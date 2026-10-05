@@ -19,13 +19,23 @@ interface Scenario {
 }
 
 function project(devices: number, groups: number) {
+  const lap = (g: number) => Math.floor(g / devices);
+  // Two extra devices carry only the marker group 0. A device shows at most
+  // three current values, so a marker on a device that also takes part in
+  // the traffic is pushed out by newer values at high rates and was never
+  // seen (AR21 review: no value lag at the §7 load).
+  const markerPair = [devices, devices + 1];
   return {
-    devices: Array.from({ length: devices }, (_, i) => ({
-      deviceId: i + 1, installationId: 1, name: `Device ${i + 1}`, individualAddressRaw: 0x1100 + i + 1,
+    devices: Array.from({ length: devices + 2 }, (_, i) => ({
+      deviceId: i + 1, installationId: 1, name: i < devices ? `Device ${i + 1}` : `Marker ${i - devices + 1}`,
+      individualAddressRaw: 0x1100 + i + 1,
     })),
     groups: Array.from({ length: groups }, (_, g) => ({
       gaRaw: 0x0800 + g, gaId: g + 1, installationId: 1, name: `Group ${g}`, dpt: "1.001",
-      members: [g % devices, (g * 7 + 3) % devices, (g * 13 + 5) % devices].map((d, k) => ({
+      // `lap` shifts the targets once groups outnumber devices, so the §7
+      // load reaches its distinct pairs instead of repeating them; for
+      // fewer groups than devices it is 0 and the U21 scenarios are unchanged.
+      members: (g === 0 ? markerPair : [g % devices, (g * 7 + 3 + lap(g)) % devices, (g * 13 + 5 + 2 * lap(g)) % devices]).map((d, k) => ({
         deviceId: d + 1, comObjectId: (g + 1) * 10 + k, direction: k === 0 ? "Send" : "Receive", active: true, flags,
       })),
     })),
@@ -180,6 +190,12 @@ const SCENARIOS: Scenario[] = [
   { name: "dense-burst-motion", devices: 300, groups: 120, ratePerSecond: 200, seconds: 15, motion: true },
   { name: "dense-burst-motion-off", devices: 300, groups: 120, ratePerSecond: 200, seconds: 15, motion: false },
   { name: "long-session-motion", devices: 60, groups: 40, ratePerSecond: 10, seconds: 180, motion: true },
+  // §7 starting load (AR21 finding 1): 500 devices, ~2,500 directed pairs, 1,000 telegrams/s.
+  { name: "target-load-motion", devices: 500, groups: 1250, ratePerSecond: 1000, seconds: 15, motion: true },
+  { name: "target-load-motion-off", devices: 500, groups: 1250, ratePerSecond: 1000, seconds: 15, motion: false },
+  // The same load for a minute: the first ~12 s are the initial layout
+  // settling; the rest shows the steady state local reheat is for.
+  { name: "target-load-motion-60s", devices: 500, groups: 1250, ratePerSecond: 1000, seconds: 60, motion: true },
 ];
 
 const results: unknown[] = [];
@@ -195,5 +211,7 @@ for (const scenario of SCENARIOS) {
 
 test.afterAll(() => {
   mkdirSync(OUT, { recursive: true });
-  writeFileSync(new URL("measurements.json", OUT), `${JSON.stringify({ measuredAt: new Date().toISOString(), results }, null, 2)}\n`);
+  // FLOW_LOAD_FILE keeps a partial run (e.g. `--grep target-load`) from
+  // overwriting the full measurement file.
+  writeFileSync(new URL(process.env.FLOW_LOAD_FILE ?? "measurements.json", OUT), `${JSON.stringify({ measuredAt: new Date().toISOString(), results }, null, 2)}\n`);
 });

@@ -5,17 +5,17 @@
 // them and admits data immediately; a pulse is illustration only and has no
 // write authority (docs/TELEGRAM_FLOW_VISUALIZATION.md §1, §4).
 import {
-  ALPHA_MIN,
+  ALPHA_DECAY,
   RATE_SATURATION,
   createDynamics,
   ensureDynamicNodes,
-  reheat,
+  reheatAround,
   step,
   type DynamicEdge,
   type DynamicNode,
   type Dynamics,
 } from "./flowDynamics";
-import { FRESH_EVENT_MS, currentLeader, edgeActivity, type FlowEvent, type FlowModel } from "./flowModel";
+import { FRESH_EVENT_MS, currentBadges, currentLeader, edgeActivity, type FlowEvent, type FlowModel } from "./flowModel";
 
 export const PULSE_MS = 700;
 /** At most one drawn frame per interval (~30 fps). The U21 load study found
@@ -29,6 +29,13 @@ const NUDGE_EVERY_MS = 5_000;
 const NUDGE_ALPHA = 0.08;
 const GROWTH_ALPHA = 0.3;
 const REFRESH_MS = 1_000;
+/** A node is redrawn only once it moved at least this far from where it was
+ * last drawn: the §7 load profile showed attribute writes and the native
+ * style/paint work they trigger as the main cost, and sub-pixel moves change
+ * nothing visible. */
+export const MIN_DRAWN_MOVE = 0.5;
+/** Longest gap between two solver steps that still counts as cooling time. */
+const MAX_COOLING_SPAN_MS = 1_000;
 
 /** Coarse activity classes: a pair's distance adapts when its class
  * changes, not on every observation inside the same class. */
@@ -60,7 +67,9 @@ export interface DrawnPulse {
 }
 
 export interface AnimatorSink {
-  positions(nodes: ReadonlyMap<string, DynamicNode>): void;
+  /** `moved` names the nodes this frame moved; everything else is unchanged
+   * and need not be rewritten. */
+  positions(nodes: ReadonlyMap<string, DynamicNode>, moved: ReadonlySet<string>): void;
   pulses(pulses: readonly DrawnPulse[]): void;
   /** Once a second while visible: fades, leader label and value expiry. */
   refresh(): void;
@@ -96,10 +105,20 @@ export class FlowAnimator {
   private pulses: Pulse[] = [];
   private lastEventSeq = -1;
   private edges: DynamicEdge[] = [];
-  private edgeSignature = "";
+  /** Activity class per directed pair, to see which pairs changed class. */
+  private edgeClasses = new Map<string, number>();
+  /** Value-badge lines per node (badges plus an overflow line). */
+  private badgeLines = new Map<string, number>();
+  /** Most badge lines a node has shown; only a new maximum reheats it, so
+   * values coming and going do not keep a settled map moving. */
+  private badgeHighWater = new Map<string, number>();
   private leader: string | null = null;
   private model: FlowModel | null = null;
   private lastDrawnAt = Number.NEGATIVE_INFINITY;
+  /** When the solver last stepped; a longer gap (rest, Freeze) counts as one frame. */
+  private lastStepAt = Number.NEGATIVE_INFINITY;
+  /** Where each node was last handed to the sink. */
+  private drawnAt = new Map<string, { x: number; y: number }>();
 
   constructor(
     box: { width: number; height: number },
@@ -144,15 +163,13 @@ export class FlowAnimator {
   sync(model: FlowModel): void {
     this.model = model;
     const now = this.scheduler.now();
-    const before = this.layout.nodes.size;
-    ensureDynamicNodes(this.layout, model.nodes.keys());
-    const edgeCount = this.edges.length;
-    const activityChanged = this.refreshEdges(now);
-    const leader = currentLeader(model, now);
-    const leaderChanged = leader !== this.leader;
-    this.leader = leader;
-    if (this.layout.nodes.size > before || this.edges.length > edgeCount || leaderChanged) reheat(this.layout, GROWTH_ALPHA);
-    else if (activityChanged) reheat(this.layout, NUDGE_ALPHA);
+    // Local reheat (§9.3): only what changed, plus its direct neighbours.
+    const added = [...model.nodes.keys()].filter((id) => !this.layout.nodes.has(id));
+    ensureDynamicNodes(this.layout, added);
+    const { grown, reclassed } = this.refreshEdges(now);
+    const grownBadges = this.refreshBadges(now);
+    reheatAround(this.layout, [...added, ...grown, ...this.leaderMoves(now)], this.edges, GROWTH_ALPHA);
+    reheatAround(this.layout, [...reclassed, ...grownBadges], this.edges, NUDGE_ALPHA);
 
     const fresh = model.events.filter((event) => event.seq > this.lastEventSeq);
     if (fresh.length > 0) this.lastEventSeq = fresh[fresh.length - 1].seq;
@@ -179,13 +196,53 @@ export class FlowAnimator {
     this.pulses = [];
   }
 
-  private refreshEdges(now: number): boolean {
-    if (!this.model) return false;
+  /** Rebuilds the solver edges; names the endpoints of new pairs (`grown`)
+   * and of pairs whose activity class changed (`reclassed`). */
+  private refreshEdges(now: number): { grown: string[]; reclassed: string[] } {
+    const grown: string[] = [];
+    const reclassed: string[] = [];
+    if (!this.model) return { grown, reclassed };
     this.edges = [...this.model.edges.values()].map((edge) => ({ from: edge.from, to: edge.to, rate: edgeActivity(edge, now) }));
-    const signature = this.edges.map((edge) => `${edge.from}>${edge.to}:${activityClass(edge.rate)}`).join("|");
-    const changed = signature !== this.edgeSignature;
-    this.edgeSignature = signature;
-    return changed;
+    const classes = new Map<string, number>();
+    for (const edge of this.edges) {
+      const key = `${edge.from}\u0000${edge.to}`;
+      const cls = activityClass(edge.rate);
+      classes.set(key, cls);
+      const previous = this.edgeClasses.get(key);
+      if (previous === undefined) grown.push(edge.from, edge.to);
+      else if (previous !== cls) reclassed.push(edge.from, edge.to);
+    }
+    this.edgeClasses = classes;
+    return { grown, reclassed };
+  }
+
+  /** The old and the new leader when the leader changed, else nothing. */
+  private leaderMoves(now: number): string[] {
+    if (!this.model) return [];
+    const leader = currentLeader(this.model, now);
+    if (leader === this.leader) return [];
+    const moves = [this.leader, leader].filter((id): id is string => id !== null);
+    this.leader = leader;
+    return moves;
+  }
+
+  /** Updates badge lines per node; names nodes whose badge block reached a new size. */
+  private refreshBadges(now: number): string[] {
+    const grown: string[] = [];
+    if (!this.model) return grown;
+    const lines = new Map<string, number>();
+    for (const id of this.model.nodes.keys()) {
+      const badges = currentBadges(this.model, id, now);
+      const count = badges.current.length + (badges.overflow > 0 ? 1 : 0);
+      if (count === 0) continue;
+      lines.set(id, count);
+      if (count > (this.badgeHighWater.get(id) ?? 0)) {
+        this.badgeHighWater.set(id, count);
+        grown.push(id);
+      }
+    }
+    this.badgeLines = lines;
+    return grown;
   }
 
   private queuePulses(events: readonly FlowEvent[], now: number): void {
@@ -226,13 +283,12 @@ export class FlowAnimator {
     this.nudgeId = this.scheduler.every(NUDGE_EVERY_MS, () => {
       if (!this.model) return;
       const now = this.scheduler.now();
-      const leader = currentLeader(this.model, now);
-      const leaderChanged = leader !== this.leader;
-      this.leader = leader;
-      if (this.refreshEdges(now) || leaderChanged) {
-        reheat(this.layout, leaderChanged ? GROWTH_ALPHA : NUDGE_ALPHA);
-        this.wake();
-      }
+      const { grown, reclassed } = this.refreshEdges(now);
+      const grownBadges = this.refreshBadges(now);
+      const before = this.layout.alpha;
+      reheatAround(this.layout, [...grown, ...this.leaderMoves(now)], this.edges, GROWTH_ALPHA);
+      reheatAround(this.layout, [...reclassed, ...grownBadges], this.edges, NUDGE_ALPHA);
+      if (this.layout.alpha > before) this.wake();
     });
   }
 
@@ -260,12 +316,25 @@ export class FlowAnimator {
     }
     this.lastDrawnAt = now;
     this.metrics.frames += 1;
-    if (!this.frozen && this.layout.alpha >= ALPHA_MIN) {
-      step(this.layout, this.edges, { leader: this.leader });
-      this.metrics.steps += 1;
-      this.sink.positions(this.layout.nodes);
-    } else if (!this.frozen) {
-      step(this.layout, this.edges, { leader: this.leader });
+    if (!this.frozen && this.layout.alpha > 0) {
+      // Cooling follows the clock, not the frame count: when frames come
+      // slowly (an overloaded page), a reheat still settles in about the
+      // same wall time instead of keeping the expensive phase alive longer.
+      const elapsed = now - this.lastStepAt <= MAX_COOLING_SPAN_MS ? now - this.lastStepAt : FRAME_INTERVAL_MS;
+      this.lastStepAt = now;
+      const cooling = ALPHA_DECAY ** Math.max(1, elapsed / FRAME_INTERVAL_MS);
+      const moved = step(this.layout, this.edges, { leader: this.leader, badgeLines: this.badgeLines, cooling });
+      if (moved.size > 0) this.metrics.steps += 1;
+      const visible = new Set<string>();
+      for (const id of moved) {
+        const node = this.layout.nodes.get(id);
+        if (!node) continue;
+        const last = this.drawnAt.get(id);
+        if (last && Math.abs(node.x - last.x) < MIN_DRAWN_MOVE && Math.abs(node.y - last.y) < MIN_DRAWN_MOVE) continue;
+        this.drawnAt.set(id, { x: node.x, y: node.y });
+        visible.add(id);
+      }
+      if (visible.size > 0) this.sink.positions(this.layout.nodes, visible);
     }
     this.pulses = this.pulses.filter((pulse) => now - pulse.start < PULSE_MS);
     this.sink.pulses(this.activePulses());

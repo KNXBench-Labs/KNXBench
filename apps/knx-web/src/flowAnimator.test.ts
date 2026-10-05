@@ -1,6 +1,6 @@
 /** U21: the animator stops frames and timers, freezes geometry only, bundles pulses. */
 import { describe, expect, it } from "vitest";
-import { COALESCE_ABOVE, FRAME_INTERVAL_MS, FlowAnimator, MAX_PULSES, PULSE_MS, type AnimatorScheduler, type DrawnPulse } from "./flowAnimator";
+import { COALESCE_ABOVE, FRAME_INTERVAL_MS, FlowAnimator, MAX_PULSES, MIN_DRAWN_MOVE, PULSE_MS, type AnimatorScheduler, type DrawnPulse } from "./flowAnimator";
 import { admitRows, createFlowModel, provideContext, type FlowModel, type FlowRowInput } from "./flowModel";
 import { snapshotJson } from "./flowTestFixtures";
 import { parseFlowSnapshot } from "./flowWire";
@@ -187,6 +187,95 @@ describe("FlowAnimator", () => {
     expect(scheduler.frames.size).toBe(1);
   });
 
+  it("a new pair elsewhere moves only itself and its neighbours; settled nodes are not rewritten", () => {
+    const scheduler = new FakeScheduler();
+    const moved: string[][] = [];
+    const animator = new FlowAnimator({ width: 960, height: 520 }, scheduler, {
+      positions: (_nodes, ids) => { moved.push([...ids]); },
+      pulses: () => {},
+      refresh: () => {},
+    });
+    animator.setMotion(true);
+    const m = createFlowModel(SNAPSHOT_SESSION);
+    provideContext(m, "1", parseFlowSnapshot(snapshotJson({
+      devices: [1, 2, 3, 4, 5].map((id) => ({ deviceId: id, installationId: 1, name: `D${id}`, individualAddressRaw: 0x1100 + id })),
+      groups: [
+        { gaRaw: 0x0801, gaId: 1, installationId: 1, name: "G1", dpt: null, members: [1, 2, 3].map(member) },
+        { gaRaw: 0x0802, gaId: 2, installationId: 1, name: "G2", dpt: null,
+          members: [{ ...member(4), direction: "Send" }, member(5)] },
+      ],
+    })), 0);
+    admitRows(m, [row(1), row(2), row(3)], 0);
+    animator.sync(m);
+    scheduler.run(20_000);
+    expect(animator.layout.alpha).toBe(0);
+    const settled = new Map([...animator.layout.nodes].map(([id, n]) => [id, [n.x, n.y]]));
+    moved.length = 0;
+    admitRows(m, [row(4, { source: "1.1.4", sourceRaw: 0x1104, destination: "1/0/2", destinationRaw: 0x0802 })], scheduler.time);
+    animator.sync(m);
+    expect(animator.currentLeader).toBe("d:1");
+    scheduler.run(20_000);
+    const everMoved = new Set(moved.flat());
+    expect(everMoved.has("d:4")).toBe(true);
+    for (const id of ["d:1", "d:2", "d:3"]) {
+      expect(everMoved.has(id), id).toBe(false);
+      const node = animator.layout.nodes.get(id)!;
+      expect([node.x, node.y], id).toEqual(settled.get(id));
+    }
+  });
+
+  it("redraws a node only after a visible move, so a cooling tail writes nothing", () => {
+    const scheduler = new FakeScheduler();
+    const reports: { id: string; x: number; y: number }[][] = [];
+    const animator = new FlowAnimator({ width: 960, height: 520 }, scheduler, {
+      positions: (nodes, ids) => { reports.push([...ids].map((id) => ({ id, x: nodes.get(id)!.x, y: nodes.get(id)!.y }))); },
+      pulses: () => {},
+      refresh: () => {},
+    });
+    animator.setMotion(true);
+    const m = model();
+    admitRows(m, [row(1)], 0);
+    animator.sync(m);
+    scheduler.run(20_000);
+    expect(animator.layout.alpha).toBe(0);
+    expect(animator.metrics.steps).toBeGreaterThan(reports.length);
+    // Every node ends within the threshold of where it was last drawn.
+    const last = new Map<string, { x: number; y: number }>();
+    for (const report of reports) for (const entry of report) last.set(entry.id, entry);
+    for (const [id, node] of animator.layout.nodes) {
+      const drawn = last.get(id)!;
+      expect(Math.abs(node.x - drawn.x)).toBeLessThan(MIN_DRAWN_MOVE);
+      expect(Math.abs(node.y - drawn.y)).toBeLessThan(MIN_DRAWN_MOVE);
+    }
+  });
+
+  it("a larger value block nudges its node; values that only come and go leave the map at rest", () => {
+    const { scheduler, animator } = setup();
+    const m = createFlowModel(SNAPSHOT_SESSION);
+    provideContext(m, "1", parseFlowSnapshot(snapshotJson({
+      devices: [1, 2, 3].map((id) => ({ deviceId: id, installationId: 1, name: `D${id}`, individualAddressRaw: 0x1100 + id })),
+      groups: [0x0801, 0x0802].map((gaRaw, i) => ({
+        gaRaw, gaId: i + 1, installationId: 1, name: `G${i + 1}`, dpt: null, members: [1, 2, 3].map(member),
+      })),
+    })), 0);
+    const second = (seq: number) => row(seq, { destination: "1/0/2", destinationRaw: 0x0802 });
+    // Six observations put every pair into the 6–9 class; later rows stay in it.
+    admitRows(m, [1, 2, 3, 4, 5, 6].map((seq) => row(seq)), 0);
+    animator.sync(m);
+    scheduler.run(20_000);
+    expect(animator.layout.alpha).toBe(0);
+    // Two current values at once: the sender's badge block grows past its maximum.
+    admitRows(m, [row(7), second(8)], scheduler.time);
+    animator.sync(m);
+    expect(animator.layout.nodes.get("d:1")!.heat).toBeGreaterThan(0);
+    scheduler.run(20_000);
+    expect(animator.layout.alpha).toBe(0);
+    // Values expired; one comes back: no new maximum, nothing moves.
+    admitRows(m, [row(9)], scheduler.time);
+    animator.sync(m);
+    expect(animator.layout.alpha).toBe(0);
+  });
+
   it("adapts distances when a pair changes its activity class, but not on every flicker", () => {
     const { scheduler, animator } = setup();
     const m = model([2]);
@@ -205,6 +294,17 @@ describe("FlowAnimator", () => {
     animator.sync(m);
     scheduler.run(1_000);
     expect(animator.metrics.steps).toBeGreaterThan(settled);
+  });
+
+  it("comes to rest within the same wall time when frames are slow, so an overloaded view does not stay busy longer", () => {
+    const { scheduler, animator } = setup();
+    const m = model();
+    admitRows(m, [row(1)], 0);
+    animator.sync(m);
+    // Five frames a second instead of thirty: the cooling follows the clock.
+    scheduler.run(15_000, 200);
+    expect(animator.layout.alpha).toBe(0);
+    expect(scheduler.frames.size).toBe(0);
   });
 
   it("draws at most about 30 frames a second, because painting cost grows with every frame", () => {

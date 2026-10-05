@@ -2305,6 +2305,18 @@ accepted:** device creation and `enrich()` keep storing package text
 language and `StringTable` resolution have no source (§14). **Waiting on the
 UI owner:** showing the slice-2b markers (catalogue, product block, DPT text).
 
+**Update 2026-10-05 (UI owner, KL-37): the markers are shown.** One rule and
+one badge (`apps/knx-web/src/languageFallback.tsx`) serve every surface: with a
+product language selected, a shown text whose answering language is `null` or
+absent gets "Untranslated (<declared source language>)", or just
+"Untranslated" when nothing is declared — never guessed. Catalogue entries mark
+name and description (`sourceLanguage`); the device product block marks
+product text, catalogue name and application name with their own
+`*_source_language`; a communication object's DPT text is marked without a
+source, because the master data declares none on this wire. *Package default*
+marks nothing. Manufacturer name and hardware name have no marker on the wire
+and get none. What remains is the accepted residue above.
+
 ## 38. Group-address CSV export/import (T12) has no verified ETS interoperability
 
 **Limitation.** "KNXBench group-address CSV v1" (`crates/knx-csv`,

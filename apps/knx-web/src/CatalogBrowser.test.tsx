@@ -78,6 +78,9 @@ const item = {
   visibleDescription: null,
   productRefId: "P-1",
   hardware2programRefId: "HP-1",
+  nameLanguage: null,
+  visibleDescriptionLanguage: null,
+  sourceLanguage: null,
 };
 
 const item2 = {
@@ -88,6 +91,9 @@ const item2 = {
   visibleDescription: null,
   productRefId: "P-2",
   hardware2programRefId: "HP-2",
+  nameLanguage: null,
+  visibleDescriptionLanguage: null,
+  sourceLanguage: null,
 };
 
 async function renderBrowser(onCreated = vi.fn(), onClose = vi.fn(), serverIncarnation?: string, lineId: number | null = null) {
@@ -797,5 +803,31 @@ describe("CatalogBrowser", () => {
     const highlighted = host!.querySelector("#catalog-option-1")!;
     expect(highlighted.textContent).toContain("Dimmer");
     root.unmount();
+  });
+
+  // KL-37 (AR10 slice 2b): a catalogue entry names the stored language that
+  // answered its name and description, or `null` for the package's own text
+  // (in `sourceLanguage`). With a product language selected that is marked.
+  it("marks catalogue names and descriptions that fell back to the package's own text", async () => {
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    apiMock.catalogItems.mockResolvedValue([
+      { ...item, name: "Aktor", nameLanguage: "de-DE", sourceLanguage: "en-US" },
+      { ...item2, visibleDescription: "Two channels", sourceLanguage: "en-US" },
+    ]);
+    const { root } = await renderBrowser();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    const badges = (i: number) => [...host!.querySelectorAll(`#catalog-option-${i} .language-fallback-badge`)]
+      .map((badge) => badge.textContent);
+    expect(badges(0)).toEqual([]);
+    expect(badges(1)).toEqual(["Untranslated (en-US)", "Untranslated (en-US)"]);
+    await act(async () => root.unmount());
+  });
+
+  it("marks no catalogue text without a selected product language", async () => {
+    apiMock.catalogItems.mockResolvedValue([{ ...item2, visibleDescription: "Two channels", sourceLanguage: "en-US" }]);
+    const { root } = await renderBrowser();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    expect(host!.querySelectorAll(".language-fallback-badge")).toHaveLength(0);
+    await act(async () => root.unmount());
   });
 });

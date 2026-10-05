@@ -1,4 +1,4 @@
-//! Synthetic existing ZIP member-count boundaries; no limit or compatibility expansion.
+//! Synthetic existing ZIP count/declared-size bounds; no limit or compatibility expansion.
 use std::io::{Cursor, Write};
 
 use knx_productdb::{install_package, open_and_migrate, PackageError};
@@ -129,4 +129,164 @@ fn one_entry_over_member_count_cap_preserves_every_seeded_database_value() {
         "refusal must preserve all rows"
     );
     assert_eq!(retained_archive(&connection, &seed_report.sha256), seed);
+}
+
+const DECLARED_MEMBER_BYTES: u32 = 64 * 1024 * 1024;
+const DECLARED_TOTAL_BYTES: u64 = 256 * 1024 * 1024;
+
+fn declared_baggage_path(index: usize) -> String {
+    format!("M-0001/Baggages/declared-{index}.bin")
+}
+
+// APPNOTE 6.3.10 sections 4.3.7/4.3.12; ordinary headers, no descriptor/ZIP64.
+// Only declarations are large: each real baggage body remains one byte.
+fn archive_with_declared_baggage_sizes(sizes: &[u32]) -> Vec<u8> {
+    assert!(!sizes.is_empty() && sizes.len() <= 4);
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    for (name, payload) in [
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ] {
+        writer.start_file(name, options).unwrap();
+        writer.write_all(payload).unwrap();
+    }
+    for index in 0..sizes.len() {
+        writer
+            .start_file(declared_baggage_path(index), options)
+            .unwrap();
+        writer.write_all(b"x").unwrap();
+    }
+    let mut bytes = writer.finish().unwrap().into_inner();
+    assert!(
+        bytes.len() < 8 * 1024,
+        "fixture must not allocate its declared size"
+    );
+    let offsets = {
+        let mut archive = zip::ZipArchive::new(Cursor::new(&bytes)).unwrap();
+        (0..sizes.len())
+            .map(|index| {
+                let path = declared_baggage_path(index);
+                let member = archive.by_name(&path).unwrap();
+                assert_eq!(member.size(), 1);
+                assert_eq!(member.compression(), zip::CompressionMethod::Deflated);
+                (
+                    usize::try_from(member.header_start()).unwrap(),
+                    usize::try_from(member.central_header_start()).unwrap(),
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    for ((local, central), size) in offsets.into_iter().zip(sizes) {
+        assert_eq!(&bytes[local..local + 4], b"PK\x03\x04");
+        assert_eq!(&bytes[central..central + 4], b"PK\x01\x02");
+        // Bit 3 would put sizes in a data descriptor, outside this fixture.
+        for flag_offset in [local + 6, central + 8] {
+            let flags = u16::from_le_bytes(bytes[flag_offset..flag_offset + 2].try_into().unwrap());
+            assert_eq!(flags & 8, 0);
+        }
+        const LOCAL_UNCOMPRESSED_SIZE: usize = 22;
+        const CENTRAL_UNCOMPRESSED_SIZE: usize = 24;
+        for offset in [
+            local + LOCAL_UNCOMPRESSED_SIZE,
+            central + CENTRAL_UNCOMPRESSED_SIZE,
+        ] {
+            assert_eq!(
+                u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()),
+                1
+            );
+            bytes[offset..offset + 4].copy_from_slice(&size.to_le_bytes());
+        }
+    }
+    let mut archive = zip::ZipArchive::new(Cursor::new(&bytes)).unwrap();
+    assert_eq!(archive.len(), 2 + sizes.len());
+    let mut declared_total = 0_u64;
+    for index in 0..archive.len() {
+        declared_total = declared_total
+            .checked_add(archive.by_index_raw(index).unwrap().size())
+            .unwrap();
+    }
+    assert_eq!(
+        declared_total,
+        u64::try_from(MASTER.len() + HARDWARE.len()).unwrap()
+            + sizes.iter().map(|size| u64::from(*size)).sum::<u64>()
+    );
+    for (index, size) in sizes.iter().enumerate() {
+        assert_eq!(
+            archive
+                .by_name(&declared_baggage_path(index))
+                .unwrap()
+                .size(),
+            u64::from(*size)
+        );
+    }
+    drop(archive);
+    bytes
+}
+
+fn refused_declared_byte_fixture_preserves_seed(sizes: &[u32]) -> PackageError {
+    let (_directory, connection) = db();
+    let seed = archive_with_entries(2);
+    let seed_report = install_package(&connection, "byte-seed.knxprod", &seed).unwrap();
+    assert_eq!(retained_archive(&connection, &seed_report.sha256), seed);
+    let before = contents(&connection);
+    let bytes = archive_with_declared_baggage_sizes(sizes);
+    let error = install_package(&connection, "declared-size.knxprod", &bytes).unwrap_err();
+    assert_eq!(
+        contents(&connection),
+        before,
+        "byte admission must preserve every seeded value"
+    );
+    assert_eq!(retained_archive(&connection, &seed_report.sha256), seed);
+    error
+}
+
+#[test]
+fn declared_byte_member_at_limit_reaches_named_payload_mismatch_without_mutation() {
+    let error = refused_declared_byte_fixture_preserves_seed(&[DECLARED_MEMBER_BYTES]);
+    assert!(
+        matches!(error, PackageError::InvalidZip { ref cause } if cause == &format!("size mismatch for {}", declared_baggage_path(0))),
+        "inclusive declared member bound must reach the later named payload mismatch, got {error}"
+    );
+}
+
+#[test]
+fn declared_byte_member_one_over_limit_is_typed_and_preserves_every_seeded_value() {
+    let error = refused_declared_byte_fixture_preserves_seed(&[DECLARED_MEMBER_BYTES + 1]);
+    assert!(
+        matches!(error, PackageError::SizeLimit { ref path } if path == &declared_baggage_path(0)),
+        "declared member above the existing bound must fail at the named size limit, got {error}"
+    );
+}
+
+fn declared_baggage_total_at_limit() -> [u32; 4] {
+    let xml_sizes = u32::try_from(MASTER.len() + HARDWARE.len()).unwrap();
+    let mut sizes = [DECLARED_MEMBER_BYTES; 4];
+    sizes[3] = sizes[3].checked_sub(xml_sizes).unwrap();
+    assert_eq!(
+        u64::from(xml_sizes) + sizes.iter().map(|size| u64::from(*size)).sum::<u64>(),
+        DECLARED_TOTAL_BYTES
+    );
+    sizes
+}
+
+#[test]
+fn declared_byte_total_at_limit_reaches_named_payload_mismatch_without_mutation() {
+    let error = refused_declared_byte_fixture_preserves_seed(&declared_baggage_total_at_limit());
+    assert!(
+        matches!(error, PackageError::InvalidZip { ref cause } if cause == &format!("size mismatch for {}", declared_baggage_path(0))),
+        "inclusive declared total bound must reach the later named payload mismatch, got {error}"
+    );
+}
+
+#[test]
+fn declared_byte_total_one_over_limit_is_typed_and_preserves_every_seeded_value() {
+    let mut sizes = declared_baggage_total_at_limit();
+    sizes[3] = sizes[3].checked_add(1).unwrap();
+    assert!(sizes.iter().all(|size| *size <= DECLARED_MEMBER_BYTES));
+    let error = refused_declared_byte_fixture_preserves_seed(&sizes);
+    assert!(
+        matches!(error, PackageError::SizeLimit { ref path } if path == &declared_baggage_path(3)),
+        "declared aggregate above the existing bound must fail at its last member, got {error}"
+    );
 }

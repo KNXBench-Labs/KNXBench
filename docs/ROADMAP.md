@@ -13,6 +13,9 @@ Execution order: UI U19 → alpha AR20 → UI U20/U21 → alpha AR21, then finis
 AR15–AR18 acceptance; AR19 still needs a separate exact release decision.
 No new commissioning work, floor-plan editor, permanent coordinates or traffic
 history. Existing historical milestones and owner work are not reopened.
+**Done 2026-10-05:** U19–U21 and AR20 delivered, AR21 accepted the feature for
+the Alpha on a recorded envelope (Motion Off for large maps; Chromium only);
+see [TELEGRAM_FLOW_VISUALIZATION §22](TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05).
 
 
 ## Integrated CRT animation follow-up (2026-10-03)

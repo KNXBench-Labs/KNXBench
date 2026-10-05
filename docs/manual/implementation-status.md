@@ -115,7 +115,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | Editing a value, with validation and re-evaluation of the program's dynamic tree | ✅ Implemented | Stored as an undo step |
 | Writing a declared but currently hidden parameter | ❌ Not implemented, deliberately | Refused rather than written blind — [§70](../KNOWN_LIMITATIONS.md#70-writing-a-declared-but-not-currently-shown-parameter-is-now-refused) |
 | Module arguments and module-scoped parameters | 🟡 Partial or experimental | Repeated instantiation is refused; a module without an `Id` cannot be matched — [§68](../KNOWN_LIMITATIONS.md#68-repeated-module-instantiation-is-refused-not-supported), [§69](../KNOWN_LIMITATIONS.md#69-a-module-with-no-id-cannot-be-matched-to-a-project-instance) |
-| Writing a parameter value to a real device | ❌ Not implemented | See *Commissioning*, below |
+| Writing a parameter value to a real device | 🟡 Partial or experimental | As part of a device download; verified on one device — see *Commissioning and device download*, below |
 
 ## Datapoint types
 
@@ -158,7 +158,8 @@ raised. A project that has been imported stays in `.knxdb`.
 | `knx products list / ingest / show / verify` | ✅ Implemented | `ingest` accepts a `.knxproj` or a `.knxprod`; a `.vd2` argument is listed but always refused |
 | `knx bus discover / monitor / write / route-monitor / route-send / scan` | ✅ Implemented | Some with the limitations under *KNXnet/IP and the bus* |
 | Distinct exit codes (`0` success, `1` failure, `2` import produced a project whose report has errors) | ✅ Implemented | `2` is raised by `import` and `ga-import` only |
-| Creating a project, or programming a device, from the command line | ❌ Not implemented | Neither command exists |
+| Creating a project from the command line | ❌ Not implemented | No command exists; create one in the application |
+| Writing to a device from the command line | 🟡 Partial or experimental | `knx device download` (one verified device); address programming is refused for now — see *Commissioning and device download*, below |
 
 ## KNXnet/IP and the bus
 
@@ -178,8 +179,8 @@ raised. A project that has been imported stays in `.knxdb`.
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Downloading a project device's configuration to the device | 🟡 Partial or experimental | `knx device download` and the **Download to device** tab: plan first, confirmation, live progress. Verified in the simulator; one real device (`1.1.67`, MDT, mask `0701h`) via both the command and the tab, every octet read back — [Bus](user-guide/07-bus-and-interfaces.md#downloading-to-a-device) |
-| Programming an individual address | 🟡 Partial or experimental | `knx device program-address` and the Bus → **Program address** tab wait for exactly one pressed button, then write and restart. Verified in the simulator only — [command line](user-guide/10-command-line.md#knx-device-program-address--give-a-device-its-individual-address), [web](user-guide/07-bus-and-interfaces.md#programming-an-individual-address) |
-| The load/unload/reset/memory-write procedures inside the core library | 🚧 In progress | Verified against a simulator this project wrote, never against hardware — [§92](../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
+| Programming an individual address | 🚧 In progress | `knx device program-address` and the Bus → **Program address** tab exist, but a confirmed start is refused before any connection until durable device-specific recovery exists; an earlier live round trip on one device is history, not current permission — [web](user-guide/07-bus-and-interfaces.md#programming-an-individual-address), [ADR-0058](../adr/0058-individual-address-reset-requires-durable-recovery.md) |
+| The load/unload/reset/memory-write procedures inside the core library | 🚧 In progress | The memory-write path used by a download has run on one real device; the property-based procedures are verified only against a simulator this project wrote — [§7](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [§92](../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
 | Read-only verification against a real installation | 🟡 Partial or experimental | Reading device state has been exercised against real hardware — [§7](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
 
 ## KNX Secure
@@ -225,9 +226,10 @@ raised. A project that has been imported stays in `.knxdb`.
 ## What this adds up to
 
 KNXBench reads, understands, edits and writes back KNX project data, and it
-can watch a bus. It cannot program a device, cannot handle KNX Secure, and
-cannot be shared between two people. Those three are not near-misses; they
-are absences, and the next chapter is careful about what it does and does not
+can watch a bus. It can download a device's configuration only within a very
+narrow verified scope (one device so far), cannot handle KNX Secure, and
+cannot be shared between two people. The last two are absences, the first is
+a beginning, and the next chapter is careful about what it does and does not
 promise regarding them.
 
 The engineering record behind every row is

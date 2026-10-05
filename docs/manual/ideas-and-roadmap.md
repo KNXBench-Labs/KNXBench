@@ -49,7 +49,7 @@ waiting on somebody finding time.
 
 | Item | Where it stands | Waiting on |
 | --- | --- | --- |
-| Commissioning a real device | All six procedures are implemented in the core library and verified against a simulator this project wrote. Read-only runs against a real installation have happened twice. | Dedicated test hardware. Writing to a live installation was ruled out of scope by the maintainer until a test bench exists — the only bus available is a house people live in. The first real write will need its own explicit go-ahead. |
+| Commissioning more real devices | A device download (application tables and parameters) has been run and read back on one real device after an explicit go-ahead; the property-based procedures are verified against a simulator this project wrote. Address programming is refused until durable recovery exists. | Test hardware and a per-target go-ahead. The only bus available is a house people live in, so every new device, write scope or experiment needs its own explicit approval. |
 | Import support for ETS schemas 12, 13, 14, 20 and 22 | The parser handles the schema family; these versions have never been tested against a real file. | One real project file per schema. No sample-hunting is scheduled. |
 | Opening AES-protected ETS6 projects | The key derivation already exists in the `knx-secure` crate. | A genuine AES-protected sample. Verifying against a self-made one would only prove the implementation agrees with itself. |
 | The `Functions` element in the KNX project model | Absent from every reference sample, so there is nothing to model against. | New KNX specification documentation. Deferred by decision, explicitly not rejected. |
@@ -140,12 +140,14 @@ Marked separately because they are exactly that — suggestions written down
 while this manual was being checked against the code, not decisions anybody
 has taken.
 
-- A correction to the New project dialog, whose hint promises that the
-  group-address style can be changed later. It cannot.
-- A way to download the project file from the browser, since the server
-  already has the route and nothing calls it.
-- Removing `.vd2` from the file pickers and command-line help that still
-  offer it, given that it is always refused.
+- Removing `.vd2` from the command-line help (`knx products ingest`) that
+  still offers it, given that it is always refused. The web file pickers no
+  longer offer it.
+
+Resolved since this pass (checked against the code on 2026-10-06): the New
+project dialog now says the group-address style cannot be changed after
+creation, and the web File menu has **Export project…** for a local `.knxdb`
+copy.
 
 None of these are scheduled. They are listed here so they are not lost, and
 because a manual that spots a defect and says nothing is not much of a

@@ -269,18 +269,20 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 - **Details:** [§140](../KNOWN_LIMITATIONS.md#140-the-individual-address-reset-needs-the-pressed-devices-named-and-its-restart-is-unconfirmed),
   [ADR-0058](../adr/0058-individual-address-reset-requires-durable-recovery.md).
 
-### Commissioning cannot program a device
+### Device download is verified on one device only
 
-- **Affected:** everything a user would call "downloading to the bus".
-- **Limitation:** the commissioning protocol exists in the core library and
-  is verified against a simulator this project wrote. It has never addressed
-  a real device, and there is no user-facing command that would let it. Read-
-  only verification against a real installation is the furthest this has gone.
-- **Consequence:** KNXBench cannot commission your installation. Plan for ETS
-  to do that.
-- **Workaround:** none.
-- **Details:** [§7 commissioning and device download are blocked](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked),
-  [§92 phase 2 is verified against a simulator](../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device)
+- **Affected:** writing a configuration into devices ("download").
+- **Limitation:** `knx device download` and the **Download to device** tab
+  work, but only one device (an MDT device with mask `0701h`) has been
+  downloaded and read back so far. Other devices, application versions and
+  masks are unverified; procedures KNXBench cannot plan are refused by name.
+  Programming an individual address is currently refused until durable
+  recovery exists. Unloading and secure devices are not supported.
+- **Consequence:** for most installations, plan for another commissioning
+  tool for now.
+- **Workaround:** none beyond the verified scope.
+- **Details:** [§7 commissioning](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked),
+  [Downloading to a device](user-guide/07-bus-and-interfaces.md#downloading-to-a-device)
 
 ### KNX Secure is not implemented
 

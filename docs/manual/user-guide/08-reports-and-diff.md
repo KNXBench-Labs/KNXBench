@@ -234,6 +234,38 @@ import, or an ETS import report containing error-level diagnostics. Without
 `--exit-code`, a successfully produced non-empty diff remains exit `0`; an import report
 with errors remains a failure so partially interpreted data cannot pass unnoticed.
 
+### Reviewing project versions in Git
+
+A `.knxdb` is a SQLite file, so plain `git diff` only says *Binary files differ*. Git
+can call `knx diff` instead. Put a small script somewhere on your machine:
+
+```sh
+#!/bin/sh
+# git external diff driver: $1 is the path, $2 the old file, $5 the new one
+case "$2" in /dev/null) echo "new project file: $1"; exit 0 ;; esac
+case "$5" in /dev/null) echo "project file removed: $1"; exit 0 ;; esac
+exec knx diff "$2" "$5"
+```
+
+make it executable, and register it for project files in your repository:
+
+```bash
+echo '*.knxdb diff=knxbench' >> .gitattributes
+git config diff.knxbench.command /path/to/knx-git-diff.sh
+```
+
+`git diff` then prints the same `+`/`-`/`~`/`?` lines as above, for example
+`~ group address 0/0/1: name: GA -> Flur Licht` after a rename. `git log -p` and
+`git show` use the driver only with `--ext-diff`. The two `case` lines matter: for an
+added or deleted file Git passes `/dev/null`, which `knx diff` refuses, and Git then
+stops the whole log. This was checked on 2026-10-06 with a small repository holding two
+commits of one project, including an added and a removed file.
+It shows what `knx diff` compares, not every stored byte. Two cautions: the new side of
+`git diff` (without a commit range) is your real working file, and if that file comes
+from an older KNXBench version, `knx diff` upgrades it in place
+([known issue](../known-issues.md#opening-an-older-project-upgrades-the-file)); and the
+driver needs `knx` on the `PATH` of every machine that runs the diff.
+
 ### What comparison is good for, and where it stops
 
 It answers the questions you actually ask about a project over time: which devices

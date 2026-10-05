@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 01:34 CEST
+- **Completed:** **AR15 slice 1.** `DOC-03` DONE (stale commissioning/`.knxproj` statements fixed across README + manual; KL §7 and the bus chapter are the reference), `KL-9`/`KL-16`/`KL-46` ACCEPTED_BOUNDARY with fresh evidence (Git external-diff recipe run on a synthetic repo and added to manual 08; `cargo deny --offline` advisories ok; tests named). Doc gates only (anchors, ledger, headers, diff --check); no code changed.
+- **Pending/Next Steps:** AR15 items 1–2 (reconcile IMPLEMENTATION_STATUS/KL/LIMITATION_TRIAGE/ROADMAP/GAP_ANALYSIS_ETS/COMPATIBILITY/IMPORT_EXPORT against code; programmatic recount), rest of item 3 (deployment/import/hardware boundaries) and item 4 (alpha scope/risk/decision matrix).
+- **Notes for Codex oder Claude:** Manual commissioning wording now follows `docs/manual/user-guide/07-bus-and-interfaces.md` (owner text): download verified on one device, address programming refused before any tunnel (ADR-0058, `address_programming_routes.rs`). If the commissioning owner widens that scope, update README, getting-started 01/03, workflow §12, FAQ, known issues, reference/02 and implementation-status together. Git credential helper note: `mise which gh` currently fails ("gh 2.102.0 (missing)"); pushes used the installed gh binary directly via `git -c credential.helper`. Web lock: unchanged per the newest owner line below.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 01:28 CEST
 - **Completed:** **KL-157 (AR15 finding): project upgrades are atomic.** `crates/knx-store/src/migration.rs` `migrate()` now wraps all pending steps + `user_version` in one `BEGIN IMMEDIATE` transaction (as the product DB does); before, a failure after the first step left a file that never opened again. RED→GREEN unit test, one compiled mutant, workspace 3,311/0/177, Clippy, five xtask checks. In-place upgrade without a copy documented (KL §157 → ACCEPTED_BOUNDARY, manual known issue, DATA_MODEL).
 - **Pending/Next Steps:** AR15 continues: dispositions for `KL-9` (SQLite vs text diff; `knx diff` as git external diff verified), `KL-16` (GTK3; advisories ok offline, Wry/Tauri GTK4 PRs still open), `KL-46`, `DOC-03` (stale manual commissioning/`.knxproj` statements in 06 §12, 10-command-line, known-issues, reference/02, implementation-status), then recounts and the scope/risk matrix.

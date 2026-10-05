@@ -63,9 +63,10 @@ Equally important is what KNXBench does not do, at least not yet:
   vendor-specific data are supported only where real test material exists to
   verify it against; see
   [Supported and unsupported KNX/ETS functionality](../reference/02-supported-and-unsupported.md).
-- It does not do **commissioning** or **device download**. KNXBench can read
-  from the bus and send individual group values, but it does not program
-  devices.
+- It is not yet a **commissioning** tool. A device download works within a
+  very narrow verified scope (one device so far), individual addresses cannot
+  be programmed at the moment, and most devices still need another tool; see
+  [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device).
 - It does not implement **KNX IP Secure**. Only plain KNXnet/IP installations
   are supported.
 

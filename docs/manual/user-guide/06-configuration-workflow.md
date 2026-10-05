@@ -157,21 +157,20 @@ For the documentation export and for comparing two projects, see
 
 ## 12. Where this workflow stops
 
-Everything above happens in files. The last step a KNX installation actually needs —
-loading the configuration into the devices on the wall — is not part of KNXBench.
+Everything above happens in files. Loading the configuration into the devices on the
+wall is a separate, guarded step, and KNXBench covers it only narrowly so far.
 
-KNXBench does not commission devices. There is no download, no programming-mode
-handling, and no way to transfer an application program or a parameter set to real
-hardware, in the interface or on the command line. The protocol work exists in the
-core library and has been driven against a simulator this project wrote; it has never
-addressed a real device, and it is not wired to any button.
+`knx device download` and the **Download to device** tab write a project device's
+application tables and parameters. Both show the plan first and write only after a
+confirmation for that one device. This has been verified on one device so far; other
+devices, application versions and masks have no such evidence, and procedures KNXBench
+cannot plan are refused by name rather than guessed. Programming an individual address
+is currently blocked until durable recovery exists. The details, including what is
+refused, are in [Bus monitor and KNXnet/IP](07-bus-and-interfaces.md#downloading-to-a-device).
 
-What KNXBench can do on a live bus is watch it and send single group values from the
-command line, which is a diagnostic tool, not commissioning. See
-[Bus monitor and KNXnet/IP](07-bus-and-interfaces.md).
-
-So the honest end of this workflow is: configure here, save the `.knxdb`, export a
-`.knxproj`, and commission with a tool that can. That is the gap between KNXBench and a
-complete replacement for ETS, and it is the one the project is still working on.
+So the honest end of this workflow is: configure here, save the `.knxdb`, download the
+devices KNXBench can plan, and commission everything else with a tool that can. There is
+no `.knxproj` export to hand the project over (section 11). That gap is the one the
+project is still working on.
 
 [Manual index](../README.md) · Next: [Bus monitor and KNXnet/IP](07-bus-and-interfaces.md) →

@@ -9,6 +9,7 @@
 
 pub mod access_key;
 mod backup_directory;
+pub mod com_object_language;
 pub mod commissioning_activity;
 pub mod comparison;
 pub mod device_backup;

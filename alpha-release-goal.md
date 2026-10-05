@@ -716,11 +716,12 @@ independent recount predicts exactly. `KL-156` `DONE`.
 
 **Sources:** `KL-14`, `KL-37`, `KL-64`, `KL-66`.
 **Dependencies:** AR06/AR07 and established language-pack contracts.
+**Status:** `DONE_SCOPED` 2026-10-05 — backend complete; the UI portion (`KL-37`: showing the slice-2b markers) waits on its owner. History: `TODO` → slices 1, 2a, 2b, 3.
 
-- [ ] Trace source/default language, manufacturer/master translations and backend diagnostics into their current readers and projection.
-- [ ] Use a source-backed language when available; otherwise expose the fallback rather than inferring one from unrelated UI settings or installation names.
-- [ ] Add language-aware lookups/structured diagnostics only on established paths, preserving original text, missing-translation behavior and raw diagnostic details.
-- [ ] Test both installed languages, absent/ambiguous translations, existing native migrations and fallback reproducibility. Send required new catalogue/rendering work to UI under its ownership contract.
+- [x] Trace source/default language, manufacturer/master translations and backend diagnostics into their current readers and projection.
+- [x] Use a source-backed language when available; otherwise expose the fallback rather than inferring one from unrelated UI settings or installation names.
+- [x] Add language-aware lookups/structured diagnostics only on established paths, preserving original text, missing-translation behavior and raw diagnostic details.
+- [x] Test both installed languages, absent/ambiguous translations, existing native migrations and fallback reproducibility. Send required new catalogue/rendering work to UI under its ownership contract.
 
 **Exit evidence:** data/application/CLI localization regressions and clear boundary wording, not a “fully localized” claim. A missing frontend consumer keeps that portion waiting on its owner.
 
@@ -749,6 +750,14 @@ readers expose the answering language and the fallback
 `the_dpt_text_names_the_language_that_answered`, catalogue assertions).
 `KL-64` ACCEPTED_BOUNDARY. `KL-37` stays open for the report's
 communication-object text; `KL-66` next.
+
+**AR10 slice 3 and closure, 2026-10-05:** the report's communication-object
+text follows the device detail's translation rule
+(`knx_app::com_object_language`, `documentation_composition.rs`
+`com_object_text::*`); the server now calls the same function. Ledger:
+`KL-14`, `KL-64`, `KL-66` `ACCEPTED_BOUNDARY`; `KL-37` `WAITING_OWNER` (UI
+markers for catalogue, product block and DPT text). Not a "fully localized"
+claim: report labels stay §48, server error bodies stay §66.
 
 ### AR11 — Resolve remaining CSV/report decisions and verify the selected backend scope
 

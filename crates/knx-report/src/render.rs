@@ -22,7 +22,10 @@ use knx_projection::{build_device_detail, ComObjectNode};
 
 use crate::html::{document_head, document_tail, escape_text};
 use crate::model::{self, Counts, InstallationModel, MalformedField, ReportModel};
-use crate::{HtmlReport, ReportField, ReportLanguage, ReportOptions, ReportSection, ReportWarning};
+use crate::{
+    HtmlReport, ReportComObjectText, ReportField, ReportLanguage, ReportOptions, ReportSection,
+    ReportWarning,
+};
 
 /// Assembles the whole document: [`crate::model::build`] derives the
 /// structural walk once, then every section is appended in the order
@@ -847,9 +850,12 @@ fn render_devices(
         }
 
         match build_device_detail(project, device.id) {
-            Some(detail) => {
-                render_com_objects_table(out, &detail.com_objects, malformed_com_object_fields)
-            }
+            Some(detail) => render_com_objects_table(
+                out,
+                &detail.com_objects,
+                malformed_com_object_fields,
+                resolved.map(|data| &data.com_object_texts),
+            ),
             None => {
                 out.push_str(
                     "<p class=\"warning\">Communication object detail unavailable for this device.</p>",
@@ -952,6 +958,7 @@ fn render_com_objects_table(
     out: &mut String,
     coms: &[ComObjectNode],
     malformed_com_object_fields: &BTreeMap<ComObjectInstanceId, Vec<MalformedField>>,
+    translated: Option<&BTreeMap<ComObjectInstanceId, ReportComObjectText>>,
 ) {
     if coms.is_empty() {
         out.push_str("<p>No communication objects.</p>");
@@ -961,21 +968,25 @@ fn render_com_objects_table(
         "<table><tr><th>Number</th><th>Name</th><th>Description</th><th>DPT</th><th>Active</th><th>R</th><th>W</th><th>T</th><th>U</th><th>C</th><th>I</th><th>Links</th></tr>",
     );
     for com in coms {
+        let text = translated.and_then(|texts| texts.get(&ComObjectInstanceId(com.id)));
+        let name = text
+            .and_then(|text| text.name.as_deref())
+            .or(com.name.as_deref());
+        let description = text
+            .and_then(|text| text.description.as_deref())
+            .or(com.description.as_deref());
         write!(out, "<tr><td>{}</td>", com.number).unwrap();
         write!(
             out,
             "<td>{}</td>",
-            com.name
-                .as_deref()
-                .map(escape_text)
+            name.map(escape_text)
                 .unwrap_or_else(|| "\u{2014}".to_string())
         )
         .unwrap();
         write!(
             out,
             "<td>{}</td>",
-            com.description
-                .as_deref()
+            description
                 .map(escape_text)
                 .unwrap_or_else(|| "\u{2014}".to_string())
         )
@@ -1114,7 +1125,8 @@ mod tests {
         building_part, device, entry, linked_com_object, range, unlinked_com_object,
     };
     use crate::{
-        render_html, ReportDeviceData, ReportField, ReportLanguage, ReportOptions, ReportSection,
+        render_html, ReportComObjectText, ReportDeviceData, ReportField, ReportLanguage,
+        ReportOptions, ReportSection,
     };
 
     fn fixed_time() -> chrono::DateTime<Utc> {
@@ -1441,6 +1453,7 @@ mod tests {
                     display_value: None,
                     problem: None,
                 }],
+                com_object_texts: std::collections::BTreeMap::new(),
             },
         );
 
@@ -1492,6 +1505,36 @@ mod tests {
         for warning in &report.warnings {
             assert!(report.html.contains(&warning.detail));
         }
+    }
+
+    // AR10 (§37): the caller's translated communication-object text is what
+    // the table shows; an object without an entry keeps the project's text.
+    #[test]
+    fn caller_translated_com_object_text_replaces_only_its_own_object() {
+        let project = sample_project();
+        let mut options = options();
+        let mut com_object_texts = std::collections::BTreeMap::new();
+        com_object_texts.insert(
+            knx_core::ComObjectInstanceId(1),
+            ReportComObjectText {
+                name: Some("Schalten".into()),
+                description: None,
+            },
+        );
+        options.device_data.insert(
+            DeviceId(1),
+            ReportDeviceData {
+                com_object_texts,
+                ..ReportDeviceData::default()
+            },
+        );
+
+        let report = render_html(&project, &options);
+
+        assert!(report.html.contains("<td>Schalten</td>"));
+        assert_eq!(report.html.matches("<td>Schalten</td>").count(), 1);
+        let untranslated = render_html(&project, &ReportOptions::new(fixed_time()));
+        assert!(!untranslated.html.contains("Schalten"));
     }
 
     #[test]

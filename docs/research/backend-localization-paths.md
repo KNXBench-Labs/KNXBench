@@ -46,6 +46,10 @@ Structured, translatable kinds exist for `ParameterDiagnostic` and
 `CreationDiagnostic`; the documentation report has EN/DE chrome. Other
 server-composed prose stays English by the rule in KNOWN_LIMITATIONS §66 [C].
 
+The report's communication-object text uses the device detail's own
+translation rule since AR10 slice 3 (`knx_app::com_object_language`,
+`documentation_composition.rs` `com_object_text::*`) [T].
+
 ## 4. Consequences for AR10
 
 - **§14** has no source to lift it from: the schema has no project language,
@@ -59,4 +63,5 @@ server-composed prose stays English by the rule in KNOWN_LIMITATIONS §66 [C].
   `parameter_panel_exposes_the_answering_language_and_the_fallback`) and the
   catalogue, device-product and master readers (slice 2b). Server DTOs and
   ts-rs bindings only; showing the markers is UI-owner work.
-- **§66** stays the documented rule; new strings follow it.
+- **§66** stays the documented rule; new strings follow it. Accepted as a
+  boundary after AR10 re-checked every disclosure it relies on.

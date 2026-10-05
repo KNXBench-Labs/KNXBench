@@ -313,3 +313,134 @@ fn unrenderable_parameter_kinds_and_allocator_refs_keep_raw_values_and_warn() {
         report.html
     );
 }
+
+// AR10 (KNOWN_LIMITATIONS §37): the report applies the device detail's rule to
+// communication-object text — product-layer text is translated into the
+// report language when a translation answered; project-authored text and a
+// language miss keep the project's own words.
+mod com_object_text {
+    use super::*;
+    use knx_core::{
+        ComObjectInstance, ComObjectInstanceId, Layer, Override, Resolved, ResolvedFlags, Text,
+    };
+
+    const HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<Hardware><Hardware Id="H-1" Name="X" SerialNumber="S" VersionNumber="1">
+<Products><Product Id="M-1_P-1" /></Products>
+<Hardware2Programs><Hardware2Program Id="H-1_HP-1" MediumTypes="MT-0">
+<ApplicationProgramRef RefId="A-1" /></Hardware2Program></Hardware2Programs>
+</Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
+
+    const PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static><ComObjectTable>
+  <ComObject Id="A-1_O-1" Number="1" Text="Switch" VisibleDescription="Switch description" ObjectSize="1 Bit" />
+  <ComObject Id="A-1_O-2" Number="2" Text="Status" ObjectSize="1 Bit" />
+</ComObjectTable><ComObjectRefs>
+  <ComObjectRef Id="A-1_O-1_R-1" RefId="A-1_O-1" />
+  <ComObjectRef Id="A-1_O-2_R-1" RefId="A-1_O-2" />
+</ComObjectRefs></Static>
+<Languages><Language Identifier="de-DE"><TranslationUnit RefId="A-1">
+  <TranslationElement RefId="A-1_O-1">
+    <Translation AttributeName="Text" Text="Schalten" />
+    <Translation AttributeName="VisibleDescription" Text="Schalterbeschreibung" />
+  </TranslationElement>
+  <TranslationElement RefId="A-1_O-2"><Translation AttributeName="Text" Text="Rueckmeldung" /></TranslationElement>
+</TranslationUnit></Language></Languages>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    fn text(value: &str, layer: Layer) -> Override<Text> {
+        Override::Value(Resolved {
+            value: Text::Literal(value.into()),
+            layer,
+        })
+    }
+
+    fn com(
+        id: u32,
+        ref_id: &str,
+        name: Override<Text>,
+        description: Override<Text>,
+    ) -> ComObjectInstance {
+        ComObjectInstance {
+            id: ComObjectInstanceId(id),
+            source: source(ref_id),
+            device: DeviceId(1),
+            number: id as u16,
+            text: name,
+            description,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        }
+    }
+
+    fn fixture() -> (tempfile::TempDir, knx_productdb::Connection, Project) {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        knx_productdb::ingest_file(&conn, "M-1/Hardware.xml", HARDWARE.as_bytes()).unwrap();
+        knx_productdb::ingest_file(&conn, "M-1/A.xml", PROGRAM.as_bytes()).unwrap();
+        let mut project = project();
+        add_device(&mut project, 1, "M-1_P-1", "H-1_HP-1");
+        project.devices.get_mut(DeviceId(1)).unwrap().com_objects =
+            vec![ComObjectInstanceId(1), ComObjectInstanceId(2)];
+        project.devices.insert_com_object(com(
+            1,
+            "A-1_O-1_R-1",
+            text("Switch", Layer::Program),
+            text("Switch description", Layer::Program),
+        ));
+        // Project-authored: never translated, whatever the package offers.
+        project.devices.insert_com_object(com(
+            2,
+            "A-1_O-2_R-1",
+            text("Feedback (renamed)", Layer::UserEdit),
+            Override::Absent,
+        ));
+        (dir, conn, project)
+    }
+
+    fn render_in(
+        project: &Project,
+        products: &knx_productdb::Connection,
+        language: ReportLanguage,
+    ) -> String {
+        let options = knx_app::documentation::report_options(
+            project,
+            Some(products),
+            Utc.with_ymd_and_hms(2026, 10, 5, 12, 0, 0).unwrap(),
+            language,
+            [ReportSection::Devices].into_iter().collect(),
+        );
+        render_html(project, &options).html
+    }
+
+    #[test]
+    fn a_german_report_translates_product_text_and_keeps_project_text() {
+        let (_dir, products, project) = fixture();
+        let html = render_in(&project, &products, ReportLanguage::German);
+        let device = article(&html, 1);
+        assert!(device.contains("<td>Schalten</td>"), "{device}");
+        assert!(device.contains("<td>Schalterbeschreibung</td>"));
+        assert!(device.contains("<td>Feedback (renamed)</td>"));
+        assert!(
+            !device.contains("Rueckmeldung"),
+            "UserEdit text is never translated"
+        );
+    }
+
+    #[test]
+    fn a_language_without_a_translation_keeps_the_projects_own_text() {
+        let (_dir, products, project) = fixture();
+        let html = render_in(&project, &products, ReportLanguage::English);
+        let device = article(&html, 1);
+        assert!(device.contains("<td>Switch</td>"));
+        assert!(device.contains("<td>Switch description</td>"));
+        assert!(!device.contains("Schalten"));
+    }
+}

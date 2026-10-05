@@ -160,6 +160,30 @@ pub fn report_options(
                 });
             }
         }
+        // §37: the device detail's own rule — product-layer text only, and
+        // only where a translation in the report language answered.
+        if let Some(input) =
+            crate::com_object_language::ComObjectTextInput::collect(project, device.id)
+        {
+            if let Ok(translated) = crate::com_object_language::translate_com_object_texts(
+                products,
+                &input,
+                language.code(),
+            ) {
+                data.com_object_texts = translated
+                    .into_iter()
+                    .map(|(id, text)| {
+                        (
+                            id,
+                            knx_report::ReportComObjectText {
+                                name: text.name,
+                                description: text.description,
+                            },
+                        )
+                    })
+                    .collect();
+            }
+        }
         options.device_data.insert(device.id, data);
     }
     options

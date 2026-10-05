@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR21 corrections: the flow map learns to sit still
+
+- Reheat is local and per node (§9.3): a new device, a new pair, a leader
+  change, a changed activity class or a taller value block heats only the
+  nodes involved and their direct neighbours; settled nodes keep their exact
+  position and are not rewritten. Cooling follows the clock, so slow frames
+  do not prolong the busy phase.
+- Hub readability (§9.3): neighbours are moved out of a node's circle, name
+  and value lines (`flowLayout.nodeFootprint`); circles and names stay inside
+  the drawing area. New Chromium test `e2e/telegram-flow-hub.e2e.ts` measures
+  a settled busy hub; it and 12 new or changed unit tests fail against the
+  previous sources.
+- §7 starting load (500 devices, ~2,500 lines, ~1,000 telegrams/s), 60 s,
+  motion on: long-task time 61.9 s → 22.2 s, frames at the 30 fps cap, but
+  the main thread stays above 0.9 (paint-bound). Recorded as the motion-on
+  envelope in KNOWN_LIMITATIONS §154 and the guide; Motion Off is the
+  recommendation for such buses. Details: TELEGRAM_FLOW_VISUALIZATION §14.
+- `FLOW-01` stays `IN_PROGRESS` until the AR21 rerun.
+
 ## 2026-10-05 — AR09: parameter-only time periods say so before a write
 
 - Numeric range pass over main types 5–9, 12–14 and 29 against DPT-AS: format

@@ -11,6 +11,9 @@ ran once, so the numbers are single samples, not distributions.
 | --- | --- |
 | `measurements.json` | Final run, with the 30 fps drawing cap (`FRAME_INTERVAL_MS = 32`) |
 | `measurements-before-frame-cap.json` | The same scenarios before the cap (60 fps), the basis for it |
+| `measurements-ar21-after.json` | AR21 corrections (2026-10-05): all scenarios incl. the §7 starting load |
+| `measurements-ar21-before.json` | The §7 scenarios with the flow sources of `origin/main` before the corrections |
+| `hub-before.png`, `hub-after.png` | A sender on 12 group addresses with 24 receivers, before and after hub separation |
 
 ## Scenarios
 
@@ -67,3 +70,21 @@ in the same batch. The second ran on the development build (React
 development checks). Fixing the first problem also exposed an e2e test that
 had passed without testing anything; it now checks the attribute and counts
 frames.
+
+## AR21 corrections (2026-10-05)
+
+Three scenarios at the §7 starting load were added: `target-load-motion`,
+`target-load-motion-off` (500 devices, 1,250 groups, 1,000 telegrams/s for
+15 s) and `target-load-motion-60s`. Group 0 now goes to two marker devices of
+its own: at high rates a marker on a busy device was pushed out of its
+three-value badge before it could be seen. Groups beyond the device count
+shift their targets, so the §7 load reaches ~2,500 distinct pairs instead of
+repeating ~1,000. For the U21 scenarios this adds two devices and changes the
+members of group 0 only. `FLOW_LOAD_FILE` names the output file.
+
+Both AR21 files were measured on a host shared with other sessions (load
+average 16–21 on 16 threads), so they are not directly comparable with the
+U21 files above; compare before with after. Results and reading:
+TELEGRAM_FLOW_VISUALIZATION §14. `hub-before.png` was taken with a scratch
+copy of the hub scenario of `e2e/telegram-flow-hub.e2e.ts` after 25 s with the
+`origin/main` flow sources; `hub-after.png` is the screenshot of that test.

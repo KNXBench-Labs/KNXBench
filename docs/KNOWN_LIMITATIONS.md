@@ -7646,7 +7646,9 @@ accepted set (11, 12, 13, 14, 20, exact 21).
 
 <a id="154-the-telegram-flow-view-is-static-and-checked-in-chromium-only"></a>
 
-**Status.** Introduced by U20 (2026-10-04); motion added by U21 parts A and B.
+**Status.** Introduced by U20 (2026-10-04); motion added by U21 parts A and B;
+local reheat and hub separation added by the AR21 corrections (2026-10-05,
+TELEGRAM_FLOW_VISUALIZATION §14).
 The bus monitor's **Flow** view (`TelegramFlowView.tsx`, reducer
 `flowModel.ts`, animator `flowAnimator.ts`; rules in
 TELEGRAM_FLOW_VISUALIZATION §11 and §12) is fed by the monitor's own poll
@@ -7668,9 +7670,22 @@ loop and the AR20 snapshot route. It is read-only.
   simultaneous pulses, telegrams are counted instead of drawn, and the view
   says so. Slower hardware and the packaged WebKitGTK app were not measured
   (docs/design/2026-10-04-telegram-flow-u21/).
+- **The §7 starting load saturates motion (measured, accepted envelope
+  pending AR21).** With 500 devices, ~2,500 lines and ~1,000 telegrams/s the
+  main thread stays above 90 % busy with motion on, with long tasks up to
+  about 0.33 s, even after the layout has come to rest; the cost is painting
+  the large SVG, not layout. Values then appear up to about 0.4 s after their
+  poll answer (up to ~1.9 s while the first layout settles). Motion Off brings
+  the same load to about 30 % (one sample on a busy host). There is no
+  automatic switch to Motion Off.
+- **Readability is approximated.** Neighbours keep clear of a node's circle,
+  name and value lines using an estimated text width of about twelve
+  characters; longer names can still touch, edge labels can cross node text,
+  and value lines may reach below the lower edge of the drawing area.
 - **Evidence.** Unit tests (happy-dom, fake scheduler) and Chromium e2e with
   intercepted synthetic traffic (`e2e/telegram-flow.e2e.ts`,
   `e2e/telegram-flow-motion.e2e.ts`, frames and intervals counted in the
-  page). No real-bus evidence, no native WebKitGTK run, no screen-reader
+  page; `e2e/telegram-flow-hub.e2e.ts`, rendered boxes of a settled busy
+  hub). No real-bus evidence, no native WebKitGTK run, no screen-reader
   check. Values and lines are hidden from assistive technology on purpose;
   the Inspector is the accessible path, and it has not been tried with Orca.

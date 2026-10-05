@@ -674,7 +674,8 @@ Parts A and B (published before the measurements of part C):
   while the layout cools or pulses run, and stops completely at rest.
   Growth or a leader change reheats it (0.3). The 5 s nudge (0.08) fires only
   when the windowed rates or the leader actually changed. The U19 study
-  nudged unconditionally, so its map never came to rest.
+  nudged unconditionally, so its map never came to rest. Since the AR21
+  corrections, every reheat is local and per node (§14).
 - **Motion.** `flowMotion.ts` reads the app's Motion level
   (`data-motion-level`, observed) and the OS `prefers-reduced-motion`
   (observed). Off cancels the pending frame, the nudge timer and every pulse
@@ -784,6 +785,100 @@ reported for this load; the cause was not determined.
    (not verified). The full suite is not reliably green.
 
 No hardware, no real bus and no KNX socket were used.
+
+## 14. AR21 corrections (goal-ui owner, 2026-10-05)
+
+Taken over from the alpha session's parked correction work by user decision
+(its uncommitted state was the starting point; the alpha session's earlier
+`u21-fix` worktree was not touched). Answers the three findings of §13.
+
+**1. Local reheat (§9.3), implemented.**
+
+- Heat is per node (`DynamicNode.heat`); `Dynamics.alpha` is only the hottest
+  node's heat. `reheatAround(layout, ids, edges, alpha)` heats the given
+  nodes and their direct neighbours along the current edges, nothing else.
+  The animator calls it with the new nodes, both ends of a new pair, and the
+  old and new leader (0.3), and with both ends of a pair whose activity class
+  changed or a node whose value block reached a new maximum height (0.08).
+  The whole-map reheat remains only for the first layout.
+- `step` moves hot nodes only and returns their ids. A settled node keeps its
+  exact position and gathers no velocity from a hot neighbour; it still
+  pushes hot nodes away. The view rewrites only the moved nodes and their
+  edges, and a node only after it moved at least 0.5 px since it was last
+  drawn.
+- Cooling follows the clock, not the frame count: when frames come slowly,
+  one step cools by `0.985^(elapsed / 32 ms)` (gaps above 1 s count as one
+  frame), so an overloaded page settles in the same wall time instead of
+  staying in the expensive phase longer.
+- Values that come and go do not move the map: only a value block taller
+  than the node ever showed nudges it.
+
+**2. Hub readability (§9.3), implemented.** `flowLayout.nodeFootprint`
+describes the area of a node's circle, name and value lines (the view draws
+with the same constants). After the forces of a step, each hot node is moved
+out of every neighbour's footprint plus 2 px, away from the neighbour's
+centre, half the way if the neighbour is hot too; a settled neighbour is not
+moved. The sum of these pushes is limited to one step (12 px), so a crowd
+cannot make a node jump. Circles and names are kept inside the drawing area;
+value lines may still reach below its lower edge. Text width is an estimate
+(about twelve characters of 11 px monospace): longer names can still touch a
+neighbour's text, and edge labels are not part of the footprint.
+`hub-before.png` / `hub-after.png` in
+docs/design/2026-10-04-telegram-flow-u21/ show a sender on 12 group addresses
+with 24 receivers before (all circles and texts piled on the hub) and after.
+
+**3. Flaky `group-address-drag.e2e.ts`.** Fixed on `main` by `0533230b`
+(the race named in §13: wait for the first summary before the `.all()`
+loop), with the user's go during the alpha lock. This package only adds it
+to the repeated runs of the gate.
+
+**Measured at the §7 starting load** (`flow-load.load.ts`, production build,
+headless Chromium 152, Ryzen 7 5800X; one sample each; the host was shared
+with other sessions, load average 16–21 on 16 threads, so absolute figures are
+higher than in a quiet run). 500 devices plus two marker devices, 1,250
+groups, 2,490 edges and 502 nodes drawn, ~1,000 telegrams/s. The study now
+reaches the distinct pairs of §7 and sends its markers to two devices of their
+own, so a value lag is reported (in §13 the markers were pushed out of a
+three-value badge by newer values). "Before" is the same study with the flow
+sources of `origin/main`.
+
+| Run (motion on unless noted) | Main thread | Long tasks (count, total) | Frame interval p50 / p95 | Marker lag (5 markers) |
+| --- | --- | --- | --- | --- |
+| 15 s, before | 0.999 | 138, 21.9 s | 200 / 483 ms | 0.8–1.7 s |
+| 15 s, after | 0.999 | 121, 17.2 s | 83 / 467 ms | 0.2–1.9 s |
+| 60 s, before | 0.999 | 433, 61.9 s | 167 / 350 ms | 0.9–1.5 s |
+| 60 s, after | 0.924 | 194, 22.2 s | 33 / 250 ms | 0.09–1.3 s |
+| 15 s, motion off, before / after | 0.29 / 0.33 | 9 / 15 | — | 0.08–0.4 s |
+
+Reading:
+
+- In the first ~12 s every node is new, so every node is hot either way; the
+  15 s run is dominated by that first layout.
+- After it, the layout comes to rest under full traffic: a scratch probe at
+  50 s counted no solver step in 5 s. Long-task time over the minute drops by
+  about 64 % and frames reach the 30 fps cap; the first marker of the 60 s run
+  fell into the first layout (1.3 s), the other four showed within 0.09–0.44 s.
+- **The motion-on envelope at this load stays saturated** (main thread above
+  0.9, long tasks up to ~0.33 s, so input can lag by that much). A Chromium
+  trace over 8 s in the settled phase spent ~6.2 s in Paint: the remaining
+  cost is repainting the 12,000-element SVG for pulses, the sending ring and
+  values, not layout. Drawing pulses in their own layer cut Paint to ~4.0 s in
+  one sample but not the main-thread total, so it was not adopted. Motion Off
+  remains the answer for buses this busy (0.3 in the same run, values within
+  0.1–0.4 s); the view, the guide and KNOWN_LIMITATIONS §154 say so.
+- The U21 scenarios (230 and 59 nodes) are unchanged within the noise of the
+  busier host: burst with motion 0.71 (U21: 0.69), session 0.26 (0.21).
+
+**Evidence.** Unit tests: `flowDynamics.test.ts` (local reheat, no momentum
+from hot neighbours, busy star without overlap of circles or text, value-line
+clearance, drawing area, bounded crowd push), `flowAnimator.test.ts` (new pair
+elsewhere, larger value block versus values coming and going, sub-pixel
+redraws, slow frames). They fail against the `origin/main` sources (12 of the
+new or changed tests). Chromium: `e2e/telegram-flow-hub.e2e.ts` measures the
+rendered circles, names and value lines of a settled busy hub and fails
+against the `origin/main` components (two circles overlap). 12 behavioural
+mutants in `flowDynamics.ts` and `flowAnimator.ts` were each killed by a named
+test; one equivalent mutant led to removing a redundant guard.
 
 ## Sources
 

@@ -18,7 +18,7 @@ sessions.
 
 ## Where things stand
 
-Row status of the 24 UI-owned source IDs lives in the
+Row status of the UI-owned source IDs lives in the
 [source-ID ledger](docs/status/LEDGER.md) (owner `ui`), per-row evidence in
 [UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md), deliveries in
 [IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md). The status narrative
@@ -27,13 +27,22 @@ that stood here (as of 2026-10-02) moved verbatim to
 2026-10-04 (AR14D D5, agreed by the goal-ui owner). The current top of
 `.ai/CURRENT_STATE.md` owns the Web-lock/publication state.
 
+**Reconciliation 2026-10-05:** U0–U18 and the UA1–UA8 deliveries are
+recorded below; U19 and U20 are delivered. U21's implementation receipt
+`fb40a99a` was returned with three findings by AR21; see
+[the acceptance review](docs/TELEGRAM_FLOW_VISUALIZATION.md#13-ar21-acceptance-review-alpha-2026-10-05).
+The alpha session claimed those corrections under the Web lock on 2026-10-05.
+Do not duplicate its active package or treat checked implementation boxes as
+final acceptance. Closure still requires the findings to be fixed, the new
+receipt reviewed, green integrated gates and a released lock (§4).
+
 ---
 
 ### Theme-pack extension (user request, 2026-10-02)
 
-**U14 contract, U15 runtime and U16 persistence/file foundations delivered.**
-**U17 implementation acceptance passed; publication is tracked in the current handover. U18 remains open.** The user requested
-theme follow-up tasks after
+**U14–U18 delivered.** U17's management delivery is `4d9073ca`; U18's
+closing delivery is `1964fd6b`, with the named evidence in their sections below.
+The user requested theme follow-up tasks after
 confirming the existing UI can switch built-in themes. U14–U18 add importable,
 exportable declarative theme packs; they do not rebuild the existing palette
 system. U0–U13 remain complete and the separately authorized alpha follow-up
@@ -53,10 +62,12 @@ is authoritative and browser storage is only its cache.
 
 The user confirmed [the nervous-system contract](docs/TELEGRAM_FLOW_VISUALIZATION.md)
 and authorized the responsible Goal sessions to implement it. **This is required
-Alpha scope**, unlike the earlier optional theme extension. U19–U21 below are
-new, open packages; completed U0–U18, owner follow-up/UA receipts and active work
-are not reopened or interrupted. Reconcile current published owner evidence at
-startup; stale local theme checkboxes do not overrule its delivery receipts.
+Alpha scope**, unlike the earlier optional theme extension. U19–U21 were added
+as open packages on 2026-10-04; their delivery evidence and the current AR21
+follow-up are recorded below and in the reconciliation above. Completed U0–U18,
+owner follow-up/UA receipts and another session's active work are not reopened
+or interrupted. Reconcile current published owner evidence at startup; stale
+local theme checkboxes do not overrule its delivery receipts.
 
 The alpha session owns only AR20's read-only participant/event contract and
 AR21's integrated acceptance. This UI session owns U19 design/handoff and all
@@ -402,7 +413,7 @@ regressions pass with unrelated settings unchanged; no new KNX API dependency.
 
 ### U17 — Add accessible theme management and reversible preview [web]
 
-**DONE — management delivered/read back as 4d9073ca; U18 remains open.**
+**DONE — management delivered/read back as 4d9073ca; U18 subsequently closed below.**
 Actual merged chain proc_cdcd42b97d47 passed all23 commands:17 repository and
 six offline inventory/execution commands. Web1,702/95 files, Chromium72 (zero
 failed/skipped/flaky), Rust2,984/0/165 across149 blocks,17 equal bindings and697

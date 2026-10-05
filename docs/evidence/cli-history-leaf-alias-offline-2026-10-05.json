@@ -1,0 +1,164 @@
+{
+  "scope": "focused offline dangling leaf input/history admission, not integrated/publication acceptance",
+  "source_base": "efde6bf81934835ce237a1618e6c4ccca842585a",
+  "source_files": {
+    "apps/knx-cli/src/activity_history_paths.rs": "7c8d498d8f3cf19aa91d1cff373db86dd8ffc65fb9cc61870fac651fbf040dda",
+    "apps/knx-cli/tests/cli_compare_activity.rs": "c4547938dcf1d22bd23808c220b624ef8db13cb6a340be75ece619090775ed88"
+  },
+  "red": {
+    "accepted_red": true,
+    "exit": 101,
+    "log_sha256": "3099f2c377a30b41d3555778d17ba4c91946f76221d1578d46a6dde4a9a8e4a3"
+  },
+  "green": {
+    "scope": "CLI compare candidate focused GREEN; not whole integration/publication",
+    "accepted": true,
+    "stages": [
+      {
+        "stage": "format-cli",
+        "exit": 0,
+        "accepted": true,
+        "passed": 0,
+        "failed": 0,
+        "log_sha256": "a92a20cde7c61e0eb1c26177f0e810e86921435b6b26d1f7ab5f2e9f1d68d29e"
+      },
+      {
+        "stage": "fmt",
+        "exit": 0,
+        "accepted": true,
+        "passed": 0,
+        "failed": 0,
+        "log_sha256": "a92a20cde7c61e0eb1c26177f0e810e86921435b6b26d1f7ab5f2e9f1d68d29e"
+      },
+      {
+        "stage": "compare-unit",
+        "exit": 0,
+        "accepted": true,
+        "passed": 6,
+        "failed": 0,
+        "log_sha256": "76d18d6be68f8362fcf984c0eda865015bbfdd6342b6ae5e7d1c8c2660133b4b"
+      },
+      {
+        "stage": "compare-entrypoints",
+        "exit": 0,
+        "accepted": true,
+        "passed": 8,
+        "failed": 0,
+        "log_sha256": "81b0ab21d537436f186b4d914074293c2bf068282f9524a7e41783779fda8806"
+      },
+      {
+        "stage": "reader-regression",
+        "exit": 0,
+        "accepted": true,
+        "passed": 7,
+        "failed": 0,
+        "log_sha256": "5b4bce6e6bb58a6494f1dc2045d4f64043d1e14c9200715e7c736d033d837713"
+      },
+      {
+        "stage": "cli-clippy",
+        "exit": 0,
+        "accepted": true,
+        "passed": 0,
+        "failed": 0,
+        "log_sha256": "81f03785c42d9fcc4753571e741f91b8a5e7f39827b573c1e1b335be6e24b3f3"
+      }
+    ]
+  },
+  "controls": {
+    "scope": "seven focused offline compare source controls; no release acceptance",
+    "controls": [
+      {
+        "case": "alias-admission",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "0b3c08db31c5423baecad7ee46b6721590be83abc06a65d9e51c9dcd6623e71b",
+          "fe37ce831b64a2188fd64455edfd863bce5b70fbc0362d85e9d1902f28f7ddd8",
+          "a46b2f5d330090c984cb13a8a570f1ff8d327eaeb72e4721bef61fd4229b9685"
+        ]
+      },
+      {
+        "case": "explicit-history-admission",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "84b9b08ac6b0803f6d8fe977ccf31a2fb2f7e5089aac8aaad22448de46a51235",
+          "0ea31949439b12d921ec51a0f7536ec868d4401f975f7341a8cd62461aa9cebb",
+          "b7c697fbf6956bb3eb6f7b0573922a99fa721f99e8b63d472b95af6619ebee73"
+        ]
+      },
+      {
+        "case": "durable-start-wiring",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "dbea44547655dba108c4ccddedad7f9faac0d04744805970a34ae6359ea74642",
+          "f0c05a76caf27144889cc8f534876cf132ca29b53db2863adfdee4b3bc9ee417",
+          "b041a574b4b32b6018f355a786795e93b10a14001759f18b78282132acba4d18"
+        ]
+      },
+      {
+        "case": "duplicate-history-option",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "2f1e0242a99de04ac7b161912c74cf438543f315ae50fbda07831278e4135b57",
+          "adfba821319040547952bfec48ed8b15cfbe447cc07b092651934ee758db0170",
+          "f3ecd3735efc9f395ad5931c0cd6b58f8649e6ec0e609b0a9a416f56237c317a"
+        ]
+      },
+      {
+        "case": "missing-destination-admission",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "333de9c89bc231e9dcc4c51b6b25e06b541fdffaa0de9fcf1ba9676f568ffec6",
+          "c450d8352c2ba62a20a7605d79d13b840101ad1e72ab3092ec5417ca8f2ee80f",
+          "6c83b09af7d82991220bccb6cceaf36f83bbd49e0d3891c89956ebb9a58dc1df"
+        ]
+      },
+      {
+        "case": "missing-parent-alias-admission",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "38ec2fc82a7441be05f23afcbe8ea552e791ecfcba84d4d23f502fc3d56b89e2",
+          "4c6db0a10f9e2eb3c411ba53c73beb1e4b8b300424e20473c61d9f778b8d05c6",
+          "1d8af83111d61e5a662158d8d5b194c2e6e269ab9d916e84c81fcfad7a178fc7"
+        ]
+      },
+      {
+        "case": "missing-leaf-alias-admission",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "ec0130c84304f981893167e003b293996e4647ad13f1515b52a45a70e5b61069",
+          "676788c027f6500f6015f74924c807b189c22aacb8a8af6af61aab7c47daa934",
+          "4eb9bb69ea7130c6cd352baa43a369c3f600ca66bd9c88bddb12d979f0008e96"
+        ]
+      }
+    ],
+    "source_restored": true,
+    "positive_exit": 0,
+    "parser_exit": 0,
+    "accepted": true
+  },
+  "hardware_contacts": false,
+  "web_source_edits": false,
+  "publication": false,
+  "boundary": "Unresolved leaf symlink destinations are refused before history creation, not followed or repaired. Canonical file/existing-parent/Unix hard-link checks remain admission-time only, without hostile-race guarantees."
+}

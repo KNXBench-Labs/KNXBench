@@ -17,12 +17,16 @@ retains uncertainty, not proof of clean bus shutdown. Cleanup error reporting
 remains separate from the comparison result. History does not grant write
 authority and is not a recovery image.
 
-The shared input helper also refuses identical requested history/product
-paths **before either file exists**. This closes a self-review finding affecting
-download, restore and compare, without changing product storage. Existing
-canonical/symlink and Unix hard-link admission remains. This is not an
-adversarial filesystem-replacement guarantee or complete alias detection for
-nonexistent paths reached through different unresolved parent components.
+The shared input helper refuses identical requested history/product paths
+**before either file exists**, including destinations reached through existing
+parent symlinks or `child/..`. Existing final-file canonical and Unix hard-link
+identities are checked too. An unresolved leaf symbolic-link destination is
+explicitly refused before history creation rather than followed or repaired.
+This closes shared download/restore/compare admission findings without changing
+product storage. It remains admission-time protection, not a hostile filesystem
+replacement/race guarantee. [Later focused parent/leaf receipt](evidence/cli-history-leaf-alias-offline-2026-10-05.json)
+contains6 unit/8 entrypoint/7 reader positives and7 restored source controls;
+the earlier counts below retain their original historical scope.
 
 [Focused offline receipt](evidence/cli-compare-history-offline-2026-10-05.json):
 six compare unit tests, six CLI entrypoint tests (including six existing-alias

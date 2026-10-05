@@ -144,7 +144,14 @@ const SIGNED64_RANGE_TYPO_CORRECTED: DptEncodingRuling = DptEncodingRuling {
     decision: "use the signed i64 range printed in the datapoint rows, correcting the format row's missing minus sign",
 };
 
+const TIME_PERIOD_RAW_COUNTER_PARAMETER_ONLY: DptEncodingRuling = DptEncodingRuling {
+    id: "time-period-raw-counter-parameter-only",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §3.8.3 footnote 6 and §3.9.3 footnote a",
+    decision: "keep the raw counter (1 = 10 ms, 100 ms or 1 min); the Standard allows these subtypes only for parameters and diagnostics, not runtime communication",
+};
+
 const NO_RULINGS: &[DptEncodingRuling] = &[];
+const TIME_PERIOD_RULINGS: &[DptEncodingRuling] = &[TIME_PERIOD_RAW_COUNTER_PARAMETER_ONLY];
 const ANGLE_RULINGS: &[DptEncodingRuling] = &[SCALED_ANGLE_LINEAR_MAPPING];
 const STATUS_MODE_RULINGS: &[DptEncodingRuling] = &[STATUS_MODE_FORMAT_RANGE];
 const SENTINEL_RULINGS: &[DptEncodingRuling] = &[INVALID_SENTINEL_PRECEDENCE];
@@ -166,6 +173,7 @@ pub const fn encoding_rulings(dpt: DptRef) -> &'static [DptEncodingRuling] {
     match (dpt.main, dpt.sub) {
         (5, Some(3)) => ANGLE_RULINGS,
         (6, Some(20)) => STATUS_MODE_RULINGS,
+        (7 | 8, Some(3 | 4 | 6)) => TIME_PERIOD_RULINGS,
         (8, Some(10)) | (9, _) => SENTINEL_RULINGS,
         (17 | 18 | 26, _) => SCENE_RULINGS,
         (19, _) => DATETIME_RULINGS,
@@ -1272,6 +1280,9 @@ fn encode_status_mode3(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecE
 // period family (7.002-7.007), a fixed display multiplier this codec does
 // not apply (it decodes the raw counter, not the multiplied duration —
 // that is a unit concern, out of this slice's scope per the design doc).
+// 7.003, 7.004 and 7.006 (and 8.003, 8.004, 8.006) are marked "Not allowed
+// for runtime communication" (§3.8.3 footnote 6, §3.9.3 footnote a); the
+// `time-period-raw-counter-parameter-only` ruling discloses both facts.
 // 7.012's raw `0` has a documented special *meaning* ("no bus power
 // supply functionality available", DPT-AS §3.8.3) but is not flagged as
 // invalid data by the Standard, so it decodes as an ordinary `Unsigned(0)`.
@@ -3147,6 +3158,40 @@ mod tests {
         assert_eq!(ids(dpt(28, None)), ["strict-null-termination"]);
         assert_eq!(ids(dpt(29, None)), ["signed64-range-typo-corrected"]);
         assert!(ids(dpt(1, Some(1))).is_empty());
+    }
+
+    #[test]
+    fn parameter_only_time_periods_disclose_their_raw_counter() {
+        // DPT-AS §3.8.3 (7.003/7.004/7.006, footnote 6) and §3.9.3
+        // (8.003/8.004/8.006, footnote a): resolution 10 ms/100 ms/1 min
+        // and "Not allowed for runtime communication". The codec keeps the
+        // raw counter, so a caller must be able to see that before a write.
+        for (main, sub) in [(7, 3), (7, 4), (7, 6), (8, 3), (8, 4), (8, 6)] {
+            let rulings: Vec<_> = encoding_rulings(dpt(main, Some(sub)))
+                .iter()
+                .map(|ruling| ruling.id)
+                .collect();
+            assert_eq!(
+                rulings,
+                ["time-period-raw-counter-parameter-only"],
+                "{main}.{sub:03}"
+            );
+        }
+        for (main, sub) in [
+            (7, 1),
+            (7, 2),
+            (7, 5),
+            (7, 7),
+            (8, 1),
+            (8, 2),
+            (8, 5),
+            (8, 7),
+        ] {
+            assert!(
+                encoding_rulings(dpt(main, Some(sub))).is_empty(),
+                "{main}.{sub:03} has unit resolution and runtime use"
+            );
+        }
     }
 
     #[test]

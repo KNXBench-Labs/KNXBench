@@ -1,9 +1,35 @@
 - **Last Agent:** Claude
-- **Timestamp:** 2026-10-05 10:59 CEST
+- **Timestamp:** 2026-10-05 11:00 CEST
 - **Completed:** AR09 step 1 (format widths) done locally: spec-width audit test for main types 1-30; defect 17.001 encoded inline (6-bit form) fixed to a 1-octet payload, reserved bits refused, pinned tests rewritten, two compiled mutants killed, knx-core 678/0/0. KL-61 ledger row -> IN_PROGRESS (snapshot counts recounted). Earlier claim: This alpha-release-goal session takes AR09 (`KL-61`, P1) in worktree alpha-dpt-audit; first step is a read-only DPT codec audit against 03_07_02 Datapoint Types v02.02.01 AS (local knx-spec-kb), recorded under docs/spec-audits/. AR06Y published at 3282d3f8 and cleaned up.
 - **Pending/Next Steps:** Audit main types 1-30 (format, range, resolution, special values) against DPT-AS; fix only proven format defects with RED tests; then the GA-declared-DPT vs linked-object question (ADR first if modelling changes). AR07 is not touched.
-- **Notes for Codex oder Claude:** Please skip AR09 while this claim stands. Web lock: held by claude-alpha per the owner entries below; not taken or released by this entry.
+- **Notes for Codex oder Claude:** Please skip AR09 while this claim stands. Web lock: held by claude-goal-ui-owner per the owner entries below; not taken or released by this entry.
 - **Gate:** Integrated public16 on f3b4fd34 independently accepted: 16 exit0, Rust 3247/0/177 in 181 blocks, Web 2001, Chromium 131 plus probe 1, 887 frozen inputs, CLI knx 0.1.0-alpha.4+gf3b4fd34. Evidence: evidence/alpha-release/ar09-dpt-widths-20261005. Next AR09 step: range/special-value audit per subtype, then GA-declared DPT vs linked object.
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-10-05 10:53
+Web lock: held by claude-goal-ui-owner for U21 corrections; not taken or released by this entry
+- **Completed:** Owner reconciliation of all 42 commission rows in `docs/status/LEDGER.md` (user go 2026-10-05). 36 WAITING_OWNER rows → ACCEPTED_BOUNDARY (11 hardware, 11 reference, 10 verified-scope, 2 recorded-scope) or LATER (`KL-110`, `GAP-T30-04`), each citing the 2026-10-04 user scope decision and its safe fallback. `SAFE-03`, `DEBUG-01` → ACCEPTED_BOUNDARY; `AUDIT-01` → DONE at commissioning scope (tests named, receipt for `ae567d00`). Counts recomputed by script; `check-ledger` 186 rows, anchors 531. Summary section in COMMISSIONING_ALPHA_LEDGER, status line in goal-commission §3. Docs only.
+- **Pending/Next Steps:** Commissioning open rows: only `KL-142` and `UI-04` (Web halves, UI owner, handoff table in COMMISSIONING_ALPHA_LEDGER). When they land, the goal gets its final status line.
+- **Notes for Codex oder Claude:** An accepted boundary is a refusal or bounded claim, not new support; hardware writes stay fail-closed. My previous chat summary said 13 hardware and 13 reference rows; the mechanical count is 11/11 (plus 10 verified, 2 recorded, 2 later). Alpha controller: Owner/Route of `KL-142` still to change.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 10:43 CEST
+Web lock: taken by claude-goal-ui-owner for U21 corrections (AR21 findings 1–3), taken over from claude-alpha by user decision
+- **Completed:** Lock taken only. User decision 2026-10-05 ("übernimm U21"): the goal-ui owner takes the three AR21 findings back (local reheat, hub readability, flaky `group-address-drag.e2e.ts`). claude-alpha's `u21-fix` worktree (9 uncommitted files, unchanged since 06:17) is backed up to the owner's scratch and used as the starting point; the worktree itself is left untouched for its owner.
+- **Pending/Next Steps:** Finish the corrections with RED tests, mutants and a measurement at the §7 load in worktree `ui-u21-corrections`; full gates; change the U21 status line in `goal-ui.md` (triggers the AR21 watch); release the lock in the delivering entry.
+- **Notes for Codex oder Claude:** claude-alpha: these rows are no longer yours; please do not continue in `u21-fix` and do not edit `apps/knx-web` until this lock is released. Your local work is preserved and will be credited in the delivery entry. No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-05 10:40 CEST
+- **Completed:** Claim only. This alpha-release-goal session takes AR09 (`KL-61`, P1) in worktree alpha-dpt-audit; first step is a read-only DPT codec audit against 03_07_02 Datapoint Types v02.02.01 AS (local knx-spec-kb), recorded under docs/spec-audits/. AR06Y published at 3282d3f8 and cleaned up.
+- **Pending/Next Steps:** Audit main types 1-30 (format, range, resolution, special values) against DPT-AS; fix only proven format defects with RED tests; then the GA-declared-DPT vs linked-object question (ADR first if modelling changes). AR07 is not touched.
+- **Notes for Codex oder Claude:** Please skip AR09 while this claim stands. Web lock: held by claude-alpha per the owner entries below; not taken or released by this entry.
 
 ---
 

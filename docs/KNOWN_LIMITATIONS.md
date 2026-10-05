@@ -879,8 +879,10 @@ that server-named id instead of the declared one (D43).
   not `ReadWrite` is listed but read-only, with a `parameterAccessReadOnly`
   warning; a write is refused with 400. The precedence of the two levels is
   an inference (ADR-0080); with neither present the field stays writable,
-  because no default is documented here. `None` fields are still shown:
-  hiding them is the UI owner's presentation decision. *Superseded
+  because no default is documented here. The panel folds `None` fields
+  away by default behind a per-section button that counts them and shows
+  them read-only on request (UI owner, ADR-0080 "UI presentation"); they are
+  never dropped, and the section's warning stays visible. *Superseded
   sentence (2026-09-14):* "the editor shows `access` verbatim and never uses
   it to block, hide or grey out a write" — RESEARCH §4.3 had looked for a
   `Memory` correlation (roughly 50/50), not for the type's own definition.
@@ -7036,7 +7038,8 @@ hidden. Public ingest/load, nested-scope, source-reopen, HTTP hidden-field refus
 and Undetermined projection checks pass; six behavioral mutants are detected.
 This is a 1,118/0/57 public two-crate candidate, not new whole-corpus counts or
 ETS parity. The warning token/English fallback is on the backend wire; Web's
-manual union/localized catalogue adoption remains with UI, not completed here.
+manual union and English/German catalogue adopted it on 2026-10-05 (UI owner,
+with ADR-0080's tokens).
 The corrected broad candidate is independently verified at 13/13: workspace
 2,924/0/164, Web 1,357 and six selected private Dynamic tests 6/0/0; all 103
 original archive hashes unchanged, no genuine skips or private raw logs. This

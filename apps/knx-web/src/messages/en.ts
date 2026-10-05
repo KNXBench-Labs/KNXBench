@@ -446,6 +446,7 @@ export const messages = {
   // `ParameterPanel.tsx`.
   "parameters.deviceScope": "Device",
   "parameters.moduleNumber": "Module #{number}",
+  "parameters.readOnlyCaption": "Not editable here — see the warnings for why.",
   "parameters.sharedReadOnlyCaption":
     "Shared across every instantiation of this module; not editable here — see the diagnostics for why.",
   "parameters.staleValuesHeading": "Stale values ({count})",
@@ -505,6 +506,15 @@ export const messages = {
     "A module argument could not be matched to the module's declaration and was ignored.",
   "parameters.diagnostic.unsupportedModuleArgumentKind":
     "A module argument uses a kind this build does not interpret and was ignored.",
+  "parameters.diagnostic.unsupportedControlKind": "A choice's controlling parameter uses an unsupported type; its branches were not evaluated.",
+  "parameters.diagnostic.evaluationWorkBudgetExhausted": "This program exceeded the evaluation work limit; its incomplete parameter panel is read-only.",
+  "parameters.diagnostic.parameterAccessReadOnly": "Some fields are declared read-only or hidden by the manufacturer (Access); they are not writable.",
+  "parameters.diagnostic.manufacturerCalculation": "Some fields are inputs or results of a manufacturer calculation that KNXBench does not run; they are read-only.",
+  "parameters.diagnostic.writeAuthorityUnavailable": "The product database has no recorded write authority for this program; its fields are read-only. Reinstall the product to record it.",
+  "parameters.noAccess.show.one": "Show {count} field without user access (Access None)",
+  "parameters.noAccess.show.other": "Show {count} fields without user access (Access None)",
+  "parameters.noAccess.hide.one": "Hide {count} field without user access (Access None)",
+  "parameters.noAccess.hide.other": "Hide {count} fields without user access (Access None)",
   "parameters.diagnostic.unresolvedTextPlaceholder":
     "A text placeholder had no matching module argument and was left as written.",
 

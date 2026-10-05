@@ -547,4 +547,91 @@ describe("ParameterPanel", () => {
 
     root.unmount();
   });
+
+  // ADR-0080 adoption (UI owner): the write-authority reasons are translated
+  // like every other kind, and `Access=None` fields — no user right to view
+  // or modify (Project Schema23 §1.1.2.1) — are folded away by default, with
+  // their count, and stay one click from view; nothing is dropped.
+  const field = (etsId: string, access: string | null, editable = access === null || access === "ReadWrite") => ({
+    ...fixture.sections[0].fields[0], etsId, name: `Field ${etsId}`, access, editable,
+    writeEtsId: editable ? etsId : null,
+  });
+  const authorityPanel = (fields: ReturnType<typeof field>[], kinds: string[]): ParameterPanelDto => ({
+    ...fixture,
+    sections: [{ scope: null, fields }],
+    stale: [],
+    diagnostics: kinds.map((kind) => ({
+      scope: null, kind: kind as ParameterPanelDto["diagnostics"][number]["kind"], severity: "warning" as const,
+      message: `server English for ${kind}`, detail: "2 field(s), effective Access is not ReadWrite: X, Y",
+    })),
+  });
+
+  it.each([
+    ["parameterAccessReadOnly", "Einige Felder hat der Hersteller schreibgeschützt oder verborgen (Access); sie sind nicht beschreibbar."],
+    ["manufacturerCalculation", "Einige Felder sind Ein- oder Ausgaben einer Herstellerberechnung, die KNXBench nicht ausführt; sie sind schreibgeschützt."],
+    ["writeAuthorityUnavailable", "Die Produktdatenbank hat für dieses Programm keine Schreibberechtigung erfasst; seine Felder sind schreibgeschützt. Installieren Sie das Produkt neu, um sie zu erfassen."],
+    ["unsupportedControlKind", "Der steuernde Parameter einer Auswahl hat einen nicht unterstützten Typ; ihre Zweige wurden nicht ausgewertet."],
+    ["evaluationWorkBudgetExhausted", "Dieses Programm hat die Auswertungsgrenze überschritten; seine unvollständige Parameteransicht ist schreibgeschützt."],
+  ])("translates the %s reason instead of showing the server's English", async (kind, german) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
+    apiMock.deviceParameters.mockResolvedValue(authorityPanel([field("A", "ReadWrite")], [kind]));
+    const root = await renderPanel();
+    expect(host!.querySelector(".parameter-section")!.textContent).toContain(german);
+    expect(host!.textContent).not.toContain(`server English for ${kind}`);
+    root.unmount();
+  });
+
+  it("folds Access=None fields away by default, counts them, and shows them read-only on request", async () => {
+    apiMock.deviceParameters.mockResolvedValue(authorityPanel(
+      [field("A", "ReadWrite"), field("B", "None"), field("C", "Read"), field("D", "None")], ["parameterAccessReadOnly"]));
+    const root = await renderPanel();
+    const section = host!.querySelector(".parameter-section")!;
+    const shown = () => [...section.querySelectorAll(".parameter-field")].map((row) => row.getAttribute("data-ets-id"));
+    expect(shown()).toEqual(["A", "C"]);
+    const toggle = section.querySelector<HTMLButtonElement>(".parameter-hidden-toggle")!;
+    expect(toggle.textContent).toBe("Show 2 fields without user access (Access None)");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    await act(async () => toggle.click());
+    expect(shown()).toEqual(["A", "B", "C", "D"]);
+    expect(toggle.textContent).toBe("Hide 2 fields without user access (Access None)");
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    for (const id of ["B", "C", "D"]) {
+      const row = section.querySelector(`.parameter-field[data-ets-id="${id}"]`)!;
+      expect(row.querySelector<HTMLInputElement | HTMLSelectElement>("input, select")!.disabled).toBe(true);
+    }
+    root.unmount();
+  });
+
+  it("offers no fold for a section without Access=None fields", async () => {
+    apiMock.deviceParameters.mockResolvedValue(authorityPanel([field("A", "ReadWrite"), field("C", "Read")], []));
+    const root = await renderPanel();
+    expect(host!.querySelector(".parameter-hidden-toggle")).toBeNull();
+    expect(host!.querySelectorAll(".parameter-field").length).toBe(2);
+    root.unmount();
+  });
+
+  it("counts a single hidden field in the singular", async () => {
+    apiMock.deviceParameters.mockResolvedValue(authorityPanel([field("B", "None")], ["parameterAccessReadOnly"]));
+    const root = await renderPanel();
+    expect(host!.querySelector(".parameter-hidden-toggle")!.textContent).toBe("Show 1 field without user access (Access None)");
+    expect(host!.querySelectorAll(".parameter-field").length).toBe(0);
+    root.unmount();
+  });
+
+  it("does not call a device-level read-only field shared across module instantiations", async () => {
+    apiMock.deviceParameters.mockResolvedValue({
+      ...authorityPanel([field("C", "Read")], ["parameterAccessReadOnly"]),
+      sections: [
+        { scope: null, fields: [field("C", "Read")] },
+        fixture.sections[1],
+      ],
+    });
+    const root = await renderPanel();
+    const [device, module] = [...host!.querySelectorAll(".parameter-section")];
+    expect(device.querySelector(".parameter-field-caption")!.textContent).toBe(
+      "Not editable here — see the warnings for why.");
+    expect(module.querySelector(".parameter-field-caption")!.textContent).toContain(
+      "Shared across every instantiation of this module");
+    root.unmount();
+  });
 });

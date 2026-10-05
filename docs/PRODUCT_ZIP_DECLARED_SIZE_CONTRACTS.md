@@ -101,8 +101,11 @@ counts are not additive and are not relabelled as this execution.
 
 The release CLI is `knx 0.1.0-alpha.1+g2e188226`; these public tests do not
 resolve another owner’s AR21 performance/manual findings or establish
-private-corpus, live-hardware or full Alpha acceptance. Final documentation/
-upstream reconciliation and publication remain pending. KL-151 IN_PROGRESS.
+private-corpus, live-hardware or full Alpha acceptance. Final documentation gates6 passed on `425f3407`; that source/evidence
+publication was pushed to main and remote-readback verified, including all
+871 source hashes and the four-test fixture. Runtime evidence remains
+identified by `2e188226`, not retagged to later metadata. KL-151 IN_PROGRESS.
+Own-only hygiene and shutdown metadata follow this publication.
 
 The original receipts, logs, six accepted binaries and intended control-source
 deltas were archived and hash-checked in 70 files (345,219,799 bytes) at the

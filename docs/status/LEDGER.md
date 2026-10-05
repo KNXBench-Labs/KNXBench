@@ -33,7 +33,7 @@ evidence, fallback, unblock) and [UI_ALPHA_READINESS](../UI_ALPHA_READINESS.md)
 
 ## Counts
 
-- **Snapshot IDs** (180 rows) — status: TODO=23, IN_PROGRESS=5, DONE=29, BLOCKED_EXTERNAL=4, WAITING_OWNER=39, WAITING_DECISION=1, ACCEPTED_BOUNDARY=58, LATER=21; owner: alpha=94, commission=42, later=19, ui=25; priority: P0=4, P1=29, P2=87, P3=60.
+- **Snapshot IDs** (180 rows) — status: TODO=22, IN_PROGRESS=6, DONE=29, BLOCKED_EXTERNAL=4, WAITING_OWNER=39, WAITING_DECISION=1, ACCEPTED_BOUNDARY=58, LATER=21; owner: alpha=94, commission=42, later=19, ui=25; priority: P0=4, P1=29, P2=87, P3=60.
 - **Post-snapshot IDs** (6 rows) — status: IN_PROGRESS=3, DONE=3; owner: alpha=6; priority: P1=2, P2=4.
 
 ## Snapshot IDs
@@ -48,7 +48,7 @@ former routing table.
 | `KL-140` | P0 | commission | `goal-commission.md` — owner only | ACCEPTED_BOUNDARY | RECORDED_SCOPE | docs/KNOWN_LIMITATIONS.md §140; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above **User decision 2026-10-05:** a missing HTTP/UI address reset is accepted as a safely refused unsupported boundary (user notice, no UI build); the CLI reset keeps failing closed before any tunnel (ADR-0058). New hardware reset/recovery validation is out of scope by the user decision of 2026-10-04. Reopen only on a new decision. |
 | `SAFE-01` | P0 | commission | `goal-commission.md` — owner only | WAITING_OWNER | BLOCKED_HARDWARE | goal-commission.md status / docs/RESEARCH.md §22–24; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-79` | P1 | ui | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §79; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above. UI owner checkpoint 2026-10-04 10:00: **User decision 2026-10-04:** native WebKitGTK/Tauri, Orca, native file chooser, dead-WebView, real multicast and real-device web evidence leave the Alpha scope. Offline parts stay delivered (KL-20 keyboard/modal `2e57f8e5`, KL-79 offline UDP loopback at U13). Still required: Nothing for the Alpha. Release notes must keep these as disclosed, unverified boundaries, not claims |
-| `KL-61` | P1 | alpha | AR09 | TODO | — | docs/KNOWN_LIMITATIONS.md §61; Retained boundary; AR09 verifies subcases before changing status |
+| `KL-61` | P1 | alpha | AR09 | IN_PROGRESS | — | docs/KNOWN_LIMITATIONS.md §61; Retained boundary; AR09 verifies subcases before changing status AR09 2026-10-05: format-width audit of main types 1-30 against DPT-AS ([audit](../spec-audits/2026-10-05-dpt-format-widths.md)); 17.001 fixed to a 1-octet payload (was 6-bit inline). Ranges/special values and the GA-declared-DPT question remain. |
 | `KL-99` | P1 | commission | `goal-commission.md` — owner only | WAITING_OWNER | VERIFIED_SCOPE | docs/KNOWN_LIMITATIONS.md §99; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-112` | P1 | commission | `goal-commission.md` — owner only | WAITING_OWNER | VERIFIED_SCOPE | docs/KNOWN_LIMITATIONS.md §112; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-136` | P1 | commission | `goal-commission.md` — owner only | WAITING_OWNER | BLOCKED_HARDWARE | docs/KNOWN_LIMITATIONS.md §136; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |

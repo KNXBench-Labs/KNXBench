@@ -30,6 +30,7 @@ EXPOSE 8080
 # `POST /api/bus/discover` sends KNXnet/IP multicast. Docker's default bridge
 # does not carry that request onto the LAN, so run this image with
 # `--network host` on Linux for any bus work. Through the bridge a tunnel gets
-# no answer either: the gateway replies to the private container address. See
-# docs/KNOWN_LIMITATIONS.md #79 and #155.
+# no answer either, because the gateway replies to the private container
+# address, unless KNX_TUNNEL_ROUTE_BACK=1 asks it to answer the packet's
+# source. See docs/KNOWN_LIMITATIONS.md #79 and #155.
 ENTRYPOINT ["/usr/local/bin/knx-server"]

@@ -137,6 +137,10 @@ export interface FlowEvent {
   gaLabel: string;
   service: string;
   observedAtMs: number;
+  /** AR21 finding 6: false when the model refused the sender (then `to` is
+   * empty) or any recipient at its node limit, so the telegram cannot be
+   * drawn completely. */
+  complete: boolean;
 }
 
 export interface FlowCounters {
@@ -153,6 +157,9 @@ export interface FlowCounters {
   refusedSlots: number;
   pendingOverflow: number;
   eventsDropped: number;
+  /** Events ever recorded; with `events` this tells a reader how many were
+   * pushed out of the ring before it looked (AR21 finding 7). */
+  eventsRecorded: number;
 }
 
 export interface FlowModel {
@@ -193,7 +200,7 @@ export function createFlowModel(
     closed: false,
     counters: {
       admitted: 0, duplicates: 0, legacy: 0, malformed: 0, markers: 0, reads: 0, noValue: 0, unknownAge: 0,
-      refusedNodes: 0, refusedEdges: 0, refusedSlots: 0, pendingOverflow: 0, eventsDropped: 0,
+      refusedNodes: 0, refusedEdges: 0, refusedSlots: 0, pendingOverflow: 0, eventsDropped: 0, eventsRecorded: 0,
     },
     sendTimes: new Map(),
     leader: null,
@@ -400,18 +407,26 @@ function pushBounded(times: number[], at: number, limit: number): void {
   if (times.length > limit) times.splice(0, times.length - limit);
 }
 
-function recordActivity(model: FlowModel, entry: QueuedRow, source: FlowNode, targets: FlowNode[], nowMs: number): void {
+function recordActivity(model: FlowModel, entry: QueuedRow, source: FlowNode, targets: FlowNode[], nowMs: number, complete: boolean): void {
   const at = entry.observedAtMs;
   // Without an observation time a row cannot be placed in the window.
   if (at === null) return;
   const times = model.sendTimes.get(source.id) ?? [];
   pushBounded(times, at, MAX_TIMES_PER_SOURCE);
   model.sendTimes.set(source.id, times);
-  if (at < nowMs - FRESH_EVENT_MS) return;
+  recordEvent(model, entry, source, targets, nowMs, complete);
+}
+
+/** A fresh row becomes a pulse event; a refused sender's row becomes a
+ * lineless one, so the renderer can count it as not drawn (AR21 finding 6). */
+function recordEvent(model: FlowModel, entry: QueuedRow, source: FlowNode, targets: FlowNode[], nowMs: number, complete: boolean): void {
+  const at = entry.observedAtMs;
+  if (at === null || at < nowMs - FRESH_EVENT_MS) return;
   model.events.push({
     seq: entry.row.seq, from: source.id, to: targets.map((target) => target.id), gaRaw: entry.destinationRaw,
-    gaLabel: entry.row.destination, service: entry.row.service, observedAtMs: at,
+    gaLabel: entry.row.destination, service: entry.row.service, observedAtMs: at, complete,
   });
+  model.counters.eventsRecorded += 1;
   const limit = model.limits.maxEvents ?? DEFAULT_MAX_EVENTS;
   if (model.events.length > limit) {
     const dropped = model.events.length - limit;
@@ -447,9 +462,12 @@ function apply(model: FlowModel, entry: QueuedRow, context: FlowContext, nowMs: 
   const keptTargets = targets.filter((target) => ensureNode(model, target));
   if (sourceKept) {
     for (const target of keptTargets) touchEdge(model, source, target, entry, group);
-    recordActivity(model, entry, source, keptTargets, nowMs);
-  } else if (keptTargets.length > 0) {
-    model.counters.refusedEdges += keptTargets.length;
+    recordActivity(model, entry, source, keptTargets, nowMs, keptTargets.length === targets.length);
+  } else {
+    if (keptTargets.length > 0) model.counters.refusedEdges += keptTargets.length;
+    // The sender has no node, so it gets no send times; the telegram still
+    // happened and is accounted for as not drawn.
+    recordEvent(model, entry, source, [], nowMs, false);
   }
 
   const { row } = entry;

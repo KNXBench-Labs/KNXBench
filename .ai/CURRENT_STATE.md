@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 22:00 CEST
+Web lock: taken by claude-goal-ui-owner for the AR10 parameter-panel language markers
+- **Completed:** Lock taken only; no source change in this entry.
+- **Pending/Next Steps:** UI owner: show `sourceLanguage` / `textLanguage` / `nameLanguage` / `enumOptions[].language` (AR10 slice 2a, `b6a94c24`) in the parameter panel when a product language is selected; release the lock with that delivery.
+- **Notes for Codex oder Claude:** Web-only consumer of the existing DTO; no server change planned.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 20:58 CEST
 - **Completed:** **AR10 slice 2a.** `parameter_views` exposes per text/name/enum label the stored language that answered (`text_language`, `name_language`, `enum_option_languages`, `None` = package's own text); new `query::program_default_language`; parameter panel DTO gains `sourceLanguage`, `textLanguage`, `nameLanguage`, `enumOptions[].language` (additive). Tests: query + HTTP test, three compiled mutants. Also fixed a ratchet slip of my own: six files from AR07/KL-156/AR10 slice 1 shipped pre-convention multi-line headers (check-headers 163 > 157 on main, unnoticed because only anchors/ledger were run); they now carry one-sentence headers, `routes.rs`/`domain.rs` gained headers, ceiling lowered to the measured 155.

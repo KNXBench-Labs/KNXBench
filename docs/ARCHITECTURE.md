@@ -13,6 +13,8 @@ context; flags/links/device edits invalidate that evidence even if DPT decoding
 is unchanged. Values update on admitted observations, never animation arrival;
 project targets do not establish real device state. AR21 owns integrated Alpha
 acceptance, and no commissioning or release authorization follows.
+**Status 2026-10-05:** implemented (U20/U21, AR20) and accepted for the Alpha by
+AR21 ([TELEGRAM_FLOW_VISUALIZATION §22](TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05)).
 
 
 The binding architecture for this repository. Decisions recorded here are

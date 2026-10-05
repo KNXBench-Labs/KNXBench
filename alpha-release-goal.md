@@ -975,6 +975,12 @@ and named regressions, consumed next by U20. No hardware or recipient-state proo
 
 ### AR21 — Accept the integrated telegram-flow Alpha feature
 
+**Status:** `DONE` 2026-10-05 — accepted for the Alpha on a recorded envelope
+(motion for small/medium maps, Motion Off for several hundred nodes or the §7
+load; Chromium only), all seven findings closed
+([§22](docs/TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05)).
+Receipt for AR18: §13–§22 and `.ai/logs/2026-10-05_claude_ar21-acceptance.md`.
+
 **Review 2026-10-05: returned to the UI owner with findings.** Receipt
 `9d432d17` + `deb6813a` + `fb40a99a` verified and gates rerun; two §9.3 binding
 requirements are neither met nor recorded as deviations, and the §7 starting
@@ -1011,15 +1017,15 @@ The alpha session does not reimplement the UI or take its lock for bookkeeping.
   layout-only freeze, bidirectional/group-labelled pulses, persistent quiet
   edges, high-load coalescing versus actual loss, stale/restart and no-project
   fallback. Use intercepted/fake adapters only; never open a real KNX socket.
-- [ ] Reconcile actual renderer/load/long-session measurements, limits and
+- [x] Reconcile actual renderer/load/long-session measurements, limits and
   leak/motion/theme/keyboard evidence with the supported Alpha envelope.
   Existing accepted native/Orca/live boundaries remain disclosed, not silently
   reopened or certified from Chromium. Do not report unexecuted benchmark targets.
-- [ ] Update manual, implementation status, architecture/research, limitations,
+- [x] Update manual, implementation status, architecture/research, limitations,
   roadmap and AR15–AR18 scope/artifact/review inputs. Required flow behavior is
   not waived by old optional/spatial dispositions; record any new user exception
   explicitly. Keep the canonical source-ID ledger's historical rows intact.
-- [ ] Run actual integrated affected/full gates and a separate feature review;
+- [x] Run actual integrated affected/full gates and a separate feature review;
   hand the named flow acceptance receipt to AR18's independent whole-product
   review. Any feature/fix after AR18 reruns affected final acceptance.
 

@@ -16,6 +16,12 @@ the bounded supersession of the older inspector-first recommendation. Renderer,
 limits and timing tuning are implementation decisions with mandatory measured
 acceptance; previously accepted native/Orca/live evidence boundaries stay intact.
 
+**Update 2026-10-05 (AR21): implemented and accepted for the Alpha.** The
+view shipped with U20/U21 and passed AR21 after seven findings were fixed
+([TELEGRAM_FLOW_VISUALIZATION §22](TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05)).
+What remains is recorded in
+[§154](#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only).
+
 
 ## Accepted commissioning validation boundary — user decision 2026-10-04
 
@@ -7847,6 +7853,18 @@ loop and the AR20 snapshot route. It is read-only.
   hub). No real-bus evidence, no native WebKitGTK run, no screen-reader
   check. Values and lines are hidden from assistive technology on purpose;
   the Inspector is the accessible path, and it has not been tried with Orca.
+
+**Update 2026-10-05 (AR21 acceptance).** Measured again with motion on: a map
+growing to 500 nodes and ~2,500 lines keeps the main thread 88 % busy at only
+2 telegrams/s, with values up to 1.1 s late, so the saturation above depends
+on map size rather than on 1,000 telegrams/s. The accepted Alpha envelope is
+motion for small and medium maps and Motion Off for several hundred nodes or
+the §7 load; there is still no automatic switch. A 900 s small session stays
+light (17 % busy, 5–7 ms lag) but its heap rose from 5.4 to 6.2 MiB without a
+visible plateau; a leak is neither shown nor excluded over hours. The
+reduced-rendering note now also counts telegrams the full map or the 2,048-event
+drawing buffer could not draw (AR21 findings 6 and 7). Details:
+[TELEGRAM_FLOW_VISUALIZATION §22](TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05).
 
 ## §155 Tunnelling from a container on Docker's bridge network gets no answer
 

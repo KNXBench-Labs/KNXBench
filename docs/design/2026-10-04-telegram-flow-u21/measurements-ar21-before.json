@@ -1,0 +1,179 @@
+{
+  "measuredAt": "2026-10-05T09:31:39.141Z",
+  "results": [
+    {
+      "scenario": {
+        "name": "target-load-motion",
+        "devices": 500,
+        "groups": 1250,
+        "ratePerSecond": 1000,
+        "seconds": 15,
+        "motion": true
+      },
+      "telegrams": 26687,
+      "wallSeconds": 25.9,
+      "mainThreadBusyShare": 0.999,
+      "heapMiB": {
+        "start": 7.5,
+        "samplesAfterGc": [
+          17.2,
+          17.4,
+          17.3,
+          16.9,
+          18.4
+        ],
+        "endAfterGc": 17.6
+      },
+      "frames": {
+        "count": 115,
+        "intervalP50": 200,
+        "intervalP95": 483.3,
+        "intervalMax": 649.9
+      },
+      "longTasks": {
+        "count": 138,
+        "totalMs": 21919,
+        "maxMs": 320
+      },
+      "markerLagMs": {
+        "values": [
+          1086,
+          1440,
+          919,
+          1739,
+          786
+        ],
+        "max": 1739
+      },
+      "dom": {
+        "nodes": 502,
+        "edges": 2490,
+        "svgElements": 11966
+      },
+      "reducedRenderingNote": "Reduced rendering: 26240 telegrams were drawn as bundled pulses, 49170 without a pulse. Values and counts are complete.",
+      "environment": {
+        "chromium": "152.0.7977.82",
+        "cpu": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16,
+        "headless": true,
+        "build": "production (vite build)"
+      }
+    },
+    {
+      "scenario": {
+        "name": "target-load-motion-off",
+        "devices": 500,
+        "groups": 1250,
+        "ratePerSecond": 1000,
+        "seconds": 15,
+        "motion": false
+      },
+      "telegrams": 19310,
+      "wallSeconds": 18.8,
+      "mainThreadBusyShare": 0.286,
+      "heapMiB": {
+        "start": 6.5,
+        "samplesAfterGc": [
+          16.1,
+          16.2,
+          16.3,
+          16.4,
+          16.4
+        ],
+        "endAfterGc": 16.5
+      },
+      "frames": {
+        "count": 0,
+        "intervalP50": null,
+        "intervalP95": null,
+        "intervalMax": null
+      },
+      "longTasks": {
+        "count": 9,
+        "totalMs": 667,
+        "maxMs": 163
+      },
+      "markerLagMs": {
+        "values": [
+          102,
+          125,
+          81,
+          84,
+          132
+        ],
+        "max": 132
+      },
+      "dom": {
+        "nodes": 502,
+        "edges": 2490,
+        "svgElements": 11486
+      },
+      "reducedRenderingNote": null,
+      "environment": {
+        "chromium": "152.0.7977.82",
+        "cpu": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16,
+        "headless": true,
+        "build": "production (vite build)"
+      }
+    },
+    {
+      "scenario": {
+        "name": "target-load-motion-60s",
+        "devices": 500,
+        "groups": 1250,
+        "ratePerSecond": 1000,
+        "seconds": 60,
+        "motion": true
+      },
+      "telegrams": 70637,
+      "wallSeconds": 69.7,
+      "mainThreadBusyShare": 0.999,
+      "heapMiB": {
+        "start": 7.2,
+        "samplesAfterGc": [
+          17.2,
+          19.4,
+          17.6,
+          18,
+          18.7
+        ],
+        "endAfterGc": 19.5
+      },
+      "frames": {
+        "count": 345,
+        "intervalP50": 166.7,
+        "intervalP95": 350,
+        "intervalMax": 650
+      },
+      "longTasks": {
+        "count": 433,
+        "totalMs": 61937,
+        "maxMs": 316
+      },
+      "markerLagMs": {
+        "values": [
+          991,
+          931,
+          1483,
+          953,
+          1402
+        ],
+        "max": 1483
+      },
+      "dom": {
+        "nodes": 502,
+        "edges": 2490,
+        "svgElements": 11486
+      },
+      "reducedRenderingNote": "Reduced rendering: 69484 telegrams were drawn as bundled pulses, 130821 without a pulse. Values and counts are complete.",
+      "environment": {
+        "chromium": "152.0.7977.82",
+        "cpu": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16,
+        "headless": true,
+        "build": "production (vite build)"
+      }
+    }
+  ]
+}

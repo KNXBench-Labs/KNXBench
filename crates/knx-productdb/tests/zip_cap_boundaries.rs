@@ -1,4 +1,4 @@
-//! Synthetic existing ZIP count/declared-size bounds; no limit or compatibility expansion.
+//! Synthetic ZIP count, declared-size and raw-input bounds; no limit or compatibility expansion.
 use std::io::{Cursor, Write};
 
 use knx_productdb::{install_package, open_and_migrate, PackageError};
@@ -224,14 +224,13 @@ fn archive_with_declared_baggage_sizes(sizes: &[u32]) -> Vec<u8> {
     bytes
 }
 
-fn refused_declared_byte_fixture_preserves_seed(sizes: &[u32]) -> PackageError {
+fn refused_package_preserves_seed(source_name: &str, bytes: &[u8]) -> PackageError {
     let (_directory, connection) = db();
     let seed = archive_with_entries(2);
     let seed_report = install_package(&connection, "byte-seed.knxprod", &seed).unwrap();
     assert_eq!(retained_archive(&connection, &seed_report.sha256), seed);
     let before = contents(&connection);
-    let bytes = archive_with_declared_baggage_sizes(sizes);
-    let error = install_package(&connection, "declared-size.knxprod", &bytes).unwrap_err();
+    let error = install_package(&connection, source_name, bytes).unwrap_err();
     assert_eq!(
         contents(&connection),
         before,
@@ -239,6 +238,38 @@ fn refused_declared_byte_fixture_preserves_seed(sizes: &[u32]) -> PackageError {
     );
     assert_eq!(retained_archive(&connection, &seed_report.sha256), seed);
     error
+}
+
+fn refused_declared_byte_fixture_preserves_seed(sizes: &[u32]) -> PackageError {
+    let bytes = archive_with_declared_baggage_sizes(sizes);
+    refused_package_preserves_seed("declared-size.knxprod", &bytes)
+}
+
+// Large only in raw slice length: intentionally invalid, no ZIP expansion.
+const RAW_INPUT_BYTES: usize = 256 * 1024 * 1024;
+
+#[test]
+fn raw_input_at_package_limit_reaches_named_zip_preflight_error_without_mutation() {
+    let bytes = vec![0xA5_u8; RAW_INPUT_BYTES];
+    assert_eq!(bytes.len(), RAW_INPUT_BYTES);
+    let error = refused_package_preserves_seed("raw-input-at-cap.knxprod", &bytes);
+    assert!(
+        matches!(error, PackageError::InvalidZip { ref cause } if cause == "missing complete end-of-directory record"),
+        "inclusive raw-input bound must reach the named ZIP preflight error, got {error}"
+    );
+}
+
+#[test]
+fn raw_input_one_over_package_limit_preserves_caller_name_and_every_seeded_value() {
+    let length = RAW_INPUT_BYTES.checked_add(1).unwrap();
+    let bytes = vec![0xA5_u8; length];
+    assert_eq!(bytes.len(), length);
+    let source_name = "raw-input-over-cap.knxprod";
+    let error = refused_package_preserves_seed(source_name, &bytes);
+    assert!(
+        matches!(error, PackageError::SizeLimit { ref path } if path == source_name),
+        "raw-input over the existing bound must fail with the exact caller filename, got {error}"
+    );
 }
 
 #[test]

@@ -224,6 +224,8 @@ UI adoption) are handed to the UI owner with the backend contract in
 no reset route/UI is built, the missing reset UI is an accepted, safely
 refused unsupported boundary with a user notice. Commissioning CLI and server
 callers record durable history since `ae567d00`.
+**Owner reconciliation 2026-10-05:** all 42 commissioning ledger rows have
+an owner status; only `KL-142` and `UI-04` (Web halves, UI owner) are open.
 An offline K7 restore-file guard now rejects missing, duplicate or extraneous
 load-state records for the plan; this does not extend the saved storage scope
 or reopen any of the address-write routes.

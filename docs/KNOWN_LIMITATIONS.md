@@ -7750,5 +7750,15 @@ Back, the data endpoint must be too.
 as the [installation guide](manual/getting-started/04-installation.md) now
 says. The published-port bridge form is for project work only.
 
-**Lifted when.** AR14B: an opt-in Route Back mode for tunnelling with offline
-tests of every HPAI the client sends; the host default stays unchanged.
+**Partly lifted 2026-10-05 (AR14B).** `KNX_TUNNEL_ROUTE_BACK=1` makes the
+server's tunnels send the Route Back HPAI in the `CONNECT_REQUEST` (control
+and data endpoint), every `CONNECTIONSTATE_REQUEST` and the
+`DISCONNECT_REQUEST` (`knx_net::TunnelReturnPath`). Offline loopback tests pin
+every HPAI in both modes; the default stays the own address, so hosts and
+gateways that work today see no change. The CLI has no switch (it runs on the
+host).
+
+**Remaining.** Only one gateway has been measured to answer a Route Back
+request, and only with `DESCRIPTION_REQUEST`; a gateway that ignores Route
+Back still gets no answer through the bridge. Discovery stays host-network
+only. No tunnel from a bridge container to real hardware has been run.

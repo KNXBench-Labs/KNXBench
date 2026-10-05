@@ -65,7 +65,11 @@ bus: a tunnel to a gateway gets no answer, because the server tells the
 gateway its private container address ([§155](../../KNOWN_LIMITATIONS.md#155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer)),
 and gateway discovery needs multicast that Docker's default bridge does not
 carry onto the LAN. On Linux, use host networking for anything that talks to
-the bus:
+the bus. If you must stay on the bridge, add `-e KNX_TUNNEL_ROUTE_BACK=1`:
+the server then asks the gateway to answer to wherever the packet came from
+(KNXnet/IP "Route Back"), which gets through Docker's address translation.
+Tunnelling then works with gateways that support Route Back; discovery still
+does not. Host networking:
 
 ```bash
 docker run -d --name knxbench --network host \
@@ -108,6 +112,7 @@ The image reads these environment variables:
 | `KNX_AUTH_PASSWORD_HASH` | The login credential, as printed by `knx-server --hash-password` | unset |
 | `KNX_AUTH_PASSWORD` | A plaintext password, hashed at startup | unset |
 | `KNX_AUTH_COOKIE_SECURE` | Marks the session cookie `Secure`, for use behind TLS | unset |
+| `KNX_TUNNEL_ROUTE_BACK` | Ask the gateway to answer the packet's source (KNXnet/IP Route Back); for tunnelling from Docker's bridge network | unset |
 
 > **Warning**
 >

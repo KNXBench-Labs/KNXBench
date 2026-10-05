@@ -53,11 +53,11 @@ standalone package, and both routes end up in the same product database.
 ## What KNXBench can read today
 
 - **Standalone `.knxprod` packages**, installed directly into the product database, at
-  master data schemes **11, 12, 13, 14, 20** and exact-namespace **21** — checked
-  atomically and safe to re-install (an already-known file is skipped, not duplicated).
-  A passing read-only corpus matrix and synthetic tests verify parser/persistence
-  behavior for these schemes, not complete manufacturer semantics or ETS parity.
-  Schemes 15–19 and 22 are not verified for standalone installation.
+  master data schemes **10** (ETS4 era), **11, 12, 13, 14, 20** and exact-namespace
+  **21** and **23** — checked atomically and safe to re-install (an already-known file
+  is skipped, not duplicated). Corpus measurements and synthetic tests verify
+  parser/persistence behavior for these schemes, not complete manufacturer semantics
+  or ETS parity. Schemes 15–19, 22 and 24 are refused for standalone installation.
 - **Manufacturer data bundled inside an imported `.knxproj`**, ingested wherever the
   project container itself can be read — which today means schema 11 fully, schema 21
   fully, and schema 23 for reading (no round-trip claim on that last one; see

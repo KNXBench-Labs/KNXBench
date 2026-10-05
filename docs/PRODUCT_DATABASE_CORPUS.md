@@ -415,7 +415,8 @@ need fixture-backed validation for each scheme.
 ## Current KNXBench result
 
 The standalone package installer admits schemes 11, 12, 13, 14, 20 and the
-exact scheme-21 namespace. The passing read-only, content-hash-ordered matrix
+exact scheme-21 namespace (since 2026-10-04 also exact 23, ADR-0072, and since
+2026-10-05 exact 10, ADR-0083; neither occurs in this private matrix scope). The passing read-only, content-hash-ordered matrix
 records all 115 instances: 115 isolated installs and, in deterministic shared
 order, 113 installs plus two byte-identical deduplications. The isolated
 unknown count is 23,347. Pinned shared totals, ten observed scheme-21 feature

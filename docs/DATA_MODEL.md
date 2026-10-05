@@ -277,8 +277,8 @@ is an assumption, not a verified fact (RESEARCH §3.1).
 future ordered `ProjectNote` collection on the `Project` aggregate. A note has
 a stable ID and a typed target for either the project or a supported
 user-facing entity; it is not a text field copied onto every entity. The
-current six-field `Project` in `knx-core/src/project.rs` has no such collection,
-and schema version 9 has no note table. Implementation therefore requires a
+current `Project` in `knx-core/src/project.rs` has no such collection,
+and schema version 9 (still true at version 10, checked 2026-10-06) has no note table. Implementation therefore requires a
 future schema bump, ordered migration, and frozen predecessor fixture. Existing
 projects will migrate to an empty collection; this paragraph does not claim
 that notes can currently be created, stored, projected, or reported.

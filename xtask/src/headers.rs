@@ -212,7 +212,10 @@ fn check_sentence(line: &str, text: &str) -> Header {
 /// down is the same slack by another route.
 /// AR01 added the missing layering-module header; its measured ceiling is 160.
 /// The keyboard package adds edited modal headers and follows the measured 157.
-pub const ABSENT_CEILING: usize = 157;
+/// AR10 slice 2a: six AR07/KL-156/AR10 files had shipped pre-convention
+/// multi-line headers (163 > 157 went unnoticed); fixed, plus headers for the
+/// edited server `routes.rs`/`domain.rs`: measured 155.
+pub const ABSENT_CEILING: usize = 155;
 
 /// The ratchet's verdict on a report: the message to print if it trips,
 /// `None` if the count is at or below [`ABSENT_CEILING`].

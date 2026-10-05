@@ -1,5 +1,15 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR10 slice 2a: the parameter panel admits when it is speaking the package's language
+
+- `knx_productdb::query::parameter_views` reports, per text/name/enum label,
+  the stored language that answered (`de` → `de-DE`) or `None` for the
+  package's own text; new `program_default_language` reads the stored but
+  previously unread `ApplicationProgram/@DefaultLanguage`.
+- Parameter panel DTO: `sourceLanguage`, `textLanguage`, `nameLanguage`,
+  `enumOptions[].language` (additive; values and fallback rule unchanged).
+- Tests: one query test, one HTTP test; UI owner decides presentation.
+
 ## 2026-10-05 — AR10 slice 1: where every language comes from (and where none does)
 
 - Trace of every language source and translated-text reader:

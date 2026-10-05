@@ -1,3 +1,5 @@
+//! Removes the schema-v20 objects so an older-version fixture is genuine.
+//!
 //! Removes the schema-v20 objects (ADR-0080) so an older-version fixture is
 //! genuine: `migrate_v19_to_v20` would otherwise fail on a column that is
 //! already there. Idempotent, because some fixtures rewind through more than

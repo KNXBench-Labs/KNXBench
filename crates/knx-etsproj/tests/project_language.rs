@@ -1,3 +1,5 @@
+//! An imported project has no source-backed language, and nothing pretends it does.
+//!
 //! AR10 / KNOWN_LIMITATIONS §14: an imported project has no source-backed
 //! language, and nothing pretends it does.
 //!

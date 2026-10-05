@@ -182,7 +182,7 @@ struct RawRow {
 /// the finished `ComObjectView`, is what keeps that correct without a
 /// second branch mirroring `pick()`'s own.
 fn overlaid_pick(
-    overlay: Option<&HashMap<(String, String), String>>,
+    overlay: Option<&ProgramOverlay>,
     co_id: &str,
     cor_id: &str,
     attribute_name: &str,
@@ -445,9 +445,15 @@ pub struct ParameterView {
     pub tag: Option<String>,
     /// `parameter.name`.
     pub name: Option<String>,
+    /// The stored language identifier whose translation `name` is, or
+    /// `None` when `name` is the package's own untranslated value — always
+    /// `None` without a requested language (AR10: the fallback is exposed).
+    pub name_language: Option<String>,
     /// `pick(parameter.text, parameter_ref.text)`.
     pub text: Option<String>,
     pub text_layer: ValueLayer,
+    /// As `name_language`, for the layer `text_layer` names.
+    pub text_language: Option<String>,
     /// `parameter_type.kind`, verbatim: one of `Restriction`, `Number`,
     /// `Text`, `None`, `Float`, `IPAddress`, `Picture`, `Raw`, `Color`,
     /// `Time`, `Other`.
@@ -471,6 +477,9 @@ pub struct ParameterView {
     /// `(value, text)`, only non-empty when `kind == "Restriction"` — the
     /// other seven kinds never have rows in `parameter_type_enum`.
     pub enum_options: Vec<(String, Option<String>)>,
+    /// One entry per `enum_options` entry, same order: the stored language
+    /// that answered its label, `None` for the package's own text.
+    pub enum_option_languages: Vec<Option<String>>,
 }
 
 struct ParameterRawRow {
@@ -502,14 +511,43 @@ struct ParameterRawRow {
 /// straight through to the package's own untranslated column, never to
 /// another language.
 fn overlay_text(
-    overlay: Option<&HashMap<(String, String), String>>,
+    overlay: Option<&ProgramOverlay>,
     ref_id: &str,
     attribute_name: &str,
 ) -> Option<String> {
-    overlay?
-        .get(&(ref_id.to_string(), attribute_name.to_string()))
-        .cloned()
+    overlay_hit(overlay, ref_id, attribute_name).map(|hit| hit.text.clone())
 }
+
+/// The stored language identifier that answered one overlay lookup — e.g.
+/// `de-DE` for a requested `de` — or `None` on a miss, when the caller
+/// keeps the package's own untranslated text (AR10: the fallback is
+/// exposed, never hidden).
+fn overlay_language(
+    overlay: Option<&ProgramOverlay>,
+    ref_id: &str,
+    attribute_name: &str,
+) -> Option<String> {
+    overlay_hit(overlay, ref_id, attribute_name).map(|hit| hit.language.clone())
+}
+
+fn overlay_hit<'a>(
+    overlay: Option<&'a ProgramOverlay>,
+    ref_id: &str,
+    attribute_name: &str,
+) -> Option<&'a OverlayHit> {
+    overlay?.get(&(ref_id.to_string(), attribute_name.to_string()))
+}
+
+/// One resolved translation: its text and the stored language identifier
+/// `best_matching_language` picked for it.
+#[derive(Debug, Clone)]
+struct OverlayHit {
+    text: String,
+    language: String,
+}
+
+/// `(ref_id, attribute_name) -> hit` for one program and requested language.
+type ProgramOverlay = HashMap<(String, String), OverlayHit>;
 
 /// Every `ParameterView` a program declares, in `parameter_ref.
 /// display_order`. One query, not one per field — a single `ModuleDef` can
@@ -602,23 +640,34 @@ pub fn parameter_views(
         let p_text = overlay_text(overlay.as_ref(), &raw.parameter_id, "Text").or(raw.p_text);
         let pr_text = overlay_text(overlay.as_ref(), &raw.id, "Text").or(raw.pr_text);
         let (text, text_layer) = pick(p_text, pr_text);
+        // The language of exactly the layer `pick()` chose (AR10).
+        let text_language = match text_layer {
+            ValueLayer::Program => overlay_language(overlay.as_ref(), &raw.parameter_id, "Text"),
+            ValueLayer::ProgramRef => overlay_language(overlay.as_ref(), &raw.id, "Text"),
+        };
+        let name_language = overlay_language(overlay.as_ref(), &raw.parameter_id, "Name");
         let name = overlay_text(overlay.as_ref(), &raw.parameter_id, "Name").or(raw.name);
         // Only `Restriction` kinds ever have rows in `parameter_type_enum`
         // (the other nine kinds have no enumeration concept at all) — the
         // kind check keeps this a second query for the fraction of rows
         // that need it, not a blind per-row lookup.
-        let enum_options = if raw.kind == "Restriction" {
+        let (enum_options, enum_option_languages) = if raw.kind == "Restriction" {
             parameter_type_enum_options(conn, program_id, &raw.parameter_type_id, overlay.as_ref())?
+                .into_iter()
+                .map(|(value, text, language)| ((value, text), language))
+                .unzip()
         } else {
-            Vec::new()
+            (Vec::new(), Vec::new())
         };
         views.push(ParameterView {
             id: raw.id,
             display_order: raw.display_order,
             tag: raw.tag,
             name,
+            name_language,
             text,
             text_layer,
+            text_language,
             kind: raw.kind,
             access: raw.access,
             ref_access: raw.ref_access,
@@ -626,9 +675,28 @@ pub fn parameter_views(
             max_inclusive: raw.max_inclusive,
             size_in_bit: raw.size_in_bit,
             enum_options,
+            enum_option_languages,
         });
     }
     Ok(views)
+}
+
+/// `ApplicationProgram/@DefaultLanguage`, verbatim: the declared language
+/// of the program's own untranslated texts, the source-backed answer to
+/// "what language is a fallback in" (AR10). `None` when the program is
+/// unknown or declares none — never guessed from anything else.
+pub fn program_default_language(
+    conn: &Connection,
+    program_id: &str,
+) -> Result<Option<String>, ProductDbError> {
+    Ok(conn
+        .query_row(
+            "SELECT default_language FROM application_program WHERE id = ?1",
+            [program_id],
+            |r| r.get::<_, Option<String>>(0),
+        )
+        .optional()?
+        .flatten())
 }
 
 /// Which side of a `ParameterCalculation` a `ParameterRef` stands on
@@ -745,7 +813,7 @@ fn translation_overlay(
     conn: &Connection,
     program_id: &str,
     language: &str,
-) -> Result<HashMap<(String, String), String>, ProductDbError> {
+) -> Result<ProgramOverlay, ProductDbError> {
     // Every stored language is loaded, not just `language` itself (R2):
     // resolving `de` against `de-DE` requires knowing `de-DE` exists for
     // this `(ref_id, attribute_name)` pair in the first place, and that
@@ -775,8 +843,14 @@ fn translation_overlay(
     for (key, candidates) in grouped {
         let languages: Vec<&str> = candidates.iter().map(|(l, _)| l.as_str()).collect();
         if let Some(matched) = best_matching_language(language, &languages) {
-            if let Some((_, text)) = candidates.iter().find(|(l, _)| l == matched) {
-                resolved.insert(key, text.clone());
+            if let Some((stored, text)) = candidates.iter().find(|(l, _)| l == matched) {
+                resolved.insert(
+                    key,
+                    OverlayHit {
+                        text: text.clone(),
+                        language: stored.clone(),
+                    },
+                );
             }
         }
     }
@@ -894,12 +968,16 @@ pub fn program_translation_languages(
     Ok(rows)
 }
 
+/// `(value, label, language that answered the label)` of one enumeration
+/// entry; the language is `None` for the package's own label (AR10).
+type EnumOptionRow = (String, Option<String>, Option<String>);
+
 fn parameter_type_enum_options(
     conn: &Connection,
     program_id: &str,
     parameter_type_id: &str,
-    overlay: Option<&HashMap<(String, String), String>>,
-) -> Result<Vec<(String, Option<String>)>, ProductDbError> {
+    overlay: Option<&ProgramOverlay>,
+) -> Result<Vec<EnumOptionRow>, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT id, value, text FROM parameter_type_enum
          WHERE program_id = ?1 AND parameter_type_id = ?2
@@ -919,8 +997,9 @@ fn parameter_type_enum_options(
     Ok(rows
         .into_iter()
         .map(|(id, value, text)| {
+            let language = overlay_language(overlay, &id, "Text");
             let text = overlay_text(overlay, &id, "Text").or(text);
-            (value, text)
+            (value, text, language)
         })
         .collect())
 }
@@ -3164,7 +3243,7 @@ mod tests {
     const PARAMETER_PROGRAM_TRANSLATED: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
 <ApplicationPrograms><ApplicationProgram Id="A-5" Name="P" ApplicationNumber="5"
-  ApplicationVersion="22" MaskVersion="MV-0701"><Static>
+  ApplicationVersion="22" MaskVersion="MV-0701" DefaultLanguage="en-US"><Static>
 <ParameterTypes>
   <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
   <ParameterType Id="PT-Enum" Name="enum"><TypeRestriction Base="Value" SizeInBit="8">
@@ -3260,6 +3339,47 @@ mod tests {
         let views = parameter_views(&conn, "A-5", Some("de")).unwrap();
         let pr1 = views.iter().find(|v| v.id == "PR-1").unwrap();
         assert_eq!(pr1.text.as_deref(), Some("Verzoegerung"));
+    }
+
+    #[test]
+    fn parameter_views_name_the_language_that_answered_and_expose_the_fallback() {
+        // AR10: a requested `de` is answered by the stored `de-DE`, and the
+        // caller is told so; a field without a `de-DE` row keeps its own
+        // text and says `None` instead of pretending to be translated.
+        let (_dir, conn) = translated_parameter_db();
+        let views = parameter_views(&conn, "A-5", Some("de")).unwrap();
+        let by_id = |id: &str| views.iter().find(|v| v.id == id).unwrap();
+        assert_eq!(by_id("PR-1").text_language.as_deref(), Some("de-DE"));
+        assert_eq!(by_id("PR-3").text_language, None);
+        assert_eq!(by_id("PR-3").text.as_deref(), Some("Untranslated"));
+        // The language of the layer `pick()` chose: the translated ref text.
+        assert_eq!(by_id("PR-4").text_layer, ValueLayer::ProgramRef);
+        assert_eq!(by_id("PR-4").text_language.as_deref(), Some("de-DE"));
+        assert_eq!(
+            by_id("PR-1").name_language,
+            None,
+            "no Name translation stored"
+        );
+        assert_eq!(
+            by_id("PR-2").enum_option_languages,
+            vec![Some("de-DE".to_string()), Some("de-DE".to_string())]
+        );
+        assert_eq!(
+            by_id("PR-2").enum_option_languages.len(),
+            by_id("PR-2").enum_options.len()
+        );
+        // No language requested: every marker is `None`, the lengths still agree.
+        let plain = parameter_views(&conn, "A-5", None).unwrap();
+        assert!(plain.iter().all(|v| v.text_language.is_none()
+            && v.name_language.is_none()
+            && v.enum_option_languages.len() == v.enum_options.len()
+            && v.enum_option_languages.iter().all(Option::is_none)));
+        // Where the fallback comes from: the program's declared language.
+        assert_eq!(
+            program_default_language(&conn, "A-5").unwrap().as_deref(),
+            Some("en-US")
+        );
+        assert_eq!(program_default_language(&conn, "A-404").unwrap(), None);
     }
 
     #[test]

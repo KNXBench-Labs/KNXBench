@@ -39,7 +39,7 @@ const HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 /// prove the same thing over HTTP, end to end.
 const TRANSLATED_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
-<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701" DefaultLanguage="en-US">
 <Static>
 <ParameterTypes>
   <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
@@ -258,6 +258,36 @@ async fn parameter_panel_returns_translated_text_for_a_requested_language() {
         p1["text"], "Verzoegerung",
         "the requested language's translation must overlay the field's text"
     );
+}
+
+// AR10: the panel says which stored language answered (a bare `de` is
+// answered by `de-DE`), says `null` where it fell back to the package's own
+// text, and names the program's declared language of that text.
+#[tokio::test]
+async fn parameter_panel_exposes_the_answering_language_and_the_fallback() {
+    let (_dir, products) = temp_product_db(TRANSLATED_PROGRAM);
+    let state = Arc::new(state_with_device(products, vec![]));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get(app, "/api/device/1/parameters?language=de").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(dto["sourceLanguage"], "en-US");
+    let p1 = field(&dto, "P-1_R-1").expect("P-1_R-1 present");
+    assert_eq!(p1["text"], "Verzoegerung");
+    assert_eq!(p1["textLanguage"], "de-DE");
+    assert!(
+        p1["nameLanguage"].is_null(),
+        "no Name translation is stored"
+    );
+    let p2 = field(&dto, "P-2_R-1").expect("P-2_R-1 present");
+    assert!(
+        p2["textLanguage"].is_null(),
+        "Mode has no de-DE text: fallback"
+    );
+    assert_eq!(p2["text"], "Mode");
+    for option in p2["enumOptions"].as_array().unwrap() {
+        assert_eq!(option["language"], "de-DE");
+    }
 }
 
 // The companion of the previous test: an absent `language` query parameter

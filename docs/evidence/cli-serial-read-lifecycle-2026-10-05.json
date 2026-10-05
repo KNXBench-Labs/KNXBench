@@ -1,0 +1,98 @@
+{
+  "scope": "Uncommitted CLI serial-lookup read caller candidate; branch-only offline gate",
+  "base_head": "9edad0a010cb6a8a8447571e6a0d39d8048b218c",
+  "production_commit": null,
+  "cli_version": "0.1.0-alpha.3",
+  "history_format": 2,
+  "history_kind": "serialLookup",
+  "address_contract": "null in both lookup directions",
+  "source_inputs": {
+    "Cargo.lock": "200b5ad3df699c36e7819d36ebc6ed55b9adcefac469c283ea8c51e23c498c75",
+    "apps/knx-cli/Cargo.toml": "f7b8ecc2d85bb76b967d4469a2f829a7c203bbfbc1e21ae899d0a8d04418c289",
+    "apps/knx-cli/src/main.rs": "23c95700e6ed8850d7cde8eca6082a6481da07ad81065e366634411a99eaeae6",
+    "apps/knx-cli/src/device_serial.rs": "26780d473be791fbd7a57f474f6e973097a58c832c41e4077936af29bef296b0",
+    "apps/knx-cli/tests/cli_read_activity.rs": "8c57a385109a177c8d38b95456ebddb02b1293a912dd9d125becb9eab884b4d2"
+  },
+  "full_source_manifest_commitment": "cd39d62e42269005187157c1903896991f9ac92fa8d3955876a86ef9ad7c99c5",
+  "tdd": [
+    {
+      "phase": "parser",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "accepted_red": true
+    },
+    {
+      "phase": "pre-adapter-persistence",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "accepted_red": true
+    }
+  ],
+  "gate_stages": [
+    {
+      "name": "fmt",
+      "exit": 0,
+      "summaries": [],
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_stable": true
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "summaries": [],
+      "log_sha256": "8c488850f49f498b1ecc65fc792eadab53bc4de08594a83fb2d382ab48dbdfc7",
+      "source_stable": true
+    },
+    {
+      "name": "regressions",
+      "exit": 0,
+      "summaries": [
+        [
+          "103",
+          "0",
+          "8"
+        ],
+        [
+          "9",
+          "0",
+          "0"
+        ],
+        [
+          "5",
+          "0",
+          "0"
+        ]
+      ],
+      "log_sha256": "d992e450541f887a7cbd78616ec86e6e14324195cc36b840c81449b145449a76",
+      "passed": 117,
+      "failed": 0,
+      "ignored": 8,
+      "expected_blocks_present": true,
+      "source_stable": true
+    },
+    {
+      "name": "version",
+      "exit": 0,
+      "summaries": [],
+      "log_sha256": "a7d956ccd685edffde7819ab96fc76696fe9f52651dc5f777be432a8027ce18b",
+      "expected_version": true,
+      "source_stable": true
+    },
+    {
+      "name": "whitespace",
+      "exit": 0,
+      "summaries": [],
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_stable": true
+    }
+  ],
+  "accepted_branch_gate": true,
+  "private_corpus_acceptance": false,
+  "web_changes": false,
+  "hardware_contacts": false,
+  "full_integration_acceptance": false,
+  "independent_review": false,
+  "publication": false
+}

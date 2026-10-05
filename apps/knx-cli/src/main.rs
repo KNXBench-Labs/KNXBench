@@ -7,6 +7,7 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod activity_history_paths;
 mod device_address;
 mod device_compare;
 mod device_download;
@@ -63,6 +64,8 @@ const USAGE: &str =
      \x20         candidate count, first/last candidate and excluded list, then exits without\n\
      \x20         opening a connection)\n\
      \x20     knx device download <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
+     \x20                  [--activity-history <path>]\n\
+     \x20         (activity history: required for confirmed writes; metadata, not recovery)\n\
      \x20                  [--key-file <path>] [--partial parameters|group-addresses|both]\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
      \x20         (a download TO the device over the bus; without --confirm it prints the\n\
@@ -83,11 +86,15 @@ const USAGE: &str =
      \x20         no-address. It prepares what `knx device download` would; nothing is sent)\n\
      \x20     knx device compare <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
      \x20                  [--partial parameters|group-addresses|both] --gateway <host:port>\n\
+     \x20                  [--activity-history <path>]\n\
+     \x20         (activity history: optional; metadata, not recovery; omission is unjournaled)\n\
      \x20         (READ ONLY: reads exactly what `knx device download` would write and lists\n\
      \x20         every octet run where the device and the project differ. It sends no\n\
      \x20         access key and has no write path; a read-protected device says so.\n\
      \x20         Exit 0: the device holds the plan; 2: it differs; 1: not compared.)\n\
      \x20     knx device restore <backup.json> [--product-db <path>] [--key-file <path>]\n\
+     \x20                  [--activity-history <path>]\n\
+     \x20         (activity history: required for confirmed writes; metadata, not recovery)\n\
      \x20                  [--backup-dir <dir>] [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
      \x20         (writes a backup back through the same load procedure; without --confirm\n\
      \x20         it prints the plan. It backs up the current state first, too. An\n\
@@ -109,9 +116,13 @@ const USAGE: &str =
      \x20         a durable pre-write backup of all affected storage is not implemented.\n\
      \x20         Read-only find-serial remains available; no restart is sent)\n\
      \x20     knx device find-serial (<MMMM:NNNNNNNN> | --address <a.l.d>) --gateway <host:port>\n\
+     \x20                  [--activity-history <path>]\n\
+     \x20         (optional metadata history; unavailable explicit history refuses lookup before a tunnel)\n\
      \x20         (which address has this serial number, MP §2.4 broadcast; or which serial\n\
      \x20         number the device at --address has, PID_SERIAL_NUMBER; read-only)\n\
      \x20     knx device service-control <area.line.device> --gateway <host:port> [--key-file <path>]\n\
+     \x20                  [--activity-history <path>]\n\
+     \x20         (activity history: required for confirmed writes; metadata, not recovery)\n\
      \x20                  [--enable|--disable [--confirm \"I confirm individual-address write enable to <address>\"]] [--backup-dir <path>]\n\
      \x20         (reads PID_SERVICE_CONTROL bit 2, Individual Address Write Enable, RES §4.2.8;\n\
      \x20         --enable/--disable changes only that bit after a durable property backup in\n\
@@ -1299,6 +1310,25 @@ fn split_product_db_flag(args: &[String]) -> Result<(Option<String>, Vec<String>
     Ok((product_db, rest))
 }
 
+/// Validate filesystem identities before history, project or product migrations.
+fn check_download_history_inputs(
+    history: Option<&str>,
+    input: &str,
+    product_db: Option<&str>,
+    key_file: Option<&str>,
+) -> Result<(), String> {
+    let Some(history) = history else {
+        return Ok(());
+    };
+    let products = resolve_product_db_path(product_db)?;
+    let mut inputs = vec![Path::new(input), products.as_path()];
+    if let Some(key_file) = key_file {
+        inputs.push(Path::new(key_file));
+    }
+    activity_history_paths::ensure_separate(Path::new(history), &inputs)
+        .map_err(|error| error.to_string())
+}
+
 fn open_products_db(explicit: Option<&str>) -> Result<knx_productdb::Connection, String> {
     let path = resolve_product_db_path(explicit)?;
     knx_productdb::open_and_migrate(&path)
@@ -1980,12 +2010,46 @@ fn run_device_download(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    if matches!(mode, device_download::Mode::Write { .. }) && parsed.activity_history.is_none() {
+        eprintln!("activity history is required for a confirmed download; not sent (add --activity-history <path>)");
+        return ExitCode::FAILURE;
+    }
     // `open_and_migrate` creates a missing file; a typo must not become an
     // empty project.
     if !Path::new(&parsed.project).exists() {
         eprintln!("project not found: {}", parsed.project);
         return ExitCode::FAILURE;
     }
+    if let Err(error) = check_download_history_inputs(
+        parsed.activity_history.as_deref(),
+        &parsed.project,
+        parsed.product_db.as_deref(),
+        parsed.key_file.as_deref(),
+    ) {
+        eprintln!("activity history/input separation refused; not sent: {error}");
+        return ExitCode::FAILURE;
+    }
+    let activity_log = if matches!(mode, device_download::Mode::Write { .. }) {
+        use knx_app::commissioning_activity::OneShotLog;
+        let path = parsed
+            .activity_history
+            .as_ref()
+            .expect("write history checked above");
+        let log = match OneShotLog::for_run(path.into()) {
+            Ok(log) => std::sync::Arc::new(log),
+            Err(error) => {
+                eprintln!("activity history unavailable; not sent: {error}");
+                return ExitCode::FAILURE;
+            }
+        };
+        if let Err(error) = log.ensure_write_available() {
+            eprintln!("activity history unavailable; not sent: {error}");
+            return ExitCode::FAILURE;
+        }
+        Some(log)
+    } else {
+        None
+    };
     let (project, opaque) = match knx_store::open_and_migrate(Path::new(&parsed.project))
         .map_err(|e| e.to_string())
         .and_then(|conn| {
@@ -2115,6 +2179,16 @@ fn run_device_download(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    let mut activity = match activity_log
+        .expect("write mode admitted history")
+        .start_download(1, target.address())
+    {
+        Ok(activity) => activity,
+        Err(error) => {
+            eprintln!("activity history unavailable; not sent: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -2135,27 +2209,41 @@ fn run_device_download(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-        let written = device_download::execute(
+        let result = device_download::execute_with_history(
             &tunnel,
             authorisation,
             keying,
             knx_net::SessionTiming::default(),
-            &prepared.plan,
-            &device_download::BackupTarget {
-                dir: &backup_dir,
-                application: &prepared.request.program_id,
-                partial: partial_parts,
-                taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
+            device_download::DownloadRun {
+                plan: &prepared.plan,
+                backup: &device_download::BackupTarget {
+                    dir: &backup_dir,
+                    application: &prepared.request.program_id,
+                    partial: partial_parts,
+                    taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
+                },
             },
+            &mut activity,
             &mut std::io::stdout(),
-        )
-        .await;
-        if let Err(e) = tunnel.disconnect().await {
-            eprintln!("tunnel disconnect: {e}");
-        }
-        match written {
-            device_download::Written::Yes => ExitCode::SUCCESS,
-            device_download::Written::No | device_download::Written::Partially => ExitCode::FAILURE,
+        ).await;
+        let recorded = activity.record_result(&result).map_err(|error| {
+            eprintln!("device outcome is witnessed, but activity history could not record it: {error}; do not retry automatically");
+        }).is_ok();
+        let cleanup_ok = match tunnel.disconnect().await {
+            Ok(()) => true,
+            Err(error) => {
+                eprintln!("tunnel disconnect: {error}");
+                false
+            }
+        };
+        let cleanup_recorded = activity.record_cleanup(cleanup_ok).map_err(|error| {
+            eprintln!("activity history could not record cleanup: {error}; device outcome is unchanged");
+        }).is_ok();
+        if matches!(result, knx_app::commissioning_activity::DownloadResult::Finished { written: device_download::Written::Yes, .. })
+            && recorded && cleanup_ok && cleanup_recorded {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
         }
     })
 }
@@ -2207,6 +2295,7 @@ fn run_device_readiness(args: &[String]) -> ExitCode {
 /// only. The same plan as a download (project, product file, `--partial`),
 /// then a read-only session: no phrase, because nothing can be written.
 fn run_device_compare(args: &[String]) -> ExitCode {
+    use knx_app::commissioning_activity::OneShotLog;
     let parsed = match device_compare::parse_compare_args(args) {
         Ok(parsed) => parsed,
         Err(e) => {
@@ -2230,6 +2319,33 @@ fn run_device_compare(args: &[String]) -> ExitCode {
         eprintln!("project not found: {}", parsed.project);
         return ExitCode::FAILURE;
     }
+    // Identity admission precedes every history/project/product store opener.
+    if let Err(error) = check_download_history_inputs(
+        parsed.activity_history.as_deref(),
+        &parsed.project,
+        parsed.product_db.as_deref(),
+        None,
+    ) {
+        eprintln!("activity history refused; comparison not started: {error}");
+        return ExitCode::FAILURE;
+    }
+    let log = match parsed.activity_history.as_ref() {
+        None => None,
+        Some(path) => {
+            let log = match OneShotLog::for_run(path.into()) {
+                Ok(log) => std::sync::Arc::new(log),
+                Err(_) => {
+                    eprintln!("activity history unavailable; comparison not started");
+                    return ExitCode::FAILURE;
+                }
+            };
+            if log.ensure_write_available().is_err() {
+                eprintln!("activity history unavailable; comparison not started");
+                return ExitCode::FAILURE;
+            }
+            Some(log)
+        }
+    };
     let project = match knx_store::open_and_migrate(Path::new(&parsed.project))
         .map_err(|e| e.to_string())
         .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
@@ -2273,13 +2389,34 @@ fn run_device_compare(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    let mut activity = log
+        .as_ref()
+        .map(|log| log.start("deviceCompare", Some(target.address().to_string())));
+    if log
+        .as_ref()
+        .is_some_and(|log| log.history_state() == "unavailable")
+    {
+        eprintln!("activity history unavailable; comparison not started");
+        return ExitCode::FAILURE;
+    }
     let gateway = parsed.gateway;
     runtime.block_on(async {
         use knx_net::BusConnection;
         let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
             Ok(tunnel) => tunnel,
             Err(e) => {
+                if let Some(guard) = activity.take() {
+                    guard.finish("failed");
+                }
                 eprintln!("could not connect to {gateway}: {e}");
+                if log
+                    .as_ref()
+                    .is_some_and(|log| log.history_state() == "unavailable")
+                {
+                    eprintln!(
+                        "activity history unavailable; comparison failure was not durably recorded"
+                    );
+                }
                 return ExitCode::FAILURE;
             }
         };
@@ -2292,8 +2429,22 @@ fn run_device_compare(args: &[String]) -> ExitCode {
             &mut std::io::stdout(),
         )
         .await;
+        if let Some(guard) = activity.take() {
+            // A difference is a completed observation, not a transport failure.
+            guard.finish(match compared {
+                device_compare::Compared::Same | device_compare::Compared::Different => "finished",
+                device_compare::Compared::Failed => "failed",
+            });
+        }
         if let Err(e) = tunnel.disconnect().await {
             eprintln!("tunnel disconnect: {e}");
+        }
+        if log
+            .as_ref()
+            .is_some_and(|log| log.history_state() == "unavailable")
+        {
+            eprintln!("activity history unavailable; comparison result was not durably recorded");
+            return ExitCode::FAILURE;
         }
         match compared {
             device_compare::Compared::Same => ExitCode::SUCCESS,
@@ -2315,6 +2466,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
     let mut gateway = None;
     let mut confirm = None;
     let mut accept_untested = None;
+    let mut activity_history = None;
     let mut i = 0;
     while i < args.len() {
         let slot = match args[i].as_str() {
@@ -2324,6 +2476,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
             "--gateway" => &mut gateway,
             "--confirm" => &mut confirm,
             "--accept-untested" => &mut accept_untested,
+            "--activity-history" => &mut activity_history,
             flag if flag.starts_with("--") => {
                 eprintln!("unknown flag {flag}\n{USAGE}");
                 return ExitCode::FAILURE;
@@ -2354,6 +2507,45 @@ fn run_device_restore(args: &[String]) -> ExitCode {
         eprintln!("--confirm writes to a device and needs --gateway <host:port>");
         return ExitCode::FAILURE;
     }
+    if confirm.is_some() && activity_history.is_none() {
+        eprintln!("activity history is required for a confirmed restore; not sent (add --activity-history <path>)");
+        return ExitCode::FAILURE;
+    }
+    // History admission must not manufacture a missing recovery input, even
+    // when the caller supplied the same path for both files.
+    if !Path::new(&file).exists() {
+        eprintln!("backup not found: {file}");
+        return ExitCode::FAILURE;
+    }
+    if let Err(error) = check_download_history_inputs(
+        activity_history.as_deref(),
+        &file,
+        product_db.as_deref(),
+        key_file.as_deref(),
+    ) {
+        eprintln!("activity history/input separation refused; not sent: {error}");
+        return ExitCode::FAILURE;
+    }
+    let activity_log = if confirm.is_some() {
+        use knx_app::commissioning_activity::OneShotLog;
+        let path = activity_history
+            .as_ref()
+            .expect("write history checked above");
+        let log = match OneShotLog::for_run(path.into()) {
+            Ok(log) => std::sync::Arc::new(log),
+            Err(error) => {
+                eprintln!("activity history unavailable; not sent: {error}");
+                return ExitCode::FAILURE;
+            }
+        };
+        if let Err(error) = log.ensure_write_available() {
+            eprintln!("activity history unavailable; not sent: {error}");
+            return ExitCode::FAILURE;
+        }
+        Some(log)
+    } else {
+        None
+    };
     let stored = match knx_app::device_backup::read_backup(std::path::Path::new(&file)) {
         Ok(stored) => stored,
         Err(e) => {
@@ -2477,6 +2669,16 @@ fn run_device_restore(args: &[String]) -> ExitCode {
             .parent()
             .map_or_else(|| ".".into(), std::path::Path::to_path_buf),
     };
+    let mut activity = match activity_log
+        .expect("write mode admitted history")
+        .start_download(1, target.address())
+    {
+        Ok(activity) => activity,
+        Err(error) => {
+            eprintln!("activity history unavailable; not sent: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -2497,27 +2699,41 @@ fn run_device_restore(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-        let written = device_download::execute(
+        let result = device_download::execute_with_history(
             &tunnel,
             authorisation,
             keying,
             knx_net::SessionTiming::default(),
-            &plan,
-            &device_download::BackupTarget {
-                dir: &backup_dir,
-                application: &stored.application,
-                partial: stored.partial,
-                taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
+            device_download::DownloadRun {
+                plan: &plan,
+                backup: &device_download::BackupTarget {
+                    dir: &backup_dir,
+                    application: &stored.application,
+                    partial: stored.partial,
+                    taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
+                },
             },
+            &mut activity,
             &mut std::io::stdout(),
-        )
-        .await;
-        if let Err(e) = tunnel.disconnect().await {
-            eprintln!("tunnel disconnect: {e}");
-        }
-        match written {
-            device_download::Written::Yes => ExitCode::SUCCESS,
-            device_download::Written::No | device_download::Written::Partially => ExitCode::FAILURE,
+        ).await;
+        let recorded = activity.record_result(&result).map_err(|error| {
+            eprintln!("device outcome is witnessed, but activity history could not record it: {error}; do not retry automatically");
+        }).is_ok();
+        let cleanup_ok = match tunnel.disconnect().await {
+            Ok(()) => true,
+            Err(error) => {
+                eprintln!("tunnel disconnect: {error}");
+                false
+            }
+        };
+        let cleanup_recorded = activity.record_cleanup(cleanup_ok).map_err(|error| {
+            eprintln!("activity history could not record cleanup: {error}; device outcome is unchanged");
+        }).is_ok();
+        if matches!(result, knx_app::commissioning_activity::DownloadResult::Finished { written: device_download::Written::Yes, .. })
+            && recorded && cleanup_ok && cleanup_recorded {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
         }
     })
 }
@@ -2758,7 +2974,12 @@ fn run_device_address_by_serial(args: &[String]) -> ExitCode {
 
 /// `knx device find-serial`: MP §2.4 or `PID_SERIAL_NUMBER`, read-only.
 fn run_device_find_serial(args: &[String]) -> ExitCode {
-    let (query, gateway) = match device_serial::parse_find_serial_args(args) {
+    use knx_app::commissioning_activity::OneShotLog;
+    let device_serial::FindSerialArgs {
+        query,
+        gateway,
+        activity_history,
+    } = match device_serial::parse_find_serial_args(args) {
         Ok(parsed) => parsed,
         Err(e) => {
             eprintln!("{e}\n{USAGE}");
@@ -2772,6 +2993,23 @@ fn run_device_find_serial(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    let log = match activity_history {
+        None => None,
+        Some(path) => {
+            let log = match OneShotLog::for_run(path.into()) {
+                Ok(log) => std::sync::Arc::new(log),
+                Err(_) => {
+                    eprintln!("activity history unavailable; lookup not started");
+                    return ExitCode::FAILURE;
+                }
+            };
+            if log.ensure_write_available().is_err() {
+                eprintln!("activity history unavailable; lookup not started");
+                return ExitCode::FAILURE;
+            }
+            Some(log)
+        }
+    };
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -2782,23 +3020,56 @@ fn run_device_find_serial(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    // Format-2 serialLookup metadata deliberately has no address in either direction.
+    let mut activity = log.as_ref().map(|log| log.start("serialLookup", None));
+    if log
+        .as_ref()
+        .is_some_and(|log| log.history_state() == "unavailable")
+    {
+        eprintln!("activity history unavailable; lookup not started");
+        return ExitCode::FAILURE;
+    }
     runtime.block_on(async {
         use knx_net::BusConnection;
         let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
             Ok(tunnel) => tunnel,
             Err(e) => {
+                if let Some(guard) = activity.take() {
+                    guard.finish("failed");
+                }
                 eprintln!("could not connect to {gateway}: {e}");
+                if log
+                    .as_ref()
+                    .is_some_and(|log| log.history_state() == "unavailable")
+                {
+                    eprintln!(
+                        "activity history unavailable; lookup failure was not durably recorded"
+                    );
+                }
                 return ExitCode::FAILURE;
             }
         };
         let found = device_serial::find(&tunnel, &query, knx_net::SessionTiming::default()).await;
+        if let Some(guard) = activity.take() {
+            guard.finish(if found.is_ok() { "finished" } else { "failed" });
+        }
+        let history_ok = !log
+            .as_ref()
+            .is_some_and(|log| log.history_state() == "unavailable");
+        if !history_ok {
+            eprintln!("activity history unavailable; lookup result was not durably recorded");
+        }
         if let Err(e) = tunnel.disconnect().await {
             eprintln!("tunnel disconnect: {e}");
         }
         match found {
             Ok(Some(line)) => {
                 println!("{line}");
-                ExitCode::SUCCESS
+                if history_ok {
+                    ExitCode::SUCCESS
+                } else {
+                    ExitCode::FAILURE
+                }
             }
             Ok(None) => {
                 println!("no answer (MP §2.4: no device with that serial number on this network)");
@@ -2816,6 +3087,7 @@ fn run_device_find_serial(args: &[String]) -> ExitCode {
 /// Reading needs only `--gateway`; changing needs `--enable`/`--disable`
 /// and the scope's own phrase, checked before a socket opens.
 fn run_device_service_control(args: &[String]) -> ExitCode {
+    use knx_app::commissioning_activity::{OneShotLog, WriteOutcome};
     let parsed = match device_service_control::parse_args(args) {
         Ok(parsed) => parsed,
         Err(e) => {
@@ -2856,12 +3128,71 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
         device_service_control::Mode::Read { gateway }
         | device_service_control::Mode::Write { gateway, .. } => *gateway,
     };
+    let writing = matches!(mode, device_service_control::Mode::Write { .. });
+    let activity_log = match parsed.activity_history.as_deref() {
+        Some(path) => match OneShotLog::for_run(std::path::PathBuf::from(path)) {
+            Ok(log) => Some(std::sync::Arc::new(log)),
+            Err(_) => {
+                eprintln!("activity history is unavailable; not sent");
+                return ExitCode::FAILURE;
+            }
+        },
+        None if writing => {
+            eprintln!("activity history is required for a confirmed write; use --activity-history <path>; not sent");
+            return ExitCode::FAILURE;
+        }
+        None => None,
+    };
+    if !writing
+        && activity_log
+            .as_ref()
+            .is_some_and(|log| log.ensure_write_available().is_err())
+    {
+        eprintln!("activity history unavailable; read not started");
+        return ExitCode::FAILURE;
+    }
+    let mut write_activity = if writing {
+        match activity_log
+            .as_ref()
+            .expect("explicit write history")
+            .start_write("serviceControlWrite", Some(address.to_string()))
+        {
+            Ok(guard) => Some(guard),
+            Err(_) => {
+                eprintln!("activity history is unavailable; not sent");
+                return ExitCode::FAILURE;
+            }
+        }
+    } else {
+        None
+    };
+    let mut read_activity = if !writing {
+        activity_log
+            .as_ref()
+            .map(|log| log.start("serviceControlRead", Some(address.to_string())))
+    } else {
+        None
+    };
+    if !writing
+        && activity_log
+            .as_ref()
+            .is_some_and(|log| log.history_state() == "unavailable")
+    {
+        eprintln!("activity history unavailable; read not started");
+        return ExitCode::FAILURE;
+    }
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
     {
         Ok(rt) => rt,
         Err(e) => {
+            if let Some(guard) = write_activity.take() {
+                guard.finish(WriteOutcome::NotSent);
+            }
+            if let Some(guard) = read_activity.take() {
+                guard.finish("failed");
+            }
             eprintln!("could not start async runtime: {e}");
             return ExitCode::FAILURE;
         }
@@ -2871,6 +3202,12 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
         let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
             Ok(tunnel) => tunnel,
             Err(e) => {
+                if let Some(guard) = write_activity.take() {
+                    guard.finish(WriteOutcome::NotSent);
+                }
+                if let Some(guard) = read_activity.take() {
+                    guard.finish("failed");
+                }
                 eprintln!("could not connect to {gateway}: {e}");
                 return ExitCode::FAILURE;
             }
@@ -2892,17 +3229,44 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
                     timing,
                     authorisation,
                     enable,
-                    &backup_dir,
+                    device_service_control::RecoveryAndHistory {
+                        backup_dir: &backup_dir,
+                        activity: write_activity.as_ref().expect("admitted write"),
+                    },
                     &mut out,
                 )
                 .await
             }
             device_service_control::Mode::Plan { .. } => unreachable!("returned above"),
         };
-        if let Err(e) = tunnel.disconnect().await {
-            eprintln!("tunnel disconnect: {e}");
+        if let Some(guard) = write_activity.take() {
+            let outcome = match (ok, guard.send_possible()) {
+                (true, true) => WriteOutcome::Verified,
+                (true, false) => WriteOutcome::NoChange,
+                (false, true) => WriteOutcome::EffectUnverified,
+                (false, false) => WriteOutcome::NotSent,
+            };
+            guard.finish(outcome);
         }
-        if ok {
+        if let Some(guard) = read_activity.take() {
+            guard.finish(if ok { "finished" } else { "failed" });
+        }
+        let cleanup_ok = match tunnel.disconnect().await {
+            Ok(()) => true,
+            Err(e) => {
+                eprintln!("tunnel disconnect: {e}");
+                false
+            }
+        };
+        let recording_ok = activity_log
+            .as_ref()
+            .is_none_or(|log| log.history_state() != "unavailable");
+        if !recording_ok {
+            eprintln!(
+                "activity history recording failed; device result and cleanup remain separate"
+            );
+        }
+        if ok && cleanup_ok && (recording_ok || !writing) {
             ExitCode::SUCCESS
         } else {
             ExitCode::FAILURE

@@ -52,6 +52,8 @@ pub struct DownloadArgs {
     /// `--accept-untested`: the phrase that accepts a download to an
     /// application no one has verified on hardware.
     pub accept_untested: Option<String>,
+    /// Explicit durable metadata history for a confirmed write.
+    pub activity_history: Option<String>,
 }
 
 /// `--partial parameters|group-addresses|both`.
@@ -82,6 +84,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
     let mut partial = None;
     let mut backup_dir = None;
     let mut accept_untested = None;
+    let mut activity_history = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -124,6 +127,10 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
                 accept_untested = Some(crate::take_value(args, i + 1, "--accept-untested")?);
                 i += 1;
             }
+            "--activity-history" => {
+                activity_history = Some(crate::take_value(args, i + 1, "--activity-history")?);
+                i += 1;
+            }
             flag if flag.starts_with("--") => return Err(format!("unknown flag {flag}")),
             positional => {
                 if target.replace(positional.to_string()).is_some() {
@@ -148,6 +155,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
         partial,
         backup_dir,
         accept_untested,
+        activity_history,
     })
 }
 
@@ -388,19 +396,18 @@ pub fn format_progress(progress: &Progress) -> Option<String> {
     }
 }
 
-/// How a run ended, for the summary and the exit code.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Written {
-    /// Every step ran.
-    Yes,
-    /// It stopped before any step that changes the device.
-    No,
-    /// It stopped after at least one step that changes the device.
-    Partially,
+/// Shared payload-free device-write classification.
+pub use knx_app::commissioning_activity::Written;
+use knx_app::commissioning_activity::{DownloadGuard, DownloadResult, Restart};
+
+/// The plan and immutable recovery destination used by the same execution.
+pub struct DownloadRun<'a> {
+    pub plan: &'a MemoryDownloadPlan,
+    pub backup: &'a BackupTarget<'a>,
 }
 
-/// Runs the plan through `transport` and writes the progress and the
-/// summary to `out`. Returns what was written.
+/// Untracked compatibility projection for existing offline transport tests only.
+#[cfg(test)]
 pub async fn execute<T: ManagementTransport>(
     transport: &T,
     authorisation: WriteAuthorisation,
@@ -410,6 +417,58 @@ pub async fn execute<T: ManagementTransport>(
     backup: &BackupTarget<'_>,
     out: &mut impl Write,
 ) -> Written {
+    match execute_inner(
+        transport,
+        authorisation,
+        keying,
+        timing,
+        DownloadRun { plan, backup },
+        || Ok(()),
+        out,
+    )
+    .await
+    {
+        DownloadResult::Finished { written, .. } | DownloadResult::Failed { written } => written,
+        DownloadResult::Running => unreachable!("executor returns a terminal result"),
+    }
+}
+
+/// Return device and restart witnesses separately from journal/cleanup outcomes.
+pub async fn execute_with_history<T: ManagementTransport>(
+    transport: &T,
+    authorisation: WriteAuthorisation,
+    keying: DownloadKeying,
+    timing: SessionTiming,
+    run: DownloadRun<'_>,
+    activity: &mut DownloadGuard,
+    out: &mut impl Write,
+) -> DownloadResult {
+    execute_inner(
+        transport,
+        authorisation,
+        keying,
+        timing,
+        run,
+        || {
+            activity
+                .mark_send_possible()
+                .map_err(|error| error.to_string())
+        },
+        out,
+    )
+    .await
+}
+
+async fn execute_inner<T: ManagementTransport>(
+    transport: &T,
+    authorisation: WriteAuthorisation,
+    keying: DownloadKeying,
+    timing: SessionTiming,
+    run: DownloadRun<'_>,
+    mut before_write: impl FnMut() -> Result<(), String>,
+    out: &mut impl Write,
+) -> DownloadResult {
+    let DownloadRun { plan, backup } = run;
     let target = authorisation.target().address();
     let mut session =
         match ManagementSession::authorised(transport, keying.plan, timing, authorisation) {
@@ -424,7 +483,9 @@ pub async fn execute<T: ManagementTransport>(
             Err(e) => {
                 let _ = writeln!(out, "== download to device {target}: refused: {e} ==");
                 let _ = writeln!(out, "written to the device: no");
-                return Written::No;
+                return DownloadResult::Failed {
+                    written: Written::No,
+                };
             }
         };
     let mut last_started = None;
@@ -442,6 +503,7 @@ pub async fn execute<T: ManagementTransport>(
         };
         let path = write_backup(backup.dir, &stored).map_err(|e| e.to_string())?;
         *kept_at.borrow_mut() = Some(path);
+        before_write()?;
         Ok(())
     };
     let result = run_memory_download_with_backup(
@@ -478,7 +540,14 @@ pub async fn execute<T: ManagementTransport>(
     match result {
         Ok(report) => {
             summarise(out, target, &report);
-            Written::Yes
+            DownloadResult::Finished {
+                written: Written::Yes,
+                restart: match report.restart {
+                    RestartOutcome::Acknowledged { .. } => Restart::Acknowledged,
+                    RestartOutcome::Unconfirmed { .. } => Restart::Unconfirmed,
+                    RestartOutcome::NotInPlan => Restart::NotInPlan,
+                },
+            }
         }
         Err(e) => {
             let _ = writeln!(out, "== download to device {target}: FAILED: {e} ==");
@@ -503,10 +572,14 @@ pub async fn execute<T: ManagementTransport>(
                         path.display()
                     );
                 }
-                Written::Partially
+                DownloadResult::Failed {
+                    written: Written::Partially,
+                }
             } else {
                 let _ = writeln!(out, "written to the device: no");
-                Written::No
+                DownloadResult::Failed {
+                    written: Written::No,
+                }
             }
         }
     }
@@ -725,6 +798,155 @@ mod tests {
             post_restart_disconnect_wait: Duration::from_millis(5),
             programming_mode_broadcast_timeout: Duration::from_millis(20),
         }
+    }
+
+    fn synthetic_download() -> (SimulatedDevice, MemoryDownloadPlan) {
+        use knx_core::commissioning::load_state::MaskVersion;
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            mask_version: 0x0701,
+            ..SimulatorConfig::default()
+        });
+        device.preset_property(0, PID_MANUFACTURER_ID, &[0x12, 0x34]);
+        device.preset_memory(0x4200, &[0xA1, 0xB2]);
+        let plan = MemoryDownloadPlan {
+            mask: MaskVersion(0x0701),
+            manufacturer: 0x1234,
+            steps: vec![
+                MemoryDownloadStep::Connect,
+                MemoryDownloadStep::WriteMemory {
+                    address: 0x4200,
+                    octets: vec![0x11, 0x22],
+                },
+                MemoryDownloadStep::Disconnect,
+            ],
+        };
+        (device, plan)
+    }
+
+    #[test]
+    fn completed_tracked_download_keeps_write_restart_and_cleanup_separate() {
+        use knx_app::commissioning_activity::{DownloadResult, OneShotLog, Restart};
+        use std::sync::Arc;
+
+        let dir = tempfile::tempdir().unwrap();
+        let history = dir.path().join("history.sqlite");
+        let log = Arc::new(OneShotLog::for_run(history).unwrap());
+        let (device, plan) = synthetic_download();
+        let mut activity = log.start_download(1, device.address()).unwrap();
+        let backups = dir.path().join("backups");
+        let backup = BackupTarget {
+            dir: &backups,
+            application: "synthetic-application",
+            partial: None,
+            taken: "2026-10-04T12:00:00Z".into(),
+        };
+        let result = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap()
+            .block_on(execute_with_history(
+                &device,
+                WriteAuthorisation::for_simulator(device.address(), WriteScope::Download).unwrap(),
+                download_keying(plan.mask, None, KeySource::None),
+                fast(),
+                DownloadRun {
+                    plan: &plan,
+                    backup: &backup,
+                },
+                &mut activity,
+                &mut Vec::new(),
+            ));
+        assert_eq!(
+            result,
+            DownloadResult::Finished {
+                written: Written::Yes,
+                restart: Restart::NotInPlan
+            }
+        );
+        assert_eq!(device.memory(0x4200, 2), vec![Some(0x11), Some(0x22)]);
+        let (rows, _) = log.history_page(0, 100).unwrap();
+        assert_eq!(rows.len(), 1);
+        let intent = serde_json::to_value(&rows[0]).unwrap();
+        assert_eq!(intent["state"], "running");
+        assert_eq!(intent["writeEvidence"]["backupRecorded"], true);
+        assert_eq!(intent["writeEvidence"]["sendPossible"], true);
+        assert!(intent["downloadEvidence"]["written"].is_null());
+        activity.record_result(&result).unwrap();
+        activity.record_cleanup(false).unwrap();
+        let (rows, _) = log.history_page(0, 100).unwrap();
+        let recorded = serde_json::to_value(&rows[0]).unwrap();
+        assert_eq!(recorded["state"], "finished");
+        assert_eq!(recorded["downloadEvidence"]["written"], "yes");
+        assert_eq!(recorded["downloadEvidence"]["restart"], "notInPlan");
+        assert_eq!(recorded["downloadEvidence"]["cleanup"], "returnedError");
+        let text = recorded.to_string();
+        assert!(!text.contains("octets"));
+        assert!(!text.contains(&dir.path().to_string_lossy().to_string()));
+    }
+
+    #[test]
+    fn download_intent_refusal_keeps_backup_and_sends_no_mutations() {
+        use knx_app::commissioning_activity::{
+            DownloadResult, OneShotLog, Written as SharedWritten,
+        };
+        use std::sync::Arc;
+
+        let dir = tempfile::tempdir().unwrap();
+        let history = dir.path().join("history.sqlite");
+        let log = Arc::new(OneShotLog::for_run(history.clone()).unwrap());
+        let (device, plan) = synthetic_download();
+        let mut activity = log.start_download(1, device.address()).unwrap();
+        let original = b"synthetic foreign journal replacement";
+        std::fs::write(&history, original).unwrap();
+        let backups = dir.path().join("backups");
+        let backup = BackupTarget {
+            dir: &backups,
+            application: "synthetic-application",
+            partial: None,
+            taken: "2026-10-04T12:00:00Z".into(),
+        };
+        let mut out = Vec::new();
+        let result = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap()
+            .block_on(execute_with_history(
+                &device,
+                WriteAuthorisation::for_simulator(device.address(), WriteScope::Download).unwrap(),
+                download_keying(plan.mask, None, KeySource::None),
+                fast(),
+                DownloadRun {
+                    plan: &plan,
+                    backup: &backup,
+                },
+                &mut activity,
+                &mut out,
+            ));
+        assert_eq!(
+            result,
+            DownloadResult::Failed {
+                written: SharedWritten::No
+            }
+        );
+        assert!(
+            backups.exists(),
+            "immutable backup was not kept before intent refusal"
+        );
+        let files: Vec<_> = std::fs::read_dir(&backups).unwrap().collect();
+        assert_eq!(files.len(), 1, "immutable backup must precede intent");
+        let stored =
+            knx_app::device_backup::read_backup(&files[0].as_ref().unwrap().path()).unwrap();
+        assert_eq!(stored.backup.regions[0].address, 0x4200);
+        assert_eq!(stored.backup.regions[0].octets, vec![0xA1, 0xB2]);
+        assert_eq!(device.memory(0x4200, 2), vec![Some(0xA1), Some(0xB2)]);
+        assert_eq!(std::fs::read(&history).unwrap(), original);
+        assert!(
+            !device.seen().iter().any(|event| matches!(
+                event,
+                Seen::PropertyWrite { .. } | Seen::MemoryWrite { .. } | Seen::Restart { .. }
+            )),
+            "intent failure allowed a device-changing transport event"
+        );
     }
 
     fn run(device: &SimulatedDevice, prepared: &PreparedDownload) -> (Written, String) {

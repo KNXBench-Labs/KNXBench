@@ -35,6 +35,8 @@ pub struct ServiceControlArgs {
     pub confirm: Option<String>,
     pub key_file: Option<String>,
     pub backup_dir: Option<String>,
+    /// Explicit metadata-only journal; plan-only never opens it.
+    pub activity_history: Option<String>,
 }
 
 pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
@@ -44,6 +46,7 @@ pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
     let mut confirm = None;
     let mut key_file = None;
     let mut backup_dir = None;
+    let mut activity_history = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -53,12 +56,13 @@ pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
                 }
                 i += 1;
             }
-            "--gateway" | "--confirm" | "--key-file" | "--backup-dir" => {
+            "--gateway" | "--confirm" | "--key-file" | "--backup-dir" | "--activity-history" => {
                 let value = crate::take_value(args, i + 1, &args[i])?;
                 let slot = match args[i].as_str() {
                     "--gateway" => &mut gateway,
                     "--confirm" => &mut confirm,
                     "--key-file" => &mut key_file,
+                    "--activity-history" => &mut activity_history,
                     _ => &mut backup_dir,
                 };
                 *slot = Some(value);
@@ -90,6 +94,7 @@ pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
         confirm,
         key_file,
         backup_dir,
+        activity_history,
     })
 }
 
@@ -203,6 +208,12 @@ pub async fn read<T: ManagementTransport>(
     }
 }
 
+/// Recovery bytes and durable intent must both precede every property mutation.
+pub struct RecoveryAndHistory<'a> {
+    pub backup_dir: &'a std::path::Path,
+    pub activity: &'a knx_app::commissioning_activity::WriteGuard,
+}
+
 /// Changes the bit and prints the outcome. Returns whether the device holds
 /// the requested value afterwards.
 pub async fn execute<T: ManagementTransport>(
@@ -211,7 +222,7 @@ pub async fn execute<T: ManagementTransport>(
     timing: SessionTiming,
     authorisation: WriteAuthorisation,
     enable: bool,
-    backup_dir: &std::path::Path,
+    recovery: RecoveryAndHistory<'_>,
     out: &mut impl Write,
 ) -> bool {
     let address = authorisation.target().address();
@@ -224,7 +235,7 @@ pub async fn execute<T: ManagementTransport>(
         enable,
         |before| {
             let path = knx_app::service_control_backup::write_backup(
-                backup_dir,
+                recovery.backup_dir,
                 address,
                 before.before.mask.0,
                 before.before.raw,
@@ -232,7 +243,10 @@ pub async fn execute<T: ManagementTransport>(
             )
             .map_err(|e| e.to_string())?;
             backup_path = Some(path);
-            Ok(())
+            recovery
+                .activity
+                .mark_send_possible()
+                .map_err(|e| e.to_string())
         },
     )
     .await;
@@ -290,6 +304,23 @@ mod tests {
     use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
 
     use super::*;
+
+    fn journal(
+        address: IndividualAddress,
+    ) -> (
+        tempfile::TempDir,
+        knx_app::commissioning_activity::WriteGuard,
+    ) {
+        let dir = tempfile::tempdir().unwrap();
+        let log = std::sync::Arc::new(knx_app::commissioning_activity::OneShotLog::persistent(
+            dir.path().join("history.sqlite"),
+            "synthetic-cli".into(),
+        ));
+        let guard = log
+            .start_write("serviceControlWrite", Some(address.to_string()))
+            .unwrap();
+        (dir, guard)
+    }
 
     fn args(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| s.to_string()).collect()
@@ -418,6 +449,7 @@ mod tests {
         let authorisation =
             WriteAuthorisation::for_simulator(address, WriteScope::IndividualAddressWriteEnable)
                 .unwrap();
+        let (_history_dir, activity) = journal(device.address());
         assert!(
             execute(
                 &device,
@@ -425,7 +457,10 @@ mod tests {
                 fast(),
                 authorisation,
                 true,
-                dir.path(),
+                RecoveryAndHistory {
+                    backup_dir: dir.path(),
+                    activity: &activity
+                },
                 &mut out
             )
             .await
@@ -461,6 +496,7 @@ mod tests {
         )
         .unwrap();
         let mut out = Vec::new();
+        let (_history_dir, activity) = journal(device.address());
         assert!(
             !execute(
                 &device,
@@ -468,7 +504,10 @@ mod tests {
                 fast(),
                 authorisation,
                 true,
-                &blocker,
+                RecoveryAndHistory {
+                    backup_dir: &blocker,
+                    activity: &activity
+                },
                 &mut out,
             )
             .await
@@ -490,6 +529,7 @@ mod tests {
         )
         .unwrap();
         let mut out = Vec::new();
+        let (_history_dir, activity) = journal(device.address());
         assert!(
             execute(
                 &device,
@@ -497,7 +537,10 @@ mod tests {
                 fast(),
                 authorisation,
                 true,
-                dir.path(),
+                RecoveryAndHistory {
+                    backup_dir: dir.path(),
+                    activity: &activity
+                },
                 &mut out
             )
             .await
@@ -525,6 +568,7 @@ mod tests {
         )
         .unwrap();
         let mut out = Vec::new();
+        let (_history_dir, activity) = journal(device.address());
         assert!(
             !execute(
                 &device,
@@ -532,7 +576,10 @@ mod tests {
                 fast(),
                 authorisation,
                 true,
-                dir.path(),
+                RecoveryAndHistory {
+                    backup_dir: dir.path(),
+                    activity: &activity
+                },
                 &mut out
             )
             .await

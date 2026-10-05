@@ -1534,6 +1534,28 @@ fn print_install_facts(facts: Option<&knx_productdb::InstallFacts>) {
     );
 }
 
+/// Reads a product package only when its length fits the package bound.
+///
+/// The read is also capped one byte past the bound, so a file growing after
+/// the metadata check still reaches `install_package`'s own typed refusal
+/// instead of being read without limit.
+fn read_bounded_package(
+    file: &str,
+) -> std::io::Result<Result<Vec<u8>, knx_productdb::PackageError>> {
+    use std::io::Read;
+    let handle = std::fs::File::open(file)?;
+    let length = handle.metadata()?.len();
+    let limit = knx_productdb::MAX_PACKAGE_INPUT_BYTES;
+    if length > limit {
+        return Ok(Err(knx_productdb::PackageError::SizeLimit {
+            path: file.into(),
+        }));
+    }
+    let mut bytes = Vec::with_capacity(usize::try_from(length).unwrap_or(0));
+    handle.take(limit + 1).read_to_end(&mut bytes)?;
+    Ok(Ok(bytes))
+}
+
 fn run_products_ingest(args: &[String]) -> ExitCode {
     let (product_db, rest) = match split_product_db_flag(args) {
         Ok(v) => v,
@@ -1559,17 +1581,24 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
             extension.eq_ignore_ascii_case("knxprod") || extension.eq_ignore_ascii_case("vd2")
         })
     {
+        // Size admission precedes reading the file and opening (or creating)
+        // the product database, so an oversized input neither lands in memory
+        // nor touches the store.
+        let bytes = match read_bounded_package(file) {
+            Ok(Ok(bytes)) => bytes,
+            Ok(Err(refusal)) => {
+                eprintln!("failed to install product package {file}: {refusal}");
+                return ExitCode::FAILURE;
+            }
+            Err(error) => {
+                eprintln!("failed to read product package {file}: {error}");
+                return ExitCode::FAILURE;
+            }
+        };
         let conn = match open_products_db(product_db.as_deref()) {
             Ok(conn) => conn,
             Err(e) => {
                 eprintln!("{e}");
-                return ExitCode::FAILURE;
-            }
-        };
-        let bytes = match std::fs::read(file) {
-            Ok(bytes) => bytes,
-            Err(error) => {
-                eprintln!("failed to read product package {file}: {error}");
                 return ExitCode::FAILURE;
             }
         };

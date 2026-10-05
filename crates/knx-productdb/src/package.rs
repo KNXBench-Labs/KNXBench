@@ -14,6 +14,9 @@ use crate::{sha256_hex, FileKind, IngestOutcome, ProductDbError};
 
 const MAX_MEMBER_SIZE: u64 = 64 * 1024 * 1024;
 const MAX_PACKAGE_SIZE: usize = 256 * 1024 * 1024;
+/// Largest raw package input `install_package` admits, for callers that must
+/// refuse by size before reading a file or opening a product database.
+pub const MAX_PACKAGE_INPUT_BYTES: u64 = MAX_PACKAGE_SIZE as u64;
 const MAX_EXPANDED_SIZE: u64 = 256 * 1024 * 1024;
 const MAX_MEMBERS: usize = 4096;
 const MAX_PATH_NODES: usize = 65_536;

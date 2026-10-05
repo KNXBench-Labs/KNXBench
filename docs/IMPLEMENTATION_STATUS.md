@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR06Y: CLI refuses oversized product packages before reading them
+
+- `knx products ingest` checked the 256 MiB package bound only after reading the
+  whole file and opening/creating the product DB. It now refuses by file length
+  first (typed `product ZIP size limit exceeded: <path>`), reads at most bound+1,
+  and opens the DB only for admitted input. Productive limits unchanged; new
+  public `MAX_PACKAGE_INPUT_BYTES` mirrors the existing private bound.
+- Four real-binary sparse-file tests (+1 byte, 64 GiB, seeded DB byte-identical,
+  exact limit reaches ZIP validation); RED shown, two compiled mutants killed.
+  Details: PRODUCT_ZIP_RAW_INPUT_CONTRACTS.md. KL-151 remains IN_PROGRESS.
+
 ## 2026-10-05 — AR06X: actual raw-input guard contracts (local native evidence)
 
 - Actual256MiB and +1-byte nonzero malformed buffers: typed inclusive/error-

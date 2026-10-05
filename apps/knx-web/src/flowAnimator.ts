@@ -86,9 +86,10 @@ interface Pulse {
 export interface AnimatorMetrics {
   frames: number;
   steps: number;
-  /** Telegrams that were drawn as part of a bundle. */
+  /** Telegrams drawn completely, as part of a bundle. Each telegram counts once. */
   coalescedEvents: number;
-  /** Telegrams that found no free pulse element. */
+  /** Telegrams of which at least one line found no free pulse element; counted
+   * once per telegram, not per line, and never also as bundled. */
   overCapacityEvents: number;
   /** True once bundling or the capacity limit was needed. */
   reduced: boolean;
@@ -248,32 +249,44 @@ export class FlowAnimator {
   private queuePulses(events: readonly FlowEvent[], now: number): void {
     const bundles = new Map<string, Pulse>();
     const bundle = events.length > COALESCE_ABOVE;
-    const add = (pulse: Pulse) => {
+    // Each telegram is counted once (AR21 finding 4): as not (completely)
+    // drawn when any of its lines found no free pulse, else, in a bundled
+    // batch, as drawn bundled. Lines per telegram are not telegrams.
+    const incomplete = new Set<number>();
+    const members = new Map<Pulse, number[]>();
+    const add = (pulse: Pulse, telegrams: readonly number[]) => {
       if (this.pulses.length >= MAX_PULSES) {
-        this.metrics.overCapacityEvents += pulse.count;
+        for (const index of telegrams) incomplete.add(index);
         this.metrics.reduced = true;
         return;
       }
       this.pulses.push(pulse);
     };
-    for (const event of events) {
+    events.forEach((event, index) => {
       for (const to of event.to) {
         const pulse = { from: event.from, to, gaLabel: event.gaLabel, count: 1, start: now };
         if (!bundle) {
-          add(pulse);
+          add(pulse, [index]);
           continue;
         }
         const key = `${event.from}\u0000${to}\u0000${event.gaRaw}`;
         const existing = bundles.get(key);
-        if (existing) existing.count += 1;
-        else bundles.set(key, pulse);
+        if (existing) {
+          existing.count += 1;
+          members.get(existing)!.push(index);
+        } else {
+          bundles.set(key, pulse);
+          members.set(pulse, [index]);
+        }
       }
-    }
+    });
     if (bundle) {
-      this.metrics.coalescedEvents += events.length;
       this.metrics.reduced = true;
-      for (const pulse of bundles.values()) add(pulse);
+      for (const pulse of bundles.values()) add(pulse, members.get(pulse)!);
+      // Every event has at least one target (a group box when no member resolved).
+      this.metrics.coalescedEvents += events.length - incomplete.size;
     }
+    this.metrics.overCapacityEvents += incomplete.size;
   }
 
   private startNudges(): void {

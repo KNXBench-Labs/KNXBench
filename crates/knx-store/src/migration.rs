@@ -19,10 +19,10 @@
 use std::fmt;
 use std::path::Path;
 
-use rusqlite::Connection;
+use rusqlite::{params, Connection, OptionalExtension};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 9;
+pub const CURRENT_SCHEMA_VERSION: i64 = 10;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -416,6 +416,114 @@ fn migrate_v8_to_v9(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// The keyed opaque path of a group address (`knx_etsproj::xpath::group_address`),
+/// spelled here because the store does not depend on the importer. A
+/// change there must change this too; the v10 lift test pins both.
+const GROUP_ADDRESS_XPATH_PREFIX: &str =
+    "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange/GroupAddress";
+
+/// v9 -> v10: a group address's own `@DatapointType` (ADR-0078).
+///
+/// Adds `group_address.dpt_state`/`dpt_value`/`dpt_layer` (the
+/// `com_object_override` encoding) and
+/// `project_info.unlifted_group_address_dpt_declarations`. For schema ≥21
+/// projects it then lifts every retained `DatapointType` attribute whose
+/// xpath is exactly a stored address's keyed path, parsing it as the
+/// importer does, and deletes the lifted row so the value is stored once
+/// (ADR-0020: re-derive what the stored bytes determine). Rows it cannot
+/// attribute — the unkeyed form of imports before 2026-09-20, or a key that
+/// matches no stored address — stay untouched and are counted. The whole
+/// step runs in one savepoint.
+fn migrate_v9_to_v10(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch("SAVEPOINT migrate_v9_to_v10")?;
+    match lift_group_address_dpts(conn) {
+        Ok(()) => {
+            conn.execute_batch("RELEASE migrate_v9_to_v10")?;
+            Ok(())
+        }
+        Err(error) => {
+            conn.execute_batch("ROLLBACK TO migrate_v9_to_v10; RELEASE migrate_v9_to_v10")?;
+            Err(error)
+        }
+    }
+}
+
+fn lift_group_address_dpts(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "ALTER TABLE group_address ADD COLUMN dpt_state TEXT NOT NULL DEFAULT 'absent';
+         ALTER TABLE group_address ADD COLUMN dpt_value TEXT;
+         ALTER TABLE group_address ADD COLUMN dpt_layer TEXT;
+         ALTER TABLE project_info ADD COLUMN unlifted_group_address_dpt_declarations
+             INTEGER NOT NULL DEFAULT 0;",
+    )?;
+    let schema: Option<i64> = conn
+        .query_row(
+            "SELECT ets_schema_version FROM project_info WHERE id = 0",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    // Schema 11 defines no `GroupAddress/@DatapointType`; such an attribute
+    // stays an unknown retained one, exactly as a fresh import keeps it.
+    if schema.is_none_or(|v| v < 21) {
+        return Ok(());
+    }
+    let rows: Vec<(i64, String, String, Vec<u8>)> = conn
+        .prepare(
+            "SELECT id, source_path, xpath, bytes FROM opaque_entry
+             WHERE kind = 'RetainedAttribute' AND name = 'DatapointType'
+               AND substr(xpath, 1, ?1) = ?2
+             ORDER BY id",
+        )?
+        .query_map(
+            params![
+                GROUP_ADDRESS_XPATH_PREFIX.len() as i64,
+                GROUP_ADDRESS_XPATH_PREFIX
+            ],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )?
+        .collect::<Result<_, _>>()?;
+    let mut unlifted: i64 = 0;
+    for (opaque_id, source_path, xpath, bytes) in rows {
+        let ets_id = xpath
+            .strip_prefix(GROUP_ADDRESS_XPATH_PREFIX)
+            .and_then(|rest| rest.strip_prefix("[@Id='"))
+            .and_then(|rest| rest.strip_suffix("']"));
+        let target: Option<i64> = match ets_id {
+            Some(ets_id) => conn
+                .query_row(
+                    "SELECT id FROM group_address WHERE source_path = ?1 AND source_ets_id = ?2",
+                    params![source_path, ets_id],
+                    |r| r.get(0),
+                )
+                .optional()?,
+            None => None,
+        };
+        let (Some(group_address_id), Ok(text)) = (target, String::from_utf8(bytes)) else {
+            unlifted += 1;
+            continue;
+        };
+        let (state, value, layer) = if text.is_empty() {
+            ("empty", None, None)
+        } else {
+            match knx_core::DptRef::parse(&text) {
+                Ok(dpt) => ("value", Some(dpt.to_string()), Some("Instance")),
+                Err(_) => ("malformed", Some(text), None),
+            }
+        };
+        conn.execute(
+            "UPDATE group_address SET dpt_state = ?1, dpt_value = ?2, dpt_layer = ?3 WHERE id = ?4",
+            params![state, value, layer, group_address_id],
+        )?;
+        conn.execute("DELETE FROM opaque_entry WHERE id = ?1", params![opaque_id])?;
+    }
+    conn.execute(
+        "UPDATE project_info SET unlifted_group_address_dpt_declarations = ?1 WHERE id = 0",
+        params![unlifted],
+    )?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// Ordered chain; index `i` migrates `user_version` `i` to `i + 1`.
@@ -430,6 +538,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v6_to_v7,
         migrate_v7_to_v8,
         migrate_v8_to_v9,
+        migrate_v9_to_v10,
     ]
 }
 
@@ -634,7 +743,7 @@ mod tests {
         // lands on `CURRENT_SCHEMA_VERSION` (now 9), not v3 — the manifest
         // table introduced at v3 is what this test actually verifies, and it
         // still exists and is empty at v5.
-        assert_eq!(v, 9);
+        assert_eq!(v, CURRENT_SCHEMA_VERSION);
         assert_eq!(
             crate::manifest::load_manufacturer_refs(&conn).unwrap(),
             vec![]
@@ -656,7 +765,7 @@ mod tests {
             .unwrap();
         // See the comment on the test above: the chain runs all the way to
         // `CURRENT_SCHEMA_VERSION` (now 9), not just to v3.
-        assert_eq!(v, 9);
+        assert_eq!(v, CURRENT_SCHEMA_VERSION);
         // The v2 opaque table survives the migration with its data intact.
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
@@ -671,7 +780,7 @@ mod tests {
         // As with the tests above, a fresh file always lands on
         // `CURRENT_SCHEMA_VERSION` (now 9) — the v4 entity tables checked
         // below still exist and are empty at v5.
-        assert_eq!(v, 9);
+        assert_eq!(v, CURRENT_SCHEMA_VERSION);
         for table in [
             "project_info",
             "id_allocators",
@@ -723,7 +832,7 @@ mod tests {
         // See the comment on `the_frozen_v2_fixture_migrates_forward_to_v3`:
         // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 9), not
         // just to v4.
-        assert_eq!(v, 9);
+        assert_eq!(v, CURRENT_SCHEMA_VERSION);
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
 
@@ -746,7 +855,7 @@ mod tests {
         // See the comment on `the_frozen_v3_fixture_migrates_forward_to_v4`:
         // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 9),
         // not just to v5.
-        assert_eq!(v, 9);
+        assert_eq!(v, CURRENT_SCHEMA_VERSION);
     }
 
     #[test]
@@ -765,7 +874,7 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 9);
+        assert_eq!(v, CURRENT_SCHEMA_VERSION);
         // `module_instance` carries no rows in the empty fixture, so the
         // "existing rows default to ''" claim is checked directly against
         // the column definition ETS never populated.
@@ -796,7 +905,7 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 9);
+        assert_eq!(v, CURRENT_SCHEMA_VERSION);
         // v7 adds no DDL — `com_object_override` is keyed by attribute name,
         // so the sixth flag needed a new `attr` string and nothing else.
         // What the migration must not do is invent rows, so the table is
@@ -823,7 +932,7 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 9);
+        assert_eq!(v, CURRENT_SCHEMA_VERSION);
         // v8 (reserved, no DDL) and v9's new `com_object_program_default`
         // table both land; the table exists and, migrating from empty, is
         // itself empty — a migration invents no rows.
@@ -931,12 +1040,18 @@ mod tests {
             crate::project::cover_ids_in_use(&mut project);
             crate::project::save_project(&conn, &project).unwrap();
 
-            // Back to a genuine v7 shape: v8 is a no-DDL placeholder and v9's
-            // only change is this table, so dropping it and rewinding
-            // `user_version` leaves exactly the file a v7 build would have
-            // written for this project.
-            conn.execute_batch("DROP TABLE com_object_program_default;")
-                .unwrap();
+            // Back to a genuine v7 shape: v8 is a no-DDL placeholder, v9's
+            // only change is this table and v10's are four columns, so
+            // dropping them and rewinding `user_version` leaves exactly the
+            // file a v7 build would have written for this project.
+            conn.execute_batch(
+                "DROP TABLE com_object_program_default;
+                 ALTER TABLE group_address DROP COLUMN dpt_state;
+                 ALTER TABLE group_address DROP COLUMN dpt_value;
+                 ALTER TABLE group_address DROP COLUMN dpt_layer;
+                 ALTER TABLE project_info DROP COLUMN unlifted_group_address_dpt_declarations;",
+            )
+            .unwrap();
             conn.pragma_update(None, "user_version", 7i64).unwrap();
             project
         };
@@ -957,7 +1072,7 @@ mod tests {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 9);
+        assert_eq!(version, CURRENT_SCHEMA_VERSION);
 
         let loaded = crate::project::load_project(&conn).unwrap();
         assert_eq!(
@@ -1116,7 +1231,7 @@ mod tests {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 9);
+        assert_eq!(version, CURRENT_SCHEMA_VERSION);
         let instance_ets_id: String = conn
             .query_row(
                 "SELECT instance_ets_id FROM module_instance WHERE id = 1",
@@ -1148,7 +1263,7 @@ mod tests {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 9); // `migrate` always runs to CURRENT_SCHEMA_VERSION, not just to v5
+        assert_eq!(version, CURRENT_SCHEMA_VERSION); // `migrate` always runs to CURRENT_SCHEMA_VERSION, not just to v5
         conn.execute("INSERT INTO module_instance (id, device_id, position, source_path, source_ets_id, repeat_index) VALUES (1, 0, 0, 't', 't', '6x1')", []).unwrap_err(); // device_id FK: no device(0) exists, expected to fail — proves the FK/table exist
         conn.query_row(
             "SELECT module_instance_id FROM com_object_instance LIMIT 0",
@@ -1156,5 +1271,145 @@ mod tests {
             |_| Ok(()),
         )
         .ok(); // column exists (no rows to fail on, just proves no "no such column" error at prepare time)
+    }
+
+    /// A v9 store with one installation, three group addresses and the
+    /// opaque rows an import writes for them; `ets_schema` is the project's
+    /// ETS schema version.
+    fn v9_store_with_declarations(ets_schema: i64) -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        for migration in &migrations()[0..9] {
+            migration(&conn).unwrap();
+        }
+        conn.pragma_update(None, "user_version", 9i64).unwrap();
+        conn.execute(
+            "INSERT INTO project_info (id, project_id, name, group_address_style, completion,
+                 default_language, ets_schema_version)
+             VALUES (0, 'P-1', 'p', 'ThreeLevel', 'Undefined', 'en', ?1)",
+            params![ets_schema],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO installation (id, name, completion) VALUES (0, 'I', 'Undefined')",
+            [],
+        )
+        .unwrap();
+        for (id, ets) in [(1, "P-1-0_GA-1"), (2, "P-1-0_GA-2"), (3, "P-1-0_GA-3")] {
+            conn.execute(
+                "INSERT INTO group_address (id, installation_id, position, source_path,
+                     source_ets_id, name, address, central, unfiltered)
+                 VALUES (?1, 0, ?1, 'P-1/0.xml', ?2, 'ga', ?1, 0, 0)",
+                params![id, ets],
+            )
+            .unwrap();
+        }
+        let keyed = |ets: &str| format!("{GROUP_ADDRESS_XPATH_PREFIX}[@Id='{ets}']");
+        for (xpath, name, value) in [
+            (keyed("P-1-0_GA-1"), "DatapointType", "DPST-9-1"),
+            (keyed("P-1-0_GA-2"), "DatapointType", ""),
+            (keyed("P-1-0_GA-3"), "DatapointType", "DPST-1-1 DPST-1-2"),
+            (keyed("P-1-0_GA-1"), "Puid", "17"),
+            // The pre-2026-09-20 unkeyed form, and a key naming no address.
+            (
+                GROUP_ADDRESS_XPATH_PREFIX.to_string(),
+                "DatapointType",
+                "DPST-5-1",
+            ),
+            (keyed("P-1-0_GA-99"), "DatapointType", "DPST-1-1"),
+        ] {
+            conn.execute(
+                "INSERT INTO opaque_entry (source_path, xpath, kind, name, bytes, sha256)
+                 VALUES ('P-1/0.xml', ?1, 'RetainedAttribute', ?2, ?3, 'x')",
+                params![xpath, name, value.as_bytes()],
+            )
+            .unwrap();
+        }
+        conn
+    }
+
+    fn declared(conn: &Connection, id: i64) -> (String, Option<String>, Option<String>) {
+        conn.query_row(
+            "SELECT dpt_state, dpt_value, dpt_layer FROM group_address WHERE id = ?1",
+            params![id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap()
+    }
+
+    fn opaque_rows(conn: &Connection) -> Vec<(String, String)> {
+        conn.prepare("SELECT xpath, name FROM opaque_entry ORDER BY id")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap()
+    }
+
+    fn unlifted(conn: &Connection) -> i64 {
+        conn.query_row(
+            "SELECT unlifted_group_address_dpt_declarations FROM project_info WHERE id = 0",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn v9_to_v10_lifts_keyed_declarations_and_counts_the_rest() {
+        let conn = v9_store_with_declarations(21);
+        migrate(&conn).unwrap();
+        assert_eq!(
+            declared(&conn, 1),
+            (
+                "value".into(),
+                Some("DPST-9-1".into()),
+                Some("Instance".into())
+            )
+        );
+        assert_eq!(declared(&conn, 2), ("empty".into(), None, None));
+        assert_eq!(
+            declared(&conn, 3),
+            ("malformed".into(), Some("DPST-1-1 DPST-1-2".into()), None)
+        );
+        let keyed = |ets: &str| format!("{GROUP_ADDRESS_XPATH_PREFIX}[@Id='{ets}']");
+        assert_eq!(
+            opaque_rows(&conn),
+            vec![
+                (keyed("P-1-0_GA-1"), "Puid".to_string()),
+                (
+                    GROUP_ADDRESS_XPATH_PREFIX.to_string(),
+                    "DatapointType".to_string()
+                ),
+                (keyed("P-1-0_GA-99"), "DatapointType".to_string()),
+            ],
+            "lifted rows go, every other row stays"
+        );
+        assert_eq!(unlifted(&conn), 2);
+    }
+
+    #[test]
+    fn v9_to_v10_lifts_nothing_for_a_schema_11_project() {
+        let conn = v9_store_with_declarations(11);
+        migrate(&conn).unwrap();
+        for id in 1..=3 {
+            assert_eq!(declared(&conn, id), ("absent".into(), None, None));
+        }
+        assert_eq!(opaque_rows(&conn).len(), 6);
+        assert_eq!(unlifted(&conn), 0);
+    }
+
+    #[test]
+    fn v9_to_v10_on_a_store_without_a_project_only_adds_columns() {
+        let conn = Connection::open_in_memory().unwrap();
+        for migration in &migrations()[0..9] {
+            migration(&conn).unwrap();
+        }
+        conn.pragma_update(None, "user_version", 9i64).unwrap();
+        migrate(&conn).unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, 10);
     }
 }

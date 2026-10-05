@@ -20,7 +20,7 @@ use crate::string_table::{Language, StringTable};
 /// 8 belongs to the schema->=21 export path (a concurrent branch at the time
 /// of writing); 9 is `com_object_program_default` (ADR-0012 gap 2,
 /// ADR-0027). Must always equal `knx_store::migration::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: u32 = 9;
+pub const CURRENT_SCHEMA_VERSION: u32 = 10;
 
 /// Synthetic, project-unique id counters. Ids start at 1; 0 is never
 /// allocated, which leaves it free for tests to use as an obviously-fake id.
@@ -202,6 +202,12 @@ pub struct ProjectInfo {
     /// version. Schema 11 devices carry a monolithic application program;
     /// schema ≥21 devices are module-based (ADR-0013).
     pub ets_schema_version: u32,
+    /// `GroupAddress/@DatapointType` opaque rows the v10 migration could not
+    /// attribute to one group address (unkeyed rows from early imports), so
+    /// they were not lifted into `GroupAddressEntry::declared_dpt`
+    /// (ADR-0078 D3). Non-zero makes an absent declaration resolve as
+    /// `DeclarationNotLifted`.
+    pub unlifted_group_address_dpt_declarations: u32,
 }
 
 impl Default for ProjectInfo {
@@ -216,6 +222,7 @@ impl Default for ProjectInfo {
             last_modified: None,
             project_start: None,
             ets_schema_version: 11,
+            unlifted_group_address_dpt_declarations: 0,
         }
     }
 }

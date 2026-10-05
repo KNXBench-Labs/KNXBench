@@ -4,7 +4,7 @@
 //! v02.02.01 AS for that main type, not from the codec. A codec that accepted a
 //! different width, or reported a different required width, would fail here.
 
-use knx_core::dpt::codec::{decode, DptCodecError};
+use knx_core::dpt::codec::{decode, format_width_bits, DptCodecError};
 use knx_core::dpt::{DptRef, GroupValue};
 
 /// (main, sub, DPT-AS section, spec width in bits).
@@ -94,5 +94,19 @@ fn codec_refuses_one_octet_less_for_multi_octet_formats() {
             ),
             "{main}.{sub:03} (DPT-AS {section}): truncated payload not refused"
         );
+    }
+}
+
+#[test]
+fn the_public_width_table_matches_the_dpt_as_rows() {
+    for &(main, sub, section, bits) in FIXED_WIDTH {
+        assert_eq!(
+            format_width_bits(main),
+            Some(bits),
+            "{main}.{sub:03} (DPT-AS {section})"
+        );
+    }
+    for variable_or_unknown in [0, 24, 28, 31, 232] {
+        assert_eq!(format_width_bits(variable_or_unknown), None);
     }
 }

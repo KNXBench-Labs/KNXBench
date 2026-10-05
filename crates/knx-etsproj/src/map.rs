@@ -386,6 +386,8 @@ fn map_project_info(
         // This mapper only ever handles schema-11 documents; schema ≥21/23
         // documents go through `map_project_info_v21` below instead.
         ets_schema_version: 11,
+        // A fresh import attributes every declaration it reads (ADR-0078).
+        unlifted_group_address_dpt_declarations: 0,
     }
 }
 
@@ -799,7 +801,7 @@ fn map_com_object(
         number,
         text: override_text(&com.text),
         description: override_text(&com.description),
-        dpt: override_dpt(&com.datapoint_type, &xpath, problems),
+        dpt: override_dpt(&com.datapoint_type, COM_OBJECT_DPT, &xpath, problems),
         flags,
         // Never stated at instance level in schema 11; filled from the
         // application program once the product database exists (Session 4).
@@ -1328,7 +1330,7 @@ fn map_com_object_v21(
         Some(c) => (
             override_text(&c.text),
             override_text(&c.description),
-            override_dpt(&c.datapoint_type, &xpath, problems),
+            override_dpt(&c.datapoint_type, COM_OBJECT_DPT, &xpath, problems),
             // Schema ≥21 instance overrides *do* carry flags, contrary to
             // what this line asserted until now. ADR-0014's claim was
             // measured against `KV v2.5 - demo.knxproj` alone, where it
@@ -1514,6 +1516,12 @@ fn map_group_range(
             central: required_bool(&address.central, &xpath, problems),
             unfiltered: required_bool(&address.unfiltered, &xpath, problems),
             range: Some(id),
+            declared_dpt: override_dpt(
+                &address.datapoint_type,
+                GROUP_ADDRESS_DPT,
+                &crate::xpath::group_address(&address.id),
+                problems,
+            ),
         });
         retained.extend(keyed(
             &address.other,
@@ -1822,8 +1830,15 @@ fn override_text(value: &Option<String>) -> Override<Text> {
     }
 }
 
+const COM_OBJECT_DPT: &str = "ComObjectInstanceRef/@DatapointType";
+const GROUP_ADDRESS_DPT: &str = "GroupAddress/@DatapointType";
+
+/// One attribute that names a single DPT (`DPT-n` / `DPST-n-m`). Anything
+/// else — several space-separated references, an unknown form — is kept
+/// verbatim as `Malformed` and reported under `kind`, never dropped.
 fn override_dpt(
     value: &Option<String>,
+    kind: &'static str,
     xpath: &str,
     problems: &mut Vec<MapProblem>,
 ) -> Override<DptRef> {
@@ -1839,7 +1854,7 @@ fn override_dpt(
                 problems.push(MapProblem {
                     xpath: xpath.to_string(),
                     detail: MapProblemDetail::Value(ValueError::UnknownEnumValue {
-                        kind: "ComObjectInstanceRef/@DatapointType",
+                        kind,
                         value: s.clone(),
                     }),
                 });

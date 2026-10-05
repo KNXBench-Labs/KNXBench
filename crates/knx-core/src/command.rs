@@ -4115,6 +4115,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         };
         stack
             .do_command(
@@ -4192,6 +4193,7 @@ mod tests {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             });
         let mut stack = CommandStack::new();
         let result = stack.do_command(
@@ -4205,6 +4207,7 @@ mod tests {
                     central: false,
                     unfiltered: false,
                     range: None,
+                    declared_dpt: Default::default(),
                 },
                 installation: None,
             },
@@ -4232,6 +4235,7 @@ mod tests {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             });
         project.devices.insert_com_object(ComObjectInstance {
             id: ComObjectInstanceId(1),
@@ -5855,6 +5859,7 @@ mod tests {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             });
         let mut com = test_com_object_instance(ComObjectInstanceId(1), DeviceId(1));
         com.links.push(GroupLink {
@@ -6348,6 +6353,7 @@ mod tests {
                 central: false,
                 unfiltered: false,
                 range: Some(GroupRangeId(1)),
+                declared_dpt: Default::default(),
             });
         let mut stack = CommandStack::new();
         let result = stack.do_command(
@@ -6637,6 +6643,7 @@ mod tests {
                 central: false,
                 unfiltered: false,
                 range: Some(GroupRangeId(1)),
+                declared_dpt: Default::default(),
             });
         let mut stack = CommandStack::new();
         stack
@@ -6672,6 +6679,7 @@ mod tests {
                 central: false,
                 unfiltered: true,
                 range: None,
+                declared_dpt: Default::default(),
             });
         let inverse = Command::UpdateGroupAddress {
             id: GroupAddressId(1),
@@ -6724,6 +6732,7 @@ mod tests {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             });
         let mut stack = CommandStack::new();
         stack
@@ -6770,6 +6779,7 @@ mod tests {
                     central: false,
                     unfiltered: false,
                     range: Some(GroupRangeId(1)),
+                    declared_dpt: Default::default(),
                 },
                 installation: None,
             },
@@ -6801,6 +6811,7 @@ mod tests {
                         central: false,
                         unfiltered: false,
                         range: Some(GroupRangeId(1)),
+                        declared_dpt: Default::default(),
                     },
                     installation: None,
                 },
@@ -6824,6 +6835,7 @@ mod tests {
                     central: false,
                     unfiltered: false,
                     range: Some(GroupRangeId(99)),
+                    declared_dpt: Default::default(),
                 },
                 installation: None,
             },
@@ -6866,6 +6878,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         });
         p
     }
@@ -7996,6 +8009,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         }
     }
 
@@ -8438,6 +8452,7 @@ mod id_integrity_tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         }
     }
 

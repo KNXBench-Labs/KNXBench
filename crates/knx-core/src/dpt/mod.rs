@@ -12,12 +12,13 @@ pub mod codec;
 pub mod resolve;
 
 pub use codec::{
-    decode, default_input_format, encode, encode_inferred_format, encoding_rulings, DptCodecError,
-    DptEncodingRuling, DptInputFormat, DptValue,
+    decode, default_input_format, encode, encode_inferred_format, encoding_rulings,
+    format_width_bits, DptCodecError, DptEncodingRuling, DptInputFormat, DptValue,
 };
 pub use resolve::{
-    group_address_dpt_from, resolve_group_address_dpt, resolve_project_group_address_dpts,
-    GroupAddressDpt,
+    group_address_dpt_from, group_address_type_from, resolve_group_address_dpt,
+    resolve_group_address_type, resolve_project_group_address_dpts, GroupAddressDpt,
+    GroupAddressType, GroupAddressTypeOutcome,
 };
 
 /// A reference to a datapoint type, e.g. `DPST-1-1` (main type 1, subtype 1)

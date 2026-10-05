@@ -2274,6 +2274,7 @@ pub fn create_group_address_in_impl(
                 central: false,
                 unfiltered: false,
                 range: range_id.map(knx_core::GroupRangeId),
+                declared_dpt: Default::default(),
             },
             installation: installation.map(knx_core::InstallationId),
         }

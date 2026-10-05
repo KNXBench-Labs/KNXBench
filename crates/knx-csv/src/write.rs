@@ -4,7 +4,10 @@
 //! Design: `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`
 //! §3 (the format).
 
-use knx_core::{DptRef, GroupAddress, GroupAddressId, Installation, InstallationId, Project};
+use knx_core::{
+    DptRef, GroupAddress, GroupAddressDpt, GroupAddressId, GroupAddressTypeOutcome, Installation,
+    InstallationId, Project,
+};
 
 use crate::read::{CsvProblem, Severity};
 
@@ -91,14 +94,19 @@ fn write_installation(project: &Project, installation: Option<&Installation>) ->
             // already mean.
             let line = index + 2;
 
-            let (dpt, contested) = derive_dpt(project, ga.id);
-            if contested {
+            let (dpt, contest) = derive_dpt(project, ga.id);
+            if let Some(contest) = contest {
+                let why = match contest {
+                    Contest::Linked => "linked communication objects disagree on datapoint type",
+                    Contest::DeclaredWidth => {
+                        "declared datapoint type and a linked communication object's differ in size"
+                    }
+                };
                 warnings.push(CsvProblem {
                     row: Some(line),
                     severity: Severity::Warning,
                     detail: format!(
-                        "address {}: linked communication objects disagree on datapoint type; \
-                         DatapointType left empty",
+                        "address {}: {why}; DatapointType left empty",
                         ga.address.format(style)
                     ),
                 });
@@ -133,30 +141,34 @@ fn write_installation(project: &Project, installation: Option<&Installation>) ->
     }
 }
 
-/// The `DatapointType` column's value for `ga`: the unanimous DPT of every
-/// communication object instance linked to it (in either direction), empty
-/// when none of them carries a resolved DPT, or empty-plus-`true` (a
-/// warning, at the call site) when they disagree. A com object linked but
-/// carrying no resolved DPT of its own (`Override::Absent`/`Empty`/
-/// `Malformed`) contributes no vote either way — it neither confirms nor
-/// contests whatever the others say.
-pub(crate) fn derive_dpt(project: &Project, ga: GroupAddressId) -> (Option<DptRef>, bool) {
-    let mut distinct = Vec::new();
-    for com in project.devices.com_objects() {
-        if !com.links.iter().any(|link| link.ga == ga) {
-            continue;
+/// The `DatapointType` column's value for `ga`: its effective type
+/// (ADR-0078) — the group address's own declaration where it applies,
+/// otherwise the unanimous DPT of every linked communication object. Empty
+/// when nothing states one; empty plus a contest (a warning, at the call
+/// site) when the linked objects disagree or the declaration and the linked
+/// objects differ in width.
+pub(crate) fn derive_dpt(
+    project: &Project,
+    ga: GroupAddressId,
+) -> (Option<DptRef>, Option<Contest>) {
+    let ty = knx_core::resolve_group_address_type(project, ga);
+    match ty.effective() {
+        GroupAddressDpt::None => (None, None),
+        GroupAddressDpt::Single(dpt) => (Some(dpt), None),
+        GroupAddressDpt::Conflict(_) if ty.outcome == GroupAddressTypeOutcome::SizeConflict => {
+            (None, Some(Contest::DeclaredWidth))
         }
-        if let Some(resolved) = com.dpt.value() {
-            if !distinct.contains(&resolved.value) {
-                distinct.push(resolved.value);
-            }
-        }
+        GroupAddressDpt::Conflict(_) => (None, Some(Contest::Linked)),
     }
-    match distinct.len() {
-        0 => (None, false),
-        1 => (Some(distinct[0]), false),
-        _ => (None, true),
-    }
+}
+
+/// Why `derive_dpt` left the column empty although types were stated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Contest {
+    /// The linked communication objects disagree.
+    Linked,
+    /// The address's declared type and a linked object's differ in width.
+    DeclaredWidth,
 }
 
 /// The names of the main and/or middle `GroupRange`s containing `address`,
@@ -332,6 +344,47 @@ mod tests {
         assert_eq!(export.warnings.len(), 1);
         assert_eq!(export.warnings[0].severity, Severity::Warning);
         assert!(export.warnings[0].detail.contains("disagree"));
+    }
+
+    #[test]
+    fn datapoint_type_uses_the_declaration_and_warns_on_a_width_conflict() {
+        // ADR-0078. Address 100 declares 9.001 over a linked 9.004 (same
+        // width: the declaration is the column); 101 declares 1.001 over a
+        // linked 5.001 (width conflict: empty plus a warning naming size).
+        let mut project = empty_project(GroupAddressStyle::Free);
+        for (id, raw, declared) in [(1, 100, "DPST-9-1"), (2, 101, "DPST-1-1")] {
+            let mut ga = entry(id, raw, "GA");
+            ga.declared_dpt = knx_core::Override::Value(knx_core::Resolved {
+                value: DptRef::parse(declared).unwrap(),
+                layer: knx_core::Layer::Instance,
+            });
+            project.installations[0].group_addresses.push(ga);
+        }
+        project.devices.insert_com_object(linked_com_object(
+            1,
+            1,
+            1,
+            Some(DptRef::parse("DPST-9-4").unwrap()),
+        ));
+        project.devices.insert_com_object(linked_com_object(
+            2,
+            1,
+            2,
+            Some(DptRef::parse("DPST-5-1").unwrap()),
+        ));
+
+        let export = export_group_addresses(&project);
+
+        let lines: Vec<_> = export.text.lines().collect();
+        assert!(
+            lines[1].contains(",GA,false,false,DPST-9-1,"),
+            "{:?}",
+            lines[1]
+        );
+        assert!(lines[2].contains(",GA,false,false,,"), "{:?}", lines[2]);
+        assert_eq!(export.warnings.len(), 1);
+        assert_eq!(export.warnings[0].row, Some(3));
+        assert!(export.warnings[0].detail.contains("differ in size"));
     }
 
     #[test]

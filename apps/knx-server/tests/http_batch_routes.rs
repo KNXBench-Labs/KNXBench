@@ -50,6 +50,7 @@ fn group_address(id: u32, raw: u16) -> GroupAddressEntry {
         central: false,
         unfiltered: false,
         range: None,
+        declared_dpt: Default::default(),
     }
 }
 

@@ -146,8 +146,9 @@ fn save_project_transaction(tx: Transaction<'_>, project: &Project) -> Result<()
     tx.execute(
         "INSERT INTO project_info
              (id, project_id, name, project_number, group_address_style, completion,
-              last_modified, project_start, default_language, ets_schema_version)
-         VALUES (0, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+              last_modified, project_start, default_language, ets_schema_version,
+              unlifted_group_address_dpt_declarations)
+         VALUES (0, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
             project.info.project_id,
             project.info.name,
@@ -158,6 +159,7 @@ fn save_project_transaction(tx: Transaction<'_>, project: &Project) -> Result<()
             project.info.project_start.map(|d| d.to_rfc3339()),
             project.strings.default_language().0,
             project.info.ets_schema_version,
+            project.info.unlifted_group_address_dpt_declarations,
         ],
     )?;
 
@@ -470,10 +472,12 @@ fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
         project_start,
         default_language,
         ets_schema_version,
+        unlifted_group_address_dpt_declarations,
     ) = conn
         .query_row(
             "SELECT project_id, name, project_number, group_address_style, completion,
-                    last_modified, project_start, default_language, ets_schema_version
+                    last_modified, project_start, default_language, ets_schema_version,
+                    unlifted_group_address_dpt_declarations
              FROM project_info WHERE id = 0",
             [],
             |row| {
@@ -487,6 +491,7 @@ fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
                     row.get::<_, Option<String>>(6)?,
                     row.get::<_, String>(7)?,
                     row.get::<_, u32>(8)?,
+                    row.get::<_, u32>(9)?,
                 ))
             },
         )
@@ -578,6 +583,7 @@ fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
                     .with_timezone(&chrono::Utc)
             }),
             ets_schema_version,
+            unlifted_group_address_dpt_declarations,
         },
         installations,
         devices,
@@ -799,6 +805,54 @@ mod tests {
         assert_eq!(loaded.info.group_address_style, GroupAddressStyle::TwoLevel);
     }
 
+    /// ADR-0078: a group address's declaration and the project's count of
+    /// unattributed declarations survive a native save and load, and the
+    /// saved project reloads equal.
+    #[test]
+    fn group_address_declarations_and_the_unlifted_count_round_trip() {
+        use knx_core::address::GroupAddress;
+        use knx_core::dpt::DptRef;
+        use knx_core::group::GroupAddressEntry;
+        use knx_core::ids::{GroupAddressId, SourceRef};
+        use knx_core::provenance::{Layer, Override, Resolved};
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_installation();
+        project.info.unlifted_group_address_dpt_declarations = 2;
+        for (id, declared_dpt) in [
+            (
+                1,
+                Override::Value(Resolved {
+                    value: DptRef {
+                        main: 9,
+                        sub: Some(1),
+                    },
+                    layer: Layer::Instance,
+                }),
+            ),
+            (2, Override::Malformed("DPST-1-1 DPST-1-2".into())),
+            (3, Override::Empty),
+        ] {
+            project.installations[0]
+                .group_addresses
+                .push(GroupAddressEntry {
+                    id: GroupAddressId(id),
+                    source: SourceRef {
+                        path: "P-1/0.xml".into(),
+                        ets_id: format!("GA-{id}"),
+                    },
+                    name: "ga".into(),
+                    address: GroupAddress::from_raw(2048 + id as u16),
+                    central: false,
+                    unfiltered: false,
+                    range: None,
+                    declared_dpt,
+                });
+        }
+        crate::project::cover_ids_in_use(&mut project);
+        save_project(&conn, &project).unwrap();
+        assert_eq!(load_project(&conn).unwrap(), project);
+    }
+
     /// A hand-edited or third-party-written `project_info.group_address_style`
     /// that names none of the three known styles must be refused, not quietly
     /// read back as `ThreeLevel` (KNOWN_LIMITATIONS.md §84) — the counterpart
@@ -877,6 +931,7 @@ mod tests {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             });
         // Stored counters: device 2, group address 3 — both below the ids above.
         project.ids = IdAllocators::from_counts(2, 0, 0, 0, 0, 3, 0, 0, 0);
@@ -1277,6 +1332,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: Some(GroupRangeId(2)),
+            declared_dpt: Default::default(),
         };
         ((building, floor), (main_range, mid_range), ga)
     }

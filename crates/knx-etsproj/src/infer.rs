@@ -1,11 +1,10 @@
 //! Datapoint type inference for group addresses (IMPORT_EXPORT §7).
 //!
-//! `GroupAddressEntry` deliberately carries no datapoint type field
-//! (DATA_MODEL §9) — a datapoint type is a property of the communication
-//! objects linked to an address, not of the address itself — so inference
-//! produces a side table rather than mutating the model. That also makes
-//! the "never exported" rule structural: there is nothing on the entity for
-//! export to write back.
+//! Inference reads only the linked communication objects and produces a
+//! side table rather than mutating the model; it never writes
+//! `GroupAddressEntry::declared_dpt`, which holds what the source file
+//! itself stated (ADR-0078) and is weighed against this inference by
+//! `knx_core::resolve_group_address_type`.
 //!
 //! Where every linked object that states a datapoint type states the same
 //! one, that value is inferred (`Layer::Inferred` conceptually, though
@@ -222,6 +221,7 @@ mod tests {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             }],
             parameters: vec![],
         });

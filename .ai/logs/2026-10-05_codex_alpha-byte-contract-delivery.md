@@ -67,3 +67,11 @@ Public evidence does not close separate AR21/manual/private/hardware scope.
 Latest remote09a266194404e868fce0545c1fa81e14f1af49c6 has3 Markdown-only
 changes; preserve latest full owner handover, then run final docs6 and safe
 publication/readback. Runtime871 unchanged; native/src production unchanged.
+
+## Delayed already-accepted integrated-public16 completion
+
+proc_a49a708ebf43 historical2e188226 public16 success reverified from permanent
+archive:16 commands0, Rust3200/0/177/175,871 inputs/logs/producer/archive
+manifest and original CLI exact. Web2001/Chromium131 plus separate probe1
+not new totals. Metadata-only merge still uncommitted; no publication,
+new execution or Web-lock release. Original failed control setup preserved.

@@ -579,15 +579,28 @@ fn migrate(conn: &Connection) -> Result<(), MigrationError> {
         });
     }
 
-    let pending = &migrations()[found as usize..CURRENT_SCHEMA_VERSION as usize];
-    for migration in pending {
-        migration(conn)?;
+    if found == CURRENT_SCHEMA_VERSION {
+        return Ok(());
     }
-
-    if found < CURRENT_SCHEMA_VERSION {
+    // One upgrade, one transaction (KNOWN_LIMITATIONS §157): a failure in
+    // any step, or a killed process, leaves the file at its old version
+    // with none of the earlier steps applied, so the next open can retry.
+    // The product database does the same (`knx_productdb::open_and_migrate`).
+    conn.execute_batch("BEGIN IMMEDIATE")?;
+    let result = (|| {
+        for migration in &migrations()[found as usize..CURRENT_SCHEMA_VERSION as usize] {
+            migration(conn)?;
+        }
         conn.pragma_update(None, "user_version", CURRENT_SCHEMA_VERSION)?;
+        Ok::<(), MigrationError>(())
+    })();
+    match result {
+        Ok(()) => conn.execute_batch("COMMIT")?,
+        Err(error) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            return Err(error);
+        }
     }
-
     Ok(())
 }
 
@@ -639,6 +652,58 @@ mod tests {
             open_and_migrate(&path),
             Err(MigrationError::FutureSchemaVersion { .. })
         ));
+    }
+
+    #[test]
+    fn a_failed_upgrade_rolls_back_every_step_and_the_file_stays_reopenable() {
+        // KNOWN_LIMITATIONS §157: one upgrade is one transaction. A v8 file
+        // whose v9->v10 step fails must not keep the v8->v9 table, or the
+        // next open re-runs v8->v9 against it and fails for good.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v8.sqlite");
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+            for migration in &migrations()[..8] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 8).unwrap();
+            // A collision that fails the v9->v10 step after v8->v9 has run,
+            // standing in for a full disk or a killed process.
+            conn.execute_batch("ALTER TABLE group_address ADD COLUMN dpt_state TEXT")
+                .unwrap();
+        }
+        let before = std::fs::read(&path).unwrap();
+        assert!(open_and_migrate(&path).is_err());
+        assert!(
+            std::fs::read(&path).unwrap() == before,
+            "a failed upgrade leaves the file byte for byte as it was"
+        );
+        {
+            let conn = Connection::open(&path).unwrap();
+            let version: i64 = conn
+                .query_row("PRAGMA user_version", [], |r| r.get(0))
+                .unwrap();
+            assert_eq!(version, 8);
+            let leaked: i64 = conn
+                .query_row(
+                    "SELECT count(*) FROM sqlite_schema WHERE name = 'com_object_program_default'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(
+                leaked, 0,
+                "the v8->v9 step rolls back with the failed v9->v10 step"
+            );
+            conn.execute_batch("ALTER TABLE group_address DROP COLUMN dpt_state")
+                .unwrap();
+        }
+        let conn = open_and_migrate(&path).unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, CURRENT_SCHEMA_VERSION);
     }
 
     #[test]

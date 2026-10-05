@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 20:39 CEST
+- **Completed:** **`KL-156` DONE** with ADR-0081: `Parameter`/`ParameterRef` report every attribute they do not store (SuffixText, InitialValue, LegacyPatchAlways, union member Offset/BitOffset, ParameterRef/@Name, …); ProductDB **schema v21** (no DDL) backfills `ingest_unknown` from retained blobs (once per package member that parsed the blob), re-derives measured install reports and `package.unknown_count`, names damaged blobs (`ParameterAttributeBackfillError`, report `unavailable`). Evidence: `parameter_attribute_unknowns.rs` 8 tests, 6 compiled mutants caught; workspace 3,289/0/177; corpus-gated suites (only the pre-existing `http_device_compare` pair fails); 102-package corpus probe: v20 rewind + migrate equals fresh install in all unknown/report tables; matrix re-pinned (+1,921/+1,921/+1,914/+1,914/+641, all predicted exactly by an independent Python recount). ADR-0080 marked Accepted.
+- **Pending/Next Steps:** Alpha: **AR10** (KL-14, KL-37, KL-64, KL-66 — backend localization paths), AR06P rows KL-151/KL-153, then AR15. AR21 rerun when the UI owner asks. **Commission owner:** the `http_device_compare` corpus pair still fails with 503 "activity history unavailable" (pre-existing since at least `c58b2d0a`).
+- **Notes for Codex oder Claude:** Test rewinds to a version < 21 need no extra step: the v21 backfill is idempotent on rows a current install already wrote. A fresh worktree needs `apps/knx-web/dist` (web build) before `cargo test --workspace`, or `knx-desktop`'s build script fails. Web lock: unchanged per the newest owner line below; not taken or released by this entry.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-05 18:30 CEST
 Web lock: taken by claude-goal-ui-owner for KL-142 (partial-download scope selector) and the ADR-0080 parameter write-authority adoption

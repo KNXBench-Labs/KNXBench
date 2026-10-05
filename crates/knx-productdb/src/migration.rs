@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 20;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 21;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -293,7 +293,194 @@ fn migrations() -> Vec<Migration> {
         migrate_v17_to_v18,
         migrate_v18_to_v19,
         migrate_v19_to_v20,
+        migrate_v20_to_v21,
     ]
+}
+
+/// v20 -> v21 (ADR-0081, KNOWN_LIMITATIONS §156). `Parameter` and
+/// `ParameterRef` now report every attribute they do not store. No DDL; per
+/// stored blob that classifies as an `ApplicationProgram` and whose bytes
+/// still match their key, in its own savepoint,
+/// `parse::program::backfill_parameter_attribute_unknowns` adds the rows a
+/// current ingest writes, for the keys the blob lacks, once per package
+/// member that re-parsed it (or once for a standalone blob): the v16 rule. Scheme-evidence reconciliation runs in the mode ingest used: the
+/// package mode for a blob some scheme-21/23 package carries.
+///
+/// Every measured package report then gains its members' new rows, merged
+/// as install merges them, and `package.unknown_count` the distinct rows
+/// each `ApplicationProgram` member gained — the v16/v18 rule, not v15's
+/// "historical" one: the old report under-states what the parser met, and
+/// these rows are pure functions of the retained bytes. A report with a
+/// member that was not carried forward (missing, damaged or unparseable
+/// bytes), or whose rewrite does not validate, is downgraded to
+/// `unavailable` with an `InstallReportBackfillError`; the blob itself gets
+/// a `ParameterAttributeBackfillError`.
+fn migrate_v20_to_v21(conn: &Connection) -> Result<(), ProductDbError> {
+    let blobs = conn
+        .prepare(
+            "SELECT s.sha256, s.source_path,
+                    EXISTS (SELECT 1 FROM package_member AS m JOIN package AS p
+                            ON p.sha256 = m.package_sha256
+                            WHERE m.source_sha256 = s.sha256 AND p.scheme IN (21, 23)),
+                    (SELECT count(*) FROM package_member AS m
+                     WHERE m.source_sha256 = s.sha256 AND m.role = 'ApplicationProgram')
+             FROM source_file AS s ORDER BY s.sha256",
+        )?
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, bool>(2)?,
+                r.get::<_, i64>(3)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    // Blob -> the rows it gained. A program blob missing from this map was
+    // not carried forward, and neither is any report that counts it.
+    let mut gained: std::collections::HashMap<String, Vec<crate::report::UnknownConstruct>> =
+        std::collections::HashMap::new();
+    for (sha256, source_path, extended, members) in blobs {
+        let failure = |cause: &str| ProductDbError::Xml {
+            source_path: source_path.clone(),
+            cause: format!("v21 backfill: {cause}"),
+        };
+        // One copy per package that re-parsed it, or one for a blob only a
+        // standalone ingest parsed (the v16 rule).
+        let copies = usize::try_from(members.max(1)).unwrap_or(1);
+        let Some(bytes) = crate::load_source_file(conn, &sha256)? else {
+            continue;
+        };
+        let refused = if classify(&bytes) != FileKind::ApplicationProgram {
+            // A damaged blob can stop classifying as a program altogether;
+            // its owner or member row still says this migration owes it rows.
+            let was_program: bool = conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM application_program WHERE source_sha256 = ?1)
+                     OR EXISTS(SELECT 1 FROM package_member WHERE source_sha256 = ?1
+                               AND role = 'ApplicationProgram')",
+                [&sha256],
+                |r| r.get(0),
+            )?;
+            if !was_program {
+                continue;
+            }
+            failure("stored program no longer classifies as an ApplicationProgram")
+        } else if crate::sha256_hex(&bytes) != sha256 {
+            failure("stored bytes do not match their SHA-256 key")
+        } else {
+            conn.execute_batch("SAVEPOINT v21_parameter_attributes;")?;
+            match crate::parse::program::backfill_parameter_attribute_unknowns(
+                conn,
+                &sha256,
+                &source_path,
+                &bytes,
+                extended,
+                copies,
+            ) {
+                Ok(rows) => {
+                    conn.execute_batch("RELEASE SAVEPOINT v21_parameter_attributes;")?;
+                    gained.insert(sha256, rows);
+                    continue;
+                }
+                Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+                Err(error) => {
+                    conn.execute_batch(
+                        "ROLLBACK TO SAVEPOINT v21_parameter_attributes;
+                         RELEASE SAVEPOINT v21_parameter_attributes;",
+                    )?;
+                    error
+                }
+            }
+        };
+        record_backfill_failure(
+            conn,
+            &sha256,
+            &source_path,
+            "ParameterAttributeBackfillError",
+            "backfill_parameter_attribute_unknowns",
+            &refused,
+        )?;
+    }
+    add_parameter_attributes_to_reports(conn, &gained)
+}
+
+/// The package half of `migrate_v20_to_v21`, the additive mirror of
+/// `retire_channel_number_from_reports`.
+fn add_parameter_attributes_to_reports(
+    conn: &Connection,
+    gained: &std::collections::HashMap<String, Vec<crate::report::UnknownConstruct>>,
+) -> Result<(), ProductDbError> {
+    let packages = conn
+        .prepare("SELECT sha256 FROM package ORDER BY sha256")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    for package in packages {
+        let members = conn
+            .prepare(
+                "SELECT source_sha256 FROM package_member
+                 WHERE package_sha256 = ?1 AND role = 'ApplicationProgram'
+                 ORDER BY ordinal",
+            )?
+            .query_map([&package], |r| r.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        let overflow = || ProductDbError::Xml {
+            source_path: package.clone(),
+            cause: "v21 backfill: unknown counter overflow".into(),
+        };
+        let added = members.iter().try_fold(0u64, |total, m| {
+            let rows = gained.get(m).map_or(0, Vec::len);
+            total
+                .checked_add(u64::try_from(rows).map_err(|_| overflow())?)
+                .ok_or_else(overflow)
+        })?;
+        let added = i64::try_from(added).map_err(|_| overflow())?;
+        conn.execute(
+            "UPDATE package SET unknown_count = unknown_count + ?2 WHERE sha256 = ?1",
+            params![package, added],
+        )?;
+
+        let stale_member = members.iter().find(|m| !gained.contains_key(*m));
+        let additions: Vec<_> = members
+            .iter()
+            .filter_map(|m| gained.get(m))
+            .flatten()
+            .cloned()
+            .collect();
+        conn.execute_batch("SAVEPOINT v21_parameter_report;")?;
+        let outcome = match stale_member {
+            Some(member) => Ok(Err(crate::package::ReportNotUpgradable(format!(
+                "member {member} was not carried forward"
+            )))),
+            None => crate::package::add_report_unknowns(conn, &package, &additions),
+        };
+        let why = match outcome {
+            Ok(Ok(())) => None,
+            Ok(Err(why)) => Some(why.0),
+            Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+            Err(error) => Some(error.to_string()),
+        };
+        match why {
+            None => conn.execute_batch("RELEASE SAVEPOINT v21_parameter_report;")?,
+            Some(why) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT v21_parameter_report;
+                     RELEASE SAVEPOINT v21_parameter_report;",
+                )?;
+                crate::package::mark_report_unavailable(conn, &package)?;
+                record_backfill_failure(
+                    conn,
+                    &package,
+                    &package,
+                    "InstallReportBackfillError",
+                    "parameter_attribute_report_backfill",
+                    &ProductDbError::Xml {
+                        source_path: package.clone(),
+                        cause: format!("v21 backfill: {why}"),
+                    },
+                )?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// v19 -> v20 (ADR-0080). `parameter_ref` gains `access`, a new

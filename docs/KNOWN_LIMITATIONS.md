@@ -7814,3 +7814,13 @@ those two from the retained bytes itself); `ParameterRef` — `Name`,
 migration re-derives the affected unknown rows and install reports the way
 v18 did for `Channel/@Number`, with the corpus matrix re-pinned. Ledger row
 `KL-156`.
+
+**Update 2026-10-05 (KL-156, [ADR-0081](adr/0081-parameter-attributes-are-reported.md)):
+lifted.** Both arms now report every attribute outside their stored set,
+through one helper the v20 -> v21 backfill shares; schema v21 adds the rows to
+existing databases and re-derives measured install reports and
+`package.unknown_count` (a blob that cannot be re-read is named and its
+reports become `unavailable`). Nothing is newly *interpreted*: `SuffixText`,
+`InitialValue`, union placement and the other names above are reported, not
+stored. Evidence: `parameter_attribute_unknowns.rs`, the corpus matrix
+re-pin, and a corpus probe comparing migrated and fresh installs.

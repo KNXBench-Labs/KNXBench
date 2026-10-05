@@ -58,6 +58,51 @@ const PROGRAM_ATTRS: &[&str] = &[
     "ReplacesVersions",
 ];
 
+/// The `Parameter` attributes the `parameter` row stores. Every other one
+/// (`SuffixText`, `InitialValue`, a union member's own `Offset`/`BitOffset`,
+/// …) is reported through `ingest_unknown` (KNOWN_LIMITATIONS §156,
+/// ADR-0081). `Suffix` stays listed: it is a column, even though the corpus
+/// spells the attribute `SuffixText`.
+pub(crate) const PARAMETER_ATTRS: &[&str] = &[
+    "Id",
+    "Name",
+    "Text",
+    "ParameterType",
+    "Access",
+    "Value",
+    "Suffix",
+];
+
+/// The `ParameterRef` attributes the `parameter_ref` row stores; `Access`
+/// since ADR-0080 (written by the write-authority pass). Every other one is
+/// reported (KNOWN_LIMITATIONS §156, ADR-0081).
+pub(crate) const PARAMETER_REF_ATTRS: &[&str] = &[
+    "Id",
+    "RefId",
+    "DisplayOrder",
+    "Tag",
+    "Text",
+    "Value",
+    "Access",
+];
+
+/// Reports what a `Parameter` or `ParameterRef` element carries beyond its
+/// stored columns. Shared by ingest and the v20 -> v21 backfill so the two
+/// cannot drift; any other element name reports nothing.
+fn report_parameter_attrs(
+    unknown: &mut UnknownCollector,
+    open_path: &[String],
+    name: &str,
+    a: &Attrs,
+) {
+    let known = match name {
+        "Parameter" => PARAMETER_ATTRS,
+        "ParameterRef" => PARAMETER_REF_ATTRS,
+        _ => return,
+    };
+    report_unknown_attrs(unknown, &xpath_of_child(open_path, name), a, known);
+}
+
 pub struct ProgramIngest {
     pub program_id: String,
     pub unknown: Vec<UnknownConstruct>,
@@ -472,6 +517,101 @@ fn fill_linkable(
         params![source_sha256, xpath],
     )?;
     Ok(filled)
+}
+
+/// Re-derives, from one stored program blob, the `Parameter`/`ParameterRef`
+/// attribute rows a current ingest reports (ADR-0081, KNOWN_LIMITATIONS
+/// §156) and adds the ones the blob's `ingest_unknown` rows still lack.
+/// Backs `migration::migrate_v20_to_v21`.
+///
+/// Walks the bytes the way `ingest_program_detailed` does (same `open_path`,
+/// `Dynamic` skipped whole) through the same `report_parameter_attrs`, then
+/// runs the same scheme-evidence reconciliation ingest runs, so a prefixed
+/// attribute ends up under its expanded name exactly as ingest leaves it.
+/// Only rows whose key this walk produced are kept: reconciliation also
+/// re-derives evidence for the whole document, which the blob already has.
+///
+/// `copies` is how many times ingest recorded this blob: `ingest_unknown`
+/// has no unique key, and every package install re-parses its program
+/// members (the v16 rule). Returns the rows that were missing and are now
+/// inserted — what one install of this blob added to its package report. A
+/// blob already carrying them (installed by a v21 parser) returns nothing,
+/// so the backfill is idempotent.
+pub(crate) fn backfill_parameter_attribute_unknowns(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+    extended_scheme_package: bool,
+    copies: usize,
+) -> Result<Vec<UnknownConstruct>, ProductDbError> {
+    let mut reader = Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut open_path: Vec<String> = Vec::new();
+    let mut unknown = UnknownCollector::default();
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        match event {
+            Event::Eof => break,
+            Event::Start(e) if local_name(&e) == "Dynamic" => {
+                skip_subtree(&mut reader, e.name().as_ref(), source_path)?;
+            }
+            Event::End(_) => {
+                open_path.pop();
+            }
+            Event::Empty(e) => {
+                let name = local_name(&e);
+                if matches!(name.as_str(), "Parameter" | "ParameterRef") {
+                    let a = attrs(&e, source_path)?;
+                    report_parameter_attrs(&mut unknown, &open_path, &name, &a);
+                }
+            }
+            Event::Start(e) => {
+                let name = local_name(&e);
+                if matches!(name.as_str(), "Parameter" | "ParameterRef") {
+                    let a = attrs(&e, source_path)?;
+                    report_parameter_attrs(&mut unknown, &open_path, &name, &a);
+                }
+                open_path.push(name);
+            }
+            _ => {}
+        }
+    }
+    let mut collected = unknown.into_vec();
+    let produced: HashSet<(String, String, String)> = collected
+        .iter()
+        .map(|u| (u.xpath.clone(), u.kind.as_str().to_string(), u.name.clone()))
+        .collect();
+    if extended_scheme_package {
+        super::scheme_evidence::reconcile_package_unknowns(bytes, source_path, &mut collected)?;
+    } else {
+        super::scheme_evidence::reconcile_targeted_unknowns(bytes, source_path, &mut collected)?;
+    }
+    let mut missing = Vec::new();
+    for u in collected {
+        if !produced.contains(&(u.xpath.clone(), u.kind.as_str().to_string(), u.name.clone())) {
+            continue;
+        }
+        let present: bool = conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM ingest_unknown
+             WHERE source_sha256 = ?1 AND xpath = ?2 AND kind = ?3 AND name = ?4)",
+            params![source_sha256, u.xpath, u.kind.as_str(), u.name],
+            |r| r.get(0),
+        )?;
+        if !present {
+            missing.push(u);
+        }
+    }
+    for _ in 0..copies {
+        crate::report::insert_unknown(conn, source_sha256, &missing)?;
+    }
+    Ok(missing)
 }
 
 /// Re-reads `TypeFloat/@minInclusive`/`@maxInclusive` and
@@ -1008,6 +1148,7 @@ fn handle_start_or_empty(
         }
         "Parameter" => {
             entities.read(EntityKind::Parameter)?;
+            report_parameter_attrs(unknown, open_path, name, a);
             let id = a.get("Id").unwrap_or_default().to_string();
             if !*already_present {
                 let (union_id, union_size, seg, off, bit) = match current_union.as_ref() {
@@ -1111,6 +1252,7 @@ fn handle_start_or_empty(
             }
         }
         "ParameterRef" => {
+            report_parameter_attrs(unknown, open_path, name, a);
             if !*already_present {
                 conn.execute(
                     "INSERT INTO parameter_ref

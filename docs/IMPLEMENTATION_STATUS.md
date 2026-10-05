@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — KL-156: the install report finally admits what it skipped (ADR-0081)
+
+- `Parameter`/`ParameterRef` report every attribute outside their stored
+  columns (`SuffixText`, `InitialValue`, `LegacyPatchAlways`, a union
+  member's `Offset`/`BitOffset`, `ParameterRef/@Name`, …), through one helper
+  shared by ingest and the new **schema v21** backfill. Nothing is newly
+  interpreted.
+- `migrate_v20_to_v21` adds the rows from the retained program blobs (once
+  per package that parsed the blob, the v16 rule), re-derives measured
+  install reports and `package.unknown_count`, and names a damaged blob
+  (`ParameterAttributeBackfillError`, report `unavailable`).
+- Evidence: `parameter_attribute_unknowns.rs` (8 tests, 6 compiled mutants
+  caught), workspace 3,289/0/177, corpus-gated suites, a corpus probe in which
+  all 102 `OriginalData` packages migrated from a v20 rewind equal a fresh
+  install table for table, and a matrix re-pin whose five changed aggregates
+  an independent Python recount predicts exactly.
+- ADR-0080 marked Accepted (its gates were green at merge).
+
 ## 2026-10-05 — AR07: the manufacturer's "hands off" now means hands off (ADR-0080)
 
 - **Census.** Read-only, aggregate-only scan of 3,599 distinct application

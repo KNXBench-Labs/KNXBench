@@ -368,8 +368,9 @@ fn v18_upgrade_rederives_source_fields_without_rewriting_the_measured_zero_insta
     assert_eq!(retry.facts, historical.facts);
     assert_eq!(retry.unknown, historical.unknown);
     assert_eq!(retry.translations, historical.translations);
-    // The AR05 Languages rederivation is v19; v20 (ADR-0080) keeps it.
-    assert_eq!(knx_productdb::CURRENT_PRODUCTDB_VERSION, 20);
+    // The AR05 Languages rederivation is v19; v20 (ADR-0080) and v21
+    // (ADR-0081) keep it.
+    assert_eq!(knx_productdb::CURRENT_PRODUCTDB_VERSION, 21);
 }
 
 #[test]

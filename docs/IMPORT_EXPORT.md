@@ -670,6 +670,14 @@ again: the v16-shaped projection, which now also leaves out the new
 or pre-existing table count moved), and the new table holds 4,849 rows,
 exactly the number of distinct (program, calculation, side, ref) tuples an
 independent Python recount of the same scope predicts.
+Schema v21 ([ADR-0081](adr/0081-parameter-attributes-are-reported.md))
+re-pinned both commitments: `Parameter`/`ParameterRef` now report every
+attribute they do not store, which moved exactly five aggregates — isolated
+and shared-successful unknown totals 22,718 → 24,639 (+1,921), shared
+installed 22,599 → 24,513 (+1,914), `ingest_unknown` 22,997 → 24,911
+(+1,914) and `package_install_unknown` 9,382 → 10,023 (+641). An independent
+instance-level Python recount of the same 115 instances / 113 unique packages
+predicts all five deltas and the new rows' 247,734 occurrences exactly.
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

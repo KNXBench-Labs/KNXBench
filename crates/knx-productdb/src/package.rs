@@ -1952,6 +1952,85 @@ pub(crate) fn retire_report_unknowns(
     }
 }
 
+/// The additive twin of `retire_report_unknowns`, for a migration that
+/// starts reporting what the parser always encountered (v20 -> v21,
+/// ADR-0081). `additions` are the new rows of the package's members in
+/// member order; rows sharing a key are merged as install merges them
+/// (occurrences summed, the first sample kept). A key the report already
+/// holds is left as it is, so re-running over a report written by a current
+/// install changes nothing. Header and `unknown_construct` counts are
+/// recomputed and validated by `persist_facts`. An `unavailable` report has
+/// no rows to change and stays as it is.
+pub(crate) fn add_report_unknowns(
+    conn: &Connection,
+    sha256: &str,
+    additions: &[crate::report::UnknownConstruct],
+) -> Result<Result<(), ReportNotUpgradable>, ProductDbError> {
+    let Some(mut facts) = load_facts_unvalidated(conn, sha256)? else {
+        return Ok(Ok(()));
+    };
+    let key = |u: &crate::report::UnknownConstruct| {
+        (u.xpath.clone(), u.kind.as_str().to_string(), u.name.clone())
+    };
+    let existing: std::collections::BTreeSet<_> =
+        facts.unknown_constructs.iter().map(key).collect();
+    let mut merged: BTreeMap<(String, String, String), crate::report::UnknownConstruct> =
+        BTreeMap::new();
+    for addition in additions {
+        let k = key(addition);
+        if existing.contains(&k) {
+            continue;
+        }
+        if let Some(current) = merged.get_mut(&k) {
+            current.occurrences = current
+                .occurrences
+                .checked_add(addition.occurrences)
+                .ok_or_else(|| report_error("unknown occurrence counter overflow"))?;
+        } else {
+            merged.insert(k, addition.clone());
+        }
+    }
+    if merged.is_empty() {
+        return Ok(Ok(()));
+    }
+    facts.unknown_constructs.extend(merged.into_values());
+    facts
+        .counts
+        .retain(|row| row.category != InstallCategory::UnknownConstruct);
+    // `sort` re-derives `unknown_occurrences` from the rows.
+    facts.sort()?;
+    let occurrences = facts.unknown_occurrences;
+    let distinct = usize_to_u64(facts.unknown_constructs.len(), "unknown distinct")?;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Read,
+        occurrences,
+    )?;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Stored,
+        distinct,
+    )?;
+    for table in [
+        "package_install_count",
+        "package_install_unknown",
+        "package_install_diagnostic",
+        "package_install_report",
+    ] {
+        conn.execute(
+            &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+            [sha256],
+        )?;
+    }
+    match persist_facts(conn, sha256, facts) {
+        Ok(()) => Ok(Ok(())),
+        Err(ProductDbError::Sqlite(error)) => Err(ProductDbError::Sqlite(error)),
+        Err(error) => Ok(Err(ReportNotUpgradable(error.to_string()))),
+    }
+}
+
 /// Downgrades one package's measured report to `unavailable`, with no
 /// detail rows: what a migration does when it cannot carry a report
 /// forward truthfully. A package with no report row, or an already

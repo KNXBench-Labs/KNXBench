@@ -1499,6 +1499,16 @@ export interface DeviceDownloadPlan {
   confirmationPhrase: string;
   support: { level: "verified" | "untested"; evidence: string | null };
   untestedAcknowledgement: string | null;
+  /** `true` for a CP §3.9.2.4 partial download (KL-142). */
+  partial: boolean;
+  /** Application writes the partial download does not make, as `[address, octets]`. */
+  notWritten: [number, number][];
+}
+
+/** The parts of a partial download; absent from the request means complete. */
+export interface DeviceDownloadParts {
+  parameters: boolean;
+  groupAddresses: boolean;
 }
 
 export type DeviceDownloadEvent =
@@ -1617,10 +1627,10 @@ export function writeServiceControl(
   });
 }
 
-export function planDeviceDownload(address: string): Promise<DeviceDownloadPlan> {
+export function planDeviceDownload(address: string, partial?: DeviceDownloadParts): Promise<DeviceDownloadPlan> {
   return request("/api/device-download/plan", {
     method: "POST",
-    body: JSON.stringify({ address }),
+    body: JSON.stringify(partial === undefined ? { address } : { address, partial }),
   });
 }
 

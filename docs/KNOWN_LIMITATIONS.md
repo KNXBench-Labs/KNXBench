@@ -7223,8 +7223,13 @@ application allocation, tables only when group addresses are selected.
 - **`AppliesTo` and `LegacyAllowPartialDownloadIfAp2Mismatch` are not
   interpreted.** Only two of 203 `070n` programs carry `AppliesTo`, both
   `full,par`, and no PDF read defines the option.
-- **The web UI does not offer it yet.** The route accepts it; the panel
-  belongs to the UI session.
+- **Web UI (delivered 2026-10-05, UI owner).** The Download to device tab
+  offers *What to write* — complete, parameters, group addresses, both —
+  sends exactly that `partial` body (absent for complete), and shows the
+  partial scope and every `notWritten` write before consent; a refusal is
+  shown with no plan. Its only evidence is mocked/intercepted (Vitest and
+  Chromium), no live device. The device *comparison* view still compares the
+  complete plan only; its route's optional partial selection is not offered.
 
 ## §141 Master Reset erases in the simulator only; hardware keeps its configuration
 

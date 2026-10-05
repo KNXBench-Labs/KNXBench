@@ -7965,3 +7965,32 @@ reports become `unavailable`). Nothing is newly *interpreted*: `SuffixText`,
 `InitialValue`, union placement and the other names above are reported, not
 stored. Evidence: `parameter_attribute_unknowns.rs`, the corpus matrix
 re-pin, and a corpus probe comparing migrated and fresh installs.
+
+## 157. Opening an older project upgrades it in place
+
+**Limitation.** Opening a project saved by an older KNXBench (schema version
+below the current one) upgrades the file itself: the application, the server
+and every CLI command that takes a `.knxdb` — read-only ones such as
+`knx diff`, `knx doc-export` and `knx ga-export` included — run the pending
+migrations on the original file. No copy is made first. An upgraded file is
+refused by the older KNXBench with a clear "newer schema" error.
+
+**Found 2026-10-05 (AR15).** Until then the upgrade was also not atomic:
+`crates/knx-store/src/migration.rs` ran each step in autocommit mode, so a
+failure or a killed process after the first step kept that step while the
+version stayed old, and every later open re-ran the step against itself and
+failed ("table already exists"). The product database already wrapped its
+whole upgrade in one transaction.
+
+**Update 2026-10-05: the upgrade is atomic.** `migrate()` now runs all pending
+steps and the version bump in one `BEGIN IMMEDIATE` transaction, as the
+product database does. A failed upgrade leaves the file byte for byte as it
+was and the next open retries. Evidence: unit test
+`a_failed_upgrade_rolls_back_every_step_and_the_file_stays_reopenable` (a v8
+file whose v9->v10 step fails), RED before the change, plus a compiled mutant
+that removes the transaction.
+
+**Remaining boundary.** The upgrade still happens in place. Keep a copy of
+the project if an older KNXBench must open it again. Current-schema files are
+not rewritten by read-only commands (measured: `knx diff` leaves both files
+byte-identical). Ledger row `KL-157`.

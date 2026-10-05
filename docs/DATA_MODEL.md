@@ -647,7 +647,11 @@ pub struct Project {
 
 The schema version is stored in SQLite's `user_version` pragma and mirrored in
 the model. Migration is an ordered chain `v_n → v_n+1` implemented in
-`knx-store`; there is no version-skipping path and no downgrade.
+`knx-store`; there is no version-skipping path and no downgrade. All pending
+steps and the version bump run in one transaction, so a failed upgrade leaves
+the file unchanged (since 2026-10-05; before that each step committed on its
+own). The upgrade rewrites the opened file in place, with no copy
+([KNOWN_LIMITATIONS §157](KNOWN_LIMITATIONS.md#157-opening-an-older-project-upgrades-it-in-place)).
 
 Every schema version gets a frozen fixture file, committed once and never
 regenerated, which must keep loading. A migration that cannot open its

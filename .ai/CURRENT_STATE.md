@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 01:28 CEST
+- **Completed:** **KL-157 (AR15 finding): project upgrades are atomic.** `crates/knx-store/src/migration.rs` `migrate()` now wraps all pending steps + `user_version` in one `BEGIN IMMEDIATE` transaction (as the product DB does); before, a failure after the first step left a file that never opened again. RED→GREEN unit test, one compiled mutant, workspace 3,311/0/177, Clippy, five xtask checks. In-place upgrade without a copy documented (KL §157 → ACCEPTED_BOUNDARY, manual known issue, DATA_MODEL).
+- **Pending/Next Steps:** AR15 continues: dispositions for `KL-9` (SQLite vs text diff; `knx diff` as git external diff verified), `KL-16` (GTK3; advisories ok offline, Wry/Tauri GTK4 PRs still open), `KL-46`, `DOC-03` (stale manual commissioning/`.knxproj` statements in 06 §12, 10-command-line, known-issues, reference/02, implementation-status), then recounts and the scope/risk matrix.
+- **Notes for Codex oder Claude:** No real older-schema stores exist in the private corpus; the frozen v1–v9 fixtures in `crates/knx-store/fixtures` carry the migration evidence. Web lock: unchanged per the newest owner line below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 01:12 CEST
 - **Completed:** **KL-153 DONE, AR06P DONE (ADR-0083).** Exact product scheme 10 admitted (`package.rs` `master_scheme` + strict member validation `10 | 21 | 23`; `parse/master_language.rs` namespace list). Census: 146 scheme-10 packages, 1,391 XML members, 0 names outside scheme 11. Tests `crates/knx-productdb/tests/scheme10.rs`; `scheme23.rs` no longer lists 10 as unresearched. Gate: fmt, Clippy, 3 mutants caught, 1,589/0/89, private matrix pin unchanged, five xtask checks. Release 853: 692 → 837 (standard), 852 with `--allow-large-package`; 1 PDF-as-ZIP stays refused.
 - **Pending/Next Steps:** Alpha: AR15 and the remaining TODO/WAITING rows of the ledger.

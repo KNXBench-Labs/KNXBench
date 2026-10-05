@@ -724,6 +724,16 @@ independent recount predicts exactly. `KL-156` `DONE`.
 
 **Exit evidence:** data/application/CLI localization regressions and clear boundary wording, not a “fully localized” claim. A missing frontend consumer keeps that portion waiting on its owner.
 
+**AR10 slice 1, 2026-10-05:** trace in
+[research/backend-localization-paths.md](docs/research/backend-localization-paths.md)
+(first checkbox's evidence). `KL-14` `ACCEPTED_BOUNDARY`: no project
+language exists in the schema; `DeviceInstance/@InitialValueLanguage` is
+reported, never promoted; the placeholder is never consulted
+(`knx-etsproj/tests/project_language.rs`). Next slice: expose the overlay
+fallback (which stored language answered, or the package's declared
+`DefaultLanguage`) on the parameter, catalogue, device-product and master
+surfaces — `KL-37`/`KL-64`.
+
 ### AR11 — Resolve remaining CSV/report decisions and verify the selected backend scope
 
 **Sources:** `KL-38`, `KL-40`, `KL-44`, `KL-47`, `KL-51`, `KL-60`.

@@ -65,7 +65,8 @@ Actual successful large-package retention/replay, member/expanded payload
 boundaries, real CLI/HTTP callers, cancellation/progress, aggregate hostile
 resource policy, owner decisions and Alpha acceptance remain separate.
 Native raw-input and semantic-control evidence is now accepted as described
-below. Scoped crate gates, integrated public gates and publication are pending;
+below. Scoped retry stopped at a real header-width violation (101 > 100 columns;
+retained); the header was shortened (comment-only). Integrated public16 on merge f867741e (leaf adf7ff29 + owner 036b46a6) independently accepted: 16 exit0, Rust 3240/0/177 in 179 blocks, Web 2001, Chromium 131 plus separate probe 1, 885 frozen inputs, CLI knx 0.1.0-alpha.4+gf867741e.
 KL151 and Alpha are not closed by this bounded native contract.
 
 ## Runtime measurement provenance

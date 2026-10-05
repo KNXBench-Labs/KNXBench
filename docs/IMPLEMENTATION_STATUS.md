@@ -10,7 +10,7 @@
   metadata0/compile0/named native101 retained and accepted without replay.
   Upper control ran separately. GNUtime127 and interrupted outer scoped-gate
   timeout remain infrastructure observations, not product regression or passes.
-- Current scoped9 retry and later integrated/publication acceptance are pending.
+- Scoped retry hit a real header-width violation (retained, fixed). Integrated public16 on merge f867741e (leaf adf7ff29 + owner 036b46a6) independently accepted: 16 exit0, Rust 3240/0/177 in 179 blocks, Web 2001, Chromium 131 plus separate probe 1, 885 frozen inputs, CLI knx 0.1.0-alpha.4+gf867741e.
   This is not valid-large import/caller/streaming/resource-policy or Alpha
   acceptance. Authoritative KL151 remains in status/LEDGER.md; evidence in
   PRODUCT_ZIP_RAW_INPUT_CONTRACTS.md.

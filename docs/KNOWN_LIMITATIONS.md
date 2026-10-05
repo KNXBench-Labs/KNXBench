@@ -3147,7 +3147,11 @@ query `encoding_rulings` and present the relevant judgment before sending.
 **Lifted when.** The accepted LTE/system scope changes, a future slice consults
 `knx_master.xml` for units and enumeration wording, or reads
 `GroupAddress/@DatapointType` directly for schema ≥ 21 projects instead of
-inferring from linked communication objects alone. The input-format inference
+inferring from linked communication objects alone. [ADR 0078](adr/0078-group-address-declared-dpt.md)
+(2026-10-05) fixes how: the declaration becomes an `Override` on the group
+address, a same-width difference follows the declaration and stays visible, a
+width difference is refused, and stores saved before v10 cannot be lifted
+because their opaque rows carry no element identity. The input-format inference
 part is lifted by T07; the explicitly named compatibility helper remains
 opt-in.
 

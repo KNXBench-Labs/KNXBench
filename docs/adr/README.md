@@ -77,3 +77,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0075](0075-shared-commissioning-activity-lifecycle.md) | Commissioning callers share an application-layer activity lifecycle | Proposed (integrated runtime acceptance pending) | 2026-10-04 |
 | [0076](0076-one-ledger-is-the-status-of-record.md) | One ledger is the status of record for tracked source IDs | Accepted | 2026-10-04 |
 | [0077](0077-session-local-telegram-flow-view.md) | A session-local telegram-flow view is not physical topology | Accepted (implementation pending) | 2026-10-04 |
+| [0078](0078-group-address-declared-dpt.md) | A group address keeps its declared DPT; resolution reports it beside the linked objects | Accepted (implementation pending) | 2026-10-05 |

@@ -1108,6 +1108,47 @@ owner may decide whether a visible stall should say so.
 `FLOW-01` stays `IN_PROGRESS` (findings 6 and 7). No hardware, no real bus
 and no KNX socket were used.
 
+## 21. AR21 findings 6 and 7 corrected (goal-ui owner, 2026-10-05)
+
+**Finding 6.** Whether a telegram can be drawn completely is now decided where
+nodes are refused: `FlowEvent.complete` is false when `apply` refused the
+sender or any recipient at the node limit. A telegram from a refused sender is
+recorded as a lineless event (`to: []`, no send times — the sender has no
+node), so it reaches the renderer instead of vanishing. `queuePulses` counts
+every incomplete event as not (completely) drawn, still draws the lines that
+remain, and never counts it as bundled. Alpha's §19 probe cases, as tests in
+`flowAnimator.test.ts` (same fixture, `maxNodes: 2`): A — 2 telegrams to 1 of
+2 recipients → 2 pulses drawn, note 0 bundled / 2 not completely; B — 2
+telegrams from a refused sender → +2; C — 30 → +30 not drawn, +0 bundled. A
+fully represented telegram stays uncounted. `flowModel.test.ts` pins
+`complete` and the absent send times.
+
+**Finding 7.** `FlowCounters.eventsRecorded` counts every event the model ever
+recorded. On each sync the animator compares it with its own baseline: events
+recorded since the last sync that are no longer in the ring were pushed out
+before they could be drawn, and are counted as not drawn (`reduced` set).
+Overflow of events the animator already drew is not counted, and neither is
+overflow while the page is hidden — consistent with "a hidden page draws
+nothing and nothing is replayed". Tests: 25 telegrams into a 10-event ring →
+15 not drawn; 8 drawn + 8 more (6 drawn ones pushed out) → 0; hidden → 0.
+
+**Found on the way: pulses after a session change.** A session change gives
+the view a new model (`useFlowFeed`), but the animator kept the old session's
+highest sequence number, so a new session's lower sequence numbers drew no
+pulses until they passed it. The animator now resets its event baseline when
+the model object changes; test: a new model's `seq 1` after an old `seq 44`
+pulses.
+
+**Observation of §20 (stale rows after a stall): no change, by decision.** A
+row older than 2 s on arrival is history under the documented no-replay rule;
+values, counts and edges still update, so nothing semantic is discarded. A
+stall note would describe the browser rather than the bus.
+
+Evidence: flow Vitest RED first (5 cases failed on the old code; 3 absence
+cases are pinned by mutants), 9 mutants over `flowModel`/`flowAnimator`; gate
+in the delivery log. Awaiting the AR21 rerun. No hardware, no bus, no KNX
+socket.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

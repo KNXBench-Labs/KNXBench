@@ -10,6 +10,33 @@
 - Measured (release CLI, 15 public packages the standard profile refuses):
   14 installed and verified, 1 scheme-10 refusal; worst 760.5 MiB RSS, 256 s,
   7.18 GiB DB ([measurement](PRODUCT_ZIP_LARGE_PROFILE.md)).
+## 2026-10-05 — KL-37: catalogue, product block and DPT text say when they fell back
+
+- New `src/languageFallback.tsx`: `fellBack(text, answered)` and
+  `LanguageFallbackBadge` — the parameter panel's badge, now shared; its
+  message keys moved from `parameters.untranslated.*` to `untranslated.*`, and
+  the tooltip says "the original text" because it no longer speaks only of
+  programs.
+- `CatalogItem` gains `nameLanguage`, `visibleDescriptionLanguage`,
+  `sourceLanguage`; the catalogue list marks name and description.
+- Inspector: product text, catalogue name and application name carry their
+  `*_language` / `*_source_language` markers; a communication object's DPT text
+  is marked without a source. Only with a product language selected.
+- Ledger `KL-37` → ACCEPTED_BOUNDARY (residue accepted in §37 by Alpha's slice
+  3; the waiting UI half delivered). Manual 09 updated.
+
+## 2026-10-05 — Telegram-flow note counts refused and ring-dropped telegrams (AR21 findings 6, 7)
+
+- `flowModel`: `FlowEvent.complete` (false when the sender or any recipient
+  was refused at the node limit); a refused sender's telegram becomes a
+  lineless event without send times; `counters.eventsRecorded`.
+- `flowAnimator`: incomplete events count as not (completely) drawn — never as
+  bundled — while their remaining lines are drawn; events pushed out of the
+  ring before a sync are counted as not drawn (not while hidden, not ones
+  already drawn); the event baseline resets when the view gets a new model,
+  so a new session's telegrams pulse again (found while fixing finding 7).
+- Details and the §20 stall decision: TELEGRAM_FLOW_VISUALIZATION §21. Awaiting
+  the AR21 rerun.
 
 ## 2026-10-05 — AR10 slice 3: the German report finally says "Schalten"
 

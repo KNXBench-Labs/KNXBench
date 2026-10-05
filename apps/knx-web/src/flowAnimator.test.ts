@@ -240,6 +240,110 @@ describe("FlowAnimator", () => {
     expect(animator.metrics.reduced).toBe(true);
   });
 
+  // AR21 finding 6 (TELEGRAM_FLOW_VISUALIZATION §19): at small node limits
+  // a telegram can reach only part of its recipients, or come from a sender
+  // the model refused. Both are not (completely) drawn.
+  function limited(maxNodes: number, limits: Partial<typeof DEFAULT_FLOW_LIMITS> = {}) {
+    const m = createFlowModel(SNAPSHOT_SESSION, { ...DEFAULT_FLOW_LIMITS, maxNodes, ...limits });
+    provideContext(m, "1", parseFlowSnapshot(snapshotJson({
+      devices: [1, 2, 3].map((id) => ({ deviceId: id, installationId: 1, name: `D${id}`, individualAddressRaw: 0x1100 + id })),
+      groups: [{ gaRaw: 0x0801, gaId: 1, installationId: 1, name: "G", dpt: null, members: [1, 2, 3].map(member) }],
+    })), 0);
+    return m;
+  }
+  const fromD3 = (seq: number) => row(seq, { source: "1.1.3", sourceRaw: 0x1103 });
+
+  it("counts a telegram drawn to only part of its recipients as not completely drawn (case A)", () => {
+    const { animator } = setup();
+    const m = limited(2);
+    admitRows(m, [row(1), row(2)], 0);
+    animator.sync(m);
+    expect(animator.activePulses().map((p) => [p.from, p.to])).toEqual([["d:1", "d:2"], ["d:1", "d:2"]]);
+    expect(animator.metrics).toMatchObject({ overCapacityEvents: 2, coalescedEvents: 0, reduced: true });
+  });
+
+  it("counts telegrams from a refused sender as not drawn (case B)", () => {
+    const { animator } = setup();
+    const m = limited(2);
+    admitRows(m, [row(1)], 0);
+    animator.sync(m);
+    const before = animator.metrics.overCapacityEvents;
+    admitRows(m, [fromD3(2), fromD3(3)], 0);
+    animator.sync(m);
+    expect(m.nodes.has("d:3")).toBe(false);
+    expect(animator.metrics.overCapacityEvents - before).toBe(2);
+    expect(animator.metrics.reduced).toBe(true);
+  });
+
+  it("counts a bundled batch from a refused sender as not drawn, never as bundled (case C)", () => {
+    const { animator } = setup();
+    const m = limited(2);
+    admitRows(m, [row(1)], 0);
+    animator.sync(m);
+    const before = { ...animator.metrics };
+    admitRows(m, Array.from({ length: 30 }, (_, i) => fromD3(i + 2)), 0);
+    animator.sync(m);
+    expect(animator.metrics.overCapacityEvents - before.overCapacityEvents).toBe(30);
+    expect(animator.metrics.coalescedEvents - before.coalescedEvents).toBe(0);
+  });
+
+  it("still counts a fully represented telegram as drawn", () => {
+    const { animator } = setup();
+    const m = model();
+    admitRows(m, [row(1), row(2)], 0);
+    animator.sync(m);
+    expect(animator.metrics).toMatchObject({ overCapacityEvents: 0, coalescedEvents: 0, reduced: false });
+  });
+
+  // AR21 finding 7 (§20): the model's event ring (`maxEvents`) can overflow
+  // within one poll; telegrams it pushed out before the animator saw them
+  // were never drawn and must not vanish from the note.
+  it("counts telegrams the event ring dropped before they were drawn", () => {
+    const { animator } = setup();
+    const m = limited(8, { maxEvents: 10 });
+    admitRows(m, Array.from({ length: 25 }, (_, i) => row(i + 1)), 0);
+    expect(m.counters.eventsDropped).toBe(15);
+    animator.sync(m);
+    expect(animator.metrics.overCapacityEvents).toBe(15);
+    expect(animator.metrics.coalescedEvents).toBe(0);
+    expect(animator.metrics.reduced).toBe(true);
+  });
+
+  it("does not count ring overflow of telegrams that were already drawn", () => {
+    const { animator } = setup();
+    const m = limited(8, { maxEvents: 10 });
+    admitRows(m, Array.from({ length: 8 }, (_, i) => row(i + 1)), 0);
+    animator.sync(m);
+    admitRows(m, Array.from({ length: 8 }, (_, i) => row(i + 9)), 0);
+    expect(m.counters.eventsDropped).toBe(6);
+    animator.sync(m);
+    expect(animator.metrics).toMatchObject({ overCapacityEvents: 0, reduced: false });
+  });
+
+  it("does not count ring overflow while the page is hidden, nor on return", () => {
+    const { scheduler, animator } = setup();
+    const m = limited(8, { maxEvents: 10 });
+    scheduler.isHidden = true;
+    admitRows(m, Array.from({ length: 25 }, (_, i) => row(i + 1)), 0);
+    animator.sync(m);
+    scheduler.isHidden = false;
+    animator.sync(m);
+    expect(animator.metrics).toMatchObject({ overCapacityEvents: 0, reduced: false });
+  });
+
+  // A session change gives the view a new model whose sequence numbers start
+  // again; the animator must not keep waiting for the old session's high mark.
+  it("pulses for a new session's telegrams even when their sequence numbers are lower", () => {
+    const { animator } = setup();
+    const first = model();
+    admitRows(first, Array.from({ length: 5 }, (_, i) => row(i + 40)), 0);
+    animator.sync(first);
+    const second = model();
+    admitRows(second, [row(1)], 0);
+    animator.sync(second);
+    expect(animator.activePulses().filter((p) => p.progress === 0)).toHaveLength(12);
+  });
+
   it("does not pulse while the page is hidden, nor replay that time on return", () => {
     const { scheduler, animator } = setup();
     const m = model();

@@ -19,7 +19,8 @@
   lifts keyed opaque rows (schema ≥21 only) and counts unkeyed ones.
 - Tests: core resolver (10), width table, importer (2), store migration (3)
   and round trips (2), projection, CSV, diff, bus-monitor decode; 9 compiled
-  mutants killed. Web display of the declared/linked detail and the binding
+  mutants killed. Integrated public16 on b7d7927e (code 5a2249d3 merged with 595d8d2e) independently accepted: 16 exit0, Rust 3269/0/177 in 182 blocks, Web 2013, Chromium 132 plus probe 1, 893 frozen inputs, CLI knx 0.1.0-alpha.4+gb7d7927e; corpus --include-ignored 1267/0/0 (7 crates); 9/9 mutants killed. KL-61 DONE.
+  Web display of the declared/linked detail and the binding
   doc comment are handed to the UI owner (web lock).
 
 ## 2026-10-05 — AR21 corrections: the flow map learns to sit still

@@ -23,7 +23,7 @@ use knx_net::commissioning::memory_download::{
     locked_device_hint, run_memory_download_with_backup, Progress, RestartOutcome,
 };
 use knx_net::{ApplicationService, BusError, Destination, ManagementSession, ScanTransport, Tpci};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::task::JoinHandle;
 
 use crate::bus::{BusTunnel, TunnelEvent};
@@ -79,26 +79,8 @@ pub struct BackupDestination {
     pub taken: String,
 }
 
-/// Whether anything was written to the device, as the CLI says it
-/// (`written to the device: yes | no | partially`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Written {
-    Yes,
-    No,
-    Partially,
-}
-
-/// What became of the closing restart.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Restart {
-    Acknowledged,
-    NotInPlan,
-    /// The device did not acknowledge it; the data is written and read
-    /// back. See KNOWN_LIMITATIONS §136.
-    Unconfirmed,
-}
+/// Shared payload-free write and restart evidence; the server keeps its progress DTO.
+pub use knx_app::commissioning_activity::{Restart, Written};
 
 /// Where a download stands.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -416,7 +398,19 @@ async fn run(
         }
     };
     // Recording failure must not alter the worker outcome or skip cleanup.
-    let _ = activity.record_result(&status);
+    let witnessed = match &status {
+        DownloadStatus::Running => knx_app::commissioning_activity::DownloadResult::Running,
+        DownloadStatus::Finished {
+            written, restart, ..
+        } => knx_app::commissioning_activity::DownloadResult::Finished {
+            written: *written,
+            restart: *restart,
+        },
+        DownloadStatus::Failed { written, .. } => {
+            knx_app::commissioning_activity::DownloadResult::Failed { written: *written }
+        }
+    };
+    let _ = activity.record_result(&witnessed);
     *shared.status.lock().expect("download status poisoned") = status;
     let cleanup = tunnel.disconnect().await;
     let _ = activity.record_cleanup(cleanup.is_ok());

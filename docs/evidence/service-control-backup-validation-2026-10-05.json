@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "scope": "Offline ServiceControlBackup v2 semantic admission and original-byte preservation, local candidate only",
+  "base_commit": "5f017a29798ea3179c155390e3e44e85cbf0bb8b",
+  "program_version": "0.1.0-alpha.3",
+  "wire_format": 2,
+  "source_snapshot_sha256": "abb73fc7f94250a5e546305514d37bde06e38b8cd8aa67cf8c7e88ffcfebd42c",
+  "source_manifest": {
+    "Cargo.lock": "adbac89bba07bf697dd68ca24f81bc7f5c4fc8667e230b48f0688abeabf28bd9",
+    "crates/knx-app/Cargo.toml": "2756077a34a39646630183209801a6bec6d20aa73ea4038ecb0c423bed968820",
+    "crates/knx-app/src/service_control_backup.rs": "3cdf8185ff33394c7159a8caca268c88cf3be282f329e159811a7f1c3a043224"
+  },
+  "canonical_stages": [
+    {
+      "stage": "fmt",
+      "exit": 0,
+      "source_stable": true,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "backup-tests",
+      "exit": 0,
+      "source_stable": true,
+      "log_sha256": "39c0c1f956ad1431c3b5077e8bededa7faaa47df17ae089a8b29ef76d414d4ec",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "result_blocks": 1,
+      "changed_crate_rebuilt": true
+    },
+    {
+      "stage": "app-tests",
+      "exit": 0,
+      "source_stable": true,
+      "log_sha256": "710c6500a76eb0712ab8c6e5b552b4a954c1d3c93287b3f2cc188a4e2adfe238",
+      "passed": 98,
+      "failed": 0,
+      "ignored": 21,
+      "result_blocks": 21
+    },
+    {
+      "stage": "clippy",
+      "exit": 0,
+      "source_stable": true,
+      "log_sha256": "70bd394d64e59229818e1ea83f58df330f8de5b8f7ecf6c8d52bb1240ef7b3f3"
+    },
+    {
+      "stage": "whitespace",
+      "exit": 0,
+      "source_stable": true,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "source_controls": [
+    {
+      "name": "format",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "kind",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "timestamp",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "address-parse",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "excluded-target",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "mask-hex",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "object-index",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "service-property",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "service-octets",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "device-property",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "device-octets",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "unknown-field",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    },
+    {
+      "name": "writer-admission",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "intended_assertion_reached": true,
+      "canonical_restored": true
+    }
+  ],
+  "canonical_backup_tests_after_each_of_four_control_batches": 7,
+  "source_controls_total": 13,
+  "source_stable": true,
+  "fresh_cargo_target": true,
+  "published": false,
+  "integrated_workspace_acceptance": false,
+  "independent_review": false,
+  "hardware_or_ets_validation": false
+}

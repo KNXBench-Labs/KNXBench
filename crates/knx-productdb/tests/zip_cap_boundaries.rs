@@ -1,7 +1,9 @@
-//! Synthetic ZIP count, declared-size and raw-input bounds; no limit or compatibility expansion.
+//! Synthetic ZIP count, declared-size and raw-input bounds of both package-limit profiles.
 use std::io::{Cursor, Write};
 
-use knx_productdb::{install_package, open_and_migrate, PackageError};
+use knx_productdb::{
+    install_package, install_package_with_limits, open_and_migrate, PackageError, PackageLimits,
+};
 use rusqlite::{types::Value, Connection};
 use zip::write::SimpleFileOptions;
 
@@ -141,7 +143,7 @@ fn declared_baggage_path(index: usize) -> String {
 // APPNOTE 6.3.10 sections 4.3.7/4.3.12; ordinary headers, no descriptor/ZIP64.
 // Only declarations are large: each real baggage body remains one byte.
 fn archive_with_declared_baggage_sizes(sizes: &[u32]) -> Vec<u8> {
-    assert!(!sizes.is_empty() && sizes.len() <= 4);
+    assert!(!sizes.is_empty() && sizes.len() <= 17);
     let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     for (name, payload) in [
@@ -225,12 +227,20 @@ fn archive_with_declared_baggage_sizes(sizes: &[u32]) -> Vec<u8> {
 }
 
 fn refused_package_preserves_seed(source_name: &str, bytes: &[u8]) -> PackageError {
+    refused_package_preserves_seed_with(source_name, bytes, PackageLimits::STANDARD)
+}
+
+fn refused_package_preserves_seed_with(
+    source_name: &str,
+    bytes: &[u8],
+    limits: PackageLimits,
+) -> PackageError {
     let (_directory, connection) = db();
     let seed = archive_with_entries(2);
     let seed_report = install_package(&connection, "byte-seed.knxprod", &seed).unwrap();
     assert_eq!(retained_archive(&connection, &seed_report.sha256), seed);
     let before = contents(&connection);
-    let error = install_package(&connection, source_name, bytes).unwrap_err();
+    let error = install_package_with_limits(&connection, source_name, bytes, limits).unwrap_err();
     assert_eq!(
         contents(&connection),
         before,
@@ -320,4 +330,125 @@ fn declared_byte_total_one_over_limit_is_typed_and_preserves_every_seeded_value(
         matches!(error, PackageError::SizeLimit { ref path } if path == &declared_baggage_path(3)),
         "declared aggregate above the existing bound must fail at its last member, got {error}"
     );
+}
+
+// KL-151 (ADR-0082): the opt-in large profile, 256 MiB per member and 4 GiB in
+// total. Declared-size fixtures stay a few KiB; reaching the later payload
+// mismatch proves the size gate admitted the declaration.
+const LARGE_MEMBER_BYTES: u32 = 256 * 1024 * 1024;
+const LARGE_TOTAL_BYTES: u64 = 4096 * 1024 * 1024;
+
+fn large_refusal(sizes: &[u32]) -> PackageError {
+    let bytes = archive_with_declared_baggage_sizes(sizes);
+    refused_package_preserves_seed_with("declared-large.knxprod", &bytes, PackageLimits::LARGE)
+}
+
+fn admitted_by_size_gate(error: &PackageError) -> bool {
+    matches!(error, PackageError::InvalidZip { cause } if cause == &format!("size mismatch for {}", declared_baggage_path(0)))
+}
+
+#[test]
+fn the_profiles_are_the_documented_bounds() {
+    assert_eq!(
+        PackageLimits::STANDARD,
+        PackageLimits {
+            max_member_size: u64::from(DECLARED_MEMBER_BYTES),
+            max_expanded_size: DECLARED_TOTAL_BYTES,
+        }
+    );
+    assert_eq!(
+        PackageLimits::LARGE,
+        PackageLimits {
+            max_member_size: u64::from(LARGE_MEMBER_BYTES),
+            max_expanded_size: LARGE_TOTAL_BYTES,
+        }
+    );
+}
+
+#[test]
+fn large_profile_admits_a_member_the_standard_profile_refuses() {
+    let sizes = [DECLARED_MEMBER_BYTES + 1];
+    let standard = refused_declared_byte_fixture_preserves_seed(&sizes);
+    assert!(
+        matches!(standard, PackageError::SizeLimit { .. }),
+        "{standard}"
+    );
+    let large = large_refusal(&sizes);
+    assert!(admitted_by_size_gate(&large), "{large}");
+}
+
+#[test]
+fn large_profile_member_bound_is_inclusive_and_one_over_is_typed() {
+    let at = large_refusal(&[LARGE_MEMBER_BYTES]);
+    assert!(admitted_by_size_gate(&at), "{at}");
+    let over = large_refusal(&[LARGE_MEMBER_BYTES + 1]);
+    assert!(
+        matches!(over, PackageError::SizeLimit { ref path } if path == &declared_baggage_path(0)),
+        "{over}"
+    );
+}
+
+fn large_total_at_limit() -> Vec<u32> {
+    let xml_sizes = u32::try_from(MASTER.len() + HARDWARE.len()).unwrap();
+    let mut sizes = vec![LARGE_MEMBER_BYTES; 16];
+    sizes[15] = sizes[15].checked_sub(xml_sizes).unwrap();
+    assert_eq!(
+        u64::from(xml_sizes) + sizes.iter().map(|size| u64::from(*size)).sum::<u64>(),
+        LARGE_TOTAL_BYTES
+    );
+    sizes
+}
+
+#[test]
+fn large_profile_total_bound_is_inclusive_and_one_over_is_typed() {
+    let at = large_refusal(&large_total_at_limit());
+    assert!(admitted_by_size_gate(&at), "{at}");
+    let mut sizes = large_total_at_limit();
+    sizes[15] += 1;
+    let over = large_refusal(&sizes);
+    assert!(
+        matches!(over, PackageError::SizeLimit { ref path } if path == &declared_baggage_path(15)),
+        "{over}"
+    );
+}
+
+/// A real 65 MiB member, not just a declaration: the standard profile refuses
+/// it atomically, the large profile installs it and retains the exact archive.
+#[test]
+fn a_real_member_over_64_mib_installs_only_under_the_large_profile() {
+    let payload = vec![0_u8; 65 * 1024 * 1024];
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    for (name, bytes) in [
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001/Baggages/large.bin", payload.as_slice()),
+    ] {
+        writer.start_file(name, options).unwrap();
+        writer.write_all(bytes).unwrap();
+    }
+    let archive = writer.finish().unwrap().into_inner();
+    assert!(
+        archive.len() < 1024 * 1024,
+        "zeros compress; the archive stays small"
+    );
+
+    let standard = refused_package_preserves_seed("large-member.knxprod", &archive);
+    assert!(
+        matches!(standard, PackageError::SizeLimit { ref path } if path == "M-0001/Baggages/large.bin"),
+        "{standard}"
+    );
+
+    let (_directory, connection) = db();
+    let report = install_package_with_limits(
+        &connection,
+        "large-member.knxprod",
+        &archive,
+        PackageLimits::LARGE,
+    )
+    .unwrap();
+    assert!(report.members.iter().any(
+        |member| member.path == "M-0001/Baggages/large.bin" && member.size == 65 * 1024 * 1024
+    ));
+    assert_eq!(retained_archive(&connection, &report.sha256), archive);
 }

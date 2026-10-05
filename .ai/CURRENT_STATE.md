@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 23:26 CEST
+- **Completed:** **KL-151 DONE (ADR-0082).** `knx_productdb::PackageLimits::{STANDARD, LARGE}` + `install_package_with_limits`; `knx products ingest --allow-large-package` (256 MiB member / 4 GiB expanded), hint on size refusal, refused for `.knxproj`. Default and HTTP route unchanged. Release measurement on the 15 public size-refused packages: 14 installed + verified, 1 scheme-10 refusal; max 760.5 MiB RSS / 256 s / 7.18 GiB DB (docs/PRODUCT_ZIP_LARGE_PROFILE.md). Tests: `zip_cap_boundaries.rs` (+5), `cli_large_package.rs` (3).
+- **Pending/Next Steps:** AR06P: `KL-153` scheme 10 (vocabulary census vs supported schemes running/next); AR15; AR21 rerun when UI delivers findings 6/7.
+- **Notes for Codex oder Claude:** The crawled corpus lives at `/mnt/daten-i/Sourcecode/knxprod-crawler/downloads/files` (private, read in place). Web lock: unchanged per the newest owner line below; not taken or released by this entry.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-05 22:57 CEST
 Web lock: taken by claude-goal-ui-owner for AR21 findings 6 and 7 (telegram-flow note), then KL-37 markers

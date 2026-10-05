@@ -195,7 +195,21 @@ Adds product data to the database. It accepts a `.knxproj` project (ingesting th
 manufacturer data embedded in it) or a `.knxprod` product package.
 
 For a `.knxprod` package it prints one line covering the scheme, member count, unknown
-constructs, conflicts, captured translations and dropped duplicate datapoint types. For
+constructs, conflicts, captured translations and dropped duplicate datapoint types.
+
+Complete manufacturer bundles (for example Siemens' all-products download) are too large
+for the default bounds: one file inside the package may hold at most 64 MiB and the whole
+package may expand to at most 256 MiB. If you trust the file, `--allow-large-package`
+raises these two bounds to 256 MiB and 4 GiB:
+
+```bash
+knx products ingest Siemens_HVAC_All_PDB.knxprod --allow-large-package
+```
+
+Expect it to take minutes, close to a gigabyte of memory and several gigabytes of
+database space for the largest bundles. The file itself must still be at most 256 MiB, and
+the option exists only on the command line; the catalog browser keeps the default
+bounds. For
 a `.knxproj` it prints:
 
 ```text

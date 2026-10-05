@@ -218,6 +218,12 @@ whole-device recovery contracts. `GET /api/bus/activity` is partial
 server-lifetime evidence, not a durable audit. The global status/history,
 partial-scope selector and any reset UI still need separate contracts and
 the Web lock; read-only Device checks already shipped without a write go.
+**User decisions 2026-10-05:** the Web partial-scope selector (and the history
+UI adoption) are handed to the UI owner with the backend contract in
+[COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05);
+no reset route/UI is built, the missing reset UI is an accepted, safely
+refused unsupported boundary with a user notice. Commissioning CLI and server
+callers record durable history since `ae567d00`.
 An offline K7 restore-file guard now rejects missing, duplicate or extraneous
 load-state records for the plan; this does not extend the saved storage scope
 or reopen any of the address-write routes.

@@ -8,6 +8,25 @@
 - **Integration:** Own leaf adf7ff29 merged with owner origin/main036b46a6 (commissioning activity/CLI); IMPLEMENTATION_STATUS conflict resolved as own section above complete owner text; handover rebuilt as own entry plus byte-exact owner suffix; ledger differs only in the KL151 row. Fresh integrated public16 pending on the merge.
 - **Integrated public16 dispatched:** proc_3d82e6c1b7e5/PID2609674 on merge f867741ee1e01d04794e3b8ad067dc1818c20fef (leaf adf7ff29 + owner036b46a6), fresh target, short TMPDIR ax6, 885 frozen non-Markdown inputs, ordered leases held; web-install0/web-build0 so far. Acceptance, publication, readback and own-only cleanup pending.
 - **Public16 accepted:** proc_3d82e6c1b7e5 — Integrated public16 on merge f867741e (leaf adf7ff29 + owner 036b46a6) independently accepted: 16 exit0, Rust 3240/0/177 in 179 blocks, Web 2001, Chromium 131 plus separate probe 1, 885 frozen inputs, CLI knx 0.1.0-alpha.4+gf867741e. Archived under evidence/alpha-release/ar06x-raw-input-20261005/integrated-public16. Next: metadata commit, doc gates on that commit, push, readback, own-only cleanup.
+- **Second owner merge:** Markdown-only owner 585749a1 (commissioning closing review) merged after metadata 9d78f26e; status/handover owner text preserved exactly. Runtime evidence stays bound to f867741e; non-Markdown inputs re-verified identical before publication.
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-10-05 09:59
+Web lock: held by claude-alpha for U21 corrections; not taken or released by this entry
+- **Completed:** Closing self-review of the commissioning track against goal-commission §4 (log `.ai/logs/2026-10-05_claude_iaw-closing-review.md`): Critical 0, Important 0, Minor 1 (stale IMPLEMENTATION_STATUS top, fixed here with a new top entry). Fail-closed address/serial/reset, property-only service-control recovery, caller/long-session history and offline abort/restore contracts are closed at their scope; integrated gates passed on `ae567d00`.
+- **Pending/Next Steps:** Commissioning has no own work left. The goal closes when the UI owner delivers KL-142 (selector) and UI-04 (history UI) from the handoff table; then a final status line in goal-commission.md. Alpha controller: reroute KL-142 Owner/Route.
+- **Notes for Codex oder Claude:** Self-review only (no subagents by user rule), not an independent review. No hardware contact, no Web edits, root checkout untouched. No ETS parity, certification or power-loss recovery claimed.
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-10-05 09:58
+Web lock: held by claude-alpha for U21 corrections; not taken or released by this entry
+- **Completed:** Recorded two user decisions (2026-10-05). (1) The Web partial-scope selector and the history UI adoption go to the UI owner: handoff table with the published backend contract in `docs/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05`; ledger `KL-142` is now IN_PROGRESS (BLOCKED_UI). (2) No reset route/UI: `KL-140` is ACCEPTED_BOUNDARY / RECORDED_SCOPE, with a new user notice (manual *There is no address reset in the app*) and decision lines in KNOWN_LIMITATIONS §140/§142 and goal-commission §3. Ledger counts recomputed by script and checked (`check-ledger` 186 rows, anchors 462). Docs only.
+- **Pending/Next Steps:** Commissioning closing self-review of the whole track against goal-commission §4; then report the goal state. Nothing else in this track needs the Web lock.
+- **Notes for Codex oder Claude:** **For the UI owner (goal-ui.md):** KL-142 selector: `POST /api/device-download/plan` takes optional `partial: { parameters, groupAddresses }`; the response carries `partial` and `notWritten`; `start` re-derives the plan from `planId`. Acceptance and the UI-04 history row are in the handoff table. No reset UI is wanted. **For the alpha controller:** please change Owner/Route of `KL-142` to `ui` / `goal-ui.md` (the ledger rules reserve that column for you); its status stays IN_PROGRESS until the UI half lands.
 
 ---
 

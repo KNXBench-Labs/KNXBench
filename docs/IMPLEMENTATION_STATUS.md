@@ -7,7 +7,8 @@
   §61 boundary). 7.003/7.004/7.006 and 8.003/8.004/8.006 (raw counter in
   10 ms/100 ms/1 min, "not allowed for runtime communication") now return the
   `time-period-raw-counter-parameter-only` ruling. Audit:
-  docs/spec-audits/2026-10-05-dpt-numeric-ranges.md. KL-61 stays IN_PROGRESS
+  docs/spec-audits/2026-10-05-dpt-numeric-ranges.md. Integrated public16 on 6fbb02c3 independently accepted: 16 exit0, Rust 3248/0/177 in 181 blocks, Web 2001, Chromium 131 plus probe 1, 887 frozen inputs, CLI knx 0.1.0-alpha.4+g6fbb02c3. First attempt refused (workspace 101): `http_bus_monitor` compared whole rows across two polls although `observedAgeMs` is measured per response (AR20); fixed in 6fbb02c3 (test only, 5 ms injected pause: old assertion fails, new passes).
+  KL-61 stays IN_PROGRESS
   for the GA-declared DPT versus linked-object question.
 
 ## 2026-10-05 — AR09: 17.001 scene numbers travel in their own octet

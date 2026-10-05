@@ -1,7 +1,8 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
-- **Timestamp:** 2026-10-05 11:04 CEST
+- **Timestamp:** 2026-10-05 11:30 CEST
 - **Completed:** AR09 numeric-range pass (local, branch alpha-dpt-ranges): DPT-AS limits for main types 5-9, 12-14, 29 probed through the public codec, no format defect. Gap fixed: parameter-only time periods 7.003/7.004/7.006 and 8.003/8.004/8.006 had no encoding ruling; new `time-period-raw-counter-parameter-only` ruling, wire unchanged. RED/GREEN test, knx-core 679/0/0, strict clippy.
-- **Pending/Next Steps:** Integrated public16, publish, readback, cleanup. Then AR09 item 2: GA-declared DPT vs linked-object inference (ADR first if modelling changes).
+- **Gate:** Integrated public16 on 6fbb02c3 independently accepted: 16 exit0, Rust 3248/0/177 in 181 blocks, Web 2001, Chromium 131 plus probe 1, 887 frozen inputs, CLI knx 0.1.0-alpha.4+g6fbb02c3. First attempt refused (workspace 101): `http_bus_monitor` compared whole rows across two polls although `observedAgeMs` is measured per response (AR20); fixed in 6fbb02c3 (test only, 5 ms injected pause: old assertion fails, new passes).
+- **Pending/Next Steps:** Publish ADR 0078 (group-address declared DPT, draft in this push). Then AR09 item 2: GA-declared DPT vs linked-object inference (ADR first if modelling changes).
 - **Notes for Codex oder Claude:** Subtype ranges deliberately stay unenforced (§61 boundary). Web lock: held by claude-goal-ui-owner per the owner entries below; not taken or released by this entry.
 
 ---

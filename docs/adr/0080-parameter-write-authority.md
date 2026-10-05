@@ -98,3 +98,20 @@ when both are absent. The calculations' semantics are vendor scripts.
 - `ParameterCalculation`, `Allocator`, `Repeat`, rename and button semantics
   stay unimplemented (KNOWN_LIMITATIONS PDB-9); this ADR adds no evaluator.
 - The UI owner adopts the three diagnostic tokens and may hide `None` fields.
+
+## UI presentation (UI owner, 2026-10-05)
+
+- The three tokens are part of Web's manual `ParameterDiagnosticKind` union
+  and translated in English and German like every other kind; so are
+  ADR-0061's `unsupportedControlKind` and ADR-0062's
+  `evaluationWorkBudgetExhausted`, which had been waiting on the same English
+  fallback. `detail` (the affected field ids) stays English, as for every
+  kind (KNOWN_LIMITATIONS §66).
+- **`None` fields are folded, not dropped.** Because `Access_t` is the user's
+  right to *view* and modify, a section folds its fields whose effective
+  access is `None` behind one button that names their count ("Show 2 fields
+  without user access (Access None)", `aria-expanded`); opened, they are
+  listed read-only like any other refused field. `Read` fields stay visible
+  and read-only. The section's `parameterAccessReadOnly` warning remains
+  visible either way, so a folded field is never unexplained. The fold is
+  per section and per panel view, not a stored preference.

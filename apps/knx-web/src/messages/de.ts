@@ -426,6 +426,7 @@ export const messages: Record<MessageKey, string> = {
 
   "parameters.deviceScope": "Gerät",
   "parameters.moduleNumber": "Modul #{number}",
+  "parameters.readOnlyCaption": "Hier nicht bearbeitbar – siehe die Warnungen für den Grund.",
   "parameters.sharedReadOnlyCaption":
     "Wird von jeder Instanziierung dieses Moduls gemeinsam genutzt; hier nicht bearbeitbar – siehe die Diagnosen für den Grund.",
   "parameters.staleValuesHeading": "Veraltete Werte ({count})",
@@ -480,6 +481,15 @@ export const messages: Record<MessageKey, string> = {
     "Ein Modulargument konnte nicht der Deklaration des Moduls zugeordnet werden und wurde ignoriert.",
   "parameters.diagnostic.unsupportedModuleArgumentKind":
     "Ein Modulargument verwendet eine Art, die diese Version nicht interpretiert, und wurde ignoriert.",
+  "parameters.diagnostic.unsupportedControlKind": "Der steuernde Parameter einer Auswahl hat einen nicht unterstützten Typ; ihre Zweige wurden nicht ausgewertet.",
+  "parameters.diagnostic.evaluationWorkBudgetExhausted": "Dieses Programm hat die Auswertungsgrenze überschritten; seine unvollständige Parameteransicht ist schreibgeschützt.",
+  "parameters.diagnostic.parameterAccessReadOnly": "Einige Felder hat der Hersteller schreibgeschützt oder verborgen (Access); sie sind nicht beschreibbar.",
+  "parameters.diagnostic.manufacturerCalculation": "Einige Felder sind Ein- oder Ausgaben einer Herstellerberechnung, die KNXBench nicht ausführt; sie sind schreibgeschützt.",
+  "parameters.diagnostic.writeAuthorityUnavailable": "Die Produktdatenbank hat für dieses Programm keine Schreibberechtigung erfasst; seine Felder sind schreibgeschützt. Installieren Sie das Produkt neu, um sie zu erfassen.",
+  "parameters.noAccess.show.one": "{count} Feld ohne Benutzerzugriff anzeigen (Access None)",
+  "parameters.noAccess.show.other": "{count} Felder ohne Benutzerzugriff anzeigen (Access None)",
+  "parameters.noAccess.hide.one": "{count} Feld ohne Benutzerzugriff ausblenden (Access None)",
+  "parameters.noAccess.hide.other": "{count} Felder ohne Benutzerzugriff ausblenden (Access None)",
   "parameters.diagnostic.unresolvedTextPlaceholder":
     "Ein Textplatzhalter hatte kein passendes Modulargument und wurde unverändert belassen.",
 

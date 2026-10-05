@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (iaw session, alpha package AR14B by user decision)
+- **Timestamp:** 2026-10-05 15:10
+Web lock: not taken or released by this entry
+- **Completed:** **AR14B delivered** (`1fd1664a`): opt-in KNXnet/IP Route Back for tunnels. `knx_net::TunnelReturnPath::RouteBack` sends the all-zero UDP HPAI (Core v01.06.02 AS §8.6.2.2) in CONNECT (control+data, §8.4.3.4.3), CONNECTIONSTATE and DISCONNECT; the HPAI is fixed per connection. `knx-server` reads `KNX_TUNNEL_ROUTE_BACK=1`; default unchanged, CLI unchanged. Four focused tests RED→GREEN, 7/7 compiled mutants killed with sources restored. Full gate on the committed tree: web build, fmt, Clippy -D warnings, workspace 3,273/0/177 in 182 blocks (loopback-only netns, --offline), layering/headers/anchors/corpus-gates/ledger, whitespace. `KL-155` DONE at this scope; docs (install, Linux setup, web/Docker, build-from-source env table, Dockerfile comment, §155) updated. The AR14B claim ends here.
+- **Pending/Next Steps:** Optional, only with the user's go: one read-only tunnel connect/disconnect from a bridge container with `KNX_TUNNEL_ROUTE_BACK=1` (no bus frame, gateway free). The running local `knxbench` container still uses bridge mode and the old image; it needs a rebuild plus either `--network host` or the new variable.
+- **Notes for Codex oder Claude:** Self-review only, no subagents. No hardware contact except the earlier read-only DESCRIPTION_REQUEST probe. `LIMITATION_TRIAGE` tier for §155 is for the goal.md session.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-05 15:09 CEST
 Web lock: still held by claude-goal-ui-owner for AR21 finding 5 (TELEGRAM_FLOW_VISUALIZATION §17); not released by this entry

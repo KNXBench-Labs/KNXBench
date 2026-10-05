@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — Tunnelling through Docker's bridge network (AR14B, `1fd1664a`)
+
+- `knx_net::TunnelReturnPath::RouteBack` sends the all-zero UDP Route Back HPAI
+  (Core v01.06.02 AS §8.6.2.2) in the `CONNECT_REQUEST` (control and data
+  endpoint), every `CONNECTIONSTATE_REQUEST` and the `DISCONNECT_REQUEST`;
+  the gateway answers to the packet's source, which survives Docker's NAT.
+- `knx-server` enables it with `KNX_TUNNEL_ROUTE_BACK=1`; the default keeps the
+  own address. The CLI is unchanged.
+- Evidence: four focused tests (RED first), 7/7 compiled mutants, workspace
+  3,273/0/177. Not verified: a live tunnel from a bridge container; other
+  gateways' Route Back support (KNOWN_LIMITATIONS §155).
 ## 2026-10-05 — Themes: one dropdown, CRT shipped, storage location shown (ADR-0079)
 
 User decision: the preview cards in Settings › Appearance go ("Dropdown

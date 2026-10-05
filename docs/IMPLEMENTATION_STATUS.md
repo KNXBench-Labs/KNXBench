@@ -9,6 +9,7 @@
   a 1-octet payload; the inline form and set reserved bits are refused.
   Pinned old tests rewritten; two compiled mutants (inline encode, reserved-bit
   check removed) caught. Audit: docs/spec-audits/2026-10-05-dpt-format-widths.md.
+  Integrated public16 on f3b4fd34 independently accepted: 16 exit0, Rust 3247/0/177 in 181 blocks, Web 2001, Chromium 131 plus probe 1, 887 frozen inputs, CLI knx 0.1.0-alpha.4+gf3b4fd34.
   KL-61 is IN_PROGRESS: ranges/special values and GA-declared DPTs remain.
 
 ## 2026-10-05 — AR06Y: CLI refuses oversized product packages before reading them

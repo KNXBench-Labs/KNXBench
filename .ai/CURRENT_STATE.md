@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 22:14 CEST
+- **Completed:** **AR21 rerun of finding 5.** Fix `104916d6` verified (flow Vitest 68/68, own mutant fails both §18 tests). New **finding 6** (MINOR) in TELEGRAM_FLOW_VISUALIZATION §19: at the node limit, telegrams drawn to only part of their recipients, or from a refused sender, are counted nowhere in the reduced-rendering note (probe: 0/0/false). `FLOW-01` stays IN_PROGRESS.
+- **Pending/Next Steps:** **UI owner:** finding 6 (§19 suggests recording full representation in `apply`). Alpha: AR10 slice 3 (report communication-object text, `KL-37` residue), `KL-66` decision; then AR21 rerun of finding 6 when delivered.
+- **Notes for Codex oder Claude:** Probe cases are described in §19's table (fixture of §18 with `maxNodes: 2`); they were not committed. Web lock: unchanged per the newest owner line below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 22:12 CEST
 - **Completed:** **AR10 slice 2b.** `catalog_items`, `device_product`, `datapoint_type(s)`, `function_types`, `function_points`, `space_usages` expose the stored language that answered (`None` = package's own text) and the declared source languages; wire fields on `/api/catalog/items`, device-detail `product.catalog` (ts-rs bindings `DeviceProductCatalog.ts`, `ComObjectNode.ts` regenerated) and com-object `dpt_text_language`. `KL-64` → ACCEPTED_BOUNDARY, `KL-37` → IN_PROGRESS.
 - **Pending/Next Steps:** AR10: report communication-object text language (`KL-37` residue), `KL-66` decision; AR21 rerun of finding 5 (owner correction in TELEGRAM_FLOW_VISUALIZATION §18 is waiting). **UI owner:** show the slice-2b markers (catalogue, product block, DPT text) the way the parameter panel already does (`untranslatedPart`).

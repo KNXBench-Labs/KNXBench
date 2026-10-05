@@ -88,6 +88,8 @@ the same multicast implementation. Bridge mode supports project work and all
 ordinary HTTP traffic, but not bus tunnelling: the gateway answers to the
 container's private address
 ([§155](../../KNOWN_LIMITATIONS.md#155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer)).
+`KNX_TUNNEL_ROUTE_BACK=1` lets a tunnel through where the gateway supports
+KNXnet/IP Route Back.
 
 > **Tip**
 >

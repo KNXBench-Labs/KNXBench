@@ -170,11 +170,19 @@ pub struct RealConnector {
     client: KnxNetIpClient,
 }
 
+impl RealConnector {
+    /// A connector whose tunnels ask the gateway to answer through `path`
+    /// (`KNX_TUNNEL_ROUTE_BACK`, KNOWN_LIMITATIONS §155).
+    pub fn new(path: knx_net::TunnelReturnPath) -> Self {
+        Self {
+            client: KnxNetIpClient::with_tunnel_return_path(path),
+        }
+    }
+}
+
 impl Default for RealConnector {
     fn default() -> Self {
-        Self {
-            client: KnxNetIpClient::new(),
-        }
+        Self::new(knx_net::TunnelReturnPath::default())
     }
 }
 
@@ -1687,6 +1695,35 @@ async fn drain_task(
 mod tests {
     use super::*;
     use fake::{FakeConnector, FakeTunnel, FakeTunnelHandle};
+
+    /// KNOWN_LIMITATIONS §155: the server's connector passes its return
+    /// path down to the tunnel; Route Back puts the all-zero HPAI into both
+    /// endpoints of the `CONNECT_REQUEST`.
+    #[tokio::test]
+    async fn a_route_back_connector_asks_the_gateway_to_answer_the_packet_source() {
+        for (path, route_back) in [
+            (knx_net::TunnelReturnPath::RouteBack, true),
+            (knx_net::TunnelReturnPath::LocalAddress, false),
+        ] {
+            let gateway = tokio::net::UdpSocket::bind("127.0.0.1:0").await.unwrap();
+            let address = match gateway.local_addr().unwrap() {
+                std::net::SocketAddr::V4(address) => address,
+                std::net::SocketAddr::V6(_) => unreachable!("bound an IPv4 socket"),
+            };
+            let connector = RealConnector::new(path);
+            let attempt = tokio::spawn(async move {
+                let _ = connector.connect_tunnel(address).await;
+            });
+            let mut buf = [0u8; 128];
+            let (n, _) = gateway.recv_from(&mut buf).await.unwrap();
+            attempt.abort();
+            // 6-octet header, then the control and the data endpoint HPAI.
+            let endpoints = &buf[6..n.min(22)];
+            let zero = [0x08, 0x01, 0, 0, 0, 0, 0, 0];
+            assert_eq!(endpoints[..8] == zero, route_back, "{path:?} control");
+            assert_eq!(endpoints[8..16] == zero, route_back, "{path:?} data");
+        }
+    }
 
     fn addr(device: u8) -> IndividualAddress {
         IndividualAddress::new(1, 1, device).expect("valid test address")

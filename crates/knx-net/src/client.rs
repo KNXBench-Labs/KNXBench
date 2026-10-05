@@ -88,15 +88,42 @@ pub struct DiscoveredGateway {
     pub device_info: Option<dib::DeviceInfo>,
 }
 
+/// Where a tunnelling gateway sends its answers.
+///
+/// `[D]` Core v01.06.02 AS §8.6.2.2: an HPAI whose address and port are all
+/// zero is a "Route Back" HPAI; the server answers to the address and port
+/// of the received IP packet. It exists for paths with NAT, such as a
+/// container on Docker's bridge network, where the client's own socket
+/// address is not reachable from the gateway (KNOWN_LIMITATIONS §155).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TunnelReturnPath {
+    /// The client's own socket address in every HPAI. The default.
+    #[default]
+    LocalAddress,
+    /// Route Back HPAIs for the control and data endpoint (§8.4.3.4.3:
+    /// both or neither) and for the connection-state and disconnect requests.
+    RouteBack,
+}
+
 /// A local KNXnet/IP client, not yet connected to any gateway. `discover`
 /// (multicast `SEARCH_REQUEST`, Core v01.06.02 AS §4.2) and `connect_tunnel`
 /// are both implemented as of Session 6 Cycle 3; `connect_routing` as of
 /// Session 6 Cycle 4.
-pub struct KnxNetIpClient;
+pub struct KnxNetIpClient {
+    tunnel_return_path: TunnelReturnPath,
+}
 
 impl KnxNetIpClient {
     pub fn new() -> Self {
-        Self
+        Self::with_tunnel_return_path(TunnelReturnPath::default())
+    }
+
+    /// A client whose tunnels ask the gateway to answer through `path`.
+    /// Discovery and routing are unaffected.
+    pub fn with_tunnel_return_path(path: TunnelReturnPath) -> Self {
+        Self {
+            tunnel_return_path: path,
+        }
     }
 }
 
@@ -226,7 +253,7 @@ impl BusConnection for KnxNetIpClient {
     }
 
     async fn connect_tunnel(&self, gateway: SocketAddrV4) -> Result<TunnelClient, BusError> {
-        TunnelClient::connect(gateway).await
+        TunnelClient::connect(gateway, self.tunnel_return_path).await
     }
 
     async fn connect_routing(
@@ -262,6 +289,9 @@ pub enum TunnelEvent {
 
 struct TunnelState {
     socket: UdpSocket,
+    /// The HPAI every request of this connection carries, fixed at connect
+    /// time: own address, or Route Back for both endpoints (§8.4.3.4.3).
+    control_hpai: Hpai,
     channel_id: u8,
     assigned_address: IndividualAddress,
     tx: broadcast::Sender<TunnelEvent>,
@@ -298,10 +328,13 @@ pub struct TunnelClient {
 }
 
 impl TunnelClient {
-    async fn connect(gateway: SocketAddrV4) -> Result<Self, BusError> {
+    async fn connect(
+        gateway: SocketAddrV4,
+        return_path: TunnelReturnPath,
+    ) -> Result<Self, BusError> {
         let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(BusError::Io)?;
         socket.connect(gateway).await.map_err(BusError::Io)?;
-        let control_hpai = local_hpai(&socket)?;
+        let control_hpai = tunnel_hpai(&socket, return_path)?;
 
         let cri = tunnelling::TunnelCri {
             layer: tunnelling::TUNNEL_LINKLAYER,
@@ -335,6 +368,7 @@ impl TunnelClient {
         let (tx, _rx) = broadcast::channel(64);
         let state = Arc::new(TunnelState {
             socket,
+            control_hpai,
             channel_id: response.channel_id,
             assigned_address: crd.individual_address,
             tx,
@@ -487,8 +521,8 @@ impl TunnelClient {
     }
 
     async fn try_send_disconnect_request(&self) -> Result<(), BusError> {
-        let control_hpai = local_hpai(&self.state.socket)?;
-        let body = services::encode_disconnect_request(self.state.channel_id, control_hpai);
+        let body =
+            services::encode_disconnect_request(self.state.channel_id, self.state.control_hpai);
         let datagram = frame::encode_frame(services::DISCONNECT_REQUEST, &body);
         self.state
             .socket
@@ -859,6 +893,18 @@ async fn routing_receive_loop(state: Arc<RoutingState>) {
     }
 }
 
+/// The HPAI a tunnel sends: its own socket address, or the all-zero UDP
+/// Route Back HPAI (Core v01.06.02 AS §8.6.2.2).
+fn tunnel_hpai(socket: &UdpSocket, path: TunnelReturnPath) -> Result<Hpai, BusError> {
+    match path {
+        TunnelReturnPath::LocalAddress => local_hpai(socket),
+        TunnelReturnPath::RouteBack => Ok(Hpai {
+            addr: Ipv4Addr::UNSPECIFIED,
+            port: 0,
+        }),
+    }
+}
+
 fn local_hpai(socket: &UdpSocket) -> Result<Hpai, BusError> {
     match socket.local_addr().map_err(BusError::Io)? {
         SocketAddr::V4(addr) => Ok(Hpai {
@@ -1016,13 +1062,7 @@ async fn heartbeat_loop(state: Arc<TunnelState>) {
                 .socket
                 .send(&frame::encode_frame(
                     services::DISCONNECT_REQUEST,
-                    &services::encode_disconnect_request(
-                        state.channel_id,
-                        match local_hpai(&state.socket) {
-                            Ok(hpai) => hpai,
-                            Err(_) => return,
-                        },
-                    ),
+                    &services::encode_disconnect_request(state.channel_id, state.control_hpai),
                 ))
                 .await;
             return;
@@ -1032,10 +1072,7 @@ async fn heartbeat_loop(state: Arc<TunnelState>) {
 
 async fn send_heartbeat_with_retries(state: &Arc<TunnelState>) -> bool {
     for _attempt in 0..4 {
-        let Ok(control_hpai) = local_hpai(&state.socket) else {
-            return false;
-        };
-        let body = services::encode_connectionstate_request(state.channel_id, control_hpai);
+        let body = services::encode_connectionstate_request(state.channel_id, state.control_hpai);
         let datagram = frame::encode_frame(services::CONNECTIONSTATE_REQUEST, &body);
         *state.heartbeat_reply.lock().await = None;
         if state.socket.send(&datagram).await.is_err() {
@@ -1329,6 +1366,136 @@ mod tests {
             .expect("disconnect task did not panic")
             .expect("matching successful response completes disconnect");
         peer.await.expect("loopback peer did not panic");
+    }
+
+    /// What a loopback gateway saw: the HPAIs of `CONNECT_REQUEST` (control,
+    /// data), `CONNECTIONSTATE_REQUEST` and `DISCONNECT_REQUEST`, raw.
+    struct SeenHpais {
+        connect_control: Vec<u8>,
+        connect_data: Vec<u8>,
+        heartbeat: Vec<u8>,
+        disconnect: Vec<u8>,
+    }
+
+    /// Runs one tunnel lifetime (connect, one heartbeat, disconnect) against
+    /// a loopback gateway that answers to each packet's source, and returns
+    /// the HPAIs the client sent plus the client's own socket address.
+    async fn tunnel_hpais(path: TunnelReturnPath) -> (SeenHpais, SocketAddrV4) {
+        let server = UdpSocket::bind("127.0.0.1:0")
+            .await
+            .expect("bind loopback gateway");
+        let server_addr = match server.local_addr().expect("server address") {
+            SocketAddr::V4(addr) => addr,
+            SocketAddr::V6(_) => unreachable!("bound an IPv4 socket"),
+        };
+        let channel_id = 0x21;
+        let peer = tokio::spawn(async move {
+            let mut buf = [0u8; 128];
+            let (n, client) = server.recv_from(&mut buf).await.expect("CONNECT_REQUEST");
+            let (header, body) = frame::decode_frame(&buf[..n]).expect("decode");
+            assert_eq!(header.service_type, services::CONNECT_REQUEST);
+            let (connect_control, connect_data) = (body[0..8].to_vec(), body[8..16].to_vec());
+            let mut reply = vec![channel_id, services::E_NO_ERROR];
+            reply.extend_from_slice(
+                &Hpai {
+                    addr: Ipv4Addr::UNSPECIFIED,
+                    port: 0,
+                }
+                .encode(),
+            );
+            reply.extend_from_slice(&[0x04, tunnelling::TUNNEL_CONNECTION, 0x11, 0x01]);
+            server
+                .send_to(
+                    &frame::encode_frame(services::CONNECT_RESPONSE, &reply),
+                    client,
+                )
+                .await
+                .expect("CONNECT_RESPONSE");
+
+            let (n, client) = server
+                .recv_from(&mut buf)
+                .await
+                .expect("CONNECTIONSTATE_REQUEST");
+            let (header, body) = frame::decode_frame(&buf[..n]).expect("decode");
+            assert_eq!(header.service_type, services::CONNECTIONSTATE_REQUEST);
+            let heartbeat = body[2..10].to_vec();
+            server
+                .send_to(
+                    &frame::encode_frame(
+                        services::CONNECTIONSTATE_RESPONSE,
+                        &[channel_id, services::E_NO_ERROR],
+                    ),
+                    client,
+                )
+                .await
+                .expect("CONNECTIONSTATE_RESPONSE");
+
+            let (n, client) = server
+                .recv_from(&mut buf)
+                .await
+                .expect("DISCONNECT_REQUEST");
+            let (header, body) = frame::decode_frame(&buf[..n]).expect("decode");
+            assert_eq!(header.service_type, services::DISCONNECT_REQUEST);
+            let disconnect = body[2..10].to_vec();
+            server
+                .send_to(
+                    &frame::encode_frame(
+                        services::DISCONNECT_RESPONSE,
+                        &services::encode_disconnect_response(channel_id, services::E_NO_ERROR),
+                    ),
+                    client,
+                )
+                .await
+                .expect("DISCONNECT_RESPONSE");
+            SeenHpais {
+                connect_control,
+                connect_data,
+                heartbeat,
+                disconnect,
+            }
+        });
+
+        let client = KnxNetIpClient::with_tunnel_return_path(path)
+            .connect_tunnel(server_addr)
+            .await
+            .expect("connect to loopback gateway");
+        let own = match client.state.socket.local_addr().expect("client address") {
+            SocketAddr::V4(addr) => addr,
+            SocketAddr::V6(_) => unreachable!("bound an IPv4 socket"),
+        };
+        assert!(
+            send_heartbeat_with_retries(&client.state).await,
+            "heartbeat answered"
+        );
+        client.disconnect().await.expect("disconnect answered");
+        (peer.await.expect("loopback gateway did not panic"), own)
+    }
+
+    /// KNOWN_LIMITATIONS §155: Route Back (Core v01.06.02 AS §8.6.2.2) is
+    /// the all-zero UDP HPAI, and §8.4.3.4.3 requires it for the data
+    /// endpoint too. Every HPAI of the tunnel's lifetime carries it.
+    #[tokio::test]
+    async fn route_back_tunnel_sends_all_zero_hpais_for_its_whole_lifetime() {
+        let (seen, _) = tunnel_hpais(TunnelReturnPath::RouteBack).await;
+        let route_back = [0x08, 0x01, 0, 0, 0, 0, 0, 0];
+        assert_eq!(seen.connect_control, route_back, "CONNECT control endpoint");
+        assert_eq!(seen.connect_data, route_back, "CONNECT data endpoint");
+        assert_eq!(seen.heartbeat, route_back, "CONNECTIONSTATE_REQUEST");
+        assert_eq!(seen.disconnect, route_back, "DISCONNECT_REQUEST");
+    }
+
+    /// The default is unchanged: hosts and gateways that work today keep
+    /// receiving the client's own socket address in every HPAI.
+    #[tokio::test]
+    async fn default_tunnel_keeps_its_own_address_in_every_hpai() {
+        let (seen, own) = tunnel_hpais(TunnelReturnPath::default()).await;
+        let mut expected = vec![0x08, 0x01];
+        expected.extend_from_slice(&own.ip().octets());
+        expected.extend_from_slice(&own.port().to_be_bytes());
+        assert_eq!(seen.connect_control, expected, "CONNECT control endpoint");
+        assert_eq!(seen.connect_data, expected, "CONNECT data endpoint");
+        assert_eq!(seen.heartbeat, expected, "CONNECTIONSTATE_REQUEST");
+        assert_eq!(seen.disconnect, expected, "DISCONNECT_REQUEST");
     }
 
     /// KNOWN_LIMITATIONS.md #27: a stale `Notify` wakeup — one meant for an
@@ -2292,8 +2459,10 @@ mod tests {
 
         let (tx, _rx) = broadcast::channel(64);
         let channel_id = 7u8;
+        let control_hpai = local_hpai(&state_socket).expect("state socket HPAI");
         let state = Arc::new(TunnelState {
             socket: state_socket,
+            control_hpai,
             channel_id,
             assigned_address: IndividualAddress::new(1, 1, 1).unwrap(),
             tx,

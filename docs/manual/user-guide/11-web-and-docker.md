@@ -118,7 +118,10 @@ The container's default bridge network supports project work and ordinary
 HTTP. It does not reach the bus: a tunnel to a manually entered gateway gets
 no answer, because the server tells the gateway its private container address
 ([§155](../../KNOWN_LIMITATIONS.md#155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer)).
-Use `--network host` for bus work. Discovery fails there too: the CLI
+Use `--network host` for bus work, or set `KNX_TUNNEL_ROUTE_BACK=1` to make
+the server ask the gateway to answer the packet's source instead (KNXnet/IP
+Route Back); that gets a tunnel through the bridge if the gateway supports it.
+Discovery fails on the bridge either way: the CLI
 invokes the shared `KnxNetIpClient` directly, while the web UI's
 **Discover gateways** action reaches it through the server. Both send IP
 multicast from their process. Docker's bridge does not carry that request onto

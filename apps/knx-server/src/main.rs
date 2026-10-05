@@ -51,7 +51,17 @@ async fn main() {
     }
     let auth_required = setup.config.is_required();
 
-    let state = Arc::new(knx_server::AppState::new(data_dir));
+    let mut app_state = knx_server::AppState::new(data_dir);
+    let return_path = tunnel_return_path(std::env::var("KNX_TUNNEL_ROUTE_BACK").ok().as_deref());
+    if return_path == knx_net::TunnelReturnPath::RouteBack {
+        eprintln!(
+            "knx-server: KNX_TUNNEL_ROUTE_BACK is set: tunnels ask the gateway to answer the \
+             packet's source (Route Back, for Docker's bridge network). Gateway discovery \
+             still needs --network host."
+        );
+        app_state.connector = Box::new(knx_server::RealConnector::new(return_path));
+    }
+    let state = Arc::new(app_state);
     let app = knx_server::app_with_auth(state, static_dir, setup.config);
 
     // Never `0.0.0.0` without a password, and never silently: the address
@@ -100,6 +110,15 @@ fn hash_password_from_stdin() {
     }
 }
 
+/// `KNX_TUNNEL_ROUTE_BACK` read as a flag (KNOWN_LIMITATIONS §155).
+fn tunnel_return_path(value: Option<&str>) -> knx_net::TunnelReturnPath {
+    if flag_from_value(value) {
+        knx_net::TunnelReturnPath::RouteBack
+    } else {
+        knx_net::TunnelReturnPath::LocalAddress
+    }
+}
+
 /// An environment variable read as a flag.
 fn env_flag(name: &str) -> bool {
     flag_from_value(std::env::var(name).ok().as_deref())
@@ -120,7 +139,22 @@ fn flag_from_value(value: Option<&str>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::flag_from_value;
+    use super::{flag_from_value, tunnel_return_path};
+
+    #[test]
+    fn route_back_is_opt_in_and_reads_like_every_other_flag() {
+        use knx_net::TunnelReturnPath::{LocalAddress, RouteBack};
+        for (value, expected) in [
+            (None, LocalAddress),
+            (Some(""), LocalAddress),
+            (Some("0"), LocalAddress),
+            (Some("false"), LocalAddress),
+            (Some("1"), RouteBack),
+            (Some("yes"), RouteBack),
+        ] {
+            assert_eq!(tunnel_return_path(value), expected, "{value:?}");
+        }
+    }
 
     #[test]
     fn a_flag_is_off_unless_it_says_something_affirmative() {

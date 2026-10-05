@@ -262,6 +262,7 @@ ones — `apps/knx-server/src/main.rs` is the only place.
 | `KNX_AUTH_PASSWORD_HASH` | The credential, as printed by `knx-server --hash-password` | unset |
 | `KNX_AUTH_PASSWORD` | A plaintext password, hashed at startup; weaker, because the value is visible in `docker inspect` and `/proc/<pid>/environ` | unset |
 | `KNX_AUTH_COOKIE_SECURE` | Marks the session cookie `Secure`, for use behind TLS | unset |
+| `KNX_TUNNEL_ROUTE_BACK` | Ask the gateway to answer the packet's source (KNXnet/IP Route Back); for tunnelling from Docker's bridge network | unset |
 | `KNX_BUILD_SHA` | Build-time only: the commit for `--version`, when git is not available | unset |
 
 With no credential configured, the server binds `127.0.0.1` instead of `0.0.0.0` and says

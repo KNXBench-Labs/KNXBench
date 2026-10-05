@@ -15,6 +15,21 @@
   acceptance. Authoritative KL151 remains in status/LEDGER.md; evidence in
   PRODUCT_ZIP_RAW_INPUT_CONTRACTS.md.
 
+## 2026-10-05 — Commissioning callers published; Web halves handed over
+
+- Commissioning CLI (`0.1.0-alpha.4`, history format 2) and server callers record
+  durable activity history: download, restore, service-control read/write,
+  compare and serial lookup. History/input aliases (identical path, parent link,
+  unresolved leaf link) are refused before any store is created.
+- Integrated gates on `ae567d00`: workspace 3238/0/177, Vitest 2001, Chromium 131,
+  selected offline private 68/0, stamped release build
+  ([receipt](evidence/commission-integrated-gates-ae567d00-2026-10-05.json)).
+- User decisions: the Web partial-scope selector and history adoption go to the
+  UI owner ([handoff](COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05));
+  no reset route/UI (accepted boundary, KNOWN_LIMITATIONS §140).
+- The serial-lookup entry below described a local candidate; it is part of this
+  published state. Metadata is not recovery; no power-loss guarantee.
+
 ## 2026-10-05 — CLI serial-lookup read lifecycle (local candidate, not integrated/published)
 
 - Both `device find-serial` directions accept optional `--activity-history`.

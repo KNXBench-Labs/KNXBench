@@ -114,14 +114,14 @@ Priority, status and owner disposition of these rows are in the
 |---|---|---|---|
 | KL-116 | E2; MP §2.3 procedure and historical one-device evidence, not current recovery approval | Public confirmed button-driven address writes remain fail-closed | Complete action-specific original-storage backup and restore witness; identified isolated target, free destination, exactly one programming device and fresh operation-specific go |
 | KL-139 | E1/E2; serial read succeeded historically; serial writes were ignored, including bit-2/SYSTEM variants | Serial write refuses before tunnel; Debug property action does not imply serial-write support | Independently supported target/procedure plus complete affected-storage recovery and a fresh serial-address go |
-| KL-140 | E2; historical reset/recovery on one device; ADR-0058 now guards public reset | No automatic reset or assumed restoration; no HTTP/UI reset implementation | Verified current full affected-storage recovery, exact reset target/scope and fresh reset-specific go |
+| KL-140 | E2; historical reset/recovery on one device; ADR-0058 now guards public reset | No automatic reset or assumed restoration; no HTTP/UI reset implementation | User decision 2026-10-05: no HTTP/UI reset; the missing reset UI is an accepted, safely refused unsupported boundary with a user notice. A future reset needs verified full affected-storage recovery, exact reset target/scope and a fresh reset-specific go |
 | SAFE-01 | E1/E2/E5; candidate suitability read does not establish exact installed application or all affected storage | No write to the proposed replacement device; property-only backup is insufficient | Establish identity/application, physically usable bench target and complete recovery before requesting exact operation-specific consent |
 | KL-99 | E5; `commissioning/mcb.rs` nibble interpretation is explicitly inferred; current comparison uses CRC/control, not access nibbles | Do not claim independently proved nibble order or use it to guess permissions | Independent bit-position reference or controlled readback before a new access-nibble consumer |
 | KL-112 | E5; required access-key assignments are explicitly unsupported, not silently omitted | Authentication with a supplied key is distinct from key replacement; no guessed/deleted/new key | Separate reviewed A_Key_Write format and deletion semantics, protected-device recovery and target-specific go before adding key writes |
 | KL-136 | E3/E5; one 0701h image/readback and functional check were observed | Closing restart remains unconfirmed; no wider mask/product claim | Independent restart receipt if supported, plus separate identified device/program/revision evidence for any coverage expansion |
 | KL-138 | E5; supplied/project-key authorisation and precedence are simulated and exposed; no protected-device trial | Never guess/log keys; absent/rejected access stays an explicit refusal | Suitable already-protected test device, authorized read/connection evidence; a key-setting experiment needs its own recovery/go |
 | KL-141 | E5; typed Master Reset semantics and erasure are simulator-only | Erasing hardware scopes are refused; non-erasing tests are not factory-reset proof | Complete recovery of every affected state plus a separately authorized erasing test on disposable isolated hardware |
-| KL-142 | E3/E5; CLI/API partial scopes and bounded three-scope one-device evidence already exist | No claim for other products/configurations; no new selector in another owner's locked Web tree | Web owner adopts plan-derived scope selector and consent/status vocabulary; new products require independent plan/restore/readback evidence |
+| KL-142 | E3/E5; CLI/API partial scopes and bounded three-scope one-device evidence already exist | No claim for other products/configurations; no new selector in another owner's locked Web tree | User decision 2026-10-05: Web selector handed to the UI owner ([handoff](#handoff-to-the-ui-owner-2026-10-05)); new products still need independent plan/restore/readback evidence |
 | KL-7 | E3/E5; memory path and narrow hardware evidence supersede the old blanket 'blocked' title | Decline unsupported masks/images; do not infer full ETS download support from simulation | Product-specific complete plan/recovery and independent hardware evidence for each additional supported path |
 | KL-92 | E3/E5; own simulator and one-device measurements establish only their stated scope | Label simulated, corpus-derived and live observations separately | Independent devices/traces over a declared mask/product/version matrix, each behind recovery and authorization gates |
 | DEBUG-01 | E1/E4; default-off scope, exact phrase, original PID 8/PID 14 backup before Verify Mode/property change; no-op writes nothing | Property recovery is manual/scoped; new gate has no hardware acceptance | If live acceptance is needed: separately approved target, operation-specific go and verified restoration of original properties; never broaden to serial/reset recovery |
@@ -160,14 +160,32 @@ Priority, status and owner disposition of these rows are in the
 1. Actual integrated source and gated acceptance are published/read back at
    `cde52ebc`; closing receipt/cleanup bookkeeping follows separately. Earlier
    failed mutations/verifiers stay recorded, not relabelled green.
-2. `AUDIT-01` / `SAFE-03`: durable long-session lifecycle/intent contracts and
-   explicit fault injection. Four instrumented one-shot kinds do not close them.
+2. `AUDIT-01` / `SAFE-03`: every commissioning CLI caller (download, restore,
+   service-control write, compare, serial read) and server caller (download
+   session, compare, serial lookup, service-control read/write) now records
+   durable history; published with integrated gates at `ae567d00`. Confirmed
+   address programming/serial write/reset refuse before any tunnel and so
+   acquire no receipts. Process/power-loss recovery stays unproven (user notice).
 3. `GAP-T30-09`: bounded direct Profile investigation complete (E6); unsupported
    variants remain reference-bounded, not newly admitted or declared compatible.
 4. `KL-115`: stale blanket wording is explicitly superseded by a current-caller
    status; a future generic restart-and-retry procedure is still separate scope.
-5. The listed Web adoption must await its owner/lock. Hardware, manufacturer
-   evidence and the controller's final review/release decisions remain separate.
+5. The listed Web adoption is handed to the UI owner (user decision
+   2026-10-05, below). Hardware, manufacturer evidence and the controller's
+   final review/release decisions remain separate.
+
+## Handoff to the UI owner (2026-10-05)
+
+User decision 2026-10-05: the remaining Web halves go to the `goal-ui.md`
+owner, who holds the Web lock; commissioning takes no lock and edits no Web
+source. The rows stay open until the UI half is delivered. Field names are
+copied from `apps/knx-server/src/device_download_routes.rs`.
+
+| Row | Task for the UI owner | Published backend contract | Acceptance |
+|---|---|---|---|
+| KL-142 | Offer complete / parameters / group addresses / both before asking for a plan; show what the partial plan omits | `POST /api/device-download/plan` body `{ address, partial?: { parameters: bool, groupAddresses: bool } }` (absent = complete). Response adds `partial: bool` and `notWritten: [address, octets][]`; `POST /api/device-download/start` re-derives the same partial plan from `planId` and refuses a different one | Rendered scope choice, `partial`/`notWritten` shown before confirmation, an unsupported-scope refusal rendered, intercepted request bodies asserted; no new write permission or phrase change |
+| KL-140 | None: no reset UI (accepted boundary). Optional: link the user notice from the commissioning view | — (no HTTP reset route exists; CLI reset fails closed before a tunnel, ADR-0058) | — |
+| UI-04 | Unchanged from the row above: adopt the activity history contract | `GET /api/bus/activity`, `GET /api/bus/history` | As in the UI-04 row |
 
 ## Reconciliation check
 

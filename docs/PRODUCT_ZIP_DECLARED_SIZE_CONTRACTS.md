@@ -90,8 +90,19 @@ At the October 5 remote-tip audit (`b3c341d5`), native ProductDB/Core/testsuppor
 sources were unchanged from the baseline; only this uncommitted test fixture
 differs in the 121-input comparison. The native runs therefore identify both
 their old base and exact source hashes, not a fabricated committed revision.
-The declaration-only slice remains local pending upstream integration and
-applicable integrated gates; KL-151 remains IN_PROGRESS.
+The declaration-only leaf `a9aa77b9` was integrated with published owner
+`b3c341d5` at `2e188226`. A fresh integrated public16 was independently
+accepted on that exact candidate: all 16 commands exit 0; Rust 3200 passed,
+0 failed, 177 ignored in 175 result blocks, Web 2001 and Chromium 131, plus
+a separate one-case Chromium environment probe (not added). All 871
+non-Markdown inputs, original logs, freshly built source-root checks and the
+release CLI stamped `2e188226` were checked and archived. Earlier scoped
+counts are not additive and are not relabelled as this execution.
+
+The release CLI is `knx 0.1.0-alpha.1+g2e188226`; these public tests do not
+resolve another owner’s AR21 performance/manual findings or establish
+private-corpus, live-hardware or full Alpha acceptance. Final documentation/
+upstream reconciliation and publication remain pending. KL-151 IN_PROGRESS.
 
 The original receipts, logs, six accepted binaries and intended control-source
 deltas were archived and hash-checked in 70 files (345,219,799 bytes) at the

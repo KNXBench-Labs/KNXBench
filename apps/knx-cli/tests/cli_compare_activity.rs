@@ -133,9 +133,33 @@ fn compare_refuses_all_primary_and_product_history_aliases_without_changing_rows
 
 #[test]
 fn missing_history_and_product_alias_is_refused_before_either_file_is_created() {
+    missing_history_alias_case("same");
+}
+
+#[test]
+#[cfg(unix)]
+fn missing_history_parent_alias_is_refused_before_either_file_is_created() {
+    for alias_kind in ["parent-traversal", "parent-symlink"] {
+        missing_history_alias_case(alias_kind);
+    }
+}
+
+fn missing_history_alias_case(alias_kind: &str) {
     let dir = tempfile::tempdir().unwrap();
     let (project, _) = comparison_inputs(dir.path());
     let input = dir.path().join("uncreated-shared-store.sqlite");
+    let history = match alias_kind {
+        "parent-traversal" => {
+            std::fs::create_dir(dir.path().join("child")).unwrap();
+            dir.path().join("child/../uncreated-shared-store.sqlite")
+        }
+        #[cfg(unix)]
+        "parent-symlink" => {
+            std::os::unix::fs::symlink(dir.path(), dir.path().join("parent-link")).unwrap();
+            dir.path().join("parent-link/uncreated-shared-store.sqlite")
+        }
+        _ => input.clone(),
+    };
     let before = std::fs::read(&project).unwrap();
     let project_connection = knx_store::open_and_migrate(&project).unwrap();
     let saved = knx_store::load_project(&project_connection).unwrap();
@@ -150,7 +174,7 @@ fn missing_history_and_product_alias_is_refused_before_either_file_is_created() 
         .arg("--product-db")
         .arg(&input)
         .arg("--activity-history")
-        .arg(&input)
+        .arg(&history)
         .arg("--gateway")
         .arg(peer.local_addr().unwrap().to_string())
         .output()

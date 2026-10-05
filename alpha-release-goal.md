@@ -779,11 +779,23 @@ boundaries. No bus run.
 **Origin:** user report and decision 2026-10-05 ("ja mit in die alpha goal"): the Docker server could not reach the bus while the CLI on the host could.
 
 - [x] Measure the cause read-only (`DESCRIPTION_REQUEST` only, no tunnel, no bus frame) and correct every document that promised tunnelling through the bridge. **Done 2026-10-05:** see KNOWN_LIMITATIONS §155; installation guide, Linux setup, web/Docker guide, README, Dockerfile comment, §79 and GAP E5 corrected.
-- [ ] Add an opt-in UDP Route Back mode for tunnelling (`[D]` Core v01.06.02 AS §8.6.2.2, §8.4.3.4.3): control and data endpoint of `CONNECT_REQUEST`, and the `CONNECTIONSTATE_REQUEST`/`DISCONNECT_REQUEST` HPAIs, all zero. Default stays the own address, so hosts and gateways that work today see no change. RED loopback tests assert every HPAI the client sends in both modes; mutants for each site.
-- [ ] Wire it to the server (`KNX_TUNNEL_ROUTE_BACK=1`) and document it for bridge containers. Discovery stays host-network only (multicast).
+- [x] Add an opt-in UDP Route Back mode for tunnelling (`[D]` Core v01.06.02 AS §8.6.2.2, §8.4.3.4.3): control and data endpoint of `CONNECT_REQUEST`, and the `CONNECTIONSTATE_REQUEST`/`DISCONNECT_REQUEST` HPAIs, all zero. Default stays the own address, so hosts and gateways that work today see no change. RED loopback tests assert every HPAI the client sends in both modes; mutants for each site.
+- [x] Wire it to the server (`KNX_TUNNEL_ROUTE_BACK=1`) and document it for bridge containers. Discovery stays host-network only (multicast).
 - [ ] Optional, only with the user's go: one read-only tunnel connect/disconnect from a bridge container to a real gateway (no bus frame, gateway free of other tunnels).
 
 **Exit evidence:** offline HPAI regressions and mutants, server env wiring test, updated docs. No claim that every gateway supports Route Back; one measured gateway is not compatibility evidence.
+
+**AR14B delivered, iaw session, 2026-10-05:** `1fd1664a`. `knx_net::TunnelReturnPath`
+(`LocalAddress` default, `RouteBack`); the HPAI is fixed per connection and used
+by CONNECT (both endpoints), CONNECTIONSTATE and DISCONNECT. `knx-server` reads
+`KNX_TUNNEL_ROUTE_BACK`. Tests: `client::tests::route_back_tunnel_sends_all_zero_hpais_for_its_whole_lifetime`,
+`default_tunnel_keeps_its_own_address_in_every_hpai`,
+`bus::tests::a_route_back_connector_asks_the_gateway_to_answer_the_packet_source`,
+`tests::route_back_is_opt_in_and_reads_like_every_other_flag`; RED first, 7/7
+compiled mutants killed with sources restored. Gate: web build, fmt, Clippy
+`-D warnings`, workspace 3,273/0/177 in 182 blocks (loopback-only namespace),
+five xtask checks, whitespace. `KL-155` `DONE` at this scope; the optional live
+check waits for the user's go.
 
 ### AR14D — Consolidate status tracking before AR15
 

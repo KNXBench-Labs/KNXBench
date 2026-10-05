@@ -60,10 +60,12 @@ docker run -d --name knxbench -p 8484:8080 \
 curl -sf http://127.0.0.1:8484/healthz
 ```
 
-This published-port form supports project work and manually entered gateway
-addresses. It does not support KNXnet/IP gateway discovery: Docker's default
-bridge does not carry the required multicast onto the LAN. On Linux, use host
-networking when the web UI's **Discover gateways** action is needed:
+This published-port form supports project work only. It cannot reach the
+bus: a tunnel to a gateway gets no answer, because the server tells the
+gateway its private container address ([§155](../../KNOWN_LIMITATIONS.md#155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer)),
+and gateway discovery needs multicast that Docker's default bridge does not
+carry onto the LAN. On Linux, use host networking for anything that talks to
+the bus:
 
 ```bash
 docker run -d --name knxbench --network host \

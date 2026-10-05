@@ -34,7 +34,7 @@ evidence, fallback, unblock) and [UI_ALPHA_READINESS](../UI_ALPHA_READINESS.md)
 ## Counts
 
 - **Snapshot IDs** (180 rows) — status: TODO=15, IN_PROGRESS=2, DONE=32, BLOCKED_EXTERNAL=6, WAITING_OWNER=3, WAITING_DECISION=1, ACCEPTED_BOUNDARY=98, LATER=23; owner: alpha=94, commission=41, later=19, ui=26; priority: P0=4, P1=29, P2=87, P3=60.
-- **Post-snapshot IDs** (6 rows) — status: IN_PROGRESS=3, DONE=3; owner: alpha=6; priority: P1=2, P2=4.
+- **Post-snapshot IDs** (7 rows) — status: IN_PROGRESS=4, DONE=3; owner: alpha=7; priority: P1=3, P2=4.
 
 ## Snapshot IDs
 
@@ -236,6 +236,8 @@ telegram-flow view into the Alpha
 [ADR-0077](../adr/0077-session-local-telegram-flow-view.md)). Its priority P1 is
 the integrating goal-ui owner's reading of "required before AR15–AR18", not a
 user-set value; the package checklists (U19–U21, AR20/AR21) carry the work.
+Origin of `KL-155`: a user report of 2026-10-05 (Docker server cannot reach
+the bus); P1 because the documented container deployment could not tunnel.
 
 | ID | P | Owner | Route | Status | Owner disposition | Evidence and remaining work |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -245,6 +247,7 @@ user-set value; the package checklists (U19–U21, AR20/AR21) carry the work.
 | `KL-152` | P2 | alpha | AR06P | DONE | — | docs/KNOWN_LIMITATIONS.md §152; 2 real packages exceed the XML evidence item limit; measure before resizing. **AR14D D2 correction 2026-10-04:** `TODO` → `DONE`. AR06P checklist item ticked; code published as `2b2a267f` with remote readback; closing metadata and hygiene listed separately (goal AR06P status). Both post-snapshot tables still said `TODO`. |
 | `KL-153` | P2 | alpha | AR06P | IN_PROGRESS | — | docs/KNOWN_LIMITATIONS.md §153; schemes 10 (146 files) and 23 (2 files) are refused; grammar evidence for scheme 23 first; unsupported schemes stay explicit refusals |
 | `FLOW-01` | P1 | alpha | U19 (`goal-ui.md`) → AR20 → U20 → U21 (`goal-ui.md`) → AR21 | IN_PROGRESS | — | docs/TELEGRAM_FLOW_VISUALIZATION.md, ADR-0077; required Alpha feature by user decision 2026-10-04. U19 delivered 2026-10-04: study, measurements and AR20 handoff in TELEGRAM_FLOW_VISUALIZATION §9. AR20 delivered 2026-10-04: backend contract in §10 (rows `sourceRaw`/`destinationRaw`/`observedAgeMs`/`flowGeneration`, `GET /api/bus/monitor/flow-snapshot`), `http_bus_flow.rs` + `flow::tests`. Next U20/U21 (UI), then AR21 sets the final status U20/U21 delivered 2026-10-04 (`dc298b78`, `9d432d17`, `deb6813a`, `fb40a99a`). **AR21 review 2026-10-05:** integration and §7 scenarios verified, gates rerun; returned to the UI owner: §9.3 local reheat and badge-height separation neither met nor recorded, §7 starting load with motion on saturates the main thread (0.98), flaky `group-address-drag.e2e.ts` (TELEGRAM_FLOW_VISUALIZATION §13). Stays IN_PROGRESS until the owner's correction and an AR21 rerun. **Owner corrections 2026-10-05:** local per-node reheat, hub separation by node footprint, wall-clock cooling; `e2e/telegram-flow-hub.e2e.ts`; §7-load motion-on envelope measured and recorded (paint-bound, main thread > 0.9; Motion Off advised); DnD race fixed by `0533230b` (TELEGRAM_FLOW_VISUALIZATION §14). **AR21 rerun 2026-10-05:** findings 1–3 closed (code, 3 own mutants, flow e2e 42/42, drag 10/10, integrated gate on b7d7927e, own §7-load measurement); new finding 4: the reduced-rendering note counts recipient paths as telegrams (39,801 "without a pulse" after 21,145 telegrams) — returned to the UI owner ([§15](../TELEGRAM_FLOW_VISUALIZATION.md#15-ar21-acceptance-rerun-alpha-2026-10-05)). **Owner correction 2026-10-05 (finding 4):** each telegram counted once, as drawn bundled or as not (completely) drawn; tests with two receivers per telegram, en/de wording ([§16](../TELEGRAM_FLOW_VISUALIZATION.md#16-ar21-finding-4-corrected-goal-ui-owner-2026-10-05)). Awaiting the AR21 rerun **AR21 rerun of finding 4 2026-10-05:** fixed for telegrams with at least one line; new finding 5 (a telegram whose targets all hit the node limit has no line and is still counted as drawn bundled; probe 30 telegrams, 0 pulses, `coalescedEvents` 30) — returned to the UI owner ([§17](../TELEGRAM_FLOW_VISUALIZATION.md#17-ar21-rerun-of-finding-4-alpha-2026-10-05)). |
+| `KL-155` | P1 | alpha | AR14B | IN_PROGRESS | — | docs/KNOWN_LIMITATIONS.md §155; user report 2026-10-05: tunnelling from a bridge-network container gets no answer (own private address in the HPAI). Docs corrected 2026-10-05; opt-in Route Back mode (Core v01.06.02 AS §8.6.2.2) and server wiring open |
 
 ## Reconciliation record (AR14D D2, 2026-10-04)
 

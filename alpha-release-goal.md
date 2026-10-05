@@ -678,6 +678,15 @@ with corrected missing input (rule, not sample). New `KL-156` (unreported
 `Parameter`/`ParameterRef` attributes) is the next alpha package. UI owner:
 adopt the three new diagnostic tokens.
 
+**AR07 follow-up `KL-156` delivered 2026-10-05**
+([ADR-0081](docs/adr/0081-parameter-attributes-are-reported.md)):
+`Parameter`/`ParameterRef` report every attribute they do not store; schema
+v21 backfills `ingest_unknown`, measured install reports and
+`package.unknown_count`. Fixture tests plus six mutants, workspace
+3,289/0/177, a 102-package corpus probe (migrated equals fresh in every
+unknown/report table) and a matrix re-pin whose five changed aggregates an
+independent recount predicts exactly. `KL-156` `DONE`.
+
 ### AR08 — Complete the safe data/application half of supported password import
 
 **Source:** `KL-13`. **Dependencies:** AR06 and existing secret-handling conventions.

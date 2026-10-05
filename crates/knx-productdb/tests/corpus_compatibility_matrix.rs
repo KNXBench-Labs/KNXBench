@@ -79,13 +79,22 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// same Gira/MDT scope (110 files, 302 distinct program blobs, 273 program
 /// ids, 84 with calculations) predicts exactly 4,849 distinct
 /// (program, calculation, side, ref) tuples.
+/// Re-pinned for ADR-0081 (schema v21): `Parameter`/`ParameterRef` report
+/// every attribute they do not store. A main-vs-branch run changed exactly
+/// five aggregates — isolated and shared-successful unknown totals
+/// 22,718 -> 24,639 (+1,921), shared installed 22,599 -> 24,513 (+1,914),
+/// `ingest_unknown` 22,997 -> 24,911 (+1,914), `package_install_unknown`
+/// 9,382 -> 10,023 (+641) — and an independent instance-level Python recount
+/// of the same 115 instances / 113 unique packages / 302 program blobs
+/// predicts all five deltas and the new rows' 247,734 occurrences exactly.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "5ecf9cd4405edcb5f5569032274626b773e41f41588f343d98f1ba5daab35b18";
-/// Current v20 outcomes/counts projected without the four v17 tables, the
-/// v20 table and PDB-11 identity (unchanged since v19); historical v16 pin:
-/// c204acc8… (see Git history).
+    "7b558cdda1b2311dab471b5a375ff64508e300c1d6cb0021a0927e326f1dd115";
+/// Current v21 outcomes/counts projected without the four v17 tables, the
+/// v20 table and PDB-11 identity; the v20 pin a2181d65… moved only by the
+/// five ADR-0081 unknown totals above. Historical v16 pin: c204acc8… (see
+/// Git history).
 const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
-    "a2181d6526ac2c74164cfbb067a0999bc57aea45af0a304600eae18524a2f03e";
+    "97f3a9d36034246f257347aae3e19ae89a501523422c61b8fd486cd4d47ca062";
 /// Tables schema v17 added (ADR-0043), left out of the v16 projection.
 const V17_TABLES: [&str; 4] = [
     "package_source_name",
@@ -921,7 +930,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22718,
+            "unknown_count": 24639,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -932,7 +941,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 22599,
+            "unknown_count": 24513,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -943,7 +952,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22718,
+            "unknown_count": 24639,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},
@@ -976,11 +985,11 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     // AR05 adds two TranslationUnit keys per package. ADR-0052's retired
     // Channel/@Number rows remain retired; no prior unknown evidence is lost.
     assert_eq!(
-        matrix["shared_final_database_counts"]["ingest_unknown"], 22997,
+        matrix["shared_final_database_counts"]["ingest_unknown"], 24911,
         "shared per-blob unknown evidence changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package_install_unknown"], 9382,
+        matrix["shared_final_database_counts"]["package_install_unknown"], 10023,
         "shared per-package unknown evidence changed"
     );
     for (table, rows) in [
@@ -1003,6 +1012,34 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         assert_eq!(
             matrix["shared_final_database_counts"][table], rows,
             "shared {table} rows changed"
+        );
+    }
+    // ADR-0081: unstored `Parameter`/`ParameterRef` attributes are named.
+    // (rows, distinct blobs or packages, occurrences), as the independent
+    // recount predicts; expanded-name evidence rows are not counted here.
+    let kl156 = "kind='Attribute' AND (xpath LIKE '%/Parameter' OR xpath LIKE '%/ParameterRef')
+                 AND instr(name, ':') = 0 AND substr(name, 1, 1) <> '{'";
+    for (table, owner, expected) in [
+        ("ingest_unknown", "source_sha256", (1914, 290, 247_734)),
+        (
+            "package_install_unknown",
+            "package_sha256",
+            (641, 103, 247_734),
+        ),
+    ] {
+        let measured: (i64, i64, i64) = shared
+            .query_row(
+                &format!(
+                    "SELECT count(*), count(DISTINCT {owner}), coalesce(sum(occurrences), 0)
+                     FROM {table} WHERE {kl156}"
+                ),
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("count parameter attribute evidence");
+        assert_eq!(
+            measured, expected,
+            "{table} parameter attribute evidence changed"
         );
     }
     // AR05: unconsumed metadata is named, never falsely declared interpreted.

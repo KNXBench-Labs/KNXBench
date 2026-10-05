@@ -772,6 +772,19 @@ boundaries. No bus run.
 
 **Exit evidence:** offline contract/regression dossier or retained documented boundaries. No real bus run, multi-tunnel redesign, automatic coupler traversal, scan speed promise or new hardware support. Monitor UI and discovery acceptance remain external owner work.
 
+### AR14B — Reach the bus from a bridge-network container
+
+**Sources (post-snapshot, outside the 180-ID ledger):** `KL-155`.
+**Dependencies:** none; independent of UI and commissioning acceptance.
+**Origin:** user report and decision 2026-10-05 ("ja mit in die alpha goal"): the Docker server could not reach the bus while the CLI on the host could.
+
+- [x] Measure the cause read-only (`DESCRIPTION_REQUEST` only, no tunnel, no bus frame) and correct every document that promised tunnelling through the bridge. **Done 2026-10-05:** see KNOWN_LIMITATIONS §155; installation guide, Linux setup, web/Docker guide, README, Dockerfile comment, §79 and GAP E5 corrected.
+- [ ] Add an opt-in UDP Route Back mode for tunnelling (`[D]` Core v01.06.02 AS §8.6.2.2, §8.4.3.4.3): control and data endpoint of `CONNECT_REQUEST`, and the `CONNECTIONSTATE_REQUEST`/`DISCONNECT_REQUEST` HPAIs, all zero. Default stays the own address, so hosts and gateways that work today see no change. RED loopback tests assert every HPAI the client sends in both modes; mutants for each site.
+- [ ] Wire it to the server (`KNX_TUNNEL_ROUTE_BACK=1`) and document it for bridge containers. Discovery stays host-network only (multicast).
+- [ ] Optional, only with the user's go: one read-only tunnel connect/disconnect from a bridge container to a real gateway (no bus frame, gateway free of other tunnels).
+
+**Exit evidence:** offline HPAI regressions and mutants, server env wiring test, updated docs. No claim that every gateway supports Route Back; one measured gateway is not compatibility evidence.
+
 ### AR14D — Consolidate status tracking before AR15
 
 **Sources:** none in the 180-ID ledger; documentation hygiene requested by the user on 2026-10-04 (“what is redundant and worth merging, and what should be split for readability”).
@@ -797,7 +810,7 @@ boundaries. No bus run.
 ### AR15 — Reconcile release documentation and limitations on the finished scope
 
 **Sources:** `DOC-03`, `KL-9`, `KL-16`, `KL-46`, plus all earlier results and accepted/later routes.
-**Dependencies:** completed/explicitly blocked AR00–AR14, AR06P and AR14D (one consolidated ledger); newest owner receipts.
+**Dependencies:** completed/explicitly blocked AR00–AR14, AR06P, AR14B and AR14D (one consolidated ledger); newest owner receipts.
 
 - [ ] Reconcile `IMPLEMENTATION_STATUS`, `KNOWN_LIMITATIONS`, `LIMITATION_TRIAGE`, `ROADMAP`, `GAP_ANALYSIS_ETS`, `COMPATIBILITY`, `IMPORT_EXPORT` and the relevant model/architecture docs with actual source/tests.
 - [ ] Recount limitations and derived tables programmatically; preserve duplicate-ID disambiguation, historical anchors and new entries published by either other track.

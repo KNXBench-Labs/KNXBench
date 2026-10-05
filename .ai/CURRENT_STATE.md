@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (iaw session, alpha package AR14B by user decision)
+- **Timestamp:** 2026-10-05 14:55
+Web lock: not taken or released by this entry
+- **Completed:** New alpha package **AR14B** (user decision 2026-10-05, "ja mit in die alpha goal") with post-snapshot ledger row `KL-155` (P1, IN_PROGRESS) and KNOWN_LIMITATIONS §155. Cause measured read-only (DESCRIPTION_REQUEST only, no tunnel, no bus frame): the tunnel client puts its own socket address into the HPAIs; in a bridge container that is 172.17.0.x and the gateway's answer is lost. The all-zero Route Back HPAI (Core v01.06.02 AS §8.6.2.2) got an answer from the bridge container. Docs that promised tunnelling through the bridge are corrected: installation guide, Linux setup, web/Docker guide, README, Dockerfile comment, §79, GAP E5. AR15 now also depends on AR14B. Gates: check-ledger 187 rows, anchors 545, diff check.
+- **Pending/Next Steps:** This session implements AR14B next in worktree `iaw-docker-tunnel`: opt-in UDP Route Back for tunnelling (CONNECT control+data, CONNECTIONSTATE, DISCONNECT), RED loopback tests and mutants, server `KNX_TUNNEL_ROUTE_BACK=1`, docs.
+- **Notes for Codex oder Claude:** **Claim:** AR14B / `KL-155` is taken by this session; please skip it. It touches `crates/knx-net/src/client.rs` (tunnel HPAIs) and server start-up wiring only, no Web source. `LIMITATION_TRIAGE` has no tier for §155 yet (goal.md session's recount).
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-05 14:00
 - **Completed:** Project-evolution story edition `2026-10-05.1` (on top of `.3`) from the user's personal chat exports in the git-ignored `.private/claude-ai-export/2026-10-04/` (ChatGPT, claude.ai; Gemini empty). Analysed locally by keyword filtering; only project conversations opened, four ChatGPT conversations used. New step `strategy-written`: the strategy and the first CLAUDE.md were written in ChatGPT on 2 Sep 14:10–14:16 CEST (similarity 98.7 % to `acf2e1bd`, 96.4 % to `fdcc5ab9`). `spec-knowledge-base` now covers its origin (ChatGPT-guided local Ollama pipeline from 4 Sep, audit 2,232/1,663/569, restart as knx-spec-kb 7 Sep, Claude Code from 10 Sep). Gaps `gap-strategy-origin` and `gap-spec-kb-origin` closed; "earliest prompt" wording scoped to the project; `rel-home-strategy` "morning" corrected to "afternoon". Candidate sha `648af1e2…`, preview `story/previews/2026-10-05.1.html`, README archaeology updated. Gates: unit tests OK, 46/46 browser checks, payload leak grep clean.

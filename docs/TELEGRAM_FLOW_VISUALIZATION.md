@@ -981,6 +981,35 @@ The `reducedRenderingNote` strings in
 docs/design/2026-10-04-telegram-flow-u21/ were recorded with the earlier
 counting; their second number counts lines, not telegrams.
 
+## 17. AR21 rerun of finding 4 (alpha, 2026-10-05)
+
+Checked `0d5da787` on `d3526c6e`. **Finding 4 is fixed for every telegram
+that has at least one line, but §16's "every event has at least one target,
+so there is no third case" does not hold; returned to the UI owner with
+finding 5.** `FLOW-01` stays `IN_PROGRESS`.
+
+- Code read: `queuePulses` records the telegrams behind each pulse; a telegram
+  with a refused line counts once as not (completely) drawn, every other
+  telegram of a bundled batch once as drawn bundled. Flow Vitest
+  (`flowAnimator`, `TelegramFlowView`, `flowModel`): 66 / 66.
+- **Finding 5 — MINOR, same §7 exact-count requirement.** `resolve` always
+  returns at least one target, but `apply` in `flowModel.ts` keeps only the
+  targets `ensureNode` admits. At the model's node limit (1,000 by default;
+  the U19 `long-growth` study refused nodes) every target can be refused while
+  the sender is kept, and `recordActivity` then pushes an event with
+  `to: []`. Such a telegram has no line, so it is neither drawn nor refused at
+  the pulse capacity; in a bundled batch it is counted as "drawn as bundled
+  pulses". Probe (alpha, Vitest, not committed): model limit `maxNodes: 1`,
+  30 telegrams from the kept sender to a group with two receivers → 30 events
+  with `to: []`, 0 pulses, `coalescedEvents: 30`, `refusedNodes: 60`. The
+  view's diagnostics do report the refused nodes; the note's bundled count is
+  still wrong for these telegrams. Needed: do not count a telegram without a
+  line as drawn (count it as not drawn, or leave it to the refusal
+  diagnostic and say so), with a test at the node limit; correct §16's
+  sentence.
+
+No hardware, no real bus and no KNX socket were used.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

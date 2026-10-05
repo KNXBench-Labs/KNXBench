@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — Left-column splitters work again with a project loaded
+
+- User report: with a project open, the separators between the navigation
+  block, the Project Explorer and the diagnostics block did not resize
+  anything. Cause: the explorer had `flex: 1 1 auto`, so its whole tree
+  height entered the column's flex calculation and the column shrank both
+  blocks — including any height a splitter set — to make room (with 40
+  installations the navigation block was squeezed to ~37 px before anyone
+  touched it). The happy-dom unit tests could not see layout.
+- Fix (CSS only): the explorer takes `flex: 1 1 0` (only the space left over)
+  with a 72 px minimum matching the splitters' own minimum.
+- New Chromium test `e2e/workbench-splitters.e2e.ts` (full app, intercepted
+  API, 40 installations): drag down/up and keyboard change the rendered height
+  by exactly the dragged distance, and both blocks at maximum leave the
+  explorer visible. RED on the previous CSS (both directions), and with a
+  0 px explorer minimum (third case).
+
 ## 2026-10-05 — AR06 rows reconciled: seven TODOs find their place
 
 - Status only, no product code. Named evidence rerun on `2f6f20b0` with the

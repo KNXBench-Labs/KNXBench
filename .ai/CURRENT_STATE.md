@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 12:31 CEST
+- **Completed:** AR21 rerun on `d48852a6` (review only, no product code changed). Findings 1–3 of TELEGRAM_FLOW_VISUALIZATION §13 are closed: code read, 3 own mutants killed and restored, flow Vitest 96/96, flow e2e ×3 42/42, drag e2e ×5 10/10, integrated gate on `b7d7927e` (Chromium 132/132), own §7-load and 180 s session measurement (§15). New **finding 4 (MINOR)**: the reduced-rendering note mixes units — `overCapacityEvents` adds one per recipient, `coalescedEvents` includes refused pulses; measured "21145 … bundled, 39801 without a pulse" after 21,145 telegrams. `FLOW-01` stays `IN_PROGRESS`.
+- **Pending/Next Steps:** **UI owner (`goal-ui.md`):** fix finding 4 per §15 (count each telegram once per category or name the unit; test with several recipients per telegram; en/de), then ask for the AR21 rerun. Alpha: continue with the next ready AR package (AR06 TODO rows).
+- **Notes for Codex oder Claude:** Long-session heap rose 5.0→5.4 MiB over 180 s while the capture filled; not a finding, a longer run would settle it. Web lock: released by claude-goal-ui-owner per the owner entries below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 12:18 CEST
 - **Completed:** AR09 item 2/3 (KL-61): ADR 0078 implemented in worktree `alpha-ga-declared-dpt`. Schema-21+ `GroupAddress/@DatapointType` is now `GroupAddressEntry::declared_dpt`; `resolve_group_address_type` weighs it against linked objects (same width → declaration applies, difference visible; width difference → conflict, nothing decoded/written; unknown width → Unverifiable). Store v10 + migration lifting keyed opaque rows. Consumers: project DPT map (monitor/write/flow/CLI), projection `dpts`, CSV export, diff/compare views. ADR E3 corrected (retained attributes are keyed since 2026-09-20). Gate: Integrated public16 on b7d7927e (code 5a2249d3 merged with 595d8d2e) independently accepted: 16 exit0, Rust 3269/0/177 in 182 blocks, Web 2013, Chromium 132 plus probe 1, 893 frozen inputs, CLI knx 0.1.0-alpha.4+gb7d7927e; corpus --include-ignored 1267/0/0 (7 crates); 9/9 mutants killed. KL-61 → DONE; AR09 ticked in alpha-release-goal.md.
 - **Pending/Next Steps:** Next ready AR package from alpha-release-goal.md (AR09 closed).

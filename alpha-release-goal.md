@@ -898,6 +898,11 @@ load saturates the main thread with motion on
 ([§13](docs/TELEGRAM_FLOW_VISUALIZATION.md#13-ar21-acceptance-review-alpha-2026-10-05)).
 `FLOW-01` stays `IN_PROGRESS`.
 
+**Rerun 2026-10-05: findings 1–3 closed, returned again with finding 4**
+(the reduced-rendering note counts recipient paths as telegrams), own §7-load
+measurement recorded
+([§15](docs/TELEGRAM_FLOW_VISUALIZATION.md#15-ar21-acceptance-rerun-alpha-2026-10-05)).
+
 Dependencies: integrated AR20 and U21's exact owner receipt, with U19/U20
 covered. Required before the finished AR15–AR18 acceptance and AR19 decision.
 The alpha session does not reimplement the UI or take its lock for bookkeeping.

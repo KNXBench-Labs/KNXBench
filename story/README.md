@@ -52,9 +52,12 @@ python3 tests/browser/make_hostile.py <scratch-dir>      # synthetic hostile-tex
 node tests/browser/check_story.mjs dist/<id>/index.html <scratch-dir>/dist/index.html <receipt.json>
 ```
 
-The browser check needs Playwright with Chromium; set `PLAYWRIGHT_DIR` to the
-`node_modules` directory that contains `playwright` if it is not at the default
-local path. It is not a repository dependency.
+The browser check needs Playwright; set `PLAYWRIGHT_DIR` to the `node_modules`
+directory that contains `playwright` if it is not at the default local path. It
+is not a repository dependency. `STORY_BROWSER=firefox` or `STORY_BROWSER=webkit`
+selects another engine (default `chromium`). Outside Chromium the phone pass
+drags with the mouse instead of real touch events, and Firefox gets the phone
+viewport without mobile emulation, which it does not support.
 
 ## Preparing an update (never publishing)
 
@@ -158,8 +161,11 @@ Findings that shaped the story:
   narrow screens the guided graph hides colliding labels; the text always
   carries the full information.
 - System fonts only; final typography and licensing are open.
-- The browser check covers Chromium via Playwright. Firefox, WebKit and real
-  screen readers have not been checked.
+- The browser check passes in Chromium and Firefox (46/46 each on
+  `2026-10-05.1`, 5 October 2026). WebKit, the engine behind Safari, has not run
+  here: Playwright's WebKit build needs Ubuntu libraries (ICU 74, flite,
+  libWPEWebKit) that this Arch-based host lacks, and installing them would change
+  the system. Real screen readers have not been checked either.
 - Coverage of the human–AI workflow depends on local logs. Cloud sessions and
   anything outside the read sources are missing from this edition.
 - Commit references assume the repository's history may be shown publicly; that

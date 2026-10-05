@@ -1037,6 +1037,9 @@ See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
 - Follow-up the same day: the user reviewed `2026-10-04.2` without changes, and
   the built pages are now versioned in `story/previews/` (`build --preview`),
   guarded by a rebuild-equality test (53 unit tests).
+- Follow-up 2026-10-05: the browser check runs in Chromium and Firefox (46/46
+  each); WebKit is blocked on this host by missing Ubuntu libraries. Privacy
+  review locations now name records by id (`events[alpha-backlog].aside`).
 - Story motion update (user request, site only, no content change): scrolling
   back retracts later steps and refocuses the current chapter; looping signal
   pulses travel each visible connection (paused off screen); random headline

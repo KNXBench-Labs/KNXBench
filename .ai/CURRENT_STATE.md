@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 11:04 CEST
+- **Completed:** AR09 numeric-range pass (local, branch alpha-dpt-ranges): DPT-AS limits for main types 5-9, 12-14, 29 probed through the public codec, no format defect. Gap fixed: parameter-only time periods 7.003/7.004/7.006 and 8.003/8.004/8.006 had no encoding ruling; new `time-period-raw-counter-parameter-only` ruling, wire unchanged. RED/GREEN test, knx-core 679/0/0, strict clippy.
+- **Pending/Next Steps:** Integrated public16, publish, readback, cleanup. Then AR09 item 2: GA-declared DPT vs linked-object inference (ADR first if modelling changes).
+- **Notes for Codex oder Claude:** Subtype ranges deliberately stay unenforced (§61 boundary). Web lock: held by claude-goal-ui-owner per the owner entries below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 11:00 CEST
 - **Completed:** Ledger-only change on the user's instruction: `KL-142` Owner commission → ui, Route → `goal-ui.md` — owner only. Status IN_PROGRESS and disposition BLOCKED_UI unchanged; Snapshot owner counts recounted. This answers the commissioning entry's "Alpha controller: Owner/Route of KL-142 still to change".
 - **Pending/Next Steps:** UI owner: KL-142's Web partial-scope selector is yours (backend contract in COMMISSIONING_ALPHA_LEDGER handoff table). AR09 (KL-61) continues: format-width step published at 6bbc2a1f; next range/special-value audit.

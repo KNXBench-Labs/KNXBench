@@ -82,3 +82,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0080](0080-parameter-write-authority.md) | Parameter writes honour Access and leave manufacturer calculations alone | Accepted | 2026-10-05 |
 | [0081](0081-parameter-attributes-are-reported.md) | `Parameter` and `ParameterRef` report every attribute they do not store | Accepted | 2026-10-05 |
 | [0082](0082-large-product-packages-are-a-cli-opt-in.md) | Large product packages are an explicit command-line opt-in | Accepted | 2026-10-05 |
+| [0083](0083-admit-exact-product-scheme-10.md) | Admit exact product scheme 10 through the strict namespace path | Accepted | 2026-10-05 |

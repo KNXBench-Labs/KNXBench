@@ -7798,6 +7798,21 @@ accepted set (11, 12, 13, 14, 20, exact 21).
   tested. Exact23 now has bounded verified import/storage/report/replay support;
   unknown manufacturer semantics and full runtime compatibility remain unsupported.
 
+**Update 2026-10-05 (AR06P, ADR-0083): scheme 10 is admitted on the exact
+namespace.** A census of all 146 scheme-10 packages (1,391 XML members) found
+no element, attribute or parent/child pair outside scheme 11's observed
+vocabulary and no foreign namespace or qualified attribute; closed value sets
+differ only by `false` spellings, other numbers and handler names
+([research](PRODUCT_SCHEME_10_RESEARCH.md#corpus-census-and-admission--2026-10-05)).
+Scheme-10 members go through the strict exact-namespace validation of 21/23.
+Release CLI over all 853 public files, fresh database each, baseline vs.
+candidate: 692 → 837 installed with the standard profile (145
+`unsupported namespace` → installed, no other change); with
+`--allow-large-package` 852 installed and 1 unreadable ZIP. All 146 scheme-10
+files verify clean; 77,434 unknown constructs stay reported. **Remaining
+boundary:** scheme-10 semantics are inferred from shared names, not from a
+specification; schemes 15–19, 22 and 24 stay refused. KL-153 is DONE.
+
 ## 154. The telegram-flow view is checked and measured in Chromium only
 
 <a id="154-the-telegram-flow-view-is-checked-in-chromium-only-load-figures-follow-in-u21-part-c"></a>

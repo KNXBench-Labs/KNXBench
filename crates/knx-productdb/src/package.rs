@@ -1,4 +1,4 @@
-//! Evidence-backed, atomic installation of readable scheme 11/12/13/14/20/21 product ZIPs.
+//! Evidence-backed, atomic installation of readable scheme 10/11/12/13/14/20/21/23 product ZIPs.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
@@ -1219,6 +1219,9 @@ fn master_scheme(bytes: &[u8]) -> Result<u32, PackageError> {
                 };
                 if root.local_name().as_ref() == "KNX" {
                     match namespace.as_str() {
+                        // ADR-0083: scheme 10 uses only vocabulary observed
+                        // in scheme 11 and is validated strictly below.
+                        "http://knx.org/xml/project/10" => return Ok(10),
                         "http://knx.org/xml/project/11" => return Ok(11),
                         "http://knx.org/xml/project/12" => return Ok(12),
                         "http://knx.org/xml/project/13" => return Ok(13),
@@ -2437,7 +2440,10 @@ pub fn install_package_with_limits(
         });
     }
     let scheme = scheme.ok_or(PackageError::MissingMaster)?;
-    if matches!(scheme, 21 | 23) {
+    // Exact-namespace member validation: 21/23 (ADR-0036/0072) and 10
+    // (ADR-0083), whose typed members must not carry foreign content that
+    // local-name readers would otherwise accept.
+    if matches!(scheme, 10 | 21 | 23) {
         for validated in &validated_members {
             if !matches!(
                 validated.member.role.as_str(),
@@ -2453,7 +2459,7 @@ pub fn install_package_with_limits(
                 .take(max_member_size + 1)
                 .read_to_end(&mut data)
                 .map_err(zip_error)?;
-            if usize_to_u64(data.len(), "scheme-21 member size")? != validated.member.size
+            if usize_to_u64(data.len(), "strict-scheme member size")? != validated.member.size
                 || sha256_hex(&data) != validated.member.sha256
             {
                 return Err(zip_error("member changed between validation passes"));

@@ -371,7 +371,27 @@ actually gets from Siemens, ABB, Hager/Berker and MDT.
 `KL-150` touches the nested-module model of AR07/R-MODULE-04, so coordinate with
 the AR07 executor before changing `dynamic/parse.rs`. No dependency on UI or
 commissioning.
-**Status:** `IN_PROGRESS`. `KL-149` has a scoped candidate with independently
+**Status:** `DONE` 2026-10-05. All five items closed; `KL-153` admitted exact
+scheme 10 (ADR-0083). Closing 853-file release measurement (fresh database per
+file, baseline `e6099fb7` vs. candidate, originals rehashed unchanged):
+
+| Outcome | 2026-10-03 (shared run) | baseline, standard | candidate, standard | candidate, `--allow-large-package` |
+|---|---|---|---|---|
+| installed | 644 | 692 | 837 | 852 |
+| unsupported namespace | 147 | 145 | 0 | 0 |
+| CLI extension case (§149) | 46 | 0 | 0 | 0 |
+| size limit (§151) | 13 | 15 | 15 | 0 |
+| evidence item limit (§152) | 1 | 0 | 0 | 0 |
+| database constraint (§150) | 1 | 0 | 0 | 0 |
+| unreadable ZIP (a PDF) | 1 | 1 | 1 | 1 |
+
+Only transition baseline → candidate: 145 `unsupported namespace` →
+installed (the 146th scheme-10 file is the large bundle, counted under size
+limit). The first column is the original shared-database run
+([corpus run](docs/PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03));
+the three new columns use a fresh database per file.
+
+**Earlier status (history):** `IN_PROGRESS`. `KL-149` has a scoped candidate with independently
 verified public16 (Rust3000/0/165, Web1702, Chromium72,17 equal bindings,
 700 exact inputs), five CLI regressions and two compiled routing mutants.
 A separate same-release-profile baseline/candidate pair proves two named
@@ -414,7 +434,7 @@ Ordered by value per effort:
   - 2026-10-04 AR06V existing-count contract checkpoint: public synthetic Scheme11 archives prove inclusive4096 ZIP entries/install/exact retained archive/replay and4097-entry SizeLimit refusal preserving every seeded database value. Native2/0/0 and two compiled semantic controls (cap4095 and4097) independently verified; canonical cap4096 never mutated. This is count-boundary evidence only, not byte-size/caller/resource-owner acceptance, a limit raise or KL151 completion. Branch public8 all exit0:ProductDB640/0/25, strict package Clippy/fmt/fresh-root doc-policy/whitespace,784 public inputs exact. Native2 is a subset of640;25 ignored tests not passes. Actual integrated4dbca7e5 public15 accepted:Rust3147/0/177 across170 blocks,Web1761,Chromium90 plus separate probe1,793 sources/CLI hash+version exact. Earlier optional-placeholder startup refusal and90 socket-path browser launch failures retained separately. New published Web-owner changes require latest integration/regating before publication; no new private corpus run.
 - [x] `KL-152` (P2): measure the actual evidence-item maxima of the two refused packages. Then either size the budget with a hostile-input test, or change evidence collection to a counted summary that stays explicit and loss-reporting.
   - Research at80a5500d accepted:4 size-admitted scheme14 packages/16 XML docs,2 selected; actual Release/Release scratch pair baseline2 atomic item refusals/observer2 installs. Max802433 items/155281510 estimated bytes, observer134552KiB RSS/max2.985s; archives/all853 originals independently exact/private temp0. Item-only raise insufficient because byte64MiB remains. Candidate1048576 items/256MiB retains depth1024/ZIP/namespace/grammar/all-or-nothing evidence,no truncation,master-language64MiB/262144 unchanged. Two named public REDs/six new hostile-boundary/late-preservation tests. Latest7f57abbb actual public18 GREEN:Rust3028/0/176/153 blocks,Web1739,Chromium82,source712/logs/Release binary exact. Fresh full853 Release/Release comparison independently reconciled after six owner Rust changes:688 unchanged table-count installs/163 unchanged normalized refusals/2 item-budget admissions→690 installs. Both binaries/all853 originals independently rehashed,retained archives exact,atomic refusals/private temp0. Earlier80a/ed03 receipts/binding17/eight controls and440-input equivalence retain historical identities. First latest rebuild-verifier rejection remains separate; corrected actual18 retry passes. Latest full CLI peak275128/275440KiB,max wall13.658/13.468s are cohort observations,not HTTP or resource-policy guarantees. Fresh binding17/eight controls and actual integrated doc5 GREEN; docs-only bb62ae57 preserved at20a3c4cd/source712 unchanged. Code and acceptance docs published as2b2a267f7873137ccbf3d0a5052a541a76573d59; normal main push/live/fetched/nine blobs exact. Four own runtime directories removed; closing metadata/final hygiene tracked separately. Not complete Alpha or ETS/runtime compatibility.
-- [ ] `KL-153` (P2): collect grammar evidence for scheme 23 first (current ETS6 product downloads, 2 files) the same way schemes 12–14/21 were admitted. Scheme 10 (146 ABB ETS4-era files) follows only if its grammar differences are bounded. Any scheme without evidence stays an explicit refusal.
+- [x] `KL-153` (P2): collect grammar evidence for scheme 23 first (current ETS6 product downloads, 2 files) the same way schemes 12–14/21 were admitted. Scheme 10 (146 ABB ETS4-era files) follows only if its grammar differences are bounded. Any scheme without evidence stays an explicit refusal.
   - First bounded research at575a2d1d:all853 hashes/852 master XML/one BadZipFile census refusal,2 selected scheme23 packages/8 complete XML (2 each Master/Catalog/Hardware/ApplicationProgram),no observed namespace mismatch/foreign elements/qualified attrs,4 positive/3 negative controls. Current ProductDB631/0/25/28 blocks/Clippy/fresh Release GREEN; real original-name CLI2 atomic exact namespace refusals and independently rehashed853/temp0. Official project Schema23 v01.00.00 (2024-03-01) excludes full manufacturer semantics;see docs/PRODUCT_SCHEME_23_RESEARCH.md. Counters and retained-language23 evidence are not typed product admission. No production changes;research doc5/in-session/private-delta review GREEN and eight research docs published as87df5d82a126384da904fc47277b0bd0101bf198 with exact live/fetched/blob readback. Closing bookkeeping/own hygiene remain separate;later synthetic admission/unknown-reporting/atomicity/caller evidence still required,KL153 unchecked.
 
   - Scheme23 bounded import is now locally verified on integrated `a346fa30` (ADR-0072): actual native6/caller4, four semantic baseline caller REDs and six compiled guard controls; original survivors/rejected wrappers retained. Original Release Full853 Source713690/161/2 is producer-bound,not a newly run current private matrix. Import/storage/evidence source and CLI entrypoint remain byte-identical; upstream query.rs only adds a read-only server helper/test. Actual Source770 public22:Rust3089/0/176 across161 blocks,ProductDB638/0/25,Web1739,Chromium82,17 fresh byte-bound shadow binding pairs,strict Clippy/build/docs/dependency gates. Separate integrated in-session review,no blocking product finding,no independent-model approval. Published as `aadd88204de154cfcf5c1638310831a0a316dd86`: live/fetched refs and17 exact owned blobs read back; actual final integrated10 repeats Rust3089/0/176,Web1739,Chromium82/all10 commands0 after preserving the owner story-only update. Original final wrapper old-vs-new Git-stamped binary hash refusal retained; current release version/hash independently archived. Scheme10 remains refused and KL153/AR06P/Alpha open.
@@ -427,6 +447,14 @@ master admission and dedicated master-language evidence omit10. See
 [scheme10 research](docs/PRODUCT_SCHEME_10_RESEARCH.md). No production change,
 new private census/import result, namespace admission or compatibility claim.
 KL153/AR06P stay IN_PROGRESS; bounded structural probe/ownership evidence pending.
+
+**2026-10-05 KL-153 closed (ADR-0083).** Vocabulary census over 146 scheme-10
+packages: 0 element kinds, 0 element/attribute pairs and 0 parent/child pairs
+outside scheme 11; no foreign namespace or qualified attribute. Exact scheme 10
+admitted through the strict 21/23 member validation; `tests/scheme10.rs`
+(install, master translations and language evidence, replay, strict refusals,
+late rollback, look-alike namespaces) with three compiled mutants. Release:
+146/146 scheme-10 files install (1 with the large profile) and verify clean.
 
 **Exit evidence:** RED/GREEN regression tests per item, unchanged atomic refusal
 for anything still unsupported, a re-run of the 853-file measurement with a

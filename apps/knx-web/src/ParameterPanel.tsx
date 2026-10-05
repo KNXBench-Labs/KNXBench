@@ -48,12 +48,16 @@ function sectionLabel(t: Translate, scope: ModuleScope | null): string {
 // read-only reason.
 function ParameterFieldRow(props: {
   field: ParameterField;
+  /** In a module instantiation's section, a disabled field is shared by
+   * every instantiation; at device level it is refused for another reason
+   * (ADR-0080: access, manufacturer calculation, unrecorded authority). */
+  moduleScoped: boolean;
   deviceId: number;
   language: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
   onValueApplied: (tree: ProjectTree) => void;
 }) {
-  const { field, deviceId, language, onUpdated, onValueApplied } = props;
+  const { field, moduleScoped, deviceId, language, onUpdated, onValueApplied } = props;
   const t = useTranslate();
   const [value, setValue] = useState(field.value ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +105,7 @@ function ParameterFieldRow(props: {
   const label = field.text ?? field.name ?? field.etsId;
 
   return (
-    <label className="inspector-field parameter-field">
+    <label className="inspector-field parameter-field" data-ets-id={field.etsId}>
       {label}
       {field.access && <span className="provenance-badge">{field.access}</span>}
       {field.kind === "Restriction" ? (
@@ -145,7 +149,7 @@ function ParameterFieldRow(props: {
       )}
       {disabled && (
         <span className="parameter-field-caption">
-          {t("parameters.sharedReadOnlyCaption")}
+          {t(moduleScoped ? "parameters.sharedReadOnlyCaption" : "parameters.readOnlyCaption")}
         </span>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -196,6 +200,11 @@ const PARAMETER_DIAGNOSTIC_MESSAGE_KEYS: Record<ParameterDiagnosticKind, Transla
   moduleArgumentNotBound: "parameters.diagnostic.moduleArgumentNotBound",
   unsupportedModuleArgumentKind: "parameters.diagnostic.unsupportedModuleArgumentKind",
   unresolvedTextPlaceholder: "parameters.diagnostic.unresolvedTextPlaceholder",
+  unsupportedControlKind: "parameters.diagnostic.unsupportedControlKind",
+  evaluationWorkBudgetExhausted: "parameters.diagnostic.evaluationWorkBudgetExhausted",
+  parameterAccessReadOnly: "parameters.diagnostic.parameterAccessReadOnly",
+  manufacturerCalculation: "parameters.diagnostic.manufacturerCalculation",
+  writeAuthorityUnavailable: "parameters.diagnostic.writeAuthorityUnavailable",
 };
 
 function describeParameterDiagnosticMessage(t: Translate, diagnostic: ParameterDiagnostic): string {
@@ -221,6 +230,13 @@ function ParameterSectionView(props: {
   const { section, diagnostics, deviceId, language, onUpdated, onValueApplied } = props;
   const t = useTranslate();
   const ownDiagnostics = diagnostics.filter((d) => sameScope(d.scope, section.scope));
+  // ADR-0080, UI owner's presentation decision: `Access` is the user's right
+  // to view and modify a parameter (Project Schema23 §1.1.2.1), so a field
+  // whose effective access is `None` is folded away by default — counted,
+  // one click from view, never dropped. `Read` fields stay visible.
+  const [showHidden, setShowHidden] = useState(false);
+  const hiddenCount = section.fields.filter((field) => field.access === "None").length;
+  const fields = showHidden ? section.fields : section.fields.filter((field) => field.access !== "None");
   return (
     <details className="parameter-section" open>
       <summary>{sectionLabel(t, section.scope)}</summary>
@@ -232,11 +248,18 @@ function ParameterSectionView(props: {
           {describeParameterDiagnosticMessage(t, d)}
         </p>
       ))}
+      {hiddenCount > 0 && (
+        <button type="button" className="parameter-hidden-toggle" aria-expanded={showHidden}
+          onClick={() => setShowHidden((shown) => !shown)}>
+          {t(`parameters.noAccess.${showHidden ? "hide" : "show"}.${hiddenCount === 1 ? "one" : "other"}` as const, { count: hiddenCount })}
+        </button>
+      )}
       <div className="parameter-fields">
-        {section.fields.map((field) => (
+        {fields.map((field) => (
           <ParameterFieldRow
             key={field.etsId}
             field={field}
+            moduleScoped={section.scope !== null}
             deviceId={deviceId}
             language={language}
             onUpdated={onUpdated}

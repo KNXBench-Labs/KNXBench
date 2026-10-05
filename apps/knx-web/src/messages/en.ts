@@ -446,6 +446,7 @@ export const messages = {
   // `ParameterPanel.tsx`.
   "parameters.deviceScope": "Device",
   "parameters.moduleNumber": "Module #{number}",
+  "parameters.readOnlyCaption": "Not editable here — see the warnings for why.",
   "parameters.sharedReadOnlyCaption":
     "Shared across every instantiation of this module; not editable here — see the diagnostics for why.",
   "parameters.staleValuesHeading": "Stale values ({count})",
@@ -505,6 +506,15 @@ export const messages = {
     "A module argument could not be matched to the module's declaration and was ignored.",
   "parameters.diagnostic.unsupportedModuleArgumentKind":
     "A module argument uses a kind this build does not interpret and was ignored.",
+  "parameters.diagnostic.unsupportedControlKind": "A choice's controlling parameter uses an unsupported type; its branches were not evaluated.",
+  "parameters.diagnostic.evaluationWorkBudgetExhausted": "This program exceeded the evaluation work limit; its incomplete parameter panel is read-only.",
+  "parameters.diagnostic.parameterAccessReadOnly": "Some fields are declared read-only or hidden by the manufacturer (Access); they are not writable.",
+  "parameters.diagnostic.manufacturerCalculation": "Some fields are inputs or results of a manufacturer calculation that KNXBench does not run; they are read-only.",
+  "parameters.diagnostic.writeAuthorityUnavailable": "The product database has no recorded write authority for this program; its fields are read-only. Reinstall the product to record it.",
+  "parameters.noAccess.show.one": "Show {count} field without user access (Access None)",
+  "parameters.noAccess.show.other": "Show {count} fields without user access (Access None)",
+  "parameters.noAccess.hide.one": "Hide {count} field without user access (Access None)",
+  "parameters.noAccess.hide.other": "Hide {count} fields without user access (Access None)",
   "parameters.diagnostic.unresolvedTextPlaceholder":
     "A text placeholder had no matching module argument and was left as written.",
 
@@ -1887,6 +1897,18 @@ export const messages = {
   "deviceDownload.chooseDevice": "Choose a device with an individual address",
   "deviceDownload.gateway": "Gateway address",
   "deviceDownload.preparePlan": "Show what would be written",
+  "deviceDownload.scope.legend": "What to write",
+  "deviceDownload.scope.complete": "Complete download",
+  "deviceDownload.scope.parameters": "Parameters only",
+  "deviceDownload.scope.groupAddresses": "Group addresses only",
+  "deviceDownload.scope.both": "Parameters and group addresses (partial)",
+  "deviceDownload.partialScope.parameters": "Partial download: parameters only. The group address table and the group object association table are not written.",
+  "deviceDownload.partialScope.groupAddresses": "Partial download: group addresses only. The application program and its parameters are not written.",
+  "deviceDownload.partialScope.both": "Partial download: parameters and group addresses. The application program is not unloaded first.",
+  "deviceDownload.partialCheck": "Before writing, the download checks that the device already carries this application program and that every part is loaded; otherwise it stops without writing.",
+  "deviceDownload.notWrittenExplainer": "Application writes this partial download does not make (only absolute data or stack segments in EEPROM are written, KNX Configuration Procedures §3.9.2.4):",
+  "deviceDownload.notWrittenNone": "No further application write is skipped.",
+  "deviceDownload.notWrittenOctets": "Octets",
   "deviceDownload.planTitle": "Download plan",
   "deviceDownload.planNothingSent": "Nothing has been sent. This is what the download would write, prepared from the project as it is now; any project edit discards it.",
   "deviceDownload.target": "Device",

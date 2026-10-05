@@ -1,10 +1,12 @@
 # Limitierungen nach Kritikalität
 
-Sortierung der **103 verbleibenden nummerierten Grenzen** aus
+Sortierung der **108 verbleibenden nummerierten Grenzen** aus
 [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md), gezählt mit
-`grep -cE '^## (§)?[0-9]' docs/KNOWN_LIMITATIONS.md` (Stand 2026-10-01).
-Die Datei enthält 110 nummerierte Überschriften: 103 Grenzen und sieben
-gelöste/historische Wegweiser (§18/23/24/42/90/95/130-GATE). 102 Grenzen sind eingestuft;
+`grep -cE '^## (§)?[0-9]' docs/KNOWN_LIMITATIONS.md` (Stand 2026-10-06, AR15;
+vorher 2026-10-01: 110 Überschriften/103 Grenzen).
+Die Datei enthält 119 nummerierte Überschriften: 108 Grenzen und elf
+gelöste/historische Wegweiser (§18/23/24/42/90/95/130-GATE/149/150/152/156).
+107 Grenzen sind eingestuft;
 §105 bleibt wegen fehlender Hardwareevidenz ohne Einstufung. Der Befehl oben
 zählt Überschriften, nicht automatisch offene Defekte. Geschlossene oder zurückgezogene Einträge sind aus der aktiven
 Liste entfernt; frühere Nummern und Fragment-Links werden nicht wiederverwendet.
@@ -47,7 +49,7 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | --- | --- | --- |
 | 2 | Kein öffentliches XSD, Import ist tolerant statt validierend | Fehler fallen erst später auf. |
 | 3 | Geräteparameter erhalten, aber nicht interpretiert | Integrität gewahrt, Nutzbarkeit nicht. |
-| 11 | Standalone `.knxprod` nur für Master-Data-Schemata 11–14, 20 und exaktes 21 belegt | Andere Schemata bleiben nicht belegt/werden abgewiesen; eingebettete Produktdaten folgen einer anderen Importstrecke. |
+| 11 | Standalone `.knxprod` für Master-Data-Schemata 10–14, 20 und exakt 21/23 | Schema 10 seit ADR-0083 über Vokabular-Evidenz, nicht über eine Spezifikation; 15–19, 22, 24 werden abgewiesen; eingebettete Produktdaten folgen einer anderen Importstrecke. |
 | 13 | AES-verschlüsselte Projekte (ETS6) werden abgelehnt | Ganze Projekte nicht zu öffnen. ZipCrypto (ETS4/5) geht. |
 | 87 | Ein Parser-Fix erreicht bereits eingelesene Zeilen nicht | Nur eine Migration holt sie zurück. |
 | 12 | Herstellerdaten-Auflösung: eine von drei Lücken geschlossen | Betrifft die Zuordnung Produkt→Programm. |
@@ -57,7 +59,7 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | § | Thema | Warum K2 |
 | --- | --- | --- |
 | 7 | Geräte-Download: v1 ist der verifizierte Speicherpfad für Maske `070nh` | Alles andere wird mit Namen abgelehnt (ADR-0048); verifiziert an einem Gerät (`1.1.67`). |
-| 142 | Teil-Download für `070nh` | Alle drei Modi liefen auf `1.1.67` mit demselben Image; andere Programme und `AppliesTo` sind unbestätigt, die Web-Bedienung fehlt. |
+| 142 | Teil-Download für `070nh` | Alle drei Modi liefen nur auf `1.1.67` mit demselben Image; andere Programme und `AppliesTo` sind unbestätigt. Die Web-Bedienung ist geliefert. |
 | 145 | Aktive, unverbundene Gruppenobjekte | Die Instanz-Flags werden angewandt; ohne Verbindung bleibt ein Unterschied im Communication-Bit gegenüber ETS. |
 | 93 | `PID_PROGRAM_VERSION` wird bedingungslos geschrieben | Geparkt, unbesetzt — C11 und C12 sind gelandet, ohne das anzufassen (korrigiert 2026-09-20). |
 | 101 | Der „once more"-Versuch kann die Worst-Case-Wartezeit verdreifachen | Spec-konform, aber teuer. |
@@ -86,17 +88,16 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 71 | Vor Store-Schema 6 importierte Projekte haben keine Modul-Instanz-Ids | Nicht beschreibbar ohne Neuimport. |
 | 129 | Veralteter Id-Allokator-Snapshot konnte Ids duplizieren | Datenverlustpfad geschlossen (ADR-0039 Phasen 1–2, 2026-09-27); dass alles über `Command::apply` läuft, sichert weiter nur das Review — Phasen 3–5 offen. |
 
-## K3 — mittel (54)
+## K3 — mittel (58)
 
 | § | Thema | Warum K3 |
 | --- | --- | --- |
-| 9 | Projektdateien nicht diffbar (SQLite) |
+| 9 | Projektdateien nicht diffbar (SQLite) | Git-External-Diff mit `knx diff` geprüft und im Handbuch beschrieben (AR15); ein Textformat gibt es nicht. |
 | 14 | Default-Sprache des Projekts ist ein Platzhalter |
 | 15 | Unparsbare Werte überleben nur auf `Override`-Feldern |
 
 | 20 | Overlay gemeinsam, native Screenreader-/WebKitGTK-Abnahme bleibt offen | Fokus und Tastatur getestet; keine vollständige native Barrierefreiheitsprüfung. |
 
-| 29 | `knx bus monitor` formatiert Gruppenadressen immer dreistufig |
 | 31 | Routing-Multicast-Override | Bibliothek und CLI können ihn setzen; andere Oberflächen übernehmen ihn nicht automatisch. |
 | 36 | Session-Log-Export ist nur ein behaltenes Fenster | Höchstens 1000 Einträge; ein Neustart oder Verdrängung verhindert einen vollständigen Audit-Trail. |
 | 37 | Importierte Übersetzungen erreichen nur einen Teil der Oberflächen | Parameter und einige Produktdaten sind übersetzt; andere Quellen/Prosa bleiben originalsprachlich. |
@@ -130,11 +131,11 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 108 | MP §2.3 widerspricht sich zur belegten `IA_new`; Ausnahmetext gewinnt | Ergebnis wird als Befund gemeldet, nicht stillschweigend erzwungen. |
 | 113 | Eskalation lädt nur die Segmente neu, die der Plan tatsächlich trägt | Nur relevant, wenn der Aufrufer den Plan unvollständig baut; Regelfall betroffen es nicht. |
 | 116 | K6: Bibliotheks-Primitive weicht eng von MP §2.3 ab; bestätigte CLI/HTTP-Schreibstarts derzeit gesperrt | Der frühere Live-Erfolg ist kein vollständiger Pre-Write-Recovery-Nachweis (ADR-0059); Web zeigt die Sperre vor einer Einwilligung an. |
-| 16 | Tauri v2 bleibt unter Linux auf GTK3 | Die früheren Advisories sind zurückgezogen (verifiziert 2026-09-22); offen ist nur der Wechsel auf das GTK4-Backend. |
+| 16 | Tauri v2 bleibt unter Linux auf GTK3 | Advisories offline geprüft „ok“ (2026-10-06); die GTK4-Migrationen von Wry/Tauri sind weiter offen. |
 | 125 | ETS-6-Objekt-Ids (geräte-lokale Form) aus einem einzigen Projekt belegt | Folgt aus §1; eine zweite unabhängige Probe fehlt. |
 | 126 | Line-Scan-Abgleich handelt auf Belegungsevidenz, nicht Geräteidentität | Nur nach ausdrücklicher Auswahl; Schweigen gilt nicht als Abwesenheit. |
 | 127 | Site/Property-UI vorhanden, `Ground`-Semantik nur aus Schematext und Tests | Zwei Gebäude unter einer Wurzel im UI getestet; unabhängiger ETS-Export mit `Ground` fehlt weiterhin. |
-| 128 | Legacy-`.vd3`–`.vd5`/`.pr3`–`.pr5` werden abgelehnt, unter falschem Namen | Atomar abgelehnt, 0 Zeilen geschrieben; nur die Meldung stimmt nicht. |
+| 128 | Legacy-`.vd3`–`.vd5`/`.pr3`–`.pr5` werden abgelehnt | Atomar abgelehnt und seit AR06 korrekt benannt; ein Legacy-Import wartet auf Design-Review und Board-Entscheidungen B-1–B-6. |
 | 133 | Ein toter Webview lässt sich nicht per Fensterknopf schließen | Folge des §132-Fixes; aus den Quellen gelesen, nicht reproduziert. |
 | 134 | Baggage wird inventarisiert, nicht interpretiert | Nichts wird ausgeführt oder entpackt; unbekannte Medien bleiben `unknown`. |
 | 135 | Paketidentität wird aufgezeichnet, nicht entschieden | Gespeichert bleibt die zuerst installierte Fassung; Abweichungen werden gezeigt, nicht aufgelöst. |
@@ -146,14 +147,20 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 143 | RF-Domänenadressen nur im Simulator, kein RF-Gerät vorhanden | Auf Hardware gesperrt, keine CLI-/HTTP-Route. |
 | 144 | RF-Gerätekonfiguration nur im Simulator | Auf Hardware gesperrt, keine CLI-/HTTP-Route. |
 | 146 | Kanallabel sichtbar; Aktivierung kann `Undetermined` und DPT mehrdeutig bleiben | `@Name`/`@Number` sind gespeichert und in der UI gezeigt; fehlende/mehrdeutige Produktdaten werden nicht geraten (ADR-0050/0052). |
+| 151 | Große Herstellerpakete nur per CLI-Opt-in | `--allow-large-package` (256 MiB/4 GiB, ADR-0082); Web/HTTP bleiben bei 64/256 MiB und weisen ab. |
+| 153 | Schema-10-Semantik aus Namensgleichheit mit Schema 11 abgeleitet | Kein Schema-10-XSD gefunden; Zulassung über Korpus-Vokabular (ADR-0083). |
+| 154 | Telegrammfluss-Ansicht nur in Chromium geprüft; Bewegung bei großen Karten teuer | Motion Off ist für mehrere hundert Knoten der unterstützte Modus; kein WebKitGTK-/Orca-/Echtbus-Nachweis. |
+| 155 | Tunnel aus einem Docker-Bridge-Container nur mit Route-Back-fähigem Gateway | Ein Gateway gemessen; kein Live-Tunnel aus der Bridge; Discovery bleibt Host-Netz. |
+| 157 | Öffnen eines älteren Projekts aktualisiert die Datei an Ort und Stelle | Seit 2026-10-06 atomar; keine Kopie, ältere KNXBench-Versionen lehnen die Datei danach ab. |
 
-## K4 — niedrig (13)
+## K4 — niedrig (14)
 
 | § | Thema | Warum K4 |
 | --- | --- | --- |
 
 | 43 | Animationsschalter und OS-Präferenz existieren; nicht jede Fläche ist abgedeckt |
-| 65 | `--version` nennt einen Commit, nie einen Arbeitsstand |
+| 29 | `knx bus route-send` adressiert immer dreistufig | Monitor/Write folgen seit AR14 dem Stil des `--project`; nur `route-send` hat keine Projektoption. |
+| 65 | `--version` nennt in Entwicklungs-Builds einen Commit, keinen Arbeitsstand | Release-Builds mit `KNX_REQUIRE_CLEAN_TREE=1` verweigern einen veränderten Baum (AR13). |
 
 | 98 | Die zweite Flavour-Zeile sieht fast niemand |
 | 100 | Hilfetexte liegen im Message-Katalog, ein Absatz pro Schlüssel |
@@ -161,7 +168,7 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 110 | `PID_GROUP_RESPONSER_TABLE` bleibt auf jedem Medium unimplementiert | Bewusst — PL110-only laut RES, dieses Projekt zielt auf TP1/RF/IP. |
 | 111 | CP §3.5.4 Schritt 07 (Individualadresse entladen) bleibt unimplementiert | Bewusste Weigerung: das Werkzeug soll das eigene Zielgerät nicht unadressierbar machen. |
 | 115 | `MasterResetResponse::recovery_wait`/`SessionTiming::restart_basic_t1` berechnen Wartezeiten, die niemand abwartet | Toter Code ohne heutigen Aufrufer. |
-| 60 | Diff-Webpanel blättert große Tabellen | Weitgehend gelöst (CT-1); Restgrenze ist das Paging. |
+| 60 | Diff-Webpanel: lange Tabellen virtualisiert, mit Suche/Filter | Paging ersetzt (AR11); offen sind Suche über Tabellen hinweg, Sprung in den Explorer und eine Screenreader-Prüfung. |
 | 121 | Zwei offene Fenster sehen Einstellungsänderungen erst nach Reload | Kein Push-Kanal; ein Reload genügt. |
 | 124 | Schnittstellensuche zeigt vier Fakten, das Protokoll trägt mehr | `knx-net` dekodiert alles, die Oberfläche zeigt einen Ausschnitt. |
 | 130 | Anwendungszoom browser-, nicht WebKitGTK-verifiziert | Nur in Chromium geprüft. (Zweiter Eintrag mit Nummer 130.) |
@@ -169,6 +176,10 @@ wird hier gewichtet, nicht seine historische Überschrift.
 
 ## Nicht in dieser Zählung
 
+- **§149/150/152/156** sind gelöst (2026-10-03 bis 2026-10-05): CLI-Endung
+  ohne Groß-/Kleinschreibung, verschachtelte `ModuleDef`s, Evidenzbudget,
+  gemeldete `Parameter`/`ParameterRef`-Attribute; Nachweise im jeweiligen
+  Eintrag und im [Ledger](status/LEDGER.md).
 - **§42** ist durch AR04 gelöst: dokumentierter vollständiger transaktionaler
   Speicher-Fallback statt erfolgreicher No-Op-Arme; Offline-Regressionen prüfen
   Wiederöffnen, Undo/Redo, Reihenfolge, SQL-Fehler und unveränderte opaque/Manifest-

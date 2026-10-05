@@ -34,7 +34,7 @@ gives five, with the measured counts behind them.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Native `.knxdb` project file (SQLite, store schema version 9) | ✅ Implemented | Open, save, save as — [Projects](user-guide/02-projects.md) |
+| Native `.knxdb` project file (SQLite, store schema version 10) | ✅ Implemented | Open, save, save as — [Projects](user-guide/02-projects.md) |
 | Schema migration of an older project file, with a refusal rather than a guess when the file is newer than the build | ✅ Implemented | Migration tests per version step — [`docs/DATA_MODEL.md`](../DATA_MODEL.md) |
 | Undo and redo across every project edit | ✅ Implemented | One shared undo stack per open project |
 | Provenance: every attribute knows which layer it came from, and an override is distinguishable from an inherited value | ✅ Implemented | [`docs/DATA_MODEL.md`](../DATA_MODEL.md), [ADR-0010](../adr/0010-per-attribute-override-representation.md) |

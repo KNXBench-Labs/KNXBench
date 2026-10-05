@@ -1141,6 +1141,11 @@ and COMPATIBILITY.md. Statements below that list only 11/12/13/14/20/21 predate
 that package. Schemes 15–19/22 still need a sample (`KL-11` is
 `BLOCKED_EXTERNAL` in the ledger).
 
+**Update 2026-10-05 (ADR-0083).** Exact-namespace scheme 10 is admitted too,
+on corpus vocabulary evidence (146 public packages, no name outside scheme
+11); see [§153](#153-product-scheme10-is-refused-exact23-support-is-bounded).
+The accepted set is now 10, 11, 12, 13, 14, 20 and exact 21/23.
+
 **Limitation.** Manufacturer product files in the `.knxprod` container are
 readable, as a standalone package independent of any `.knxproj`, for master
 data schemes 11, 12, 13, 14, 20 and exact-namespace 21

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 01:40 CEST
+- **Completed:** **AR15 slice 2 (items 1–2).** LIMITATION_TRIAGE recounted by script (119 headings = 108 limitations + 11 signposts; 107 rated: K1 5/K2 30/K3 58/K4 14; §105 unrated). Scheme set, schema versions and commissioning status reconciled across COMPATIBILITY, GAP_ANALYSIS_ETS, ROADMAP, ARCHITECTURE, DATA_MODEL, PRODUCT_DATABASE_CORPUS, KL §11 and the manual. Doc gates only.
+- **Pending/Next Steps:** AR15 item 3 rest (deployment/import/hardware boundaries) and item 4 (alpha scope/risk/decision matrix), then AR16 waits on the UI owner.
+- **Notes for Codex oder Claude:** Recount script logic is in `.ai/logs/2026-10-06_claude_ar15-slice2.md`; rerun it after adding a KL heading. Web lock: unchanged per the newest owner line below.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 01:34 CEST
 - **Completed:** **AR15 slice 1.** `DOC-03` DONE (stale commissioning/`.knxproj` statements fixed across README + manual; KL §7 and the bus chapter are the reference), `KL-9`/`KL-16`/`KL-46` ACCEPTED_BOUNDARY with fresh evidence (Git external-diff recipe run on a synthetic repo and added to manual 08; `cargo deny --offline` advisories ok; tests named). Doc gates only (anchors, ledger, headers, diff --check); no code changed.
 - **Pending/Next Steps:** AR15 items 1–2 (reconcile IMPLEMENTATION_STATUS/KL/LIMITATION_TRIAGE/ROADMAP/GAP_ANALYSIS_ETS/COMPATIBILITY/IMPORT_EXPORT against code; programmatic recount), rest of item 3 (deployment/import/hardware boundaries) and item 4 (alpha scope/risk/decision matrix).

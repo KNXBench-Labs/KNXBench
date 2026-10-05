@@ -917,9 +917,23 @@ manual; counts verified). A storage finding from the same check became
 `KL-157` (atomic upgrade, fixed `b247268a`). Open: the cross-document
 reconciliation/recount (items 1–2), deployment/import/hardware boundaries
 (rest of item 3) and the scope/risk/decision matrix (item 4).
+Slice 2 (2026-10-06): items 1–2 done as listed under each item.
 
-- [ ] Reconcile `IMPLEMENTATION_STATUS`, `KNOWN_LIMITATIONS`, `LIMITATION_TRIAGE`, `ROADMAP`, `GAP_ANALYSIS_ETS`, `COMPATIBILITY`, `IMPORT_EXPORT` and the relevant model/architecture docs with actual source/tests.
-- [ ] Recount limitations and derived tables programmatically; preserve duplicate-ID disambiguation, historical anchors and new entries published by either other track.
+- [x] Reconcile `IMPLEMENTATION_STATUS`, `KNOWN_LIMITATIONS`, `LIMITATION_TRIAGE`, `ROADMAP`, `GAP_ANALYSIS_ETS`, `COMPATIBILITY`, `IMPORT_EXPORT` and the relevant model/architecture docs with actual source/tests.
+  - Slice 2 checked claims against code constants and tests: product schemes
+    (10–14, 20, exact 21/23) in COMPATIBILITY, GAP_ANALYSIS_ETS, ROADMAP, KL §11,
+    PRODUCT_DATABASE_CORPUS and the manual; store/product schema versions (10/21)
+    in the architecture tour, implementation status and DATA_MODEL;
+    commissioning status in ARCHITECTURE §8 and COMPATIBILITY (now pointing to
+    KL §7); migration atomicity (KL-157). ROADMAP/GAP_ANALYSIS commissioning
+    text was already current (owner). Not every sentence of these documents was
+    re-proven; historical sections stay as dated history.
+- [x] Recount limitations and derived tables programmatically; preserve duplicate-ID disambiguation, historical anchors and new entries published by either other track.
+  - Slice 2: script over KNOWN_LIMITATIONS and LIMITATION_TRIAGE — 119
+    heading lines, 118 numbers (§130 twice), 108 limitations + 11 signposts,
+    107 rated (K1 5, K2 30, K3 58, K4 14), §105 unrated; no triage row without
+    a heading. New rows §151/153/154/155/157, §149/150/152/156 to signposts,
+    §29 to K4, six reasons refreshed.
 - [ ] Document native SQLite versus text-diff limits, product-dependent report names, GTK3 platform dependency and actual deployment/import/hardware boundaries. Withdraw resolved prose, not remaining evidence gaps.
 - [ ] Produce the alpha scope/risk/decision matrix: supported and verified, simulator-only, externally blocked, accepted boundary and later work. Every unaccepted blocker gets a release disposition, not a hidden waiver.
 

@@ -173,8 +173,9 @@ The schema lives in `crates/knx-store/src/`, one module per area — `project.rs
 Migrations live in `crates/knx-store/src/migration.rs` and the mechanism is deliberately
 boring: SQLite's own `user_version` pragma is the entire version marker. There is an
 ordered chain of migration functions where index `i` migrates version `i` to `i + 1`,
-`CURRENT_SCHEMA_VERSION` is the end of the chain — **7** at the time of writing — and
-opening a file runs every pending step and then sets the pragma. A file whose
+`CURRENT_SCHEMA_VERSION` is the end of the chain — **10** as of 2026-10-06 — and
+opening a file runs every pending step and then sets the pragma, all in one transaction,
+so a failed upgrade leaves the file as it was. A file whose
 `user_version` is *higher* than the binary supports is refused rather than opened
 hopefully, because guessing at a future schema is how you lose somebody's project.
 
@@ -182,8 +183,8 @@ Adding a migration means appending a function to the chain and raising the const
 editing an existing one: somebody's file has already been through it.
 
 The product database has its own, separate chain in
-`crates/knx-productdb/src/migration.rs`, with its own `CURRENT_PRODUCTDB_VERSION` — **11**
-at the time of writing. A migration there may re-derive anything the stored package bytes
+`crates/knx-productdb/src/migration.rs`, with its own `CURRENT_PRODUCTDB_VERSION` — **21**
+as of 2026-10-06. A migration there may re-derive anything the stored package bytes
 determine, and must not invent what only the original install knew
 ([ADR-0020](../../adr/0020-migrations-may-rederive-from-stored-bytes.md)).
 

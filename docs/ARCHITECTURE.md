@@ -380,6 +380,12 @@ required, blocked until the KNX specification database is finished
 ([KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)).
 The architecture does not block that path today: load procedures, memory
 layout and mask data all live in the product database.
+**Status 2026-10-06 (AR15):** overtaken. Device download is implemented for the
+verified `070nh` memory path (ADR-0048/0049): `knx device download` and the
+Web download tab, run with read-back on one device. Address programming and
+reset fail closed before a tunnel until durable recovery exists (ADR-0057,
+ADR-0058); the property-based downloader is simulator-only
+([KNOWN_LIMITATIONS §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)).
 
 ## 9. Key material
 

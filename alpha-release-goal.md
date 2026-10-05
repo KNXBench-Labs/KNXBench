@@ -905,6 +905,10 @@ load saturates the main thread with motion on
 measurement recorded
 ([§15](docs/TELEGRAM_FLOW_VISUALIZATION.md#15-ar21-acceptance-rerun-alpha-2026-10-05)).
 
+**Rerun of finding 4, 2026-10-05:** fixed for telegrams with a line; returned
+with finding 5 (telegrams without a line at the node limit counted as drawn)
+([§17](docs/TELEGRAM_FLOW_VISUALIZATION.md#17-ar21-rerun-of-finding-4-alpha-2026-10-05)).
+
 Dependencies: integrated AR20 and U21's exact owner receipt, with U19/U20
 covered. Required before the finished AR15–AR18 acceptance and AR19 decision.
 The alpha session does not reimplement the UI or take its lock for bookkeeping.

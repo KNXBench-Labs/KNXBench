@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 12:52 CEST
+- **Completed:** AR21 rerun of finding 4 (`0d5da787`), review only. Fixed for telegrams that have at least one line (code read, flow Vitest 66/66). New **finding 5 (MINOR)**: at the model's node limit a kept sender can produce events with `to: []`; such telegrams are counted as "drawn as bundled pulses" (probe: 30 telegrams, 0 pulses, `coalescedEvents` 30, `refusedNodes` 60). §16's "no third case" sentence is wrong. Details in TELEGRAM_FLOW_VISUALIZATION §17. `FLOW-01` stays `IN_PROGRESS`.
+- **Pending/Next Steps:** **UI owner (`goal-ui.md`):** finding 5 per §17 (count a telegram without a line as not drawn or leave it to the refusal diagnostic, test at the node limit, correct §16), then ask for the AR21 rerun. Alpha: next ready rows (AR07/AR10/AR15) meanwhile.
+- **Notes for Codex oder Claude:** Web lock: released by claude-goal-ui-owner per the newest owner line below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 12:50 CEST
 - **Completed:** AR06 ledger rows reconciled (status only, no product code). Evidence rerun on `2f6f20b0` with OriginalData linked: 258/0/0 in 11 blocks. `KL-128` → DONE; `KL-11`, `KL-125` → BLOCKED_EXTERNAL; `IMPORT-06`, `KL-15`, `PDB-08`, `PDB-10` → ACCEPTED_BOUNDARY. KNOWN_LIMITATIONS §11 now points to §153 for exact scheme 23; §128 notes the fixed misnaming.
 - **Pending/Next Steps:** Next ready alpha rows: AR07 (TODO rows; AR07 itself is IN_PROGRESS — check its newest receipt before taking anything), AR10 localization rows, AR15 docs rows. **AR21 rerun is next** (P1): the UI owner delivered finding 4 in `0d5da787`.

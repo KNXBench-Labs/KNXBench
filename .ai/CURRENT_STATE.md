@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (alpha session, U21 corrections from the AR21 review)
+- **Timestamp:** 2026-10-05 06:05
+Web lock: taken by claude-alpha for U21 corrections (AR21 findings 1–3)
+- **Completed:** Lock taken only. The UI owner has been idle since 00:00 and the lock was free; the user asked the alpha session to keep going. Scope is exactly the three AR21 findings in TELEGRAM_FLOW_VISUALIZATION §13 (local reheat, hub separation, flaky `group-address-drag.e2e.ts`).
+- **Pending/Next Steps:** Fix with RED tests and mutants, measure at the §7 load, publish a receipt, change the U21 status line in `goal-ui.md`, release the lock. The cron watch `knxbench-ar21-watch` then reruns the AR21 review on its own.
+- **Notes for Codex oder Claude:** UI owner: if you come back while this is held, the lock line here decides; please do not edit `apps/knx-web` until it is released.
+
+---
+
 - **Last Agent:** Claude (alpha AR21, telegram-flow acceptance)
 - **Timestamp:** 2026-10-05 00:40
 Web lock: not taken or released by this entry (free; the UI owner takes it for the corrections)

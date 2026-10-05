@@ -141,7 +141,7 @@ async function choose(address: string) {
 }
 
 async function setGateway(value: string) {
-  const input = host!.querySelector<HTMLInputElement>(".device-download-config input")!;
+  const input = host!.querySelector<HTMLInputElement>('.device-download-config input:not([type="radio"])')!;
   const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
   await act(async () => {
     setter.call(input, value);
@@ -383,4 +383,117 @@ it("shows the backup path during a run and on failure", async () => {
   await render();
   expect(host!.textContent).toContain("device-backups/1.1.67_backup.json");
   expect(host!.textContent).toContain("32 octets");
+});
+
+// KL-142: the scope is chosen before the plan; a partial plan says what it leaves out.
+const PARTIAL_PLAN = {
+  ...PLAN, planId: 8, partial: true, notWritten: [[0x4100, 12], [0x4200, 3]] as [number, number][],
+  confirmationPhrase: "I confirm partial download to 1.1.67",
+};
+
+function scopeRadio(label: string): HTMLInputElement {
+  const found = [...host!.querySelectorAll<HTMLLabelElement>(".device-download-scope label")]
+    .find((candidate) => candidate.textContent === label);
+  if (!found) throw new Error(`scope not found: ${label}`);
+  return found.querySelector("input")!;
+}
+
+async function pickScope(label: string) {
+  await act(async () => scopeRadio(label).click());
+}
+
+it("offers the four download scopes before a plan, complete by default", async () => {
+  await render();
+  const labels = [...host!.querySelectorAll(".device-download-scope label")].map((label) => label.textContent);
+  expect(labels).toEqual([
+    en["deviceDownload.scope.complete"], en["deviceDownload.scope.parameters"],
+    en["deviceDownload.scope.groupAddresses"], en["deviceDownload.scope.both"],
+  ]);
+  expect(scopeRadio(en["deviceDownload.scope.complete"]).checked).toBe(true);
+  expect(host!.querySelector(".device-download-scope legend")?.textContent).toBe(en["deviceDownload.scope.legend"]);
+});
+
+it("asks for a complete plan without a partial part", async () => {
+  await render();
+  await showPlan();
+  expect(apiMock.planDeviceDownload).toHaveBeenCalledWith("1.1.67");
+  expect(host!.querySelector(".device-download-not-written")).toBeNull();
+});
+
+it.each([
+  ["deviceDownload.scope.parameters", { parameters: true, groupAddresses: false }],
+  ["deviceDownload.scope.groupAddresses", { parameters: false, groupAddresses: true }],
+  ["deviceDownload.scope.both", { parameters: true, groupAddresses: true }],
+] as const)("asks for the %s plan with exactly that partial part", async (key, partial) => {
+  apiMock.planDeviceDownload.mockResolvedValue(PARTIAL_PLAN);
+  await render();
+  await choose("1.1.67");
+  await pickScope(en[key]);
+  await setGateway("192.0.2.10:3671");
+  await act(async () => button(en["deviceDownload.preparePlan"]).click());
+  await flush();
+  expect(apiMock.planDeviceDownload).toHaveBeenCalledWith("1.1.67", partial);
+});
+
+it("shows what a partial plan leaves out before anything is confirmed", async () => {
+  apiMock.planDeviceDownload.mockResolvedValue(PARTIAL_PLAN);
+  await render();
+  await choose("1.1.67");
+  await pickScope(en["deviceDownload.scope.parameters"]);
+  await setGateway("192.0.2.10:3671");
+  await act(async () => button(en["deviceDownload.preparePlan"]).click());
+  await flush();
+  const plan = host!.querySelector(".device-download-plan")!;
+  expect(plan.textContent).toContain(en["deviceDownload.partialScope.parameters"]);
+  const omitted = [...plan.querySelectorAll(".device-download-not-written tbody tr")].map((row) => row.textContent);
+  expect(omitted).toEqual(["4100h12", "4200h3"]);
+  expect(plan.textContent).toContain(en["deviceDownload.notWrittenExplainer"]);
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+  expect(consentDialog()).toBeNull();
+});
+
+it("says so when a partial plan skips no further application write", async () => {
+  apiMock.planDeviceDownload.mockResolvedValue({ ...PARTIAL_PLAN, notWritten: [] });
+  await render();
+  await choose("1.1.67");
+  await pickScope(en["deviceDownload.scope.groupAddresses"]);
+  await setGateway("192.0.2.10:3671");
+  await act(async () => button(en["deviceDownload.preparePlan"]).click());
+  await flush();
+  const plan = host!.querySelector(".device-download-plan")!;
+  expect(plan.textContent).toContain(en["deviceDownload.partialScope.groupAddresses"]);
+  expect(plan.textContent).toContain(en["deviceDownload.notWrittenNone"]);
+  expect(plan.querySelector(".device-download-not-written table")).toBeNull();
+});
+
+it("drops a shown plan when the scope changes, so a plan for another scope is never started", async () => {
+  await render();
+  await showPlan();
+  expect(host!.querySelector(".device-download-plan")).not.toBeNull();
+  await pickScope(en["deviceDownload.scope.parameters"]);
+  expect(host!.querySelector(".device-download-plan")).toBeNull();
+});
+
+it("renders the server's refusal of a scope it cannot derive and shows no plan", async () => {
+  apiMock.planDeviceDownload.mockRejectedValue(new Error(
+    "no partial download to device 1.1.67 prepared: a partial download needs parameters, group addresses or both"));
+  await render();
+  await choose("1.1.67");
+  await pickScope(en["deviceDownload.scope.both"]);
+  await act(async () => button(en["deviceDownload.preparePlan"]).click());
+  await flush();
+  expect(host!.querySelector('[role="alert"]')?.textContent).toContain("no partial download to device 1.1.67 prepared");
+  expect(host!.querySelector(".device-download-plan")).toBeNull();
+});
+
+it("locks the scope while a plan is being prepared", async () => {
+  let finish!: (plan: typeof PLAN) => void;
+  apiMock.planDeviceDownload.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  await render();
+  await choose("1.1.67");
+  await act(async () => button(en["deviceDownload.preparePlan"]).click());
+  expect(scopeRadio(en["deviceDownload.scope.parameters"]).disabled).toBe(true);
+  await act(async () => finish(PLAN));
+  await flush();
+  expect(scopeRadio(en["deviceDownload.scope.parameters"]).disabled).toBe(false);
 });

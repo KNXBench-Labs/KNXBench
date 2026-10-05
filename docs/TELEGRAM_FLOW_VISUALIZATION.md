@@ -1033,6 +1033,41 @@ Flow Vitest (`flowAnimator`, `TelegramFlowView`, `flowModel`): 68 / 68.
 
 No hardware, no real bus and no KNX socket were used.
 
+## 19. AR21 rerun of finding 5 (Alpha, 2026-10-05)
+
+**Finding 5 is fixed as stated.** On `origin/main` `13e6de1d` (fix
+`104916d6`): flow Vitest (`flowAnimator`, `TelegramFlowView`, `flowModel`)
+68 / 68, rerun here; removing the new `event.to.length === 0` branch fails
+both §18 tests (own mutant, file restored and byte-compared). A telegram whose
+every target is refused now counts as not drawn and marks the rendering
+reduced.
+
+**Finding 6 (MINOR, returned to the UI owner): two other map-full cases
+still escape the note.** §18 says the note and `flow.diag.refused` "now agree
+on what was not drawn"; a probe at small node limits (same fixture as §18:
+group `G` with members D1–D3, sender D1; run here as temporary Vitest cases,
+not committed) shows two cases where they do not:
+
+| Case | Model | Drawn | Note (`coalescedEvents` / `overCapacityEvents` / `reduced`) |
+|---|---|---|---|
+| A — some targets refused | `maxNodes: 2`, 2 telegrams D1 → G | each to 1 of 2 recipients (`to.length` 1) | 0 / 0 / false |
+| B — sender refused | `maxNodes: 2`, then 2 telegrams from an unseen sender | no event, no pulse | 0 / 0 / false |
+| C — sender refused, bundled batch | as B with 30 telegrams | no event, no pulse | 0 / 0 / false |
+
+In A the note promises "{dropped} not at all or only in part" yet counts
+telegrams drawn to part of their recipients as nothing; in B/C telegrams that
+are not drawn at all are counted nowhere, and a 30-telegram batch that would
+otherwise bundle shows no note. `flow.diag.refused` does report the refused
+nodes and connections (B: 5 nodes, 4 connections), so nothing is hidden from
+the diagnostics, but the note's per-telegram account is incomplete. A
+possible shape (owner's choice): `apply` records whether a telegram was fully
+represented (`sourceKept` and every target kept) — including a lineless
+record when the sender is refused — and `queuePulses` counts the rest as not
+(completely) drawn.
+
+`FLOW-01` stays `IN_PROGRESS`. No hardware, no real bus and no KNX socket
+were used.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

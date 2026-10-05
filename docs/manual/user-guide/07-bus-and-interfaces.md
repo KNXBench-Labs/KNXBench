@@ -206,6 +206,9 @@ send anything.
   after ten seconds to a faint resting line; they never disappear while the
   session lasts. A pulse is an illustration: the value is already shown when
   the telegram arrives, not when the pulse does.
+- Only what changed moves: a new device or connection shifts its own
+  neighbourhood, and the rest of the map stays where it is. Neighbours keep
+  clear of a node's name and of its values, also around a busy sender.
 - **Freeze layout** stops the movement of the nodes. Pulses, values and the
   sender ranking keep running.
 - **Motion Off** (in the settings) or the system's *reduce motion* stops all
@@ -216,7 +219,10 @@ send anything.
   note above the map says so. Values and counts are always complete.
 
 Movement costs processor time: on a busy bus, or on a slower computer, *Motion
-Off* keeps the view light and loses no information. See [known limitations
+Off* keeps the view light and loses no information. With several hundred
+devices and around a thousand telegrams a second, movement keeps the
+processor fully busy and the window can react with a delay of a few tenths of
+a second; switch Motion Off for such a bus. See [known limitations
 §154](../../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only).
 
 ## Sending a value

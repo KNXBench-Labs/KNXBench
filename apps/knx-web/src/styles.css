@@ -2512,7 +2512,13 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    some of it back rather than pushing the explorer out of existence. Both
    scroll internally for the same reason. */
 .workbench-pane-left .workbench-navigation { flex: 0 1 auto; overflow: auto; }
-.workbench-pane-left .project-explorer { flex: 1 1 auto; min-height: 0; overflow: auto; }
+/* Basis 0, not auto: the explorer takes only the space the two blocks leave.
+   With `auto` its whole tree height entered the flex calculation, and the
+   column shrank the navigation blocks — and every height a splitter set —
+   to make room for it (user report: splitters did nothing with a project).
+   Its minimum matches the splitters' (`STACK_BLOCK_MIN_PX` in App.tsx), so
+   two blocks dragged to their maximum cannot squeeze it out of sight. */
+.workbench-pane-left .project-explorer { flex: 1 1 0; min-height: 72px; overflow: auto; }
 .workbench .project-explorer .tree-root { margin: 0; }
 .workbench .project-explorer ul { padding-left: 14px; }
 .workbench .tree-row { display: flex; align-items: center; min-height: var(--knx-control-height); }

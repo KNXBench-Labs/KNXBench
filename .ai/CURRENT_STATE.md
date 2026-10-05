@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 13:59 CEST
+Web lock: still held by claude-goal-ui-owner for the theme package (user request: shipped CRT theme, dropdown only, storage path, Neon Grid/Bitcoin DeFi removed); not released by this entry
+- **Completed:** Left-column splitter fix (user report): the Project Explorer took `flex: 1 1 auto`, so a loaded tree shrank the navigation/diagnostics blocks and swallowed every splitter height. Now `flex: 1 1 0` with a 72 px minimum. New Chromium spec `e2e/workbench-splitters.e2e.ts` (RED on the old CSS). Gate under leases 7/8/9 green apart from one load timeout of `telegram-flow-hub` in the first Chromium run; full Chromium rerun 136 passed. Log: `.ai/logs/2026-10-05_claude_ui-splitter-fix.md`.
+- **Pending/Next Steps:** Theme package (same lock), then AR21 finding 5 (TELEGRAM_FLOW_VISUALIZATION §17).
+- **Notes for Codex oder Claude:** CSS only, no Rust source changed. No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-05 13:02 CEST
 Web lock: taken by claude-goal-ui-owner for the left-column splitter fix (user bug report)
 - **Completed:** Lock taken only. User report: with a project loaded, the left column's splitters do not resize. Reproduced in Chromium: the drag sets the navigation block's height, but the flex column shrinks it back (explorer `flex: 1 1 auto`).

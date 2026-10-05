@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — AR15 done: one page that says what the Alpha is, and what it is not yet
+
+- New [ALPHA_SCOPE_MATRIX](ALPHA_SCOPE_MATRIX.md): capabilities by evidence
+  level (verified / simulator-only / externally blocked / accepted / later),
+  deployment, import and hardware boundaries, ledger totals (189 rows), and a
+  release disposition for each of the 13 rows not yet accepted — nothing
+  waived; the BLOCKED_EXTERNAL rows are *proposed* as disclosed boundaries
+  for the user's AR19 decision.
+- ALPHA_READINESS carries the AR15 recount. AR15 is DONE as a dossier; the
+  final acceptance remains AR18/AR19.
+
 ## 2026-10-06 — AR15 slice 2: counting what is left, and saying "10" out loud
 
 - LIMITATION_TRIAGE recounted by script: 119 heading lines = 108 limitations

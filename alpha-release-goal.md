@@ -908,16 +908,17 @@ check waits for the user's go.
 
 **Sources:** `DOC-03`, `KL-9`, `KL-16`, `KL-46`, plus all earlier results and accepted/later routes.
 **Dependencies:** completed/explicitly blocked AR00–AR14, AR06P, AR14B and AR14D (one consolidated ledger); newest owner receipts.
-**Status:** `IN_PROGRESS` 2026-10-06. Slice 1 done: the four source IDs are
+**Status:** `DONE` 2026-10-06 — dossier complete ([ALPHA_SCOPE_MATRIX](docs/ALPHA_SCOPE_MATRIX.md)); final acceptance stays with AR18/AR19. Slice 1 done: the four source IDs are
 disposed with fresh evidence — `KL-9`, `KL-16`, `KL-46` `ACCEPTED_BOUNDARY`
 (Git external-diff recipe run and documented; GTK3/advisories rechecked; report
 names rechecked against tests), `DOC-03` `DONE` (stale commissioning,
 `.knxproj` hand-over and suggestion statements corrected across README and
 manual; counts verified). A storage finding from the same check became
-`KL-157` (atomic upgrade, fixed `b247268a`). Open: the cross-document
-reconciliation/recount (items 1–2), deployment/import/hardware boundaries
-(rest of item 3) and the scope/risk/decision matrix (item 4).
-Slice 2 (2026-10-06): items 1–2 done as listed under each item.
+`KL-157` (atomic upgrade, fixed `b247268a`).
+Slice 2 (2026-10-06): items 1–2 done as listed under each item. Slice 3
+(2026-10-06): items 3–4 in [ALPHA_SCOPE_MATRIX](docs/ALPHA_SCOPE_MATRIX.md)
+(capabilities by evidence level, deployment/import/hardware boundaries, ledger
+totals, a release disposition for every not-yet-accepted row, risks).
 
 - [x] Reconcile `IMPLEMENTATION_STATUS`, `KNOWN_LIMITATIONS`, `LIMITATION_TRIAGE`, `ROADMAP`, `GAP_ANALYSIS_ETS`, `COMPATIBILITY`, `IMPORT_EXPORT` and the relevant model/architecture docs with actual source/tests.
   - Slice 2 checked claims against code constants and tests: product schemes
@@ -934,8 +935,8 @@ Slice 2 (2026-10-06): items 1–2 done as listed under each item.
     107 rated (K1 5, K2 30, K3 58, K4 14), §105 unrated; no triage row without
     a heading. New rows §151/153/154/155/157, §149/150/152/156 to signposts,
     §29 to K4, six reasons refreshed.
-- [ ] Document native SQLite versus text-diff limits, product-dependent report names, GTK3 platform dependency and actual deployment/import/hardware boundaries. Withdraw resolved prose, not remaining evidence gaps.
-- [ ] Produce the alpha scope/risk/decision matrix: supported and verified, simulator-only, externally blocked, accepted boundary and later work. Every unaccepted blocker gets a release disposition, not a hidden waiver.
+- [x] Document native SQLite versus text-diff limits, product-dependent report names, GTK3 platform dependency and actual deployment/import/hardware boundaries. Withdraw resolved prose, not remaining evidence gaps.
+- [x] Produce the alpha scope/risk/decision matrix: supported and verified, simulator-only, externally blocked, accepted boundary and later work. Every unaccepted blocker gets a release disposition, not a hidden waiver.
 
 **Exit evidence:** mutually consistent release claims, full source-ID disposition and doc gates. This dossier can advance while a final owner receipt is pending; final acceptance cannot.
 

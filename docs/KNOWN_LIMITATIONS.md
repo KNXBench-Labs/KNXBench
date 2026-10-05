@@ -87,7 +87,15 @@ includes28 selected offline cases (matrix included);421 private files unchanged.
 This closes the fixture-coverage finding, not native/Orca/general WCAG or
 whole-application Alpha/ETS acceptance. Publication/readback is in the handover.
 
-Preview cancellation changes presentation only. Once a guarded write is
+Since 2026-10-05 there is no preview ([ADR-0079](adr/0079-theme-choice-is-one-dropdown.md)):
+a theme choice or import is a saved change. Pack-based themes — imported or
+shipped, such as Modern Retro Green CRT — are painted once the application
+module has loaded; the pre-mount bootstrap in `index.html` knows only the CSS
+palettes and shows the System palette until then. The storage location shown in
+Settings is the documented default per deployment (desktop identifier,
+`KNX_DATA_DIR`); the server does not report its real data directory.
+
+Historical (until 2026-10-05): preview cancellation changed presentation only. Once a guarded write is
 dispatched, closing Settings cannot cancel its server operation; the UI states
 this and disables false-undo Cancel while awaiting acknowledgment. A definitive
 409 retains the last confirmed settings until the existing refresh sees a peer;
@@ -4330,9 +4338,11 @@ not scheduled as part of T17.
 `224.0.23.12:3671` and awaits a unicast response. Docker's default bridge
 does not provide the required multicast path; the documented Linux
 deployment uses host networking when discovery is needed. A manually entered
-numeric IPv4 endpoint remains the fallback and can work over unicast even
-when multicast discovery cannot. Host routing, firewall and gateway support
-still matter with host networking.
+numeric IPv4 endpoint works over unicast from the host or a host-network
+container; from a bridge container the tunnel gets no answer either
+([§155](#155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer),
+corrected 2026-10-05). Host routing, firewall and gateway support still
+matter with host networking.
 
 **Host cause resolved (2026-09-30, RESEARCH §20.1).** The host `ufw` had
 dropped the gateway's unicast UDP reply from *source* port 3671. The user
@@ -7730,7 +7740,46 @@ loop and the AR20 snapshot route. It is read-only.
   check. Values and lines are hidden from assistive technology on purpose;
   the Inspector is the accessible path, and it has not been tried with Orca.
 
-## 155. Unstored `Parameter`/`ParameterRef` attributes are not reported
+## §155 Tunnelling from a container on Docker's bridge network gets no answer
+
+**Found 2026-10-05 (user report, measured).** The server in a container on
+Docker's default bridge network could not open a tunnel to a gateway on the
+LAN, although the host firewall was set up and the CLI on the host worked.
+
+**Cause.** `TunnelClient::connect` (`crates/knx-net/src/client.rs`) puts its
+own socket address into the `CONNECT_REQUEST`'s control and data endpoint
+HPAIs. In a bridge container that is the private bridge address
+(`172.17.0.x`). The gateway answers to the address in the HPAI, not to the
+packet's source, and that address does not exist on the LAN. Docker's NAT
+rewrites only the IP header. `[V]` A read-only `DESCRIPTION_REQUEST` probe
+(no tunnel, no bus frame) against one gateway: no answer from a bridge
+container with its own address in the HPAI; answers from the host, from a
+host-network container, and from a bridge container with the all-zero
+"Route Back" HPAI.
+
+**Standard.** `[D]` Core v01.06.02 AS §8.6.2.2 defines the UDP Route Back HPAI
+(address and port all zero) for NAT: the server answers to the address and
+port of the received IP packet. §8.4.3.4.3: if the control endpoint is Route
+Back, the data endpoint must be too.
+
+**Workaround.** Run the container with `--network host` (Linux Docker Engine),
+as the [installation guide](manual/getting-started/04-installation.md) now
+says. The published-port bridge form is for project work only.
+
+**Partly lifted 2026-10-05 (AR14B).** `KNX_TUNNEL_ROUTE_BACK=1` makes the
+server's tunnels send the Route Back HPAI in the `CONNECT_REQUEST` (control
+and data endpoint), every `CONNECTIONSTATE_REQUEST` and the
+`DISCONNECT_REQUEST` (`knx_net::TunnelReturnPath`). Offline loopback tests pin
+every HPAI in both modes; the default stays the own address, so hosts and
+gateways that work today see no change. The CLI has no switch (it runs on the
+host).
+
+**Remaining.** Only one gateway has been measured to answer a Route Back
+request, and only with `DESCRIPTION_REQUEST`; a gateway that ignores Route
+Back still gets no answer through the bridge. Discovery stays host-network
+only. No tunnel from a bridge container to real hardware has been run.
+
+## 156. Unstored `Parameter`/`ParameterRef` attributes are not reported
 
 **Limitation.** The static program parser stores a fixed set of
 `Parameter` attributes (`Id`, `Name`, `Text`, `ParameterType`, `Access`,
@@ -7764,4 +7813,4 @@ those two from the retained bytes itself); `ParameterRef` — `Name`,
 **Lifted when.** Both arms report what they do not store, and a schema
 migration re-derives the affected unknown rows and install reports the way
 v18 did for `Channel/@Number`, with the corpus matrix re-pinned. Ledger row
-`KL-155`.
+`KL-156`.

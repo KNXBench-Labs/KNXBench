@@ -1,7 +1,7 @@
 /** Settings overlay for theme, motion, UI/product language, and language-pack management. */
 import { ACCENTS, DENSITIES, type useAppearance } from "./appearance";
 import { useState } from "react";
-import type { ThemeDef, ThemePreview } from "./theme";
+import type { ThemeDef } from "./theme";
 import { getThemeAccentOptions, THEMES } from "./theme";
 import ThemePackManager from "./ThemePackManager";
 import { commitThemeMutation, planThemeSelection } from "./themePackStorage";
@@ -215,8 +215,10 @@ export default function SettingsPanel(props: {
   themes: readonly ThemeDef[];
   activeThemeId: string;
   onSelectTheme: (id: string) => void;
-  onPreviewTheme?: (preview: ThemePreview | undefined) => void;
-  previewTheme?: ThemePreview;
+  /** The application's Appearance: every theme choice goes through the
+   * acknowledged conditional write, and theme files can be managed.
+   * Standalone/legacy callers leave it off and keep their builtin callback. */
+  manageThemes?: boolean;
   motionStyles: readonly MotionStyleDef[];
   activeMotionStyle: string;
   onSelectMotionStyle: (id: string) => void;
@@ -270,7 +272,7 @@ export default function SettingsPanel(props: {
   async function selectTheme(id: string) {
     // Standalone/legacy panels retain their existing builtin callback. The
     // managed Appearance surface uses acknowledgment for every theme choice.
-    if (!props.onPreviewTheme && THEMES.some((theme) => theme.id === id)) {
+    if (!props.manageThemes && THEMES.some((theme) => theme.id === id)) {
       onSelectTheme(id);
       return;
     }
@@ -288,14 +290,14 @@ export default function SettingsPanel(props: {
     finally { setThemeSelectionBusy(false); }
   }
 
-  // Cupertino, Neon Grid and Bitcoin DeFi treat the accent as identity and
-  // declare no `[data-accent="…"]` variations (ADR-0022) — the control
-  // below would silently do nothing for them, so it is disabled instead.
+  // Cupertino and packs without accent variations treat the accent as
+  // identity and declare no `[data-accent="…"]` variations (ADR-0022) — the
+  // control below would silently do nothing for them, so it is disabled instead.
   const activeTheme = themes.find((theme) => theme.id === activeThemeId);
-  const accentOptions = getThemeAccentOptions(activeThemeId, props.previewTheme);
-  const accentUnavailable = props.onPreviewTheme ? accentOptions.length === 0
+  const accentOptions = getThemeAccentOptions(activeThemeId);
+  const accentUnavailable = props.manageThemes ? accentOptions.length === 0
     : activeTheme !== undefined && !activeTheme.hasAccentVariations;
-  const partialAccentSupport = !!props.onPreviewTheme && accentOptions.length > 0 && accentOptions.length < ACCENTS.length;
+  const partialAccentSupport = !!props.manageThemes && accentOptions.length > 0 && accentOptions.length < ACCENTS.length;
 
   async function handleImportFile(file: File) {
     let raw: unknown;
@@ -382,7 +384,7 @@ export default function SettingsPanel(props: {
       </label>
       {themeSelectionOutcome && <div role="status">{t(themeSelectionOutcome === "saved" ? "themePack.manager.saved" : "themePack.manager.applyFailed")}</div>}
       {themeSelectionCacheError && <p role="status" className="settings-diagnostic">{t("themePack.manager.cacheWarning")}</p>}
-      {props.onPreviewTheme && <ThemePackManager onPreview={props.onPreviewTheme} onDownload={downloadText} />}
+      {props.manageThemes && <ThemePackManager onDownload={downloadText} />}
       {props.appearance && <>
         <label className="settings-field">
           <span className="settings-field-label">{t("appearance.accent")}</span>
@@ -397,7 +399,7 @@ export default function SettingsPanel(props: {
             aria-describedby={accentUnavailable || partialAccentSupport ? ACCENT_HINT_ID : undefined}
             onChange={(e) => props.appearance!.setAccent(e.target.value as typeof ACCENTS[number])}>
             {ACCENTS.map((accent) => <option key={accent} value={accent}
-              disabled={!!props.onPreviewTheme && !accentOptions.includes(accent)}>{t(`appearance.${accent}`)}</option>)}
+              disabled={!!props.manageThemes && !accentOptions.includes(accent)}>{t(`appearance.${accent}`)}</option>)}
           </select>
           {accentUnavailable && (
             <span className="settings-field-hint" id={ACCENT_HINT_ID}>

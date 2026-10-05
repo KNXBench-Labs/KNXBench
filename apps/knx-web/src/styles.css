@@ -150,99 +150,9 @@
   --knx-backdrop-mask: none;
 }
 
-/* Neon Grid — the cyberpunk register, kept sleek: near-black canvas, one
-   cyan and one magenta, hairline corners, a scanline backdrop. The glitch
-   *motion* is deliberately not here: motion is the Settings panel's own
-   axis (Motion style "Glitch"), and ADR-0022 keeps themes out of it. Pair
-   this theme with that style for the full register. Accent is identity
-   here too, so there are no accent variations. */
-:root[data-theme="neon-grid"] {
-  color-scheme: dark;
-
-  --knx-bg: #05060d;
-  --knx-surface: #0b0f1c;
-  --knx-foreground: #e8fbff;
-  --knx-muted: #8fa8c0;
-  --knx-border: #1e2f4a;
-  --knx-border-hover: #ff2e88;
-
-  --knx-accent: #22e0f5;
-  --knx-on-accent: #00161b;
-  --knx-accent-tertiary: #ff62aa;
-  --knx-gradient-primary: linear-gradient(105deg, #ff2e88, #22e0f5);
-  --knx-gradient-display: linear-gradient(90deg, #22e0f5, #a855f7, #ff2e88);
-
-  --knx-error-color: #ff5d7a;
-  --knx-warning-color: #ffd166;
-  --knx-success-color: #3ef5b0;
-
-  --knx-overlay-backdrop: rgba(5, 6, 13, 0.78);
-  --knx-overlay-shadow: rgba(34, 224, 245, 0.28);
-  --knx-shadow-raised: 0 0 14px -4px rgba(34, 224, 245, 0.55);
-  --knx-shadow-hover: 0 0 28px -4px rgba(255, 46, 136, 0.65);
-
-  --knx-font-heading: "Space Grotesk", sans-serif;
-  --knx-font-body: "Inter", sans-serif;
-  --knx-font-mono: "JetBrains Mono", monospace;
-
-  --knx-radius-card: 3px;
-  --knx-radius-button: 2px;
-  --knx-radius-input: 2px;
-
-  --knx-backdrop-image:
-    repeating-linear-gradient(to bottom, rgba(34, 224, 245, 0.05) 0 1px, transparent 1px 4px),
-    linear-gradient(to right, rgba(255, 46, 136, 0.12) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(34, 224, 245, 0.12) 1px, transparent 1px);
-  --knx-backdrop-size: auto, 48px 48px, 48px 48px;
-  --knx-backdrop-mask: radial-gradient(circle at 50% 30%, black 30%, transparent 100%);
-}
-
-/* Bitcoin DeFi — the loud one: black canvas, orange gradients, real glow. */
-:root[data-theme="bitcoin-defi"] {
-  color-scheme: dark;
-
-  --knx-bg: #030304;
-  --knx-surface: #0f1115;
-  --knx-foreground: #ffffff;
-  --knx-muted: #94a3b8;
-  --knx-border: rgba(255, 255, 255, 0.1);
-  --knx-border-hover: rgba(247, 147, 26, 0.5);
-
-  --knx-accent: #f7931a;
-  /* Ink for text sitting on the accent. This theme had no such token
-     before ADR-0022, so buttons hard-coded white onto orange at 2.3:1. */
-  --knx-on-accent: #2a1500;
-  --knx-accent-tertiary: #ffd600;
-  --knx-gradient-primary: linear-gradient(to right, #ea580c, #f7931a);
-  --knx-gradient-display: linear-gradient(to right, #f7931a, #ffd600);
-
-  --knx-error-color: #ff6b6b;
-  --knx-warning-color: #ffd600;
-  --knx-success-color: #3ddc97;
-
-  --knx-overlay-backdrop: rgba(3, 3, 4, 0.7);
-  --knx-overlay-shadow: rgba(234, 88, 12, 0.25);
-  --knx-shadow-raised: 0 0 20px -5px rgba(234, 88, 12, 0.5);
-  --knx-shadow-hover: 0 0 30px -5px rgba(247, 147, 26, 0.6);
-
-  --knx-font-heading: "Space Grotesk", sans-serif;
-  --knx-font-body: "Inter", sans-serif;
-  --knx-font-mono: "JetBrains Mono", monospace;
-
-  --knx-radius-card: 16px;
-  --knx-radius-button: 999px;
-  --knx-radius-input: 8px;
-
-  --knx-backdrop-image:
-    linear-gradient(to right, rgba(30, 41, 59, 0.5) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(30, 41, 59, 0.5) 1px, transparent 1px);
-  --knx-backdrop-size: 50px 50px;
-  --knx-backdrop-mask: radial-gradient(circle at center, black 40%, transparent 100%);
-}
-
 /* Accent variations — opt-in, per theme, never by negation. Porcelain and
-   Graphite treat the accent as the user's choice; the other three treat it
-   as part of their identity and declare nothing here. "violet" is these
+   Graphite treat the accent as the user's choice; Cupertino treats it as
+   part of its identity and declares nothing here. "violet" is these
    two themes' base accent, so it needs no rule of its own. */
 :root[data-theme="porcelain"][data-accent="mint"] { --knx-accent: #087a62; }
 :root[data-theme="porcelain"][data-accent="blue"] { --knx-accent: #2560c8; }
@@ -820,17 +730,6 @@ main {
 .theme-manager { display: grid; gap: 0.75rem; min-width: 0; }
 .theme-manager h4, .theme-manager p { margin: 0; }
 .theme-manager > button { justify-self: start; }
-.theme-manager-list { display: grid; gap: 0.5rem; padding: 0; margin: 0; list-style: none; }
-.theme-manager-entry {
-  display: grid;
-  gap: 0.3rem;
-  min-width: 0;
-  padding: 0.75rem;
-  border: 1px solid var(--knx-border);
-  border-radius: 6px;
-  background: var(--knx-surface);
-}
-.theme-manager-entry > span, .theme-manager-entry > p { color: var(--knx-muted); font-size: 0.8rem; }
 .theme-manager code, .theme-manager strong, .theme-manager p { overflow-wrap: anywhere; }
 .theme-manager-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.25rem; }
 .theme-manager-actions > button { max-width: 100%; white-space: normal; }
@@ -2512,7 +2411,13 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    some of it back rather than pushing the explorer out of existence. Both
    scroll internally for the same reason. */
 .workbench-pane-left .workbench-navigation { flex: 0 1 auto; overflow: auto; }
-.workbench-pane-left .project-explorer { flex: 1 1 auto; min-height: 0; overflow: auto; }
+/* Basis 0, not auto: the explorer takes only the space the two blocks leave.
+   With `auto` its whole tree height entered the flex calculation, and the
+   column shrank the navigation blocks — and every height a splitter set —
+   to make room for it (user report: splitters did nothing with a project).
+   Its minimum matches the splitters' (`STACK_BLOCK_MIN_PX` in App.tsx), so
+   two blocks dragged to their maximum cannot squeeze it out of sight. */
+.workbench-pane-left .project-explorer { flex: 1 1 0; min-height: 72px; overflow: auto; }
 .workbench .project-explorer .tree-root { margin: 0; }
 .workbench .project-explorer ul { padding-left: 14px; }
 .workbench .tree-row { display: flex; align-items: center; min-height: var(--knx-control-height); }
@@ -2958,7 +2863,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    The first thing anyone sees of this application on a server deployment,
    so it is built the same way everything else is: nothing but the theme
    layer's tokens (ADR-0022), which is what makes it read as porcelain's
-   flat daylight card and as neon-grid's hairline-on-black panel without a
+   flat daylight card and as graphite's dark panel without a
    single per-theme rule below.
 
    It is a full-viewport cover rather than a translucent modal on purpose.

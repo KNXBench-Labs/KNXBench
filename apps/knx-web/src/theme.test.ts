@@ -12,8 +12,8 @@ function fakeStorage(initial: Record<string, string> = {}) {
 }
 
 describe("THEMES", () => {
-  it("includes bitcoin-defi", () => {
-    expect(THEMES.some((t) => t.id === "bitcoin-defi")).toBe(true);
+  it("no longer offers Neon Grid or Bitcoin DeFi (removed 2026-10-05, ADR-0079)", () => {
+    expect(THEMES.map((t) => t.id)).toEqual(["system", "porcelain", "graphite", "cupertino"]);
   });
 
   it("offers at least three palettes besides the System entry", () => {
@@ -52,7 +52,7 @@ describe("resolveThemeId", () => {
   });
 
   it("leaves an explicit choice alone whatever the OS prefers", () => {
-    expect(resolveThemeId("neon-grid", false)).toBe("neon-grid");
+    expect(resolveThemeId("graphite", false)).toBe("graphite");
     expect(resolveThemeId("cupertino", true)).toBe("cupertino");
   });
 });
@@ -63,7 +63,12 @@ describe("loadThemeId", () => {
   });
 
   it("returns a known stored id unchanged", () => {
-    expect(loadThemeId(fakeStorage({ "theme": "bitcoin-defi" }))).toBe("bitcoin-defi");
+    expect(loadThemeId(fakeStorage({ "theme": "cupertino" }))).toBe("cupertino");
+  });
+
+  it("shows a saved choice of a removed palette as System", () => {
+    expect(loadThemeId(fakeStorage({ "theme": "neon-grid" }))).toBe("system");
+    expect(loadThemeId(fakeStorage({ "theme": "bitcoin-defi" }))).toBe("system");
   });
 
   it("falls back to system for an unknown id", () => {
@@ -80,8 +85,8 @@ describe("loadThemeId", () => {
 describe("saveThemeId", () => {
   it("stores the exact key and value", () => {
     const storage = fakeStorage();
-    saveThemeId(storage, "bitcoin-defi");
-    expect(storage.setItem).toHaveBeenCalledWith("theme", "bitcoin-defi");
+    saveThemeId(storage, "cupertino");
+    expect(storage.setItem).toHaveBeenCalledWith("theme", "cupertino");
   });
 });
 

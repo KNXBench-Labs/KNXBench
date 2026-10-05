@@ -3,23 +3,25 @@
 import { useEffect } from "react";
 import { getSetting, settingsStorage, useSettingsRevision } from "./settingsStore";
 import { ACCENTS, loadAppearance, type Accent } from "./appearance";
-import { readThemePackStore, validateThemePack } from "./themePack";
+import { readThemePackStore } from "./themePack";
 import type { ThemePack, ThemePackStore } from "./themePack";
 import { applyThemePack } from "./themePackDom";
+import { BUNDLED_THEME_PACKS } from "./bundledThemes";
 
 /** `hasAccentVariations` is whether styles.css declares any
- * `[data-accent="…"]` variation for this theme (ADR-0022: three of five
- * treat the accent as identity and declare none). `themeTokens.test.ts`
+ * `[data-accent="…"]` variation for this theme (ADR-0022: Cupertino
+ * treats the accent as identity and declares none). `themeTokens.test.ts`
  * checks this flag against the stylesheet so it cannot go stale. */
 export interface ThemeDef { id: string; name: string; hasAccentVariations: boolean; }
 
-/** The palettes: one `:root[data-theme="<id>"]` block each in styles.css. */
+/** The palettes: one `:root[data-theme="<id>"]` block each in styles.css.
+ * Neon Grid and Bitcoin DeFi were removed on the user's decision of
+ * 2026-10-05 (ADR-0079). A saved choice of either is kept as written and
+ * reported as an unavailable selection, like any other unknown id. */
 const PALETTE_THEMES: readonly ThemeDef[] = [
   { id: "porcelain", name: "Porcelain", hasAccentVariations: true },
   { id: "graphite", name: "Graphite", hasAccentVariations: true },
   { id: "cupertino", name: "Cupertino", hasAccentVariations: false },
-  { id: "neon-grid", name: "Neon Grid", hasAccentVariations: false },
-  { id: "bitcoin-defi", name: "Bitcoin DeFi", hasAccentVariations: false },
 ];
 
 /**
@@ -63,9 +65,19 @@ export function loadThemeId(storage: Pick<Storage, "getItem">, themes: readonly 
   if (raw === "dark") return "graphite";
   return themes.some((theme) => theme.id === raw) ? raw! : "system";
 }
-/** Keep the built-in registry fixed; derive installed choices from validated data. */
+/** The pack behind a theme id: an installed pack wins over a shipped one
+ * with the same id — it is the user's own data (ADR-0079). */
+export function findThemePack(store: ThemePackStore, id: string): ThemePack | undefined {
+  return store.packs.find((pack) => pack.id === id) ?? BUNDLED_THEME_PACKS.find((pack) => pack.id === id);
+}
+/** Whether a theme id is a shipped pack that no installed pack replaces. */
+export function isBundledThemeId(store: ThemePackStore, id: string): boolean {
+  return !store.packs.some((pack) => pack.id === id) && BUNDLED_THEME_PACKS.some((pack) => pack.id === id);
+}
+/** Keep the built-in registry fixed; derive pack choices from validated data. */
 export function getThemeDefinitions(store: ThemePackStore = readThemePackStore(getSetting("uiThemePacks"))): readonly ThemeDef[] {
-  return [...THEMES, ...store.packs.map((pack) => ({ id: pack.id, name: pack.name,
+  const bundled = BUNDLED_THEME_PACKS.filter((pack) => isBundledThemeId(store, pack.id));
+  return [...THEMES, ...[...bundled, ...store.packs].map((pack) => ({ id: pack.id, name: pack.name,
     hasAccentVariations: Object.keys(pack.accents ?? {}).length > 0 }))];
 }
 export interface ThemeSelection {
@@ -83,7 +95,7 @@ export function readThemeSelection(storage: Pick<Storage, "getItem">, rawPacks: 
   if (raw !== null && raw !== "light" && raw !== "dark" && !themes.some((theme) => theme.id === raw)) {
     diagnostics.push({ id: null, diagnostic: { kind: "missingSelection", path: "$.theme" } });
   }
-  return { id, pack: store.packs.find((pack) => pack.id === id), diagnostics };
+  return { id, pack: findThemePack(store, id), diagnostics };
 }
 export function resolveThemeId(id: string, dark: boolean): string {
   return id === "system" ? (dark ? "graphite" : "porcelain") : id;
@@ -91,51 +103,34 @@ export function resolveThemeId(id: string, dark: boolean): string {
 export function saveThemeId(storage: Pick<Storage, "setItem">, id: string): void {
   try { storage.setItem(STORAGE_KEY, id); } catch { /* Session preference still works. */ }
 }
-/** An ephemeral visual candidate, owned by the same root runtime as normal themes. */
-export interface ThemePreview { readonly themeId: string; readonly pack?: ThemePack; }
-/** Advertise only variations the same admitted visual candidate can apply. */
-export function getThemeAccentOptions(id: string, preview?: ThemePreview): readonly Accent[] {
-  const admitted = preview?.pack && preview.pack.id === preview.themeId
-    ? validateThemePack(preview.pack) : undefined;
-  if (admitted?.ok) return ACCENTS.filter((accent) => Object.hasOwn(admitted.pack.accents ?? {}, accent));
-  const builtinPreview = !preview?.pack && THEMES.some((theme) => theme.id === preview?.themeId);
-  const effectiveId = builtinPreview ? preview!.themeId : id;
-  const builtin = THEMES.find((theme) => theme.id === effectiveId);
+/** Advertise only the accent variations the selected theme can apply. */
+export function getThemeAccentOptions(id: string): readonly Accent[] {
+  const builtin = THEMES.find((theme) => theme.id === id);
   if (builtin) return builtin.hasAccentVariations ? ACCENTS : [];
-  const stored = readThemePackStore(getSetting("uiThemePacks")).packs.find((pack) => pack.id === effectiveId);
-  return ACCENTS.filter((accent) => Object.hasOwn(stored?.accents ?? {}, accent));
+  const pack = findThemePack(readThemePackStore(getSetting("uiThemePacks")), id);
+  return ACCENTS.filter((accent) => Object.hasOwn(pack?.accents ?? {}, accent));
 }
 /** A theme consumer must not acquire another root DOM lease. */
 export function useSavedThemeId(): string {
   useSettingsRevision();
   return readThemeSelection(settingsStorage, getSetting("uiThemePacks")).id;
 }
-export function useThemeId(preview?: ThemePreview): [string, (id: string) => void] {
+export function useThemeId(): [string, (id: string) => void] {
   const revision = useSettingsRevision();
   const { id, pack } = readThemeSelection(settingsStorage, getSetting("uiThemePacks"));
-  const previewPack = preview?.pack;
-  const previewId = (previewPack ? previewPack.id === preview?.themeId
-    : THEMES.some((theme) => theme.id === preview?.themeId)) ? preview?.themeId : undefined;
   useEffect(() => {
     const query = window.matchMedia("(prefers-color-scheme: dark)");
     const root = document.documentElement;
-    const admitted = previewPack ? validateThemePack(previewPack) : undefined;
-    const previewActive = previewId !== undefined && (!previewPack || admitted?.ok);
-    const visualPack = previewActive ? (admitted?.ok ? admitted.pack : undefined) : pack;
-    const application = visualPack ? applyThemePack(root, visualPack, loadAppearance(settingsStorage).accent) : undefined;
-    const appliedId = application && !application.ok ? "system" : ((previewActive ? previewId : undefined) ?? id);
+    const application = pack ? applyThemePack(root, pack, loadAppearance(settingsStorage).accent) : undefined;
+    const appliedId = application && !application.ok ? "system" : id;
     const apply = () => { root.dataset.theme = resolveThemeId(appliedId, query.matches); };
     apply();
     query.addEventListener("change", apply);
     return () => {
       query.removeEventListener("change", apply);
       if (application?.ok) application.release();
-      if (previewId !== undefined) {
-        const current = readThemeSelection(settingsStorage, getSetting("uiThemePacks"));
-        root.dataset.theme = resolveThemeId(current.id, query.matches);
-      }
     };
-  }, [id, revision, previewId, previewPack]);
+  }, [id, revision]);
   return [id, (next) => {
     if (getThemeDefinitions().some((theme) => theme.id === next)) saveThemeId(settingsStorage, next);
   }];

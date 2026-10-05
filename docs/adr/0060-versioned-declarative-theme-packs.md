@@ -2,7 +2,8 @@
 
 Date: 2026-10-02
 
-Status: Accepted — U14–U18 delivered/read back; U18 actual24-command extension acceptance and closing self-review verified, source delivery1964fd6b, final metadata in handover.
+Status: Accepted, preview and per-theme management parts superseded by
+[ADR-0079](0079-theme-choice-is-one-dropdown.md) (2026-10-05) — U14–U18 delivered/read back; U18 actual24-command extension acceptance and closing self-review verified, source delivery1964fd6b, final metadata in handover.
 
 ## Context
 

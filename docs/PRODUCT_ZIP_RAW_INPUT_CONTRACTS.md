@@ -132,3 +132,5 @@ only matter for a file growing between check and read, which is not tested.
 HTTP `POST` catalog install already has `DefaultBodyLimit` 256 MiB
 (`apps/knx-server/src/routes.rs`); no HTTP boundary test is added here.
 Valid-large success, streaming and production resource policy remain open.
+
+Integrated public16 on 0533230b independently accepted: 16 exit0, Rust 3244/0/177 in 180 blocks, Web 2001, Chromium 131 plus probe 1, 886 frozen inputs, CLI knx 0.1.0-alpha.4+g0533230b. Three earlier attempts refused on Web tests (two group-address-drag race failures, one vitest worker crash), retained. The race was fixed by a user-authorized one-line wait in the e2e test.

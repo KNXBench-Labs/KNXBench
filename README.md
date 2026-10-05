@@ -45,8 +45,9 @@ In hindsight: I must have been drunk.
   bus panel.
 
 Not available, and not claimed: writing a `.knxproj` (withdrawn 2026-09-20 — once imported,
-a project stays in KNXBench's own format), commissioning or device download to real
-hardware, KNX IP Secure, and anything resembling certification or full ETS compatibility. The wording here
+a project stays in KNXBench's own format), general commissioning (a device download is
+verified on one device only, and address programming is refused for now), KNX IP Secure,
+and anything resembling certification or full ETS compatibility. The wording here
 is **KNX-compatible**, deliberately. See
 [Implementation status](docs/manual/implementation-status.md) and
 [Known issues](docs/manual/known-issues.md) for the honest current picture.

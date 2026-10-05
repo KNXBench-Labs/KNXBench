@@ -23,8 +23,9 @@ publish a release AppImage exists but has never been run.
   cookie. No user accounts, no roles, no audit trail, and no TLS of its own.
   Without a password it refuses to leave loopback at all.
   [Installation](04-installation.md) has the recipe and the caveats.
-- Nothing in KNXBench writes configuration to a real KNX device.
-  Commissioning and device download are not implemented.
+- Writing configuration to a real KNX device is limited to a device download
+  verified on one device so far; address programming is refused for now and
+  most devices still need another commissioning tool.
 
 None of this means KNXBench is unusable — it is under active development and
 the test suite is substantial — but it does mean you should treat it the way

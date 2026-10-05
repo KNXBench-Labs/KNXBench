@@ -908,6 +908,15 @@ check waits for the user's go.
 
 **Sources:** `DOC-03`, `KL-9`, `KL-16`, `KL-46`, plus all earlier results and accepted/later routes.
 **Dependencies:** completed/explicitly blocked AR00–AR14, AR06P, AR14B and AR14D (one consolidated ledger); newest owner receipts.
+**Status:** `IN_PROGRESS` 2026-10-06. Slice 1 done: the four source IDs are
+disposed with fresh evidence — `KL-9`, `KL-16`, `KL-46` `ACCEPTED_BOUNDARY`
+(Git external-diff recipe run and documented; GTK3/advisories rechecked; report
+names rechecked against tests), `DOC-03` `DONE` (stale commissioning,
+`.knxproj` hand-over and suggestion statements corrected across README and
+manual; counts verified). A storage finding from the same check became
+`KL-157` (atomic upgrade, fixed `b247268a`). Open: the cross-document
+reconciliation/recount (items 1–2), deployment/import/hardware boundaries
+(rest of item 3) and the scope/risk/decision matrix (item 4).
 
 - [ ] Reconcile `IMPLEMENTATION_STATUS`, `KNOWN_LIMITATIONS`, `LIMITATION_TRIAGE`, `ROADMAP`, `GAP_ANALYSIS_ETS`, `COMPATIBILITY`, `IMPORT_EXPORT` and the relevant model/architecture docs with actual source/tests.
 - [ ] Recount limitations and derived tables programmatically; preserve duplicate-ID disambiguation, historical anchors and new entries published by either other track.

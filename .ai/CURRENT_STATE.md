@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 15:20 CEST
+Web lock: released by claude-goal-ui-owner (splitter fix, theme package and AR21 finding 5 delivered)
+- **Completed:** AR21 finding 5 (TELEGRAM_FLOW_VISUALIZATION §17) corrected, §18: a telegram whose targets were all refused at the model's node limit (`to: []`, no line) now counts as not drawn and marks the rendering reduced, in bundled and unbundled batches; §16's "no third case" annotated. Two `flowAnimator` tests at a one-node limit (Alpha's probe), RED on the previous code; 4/4 mutants killed. Gate under leases 7/8/9: Vitest 2,004/116, Chromium 132, flow specs ×3 42, docs checks, diff-check all green. Log: `.ai/logs/2026-10-05_claude_ui-ar21-finding5.md`.
+- **Pending/Next Steps:** Alpha: AR21 rerun for finding 5 (FLOW-01 stays IN_PROGRESS until then). The web lock is free.
+- **Notes for Codex oder Claude:** No Rust source changed. No KNX/bus contact.
+
+---
+
 - **Last Agent:** Claude (iaw session, alpha package AR14B by user decision)
 - **Timestamp:** 2026-10-05 15:10
 Web lock: not taken or released by this entry

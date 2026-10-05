@@ -87,7 +87,15 @@ includes28 selected offline cases (matrix included);421 private files unchanged.
 This closes the fixture-coverage finding, not native/Orca/general WCAG or
 whole-application Alpha/ETS acceptance. Publication/readback is in the handover.
 
-Preview cancellation changes presentation only. Once a guarded write is
+Since 2026-10-05 there is no preview ([ADR-0079](adr/0079-theme-choice-is-one-dropdown.md)):
+a theme choice or import is a saved change. Pack-based themes — imported or
+shipped, such as Modern Retro Green CRT — are painted once the application
+module has loaded; the pre-mount bootstrap in `index.html` knows only the CSS
+palettes and shows the System palette until then. The storage location shown in
+Settings is the documented default per deployment (desktop identifier,
+`KNX_DATA_DIR`); the server does not report its real data directory.
+
+Historical (until 2026-10-05): preview cancellation changed presentation only. Once a guarded write is
 dispatched, closing Settings cannot cancel its server operation; the UI states
 this and disables false-undo Cancel while awaiting acknowledgment. A definitive
 409 retains the last confirmed settings until the existing refresh sees a peer;

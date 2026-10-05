@@ -1,5 +1,37 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — Themes: one dropdown, CRT shipped, storage location shown (ADR-0079)
+
+User decision: the preview cards in Settings › Appearance go ("Dropdown
+reicht"), Modern Retro Green CRT ships with the application, the pane states
+where themes are stored, Neon Grid and Bitcoin DeFi are removed.
+
+- **Dropdown only.** `ThemePackManager` no longer lists themes or previews
+  them; the `ThemePreview` plumbing (App → SettingsPanel → `useThemeId`) is
+  gone and `SettingsPanel` takes `manageThemes` instead. An import is admitted
+  as before and then installed *and selected* in one conditional write;
+  replacing an installed id still asks first. Export/Remove act on the selected
+  pack (Remove only for installed packs). Diagnostics and recovery export stay.
+- **Shipped CRT.** `src/bundledThemes.ts` admits
+  `themes/modern-retro-green-crt.knx-theme.json` through `parseThemePackText`
+  at build time. Selecting it stores only `theme`; it is never copied into
+  `uiThemePacks`. An installed pack with the same id wins and is listed once.
+- **Storage location** stated in the pane (en/de): `settings.json`
+  (`uiThemePacks`, `theme`) in the data folder — desktop
+  `~/.local/share/com.knxbench.knxbench-labs`, server `KNX_DATA_DIR` (Docker
+  `/data`). No API returns a host path (unchanged rule).
+- **Neon Grid / Bitcoin DeFi removed** from registry, stylesheet and the
+  `index.html` bootstrap list. A saved choice of either is kept, shown as
+  System and reported as an unavailable selection.
+- Tests: new `themeSettings.test.tsx` (10; written first, 8 of the first 9
+  RED on the previous code — the shadowing case passes trivially without a
+  shipped pack),
+  `ThemePackManager.integration.test.tsx` rewritten (23; preview-only cases
+  dropped, every write/consent/conflict/500/cache/late-file/out-of-order
+  guarantee kept), `themePreview.test.tsx` removed with its feature,
+  `e2e/theme-manager.e2e.ts` rewritten (12, incl. CRT selection + cold reload
+  in Chromium). 12 code mutants killed.
+
 ## 2026-10-05 — Left-column splitters work again with a project loaded
 
 - User report: with a project open, the separators between the navigation

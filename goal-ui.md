@@ -254,6 +254,12 @@ was initially blocked by the host firewall; after the user's rule change,
 CLI and HTTP discovery succeeded (RESEARCH §20.1). Native WebKitGTK Search
 remains unverified. Do not redispatch the completed packages.
 
+User-requested follow-ups outside the U-sequence (2026-10-05, owner session,
+under the Web lock): left-column splitter fix (`4804982b`); theme choice by
+dropdown only, shipped Modern Retro Green CRT, theme storage location in
+Settings, Neon Grid/Bitcoin DeFi removed — ADR-0079, superseding ADR-0060's
+preview parts.
+
 ### U12 — Delivered within verified boundaries [web]
 
 ISSUE-05 structure editing, ISSUE-08 grouping, §146 labels, §147 monitor

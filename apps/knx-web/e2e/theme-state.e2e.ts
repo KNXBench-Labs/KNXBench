@@ -9,8 +9,6 @@ const palettes: Palette[] = [
   { id: "porcelain", resolved: "porcelain", scheme: "light", accents: true },
   { id: "graphite", resolved: "graphite", scheme: "dark", accents: true },
   { id: "cupertino", resolved: "cupertino", scheme: "light", accents: false },
-  { id: "neon-grid", resolved: "neon-grid", scheme: "dark", accents: false },
-  { id: "bitcoin-defi", resolved: "bitcoin-defi", scheme: "dark", accents: false },
   { id: "system", resolved: "porcelain", scheme: "light", accents: true },
   { id: "system", resolved: "graphite", scheme: "dark", accents: true },
   { id: "user-orchid", resolved: "user-orchid", scheme: "light", accents: true },

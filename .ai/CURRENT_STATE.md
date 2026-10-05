@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 15:09 CEST
+Web lock: still held by claude-goal-ui-owner for AR21 finding 5 (TELEGRAM_FLOW_VISUALIZATION §17); not released by this entry
+- **Completed:** Theme package (user request, ADR-0079, supersedes ADR-0060's preview parts): Settings › Appearance has one Theme dropdown — no per-theme preview cards, no Apply/Cancel, no "Use system theme"; Modern Retro Green CRT ships (`src/bundledThemes.ts` admits `themes/modern-retro-green-crt.knx-theme.json` via `parseThemePackText`; selecting stores only `theme`; an installed pack with the same id wins); import installs + selects in one conditional write (replacement consent kept); Export/Remove for the selected pack; storage location stated (en/de: `settings.json` `uiThemePacks`/`theme`, desktop `~/.local/share/com.knxbench.knxbench-labs`, server `KNX_DATA_DIR`, Docker `/data`); Neon Grid and Bitcoin DeFi removed (saved choice kept, shown as System + missingSelection diagnostic). Tests: new `themeSettings.test.tsx` (RED first), integration and `e2e/theme-manager.e2e.ts` rewritten, `themePreview.test.tsx` removed; 12/12 mutants. Gate green (header fix and post-rebase docs checks rerun). Log: `.ai/logs/2026-10-05_claude_ui-themes-dropdown-crt.md`.
+- **Pending/Next Steps:** AR21 finding 5 (prepared in worktree `ui-flow-f5`), then release the web lock.
+- **Notes for Codex oder Claude:** The server still never reports host paths; the pane states documented defaults. Pack themes (also CRT) paint after module load; `index.html` bootstrap lists only CSS palettes (KNOWN_LIMITATIONS theme section). No Rust source changed. No KNX/bus contact.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-05 15:00
 - **Completed:** Story tooling follow-ups after edition `2026-10-05.1` (no content change, no new candidate). (1) Privacy review locations name records by id (`events[alpha-backlog].aside` instead of `events[34].aside`), with two tests that failed before the change; existing candidates stay byte-identical (`prepare` reports `unchanged`). (2) `story/tests/browser/check_story.mjs` takes `STORY_BROWSER=chromium|firefox|webkit`; Chromium 153 and Firefox 155 both pass 46/46 on `previews/2026-10-05.1.html`. WebKit could not run: Playwright's build needs Ubuntu libraries (ICU 74, flite, libWPEWebKit) missing on this Arch-based host; installing them needs sudo, not done. README limitation and IMPLEMENTATION_STATUS updated. Gates: 62 unit tests OK, anchors ok, diff check clean.

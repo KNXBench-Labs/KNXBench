@@ -234,3 +234,12 @@ Evidence and narrower compatibility claims are in
 The screenshot samples a paused native animation; normal expiry/cancellation is
 verified separately with real timers. This is not WebKitGTK/Orca or broad WCAG
 acceptance, and it does not supply Save-only purple or an exact selection color.
+
+## Follow-up (2026-10-05)
+
+Neon Grid and Bitcoin DeFi were removed on the user's decision
+([ADR-0079](0079-theme-choice-is-one-dropdown.md)). The built-in CSS palettes
+are Porcelain, Graphite and Cupertino; Cupertino is the one that treats its
+accent as identity. The Modern Retro Green CRT palette ships as a validated
+theme pack, not as a CSS block. Mentions of the two removed themes above are
+historical.

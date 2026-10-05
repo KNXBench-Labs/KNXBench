@@ -19,10 +19,12 @@ row-by-row evidence.
 
 **Can KNXBench program or commission a device?**
 
-No. There is no download command, no route, and no button anywhere in the interface or
-the command line that writes an application program, parameters, group links, or an
-individual address into a real device. KNXBench can read from a bus and send a single
-group value; that is the entire list of what it writes to one. See
+Only narrowly. `knx device download` and the **Download to device** tab write a project
+device's application tables and parameters after a plan and a per-device confirmation;
+this has been verified on one device so far, and procedures KNXBench cannot plan are
+refused. Programming an individual address is currently refused until durable recovery
+exists, and unloading and secure devices are not supported. For anything beyond that,
+use a commissioning tool that covers your devices. See
 [Bus monitor and KNXnet/IP](../user-guide/07-bus-and-interfaces.md#what-knxbench-does-and-does-not-do-on-a-bus).
 
 **Is my project safe with KNXBench?**

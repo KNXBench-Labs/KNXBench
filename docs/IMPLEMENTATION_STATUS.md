@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — AR15 slice 1: the manual stops saying "never" about downloads
+
+- `DOC-03` DONE: README, getting started, workflow §12, command line, FAQ,
+  known issues, reference and implementation status no longer claim that no
+  download command exists; they now state the verified scope (one device,
+  address programming refused under ADR-0058) and link the bus chapter. The
+  workflow no longer suggests exporting a `.knxproj`; two resolved roadmap
+  suggestions moved to a "resolved" note. Counts checked against code.
+- `KL-9` ACCEPTED_BOUNDARY: `knx diff` as a Git external diff driver was run
+  on a synthetic repository; the manual recipe handles Git's `/dev/null` for
+  added/removed files and says `--ext-diff` is needed for log/show.
+- `KL-16` ACCEPTED_BOUNDARY: advisories ok offline (DB 2026-10-03), GTK4
+  migration PRs still open, Tauri 3 still alpha.
+- `KL-46` ACCEPTED_BOUNDARY: rechecked against the named tests.
+
 ## 2026-10-06 — KL-157: a project upgrade is now all or nothing
 
 - Found by AR15 while checking storage claims: `knx_store::migration::migrate`

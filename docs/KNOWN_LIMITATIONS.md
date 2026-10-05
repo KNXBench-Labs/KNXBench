@@ -1118,6 +1118,20 @@ between two versions requires the application.
 **Lifted when.** A textual export and import format is added, if a demonstrated
 need arises. It is deliberately not built speculatively.
 
+**Update 2026-10-06 (AR15): accepted boundary, with a verified Git recipe.**
+Still one SQLite file (ADR-0003); no textual project format exists, and none
+is built speculatively. Two ways to review versions were run on a synthetic
+repository (the `zipcrypto-minimal` fixture project, one address renamed and
+one added through `knx ga-import`, two commits): `knx diff` registered as a
+Git external diff driver prints `+ group address 0/0/2` and
+`~ group address 0/0/1: name: GA -> Flur Licht`; `git show`/`git log -p` need
+`--ext-diff`, and the driver must handle Git's `/dev/null` for added/removed
+files, which `knx diff` refuses (Git then aborts the log). A `sqlite3 .dump`
+textconv also works, but shows raw rows and counters rather than KNX
+entities. `knx diff` reports what it compares, not every stored byte, and it
+upgrades an older-schema working file in place (§157). Recipe in the manual:
+[Reviewing project versions in Git](manual/user-guide/08-reports-and-diff.md#reviewing-project-versions-in-git).
+
 ## 11. `.knxprod` support is evidenced for schemes 11, 12, 13, 14, 20, and exact-namespace 21
 
 **Update 2026-10-05 (AR06 row reconciliation).** Exact-namespace scheme 23
@@ -1623,6 +1637,16 @@ database. Until then, the `deny.toml` ignore list is permanent infrastructure.
 backend and becomes the default on Linux.
 
 </details>
+
+**Update 2026-10-06 (AR15): rechecked, decision unchanged.** `Cargo.lock`
+pins `tauri` 2.11.5 (crates.io stable is 2.12.1), `gtk` 0.18.2, `webkit2gtk`
+2.0.2 and `wry` 0.55.1. `cargo deny --offline check advisories` against the
+local advisory database of 2026-10-03 (`ef6173c`) reports `advisories ok`
+with no unmatched ignore. Wry's GTK4/WebKitGTK 6 migration
+([wry#1767](https://github.com/tauri-apps/wry/pull/1767)) and Tauri's
+([tauri#14684](https://github.com/tauri-apps/tauri/pull/14684)) are still open
+(GitHub API, 2026-10-06); Tauri 3.0.0-alpha.4 was published on 2026-10-01.
+The GTK3 platform dependency is an accepted boundary for the Alpha.
 
 ## 18. `open_project` does not clear the previous `.knxdb` `store_path`
 
@@ -2654,6 +2678,15 @@ invent human-readable names. They remain complete but carry explicit warnings.
 **Lifted when.** The data-dependent part cannot be lifted globally: product
 packages are optional. The architectural gap is closed; missing external data
 is now an explicit per-device report condition.
+
+**Update 2026-10-06 (AR15): accepted boundary, rechecked.** Behaviour as
+described above, covered by `knx-report`
+`unresolved_identity_and_unrenderable_value_warn_and_remain_inline` and
+`knx-app` `mismatched_product_and_program_never_cross_attribute_another_devices_program_data`
+and `blank_identity_parameter_and_module_argument_names_fall_back_to_raw_references`
+(all green in the 2026-10-06 workspace run, 3,311 passed). Since AR10 slice 3
+the report also uses the requested product language with the same rule as the
+device detail. Names stay data-dependent: no product package, no name.
 
 <a id="47-project-documentation-export-does-not-list-parameter-values-or-module-instance-arguments"></a>
 ## 47. Project documentation export lists parameter values and module-instance arguments — partially resolved 2026-09-23 (T14)

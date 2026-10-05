@@ -265,10 +265,12 @@ A mismatch exits with `1`, so this works as an integrity check in a scheduled jo
 > address from a reserved range and belongs to no real network; `1/2/3` and `1.1.0` are
 > generic. Substitute your own knowingly — never by copy and paste.
 
-KNXBench never writes anything into a device: no application programs, no parameters, no
-individual addresses, no commissioning of any kind. See the boundary section in
-[Bus monitor and KNXnet/IP](07-bus-and-interfaces.md) for the full statement and the
-guard rails behind it.
+None of the `knx bus` commands writes anything into a device. Writing to a device is
+reserved for the `knx device` commands below, each with its own confirmation:
+`knx device download` writes a project device's configuration (verified on one device
+so far), and address programming is currently refused before any connection. See the
+boundary section in [Bus monitor and KNXnet/IP](07-bus-and-interfaces.md) for the full
+statement and the guard rails behind it.
 
 ### `knx bus discover` — find interfaces
 

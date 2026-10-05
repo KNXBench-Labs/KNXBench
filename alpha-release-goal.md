@@ -358,6 +358,8 @@ Both review findings closed; task-owned cleanup then AR07 offline research next.
 
 **Exit evidence:** bounded compatibility/import report, malformed-input and atomicity tests, native save/load evidence and an explicit sample matrix. Missing independent samples remain `BLOCKED_EXTERNAL`, not “compatible”.
 
+**Ledger rows reconciled 2026-10-05:** `KL-128` `DONE`; `KL-11`, `KL-125` `BLOCKED_EXTERNAL`; `IMPORT-06`, `KL-15`, `PDB-08`, `PDB-10` `ACCEPTED_BOUNDARY`; `KL-1` unchanged (`BLOCKED_EXTERNAL`). Evidence and test names in the ledger rows.
+
 ### AR06P — Admit real-world product packages the supported grammar already covers
 
 **Sources (post-snapshot, outside the 180-ID ledger):** `KL-149`, `KL-150`, `KL-151`, `KL-152`, `KL-153`.

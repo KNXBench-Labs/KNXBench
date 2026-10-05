@@ -1,5 +1,17 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR06 rows reconciled: seven TODOs find their place
+
+- Status only, no product code. Named evidence rerun on `2f6f20b0` with the
+  OriginalData corpus linked: 258 passed / 0 failed / 0 ignored in 11 blocks
+  across knx-etsproj, knx-productdb, knx-cli, knx-app and knx-server.
+- `KL-128` → `DONE` (legacy filename refusal fixed in 95e6bcb0);
+  `KL-11`, `KL-125` → `BLOCKED_EXTERNAL` (missing scheme 15–19/22 samples,
+  missing independent schema-23 project); `IMPORT-06`, `KL-15`, `PDB-08`,
+  `PDB-10` → `ACCEPTED_BOUNDARY` with their lifting conditions unchanged.
+- KNOWN_LIMITATIONS §11 gains the scheme-23 pointer it was missing; §128
+  notes that its misnaming is fixed.
+
 ## 2026-10-05 — AR09: a group address finally says what it carries (ADR 0078)
 
 - `GroupAddressEntry::declared_dpt: Override<DptRef>` holds schema-21+

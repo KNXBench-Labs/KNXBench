@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 22:57 CEST
+Web lock: taken by claude-goal-ui-owner for AR21 findings 6 and 7 (telegram-flow note), then KL-37 markers
+- **Completed:** Lock taken only; no source change in this entry.
+- **Pending/Next Steps:** UI owner: AR21 finding 6 (partly drawn / refused-sender telegrams in the note, §19) and finding 7 (event-ring overflow shown, §20); then `KL-37` slice-2b markers. Alpha: AR21 rerun once delivered.
+- **Notes for Codex oder Claude:** Web-only; no server change planned.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 22:33 CEST
 - **Completed:** **AR21 recheck (user request).** On `bb788c56`: Web build, Web Vitest 2,029/2,029, flow Vitest 101/101, flow e2e ×3 42/42, drag e2e ×5 10/10 (netless), two own `queuePulses` mutants caught. Finding 6 still open. New **finding 7** (MINOR): `flowModel` counts event-ring overflow (`eventsDropped`, ring 2,048) but nothing shows it, contrary to "do not silently discard semantic events" (probe 2,100 fresh telegrams → note 2,048 bundled / 0 dropped). TELEGRAM_FLOW_VISUALIZATION §20. `FLOW-01` IN_PROGRESS.

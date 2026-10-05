@@ -485,6 +485,13 @@ directory without extraction), not from file names.
 | **23** | 2 | 0 | 2 unsupported namespace (§153) |
 | no ZIP | 1 | 0 | invalid ZIP: ABB serves a PDF named `.knxprod`. Correctly refused |
 
+**Update 2026-10-05 (AR06P closed).** After §149–§153 the same 853 files,
+fresh database each: 837 installed with the standard limits, 15 size-limit
+refusals, 1 invalid ZIP; with `knx products ingest --allow-large-package`
+(ADR-0082) 852 installed. Scheme 10 is admitted since ADR-0083
+([census](PRODUCT_SCHEME_10_RESEARCH.md#corpus-census-and-admission--2026-10-05)).
+The table above stays the historical 2026-10-03 result.
+
 **Outcome totals (shared run).** 644 installs (608 new packages and 36
 byte-identical re-deliveries reported as "already known"), 147
 unsupported-namespace refusals, 46 CLI extension-case refusals (all Hager),

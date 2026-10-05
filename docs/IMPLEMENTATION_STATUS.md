@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — KL-153: ABB's ETS4 shelf gets its library card (scheme 10, ADR-0083)
+
+- Exact namespace `http://knx.org/xml/project/10` is admitted through the
+  strict member validation of 21/23 (no foreign elements, no qualified
+  attributes); generic scheme-11 readers and unknown reporting.
+- Evidence: census of 146 packages / 1,391 XML members — no element,
+  attribute or parent/child pair outside scheme 11's observed vocabulary.
+- Tests: `knx-productdb/tests/scheme10.rs` (4 tests), three compiled mutants;
+  ProductDB/CLI/server/xtask 1,589 passed / 0 failed; private product matrix
+  unchanged (pin holds, no scheme-10 file in its scope).
+- Release, 853 public files, fresh DB each: 692 → 837 installed (standard),
+  852 with `--allow-large-package`. AR06P is DONE.
+
 ## 2026-10-05 — KL-151: Siemens fits through the door, if you hold it open (ADR-0082)
 
 - `knx_productdb::PackageLimits` (`STANDARD` 64 MiB / 256 MiB, `LARGE`

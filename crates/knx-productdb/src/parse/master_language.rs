@@ -53,7 +53,8 @@ fn supported_namespace(namespace: &str) -> bool {
     // form, not a newly admitted product-package scheme. Others are exact.
     matches!(
         namespace,
-        "" | "http://knx.org/xml/project/11"
+        "" | "http://knx.org/xml/project/10"
+            | "http://knx.org/xml/project/11"
             | "http://knx.org/xml/project/12"
             | "http://knx.org/xml/project/13"
             | "http://knx.org/xml/project/14"

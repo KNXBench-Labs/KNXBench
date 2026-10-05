@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 01:12 CEST
+- **Completed:** **KL-153 DONE, AR06P DONE (ADR-0083).** Exact product scheme 10 admitted (`package.rs` `master_scheme` + strict member validation `10 | 21 | 23`; `parse/master_language.rs` namespace list). Census: 146 scheme-10 packages, 1,391 XML members, 0 names outside scheme 11. Tests `crates/knx-productdb/tests/scheme10.rs`; `scheme23.rs` no longer lists 10 as unresearched. Gate: fmt, Clippy, 3 mutants caught, 1,589/0/89, private matrix pin unchanged, five xtask checks. Release 853: 692 → 837 (standard), 852 with `--allow-large-package`; 1 PDF-as-ZIP stays refused.
+- **Pending/Next Steps:** Alpha: AR15 and the remaining TODO/WAITING rows of the ledger.
+- **Notes for Codex oder Claude:** Scheme-10 semantics rest on shared names with scheme 11, not on a specification (none found); a primary scheme-10 XSD that contradicts this reopens ADR-0083. Web lock: unchanged per the newest owner line below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 23:26 CEST
 - **Completed:** **KL-151 DONE (ADR-0082).** `knx_productdb::PackageLimits::{STANDARD, LARGE}` + `install_package_with_limits`; `knx products ingest --allow-large-package` (256 MiB member / 4 GiB expanded), hint on size refusal, refused for `.knxproj`. Default and HTTP route unchanged. Release measurement on the 15 public size-refused packages: 14 installed + verified, 1 scheme-10 refusal; max 760.5 MiB RSS / 256 s / 7.18 GiB DB (docs/PRODUCT_ZIP_LARGE_PROFILE.md). Tests: `zip_cap_boundaries.rs` (+5), `cli_large_package.rs` (3).
 - **Pending/Next Steps:** AR06P: `KL-153` scheme 10 (vocabulary census vs supported schemes running/next); AR15; **AR21 rerun of findings 6/7 is ready** (UI owner delivered, TELEGRAM_FLOW_VISUALIZATION §21).

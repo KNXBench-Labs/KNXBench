@@ -222,8 +222,8 @@ fn scheme23_late_evidence_failure_preserves_nonempty_database() {
 
 #[test]
 fn scheme23_admission_does_not_admit_unresearched_master_namespaces() {
+    // Scheme 10 is admitted since ADR-0083 (`tests/scheme10.rs`).
     for namespace in [
-        "http://knx.org/xml/project/10",
         "http://knx.org/xml/project/22",
         "http://knx.org/xml/project/24",
         "urn:extension",

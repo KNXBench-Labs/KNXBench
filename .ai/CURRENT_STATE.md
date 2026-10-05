@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-10-05 09:59
+Web lock: held by claude-alpha for U21 corrections; not taken or released by this entry
+- **Completed:** Closing self-review of the commissioning track against goal-commission §4 (log `.ai/logs/2026-10-05_claude_iaw-closing-review.md`): Critical 0, Important 0, Minor 1 (stale IMPLEMENTATION_STATUS top, fixed here with a new top entry). Fail-closed address/serial/reset, property-only service-control recovery, caller/long-session history and offline abort/restore contracts are closed at their scope; integrated gates passed on `ae567d00`.
+- **Pending/Next Steps:** Commissioning has no own work left. The goal closes when the UI owner delivers KL-142 (selector) and UI-04 (history UI) from the handoff table; then a final status line in goal-commission.md. Alpha controller: reroute KL-142 Owner/Route.
+- **Notes for Codex oder Claude:** Self-review only (no subagents by user rule), not an independent review. No hardware contact, no Web edits, root checkout untouched. No ETS parity, certification or power-loss recovery claimed.
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-10-05 09:58
 Web lock: held by claude-alpha for U21 corrections; not taken or released by this entry
 - **Completed:** Recorded two user decisions (2026-10-05). (1) The Web partial-scope selector and the history UI adoption go to the UI owner: handoff table with the published backend contract in `docs/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05`; ledger `KL-142` is now IN_PROGRESS (BLOCKED_UI). (2) No reset route/UI: `KL-140` is ACCEPTED_BOUNDARY / RECORDED_SCOPE, with a new user notice (manual *There is no address reset in the app*) and decision lines in KNOWN_LIMITATIONS §140/§142 and goal-commission §3. Ledger counts recomputed by script and checked (`check-ledger` 186 rows, anchors 462). Docs only.

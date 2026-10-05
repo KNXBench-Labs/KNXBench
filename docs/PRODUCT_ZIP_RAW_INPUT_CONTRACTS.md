@@ -102,3 +102,33 @@ not rerun. Only the unstarted upper ran in the separate remainder wrapper0.
 Runner-authoring syntax correction and missing GNUtime127 are infrastructure
 observations, not behavioral kills. Scoped owning-crate and integrated gates
 remain pending; this dossier is evidence, not a second status inventory.
+
+## AR06Y: CLI caller admission
+
+Defect found while tracing real callers: `knx products ingest` opened (or
+created) the product database and then read the whole package with
+`std::fs::read` before `install_package` applied its 256 MiB bound. An oversized
+file was therefore read completely into memory, and a missing database was
+created, before the typed refusal.
+
+The CLI now checks the opened file's length against the public
+`knx_productdb::MAX_PACKAGE_INPUT_BYTES` (same value as the private install
+bound) before reading or opening the database. The read is additionally capped
+at bound + 1 byte, so a file that grows after the check still reaches
+`install_package`'s own refusal. Refusal text is the typed
+`product ZIP size limit exceeded: <caller path>`.
+
+Real-binary tests in `apps/knx-cli/tests/cli_package_raw_admission.rs` use
+sparse files: +1 byte refused with no database created; 64 GiB logical
+length refused by size without being read; +1 byte against a seeded database
+leaves all database files byte-identical; exactly 256 MiB is read and reaches
+the named missing end-of-directory ZIP error. RED before the fix: the
+no-database-created assertion failed (the 64 GiB case was skipped in the RED
+run to avoid reading 64 GiB on the host). Two compiled mutants (guard unwired,
+inclusive boundary) each failed exactly their intended test and assertion;
+source restored. The bounded-read cap itself has no mutant: removing it would
+only matter for a file growing between check and read, which is not tested.
+
+HTTP `POST` catalog install already has `DefaultBodyLimit` 256 MiB
+(`apps/knx-server/src/routes.rs`); no HTTP boundary test is added here.
+Valid-large success, streaming and production resource policy remain open.

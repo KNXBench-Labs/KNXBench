@@ -43,6 +43,7 @@ pub use migration::{default_path, open_and_migrate, ProductDbError, CURRENT_PROD
 pub use package::{
     install_package, InstallCategory, InstallCount, InstallDiagnostic, InstallDiagnosticKind,
     InstallDisposition, InstallFacts, InstallReport, PackageError, PackageMember,
+    MAX_PACKAGE_INPUT_BYTES,
 };
 pub use parse::baggage::BaggageDeclaration;
 pub use parse::master::{ingest_master_data, MasterIngest};

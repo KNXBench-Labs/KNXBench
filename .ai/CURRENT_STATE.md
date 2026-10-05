@@ -1,4 +1,82 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 16:08 CEST
+- **Completed:** **AR07 closed `DONE_SCOPED`** with ADR-0080 (parameter write authority). Read-only census of 3,599 distinct application programs (OriginalData + crawler download): no `Dynamic` kind outside the evaluator set besides Button/Rename/ParameterBlockRename/Repeat; every `when/@test` is a `Condition_t` integer form; 116,799 `ParameterCalculation`s; 1,199 allocator bindings (all without `@Value`). Project Schema23 §1.1.2.1 makes `Access` a user right → ProductDB **schema v20** stores `ParameterRef/@Access`, indexes calculation members (`parameter_calculation_ref`), flags recorded programs; the panel refuses writes for effective access ≠ `ReadWrite`, both calculation sides, and unrecorded programs (fail closed); three new diagnostic kinds. Tests: `write_authority` 5, `http_parameter_write_authority` 3, six compiled mutants caught; ProductDB+server 1,263/0/69; workspace 3,276/1/177 before the one stale version pin was fixed (rerun green); corpus-gated suites run; matrix re-pinned (v16 projection equal; 4,849 calc refs = independent Python recount). Ledger: KL-3, KL-146, PDB-02/03/05 ACCEPTED_BOUNDARY; PDB-01, R-DYNAMIC-01 BLOCKED_EXTERNAL; R-MODULE-03/04 evidence corrected; new `KL-156` TODO.
+- **Pending/Next Steps:** Alpha: **`KL-156`** (Parameter/ParameterRef attributes not reported; needs migration + matrix re-pin), then AR10/AR15 rows; AR21 rerun when the UI owner asks (finding 5 delivered in `104916d6`). **UI owner:** adopt `parameterAccessReadOnly`, `manufacturerCalculation`, `writeAuthorityUnavailable` (English fallback works meanwhile) and decide how `access: "None"` fields are shown. **Commission owner:** `http_device_compare` corpus tests `after_the_download_the_device_compares_the_same` and `a_running_download_blocks_the_compare` fail with 503 "activity history unavailable" — identical on base `c58b2d0a`, so pre-existing, not caused by AR07.
+- **Notes for Codex oder Claude:** ADR number 0079 was taken upstream by the theme ADR; this package is ADR-0080, its limitation §156 (upstream used §155). Test rewinds to versions < 20 must call `tests/v20_rewind::drop_v20_objects`. Web lock: released by claude-goal-ui-owner per the newest owner line below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 15:20 CEST
+Web lock: released by claude-goal-ui-owner (splitter fix, theme package and AR21 finding 5 delivered)
+- **Completed:** AR21 finding 5 (TELEGRAM_FLOW_VISUALIZATION §17) corrected, §18: a telegram whose targets were all refused at the model's node limit (`to: []`, no line) now counts as not drawn and marks the rendering reduced, in bundled and unbundled batches; §16's "no third case" annotated. Two `flowAnimator` tests at a one-node limit (Alpha's probe), RED on the previous code; 4/4 mutants killed. Gate under leases 7/8/9: Vitest 2,004/116, Chromium 132, flow specs ×3 42, docs checks, diff-check all green. Log: `.ai/logs/2026-10-05_claude_ui-ar21-finding5.md`.
+- **Pending/Next Steps:** Alpha: AR21 rerun for finding 5 (FLOW-01 stays IN_PROGRESS until then). The web lock is free.
+- **Notes for Codex oder Claude:** No Rust source changed. No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (iaw session, alpha package AR14B by user decision)
+- **Timestamp:** 2026-10-05 15:10
+Web lock: not taken or released by this entry
+- **Completed:** **AR14B delivered** (`1fd1664a`): opt-in KNXnet/IP Route Back for tunnels. `knx_net::TunnelReturnPath::RouteBack` sends the all-zero UDP HPAI (Core v01.06.02 AS §8.6.2.2) in CONNECT (control+data, §8.4.3.4.3), CONNECTIONSTATE and DISCONNECT; the HPAI is fixed per connection. `knx-server` reads `KNX_TUNNEL_ROUTE_BACK=1`; default unchanged, CLI unchanged. Four focused tests RED→GREEN, 7/7 compiled mutants killed with sources restored. Full gate on the committed tree: web build, fmt, Clippy -D warnings, workspace 3,273/0/177 in 182 blocks (loopback-only netns, --offline), layering/headers/anchors/corpus-gates/ledger, whitespace. `KL-155` DONE at this scope; docs (install, Linux setup, web/Docker, build-from-source env table, Dockerfile comment, §155) updated. The AR14B claim ends here.
+- **Pending/Next Steps:** Optional, only with the user's go: one read-only tunnel connect/disconnect from a bridge container with `KNX_TUNNEL_ROUTE_BACK=1` (no bus frame, gateway free). The running local `knxbench` container still uses bridge mode and the old image; it needs a rebuild plus either `--network host` or the new variable.
+- **Notes for Codex oder Claude:** Self-review only, no subagents. No hardware contact except the earlier read-only DESCRIPTION_REQUEST probe. `LIMITATION_TRIAGE` tier for §155 is for the goal.md session.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 15:09 CEST
+Web lock: still held by claude-goal-ui-owner for AR21 finding 5 (TELEGRAM_FLOW_VISUALIZATION §17); not released by this entry
+- **Completed:** Theme package (user request, ADR-0079, supersedes ADR-0060's preview parts): Settings › Appearance has one Theme dropdown — no per-theme preview cards, no Apply/Cancel, no "Use system theme"; Modern Retro Green CRT ships (`src/bundledThemes.ts` admits `themes/modern-retro-green-crt.knx-theme.json` via `parseThemePackText`; selecting stores only `theme`; an installed pack with the same id wins); import installs + selects in one conditional write (replacement consent kept); Export/Remove for the selected pack; storage location stated (en/de: `settings.json` `uiThemePacks`/`theme`, desktop `~/.local/share/com.knxbench.knxbench-labs`, server `KNX_DATA_DIR`, Docker `/data`); Neon Grid and Bitcoin DeFi removed (saved choice kept, shown as System + missingSelection diagnostic). Tests: new `themeSettings.test.tsx` (RED first), integration and `e2e/theme-manager.e2e.ts` rewritten, `themePreview.test.tsx` removed; 12/12 mutants. Gate green (header fix and post-rebase docs checks rerun). Log: `.ai/logs/2026-10-05_claude_ui-themes-dropdown-crt.md`.
+- **Pending/Next Steps:** AR21 finding 5 (prepared in worktree `ui-flow-f5`), then release the web lock.
+- **Notes for Codex oder Claude:** The server still never reports host paths; the pane states documented defaults. Pack themes (also CRT) paint after module load; `index.html` bootstrap lists only CSS palettes (KNOWN_LIMITATIONS theme section). No Rust source changed. No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-05 15:00
+- **Completed:** Story tooling follow-ups after edition `2026-10-05.1` (no content change, no new candidate). (1) Privacy review locations name records by id (`events[alpha-backlog].aside` instead of `events[34].aside`), with two tests that failed before the change; existing candidates stay byte-identical (`prepare` reports `unchanged`). (2) `story/tests/browser/check_story.mjs` takes `STORY_BROWSER=chromium|firefox|webkit`; Chromium 153 and Firefox 155 both pass 46/46 on `previews/2026-10-05.1.html`. WebKit could not run: Playwright's build needs Ubuntu libraries (ICU 74, flite, libWPEWebKit) missing on this Arch-based host; installing them needs sudo, not done. README limitation and IMPLEMENTATION_STATUS updated. Gates: 62 unit tests OK, anchors ok, diff check clean.
+- **Pending/Next Steps:** WebKit/Safari coverage needs either the missing system libraries (user decision) or a test on another machine; screen readers untested. Hosting/publication later; no approval for any candidate.
+- **Notes for Codex oder Claude:** Firefox and WebKit browser builds now sit in `~/.cache/ms-playwright` (user cache). Receipts for chromium/firefox are in the private story directory under `receipts/`.
+
+---
+
+- **Last Agent:** Claude (iaw session, alpha package AR14B by user decision)
+- **Timestamp:** 2026-10-05 14:55
+Web lock: not taken or released by this entry
+- **Completed:** New alpha package **AR14B** (user decision 2026-10-05, "ja mit in die alpha goal") with post-snapshot ledger row `KL-155` (P1, IN_PROGRESS) and KNOWN_LIMITATIONS §155. Cause measured read-only (DESCRIPTION_REQUEST only, no tunnel, no bus frame): the tunnel client puts its own socket address into the HPAIs; in a bridge container that is 172.17.0.x and the gateway's answer is lost. The all-zero Route Back HPAI (Core v01.06.02 AS §8.6.2.2) got an answer from the bridge container. Docs that promised tunnelling through the bridge are corrected: installation guide, Linux setup, web/Docker guide, README, Dockerfile comment, §79, GAP E5. AR15 now also depends on AR14B. Gates: check-ledger 187 rows, anchors 545, diff check.
+- **Pending/Next Steps:** This session implements AR14B next in worktree `iaw-docker-tunnel`: opt-in UDP Route Back for tunnelling (CONNECT control+data, CONNECTIONSTATE, DISCONNECT), RED loopback tests and mutants, server `KNX_TUNNEL_ROUTE_BACK=1`, docs.
+- **Notes for Codex oder Claude:** **Claim:** AR14B / `KL-155` is taken by this session; please skip it. It touches `crates/knx-net/src/client.rs` (tunnel HPAIs) and server start-up wiring only, no Web source. `LIMITATION_TRIAGE` has no tier for §155 yet (goal.md session's recount).
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-05 14:00
+- **Completed:** Project-evolution story edition `2026-10-05.1` (on top of `.3`) from the user's personal chat exports in the git-ignored `.private/claude-ai-export/2026-10-04/` (ChatGPT, claude.ai; Gemini empty). Analysed locally by keyword filtering; only project conversations opened, four ChatGPT conversations used. New step `strategy-written`: the strategy and the first CLAUDE.md were written in ChatGPT on 2 Sep 14:10–14:16 CEST (similarity 98.7 % to `acf2e1bd`, 96.4 % to `fdcc5ab9`). `spec-knowledge-base` now covers its origin (ChatGPT-guided local Ollama pipeline from 4 Sep, audit 2,232/1,663/569, restart as knx-spec-kb 7 Sep, Claude Code from 10 Sep). Gaps `gap-strategy-origin` and `gap-spec-kb-origin` closed; "earliest prompt" wording scoped to the project; `rel-home-strategy` "morning" corrected to "afternoon". Candidate sha `648af1e2…`, preview `story/previews/2026-10-05.1.html`, README archaeology updated. Gates: unit tests OK, 46/46 browser checks, payload leak grep clean.
+- **Pending/Next Steps:** User review of `2026-10-05.1`; hosting later (user has a domain). No publication approval exists.
+- **Notes for Codex oder Claude:** User decisions 2026-10-05: strategy origin public with translated quotes and ChatGPT named; pre-September history from the exports must NOT be mentioned anywhere (keep the scope wording neutral); no further ChatGPT side notes (donations, promo video, Paperclip advice, Codex comparison). The exports contain very personal data: never copy, quote or summarise anything else from them; work locally and print only filtered project matches. Private conversation ids are in the ledger only.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 13:59 CEST
+Web lock: still held by claude-goal-ui-owner for the theme package (user request: shipped CRT theme, dropdown only, storage path, Neon Grid/Bitcoin DeFi removed); not released by this entry
+- **Completed:** Left-column splitter fix (user report): the Project Explorer took `flex: 1 1 auto`, so a loaded tree shrank the navigation/diagnostics blocks and swallowed every splitter height. Now `flex: 1 1 0` with a 72 px minimum. New Chromium spec `e2e/workbench-splitters.e2e.ts` (RED on the old CSS). Gate under leases 7/8/9 green apart from one load timeout of `telegram-flow-hub` in the first Chromium run; full Chromium rerun 136 passed. Log: `.ai/logs/2026-10-05_claude_ui-splitter-fix.md`.
+- **Pending/Next Steps:** Theme package (same lock), then AR21 finding 5 (TELEGRAM_FLOW_VISUALIZATION §17).
+- **Notes for Codex oder Claude:** CSS only, no Rust source changed. No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 13:02 CEST
+Web lock: taken by claude-goal-ui-owner for the left-column splitter fix (user bug report)
+- **Completed:** Lock taken only. User report: with a project loaded, the left column's splitters do not resize. Reproduced in Chromium: the drag sets the navigation block's height, but the flex column shrinks it back (explorer `flex: 1 1 auto`).
+- **Pending/Next Steps:** Browser test (RED), CSS fix, gates, release this lock in the delivering entry. Afterwards AR21 finding 5 (TELEGRAM_FLOW_VISUALIZATION, `c58b2d0a`).
+- **Notes for Codex oder Claude:** Please do not edit `apps/knx-web` until this lock is released. No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 12:52 CEST
 - **Completed:** AR21 rerun of finding 4 (`0d5da787`), review only. Fixed for telegrams that have at least one line (code read, flow Vitest 66/66). New **finding 5 (MINOR)**: at the model's node limit a kept sender can produce events with `to: []`; such telegrams are counted as "drawn as bundled pulses" (probe: 30 telegrams, 0 pulses, `coalescedEvents` 30, `refusedNodes` 60). §16's "no third case" sentence is wrong. Details in TELEGRAM_FLOW_VISUALIZATION §17. `FLOW-01` stays `IN_PROGRESS`.
 - **Pending/Next Steps:** **UI owner (`goal-ui.md`):** finding 5 per §17 (count a telegram without a line as not drawn or leave it to the refusal diagnostic, test at the node limit, correct §16), then ask for the AR21 rerun. Alpha: next ready rows (AR07/AR10/AR15) meanwhile.

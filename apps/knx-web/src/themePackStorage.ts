@@ -4,7 +4,7 @@ import type { SettingsAcknowledgementReason } from "./settingsStore";
 import { getAcknowledgedSettings, patchAcknowledgedSettings } from "./settingsStore";
 import { MAX_THEME_STORE_BYTES, MAX_INSTALLED_THEME_PACKS, readThemePackStore, validateThemePack } from "./themePack";
 import type { ThemePackDiagnostic } from "./themePack";
-import { THEMES } from "./theme";
+import { isBundledThemeId, THEMES } from "./theme";
 export interface ThemeMutationPlan {
   readonly id: string;
   readonly requiresReplacementConsent: boolean;
@@ -60,7 +60,10 @@ export function planThemeRemoval(id: string): ThemePlanResult {
 export function planThemeSelection(id: string): ThemePlanResult {
   const snapshot = getAcknowledgedSettings(["theme", "uiThemePacks"]);
   if (!snapshot.ok) return { ok: false, diagnostic: { kind: "settingsUnavailable", reason: snapshot.reason, path: "$" } };
-  if (!THEMES.some((theme) => theme.id === id)) {
+  const shipped = isBundledThemeId(readThemePackStore(snapshot.settings.uiThemePacks), id)
+    && !(typeof snapshot.settings.uiThemePacks === "object" && snapshot.settings.uiThemePacks !== null
+      && Object.hasOwn(snapshot.settings.uiThemePacks, id));
+  if (!THEMES.some((theme) => theme.id === id) && !shipped) {
     const map = snapshot.settings.uiThemePacks;
     if (typeof map !== "object" || map === null || Array.isArray(map)) return { ok: false, diagnostic: { kind: "missingTheme", path: "$" } };
     if (!Object.hasOwn(map, id)) return { ok: false, diagnostic: { kind: "missingTheme", path: "$" } };

@@ -56,7 +56,9 @@ def _walk(value: object, location: str):
             yield from _walk(value[key], f"{location}.{key}" if location else key)
     elif isinstance(value, list):
         for index, item in enumerate(value):
-            yield from _walk(item, f"{location}[{index}]")
+            # Records with an id are named by it, so review notes survive reordering.
+            key = item.get("id") if isinstance(item, dict) else None
+            yield from _walk(item, f"{location}[{key if isinstance(key, str) and key else index}]")
     elif isinstance(value, str):
         yield location, value
 

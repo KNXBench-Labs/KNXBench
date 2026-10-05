@@ -8,7 +8,13 @@ import { pathToFileURL } from "url";
 const require = createRequire(
   (process.env.PLAYWRIGHT_DIR || "/home/knxbench/.local/share/mise/installs/npm-playwright/latest/node_modules") + "/",
 );
-const { chromium } = require("playwright");
+const playwright = require("playwright");
+// STORY_BROWSER selects the engine: chromium (default), firefox or webkit.
+const engine = process.env.STORY_BROWSER || "chromium";
+if (!["chromium", "firefox", "webkit"].includes(engine)) {
+  console.error(`unknown STORY_BROWSER ${engine}`);
+  process.exit(2);
+}
 
 const [storyPath, hostilePath, receiptPath] = process.argv.slice(2);
 if (!storyPath || !hostilePath) {
@@ -152,7 +158,8 @@ async function atlas(page, label, mobile) {
   const box = await page.locator("#atlas-canvas").boundingBox();
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
-  if (mobile) {
+  if (mobile && engine === "chromium") {
+    // Real touch events need CDP; other engines get the same drag as a mouse gesture.
     const session = await page.context().newCDPSession(page);
     const touch = (type, x, y) => session.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
     await touch("touchStart", cx, cy);
@@ -329,11 +336,14 @@ async function hostile(browser) {
   await context.close();
 }
 
-const browser = await chromium.launch();
+const browser = await playwright[engine].launch();
+// Firefox has no mobile emulation; it gets the phone viewport with touch support only.
+const browserVersion = browser.version();
+const mobileOptions = engine === "firefox" ? { hasTouch: true } : { isMobile: true, hasTouch: true, deviceScaleFactor: 2 };
 for (const [label, viewport, mobile] of [["desktop 1440×900", { width: 1440, height: 900 }, false],
   ["mobile 390×844", { width: 390, height: 844 }, true]]) {
   const { context, page, problems } = await openPage(browser, viewport,
-    mobile ? { isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : {});
+    mobile ? mobileOptions : {});
   await page.goto(storyUrl);
   await page.waitForTimeout(300);
   await narrative(page, label);
@@ -353,7 +363,7 @@ await hostile(browser);
 await browser.close();
 
 const failed = results.filter((result) => !result.passed);
-const receipt = { story: storyPath, hostile: hostilePath, browser: "chromium (Playwright)", checks: results.length,
+const receipt = { story: storyPath, hostile: hostilePath, browser: `${engine} ${browserVersion} (Playwright)`, checks: results.length,
   failed: failed.length, results };
 if (receiptPath) writeFileSync(receiptPath, JSON.stringify(receipt, null, 1));
 console.log(`\n${results.length - failed.length}/${results.length} browser checks passed`);

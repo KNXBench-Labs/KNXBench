@@ -37,7 +37,7 @@ test("a validated cached palette paints, metadata stays text, and other preferen
   await expect(page.locator("html")).toHaveAttribute("data-theme", pack.id);
   check();
 });
-for (const id of ["porcelain", "graphite", "cupertino", "neon-grid", "bitcoin-defi", "system"]) {
+for (const id of ["porcelain", "graphite", "cupertino", "system"]) {
   test(`switching imported → ${id} clears the bounded overrides`, async ({ page }) => {
     const { pack, check } = await fixture(page);
     await expect(page.locator("html")).toHaveAttribute("data-theme", pack.id);

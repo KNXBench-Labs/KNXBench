@@ -3,7 +3,7 @@
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import SettingsPanel from "../src/SettingsPanel";
-import { getThemeDefinitions, useThemeId, type ThemePreview } from "../src/theme";
+import { getThemeDefinitions, useThemeId } from "../src/theme";
 import { useAppearance } from "../src/appearance";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "../src/motion";
 import { initSettings, startSettingsRefresh } from "../src/settingsStore";
@@ -15,8 +15,7 @@ import "../src/styles.css";
 
 function Fixture() {
   const representative = new URLSearchParams(location.search).get("representative") === "1";
-  const [preview, setPreview] = useState<ThemePreview>();
-  const [themeId, selectTheme] = useThemeId(preview);
+  const [themeId, selectTheme] = useThemeId();
   const appearance = useAppearance();
   useMotion();
   const [open, setOpen] = useState(false);
@@ -27,7 +26,7 @@ function Fixture() {
       {representative && <RepresentativeThemeStates />}
     </main>
     {open && <SettingsPanel themes={getThemeDefinitions()} activeThemeId={themeId} onSelectTheme={selectTheme}
-      onPreviewTheme={setPreview} previewTheme={preview} appearance={appearance}
+      manageThemes appearance={appearance}
       motionStyles={MOTION_STYLES} activeMotionStyle="apple" onSelectMotionStyle={() => {}}
       motionLevels={MOTION_LEVELS} activeMotionLevel="off" onSelectMotionLevel={() => {}}
       productLanguages={[]} activeProductLanguage={null} onSelectProductLanguage={() => {}}

@@ -31,7 +31,7 @@ pub use cemi::{
 };
 pub use client::{
     BusConnection, BusError, DiscoveredGateway, KnxNetIpClient, RoutingClient, TunnelClient,
-    TunnelEvent,
+    TunnelEvent, TunnelReturnPath,
 };
 pub use commissioning::{
     ConnectionState, ManagementSession, SessionError, SessionTiming, VerifyMode,

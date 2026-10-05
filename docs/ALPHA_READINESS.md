@@ -296,6 +296,13 @@ There are **110 numbered headings**, **109 distinct numbers**, two meanings of
 90, 95, 130-GATE (AR01). Therefore **103 numbered residual boundaries** remain:
 K1=5, K2=30, K3=54, K4=13 (102 triaged); 105 is wire-evidence-only and unclassified.
 No heading or legacy fragment is destructively renumbered.
+**Update 2026-10-06 (AR15 recount):** 119 numbered heading lines, 118
+distinct numbers; eleven are signposts (the seven above plus 149, 150, 152,
+156), so **108 numbered residual boundaries** remain: K1=5, K2=30, K3=58,
+K4=14 (107 triaged), 105 still unclassified. Counts and the script are in
+[LIMITATION_TRIAGE](LIMITATION_TRIAGE.md) and
+`.ai/logs/2026-10-06_claude_ar15-slice2.md`; the release view is
+[ALPHA_SCOPE_MATRIX](ALPHA_SCOPE_MATRIX.md).
 `KL-8` also routes 26 (Secure); `KL-130-GATE` and `KL-130-ZOOM` identify the
 separate headings exactly. All other numbered IDs use `KL-<number>`.
 

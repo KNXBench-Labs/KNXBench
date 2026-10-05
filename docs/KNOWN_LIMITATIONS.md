@@ -2261,6 +2261,17 @@ ingested but still read by nothing — hardware and master text — is
 recorded in
 [§64](#64-languages-blocks-outside-an-application-program-are-discarded-on-import).
 
+**Update 2026-10-05 (AR10 slice 2a): the parameter panel no longer hides
+its fallback.** `parameter_views` now says, per field text, name and enum
+label, which stored language answered a request (`de` → `de-DE`) or that the
+package's own text was kept (`None`); `GET/POST /api/device/{id}/parameters`
+carries this as `textLanguage`, `nameLanguage`, `enumOptions[].language` and
+the panel-level `sourceLanguage` (`ApplicationProgram/@DefaultLanguage`,
+verbatim, `null` when undeclared). No text, value or fallback rule changed.
+Catalogue, device-product and master surfaces still fall back silently;
+showing the markers is the UI owner's decision. Trace:
+[research/backend-localization-paths.md](research/backend-localization-paths.md).
+
 ## 38. Group-address CSV export/import (T12) has no verified ETS interoperability
 
 **Limitation.** "KNXBench group-address CSV v1" (`crates/knx-csv`,

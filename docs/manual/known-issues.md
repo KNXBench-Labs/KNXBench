@@ -349,6 +349,18 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   and the Inspector stay; nothing is lost.
 - **Details:** [§154 the telegram-flow view](../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only)
 
+### Opening an older project upgrades the file
+
+- **Affected:** a project saved by an older KNXBench version.
+- **Limitation:** opening it — in the application or with any `knx` command
+  that takes a `.knxdb` file, including `knx diff` and `knx doc-export` —
+  upgrades the file itself to the current format. No copy is made, and the
+  older KNXBench then refuses the file as "newer". A failed upgrade leaves the
+  file unchanged.
+- **Workaround:** copy the project file first if an older version must still
+  open it.
+- **Details:** [§157](../KNOWN_LIMITATIONS.md#157-opening-an-older-project-upgrades-it-in-place)
+
 ### A running monitor keeps the group-address style it started with
 
 - **Resolved in T13:** changing the open project's group-address style refreshes

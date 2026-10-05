@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — KL-157: a project upgrade is now all or nothing
+
+- Found by AR15 while checking storage claims: `knx_store::migration::migrate`
+  ran each upgrade step in autocommit mode. A failure (or a killed process)
+  after the first step kept it while `user_version` stayed old, so every
+  later open re-ran that step and failed — a project that never opens again.
+- Fix: all pending steps plus the version bump in one `BEGIN IMMEDIATE`
+  transaction, the pattern `knx_productdb::open_and_migrate` already used.
+- Test `a_failed_upgrade_rolls_back_every_step_and_the_file_stays_reopenable`
+  (v8 file, failing v9->v10 step): RED before, GREEN after; a mutant without
+  the transaction fails it. The in-place upgrade without a copy is now a
+  documented boundary (KNOWN_LIMITATIONS §157, manual known issues, DATA_MODEL).
+
 ## 2026-10-05 — KL-153: ABB's ETS4 shelf gets its library card (scheme 10, ADR-0083)
 
 - Exact namespace `http://knx.org/xml/project/10` is admitted through the

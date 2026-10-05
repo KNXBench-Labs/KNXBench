@@ -6,6 +6,114 @@ section index and the sources. Section numbers are global and stable;
 dated entries are newest first. Moved here verbatim from `RESEARCH.md` on
 2026-10-04 (AR14D D4); only relative links changed.
 
+## 2026-09-29 — Read-only inventory of local ETS installation data
+
+*Recovered 2026-10-05 from an uncommitted edit in the shared root checkout; the entry was written on 2026-09-29 (with the 2026-10-01 TEMP-capture addendum) before the AR14D split and never reached `main`. Content unchanged; the `PRODUCT_DATABASE_CORPUS.md` link is adjusted for this directory.*
+
+- **[V]** The off-repository ETS installation-data directory was inspected
+  read-only (filesystem inventory, XML roots/namespaces, ZIP directories and
+  bounded ZIP member hashes). Its 948 files contain **no** `.knxproj` or
+  `.knxprod`. ZIP members were read in memory for bounded hashing but not
+  extracted onto disk; nothing was altered, executed, imported into a
+  database, or placed in Git. `Licensing/` and connection configuration were
+  deliberately not inspected for content.
+- **[V]** ETS5 and ETS6 each have one live project-store tree and respectively
+  eight and two `.restorepoint` files. Each restore point is a readable ZIP with
+  319 entries (298 files), including extensionless XML fragments and manufacturer
+  files, but without the `Project.xml` / `0.xml` structure the KNXBench
+  `.knxproj` importer requires. The newest restore point of each generation
+  matches its corresponding live tree byte-for-byte on all 298 included files;
+  older restore points differ, so they are potential *historical* regression
+  sources, not ten independent projects. ETS5 has a populated separate product
+  store; the ETS6 product store is empty. The internal stores and restore points
+  are **not** direct KNXBench import fixtures. KNX Association documents them as
+  ETS-local stores/restore points and recommends restoring/exporting through ETS:
+  https://support.knx.org/hc/de/articles/360020712719-Datenablage and
+  https://support.knx.org/hc/de/articles/115001130890-Datenablage .
+- **[V]** Six loose `knx_master.xml` files cover namespaces 11, 12, 14 (two
+  distinct files), 20 and 23. The copy in a directory named `project-13` has
+  **namespace 14**, illustrating why folder names cannot determine scheme.
+  The scheme-11 and scheme-23 master files are byte-identical to masters in
+  the existing private `.knxproj` demo fixtures. The other four are useful
+  read-only master-data/differential fixtures, **not** complete projects or
+  standalone product packages. There are also three `knx_cvexc.xml` files;
+  their semantics were not assessed. The existing product corpus already
+  exercises schemes 12, 14 and 20 in actual packages
+  ([PRODUCT_DATABASE_CORPUS.md](../PRODUCT_DATABASE_CORPUS.md)); no new package
+  compatibility is established by these loose XML files.
+- **[V]** ETS4 holds a SQL Server-style `.mdf`/`.ldf` database pair (the
+  `.mdf` is about 849 MB), not a `.knxproj`. Its contents were not opened.
+  KNX Association describes conversion of ETS4 `.mdf` through its separate,
+  end-of-life project exporter to `.knxproj`:
+  https://support.knx.org/hc/de/articles/360001690379-ETS-Projekt-Exportassistent .
+- **[A] Next useful experiment:** With an authorized ETS environment, export
+  selected *different* restore-point revisions to `.knxproj` on a copy, then
+  run the existing importer and compare per-version counts, warnings, unknowns
+  and opaque preservation. Do not reverse-engineer or modify the live store as
+  a shortcut; never publish project identifiers, addresses, licensing data or
+  raw exports as test fixtures. This inventory alone does not establish
+  compatibility or losslessness for any new project schema.
+
+### Additional user-profile data (same day)
+
+- **[V]** A read-only filename scan of the off-repository Windows user profile
+  found two `.knxproj` files in Documents/Downloads. The first is byte-identical
+  to the existing private scheme-11 demo project. The second has the same 39
+  ZIP *files* as the existing private scheme-23 demo project: 38 are
+  byte-identical and only `knx_master.xml` differs (an older master-data
+  revision). Thus neither supplies a new project topology or application
+  program. The production `knx import --no-product-db` path was run on the
+  second file and the existing scheme-23 sample, each with a temporary native
+  store and an ephemeral report: both exited 0, mapped 35 device instances,
+  514 group addresses and 867 communication-object references, and reported
+  9 unknowns, 789 opaque entries, 3 unsupported features and no errors or
+  warnings. This is an importer comparison, **not** proof of semantic
+  losslessness or roundtrip compatibility. No project or report was retained.
+- **[V]** One separate small XML file is a
+  `{http://knx.org/xml/telegrams/01}CommunicationLog` with 71 `Telegram`
+  records. Each has a hex `RawData` attribute beginning with `29` (a cEMI
+  `L_Data.ind` marker according to `knx-net/src/cemi.rs`), plus timestamp and
+  capture metadata. It may be useful as a **private, offline decoder fixture**
+  after sanitization and verification against `decode_l_data`; KNXBench does
+  not currently import this capture XML. No addresses, frames, connection
+  names or times were published.
+- **[V] 2026-10-01, separate TEMP captures:** Two more private ETS Group Monitor
+  XML files under `/mnt/system/TEMP/` use the same `CommunicationLog` namespace
+  and contain 578 and 582 `Telegram` records. The first frame sequence is an
+  exact prefix of the second; the second adds four group-communication frames.
+  These are two exports of effectively **one recording**, not two independent
+  fixtures. **[D]** KNX Association describes its XML telegram export as
+  largely ETS-internal and the telegram data as unencrypted hex cEMI; that
+  article does not specify a stable third-party interchange contract:
+  https://support.knx.org/hc/en-us/articles/360019034599-Telegram-recording-options .
+  **[V]** All 1,160 records have valid hex `RawData`, matching cEMI
+  `L_Data.ind` (327/331) or `L_Data.con` (251/251) markers and parseable
+  timestamps; confirmation error flags are clear. The files also carry private
+  capture metadata and must not be committed as fixtures. A bounded, DTD-free
+  offline XML read fed the raw bytes in memory to the production
+  `knx_net::cemi::decode_l_data` implementation: **578/578 and 582/582
+  decoded**, with semantic `decode(encode(decoded))` equality for every frame.
+  In the larger export the decoded services include 43 group writes, 20 group
+  reads, 20 group responses, 108 memory reads, 108 memory responses, 20 memory
+  writes, four property reads and responses each, and one each of authorization
+  request/response, descriptor read/response and restart; 250 control PDUs are
+  present. The smaller export omits four group-communication frames but covers
+  the same other service categories. This is useful **offline regression
+  evidence for existing cEMI/commissioning decoding**, especially against
+  real management traffic; it reveals no current decoder failure and proves
+  neither byte-exact replay, semantic validity of ETS metadata, bus write
+  safety, nor `.knxproj`/manufacturer import compatibility. KNXBench still has
+  no ETS `CommunicationLog` XML importer. Any future checked-in regression
+  fixture must be explicitly sanitized or synthetic, with addresses, payloads,
+  timestamps and connection metadata reviewed before publication.
+- **[V]** The scoped Documents, Downloads, Desktop, OneDrive and KNX-specific
+  AppData subtrees contained no additional product packages or project exports.
+  AppData's KNX trees hold settings, caches, workspaces and logs, not additional
+  `.knxproj` files; their content was deliberately not opened. A broader
+  filename-only pass was stopped at its entry budget, so this is **not** a
+  claim to have searched every file in the entire user profile. Nothing was
+  changed in the source directory or on the KNX bus.
+
 ## 2. `.knxproj` container format
 
 ### 2.1 Structure [V]

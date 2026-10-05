@@ -537,6 +537,14 @@ but not interpreted in v1:
   number). `migrate_v17_to_v18` backfills them from the stored blobs as v11
   did, but keeps every recorded unknown row except the retired
   `Channel/@Number` ones. Again product-database side only.
+  **Schema v20 (2026-10-05, [ADR-0080](adr/0080-parameter-write-authority.md))**
+  adds `parameter_ref.access` (`ParameterRef/@Access`, verbatim), the
+  `parameter_calculation_ref` index (which `ParameterRef`s a
+  `ParameterCalculation` names, per side) and
+  `application_program.write_authority_recorded`. `migrate_v19_to_v20`
+  backfills all three from the stored blobs; a blob that cannot be re-read
+  leaves its programs unrecorded, which the parameter editor treats as
+  read-only. The project model is unchanged.
 - `Memory`, `AbsoluteSegment`, `LoadProcedures`, mask and resource data — held
   in the product database, not in the project.
 - `BusAccess`, `BCUKey`, `SplitType`, `BinaryData` and vendor baggage — held in

@@ -393,7 +393,16 @@ than dropped:
 - **Calculations and allocators.** `ParameterCalculation` (1,236 in 91
   programs) and `Allocator` (94 in 14) are reported unknown elements with
   their attributes, and the program bytes are retained; their
-  transformation scripts and allocation ranges are not evaluated.
+  transformation scripts and allocation ranges are not evaluated. Since
+  ADR-0080 (2026-10-05) every `ParameterRef` a calculation names on either
+  side is read-only (`manufacturerCalculation` warning): editing the input
+  without running the script would leave the derived values stale. The
+  wider 3,599-program census has 116,799 calculations in 809 programs
+  (JavaScript and VBScript), so this removes many fields from editing — by
+  design. All 1,199 corpus `NumericArg/@AllocatorRefId` bindings carry no
+  `@Value`; the evaluator reports `ModuleArgumentNotBound` and leaves their
+  `{{Name}}` placeholders verbatim. The allocation rule itself is still not
+  documented ([census](PARAMETER_SEMANTICS_BOUNDARY.md#ar07-corpus-census-and-write-authority--2026-10-05)).
 - **Display-only type attributes.** `UIHint`, `Increment`, `DisplayFactor`,
   `DisplayFormat`, `Pattern`, `Encoding`, `AddressType`, `TypeTime/@Unit`,
   `TypeColor/@Space`, `TypePicture/@RefId`/`@HorizontalAlignment` and
@@ -855,11 +864,18 @@ that server-named id instead of the declared one (D43).
   spelling it produces `Diagnostic::UnsupportedModuleArgumentKind` per
   instantiation instead of passing unremarked. Nothing about its semantics
   is guessed at.
-- **`Access` has no attested correlation and is not used for write
-  gating.** RESEARCH §4.3 found no usable correlation for `Access`
-  (`Access="None"` alongside a `Memory` child came back roughly 50/50 in
-  the corpus, `Visible` never observed at all); the editor shows `access`
-  verbatim and never uses it to block, hide or grey out a write.
+- **`Access` gates writes since ADR-0080 (2026-10-05); it does not hide
+  fields.** *Project Schema23* §1.1.2.1 defines `Access_t` as the ETS
+  user's right to view and modify a parameter. A field whose effective
+  access (`ParameterRef/@Access`, else `Parameter/@Access`) is present and
+  not `ReadWrite` is listed but read-only, with a `parameterAccessReadOnly`
+  warning; a write is refused with 400. The precedence of the two levels is
+  an inference (ADR-0080); with neither present the field stays writable,
+  because no default is documented here. `None` fields are still shown:
+  hiding them is the UI owner's presentation decision. *Superseded
+  sentence (2026-09-14):* "the editor shows `access` verbatim and never uses
+  it to block, hide or grey out a write" — RESEARCH §4.3 had looked for a
+  `Memory` correlation (roughly 50/50), not for the type's own definition.
 - **T18 slice 5 (2026-09-14) gives `Float`, `Text` and `IPAddress` real
   validation; `Picture` and `Raw` stay on the non-empty-string floor,
   documented as a gap rather than guessed shut.** `Float` now rejects
@@ -7713,3 +7729,39 @@ loop and the AR20 snapshot route. It is read-only.
   hub). No real-bus evidence, no native WebKitGTK run, no screen-reader
   check. Values and lines are hidden from assistive technology on purpose;
   the Inspector is the accessible path, and it has not been tried with Orca.
+
+## 155. Unstored `Parameter`/`ParameterRef` attributes are not reported
+
+**Limitation.** The static program parser stores a fixed set of
+`Parameter` attributes (`Id`, `Name`, `Text`, `ParameterType`, `Access`,
+`Value`, `Suffix`) and of `ParameterRef` attributes (`Id`, `RefId`,
+`DisplayOrder`, `Tag`, `Text`, `Value`, and since ADR-0080 `Access`). Any
+other attribute on these two elements is neither stored nor written to
+`ingest_unknown`, so the install report does not name it. The bytes stay in
+the retained program blob; nothing is lost, but the report under-states what
+was not interpreted. A synthetic probe (AR07, 2026-10-05) confirmed it for
+`Parameter/@SuffixText`, `@InitialValue`, `@LegacyPatchAlways` and
+`ParameterRef/@Name`, `@SuffixText`, `@InitialValue`; `ParameterValidation`,
+by contrast, is reported as an unknown element with its attributes.
+
+**Cause.** The `Parameter` and `ParameterRef` arms in
+`crates/knx-productdb/src/parse/program.rs` insert their columns without the
+`report_unknown_attrs` call the other modelled elements make. `Suffix` is
+also not the corpus spelling: the 332 `OriginalData` programs use
+`SuffixText` (55,060 times) and never `Suffix`, so the `suffix` column stays
+empty (the separate `SuffixText` display gap is described with the
+product-language limitations above).
+
+**Impact.** Install reports and the manufacturer report omit these
+attributes. Corpus attribute names seen and not stored (332 programs):
+`Parameter` — `SuffixText`, `DefaultUnionParameter`, `InitialValue`,
+`LegacyPatchAlways`, `BaseValue`, `InternalDescription`, and the union
+member placement `Offset`/`BitOffset` (the download image builder reads
+those two from the retained bytes itself); `ParameterRef` — `Name`,
+`SuffixText`, `InitialValue`, `InternalDescription`,
+`ForbidGrantingUseByCustomer`.
+
+**Lifted when.** Both arms report what they do not store, and a schema
+migration re-derives the affected unknown rows and install reports the way
+v18 did for `Channel/@Number`, with the corpus matrix re-pinned. Ledger row
+`KL-155`.

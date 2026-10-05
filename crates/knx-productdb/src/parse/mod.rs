@@ -12,6 +12,7 @@ pub(crate) mod master_language;
 pub mod program;
 pub(crate) mod scheme_evidence;
 pub mod translation;
+pub(crate) mod write_authority;
 
 use std::collections::HashMap;
 

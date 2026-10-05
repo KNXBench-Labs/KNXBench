@@ -50,6 +50,47 @@ Status: controller checkpoint published; bounded Float guard integrated and
 accepted20/20 and published as da3bc947. Selected private/offline
 witnesses pass; broader AR07 and UI/native/ETS acceptance remain separate.
 
+## AR07 corpus census and write authority — 2026-10-05
+
+**Census [V].** A read-only, aggregate-only Python scan (stdlib, in-memory
+ZIP reads, no extraction, no identifiers kept) of every application program
+in `OriginalData/` (332 distinct programs by SHA-256) and in the 2026-10-03
+public crawler download (together 3,599 distinct programs, 4,121 instances,
+972 input files, one unreadable ZIP; 555 of the programs are scheme 10 and
+cannot be installed today, §153):
+
+| Construct | `OriginalData` | All 3,599 | Current handling |
+| --- | --- | --- | --- |
+| `Dynamic` kinds outside the evaluator's set | `Button` 20, `ParameterBlockRename` 270, `Rename` 56, `Repeat` 16 | `Button` 70, `ParameterBlockRename` 912, `Rename` 4,791, `Repeat` 373 | `UnrecognizedNode`, refs below named (ADR-0041); **no other kind occurs** |
+| `Repeat` children | 16 × `Module` | 373 × `Module` | named, not expanded (PDB-9) |
+| `when/@test` forms | integer 1,409,216, list 39,378, operator 6,552 | 6,311,796 / 106,279 / 976,308 | all three `Condition_t` forms; **zero** decimal, empty or other forms |
+| `Module` inside a `ModuleDef`'s `Dynamic` | 0 | 11 (one package, `KL-150`) | bounded nested expansion |
+| `NumericArg/@AllocatorRefId` | 129 (5 programs) | 1,199 | every one has **no** `@Value` and binds a `Numeric` declaration: `ModuleArgumentNotBound`, placeholder left verbatim (393 label uses) |
+| `Argument/@Type="AllocatorRef"` | 0 | 0 | `UnsupportedModuleArgumentKind` if it ever appears |
+| `ParameterCalculation` | 1,236 in 91 programs | 116,799 in 809 (87,889 JavaScript, 28,910 VBScript) | reported unknown; **both sides read-only since ADR-0080** |
+| `ParameterValidation` | 1 | 401 | reported like other unmodelled elements; not run |
+
+The calibration matches ADR-0041's earlier 304-program scan exactly for the
+four unrecognized kinds and `Rows`/`Columns` (4,267), so the scanner and the
+evaluator's kind set agree.
+
+**Write authority (ADR-0080).** The licensed *Project Schema23* §1.1.2.1
+defines `Access_t` as "the rights for the ETS user to view and modify
+parameters". 2,505,462 of 7,048,845 offered refs (35 %) have an effective
+access of `None` or `Read`, and `ParameterRef/@Access` was never stored.
+ADR-0080 stores it, applies the `ParameterRef`-over-`Parameter` layering,
+refuses writes whose effective access is not `ReadWrite`, refuses writes to
+both sides of a `ParameterCalculation`, and fails closed for a program whose
+authority was not recorded. Public tests: `write_authority` (ProductDB, 5)
+and `http_parameter_write_authority` (server, 3); six compiled mutants
+(ingest pass, backfill, access check, access layering, calculation check,
+fail-closed check) are each caught.
+
+**Still open, unchanged:** the structural `Dynamic` grammar, the no-match
+`choose` rule, `Repeat` expansion, rename/button behaviour, the allocator
+rule (sample present now, rule not documented), and the precedence of the two
+`Access` levels (inference [A], documented in the ADR).
+
 ## Scope and authority
 
 AR07 follows the delivered AR06 conservative import contract. Manufacturer

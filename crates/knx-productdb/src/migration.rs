@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 19;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 20;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -292,7 +292,108 @@ fn migrations() -> Vec<Migration> {
         migrate_v16_to_v17,
         migrate_v17_to_v18,
         migrate_v18_to_v19,
+        migrate_v19_to_v20,
     ]
+}
+
+/// v19 -> v20 (ADR-0080). `parameter_ref` gains `access`, a new
+/// `parameter_calculation_ref` table indexes which refs a
+/// `ParameterCalculation` names, and `application_program` gains
+/// `write_authority_recorded`, filled from each retained program blob in its
+/// own savepoint by the same pass ingest runs.
+///
+/// A blob that no longer re-reads — bytes that do not match their key, a
+/// blob that no longer classifies as a program, or one whose XML fails — is
+/// rolled back and recorded as `WriteAuthorityBackfillError`. Its programs
+/// keep `write_authority_recorded = 0`, which the server treats as
+/// read-only: fail closed, never silently writable. No unknown row and no
+/// install report changes: `ParameterRef/@Access` was never reported and the
+/// calculation elements stay reported as they were.
+fn migrate_v19_to_v20(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "ALTER TABLE parameter_ref ADD COLUMN access TEXT;
+         ALTER TABLE application_program
+             ADD COLUMN write_authority_recorded INTEGER NOT NULL DEFAULT 0;
+         CREATE TABLE parameter_calculation_ref (
+             program_id       TEXT NOT NULL,
+             calculation_id   TEXT NOT NULL,
+             side             TEXT NOT NULL CHECK (side IN ('L', 'R')),
+             parameter_ref_id TEXT NOT NULL,
+             PRIMARY KEY (program_id, calculation_id, side, parameter_ref_id)
+         ) STRICT;
+         CREATE INDEX parameter_calculation_ref_member
+             ON parameter_calculation_ref (program_id, parameter_ref_id);",
+    )?;
+    let blobs = conn
+        .prepare(
+            "SELECT DISTINCT s.sha256, s.source_path FROM source_file s
+             JOIN application_program p ON p.source_sha256 = s.sha256
+             ORDER BY s.sha256",
+        )?
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (sha256, source_path) in blobs {
+        let failure = |cause: &str| ProductDbError::Xml {
+            source_path: source_path.clone(),
+            cause: format!("v20 backfill: {cause}"),
+        };
+        let Some(bytes) = crate::load_source_file(conn, &sha256)? else {
+            record_backfill_failure(
+                conn,
+                &sha256,
+                &source_path,
+                "WriteAuthorityBackfillError",
+                "record_write_authority",
+                &failure("stored program bytes are missing"),
+            )?;
+            continue;
+        };
+        let refused = if crate::sha256_hex(&bytes) != sha256 {
+            Some(failure("stored bytes do not match their SHA-256 key"))
+        } else if classify(&bytes) != FileKind::ApplicationProgram {
+            Some(failure(
+                "stored program no longer classifies as an ApplicationProgram",
+            ))
+        } else {
+            None
+        };
+        if let Some(error) = refused {
+            record_backfill_failure(
+                conn,
+                &sha256,
+                &source_path,
+                "WriteAuthorityBackfillError",
+                "record_write_authority",
+                &error,
+            )?;
+            continue;
+        }
+        conn.execute_batch("SAVEPOINT v20_write_authority;")?;
+        match crate::parse::write_authority::record_write_authority(
+            conn,
+            &sha256,
+            &source_path,
+            &bytes,
+        ) {
+            Ok(()) => conn.execute_batch("RELEASE SAVEPOINT v20_write_authority;")?,
+            Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT v20_write_authority;
+                     RELEASE SAVEPOINT v20_write_authority;",
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "WriteAuthorityBackfillError",
+                    "record_write_authority",
+                    &error,
+                )?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Byte-only Languages evidence. Historical install snapshots and normalized

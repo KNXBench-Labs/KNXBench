@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR07: the manufacturer's "hands off" now means hands off (ADR-0080)
+
+- **Census.** Read-only, aggregate-only scan of 3,599 distinct application
+  programs (`OriginalData` + the public crawler download): no `Dynamic`
+  kind outside the evaluator's set besides the four ADR-0041 names; every
+  `when/@test` is a `Condition_t` integer form; 1,199 allocator bindings,
+  116,799 `ParameterCalculation`s (JavaScript and VBScript), 373 `Repeat`s.
+  Table in PARAMETER_SEMANTICS_BOUNDARY.
+- **Write authority.** *Project Schema23* §1.1.2.1 makes `Access` a user
+  right. ProductDB schema v20 stores `ParameterRef/@Access`, indexes
+  `ParameterCalculation` members and marks recorded programs; the panel
+  refuses writes for effective access other than `ReadWrite`, for both sides
+  of a calculation, and for unrecorded programs (fail closed), with three
+  new warnings. Imported values are untouched.
+- **Found:** `KL-155` — unstored `Parameter`/`ParameterRef` attributes are
+  not reported (probe-confirmed). Next alpha package.
+- **UI owner:** adopt `parameterAccessReadOnly`, `manufacturerCalculation`,
+  `writeAuthorityUnavailable`; decide how `access: "None"` fields look.
+
 ## 2026-10-05 — AR06 rows reconciled: seven TODOs find their place
 
 - Status only, no product code. Named evidence rerun on `2f6f20b0` with the

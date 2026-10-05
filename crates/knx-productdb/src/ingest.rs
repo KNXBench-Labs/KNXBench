@@ -179,6 +179,16 @@ pub(crate) fn ingest_file_in_transaction(
             let dyn_detailed =
                 dynamic::parse::parse_dynamic_trees_detailed(conn, &sha256, source_path, bytes)?;
             let dyn_out = dyn_detailed.outcome;
+            // ADR-0080: a third pass records the declared write authority
+            // for the programs this blob owns (`ParameterRef/@Access`,
+            // `ParameterCalculation` members). It reports nothing: the
+            // calculation element is already reported by the static pass.
+            crate::parse::write_authority::record_write_authority(
+                conn,
+                &sha256,
+                source_path,
+                bytes,
+            )?;
             let mut unknown = out.unknown;
             unknown.extend(dyn_out.unknown);
             let mut entities = detailed.entities;

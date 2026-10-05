@@ -8,6 +8,7 @@
 
 mod dynamic_scalar_copy;
 mod v16_rewind;
+mod v20_rewind;
 
 use std::collections::HashMap;
 use std::io::{Cursor, Write};
@@ -2780,6 +2781,7 @@ fn migrating_from_v2_backfills_dynamic_node_from_stored_blobs_without_a_reinstal
     // `migrate_v3_to_v4`'s rebuild against a table that is already in its
     // own target shape would fail looking for the `program_id` column it
     // expects to migrate away from.
+    v20_rewind::drop_v20_objects(&conn);
     conn.execute_batch(
         "DROP TABLE package_install_diagnostic;
          DROP TABLE package_install_unknown;
@@ -2872,6 +2874,7 @@ fn a_parse_failure_during_the_v2_to_v3_backfill_does_not_abort_the_migration() {
     // `migrate_v3_to_v4`'s rebuild against a table that is already in its
     // own target shape would fail looking for the `program_id` column it
     // expects to migrate away from.
+    v20_rewind::drop_v20_objects(&conn);
     conn.execute_batch(
         "DROP TABLE package_install_diagnostic;
          DROP TABLE package_install_unknown;
@@ -4215,6 +4218,7 @@ fn a_v10_database_gains_its_arguments_from_the_stored_blob_alone() {
     // table dropped and its column removed, every table v10 itself brought
     // — T13's `function_type`, `function_point`, `space_usage` among them —
     // left standing, and the stored blob untouched.
+    v20_rewind::drop_v20_objects(&conn);
     conn.execute_batch(
         "DROP TABLE package_install_diagnostic;
          DROP TABLE package_install_unknown;

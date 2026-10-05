@@ -14,6 +14,7 @@
 use rusqlite::Connection;
 
 mod v16_rewind;
+mod v20_rewind;
 
 fn db() -> (tempfile::TempDir, Connection) {
     let dir = tempfile::tempdir().unwrap();
@@ -295,6 +296,7 @@ fn rewind_to_v14(conn: &Connection) {
             .unwrap();
         }
     }
+    v20_rewind::drop_v20_objects(conn);
     conn.execute_batch(
         "UPDATE parameter_type
          SET kind = 'Other', size_in_bit = NULL, min_inclusive = NULL, max_inclusive = NULL

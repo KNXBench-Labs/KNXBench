@@ -1,6 +1,7 @@
 //! Verifies atomic standalone product-package ingestion and ZIP safety boundaries.
 
 mod v16_rewind;
+mod v20_rewind;
 
 use std::io::{Cursor, Read, Write};
 use std::path::PathBuf;
@@ -1549,6 +1550,7 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
     // `scope`/`scope_id`, and rerunning `migrate_v3_to_v4`'s rebuild against a
     // table that is already in its own target shape would fail looking for
     // the `program_id` column it expects to migrate away from.
+    v20_rewind::drop_v20_objects(&conn);
     conn.execute_batch(
         "DROP TABLE package_install_diagnostic;
          DROP TABLE package_install_unknown;
@@ -1608,6 +1610,7 @@ fn a_failed_v1_to_v2_migration_rolls_back_its_ddl_and_version() {
     // the same reason `migrating_v1_preserves_existing_rows_and_blobs` does:
     // `db()` already ran the full chain up to v4, so `migrate_v3_to_v4`'s
     // rebuild must find `program_id` still there to migrate away from.
+    v20_rewind::drop_v20_objects(&conn);
     conn.execute_batch(
         "DROP TABLE package_install_diagnostic;
          DROP TABLE package_install_unknown;
@@ -2074,6 +2077,7 @@ fn a_v6_corpus_database_gets_its_linkable_back_from_its_own_blobs() {
         )
         .unwrap();
         drop_v13_catalogue_columns(&conn);
+        v20_rewind::drop_v20_objects(&conn);
         conn.pragma_update(None, "user_version", 6i64).unwrap();
     }
 

@@ -296,6 +296,13 @@ detail in the spike report §6):
    was never observed at all). Resolvable by the EEPROM/memory-mapping
    part of the KNX Standard not covered by this spike, or a much larger
    corpus.
+   **Partly answered 2026-10-05 (AR07, ADR-0080):** *Project Schema23*
+   §1.1.2.1 defines `Access_t` (`None`/`Read`/`ReadWrite`) as "the rights
+   for the ETS user to view and modify parameters" — a user right, not a
+   memory or activation rule, which is why the `Memory` correlation found
+   nothing. `ParameterRef/@Access` exists as well (80,962 refs in 301 of
+   332 `OriginalData` programs); how it combines with `Parameter/@Access` is
+   not stated and is inferred as an override. `Visible` stays unobserved.
 
 **Advisory for T18** (research input, not a design decision made here):
 the `@test`/`@default` value grammar and the resolution chain are solid

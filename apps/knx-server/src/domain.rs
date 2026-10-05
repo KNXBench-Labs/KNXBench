@@ -4332,6 +4332,9 @@ fn assemble_parameter_panel(
         .map_err(|e| e.to_string())?;
     let views_by_id: HashMap<String, knx_productdb::query::ParameterView> =
         views.iter().cloned().map(|v| (v.id.clone(), v)).collect();
+    // ADR-0080: the declared write authority beyond the parameter types.
+    let authority =
+        knx_productdb::query::write_authority(&products, &program_id).map_err(|e| e.to_string())?;
 
     // Coordinator addition: `parameter_views`' inner joins silently drop
     // a row whose `parameter`/`parameter_type` does not resolve — name
@@ -4498,12 +4501,17 @@ fn assemble_parameter_panel(
             },
         };
         let mut fields = Vec::with_capacity(section.ref_ids.len());
+        let mut refused: Vec<(WriteRefusal, String)> = Vec::new();
         for ref_id in &section.ref_ids {
             // A ref the join dropped (see the diagnostic above) has no
             // metadata to show; it is not fabricated here.
             let Some(view) = views_by_id.get(ref_id) else {
                 continue;
             };
+            let refusal = write_refusal(view, &authority);
+            if let Some(refusal) = refusal {
+                refused.push((refusal, view.id.clone()));
+            }
             // D42: display reads through `ValueMap` alone — it already
             // knows, per scope, whether a stored (possibly module-scoped)
             // value or the program default answers.
@@ -4532,7 +4540,7 @@ fn assemble_parameter_panel(
             // now has no string standing in for it anywhere, not even an
             // unreachable one; the `(Some(_), None)` arm returns `None`
             // directly.
-            let write_ets_id = if resource_limited {
+            let write_ets_id = if resource_limited || refusal.is_some() {
                 None
             } else {
                 match (&section.scope, mi_digits.as_deref()) {
@@ -4564,10 +4572,15 @@ fn assemble_parameter_panel(
                     })
                     .collect(),
                 display_order: view.display_order,
-                access: view.access.clone(),
+                access: effective_access(view).map(str::to_string),
                 write_ets_id,
             });
         }
+        push_write_refusals(
+            &mut diagnostics,
+            section.scope.as_ref().map(|s| module_scope_dto(s)),
+            refused,
+        );
         sections.push(crate::routes::ParameterSectionDto {
             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
             fields,
@@ -4598,6 +4611,89 @@ fn assemble_parameter_panel(
         views_by_id,
         ref_ids,
     })
+}
+
+/// ADR-0080: why a field is not writable beyond the evaluation's own
+/// reasons. Ordered as the diagnostics are emitted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum WriteRefusal {
+    AuthorityUnavailable,
+    AccessReadOnly,
+    ManufacturerCalculation,
+}
+
+/// The access a program declares for one field: the `ParameterRef`'s when
+/// present, otherwise the `Parameter`'s — the same layering `Text` and
+/// `Value` use (design D22). ADR-0080 records this precedence as an
+/// inference; it only decides which fields keep write authority.
+fn effective_access(view: &knx_productdb::query::ParameterView) -> Option<&str> {
+    view.ref_access.as_deref().or(view.access.as_deref())
+}
+
+/// The first ADR-0080 reason that refuses a write to `view`, if any. An
+/// absent access on both levels refuses nothing: no default is invented.
+fn write_refusal(
+    view: &knx_productdb::query::ParameterView,
+    authority: &knx_productdb::query::WriteAuthority,
+) -> Option<WriteRefusal> {
+    if !authority.recorded {
+        return Some(WriteRefusal::AuthorityUnavailable);
+    }
+    if effective_access(view).is_some_and(|access| access != "ReadWrite") {
+        return Some(WriteRefusal::AccessReadOnly);
+    }
+    if authority.calculated.contains_key(&view.id) {
+        return Some(WriteRefusal::ManufacturerCalculation);
+    }
+    None
+}
+
+/// One warning per section and reason, naming every affected field in
+/// `detail` (ADR-0080 rule 4). Nothing is emitted for a section without
+/// refusals.
+fn push_write_refusals(
+    diagnostics: &mut Vec<crate::routes::ParameterDiagnosticDto>,
+    scope: Option<crate::routes::ModuleScopeDto>,
+    mut refused: Vec<(WriteRefusal, String)>,
+) {
+    refused.sort();
+    let mut start = 0;
+    while start < refused.len() {
+        let reason = refused[start].0;
+        let end = refused[start..]
+            .iter()
+            .position(|(r, _)| *r != reason)
+            .map_or(refused.len(), |offset| start + offset);
+        let ids: Vec<&str> = refused[start..end]
+            .iter()
+            .map(|(_, id)| id.as_str())
+            .collect();
+        let (kind, message, why) = match reason {
+            WriteRefusal::AuthorityUnavailable => (
+                crate::routes::ParameterDiagnosticKindDto::WriteAuthorityUnavailable,
+                "The product database has no recorded write authority for this program; its fields are read-only. Reinstall the product to record it.",
+                "no write authority recorded for this program (v20 backfill failed)",
+            ),
+            WriteRefusal::AccessReadOnly => (
+                crate::routes::ParameterDiagnosticKindDto::ParameterAccessReadOnly,
+                "Some fields are declared read-only or hidden by the manufacturer (Access); they are not writable.",
+                "effective Access is not ReadWrite",
+            ),
+            WriteRefusal::ManufacturerCalculation => (
+                crate::routes::ParameterDiagnosticKindDto::ManufacturerCalculation,
+                "Some fields are inputs or results of a manufacturer calculation that KNXBench does not run; they are read-only.",
+                "named by a ParameterCalculation",
+            ),
+        };
+        diagnostics.push(crate::routes::ParameterDiagnosticDto {
+            scope: scope.clone(),
+            kind,
+            severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
+            message: message.to_string(),
+            detail: format!("{} field(s), {why}: {}", ids.len(), ids.join(", ")),
+        });
+        start = end;
+    }
 }
 
 pub(crate) fn parameter_panel_impl(
@@ -4967,7 +5063,7 @@ pub(crate) fn set_parameter_value_impl(
                     Some(correct) => format!(
                         "is shown, but must be written using its module-qualified id '{correct}', not this one"
                     ),
-                    None => "is currently shown but not writable (evaluation was incomplete, its module-scoped section has no single authoritative module instance, or its write target could not be reconstructed)".to_string(),
+                    None => "is currently shown but not writable (its declared Access or a manufacturer calculation forbids writing, the program's write authority was not recorded, evaluation was incomplete, its module-scoped section has no single authoritative module instance, or its write target could not be reconstructed)".to_string(),
                 }
             } else if before.ref_ids.contains(&ets_id) {
                 "is declared by this program but not currently active".to_string()
@@ -5659,6 +5755,7 @@ mod tests {
             text_layer: knx_productdb::query::ValueLayer::Program,
             kind: kind.to_string(),
             access: None,
+            ref_access: None,
             min_inclusive: None,
             max_inclusive: None,
             size_in_bit: None,

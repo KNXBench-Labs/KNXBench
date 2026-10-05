@@ -15,6 +15,67 @@
   acceptance. Authoritative KL151 remains in status/LEDGER.md; evidence in
   PRODUCT_ZIP_RAW_INPUT_CONTRACTS.md.
 
+## 2026-10-05 — CLI serial-lookup read lifecycle (local candidate, not integrated/published)
+
+- Both `device find-serial` directions accept optional `--activity-history`.
+  Explicit unavailable history refuses before adapter acquisition; startup metadata
+  precedes the first loopback tunnel request. Format-2 `serialLookup` keeps its
+  required null address and omits serial, gateway, path and payload.
+- Four compiled/listed/named runtime RED phases preceded implementation and correction.
+  Five-stage branch gate accepted fmt, strict CLI all-target Clippy, selected
+  regressions **119/0/8 across three result blocks**, actual alpha.3 version smoke,
+  and whitespace. New CLI read tests **7/0/0** cover both directions, interruption,
+  privacy, evidence-preserving refusal, duplicate flags, terminal connection failure
+  and usage. Existing service-control reads now also refuse explicit unavailable
+  history before adapter acquisition rather than silently continuing unjournaled.
+  [Source-bound branch receipt](evidence/cli-read-lifecycle-2026-10-05.json).
+- Three compiled/listed/intended-runtime source controls caught no-match, omitted
+  pending-start and service-admission regressions; canonical bytes restored and
+  reader **7/0/0** recompiled afterward.
+- Offline Rust workspace **3225/0/177 across178 blocks** passed after an actual
+  frontend dependency/build prerequisite; frozen Source/Web hashes unchanged. This
+  cached-target branch gate is not latest-main integration, private-corpus, browser
+  or independent acceptance. No-match completion is finished metadata while
+  preserving the existing no-answer output and nonzero CLI exit.
+  No Web/protocol code or hardware changed. Integration with the moving upstream,
+  publication, further readers/long sessions and broader recovery remain pending;
+  ledger status/ownership is unchanged. See the [caller contract](COMMISSIONING_ACTIVITY_HISTORY.md).
+
+## 2026-10-05 — Service-control recovery-record admission (local candidate)
+
+- [Property-only record contract](SERVICE_CONTROL_BACKUP.md): exact format-2
+  semantic admission, explicit unsupported/unknown-field errors, all original
+  bits and lowercase spelling retained; invalid records refused before filesystem
+  effects. App advances to alpha.3, recovery format stays 2.
+- Fresh five-stage local gate passed backup7/0/0, App98/0/21, fmt,
+  strict Clippy and whitespace. Thirteen source controls each compiled, registered
+  one test, failed at its named runtime assertion and restored canonical bytes;
+  all four batches reran backup7/0/0. [Snapshot receipt](evidence/service-control-backup-validation-2026-10-05.json).
+- Integrated workspace/publication, wider abort/restore/long sessions and client
+  surfaces remain open. No independent acceptance, hardware/ETS parity or
+  guaranteed power-loss recovery is implied. Ledger statuses are unchanged.
+
+## 2026-10-04 — Shared commissioning Caller candidate (integration pending)
+
+- ADR-0075 moves the unchanged format-2 activity engine to `knx-app`, with a
+  server adapter and tracked CLI download/restore/service-control writes.
+  Confirmed writes require an explicitly supplied persistent history. Original
+  backups precede durable possible-send intent; intent failure sends no mutation.
+  Written, restart and cleanup outcomes remain separate. History is not recovery.
+- App/CLI program versions advance to0.1.0-alpha.2. The current typed consent,
+  unsupported masks/device-recovery refusals and never-contact list are unchanged.
+- The candidate78aae8ae passed its local frozen fmt, strict Clippy and three
+  package gate853/0/85. After current-main integration, the public seeded-history
+  regression covers18 exact/symlink/Unix-hardlink variants across primary,
+  product and operator-key inputs for both callers; admission9/0/0. Two
+  additional compiled parent-wiring controls failed at their intended runtime
+  assertions; canonical bytes were restored and the target passed again.
+- Actual merged-workspace acceptance/publication remains pending. The two
+  earlier local result scopes are not a new workspace total. Further read
+  callers, long sessions, client adoption and offline original-property recovery
+  remain open. No hardware/ETS/vendor/power-loss validation is claimed or made
+  an operator completion blocker. Status-of-record: [ledger](status/LEDGER.md).
+
 ## 2026-10-04 — AR06W: bounded declared-byte admission contracts
 
 - Four public synthetic native contracts pass4/0/0, old count2 filtered: exact/

@@ -9,11 +9,12 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
-use knx_core::IndividualAddress;
+use knx_core::commissioning::properties::{PID_DEVICE_CONTROL, PID_SERVICE_CONTROL};
+use knx_core::{ContactableAddress, IndividualAddress};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(try_from = "UncheckedBackup")]
 pub struct ServiceControlBackup {
     pub format: u32,
     pub kind: String,
@@ -29,7 +30,67 @@ pub struct ServiceControlBackup {
     pub device_control_octets: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UncheckedBackup {
+    format: u32,
+    kind: String,
+    taken: String,
+    device: String,
+    mask: String,
+    object_index: u8,
+    property_id: u8,
+    octets: String,
+    device_control_property_id: u8,
+    device_control_octets: String,
+}
+
+impl TryFrom<UncheckedBackup> for ServiceControlBackup {
+    type Error = io::Error;
+
+    fn try_from(raw: UncheckedBackup) -> Result<Self, Self::Error> {
+        let record = Self {
+            format: raw.format,
+            kind: raw.kind,
+            taken: raw.taken,
+            device: raw.device,
+            mask: raw.mask,
+            object_index: raw.object_index,
+            property_id: raw.property_id,
+            octets: raw.octets,
+            device_control_property_id: raw.device_control_property_id,
+            device_control_octets: raw.device_control_octets,
+        };
+        record.validate()?;
+        Ok(record)
+    }
+}
+
 impl ServiceControlBackup {
+    fn validate(&self) -> io::Result<()> {
+        fn hex(value: &str, width: usize) -> bool {
+            value.len() == width && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+        }
+        let target = self.device.parse::<IndividualAddress>().ok();
+        if self.format != 2
+            || self.kind != "knxbench-service-control-backup"
+            || chrono::DateTime::parse_from_rfc3339(&self.taken).is_err()
+            || !target.is_some_and(|address| ContactableAddress::new(address).is_ok())
+            || !hex(&self.mask, 4)
+            || self.object_index != 0
+            || self.property_id != PID_SERVICE_CONTROL
+            || !hex(&self.octets, 4)
+            || self.device_control_property_id != PID_DEVICE_CONTROL
+            || !hex(&self.device_control_octets, 2)
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "unsupported or invalid service-control recovery record",
+            ));
+        }
+        Ok(())
+    }
+
     fn new(device: IndividualAddress, mask: u16, raw: u16, device_control: u8) -> Self {
         Self {
             format: 2,
@@ -38,9 +99,9 @@ impl ServiceControlBackup {
             device: device.to_string(),
             mask: format!("{mask:04X}"),
             object_index: 0,
-            property_id: 8,
+            property_id: PID_SERVICE_CONTROL,
             octets: format!("{raw:04X}"),
-            device_control_property_id: 14,
+            device_control_property_id: PID_DEVICE_CONTROL,
             device_control_octets: format!("{device_control:02X}"),
         }
     }
@@ -70,6 +131,7 @@ fn write_record_with_sync(
     record: ServiceControlBackup,
     sync_directory: impl FnMut(&Path) -> io::Result<()>,
 ) -> io::Result<PathBuf> {
+    record.validate()?;
     fs::create_dir_all(dir)?;
     let stamp: String = record
         .taken
@@ -107,6 +169,118 @@ fn write_record_with_sync(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn refuses_semantically_invalid_recovery_records() {
+        let record = ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104, 0x02);
+        let valid = serde_json::to_value(&record).unwrap();
+        let decoded: ServiceControlBackup = serde_json::from_value(valid.clone()).unwrap();
+        assert_eq!(
+            decoded, record,
+            "original properties must roundtrip unchanged"
+        );
+        for (field, value) in [
+            ("format", serde_json::json!(1)),
+            ("format", serde_json::json!(3)),
+            ("kind", serde_json::json!("foreign-backup")),
+            ("taken", serde_json::json!("not-a-timestamp")),
+            ("device", serde_json::json!("invalid-address")),
+            ("device", serde_json::json!("1.1.220")),
+            ("mask", serde_json::json!("070")),
+            ("mask", serde_json::json!("ZZZZ")),
+            ("object_index", serde_json::json!(1)),
+            ("property_id", serde_json::json!(14)),
+            ("octets", serde_json::json!("04")),
+            ("octets", serde_json::json!("XXXX")),
+            ("device_control_property_id", serde_json::json!(8)),
+            ("device_control_octets", serde_json::json!("0002")),
+            ("device_control_octets", serde_json::json!("XX")),
+            ("mask", serde_json::json!("+701")),
+            ("octets", serde_json::json!("+104")),
+            ("device_control_octets", serde_json::json!("+2")),
+            ("synthetic_extension", serde_json::json!("not-understood")),
+        ] {
+            let mut invalid = valid.clone();
+            invalid[field] = value;
+            assert!(
+                serde_json::from_value::<ServiceControlBackup>(invalid).is_err(),
+                "invalid recovery field admitted: {field}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_original_device_control_octet_is_retained_without_bit_interpretation() {
+        for device_control in u8::MIN..=u8::MAX {
+            for service_control in [0, 0x0104, 0x8000, u16::MAX] {
+                let record = ServiceControlBackup::new(
+                    "1.1.67".parse().unwrap(),
+                    0x0701,
+                    service_control,
+                    device_control,
+                );
+                let mut wire = serde_json::to_value(&record).unwrap();
+                let decoded: ServiceControlBackup = serde_json::from_value(wire.clone()).unwrap();
+                assert_eq!(decoded, record, "all original bits must be preserved");
+                wire["device_control_octets"] = serde_json::json!(format!("{device_control:02x}"));
+                let decoded: ServiceControlBackup = serde_json::from_value(wire.clone()).unwrap();
+                assert_eq!(serde_json::to_value(decoded).unwrap(), wire);
+            }
+        }
+    }
+
+    #[test]
+    fn invalid_records_are_refused_before_filesystem_changes() {
+        let temp = tempfile::tempdir().unwrap();
+        let seed = temp.path().join("existing.backup.json");
+        let seed_bytes = b"existing recovery evidence must remain unchanged";
+        fs::write(&seed, seed_bytes).unwrap();
+        let valid = ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104, 0x02);
+        for (label, record) in [
+            (
+                "format",
+                ServiceControlBackup {
+                    format: 3,
+                    ..valid.clone()
+                },
+            ),
+            (
+                "path",
+                ServiceControlBackup {
+                    device: "../../outside".into(),
+                    ..valid.clone()
+                },
+            ),
+            (
+                "excluded-target",
+                ServiceControlBackup {
+                    device: "1.1.220".into(),
+                    ..valid.clone()
+                },
+            ),
+            (
+                "original-octet",
+                ServiceControlBackup {
+                    device_control_octets: "+2".into(),
+                    ..valid.clone()
+                },
+            ),
+        ] {
+            let dir = temp.path().join(format!("uncreated-{label}"));
+            let mut synced = false;
+            let result = write_record_with_sync(&dir, record, |_| {
+                synced = true;
+                Ok(())
+            });
+            assert!(
+                !dir.exists(),
+                "invalid recovery record must be refused before creating directories: {label}"
+            );
+            assert_eq!(result.unwrap_err().kind(), io::ErrorKind::InvalidData);
+            assert!(!synced, "a refused record must not reach directory sync");
+            assert_eq!(fs::read(&seed).unwrap(), seed_bytes);
+        }
+    }
 
     #[test]
     fn nested_backup_directory_entries_are_all_synced() {

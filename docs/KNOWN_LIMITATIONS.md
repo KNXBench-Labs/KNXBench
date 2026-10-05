@@ -2853,7 +2853,7 @@ this document. The inventory is: `scaled-angle-linear-mapping` (5.003),
 `datetime-src-is-reserved` and `datetime-invalid-fields-keep-width-only`
 (19.*), `format-level-validation-only` (20.*, 21.*, 22.*, 23.*, 25.*, 27.*,
 30.*), `strict-null-termination` (24.*, 28.*), and
-`signed64-range-typo-corrected` (29.*). This is metadata only: T07 changed no
+`signed64-range-typo-corrected` (29.*), and since AR09 (2026-10-05) `time-period-raw-counter-parameter-only` (7.003, 7.004, 7.006, 8.003, 8.004, 8.006: raw counter, Standard allows them for parameters and diagnostics only). This is metadata only: T07 changed no
 wire encoding.
 
 Against the ETS master data that number reads differently, and the

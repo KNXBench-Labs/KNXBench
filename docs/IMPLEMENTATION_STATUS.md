@@ -1,5 +1,15 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR09: parameter-only time periods say so before a write
+
+- Numeric range pass over main types 5–9, 12–14 and 29 against DPT-AS: format
+  limits correct, no wire change. Subtype ranges remain unenforced (documented
+  §61 boundary). 7.003/7.004/7.006 and 8.003/8.004/8.006 (raw counter in
+  10 ms/100 ms/1 min, "not allowed for runtime communication") now return the
+  `time-period-raw-counter-parameter-only` ruling. Audit:
+  docs/spec-audits/2026-10-05-dpt-numeric-ranges.md. KL-61 stays IN_PROGRESS
+  for the GA-declared DPT versus linked-object question.
+
 ## 2026-10-05 — AR09: 17.001 scene numbers travel in their own octet
 
 - Format-width audit of DPT main types 1–30 against DPT-AS (new

@@ -45,3 +45,7 @@ write. The wire behaviour itself is not wrong.
 counter and the parameter-only restriction. The wire encoding is unchanged.
 New test: `parameter_only_time_periods_disclose_their_raw_counter`
 (RED before, GREEN after).
+
+## Gates
+
+Integrated public16 on 6fbb02c3 independently accepted: 16 exit0, Rust 3248/0/177 in 181 blocks, Web 2001, Chromium 131 plus probe 1, 887 frozen inputs, CLI knx 0.1.0-alpha.4+g6fbb02c3. First attempt refused (workspace 101): `http_bus_monitor` compared whole rows across two polls although `observedAgeMs` is measured per response (AR20); fixed in 6fbb02c3 (test only, 5 ms injected pause: old assertion fails, new passes).

@@ -742,6 +742,13 @@ stored language answered or that the package's own text was kept
 device-product and master surfaces remain (slice 2b). UI owner: decide how
 the markers are shown.
 
+**AR10 slice 2b, 2026-10-05:** catalogue, device-product block and master
+readers expose the answering language and the fallback
+(`device_product_names_the_language_that_answered_and_the_fallback`,
+`the_dpt_text_names_the_language_that_answered`, catalogue assertions).
+`KL-64` ACCEPTED_BOUNDARY. `KL-37` stays open for the report's
+communication-object text; `KL-66` next.
+
 ### AR11 — Resolve remaining CSV/report decisions and verify the selected backend scope
 
 **Sources:** `KL-38`, `KL-40`, `KL-44`, `KL-47`, `KL-51`, `KL-60`.

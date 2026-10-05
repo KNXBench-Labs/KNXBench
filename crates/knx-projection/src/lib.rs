@@ -561,6 +561,33 @@ pub struct DeviceProductCatalog {
     pub application_number: Option<String>,
     pub application_version: Option<String>,
     pub mask_version: Option<String>,
+    /// The stored language identifier that answered a requested display
+    /// language for `product_text` (e.g. `de-DE` for `de`); absent when
+    /// `product_text` is the package's own text (AR10).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub product_text_language: Option<String>,
+    /// As `product_text_language`, for `catalog_item_name`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub catalog_item_name_language: Option<String>,
+    /// As `product_text_language`, for `application_name`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub application_name_language: Option<String>,
+    /// `product.default_language`, verbatim: the declared language of the
+    /// package's own `product_text`; absent when undeclared.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub product_source_language: Option<String>,
+    /// `catalog_item.default_language`, verbatim.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub catalog_item_source_language: Option<String>,
+    /// `application_program.default_language`, verbatim.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub application_source_language: Option<String>,
 }
 
 /// Why [`DeviceProductNode::catalog`] is what it is.
@@ -646,6 +673,12 @@ pub struct ComObjectNode {
     /// the master data translates it. The canonical id stays in `dpt`/
     /// `program_dpt`. Server-only: [`build_device_detail`] leaves it `None`.
     pub dpt_text: Option<String>,
+    /// The stored language identifier that answered a requested display
+    /// language for `dpt_text`; absent when `dpt_text` is the master data's
+    /// own text (AR10). Server-only, like `dpt_text`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub dpt_text_language: Option<String>,
     /// The product's `FunctionText` (`ComObjectRef` over `ComObject`), in
     /// the requested language when translated, module arguments of the
     /// object's own module instance substituted. The main-function label
@@ -803,6 +836,7 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
         channel: None,
         program_dpt,
         dpt_text: None,
+        dpt_text_language: None,
         function_text: None,
     }
 }

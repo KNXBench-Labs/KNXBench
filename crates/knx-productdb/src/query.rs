@@ -776,7 +776,7 @@ fn overlay_one(
     ref_id: &str,
     attribute_name: &str,
     language: &str,
-) -> Result<Option<String>, ProductDbError> {
+) -> Result<Option<OverlayHit>, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT language, text FROM translation
          WHERE scope = ?1 AND scope_id = ?2 AND ref_id = ?3 AND attribute_name = ?4
@@ -794,7 +794,10 @@ fn overlay_one(
             candidates
                 .iter()
                 .find(|(l, _)| l == matched)
-                .map(|(_, text)| text.clone())
+                .map(|(stored, text)| OverlayHit {
+                    text: text.clone(),
+                    language: stored.clone(),
+                })
         }),
     )
 }
@@ -1095,6 +1098,15 @@ pub struct CatalogItemRow {
     pub visible_description: Option<String>,
     pub product_ref_id: Option<String>,
     pub hardware2program_ref_id: Option<String>,
+    /// The stored language identifier whose translation `name` is (e.g.
+    /// `de-DE` for a requested `de`), `None` for the package's own text
+    /// (AR10: the fallback is exposed, never hidden).
+    pub name_language: Option<String>,
+    /// As `name_language`, for `visible_description`.
+    pub visible_description_language: Option<String>,
+    /// `catalog_item.default_language`, verbatim: the declared language of
+    /// the untranslated texts, `None` when the package declares none.
+    pub source_language: Option<String>,
 }
 
 fn row_to_catalog_item(r: &rusqlite::Row) -> rusqlite::Result<CatalogItemRow> {
@@ -1106,10 +1118,13 @@ fn row_to_catalog_item(r: &rusqlite::Row) -> rusqlite::Result<CatalogItemRow> {
         visible_description: r.get(4)?,
         product_ref_id: r.get(5)?,
         hardware2program_ref_id: r.get(6)?,
+        name_language: None,
+        visible_description_language: None,
+        source_language: r.get(7)?,
     })
 }
 
-const CATALOG_ITEM_COLUMNS: &str = "id, manufacturer_id, name, number, visible_description, product_ref_id, hardware2program_ref_id";
+const CATALOG_ITEM_COLUMNS: &str = "id, manufacturer_id, name, number, visible_description, product_ref_id, hardware2program_ref_id, default_language";
 
 /// Every `catalog_item` row, optionally narrowed to one manufacturer and/or
 /// a case-insensitive substring match on `name`/`number` — backs the catalog
@@ -1185,15 +1200,17 @@ pub fn catalog_items(
     };
     let overlay = catalog_overlay(conn, &manufacturer_ids, lang)?;
     for row in &mut rows {
-        if let Some(name) = overlay.get(&(row.manufacturer_id.clone(), row.id.clone(), "Name")) {
-            row.name = Some(name.clone());
+        if let Some(hit) = overlay.get(&(row.manufacturer_id.clone(), row.id.clone(), "Name")) {
+            row.name = Some(hit.text.clone());
+            row.name_language = Some(hit.language.clone());
         }
-        if let Some(desc) = overlay.get(&(
+        if let Some(hit) = overlay.get(&(
             row.manufacturer_id.clone(),
             row.id.clone(),
             "VisibleDescription",
         )) {
-            row.visible_description = Some(desc.clone());
+            row.visible_description = Some(hit.text.clone());
+            row.visible_description_language = Some(hit.language.clone());
         }
     }
 
@@ -1234,7 +1251,7 @@ fn catalog_overlay(
     conn: &Connection,
     manufacturer_ids: &[String],
     language: &str,
-) -> Result<HashMap<CatalogOverlayKey, String>, ProductDbError> {
+) -> Result<HashMap<CatalogOverlayKey, OverlayHit>, ProductDbError> {
     if manufacturer_ids.is_empty() {
         return Ok(HashMap::new());
     }
@@ -1272,8 +1289,14 @@ fn catalog_overlay(
     for (key, candidates) in grouped {
         let languages: Vec<&str> = candidates.iter().map(|(l, _)| l.as_str()).collect();
         if let Some(matched) = best_matching_language(language, &languages) {
-            if let Some((_, text)) = candidates.iter().find(|(l, _)| l == matched) {
-                resolved.insert(key, text.clone());
+            if let Some((stored, text)) = candidates.iter().find(|(l, _)| l == matched) {
+                resolved.insert(
+                    key,
+                    OverlayHit {
+                        text: text.clone(),
+                        language: stored.clone(),
+                    },
+                );
             }
         }
     }
@@ -1533,6 +1556,20 @@ pub struct DeviceProductRow {
     /// Whether the requested program link belongs to this product's
     /// hardware. Mismatched links never contribute program metadata.
     pub program_relation: DeviceProgramRelation,
+    /// The stored language identifier whose translation `product_text` is,
+    /// `None` for the package's own text (AR10: the fallback is exposed).
+    pub product_text_language: Option<String>,
+    /// As `product_text_language`, for `catalog_item_name`.
+    pub catalog_item_name_language: Option<String>,
+    /// As `product_text_language`, for `application_name`.
+    pub application_name_language: Option<String>,
+    /// `product.default_language`, verbatim: the declared language of the
+    /// untranslated `product_text`.
+    pub product_source_language: Option<String>,
+    /// `catalog_item.default_language`, verbatim.
+    pub catalog_item_source_language: Option<String>,
+    /// `application_program.default_language`, verbatim.
+    pub application_source_language: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1583,6 +1620,12 @@ fn row_to_device_product_raw(r: &rusqlite::Row) -> rusqlite::Result<DeviceProduc
             application_version: r.get(12)?,
             mask_version: r.get(13)?,
             program_relation,
+            product_text_language: None,
+            catalog_item_name_language: None,
+            application_name_language: None,
+            product_source_language: r.get(18)?,
+            catalog_item_source_language: r.get(19)?,
+            application_source_language: r.get(20)?,
         },
         catalog_item_id: r.get(14)?,
         catalog_item_manufacturer_id: r.get(15)?,
@@ -1660,7 +1703,8 @@ pub fn device_product(
                 apg.id, apg.name, apg.application_number,
                 apg.application_version, apg.mask_version,
                 ci.id, ci.manufacturer_id,
-                p.hardware_id, h2p.hardware_id
+                p.hardware_id, h2p.hardware_id,
+                p.default_language, ci.default_language, apg.default_language
          FROM product p
          LEFT JOIN hardware h ON h.id = p.hardware_id
          LEFT JOIN manufacturer m ON m.id = p.manufacturer_id
@@ -1686,7 +1730,7 @@ pub fn device_product(
     };
 
     let mut row = raw.row;
-    if let Some(text) = overlay_one(
+    if let Some(hit) = overlay_one(
         conn,
         "Hardware",
         &row.manufacturer_id,
@@ -1694,20 +1738,23 @@ pub fn device_product(
         "Text",
         lang,
     )? {
-        row.product_text = Some(text);
+        row.product_text = Some(hit.text);
+        row.product_text_language = Some(hit.language);
     }
     if let (Some(item_id), Some(item_manufacturer_id)) =
         (&raw.catalog_item_id, &raw.catalog_item_manufacturer_id)
     {
-        if let Some(name) =
+        if let Some(hit) =
             overlay_one(conn, "Catalog", item_manufacturer_id, item_id, "Name", lang)?
         {
-            row.catalog_item_name = Some(name);
+            row.catalog_item_name = Some(hit.text);
+            row.catalog_item_name_language = Some(hit.language);
         }
     }
-    if let Some(program_id) = &row.application_program_id {
-        if let Some(name) = overlay_one(conn, "Program", program_id, program_id, "Name", lang)? {
-            row.application_name = Some(name);
+    if let Some(program_id) = row.application_program_id.clone() {
+        if let Some(hit) = overlay_one(conn, "Program", &program_id, &program_id, "Name", lang)? {
+            row.application_name = Some(hit.text);
+            row.application_name_language = Some(hit.language);
         }
     }
     Ok(Some(row))
@@ -1753,6 +1800,9 @@ pub struct DatapointTypeRow {
     /// stored, untranslated value otherwise. A missing translation is never
     /// an error and never turns this into `Some("")`.
     pub text: Option<String>,
+    /// The stored language identifier whose translation `text` is, `None`
+    /// for the master data's own text (AR10: the fallback is exposed).
+    pub text_language: Option<String>,
 }
 
 fn row_to_datapoint_type(r: &rusqlite::Row) -> rusqlite::Result<DatapointTypeRow> {
@@ -1762,6 +1812,7 @@ fn row_to_datapoint_type(r: &rusqlite::Row) -> rusqlite::Result<DatapointTypeRow
         sub: r.get(2)?,
         name: r.get(3)?,
         text: r.get(4)?,
+        text_language: None,
     })
 }
 
@@ -1790,7 +1841,7 @@ const DATAPOINT_TYPE_COLUMNS: &str = "id, main, sub, name, text";
 fn master_text_overlay(
     conn: &Connection,
     language: &str,
-) -> Result<HashMap<String, String>, ProductDbError> {
+) -> Result<HashMap<String, OverlayHit>, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT ref_id, language, text FROM translation
          WHERE scope = 'Master' AND scope_id = '' AND attribute_name = 'Text'
@@ -1811,8 +1862,14 @@ fn master_text_overlay(
     for (ref_id, candidates) in grouped {
         let languages: Vec<&str> = candidates.iter().map(|(l, _)| l.as_str()).collect();
         if let Some(matched) = best_matching_language(language, &languages) {
-            if let Some((_, text)) = candidates.iter().find(|(l, _)| l == matched) {
-                resolved.insert(ref_id, text.clone());
+            if let Some((stored, text)) = candidates.iter().find(|(l, _)| l == matched) {
+                resolved.insert(
+                    ref_id,
+                    OverlayHit {
+                        text: text.clone(),
+                        language: stored.clone(),
+                    },
+                );
             }
         }
     }
@@ -1841,8 +1898,9 @@ pub fn datapoint_types(
     Ok(rows
         .into_iter()
         .map(|mut row| {
-            if let Some(text) = overlay.get(&row.id) {
-                row.text = Some(text.clone());
+            if let Some(hit) = overlay.get(&row.id) {
+                row.text = Some(hit.text.clone());
+                row.text_language = Some(hit.language.clone());
             }
             row
         })
@@ -1867,8 +1925,9 @@ pub fn datapoint_type(
     let Some(lang) = language else {
         return Ok(Some(row));
     };
-    if let Some(text) = overlay_one(conn, "Master", "", &row.id, "Text", lang)? {
-        row.text = Some(text);
+    if let Some(hit) = overlay_one(conn, "Master", "", &row.id, "Text", lang)? {
+        row.text = Some(hit.text);
+        row.text_language = Some(hit.language);
     }
     Ok(Some(row))
 }
@@ -1886,6 +1945,8 @@ pub struct FunctionTypeRow {
     /// translation in `language` when one resolves.
     pub text: Option<String>,
     pub status: Option<String>,
+    /// As `DatapointTypeRow::text_language`.
+    pub text_language: Option<String>,
 }
 
 fn row_to_function_type(r: &rusqlite::Row) -> rusqlite::Result<FunctionTypeRow> {
@@ -1894,6 +1955,7 @@ fn row_to_function_type(r: &rusqlite::Row) -> rusqlite::Result<FunctionTypeRow> 
         number: r.get(1)?,
         text: r.get(2)?,
         status: r.get(3)?,
+        text_language: None,
     })
 }
 
@@ -1918,8 +1980,9 @@ pub fn function_types(
     Ok(rows
         .into_iter()
         .map(|mut row| {
-            if let Some(text) = overlay.get(&row.id) {
-                row.text = Some(text.clone());
+            if let Some(hit) = overlay.get(&row.id) {
+                row.text = Some(hit.text.clone());
+                row.text_language = Some(hit.language.clone());
             }
             row
         })
@@ -1942,8 +2005,9 @@ pub fn function_type(
     let Some(lang) = language else {
         return Ok(Some(row));
     };
-    if let Some(text) = overlay_one(conn, "Master", "", &row.id, "Text", lang)? {
-        row.text = Some(text);
+    if let Some(hit) = overlay_one(conn, "Master", "", &row.id, "Text", lang)? {
+        row.text = Some(hit.text);
+        row.text_language = Some(hit.language);
     }
     Ok(Some(row))
 }
@@ -1960,6 +2024,8 @@ pub struct FunctionPointRow {
     pub role: Option<String>,
     pub characteristics: Option<String>,
     pub text: Option<String>,
+    /// As `DatapointTypeRow::text_language`.
+    pub text_language: Option<String>,
 }
 
 fn row_to_function_point(r: &rusqlite::Row) -> rusqlite::Result<FunctionPointRow> {
@@ -1970,6 +2036,7 @@ fn row_to_function_point(r: &rusqlite::Row) -> rusqlite::Result<FunctionPointRow
         role: r.get(3)?,
         characteristics: r.get(4)?,
         text: r.get(5)?,
+        text_language: None,
     })
 }
 
@@ -1997,8 +2064,9 @@ pub fn function_points(
     Ok(rows
         .into_iter()
         .map(|mut row| {
-            if let Some(text) = overlay.get(&row.id) {
-                row.text = Some(text.clone());
+            if let Some(hit) = overlay.get(&row.id) {
+                row.text = Some(hit.text.clone());
+                row.text_language = Some(hit.language.clone());
             }
             row
         })
@@ -2017,6 +2085,8 @@ pub struct SpaceUsageRow {
     /// `SpaceUsage`'s own `@Text`, overlaid from a `Master`-scope
     /// translation in `language` when one resolves.
     pub text: Option<String>,
+    /// As `DatapointTypeRow::text_language`.
+    pub text_language: Option<String>,
 }
 
 fn row_to_space_usage(r: &rusqlite::Row) -> rusqlite::Result<SpaceUsageRow> {
@@ -2024,6 +2094,7 @@ fn row_to_space_usage(r: &rusqlite::Row) -> rusqlite::Result<SpaceUsageRow> {
         id: r.get(0)?,
         number: r.get(1)?,
         text: r.get(2)?,
+        text_language: None,
     })
 }
 
@@ -2047,8 +2118,9 @@ pub fn space_usages(
     Ok(rows
         .into_iter()
         .map(|mut row| {
-            if let Some(text) = overlay.get(&row.id) {
-                row.text = Some(text.clone());
+            if let Some(hit) = overlay.get(&row.id) {
+                row.text = Some(hit.text.clone());
+                row.text_language = Some(hit.language.clone());
             }
             row
         })
@@ -2069,8 +2141,9 @@ pub fn space_usage(
     let Some(lang) = language else {
         return Ok(Some(row));
     };
-    if let Some(text) = overlay_one(conn, "Master", "", &row.id, "Text", lang)? {
-        row.text = Some(text);
+    if let Some(hit) = overlay_one(conn, "Master", "", &row.id, "Text", lang)? {
+        row.text = Some(hit.text);
+        row.text_language = Some(hit.language);
     }
     Ok(Some(row))
 }
@@ -2287,6 +2360,19 @@ mod tests {
         let items = catalog_items(&conn, None, None, Some("de")).unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].name.as_deref(), Some("Umschaltaktor"));
+        // AR10: the answering language is named, an untranslated
+        // description says so, and the declared source language comes along.
+        assert_eq!(items[0].name_language.as_deref(), Some("de-DE"));
+        assert_eq!(items[0].visible_description_language, None);
+        assert_eq!(items[0].source_language.as_deref(), Some("de-DE"));
+        let plain = catalog_items(&conn, None, None, None).unwrap();
+        assert_eq!(plain[0].name_language, None);
+        let missed = catalog_items(&conn, None, None, Some("fr")).unwrap();
+        assert_eq!(missed[0].name.as_deref(), Some("Schaltaktor"));
+        assert_eq!(
+            missed[0].name_language, None,
+            "a miss is the package's own text"
+        );
     }
 
     #[test]
@@ -2530,6 +2616,32 @@ mod tests {
             Some("Umschaltaktor")
         );
         assert_eq!(translated.application_name.as_deref(), Some("Programm P"));
+        // AR10: each overlaid text names the stored language that answered.
+        assert_eq!(translated.product_text_language.as_deref(), Some("de-DE"));
+        assert_eq!(
+            translated.catalog_item_name_language.as_deref(),
+            Some("de-DE")
+        );
+        assert_eq!(
+            translated.application_name_language.as_deref(),
+            Some("de-DE")
+        );
+        assert_eq!(
+            translated.catalog_item_source_language.as_deref(),
+            Some("de-DE")
+        );
+        let missed = device_product(&conn, "M-006A_H-1_P-1", "H-1_HP-1", Some("fr"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (
+                missed.product_text_language,
+                missed.catalog_item_name_language,
+                missed.application_name_language
+            ),
+            (None, None, None),
+            "a miss keeps the package's own text and says so"
+        );
     }
 
     #[test]
@@ -3725,6 +3837,14 @@ mod tests {
         let rows = datapoint_types(&conn, Some("de")).unwrap();
         let dpst = rows.iter().find(|r| r.id == "DPST-1-1").unwrap();
         assert_eq!(dpst.text.as_deref(), Some("Schalten"));
+        // AR10: batch and single lookups name the answering language alike.
+        assert_eq!(dpst.text_language.as_deref(), Some("de-DE"));
+        let one = datapoint_type(&conn, "DPST-1-1", Some("de"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(one.text_language.as_deref(), Some("de-DE"));
+        let missed = datapoint_types(&conn, Some("fr-FR")).unwrap();
+        assert!(missed.iter().all(|r| r.text_language.is_none()));
     }
 
     #[test]
@@ -3761,6 +3881,7 @@ mod tests {
         assert_eq!(ft.number, Some(1));
         assert_eq!(ft.status.as_deref(), Some("Certified"));
         assert_eq!(ft.text.as_deref(), Some("Schalten"));
+        assert_eq!(ft.text_language.as_deref(), Some("de-DE"), "AR10");
     }
 
     #[test]
@@ -3810,6 +3931,7 @@ mod tests {
         let su = rows.iter().find(|r| r.id == "SU-1").unwrap();
         assert_eq!(su.number, Some(1));
         assert_eq!(su.text.as_deref(), Some("Büro"));
+        assert_eq!(su.text_language.as_deref(), Some("de-DE"), "AR10");
     }
 
     #[test]

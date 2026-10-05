@@ -2668,6 +2668,14 @@ struct CatalogItemDto {
     visible_description: Option<String>,
     product_ref_id: Option<String>,
     hardware2program_ref_id: Option<String>,
+    /// The stored language identifier that answered a requested `language`
+    /// for `name` (e.g. `de-DE` for `de`), `null` for the package's own
+    /// text, which is in `sourceLanguage` (AR10).
+    name_language: Option<String>,
+    /// As `nameLanguage`, for `visibleDescription`.
+    visible_description_language: Option<String>,
+    /// `CatalogItem/@DefaultLanguage`, verbatim; `null` when undeclared.
+    source_language: Option<String>,
 }
 
 impl From<knx_productdb::query::CatalogItemRow> for CatalogItemDto {
@@ -2680,6 +2688,9 @@ impl From<knx_productdb::query::CatalogItemRow> for CatalogItemDto {
             visible_description: r.visible_description,
             product_ref_id: r.product_ref_id,
             hardware2program_ref_id: r.hardware2program_ref_id,
+            name_language: r.name_language,
+            visible_description_language: r.visible_description_language,
+            source_language: r.source_language,
         }
     }
 }

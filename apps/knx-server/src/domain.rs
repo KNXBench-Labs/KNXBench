@@ -1559,18 +1559,21 @@ fn apply_dpt_texts(
     detail: &mut knx_projection::DeviceDetail,
     language: Option<&str>,
 ) -> Result<(), String> {
-    let mut texts: HashMap<String, Option<String>> = HashMap::new();
+    // (text, the stored language that answered it — AR10).
+    let mut texts: HashMap<String, (Option<String>, Option<String>)> = HashMap::new();
     for com in &mut detail.com_objects {
         let Some(id) = com.dpt.clone().or_else(|| com.program_dpt.clone()) else {
             continue;
         };
         if !texts.contains_key(&id) {
-            let text = knx_productdb::query::datapoint_type(products, &id, language)
-                .map_err(|e| e.to_string())?
-                .and_then(|row| row.text);
-            texts.insert(id.clone(), text);
+            let row = knx_productdb::query::datapoint_type(products, &id, language)
+                .map_err(|e| e.to_string())?;
+            let entry = row.map_or((None, None), |row| (row.text, row.text_language));
+            texts.insert(id.clone(), entry);
         }
-        com.dpt_text = texts[&id].clone();
+        let (text, text_language) = texts[&id].clone();
+        com.dpt_text = text;
+        com.dpt_text_language = text_language;
     }
     Ok(())
 }
@@ -1681,6 +1684,12 @@ pub fn device_detail(
                     application_number: row.application_number,
                     application_version: row.application_version,
                     mask_version: row.mask_version,
+                    product_text_language: row.product_text_language,
+                    catalog_item_name_language: row.catalog_item_name_language,
+                    application_name_language: row.application_name_language,
+                    product_source_language: row.product_source_language,
+                    catalog_item_source_language: row.catalog_item_source_language,
+                    application_source_language: row.application_source_language,
                 });
             }
             None => {

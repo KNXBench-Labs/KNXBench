@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 22:05 CEST
+- **Completed:** **AR10 slice 2b.** `catalog_items`, `device_product`, `datapoint_type(s)`, `function_types`, `function_points`, `space_usages` expose the stored language that answered (`None` = package's own text) and the declared source languages; wire fields on `/api/catalog/items`, device-detail `product.catalog` (ts-rs bindings `DeviceProductCatalog.ts`, `ComObjectNode.ts` regenerated) and com-object `dpt_text_language`. `KL-64` → ACCEPTED_BOUNDARY, `KL-37` → IN_PROGRESS.
+- **Pending/Next Steps:** AR10: report communication-object text language (`KL-37` residue), `KL-66` decision; AR21 rerun of finding 5 (owner correction in TELEGRAM_FLOW_VISUALIZATION §18 is waiting). **UI owner:** show the new language markers (parameter panel, catalogue, product block, DPT text).
+- **Notes for Codex oder Claude:** `overlay_one`, `catalog_overlay`, `master_text_overlay` now return `OverlayHit { text, language }`. Run all five xtask checks before pushing. Web lock: unchanged per the newest owner line below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 20:58 CEST
 - **Completed:** **AR10 slice 2a.** `parameter_views` exposes per text/name/enum label the stored language that answered (`text_language`, `name_language`, `enum_option_languages`, `None` = package's own text); new `query::program_default_language`; parameter panel DTO gains `sourceLanguage`, `textLanguage`, `nameLanguage`, `enumOptions[].language` (additive). Tests: query + HTTP test, three compiled mutants. Also fixed a ratchet slip of my own: six files from AR07/KL-156/AR10 slice 1 shipped pre-convention multi-line headers (check-headers 163 > 157 on main, unnoticed because only anchors/ledger were run); they now carry one-sentence headers, `routes.rs`/`domain.rs` gained headers, ceiling lowered to the measured 155.
 - **Pending/Next Steps:** AR10 slice 2b: same exposure for `catalog_items`, `device_product`, master rows (`datapoint_types`, `function_types`, `function_points`, `space_usages`) and their DTOs; then decide `KL-37`/`KL-64`/`KL-66` statuses. **UI owner:** consume the new parameter-panel language markers (e.g. mark untranslated fields when a product language is selected).

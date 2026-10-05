@@ -82,3 +82,10 @@ package-interrupted; no own process remained at readback. No regression/pass
 inferred. Necessary full retry uses package-retry runner and background job,
 not another foreground wait. Native evidence recorded in sole KL151 row,
 IN_PROGRESS unchanged; all other ledger rows and complete owner suffix preserved.
+
+## Integration and integrated acceptance
+
+Scoped retry: productdb-public0, clippy0, format0, headers1 (101-column
+header); remaining five not started; retained. Header shortened. Leaf
+adf7ff29 merged with owner 036b46a6 as f867741e; owner status/handover text
+preserved exactly. Integrated public16 on merge f867741e (leaf adf7ff29 + owner 036b46a6) independently accepted: 16 exit0, Rust 3240/0/177 in 179 blocks, Web 2001, Chromium 131 plus separate probe 1, 885 frozen inputs, CLI knx 0.1.0-alpha.4+gf867741e.

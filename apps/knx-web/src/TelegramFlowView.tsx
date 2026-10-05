@@ -9,7 +9,7 @@ import { FlowAnimator, type AnimatorScheduler, type AnimatorSink, type DrawnPuls
 import { createDynamics, type DynamicNode } from "./flowDynamics";
 import { useFlowMotion } from "./flowMotion";
 import { flowNow, type FlowFeed } from "./flowFeed";
-import { NODE_RADIUS, edgeGeometry, edgeOpacity, pointOnEdge, type Point } from "./flowLayout";
+import { BADGE_LINE, NODE_RADIUS, TEXT_CLEARANCE, edgeGeometry, edgeOpacity, pointOnEdge, type Point } from "./flowLayout";
 import {
   allCurrentValues,
   currentBadges,
@@ -30,11 +30,10 @@ const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
 const PAN_STEP = 60;
 const EDGE_LABELS = 2;
-// Distance from the circle to the node name (above) and to the first value
-// badge (below): an arrowhead arriving straight from above or below ends in
-// this gap instead of under the text's halo.
-const TEXT_CLEARANCE = 16;
-const BADGE_LINE = 14;
+// TEXT_CLEARANCE (flowLayout) is the distance from the circle to the node
+// name (above) and to the first value badge (below): an arrowhead arriving
+// straight from above or below ends in this gap instead of under the text's
+// halo. The solver keeps neighbours clear of the same footprint.
 
 interface View {
   zoom: number;
@@ -290,12 +289,16 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
 
   useEffect(() => {
     const sink: AnimatorSink = {
-      positions: (nodes: ReadonlyMap<string, DynamicNode>) => {
-        for (const [id, element] of nodeRefs.current) {
+      // Only what moved is rewritten (§9.3): settled nodes and the edges
+      // between them keep their attributes untouched.
+      positions: (nodes: ReadonlyMap<string, DynamicNode>, moved: ReadonlySet<string>) => {
+        for (const id of moved) {
+          const element = nodeRefs.current.get(id);
           const node = nodes.get(id);
-          if (node) element.setAttribute("transform", `translate(${node.x.toFixed(1)} ${node.y.toFixed(1)})`);
+          if (element && node) element.setAttribute("transform", `translate(${node.x.toFixed(1)} ${node.y.toFixed(1)})`);
         }
         for (const edge of edgeRefs.current.values()) {
+          if (!moved.has(edge.from) && !moved.has(edge.to)) continue;
           const from = nodes.get(edge.from);
           const to = nodes.get(edge.to);
           if (!from || !to) continue;

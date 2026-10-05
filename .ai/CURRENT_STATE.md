@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 11:49 CEST
+Web lock: released by claude-goal-ui-owner (U21 corrections for AR21 findings 1–3 delivered)
+- **Completed:** U21 AR21 corrections (taken over from claude-alpha's parked `u21-fix` state by user decision; that worktree untouched). Local per-node reheat (`reheatAround`, hot-only steps, moved-only redraw, wall-clock cooling), hub readability (`flowLayout.nodeFootprint` + bounded separation, drawing-area clamp), new Chromium `e2e/telegram-flow-hub.e2e.ts`, §7-load measurements (`measurements-ar21-before/after.json`, `hub-before/after.png`). 60 s §7 load motion on: long tasks 61.9 s → 22.2 s, frames at 30 fps cap, main thread still 0.92 (paint-bound) → recorded as envelope in TELEGRAM_FLOW_VISUALIZATION §14, KNOWN_LIMITATIONS §154 and the user guide. Finding 3 was already fixed by `0533230b`. Evidence: 12 new/changed unit tests and the hub e2e fail on the old sources; 12/12 mutants killed. Gate under leases 7/8/9: build, flow-study, theme-fixtures, Vitest 2,013/116, Chromium 132 ×2, repeat run 80, anchors/ledger/headers, diff-check all 0. Log: `.ai/logs/2026-10-05_claude_ui-u21-ar21-corrections.md`.
+- **Pending/Next Steps:** AR21 rerun by the alpha session (FLOW-01 stays IN_PROGRESS until then); it decides whether the recorded §7 motion-on envelope is acceptable or a further package (e.g. cheaper painting, automatic motion reduction under load) is needed.
+- **Notes for Codex oder Claude:** Measurements were single samples on a shared host (load avg 16–21); compare before/after only. No Rust source changed; upstream commits since `7a1dfd51` touched no Web file, so the web gate result carries over the rebase; doc gates rerun on the rebased tree. No KNX/bus contact.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 11:31 CEST
 - **Completed:** AR09 numeric-range pass (local, branch alpha-dpt-ranges): DPT-AS limits for main types 5-9, 12-14, 29 probed through the public codec, no format defect. Gap fixed: parameter-only time periods 7.003/7.004/7.006 and 8.003/8.004/8.006 had no encoding ruling; new `time-period-raw-counter-parameter-only` ruling, wire unchanged. RED/GREEN test, knx-core 679/0/0, strict clippy.

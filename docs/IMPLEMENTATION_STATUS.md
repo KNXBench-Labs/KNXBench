@@ -13,6 +13,16 @@
 - Release, 853 public files, fresh DB each: 692 → 837 installed (standard),
   852 with `--allow-large-package`. AR06P is DONE.
 
+## 2026-10-05 — AR21: the nervous system passes its physical (with a doctor's note for big maps)
+
+- Findings 6 and 7 verified fixed; all seven AR21 findings closed.
+- Measured: 900 s small session light (17 % busy, 5–7 ms value lag, heap
+  5.4→6.2 MiB, no plateau shown); a map growing to 500 nodes / ~2,500 lines
+  is 88 % busy at only 2 telegrams/s — motion cost follows map size.
+- `FLOW-01` DONE for the Alpha on that envelope; manual, known issues,
+  §154, architecture and roadmap updated. Receipt for AR18:
+  TELEGRAM_FLOW_VISUALIZATION §13–§22.
+
 ## 2026-10-05 — KL-151: Siemens fits through the door, if you hold it open (ADR-0082)
 
 - `knx_productdb::PackageLimits` (`STANDARD` 64 MiB / 256 MiB, `LARGE`

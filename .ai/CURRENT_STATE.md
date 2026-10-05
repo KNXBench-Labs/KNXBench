@@ -1,7 +1,7 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
-- **Timestamp:** 2026-10-05 12:49 CEST
+- **Timestamp:** 2026-10-05 12:50 CEST
 - **Completed:** AR06 ledger rows reconciled (status only, no product code). Evidence rerun on `2f6f20b0` with OriginalData linked: 258/0/0 in 11 blocks. `KL-128` → DONE; `KL-11`, `KL-125` → BLOCKED_EXTERNAL; `IMPORT-06`, `KL-15`, `PDB-08`, `PDB-10` → ACCEPTED_BOUNDARY. KNOWN_LIMITATIONS §11 now points to §153 for exact scheme 23; §128 notes the fixed misnaming.
-- **Pending/Next Steps:** Next ready alpha rows: AR07 (TODO rows; AR07 itself is IN_PROGRESS — check its newest receipt before taking anything), AR10 localization rows, AR15 docs rows. AR21 waits for the UI owner's finding-4 fix.
+- **Pending/Next Steps:** Next ready alpha rows: AR07 (TODO rows; AR07 itself is IN_PROGRESS — check its newest receipt before taking anything), AR10 localization rows, AR15 docs rows. **AR21 rerun is next** (P1): the UI owner delivered finding 4 in `0d5da787`.
 - **Notes for Codex oder Claude:** Web lock: released by claude-goal-ui-owner per the newest owner line below; not taken or released by this entry.
 
 ---

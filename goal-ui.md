@@ -624,10 +624,12 @@ intercepted synthetic traffic; no real bus, inferred receipt or new persistence.
 **Done (2026-10-04), returned by AR21 and corrected (2026-10-05).** Parts A
 and B `9d432d17` (+ whitespace fix `deb6813a`), part C `fb40a99a` (activity
 classes, 30 fps cap, production load figures in
-docs/design/2026-10-04-telegram-flow-u21/). AR21 corrections in the delivering
-commit of 2026-10-05: local per-node reheat, hub separation, §7-load envelope
-(TELEGRAM_FLOW_VISUALIZATION §13, §14); awaiting the AR21 rerun. Rules:
-TELEGRAM_FLOW_VISUALIZATION §12, §14; residue: KNOWN_LIMITATIONS §154 (one path
+docs/design/2026-10-04-telegram-flow-u21/). AR21 corrections `595d8d2e`:
+local per-node reheat, hub separation, §7-load envelope
+(TELEGRAM_FLOW_VISUALIZATION §13, §14); the AR21 rerun (§15) closed those and
+returned finding 4, corrected in the delivering commit of 2026-10-05 (each
+telegram counted once in the reduced-rendering note, §16); awaiting the next
+AR21 rerun. Rules: TELEGRAM_FLOW_VISUALIZATION §12, §14, §16; residue: KNOWN_LIMITATIONS §154 (one path
 per pair, one machine measured, §7 load saturates motion, no WebKitGTK/Orca). Dependency: U20. Keep data admission independent of solver/rendering.
 
 - [x] Add event-triggered directional traveling pulses, opposite-direction

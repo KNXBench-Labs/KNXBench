@@ -152,6 +152,59 @@ describe("FlowAnimator", () => {
     expect(animator.metrics.overCapacityEvents).toBe(40);
   });
 
+  // AR21 finding 4: one telegram to several recipients is one telegram in the
+  // note, not one per line it travels on (TELEGRAM_FLOW_VISUALIZATION §15).
+  function fanOut() {
+    const m = createFlowModel(SNAPSHOT_SESSION);
+    provideContext(m, "1", parseFlowSnapshot(snapshotJson({
+      devices: [1, 2, 3].map((id) => ({ deviceId: id, installationId: 1, name: `D${id}`, individualAddressRaw: 0x1100 + id })),
+      groups: [
+        // One receiver: a single line.
+        { gaRaw: 0x0800, gaId: 1, installationId: 1, name: "One", dpt: null, members: [1, 2].map(member) },
+        // Two receivers each: two lines per telegram.
+        ...Array.from({ length: 100 }, (_, i) => ({
+          gaRaw: 0x0900 + i, gaId: 10 + i, installationId: 1, name: `Two ${i}`, dpt: null, members: [1, 2, 3].map(member),
+        })),
+      ],
+    })), 0);
+    const to = (seq: number, gaRaw: number) => row(seq, { destinationRaw: gaRaw, destination: `x/${gaRaw}` });
+    return { m, to };
+  }
+
+  it("counts a bundled telegram to several recipients once, as drawn or as not completely drawn", () => {
+    const { animator } = setup();
+    const { m, to } = fanOut();
+    // 1 + 99 × 2 = 199 lines for 100 telegrams; the 160th line is the first of
+    // telegram 81, so telegrams 81–100 are not (completely) drawn. Two more on
+    // the last group share its refused bundle and are missing too.
+    admitRows(m, [
+      to(1, 0x0800),
+      ...Array.from({ length: 99 }, (_, i) => to(i + 2, 0x0900 + i)),
+      to(101, 0x0900 + 98), to(102, 0x0900 + 98),
+    ], 0);
+    animator.sync(m);
+    expect(animator.activePulses()).toHaveLength(MAX_PULSES);
+    expect(animator.metrics.coalescedEvents).toBe(80);
+    expect(animator.metrics.overCapacityEvents).toBe(22);
+  });
+
+  it("counts an unbundled telegram to several recipients once when it finds no free pulse", () => {
+    const { animator } = setup();
+    const { m, to } = fanOut();
+    let seq = 1;
+    // Four batches of 20 telegrams (no bundling) fill all 160 pulses …
+    for (let batch = 0; batch < 4; batch += 1) {
+      admitRows(m, Array.from({ length: 20 }, () => { seq += 1; return to(seq, 0x0900 + (seq % 100)); }), 0);
+      animator.sync(m);
+    }
+    expect(animator.activePulses()).toHaveLength(MAX_PULSES);
+    // … so the ten telegrams of the fifth batch find none: ten, not twenty lines.
+    admitRows(m, Array.from({ length: 10 }, () => { seq += 1; return to(seq, 0x0900 + (seq % 100)); }), 0);
+    animator.sync(m);
+    expect(animator.metrics.overCapacityEvents).toBe(10);
+    expect(animator.metrics.coalescedEvents).toBe(0);
+  });
+
   it("does not pulse while the page is hidden, nor replay that time on return", () => {
     const { scheduler, animator } = setup();
     const m = model();

@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-10-05 10:53
+Web lock: held by claude-goal-ui-owner for U21 corrections; not taken or released by this entry
+- **Completed:** Owner reconciliation of all 42 commission rows in `docs/status/LEDGER.md` (user go 2026-10-05). 36 WAITING_OWNER rows → ACCEPTED_BOUNDARY (11 hardware, 11 reference, 10 verified-scope, 2 recorded-scope) or LATER (`KL-110`, `GAP-T30-04`), each citing the 2026-10-04 user scope decision and its safe fallback. `SAFE-03`, `DEBUG-01` → ACCEPTED_BOUNDARY; `AUDIT-01` → DONE at commissioning scope (tests named, receipt for `ae567d00`). Counts recomputed by script; `check-ledger` 186 rows, anchors 531. Summary section in COMMISSIONING_ALPHA_LEDGER, status line in goal-commission §3. Docs only.
+- **Pending/Next Steps:** Commissioning open rows: only `KL-142` and `UI-04` (Web halves, UI owner, handoff table in COMMISSIONING_ALPHA_LEDGER). When they land, the goal gets its final status line.
+- **Notes for Codex oder Claude:** An accepted boundary is a refusal or bounded claim, not new support; hardware writes stay fail-closed. My previous chat summary said 13 hardware and 13 reference rows; the mechanical count is 11/11 (plus 10 verified, 2 recorded, 2 later). Alpha controller: Owner/Route of `KL-142` still to change.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-05 10:43 CEST
 Web lock: taken by claude-goal-ui-owner for U21 corrections (AR21 findings 1–3), taken over from claude-alpha by user decision

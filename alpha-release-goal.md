@@ -681,11 +681,13 @@ Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 
 **Source:** `KL-61`. **Dependencies:** AR06/AR07 for imported type provenance.
 
-- [ ] Audit implemented types and observable encoding rulings against current primary evidence. Fix proven format defects only; keep format validation distinct from unverified subtype tables.
-- [ ] Investigate explicitly declared group-address DPT versus linked-object inference in supported project schemas. If modeling/resolution changes are justified, write an ADR and migration/roundtrip contract first.
-- [ ] Test explicit, inferred, conflicting, missing and unsupported types, retained raw payload and error propagation. Never silently override a conflict or discard a source declaration.
+- [x] Audit implemented types and observable encoding rulings against current primary evidence. Fix proven format defects only; keep format validation distinct from unverified subtype tables.
+- [x] Investigate explicitly declared group-address DPT versus linked-object inference in supported project schemas. If modeling/resolution changes are justified, write an ADR and migration/roundtrip contract first.
+- [x] Test explicit, inferred, conflicting, missing and unsupported types, retained raw payload and error propagation. Never silently override a conflict or discard a source declaration.
 
 **Exit evidence:** model/import/native roundtrip and codec tests, or a documented prerequisite. No LTE/200-series scope expansion, scene-display change in UI or real group write.
+
+**Status 2026-10-05: DONE.** Width audit `f3b4fd34` (17.001 fixed), range pass `f7050d6a`, ADR 0078 + implementation `5a2249d3`, integrated `b7d7927e` (Rust 3269/0/177, Web 2013, Chromium 132). Audits in `docs/spec-audits/`. Web display of declared-vs-linked detail handed to the UI owner.
 
 ### AR10 — Finish evidence-backed backend localization paths
 

@@ -7687,6 +7687,18 @@ hostile regressions before choosing a smaller documented bound or streaming.
   for example a streaming ingest or a per-package opt-in raise, while
   keeping a bound.
 
+**Update 2026-10-05 (ADR-0082): lifted for the command line.**
+`knx products ingest --allow-large-package` uses `PackageLimits::LARGE`
+(256 MiB per member, 4 GiB in total); every other bound is unchanged and the
+default stays 64 MiB / 256 MiB. Measured with the release CLI on the 15
+size-refused public packages: 14 install and verify, one remains a scheme-10
+namespace refusal (§153); worst case 760.5 MiB peak RSS, 256 s, 7.18 GiB
+database; Siemens' bundle 91 s / 402 MiB / 2.5 GiB
+([measurement](PRODUCT_ZIP_LARGE_PROFILE.md)). **Residue, accepted:** the web
+catalog install keeps the standard bounds, because it installs synchronously
+while holding the product database; a server opt-in would need progress and
+cancellation first.
+
 ## §152 The XML evidence item limit refuses two real packages
 
 **2026-10-04 candidate update (verified, not delivered):** exact original853 hashes and a

@@ -41,9 +41,9 @@ pub use ingest::{ingest_file, FileKind, IngestOutcome};
 pub use master_evidence::{rederive_master_language_evidence, MasterLanguageEvidenceReport};
 pub use migration::{default_path, open_and_migrate, ProductDbError, CURRENT_PRODUCTDB_VERSION};
 pub use package::{
-    install_package, InstallCategory, InstallCount, InstallDiagnostic, InstallDiagnosticKind,
-    InstallDisposition, InstallFacts, InstallReport, PackageError, PackageMember,
-    MAX_PACKAGE_INPUT_BYTES,
+    install_package, install_package_with_limits, InstallCategory, InstallCount, InstallDiagnostic,
+    InstallDiagnosticKind, InstallDisposition, InstallFacts, InstallReport, PackageError,
+    PackageLimits, PackageMember, MAX_PACKAGE_INPUT_BYTES,
 };
 pub use parse::baggage::BaggageDeclaration;
 pub use parse::master::{ingest_master_data, MasterIngest};

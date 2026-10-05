@@ -81,3 +81,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0079](0079-theme-choice-is-one-dropdown.md) | Theme choice is one dropdown; shipped packs are data; Neon Grid and Bitcoin DeFi retired | Accepted | 2026-10-05 |
 | [0080](0080-parameter-write-authority.md) | Parameter writes honour Access and leave manufacturer calculations alone | Accepted | 2026-10-05 |
 | [0081](0081-parameter-attributes-are-reported.md) | `Parameter` and `ParameterRef` report every attribute they do not store | Accepted | 2026-10-05 |
+| [0082](0082-large-product-packages-are-a-cli-opt-in.md) | Large product packages are an explicit command-line opt-in | Accepted | 2026-10-05 |

@@ -26,7 +26,7 @@ const USAGE: &str =
      \x20     knx doc-export <store.knxdb> <out.html>\n\
      \x20     knx diff [--exit-code] <a.knxdb|a.knxproj> <b.knxdb|b.knxproj>\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
-     \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>]\n\
+     \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>] [--allow-large-package]\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
      \x20     knx products verify [--product-db <path>]\n\
      \x20     knx products identity <table> <id> [--product-db <path>]\n\
@@ -1564,6 +1564,18 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    // KL-151 (ADR-0082): complete manufacturer bundles need the larger
+    // expansion bounds; only an explicit opt-in accepts their cost.
+    let allow_large = rest.iter().any(|arg| arg == "--allow-large-package");
+    let rest: Vec<String> = rest
+        .into_iter()
+        .filter(|arg| arg != "--allow-large-package")
+        .collect();
+    let limits = if allow_large {
+        knx_productdb::PackageLimits::LARGE
+    } else {
+        knx_productdb::PackageLimits::STANDARD
+    };
     let Some(file) = rest.first() else {
         eprintln!("missing <file.knxproj|file.knxprod|file.vd2>\n{USAGE}");
         return ExitCode::FAILURE;
@@ -1602,7 +1614,7 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-        return match knx_productdb::install_package(&conn, file, &bytes) {
+        return match knx_productdb::install_package_with_limits(&conn, file, &bytes, limits) {
             Ok(report) => {
                 println!(
                     "package installed: scheme {}, {} member(s), {} unknown construct(s), {} conflict(s), \
@@ -1632,9 +1644,21 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
             }
             Err(error) => {
                 eprintln!("failed to install product package {file}: {error}");
+                if !allow_large && matches!(error, knx_productdb::PackageError::SizeLimit { .. }) {
+                    eprintln!(
+                        "hint: if a member exceeds 64 MiB or the package expands beyond 256 MiB, \
+                         --allow-large-package raises these bounds to 256 MiB and 4 GiB \
+                         (more memory, time and database space; the 256 MiB file bound stays)"
+                    );
+                }
                 ExitCode::FAILURE
             }
         };
+    }
+
+    if allow_large {
+        eprintln!("--allow-large-package applies to .knxprod product packages only");
+        return ExitCode::FAILURE;
     }
 
     let outcome = match knx_etsproj::import_knxproj(Path::new(file)) {

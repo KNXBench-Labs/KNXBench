@@ -12,12 +12,38 @@ use crate::ingest::{classify, ingest_file_in_transaction, DetailedIngestOutcome}
 use crate::report::{insert_unknown, IdConflict, TranslationCounts, UnknownCollector};
 use crate::{sha256_hex, FileKind, IngestOutcome, ProductDbError};
 
-const MAX_MEMBER_SIZE: u64 = 64 * 1024 * 1024;
+const MIB: u64 = 1024 * 1024;
 const MAX_PACKAGE_SIZE: usize = 256 * 1024 * 1024;
 /// Largest raw package input `install_package` admits, for callers that must
 /// refuse by size before reading a file or opening a product database.
 pub const MAX_PACKAGE_INPUT_BYTES: u64 = MAX_PACKAGE_SIZE as u64;
-const MAX_EXPANDED_SIZE: u64 = 256 * 1024 * 1024;
+
+/// Expansion bounds of one product package (KL-151, ADR-0082). The raw input
+/// bound ([`MAX_PACKAGE_INPUT_BYTES`]) and every other ZIP/XML budget are
+/// the same for both profiles; only the decoded member and total sizes differ.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PackageLimits {
+    /// Largest decoded archive member, inclusive.
+    pub max_member_size: u64,
+    /// Largest sum of decoded member sizes, inclusive.
+    pub max_expanded_size: u64,
+}
+
+impl PackageLimits {
+    /// The default for every caller: 64 MiB per member, 256 MiB in total.
+    pub const STANDARD: Self = Self {
+        max_member_size: 64 * MIB,
+        max_expanded_size: 256 * MIB,
+    };
+    /// Explicit opt-in for complete manufacturer bundles: 256 MiB per member,
+    /// 4 GiB in total. Measured on the 15 public packages the standard
+    /// profile refuses (14 installed; at most ~0.8 GiB peak RSS, ~222 s and
+    /// ~7 GiB database growth for one package). Never a default.
+    pub const LARGE: Self = Self {
+        max_member_size: 256 * MIB,
+        max_expanded_size: 4096 * MIB,
+    };
+}
 const MAX_MEMBERS: usize = 4096;
 const MAX_PATH_NODES: usize = 65_536;
 const MAX_CENTRAL_DIRECTORY_SIZE: usize = 24 * 1024 * 1024;
@@ -2128,6 +2154,22 @@ pub fn install_package(
     source_name: &str,
     bytes: &[u8],
 ) -> Result<InstallReport, PackageError> {
+    install_package_with_limits(conn, source_name, bytes, PackageLimits::STANDARD)
+}
+
+/// [`install_package`] with explicit expansion bounds. Only a caller that has
+/// accepted the resource cost of [`PackageLimits::LARGE`] (memory, time and
+/// database growth, while it holds its connection) should pass it.
+pub fn install_package_with_limits(
+    conn: &Connection,
+    source_name: &str,
+    bytes: &[u8],
+    limits: PackageLimits,
+) -> Result<InstallReport, PackageError> {
+    let PackageLimits {
+        max_member_size,
+        max_expanded_size,
+    } = limits;
     if bytes.len() > MAX_PACKAGE_SIZE {
         return Err(PackageError::SizeLimit {
             path: source_name.into(),
@@ -2329,7 +2371,7 @@ pub fn install_package(
         total = total
             .checked_add(file.size())
             .ok_or_else(|| PackageError::SizeLimit { path: path.into() })?;
-        if file.size() > MAX_MEMBER_SIZE || total > MAX_EXPANDED_SIZE {
+        if file.size() > max_member_size || total > max_expanded_size {
             return Err(PackageError::SizeLimit { path: path.into() });
         }
         if normalized
@@ -2352,11 +2394,11 @@ pub fn install_package(
         let is_directory = file.is_dir();
         let mut data = Vec::new();
         (&mut file)
-            .take(MAX_MEMBER_SIZE + 1)
+            .take(max_member_size + 1)
             .read_to_end(&mut data)
             .map_err(zip_error)?;
         let data_len = usize_to_u64(data.len(), "decoded member size")?;
-        if data_len > MAX_MEMBER_SIZE {
+        if data_len > max_member_size {
             return Err(PackageError::SizeLimit { path });
         }
         if data_len != file.size() {
@@ -2408,7 +2450,7 @@ pub fn install_package(
                 .map_err(zip_error)?;
             let mut data = Vec::new();
             (&mut file)
-                .take(MAX_MEMBER_SIZE + 1)
+                .take(max_member_size + 1)
                 .read_to_end(&mut data)
                 .map_err(zip_error)?;
             if usize_to_u64(data.len(), "scheme-21 member size")? != validated.member.size
@@ -2549,7 +2591,7 @@ pub fn install_package(
             .map_err(zip_error)?;
         let mut data = Vec::new();
         (&mut file)
-            .take(MAX_MEMBER_SIZE + 1)
+            .take(max_member_size + 1)
             .read_to_end(&mut data)
             .map_err(zip_error)?;
         if usize_to_u64(data.len(), "decoded member size")? != size

@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — KL-151: Siemens fits through the door, if you hold it open (ADR-0082)
+
+- `knx_productdb::PackageLimits` (`STANDARD` 64 MiB / 256 MiB, `LARGE`
+  256 MiB / 4 GiB) and `install_package_with_limits`; `install_package` and
+  the HTTP catalog route keep `STANDARD`.
+- `knx products ingest --allow-large-package` opts in; a size refusal without
+  it names the flag. Refused for `.knxproj` input.
+- Measured (release CLI, 15 public packages the standard profile refuses):
+  14 installed and verified, 1 scheme-10 refusal; worst 760.5 MiB RSS, 256 s,
+  7.18 GiB DB ([measurement](PRODUCT_ZIP_LARGE_PROFILE.md)).
+
 ## 2026-10-05 — AR10 slice 3: the German report finally says "Schalten"
 
 - New `knx_app::com_object_language` holds the communication-object

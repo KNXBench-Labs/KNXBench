@@ -10,6 +10,20 @@
   ts-rs bindings regenerated); com-object `dpt_text_language`.
 - `KL-64` ACCEPTED_BOUNDARY; `KL-37` IN_PROGRESS (report com-object text,
   UI consumption of the markers).
+## 2026-10-05 — Parameter panel marks labels that fell back to the program's own text
+
+- Consumes AR10 slice 2a (`b6a94c24`): `api.ts` gains `sourceLanguage`,
+  `textLanguage`, `nameLanguage` and `enumOptions[].language`.
+- With a product language selected, a field whose *shown* label (`text` before
+  `name`) has no answering language is badged "Untranslated (en-US)" — or just
+  "Untranslated" when the program declares no `DefaultLanguage`, never
+  guessed; a translated label with untranslated option labels is badged
+  "Options untranslated". Value-only options and id-only labels are not
+  translation gaps. A panel line counts affected fields (folded `Access=None`
+  fields included). *Package default* marks nothing. English and German.
+- Tests: 5 new `ParameterPanel.test.tsx` cases (3 RED first; the two absence
+  cases are pinned by mutants); 10/10 mutants. No server change. Catalogue,
+  device-product and master surfaces wait for AR10 slice 2b.
 
 ## 2026-10-05 — AR10 slice 2a: the parameter panel admits when it is speaking the package's language
 

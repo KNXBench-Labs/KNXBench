@@ -138,6 +138,15 @@ itself declares", and is the default choice.
 With no product database installed, the control is disabled and reads *"No product
 database installed"*.
 
+A translation can be incomplete. When you choose a language and a parameter label has
+no translation for it, the device's parameter panel still shows the label — in the
+application program's own language — and marks it **Untranslated (en-US)**, naming that
+language where the program declares one. **Options untranslated** means the label is
+translated but some of a list's choices are not. A line above the parameters counts
+the affected fields, folded ones included. With **Package default** nothing is marked:
+the program's own text is then exactly what you asked for. Device names in the catalog
+and product details do not carry these marks yet.
+
 ## UI language
 
 KNXBench ships two interface languages: **English** and **Deutsch**. On first start it

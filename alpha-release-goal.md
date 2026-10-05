@@ -740,7 +740,8 @@ stored language answered or that the package's own text was kept
 (`parameter_views_name_the_language_that_answered_and_expose_the_fallback`,
 `parameter_panel_exposes_the_answering_language_and_the_fallback`). Catalogue,
 device-product and master surfaces remain (slice 2b). UI owner: decide how
-the markers are shown.
+the markers are shown. **Delivered by the UI owner 2026-10-05 (`f5494094`):** "Untranslated
+(en-US)" / "Options untranslated" badges in the parameter panel.
 
 **AR10 slice 2b, 2026-10-05:** catalogue, device-product block and master
 readers expose the answering language and the fallback

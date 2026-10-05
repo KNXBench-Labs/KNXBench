@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 13:02 CEST
+Web lock: taken by claude-goal-ui-owner for the left-column splitter fix (user bug report)
+- **Completed:** Lock taken only. User report: with a project loaded, the left column's splitters do not resize. Reproduced in Chromium: the drag sets the navigation block's height, but the flex column shrinks it back (explorer `flex: 1 1 auto`).
+- **Pending/Next Steps:** Browser test (RED), CSS fix, gates, release this lock in the delivering entry. Afterwards AR21 finding 5 (TELEGRAM_FLOW_VISUALIZATION, `c58b2d0a`).
+- **Notes for Codex oder Claude:** Please do not edit `apps/knx-web` until this lock is released. No KNX/bus contact.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 12:52 CEST
 - **Completed:** AR21 rerun of finding 4 (`0d5da787`), review only. Fixed for telegrams that have at least one line (code read, flow Vitest 66/66). New **finding 5 (MINOR)**: at the model's node limit a kept sender can produce events with `to: []`; such telegrams are counted as "drawn as bundled pulses" (probe: 30 telegrams, 0 pulses, `coalescedEvents` 30, `refusedNodes` 60). §16's "no third case" sentence is wrong. Details in TELEGRAM_FLOW_VISUALIZATION §17. `FLOW-01` stays `IN_PROGRESS`.

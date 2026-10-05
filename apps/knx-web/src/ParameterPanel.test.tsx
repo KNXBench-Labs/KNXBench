@@ -46,6 +46,7 @@ afterEach(() => {
 // step 7 names.
 const fixture: ParameterPanelDto = {
   programId: "PROG-1",
+  sourceLanguage: null,
   sections: [
     {
       scope: null,
@@ -53,7 +54,9 @@ const fixture: ParameterPanelDto = {
         {
           etsId: "P1",
           name: "Field A",
+          nameLanguage: null,
           text: null,
+          textLanguage: null,
           kind: "Number",
           value: "5",
           valueSource: "Stored",
@@ -75,7 +78,9 @@ const fixture: ParameterPanelDto = {
         {
           etsId: "P2_M7_MI-1",
           name: "Field B",
+          nameLanguage: null,
           text: null,
+          textLanguage: null,
           kind: "Restriction",
           value: "1",
           valueSource: "Default",
@@ -83,8 +88,8 @@ const fixture: ParameterPanelDto = {
           min: null,
           max: null,
           enumOptions: [
-            { value: "1", text: "On" },
-            { value: "0", text: "Off" },
+            { value: "1", text: "On", language: null },
+            { value: "0", text: "Off", language: null },
           ],
           displayOrder: null,
           access: null,
@@ -256,6 +261,7 @@ describe("ParameterPanel", () => {
   it("renders the empty-program state while still rendering a non-empty stale list", async () => {
     const noProgram: ParameterPanelDto = {
       programId: null,
+      sourceLanguage: null,
       sections: [],
       stale: [{ etsId: "P9", raw: "legacy-raw" }],
       diagnostics: [],
@@ -375,6 +381,7 @@ describe("ParameterPanel", () => {
   it("writes a module-scoped field's writeEtsId, not its declared etsId", async () => {
     const scopedPanel: ParameterPanelDto = {
       programId: "PROG-1",
+      sourceLanguage: null,
       sections: [
         {
           scope: { moduleNode: 7, moduleId: "M-7", moduleDefId: "MD-1" },
@@ -382,7 +389,9 @@ describe("ParameterPanel", () => {
             {
               etsId: "P2",
               name: "Field B",
+              nameLanguage: null,
               text: null,
+              textLanguage: null,
               kind: "Number",
               value: "1",
               valueSource: "Default",
@@ -426,6 +435,7 @@ describe("ParameterPanel", () => {
     // `disabled`/`apply()` guards) does not simply trust `editable`.
     const contractBrokenPanel: ParameterPanelDto = {
       programId: "PROG-1",
+      sourceLanguage: null,
       sections: [
         {
           scope: { moduleNode: 7, moduleId: "M-7", moduleDefId: "MD-1" },
@@ -433,7 +443,9 @@ describe("ParameterPanel", () => {
             {
               etsId: "P2",
               name: "Field B",
+              nameLanguage: null,
               text: null,
+              textLanguage: null,
               kind: "Restriction",
               value: "1",
               valueSource: "Default",
@@ -441,8 +453,8 @@ describe("ParameterPanel", () => {
               min: null,
               max: null,
               enumOptions: [
-                { value: "1", text: "On" },
-                { value: "0", text: "Off" },
+                { value: "1", text: "On", language: null },
+                { value: "0", text: "Off", language: null },
               ],
               displayOrder: null,
               access: null,
@@ -556,7 +568,7 @@ describe("ParameterPanel", () => {
     ...fixture.sections[0].fields[0], etsId, name: `Field ${etsId}`, access, editable,
     writeEtsId: editable ? etsId : null,
   });
-  const authorityPanel = (fields: ReturnType<typeof field>[], kinds: string[]): ParameterPanelDto => ({
+  const authorityPanel = (fields: ParameterPanelDto["sections"][number]["fields"], kinds: string[]): ParameterPanelDto => ({
     ...fixture,
     sections: [{ scope: null, fields }],
     stale: [],
@@ -632,6 +644,95 @@ describe("ParameterPanel", () => {
       "Not editable here — see the warnings for why.");
     expect(module.querySelector(".parameter-field-caption")!.textContent).toContain(
       "Shared across every instantiation of this module");
+    root.unmount();
+  });
+
+  // AR10 slice 2a (`b6a94c24`): the server names the stored language that
+  // answered each label (`textLanguage`, `nameLanguage`,
+  // `enumOptions[].language`) or `null` when the package's own text was kept,
+  // whose language is the panel's `sourceLanguage`. With a product language
+  // selected, a label that fell back is marked; without one, nothing fell back.
+  const lang = (
+    etsId: string,
+    label: { text?: string | null; textLanguage?: string | null; name?: string | null; nameLanguage?: string | null },
+    options: { value: string; text: string | null; language: string | null }[] = [],
+  ) => ({
+    ...field(etsId, null),
+    kind: options.length > 0 ? "Restriction" : "Number",
+    text: label.text ?? null, textLanguage: label.textLanguage ?? null,
+    name: label.name ?? null, nameLanguage: label.nameLanguage ?? null,
+    enumOptions: options, value: options.length > 0 ? options[0].value : "1",
+  });
+  const languagePanel = (sourceLanguage: string | null, fields: ParameterPanelDto["sections"][number]["fields"]): ParameterPanelDto => ({
+    ...authorityPanel(fields, []), sourceLanguage,
+  });
+  const mixedFields = () => [
+    lang("A", { text: "Allgemein", textLanguage: "de-DE" }),
+    lang("B", { text: "Channel A" }),
+    lang("C", { text: "Modus", textLanguage: "de-DE" }, [
+      { value: "1", text: "Ein", language: "de-DE" }, { value: "0", text: "Off", language: null }]),
+    lang("D", { name: "Kanal", nameLanguage: "de-DE" }),
+    lang("E", {}),
+    lang("F", { text: "Allgemein", textLanguage: "de-DE", name: "General" }),
+    // An option without a label shows its value; no translation can change that.
+    lang("G", { text: "Stufe", textLanguage: "de-DE" }, [{ value: "2", text: null, language: null }]),
+  ];
+  const badgeOf = (id: string) =>
+    host!.querySelector(`.parameter-field[data-ets-id="${id}"] .parameter-language-badge`);
+
+  it("marks every label that fell back to the program's own text when a product language is selected", async () => {
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    apiMock.deviceParameters.mockResolvedValue(languagePanel("en-US", mixedFields()));
+    const root = await renderPanel();
+    expect(badgeOf("A")).toBeNull();
+    expect(badgeOf("B")!.textContent).toBe("Untranslated (en-US)");
+    expect(badgeOf("B")!.getAttribute("title")).toBe("No de translation is stored; this is the program's own text.");
+    expect(badgeOf("C")!.textContent).toBe("Options untranslated (en-US)");
+    expect(badgeOf("D")).toBeNull();
+    expect(badgeOf("E")).toBeNull();
+    expect(badgeOf("F")).toBeNull();
+    expect(badgeOf("G")).toBeNull();
+    expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
+      "2 fields are not fully translated into de; they show the program's own text (en-US).");
+    root.unmount();
+  });
+
+  it("marks nothing when no product language is selected", async () => {
+    apiMock.deviceParameters.mockResolvedValue(languagePanel("en-US", mixedFields()));
+    const root = await renderPanel();
+    expect(host!.querySelectorAll(".parameter-language-badge").length).toBe(0);
+    expect(host!.querySelector(".parameter-language-summary")).toBeNull();
+    root.unmount();
+  });
+
+  it("does not guess the source language when the program declares none", async () => {
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    apiMock.deviceParameters.mockResolvedValue(languagePanel(null, [lang("B", { text: "Channel A" })]));
+    const root = await renderPanel();
+    expect(badgeOf("B")!.textContent).toBe("Untranslated");
+    expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
+      "1 field is not fully translated into de; it shows the program's own text.");
+    root.unmount();
+  });
+
+  it("shows no summary when every label answered in the selected language", async () => {
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    apiMock.deviceParameters.mockResolvedValue(languagePanel("en-US", [lang("A", { text: "Allgemein", textLanguage: "de-DE" })]));
+    const root = await renderPanel();
+    expect(host!.querySelector(".parameter-language-summary")).toBeNull();
+    expect(host!.querySelectorAll(".parameter-language-badge").length).toBe(0);
+    root.unmount();
+  });
+
+  it("speaks German about untranslated labels", async () => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    apiMock.deviceParameters.mockResolvedValue(languagePanel("en-US", mixedFields()));
+    const root = await renderPanel();
+    expect(badgeOf("B")!.textContent).toBe("Unübersetzt (en-US)");
+    expect(badgeOf("C")!.textContent).toBe("Optionen unübersetzt (en-US)");
+    expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
+      "2 Felder sind nicht vollständig in de übersetzt; sie zeigen den eigenen Text des Programms (en-US).");
     root.unmount();
   });
 });

@@ -1512,6 +1512,19 @@ sets it.
 `RegistrationInfo`, giving the importer a measured language to set instead
 of a placeholder.
 
+**Update 2026-10-05 (AR10): accepted boundary, not a pending fix.** The
+"Lifted when" condition above assumed a measured language would arrive with
+application programs. It cannot: *Project Schema23* `ProjectInformation` has
+no language attribute; `ApplicationProgram/@DefaultLanguage` is one
+program's language, not the project's; and the only project-side language
+attribute, the optional per-device `DeviceInstance/@InitialValueLanguage`,
+occurs in none of the three local reference projects. If present it is
+reported as an unknown attribute and retained, never promoted. The
+placeholder is still never consulted: no production path inserts a
+`StringTable` entry, so every resolution is literal. Pinned by
+`crates/knx-etsproj/tests/project_language.rs`; trace in
+[research/backend-localization-paths.md](research/backend-localization-paths.md).
+
 ## 15. Unparsable values survive only on `Override` fields
 
 **Limitation.** A present attribute whose value cannot be parsed keeps its

@@ -12,6 +12,7 @@ import type {
 } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useProductLanguage } from "./productLanguage";
+import { LanguageFallbackBadge } from "./languageFallback";
 import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
 
 // T18 slice 3, task 4 (design docs/superpowers/specs/2026-09-11-parameter-editor-design.md).
@@ -125,14 +126,8 @@ function ParameterFieldRow(props: {
     <label className="inspector-field parameter-field" data-ets-id={field.etsId}>
       {label}
       {field.access && <span className="provenance-badge">{field.access}</span>}
-      {untranslated && (
-        <span className="provenance-badge parameter-language-badge"
-          title={t("parameters.untranslated.title", { language: language ?? "" })}>
-          {sourceLanguage === null
-            ? t(untranslated === "label" ? "parameters.untranslated.labelUnknown" : "parameters.untranslated.optionsUnknown")
-            : t(untranslated === "label" ? "parameters.untranslated.label" : "parameters.untranslated.options",
-              { source: sourceLanguage })}
-        </span>
+      {untranslated && language !== null && (
+        <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} />
       )}
       {field.kind === "Restriction" ? (
         <select

@@ -43,6 +43,7 @@ vi.mock("./api", () => ({
 import Inspector from "./Inspector";
 import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
 import { resetSettingsForTests, setSetting } from "./settingsStore";
+import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests } from "./productLanguage";
 
 let host: HTMLDivElement | undefined;
 let root: Root | undefined;
@@ -1215,5 +1216,58 @@ describe("Inspector — group address drop", () => {
     expect(row.getAttribute("data-drop-ready")).toBeNull();
     await drag(row, "drop", device);
     expect(apiMock.linkComObject).not.toHaveBeenCalled();
+  });
+});
+
+// KL-37 (AR10 slice 2b): the device's product block and a communication
+// object's DPT text say which stored language answered (`*_language`) or are
+// the package's / master data's own text (field absent). Marked only with a
+// product language selected; the declared source language is named when the
+// package states one.
+describe("Inspector — product texts in a selected product language (KL-37)", () => {
+  afterEach(() => resetProductLanguageForTests());
+
+  const catalogDetail = (): DeviceDetail => ({
+    ...detailWithComObject(),
+    product: {
+      product_ref: "P-1", program_ref: "AP-1", resolution: "Resolved",
+      catalog: {
+        manufacturer_id: "M-1", manufacturer_name: "Maker", product_text: "Schaltaktor", order_number: "SA-1",
+        hardware_name: null, hardware_version: null, hardware_serial_number: null,
+        catalog_item_name: "Switch actuator", catalog_item_number: null, application_program_id: "AP-1",
+        application_name: "Switching", application_number: null, application_version: null, mask_version: null,
+        product_text_language: "de-DE", product_source_language: "en-US",
+        catalog_item_source_language: "en-US",
+      },
+    },
+    com_objects: [{ ...detailWithComObject().com_objects[0], dpt_text: "switch" }],
+  });
+  const badgeBeside = (value: string) => {
+    const row = [...host!.querySelectorAll(".identity-row")].find((r) => r.querySelector("dd")!.textContent!.startsWith(value))!;
+    return row.querySelector(".language-fallback-badge")?.textContent ?? null;
+  };
+
+  it("marks product texts that fell back, naming the declared source language when there is one", async () => {
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    await renderInspector({ kind: "device", id: 42 }, laterInstallationTree(), catalogDetail());
+    expect(badgeBeside("Schaltaktor")).toBeNull();
+    expect(badgeBeside("Switch actuator")).toBe("Untranslated (en-US)");
+    expect(badgeBeside("Switching")).toBe("Untranslated");
+    expect(badgeBeside("Maker")).toBeNull();
+    const dpt = host!.querySelector(".com-object-effective-dpt")!;
+    expect(dpt.querySelector(".language-fallback-badge")!.textContent).toBe("Untranslated");
+  });
+
+  it("does not mark a DPT text the master data translated", async () => {
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    const detail = catalogDetail();
+    detail.com_objects = [{ ...detail.com_objects[0], dpt_text: "schalten", dpt_text_language: "de-DE" }];
+    await renderInspector({ kind: "device", id: 42 }, laterInstallationTree(), detail);
+    expect(host!.querySelector(".com-object-effective-dpt .language-fallback-badge")).toBeNull();
+  });
+
+  it("marks nothing without a selected product language", async () => {
+    await renderInspector({ kind: "device", id: 42 }, laterInstallationTree(), catalogDetail());
+    expect(host!.querySelectorAll(".language-fallback-badge")).toHaveLength(0);
   });
 });

@@ -20,6 +20,8 @@ import type { Selection } from "./selection";
 import ParameterPanel from "./ParameterPanel";
 import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
+import { useProductLanguage } from "./productLanguage";
+import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useGroupAddressFormat } from "./gaNotation";
 import {
   directionLabel,
@@ -647,7 +649,8 @@ const RESOLUTION_KEYS: Record<ProductResolution, { badge: MessageKey; explain: M
 // communication object table off the screen to say so.
 const HEADLINE_FIELDS: CatalogField[] = [
   { label: "deviceIdentity.manufacturer", of: (c) => c.manufacturer_name },
-  { label: "deviceIdentity.productText", of: (c) => c.product_text },
+  { label: "deviceIdentity.productText", of: (c) => c.product_text,
+    language: (c) => ({ answered: c.product_text_language, source: c.product_source_language }) },
   { label: "deviceIdentity.orderNumber", of: (c) => c.order_number, mono: true },
 ];
 
@@ -656,12 +659,20 @@ const HEADLINE_FIELDS: CatalogField[] = [
 // `mono: true` marks the identifier-shaped fields (order numbers, program
 // ids, versions) — prose names stay in the body face so they don't read
 // like codes.
-type CatalogField = { label: MessageKey; of: (c: DeviceProductCatalog) => string | null; mono?: boolean };
+// `language` (AR10 slice 2b, KL-37): which stored language answered the
+// text, and the declared language of the package's own text.
+type CatalogField = {
+  label: MessageKey;
+  of: (c: DeviceProductCatalog) => string | null;
+  mono?: boolean;
+  language?: (c: DeviceProductCatalog) => { answered: string | undefined; source: string | undefined };
+};
 
 const CATALOG_GROUPS: { title: MessageKey; fields: CatalogField[] }[] = [
   { title: "deviceIdentity.group.product", fields: [
     { label: "deviceIdentity.manufacturerId", of: (c) => c.manufacturer_id, mono: true },
-    { label: "deviceIdentity.catalogItemName", of: (c) => c.catalog_item_name },
+    { label: "deviceIdentity.catalogItemName", of: (c) => c.catalog_item_name,
+      language: (c) => ({ answered: c.catalog_item_name_language, source: c.catalog_item_source_language }) },
     { label: "deviceIdentity.catalogItemNumber", of: (c) => c.catalog_item_number, mono: true },
   ] },
   { title: "deviceIdentity.group.hardware", fields: [
@@ -670,7 +681,8 @@ const CATALOG_GROUPS: { title: MessageKey; fields: CatalogField[] }[] = [
     { label: "deviceIdentity.hardwareSerial", of: (c) => c.hardware_serial_number, mono: true },
   ] },
   { title: "deviceIdentity.group.application", fields: [
-    { label: "deviceIdentity.applicationName", of: (c) => c.application_name },
+    { label: "deviceIdentity.applicationName", of: (c) => c.application_name,
+      language: (c) => ({ answered: c.application_name_language, source: c.application_source_language }) },
     { label: "deviceIdentity.applicationNumber", of: (c) => c.application_number, mono: true },
     { label: "deviceIdentity.applicationVersion", of: (c) => c.application_version, mono: true },
     { label: "deviceIdentity.applicationProgramId", of: (c) => c.application_program_id, mono: true },
@@ -678,13 +690,24 @@ const CATALOG_GROUPS: { title: MessageKey; fields: CatalogField[] }[] = [
   ] },
 ];
 
-type IdentityRowData = { label: MessageKey; value: string; mono?: boolean };
+type IdentityRowData = {
+  label: MessageKey;
+  value: string;
+  mono?: boolean;
+  /** Set when the value is the package's own text in a selected product language. */
+  fallback?: { selected: string; source: string | undefined };
+};
 
 /** The fields of `group` that the database actually filled, in declared order. */
-function presentRows(fields: CatalogField[], catalog: DeviceProductCatalog): IdentityRowData[] {
+function presentRows(fields: CatalogField[], catalog: DeviceProductCatalog, selected: string | null): IdentityRowData[] {
   return fields.flatMap((f) => {
     const value = f.of(catalog);
-    return value === null ? [] : [{ label: f.label, value, mono: f.mono }];
+    if (value === null) return [];
+    const language = f.language?.(catalog);
+    const fallback = selected !== null && language && fellBack(value, language.answered)
+      ? { selected, source: language.source }
+      : undefined;
+    return [{ label: f.label, value, mono: f.mono, fallback }];
   });
 }
 
@@ -693,7 +716,10 @@ function IdentityFields(props: { rows: IdentityRowData[]; t: Translate }) {
     {props.rows.map((row) => (
       <div className="identity-row" key={row.label}>
         <dt>{props.t(row.label)}</dt>
-        <dd className={row.mono ? "mono" : undefined}>{row.value}</dd>
+        <dd className={row.mono ? "mono" : undefined}>
+          {row.value}
+          {row.fallback && <LanguageFallbackBadge selected={row.fallback.selected} source={row.fallback.source} />}
+        </dd>
       </div>
     ))}
   </dl>;
@@ -720,6 +746,7 @@ function IdentityFields(props: { rows: IdentityRowData[]; t: Translate }) {
 function DeviceIdentity(props: { product: DeviceProductNode }) {
   const { product_ref, program_ref, catalog, resolution } = props.product;
   const t = useTranslate();
+  const [productLanguage] = useProductLanguage();
   // A variant outside the generated union cannot arise from a matching
   // server, only from a frontend older than the one it talks to. It gets its
   // own wording rather than borrowing another variant's: reusing
@@ -748,10 +775,10 @@ function DeviceIdentity(props: { product: DeviceProductNode }) {
   // list: the ref rows are not catalogue fields, and "however many rows are
   // in the headline, minus two" stops being true the moment `refRows` is
   // empty — which `NoReference` makes it.
-  const headlineCatalogRows = catalog ? presentRows(HEADLINE_FIELDS, catalog) : [];
+  const headlineCatalogRows = catalog ? presentRows(HEADLINE_FIELDS, catalog, productLanguage) : [];
   const headline = [...refRows, ...headlineCatalogRows];
   const groups = catalog
-    ? CATALOG_GROUPS.map((group) => ({ title: group.title, rows: presentRows(group.fields, catalog) }))
+    ? CATALOG_GROUPS.map((group) => ({ title: group.title, rows: presentRows(group.fields, catalog, productLanguage) }))
     : [];
   // Every catalogue field the database left null, counted across the headline
   // and the groups alike.
@@ -830,6 +857,7 @@ function ComObjectRow(props: {
 }) {
   const { com, groupAddresses, onApplied } = props;
   const t = useTranslate();
+  const [productLanguage] = useProductLanguage();
   const formatGa = useGroupAddressFormat();
   const dpt = com.dpt ?? com.program_dpt;
   const usesProgramDefault = com.dpt === null && com.program_dpt !== null;
@@ -850,6 +878,9 @@ function ComObjectRow(props: {
           {usesProgramDefault && <small className="com-object-dpt-origin">{t("inspector.programDefault")}</small>}
           <span className="mono">{dpt ?? "—"}</span>
           {com.dpt_text && <small>{com.dpt_text}</small>}
+          {productLanguage !== null && fellBack(com.dpt_text, com.dpt_text_language) && (
+            <LanguageFallbackBadge selected={productLanguage} source={null} />
+          )}
         </span>
         <span className="mono ga-address">{com.links.map((link) => (link.address === null ? "—" : formatGa(link.address))).join(", ") || "—"}</span>
       </summary>

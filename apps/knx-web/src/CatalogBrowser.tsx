@@ -15,6 +15,7 @@ import type {
 import type { ProjectTree } from "./bindings/ProjectTree";
 
 import { useProductLanguage } from "./productLanguage";
+import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useTranslate } from "./i18n";
 import type { MessageKey, Translate } from "./i18n";
 import { useActiveOptionScroll } from "./useActiveOptionScroll";
@@ -508,8 +509,14 @@ export default function CatalogBrowser(props: {
             onClick={() => pick(item)}
           >
             {item.name ?? item.id}
+            {language !== null && fellBack(item.name, item.nameLanguage) && (
+              <LanguageFallbackBadge selected={language} source={item.sourceLanguage} />
+            )}
             {item.number ? ` (${item.number})` : ""}
             {item.visibleDescription ? ` — ${item.visibleDescription}` : ""}
+            {language !== null && fellBack(item.visibleDescription, item.visibleDescriptionLanguage) && (
+              <LanguageFallbackBadge selected={language} source={item.sourceLanguage} />
+            )}
           </li>
         ))}
       </ul>

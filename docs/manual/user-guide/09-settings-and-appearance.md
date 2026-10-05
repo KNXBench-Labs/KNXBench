@@ -144,8 +144,10 @@ application program's own language — and marks it **Untranslated (en-US)**, na
 language where the program declares one. **Options untranslated** means the label is
 translated but some of a list's choices are not. A line above the parameters counts
 the affected fields, folded ones included. With **Package default** nothing is marked:
-the program's own text is then exactly what you asked for. Device names in the catalog
-and product details do not carry these marks yet.
+the program's own text is then exactly what you asked for. The same **Untranslated**
+mark appears beside catalog entries (name and description), beside the product text,
+catalog name and application name in a device's product details, and beside a
+communication object's datapoint-type text.
 
 ## UI language
 

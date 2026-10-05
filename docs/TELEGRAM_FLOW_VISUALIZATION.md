@@ -880,6 +880,80 @@ against the `origin/main` components (two circles overlap). 12 behavioural
 mutants in `flowDynamics.ts` and `flowAnimator.ts` were each killed by a named
 test; one equivalent mutant led to removing a redundant guard.
 
+## 15. AR21 acceptance rerun (alpha, 2026-10-05)
+
+Receipt under review: the §14 corrections, `595d8d2e`, on `origin/main`
+`d48852a6` (only Markdown changed after `b7d7927e`). **Result: findings 1–3
+of §13 are closed; one new finding, so not accepted yet; returned to the UI
+owner.** `FLOW-01` stays `IN_PROGRESS`.
+
+**Verified by the alpha session (run, not adopted):**
+
+- §9.3, all four binding requirements. Local reheat and hub separation by
+  code reading: `reheatAround` heats the given nodes and their direct
+  neighbours only; `step` moves only hot nodes and a settled node gains no
+  velocity; `separate` moves a hot node out of each neighbour's footprint and
+  never moves a settled one; the animator cools by
+  `ALPHA_DECAY ** (elapsed / 32 ms)`. Pulse bundling: a poll batch of more
+  than 24 events is bundled per pair and group address; polls come every
+  1,000 ms and a pulse lives 700 ms, so pulses of consecutive batches do not
+  overlap and bundling covers a whole pulse lifetime in effect. Contrast: as
+  in §13 (code read, no contrast measurement).
+- Three own mutants, each restored afterwards (byte comparison): map-wide
+  heating in `reheatAround` → 1 named test fails; separation switched off → 3
+  named hub-readability tests fail; frame-count cooling → 1 named animator
+  test fails.
+- Vitest, the seven flow test files: 96 / 96. Chromium (loopback-only
+  namespace, production build): `telegram-flow`, `telegram-flow-motion` and
+  `telegram-flow-hub` three times each, 42 / 42; `group-address-drag` five
+  times, 10 / 10 (finding 3 of §13).
+- Integrated gate on `b7d7927e` (alpha's ADR 0078 merge, which contains
+  `595d8d2e`): 16 stages exit 0, Rust 3,269 / 0 / 177 in 182 blocks,
+  Vitest 2,013, complete Chromium suite 132 / 132 plus the launch probe.
+- `hub-before.png` / `hub-after.png` inspected: after the correction no two
+  circles overlap and node names and value lines stay clear of other nodes.
+  Edge labels near the hub still overlap each other and cross nearby text,
+  and edges pass through the hub's value block, as §14 and
+  KNOWN_LIMITATIONS §154 already disclose.
+
+**Own load measurement** (`flow-load.load.ts` with `FLOW_LOAD_FILE` set so
+the owner's `measurements.json` stayed untouched; production build, headless
+Chromium 152 in a loopback-only namespace, Ryzen 7 5800X; one sample each;
+`load1` 13.3 at the start and 3.0 at the end, so quieter than §14's run):
+
+| Scenario | Telegrams | Main thread | Long tasks (count, total, max) | Marker lag | Heap after GC |
+| --- | --- | --- | --- | --- | --- |
+| §7 load, motion, 15 s | 21,145 | 0.941 | 128, 14.5 s, 197 ms | 166–659 ms | 18.0 → 18.4 MiB |
+| §7 load, motion off, 15 s | 18,162 | 0.187 | 2, 0.14 s, 77 ms | 52–84 ms | 16.6 → 17.0 MiB |
+| §7 load, motion, 60 s | 64,155 | 0.737 | 158, 16.9 s, 208 ms | 41–93 ms (first 654 ms) | 18.4 → 19.5 MiB |
+| long session, 10/s, 180 s | 1,827 | 0.14 | 0 | 4–8 ms | 5.0 → 5.4 MiB |
+
+This agrees with §14 in kind: motion on at the §7 load is saturated during
+the first layout and stays heavy afterwards; Motion Off is light. The 60 s
+figure (0.74) is lower than §14's 0.92 on a busier host. In the long session
+the heap rose by 0.1 MiB per sample (5.0, 5.1, 5.2, 5.3, 5.4) while the
+monitor capture filled to its 1,000-row limit; 180 s do not show whether it
+levels off, so this run neither confirms nor contradicts §12's plateau.
+
+**Finding 4 for the UI owner — MINOR, but the shown numbers are wrong.** The
+reduced-rendering note says "{bundled} telegrams were drawn as bundled
+pulses, {dropped} without a pulse". `flowAnimator.ts` adds `events.length`
+to `coalescedEvents` for every bundled batch, including the pulses that are
+then refused at the 160-pulse capacity, and adds `pulse.count` — one per
+*recipient* — to `overCapacityEvents`. The second number therefore counts
+telegram × recipient paths, not telegrams, and the first includes telegrams
+that got no pulse. Measured: the 15 s run ended with "21145 telegrams were
+drawn as bundled pulses, 39801 without a pulse" after 21,145 telegrams in
+total. §7 requires exact counts and separate overflow states. The unit test
+(`caps simultaneous pulses and counts the telegrams it could not show`) uses
+one recipient per telegram and cannot see this. Needed: count each telegram
+once in one category (or name the unit the note reports), with a test that
+has several recipients per telegram, en/de.
+
+**Not certified here:** native/Orca/live-network behaviour (the existing
+boundaries stay), and any KNX traffic measurement. No hardware, no real bus
+and no KNX socket were used.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

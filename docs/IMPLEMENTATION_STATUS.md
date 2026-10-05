@@ -1,5 +1,14 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR10 slice 3: the German report finally says "Schalten"
+
+- New `knx_app::com_object_language` holds the communication-object
+  translation rule (product layers only, only on a translation hit); the
+  device-detail route and the documentation report both use it.
+- `knx_report::ReportDeviceData::com_object_texts` carries the caller's
+  translated texts; the renderer shows them in place of the project text.
+- Ledger: `KL-66` ACCEPTED_BOUNDARY, `KL-37` WAITING_OWNER; AR10 DONE_SCOPED.
+
 ## 2026-10-05 — AR10 slice 2b: catalogue, product block and master data stop pretending to be bilingual
 
 - `catalog_items`, `device_product` and the master readers name the stored

@@ -2290,6 +2290,21 @@ same day); the catalogue, product-block and DPT markers have no web consumer
 yet (UI owner), and the documentation report's communication-object text
 stays language-insensitive (above).
 
+**Update 2026-10-05 (AR10 slice 3): the documentation report follows the
+device detail's rule.** `knx_app::com_object_language` now holds the one rule
+both use — only `Program`/`ProgramRef`-layer text is replaced, only where a
+translation answered — and `report_options` passes the result to the renderer
+as `ReportDeviceData::com_object_texts`. A German report therefore shows the
+package's German communication-object name and description; project-authored
+text and language misses keep the project's words
+(`documentation_composition.rs`: `com_object_text::*`). Two statements above
+are stale and corrected here: `ComObjectNode` has carried `function_text`
+since §146, so `FunctionText` is read on the device detail. **Residue,
+accepted:** device creation and `enrich()` keep storing package text
+(project data must not depend on a display setting); the project's own
+language and `StringTable` resolution have no source (§14). **Waiting on the
+UI owner:** showing the slice-2b markers (catalogue, product block, DPT text).
+
 ## 38. Group-address CSV export/import (T12) has no verified ETS interoperability
 
 **Limitation.** "KNXBench group-address CSV v1" (`crates/knx-csv`,
@@ -3930,6 +3945,16 @@ this section previously said would be needed. On 2026-09-23 the report gained
 an injected EN/DE choice and localized primary chrome, but not a complete
 catalogue or language-pack integration. The remaining surfaces above stay
 open for the stated reasons; none is scheduled.
+
+**Update 2026-10-05 (AR10): accepted boundary.** Re-checked against the code:
+the parameter-diagnostic headline is translated by `kind`
+(`PARAMETER_DIAGNOSTIC_MESSAGE_KEYS` onto the `parameters.diagnostic.*`
+catalogue keys in `messages/en.ts`/`de.ts`); `.detail` and the session log stay English by
+design, and the log panel and every error toast say so where the reader is
+(`logPanel.entryTextIsEnglish`, `toast.error.messageIsEnglish`, with tests in
+`LogPanel.test.tsx`/`Toast.test.tsx`). Error bodies are not a closed set;
+the report's detailed labels are §48's accepted boundary. No server string
+added by AR10 is prose: the new language markers are identifiers.
 
 ## 68. Repeated module instantiation is refused, not supported
 

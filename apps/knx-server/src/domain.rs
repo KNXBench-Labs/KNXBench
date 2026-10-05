@@ -1372,32 +1372,9 @@ pub fn device_detail_impl(
         .ok_or_else(|| format!("device {device_id} not found"))
 }
 
-/// Everything `device_detail`'s language overlay (T33 Task 2) needs from
-/// the project, gathered while only `project` is locked — mirrors
-/// `assemble_parameter_panel`'s own step 1, so `product_db`'s lock, taken
-/// afterwards if at all, never overlaps this one.
-struct ComObjectOverlayInput {
-    program_ref: String,
-    /// Keyed by `ComObjectNode::id` (== `ComObjectInstanceId.0`): the
-    /// instance's ETS ref id, whether it is module-based, and the `Layer`
-    /// its `text`/`description` overrides currently sit at. `None` for a
-    /// layer means the override is `Absent`/`Empty`/`Malformed` — there is
-    /// nothing to overlay, and `build_device_detail`'s own output is left
-    /// exactly as it is.
-    com_objects: HashMap<
-        u32,
-        (
-            String,
-            bool,
-            Option<knx_core::Layer>,
-            Option<knx_core::Layer>,
-        ),
-    >,
-}
-
 /// Everything ISSUE-08's activation/channel overlay needs from the project,
 /// gathered while only `project` is locked (same discipline as
-/// [`ComObjectOverlayInput`]). `None` when the device states no program.
+/// [`knx_app::com_object_language::ComObjectTextInput`]). `None` when the device states no program.
 struct ActivationInput {
     program_ref: String,
     stored: Vec<(String, String)>,
@@ -1611,26 +1588,10 @@ pub fn device_detail(
         let detail = device_detail_impl(project, device_id)?;
         let activation_input = activation_input(project, knx_core::DeviceId(device_id));
         let overlay_input = language.and_then(|_| {
-            let dev = project.devices.get(knx_core::DeviceId(device_id))?;
-            Some(ComObjectOverlayInput {
-                program_ref: dev.program_ref.clone(),
-                com_objects: dev
-                    .com_objects
-                    .iter()
-                    .filter_map(|com_id| project.devices.com_object(*com_id))
-                    .map(|com| {
-                        (
-                            com.id.0,
-                            (
-                                com.source.ets_id.clone(),
-                                com.module_instance.is_some(),
-                                com.text.layer(),
-                                com.description.layer(),
-                            ),
-                        )
-                    })
-                    .collect(),
-            })
+            knx_app::com_object_language::ComObjectTextInput::collect(
+                project,
+                knx_core::DeviceId(device_id),
+            )
         });
         (detail, overlay_input, activation_input)
     };
@@ -1708,83 +1669,20 @@ pub fn device_detail(
         return Ok(detail);
     };
 
-    let program_id = knx_productdb::query::resolve_program(&products, &overlay_input.program_ref)
-        .map_err(|e| e.to_string())?;
-    // A device whose program is not installed is ordinary project state,
-    // not an error — return the untranslated detail unchanged.
-    let Some(program_id) = program_id else {
-        return Ok(detail);
-    };
-
-    // Every lookup id this device needs, collected up front so the overlay
-    // (translation table + `translation_overlay`'s own query) is loaded
-    // exactly once for the whole device, not once per communication object
-    // — `com_object_view` in a loop used to reload it per iteration, and a
-    // device can own hundreds of communication objects.
-    let lookup_ids: Vec<String> = detail
-        .com_objects
-        .iter()
-        .filter_map(|com| overlay_input.com_objects.get(&com.id))
-        .map(|(ref_id, module_based, _, _)| {
-            knx_productdb::com_object_lookup_id(&program_id, ref_id, *module_based)
-        })
-        .collect();
-    let lookup_id_refs: Vec<&str> = lookup_ids.iter().map(String::as_str).collect();
-    let views =
-        knx_productdb::query::com_object_views(&products, &program_id, &lookup_id_refs, Some(lang))
+    // T33/§37: the shared rule — product-layer text only, and only where a
+    // translation answered; see `knx_app::com_object_language`.
+    let translated =
+        knx_app::com_object_language::translate_com_object_texts(&products, &overlay_input, lang)
             .map_err(|e| e.to_string())?;
-
     for com in &mut detail.com_objects {
-        let Some((ref_id, module_based, text_layer, description_layer)) =
-            overlay_input.com_objects.get(&com.id)
-        else {
+        let Some(text) = translated.get(&knx_core::ComObjectInstanceId(com.id)) else {
             continue;
         };
-        // Recomputed rather than carried: `com_object_lookup_id` is pure
-        // and both sites feed it the same three inputs, so this is the
-        // key the collection loop above queried with. If the two ever
-        // drift apart the symptom is silent — a `views` miss and
-        // untranslated text, with no test to notice — so keep them
-        // reading the same `overlay_input` entry.
-        let lookup_id = knx_productdb::com_object_lookup_id(&program_id, ref_id, *module_based);
-        let Some(view) = views.get(&lookup_id) else {
-            continue;
-        };
-        // Only a `Program`/`ProgramRef`-layer value came from the product
-        // database and may be overlaid (Global Constraint 2). The layer
-        // read here is the one stored on the project's own
-        // `ComObjectInstance`, never the layer `view` itself reports —
-        // those two can legitimately disagree (a `ComObjectRef`
-        // translation with no matching structural override), and trusting
-        // the latter would translate project-authored text.
-        //
-        // Finding M6: an overlay hit is not enough on its own — `pick()`
-        // still returns the product database's untranslated column when
-        // the requested language has no `translation` row for this value,
-        // and overwriting the project's own resolved text with that
-        // untranslated column on a language miss would replace a correct
-        // value with a different (wrong-language) one. `*_translated`
-        // (Task 1) is `true` only when the value `pick()` actually chose
-        // came out of the overlay, so gating on it here means a miss
-        // leaves `com.name`/`com.description` exactly as
-        // `device_detail_impl` already resolved them.
-        if matches!(
-            text_layer,
-            Some(knx_core::Layer::Program) | Some(knx_core::Layer::ProgramRef)
-        ) && view.text_translated
-        {
-            if let Some(text) = &view.text {
-                com.name = Some(text.clone());
-            }
+        if let Some(name) = &text.name {
+            com.name = Some(name.clone());
         }
-        if matches!(
-            description_layer,
-            Some(knx_core::Layer::Program) | Some(knx_core::Layer::ProgramRef)
-        ) && view.visible_description_translated
-        {
-            if let Some(description) = &view.visible_description {
-                com.description = Some(description.clone());
-            }
+        if let Some(description) = &text.description {
+            com.description = Some(description.clone());
         }
     }
 

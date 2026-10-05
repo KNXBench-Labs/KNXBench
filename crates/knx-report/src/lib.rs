@@ -22,7 +22,7 @@ mod testutil;
 use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{DateTime, Utc};
-use knx_core::{DeviceId, Project};
+use knx_core::{ComObjectInstanceId, DeviceId, Project};
 
 /// Renders `project` into one self-contained HTML "project documentation"
 /// document, using `options.generated_at` as the only source of "now"
@@ -118,6 +118,18 @@ pub struct ReportDeviceData {
     pub problems: Vec<String>,
     pub parameters: Vec<ReportField>,
     pub module_arguments: Vec<ReportField>,
+    /// Caller-translated communication-object texts in the report language
+    /// (AR10, KNOWN_LIMITATIONS §37). An absent entry or field keeps the
+    /// project's own resolved text; the caller decides which texts may be
+    /// translated at all.
+    pub com_object_texts: BTreeMap<ComObjectInstanceId, ReportComObjectText>,
+}
+
+/// Display-only replacement texts for one communication object.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ReportComObjectText {
+    pub name: Option<String>,
+    pub description: Option<String>,
 }
 
 /// One parameter value or module argument. `raw_value` is mandatory and is

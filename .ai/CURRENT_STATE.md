@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 22:19 CEST
+- **Completed:** **AR10 slice 3, AR10 closed DONE_SCOPED.** `knx_app::com_object_language` (`ComObjectTextInput::collect` + `translate_com_object_texts`) is the shared com-object translation rule; `apps/knx-server` device detail now calls it (behaviour unchanged, its tests pass), and `knx_app::documentation::report_options` fills the new `knx_report::ReportDeviceData::com_object_texts`. Ledger `KL-66` ACCEPTED_BOUNDARY, `KL-37` WAITING_OWNER.
+- **Pending/Next Steps:** **UI owner:** `KL-37` — show the slice-2b markers (catalogue `nameLanguage`/`sourceLanguage`, device `product.catalog.*_language`, com-object `dpt_text_language`); AR21 finding 6 (§19). Alpha: next open AR package (AR06P, AR11+), AR21 rerun when finding 6 lands.
+- **Notes for Codex oder Claude:** Report translation follows the same layer rule as the device detail; English reports also translate when the package carries an `en-*` translation (same as parameters). Web lock: unchanged per the newest owner line below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 22:14 CEST
 - **Completed:** **AR21 rerun of finding 5.** Fix `104916d6` verified (flow Vitest 68/68, own mutant fails both §18 tests). New **finding 6** (MINOR) in TELEGRAM_FLOW_VISUALIZATION §19: at the node limit, telegrams drawn to only part of their recipients, or from a refused sender, are counted nowhere in the reduced-rendering note (probe: 0/0/false). `FLOW-01` stays IN_PROGRESS.
 - **Pending/Next Steps:** **UI owner:** finding 6 (§19 suggests recording full representation in `apply`). Alpha: AR10 slice 3 (report communication-object text, `KL-37` residue), `KL-66` decision; then AR21 rerun of finding 6 when delivered.

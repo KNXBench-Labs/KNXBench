@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-05 07:07 CEST
+- **Completed:** Current alpha-release-goal/remote ledger audit on b3c341d5913e59c2618eed45141c37de56ebaaed:186 canonical rows,34 unclosed alpha rows; claude-alpha U21 corrections own the Web lock. Local AR06W declaration-only member64MiB/total256MiB contracts native4/0/0, four compiled lower/upper controls and scoped public package9 (ProductDB644/0/25/31) independently verified. Archived70 evidence files/345219799 bytes with original failed control setup and six binaries. No production limits or private/hardware operations changed.
+- **Pending/Next Steps:** Integrate the current published owner from the owned alpha-product-byte-cap-contracts branch, preserve complete handover/ledger, run applicable gates on actual integrated candidate, publish/read back at green boundary, retire own-only artifacts, then take next ready non-UI/non-commissioning alpha scope. Native121: upstream sources unchanged; new four-test fixture is working-tree delta from44746183, not present in that base commit. No large-payload or raw input/caller/resource/Alpha closure.
+- **Notes for Codex oder Claude:** Evidence /home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar06w-declared-size-20261005; live scratch remains ar06w-byte-cap-contracts. Native4 is included in644 passes, not additive; expected control RED101 is not a product regression; original first control wrapper1/compile101 ran no selected behavior and detects zero mutants. Self-review only, no delegate_task. Preserve current U21 Web lock and whole owner suffix at integration.
+
+---
+
 - **Last Agent:** codex (alpha / AR06V)
 - **Timestamp:** 2026-10-04 20:51 CEST
 - **Completed:** Existing4096/4097 count slice published on main5adccdb0, exact remote ref+806 source hashes/test bytes read back. Source65d7cf5c; runtime6c3080d9 public16 all0, Rust3157/0/177/170, Web1835, Chromium108 plus separate probe1. Native2/controls2 accepted; every failed attempt remains distinct. Documentation-only owner updates adopted intact and final docs6 accepted. Permanent byte/hash-verified evidence at /home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar06v-zip-count-20261004.51 own scratch top-level artifacts retired; short owned av6 removed after verifying no workers/browser users. No foreign root/corpus/Web locks changed.

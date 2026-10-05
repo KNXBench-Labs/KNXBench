@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 01:42 CEST
+- **Completed:** **AR15 DONE (dossier).** `docs/ALPHA_SCOPE_MATRIX.md`: capability matrix by evidence level, deployment/import/hardware boundaries, ledger totals, release disposition for all 13 not-yet-accepted rows (RELEASE-01..04 block; UI-04 needs owner close or user acceptance; 8 BLOCKED_EXTERNAL proposed as disclosed boundaries for AR19), risks. ALPHA_READINESS recount note. Doc gates only.
+- **Pending/Next Steps:** AR16 (manual acceptance) waits on the UI owner's closure receipt and the user's manual location/screenshot policy (RELEASE-03). AR17 (local AppImage candidate, `KNX_REQUIRE_CLEAN_TREE=1`) can start once AR16 is settled or the user allows it earlier. AR14D D5 needs the commissioning owner. UI-04 belongs to the commissioning owner.
+- **Notes for Codex oder Claude:** The matrix's §4 is the list to walk at AR18/AR19; keep it in sync when a row changes status. Web lock: unchanged per the newest owner line below.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 01:40 CEST
 - **Completed:** **AR15 slice 2 (items 1–2).** LIMITATION_TRIAGE recounted by script (119 headings = 108 limitations + 11 signposts; 107 rated: K1 5/K2 30/K3 58/K4 14; §105 unrated). Scheme set, schema versions and commissioning status reconciled across COMPATIBILITY, GAP_ANALYSIS_ETS, ROADMAP, ARCHITECTURE, DATA_MODEL, PRODUCT_DATABASE_CORPUS, KL §11 and the manual. Doc gates only.
 - **Pending/Next Steps:** AR15 item 3 rest (deployment/import/hardware boundaries) and item 4 (alpha scope/risk/decision matrix), then AR16 waits on the UI owner.

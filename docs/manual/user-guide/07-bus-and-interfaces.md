@@ -27,8 +27,9 @@ Discovery is available in the UI and on the command line:
 knx bus discover
 ```
 
-The graphical bus monitor offers **Discover gateways** through the same
-server-side discovery call. The CLI remains useful for terminal diagnostics.
+The graphical bus monitor offers the same server-side discovery call as its
+**Search** button next to the gateway fields (it also runs once by itself when
+the application starts). The CLI remains useful for terminal diagnostics.
 Line scan still requires a known control endpoint to be entered manually.
 
 > **Note**
@@ -66,14 +67,16 @@ hostnames and IPv6 addresses remain visible if they were saved previously, but
 the form explains why it cannot connect to them.
 
 If you saved a preferred gateway in Settings, a newly opened monitor starts with
-that address. You can replace it without changing the saved preference. **Discover
-gateways** lets you select a discovered endpoint; the selection does not connect
-until you press Connect.
+that address. You can replace it without changing the saved preference. **Search**
+lists the interfaces that answered and lets you select one; the selection does not
+connect until you press Connect.
 
-![The KNXBench bus monitor before a session starts, with separate gateway host and port fields and the Connect button](../../assets/screenshots/porcelain-bus-monitor.png)
+![The KNXBench bus monitor before a session starts: the tabs Bus monitor, Line scan, Device checks, Download to device, Program address, Debug · service control and Activity history; separate gateway host and port fields, the Connect and Search buttons, and the note that the search could not be run because the network is unreachable](../../assets/screenshots/porcelain-bus-monitor.png)
 
-The pictured empty discovery result uses a local UI test fixture, not a live
-measurement of a KNX network.
+The screenshot was taken on a machine without any network, so the gateway search
+reports that it could not run. KNXBench runs that read-only search once on its own when
+the application starts, and again when you press **Search**; it only lists what
+answers and never connects by itself.
 
 Notice the eyebrow above the title: *KNXnet/IP · Tunnelling*. That is the panel
 telling you which transport it uses, and it is the only one it offers. The telegram
@@ -253,7 +256,7 @@ address. It does not send anything.
 The **Log** entry in the sidebar opens the session log: everything KNXBench did this
 session, filtered by Error, Warning and Info.
 
-![The KNXBench session log with Error, Warning and Info filters and one info entry recording an opened project](../../assets/screenshots/porcelain-log.png)
+![The KNXBench session log with Error, Warning and Info filters, a search field and an export button; the first info entry records the imported sample project and its counts, followed by entries for manufacturer files preserved in the product database](../../assets/screenshots/porcelain-log.png)
 
 Log entries are the server's own text and stay in English even when the interface is
 translated — a deliberate choice, so an error message you paste into a bug report

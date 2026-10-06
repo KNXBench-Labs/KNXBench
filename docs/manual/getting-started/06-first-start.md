@@ -11,11 +11,13 @@ the screen so the rest of the manual makes sense.
 The first thing KNXBench shows, with nothing open yet, is a workspace with no
 project loaded:
 
-![The empty KNXBench workspace, with New project, Open project and Open (.knxdb) buttons in the center, a navigation sidebar on the left, and an empty properties pane on the right.](../../assets/screenshots/porcelain-welcome.png)
+![The empty KNXBench workspace headed "Your KNX workspace", with the cards New project…, Open KNXBench project and Import ETS project in the center, a navigation sidebar on the left, and an empty properties pane on the right.](../../assets/screenshots/porcelain-welcome.png)
 
-Three buttons cover the three ways to start: **New project…** creates an
-empty one, **Open project…** imports an ETS `.knxproj` archive, and
-**Open (.knxdb)…** opens a project already saved in KNXBench's own format.
+Three cards cover the three ways to start: **New project…** creates an
+empty one, **Open KNXBench project** opens a project already saved in
+KNXBench's own `.knxdb` format, and **Import ETS project** imports an ETS
+`.knxproj` archive. The **File** menu offers the same actions as
+**Open (.knxdb)…** and **Open project…**.
 The left sidebar's navigation entries (Overview, Buildings, Topology, Group
 addresses, Product catalog) stay visible but have nothing to show until a
 project is open.
@@ -28,7 +30,7 @@ KNXBench shows its own in-browser file browser instead — the same list of
 files on the server's storage that a native "Open" dialog would show, plus an
 upload option for a file that only exists on your own machine:
 
-![KNXBench's in-browser Open dialog, listing a file called kv-demo.knxdb, with an Upload… control below it and a Cancel button.](../../assets/screenshots/porcelain-open-project-dialog.png)
+![KNXBench's in-browser Open dialog, titled "Open — /", listing a file called sample-house.knxproj, with an Upload… control below it and a Cancel button.](../../assets/screenshots/porcelain-open-project-dialog.png)
 
 The desktop build instead uses your Linux file manager's own native Open
 dialog, since it can talk to the file system directly.

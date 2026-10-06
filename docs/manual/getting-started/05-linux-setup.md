@@ -83,7 +83,7 @@ This is documented and was locally verified, not guessed: see
 On Linux, running that container with `--network host` instead puts the
 request on the real network interface, exactly like running the CLI outside a
 container. This now applies to the shipped `knxbench-server` image too:
-**Discover gateways** in the web UI calls `POST /api/bus/discover`, which uses
+The bus monitor's interface **Search** in the web UI calls `POST /api/bus/discover`, which uses
 the same multicast implementation. Bridge mode supports project work and all
 ordinary HTTP traffic, but not bus tunnelling: the gateway answers to the
 container's private address

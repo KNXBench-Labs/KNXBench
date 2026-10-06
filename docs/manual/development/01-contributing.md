@@ -236,6 +236,30 @@ to:
 - **Say what is missing.** An honest gap in a document is useful. A confident wrong
   sentence costs somebody an afternoon.
 
+### Screenshots in this manual
+
+The manual lives in the repository and is read on GitHub; it is not bundled into the
+application ([ADR-0024](../../adr/0024-in-application-help.md)). Its screenshots in
+`docs/assets/screenshots/` come from the finished application, never from mock-ups:
+a release `knx-server`, the production frontend and a fictional project built by
+`tools/manual_sample_project.py` (invented manufacturer `M-7FF0`, no real data). To
+regenerate them after a UI change:
+
+```sh
+cargo build --release -p knx-server
+npm run build --prefix apps/knx-web
+cd apps/knx-web
+KNX_SERVER_BIN=../../target/release/knx-server \
+  unshare --user --map-root-user --net sh -c 'ip link set lo up && exec "$@"' sh \
+  npx playwright test -c playwright.manual.config.ts
+```
+
+The network namespace keeps the run offline: the start-up gateway search finds
+nothing, which is what the bus-monitor screenshot shows. If Chromium fails to start
+with "Socket path too long", point `TMPDIR` at a short directory. Read every changed
+picture before committing it, and update the alt text and the sentence around it in the
+same change.
+
 ## What to expect
 
 One maintainer, evenings and weekends, a project that is `0.1.0-alpha.1` with no release

@@ -21,17 +21,18 @@ another line does not move it out of its room.
 
 ## The two views
 
-![The Topology view showing area 0 with an empty line 0.0, and area 1 with line 1.0
-holding four devices, each with a communication-object
-count](../../assets/screenshots/porcelain-topology.png)
+![The Topology view showing area 1 "House" with line 1.1 "Ground floor" holding
+five devices and line 1.2 "First floor" holding three, each device tile with its
+address and communication-object count](../../assets/screenshots/porcelain-topology.png)
 
 The Topology view draws each area as a block, each line inside it, and each device as
 a tile with its individual address and its number of communication objects. The `+`
 button on a line header adds a device to that line. An empty line is drawn as an empty
 line, not hidden.
 
-![The Buildings view with a single card named "KV v2.5 - demo", tagged Building, and a
-"+ Device" button in the header](../../assets/screenshots/porcelain-buildings.png)
+![The Buildings view with the building "Sample house", its Ground floor and First
+floor cards, and rooms such as Living room, Kitchen and Hall holding their devices;
+a "+ Device" button sits in the header](../../assets/screenshots/porcelain-buildings.png)
 
 The Buildings view draws building parts as nested cards with their devices inside.
 Clicking a card focuses it: the view then shows that part's devices as a table and its
@@ -96,9 +97,10 @@ workspace; changing either copy uses the same undoable command.
 **A device** has an address field, a line, a building part, a description, and a
 Delete button.
 
-![The properties pane for device 1.0.1, showing Delete, Address 1.0.1, Line "Line 0:",
-Building part "(none)" and an empty Description
-field](../../assets/screenshots/porcelain-device-inspector.png)
+![The properties pane for device 1.1.1 "Switch actuator ground floor", showing Delete,
+the device number 1.1.1, Line "Line 1: Ground floor", Building part "Sample house /
+Ground floor / Distribution board" and the Description "Fictional sample
+device"](../../assets/screenshots/porcelain-device-inspector.png)
 
 Areas, lines and building parts can be renamed. Device renaming is still not
 available. Text fields commit when they lose focus, and Enter is a shortcut

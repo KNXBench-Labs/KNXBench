@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — AR18 gates: the whole candidate goes through the scanner
+
+- Full §5 gate on the clean revision `4b9e913e`, one script, all leases,
+  offline: Rust 3317 passed / 0 failed / 177 ignored, Vitest 2071, Chromium
+  139, fmt, clippy, `cargo deny`, the five `xtask` checks and `check-appimage`
+  all green ([ALPHA_FINAL_GATES](ALPHA_FINAL_GATES.md)).
+- Private corpus: 142 `OriginalData` tests selected from the source by script;
+  140 pass, the known `http_device_compare` pair fails (stale test harness
+  without an activity-history store; the server fails closed). Commissioning
+  owner.
+- AppImage built with `--remap-path-prefix`: no builder home path left in the
+  binaries; offline Wayland start and API steps as in AR17.
+- The independent review brief is [review/AR18_REVIEW_BRIEF.md](review/AR18_REVIEW_BRIEF.md);
+  the review itself is a fresh Claude session the user starts.
+
 ## 2026-10-06 — KL-61: a group address finally says what it declares, not just what it ends up with
 
 - Projection: `GroupAddressNode.dpt_detail` (optional on the wire) carries the

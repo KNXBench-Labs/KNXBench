@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 06:35 CEST
+- **Completed:** **AR17 DONE.** Local AppImage candidate 0.1.0-alpha.4 from `6b9b6818` (desktop version raised to match knx-web alpha.4; check-appimage had refused alpha.1). Offline smoke under X11 (private Xvfb) and native Wayland; packaging manifest clean. Record `docs/ALPHA_CANDIDATE.md`. New `KL-158` (AppImage forces X11, WAITING_DECISION for AR19), privacy checklist item 6 (build paths in local binaries), troubleshooting + known-issues entries. AR16: user policy recorded (manual on GitHub with screenshots).
+- **Pending/Next Steps:** AR16: screenshots from the fictional sample project (generator script was in the AR17 scratch; recreate under `scripts/` or the e2e harness), claim-by-claim manual review, dated checklist; UI-owner closure receipt still needed. Any code change after `6b9b6818` requires a rebuild of the candidate before AR18.
+- **Notes for Codex oder Claude:** On this host Hyprland's Xwayland socket refuses connections; use a private Xvfb (signature-checked Arch package) or the Wayland workaround from KL §158 for native runs.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-06 06:18 CEST
 - **Completed:** Docs only, at the user's request. `alpha-release-goal.md` AR10: status line and a "UI portion delivered" note (`f5494094`, `ba190b6e`; `KL-37` ACCEPTED_BOUNDARY). `goal-ui.md`: the 2026-10-05 reconciliation's closure conditions recorded as met — findings 4–7 corrected, Alpha's independent AR21 rerun accepted `FLOW-01` (§22); U19–U21 closed. No AR21 self-rerun by the UI owner: Alpha's §22 already reran findings 6 and 7 with its own probes and mutants. Doc gates: anchors 593, ledger 189, headers 155/155, diff-check clean.

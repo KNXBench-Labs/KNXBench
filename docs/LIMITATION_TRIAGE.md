@@ -1,12 +1,12 @@
 # Limitierungen nach Kritikalität
 
-Sortierung der **108 verbleibenden nummerierten Grenzen** aus
+Sortierung der **109 verbleibenden nummerierten Grenzen** aus
 [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md), gezählt mit
-`grep -cE '^## (§)?[0-9]' docs/KNOWN_LIMITATIONS.md` (Stand 2026-10-06, AR15;
+`grep -cE '^## (§)?[0-9]' docs/KNOWN_LIMITATIONS.md` (Stand 2026-10-06, AR15, §158 aus AR17 ergänzt;
 vorher 2026-10-01: 110 Überschriften/103 Grenzen).
-Die Datei enthält 119 nummerierte Überschriften: 108 Grenzen und elf
+Die Datei enthält 120 nummerierte Überschriften: 109 Grenzen und elf
 gelöste/historische Wegweiser (§18/23/24/42/90/95/130-GATE/149/150/152/156).
-107 Grenzen sind eingestuft;
+108 Grenzen sind eingestuft;
 §105 bleibt wegen fehlender Hardwareevidenz ohne Einstufung. Der Befehl oben
 zählt Überschriften, nicht automatisch offene Defekte. Geschlossene oder zurückgezogene Einträge sind aus der aktiven
 Liste entfernt; frühere Nummern und Fragment-Links werden nicht wiederverwendet.
@@ -88,7 +88,7 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 71 | Vor Store-Schema 6 importierte Projekte haben keine Modul-Instanz-Ids | Nicht beschreibbar ohne Neuimport. |
 | 129 | Veralteter Id-Allokator-Snapshot konnte Ids duplizieren | Datenverlustpfad geschlossen (ADR-0039 Phasen 1–2, 2026-09-27); dass alles über `Command::apply` läuft, sichert weiter nur das Review — Phasen 3–5 offen. |
 
-## K3 — mittel (58)
+## K3 — mittel (59)
 
 | § | Thema | Warum K3 |
 | --- | --- | --- |
@@ -152,6 +152,7 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 154 | Telegrammfluss-Ansicht nur in Chromium geprüft; Bewegung bei großen Karten teuer | Motion Off ist für mehrere hundert Knoten der unterstützte Modus; kein WebKitGTK-/Orca-/Echtbus-Nachweis. |
 | 155 | Tunnel aus einem Docker-Bridge-Container nur mit Route-Back-fähigem Gateway | Ein Gateway gemessen; kein Live-Tunnel aus der Bridge; Discovery bleibt Host-Netz. |
 | 157 | Öffnen eines älteren Projekts aktualisiert die Datei an Ort und Stelle | Seit 2026-10-06 atomar; keine Kopie, ältere KNXBench-Versionen lehnen die Datei danach ab. |
+| 158 | Das AppImage startet nur mit X-Server | Ohne funktionierendes Xwayland bricht es sofort ab; nativer Wayland-Start aus dem entpackten AppImage ist dokumentiert und auf einer Maschine gemessen. |
 
 ## K4 — niedrig (14)
 

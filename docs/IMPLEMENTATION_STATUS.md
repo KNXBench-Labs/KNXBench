@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — AR17: a real AppImage, weighed and sniffed (offline)
+
+- Local candidate `KNXBench_0.1.0-alpha.4_amd64.AppImage` from `6b9b6818`
+  (clean tree), SHA-256 `4c778104…80ef2`, `xtask check-appimage` ok. Record:
+  [ALPHA_CANDIDATE](ALPHA_CANDIDATE.md).
+- Offline smoke in a loopback-only namespace: launch, new/import/save/reopen,
+  clear errors, no non-loopback socket — under X11 (private Xvfb, unmodified
+  AppImage) and native Wayland.
+- Fixed on the way: the desktop crate still said `0.1.0-alpha.1` while the
+  bundled web frontend was `alpha.4`; the validator refused it.
+- New `KL-158`: the AppImage forces X11; Wayland-only sessions need the
+  documented workaround. Privacy checklist item 6: local builds carry the
+  builder's home path.
+- AR16: the user decided the manual stays on GitHub, with screenshots.
+
 ## 2026-10-06 — AR15 done: one page that says what the Alpha is, and what it is not yet
 
 - New [ALPHA_SCOPE_MATRIX](ALPHA_SCOPE_MATRIX.md): capabilities by evidence

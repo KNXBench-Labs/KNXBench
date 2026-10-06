@@ -238,9 +238,10 @@ how a session ends and what KNXBench shows when it does.
 **You see:** `cargo tauri dev` or a built AppImage fails to launch, often with a
 complaint about a missing shared library.
 
-**Why:** Tauri's Linux backend draws its window and renders the frontend through the
-host's own GTK and WebKit libraries rather than bundling a browser engine. It needs
-**GTK 3** and **WebKitGTK 4.1** present on the machine. KNXBench's desktop build has only
+**Why:** Tauri's Linux backend draws its window and renders the frontend through
+GTK and WebKit rather than bundling a browser engine. Building or running it from
+source needs **GTK 3** and **WebKitGTK 4.1** on the machine; the AppImage carries its
+own copies of both (checked on the 2026-10-06 candidate). KNXBench's desktop build has only
 been built and run on one tested machine — an x86_64 Arch Linux host under XWayland — so
 other distributions, package versions, or Wayland-native setups are not a verified
 combination, even where they're likely to work.
@@ -249,6 +250,30 @@ combination, even where they're likely to work.
 or running the desktop shell. See
 [Linux setup §Desktop shell dependencies](../getting-started/05-linux-setup.md#desktop-shell-dependencies)
 for what's tested and what isn't.
+
+## The AppImage stops with "Failed to initialize GTK"
+
+**You see:** starting the AppImage prints `Failed to initialize gtk backend!` and it
+exits straight away.
+
+**Why:** the AppImage always opens its window through X11; the GTK start-up script
+inside it overrides any `GDK_BACKEND` you set. Without a working X server — for
+example a Wayland session without Xwayland — there is nothing to draw on
+([known limitation §158](../../KNOWN_LIMITATIONS.md#158-the-appimage-starts-only-with-an-x-server)).
+
+**Do this:** enable Xwayland in your compositor, or start the program natively on
+Wayland from the unpacked AppImage:
+
+```sh
+./KNXBench_0.1.0-alpha.4_amd64.AppImage --appimage-extract
+cd squashfs-root
+export APPDIR="$PWD"
+source apprun-hooks/linuxdeploy-plugin-gtk.sh
+GDK_BACKEND=wayland WEBKIT_DISABLE_DMABUF_RENDERER=1 ./AppRun.wrapped
+```
+
+Both settings matter: without `WEBKIT_DISABLE_DMABUF_RENDERER=1` the window closes
+with "Error 71 (Protocol error)". This was tested on one Hyprland machine only.
 
 ## `cargo tauri dev` fails because the frontend was never installed
 

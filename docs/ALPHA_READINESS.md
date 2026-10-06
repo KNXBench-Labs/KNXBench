@@ -252,6 +252,10 @@ session. Offline only; no TLS service, role system, host or firewall change.
    `environment.json`, `log.json`; everything else stays, as `report.md`
    says. `bus-telegrams.json` is unredacted (addresses, names, values,
    timestamps) and opt-in. Nothing is uploaded; review before sharing.
+6. (AR17, 2026-10-06) A release binary built on a personal machine carries
+   about 540 source paths with the builder's home directory (`~/.cargo`,
+   `~/.rustup`). Build releases in CI or with `--remap-path-prefix`; see
+   [ALPHA_CANDIDATE §4](ALPHA_CANDIDATE.md#4-findings).
 
 ### Handed over
 

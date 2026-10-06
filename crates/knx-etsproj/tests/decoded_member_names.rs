@@ -1,4 +1,4 @@
-//! Member identity is judged on the names the zip reader decodes, and a protected payload stays in budget.
+//! Members are judged by their decoded names, and a protected payload is counted before unpacking.
 //
 // AR18 re-check (2026-10-06), findings N1 and N2. N1: two records whose raw
 // names differ but which the `zip` reader *decodes* to one name (an Info-ZIP

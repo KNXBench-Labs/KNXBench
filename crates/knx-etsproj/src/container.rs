@@ -612,6 +612,34 @@ impl Container {
         self.project_part_opt().ok_or(ContainerError::NoProjectPart)
     }
 
+    /// Every other `P-xxxx` part the archive carries — by signature, nested
+    /// payload or top-level folder — besides the one [`Self::project_part`]
+    /// imports. Sorted and deduplicated; empty for an ordinary archive (AR18
+    /// review M3: such parts were kept as opaque entries but never named).
+    pub fn other_project_parts(&self) -> Vec<String> {
+        let Some(imported) = self.project_part_opt() else {
+            return Vec::new();
+        };
+        let mut parts: Vec<String> = self
+            .entries
+            .iter()
+            .filter_map(|entry| {
+                let path = entry.path.as_str();
+                let top = match path.split_once('/') {
+                    Some((dir, _)) => dir,
+                    None => path
+                        .strip_suffix(".signature")
+                        .or_else(|| path.strip_suffix(".zip"))?,
+                };
+                top.starts_with("P-").then(|| top.to_string())
+            })
+            .filter(|part| !part.eq_ignore_ascii_case(imported))
+            .collect();
+        parts.sort();
+        parts.dedup();
+        parts
+    }
+
     fn project_part_opt(&self) -> Option<&str> {
         self.entries.iter().find_map(|e| {
             let name = e.path.rsplit('/').next().unwrap_or(&e.path);

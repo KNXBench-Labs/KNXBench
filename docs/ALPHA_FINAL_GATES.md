@@ -126,3 +126,52 @@ the full-gate figures above still describe `4b9e913e`.
 
 This dossier is evidence for revision `4b9e913e` only. Any later code change
 needs the affected gates run again.
+
+## 7. AR18 conditions C1–C5: fixed and re-gated
+
+The independent review ([verdict](review/2026-10-06-alpha-independent-review.md),
+`READY_WITH_CONDITIONS`) named four IMPORTANT findings. The release owner fixed
+all four instead of asking for exceptions. §1–§6 above stay the evidence for
+`4b9e913e`; this section is the evidence for the new code revision
+`64badb9956a036affdf955677ff38f91a44fccfb`.
+
+| Finding | Fix | Commit | Proof |
+| --- | --- | --- | --- |
+| F1 — Open/Import discard unsaved edits | Server: `409` kind `projectUnsavedChanges` until `discardChanges: true`, checked before the file is read and again under the project lock. Web: *Cancel / Discard changes and open / Save and open*, also for a late refusal and the password retry | `94bdd7bd` | Route test (refusal leaves the edit and a broken file untouched), domain test of the inner guard, five App tests |
+| F2 — duplicate or case-colliding members | Refused with `DuplicateEntry`, checked on the raw central directory; also inside a protected project's nested payload | `7e606e55`, `64badb99` | Four tests |
+| F3 — unbounded memory | Each member read with at most its declared size; at most 512 MiB declared per archive (KNOWN_LIMITATIONS §159) | `7e606e55` | Three tests, including the exact budget |
+| F4 — `--store` overwrites | An existing file is refused untouched; `--replace` overwrites on request | `55badf3c` | Three CLI tests |
+| M4, M5 | Wrong-password message on one line; limitation counts and the AppImage row brought up to date | `7e606e55` | One test; documentation |
+
+**Mutation sweep:** 16 mutants, each killed by a named test, with the
+sources compared byte for byte after restore. In the first run, two
+server-guard mutants survived, because each server layer covered for the
+other. One more test per layer was added, and both are now killed on their
+own.
+
+**Integrated gate on `64badb99`** (clean tree, the same script as §2, leases
+held, offline, 11:31–11:51 CEST):
+
+| Gate | Result |
+| --- | --- |
+| `npm ci`, build, `tsc`, flow study, theme fixtures | exit 0 |
+| Vitest | 2,076 passed in 117 files |
+| Chromium | 139 passed |
+| fmt, clippy `-D warnings` | exit 0 |
+| Workspace tests | 3,331 passed, 0 failed, 177 ignored, in 189 blocks |
+| Five `xtask` checks | ok (headers 553/155, anchors 617, ledger 190, corpus conventions 390 files) |
+| `cargo deny check` | ok |
+| Private corpus (`OriginalData`) | **142 passed, 0 failed** |
+| AppImage | `check-appimage` ok; `KNXBench_0.1.0-alpha.4_amd64.AppImage`, 107,846,136 bytes, SHA-256 `235b00704cbde86c79c48ae3c202731fa0cfbe00a700c86e38d3d25f692d6bf7`; build stamp `64badb99`; no builder home path in any of the 337 files |
+| Offline start | Native Wayland start rendered `v0.1.0-alpha.4`. The API sequence passed: new project, save, import, reopen, missing file, non-ZIP. No non-loopback socket |
+| `git diff --check`, inputs frozen | ok |
+
+Not addressed, and named in the review: M1 (failure and read-only paths
+migrate a file in place; F4 and F1 now cover the import and open-over-edits
+cases), M2 (Save writes three transactions in place), M3 (a second project
+part is kept but not mentioned), M6–M9. They stay for the re-check and for
+the user at AR19.
+
+**Re-check:** the fixes are the owner's own work. The reviewer asked that
+someone else check them. The brief is
+[review/AR18_RECHECK_BRIEF.md](review/AR18_RECHECK_BRIEF.md).

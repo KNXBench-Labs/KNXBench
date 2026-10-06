@@ -161,24 +161,18 @@ pub struct GroupAddressNode {
     /// `group_ranges`, carrying its own name and `parent`, so resolving
     /// the path here would duplicate data the caller already holds.
     pub range: Option<u32>,
-    /// Every datapoint type the communication objects linked to this
-    /// address state, classified by `knx_core::group_address_dpt_from` —
-    /// the same rule `resolve_group_address_dpt` applies, over the same
-    /// set of communication objects.
+    /// The address's *effective* datapoint type (ADR-0078), the one the bus
+    /// monitor decodes with: the address's own declaration where it
+    /// applies, otherwise what the communication objects linked to it
+    /// state (`knx_core::group_address_type_from(..).effective()`).
     ///
-    /// Empty means `GroupAddressDpt::None` (nothing linked states one, the
-    /// ordinary case for 38% of the reference project's addresses); one
-    /// entry means every linked object that states a DPT states that one;
-    /// two or more is `GroupAddressDpt::Conflict` — the disagreement
-    /// reported, never settled by picking a winner. Entries are `DptRef`'s
-    /// `Display` text (`"DPST-1-1"`, `"DPT-1"`), never the dotted
-    /// `"1.001"` form, which nothing in this repository produces.
-    // ADR-0078 (2026-10-05): the values are now the address's *effective*
-    // type — its own declaration where it applies, a width conflict as two
-    // or more entries (see `effective_dpts`). The doc comment above is copied
-    // into the generated web binding, which the web-lock holder regenerates;
-    // it is left unchanged here so this package does not edit the locked
-    // tree. Hand-over: reword it to "effective type" when regenerating.
+    /// Empty means no type is known (nothing declared or linked states
+    /// one); one entry is the effective type; two or more is a conflict —
+    /// linked objects disagreeing, or a declaration whose width differs
+    /// from the linked one — reported, never settled by picking a winner.
+    /// Whether the declaration and the linked type agree is not carried
+    /// here (KNOWN_LIMITATIONS §61). Entries are `DptRef`'s `Display` text
+    /// (`"DPST-1-1"`, `"DPT-1"`), never the dotted `"1.001"` form.
     pub dpts: Vec<String>,
     /// Every communication object linked to this address, in
     /// `ComObjectInstanceId` order — the reverse of `ComObjectNode::links`.

@@ -1,5 +1,14 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — The user signs the boundary list; AR18 gets a reviewer
+
+- Nine rows accepted as disclosed Alpha boundaries (ledger `ACCEPTED_BOUNDARY`,
+  disposition `USER_ACCEPTED`): `KL-1`, `KL-11`, `KL-125`, `KL-31`, `PDB-01`,
+  `R-DYNAMIC-01`, `R-MODULE-03`, `R-MODULE-04`, `KL-158`. No `BLOCKED_EXTERNAL`
+  row remains.
+- AR18's independent review: a fresh Claude session started by the user from a
+  written brief. `KL-61`'s declared-versus-linked display comes first.
+
 ## 2026-10-06 — AR16 done: the manual meets the app it describes, sentence by sentence
 
 - Claim-by-claim pass by script and live probes: all 95 `knx` invocations,

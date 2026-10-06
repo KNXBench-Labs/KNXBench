@@ -294,6 +294,9 @@ impl Container {
                 cause: e.to_string(),
             }
         })?;
+        // Same identity rule as the outer archive (AR18 review F2): the
+        // reader above has already collapsed an exact duplicate.
+        check_member_names(&payload_bytes, inner.central_directory_start())?;
 
         // The opaque nested-zip blob is about to be replaced by the
         // entries it actually contains. Removed here, before the loop

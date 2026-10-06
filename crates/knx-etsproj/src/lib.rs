@@ -426,6 +426,21 @@ fn import_knxproj_bytes_inner(
     // ciphertext is gone, so a project exported from this import would come
     // back without its password. Said here, at import time, rather than
     // discovered at export (KNOWN_LIMITATIONS §13).
+    // A second project part is kept (its files are opaque entries) but not
+    // imported; it gets its own report line so nobody has to notice it in
+    // the passthrough list (AR18 review M3).
+    if let Ok(imported) = container.project_part() {
+        for other in container.other_project_parts() {
+            import_report.unsupported.push(report::UnsupportedFeature {
+                what: format!("additional project part {other}"),
+                consequence: format!(
+                    "only {imported} was imported; the files of {other} are kept \
+                     unchanged as retained original files, but none of its content \
+                     is part of the project model"
+                ),
+            });
+        }
+    }
     if let Some(payload) = container.decrypted_payload() {
         import_report.unsupported.push(report::UnsupportedFeature {
             what: format!("project password protection ({payload}, ZipCrypto)"),

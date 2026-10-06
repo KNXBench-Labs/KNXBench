@@ -14,7 +14,7 @@ and your own measurements, not from the project's own status claims.
 | Item | Value |
 | --- | --- |
 | Repository | `/mnt/daten-i/Sourcecode/KNXBench` (remote `origin`, branch `main`) |
-| Candidate revision | The `origin/main` commit that added this brief. Its code is identical to the gated `4b9e913e5ee2d5241bbb06ca932f02bf29a4e888`; verify with `git diff --name-only 4b9e913e HEAD` (documentation and handover files only) |
+| Candidate revision | The `origin/main` commit that added this brief. Its code is the gated `4b9e913e5ee2d5241bbb06ca932f02bf29a4e888` plus one test-only fix; verify with `git diff --name-only 4b9e913e HEAD` (documentation, handover files and `apps/knx-server/tests/http_device_compare.rs`) |
 | AppImage | `/home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar18-candidate-20261006/KNXBench_0.1.0-alpha.4_amd64.AppImage`, SHA-256 `70bbb6b640dec6d77340c702dc4e1baad6b46c1e6516c6523bd74b898f72f81b` (copy it before you run it; do not modify the evidence directory) |
 | Versions | CLI, desktop, web `0.1.0-alpha.4`; server `0.1.0-alpha.1` (each program counts separately, ADR-0018) |
 
@@ -99,10 +99,11 @@ compatibility → maintainability → UX → performance.**
 
 [ALPHA_FINAL_GATES](../ALPHA_FINAL_GATES.md) is the release owner's own gate
 dossier for `4b9e913e`. Reproduce what you rely on rather than quoting it.
-It records one known red result: two corpus tests in
-`apps/knx-server/tests/http_device_compare.rs` fail with 503 "activity history
-unavailable". The dossier calls this a stale test harness, not a product defect.
-Judge that claim yourself, including whether it hides a real compare/download
+It records two corpus tests in
+`apps/knx-server/tests/http_device_compare.rs` that failed with 503 "activity
+history unavailable" and were then fixed in the test harness only. The
+dossier calls this a stale test harness, not a product defect. Judge that
+claim yourself, including whether the fix hides a real compare/download
 problem. It also records the AppImage built with `--remap-path-prefix`, which
 removes the builder's home directory from the binaries.
 

@@ -12,6 +12,8 @@ import type { ProductResolution } from "./bindings/ProductResolution";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { AreaNode } from "./bindings/AreaNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
+import type { DeclaredDptNode } from "./bindings/DeclaredDptNode";
+import type { GroupAddressDptOutcome } from "./bindings/GroupAddressDptOutcome";
 import type { GroupLinkNode } from "./bindings/GroupLinkNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { LineNode } from "./bindings/LineNode";
@@ -1189,6 +1191,16 @@ function GroupAddressInspector(props: {
           {dptText(t, ga)}
           {hasDptConflict(ga) && <small> {t("addressTable.dptConflict")}</small>}
         </dd>
+        {ga.dpt_detail && (
+          <>
+            <dt>{t("gaType.declared")}</dt>
+            <dd className="mono">{declaredDptText(t, ga.dpt_detail.declared)}</dd>
+            <dt>{t("gaType.linked")}</dt>
+            <dd className="mono">
+              {ga.dpt_detail.linked.length === 0 ? t("addressTable.noDpt") : ga.dpt_detail.linked.join(" · ")}
+            </dd>
+          </>
+        )}
         <dt>{t("addressTable.links")}</dt>
         <dd>
           {counts.total === 0
@@ -1196,6 +1208,11 @@ function GroupAddressInspector(props: {
             : `${t("addressTable.linkTotal", { count: counts.total })} · ${t("addressTable.linkCounts", { senders: counts.senders, receivers: counts.receivers })}`}
         </dd>
       </dl>
+      {ga.dpt_detail && (
+        <p className={ga.dpt_detail.outcome === "SizeConflict" ? "dpt-outcome dpt-conflict" : "dpt-outcome"}>
+          {t(DPT_OUTCOME_KEYS[ga.dpt_detail.outcome])}
+        </p>
+      )}
       {canDelete ? (
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
@@ -1206,6 +1223,30 @@ function GroupAddressInspector(props: {
       {error && <span className="field-error">{error}</span>}
     </div>
   );
+}
+
+const DPT_OUTCOME_KEYS: Record<GroupAddressDptOutcome, MessageKey> = {
+  Declared: "gaType.outcome.Declared",
+  DeclaredDiffersFromLinked: "gaType.outcome.DeclaredDiffersFromLinked",
+  SizeConflict: "gaType.outcome.SizeConflict",
+  Unverifiable: "gaType.outcome.Unverifiable",
+  DeclarationNotLifted: "gaType.outcome.DeclarationNotLifted",
+  Inferred: "gaType.outcome.Inferred",
+};
+
+// The address's own `DatapointType` exactly as stored (ADR-0078): an absent,
+// empty or unreadable declaration is named as such, never shown as a type.
+function declaredDptText(t: Translate, declared: DeclaredDptNode): string {
+  switch (declared.state) {
+    case "Value":
+      return declared.text ?? "";
+    case "Malformed":
+      return t("gaType.declaredMalformed", { text: declared.text ?? "" });
+    case "Empty":
+      return t("gaType.declaredEmpty");
+    case "Absent":
+      return t("gaType.declaredAbsent");
+  }
 }
 
 function GroupRangeNameField(props: {

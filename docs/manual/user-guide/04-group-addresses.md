@@ -25,14 +25,21 @@ Six columns, one row per address:
 | Address | The address, in the project's group-address style |
 | Name | The address's name |
 | Range | The group range that contains it, as `Main / Middle`, or `(no range)` |
-| DPT | The datapoint type, derived from the linked communication objects |
+| DPT | The datapoint type that applies: the address's own declaration, or the one its linked objects state |
 | Links | How many communication objects send to it and how many receive from it |
 
-The **DPT** column deserves a note. In the KNX model a group address does not carry a
-datapoint type of its own — its linked communication objects do. So KNXBench derives
-it: if every linked object agrees, that is the DPT; if none is linked, the column says
-`none stated`; if two linked objects disagree, the column says `conflicting` and shows
-both. It never picks a winner. See
+The **DPT** column deserves a note. Projects from ETS versions that write schema 21 or
+later can declare a type on the group address itself; older ones leave it to the linked
+communication objects. KNXBench uses the declaration when there is one and its size
+matches the linked objects; a linked object of the same size but another subtype does
+not override it. Without a declaration, the linked objects decide: if they agree, that
+is the DPT; if none is linked, the column says `none stated`; if two disagree — or a
+declaration and a linked object differ in size, which the project format forbids — the
+column says `conflicting` and shows both. It never picks a winner.
+
+Select an address to see both sides in the properties pane: **Declared on the address**
+(the stored value, or `none`, `empty`, `unreadable: …`), **Linked objects state**, and a
+sentence saying which of them applies. See
 [Datapoint types](../knx-basics/04-datapoint-types.md).
 
 **The filter field** above the table matches the address, the name and the DPT, case
@@ -143,7 +150,7 @@ whitespace ignored), and their order does not matter.
 | `Name` | The name | Required, must not be empty |
 | `Central` | `true` / `false` | Optional: `true`/`false`/`1`/`0`/`yes`/`no` |
 | `Unfiltered` | `true` / `false` | Same as `Central` |
-| `DatapointType (read-only)` | Derived from the linked objects, empty if they disagree | Validated, never applied; editing it rejects the row |
+| `DatapointType (read-only)` | The type that applies (declaration or linked objects), empty if they conflict | Validated, never applied; editing it rejects the row |
 | `MainGroup (read-only)` | The containing main range's name | Validated, never applied |
 | `MiddleGroup (read-only)` | The containing middle range's name | Validated, never applied |
 

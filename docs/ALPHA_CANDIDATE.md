@@ -49,7 +49,7 @@ addresses; built by a script, no real data).
 | New project → save as `smoke.knxdb` | 200 / 200 | 200 / 200 |
 | Import sample `.knxproj` → save as `sample.knxdb` | 200, 0 errors, 0 warnings / 200 | same |
 | Reopen both files | `Smoke`; `Sample house`, 15 group addresses, 2 lines | same |
-| Open a missing file | 400 `path does not exist` | same |
+| Open a missing file | 400 `path does not exist` (409 `projectUnsavedChanges` over unsaved edits, otherwise 422 `projectNotOpenable` since 2026-10-06, see below) | same |
 | Import a non-ZIP file | 500 `not a zip archive: invalid Zip archive: Could not find EOCD` (422 `projectNotImportable` since 2026-10-06, see below) | same |
 | Non-loopback sockets after the steps | none | none |
 | Application still running | yes | yes |
@@ -116,5 +116,6 @@ No maintainer documentation is bundled (ADR-0024).
 ## 6. Not covered
 
 Other distributions and desktops; any network or KNX contact (excluded by
-design); AppImage update/signing; the UI owner's native checks; the 500 status
-for malformed files (unchanged, see §3).
+design); AppImage update/signing; the UI owner's native checks. (This list
+once named the 500 status for malformed files; since 2026-10-06 they answer
+422 `projectNotImportable`, see §3.)

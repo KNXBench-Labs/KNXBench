@@ -33,7 +33,7 @@ its `bundled` feature, so there is no system SQLite to install). Make coffee.
 
 ## What is in the workspace
 
-One Cargo workspace: twelve crates under `crates/`, the `xtask` gate runner, and the
+One Cargo workspace: thirteen crates under `crates/`, the `xtask` gate runner, and the
 applications under `apps/`. The dependency arrows all
 point downward — see [Architecture tour](03-architecture-tour.md) for why that matters and
 which gate enforces it.
@@ -52,7 +52,8 @@ which gate enforces it.
 | `crates/knx-net` | KNXnet/IP: discovery, tunneling, routing, cEMI, telegrams. |
 | `crates/knx-secure` | The isolated key-material subsystem. Deliberately reaches neither `knx-core` nor `serde`. |
 | `crates/knx-testsupport` | Test-fixture paths and nothing else. A `[dev-dependencies]` entry only. |
-| `xtask` | The repository's own verification tasks: the layering, header, anchor and AppImage gates. |
+| `crates/knx-build-stamp` | Decides which commit a binary names and refuses a release build from a modified tree (`KNX_REQUIRE_CLEAN_TREE=1`). Used by the CLI's and server's `build.rs`. |
+| `xtask` | The repository's own verification tasks: the layering, header, anchor, ledger, corpus-gate and AppImage checks. |
 
 And the applications:
 
@@ -173,7 +174,7 @@ The workflow also validates the artifact afterwards, and you can run that check 
 
 ```bash
 cargo run -p xtask -- check-appimage
-cargo run -p xtask -- check-appimage --tag v0.1.0-alpha.1
+cargo run -p xtask -- check-appimage --tag v0.1.0-alpha.4
 ```
 
 The tagged form additionally checks that the artifact's file name matches the tag.

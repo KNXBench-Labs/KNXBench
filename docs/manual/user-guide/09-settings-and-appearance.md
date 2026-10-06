@@ -3,7 +3,8 @@
 # Settings, themes and languages
 
 KNXBench's settings are grouped into **Appearance**, **Language & data**,
-**Bus & diagnostics**, and a separate **Debug · device control** section.
+**Autosave**, **Bus & diagnostics**, and a separate **Debug · device control**
+section.
 Ordinary changes apply without a Save button or restart. The Debug switch is
 shown as enabled only after the server persists and reads it back.
 
@@ -188,6 +189,14 @@ why nothing changed. Rejected packs get a specific reason, not a generic failure
 
 For the pack format itself, see [Language packs](../../LANGUAGE_PACKS.md).
 
+## Autosave
+
+**Autosave** is on by default and saves every **five minutes** (adjustable from 1 to
+120). It only saves a project that already has a `.knxdb` file and has changed since the
+last save; it never opens a file dialog. A notice counts down the last five seconds and
+offers **Cancel**. If an autosave fails, a message says so and the project stays marked
+as unsaved, exactly as after a failed manual save.
+
 ## Debug · device control
 
 **Allow manual Individual Address Write Enable** is **off by default**. Its
@@ -209,16 +218,10 @@ No live device was accessed while building this UI.
 
 **The group address style.** Whether addresses read as `1/2/3`, `1/3` or a single
 number is a property of the project, not of the application, so it is not here. You
-choose it in the **New project** dialog, and the Project node in the Inspector shows
-the current project's style as a read-only fact. There is no control anywhere in the
-interface that changes the style of an existing project.
-
-> **Note**
->
-> The New project dialog's hint text says the project properties can restyle it later.
-> The server can indeed do that, but no button in the interface calls it today. Treat
-> the choice you make in that dialog as the one you will live with for now, and see
-> [Group addresses](../knx-basics/03-group-addresses.md) for what the three styles mean.
+choose it in the **New project** dialog and can change it later on the **Project** node
+in the properties pane ([Working with group addresses](04-group-addresses.md#the-group-address-style)).
+See [Group addresses](../knx-basics/03-group-addresses.md) for what the three styles
+mean.
 
 **Anything about the server.** Ports, data directories and static file locations are
 environment variables, not settings — see
@@ -231,10 +234,17 @@ monitor or line scan. Changing it does not connect to a gateway or start a scan.
 A gateway typed or selected in an active monitor or scan stays under your control;
 discovery does not change the saved preference.
 
-**Protected line-scan exclusions** can be edited here or in the Line Scan panel.
-Both use the same preference. Review the exclusion list before starting a scan:
+**Protected exclusions** (for the line scan) can be edited here or in the Line Scan
+panel. Both use the same preference. Review the exclusion list before starting a scan:
 a scan sends management traffic to the remaining candidates. See
 [Bus monitor and KNXnet/IP](07-bus-and-interfaces.md).
+
+**Programming confirmation** shows whether KNXBench asks before every programming
+operation. The question names the release stage of the running build (alpha, beta,
+release candidate, stable). If you chose "don't ask again", it is remembered for that
+stage only, and **Ask again** brings the question back; a new stage always asks again
+([ADR-0040](../../adr/0040-programming-requires-release-stage-consent.md)). This is a
+confirmation, not a permission: the device-specific phrases stay required.
 
 Settings also shows translated diagnostics when an older settings record was
 migrated or adopted, a newer file was refused, or a damaged file was set aside.

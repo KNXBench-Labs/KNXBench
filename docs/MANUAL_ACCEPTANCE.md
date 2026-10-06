@@ -38,10 +38,53 @@ and any theme other than Porcelain.
 | 3 | Every screenshot reference (26 places in README and 10 manual chapters) | Picture replaced; each alt text and its surrounding sentence re-read against the new picture and corrected. |
 | 4 | Claims found stale while doing 3 | Fixed: the bus monitor's button is **Search**, not "Discover gateways" (7 places); the start-up gateway search is now stated; the welcome screen has three cards (New project…, Open KNXBench project, Import ETS project); help has eleven topics; the catalog row shows `name (number) — description`; the Parameters example has no modules. |
 | 5 | Counts re-measured in the run | Command palette: 13 commands with the Ctrl+Z, Ctrl+Shift+Z, Ctrl+K and F1 hints. Help: 11 topics. |
-| 6 | Remaining chapters, claim by claim | **Open.** Chapters without a screenshot (KNX basics, configuration workflow, reports and diff, command line, reference tables, FAQ) still need a line-by-line pass against the application. AR15 already corrected the download, schema and version statements in them. |
+| 6 | Remaining chapters, claim by claim | Done 2026-10-06 (slice 2), method below. |
+
+## Row 6 — how the remaining chapters were checked (2026-10-06)
+
+Against `origin/main` `6a9204a4`: the debug `knx` binary, a debug `knx-server`
+with the production frontend, and the fictional sample project, offline.
+
+| Check | Scope | Result |
+| --- | --- | --- |
+| Every `knx …` invocation in the manual and README against `knx --help` | 95 invocations, 28 commands | All commands and flags exist; the only unknown command is the removed `knx export`, always described as removed |
+| Bold interface labels against the English message catalogue and components | all chapters except development | 39 labels not found verbatim; each read in context — prose terms, German labels on purpose, or templates, plus the stale ones below |
+| `KNX_*` variables and `/api/…` routes | all chapters | All exist (the removed export route is described as removed) |
+| Version strings, counts ("thirteen", "eleven", "seventeen", crates, ADRs) | all chapters | Corrected where stale |
+| Every "not yet / not implemented / no way" sentence | all chapters | Each checked; stale ones corrected |
+| Live probes | style change, catalog create, Settings, documentation export | Behaviour recorded below |
+
+Stale claims found and corrected:
+
+- **Group-address style:** the Project node changes it, undoably (probe: ThreeLevel →
+  TwoLevel → Undo). Four chapters said it could not. The New project dialog's hint
+  still says so; that string belongs to the UI owner (handed over).
+- **Autosave** exists (on, five minutes, only with a file, countdown with Cancel); two
+  chapters said there was none. Settings also gained **Autosave** and **Programming
+  confirmation** descriptions.
+- **Drag and drop:** works within any installation, and a group address can be dropped on
+  a link row; four places said otherwise.
+- **Documentation export:** the dialog has section checkboxes and a preview; one
+  paragraph said they had not landed.
+- **`knx diff --exit-code`** exists; the status page listed it as missing and the CLI
+  chapter's exit-code table denied any other `2`. The CLI chapter now lists the device
+  commands it did not mention.
+- **Product-data translations and language packs** are used; the status page said not.
+- **Versions:** programs carry their own versions (CLI, desktop, web `alpha.4`, server
+  `alpha.1`); several pages said `alpha.1` everywhere.
+- **Workflow chapter** now walks the fictional sample instead of a project the
+  screenshots no longer show, and the address step matches the device-number field.
+- **Device writes:** the architecture tour and the FAQ still said nothing writes to a real
+  device; the download is verified on one device.
+- **Group-address DPT:** schema-21+ declarations (ADR-0078) added to the KNX basics.
+- **Developer pages:** thirteen crates (with `knx-build-stamp`), 83 ADRs, all six `xtask`
+  checks.
+
+Not done: a sentence-by-sentence reading of the five KNX-basics chapters for KNX
+theory; only their statements about KNXBench were checked.
 
 ## Acceptance
 
-Not yet accepted. Rows 2–5 are done; rows 1 and 6 are open. Acceptance needs row 6
+Not yet accepted. Rows 2–6 are done; row 1 (the UI owner's closure receipt) is open. Acceptance needs row 6
 and stays with the release owner at AR18, and with the user for anything that
 remains an exception at AR19.

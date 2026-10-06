@@ -29,8 +29,8 @@ Once you have an AppImage file — built locally, or, once one exists,
 downloaded from a GitHub release — make it executable and run it:
 
 ```bash
-chmod +x "KNXBench_0.1.0-alpha.1_amd64.AppImage"
-"./KNXBench_0.1.0-alpha.1_amd64.AppImage"
+chmod +x "KNXBench_0.1.0-alpha.4_amd64.AppImage"
+"./KNXBench_0.1.0-alpha.4_amd64.AppImage"
 ```
 
 > **Note**

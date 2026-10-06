@@ -93,9 +93,8 @@ Nothing below is waived. Each row says what has to happen before AR18/AR19.
 | `KL-158` | alpha (AR17 finding) | A launcher that does not need X11, or a decision to ship with the X server requirement | **Proposed: ship as disclosed boundary** with the tested Wayland workaround in troubleshooting. Needs the user's decision at AR19. |
 | `PDB-01`, `R-DYNAMIC-01`, `R-MODULE-03`, `R-MODULE-04` | alpha | Primary semantics/samples for unevaluated parameter logic and nested modules | **Proposed: ship as disclosed boundary** (raw values preserved, never guessed). Needs acceptance at AR19. |
 
-Also open outside the ledger: AR14D D5 (the `goal-commission.md` status
-section still needs its owner's link-over); documentation hygiene only, not a
-product blocker.
+AR14D D5 is closed: the commissioning owner linked `goal-commission.md` over
+to the ledger on 2026-10-06.
 
 ## 5. Risks to watch
 

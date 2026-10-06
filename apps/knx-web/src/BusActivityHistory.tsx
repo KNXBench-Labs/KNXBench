@@ -5,6 +5,9 @@ import { appendHistoryPage, HistoryContractError, type HistoryEntry, type Untrac
 import { useTranslate } from "./i18n";
 import { useUiLanguage } from "./uiLanguage";
 
+/** UI-04: how often a first window that shows a running operation reloads itself. */
+export const RUNNING_REFRESH_MS = 3_000;
+
 export default function BusActivityHistory() {
   const t = useTranslate();
   const [language] = useUiLanguage();
@@ -15,6 +18,8 @@ export default function BusActivityHistory() {
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [failure, setFailure] = useState<"unavailable" | "unsupported" | "malformed" | null>(null);
+  // True once older pages were appended: a reload would collapse them.
+  const [paged, setPaged] = useState(false);
   const generation = useRef(0);
 
   async function load(append: boolean) {
@@ -29,6 +34,7 @@ export default function BusActivityHistory() {
       setCursor(page.nextCursor);
       setMore(page.hasMore);
       setUntracked(page.untracked);
+      setPaged(append);
       setLoaded(true);
     } catch (reason) {
       if (ticket !== generation.current) return;
@@ -46,6 +52,16 @@ export default function BusActivityHistory() {
     void load(false);
     return () => { generation.current += 1; };
   }, []);
+
+  // A cursor never updates an already loaded running row; the contract's way
+  // to see its outcome is to reload the window. Only the first window does
+  // so on its own — after paging, the user decides.
+  const running = entries.some((entry) => entry.state === "running");
+  useEffect(() => {
+    if (!running || paged || loading || failure !== null) return;
+    const timer = setTimeout(() => void load(false), RUNNING_REFRESH_MS);
+    return () => clearTimeout(timer);
+  }, [running, paged, loading, failure, entries]);
 
   function time(value: string) {
     return <time dateTime={value}>{new Intl.DateTimeFormat(language, { dateStyle: "short", timeStyle: "medium" }).format(new Date(value))}</time>;
@@ -65,6 +81,7 @@ export default function BusActivityHistory() {
         {more && <button disabled={loading} onClick={() => void load(true)}>{t("activityHistory.more")}</button>}
       </div>
       <p>{t("activityHistory.cursorMeaning")}</p>
+      {running && paged && <p className="activity-history-running-paged">{t("activityHistory.runningPaged")}</p>}
       {loading && <p role="status">{t("activityHistory.loading")}</p>}
       {failure !== null && <p role="alert">{t(`activityHistory.${failure}`)}</p>}
       {failure === null && loaded && entries.length === 0 && <p>{t("activityHistory.empty")}</p>}

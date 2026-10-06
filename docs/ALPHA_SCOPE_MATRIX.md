@@ -104,5 +104,5 @@ to the ledger on 2026-10-06.
 | DPT encoding rulings (`KL-61`, K1) | A wrong ruling sends a valid-looking telegram | Explicit input formats, disclosed rulings |
 | Device writes on one device only (`KL-92`, K1) | A second device could behave differently | Plans refuse unknown shapes; backup before writes; per-device phrase |
 | Motion cost on large maps (`KL-154`) | The flow view can saturate the UI thread | Manual and known issues say Motion Off for large installations |
-| Release binary carries build paths ([ALPHA_CANDIDATE §4](ALPHA_CANDIDATE.md#4-findings)) | A locally built binary names the builder's home directory | Build releases in CI or with `--remap-path-prefix` (privacy checklist item 6) |
+| Release binary carries build paths ([ALPHA_CANDIDATE §4](ALPHA_CANDIDATE.md#4-findings)) | A locally built binary names the builder's home directory | Build releases in CI or with `--remap-path-prefix` (privacy checklist item 6); the AR18 candidate does, 0 home paths ([ALPHA_FINAL_GATES §5](ALPHA_FINAL_GATES.md#5-artifact-and-offline-start)) |
 | In-place upgrade (`KL-157`) | Older KNXBench cannot reopen an upgraded file | Atomic upgrade; manual tells users to copy first |

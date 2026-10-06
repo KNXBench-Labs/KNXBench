@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 08:11 CEST
+- **Completed:** AR18 gate dossier on `4b9e913e` (docs/ALPHA_FINAL_GATES.md): all §5 gates green; private corpus 140/2; AppImage with remapped build paths (SHA-256 70bbb6b6…f81b, evidence `ar18-candidate-20261006`), offline start ok. Review brief docs/review/AR18_REVIEW_BRIEF.md.
+- **Pending/Next Steps:** The user starts a fresh Claude session with the brief (independent review, verdict file under docs/review/, branch `review/alpha-independent`). Then fix findings in their owning track, rerun affected gates, record ready/not-ready (AR18), AR19 user decision.
+- **Notes for Codex oder Claude:** **For the commissioning owner:** `apps/knx-server/tests/http_device_compare.rs` harness builds `AppState { ..Default::default() }` without an activity-history store, so the two download-then-compare corpus tests hit the AUDIT-01 503 (`activity history unavailable; not sent`). `http_device_download.rs` uses `..knx_server::AppState::new(dir)`; the same base likely fixes it (test-only). Also open for you: `UI-04` row closure (Web half `892b9948`).
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 07:44 CEST
 Web lock: released by claude-alpha-release (KL-61 delivered)
 - **Completed:** KL-61 declared-versus-linked DPT display: projection `GroupAddressNode.dpt_detail` (+4 generated bindings), group-address Inspector rows **Declared on the address** / **Linked objects state** + outcome sentence (en/de, `gaType.*` keys). Gate: Rust 3317/0/177, Vitest 2071, Chromium 139, clippy/fmt/xtask green; mutants 8/8. Manual group-address chapter + one known issue corrected.

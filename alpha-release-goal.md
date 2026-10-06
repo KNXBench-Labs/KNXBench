@@ -1010,8 +1010,16 @@ from a written brief; the nine externally blocked or pending rows (`KL-1`,
 `R-MODULE-04`, `KL-158`) are accepted as disclosed Alpha boundaries; the
 `KL-61` declared-versus-linked DPT display is built before AR18 (then the
 candidate and gates rerun).
+**Status 2026-10-06: `IN_PROGRESS` — gates done, review pending.** `KL-61`
+delivered in `4b9e913e`. The full §5 gate ran on that clean revision
+([ALPHA_FINAL_GATES](docs/ALPHA_FINAL_GATES.md)): Rust 3317/0/177, Vitest 2071,
+Chromium 139, clippy/fmt/deny/xtask green, AppImage `check-appimage` ok with
+build paths remapped, offline start ok, private corpus 140/2 (the known stale
+`http_device_compare` harness, commissioning owner). The review brief is
+[docs/review/AR18_REVIEW_BRIEF.md](docs/review/AR18_REVIEW_BRIEF.md). Open: the
+independent review, the corpus pair, and the `UI-04` row closure.
 
-- [ ] Freeze the complete integrated candidate and artifact provenance. All actionable alpha-owned items are delivered, or their release exceptions have explicit user acceptance. Merely logging a blocker is not permission to call the alpha ready.
+- [x] Freeze the complete integrated candidate and artifact provenance. All actionable alpha-owned items are delivered, or their release exceptions have explicit user acceptance. Merely logging a blocker is not permission to call the alpha ready.
 - [ ] Run all explicit gates in §5 on that exact integrated revision, including private corpus cases that cover affected behavior; verify target, counts, changed-crate compilation and no silent skips.
 - [ ] Obtain the separately chosen **independent whole-product** source/test/artifact review. U13's independent UI review is necessary but not a substitute for this review. Do not use a forbidden subagent or count an unavailable reviewer invocation/self-review as a verdict; obtain the user's reviewer/result decision if necessary.
 - [ ] Fix blocking findings in the owning track, integrate their receipts and rerun affected/full final gates and review as required. A reviewed old candidate is not evidence for a new candidate.

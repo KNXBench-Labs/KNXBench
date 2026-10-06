@@ -82,6 +82,9 @@ owner and were not claimed here.
    instead. Option for AR18/AR19: build releases with
    `--remap-path-prefix`. Added to the privacy checklist in
    [ALPHA_READINESS](ALPHA_READINESS.md#deployment-and-privacy-checklist-for-ar15ar17-and-release-notes).
+   *Update 2026-10-06 (AR18):* the AR18 candidate was built with
+   `--remap-path-prefix` and holds no such string;
+   [ALPHA_FINAL_GATES §5](ALPHA_FINAL_GATES.md#5-artifact-and-offline-start).
 3. **Version drift** between desktop and web — fixed (§1).
 
 ## 5. Packaging contents

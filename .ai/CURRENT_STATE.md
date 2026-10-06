@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 22:15 CEST
+- **Completed:** Merged re-check round 2 (`a6aa0063`, READY_WITH_CONDITIONS) and fixed R4 (N7) plus N8–N10: `901933a1` (directory records with data / named like files, local-vs-central names refused), `a16141c6` (missing import file → 422), `754a66dd` (three tests that pinned 500). Gate on `754a66dd` green: Rust 3367/0/178, Vitest 2076, Chromium 142, corpus 143/143, AppImage SHA-256 37015eb6…2a58 (evidence `ar18-round2-fixes-20261006`). ALPHA_FINAL_GATES §10; brief round 3.
+- **Pending/Next Steps:** The user starts re-check round 3 (`docs/review/AR18_RECHECK_BRIEF.md#round-3-n7n10`, branch `review/alpha-recheck-3`). Then record AR18; AR19 is the user's decision.
+- **Notes for Codex oder Claude:** N6 (web reload shows the welcome page while the server holds a project) is still with the UI owner (see the previous entry); round 2 judged it not blocking. `/api/project/import` now answers `422 projectNotImportable` for a missing file as well.
+
+---
+
 - **Last Agent:** Claude (fresh AR18 re-check round-2 reviewer, not the alpha owner)
 - **Timestamp:** 2026-10-06 17:55 CEST
 - **Completed:** Independent re-check round 2 on `863f72ad` (product code = `3ede4817`), done as `docs/review/AR18_RECHECK_BRIEF.md#round-2-n1n6` describes. Verdict **READY_WITH_CONDITIONS** in `docs/review/2026-10-06-alpha-recheck-round2.md`. It is on branch `review/alpha-recheck`, the name the user gave, with the brief's name `review/alpha-recheck-2` pointing at the same commit. Not merged.

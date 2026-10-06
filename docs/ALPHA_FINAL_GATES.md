@@ -282,4 +282,61 @@ line, and the full gate was rerun on it. Evidence:
 - In-place upgrade of older projects that hold a saved project (§157).
 
 Because the candidate changed, AR18 asks for another independent look:
-[brief round 2](review/AR18_RECHECK_BRIEF.md#round-2-n1n6).
+[brief round 2](review/AR18_RECHECK_BRIEF.md#round-2-n1n6). Its result and
+the fixes that followed are in §10.
+
+## 10. AR18 re-check round 2: condition R4 fixed and re-gated
+
+Round 2 ([verdict](review/2026-10-06-alpha-recheck-round2.md),
+`READY_WITH_CONDITIONS`) confirmed N2–N5 and every round-1 N1 scenario. It
+found no real project or product package refused (3/3 projects, 103/103
+`.knxprod`), and judged that N6 should not block. It found one more bypass of
+the identity class (N7: condition R4, with R5 to re-gate) and three MINOR
+findings, N8–N10. This section is the evidence for the code revision
+`754a66dde05db9dd522720baa67d6bbc39290dbb`.
+
+| Finding | Fix | Commit | Proof |
+| --- | --- | --- | --- |
+| N7 (R4) — a Unicode Path field turns `0.xml` into a "directory" (skipped with its bytes) and a forgery into `0.xml` | Refused: a directory record that carries data, a directory named like a file. Outer archive and nested payload | `901933a1` | 4 tests (both topology scenarios, data-bearing directory, directory/file clash). Controls: empty ETS6 directories and a prefixed archive still import |
+| N8 — importing a missing path answers `500` | `ImportFailure::Io(NotFound)` → `422 projectNotImportable`, like Open | `a16141c6`, `754a66dd` | Route test; three tests that had pinned the old `500` as a side effect now assert `422` |
+| N9 — local and central headers are not compared | A local name that differs from the central raw name is refused. This also covers two records that share one local record | `901933a1` | 2 tests |
+| N10 — two stale statements | `ALPHA_CANDIDATE` table and the `AppState::default` doc comment | `a16141c6`, docs | — |
+
+**Mutation sweep:** 5 mutants. Four were each killed by a named test:
+directory data, directory/file clash, local-name comparison, missing-file
+`422`. The fifth, a separate "shared local record" check, survived because
+the local-name comparison already catches every such archive. The redundant
+check was removed instead of kept untested.
+
+**Integrated gate on `754a66dd`** (clean tree, three leases, `XDG_DATA_HOME`
+isolated, no `KNX_*`, 21:59–22:14 CEST):
+
+| Gate | Result |
+| --- | --- |
+| `npm ci`, build, `tsc`, flow study, theme fixtures | exit 0 |
+| Vitest / Chromium | 2,076 in 117 files / 142 |
+| fmt, clippy `-D warnings` | exit 0 |
+| Workspace tests | 3,367 passed, 0 failed, 178 ignored, in 192 blocks |
+| Five `xtask` checks | ok (headers 557/155, anchors 634, ledger 190, corpus conventions 393 files) |
+| `cargo deny check`, `npm audit` | ok, 0 vulnerabilities |
+| `tools/run_corpus_tests.py` (offline) | **143 of 143 in 31 targets** |
+| AppImage | `check-appimage` ok; 107,866,616 bytes, SHA-256 `37015eb6fb8811deb1033818ba0a422cd2ba46d5d1637392058396b4fedf2a58`; build stamp `754a66dd`; no builder home path in any of the 337 files |
+| Offline start | Native start rendered `v0.1.0-alpha.4`. The API sequence passed, with non-ZIP `422`. No non-loopback socket |
+| `git diff --check`, inputs frozen | ok |
+
+The first run, on `a16141c6`, was green except for 3 of 3,367 workspace
+tests. Those three server tests used a missing file to provoke a `500`, and
+the N8 change intentionally turned that into `422`. Before the gate I had
+run only the route test file, not the whole crate. `754a66dd` updates the
+three tests, and the full gate was rerun on it. Evidence:
+`ar18-round2-fixes-20261006`.
+
+**What stays:**
+- N6 (UI owner; round 2: not blocking).
+- The ~3× in-budget memory peak (§159).
+- The in-place upgrade of older projects that hold a saved project (§157).
+- Whether ETS itself ever writes Unicode Path fields or the other records
+  refused here is unknown; no real file was refused.
+
+Because the candidate changed again, AR18 asks for one more look:
+[brief round 3](review/AR18_RECHECK_BRIEF.md#round-3-n7n10).

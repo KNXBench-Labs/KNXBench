@@ -184,6 +184,11 @@ storage and its sidecars for explicit repair, not automatic rollback/conversion.
 Hostile concurrent path replacement is not covered. Earlier full gate receipts
 belong to their older source; corrected integrated acceptance is still pending.
 
+**Update 2026-10-06 (user decision, AR18):** with the Web half delivered
+(`892b9948`), the user accepted the remaining `UI-04` row as a disclosed
+Alpha boundary. The snapshot stays partial as described above; no broader
+history or live-bus claim follows.
+
 ## U12 structure editor scope (ISSUE-05)
 
 Area/line renames and line, building-part and group-range reparenting are

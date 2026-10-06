@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 09:00 CEST
+- **Completed:** By user decision: (1) `http_device_compare.rs` harness fixed test-only (`AppState::new(dir)`), corpus pair green, revert mutant red; (2) `UI-04` → `ACCEPTED_BOUNDARY` / `USER_ACCEPTED`. Dossier and review brief updated (candidate = `4b9e913e` + docs + this test file).
+- **Pending/Next Steps:** The user starts the fresh Claude review session with docs/review/AR18_REVIEW_BRIEF.md. Afterwards: route findings, rerun affected gates, AR18 verdict, AR19 user decision.
+- **Notes for Codex oder Claude:** **For the commissioning owner:** your test file `apps/knx-server/tests/http_device_compare.rs` was changed by the alpha owner on the user's instruction (harness base only, no assertion changed); `UI-04` is closed by the user's acceptance — nothing left for you before the Alpha.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 08:11 CEST
 - **Completed:** AR18 gate dossier on `4b9e913e` (docs/ALPHA_FINAL_GATES.md): all §5 gates green; private corpus 140/2; AppImage with remapped build paths (SHA-256 70bbb6b6…f81b, evidence `ar18-candidate-20261006`), offline start ok. Review brief docs/review/AR18_REVIEW_BRIEF.md.
 - **Pending/Next Steps:** The user starts a fresh Claude session with the brief (independent review, verdict file under docs/review/, branch `review/alpha-independent`). Then fix findings in their owning track, rerun affected gates, record ready/not-ready (AR18), AR19 user decision.

@@ -67,12 +67,12 @@ Evidence levels used below:
 | Status | Rows | Meaning for the release |
 | --- | --- | --- |
 | `DONE` | 43 | Delivered with evidence in the row |
-| `ACCEPTED_BOUNDARY` | 120 | Kept for the Alpha by a named decision or ADR |
+| `ACCEPTED_BOUNDARY` | 121 | Kept for the Alpha by a named decision or ADR |
 | `LATER` | 23 | Out of the Alpha by decision |
 | `BLOCKED_EXTERNAL` | 0 | All eight accepted as disclosed boundaries by the user on 2026-10-06 |
 | `WAITING_OWNER` | 2 | Release gates — see §4 |
 | `WAITING_DECISION` | 1 | The release decision (`RELEASE-04`, AR19) |
-| `IN_PROGRESS` | 1 | Commissioning owner — see §4 |
+| `IN_PROGRESS` | 0 | `UI-04` accepted by the user on 2026-10-06 |
 
 Recount: `cargo run -p xtask -- check-ledger` (counts are enforced there).
 Limitations: 109 numbered boundaries, 108 rated
@@ -87,7 +87,7 @@ Nothing below is waived. Each row says what has to happen before AR18/AR19.
 | `RELEASE-01`, `RELEASE-02` | alpha (AR18) | Final integrated gates on a frozen candidate and an independent whole-product review | **Blocks release.** Cannot be produced from historical receipts. |
 | `RELEASE-03` | alpha (AR16) | — | **Done 2026-10-06:** UI closure receipt verified, screenshots regenerated, claim-by-claim pass, manual accepted at its tested scope ([MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md)); its exceptions go to the user at AR19. |
 | `RELEASE-04` | user (AR19) | Explicit tag/version/publication decision on the reviewed candidate | **Blocks release** by design; no automatic tag. |
-| `UI-04` | commissioning | Owner review of the delivered Web half (*Live activity*, `892b9948`) and the row's closure | **Owner must close or the user must accept it as a boundary before AR18.** |
+| `UI-04` | commissioning | — | **Accepted by the user 2026-10-06 as a disclosed Alpha boundary** (Web half delivered in `892b9948`). |
 | `KL-1`, `KL-11`, `KL-125` | alpha | Independent project samples (other schemas, second ETS6 project) | **Accepted by the user 2026-10-06 as a disclosed boundary** (no broader compatibility claim). |
 | `KL-31` | alpha | Live router traffic on a custom multicast group | **Accepted by the user 2026-10-06 as a disclosed boundary** (offline-tested only). |
 | `KL-158` | alpha (AR17 finding) | A launcher that does not need X11, or a decision to ship with the X server requirement | **Accepted by the user 2026-10-06 as a disclosed boundary** with the tested Wayland workaround in troubleshooting. |

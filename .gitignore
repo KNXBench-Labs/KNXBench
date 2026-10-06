@@ -24,7 +24,7 @@ IDENTITY.md
 MEMORY.md
 MEMORY.md.bak.*
 # Local Claude Code state stays private; only the shared project settings
-# (cloud-session hook, attribution off) are versioned. `.claude/*` rather
+# (attribution off) are versioned. `.claude/*` rather
 # than `.claude/` because git cannot re-include a file below an ignored
 # directory.
 .claude/*
@@ -56,3 +56,19 @@ Backup/
 # ProjectStats private local state
 /.projectstats.json
 /.projectstats/
+
+# Agent internals: handover logs, goal ledgers, the shared memory tooling and
+# the retired cloud-session kit. They live on in the maintainer's checkout
+# (and in history), not in the public tree.
+/alpha-release-goal.md
+/goal-ui.md
+/goal-commission.md
+/IDEA.md
+/compare.md
+/stats.md
+/docs/PROJECT_CONTEXT.md
+/docs/CLOUD_SESSIONS.md
+/docs/superpowers/*/2026-09-22-cross-agent-project-memory*.md
+/tools/agent_memory_sync.py
+/tools/tests/test_agent_memory_sync.py
+/tools/cloud/

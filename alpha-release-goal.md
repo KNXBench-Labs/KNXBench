@@ -956,9 +956,14 @@ totals, a release disposition for every not-yet-accepted row, risks).
 ### AR16 — Accept the existing manual after UI closure
 
 **Source:** `RELEASE-03`. **Dependencies:** AR15 and integrated U13 closure receipt.
+**Status:** `IN_PROGRESS` 2026-10-06 — location/screenshot policy decided by the
+user on 2026-10-06: the manual stays on GitHub (`docs/manual/`, read in the
+repository, not bundled — consistent with ADR-0024) **with screenshots**.
+Screenshots must show the finished application at its tested scope and use
+fictional data only.
 
 - [ ] Verify the current UI owner's closure, actual tested surfaces and any native/accessibility exceptions; do not substitute a self-review or an old unsuccessful invocation.
-- [ ] Resolve the reserved manual location/screenshot decision consistently with ADR-0024: maintainer `docs/` does not silently become a bundled in-app help system.
+- [x] Resolve the reserved manual location/screenshot decision consistently with ADR-0024: maintainer `docs/` does not silently become a bundled in-app help system.
 - [ ] Review the existing manual claim by claim against the finished application, update workflows/screenshots at their actual tested scope, and remove stale “never written”, browser-export and count statements without broadening hardware claims.
 - [ ] Record explicit manual acceptance and unresolved user-owned exceptions.
 
@@ -968,11 +973,19 @@ totals, a release disposition for every not-yet-accepted row, risks).
 
 **Sources:** packaging part of `RELEASE-04`; no new inventory task implied.
 **Dependencies:** AR15/AR16 and the integrated code candidate.
+**Status:** `DONE` 2026-10-06 — started before AR16 with the user's permission
+(2026-10-06). Candidate `KNXBench_0.1.0-alpha.4_amd64.AppImage` from
+`6b9b6818`, SHA-256 `4c778104…80ef2`, `check-appimage` ok; offline smoke under
+X11 (private Xvfb) and native Wayland; packaging clean. Findings: version
+drift (fixed in `6b9b6818`), `KL-158` (AppImage needs an X server), build
+paths in the binary (privacy checklist item 6). Record:
+[ALPHA_CANDIDATE](docs/ALPHA_CANDIDATE.md). A later code change needs a
+rebuild before AR18.
 
-- [ ] Follow the repository's existing AppImage workflow/ADR-0021, using the recorded toolchain and current build commands rather than guessed installation steps.
-- [ ] Build an actual Linux x86_64 artifact, run `xtask check-appimage` with its real artifact directory and record the built revision, version, digest and result.
-- [ ] Perform authorized **offline** smoke checks: launch, create/open/save/reopen, clear failure messages and no backend/device auto-contact. Native UI checks themselves remain coordinated with the UI owner; consume its verified result rather than claiming them from headless Chromium.
-- [ ] Check packaging for private corpus, secrets and accidental maintainer-doc bundling. Record exactly the Linux environment tested.
+- [x] Follow the repository's existing AppImage workflow/ADR-0021, using the recorded toolchain and current build commands rather than guessed installation steps.
+- [x] Build an actual Linux x86_64 artifact, run `xtask check-appimage` with its real artifact directory and record the built revision, version, digest and result.
+- [x] Perform authorized **offline** smoke checks: launch, create/open/save/reopen, clear failure messages and no backend/device auto-contact. Native UI checks themselves remain coordinated with the UI owner; consume its verified result rather than claiming them from headless Chromium.
+- [x] Check packaging for private corpus, secrets and accidental maintainer-doc bundling. Record exactly the Linux environment tested.
 
 **Exit evidence:** actual local artifact, validator/smoke output and narrow packaging manifest. No tag, upload or claim of all-distribution/platform support; this is a candidate, not a release.
 

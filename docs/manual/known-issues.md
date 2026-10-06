@@ -459,6 +459,17 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   supported installation route.
 - **Workaround:** build from source, or run the server and use a browser.
 
+### The AppImage needs an X server
+
+- **Affected:** the desktop AppImage on Wayland sessions.
+- **Limitation:** the AppImage always opens its window through X11. Without a
+  working Xwayland it stops at once with "Failed to initialize GTK".
+- **Workaround:** enable Xwayland, or start the unpacked AppImage natively on
+  Wayland as shown in
+  [Troubleshooting](reference/03-troubleshooting.md#the-appimage-stops-with-failed-to-initialize-gtk)
+  (tested on one Hyprland machine).
+- **Details:** [§158](../KNOWN_LIMITATIONS.md#158-the-appimage-starts-only-with-an-x-server)
+
 ### The desktop shell has no login, on purpose
 
 - **Affected:** nothing you can do about it, but worth knowing.

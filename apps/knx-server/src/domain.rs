@@ -268,7 +268,7 @@ fn new_server_incarnation() -> String {
 }
 
 impl Default for AppState {
-    /// Test-only convenience — production always calls `AppState::new`
+    /// Test-only convenience — production always calls `AppState::with_user_product_db`
     /// with `KNX_DATA_DIR`. Falls back to the OS temp dir so tests that
     /// never touch `/api/fs/*` don't need to care.
     ///
@@ -487,6 +487,11 @@ fn load_failure_kind(error: &AppError) -> Option<&'static str> {
         // about its size), not a KNX project, or a schema without a table.
         // The caller's to fix: `422`, not an internal error (AR18 re-check
         // N5; formerly the disclosed non-ZIP `500`).
+        // A path that does not exist is the caller's to fix too, as it is
+        // for Open (`projectNotOpenable`) — AR18 re-check round 2, N8.
+        AppError::Import(ImportFailure::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+            Some(PROJECT_NOT_IMPORTABLE)
+        }
         AppError::Import(
             ImportFailure::Container(_)
             | ImportFailure::Detect(_)

@@ -55,7 +55,7 @@ async fn importing_the_reference_project_returns_the_golden_counts() {
 }
 
 #[tokio::test]
-async fn importing_a_missing_file_is_a_500() {
+async fn importing_a_missing_file_is_refused_as_the_callers_to_fix() {
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state, None);
 
@@ -73,8 +73,10 @@ async fn importing_a_missing_file_is_a_500() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    // AR18 re-check round 2, N8: was 500 with no kind.
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
     let body = body_json(response).await;
+    assert_eq!(body["kind"], "projectNotImportable", "{body}");
     assert!(!body["error"].as_str().unwrap().is_empty());
 }
 

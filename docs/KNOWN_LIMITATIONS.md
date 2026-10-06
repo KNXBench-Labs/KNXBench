@@ -8094,3 +8094,28 @@ at AR19. Ledger row `KL-158`.
 
 **Update 2026-10-06 (user decision):** accepted for the Alpha as a disclosed
 boundary with the documented Wayland workaround; the launcher stays as built.
+
+## 159. A project archive may unpack to at most 512 MiB, and every member name must be unique
+
+**Limitation.** `knx-etsproj` refuses a `.knxproj` whose members together
+declare more than 512 MiB uncompressed (`MAX_ARCHIVE_UNCOMPRESSED`), or one
+member of more than 64 MiB, and it reads every member only up to the size its
+headers declare: a member that inflates further is refused by name. It also
+refuses an archive in which two file members share a name, byte for byte or
+differing only in ASCII case, with `DuplicateEntry` naming the second one.
+
+**Why.** The AR18 independent review (2026-10-06, findings F2 and F3) showed
+that a 1 MB crafted archive drove an import to 2–3 GB of memory, and that a
+duplicate or case-variant member was collapsed or read in place of the other
+without a report — while the documentation promised that nothing is dropped
+silently. Lookups in the archive are case-insensitive, so either repeat let
+one member's bytes stand in for another's.
+
+**Impact.** The largest real project measured so far declares 22 MiB, so the
+budget leaves more than twenty times that; a genuine project above 512 MiB
+would be refused with the totals in the message instead of imported. ETS is
+not known to write duplicate or case-variant names; such an archive is now
+refused instead of imported with lost bytes.
+
+**Lifted when.** A streaming import that keeps members on disk instead of in
+memory, or measured evidence that real projects need a larger budget.

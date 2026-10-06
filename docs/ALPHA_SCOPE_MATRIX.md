@@ -41,7 +41,7 @@ Evidence levels used below:
 | Property-based downloader, master reset, RF configuration | Simulator-only | No hardware route | [KL §92](KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device), §141, §143–§144 |
 | Individual-address programming, reset, serial writes | Refused (fail closed) | Commands exist; refused before a tunnel until durable recovery exists | ADR-0057/0058/0059 |
 | KNX Secure (Data/IP) | Accepted boundary | Not implemented; deferred 2026-09-11 | `KL-8` |
-| Linux AppImage candidate | Verified on one machine | `0.1.0-alpha.4`, built from `6b9b6818`, offline smoke under X11 and native Wayland; needs an X server unless started as documented | [ALPHA_CANDIDATE](ALPHA_CANDIDATE.md), `KL-158` |
+| Linux AppImage candidate | Verified on one machine | `0.1.0-alpha.4`; the AR18 candidate is built from `4b9e913e` with build paths remapped (offline smoke, native Wayland); AR17 checked X11 and Wayland on `6b9b6818`; needs an X server unless started as documented | [ALPHA_FINAL_GATES](ALPHA_FINAL_GATES.md), [ALPHA_CANDIDATE](ALPHA_CANDIDATE.md), `KL-158` |
 | Multi-user server | Accepted boundary | One shared password, no roles/audit/TLS of its own | `KL-63`, [ALPHA_READINESS AR13](ALPHA_READINESS.md#deployment-and-privacy-checklist-for-ar15ar17-and-release-notes) |
 
 ## 2. Deployment, import and hardware boundaries
@@ -75,7 +75,7 @@ Evidence levels used below:
 | `IN_PROGRESS` | 0 | `UI-04` accepted by the user on 2026-10-06 |
 
 Recount: `cargo run -p xtask -- check-ledger` (counts are enforced there).
-Limitations: 109 numbered boundaries, 108 rated
+Limitations: 110 numbered boundaries, 109 rated
 ([LIMITATION_TRIAGE](LIMITATION_TRIAGE.md)).
 
 ## 4. Not yet accepted — release disposition

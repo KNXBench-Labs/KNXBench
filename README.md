@@ -170,7 +170,7 @@ the corresponding source code as required by the AGPL.
 ## Before you point it at anything expensive
 
 This is one person's alpha, developed in the open and changing weekly. Imports have been
-tested against real project files, and there are still 119 documented limitations to prove
+tested against real project files, and there are still 110 documented limitations to prove
 the point. Treat it the way you would treat any pre-1.0 engineering tool: read
 [Known issues](docs/manual/known-issues.md) first, and keep a backup of every project you
 would be unhappy to lose. A KNX project is a map of a building somebody paid for. Projects

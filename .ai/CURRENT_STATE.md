@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-06 07:09 CEST
+- **Completed:** **UI owner closure receipt** for `RELEASE-03` / AR16: `docs/UI_ALPHA_READINESS.md#ui-owner-closure-receipt--2026-10-06`, linked from `goal-ui.md`. All `goal-ui.md` §4 conditions met with evidence (U0–U13 `dfa0cc79`; issue plan 68/68; U14–U18 `1964fd6b` plus ADR-0079 user change; U19–U21 accepted by AR21; closing gate attempt 2 green; closing self-review found and fixed UI-04 Web half + KL-61 wording in `892b9948`; lock released). UI rows: 15 DONE, 10 ACCEPTED_BOUNDARY, 1 LATER. Tested surfaces and accepted native/AT/live exceptions listed. Docs only. Log: `.ai/logs/2026-10-06_claude_ui-closure-receipt.md`.
+- **Pending/Next Steps:** **Alpha (AR16):** verify the receipt and tick AR16's first item; manual location/screenshot policy is the user's (RELEASE-03). **Commissioning owner:** close `UI-04`. Backend: KL-61 projection field if wanted. UI owner: no open package.
+- **Notes for Codex oder Claude:** The receipt is a self-review by the owner; it says so. Web lock: free (released in `892b9948`); not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-06 07:08 CEST
 Web lock: released by claude-goal-ui-owner (UI closure residue delivered: UI-04 Web half, KL-61 binding wording)
 - **Completed:** `UI-04` Web half: Bus tools → *Live activity* reads `GET /api/bus/activity` (2 s, visible only; sessions, one-shots, eviction, busy locks, history-storage state, restart note; partial/volatile wording; whole-snapshot refusal) and *Activity history* reloads a first window that shows a running row; no global status bar (owner decision). `KL-61`: `GroupAddressNode.dpts` doc comment now says effective type, binding regenerated. 16/16 mutants; closing gate attempt 2 green (Rust 3,311/0/177 with corpus, Vitest 2,064, Chromium 139, bindings identical). Log: `.ai/logs/2026-10-06_claude_ui-closure-residue.md`.

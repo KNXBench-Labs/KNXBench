@@ -18,8 +18,9 @@ mod device_service_control;
 mod scan;
 
 const USAGE: &str =
-    "usage: knx import <file.knxproj> [--store <path.knxdb>] [--report-json <path.json>]\n\
+    "usage: knx import <file.knxproj> [--store <path.knxdb> [--replace]] [--report-json <path.json>]\n\
      \x20                  [--product-db <path>] [--no-product-db] [--password-stdin]\n\
+     \x20         (an existing --store file is refused, untouched, unless --replace is given)\n\
      \x20     knx ga-export <store.knxdb> <out.csv> [--installation <id>]\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]\n\
      \x20                   [--installation <id>]\n\
@@ -195,6 +196,9 @@ struct ImportArgs {
     /// There is deliberately no flag that takes the password as a value:
     /// an argument vector is visible to every process on the machine.
     password_stdin: bool,
+    /// Overwrite the project in an existing `--store` file (AR18 review
+    /// F4); without it an existing file is refused untouched.
+    replace: bool,
 }
 
 /// Reads the value following a `--flag`. Refuses to treat the *next* flag
@@ -216,6 +220,7 @@ fn parse_import_args(args: &[String]) -> Result<ImportArgs, String> {
     let mut product_db = None;
     let mut no_product_db = false;
     let mut password_stdin = false;
+    let mut replace = false;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -237,6 +242,9 @@ fn parse_import_args(args: &[String]) -> Result<ImportArgs, String> {
             "--password-stdin" => {
                 password_stdin = true;
             }
+            "--replace" => {
+                replace = true;
+            }
             // Refused before anything else is read, and the value is never
             // repeated back: it may already be the password.
             flag if flag == "--password" || flag.starts_with("--password=") => {
@@ -255,6 +263,9 @@ fn parse_import_args(args: &[String]) -> Result<ImportArgs, String> {
     if product_db.is_some() && no_product_db {
         return Err("--product-db and --no-product-db cannot both be given".to_string());
     }
+    if replace && store.is_none() {
+        return Err("--replace needs --store: without a store nothing is replaced".to_string());
+    }
     let file = file.ok_or_else(|| "missing <file.knxproj>".to_string())?;
     Ok(ImportArgs {
         file,
@@ -263,6 +274,7 @@ fn parse_import_args(args: &[String]) -> Result<ImportArgs, String> {
         product_db,
         no_product_db,
         password_stdin,
+        replace,
     })
 }
 
@@ -308,6 +320,19 @@ fn run_import(args: &[String]) -> ExitCode {
     if let Err(error) = knx_etsproj::check_project_filename(Path::new(&parsed.file)) {
         eprintln!("import refused: {error}");
         return ExitCode::FAILURE;
+    }
+
+    // An existing store holds a project; replacing it is a decision, not a
+    // side effect (AR18 review F4). Checked before anything opens, migrates
+    // or prompts, so a refusal leaves the file exactly as it was.
+    if let Some(store) = &parsed.store {
+        if !parsed.replace && std::fs::symlink_metadata(store).is_ok() {
+            eprintln!(
+                "import refused: {store} already exists; pass --replace to overwrite the \
+                 project in it, or choose a new --store path"
+            );
+            return ExitCode::FAILURE;
+        }
     }
 
     let password = if parsed.password_stdin {

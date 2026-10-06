@@ -611,3 +611,120 @@ fn a_report_with_real_errors_exits_two_not_zero() {
     let text = String::from_utf8(out.stdout).unwrap();
     assert!(text.contains("1 error(s)"), "stdout was: {text}");
 }
+
+/// Two valid one-installation projects that differ in their group addresses.
+fn two_distinct_projects(dir: &Path) -> (PathBuf, PathBuf) {
+    let two = DUPLICATE_ID_TOPOLOGY.replace(
+        r#"<GroupAddress Id="P-0001-0_GA-1" Address="2" Name="GA2" />"#,
+        r#"<GroupAddress Id="P-0001-0_GA-2" Address="2" Name="GA2" />"#,
+    );
+    let one = DUPLICATE_ID_TOPOLOGY.replace(
+        r#"<GroupAddress Id="P-0001-0_GA-1" Address="2" Name="GA2" />"#,
+        "",
+    );
+    let (a, b) = (dir.join("two.knxproj"), dir.join("one.knxproj"));
+    write_knxproj_topology(&a, &two);
+    write_knxproj_topology(&b, &one);
+    (a, b)
+}
+
+fn stored_group_addresses(store: &Path) -> usize {
+    let conn = knx_store::open_and_migrate(store).unwrap();
+    knx_store::load_project(&conn).unwrap().installations[0]
+        .group_addresses
+        .len()
+}
+
+#[test]
+fn an_occupied_store_is_refused_without_replace_and_left_untouched() {
+    // AR18 independent review F4: a second import into the same --store used
+    // to replace the project in it without a word.
+    let dir = tempfile::tempdir().unwrap();
+    let (two, one) = two_distinct_projects(dir.path());
+    let store = dir.path().join("project.knxdb");
+    let first = run_cli(&[
+        "import",
+        two.to_str().unwrap(),
+        "--store",
+        store.to_str().unwrap(),
+        "--no-product-db",
+    ]);
+    assert_eq!(
+        first.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&first.stderr)
+    );
+    let before = std::fs::read(&store).unwrap();
+
+    let second = run_cli(&[
+        "import",
+        one.to_str().unwrap(),
+        "--store",
+        store.to_str().unwrap(),
+        "--no-product-db",
+    ]);
+    assert_eq!(second.status.code(), Some(1));
+    assert!(second.stdout.is_empty());
+    let stderr = String::from_utf8(second.stderr).unwrap();
+    assert!(
+        stderr.contains("already exists") && stderr.contains("--replace"),
+        "{stderr}"
+    );
+    assert!(
+        std::fs::read(&store).unwrap() == before,
+        "the store must be byte-identical"
+    );
+    assert_eq!(stored_group_addresses(&store), 2);
+}
+
+#[test]
+fn replace_overwrites_an_occupied_store_on_request() {
+    let dir = tempfile::tempdir().unwrap();
+    let (two, one) = two_distinct_projects(dir.path());
+    let store = dir.path().join("project.knxdb");
+    let s = store.to_str().unwrap();
+    assert_eq!(
+        run_cli(&[
+            "import",
+            two.to_str().unwrap(),
+            "--store",
+            s,
+            "--no-product-db"
+        ])
+        .status
+        .code(),
+        Some(0)
+    );
+    let out = run_cli(&[
+        "import",
+        one.to_str().unwrap(),
+        "--store",
+        s,
+        "--no-product-db",
+        "--replace",
+    ]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(stored_group_addresses(&store), 1);
+}
+
+#[test]
+fn replace_without_store_is_a_usage_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let (two, _) = two_distinct_projects(dir.path());
+    let out = run_cli(&[
+        "import",
+        two.to_str().unwrap(),
+        "--replace",
+        "--no-product-db",
+    ]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(String::from_utf8(out.stderr)
+        .unwrap()
+        .contains("--replace needs --store"));
+}

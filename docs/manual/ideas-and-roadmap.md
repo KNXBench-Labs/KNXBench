@@ -11,7 +11,7 @@ than anything inside them:
 3. **Ideas and experiments** — things someone wrote down. Not commitments.
 
 There are no dates anywhere in this chapter, and no release schedule exists.
-KNXBench is at `0.1.0-alpha.1` with nothing published. An item's position in
+KNXBench is in its `0.1.0-alpha` series with nothing published. An item's position in
 part 2 says it is intended; it does not say when, or that it will happen at
 all.
 

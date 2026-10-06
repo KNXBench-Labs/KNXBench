@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — AR16 slice 2: the manual meets the app it describes, sentence by sentence
+
+- Claim-by-claim pass by script and live probes: all 95 `knx` invocations,
+  bold labels, env vars, routes, versions and every "not yet" sentence checked
+  against the running application ([MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md)).
+- Stale claims fixed: group-address style is changeable (Project node,
+  undoable), autosave exists, drag and drop links group addresses, the export
+  dialog has section choices, `knx diff --exit-code` exists, translations are
+  used, per-program versions, device writes verified on one device, ADR-0078
+  in KNX basics, workflow chapter on the sample house.
+- Handed to the UI owner: the New project dialog's style hint still claims
+  the style cannot be changed.
+
 ## 2026-10-06 — AR16 slice 1: the manual gets new photos of a house that does not exist
 
 - All 21 manual screenshots regenerated from the real application (release

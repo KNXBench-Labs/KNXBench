@@ -262,7 +262,7 @@ same change.
 
 ## What to expect
 
-One maintainer, evenings and weekends, a project that is `0.1.0-alpha.1` with no release
+One maintainer, evenings and weekends, a project in its `0.1.0-alpha` series with no release
 cut yet. Issues may sit for a while. Pull requests that arrive with a test and a
 documentation update are far more likely to be merged quickly than ones that need a
 conversation first.

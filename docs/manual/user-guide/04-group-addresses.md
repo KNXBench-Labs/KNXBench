@@ -111,10 +111,12 @@ A project uses one of three styles for the whole project:
 | TwoLevel | `1/2` | main / sub |
 | Free | `2051` | one number |
 
-The style is chosen when the project is created, and it is shown — read-only — on the
-Project node in the properties pane. The application has no control for changing it
-afterwards. The server has a route for it, but nothing in the interface calls that
-route, so treat the choice as made at creation time.
+The style is chosen when the project is created. To change it later, select the
+**Project** node in the Project Explorer and pick another **Group address style** in
+the properties pane. Every address keeps its value; only how it is written changes
+(`0/0/1` becomes `0/1` in two-level style). The change is one step on the undo stack,
+and a running bus monitor picks it up without reconnecting. The New project dialog's
+hint still says the style cannot be changed later; that text is out of date.
 
 ## Group addresses as CSV
 

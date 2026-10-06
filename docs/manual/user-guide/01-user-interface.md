@@ -122,7 +122,7 @@ deleted. The chapters that follow say which is which.
 
 One line at the bottom: the installation names of the open project (or just
 "KNXBench" when nothing is open) on the left, and the version on the right. The
-screenshots in this manual were taken from `v0.1.0-alpha.1`.
+screenshots in this manual were taken from `v0.1.0-alpha.4`.
 
 ## Resizing
 

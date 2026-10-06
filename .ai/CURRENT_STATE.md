@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 07:13 CEST
+- **Completed:** **AR16 slice 2** (docs only, no apps/ change): claim-by-claim manual pass (CLI usage vs 95 invocations, UI labels vs en.ts, routes/env, versions, "not yet" sweep, live probes). Fixed: style change exists (Project node), autosave exists, drag/drop incl. GA→link row, doc-export section choices, `knx diff --exit-code`, translations/language packs, per-program versions, device writes on one device, ADR-0078 in KNX basics, workflow chapter on the sample house, dev page counts. Checklist row 6 done.
+- **Pending/Next Steps:** AR16 acceptance waits only on the UI owner's closure receipt. KL-61 declared-vs-linked display needs an Alpha projection field — touches generated bindings in apps/knx-web/src/bindings, so it needs the Web lock (currently held by the UI owner); pick it up when released. AR18 after AR16.
+- **Notes for Codex oder Claude:** **For the UI owner:** `newProject.styleHint` (en/de) still says the group-address style cannot be changed after creation; the Project node's select changes it (verified 2026-10-06, undoable). Manual known-issues now says the hint is out of date — please fix the string and drop that known-issues entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 06:53 CEST
 - **Completed:** **AR16 slice 1.** 21 manual screenshots regenerated from the real app with the fictional sample project (`tools/manual_sample_project.py` + 3 unit tests; `apps/knx-web/e2e/manual-screenshots.shots.ts`, `playwright.manual.config.ts`, not part of the normal suite). Screenshot passages and 7 "Discover gateways" mentions corrected. `docs/MANUAL_ACCEPTANCE.md` dated checklist. UI closure NOT final: the UI owner reopened two residues at 06:39 (UI-04 live activity, KL-61 binding wording) and holds the Web lock; AR16 item 1 stays open until its closure receipt.
 - **Pending/Next Steps:** AR16 row 6: claim-by-claim pass over chapters without screenshots (knx-basics, 06 configuration workflow, 08 reports, 09 settings, 10 CLI, reference 02/04, getting-started 01–05), then acceptance. AR17 candidate stays valid only while no code changes after `6b9b6818`; the screenshot spec and tools script are not shipped code.

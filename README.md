@@ -4,13 +4,13 @@
 to ETS for working with KNX projects.**
 
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange)
-![version 0.1.0-alpha.1](https://img.shields.io/badge/version-0.1.0--alpha.1-blue)
+![version 0.1.0-alpha](https://img.shields.io/badge/version-0.1.0--alpha-blue)
 ![license AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-green)
 
 > **Warning**
 >
-> KNXBench is **alpha software under active development**. Every program reports
-> `0.1.0-alpha.1`, there is no git tag, and no release has ever been published. It is
+> KNXBench is **alpha software under active development**. Every program reports a
+> `0.1.0-alpha.N` version, there is no git tag, and no release has ever been published. It is
 > useful and it is tested, but it is still moving. Keep backups.
 
 ![KNXBench showing the group address table of an imported ETS project, with the project tree on the left and the properties inspector on the right](docs/assets/screenshots/porcelain-group-addresses.png)

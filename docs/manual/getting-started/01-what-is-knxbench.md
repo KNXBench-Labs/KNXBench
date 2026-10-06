@@ -50,8 +50,8 @@ a virtual machine just for one program.
   a single group value.
 - **Comes with a command-line tool.** The `knx` binary covers import, export,
   product-database management, and KNXnet/IP operations — including
-  operations, such as discovery and routing, that are not yet in the
-  graphical interface.
+  operations, such as routing, that are not yet in the graphical
+  interface.
 
 ## What it is not
 

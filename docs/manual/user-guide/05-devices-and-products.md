@@ -197,7 +197,7 @@ inside each object remain the same. Expanding a row gives you:
 | Description | Sets the object's description |
 | Flags | Read, Write, Transmit, Update, Communication, Read on init (with standard letters) |
 | Group links | One row per directional link, with Unlink; paired links can be unlinked together |
-| New link | Pick an address, choose Send, Receive or Send + Receive, then click Link |
+| New link | Pick an address, choose Send, Receive or Send + Receive, then click Link — or drop a group address from the Project Explorer on this row, which links it in the direction the row shows |
 
 The six toggles retain their KNX letters — `R`, `W`, `T`, `U`, `C` and `I` —
 and now show their full names alongside them. KNXBench stores what you set; it

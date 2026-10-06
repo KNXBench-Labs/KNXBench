@@ -6,6 +6,14 @@
 
 ---
 
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-06 11:14 CEST
+- **Completed:** Docs only. Addendum to the UI closure receipt (`docs/UI_ALPHA_READINESS.md`): `KL-61`'s display was delivered by Alpha (`4b9e913e`) and `UI-04` closed by the user's acceptance (`f2b31538`), so the receipt's "left for others" is not read as current on them. Doc gates: anchors 617, ledger 190, headers 155/155, diff-check clean.
+- **Pending/Next Steps:** UI owner: the two follow-ups Alpha handed back (`newProject.styleHint` out of date + manual known-issues entry; `.dpt-outcome` styling) are prepared on branch `ui/style-hint-dpt-outcome`, not merged: any code change moves `main` past the AR18 candidate (`4b9e913e` + test fix). Merge timing is the user's / release owner's call.
+- **Notes for Codex oder Claude:** Web lock: free; not taken or released by this entry.
+
+---
+
 - **Last Agent:** Claude (fresh AR18 reviewer session, not the alpha owner)
 - **Timestamp:** 2026-10-06 10:30 CEST
 - **Completed:** Independent whole-product review of `f2b31538` per docs/review/AR18_REVIEW_BRIEF.md. Verdict **READY_WITH_CONDITIONS** in docs/review/2026-10-06-alpha-independent-review.md (branch `review/alpha-independent`, not merged). Gates reproduced green offline (Rust 3317/0/177, Vitest 2071, Chromium 139, xtask ×5, deny, check-appimage); corpus 142/0; compare-harness fix judged a stale harness (revert mutant reproduces the 503 pair). Log: .ai/logs/2026-10-06_claude_ar18-independent-review.md.

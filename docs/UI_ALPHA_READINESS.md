@@ -101,6 +101,19 @@ carry over. Published as `892b9948`, read back equal on `origin/main`.
 owner); AR16's manual location/screenshot policy (user, `RELEASE-03`); AR18's
 independent whole-product review.
 
+**Addendum, later on 2026-10-06 (UI owner).** Two of these have since been
+done by others, recorded here so the receipt is not read as current on them:
+`KL-61`'s declared-versus-linked display was delivered by Alpha under its own
+Web lock (`5adeb61a` → `4b9e913e`: `GroupAddressNode.dpt_detail` and the
+group-address Inspector; ledger `DONE`), and `UI-04` was closed as
+`ACCEPTED_BOUNDARY` by the user's acceptance (ledger, `f2b31538`). AR16 is
+done. Still outside this owner: AR18's independent review. Two interface
+follow-ups handed back by Alpha — the out-of-date `newProject.styleHint` and
+styling for the new `.dpt-outcome` line — are UI-owner work prepared on the
+branch `ui/style-hint-dpt-outcome`. Merging any code change moves `main` past
+the revision AR18 reviews, so when it lands is decided with the release
+owner and the user, not by this receipt.
+
 ## Telegram-flow owner addition — user decision 2026-10-04
 
 [The approved Alpha feature](TELEGRAM_FLOW_VISUALIZATION.md) adds UI U19–U21

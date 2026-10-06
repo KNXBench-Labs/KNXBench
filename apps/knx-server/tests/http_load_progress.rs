@@ -238,7 +238,9 @@ async fn a_failed_load_still_echoes_the_token_that_started_it() {
         ))
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    // A missing file is the caller's to fix: 422 since AR18 re-check round 2
+    // (N8), formerly 500. What this test is about is the snapshot below.
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
     let snapshot = progress(&state).await;
     assert_eq!(snapshot["status"], "failed");
@@ -298,7 +300,9 @@ async fn a_failed_import_is_reported_as_failed_and_leaves_the_open_project_alone
         ))
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    // A missing file is the caller's to fix: 422 since AR18 re-check round 2
+    // (N8), formerly 500. What this test is about is the snapshot below.
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
     let reported = body_json(response).await["error"]
         .as_str()
         .unwrap()

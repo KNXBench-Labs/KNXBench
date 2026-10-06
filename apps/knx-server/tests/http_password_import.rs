@@ -162,7 +162,7 @@ async fn an_empty_password_counts_as_none() {
 }
 
 #[tokio::test]
-async fn an_unprotected_import_failure_keeps_the_plain_500_body() {
+async fn an_unprotected_import_failure_carries_no_password_kind() {
     let (status, body) = call(
         &app(),
         "POST",
@@ -170,7 +170,9 @@ async fn an_unprotected_import_failure_keeps_the_plain_500_body() {
         Some(json!({ "path": "/does/not/exist.knxproj", "password": "x" })),
     )
     .await;
-    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+    // A missing file is refused as the caller's to fix (422 since AR18
+    // re-check round 2, N8), and never as a password problem.
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
     let body: Value = serde_json::from_str(&body).unwrap();
-    assert!(body.get("kind").is_none(), "{body}");
+    assert_eq!(body["kind"], "projectNotImportable", "{body}");
 }

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 07:21 CEST
+- **Completed:** User decisions for AR18 recorded: 9 rows → `ACCEPTED_BOUNDARY` / `USER_ACCEPTED` (KL-1, KL-11, KL-125, KL-31, PDB-01, R-DYNAMIC-01, R-MODULE-03, R-MODULE-04, KL-158); reviewer = fresh Claude session from a written brief (user starts it); KL-61 display before AR18. Ledger recount, ALPHA_SCOPE_MATRIX, KL §158 update, goal AR18 note.
+- **Pending/Next Steps:** KL-61 package (projection field + Web display; takes the Web lock), then rebuild the AppImage candidate, full §5 gates, write the AR18 review brief. UI-04 row closure stays with the commissioning owner.
+- **Notes for Codex oder Claude:** Web lock: free at this entry; the KL-61 package will take it with its own handover entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 07:13 CEST
 - **Completed:** **AR16 slice 2 + acceptance** (docs only, no apps/ change): claim-by-claim manual pass (CLI usage vs 95 invocations, UI labels vs en.ts, routes/env, versions, "not yet" sweep, live probes). Fixed: style change exists (Project node), autosave exists, drag/drop incl. GA→link row, doc-export section choices, `knx diff --exit-code`, translations/language packs, per-program versions, device writes on one device, ADR-0078 in KNX basics, workflow chapter on the sample house, dev page counts. Checklist row 6 done.
 - **Pending/Next Steps:** AR16 DONE after the merge (UI closure receipt `84bc32c3` verified: 26 UI rows 15/10/1, issue plan 68/0, binding comment on main; bus-monitor screenshot re-shot for the new Live activity tab). Next: KL-61 projection field (declared DPT + outcome) — needs the Web lock for the regenerated binding; then AR18 (rebuild the AppImage candidate first: code changed after `6b9b6818`).

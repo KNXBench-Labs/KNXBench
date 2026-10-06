@@ -1003,6 +1003,13 @@ rebuild before AR18.
 
 **Sources:** `RELEASE-01`, `RELEASE-02`.
 **Dependencies:** AR15–AR17, integrated U13 receipt, commissioning's dated scope/safety receipt, and decisions for every unresolved alpha-owned blocker.
+**Decisions recorded 2026-10-06 (user):** the independent whole-product review
+is done by a fresh Claude session without this history, started by the user
+from a written brief; the nine externally blocked or pending rows (`KL-1`,
+`KL-11`, `KL-125`, `KL-31`, `PDB-01`, `R-DYNAMIC-01`, `R-MODULE-03`,
+`R-MODULE-04`, `KL-158`) are accepted as disclosed Alpha boundaries; the
+`KL-61` declared-versus-linked DPT display is built before AR18 (then the
+candidate and gates rerun).
 
 - [ ] Freeze the complete integrated candidate and artifact provenance. All actionable alpha-owned items are delivered, or their release exceptions have explicit user acceptance. Merely logging a blocker is not permission to call the alpha ready.
 - [ ] Run all explicit gates in §5 on that exact integrated revision, including private corpus cases that cover affected behavior; verify target, counts, changed-crate compilation and no silent skips.

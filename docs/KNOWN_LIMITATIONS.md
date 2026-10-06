@@ -8081,3 +8081,6 @@ Not tested on any other compositor or GPU.
 **Not changed.** Removing or rewriting the hook in the build would ship an
 untested launcher on every desktop; that is a packaging decision for the user
 at AR19. Ledger row `KL-158`.
+
+**Update 2026-10-06 (user decision):** accepted for the Alpha as a disclosed
+boundary with the documented Wayland workaround; the launcher stays as built.

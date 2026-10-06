@@ -103,6 +103,11 @@ vi.mock("./api", () => ({
   errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
   isUnsavedChangesConflict: (error: unknown) =>
     error instanceof Error && (error as Error & { status?: number }).status === 409,
+  // Same predicate as `api.ts`'s; App only reaches it after a failed load.
+  isUnsavedProjectConflict: (error: unknown) => {
+    const { status, body } = (error ?? {}) as { status?: unknown; body?: { kind?: unknown } | null };
+    return status === 409 && body?.kind === "projectUnsavedChanges";
+  },
 }));
 
 vi.mock("./filePicker", () => ({ ...filePickerMock }));
@@ -361,6 +366,15 @@ describe("App — ISSUE-04 last-saved status", () => {
     await act(async () => root.unmount());
   });
 });
+
+/** Answers F1's open-over-unsaved-edits dialog with "discard". */
+async function confirmReplaceDiscard() {
+  const discard = Array.from(document.querySelectorAll<HTMLButtonElement>(".replace-confirm button"))
+    .find((b) => b.textContent === enMessages["replace.discard"]);
+  if (!discard) throw new Error("the replace-confirm dialog is not open");
+  await act(async () => discard.click());
+  await act(async () => {});
+}
 
 function findButton(text: string): HTMLButtonElement {
   const button = Array.from(host!.querySelectorAll("button")).find((b) => b.textContent === text);
@@ -3067,6 +3081,9 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
   });
 
   it("does not let a delayed Save As refresh replace a subsequently loaded project or its save-path state", async () => {
+    // Queue only this test's loads: a leftover one-shot reply from an earlier
+    // test would hand back a clean tree and skip F1's dialog.
+    apiMock.importProject.mockReset();
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/old.knxproj");
     filePickerMock.pickSavePath
       .mockResolvedValueOnce("/tmp/old.knxdb")
@@ -3091,6 +3108,8 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     await act(async () => {
       findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
+    // The first project is still modified, so F1's dialog asks first.
+    await confirmReplaceDiscard();
     expect(host!.textContent).toContain("Device D");
 
     await act(async () => {
@@ -3108,6 +3127,9 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
   });
 
   it("accepts revision one from a restarted server and rejects a delayed reply from its retired process", async () => {
+    // Queue only this test's loads: a leftover one-shot reply from an earlier
+    // test would hand back a clean tree and skip F1's dialog.
+    apiMock.importProject.mockReset();
     window.localStorage.clear();
     filePickerMock.pickOpenPath
       .mockResolvedValueOnce("/tmp/old.knxproj")
@@ -3138,6 +3160,8 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     await act(async () => {
       findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
+    // The first project is still modified, so F1's dialog asks first.
+    await confirmReplaceDiscard();
     expect(host!.textContent).toContain("Device D");
     apiMock.deviceDetail.mockResolvedValue(deviceDetailFixture());
     await act(async () => {
@@ -3352,6 +3376,115 @@ describe("App — project password", () => {
     expect(document.body.textContent).not.toContain("Could not load");
     expect(apiMock.importProject).toHaveBeenCalledTimes(2);
     expect(host!.querySelector(".project-explorer")).toBeNull();
+    root.unmount();
+  });
+});
+
+// AR18 independent review F1: File › Open / Import used to replace a project
+// with unsaved edits without a word. They now ask first, like Quit does.
+describe("App — unsaved edits before opening another project", () => {
+  const unsavedRefusal = () =>
+    Object.assign(new Error("the open project has unsaved changes"), {
+      status: 409,
+      body: { error: "the open project has unsaved changes", kind: "projectUnsavedChanges" },
+    });
+
+  async function openDirtyProject() {
+    apiMock.openProject.mockReset();
+    apiMock.importProject.mockReset();
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/current.knxdb");
+    apiMock.openProject.mockResolvedValueOnce(treeAt({ ...baseTree(), is_modified: true }, 1));
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(apiMock.openProject).toHaveBeenCalledTimes(1);
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/other.knxproj");
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+    return root;
+  }
+
+  const dialog = () => document.querySelector<HTMLElement>(".replace-confirm");
+  const click = async (text: string) => {
+    await act(async () => {
+      Array.from(dialog()!.querySelectorAll("button")).find((b) => b.textContent === text)!.click();
+    });
+    await act(async () => {});
+  };
+
+  it("asks before importing over unsaved edits and sends nothing on cancel", async () => {
+    const root = await openDirtyProject();
+    expect(dialog()?.textContent).toContain(enMessages["replace.message"]);
+    expect(dialog()?.textContent).toContain("other.knxproj");
+    expect(apiMock.importProject).not.toHaveBeenCalled();
+    await click(enMessages["replace.cancel"]);
+    expect(dialog()).toBeNull();
+    expect(apiMock.importProject).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  it("discards only on the explicit button, and says so on the wire", async () => {
+    const root = await openDirtyProject();
+    apiMock.importProject.mockResolvedValueOnce(baseTree());
+    await click(enMessages["replace.discard"]);
+    expect(dialog()).toBeNull();
+    expect(apiMock.importProject).toHaveBeenCalledTimes(1);
+    const [path, , password, discard] = apiMock.importProject.mock.calls[0];
+    expect([path, password, discard]).toEqual(["/tmp/other.knxproj", undefined, true]);
+    root.unmount();
+  });
+
+  it("saves first and then imports without discarding anything", async () => {
+    const root = await openDirtyProject();
+    apiMock.saveProject.mockResolvedValueOnce(undefined);
+    apiMock.currentProject.mockResolvedValueOnce(treeAt({ ...baseTree(), is_modified: false }, 2));
+    apiMock.importProject.mockResolvedValueOnce(baseTree());
+    await click(enMessages["replace.save"]);
+    expect(apiMock.saveProject).toHaveBeenCalled();
+    expect(apiMock.importProject).toHaveBeenCalledTimes(1);
+    expect(apiMock.importProject.mock.calls[0]).toHaveLength(2);
+    root.unmount();
+  });
+
+  it("turns the server's late refusal into the same question, not an error", async () => {
+    apiMock.importProject.mockReset();
+    apiMock.importProject.mockRejectedValueOnce(unsavedRefusal());
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/other.knxproj");
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+    expect(dialog()?.textContent).toContain("other.knxproj");
+    expect(document.body.textContent).not.toContain("Could not load");
+    root.unmount();
+  });
+
+  it("keeps the discard decision for the password retry of the same import", async () => {
+    const root = await openDirtyProject();
+    apiMock.importProject
+      .mockRejectedValueOnce(
+        Object.assign(new Error("project password needed"), {
+          status: 422,
+          body: { error: "project password needed", kind: "projectPasswordRequired" },
+        }),
+      )
+      .mockResolvedValueOnce(baseTree());
+    await click(enMessages["replace.discard"]);
+    const input = document.querySelector<HTMLInputElement>('input[type="password"]')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "s3cret");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      Array.from(document.querySelectorAll("button")).find((b) => b.textContent === "Import")!.click();
+    });
+    await act(async () => {});
+    expect(apiMock.importProject).toHaveBeenCalledTimes(2);
+    expect(apiMock.importProject.mock.calls[1].slice(2)).toEqual(["s3cret", true]);
     root.unmount();
   });
 });

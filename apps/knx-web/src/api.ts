@@ -97,20 +97,39 @@ function requestError(status: number, message: string, body: unknown = null): Er
  * `loadProgress.ts`'s `ownsOperation` is exact equality against it, not a
  * fact this module derives.
  */
-export function importProject(path: string, clientToken: string, password?: string): Promise<ProjectTree> {
+export function importProject(
+  path: string,
+  clientToken: string,
+  password?: string,
+  discardChanges?: boolean,
+): Promise<ProjectTree> {
   // AR08: a project password travels only in this request, only when one
   // was entered. It is never logged, stored or echoed by the client.
+  // AR18 F1: `discardChanges` is sent only when a human confirmed it.
   return request("/api/project/import", {
     method: "POST",
-    body: JSON.stringify({ path, clientToken, ...(password ? { password } : {}) }),
+    body: JSON.stringify({
+      path,
+      clientToken,
+      ...(password ? { password } : {}),
+      ...(discardChanges ? { discardChanges: true } : {}),
+    }),
   });
 }
 
-export function openProject(path: string, clientToken: string): Promise<ProjectTree> {
+export function openProject(path: string, clientToken: string, discardChanges?: boolean): Promise<ProjectTree> {
   return request("/api/project/open", {
     method: "POST",
-    body: JSON.stringify({ path, clientToken }),
+    body: JSON.stringify({ path, clientToken, ...(discardChanges ? { discardChanges: true } : {}) }),
   });
+}
+
+/** Whether an open/import rejection is the server's "the open project has
+ * unsaved changes" refusal (`409` with kind `projectUnsavedChanges`) —
+ * distinct from the other `409`, a load already running. */
+export function isUnsavedProjectConflict(e: unknown): boolean {
+  const { status, body } = (e ?? {}) as { status?: unknown; body?: { kind?: unknown } | null };
+  return status === 409 && body?.kind === "projectUnsavedChanges";
 }
 
 export function currentProject(): Promise<ProjectTree & { has_store_path: boolean }> {

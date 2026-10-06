@@ -507,11 +507,13 @@ async fn importing_replaces_a_dirty_project_with_a_clean_baseline() {
         .is_some_and(|value| !value.is_empty()));
     assert_eq!(edited["server_incarnation"], created["server_incarnation"]);
 
+    // Since the AR18 review (F1) replacing unsaved edits needs the same
+    // explicit consent as `/api/project/new`.
     let imported = app
         .clone()
         .oneshot(post(
             "/api/project/import",
-            json!({ "path": path.to_string_lossy() }),
+            json!({ "path": path.to_string_lossy(), "discardChanges": true }),
         ))
         .await
         .unwrap();
@@ -867,4 +869,94 @@ async fn a_new_project_clears_the_path_the_previous_one_was_loaded_from() {
         .unwrap();
     assert_ne!(save.status(), StatusCode::OK);
     assert_eq!(std::fs::metadata(&db_path).unwrap().len(), before);
+}
+
+/// AR18 independent review F1: Open and Import used to replace a project
+/// with unsaved edits without asking, while New project refused with 409.
+#[tokio::test]
+async fn opening_or_importing_refuses_to_discard_unsaved_edits_unless_told_to() {
+    let dir = tempfile::tempdir().unwrap();
+    let source = knx_testsupport::write_minimal_knxproj(dir.path());
+    let state = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
+    let app = knx_server::app(state, None);
+
+    let send = |uri: &'static str, body: Value| {
+        let app = app.clone();
+        async move {
+            let response = app.oneshot(post(uri, body)).await.unwrap();
+            let status = response.status();
+            let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap();
+            let value = if bytes.is_empty() {
+                Value::Null
+            } else {
+                serde_json::from_slice(&bytes).unwrap()
+            };
+            (status, value)
+        }
+    };
+    let (status, _) = send("/api/project/new", json!({})).await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = send("/api/project/save-as", json!({ "path": "saved.knxdb" })).await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, edited) = send(
+        "/api/areas",
+        json!({ "name": "Unsaved area", "address": 2 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(edited["is_modified"], true);
+
+    for (uri, body) in [
+        (
+            "/api/project/import",
+            json!({ "path": source.to_string_lossy() }),
+        ),
+        ("/api/project/open", json!({ "path": "saved.knxdb" })),
+        (
+            "/api/project/import",
+            json!({ "path": source.to_string_lossy(), "discardChanges": false }),
+        ),
+    ] {
+        let (status, refusal) = send(uri, body).await;
+        assert_eq!(status, StatusCode::CONFLICT, "{uri}: {refusal}");
+        assert_eq!(refusal["kind"], "projectUnsavedChanges", "{uri}: {refusal}");
+        let current = app.clone().oneshot(get("/api/project")).await.unwrap();
+        let current = body_json(current).await;
+        assert_eq!(
+            current["is_modified"], true,
+            "{uri} must leave the edit in place"
+        );
+        assert_eq!(
+            current["snapshot_revision"], edited["snapshot_revision"],
+            "{uri}"
+        );
+    }
+
+    // The refusal comes before the file is read at all: a broken file that
+    // would fail to load is answered with the same 409 and left untouched.
+    std::fs::write(dir.path().join("broken.knxproj"), b"not a zip").unwrap();
+    std::fs::write(dir.path().join("broken.knxdb"), b"not a database").unwrap();
+    for (uri, path) in [
+        ("/api/project/import", "broken.knxproj"),
+        ("/api/project/open", "broken.knxdb"),
+    ] {
+        let (status, refusal) = send(uri, json!({ "path": path })).await;
+        assert_eq!(status, StatusCode::CONFLICT, "{uri}: {refusal}");
+        assert_eq!(refusal["kind"], "projectUnsavedChanges", "{uri}: {refusal}");
+    }
+    assert_eq!(
+        std::fs::read(dir.path().join("broken.knxdb")).unwrap(),
+        b"not a database",
+        "a refused open must not migrate the file"
+    );
+
+    let (status, opened) = send(
+        "/api/project/open",
+        json!({ "path": "saved.knxdb", "discardChanges": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{opened}");
+    assert_eq!(opened["is_modified"], false);
 }

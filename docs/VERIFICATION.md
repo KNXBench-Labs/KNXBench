@@ -57,6 +57,36 @@ code in a fresh per-worktree `CARGO_TARGET_DIR`, confirm compilation, and keep
 sources stable during verification. A stale pre-AR01 binary still has its bug;
 Git pruning cannot rewrite its baked-in path. Do not silently bless it.
 
+## Private-corpus test run
+
+The textual lint above does not run a single corpus test, and CI cannot: the
+corpus is private. The AR18 review (M7) found two corpus tests red for weeks.
+One command now runs all of them:
+
+```sh
+unshare --user --map-root-user --net sh -c 'ip link set lo up && exec "$@"' sh \
+  python3 tools/run_corpus_tests.py
+```
+
+- **What it runs:** `tools/run_corpus_tests.py` selects every test that is
+  `#[ignore]`d for `OriginalData`. It groups them by Cargo target and runs
+  each group with `--ignored`. `--list` prints only the selection.
+- **What it prints:** test names and counts, never corpus content.
+- **When it fails:**
+  - exit `2`, with nothing run, if `OriginalData/` is missing;
+  - exit `1` if any target fails, or if the passed count differs from the
+    selection.
+- **Environment:**
+  - no `KNX_*` variables, so no hardware is addressed;
+  - `XDG_DATA_HOME` points to a fresh temporary directory, so the
+    developer's product database is neither read nor changed (M8);
+  - network isolation is the `unshare` wrapper's job.
+
+**When it must run:** on every release candidate (part of the
+[final gates](ALPHA_FINAL_GATES.md)), and before merging a change to import,
+storage, enrichment, the server's project routes or device download. The
+2026-10-06 selection was 142 tests in 31 targets (`--list`).
+
 ## Release build provenance
 
 Build every release candidate (AR17's AppImage included) with

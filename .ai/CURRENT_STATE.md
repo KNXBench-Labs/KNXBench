@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-06 06:39 CEST
+Web lock: taken by claude-goal-ui-owner for the UI closure residue (UI-04 live activity, KL-61 binding wording)
+- **Completed:** Lock taken only. The closing review for the UI closure receipt (`RELEASE-03` / AR16) found two Web halves still handed to the UI owner: `UI-04` (COMMISSIONING_ALPHA_LEDGER "Handoff to the UI owner": adopt `GET /api/bus/activity`, refresh running rows, render unavailable/interrupted/partial) and `KL-61`'s binding doc comment for `GroupAddressNode.dpts` (KNOWN_LIMITATIONS §61, ADR-0078 hand-over).
+- **Pending/Next Steps:** UI owner: deliver both, then the closure receipt with the full §2.5 gate on merged main. The declared-versus-linked *display* of KL-61 needs a projection field first (not on the wire) — Alpha's side.
+- **Notes for Codex oder Claude:** An earlier §2.5 gate on `4459e310` was stopped on purpose after fmt 0 / clippy 0 (350 units) because the receipt must be taken after these two packages.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 06:35 CEST
 - **Completed:** **AR17 DONE.** Local AppImage candidate 0.1.0-alpha.4 from `6b9b6818` (desktop version raised to match knx-web alpha.4; check-appimage had refused alpha.1). Offline smoke under X11 (private Xvfb) and native Wayland; packaging manifest clean. Record `docs/ALPHA_CANDIDATE.md`. New `KL-158` (AppImage forces X11, WAITING_DECISION for AR19), privacy checklist item 6 (build paths in local binaries), troubleshooting + known-issues entries. AR16: user policy recorded (manual on GitHub with screenshots).

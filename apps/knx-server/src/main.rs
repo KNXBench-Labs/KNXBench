@@ -51,7 +51,7 @@ async fn main() {
     }
     let auth_required = setup.config.is_required();
 
-    let mut app_state = knx_server::AppState::new(data_dir);
+    let mut app_state = knx_server::AppState::with_user_product_db(data_dir);
     let return_path = tunnel_return_path(std::env::var("KNX_TUNNEL_ROUTE_BACK").ok().as_deref());
     if return_path == knx_net::TunnelReturnPath::RouteBack {
         eprintln!(

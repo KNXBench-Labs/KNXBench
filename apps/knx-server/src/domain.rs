@@ -193,11 +193,23 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(data_dir: PathBuf) -> Self {
+    /// The production state: [`Self::new`] plus the user's own product
+    /// database at `knx_productdb::default_path()`, opened (and created or
+    /// migrated if needed). Only the server and desktop binaries call this.
+    pub fn with_user_product_db(data_dir: PathBuf) -> Self {
         let product_db = knx_productdb::default_path()
             .and_then(|path| knx_productdb::open_and_migrate(&path).ok())
             .map(Mutex::new);
         Self::with_product_db(data_dir, product_db)
+    }
+
+    /// State rooted at `data_dir` with **no** product database: nothing
+    /// outside `data_dir` is opened, created or migrated, so a test built on
+    /// it never depends on, or changes, the developer's own product
+    /// database (AR18 review M8, re-check N4). A caller that needs products
+    /// sets `product_db` itself.
+    pub fn new(data_dir: PathBuf) -> Self {
+        Self::with_product_db(data_dir, None)
     }
 
     /// [`Self::new`] with the product database given rather than opened
@@ -413,6 +425,9 @@ impl From<String> for LoadFailure {
 /// written: not a KNXBench file, no such file, no saved project, or a newer
 /// schema. The route answers `422`.
 pub const PROJECT_NOT_OPENABLE: &str = "projectNotOpenable";
+/// [`LoadFailure::kind`] of an import refused because of the file itself
+/// (not a ZIP, a refused archive, not a KNX project). The route answers `422`.
+pub const PROJECT_NOT_IMPORTABLE: &str = "projectNotImportable";
 /// [`LoadFailure::kind`] of a protected `.knxproj` imported without a password.
 pub const PASSWORD_REQUIRED: &str = "projectPasswordRequired";
 /// [`LoadFailure::kind`] of a protected `.knxproj` imported with a wrong password.
@@ -467,6 +482,18 @@ fn load_failure_kind(error: &AppError) -> Option<&'static str> {
         AppError::Import(ImportFailure::Container(ContainerError::WrongPassword { .. })) => {
             Some(PASSWORD_WRONG)
         }
+        // The file itself is the problem — not a ZIP, a refused archive
+        // (duplicate or colliding names, over budget, a member that lies
+        // about its size), not a KNX project, or a schema without a table.
+        // The caller's to fix: `422`, not an internal error (AR18 re-check
+        // N5; formerly the disclosed non-ZIP `500`).
+        AppError::Import(
+            ImportFailure::Container(_)
+            | ImportFailure::Detect(_)
+            | ImportFailure::Parse(_)
+            | ImportFailure::UnsupportedLegacyFormat { .. }
+            | ImportFailure::NoKnownSchemaTable { .. },
+        ) => Some(PROJECT_NOT_IMPORTABLE),
         _ => None,
     }
 }
@@ -6683,6 +6710,15 @@ mod tests {
         // AR18 review M8: `Default` used to open (and, if missing, create)
         // the developer's own product database.
         assert!(AppState::default().product_db.is_none());
+    }
+
+    #[test]
+    fn the_plain_constructor_touches_no_product_database_outside_its_dir() {
+        // AR18 re-check N4: `new` used to open, create or migrate
+        // `~/.local/share/knx/products.sqlite`; ten server test files use it.
+        let dir = tempfile::tempdir().unwrap();
+        let state = AppState::new(dir.path().to_path_buf());
+        assert!(state.product_db.is_none());
     }
 
     #[test]

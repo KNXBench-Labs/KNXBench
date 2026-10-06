@@ -188,7 +188,7 @@ pub fn run() {
                 .expect("no app data dir available")
                 .join("projects");
             std::fs::create_dir_all(&data_dir)?;
-            let state = Arc::new(knx_server::AppState::new(data_dir));
+            let state = Arc::new(knx_server::AppState::with_user_product_db(data_dir));
             app.manage(Arc::clone(&state));
 
             let window_url = if cfg!(debug_assertions) {

@@ -96,6 +96,25 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
     save_project_transaction(tx, project)
 }
 
+/// Saves `project` together with its opaque passthrough entries and its
+/// manufacturer manifest in **one** transaction (AR18 review M2). Saving
+/// them one by one committed three times, so a crash in between left the
+/// new project beside the previous file's opaque evidence. Either all three
+/// tables change, or none does.
+pub fn save_project_with_passthrough(
+    conn: &Connection,
+    project: &Project,
+    opaque: &[crate::StoredOpaqueEntry],
+    manufacturer_refs: &[crate::ManufacturerRef],
+) -> Result<(), StoreError> {
+    let tx = conn.unchecked_transaction()?;
+    write_project(&tx, project)?;
+    crate::opaque::write_opaque(&tx, opaque)?;
+    crate::manifest::write_manufacturer_refs(&tx, manufacturer_refs)?;
+    tx.commit()?;
+    Ok(())
+}
+
 /// Saves `replacement` only if the persisted semantic project still equals
 /// `expected`. `BEGIN IMMEDIATE` obtains SQLite's write lock before the
 /// comparison and holds it through commit, closing the check/write race that
@@ -118,6 +137,13 @@ pub fn save_project_if_unchanged(
 }
 
 fn save_project_transaction(tx: Transaction<'_>, project: &Project) -> Result<(), StoreError> {
+    write_project(&tx, project)?;
+    tx.commit()?;
+    Ok(())
+}
+
+/// Writes `project` inside a transaction the caller owns and commits.
+fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(), StoreError> {
     crate::representable::check_representable(project)?;
     // Defer every foreign-key check to `COMMIT`, for two reasons that both
     // come from `building_part`/`group_range` self-referencing via
@@ -305,7 +331,6 @@ fn save_project_transaction(tx: Transaction<'_>, project: &Project) -> Result<()
         }
     }
 
-    tx.commit()?;
     Ok(())
 }
 

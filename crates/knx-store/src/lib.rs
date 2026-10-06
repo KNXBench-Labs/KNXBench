@@ -20,11 +20,13 @@ pub mod topology;
 pub use command_sync::sync_after_command;
 pub use manifest::{insert_manufacturer_refs, load_manufacturer_refs, ManufacturerRef};
 pub use migration::{
-    open_and_migrate, open_and_migrate_in_memory, MigrationError, CURRENT_SCHEMA_VERSION,
+    open_and_migrate, open_and_migrate_in_memory, open_existing_and_migrate, MigrationError,
+    CURRENT_SCHEMA_VERSION,
 };
 pub use opaque::{insert_opaque, load_opaque, StoredOpaqueEntry};
 pub use project::{
-    load_project, load_project_reporting, save_project, save_project_if_unchanged, AllocatorRepair,
+    load_project, load_project_reporting, save_project, save_project_if_unchanged,
+    save_project_with_passthrough, AllocatorRepair,
 };
 /// Re-exported so `knx-app` names the connection type through the storage
 /// crate rather than depending on `rusqlite` directly.

@@ -194,10 +194,19 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(data_dir: PathBuf) -> Self {
-        let server_incarnation = new_server_incarnation();
         let product_db = knx_productdb::default_path()
             .and_then(|path| knx_productdb::open_and_migrate(&path).ok())
             .map(Mutex::new);
+        Self::with_product_db(data_dir, product_db)
+    }
+
+    /// [`Self::new`] with the product database given rather than opened
+    /// from the user's default location.
+    fn with_product_db(
+        data_dir: PathBuf,
+        product_db: Option<Mutex<knx_productdb::Connection>>,
+    ) -> Self {
+        let server_incarnation = new_server_incarnation();
         Self {
             project: Mutex::new(None),
             clean_project: Mutex::new(None),
@@ -250,8 +259,14 @@ impl Default for AppState {
     /// Test-only convenience — production always calls `AppState::new`
     /// with `KNX_DATA_DIR`. Falls back to the OS temp dir so tests that
     /// never touch `/api/fs/*` don't need to care.
+    ///
+    /// No product database: the user's real one (`~/.local/share/knx/
+    /// products.sqlite`) is neither opened, created nor migrated, so a
+    /// test result never depends on what the developer happens to have
+    /// installed (AR18 review M8). A test that needs products sets
+    /// `product_db` itself.
     fn default() -> Self {
-        let mut state = Self::new(std::env::temp_dir());
+        let mut state = Self::with_product_db(std::env::temp_dir(), None);
         // Test conveniences never share a durable activity database.
         state.one_shot_activity = std::sync::Arc::default();
         state
@@ -394,6 +409,10 @@ impl From<String> for LoadFailure {
     }
 }
 
+/// [`LoadFailure::kind`] of a `.knxdb` open refused before anything was
+/// written: not a KNXBench file, no such file, no saved project, or a newer
+/// schema. The route answers `422`.
+pub const PROJECT_NOT_OPENABLE: &str = "projectNotOpenable";
 /// [`LoadFailure::kind`] of a protected `.knxproj` imported without a password.
 pub const PASSWORD_REQUIRED: &str = "projectPasswordRequired";
 /// [`LoadFailure::kind`] of a protected `.knxproj` imported with a wrong password.
@@ -552,10 +571,9 @@ pub fn save_project_as_impl(
     manufacturer_refs: &[knx_store::ManufacturerRef],
 ) -> Result<(), String> {
     let conn = knx_store::open_and_migrate(path).map_err(|e| e.to_string())?;
-    knx_store::save_project(&conn, project).map_err(|e| e.to_string())?;
-    knx_store::insert_opaque(&conn, opaque).map_err(|e| e.to_string())?;
-    knx_store::insert_manufacturer_refs(&conn, manufacturer_refs).map_err(|e| e.to_string())?;
-    Ok(())
+    // One transaction for all three (AR18 review M2).
+    knx_store::save_project_with_passthrough(&conn, project, opaque, manufacturer_refs)
+        .map_err(|e| e.to_string())
 }
 
 /// Shared by `open_native_project_impl` (display-only) and
@@ -564,20 +582,37 @@ pub fn save_project_as_impl(
 /// opaque/manifest rows already on disk, so `state.opaque`/
 /// `state.manufacturer_refs` stay accurate after a native load too, not
 /// just after an ETS import.
-fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, String> {
+fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, LoadFailure> {
     // The five phases a native open really has (ADR-0023): the store open
     // (which also runs any pending migration), the normalized read, the
     // two passthrough reads, and the projection. Each is announced before
     // its own work, so the label names what is running.
     progress.phase(LoadPhase::OpenStore);
-    let conn = knx_store::open_and_migrate(path).map_err(|e| e.to_string())?;
+    let conn = knx_store::open_existing_and_migrate(path).map_err(|e| {
+        // A file that is not a KNXBench project, or holds none, is the
+        // caller's to fix — refused (422) untouched, not a server fault
+        // (AR18 review M1b/M1c).
+        let kind = matches!(
+            e,
+            knx_store::MigrationError::ForeignDatabase
+                | knx_store::MigrationError::NotFound
+                | knx_store::MigrationError::NothingSaved
+                | knx_store::MigrationError::FutureSchemaVersion { .. }
+        )
+        .then_some(PROJECT_NOT_OPENABLE);
+        LoadFailure {
+            message: e.to_string(),
+            kind,
+        }
+    })?;
     progress.phase(LoadPhase::LoadStoredProject);
     let (project, allocator_repair) =
-        knx_store::load_project_reporting(&conn).map_err(|e| e.to_string())?;
+        knx_store::load_project_reporting(&conn).map_err(|e| LoadFailure::from(e.to_string()))?;
     progress.phase(LoadPhase::LoadOpaque);
-    let opaque = knx_store::load_opaque(&conn).map_err(|e| e.to_string())?;
+    let opaque = knx_store::load_opaque(&conn).map_err(|e| LoadFailure::from(e.to_string()))?;
     progress.phase(LoadPhase::LoadManufacturerRefs);
-    let manufacturer_refs = knx_store::load_manufacturer_refs(&conn).map_err(|e| e.to_string())?;
+    let manufacturer_refs =
+        knx_store::load_manufacturer_refs(&conn).map_err(|e| LoadFailure::from(e.to_string()))?;
     progress.phase(LoadPhase::BuildProjectTree);
     let tree = knx_projection::build_project_tree(&project);
     Ok((tree, project, (opaque, manufacturer_refs), allocator_repair))
@@ -618,7 +653,9 @@ fn allocator_repair_log_entry(repair: &knx_store::AllocatorRepair) -> LogEntry {
 /// stay at their default zero.
 pub fn open_native_project_impl(path: &Path) -> Result<ProjectTree, String> {
     let progress = detached_progress(crate::load_progress::LoadKind::Open, path);
-    let outcome = load_native(path, &progress).map(|(tree, ..)| tree);
+    let outcome = load_native(path, &progress)
+        .map(|(tree, ..)| tree)
+        .map_err(|failure| failure.message);
     match &outcome {
         Ok(_) => progress.succeed(),
         Err(e) => progress.fail(e.clone()),
@@ -641,7 +678,7 @@ pub fn open_native_project(
     let loaded = load_native(path, progress);
     let (_tree, project, (opaque, manufacturer_refs), allocator_repair) = match loaded {
         Ok(v) => v,
-        Err(e) => {
+        Err(failure) => {
             state
                 .session_log
                 .lock()
@@ -650,12 +687,12 @@ pub fn open_native_project(
                     timestamp: session_log::now(),
                     severity: Severity::Error,
                     source: "open".to_string(),
-                    message: e.clone(),
+                    message: failure.message.clone(),
                     location: None,
                     diagnostic: None,
                     detail: None,
                 });
-            return Err(LoadFailure::from(e));
+            return Err(failure);
         }
     };
     let tree = replace_unless_unsaved(
@@ -6034,7 +6071,7 @@ mod tests {
             .begin(crate::LoadKind::Open, "not-a-store.knxdb", None)
             .expect("a fresh registry has no operation in flight");
         let error = load_native(&db_path, &handle).unwrap_err();
-        handle.fail(error);
+        handle.fail(error.message);
 
         assert_eq!(operations.recorded_phases(), vec!["openStore"]);
         let snapshot = operations.snapshot().unwrap();
@@ -6639,6 +6676,13 @@ mod tests {
         let project = state.project.lock().unwrap();
         let project = project.as_ref().expect("the opened project is installed");
         assert_eq!(project.ids.peek_device(), 3);
+    }
+
+    #[test]
+    fn the_test_default_state_has_no_product_database() {
+        // AR18 review M8: `Default` used to open (and, if missing, create)
+        // the developer's own product database.
+        assert!(AppState::default().product_db.is_none());
     }
 
     #[test]

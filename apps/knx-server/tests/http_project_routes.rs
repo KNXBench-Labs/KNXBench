@@ -960,3 +960,56 @@ async fn opening_or_importing_refuses_to_discard_unsaved_edits_unless_told_to() 
     assert_eq!(status, StatusCode::OK, "{opened}");
     assert_eq!(opened["is_modified"], false);
 }
+
+#[tokio::test]
+async fn opening_a_file_that_holds_no_knxbench_project_is_refused_untouched() {
+    // AR18 review M1b/M1c: a foreign SQLite file got 22 tables, an empty
+    // older store was upgraded and then answered 500. Both are now a 422
+    // with kind projectNotOpenable, and neither file changes.
+    let dir = tempfile::tempdir().unwrap();
+    let foreign = dir.path().join("notes.knxdb");
+    knx_store::Connection::open(&foreign)
+        .unwrap()
+        .execute_batch("CREATE TABLE notes (body TEXT); INSERT INTO notes VALUES ('mine');")
+        .unwrap();
+    let old = dir.path().join("old.knxdb");
+    knx_store::Connection::open(&old)
+        .unwrap()
+        .execute_batch(
+            "CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
+             INSERT INTO schema_meta VALUES ('created_by', 'knx-store');
+             PRAGMA user_version = 3;",
+        )
+        .unwrap();
+    let app = knx_server::app(
+        Arc::new(knx_server::AppState::new(dir.path().to_path_buf())),
+        None,
+    );
+    for (name, path) in [("notes.knxdb", &foreign), ("old.knxdb", &old)] {
+        let before = std::fs::read(path).unwrap();
+        let response = app
+            .clone()
+            .oneshot(post("/api/project/open", json!({ "path": name })))
+            .await
+            .unwrap();
+        assert_eq!(
+            response.status(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{name}"
+        );
+        let body = body_json(response).await;
+        assert_eq!(body["kind"], "projectNotOpenable", "{name}: {body}");
+        assert!(std::fs::read(path).unwrap() == before, "{name} changed");
+    }
+    let response = app
+        .clone()
+        .oneshot(post("/api/project/open", json!({ "path": "typo.knxdb" })))
+        .await
+        .unwrap();
+    assert!(
+        response.status().is_client_error(),
+        "a mistyped path is the caller's to fix: {}",
+        response.status()
+    );
+    assert!(!dir.path().join("typo.knxdb").exists());
+}

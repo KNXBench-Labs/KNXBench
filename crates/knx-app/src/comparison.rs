@@ -102,7 +102,7 @@ pub fn load_comparison_input(path: &Path) -> Result<ComparisonInput, ComparisonI
 
     match ComparisonInputKind::of_path(path) {
         Some(ComparisonInputKind::NativeStore) => {
-            let connection = knx_store::open_and_migrate(path).map_err(|error| {
+            let connection = knx_store::open_existing_and_migrate(path).map_err(|error| {
                 ComparisonInputError::NativeStore {
                     path: path.to_path_buf(),
                     detail: error.to_string(),

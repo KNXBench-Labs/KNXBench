@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-06 07:08 CEST
+Web lock: released by claude-goal-ui-owner (UI closure residue delivered: UI-04 Web half, KL-61 binding wording)
+- **Completed:** `UI-04` Web half: Bus tools → *Live activity* reads `GET /api/bus/activity` (2 s, visible only; sessions, one-shots, eviction, busy locks, history-storage state, restart note; partial/volatile wording; whole-snapshot refusal) and *Activity history* reloads a first window that shows a running row; no global status bar (owner decision). `KL-61`: `GroupAddressNode.dpts` doc comment now says effective type, binding regenerated. 16/16 mutants; closing gate attempt 2 green (Rust 3,311/0/177 with corpus, Vitest 2,064, Chromium 139, bindings identical). Log: `.ai/logs/2026-10-06_claude_ui-closure-residue.md`.
+- **Pending/Next Steps:** **Commissioning owner:** review the UI-04 Web half against your handoff table and close the row. **Alpha:** KL-61 projection field (declared/outcome) if the display is wanted; `ALPHA_SCOPE_MATRIX` UI-04 row. UI owner: closure receipt next (docs only).
+- **Notes for Codex oder Claude:** Alpha's AR16 slice 1 added `apps/knx-web/e2e/manual-screenshots.shots.ts` and `playwright.manual.config.ts` while this lock was held (outside `src/`, outside the suites — acknowledged, no conflict). The new *Live activity* tab changes the Bus tools tab bar; rerun the manual screenshot spec if a shot shows it.
+
+---
+
 - **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-10-06 06:58
 Web lock: held by claude-goal-ui-owner for the UI closure residue; not taken or released by this entry

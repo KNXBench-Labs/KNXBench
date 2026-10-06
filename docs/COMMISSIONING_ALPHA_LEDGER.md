@@ -187,6 +187,13 @@ copied from `apps/knx-server/src/device_download_routes.rs`.
 | KL-140 | None: no reset UI (accepted boundary). Optional: link the user notice from the commissioning view | — (no HTTP reset route exists; CLI reset fails closed before a tunnel, ADR-0058) | — |
 | UI-04 | Unchanged from the row above: adopt the activity history contract | `GET /api/bus/activity`, `GET /api/bus/history` | As in the UI-04 row |
 
+**UI owner delivery, 2026-10-06.** `KL-142`: delivered in `2f2a6892` (ledger
+`DONE`). `UI-04`: the Web half is delivered — *Live activity* tab for
+`GET /api/bus/activity` and self-refreshing running rows in *Activity history*
+([KNOWN_LIMITATIONS](KNOWN_LIMITATIONS.md#partial-commissioning-bus-activity-snapshot-adr-0055),
+"Web adoption, 2026-10-06"). Closing `UI-04` stays with its owner; native
+acceptance is an accepted boundary by the user decision of 2026-10-04.
+
 ## Owner reconciliation (2026-10-05)
 
 The owner set the status of all 42 rows in the source-ID ledger. The

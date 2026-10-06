@@ -1619,6 +1619,12 @@ export const messages: Record<MessageKey, string> = {
   "quit.discard": "Ohne Speichern beenden",
   "quit.saving": "Speichert…",
   "quit.save": "Speichern und beenden",
+  "replace.title": "Nicht gespeicherte Änderungen",
+  "replace.message": "Das geöffnete Projekt hat nicht gespeicherte Änderungen. Ein anderes Projekt zu öffnen ersetzt es.",
+  "replace.target": "Als Nächstes: {file}",
+  "replace.cancel": "Abbrechen",
+  "replace.discard": "Änderungen verwerfen und öffnen",
+  "replace.save": "Speichern und öffnen",
 
   "autosave.countdown": "Automatisches Speichern in {seconds}s…",
   "autosave.cancel": "Abbrechen",

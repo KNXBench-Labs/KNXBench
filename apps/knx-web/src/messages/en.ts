@@ -1774,6 +1774,13 @@ export const messages = {
   "quit.discard": "Quit without saving",
   "quit.saving": "Saving…",
   "quit.save": "Save and quit",
+  // AR18 F1: opening or importing over unsaved edits.
+  "replace.title": "Unsaved changes",
+  "replace.message": "The open project has changes that are not saved. Opening another project replaces it.",
+  "replace.target": "Next: {file}",
+  "replace.cancel": "Cancel",
+  "replace.discard": "Discard changes and open",
+  "replace.save": "Save and open",
 
   // ISSUE-04's autosave countdown toast and failure notice. `{seconds}`
   // ticks down from `AUTOSAVE_COUNTDOWN_SECONDS`; `cancel` stops this

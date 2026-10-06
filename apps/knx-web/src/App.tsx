@@ -167,7 +167,15 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const knxdbFilter = [{ name: t("app.filterName.knxDesktopProject"), extensions: ["knxdb"] }];
   const [tree, setTree] = useState<ProjectTree | null>(null);
   // AR08: which import is waiting for its project password, and why.
-  const [passwordPrompt, setPasswordPrompt] = useState<{ path: string; reason: ProjectPasswordRefusal } | null>(null);
+  const [passwordPrompt, setPasswordPrompt] = useState<
+    { path: string; reason: ProjectPasswordRefusal; discardChanges: boolean } | null
+  >(null);
+  // AR18 review F1: an open or import that would replace unsaved edits
+  // asks first, like Quit; `discardChanges` reaches the server only from
+  // this dialog's explicit button.
+  const [replaceConfirm, setReplaceConfirm] = useState<{ path: string; kind: "import" | "open" } | null>(null);
+  const [replaceSaving, setReplaceSaving] = useState(false);
+  const loadDiscardRef = useRef(false);
   // Modern responses are ordered within an opaque server lifetime. The set
   // of retired lifetimes prevents a delayed reply from switching the UI back
   // after a restarted server has been accepted. Legacy responses remain in
@@ -733,7 +741,15 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       if (passwordRefusal) {
         setLoadSource(null);
         setLoadSnapshot(null);
-        setPasswordPrompt({ path, reason: passwordRefusal });
+        setPasswordPrompt({ path, reason: passwordRefusal, discardChanges: loadDiscardRef.current });
+        return;
+      }
+      // F1: the server found unsaved edits (one made after this click, or a
+      // client that did not know): the same question as before the click.
+      if (api.isUnsavedProjectConflict(failure)) {
+        setLoadSource(null);
+        setLoadSnapshot(null);
+        setReplaceConfirm({ path, kind });
         return;
       }
       reportError(failure);
@@ -787,14 +803,62 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     if (loadingRef.current) return;
     const path = await pickOpenPath(etsProjectFilter);
     if (!path) return;
-    await runLoad(path, api.importProject, false);
+    await loadOrAsk(path, "import");
   }
 
   async function openNativeProject() {
     if (loadingRef.current) return;
     const path = await pickOpenPath(knxdbFilter);
     if (!path) return;
-    await runLoad(path, api.openProject, true);
+    await loadOrAsk(path, "open");
+  }
+
+  // F1: unsaved edits are never replaced on the way past; the dialog below
+  // decides. The server refuses too, so this check is the courtesy, not
+  // the guard.
+  async function loadOrAsk(path: string, kind: "import" | "open") {
+    if (tree?.is_modified) {
+      setReplaceConfirm({ path, kind });
+      return;
+    }
+    await startLoad(path, kind, false);
+  }
+
+  // `discardChanges` travels only when true, so an ordinary request keeps
+  // its exact shape.
+  async function startLoad(path: string, kind: "import" | "open", discardChanges: boolean) {
+    loadDiscardRef.current = discardChanges;
+    if (kind === "import") {
+      await runLoad(path, (p, clientToken) => (discardChanges
+        ? api.importProject(p, clientToken, undefined, true)
+        : api.importProject(p, clientToken)), false, "import");
+    } else {
+      await runLoad(path, (p, clientToken) => (discardChanges
+        ? api.openProject(p, clientToken, true)
+        : api.openProject(p, clientToken)), true, "open");
+    }
+  }
+
+  async function replaceDiscard() {
+    if (!replaceConfirm) return;
+    const { path, kind } = replaceConfirm;
+    setReplaceConfirm(null);
+    await startLoad(path, kind, true);
+  }
+
+  // Opens only after a save that left the project clean; anything else
+  // keeps the dialog, so nothing is replaced on a guess.
+  async function replaceSaveFirst() {
+    if (!replaceConfirm || replaceSaving) return;
+    const { path, kind } = replaceConfirm;
+    setReplaceSaving(true);
+    try {
+      if (!(await saveProject())) return;
+    } finally {
+      setReplaceSaving(false);
+    }
+    setReplaceConfirm(null);
+    await startLoad(path, kind, false);
   }
 
   // Resolves `true` only when the refreshed snapshot was accepted *and*
@@ -1160,11 +1224,30 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         <ProjectPasswordDialog fileName={fileNameOf(passwordPrompt.path)} reason={passwordPrompt.reason}
           onCancel={() => setPasswordPrompt(null)}
           onSubmit={(password) => {
-            const { path } = passwordPrompt;
+            const { path, discardChanges } = passwordPrompt;
             setPasswordPrompt(null);
-            // The password lives only in this closure for the one retry.
-            void runLoad(path, (p, clientToken) => api.importProject(p, clientToken, password), false, "import");
+            loadDiscardRef.current = discardChanges;
+            // The password lives only in this closure for the one retry; a
+            // discard already confirmed for this import stays confirmed.
+            void runLoad(path, (p, clientToken) => (discardChanges
+              ? api.importProject(p, clientToken, password, true)
+              : api.importProject(p, clientToken, password)), false, "import");
           }} />
+      )}
+      {replaceConfirm && (
+        <Overlay labelledBy="replace-confirm-title" className="quit-confirm replace-confirm" onClose={() => setReplaceConfirm(null)}>
+          <h2 id="replace-confirm-title">{t("replace.title")}</h2>
+          <p>{t("replace.message")}</p>
+          <p className="quit-confirm-hint">{t("replace.target", { file: fileNameOf(replaceConfirm.path) })}</p>
+          {/* Cancel first, as in the quit dialog: the safe answer gets focus. */}
+          <footer className="quit-confirm-footer">
+            <button type="button" onClick={() => setReplaceConfirm(null)}>{t("replace.cancel")}</button>
+            <button type="button" className="quit-confirm-discard" disabled={replaceSaving} onClick={() => void replaceDiscard()}>{t("replace.discard")}</button>
+            <button type="button" className="primary-action quit-confirm-save" disabled={replaceSaving} onClick={() => void replaceSaveFirst()}>
+              {replaceSaving ? t("quit.saving") : t("replace.save")}
+            </button>
+          </footer>
+        </Overlay>
       )}
       {tree && searchOpen && (
         <Search tree={tree} onSelect={selectSearchResult} onClose={() => setSearchOpen(false)} />

@@ -560,6 +560,11 @@ pub(crate) struct PathBody {
     /// deserialize.
     #[serde(default, rename = "clientToken")]
     pub(crate) client_token: Option<String>,
+    /// Read only by `open_native_project`: the caller's explicit "yes,
+    /// throw away the edits I have not saved" (AR18 review F1); absent
+    /// means `false`, so the default refuses.
+    #[serde(default, rename = "discardChanges")]
+    pub(crate) discard_changes: bool,
 }
 
 /// The `LoadSnapshot` on the wire. Hand-written rather than derived on
@@ -681,6 +686,9 @@ async fn tracked_load(
     .map_err(|e| ApiError::internal(format!("the load task did not finish: {e}")))?
     .map(Json)
     .map_err(|failure| match failure.kind {
+        Some(domain::UNSAVED_CHANGES) => {
+            ApiError::conflict(domain::UNSAVED_CHANGES, failure.message)
+        }
         Some(kind) => ApiError::refused(kind, failure.message),
         None => ApiError::internal(failure.message),
     })
@@ -698,6 +706,9 @@ struct ImportBody {
     client_token: Option<String>,
     #[serde(default)]
     password: Option<String>,
+    /// See [`PathBody::discard_changes`].
+    #[serde(default, rename = "discardChanges")]
+    discard_changes: bool,
 }
 
 async fn import_project(
@@ -709,13 +720,20 @@ async fn import_project(
         .password
         .filter(|password| !password.is_empty())
         .map(knx_etsproj::ProjectPassword::new);
+    let discard_changes = body.discard_changes;
     tracked_load(
         state,
         crate::LoadKind::Import,
         path,
         body.client_token,
         move |state, path, handle| {
-            domain::open_project_with_password(state, path, password.as_ref(), handle)
+            domain::open_project_with_password(
+                state,
+                path,
+                password.as_ref(),
+                discard_changes,
+                handle,
+            )
         },
     )
     .await
@@ -825,13 +843,14 @@ async fn open_native_project(
     Json(body): Json<PathBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let path = resolve_project_path(&state.data_dir, &body.path)?;
+    let discard_changes = body.discard_changes;
     tracked_load(
         state,
         crate::LoadKind::Open,
         path,
         body.client_token,
-        |state, path, handle| {
-            domain::open_native_project(state, path, handle).map_err(domain::LoadFailure::from)
+        move |state, path, handle| {
+            domain::open_native_project(state, path, discard_changes, handle)
         },
     )
     .await

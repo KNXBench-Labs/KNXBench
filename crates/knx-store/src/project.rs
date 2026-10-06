@@ -207,7 +207,7 @@ fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(), StoreErr
         ],
     )?;
 
-    upsert_string_table(&tx, &project.strings)?;
+    upsert_string_table(tx, &project.strings)?;
 
     // `Devices` is an independent map: a `DeviceInstance` can live there
     // without any `Line::devices`/`Topology::unassigned` list naming it, and
@@ -218,16 +218,16 @@ fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(), StoreErr
     let mut written_devices: BTreeSet<DeviceId> = BTreeSet::new();
 
     for installation in &project.installations {
-        upsert_installation_row(&tx, installation)?;
+        upsert_installation_row(tx, installation)?;
 
         for (i, area) in installation.topology.areas.iter().enumerate() {
-            upsert_area(&tx, installation.id, i as i64, area)?;
+            upsert_area(tx, installation.id, i as i64, area)?;
             for (j, line_id) in area.lines.iter().enumerate() {
                 let line = installation
                     .topology
                     .line(*line_id)
                     .expect("Area::lines only ever names lines that exist in this Topology");
-                upsert_line(&tx, area.id, j as i64, line)?;
+                upsert_line(tx, area.id, j as i64, line)?;
             }
         }
 
@@ -241,8 +241,8 @@ fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(), StoreErr
                     .devices
                     .get(*device_id)
                     .expect("Line::devices only ever names devices that exist in Devices");
-                upsert_device(&tx, installation.id, i as i64, device)?;
-                set_device_line(&tx, *device_id, Some(line.id), i as i64)?;
+                upsert_device(tx, installation.id, i as i64, device)?;
+                set_device_line(tx, *device_id, Some(line.id), i as i64)?;
                 written_devices.insert(*device_id);
             }
         }
@@ -251,25 +251,25 @@ fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(), StoreErr
                 .devices
                 .get(*device_id)
                 .expect("Topology::unassigned only ever names devices that exist in Devices");
-            upsert_device(&tx, installation.id, i as i64, device)?;
-            set_device_line(&tx, *device_id, None, i as i64)?;
+            upsert_device(tx, installation.id, i as i64, device)?;
+            set_device_line(tx, *device_id, None, i as i64)?;
             written_devices.insert(*device_id);
         }
 
         for (i, flat_position, part) in flatten_buildings(&installation.buildings) {
-            upsert_building_part(&tx, installation.id, i, flat_position, part)?;
+            upsert_building_part(tx, installation.id, i, flat_position, part)?;
         }
 
         for (i, flat_position, range) in flatten_ranges(&installation.group_ranges) {
-            upsert_group_range(&tx, installation.id, i, flat_position, range)?;
+            upsert_group_range(tx, installation.id, i, flat_position, range)?;
         }
 
         for (i, entry) in installation.group_addresses.iter().enumerate() {
-            upsert_group_address(&tx, installation.id, i as i64, entry)?;
+            upsert_group_address(tx, installation.id, i as i64, entry)?;
         }
 
         for (i, p) in installation.parameters.iter().enumerate() {
-            upsert_parameter_instance(&tx, i as i64, p)?;
+            upsert_parameter_instance(tx, i as i64, p)?;
         }
     }
 
@@ -295,10 +295,10 @@ fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(), StoreErr
                 .devices
                 .com_object(*com_id)
                 .expect("DeviceInstance::com_objects only ever names existing com objects");
-            upsert_com_object_instance(&tx, device.id, j as i64, com)?;
-            upsert_group_links(&tx, com.id, &com.links)?;
+            upsert_com_object_instance(tx, device.id, j as i64, com)?;
+            upsert_group_links(tx, com.id, &com.links)?;
             if let Some(defaults) = project.devices.program_defaults(com.id) {
-                upsert_com_object_program_defaults(&tx, com.id, defaults)?;
+                upsert_com_object_program_defaults(tx, com.id, defaults)?;
             }
             written_com_objects.insert(com.id);
         }
@@ -327,7 +327,7 @@ fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(), StoreErr
             .filter(|m| m.device == device.id)
             .enumerate()
         {
-            upsert_module_instance(&tx, position as i64, module_instance)?;
+            upsert_module_instance(tx, position as i64, module_instance)?;
         }
     }
 

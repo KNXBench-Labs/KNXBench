@@ -1,3 +1,15 @@
+- **Last Agent:** Claude (fresh AR18 re-check round-3 reviewer, not the alpha owner)
+- **Timestamp:** 2026-10-06 23:05 CEST
+- **Completed:** Independent re-check round 3 on `8a79791b` (product code = `754a66dd`), done as `docs/review/AR18_RECHECK_BRIEF.md#round-3-n7n10` describes. Verdict **READY_WITH_CONDITIONS** in `docs/review/2026-10-06-alpha-recheck-round3.md`, on branch `review/alpha-recheck-3` (the brief's name), with `review/alpha-recheck` (the name the user gave) pointing at the same commit. Not merged.
+  - Gates reproduced green offline: Rust 3367/0/178 in 192 blocks, Vitest 2076, Chromium 142, xtask ×5, deny, npm audit 0, check-appimage, corpus 143/143 in 31 targets. AppImage SHA-256 matches, stamp `754a66dd`, renders alpha.4 offline.
+  - Fixed: N7 as specified (every round-2 archive refused, outer and nested), N8 (missing import → 422, F1 holds over a real edit), N9 for names (also with a data descriptor), N10 (one stale line left → N13). N6 unchanged, should not block. No real project or product package refused (3 `.knxproj`, 3 via `products ingest`, 103 `.knxprod`; 126 ETS directory records import).
+  - IMPORTANT residual **N11**: only the local *name* is compared with the central record. A record whose central sizes/CRC are 0 hides its local bytes; with a Unicode Path to a directory or another file, the real `0.xml` vanishes and a forged member becomes `0.xml` (exit 0; `200` in the AppImage; with or without `0x08`; nested too). The product reader refuses it. MINOR: N12 (a deflated empty directory, as Java tools write, is refused), N13 (`ALPHA_CANDIDATE.md:119` still says 500).
+  - Log: `.ai/logs/2026-10-06_claude_ar18-recheck-round3.md`.
+- **Pending/Next Steps:** The alpha owner fixes R6 (`crates/knx-etsproj/src/container.rs` `check_decoded_names`: compare flags, method, CRC, sizes — zeros plus matching descriptor for bit 3 — and the local/central Unicode Path, like `crates/knx-productdb/src/package.rs:1088-1127`), or the user accepts it and qualifies §159. Then R7: regate and rebuild the AppImage. Corpus structural census: 0 of 1,517 real records disagree, so R6 refuses nothing real.
+- **Notes for Codex oder Claude:** No product code was changed. Real ETS nested payloads carry Info-ZIP Unicode Path fields (2 records in the corpus, both headers, consistent). `zip`'s `is_dir()` also treats a trailing `\` as a directory; the clash check trims only `/`.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 22:15 CEST
 - **Completed:** Merged re-check round 2 (`a6aa0063`, READY_WITH_CONDITIONS) and fixed R4 (N7) plus N8–N10: `901933a1` (directory records with data / named like files, local-vs-central names refused), `a16141c6` (missing import file → 422), `754a66dd` (three tests that pinned 500). Gate on `754a66dd` green: Rust 3367/0/178, Vitest 2076, Chromium 142, corpus 143/143, AppImage SHA-256 37015eb6…2a58 (evidence `ar18-round2-fixes-20261006`). ALPHA_FINAL_GATES §10; brief round 3.

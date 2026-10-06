@@ -85,7 +85,7 @@ unshare --user --map-root-user --net sh -c 'ip link set lo up && exec "$@"' sh \
 **When it must run:** on every release candidate (part of the
 [final gates](ALPHA_FINAL_GATES.md)), and before merging a change to import,
 storage, enrichment, the server's project routes or device download. The
-2026-10-06 selection was 142 tests in 31 targets (`--list`).
+2026-10-06 selection was 143 tests in 31 targets (`--list`).
 
 ## Release build provenance
 

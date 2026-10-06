@@ -8065,6 +8065,33 @@ the project if an older KNXBench must open it again. Current-schema files are
 not rewritten by read-only commands (measured: `knx diff` leaves both files
 byte-identical). Ledger row `KL-157`.
 
+**Update 2026-10-06 (AR18 review M1/M2): what is *not* upgraded any more.**
+Readers — GUI *Open*, `knx doc-export`, `knx ga-export`, `knx diff`, the
+device comparison and the `--serial` lookup — now open through
+`open_existing_and_migrate`. It refuses these files untouched, before any
+migration:
+- a missing path (nothing is created there);
+- an SQLite file without KNXBench's `created_by = knx-store` marker (no
+  more 22 foreign tables);
+- a KNXBench file that holds no saved project.
+
+The server answers `422` with kind `projectNotOpenable` instead of `500`.
+`knx import --store` imports into memory first, so a failed import neither
+creates nor upgrades the store. Save and Save As write the project, the
+retained original files and the manufacturer list in one transaction.
+
+What remains: an older KNXBench file *with* a saved project is still
+upgraded in place when it is opened.
+
+Evidence: `crates/knx-store/tests/store_integrity.rs` (9 tests), the CLI
+tests `a_failed_import_creates_no_store_file`,
+`a_failed_replace_leaves_the_existing_store_byte_identical`,
+`readers_never_create_a_file_at_a_mistyped_path` and
+`readers_leave_a_foreign_sqlite_file_untouched`, and the route test
+`opening_a_file_that_holds_no_knxbench_project_is_refused_untouched`.
+Each guard is backed by a killed mutant
+([ALPHA_FINAL_GATES §8](ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
+
 ## 158. The AppImage starts only with an X server
 
 **Limitation.** The Linux AppImage runs its window through X11 only. The GTK

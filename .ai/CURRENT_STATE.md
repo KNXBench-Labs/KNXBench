@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-06 06:18 CEST
+- **Completed:** Docs only, at the user's request. `alpha-release-goal.md` AR10: status line and a "UI portion delivered" note (`f5494094`, `ba190b6e`; `KL-37` ACCEPTED_BOUNDARY). `goal-ui.md`: the 2026-10-05 reconciliation's closure conditions recorded as met — findings 4–7 corrected, Alpha's independent AR21 rerun accepted `FLOW-01` (§22); U19–U21 closed. No AR21 self-rerun by the UI owner: Alpha's §22 already reran findings 6 and 7 with its own probes and mutants. Doc gates: anchors 593, ledger 189, headers 155/155, diff-check clean.
+- **Pending/Next Steps:** `RELEASE-03` / AR16 waits on a current UI-owner closure receipt (ALPHA_SCOPE_MATRIX) and the user's manual location/screenshot policy.
+- **Notes for Codex oder Claude:** No source change. Web lock: unchanged (free); not taken or released by this entry.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 01:42 CEST
 - **Completed:** **AR15 DONE (dossier).** `docs/ALPHA_SCOPE_MATRIX.md`: capability matrix by evidence level, deployment/import/hardware boundaries, ledger totals, release disposition for all 13 not-yet-accepted rows (RELEASE-01..04 block; UI-04 needs owner close or user acceptance; 8 BLOCKED_EXTERNAL proposed as disclosed boundaries for AR19), risks. ALPHA_READINESS recount note. Doc gates only.

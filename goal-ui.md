@@ -36,6 +36,14 @@ Do not duplicate its active package or treat checked implementation boxes as
 final acceptance. Closure still requires the findings to be fixed, the new
 receipt reviewed, green integrated gates and a released lock (§4).
 
+**Update 2026-10-06:** those conditions are met. The owner corrected AR21
+findings 4–7 (`0d5da787`, `104916d6`, `6fa10eb8`); Alpha reran each one
+independently, and AR21 accepted `FLOW-01` for the Alpha on its recorded
+envelope (motion for small/medium maps, Motion Off for several hundred nodes
+or the §7 load, Chromium only) in
+[TELEGRAM_FLOW_VISUALIZATION §22](docs/TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05).
+U19–U21 are closed. The Web lock is free.
+
 ---
 
 ### Theme-pack extension (user request, 2026-10-02)
@@ -633,9 +641,10 @@ classes, 30 fps cap, production load figures in
 docs/design/2026-10-04-telegram-flow-u21/). AR21 corrections `595d8d2e`:
 local per-node reheat, hub separation, §7-load envelope
 (TELEGRAM_FLOW_VISUALIZATION §13, §14); the AR21 rerun (§15) closed those and
-returned finding 4, corrected in the delivering commit of 2026-10-05 (each
-telegram counted once in the reduced-rendering note, §16); awaiting the next
-AR21 rerun. Rules: TELEGRAM_FLOW_VISUALIZATION §12, §14, §16; residue: KNOWN_LIMITATIONS §154 (one path
+returned finding 4, corrected in `0d5da787` (each telegram counted once in
+the reduced-rendering note, §16); findings 5 (`104916d6`, §18) and 6–7
+(`6fa10eb8`, §21) followed, and **AR21 accepted `FLOW-01` on 2026-10-05**
+(§22, Alpha's independent rerun). Rules: TELEGRAM_FLOW_VISUALIZATION §12, §14, §16; residue: KNOWN_LIMITATIONS §154 (one path
 per pair, one machine measured, §7 load saturates motion, no WebKitGTK/Orca). Dependency: U20. Keep data admission independent of solver/rendering.
 
 - [x] Add event-triggered directional traveling pulses, opposite-direction

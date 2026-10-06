@@ -2780,6 +2780,10 @@ fn run_device_restore(args: &[String]) -> ExitCode {
             Err(e) => {
                 eprintln!("could not connect to {gateway}: {e}");
                 println!("written to the device: no");
+                // As for a download (AR18 re-check N3): failed, nothing written.
+                if let Err(error) = activity.record_never_connected() {
+                    eprintln!("activity history could not record the failed connection: {error}");
+                }
                 return ExitCode::FAILURE;
             }
         };

@@ -1,5 +1,27 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — The reviewer's four conditions, met in code rather than waived
+
+- Independent AR18 review: `READY_WITH_CONDITIONS`, with no CRITICAL
+  finding; four IMPORTANT ones
+  ([verdict](review/2026-10-06-alpha-independent-review.md)).
+- F1: Open and Import refuse to replace unsaved edits. The server answers
+  `409` with kind `projectUnsavedChanges` and checks twice; the web asks
+  *Cancel / Discard changes and open / Save and open*.
+- F2: duplicate or case-colliding archive members are refused by name, also
+  inside a protected project's payload.
+- F3: members are read only up to their declared size, with at most 512 MiB
+  per archive (KNOWN_LIMITATIONS §159).
+- F4: `knx import --store` refuses an existing file unless `--replace` is
+  given.
+- M4 (stray backslash in the wrong-password message) and M5 (limitation
+  counts) are fixed.
+- 16 of 16 mutants were killed. Gate on `64badb99`: Rust 3331/0/177, Vitest
+  2076, Chromium 139, corpus 142/0. AppImage rebuilt
+  ([ALPHA_FINAL_GATES §7](ALPHA_FINAL_GATES.md#7-ar18-conditions-c1c5-fixed-and-re-gated)).
+- Next: the independent re-check of the fixes
+  ([brief](review/AR18_RECHECK_BRIEF.md)).
+
 ## 2026-10-06 — The last red corpus pair turns green, and UI-04 gets its signature
 
 - `http_device_compare` harness: built on `AppState::new(dir)` like the

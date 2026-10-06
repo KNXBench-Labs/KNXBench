@@ -1018,11 +1018,20 @@ build paths remapped, offline start ok, private corpus 140/2 (the known stale
 `http_device_compare` harness, commissioning owner). The review brief is
 [docs/review/AR18_REVIEW_BRIEF.md](docs/review/AR18_REVIEW_BRIEF.md). By user
 decision the corpus pair was fixed in its test harness (142/142) and `UI-04`
-was accepted as a disclosed boundary. Open: the independent review.
+was accepted as a disclosed boundary. **Independent review 2026-10-06:**
+`READY_WITH_CONDITIONS`
+([verdict](docs/review/2026-10-06-alpha-independent-review.md)), four IMPORTANT
+findings F1–F4. All four were fixed by the release owner (`7e606e55`,
+`55badf3c`, `94bdd7bd`, `64badb99`). The full gate on `64badb99` is green:
+Rust 3331/0/177, Vitest 2076, Chromium 139, corpus 142/0, AppImage with the
+build paths remapped
+([ALPHA_FINAL_GATES §7](docs/ALPHA_FINAL_GATES.md#7-ar18-conditions-c1c5-fixed-and-re-gated)).
+Open: the independent re-check of the fixes
+([brief](docs/review/AR18_RECHECK_BRIEF.md)), then the ready/not-ready record.
 
 - [x] Freeze the complete integrated candidate and artifact provenance. All actionable alpha-owned items are delivered, or their release exceptions have explicit user acceptance. Merely logging a blocker is not permission to call the alpha ready.
-- [ ] Run all explicit gates in §5 on that exact integrated revision, including private corpus cases that cover affected behavior; verify target, counts, changed-crate compilation and no silent skips.
-- [ ] Obtain the separately chosen **independent whole-product** source/test/artifact review. U13's independent UI review is necessary but not a substitute for this review. Do not use a forbidden subagent or count an unavailable reviewer invocation/self-review as a verdict; obtain the user's reviewer/result decision if necessary.
+- [x] Run all explicit gates in §5 on that exact integrated revision, including private corpus cases that cover affected behavior; verify target, counts, changed-crate compilation and no silent skips.
+- [x] Obtain the separately chosen **independent whole-product** source/test/artifact review. U13's independent UI review is necessary but not a substitute for this review. Do not use a forbidden subagent or count an unavailable reviewer invocation/self-review as a verdict; obtain the user's reviewer/result decision if necessary.
 - [ ] Fix blocking findings in the owning track, integrate their receipts and rerun affected/full final gates and review as required. A reviewed old candidate is not evidence for a new candidate.
 - [ ] Record ready/not-ready, accepted remaining boundaries, test counts, exact revision/artifact and review verdict. If only an external gate remains, stop with its precise owner/unblock action.
 

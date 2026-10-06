@@ -42,6 +42,14 @@ use zip::{CompressionMethod, ZipArchive};
 /// (RESEARCH). 64 MB leaves ample headroom for a legitimate project.
 const MAX_ENTRY_SIZE: u64 = 64 * 1024 * 1024;
 
+/// The most uncompressed bytes one archive may declare across all its
+/// members (AR18 review F3). Every member is read with at most its declared
+/// size, so this bounds what an import holds in memory from the archive.
+/// The reference projects declare at most 22 MiB in total; 512 MiB leaves
+/// room for large real projects while keeping a crafted archive of a few
+/// megabytes from driving the process to gigabytes.
+pub const MAX_ARCHIVE_UNCOMPRESSED: u64 = 512 * 1024 * 1024;
+
 /// The on-disk compression-method value APPNOTE §4.4.5 reserves to mean
 /// "see the WinZip AES extra field (0x9901) for the entry's real method".
 /// `zip` calls this `CompressionMethod::Unsupported(99)` internally but,
@@ -137,6 +145,12 @@ pub enum ContainerError {
     DuplicateEntry {
         path: String,
     },
+    /// The members together declare more uncompressed bytes than
+    /// [`MAX_ARCHIVE_UNCOMPRESSED`] (AR18 review F3).
+    TooLarge {
+        total: u64,
+        limit: u64,
+    },
 }
 
 /// Which encryption scheme a nested payload turned out to be protected
@@ -179,7 +193,7 @@ impl std::fmt::Display for ContainerError {
             ),
             ContainerError::WrongPassword { nested_entry } => write!(
                 f,
-                "wrong password for password-protected project (nested payload {nested_entry}); \\
+                "wrong password for password-protected project (nested payload {nested_entry}); \
                  a damaged encrypted entry is reported the same way"
             ),
             ContainerError::UnsupportedEncryption {
@@ -193,6 +207,11 @@ impl std::fmt::Display for ContainerError {
             ContainerError::DuplicateEntry { path } => {
                 write!(f, "duplicate entry path across the container: {path}")
             }
+            ContainerError::TooLarge { total, limit } => write!(
+                f,
+                "the archive declares {total} uncompressed bytes, more than the \
+                 {limit}-byte limit"
+            ),
         }
     }
 }
@@ -259,13 +278,8 @@ impl Container {
                     path: nested_info.path.clone(),
                     cause: e.to_string(),
                 })?;
-        let mut payload_bytes = Vec::with_capacity(payload.size() as usize);
-        payload
-            .read_to_end(&mut payload_bytes)
-            .map_err(|e| ContainerError::Read {
-                path: nested_info.path.clone(),
-                cause: e.to_string(),
-            })?;
+        let payload_size = payload.size();
+        let payload_bytes = read_declared(&mut payload, payload_size, nested_info.path.clone())?;
         drop(payload);
 
         // Borrows `payload_bytes` rather than consuming it, so the raw
@@ -473,6 +487,7 @@ impl Container {
         if !container.decrypted.is_empty() {
             container.decrypted_from = Some(nested);
         }
+        check_total_size(&container.entries)?;
         Ok(container)
     }
 
@@ -481,6 +496,14 @@ impl Container {
     /// do about a password-protected nested payload — that decision is
     /// each caller's alone.
     fn open_raw(bytes: Vec<u8>) -> Result<Self, ContainerError> {
+        // Names are checked on the raw central directory first: the `zip`
+        // crate keys members by name, so an exact duplicate is already
+        // collapsed into one slot by the time its index can be asked.
+        {
+            let probe = ZipArchive::new(Cursor::new(bytes.as_slice()))
+                .map_err(|e| ContainerError::NotAZip(e.to_string()))?;
+            check_member_names(&bytes, probe.central_directory_start())?;
+        }
         let mut archive = ZipArchive::new(Cursor::new(bytes))
             .map_err(|e| ContainerError::NotAZip(e.to_string()))?;
 
@@ -497,6 +520,7 @@ impl Container {
                 size: entry.size(),
             });
         }
+        check_total_size(&entries)?;
 
         Ok(Self {
             archive,
@@ -568,14 +592,8 @@ impl Container {
                 path: real_path.clone(),
                 cause: e.to_string(),
             })?;
-        let mut buf = Vec::with_capacity(entry.size() as usize);
-        entry
-            .read_to_end(&mut buf)
-            .map_err(|e| ContainerError::Read {
-                path: real_path,
-                cause: e.to_string(),
-            })?;
-        Ok(buf)
+        let declared = entry.size();
+        read_declared(&mut entry, declared, real_path)
     }
 
     /// Case-insensitive over the inventory; `Project.xml` and `project.xml`
@@ -598,6 +616,81 @@ impl Container {
                 .filter(|stem| stem.starts_with("P-"))
         })
     }
+}
+
+/// Reads one member, never more than its `declared` uncompressed size (AR18
+/// review F3). The `zip` reader checks a deflated member's CRC-32 but not
+/// its length, so a member whose headers declare 100 bytes could otherwise
+/// inflate to gigabytes; one byte past the declaration is read only to
+/// tell "exactly as declared" from "more".
+fn read_declared(
+    entry: &mut impl Read,
+    declared: u64,
+    path: String,
+) -> Result<Vec<u8>, ContainerError> {
+    let mut buf = Vec::with_capacity(declared.min(MAX_ENTRY_SIZE) as usize);
+    entry
+        .take(declared.saturating_add(1))
+        .read_to_end(&mut buf)
+        .map_err(|e| ContainerError::Read {
+            path: path.clone(),
+            cause: e.to_string(),
+        })?;
+    if buf.len() as u64 > declared {
+        return Err(ContainerError::Read {
+            path,
+            cause: format!("inflated to more than the declared {declared} bytes"),
+        });
+    }
+    Ok(buf)
+}
+
+/// Refuses an archive whose members together declare more than
+/// [`MAX_ARCHIVE_UNCOMPRESSED`] bytes (AR18 review F3).
+fn check_total_size(entries: &[EntryInfo]) -> Result<(), ContainerError> {
+    let total = entries
+        .iter()
+        .fold(0u64, |sum, entry| sum.saturating_add(entry.size));
+    if total > MAX_ARCHIVE_UNCOMPRESSED {
+        return Err(ContainerError::TooLarge {
+            total,
+            limit: MAX_ARCHIVE_UNCOMPRESSED,
+        });
+    }
+    Ok(())
+}
+
+/// Walks the central directory at `start` record by record and refuses a
+/// second file member with the same name, byte for byte or ignoring ASCII
+/// case (AR18 review F2). Lookups here are case-insensitive (`find`), so
+/// either kind of repeat would let one member's bytes stand in for the
+/// other's without a word. Directory records carry no data and are skipped.
+fn check_member_names(bytes: &[u8], start: u64) -> Result<(), ContainerError> {
+    const RECORD: usize = 46;
+    let field = |at: usize| -> Option<usize> {
+        bytes
+            .get(at..at + 2)
+            .map(|b| u16::from_le_bytes([b[0], b[1]]) as usize)
+    };
+    let mut seen = std::collections::HashSet::new();
+    let mut at = usize::try_from(start).unwrap_or(usize::MAX);
+    while bytes.get(at..at + 4) == Some(b"PK\x01\x02".as_slice()) {
+        let (Some(name_len), Some(extra_len), Some(comment_len)) =
+            (field(at + 28), field(at + 30), field(at + 32))
+        else {
+            break;
+        };
+        let Some(name) = bytes.get(at + RECORD..at + RECORD + name_len) else {
+            break;
+        };
+        if !name.ends_with(b"/") && !seen.insert(name.to_ascii_lowercase()) {
+            return Err(ContainerError::DuplicateEntry {
+                path: String::from_utf8_lossy(name).into_owned(),
+            });
+        }
+        at += RECORD + name_len + extra_len + comment_len;
+    }
+    Ok(())
 }
 
 /// Decompresses one nested-payload entry's bytes, called from

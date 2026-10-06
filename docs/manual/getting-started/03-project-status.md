@@ -17,8 +17,8 @@ publish a release AppImage exists but has never been run.
 
 **KNXBench is Alpha software.** Concretely:
 
-- As of 2026-10-06, `docs/KNOWN_LIMITATIONS.md` has 120 numbered headings,
-  including eleven resolved or signpost entries. Of the 109 residual
+- As of 2026-10-06, `docs/KNOWN_LIMITATIONS.md` has 121 numbered headings,
+  including eleven resolved or signpost entries. Of the 110 residual
   boundaries, five are K1 (critical); the
   [detailed triage](../../LIMITATION_TRIAGE.md) is the authority, not a count of
   headings interpreted as defects.

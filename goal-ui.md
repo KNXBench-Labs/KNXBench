@@ -44,6 +44,13 @@ or the §7 load, Chromium only) in
 [TELEGRAM_FLOW_VISUALIZATION §22](docs/TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05).
 U19–U21 are closed. The Web lock is free.
 
+**Closure, 2026-10-06:** every §4 condition is met; the owner's receipt is
+[UI_ALPHA_READINESS — UI owner closure receipt](docs/UI_ALPHA_READINESS.md#ui-owner-closure-receipt--2026-10-06).
+Its closing review found two Web halves still handed to this owner — `UI-04`'s
+live activity and `KL-61`'s binding wording — delivered in `892b9948` before
+the closing gate. Self-review, not an independent verdict: AR16 verifies the
+receipt and AR18 reviews the whole product. No package of this goal is open.
+
 ---
 
 ### Theme-pack extension (user request, 2026-10-02)

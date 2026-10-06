@@ -22,7 +22,10 @@ fictional "Sample house" from `tools/manual_sample_project.py` (manufacturer
 `M-7FF0` "Example Devices (fictional)", 8 devices, 15 group addresses, 39
 communication objects); three unit tests pin its content and determinism. The
 run is `apps/knx-web/e2e/manual-screenshots.shots.ts` with
-`playwright.manual.config.ts`; the regeneration recipe is in
+`playwright.manual.config.ts`. After the UI owner's *Live activity* tab
+(`892b9948`) the spec ran again on the merged tree (debug server, same
+frontend build steps): only the bus-monitor picture changed and was replaced.
+The regeneration recipe is in
 [Contributing](manual/development/01-contributing.md#screenshots-in-this-manual).
 
 Not shown, by design: any live KNX bus, gateway or device (the bus-monitor
@@ -33,7 +36,7 @@ and any theme other than Porcelain.
 
 | # | Check | Result |
 | --- | --- | --- |
-| 1 | UI owner's closure | **Open.** `goal-ui.md`: U0–U13 done, U14–U18 delivered, U19–U21 closed with AR21's acceptance (`4459e310`). At 06:39 the owner's closing review reopened two Web residues (`UI-04` live activity, the `KL-61` binding wording) and took the Web lock; the closure receipt follows them. Named verification gaps: native WebKitGTK and real screen-reader checks. |
+| 1 | UI owner's closure | Done. Receipt [`84bc32c3`](UI_ALPHA_READINESS.md#ui-owner-closure-receipt--2026-10-06) after the two residues (`UI-04` Web half, `KL-61` wording) shipped in `892b9948`. Checked independently of the receipt's text: 26 UI ledger rows = 15 `DONE`, 10 `ACCEPTED_BOUNDARY`, 1 `LATER`; issue plan 68 ticked, 0 open; the regenerated `GroupAddressNode` binding on `origin/main` says *effective* type. The receipt is the owner's self-review; AR18 reviews independently. The new *Live activity* tab made the bus-monitor screenshot stale; it was re-shot. |
 | 2 | Location and screenshot policy | Recorded above. |
 | 3 | Every screenshot reference (26 places in README and 10 manual chapters) | Picture replaced; each alt text and its surrounding sentence re-read against the new picture and corrected. |
 | 4 | Claims found stale while doing 3 | Fixed: the bus monitor's button is **Search**, not "Discover gateways" (7 places); the start-up gateway search is now stated; the welcome screen has three cards (New project…, Open KNXBench project, Import ETS project); help has eleven topics; the catalog row shows `name (number) — description`; the Parameters example has no modules. |
@@ -85,6 +88,14 @@ theory; only their statements about KNXBench were checked.
 
 ## Acceptance
 
-Not yet accepted. Rows 2–6 are done; row 1 (the UI owner's closure receipt) is open. Acceptance needs row 6
-and stays with the release owner at AR18, and with the user for anything that
-remains an exception at AR19.
+**Accepted 2026-10-06 by the Alpha release owner**, at the scope above: the
+manual on GitHub, with screenshots of the finished application and fictional
+data, describes what the application does on `origin/main` today.
+
+Exceptions the manual states and that only the user can accept (AR19): native
+WebKitGTK/Tauri workflows, real screen readers, native file choosers, real
+multicast discovery, a dead web view and any live KNX bus are not shown or
+verified by these pictures (the UI owner's accepted boundaries of 2026-10-04);
+screenshots show only the Porcelain theme in English; the KNX-basics chapters
+were checked only for their statements about KNXBench. AR18's independent
+review may still reopen any line.

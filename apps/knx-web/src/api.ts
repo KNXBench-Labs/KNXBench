@@ -8,6 +8,7 @@ import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { DocumentationOptions } from "./documentationOptions";
 import { notifySessionExpired } from "./session";
 import { admitHistoryPage, assertHistoryBounds, HistoryContractError, type HistoryPage } from "./activityHistory";
+import { admitActivitySnapshot, type ActivitySnapshot } from "./liveActivity";
 import { parseFlowSnapshot, type FlowSnapshot } from "./flowWire";
 
 /**
@@ -18,6 +19,16 @@ import { parseFlowSnapshot, type FlowSnapshot } from "./flowWire";
  * on the desktop shell would conjure one out of nothing.
  */
 const AUTH_PATH_PREFIX = "/api/auth/";
+
+/** UI-04: the partial, volatile live snapshot (ADR-0055); read-only, never waits on a bus lock. */
+export async function busActivity(): Promise<ActivitySnapshot> {
+  try {
+    return admitActivitySnapshot(await request("/api/bus/activity"));
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new HistoryContractError("malformed");
+    throw error;
+  }
+}
 
 /** Read-only history: no tunnel, retry, restore or bus command is requested. */
 export async function activityHistory(after = 0, limit = 50): Promise<HistoryPage> {

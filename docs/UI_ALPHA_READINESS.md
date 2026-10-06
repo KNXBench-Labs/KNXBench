@@ -1,5 +1,106 @@
 # UI alpha-readiness owner audit and follow-ups
 
+## UI owner closure receipt — 2026-10-06
+
+Owner: the Claude `goal-ui.md` owner session. Asked for by the user for
+`RELEASE-03` / AR16 ([ALPHA_SCOPE_MATRIX](ALPHA_SCOPE_MATRIX.md)). This is the
+owner's own receipt, **not an independent review**: AR16 verifies it and
+AR18 reviews the whole product independently. It is not an alpha tag or a
+release claim.
+
+**Candidate.** `origin/main` at `1f4aca11` plus the residue package
+`892b9948` (UI-04 Web half, KL-61 binding wording), gated as one tree before
+publication; this receipt follows as a docs-only commit.
+
+### Completion condition (`goal-ui.md` §4)
+
+| Condition | State | Evidence |
+| --- | --- | --- |
+| U0–U13 done | Met | U13 receipt `dfa0cc79` (independent GPT-6.1-Sol review, findings fixed); [owner status history](#owner-status-history) |
+| Issue-plan checkboxes | Met | [Issue plan](superpowers/plans/2026-09-21-user-reported-issues.md): 68 ticked, 0 open |
+| U14–U18 | Met, one user-approved change | U18 `1964fd6b`; the user's 2026-10-05 request replaced U17's preview with one dropdown and retired two palettes ([ADR-0079](adr/0079-theme-choice-is-one-dropdown.md), `03609b60`) |
+| U19–U21 and AR21 hand-off | Met | AR21 accepted `FLOW-01` after Alpha's independent reruns of findings 1–7 ([TELEGRAM_FLOW_VISUALIZATION §22](TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05)) |
+| §2.5 gates green on the merged result | Met | Closing gate below |
+| Closing review, findings fixed | Met (self-review) | Below; two findings fixed in `892b9948` |
+| Web lock released | Met | Released in `892b9948`'s handover entry |
+
+### Delivered since the U18 receipt
+
+UA1–UA8 web halves (`596697a6`, `45e1299f`, `c6da3c78`, `0dd9add8`,
+`e4737129`, `efe7fb53`, `bd2e5a3a`, `9bc36499`, `0438abed`, `ab1b87b7`);
+U19–U21 (`51a6004e`, `4525c36e`, `dc298b78`, `9d432d17`, `fb40a99a`) with the
+AR21 corrections (`595d8d2e`, `0d5da787`, `104916d6`, `6fa10eb8`); user
+requests: sidebar splitters `4804982b`, theme dropdown and shipped CRT
+`03609b60`; routed halves: KL-142 download scope `2f2a6892`, ADR-0080
+write-authority reasons `81946dbc`, AR10/KL-37 language markers `f5494094`,
+`ba190b6e`; closure residue `892b9948`. Each package: RED first, mutants,
+gate under the shared leases, log under `.ai/logs/`.
+
+### Source-ID rows owned by UI
+
+26 rows in the [ledger](status/LEDGER.md): 15 `DONE`, 10 `ACCEPTED_BOUNDARY`,
+1 `LATER` (`KL-43`, owner decision 2026-10-04). Rows owned elsewhere whose Web
+half was handed to this owner: `KL-142` (delivered, `DONE`), `KL-37`
+(delivered, `ACCEPTED_BOUNDARY`), `UI-04` (Web half delivered; closing the
+row is the commissioning owner's), `KL-61` (binding wording delivered;
+the declared-versus-linked display needs a projection field from the backend
+owner first).
+
+### Closing review (self-review, 2026-10-06)
+
+Mechanical, over every Web change since `1964fd6b` (32 commits, 136 files):
+no focused or skipped tests, no scratch specs, no new `console.log`, no new
+TODO/FIXME. Documentation, searched for work still waiting on the UI owner:
+
+1. **Fixed — `UI-04` Web half.** The handover in
+   [COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md) asked for the
+   live snapshot and refreshed running rows; `GET /api/bus/activity` had no
+   Web reader. Delivered as *Live activity* (`892b9948`).
+2. **Fixed — `KL-61` binding wording.** `GroupAddressNode.dpts`' generated
+   doc comment still described the linked-only rule (ADR-0078 hand-over).
+3. **Not this owner's — `KL-61` display.** Showing declared versus linked
+   needs the projection to carry the declaration and outcome; recorded in
+   KNOWN_LIMITATIONS §61 for the backend owner.
+4. **Stale wording elsewhere, not changed here:** the commissioning ledger's
+   "Open: `KL-142` and `UI-04`" sentence now has a delivery note beneath its
+   handoff table; `ALPHA_SCOPE_MATRIX`'s `UI-04` row is Alpha's to update.
+
+### Tested surfaces and exceptions
+
+Tested: happy-dom Vitest through the real parents; headless Chromium against
+locally intercepted HTTP (`page.route`), EN and DE, 360–1440 px; the
+production Web build. **Not tested, accepted boundaries by the user decision
+of 2026-10-04:** native WebKitGTK/Tauri workflows (beyond the static zoom
+probe of KL-130-ZOOM), Orca or any real screen reader, native file choosers,
+real multicast/firewall discovery (KL-79), a dead-WebView close (KL-133), any
+live KNX bus. Telegram-flow motion: Chromium only, Motion Off for large maps
+(AR21 envelope). No hardware, bus or KNX socket was used for this receipt.
+
+### Closing gate
+
+Run under the three shared leases, own target directory, corpus linked
+(`OriginalData`), inputs hashed at start and end. Attempt 1 was refused
+(Vitest 1 failed: the companion import-inventory guard, fixed in the
+package; inputs changed during the run). **Attempt 2, head `03d8a7fb` plus the
+candidate, inputs frozen:** `cargo fmt --check` 0; `cargo clippy --workspace
+--all-targets -D warnings` 0 (incremental in that target: 350 units on
+`4459e310`, then 6, then 1); `cargo test --workspace --no-fail-fast` 188 suites,
+3,311 passed, 0 failed, 177 ignored; ts-rs bindings regenerate identically (17
+files, trailing spaces ignored as in CI); check-layering, check-headers
+(155 / ceiling 155), check-anchors 603, check-ledger 190, check-corpus-gates
+all 0; `git diff --check` 0; `tsc --noEmit` 0, `tsc -b` 0; production Web build
+0; Vitest 2,064 / 117 files; Chromium 139 (intercepted HTTP). **After rebasing
+onto `1f4aca11`** (upstream: docs, Python tools, two manual-screenshot tooling
+files outside `src/` and the suites, no Rust): headers 155/155, anchors 606,
+ledger 190, diff-check 0, `tsc -b` 0, Vitest 2,064 / 117; Rust and Chromium
+carry over. Published as `892b9948`, read back equal on `origin/main`.
+
+### Left for others
+
+`UI-04` row closure (commissioning owner); `KL-61` projection field (backend
+owner); AR16's manual location/screenshot policy (user, `RELEASE-03`); AR18's
+independent whole-product review.
+
 ## Telegram-flow owner addition — user decision 2026-10-04
 
 [The approved Alpha feature](TELEGRAM_FLOW_VISUALIZATION.md) adds UI U19–U21

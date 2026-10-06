@@ -144,6 +144,23 @@ No property octets, keys or host backup paths are disclosed. The global Web
 status bar and per-action history remain open (ADR-0055/0056); simulator
 evidence is not a live bus check.
 
+**Web adoption, 2026-10-06 (UI owner, UI-04).** Bus tools → *Live activity*
+reads this snapshot every 2 s while the tab is open and the page visible:
+held sessions with their state and progress, short operations and the
+eviction count, busy locks named as "operation unknown", the history-storage
+state (`unavailable` as an alert), the untracked kinds, and a note when the
+server incarnation changes. It always says the view is partial and volatile
+and that an empty list does not mean an idle bus. A snapshot with an unknown
+field, state, lock or out-of-range count is refused as a whole; a failed poll
+clears the last snapshot. *Activity history* now reloads its first window on
+its own while that window shows a running operation; after paging further it
+says how to see the latest state instead. **Not built, by owner decision:** a
+global status-bar indicator. Polling the server from every view for a list
+whose emptiness proves nothing would add load without adding certainty; the
+tab is where the evidence and its limits can be read together. Native
+WebKitGTK/Orca acceptance stays an accepted boundary (user decision
+2026-10-04).
+
 **Durable backend candidate, 2026-10-03 (ADR-0064).** A separate versioned
 SQLite history now retains four one-shot operation kinds across ring eviction
 and restart; seven kinds remain explicitly untracked. Previous-incarnation
@@ -3216,7 +3233,12 @@ linked objects states an instance DPT; neither `Unser Zuhause` export
 carries it on **any of 514**. Still open, for the web owner: the web shows
 only the effective type, not the declared-versus-linked detail, and the
 generated binding's doc comment for `GroupAddressNode.dpts` still describes
-the linked-only rule.
+the linked-only rule. *Update 2026-10-06 (UI owner):* the doc comment now
+describes the effective type and was regenerated into the binding. The
+declared-versus-linked detail cannot be shown yet: `GroupAddressNode` carries
+only `dpts`, not the declaration or the `GroupAddressTypeOutcome`, so the
+projection must expose them first (backend owner) before the web can render
+them.
 
 **Two sentinel collisions the Standard does not resolve, where the codec
 picked one reading and says so.** `8.010 DPT_Percent_V16`'s printed maximum

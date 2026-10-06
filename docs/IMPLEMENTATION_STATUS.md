@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-06 — AR16 slice 2: the manual meets the app it describes, sentence by sentence
+## 2026-10-06 — AR16 done: the manual meets the app it describes, sentence by sentence
 
 - Claim-by-claim pass by script and live probes: all 95 `knx` invocations,
   bold labels, env vars, routes, versions and every "not yet" sentence checked
@@ -12,6 +12,31 @@
   in KNX basics, workflow chapter on the sample house.
 - Handed to the UI owner: the New project dialog's style hint still claims
   the style cannot be changed.
+- AR16 DONE: the UI owner's closure receipt (`84bc32c3`) verified against the
+  ledger and the issue plan; the manual is accepted at its tested scope, with
+  the user-owned exceptions listed in MANUAL_ACCEPTANCE. `RELEASE-03` DONE.
+## 2026-10-06 — UI-04 Web half: live bus activity; KL-61 binding wording
+
+- New Bus tools tab *Live activity* (`BusActivityLive.tsx`, `liveActivity.ts`)
+  reads `GET /api/bus/activity` every 2 s while open and visible: sessions with
+  state/progress, short operations and eviction count, busy locks as
+  "operation unknown", history-storage state (`unavailable` as alert),
+  untracked kinds, server-restart note; partial/volatile wording throughout.
+  Admission refuses a whole snapshot with unknown fields, states, locks or
+  out-of-range counts; one-shot records reuse the history admission so the two
+  readers cannot drift. A failed poll clears the last snapshot.
+- *Activity history* reloads its first window every 3 s while it shows a
+  running operation; after paging further it points to "Refresh from
+  beginning" instead of collapsing the loaded pages.
+- No global status-bar indicator, by owner decision (KNOWN_LIMITATIONS,
+  "Web adoption, 2026-10-06").
+- KL-61: `GroupAddressNode.dpts`' doc comment now describes the effective type
+  (ADR-0078) and is regenerated into the binding; the declared-versus-linked
+  detail needs a projection field first.
+- Tests: 17 live + 3 history Vitest cases (RED first), 16/16 mutants; Chromium
+  `activity-live.e2e.ts` 5 (EN/DE, 360/1440 px, poll/restart/storage), RED on
+  the previous `BusDiagnosticsPanel` (negative control, byte-exact restore).
+  Manual 07 gains "Live activity and activity history".
 
 ## 2026-10-06 — AR16 slice 1: the manual gets new photos of a house that does not exist
 

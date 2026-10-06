@@ -66,11 +66,11 @@ Evidence levels used below:
 
 | Status | Rows | Meaning for the release |
 | --- | --- | --- |
-| `DONE` | 42 | Delivered with evidence in the row |
+| `DONE` | 43 | Delivered with evidence in the row |
 | `ACCEPTED_BOUNDARY` | 111 | Kept for the Alpha by a named decision or ADR |
 | `LATER` | 23 | Out of the Alpha by decision |
 | `BLOCKED_EXTERNAL` | 8 | Needs a sample/source/run the project lacks — see §4 |
-| `WAITING_OWNER` | 3 | Release gates — see §4 |
+| `WAITING_OWNER` | 2 | Release gates — see §4 |
 | `WAITING_DECISION` | 2 | Release decisions — see §4 |
 | `IN_PROGRESS` | 1 | Commissioning owner — see §4 |
 
@@ -85,17 +85,16 @@ Nothing below is waived. Each row says what has to happen before AR18/AR19.
 | ID | Owner | What is missing | Disposition |
 | --- | --- | --- | --- |
 | `RELEASE-01`, `RELEASE-02` | alpha (AR18) | Final integrated gates on a frozen candidate and an independent whole-product review | **Blocks release.** Cannot be produced from historical receipts. |
-| `RELEASE-03` | alpha (AR16) | UI owner's closure receipt (UI-04, KL-61 residues), then acceptance ([MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md)); screenshots and claim-by-claim pass done 2026-10-06 | **Blocks release.** Manual content was corrected in AR15 (`DOC-03`), acceptance is still open. |
+| `RELEASE-03` | alpha (AR16) | — | **Done 2026-10-06:** UI closure receipt verified, screenshots regenerated, claim-by-claim pass, manual accepted at its tested scope ([MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md)); its exceptions go to the user at AR19. |
 | `RELEASE-04` | user (AR19) | Explicit tag/version/publication decision on the reviewed candidate | **Blocks release** by design; no automatic tag. |
-| `UI-04` | commissioning | Owner receipt for the partial bus-activity snapshot (ADR-0055/0056) | **Owner must close or the user must accept it as a boundary before AR18.** |
+| `UI-04` | commissioning | Owner review of the delivered Web half (*Live activity*, `892b9948`) and the row's closure | **Owner must close or the user must accept it as a boundary before AR18.** |
 | `KL-1`, `KL-11`, `KL-125` | alpha | Independent project samples (other schemas, second ETS6 project) | **Proposed: ship as disclosed boundary** (no broader compatibility claim). Needs the user's acceptance at AR19. |
 | `KL-31` | alpha | Live router traffic on a custom multicast group | **Proposed: ship as disclosed boundary** (offline-tested only). Needs acceptance at AR19. |
 | `KL-158` | alpha (AR17 finding) | A launcher that does not need X11, or a decision to ship with the X server requirement | **Proposed: ship as disclosed boundary** with the tested Wayland workaround in troubleshooting. Needs the user's decision at AR19. |
 | `PDB-01`, `R-DYNAMIC-01`, `R-MODULE-03`, `R-MODULE-04` | alpha | Primary semantics/samples for unevaluated parameter logic and nested modules | **Proposed: ship as disclosed boundary** (raw values preserved, never guessed). Needs acceptance at AR19. |
 
-Also open outside the ledger: AR14D D5 (the `goal-commission.md` status
-section still needs its owner's link-over); documentation hygiene only, not a
-product blocker.
+AR14D D5 is closed: the commissioning owner linked `goal-commission.md` over
+to the ledger on 2026-10-06.
 
 ## 5. Risks to watch
 

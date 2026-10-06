@@ -153,6 +153,14 @@ pub enum ContainerError {
         records: usize,
         members: usize,
     },
+    /// A record whose parts disagree, so two readers would see two
+    /// different archives (AR18 re-check round 2, N7/N9): a directory that
+    /// carries bytes, a directory named like a file, or a local header whose
+    /// name differs from the central one. `reason` says which.
+    InconsistentRecord {
+        path: String,
+        reason: &'static str,
+    },
     /// The members together declare more uncompressed bytes than
     /// [`MAX_ARCHIVE_UNCOMPRESSED`] (AR18 review F3).
     TooLarge {
@@ -220,6 +228,9 @@ impl std::fmt::Display for ContainerError {
                 "the archive declares {total} uncompressed bytes, more than the \
                  {limit}-byte limit"
             ),
+            ContainerError::InconsistentRecord { path, reason } => {
+                write!(f, "inconsistent archive record {path}: {reason}")
+            }
             ContainerError::NameCollision { records, members } => write!(
                 f,
                 "the archive has {records} member records, but they decode to only \
@@ -309,8 +320,8 @@ impl Container {
         })?;
         // Same identity rule as the outer archive (AR18 review F2): the
         // reader above has already collapsed an exact duplicate.
-        let records = check_member_names(&payload_bytes, inner.central_directory_start())?;
-        check_decoded_names(&mut inner, records)?;
+        let raw_names = check_member_names(&payload_bytes, inner.central_directory_start())?;
+        check_decoded_names(&mut inner, &raw_names, &payload_bytes)?;
 
         // The opaque nested-zip blob is about to be replaced by the
         // entries it actually contains. Removed here, before the loop
@@ -537,14 +548,14 @@ impl Container {
         // Names are checked on the raw central directory first: the `zip`
         // crate keys members by name, so an exact duplicate is already
         // collapsed into one slot by the time its index can be asked.
-        let records = {
-            let probe = ZipArchive::new(Cursor::new(bytes.as_slice()))
+        {
+            let mut probe = ZipArchive::new(Cursor::new(bytes.as_slice()))
                 .map_err(|e| ContainerError::NotAZip(e.to_string()))?;
-            check_member_names(&bytes, probe.central_directory_start())?
-        };
+            let raw_names = check_member_names(&bytes, probe.central_directory_start())?;
+            check_decoded_names(&mut probe, &raw_names, &bytes)?;
+        }
         let mut archive = ZipArchive::new(Cursor::new(bytes))
             .map_err(|e| ContainerError::NotAZip(e.to_string()))?;
-        check_decoded_names(&mut archive, records)?;
 
         let mut entries = Vec::with_capacity(archive.len());
         for i in 0..archive.len() {
@@ -732,7 +743,7 @@ fn check_total_size(entries: &[EntryInfo]) -> Result<(), ContainerError> {
 /// case (AR18 review F2). Lookups here are case-insensitive (`find`), so
 /// either kind of repeat would let one member's bytes stand in for the
 /// other's without a word. Directory records carry no data and are skipped.
-fn check_member_names(bytes: &[u8], start: u64) -> Result<usize, ContainerError> {
+fn check_member_names(bytes: &[u8], start: u64) -> Result<Vec<Vec<u8>>, ContainerError> {
     const RECORD: usize = 46;
     let field = |at: usize| -> Option<usize> {
         bytes
@@ -740,7 +751,7 @@ fn check_member_names(bytes: &[u8], start: u64) -> Result<usize, ContainerError>
             .map(|b| u16::from_le_bytes([b[0], b[1]]) as usize)
     };
     let mut seen = std::collections::HashSet::new();
-    let mut records = 0;
+    let mut records = Vec::new();
     let mut at = usize::try_from(start).unwrap_or(usize::MAX);
     while bytes.get(at..at + 4) == Some(b"PK\x01\x02".as_slice()) {
         let (Some(name_len), Some(extra_len), Some(comment_len)) =
@@ -756,43 +767,77 @@ fn check_member_names(bytes: &[u8], start: u64) -> Result<usize, ContainerError>
                 path: String::from_utf8_lossy(name).into_owned(),
             });
         }
-        records += 1;
+        records.push(name.to_vec());
         at += RECORD + name_len + extra_len + comment_len;
     }
     Ok(records)
 }
 
-/// The second half of the identity rule (AR18 re-check N1): the names the
-/// `zip` reader actually serves. It decodes a name as CP437 or UTF-8 and
-/// may replace it with an Info-ZIP Unicode Path field, then keys members by
-/// the result — so two records with different raw names can still become
-/// one member, or two members with one name. Refused when the reader keeps
-/// fewer members than [`check_member_names`] counted `records`, or when two
-/// decoded file names are equal ignoring ASCII case (what [`Container::find`]
-/// would confuse).
+/// The second half of the identity rule (AR18 re-check N1, round 2 N7/N9):
+/// the records as the `zip` reader actually serves them. It decodes a name
+/// as CP437 or UTF-8 and may replace it with an Info-ZIP Unicode Path field,
+/// then keys members by the result — so two records with different raw
+/// names can still become one member, and a file can become a "directory"
+/// whose bytes every later step skips. Refused, given the raw central names
+/// `raw_names` from [`check_member_names`] and the archive's `bytes`:
+/// - fewer members than records ([`ContainerError::NameCollision`]);
+/// - two decoded file names equal ignoring ASCII case;
+/// - a directory record that carries data, or that is named like a file;
+/// - a local header whose name differs from its central record's raw name
+///   (which also catches two central records sharing one local record).
 fn check_decoded_names<R: Read + std::io::Seek>(
     archive: &mut ZipArchive<R>,
-    records: usize,
+    raw_names: &[Vec<u8>],
+    bytes: &[u8],
 ) -> Result<(), ContainerError> {
-    if archive.len() != records {
+    if archive.len() != raw_names.len() {
         return Err(ContainerError::NameCollision {
-            records,
+            records: raw_names.len(),
             members: archive.len(),
         });
     }
-    let mut seen = std::collections::HashSet::new();
-    for i in 0..archive.len() {
+    let inconsistent = |path: &str, reason| ContainerError::InconsistentRecord {
+        path: path.to_string(),
+        reason,
+    };
+    let mut files = std::collections::HashSet::new();
+    let mut directories = Vec::new();
+    for (i, raw_name) in raw_names.iter().enumerate() {
         let entry = archive
             .by_index_raw(i)
             .map_err(|e| ContainerError::NotAZip(e.to_string()))?;
+        let name = entry.name().to_string();
+        // Two central records sharing one local record need no check of
+        // their own: their central names differ, so one of them fails the
+        // local-name comparison below.
+        let local = usize::try_from(entry.header_start()).unwrap_or(usize::MAX);
+        let local_name = bytes
+            .get(local..local.saturating_add(30))
+            .filter(|header| header.starts_with(b"PK\x03\x04"))
+            .map(|header| u16::from_le_bytes([header[26], header[27]]) as usize)
+            .and_then(|len| bytes.get(local + 30..local + 30 + len));
+        if local_name != Some(raw_name.as_slice()) {
+            return Err(inconsistent(
+                &name,
+                "its local header names a different member",
+            ));
+        }
         if entry.is_dir() {
+            if entry.size() > 0 || entry.compressed_size() > 0 {
+                return Err(inconsistent(&name, "a directory record carries data"));
+            }
+            directories.push(name.trim_end_matches('/').to_ascii_lowercase());
             continue;
         }
-        if !seen.insert(entry.name().to_ascii_lowercase()) {
-            return Err(ContainerError::DuplicateEntry {
-                path: entry.name().to_string(),
-            });
+        if !files.insert(name.to_ascii_lowercase()) {
+            return Err(ContainerError::DuplicateEntry { path: name });
         }
+    }
+    if let Some(directory) = directories.iter().find(|d| files.contains(*d)) {
+        return Err(inconsistent(
+            directory,
+            "a directory has the same name as a file",
+        ));
     }
     Ok(())
 }

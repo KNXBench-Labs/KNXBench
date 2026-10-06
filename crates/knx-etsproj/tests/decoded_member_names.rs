@@ -41,6 +41,11 @@ struct Member {
     extra: Vec<u8>,
     data: Vec<u8>,
     declared: u32,
+    /// The local header's name, when it should differ from the central one.
+    local_name: Option<Vec<u8>>,
+    /// Point this central record at an earlier member's local record
+    /// instead of writing one of its own.
+    alias_of: Option<usize>,
 }
 
 fn member(name: &str, data: &[u8]) -> Member {
@@ -50,6 +55,8 @@ fn member(name: &str, data: &[u8]) -> Member {
         extra: Vec::new(),
         data: data.to_vec(),
         declared: data.len() as u32,
+        local_name: None,
+        alias_of: None,
     }
 }
 
@@ -68,12 +75,27 @@ fn unicode_path(raw: &[u8], decoded: &str) -> Vec<u8> {
 
 /// A stored (method 0) ZIP with exactly these members, in this order.
 fn zip(members: &[Member]) -> Vec<u8> {
+    zip_after(&[], members)
+}
+
+/// [`zip`] behind `prefix` bytes (a self-extractor stub, say); offsets are
+/// written relative to the archive, as such tools do.
+fn zip_after(prefix: &[u8], members: &[Member]) -> Vec<u8> {
     let mut out = Vec::new();
     let mut central = Vec::new();
+    let mut offsets = Vec::new();
     for m in members {
-        let offset = out.len() as u32;
         let crc = crc32(&m.data);
         let size = m.data.len() as u32;
+        if let Some(earlier) = m.alias_of {
+            let offset: u32 = offsets[earlier];
+            offsets.push(offset);
+            central_record(&mut central, m, crc, size, offset);
+            continue;
+        }
+        let offset = out.len() as u32;
+        offsets.push(offset);
+        let local_name = m.local_name.as_ref().unwrap_or(&m.name);
         out.extend_from_slice(&0x0403_4b50u32.to_le_bytes());
         out.extend_from_slice(&20u16.to_le_bytes());
         out.extend_from_slice(&m.flags.to_le_bytes());
@@ -83,12 +105,30 @@ fn zip(members: &[Member]) -> Vec<u8> {
         out.extend_from_slice(&crc.to_le_bytes());
         out.extend_from_slice(&size.to_le_bytes());
         out.extend_from_slice(&m.declared.to_le_bytes());
-        out.extend_from_slice(&(m.name.len() as u16).to_le_bytes());
+        out.extend_from_slice(&(local_name.len() as u16).to_le_bytes());
         out.extend_from_slice(&(m.extra.len() as u16).to_le_bytes());
-        out.extend_from_slice(&m.name);
+        out.extend_from_slice(local_name);
         out.extend_from_slice(&m.extra);
         out.extend_from_slice(&m.data);
+        central_record(&mut central, m, crc, size, offset);
+    }
+    let start = out.len() as u32;
+    out.extend_from_slice(&central);
+    out.extend_from_slice(&0x0605_4b50u32.to_le_bytes());
+    out.extend_from_slice(&0u16.to_le_bytes());
+    out.extend_from_slice(&0u16.to_le_bytes());
+    out.extend_from_slice(&(members.len() as u16).to_le_bytes());
+    out.extend_from_slice(&(members.len() as u16).to_le_bytes());
+    out.extend_from_slice(&(central.len() as u32).to_le_bytes());
+    out.extend_from_slice(&start.to_le_bytes());
+    out.extend_from_slice(&0u16.to_le_bytes());
+    let mut whole = prefix.to_vec();
+    whole.extend_from_slice(&out);
+    whole
+}
 
+fn central_record(central: &mut Vec<u8>, m: &Member, crc: u32, size: u32, offset: u32) {
+    {
         central.extend_from_slice(&0x0201_4b50u32.to_le_bytes());
         central.extend_from_slice(&20u16.to_le_bytes());
         central.extend_from_slice(&20u16.to_le_bytes());
@@ -109,17 +149,6 @@ fn zip(members: &[Member]) -> Vec<u8> {
         central.extend_from_slice(&m.name);
         central.extend_from_slice(&m.extra);
     }
-    let start = out.len() as u32;
-    out.extend_from_slice(&central);
-    out.extend_from_slice(&0x0605_4b50u32.to_le_bytes());
-    out.extend_from_slice(&0u16.to_le_bytes());
-    out.extend_from_slice(&0u16.to_le_bytes());
-    out.extend_from_slice(&(members.len() as u16).to_le_bytes());
-    out.extend_from_slice(&(members.len() as u16).to_le_bytes());
-    out.extend_from_slice(&(central.len() as u32).to_le_bytes());
-    out.extend_from_slice(&start.to_le_bytes());
-    out.extend_from_slice(&0u16.to_le_bytes());
-    out
 }
 
 /// A minimal project plus `extra` members.
@@ -151,7 +180,9 @@ fn protected_with(inner: Vec<Member>) -> Vec<u8> {
 fn refused_for_identity(result: Result<knx_etsproj::ImportOutcome, ImportFailure>) {
     match result {
         Err(ImportFailure::Container(
-            ContainerError::DuplicateEntry { .. } | ContainerError::NameCollision { .. },
+            ContainerError::DuplicateEntry { .. }
+            | ContainerError::NameCollision { .. }
+            | ContainerError::InconsistentRecord { .. },
         )) => {}
         other => panic!("expected an identity refusal, got {:?}", other.map(|_| ())),
     }
@@ -159,7 +190,11 @@ fn refused_for_identity(result: Result<knx_etsproj::ImportOutcome, ImportFailure
 
 fn container_refused_for_identity(result: Result<Container, ContainerError>) {
     match result {
-        Err(ContainerError::DuplicateEntry { .. } | ContainerError::NameCollision { .. }) => {}
+        Err(
+            ContainerError::DuplicateEntry { .. }
+            | ContainerError::NameCollision { .. }
+            | ContainerError::InconsistentRecord { .. },
+        ) => {}
         other => panic!("expected an identity refusal, got {:?}", other.map(|_| ())),
     }
 }
@@ -275,4 +310,103 @@ fn a_protected_payload_declaring_more_than_the_budget_is_refused_before_unpackin
         }
         other => panic!("expected TooLarge, got {:?}", other.map(|_| ())),
     }
+}
+
+// AR18 re-check round 2, N7: a decoded name that ends in `/` made a record
+// a "directory", and directories were skipped together with their bytes.
+
+#[test]
+fn the_real_topology_turned_into_a_directory_and_a_forgery_into_0_xml_is_refused() {
+    let real = Member {
+        extra: unicode_path(b"P-0001/0.xml", "P-0001/0.xml/"),
+        ..member("P-0001/0.xml", INSTALLATION)
+    };
+    let forged = upath_member("P-0001/zz.xml", "P-0001/0.xml", INSTALLATION);
+    let bytes = zip(&[
+        member("P-0001.signature", b"x"),
+        real,
+        member("P-0001/Project.xml", PROJECT_INFO),
+        forged,
+    ]);
+    refused_for_identity(import_knxproj_bytes(bytes, "fixture.knxproj"));
+}
+
+#[test]
+fn the_same_inside_a_protected_payload_is_refused() {
+    let real = Member {
+        extra: unicode_path(b"P-0001/0.xml", "P-0001/0.xml/"),
+        ..member("P-0001/0.xml", INSTALLATION)
+    };
+    let forged = upath_member("P-0001/zz.xml", "P-0001/0.xml", INSTALLATION);
+    let payload = zip(&[real, member("P-0001/Project.xml", PROJECT_INFO), forged]);
+    let bytes = zip(&[
+        member("P-0001.signature", b"x"),
+        member("P-0001.zip", &payload),
+    ]);
+    container_refused_for_identity(Container::open_with_password(bytes, "fictional"));
+}
+
+#[test]
+fn a_directory_record_that_carries_bytes_is_refused() {
+    let bytes = project_with(vec![member("P-0001/BinaryData/hidden/", &[7u8; 4500])]);
+    refused_for_identity(import_knxproj_bytes(bytes, "fixture.knxproj"));
+}
+
+#[test]
+fn a_directory_named_like_a_file_is_refused() {
+    let bytes = project_with(vec![
+        member("P-0001/BinaryData/x.dat/", b""),
+        member("P-0001/BinaryData/x.dat", b"file"),
+    ]);
+    refused_for_identity(import_knxproj_bytes(bytes, "fixture.knxproj"));
+}
+
+#[test]
+fn empty_directory_records_still_import() {
+    // ETS6 writes them; they carry nothing.
+    let bytes = project_with(vec![
+        member("P-0001/BinaryData/", b""),
+        member("P-0001/BinaryData/a.dat", b"bytes"),
+    ]);
+    assert!(import_knxproj_bytes(bytes, "fixture.knxproj").is_ok());
+}
+
+// N9: KNXBench follows the central directory, but an archive whose local
+// headers disagree with it means two readers see two different projects.
+
+#[test]
+fn a_local_header_name_that_differs_from_the_central_one_is_refused() {
+    let lying = Member {
+        local_name: Some(b"P-0001/evil.xml".to_vec()),
+        ..member("P-0001/0.xml", INSTALLATION)
+    };
+    let bytes = zip(&[
+        member("P-0001.signature", b"x"),
+        lying,
+        member("P-0001/Project.xml", PROJECT_INFO),
+    ]);
+    refused_for_identity(import_knxproj_bytes(bytes, "fixture.knxproj"));
+}
+
+#[test]
+fn two_central_records_sharing_one_local_record_are_refused() {
+    let shared = Member {
+        alias_of: Some(3),
+        ..member("P-0001/BinaryData/b.dat", b"bytes")
+    };
+    let bytes = project_with(vec![member("P-0001/BinaryData/a.dat", b"bytes"), shared]);
+    refused_for_identity(import_knxproj_bytes(bytes, "fixture.knxproj"));
+}
+
+#[test]
+fn an_archive_behind_a_prefix_still_imports() {
+    let bytes = zip_after(
+        &[0x4d; 4096],
+        &[
+            member("P-0001.signature", b"x"),
+            member("P-0001/0.xml", INSTALLATION),
+            member("P-0001/Project.xml", PROJECT_INFO),
+        ],
+    );
+    assert!(import_knxproj_bytes(bytes, "fixture.knxproj").is_ok());
 }

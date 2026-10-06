@@ -123,6 +123,14 @@ ETS ever writes such an archive is not known.
 ETS6 write `project.xml` [V]. Entry lookup is therefore case-insensitive over
 the inventory, not a hard-coded name.
 
+**Member identity** (KNOWN_LIMITATIONS §159). Because lookup ignores case,
+two members whose names differ only in case are refused. The same holds for
+two members that the `zip` reader decodes to one name: CP437 against UTF-8,
+or an Info-ZIP Unicode Path field. Such archives are refused rather than
+letting one member's bytes stand in for another's. The check runs on the raw
+central directory *and* on the decoded names, in the outer archive and in a
+protected project's nested payload.
+
 **Password protection** (RESEARCH §2.3): a protected project nests the
 payload as `<P-xxxx>.zip`.
 

@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — The re-check's conditions: the reader's names and the payload's budget
+
+- Independent re-check: `READY_WITH_CONDITIONS`
+  ([verdict](review/2026-10-06-alpha-conditions-recheck.md)).
+- N1: members are judged on the names the `zip` reader decodes, too (Unicode
+  Path, CP437 against UTF-8).
+- N2: a protected payload is counted before it is unpacked.
+- N3: `device restore` records a never-opened tunnel as failed.
+- N4: `AppState::new` opens no product database.
+- N5: a bad import file answers `422 projectNotImportable`, non-ZIP included.
+- N6 (web reload) is handed to the UI owner and disclosed in KL §82.
+- Gate on `3ede4817` green; Rust 3359/0/178, corpus 143/143
+  ([ALPHA_FINAL_GATES §9](ALPHA_FINAL_GATES.md#9-ar18-re-check-conditions-r1r3-fixed-and-re-gated)).
+- Next: re-check round 2.
+
 ## 2026-10-06 — The minor findings M1–M9 fixed as well
 
 - M1: readers (*Open*, `doc-export`, `ga-export`, `diff`, compare, the

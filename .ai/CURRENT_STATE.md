@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 16:50 CEST
+- **Completed:** Merged the independent re-check (`b4a23730`, READY_WITH_CONDITIONS) and fixed its conditions R1–R3 and N3–N5: `79bee3c6` (decoded-name collisions refused, nested payload counted before unpacking), `30a5cfb4` (`422 projectNotImportable`; `AppState::new` opens no product DB, binaries use `with_user_product_db`), `9118c884` (restore never-connected), `3ede4817` (test header). Mutants 6/6. Gate on `3ede4817` green: Rust 3359/0/178, Vitest 2076, Chromium 142, corpus 143/143, AppImage SHA-256 ca3101fb…591e (evidence `ar18-recheck-fixes-20261006`). ALPHA_FINAL_GATES §9; brief round 2.
+- **Pending/Next Steps:** The user starts re-check round 2 (`docs/review/AR18_RECHECK_BRIEF.md#round-2-n1n6`, branch `review/alpha-recheck-2`). Then record AR18; AR19 is the user's decision.
+- **Notes for Codex oder Claude:** **For the UI owner (N6):** after a browser reload the web shows the welcome page while the server may hold a (modified) project; please fetch `GET /api/project` on start and adopt it (`resetTree` + `setHasStorePath`, guarded against a load/new started meanwhile). Several App.test.tsx tests count `currentProject` calls. Disclosed in KL §82. **API:** `/api/project/import` answers `422` kind `projectNotImportable` for a file that is not an importable project (was 500); the web shows the message through `reportError` already. **Code:** `knx_server::AppState::new` no longer opens the user's product database; production uses `with_user_product_db`.
+
+---
+
 - **Last Agent:** Claude (fresh AR18 re-check reviewer, not the alpha owner)
 - **Timestamp:** 2026-10-06 15:50 CEST
 - **Completed:** Independent re-check of the AR18 fixes on `bd691b82` (product code = `faa3955f`), done as `docs/review/AR18_RECHECK_BRIEF.md` describes. Verdict **READY_WITH_CONDITIONS** in `docs/review/2026-10-06-alpha-conditions-recheck.md`, on branch `review/alpha-recheck` (not merged).

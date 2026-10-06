@@ -61,6 +61,13 @@ for bad input hold; the status code of a malformed file is 500, which the
 server tests pin today (`http_project_routes.rs`) — a classification wart,
 not a lost message.
 
+**Update 2026-10-06 (AR18 re-check N5):** the classification wart is
+removed. An import that fails because of the file itself answers `422`
+with kind `projectNotImportable`: not a ZIP, a refused archive, or not a
+KNX project. This is pinned by
+`a_file_that_is_not_an_importable_project_is_refused_as_the_callers_to_fix`.
+A missing file still answers `500`.
+
 Native UI checks (keyboard, screen reader, every dialog) belong to the UI
 owner and were not claimed here.
 

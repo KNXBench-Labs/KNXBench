@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (fresh AR18 reviewer session, not the alpha owner)
+- **Timestamp:** 2026-10-06 10:30 CEST
+- **Completed:** Independent whole-product review of `f2b31538` per docs/review/AR18_REVIEW_BRIEF.md. Verdict **READY_WITH_CONDITIONS** in docs/review/2026-10-06-alpha-independent-review.md (branch `review/alpha-independent`, not merged). Gates reproduced green offline (Rust 3317/0/177, Vitest 2071, Chromium 139, xtask ×5, deny, check-appimage); corpus 142/0; compare-harness fix judged a stale harness (revert mutant reproduces the 503 pair). Log: .ai/logs/2026-10-06_claude_ar18-independent-review.md.
+- **Pending/Next Steps:** Owners fix or the user explicitly accepts the four IMPORTANT findings before AR19: F1 Open/Import discard unsaved edits silently (web/server), F2 duplicate/case-colliding archive members lost or substituted (knx-etsproj container), F3 unbounded memory on crafted archives (knx-etsproj container/opaque), F4 `knx import --store <existing>` overwrites silently (CLI). Then rerun affected gates and rebuild the AppImage with `--remap-path-prefix`. MINOR M1–M9 optional; M5 doc counts cheap.
+- **Notes for Codex oder Claude:** Reviewer is read-only on product code; nothing was fixed. Owners: F1 web + server (`App.tsx` pickProject/openNativeProject, routes import/open), F2/F3 import (`container.rs`, `opaque.rs`), F4 CLI (`main.rs` run_import). A new reviewer (or this one) should re-check the fixes, not the owners themselves.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 09:00 CEST
 - **Completed:** By user decision: (1) `http_device_compare.rs` harness fixed test-only (`AppState::new(dir)`), corpus pair green, revert mutant red; (2) `UI-04` → `ACCEPTED_BOUNDARY` / `USER_ACCEPTED`. Dossier and review brief updated (candidate = `4b9e913e` + docs + this test file).

@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — Round 3's condition: every part of a record must agree
+
+- Re-check round 3: `READY_WITH_CONDITIONS`
+  ([verdict](review/2026-10-06-alpha-recheck-round3.md)).
+- N11: each local header must agree with its central record (flags, method,
+  CRC, sizes, data descriptor, Unicode Path), and the records must tile the
+  archive up to the central directory.
+- N12: an empty directory written deflated (Java, `jar`) imports.
+- N13: the last stale `500` in `ALPHA_CANDIDATE` corrected.
+- Gate on `2254eed0` green: Rust 3402/0/178, corpus 143/143
+  ([ALPHA_FINAL_GATES §11](ALPHA_FINAL_GATES.md#11-ar18-re-check-round-3-condition-r6-fixed-and-re-gated)).
+- Next: re-check round 4.
+
 ## 2026-10-06 — A README that leads with the alpha and shows the bus thinking
 
 - Root `README.md` rewritten: alpha warning first, verified features as bold

@@ -130,3 +130,35 @@ Check:
 Write `docs/review/<date>-alpha-recheck-round3.md` on a branch
 `review/alpha-recheck-3`. Give the same verdict scale and include a gate
 table.
+
+## Round 4: N11–N13
+
+[Round 3](2026-10-06-alpha-recheck-round3.md) returned
+`READY_WITH_CONDITIONS` with condition R6 (N11). The release owner fixed it,
+and N12 and N13 too
+([ALPHA_FINAL_GATES §11](../ALPHA_FINAL_GATES.md#11-ar18-re-check-round-3-condition-r6-fixed-and-re-gated)).
+Round 4 is narrow. The rules of §1–§3 above still apply.
+
+| Item | Value |
+| --- | --- |
+| Product code | `2254eed002e1c8a0988cd5bab89910559371342e`; `git diff --name-only 2254eed0 HEAD` lists only documentation and handover files |
+| AppImage | `/home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar18-round3-fixes-20261006/KNXBench_0.1.0-alpha.4_amd64.AppImage`, SHA-256 `138444b4cf7f5664ce2f64e88b82574f88dcc5b382dca7f2e49ff1eae7d6c3fc` |
+
+Check:
+
+1. **N11:** your round-3 archives (central sizes 0 with a directory, `\`
+   directory or file target; outer and nested; with and without `0x08`), and
+   a local/central disagreement in every field: flags, method, CRC, each size,
+   zip64 values, data-descriptor values and placement, the Unicode Path
+   field. Also the new layout rule (records must tile the archive up to the
+   central directory): gaps, overlaps, a record that ends early.
+2. **N12, N13** against their fixes.
+3. **Regressions:** the corpus subset; real projects; product packages
+   through `knx products ingest`; empty ETS6 directory records; archives
+   real writers produce (Info-ZIP with and without `-e`, Python `zipfile`
+   streaming and zip64, Java `jar`).
+4. Whether anything still open should block AR19.
+
+Write `docs/review/<date>-alpha-recheck-round4.md` on a branch
+`review/alpha-recheck-4`. Give the same verdict scale and include a gate
+table.

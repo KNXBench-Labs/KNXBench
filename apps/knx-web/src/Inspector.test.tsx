@@ -599,6 +599,82 @@ describe("Inspector — entities of a later installation", () => {
   });
 });
 
+// KL-61 / ADR-0078: the effective type alone hides whether the address's own
+// declaration and its linked objects agree.
+describe("Inspector — group address type detail", () => {
+  function withDetail(detail: GroupAddressNode["dpt_detail"], dpts: string[]): ProjectTree {
+    const tree = twoInstallationTree();
+    tree.installations[0].group_addresses = [{ ...ga(301, "Dimmer value", "1/0/2"), dpts, dpt_detail: detail }];
+    return tree;
+  }
+  const facts = () =>
+    Array.from(host!.querySelectorAll(".inspector-facts dt"), (dt) => [
+      dt.textContent,
+      dt.nextElementSibling?.textContent ?? "",
+    ]);
+
+  it("shows the declaration, the linked types and that they differ in subtype", async () => {
+    await renderInspector({ kind: "group_address", id: 301 }, withDetail({
+      declared: { state: "Value", text: "DPST-9-1" },
+      linked: ["DPST-9-4"],
+      outcome: "DeclaredDiffersFromLinked",
+    }, ["DPST-9-1"]));
+    expect(facts()).toEqual(expect.arrayContaining([
+      ["Declared on the address", "DPST-9-1"],
+      ["Linked objects state", "DPST-9-4"],
+    ]));
+    expect(host!.querySelector(".dpt-outcome")?.textContent).toBe(
+      "The declaration applies. A linked object states another type of the same size.");
+  });
+
+  it("names a size conflict and applies no type", async () => {
+    await renderInspector({ kind: "group_address", id: 301 }, withDetail({
+      declared: { state: "Value", text: "DPST-1-1" },
+      linked: ["DPST-5-1"],
+      outcome: "SizeConflict",
+    }, ["DPST-1-1", "DPST-5-1"]));
+    expect(host!.querySelector(".dpt-outcome")?.textContent).toBe(
+      "The declaration and a linked object differ in size, which the project format forbids. No type applies.");
+    expect(host!.querySelector(".dpt-outcome")?.classList.contains("dpt-conflict")).toBe(true);
+  });
+
+  it.each([
+    [{ state: "Absent", text: null }, "none", "No declaration on the address; the linked objects' type applies."],
+    [{ state: "Empty", text: null }, "empty", "No declaration on the address; the linked objects' type applies."],
+    [{ state: "Malformed", text: "DPT-x" }, "unreadable: DPT-x", "No declaration on the address; the linked objects' type applies."],
+  ] as const)("shows a %o declaration as it is stored", async (declared, shown, outcome) => {
+    await renderInspector({ kind: "group_address", id: 301 }, withDetail({
+      declared: { ...declared },
+      linked: [],
+      outcome: "Inferred",
+    }, []));
+    expect(facts()).toEqual(expect.arrayContaining([
+      ["Declared on the address", shown],
+      ["Linked objects state", "none stated"],
+    ]));
+    expect(host!.querySelector(".dpt-outcome")?.textContent).toBe(outcome);
+  });
+
+  it("explains a store whose older declarations could not be attributed", async () => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
+    await renderInspector({ kind: "group_address", id: 301 }, withDetail({
+      declared: { state: "Absent", text: null },
+      linked: ["DPST-1-1"],
+      outcome: "DeclarationNotLifted",
+    }, ["DPST-1-1"]));
+    expect(host!.querySelector(".dpt-outcome")?.textContent).toBe(
+      "Dieses Projekt enthält Typangaben, die keiner Adresse mehr zugeordnet werden konnten. Es gilt der Typ der verknüpften Objekte; er kann unvollständig sein.");
+  });
+
+  it("shows no detail rows when the tree carries none", async () => {
+    const tree = twoInstallationTree();
+    tree.installations[0].group_addresses = [{ ...ga(301, "Plain", "1/0/2"), dpts: ["DPST-1-1"] }];
+    await renderInspector({ kind: "group_address", id: 301 }, tree);
+    expect(host!.textContent).not.toContain("Declared on the address");
+    expect(host!.querySelector(".dpt-outcome")).toBeNull();
+  });
+});
+
 // Restyling uses the existing command-backed route, not a display preference.
 describe("Inspector — project node", () => {
   it.each(["en", "de"])("restyles an existing project through one authoritative request (%s)", async (language) => {

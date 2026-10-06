@@ -3238,7 +3238,12 @@ describes the effective type and was regenerated into the binding. The
 declared-versus-linked detail cannot be shown yet: `GroupAddressNode` carries
 only `dpts`, not the declaration or the `GroupAddressTypeOutcome`, so the
 projection must expose them first (backend owner) before the web can render
-them.
+them. *Update 2026-10-06 (Alpha, user decision before AR18):* lifted. The
+projection carries `GroupAddressNode.dpt_detail` (declared state and text,
+linked types, outcome) and the group-address Inspector shows **Declared on
+the address**, **Linked objects state** and one sentence for the outcome; a
+size conflict is marked. The table column still shows only the effective
+type.
 
 **Two sentinel collisions the Standard does not resolve, where the codec
 picked one reading and says so.** `8.010 DPT_Percent_V16`'s printed maximum

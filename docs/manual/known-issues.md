@@ -299,10 +299,12 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 
 - **Affected:** writing a value to a group address, and reading the decoded
   value of a telegram.
-- **Limitation:** the codec covers thirty main types. It infers the format of
-  the input rather than being told it, and for several encoding questions the
-  KNX standard's printed text is ambiguous enough that this project made a
-  documented ruling instead of following it literally.
+- **Limitation:** the codec covers thirty main types. The input format is
+  declared, not guessed (`--input-format` in the CLI, a format choice in the
+  interface); a caller that omits it gets a named compatibility parser. For
+  several encoding questions the KNX standard's printed text is ambiguous
+  enough that this project made a documented ruling instead of following it
+  literally.
 - **Consequence:** a misread input produces a valid telegram carrying the
   wrong value. The bus cannot tell you that it was wrong.
 - **Workaround:** check the write confirmation, which echoes the decoded

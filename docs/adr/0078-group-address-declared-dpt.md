@@ -137,6 +137,10 @@ towards either side.
   would land in the generated web bindings, which belong to the current web
   lock holder; the AR09 implementation therefore does not add them and hands
   them, together with any display of the difference, to the UI owner.
+  *Update 2026-10-06:* added by the Alpha owner under the Web lock as
+  `GroupAddressNode.dpt_detail` (declared state and text, linked types, the
+  outcome mirrored one to one) and shown in the group-address Inspector; the
+  field is optional on the wire and `dpts` is unchanged.
 - The CSV *import* still never applies `DatapointType`
   (IMPORT_EXPORT.md); changing that is out of scope.
 

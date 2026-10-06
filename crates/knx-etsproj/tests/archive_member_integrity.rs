@@ -142,6 +142,36 @@ fn an_exact_duplicate_member_name_is_refused_not_collapsed() {
 }
 
 #[test]
+fn an_exact_duplicate_inside_a_protected_projects_payload_is_refused_too() {
+    // The nested `P-0001.zip` of a password-protected project goes through
+    // the same `zip` reader, which would collapse the two copies as well.
+    // Its members are stored unencrypted here: the nested-payload loop reads
+    // a plain member the same way, so no cipher is needed to reach it.
+    let mut inner = zip_with(
+        &[
+            ("P-0001/0.xml", INSTALLATION),
+            ("P-0001/Project.xml", PROJECT_INFO),
+            ("P-0001/BinaryData/x.dat", b"first copy"),
+            ("P-0001/BinaryData/y.dat", b"second copy"),
+        ],
+        zip::CompressionMethod::Stored,
+    );
+    rename_member(
+        &mut inner,
+        "P-0001/BinaryData/y.dat",
+        "P-0001/BinaryData/x.dat",
+    );
+    let outer = zip_with(
+        &[("P-0001.signature", b"x"), ("P-0001.zip", &inner)],
+        zip::CompressionMethod::Stored,
+    );
+    match Container::open_with_password(outer, "fictional") {
+        Err(ContainerError::DuplicateEntry { path }) => assert_eq!(path, "P-0001/BinaryData/x.dat"),
+        other => panic!("expected DuplicateEntry, got {:?}", other.map(|_| ())),
+    }
+}
+
+#[test]
 fn a_case_variant_of_the_topology_document_is_refused() {
     let bytes = knxproj_with(&[("P-0001/0.XML", b"<KNX/>")]);
     assert_eq!(refused_as_duplicate(bytes), "P-0001/0.XML");

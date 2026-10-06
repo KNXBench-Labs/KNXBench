@@ -745,7 +745,7 @@ independent recount predicts exactly. `KL-156` `DONE`.
 
 **Sources:** `KL-14`, `KL-37`, `KL-64`, `KL-66`.
 **Dependencies:** AR06/AR07 and established language-pack contracts.
-**Status:** `DONE_SCOPED` 2026-10-05 — backend complete; the UI portion (`KL-37`: showing the slice-2b markers) waits on its owner. History: `TODO` → slices 1, 2a, 2b, 3.
+**Status:** `DONE_SCOPED` 2026-10-05 — backend complete; the UI portion (`KL-37`: showing the slice-2b markers) delivered by the UI owner the same day (`ba190b6e`), `KL-37` `ACCEPTED_BOUNDARY`. History: `TODO` → slices 1, 2a, 2b, 3 → UI markers.
 
 - [x] Trace source/default language, manufacturer/master translations and backend diagnostics into their current readers and projection.
 - [x] Use a source-backed language when available; otherwise expose the fallback rather than inferring one from unrelated UI settings or installation names.
@@ -787,6 +787,19 @@ text follows the device detail's translation rule
 `KL-14`, `KL-64`, `KL-66` `ACCEPTED_BOUNDARY`; `KL-37` `WAITING_OWNER` (UI
 markers for catalogue, product block and DPT text). Not a "fully localized"
 claim: report labels stay §48, server error bodies stay §66.
+
+**UI portion delivered, 2026-10-05 (UI owner, recorded 2026-10-06 at the
+user's request):** `f5494094` shows the slice-2a markers in the parameter panel;
+`ba190b6e` adds one shared rule and badge (`apps/knx-web/src/languageFallback.tsx`)
+for the catalogue (name, description), the device product block (product text,
+catalogue name, application name, each with its declared source language) and
+the communication-object DPT text (no source declared on that wire). Markers
+appear only with a product language selected. Ledger `KL-37`
+`ACCEPTED_BOUNDARY`; [KNOWN_LIMITATIONS §37](docs/KNOWN_LIMITATIONS.md#37-translations-reach-selected-surfaces-not-every-imported-text-or-ui-output)
+"the markers are shown". Evidence: RED-first Vitest, 10/10 and 11/11 mutants,
+gates in `.ai/logs/2026-10-05_claude_ui-ar10-language-markers.md` and
+`…_ui-kl37-language-markers.md`. Owner self-report; no independent review of the
+UI half was requested.
 
 ### AR11 — Resolve remaining CSV/report decisions and verify the selected backend scope
 

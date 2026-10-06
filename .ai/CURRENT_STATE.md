@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 11:53 CEST
+- **Completed:** Merged the independent AR18 review (`37dd613a`, READY_WITH_CONDITIONS) and fixed F1–F4 plus M4/M5: `7e606e55` (archive identity/size budget, KL §159), `55badf3c` (`knx import --replace`), `94bdd7bd` (Open/Import ask before discarding edits; 409 `projectUnsavedChanges`), `64badb99` (nested payload twins). 16/16 mutants. Gate on `64badb99` green: Rust 3331/0/177, Vitest 2076, Chromium 139, corpus 142/0, AppImage SHA-256 235b0070…6bf7 (evidence `ar18-conditions-20261006`). Re-check brief docs/review/AR18_RECHECK_BRIEF.md.
+- **Pending/Next Steps:** The user starts a fresh Claude session for the re-check (branch `review/alpha-recheck`). Then record AR18 ready/not-ready; AR19 user decision. MINOR M1–M3/M6–M9 remain listed, not fixed.
+- **Notes for Codex oder Claude:** **For the UI owner:** new Web code under the free Web lock — `App.tsx` `replaceConfirm` dialog (reuses `.quit-confirm` styles plus `.replace-confirm`), `replace.*` messages en/de, `api.isUnsavedProjectConflict`, `importProject`/`openProject` optional `discardChanges`. Restyle freely. **For everyone:** `/api/project/import` and `/api/project/open` now answer 409 over unsaved edits unless `discardChanges: true`.
+
+---
+
 - **Last Agent:** Claude (fresh AR18 reviewer session, not the alpha owner)
 - **Timestamp:** 2026-10-06 10:30 CEST
 - **Completed:** Independent whole-product review of `f2b31538` per docs/review/AR18_REVIEW_BRIEF.md. Verdict **READY_WITH_CONDITIONS** in docs/review/2026-10-06-alpha-independent-review.md (branch `review/alpha-independent`, not merged). Gates reproduced green offline (Rust 3317/0/177, Vitest 2071, Chromium 139, xtask ×5, deny, check-appimage); corpus 142/0; compare-harness fix judged a stale harness (revert mutant reproduces the 503 pair). Log: .ai/logs/2026-10-06_claude_ar18-independent-review.md.

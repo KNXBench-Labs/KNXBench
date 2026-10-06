@@ -2511,6 +2511,11 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .address-table tr.row-multi-selected { background: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface)); box-shadow: inset 3px 0 0 var(--knx-accent); }
 .dpt-conflict { color: var(--knx-warning-color); }
 .dpt-conflict-note { font-style: italic; }
+/* KL-61: one sentence under the group address's type facts. A note, not body
+   text; a size conflict keeps the warning colour (`.dpt-conflict` is set on
+   the same element, so the compound selector below must win). */
+.dpt-outcome { margin: 4px 0 12px; color: var(--knx-muted); font-size: 12px; line-height: 1.45; max-width: 78ch; }
+.dpt-outcome.dpt-conflict { color: var(--knx-warning-color); }
 .address-links-panel { margin-top: 24px; }
 .address-links-panel h2 { font-size: 16px; margin: 0 0 8px; }
 .address-links-panel small { color: var(--knx-muted); }

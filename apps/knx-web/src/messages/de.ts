@@ -1364,7 +1364,7 @@ export const messages: Record<MessageKey, string> = {
   "newProject.languageHint": "Sprachkennung für Projekttexte. Wähle eine Sprache aus der Liste oder gib eine andere gültige Kennung ein, z. B. de-DE. Die Sprache der Oberfläche bleibt unverändert.",
   "newProject.filenameHint": "Speichern oder Speichern unter legt den .knxdb-Dateinamen fest. Projekt- und Anlagenname sind keine Dateipfade.",
   "newProject.style": "Gruppenadressstil",
-  "newProject.styleHint": "Wähle den Gruppenadressstil jetzt; nach dem Anlegen kann er derzeit nicht geändert werden.",
+  "newProject.styleHint": "Den Gruppenadressstil kannst du später am Projektknoten ändern.",
   "newProject.style.Free": "Frei (0–65535)",
   "newProject.style.TwoLevel": "Zweistufig (Haupt/Unter)",
   "newProject.style.ThreeLevel": "Dreistufig (Haupt/Mittel/Unter)",

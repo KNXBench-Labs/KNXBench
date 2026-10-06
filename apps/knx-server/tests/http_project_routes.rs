@@ -1013,3 +1013,46 @@ async fn opening_a_file_that_holds_no_knxbench_project_is_refused_untouched() {
     );
     assert!(!dir.path().join("typo.knxdb").exists());
 }
+
+#[tokio::test]
+async fn a_file_that_is_not_an_importable_project_is_refused_as_the_callers_to_fix() {
+    // AR18 re-check N5: refused archives (and the disclosed non-ZIP case)
+    // answered 500 Internal Server Error.
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("broken.knxproj"), b"not a zip").unwrap();
+    let mut twins = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    let options = zip::write::SimpleFileOptions::default();
+    for (name, bytes) in [
+        ("P-0001.signature", &b"x"[..]),
+        ("P-0001/0.xml", b"<KNX/>"),
+        ("P-0001/BinaryData/a.dat", b"lower"),
+        ("P-0001/BinaryData/A.DAT", b"UPPER"),
+    ] {
+        twins.start_file(name, options).unwrap();
+        std::io::Write::write_all(&mut twins, bytes).unwrap();
+    }
+    std::fs::write(
+        dir.path().join("twins.knxproj"),
+        twins.finish().unwrap().into_inner(),
+    )
+    .unwrap();
+    let app = knx_server::app(
+        Arc::new(knx_server::AppState::new(dir.path().to_path_buf())),
+        None,
+    );
+    for name in ["broken.knxproj", "twins.knxproj"] {
+        let response = app
+            .clone()
+            .oneshot(post("/api/project/import", json!({ "path": name })))
+            .await
+            .unwrap();
+        assert_eq!(
+            response.status(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{name}"
+        );
+        let body = body_json(response).await;
+        assert_eq!(body["kind"], "projectNotImportable", "{name}: {body}");
+        assert!(!body["error"].as_str().unwrap().is_empty());
+    }
+}

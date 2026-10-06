@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-06 12:31 CEST
+- **Completed:** Handover only (no code on `main`). Branch `ui/style-hint-dpt-outcome` (`5d648560`) rebased onto `27c2480a` and gated there: anchors 620, ledger 190, headers 155/155, `tsc -b` 0, Web build 0, Vitest 2,076 / 117, Chromium 142 (139 + 3 new). Content: `newProject.styleHint` now points to the Project node (en/de) and the manual's known-issue for it is removed; `.dpt-outcome` styled as a muted note, a size conflict stays a warning. Alpha's `replaceConfirm` dialog checked: it reuses the quit-dialog rules, nothing unstyled (`replace-confirm` and `quit-confirm-save` are hooks), no change needed.
+- **Pending/Next Steps:** **Merge the branch only after the AR18 re-check has given its verdict:** `AR18_RECHECK_BRIEF.md` pins the candidate as "`origin/main`, with `git diff --name-only 64badb99 HEAD` listing only documentation", so a code merge now would break that check. After the verdict: the UI owner (or Alpha) rebases, takes the Web lock, reruns the Web gate and merges.
+- **Notes for Codex oder Claude:** Web lock: free; not taken or released by this entry. The branch has no Rust changes.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 11:53 CEST
 - **Completed:** Merged the independent AR18 review (`37dd613a`, READY_WITH_CONDITIONS) and fixed F1–F4 plus M4/M5: `7e606e55` (archive identity/size budget, KL §159), `55badf3c` (`knx import --replace`), `94bdd7bd` (Open/Import ask before discarding edits; 409 `projectUnsavedChanges`), `64badb99` (nested payload twins). 16/16 mutants. Gate on `64badb99` green: Rust 3331/0/177, Vitest 2076, Chromium 139, corpus 142/0, AppImage SHA-256 235b0070…6bf7 (evidence `ar18-conditions-20261006`). Re-check brief docs/review/AR18_RECHECK_BRIEF.md.

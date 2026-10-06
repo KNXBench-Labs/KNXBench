@@ -105,7 +105,7 @@ pub fn resolve_serial(source: &SerialSource) -> Result<SerialNumber, String> {
             if !Path::new(project).exists() {
                 return Err(format!("project not found: {project}"));
             }
-            let conn = knx_store::open_and_migrate(Path::new(project))
+            let conn = knx_store::open_existing_and_migrate(Path::new(project))
                 .map_err(|e| format!("could not read project {project}: {e}"))?;
             let opaque = knx_store::load_opaque(&conn)
                 .map_err(|e| format!("could not read project {project}: {e}"))?;
@@ -486,7 +486,12 @@ mod tests {
     fn a_project_without_the_serial_asks_for_it() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("empty.knxdb");
-        knx_store::open_and_migrate(&path).unwrap();
+        let conn = knx_store::open_and_migrate(&path).unwrap();
+        knx_store::save_project(
+            &conn,
+            &knx_core::Project::new(knx_core::Language("en".into())),
+        )
+        .unwrap();
         let err = resolve_serial(&SerialSource::Project {
             project: path.display().to_string(),
             device: "P-0001-0_DI-1".to_string(),

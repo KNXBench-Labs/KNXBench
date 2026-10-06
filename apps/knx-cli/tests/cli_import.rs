@@ -728,3 +728,94 @@ fn replace_without_store_is_a_usage_error() {
         .unwrap()
         .contains("--replace needs --store"));
 }
+
+#[test]
+fn a_failed_import_creates_no_store_file() {
+    // AR18 review M1a: the store used to be created and migrated before
+    // the import had a chance to fail.
+    let dir = tempfile::tempdir().unwrap();
+    let broken = dir.path().join("broken.knxproj");
+    std::fs::write(&broken, b"not a zip").unwrap();
+    let store = dir.path().join("never.knxdb");
+    let out = run_cli(&[
+        "import",
+        broken.to_str().unwrap(),
+        "--store",
+        store.to_str().unwrap(),
+        "--no-product-db",
+    ]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(
+        !store.exists(),
+        "a failed import must not leave a store behind"
+    );
+}
+
+#[test]
+fn a_failed_replace_leaves_the_existing_store_byte_identical() {
+    let dir = tempfile::tempdir().unwrap();
+    let (two, _) = two_distinct_projects(dir.path());
+    let store = dir.path().join("project.knxdb");
+    let s = store.to_str().unwrap();
+    assert_eq!(
+        run_cli(&[
+            "import",
+            two.to_str().unwrap(),
+            "--store",
+            s,
+            "--no-product-db"
+        ])
+        .status
+        .code(),
+        Some(0)
+    );
+    let before = std::fs::read(&store).unwrap();
+    let broken = dir.path().join("broken.knxproj");
+    std::fs::write(&broken, b"not a zip").unwrap();
+    let out = run_cli(&[
+        "import",
+        broken.to_str().unwrap(),
+        "--store",
+        s,
+        "--no-product-db",
+        "--replace",
+    ]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(std::fs::read(&store).unwrap() == before);
+}
+
+#[test]
+fn readers_never_create_a_file_at_a_mistyped_path() {
+    // AR18 review M1d.
+    let dir = tempfile::tempdir().unwrap();
+    let typo = dir.path().join("typo.knxdb");
+    for args in [
+        vec!["doc-export", typo.to_str().unwrap(), "out.html"],
+        vec!["ga-export", typo.to_str().unwrap(), "out.csv"],
+    ] {
+        let out = run_cli(&args);
+        assert_eq!(out.status.code(), Some(1), "{args:?}");
+        assert!(!typo.exists(), "{args:?} created {}", typo.display());
+    }
+}
+
+#[test]
+fn readers_leave_a_foreign_sqlite_file_untouched() {
+    // AR18 review M1b: a foreign database used to get 22 KNXBench tables.
+    let dir = tempfile::tempdir().unwrap();
+    let foreign = dir.path().join("notes.sqlite");
+    knx_store::Connection::open(&foreign)
+        .unwrap()
+        .execute_batch("CREATE TABLE notes (body TEXT); INSERT INTO notes VALUES ('mine');")
+        .unwrap();
+    let before = std::fs::read(&foreign).unwrap();
+    let out_html = dir.path().join("out.html");
+    let out = run_cli(&[
+        "doc-export",
+        foreign.to_str().unwrap(),
+        out_html.to_str().unwrap(),
+    ]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("not created by KNXBench"));
+    assert!(std::fs::read(&foreign).unwrap() == before);
+}

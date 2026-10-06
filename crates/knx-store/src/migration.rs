@@ -27,7 +27,22 @@ pub const CURRENT_SCHEMA_VERSION: i64 = 10;
 #[derive(Debug)]
 pub enum MigrationError {
     Sqlite(rusqlite::Error),
-    FutureSchemaVersion { found: i64, supported: i64 },
+    FutureSchemaVersion {
+        found: i64,
+        supported: i64,
+    },
+    /// The file is an SQLite database that KNXBench did not create: tables
+    /// but no `user_version`, or a version without the `schema_meta`
+    /// `created_by = knx-store` marker (AR18 review M1). Refused untouched
+    /// rather than given 22 KNXBench tables it never asked for.
+    ForeignDatabase,
+    /// [`open_existing_and_migrate`] was given a path that does not exist;
+    /// nothing was created there.
+    NotFound,
+    /// [`open_existing_and_migrate`] found a KNXBench (or empty) database
+    /// that holds no saved project. Refused before any migration, so the
+    /// file keeps its schema version (AR18 review M1c).
+    NothingSaved,
 }
 
 impl std::error::Error for MigrationError {}
@@ -39,6 +54,15 @@ impl fmt::Display for MigrationError {
             MigrationError::FutureSchemaVersion { found, supported } => write!(
                 f,
                 "project file is schema version {found}, this build supports up to {supported} — no downgrade path exists"
+            ),
+            MigrationError::ForeignDatabase => write!(
+                f,
+                "this SQLite file was not created by KNXBench; it was left untouched"
+            ),
+            MigrationError::NotFound => write!(f, "no project file at this path"),
+            MigrationError::NothingSaved => write!(
+                f,
+                "no project has been saved to this file; it was left untouched"
             ),
         }
     }
@@ -552,6 +576,87 @@ pub fn open_and_migrate(path: &Path) -> Result<Connection, MigrationError> {
     Ok(conn)
 }
 
+/// [`open_and_migrate`] for a file that must already exist — every reader
+/// (`doc-export`, `ga-export`, open). A missing path is refused with
+/// [`MigrationError::NotFound`] and nothing is created there (AR18 review
+/// M1d: a mistyped path used to leave an empty project file behind).
+pub fn open_existing_and_migrate(path: &Path) -> Result<Connection, MigrationError> {
+    use rusqlite::OpenFlags;
+    if !path.exists() {
+        return Err(MigrationError::NotFound);
+    }
+    let flags = OpenFlags::SQLITE_OPEN_READ_WRITE
+        | OpenFlags::SQLITE_OPEN_URI
+        | OpenFlags::SQLITE_OPEN_NO_MUTEX;
+    let conn = Connection::open_with_flags(path, flags).map_err(|error| {
+        match error.sqlite_error_code() {
+            Some(rusqlite::ErrorCode::CannotOpen) => MigrationError::NotFound,
+            _ => MigrationError::Sqlite(error),
+        }
+    })?;
+    conn.pragma_update(None, "foreign_keys", "ON")?;
+    let version: i64 = conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version <= CURRENT_SCHEMA_VERSION {
+        if !is_own_or_empty(&conn, version)? {
+            return Err(MigrationError::ForeignDatabase);
+        }
+        if !has_saved_project(&conn)? {
+            return Err(MigrationError::NothingSaved);
+        }
+    }
+    migrate(&conn)?;
+    Ok(conn)
+}
+
+/// Whether a saved project is present. Only schema v4 and later can hold
+/// one (`project_info` arrives in `migrate_v3_to_v4`); an older or empty
+/// file has nothing a reader could load, migrated or not.
+fn has_saved_project(conn: &Connection) -> Result<bool, MigrationError> {
+    let has_table: i64 = conn.query_row(
+        "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'project_info'",
+        [],
+        |row| row.get(0),
+    )?;
+    if has_table == 0 {
+        return Ok(false);
+    }
+    let rows: i64 = conn.query_row("SELECT count(*) FROM project_info", [], |row| row.get(0))?;
+    Ok(rows > 0)
+}
+
+/// Whether `conn` is a database this crate created, or an empty one it may
+/// initialise. Checked before any migration writes (AR18 review M1b).
+fn is_own_or_empty(conn: &Connection, version: i64) -> Result<bool, MigrationError> {
+    let tables: i64 = conn.query_row(
+        "SELECT count(*) FROM sqlite_master WHERE type = 'table'",
+        [],
+        |row| row.get(0),
+    )?;
+    if version == 0 {
+        return Ok(tables == 0);
+    }
+    let has_meta: i64 = conn.query_row(
+        "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'schema_meta'",
+        [],
+        |row| row.get(0),
+    )?;
+    if has_meta == 0 {
+        return Ok(false);
+    }
+    let marker: Option<String> = conn
+        .query_row(
+            "SELECT value FROM schema_meta WHERE key = 'created_by'",
+            [],
+            |row| row.get(0),
+        )
+        .map(Some)
+        .or_else(|error| match error {
+            rusqlite::Error::QueryReturnedNoRows => Ok(None),
+            other => Err(other),
+        })?;
+    Ok(marker.as_deref() == Some("knx-store"))
+}
+
 /// Opens an in-memory database and runs every migration in order — the same
 /// chain as [`open_and_migrate`], but with nothing written to disk and
 /// nothing left behind when the connection is dropped. For callers that
@@ -577,6 +682,10 @@ fn migrate(conn: &Connection) -> Result<(), MigrationError> {
             found,
             supported: CURRENT_SCHEMA_VERSION,
         });
+    }
+
+    if !is_own_or_empty(conn, found)? {
+        return Err(MigrationError::ForeignDatabase);
     }
 
     if found == CURRENT_SCHEMA_VERSION {

@@ -1,5 +1,14 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 07:21 CEST
+Web lock: taken by claude-alpha-release for KL-61 (declared-versus-linked DPT display)
+- **Completed:** Lock taken only.
+- **Pending/Next Steps:** KL-61 package: projection carries the declared DPT and its outcome; group-address views show it; binding regenerated. Release in the delivery entry.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 07:21 CEST
 - **Completed:** User decisions for AR18 recorded: 9 rows → `ACCEPTED_BOUNDARY` / `USER_ACCEPTED` (KL-1, KL-11, KL-125, KL-31, PDB-01, R-DYNAMIC-01, R-MODULE-03, R-MODULE-04, KL-158); reviewer = fresh Claude session from a written brief (user starts it); KL-61 display before AR18. Ledger recount, ALPHA_SCOPE_MATRIX, KL §158 update, goal AR18 note.
 - **Pending/Next Steps:** KL-61 package (projection field + Web display; takes the Web lock), then rebuild the AppImage candidate, full §5 gates, write the AR18 review brief. UI-04 row closure stays with the commissioning owner.
 - **Notes for Codex oder Claude:** Web lock: free at this entry; the KL-61 package will take it with its own handover entry.

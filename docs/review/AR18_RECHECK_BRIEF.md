@@ -71,3 +71,34 @@ Write `docs/review/<date>-alpha-conditions-recheck.md` on a branch
 - new findings, rated CRITICAL, IMPORTANT or MINOR, each with `file:line`;
 - the gate table;
 - what you did not check.
+
+## Round 2: N1–N6
+
+The [first re-check](2026-10-06-alpha-conditions-recheck.md) returned
+`READY_WITH_CONDITIONS` with conditions R1–R3. The release owner fixed them,
+and fixed N3–N5 too
+([ALPHA_FINAL_GATES §9](../ALPHA_FINAL_GATES.md#9-ar18-re-check-conditions-r1r3-fixed-and-re-gated)).
+Round 2 is narrower. The rules of §1–§3 above still apply.
+
+| Item | Value |
+| --- | --- |
+| Product code | `3ede481741acbfcd5904f67c80e443077d1151c0`; `git diff --name-only 3ede4817 HEAD` lists only documentation and handover files |
+| AppImage | `/home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar18-recheck-fixes-20261006/KNXBench_0.1.0-alpha.4_amd64.AppImage`, SHA-256 `ca3101fb3b4584dacb1e2d768f455f35bab772f38009a9dc504968aebc78591e` |
+
+Check:
+
+1. **N1:** your Unicode Path, CP437/UTF-8 and `0.xml` substitution
+   archives, outer and nested. Also the identity tricks the first round did
+   not try:
+   - local-header names that differ from central-directory names;
+   - zip64 records;
+   - directory entries that collide with file names.
+2. **N2:** your nested bombs. What is the peak memory now?
+3. **N3–N5** against their fixes.
+4. **N6:** it was not changed. Say whether it should block.
+5. **Regressions:** the corpus subset; real projects; product packages
+   through `knx products ingest`.
+
+Write `docs/review/<date>-alpha-recheck-round2.md` on a branch
+`review/alpha-recheck-2`. Give the same verdict scale and include a gate
+table.

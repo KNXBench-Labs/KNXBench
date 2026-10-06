@@ -1031,8 +1031,17 @@ The MINOR findings M1–M9 are fixed too (`7bb3e12a`, `9cb293d8`, `a86b7ddd`,
 3350/0/178, Vitest 2076, Chromium 142, corpus 143/143 through
 `tools/run_corpus_tests.py`, `npm audit` 0, AppImage
 ([ALPHA_FINAL_GATES §8](docs/ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
-Open: the independent re-check of all fixes
-([brief](docs/review/AR18_RECHECK_BRIEF.md)), then the ready/not-ready record.
+**Independent re-check 2026-10-06:** `READY_WITH_CONDITIONS`
+([verdict](docs/review/2026-10-06-alpha-conditions-recheck.md)). It confirmed
+F1, F4 and M1–M9. Conditions R1–R3: N1 decoded-name collisions and N2 the
+nested payload's budget. Both are fixed, together with N3–N5 (`79bee3c6`,
+`30a5cfb4`, `9118c884`, `3ede4817`). N6 (web reload) is disclosed and handed
+to the UI owner. Full gate on `3ede4817`: Rust 3359/0/178, Vitest 2076,
+Chromium 142, corpus 143/143, AppImage
+([ALPHA_FINAL_GATES §9](docs/ALPHA_FINAL_GATES.md#9-ar18-re-check-conditions-r1r3-fixed-and-re-gated)).
+Open: re-check round 2 on the changed candidate
+([brief](docs/review/AR18_RECHECK_BRIEF.md#round-2-n1n6)), then the
+ready/not-ready record.
 
 - [x] Freeze the complete integrated candidate and artifact provenance. All actionable alpha-owned items are delivered, or their release exceptions have explicit user acceptance. Merely logging a blocker is not permission to call the alpha ready.
 - [x] Run all explicit gates in §5 on that exact integrated revision, including private corpus cases that cover affected behavior; verify target, counts, changed-crate compilation and no silent skips.

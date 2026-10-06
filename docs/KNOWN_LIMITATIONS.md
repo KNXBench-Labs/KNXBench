@@ -4594,6 +4594,14 @@ it cannot see, and what each one costs:
    the previous record stands until it does. A stale-but-identical
    fingerprint is the harmless case; a project *closed* and a different
    one opened elsewhere is case 1 again.
+   **Update 2026-10-06 (AR18 re-check N6):** the same gap shows in the main
+   window. After a browser reload, the welcome page appears while the
+   server still holds the project, possibly with unsaved edits. A
+   following Open or Import is correctly refused, and the unsaved-changes
+   dialog appears, but its *Save* and *Discard* then act on a project the
+   user cannot see. No data is lost: nothing is replaced without that
+   explicit choice. Fetching `GET /api/project` on start is a UI-owner
+   change, handed over in `.ai/CURRENT_STATE.md`.
 4. **Two sessions in one profile, one of them unrecorded.** If a session
    is started by something that does not write the record — another
    client, or a direct `POST /api/bus/monitor/start` — the companion
@@ -8146,3 +8154,25 @@ refused instead of imported with lost bytes.
 
 **Lifted when.** A streaming import that keeps members on disk instead of in
 memory, or measured evidence that real projects need a larger budget.
+
+**Update 2026-10-06 (AR18 re-check N1/N2): identity is judged on the names
+the reader uses, and a protected payload is counted before it is unpacked.**
+The first fix compared raw name bytes. The `zip` reader, however, decodes
+names — CP437 or UTF-8, and an Info-ZIP Unicode Path field may replace the
+name entirely — and keys members by the result. So two different raw names
+could still become one member, even one standing in for `0.xml`. The
+archive, and a protected project's nested payload, are now refused:
+- when the reader keeps fewer members than the central directory has
+  records (`NameCollision`);
+- when two decoded file names are equal ignoring ASCII case.
+
+A protected payload's declared total is checked against the 512 MiB budget
+before its first member is unpacked. Before this change, a 12 MB file
+unpacked to 8 GB before the check.
+
+Evidence: `crates/knx-etsproj/tests/decoded_member_names.rs` (7 tests on
+hand-written archives), RED before the change, and four killed mutants.
+
+What remains: an import inside the budget still peaks at about three times
+the declared total in process memory (measured by the re-check: 480 MiB →
+1.6 GB). The budget bounds the archive's bytes, not the whole process.

@@ -287,6 +287,14 @@ describe("one editing workspace", () => {
     expect([...historyGraph.keys()]).toEqual(["activityHistory.ts"]);
     expect(apiCallsIn(historyGraph)).toEqual([]);
     expect(historyGraph.get("activityHistory.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    // UI-04 adds `liveActivity.ts` through the shared API: pure admission of
+    // the read-only `/api/bus/activity` snapshot. It reuses the history
+    // admission (its one value import), calls no API and mutates nothing; the
+    // companion does not call the new live reader.
+    const liveGraph = valueImportGraph("liveActivity.ts");
+    expect([...liveGraph.keys()].sort()).toEqual(["activityHistory.ts", "liveActivity.ts"]);
+    expect(apiCallsIn(liveGraph)).toEqual([]);
+    expect(liveGraph.get("liveActivity.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -318,6 +326,7 @@ describe("one editing workspace", () => {
       "help.ts",
       "i18n.ts",
       "languagePack.ts",
+      "liveActivity.ts",
       "localJsonDownload.ts",
       "messages/de.ts",
       "messages/en.ts",

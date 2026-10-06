@@ -421,6 +421,27 @@ restore other possible manufacturer side effects. Switching this option on
 never automatically enables it for a download or serial-address write. No
 live bus was contacted to validate this UI.
 
+## Live activity and activity history
+
+Two read-only tabs in the bus tools say what the server has done; neither
+contacts the bus.
+
+- **Live activity** shows what the server holds right now: a running download,
+  address programming, the bus monitor or a line scan with its progress, short
+  operations since the server started, and locks that are busy without telling
+  for what. It refreshes every two seconds while the tab is open. It is
+  *partial*: group writes and serial-address writes are not observed, and an
+  empty list does not mean the bus is idle. It is *volatile*: a server restart
+  clears it, and the tab says so when it happens.
+- **Activity history** lists stored records of device comparisons,
+  service-control reads and writes, serial lookups and downloads, newest
+  operation first by start order. While the first page shows an operation that
+  is still running, it reloads itself until that operation ends. After loading
+  older pages, use **Refresh from beginning** to see the latest state.
+
+Neither tab is a backup, a recovery image or proof that a device holds what
+was written.
+
 ## What KNXBench does and does not do on a bus
 
 This section is deliberately plain.

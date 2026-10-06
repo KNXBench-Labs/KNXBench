@@ -10,6 +10,7 @@ vi.mock("./DeviceDownloadPanel", () => ({ default: () => <p>Download stub</p> })
 vi.mock("./AddressProgrammingPanel", () => ({ default: () => <p>Address stub</p> }));
 vi.mock("./ServiceControlPanel", () => ({ default: () => <p>Service stub</p> }));
 import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
+import { RUNNING_REFRESH_MS } from "./BusActivityHistory";
 import { messages as en } from "./messages/en";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let host: HTMLDivElement; let root: Root;
@@ -138,4 +139,50 @@ it("ignores a delayed response after the actual parent switches away", async () 
   await act(async () => resolve(response(page()))); await flush();
   expect(host.textContent).toContain(en["activityHistory.empty"]);
   expect(host.querySelectorAll(".activity-history-entry")).toHaveLength(0);
+});
+
+// UI-04: cursors never update an already loaded running row (the contract's
+// "refresh the current page"). While the first window holds one, it reloads
+// itself; after paging further it says how to see the latest state instead.
+function running() {
+  const pending = page(); Object.assign(pending.entries[0], { state: "running", interrupted: false, finishedAt: null,
+    downloadEvidence: { sessionId: 7, written: null, restart: null, cleanup: "pending" } });
+  return pending;
+}
+async function wait(ms: number) { await act(async () => { vi.advanceTimersByTime(ms); }); await flush(); }
+
+it("reloads the first window on its own while it shows a running operation, then stops", async () => {
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "setTimeout", "clearTimeout"] });
+  try {
+    const fetcher = vi.fn().mockResolvedValueOnce(response(running())).mockResolvedValue(response(page()));
+    vi.stubGlobal("fetch", fetcher); await open();
+    await wait(RUNNING_REFRESH_MS);
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual(["/api/bus/history?after=0&limit=50", "/api/bus/history?after=0&limit=50"]);
+    expect(host.textContent).toContain(en["activityHistory.written.yes"]);
+    await wait(RUNNING_REFRESH_MS * 3);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  } finally { vi.useRealTimers(); }
+});
+
+it("does not reload by itself when nothing loaded is running", async () => {
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "setTimeout", "clearTimeout"] });
+  try {
+    const fetcher = vi.fn().mockResolvedValue(response(page())); vi.stubGlobal("fetch", fetcher); await open();
+    await wait(RUNNING_REFRESH_MS * 3);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(host.querySelector(".activity-history-running-paged")).toBeNull();
+  } finally { vi.useRealTimers(); }
+});
+
+it("after paging further, asks for a refresh instead of collapsing the loaded window", async () => {
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "setTimeout", "clearTimeout"] });
+  try {
+    const first = running(); first.hasMore = true;
+    const fetcher = vi.fn().mockResolvedValueOnce(response(first)).mockResolvedValueOnce(response(page(2, "synthetic-new-server")));
+    vi.stubGlobal("fetch", fetcher); await open(); await click(en["activityHistory.more"]);
+    await wait(RUNNING_REFRESH_MS * 3);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(host.querySelectorAll(".activity-history-entry")).toHaveLength(2);
+    expect(host.querySelector(".activity-history-running-paged")!.textContent).toBe(en["activityHistory.runningPaged"]);
+  } finally { vi.useRealTimers(); }
 });

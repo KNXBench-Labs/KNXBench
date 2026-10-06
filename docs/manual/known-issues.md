@@ -198,17 +198,6 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 
 ## Group addresses
 
-### The New project dialog says the style cannot be changed later
-
-- **Affected:** choosing a group-address style when creating a project.
-- **Limitation:** the dialog's hint reads "Choose the group-address style now;
-  it cannot currently be changed after creation." That is out of date: since
-  2026-10-02 the **Project** node in the properties pane changes the style, as
-  one undoable step (checked 2026-10-06 against the running application).
-- **Consequence:** none for your project; only the hint is wrong. The text
-  belongs to the interface and is handed to its owner.
-- **Workaround:** change the style on the Project node if you need to.
-
 ### CSV import does not manage group ranges
 
 - **Affected:** the group-address CSV import.

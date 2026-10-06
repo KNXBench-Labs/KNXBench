@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — UI follow-ups from AR16 and KL-61: honest style hint, styled type outcome
+
+- New project dialog: the group-address style hint no longer says the style
+  cannot be changed after creation; it points to the Project node, which
+  restyles as one undoable step since 2026-10-02. The manual's known-issues
+  entry for the stale hint is removed.
+- Group-address Inspector: the KL-61 outcome sentence (`.dpt-outcome`, added
+  by Alpha in `4b9e913e` without a rule) is now a muted 12 px note; a size
+  conflict keeps the warning colour (compound selector).
+- Tests: Vitest case rewritten RED-first (EN/DE, old wording absent); Chromium
+  `ga-type-detail.e2e.ts` 3 (muted note; conflict warning in porcelain and
+  graphite) RED before the rule; 4/4 CSS mutants killed; Vitest 2,071 / 117,
+  `tsc -b` 0.
+
 ## 2026-10-06 — The reviewer's four conditions, met in code rather than waived
 
 - Independent AR18 review: `READY_WITH_CONDITIONS`, with no CRITICAL

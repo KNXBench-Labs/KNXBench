@@ -1509,7 +1509,7 @@ export const messages = {
   "newProject.languageHint": "The language tag your project texts are stored under. Choose a listed language or enter another well-formed tag, e.g. de-DE. This does not change the interface language.",
   "newProject.filenameHint": "Save or Save As chooses the .knxdb filename. Project and installation names are not file paths.",
   "newProject.style": "Group address style",
-  "newProject.styleHint": "Choose the group-address style now; it cannot currently be changed after creation.",
+  "newProject.styleHint": "You can change the group-address style later on the Project node.",
   "newProject.style.Free": "Free (0–65535)",
   "newProject.style.TwoLevel": "Two level (main/sub)",
   "newProject.style.ThreeLevel": "Three level (main/middle/sub)",

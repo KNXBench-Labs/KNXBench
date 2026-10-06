@@ -267,15 +267,20 @@ describe("NewProjectDialog", () => {
     root.unmount();
   });
 
-  it("does not promise a group-address restyle that project properties cannot perform", async () => {
+  // Since 2026-10-02 the Project node's style select restyles a project as one
+  // undoable command (`setGroupAddressStyle`); the hint must not claim the
+  // choice is final (AR16 hand-over, 2026-10-06).
+  it("says the group-address style can be changed later on the Project node", async () => {
     const { root } = await renderDialog();
-    expect(host!.textContent).toContain("Choose the group-address style now; it cannot currently be changed after creation.");
+    expect(host!.textContent).toContain("You can change the group-address style later on the Project node.");
+    expect(host!.textContent).not.toContain("cannot currently be changed");
     root.unmount();
 
     saveUiLanguage(settingsStorage, "de");
     resetUiLanguageForTests();
     const { root: germanRoot } = await renderDialog();
-    expect(host!.textContent).toContain("Wähle den Gruppenadressstil jetzt; nach dem Anlegen kann er derzeit nicht geändert werden.");
+    expect(host!.textContent).toContain("Den Gruppenadressstil kannst du später am Projektknoten ändern.");
+    expect(host!.textContent).not.toContain("nicht geändert werden");
     germanRoot.unmount();
   });
 

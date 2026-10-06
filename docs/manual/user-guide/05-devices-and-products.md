@@ -18,13 +18,14 @@ Open it from the navigation pane (**Product catalog**), from the `+ Add device` 
 under a line in the project explorer, or from the `+` button on a line in the Topology
 view. All three open the same centre workspace; only the target line differs.
 
-![The product catalog in the main workspace: an install file picker, manufacturer
-filter, search and result, then a device name, quantity of three, and a preview
-of the generated names and unassigned addresses. This is an illustrative local
-UI fixture, not an installed manufacturer's data.](../../assets/screenshots/porcelain-product-catalog.png)
+![The Device catalog in the main workspace, opened from line 1.1 in the Topology
+view: an install file picker, the manufacturer filter and search, four fictional
+products with "Switch actuator 4-fold, DIN rail (1)" picked, the name field, quantity
+3, "Assign free addresses on the line" ticked, and a "Devices to create" preview
+naming Switch actuator 4-fold, DIN rail 1 to 3 for target line 1](../../assets/screenshots/porcelain-product-catalog.png)
 
-In an installed catalog a row can show `name (number) — description` (the
-illustrative screenshot has only a name), and the same product can appear more
+A row shows `name (number) — description`, as in the screenshot, and the same
+product can appear more
 than once — one row per catalog item in the database, including
 several entries that differ only in a number. KNXBench shows what the database
 contains; it does not deduplicate on your behalf.
@@ -151,11 +152,13 @@ edit the project; they do not connect to, program or download a KNX device.
 
 ### Communication objects
 
-![The device panel for 1.0.1 with the Communication objects tab selected, below the
-Topology view. Object 0 is expanded: DPT `DPST-1-1` with a ProgramRef badge, a
-Description field, the six flag checkboxes R W T U C I with T and C ticked, an existing
-Send link to 0/0/1 with an Unlink button, and a row for adding the next
-link](../../assets/screenshots/porcelain-device-tab-communication-objects.png)
+![The device panel for 1.1.1 with the Communication objects tab selected. The channel
+group "Channel A" (Name: Channel1, Number: 1, 2 objects) is open and object 0
+"Channel A: Switch" is expanded: DPT `DPST-1-1` with a Program badge, a Description
+field, the six flag checkboxes R W T U C I with W and C ticked, an existing Receive
+link to 0/0/1 "Living room ceiling light" with an Unlink button, and a row for adding
+the next link. Object 1 "Channel A: Status" and the closed group "Channel B"
+follow](../../assets/screenshots/porcelain-device-tab-communication-objects.png)
 
 One collapsible **channel group** per evaluated channel, initially closed. The
 application program's evaluated ownership determines grouping; neither the
@@ -241,11 +244,10 @@ If no product database is installed, the import simply says so and skips this st
 
 ### Parameters
 
-![The device panel with the Parameters tab selected. A Device section holds "Enable room
-temperature control" set to "no"; below it two module sections named
-M-00FA_A-2504-10-C071_MD-2_M-1 and _M-2, each with a Function select reading "Switching -
-No Feedback" and "Dimming - No
-Feedback"](../../assets/screenshots/porcelain-device-tab-parameters.png)
+![The device panel with the Parameters tab selected. A Device section holds "Delay
+after bus voltage recovery (s)" set to 3, followed by "Operating mode" ("Normally
+open") and "Behaviour on bus voltage recovery" ("Keep state") once per channel. The
+sample program has no modules, so no module sections appear](../../assets/screenshots/porcelain-device-tab-parameters.png)
 
 The tab loads the device's parameters when you select the device. What you get:
 
@@ -292,10 +294,11 @@ gated device-download operation, never a side effect of this field.
 
 ![The device panel with the Product data tab selected. Under PRODUCT IDENTITY a badge
 reads "From the product database"; the product reference, the application program
-reference, the manufacturer "KNX Association", the product name "KX.tp (D4)" and the
-order number are listed, and the expanded "More product data" disclosure below adds
-manufacturer ID and catalogue
-item](../../assets/screenshots/porcelain-device-tab-product-data.png)
+reference, the manufacturer "Example Devices (fictional)", the product name "Switch
+actuator 4-fold, DIN rail" and the order number EX-SA4 are listed, and the expanded
+"More product data" disclosure adds the PRODUCT, HARDWARE and APPLICATION PROGRAM
+groups with manufacturer ID, catalogue item, hardware and program versions and the mask
+version](../../assets/screenshots/porcelain-device-tab-product-data.png)
 
 This tab answers one question: which product does the project say this device is, and
 did the installed database recognize it? The badge at the top right gives the verdict:

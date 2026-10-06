@@ -195,7 +195,7 @@ identical to "no gateway found."
 **Do this:** if you're running `knx bus discover` inside a container of your own on
 Linux, add `--network host` and try again — that puts the request on the real network
 interface, the same as running the CLI outside a container. This applies both
-to the `knx` CLI and to the **Discover gateways** action in the
+to the `knx` CLI and to the bus monitor's interface **Search** in the
 `knxbench-server` web UI, because both use the same multicast discovery
 implementation. See
 [Linux setup §Multicast and `knx bus discover`](../getting-started/05-linux-setup.md#multicast-and-knx-bus-discover)

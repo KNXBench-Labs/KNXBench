@@ -8,8 +8,8 @@ before it works. This chapter walks around the window once, names every part, an
 says what each part is for.
 
 ![The KNXBench window with no project open: a header bar, a navigation pane on the
-left, an empty workspace with New project, Open project and Open (.knxdb) buttons, and
-a properties pane on the right](../../assets/screenshots/porcelain-welcome.png)
+left, a workspace headed "Your KNX workspace" with the cards New project…, Open
+KNXBench project and Import ETS project, and a properties pane on the right](../../assets/screenshots/porcelain-welcome.png)
 
 That is the whole window before any project exists. Notice that the navigation pane,
 the workspace and the properties pane are already there and already empty — the layout
@@ -79,10 +79,9 @@ installations, areas, lines, devices, group addresses, building parts and
 communication objects, with the project tree on the
 left](../../assets/screenshots/porcelain-dashboard.png)
 
-The Overview of the KV v2.5 demo project: 2 areas, 2 lines, 4 devices, 13 group
-addresses, 75 communication objects. In the tree on the left you can see one of those
-inline creation rows open under Area 0 — an address field, a name field, a medium
-field, and an Add button.
+The Overview of the fictional sample project the manual's screenshots use: 1 area,
+2 lines, 8 devices, 15 group addresses, 8 building parts, 39 communication objects.
+The tree on the left shows the same project, opened at its first line.
 
 ## The workspace
 
@@ -160,10 +159,10 @@ building parts, grouped by kind. It matches as you type, arrow keys move through
 hits, Enter selects one and takes you to it, reopening the containing Project
 Explorer branches when necessary.
 
-![The search overlay with the query "dimming" and five matching group addresses listed
-under a "Group addresses" heading](../../assets/screenshots/porcelain-search.png)
+![The search overlay with the query "light" and eight matching group addresses listed
+under a "Group addresses" heading, each with its address](../../assets/screenshots/porcelain-search.png)
 
-Searching the demo project for "dimming": five group addresses match, each shown with
+Searching the sample project for "light": eight group addresses match, each shown with
 its name and its address.
 
 **The command palette** (`Ctrl+Shift+P`) lists every command KNXBench has as a
@@ -191,15 +190,12 @@ not datapoint types or payload-value intervals. A validation toast for a
 malformed address, DPT or project language also shows the expected syntax
 and one example; the original server detail remains available for diagnostics.
 
-![The help panel with its ten topics listed and the "Getting started" topic
+![The help panel with its eleven topics listed, among them Group address ranges and
+Import, and the "Getting started" topic
 open](../../assets/screenshots/porcelain-help-panel.png)
 
-> **Note**
->
-> The screenshot shows ten topics and the earlier “Import and export” label.
-> The live panel now has eleven topics, including **Group address ranges**;
-> the import topic is named **Import**, because KNXBench does not export
-> `.knxproj` ([ADR-0028](../../adr/0028-no-knxproj-export.md)).
+The import topic is named **Import**, not "Import and export", because KNXBench does
+not export `.knxproj` ([ADR-0028](../../adr/0028-no-knxproj-export.md)).
 
 The help panel is deliberately short. It answers "what is this thing on my screen",
 not "how does KNX work" — that part is this manual's job, starting at

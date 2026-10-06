@@ -15,8 +15,9 @@ to ETS for working with KNX projects.**
 
 ![KNXBench showing the group address table of an imported ETS project, with the project tree on the left and the properties inspector on the right](docs/assets/screenshots/porcelain-group-addresses.png)
 
-*The group address table after importing an ETS demo project: address, name, range,
-datapoint type and link counts, with a filter box and CSV import/export. Porcelain theme.*
+*The group address table of the fictional sample project used for every screenshot in
+the manual: address, name, range, datapoint type and link counts, with a filter box and
+CSV import/export. Porcelain theme.*
 
 ## Why this exists
 
@@ -67,7 +68,7 @@ curl -sf http://127.0.0.1:8484/healthz
 That published-port form supports project work only: from Docker's default
 bridge a tunnel to a gateway gets no answer
 ([§155](docs/KNOWN_LIMITATIONS.md#155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer)),
-and the multicast used by the **Discover gateways** button is blocked. On
+and the multicast used by the bus monitor's interface **Search** is blocked. On
 Linux, use host networking for bus work (host mode ignores `-p`, hence
 `KNX_PORT`):
 

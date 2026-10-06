@@ -14,8 +14,8 @@ properly; this chapter is about the table.
 Pick **Group addresses** in the navigation pane.
 
 ![The group-address table with columns Address, Name, Range, DPT and Links, listing
-addresses 0/0/1 through 0/0/11 of the demo project, with export and import buttons for
-CSV above it](../../assets/screenshots/porcelain-group-addresses.png)
+the sample project's lighting addresses 0/0/1 to 0/1/4 and the first blind address
+1/0/1, with export and import buttons for CSV above it](../../assets/screenshots/porcelain-group-addresses.png)
 
 Six columns, one row per address:
 

@@ -420,7 +420,7 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 ### Discovery does not work inside Docker's default network
 
 - **Affected:** KNXnet/IP gateway discovery from a container, including the
-  web UI's **Discover gateways** action.
+  interface **Search** in the web UI's bus monitor.
 - **Limitation:** discovery needs IP multicast, which the default bridge
   network does not carry.
 - **Workaround:** the host network, as above, or configure the gateway

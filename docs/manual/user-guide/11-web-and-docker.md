@@ -123,7 +123,7 @@ the server ask the gateway to answer the packet's source instead (KNXnet/IP
 Route Back); that gets a tunnel through the bridge if the gateway supports it.
 Discovery fails on the bridge either way: the CLI
 invokes the shared `KnxNetIpClient` directly, while the web UI's
-**Discover gateways** action reaches it through the server. Both send IP
+interface **Search** in the bus monitor reaches it through the server. Both send IP
 multicast from their process. Docker's bridge does not carry that request onto
 the LAN, so either call returns an empty result when its process is inside the
 bridge. See [The command line](10-command-line.md) and
@@ -212,7 +212,7 @@ Before it renders anything, the web frontend asks `GET /api/auth/status`. A serv
 wants no password renders the workbench directly — which is why the desktop shell never
 shows a login. A server that wants one shows this instead:
 
-![The KNXBench login card on an empty background: the KNXBench word mark, the sentence
+![The KNXBench login card on an empty background: the eyebrow "KNX-compatible · Linux-first", the KNXBench word mark, the sentence
 "This server is password-protected. Enter the password to carry on.", a Password field, a
 Sign in button, and the note "One password for the whole server, set when it was started.
 There are no user accounts yet."](../../assets/screenshots/porcelain-login.png)

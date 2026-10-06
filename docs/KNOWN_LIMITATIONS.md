@@ -8190,3 +8190,45 @@ The last one also catches two central records that share one local record.
 Empty directory records, as ETS6 writes them, and archives behind a prefix
 still import. Evidence: 8 more tests in `decoded_member_names.rs`, and four
 killed mutants.
+
+**Update 2026-10-06 (AR18 re-check round 3, N11/N12): every part of a record
+must agree, and the records must fill the archive.** Round 2 compared only
+the local *name*. The `zip` reader takes every size from the central record
+and reads the local header only to skip its name and extra field, so a
+central record that claimed 0 bytes hid the local bytes. With a Unicode Path,
+the real `0.xml` vanished again and a forgery took its name. Now each local
+record is compared with its central record, in the outer archive and in a
+nested payload, and refused with `InconsistentRecord` naming the part:
+- flags and compression method equal;
+- CRC and both sizes equal, zip64 placeholders taken from the local zip64
+  field;
+- with a data descriptor (bit 3): the local values are zeros (APPNOTE 4.4.4)
+  or the central values (Info-ZIP's `zip -e` writes those, and the ZipCrypto
+  fixtures were made with it), and a descriptor, with or without its
+  signature, follows the data and carries the central CRC and sizes (8-byte
+  sizes when the local header has a zip64 field);
+- the Info-ZIP Unicode Path fields (0x7075) of both headers are equal, or
+  both absent;
+- the records follow each other without gap or overlap up to the central
+  directory. Without this, twelve zero bytes after an empty record would pass
+  for a descriptor, and whatever follows them would belong to no record.
+
+A directory carries data when it declares a size, stores bytes uncompressed,
+or holds a deflate stream that inflates to anything or ends before its stored
+bytes do. An empty directory written deflated, as Java's `ZipOutputStream`
+and `jar` write it, now imports (N12). A directory name ending in `\`,
+which `zip` also treats as a directory, is compared with the file names too.
+
+The private corpus has none of these disagreements: 106 archives and 7
+unencrypted nested payloads, 1,517 records, no data descriptor, gap, overlap
+or prefix. Through the release CLI the fixed code imports the 3 real projects as before (2 exit 0, 1 exit 2 for report errors in its own data, none refused), ingests the same 3 through `knx products ingest` and all 103 `.knxprod`, and leaves every corpus file unchanged. Evidence: 35 more tests in
+`decoded_member_names.rs` (21 of the first 46 were RED before the fix), and
+27 killed mutants (ALPHA_FINAL_GATES §11).
+
+What remains:
+- Bytes in front of the first record are accepted as a prefix
+  (self-extractor stubs exist with both relative and absolute offsets), so a
+  record nobody references can still sit there. The central directory is
+  authoritative (APPNOTE), and every reader the re-check tried follows it; a
+  streaming reader would see the extra record.
+- Encrypted nested payloads of real projects were not part of the census.

@@ -49,7 +49,7 @@ addresses; built by a script, no real data).
 | New project → save as `smoke.knxdb` | 200 / 200 | 200 / 200 |
 | Import sample `.knxproj` → save as `sample.knxdb` | 200, 0 errors, 0 warnings / 200 | same |
 | Reopen both files | `Smoke`; `Sample house`, 15 group addresses, 2 lines | same |
-| Open a missing file | 400 `path does not exist` (409 `projectUnsavedChanges` over unsaved edits, otherwise 422 `projectNotOpenable` since 2026-10-06, see below) | same |
+| Open a missing file | 400 `path does not exist` (still so for a relative path, which is confined to the data directory and checked first, as in the 2026-10-06 round-3 smoke; an absolute path, as the desktop's file dialog sends, answers 422 `projectNotOpenable`, or 409 `projectUnsavedChanges` over unsaved edits, per the AR18 re-check round 3) | same |
 | Import a non-ZIP file | 500 `not a zip archive: invalid Zip archive: Could not find EOCD` (422 `projectNotImportable` since 2026-10-06, see below) | same |
 | Non-loopback sockets after the steps | none | none |
 | Application still running | yes | yes |

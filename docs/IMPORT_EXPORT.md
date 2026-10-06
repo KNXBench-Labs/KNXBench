@@ -131,6 +131,15 @@ letting one member's bytes stand in for another's. The check runs on the raw
 central directory *and* on the decoded names, in the outer archive and in a
 protected project's nested payload.
 
+**Record agreement** (KNOWN_LIMITATIONS §159, AR18 re-check rounds 2–3).
+Each record's local header must agree with its central record: name, flags,
+method, CRC, sizes (zip64 resolved), the data descriptor when bit 3 is set,
+and the Unicode Path field. The records must also follow each other without
+a gap up to the central directory, and a directory record may carry no data
+(an empty deflate stream, as Java tools write it, counts as none). The `zip`
+reader reads sizes from the central record alone, so any disagreement would
+let one archive mean two things to two readers.
+
 **Password protection** (RESEARCH §2.3): a protected project nests the
 payload as `<P-xxxx>.zip`.
 

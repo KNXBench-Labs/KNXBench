@@ -339,4 +339,66 @@ three tests, and the full gate was rerun on it. Evidence:
   refused here is unknown; no real file was refused.
 
 Because the candidate changed again, AR18 asks for one more look:
-[brief round 3](review/AR18_RECHECK_BRIEF.md#round-3-n7n10).
+[brief round 3](review/AR18_RECHECK_BRIEF.md#round-3-n7n10). Its result and
+the fixes that followed are in §11.
+
+## 11. AR18 re-check round 3: condition R6 fixed and re-gated
+
+Round 3 ([verdict](review/2026-10-06-alpha-recheck-round3.md),
+`READY_WITH_CONDITIONS`) confirmed N7–N10 against its own archives and found
+no real project or product package refused. It found one more bypass of the
+same class (N11: condition R6, with R7 to re-gate) and two MINOR findings,
+N12 and N13. This section is the evidence for the code revision
+`2254eed002e1c8a0988cd5bab89910559371342e`.
+
+| Finding | Fix | Commit | Proof |
+| --- | --- | --- | --- |
+| N11 (R6) — a central record that claims 0 bytes hides its local bytes; with a Unicode Path the real `0.xml` becomes a "directory" or an empty file and a forgery becomes `0.xml` | Each local record must agree with its central record: name, flags, method, CRC, sizes (zip64 resolved); with bit 3 zeros or the central values locally and a descriptor (signed or not) carrying the central values; equal Unicode Path fields. Records must tile the archive up to the central directory. Outer archive and nested payload; new private module `container/local_record.rs`, implemented locally because `knx-etsproj` may not depend on `knx-productdb` | `296ba1bb` | `decoded_member_names.rs`: the round-3 scenarios (directory, `\` directory and stored-file targets; nested; with descriptors), every single-field disagreement, gaps, an early record end. Controls: descriptors with and without signature (outer and nested), Info-ZIP local values, all-zip64, zip64 end record only, zip64 with descriptors, consistent Unicode Paths, a 4 KiB prefix, empty stored directories |
+| N12 — an empty directory written deflated is refused | A directory carries data only if it declares a size, stores bytes uncompressed, or its deflate stream inflates to anything or ends early; judged after the layout check. Trailing `\` counts in the directory/file clash | `296ba1bb` | 1 control and 4 refusals (a stream of one byte, bytes behind the stream, stored `03 00`, a declared size without bytes), plus the `\` clash |
+| N13 — one stale `500` in `ALPHA_CANDIDATE` | §6 corrected; the *Open a missing file* smoke row notes today's `409`/`422 projectNotOpenable` | `2254eed0` | — |
+
+Tests: `cba15ce4` (35 new; 21 of the first 46 were RED before the fix). The
+first full crate run after the fix found the four ZipCrypto fixture tests
+red: Info-ZIP's `zip -e` sets bit 3 *and* writes the real CRC and sizes into
+the local header. The brief's "zeros with bit 3" rule was therefore widened
+to "zeros or the central values"; the descriptor must still match.
+
+**Mutation sweep:** 27 mutants over the new guards, each killed by a named
+test (name, flags, method, CRC, each size, bit-3 local values both ways,
+descriptor present, signed and unsigned, 8-byte descriptor sizes, Unicode
+Path, local zip64 resolution, bounds, gap, tail gap, early end, directory
+size/empty/method/one-byte stream/trailing bytes, the N12 revert, the `\`
+clash, and the nested-layer call). Three first read as survivors with exit
+101: cargo stopped after the library's ZipCrypto fixture tests failed and
+never ran the integration binary. Rerun with `--no-fail-fast`, each is
+killed by its named test as well. One guard was removed instead of tested:
+an "encrypted directory carries data" branch protected no byte. The sources
+were compared byte for byte after restore.
+
+**Integrated gate on `2254eed0`** (clean detached worktree, fresh target,
+three leases, `XDG_DATA_HOME` isolated, no `KNX_*`, 23:15–23:45 CEST):
+
+| Gate | Result |
+| --- | --- |
+| `npm ci`, build, `tsc`, flow study, theme fixtures | exit 0 |
+| Vitest / Chromium | 2,076 in 117 files / 142 |
+| fmt, clippy `-D warnings` | exit 0 |
+| Workspace tests | 3,402 passed, 0 failed, 178 ignored, in 192 blocks (3,367 + the 35 new tests) |
+| Five `xtask` checks | ok (headers 560/155, anchors 567, ledger 190, corpus conventions 394 files) |
+| `cargo deny check`, `npm audit` | ok, 0 vulnerabilities |
+| `tools/run_corpus_tests.py` (offline) | **143 of 143 in 31 targets** |
+| Real archives through the release CLI | 3 `.knxproj`: 2 exit 0, 1 exit 2 (report errors in its own data), 0 refused; the same 3 via `knx products ingest`: 3/3; 103/103 `.knxprod` ingested; corpus files unchanged (SHA-256) |
+| AppImage | `check-appimage` ok; 107,870,712 bytes, SHA-256 `138444b4cf7f5664ce2f64e88b82574f88dcc5b382dca7f2e49ff1eae7d6c3fc`; build stamp `2254eed0`; no builder home, `/mnt`, worktree or `OriginalData` path in any of the 337 files |
+| Offline start | Native start (Wayland recipe, loopback-only namespace) rendered `v0.1.0-alpha.4` (screenshot inspected). The API sequence passed: new, save, import sample (0 errors), save, reopen both; a relative missing path `400`; non-ZIP `422 projectNotImportable`. No non-loopback socket |
+| `git diff --check`, inputs frozen | ok |
+
+Evidence: `ar18-round3-fixes-20261006`.
+
+**What stays:**
+- N6 (UI owner; rounds 2 and 3: not blocking).
+- The ~3× in-budget memory peak (§159).
+- The in-place upgrade of older projects that hold a saved project (§157).
+- Bytes in front of the first record are accepted as a prefix (§159).
+
+Because the candidate changed again, AR18 asks for one more look:
+[brief round 4](review/AR18_RECHECK_BRIEF.md#round-4-n11n13).

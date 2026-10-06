@@ -194,8 +194,15 @@ separate: saving keeps that history but clears the modified state; undoing edits
 to the baseline is also clean. A failed save does not clear the modified state.
 
 In the desktop build, quitting with a modified project asks first, and offers
-**Cancel** or **Quit without saving**. In the web build there is no Quit item — a
-browser tab cannot close itself — so nothing intercepts a closed tab.
+**Cancel**, **Quit without saving** or **Save and quit**. In the web build there is no
+Quit item — a browser tab cannot close itself — so nothing intercepts a closed tab.
+
+Opening or importing another project while the current one has unsaved edits asks the
+same way (since 2026-10-06): **Cancel**, **Discard changes and open** or **Save and
+open**. "Save and open" opens the other project only after a save that left the current
+one clean; the server refuses the replacement too, so a script calling the API cannot
+discard edits by accident either (`409`, kind `projectUnsavedChanges`, until it resends
+with `discardChanges: true`).
 
 > **Warning**
 >

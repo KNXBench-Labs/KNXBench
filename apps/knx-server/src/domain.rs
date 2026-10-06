@@ -371,7 +371,7 @@ pub fn open_project(
     path: &Path,
     progress: &LoadHandle,
 ) -> Result<ProjectTree, String> {
-    open_project_with_password(state, path, None, progress).map_err(|failure| failure.message)
+    open_project_with_password(state, path, None, true, progress).map_err(|failure| failure.message)
 }
 
 /// A failed project load: the message every caller already shows, plus a
@@ -398,6 +398,46 @@ impl From<String> for LoadFailure {
 pub const PASSWORD_REQUIRED: &str = "projectPasswordRequired";
 /// [`LoadFailure::kind`] of a protected `.knxproj` imported with a wrong password.
 pub const PASSWORD_WRONG: &str = "projectPasswordWrong";
+/// [`LoadFailure::kind`] of an open or import that would throw away the
+/// open project's unsaved edits (AR18 review F1). The route answers `409`;
+/// resending with `discardChanges: true` is the caller's explicit consent,
+/// exactly as for [`new_project_impl`].
+pub const UNSAVED_CHANGES: &str = "projectUnsavedChanges";
+
+/// Whether the open project differs from its clean snapshot — the same
+/// predicate [`new_project_impl`] guards with.
+fn has_unsaved_changes(state: &AppState) -> bool {
+    let project = state.project.lock().expect("state mutex poisoned");
+    let clean = state.clean_project.lock().expect("state mutex poisoned");
+    project
+        .as_ref()
+        .is_some_and(|project| project_is_modified(project, clean.as_ref()))
+}
+
+/// The refusal for an open or import over unsaved edits, logged like the
+/// one for a new project.
+fn unsaved_changes_refusal(state: &AppState, source: &str) -> LoadFailure {
+    let message = "the open project has unsaved changes; save it first or resend with \
+                   discardChanges: true"
+        .to_string();
+    state
+        .session_log
+        .lock()
+        .expect("state mutex poisoned")
+        .push(LogEntry {
+            timestamp: session_log::now(),
+            severity: Severity::Warning,
+            source: source.to_string(),
+            message: format!("refused to {source}: the open project has unsaved edits"),
+            location: None,
+            diagnostic: None,
+            detail: None,
+        });
+    LoadFailure {
+        message,
+        kind: Some(UNSAVED_CHANGES),
+    }
+}
 
 fn load_failure_kind(error: &AppError) -> Option<&'static str> {
     use knx_etsproj::{ContainerError, ImportFailure};
@@ -417,12 +457,21 @@ fn load_failure_kind(error: &AppError) -> Option<&'static str> {
 /// decryptor: it is not kept in `state`, and neither the returned failure,
 /// the session log nor the load-progress record carries it (container
 /// errors name the nested entry, never the password).
+///
+/// Refuses with [`UNSAVED_CHANGES`] when the open project has unsaved edits,
+/// unless `discard_changes` is set: checked before the import starts, and
+/// again atomically at the replacement, so an edit made while the file was
+/// being read is not lost either.
 pub fn open_project_with_password(
     state: &AppState,
     path: &Path,
     password: Option<&knx_etsproj::ProjectPassword>,
+    discard_changes: bool,
     progress: &LoadHandle,
 ) -> Result<ProjectTree, LoadFailure> {
+    if !discard_changes && has_unsaved_changes(state) {
+        return Err(unsaved_changes_refusal(state, "import"));
+    }
     let guard = state
         .product_db
         .as_ref()
@@ -452,14 +501,16 @@ pub fn open_project_with_password(
             return Err(failure);
         }
     };
-    let tree = replace_project_state(
+    let tree = replace_unless_unsaved(
         state,
         project,
         (tree.errors, tree.warnings),
         None,
         opaque,
         manufacturer_refs,
-    );
+        discard_changes,
+    )
+    .map_err(|UnsavedChanges| unsaved_changes_refusal(state, "import"))?;
 
     let mut log = state.session_log.lock().expect("state mutex poisoned");
     log.reset();
@@ -576,12 +627,17 @@ pub fn open_native_project_impl(path: &Path) -> Result<ProjectTree, String> {
 }
 
 /// Loads a `.knxdb` file at `path`, replaces `state`'s project, and points
-/// `store_path` at it — what the `/api/project/open` route calls.
+/// `store_path` at it — what the `/api/project/open` route calls. Refuses
+/// over unsaved edits like [`open_project_with_password`].
 pub fn open_native_project(
     state: &AppState,
     path: &Path,
+    discard_changes: bool,
     progress: &LoadHandle,
-) -> Result<ProjectTree, String> {
+) -> Result<ProjectTree, LoadFailure> {
+    if !discard_changes && has_unsaved_changes(state) {
+        return Err(unsaved_changes_refusal(state, "open"));
+    }
     let loaded = load_native(path, progress);
     let (_tree, project, (opaque, manufacturer_refs), allocator_repair) = match loaded {
         Ok(v) => v,
@@ -599,17 +655,19 @@ pub fn open_native_project(
                     diagnostic: None,
                     detail: None,
                 });
-            return Err(e);
+            return Err(LoadFailure::from(e));
         }
     };
-    let tree = replace_project_state(
+    let tree = replace_unless_unsaved(
         state,
         project,
         (0, 0),
         Some(path.to_path_buf()),
         opaque,
         manufacturer_refs,
-    );
+        discard_changes,
+    )
+    .map_err(|UnsavedChanges| unsaved_changes_refusal(state, "open"))?;
 
     let mut log = state.session_log.lock().expect("state mutex poisoned");
     log.reset();
@@ -1744,25 +1802,37 @@ impl AppState {
     }
 }
 
-fn replace_project_state(
+/// The project replacement behind the unsaved-edits guard of
+/// [`new_project_impl`], evaluated under the same project lock as the
+/// replacement itself.
+fn replace_unless_unsaved(
     state: &AppState,
     replacement: knx_core::Project,
     replacement_import_counts: (usize, usize),
     replacement_store_path: Option<PathBuf>,
     replacement_opaque: Vec<knx_store::StoredOpaqueEntry>,
     replacement_manufacturer_refs: Vec<knx_store::ManufacturerRef>,
-) -> ProjectTree {
-    replace_project_state_with_pause(
+    discard_changes: bool,
+) -> Result<ProjectTree, UnsavedChanges> {
+    replace_project_state_transaction(
         state,
         replacement,
         replacement_import_counts,
         replacement_store_path,
         replacement_opaque,
         replacement_manufacturer_refs,
+        |project, clean_project| {
+            discard_changes
+                || !project.is_some_and(|project| project_is_modified(project, clean_project))
+        },
         || {},
     )
 }
 
+/// An unconditional replacement with a hook inside the lock, for the
+/// publication-order tests; production replacements go through
+/// [`replace_unless_unsaved`] or [`new_project_impl`].
+#[cfg(test)]
 fn replace_project_state_with_pause(
     state: &AppState,
     replacement: knx_core::Project,
@@ -6554,6 +6624,7 @@ mod tests {
         open_native_project(
             &state,
             &db_path,
+            false,
             &detached_progress(crate::LoadKind::Open, &db_path),
         )
         .unwrap();
@@ -6571,6 +6642,47 @@ mod tests {
     }
 
     #[test]
+    fn the_replacement_itself_refuses_over_unsaved_edits_unless_told_to() {
+        // AR18 review F1, inner layer: the route checks first, but an edit
+        // can land while a file is being read. The replacement re-checks
+        // under the project lock.
+        let state = AppState::default();
+        new_project_impl(&state, Some("Before".into()), None, None, None, true).unwrap();
+        state.project.lock().unwrap().as_mut().unwrap().info.name = "Edited, not saved".into();
+        let replacement = || knx_core::Project::new(knx_core::Language("en".into()));
+        assert!(matches!(
+            replace_unless_unsaved(
+                &state,
+                replacement(),
+                (0, 0),
+                None,
+                Vec::new(),
+                Vec::new(),
+                false
+            ),
+            Err(UnsavedChanges)
+        ));
+        assert_eq!(
+            state.project.lock().unwrap().as_ref().unwrap().info.name,
+            "Edited, not saved"
+        );
+        assert!(replace_unless_unsaved(
+            &state,
+            replacement(),
+            (0, 0),
+            None,
+            Vec::new(),
+            Vec::new(),
+            true
+        )
+        .is_ok());
+        assert_eq!(
+            state.project.lock().unwrap().as_ref().unwrap().info.name,
+            ""
+        );
+    }
+
+    #[test]
     fn opening_a_consistent_file_logs_no_allocator_repair() {
         let dir = tempfile::tempdir().unwrap();
         let db_path = dir.path().join("consistent.knxdb");
@@ -6583,6 +6695,7 @@ mod tests {
         open_native_project(
             &state,
             &db_path,
+            false,
             &detached_progress(crate::LoadKind::Open, &db_path),
         )
         .unwrap();

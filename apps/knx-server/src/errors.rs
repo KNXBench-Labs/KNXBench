@@ -94,6 +94,18 @@ impl ApiError {
         }
     }
 
+    /// A `409` with a stable `kind`: the request conflicts with state the
+    /// caller can resolve, e.g. unsaved edits an open would discard. The
+    /// kind tells it apart from the other `409`s (a load already running).
+    pub fn conflict(kind: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            message: message.into(),
+            validation: None,
+            kind: Some(kind),
+        }
+    }
+
     /// A `422` the client answers with a specific action rather than just
     /// showing the text, for example asking for a project password. The
     /// body is `{ error, kind }`; `kind` is a stable camelCase token.

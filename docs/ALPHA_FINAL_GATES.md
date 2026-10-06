@@ -10,7 +10,7 @@ review, the user decides at AR19.
 | Field | Value |
 | --- | --- |
 | Gated revision | `4b9e913e5ee2d5241bbb06ca932f02bf29a4e888` (clean tree, fetched `origin/main`) |
-| Later commits | Documentation only: this dossier, the review brief and status files. `git diff --name-only 4b9e913e <later>` lists no source, test or build file |
+| Later commits | Documentation and one test-only fix: `git diff --name-only 4b9e913e <later>` lists docs, handover files and `apps/knx-server/tests/http_device_compare.rs` (§4). No product source or build file |
 | Versions | CLI, desktop, web `0.1.0-alpha.4`; server `0.1.0-alpha.1` (ADR-0018) |
 | AppImage | `KNXBench_0.1.0-alpha.4_amd64.AppImage`, 107,833,848 bytes, SHA-256 `70bbb6b640dec6d77340c702dc4e1baad6b46c1e6516c6523bd74b898f72f81b` |
 | Artifact location | Maintainer evidence store `ar18-candidate-20261006` (not committed), with the AppDir manifest (337 files) |
@@ -76,6 +76,16 @@ sends anything, as AUDIT-01 requires. The download tests' harness builds
 is stale. This file belongs to the commissioning owner. The fix is test-only
 and has not been made here.
 
+**Fixed 2026-10-06, user decision (test-only).** The harness now builds on
+`AppState::new(dir)` like the download tests, so the activity history lives
+in the test's own directory. The fix was measured on its own after the
+gate: `http_device_compare` with the corpus ran 8 passed, 0 failed. Reverting
+the fix as a mutant brought back exactly the two failures, both with the 503
+message. The whole `knx-server` suite ran 617 passed, 0 failed, 44 ignored.
+fmt, clippy for `knx-server` and the five `xtask` checks were green. The
+private corpus result for the review candidate is therefore 142 of 142;
+the full-gate figures above still describe `4b9e913e`.
+
 ## 5. Artifact and offline start
 
 - Built from the clean tree (`KNX_REQUIRE_CLEAN_TREE=1`); the binary carries
@@ -111,8 +121,8 @@ and has not been made here.
 | Item | Owner | State |
 | --- | --- | --- |
 | Independent whole-product review | Fresh Claude session started by the user ([brief](review/AR18_REVIEW_BRIEF.md)) | Not started |
-| `http_device_compare` corpus pair | Commissioning owner | Red, test harness stale (§4) |
-| `UI-04` row closure | Commissioning owner, or the user accepting it as a boundary | Web half delivered (`892b9948`); row open |
+| `http_device_compare` corpus pair | Alpha, test-only, by user decision | Fixed and measured (§4) |
+| `UI-04` row closure | User | Accepted 2026-10-06 as a disclosed Alpha boundary |
 
 This dossier is evidence for revision `4b9e913e` only. Any later code change
 needs the affected gates run again.

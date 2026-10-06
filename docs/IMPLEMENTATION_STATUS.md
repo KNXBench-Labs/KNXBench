@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — The last red corpus pair turns green, and UI-04 gets its signature
+
+- `http_device_compare` harness: built on `AppState::new(dir)` like the
+  download tests, so its downloads find an activity history (test-only, by
+  user decision). Corpus pair 8/0; revert mutant brings back both 503
+  failures; `knx-server` 617/0/44; the review candidate's corpus count is
+  142/142.
+- `UI-04` accepted by the user as a disclosed Alpha boundary (ledger
+  `ACCEPTED_BOUNDARY` / `USER_ACCEPTED`); no snapshot row remains
+  `IN_PROGRESS`. Only the independent review stands before the AR18 verdict.
+
 ## 2026-10-06 — AR18 gates: the whole candidate goes through the scanner
 
 - Full §5 gate on the clean revision `4b9e913e`, one script, all leases,

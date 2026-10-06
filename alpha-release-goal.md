@@ -1016,8 +1016,9 @@ delivered in `4b9e913e`. The full §5 gate ran on that clean revision
 Chromium 139, clippy/fmt/deny/xtask green, AppImage `check-appimage` ok with
 build paths remapped, offline start ok, private corpus 140/2 (the known stale
 `http_device_compare` harness, commissioning owner). The review brief is
-[docs/review/AR18_REVIEW_BRIEF.md](docs/review/AR18_REVIEW_BRIEF.md). Open: the
-independent review, the corpus pair, and the `UI-04` row closure.
+[docs/review/AR18_REVIEW_BRIEF.md](docs/review/AR18_REVIEW_BRIEF.md). By user
+decision the corpus pair was fixed in its test harness (142/142) and `UI-04`
+was accepted as a disclosed boundary. Open: the independent review.
 
 - [x] Freeze the complete integrated candidate and artifact provenance. All actionable alpha-owned items are delivered, or their release exceptions have explicit user acceptance. Merely logging a blocker is not permission to call the alpha ready.
 - [ ] Run all explicit gates in §5 on that exact integrated revision, including private corpus cases that cover affected behavior; verify target, counts, changed-crate compilation and no silent skips.

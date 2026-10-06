@@ -145,6 +145,14 @@ pub enum ContainerError {
     DuplicateEntry {
         path: String,
     },
+    /// The archive has more central-directory records than the `zip` reader
+    /// keeps members: two records decode to one name (an Info-ZIP Unicode
+    /// Path field, or CP437 against UTF-8), so one would stand in for the
+    /// other (AR18 re-check N1).
+    NameCollision {
+        records: usize,
+        members: usize,
+    },
     /// The members together declare more uncompressed bytes than
     /// [`MAX_ARCHIVE_UNCOMPRESSED`] (AR18 review F3).
     TooLarge {
@@ -211,6 +219,11 @@ impl std::fmt::Display for ContainerError {
                 f,
                 "the archive declares {total} uncompressed bytes, more than the \
                  {limit}-byte limit"
+            ),
+            ContainerError::NameCollision { records, members } => write!(
+                f,
+                "the archive has {records} member records, but they decode to only \
+                 {members} distinct names; one member would stand in for another"
             ),
         }
     }
@@ -296,7 +309,8 @@ impl Container {
         })?;
         // Same identity rule as the outer archive (AR18 review F2): the
         // reader above has already collapsed an exact duplicate.
-        check_member_names(&payload_bytes, inner.central_directory_start())?;
+        let records = check_member_names(&payload_bytes, inner.central_directory_start())?;
+        check_decoded_names(&mut inner, records)?;
 
         // The opaque nested-zip blob is about to be replaced by the
         // entries it actually contains. Removed here, before the loop
@@ -306,6 +320,27 @@ impl Container {
         // inventory, including entries pushed by earlier iterations of
         // this same loop (finding 6 of the T15 branch review).
         container.entries.retain(|e| e.path != nested_info.path);
+
+        // The budget is judged on what the payload *declares*, before any
+        // member is unpacked (AR18 re-check N2): checked only after the
+        // loop, a small file could make it unpack gigabytes first. Each
+        // member is then read with at most its declared size, so the
+        // declarations are binding.
+        let mut declared = container.entries.clone();
+        for i in 0..inner.len() {
+            let entry = inner.by_index_raw(i).map_err(|e| ContainerError::Read {
+                path: nested_info.path.clone(),
+                cause: e.to_string(),
+            })?;
+            if !entry.is_dir() {
+                declared.push(EntryInfo {
+                    path: entry.name().to_string(),
+                    size: entry.size(),
+                });
+            }
+        }
+        check_total_size(&declared)?;
+        drop(declared);
 
         for i in 0..inner.len() {
             // `by_index_raw` returns the entry's bytes exactly as stored —
@@ -502,13 +537,14 @@ impl Container {
         // Names are checked on the raw central directory first: the `zip`
         // crate keys members by name, so an exact duplicate is already
         // collapsed into one slot by the time its index can be asked.
-        {
+        let records = {
             let probe = ZipArchive::new(Cursor::new(bytes.as_slice()))
                 .map_err(|e| ContainerError::NotAZip(e.to_string()))?;
-            check_member_names(&bytes, probe.central_directory_start())?;
-        }
+            check_member_names(&bytes, probe.central_directory_start())?
+        };
         let mut archive = ZipArchive::new(Cursor::new(bytes))
             .map_err(|e| ContainerError::NotAZip(e.to_string()))?;
+        check_decoded_names(&mut archive, records)?;
 
         let mut entries = Vec::with_capacity(archive.len());
         for i in 0..archive.len() {
@@ -696,7 +732,7 @@ fn check_total_size(entries: &[EntryInfo]) -> Result<(), ContainerError> {
 /// case (AR18 review F2). Lookups here are case-insensitive (`find`), so
 /// either kind of repeat would let one member's bytes stand in for the
 /// other's without a word. Directory records carry no data and are skipped.
-fn check_member_names(bytes: &[u8], start: u64) -> Result<(), ContainerError> {
+fn check_member_names(bytes: &[u8], start: u64) -> Result<usize, ContainerError> {
     const RECORD: usize = 46;
     let field = |at: usize| -> Option<usize> {
         bytes
@@ -704,6 +740,7 @@ fn check_member_names(bytes: &[u8], start: u64) -> Result<(), ContainerError> {
             .map(|b| u16::from_le_bytes([b[0], b[1]]) as usize)
     };
     let mut seen = std::collections::HashSet::new();
+    let mut records = 0;
     let mut at = usize::try_from(start).unwrap_or(usize::MAX);
     while bytes.get(at..at + 4) == Some(b"PK\x01\x02".as_slice()) {
         let (Some(name_len), Some(extra_len), Some(comment_len)) =
@@ -719,7 +756,43 @@ fn check_member_names(bytes: &[u8], start: u64) -> Result<(), ContainerError> {
                 path: String::from_utf8_lossy(name).into_owned(),
             });
         }
+        records += 1;
         at += RECORD + name_len + extra_len + comment_len;
+    }
+    Ok(records)
+}
+
+/// The second half of the identity rule (AR18 re-check N1): the names the
+/// `zip` reader actually serves. It decodes a name as CP437 or UTF-8 and
+/// may replace it with an Info-ZIP Unicode Path field, then keys members by
+/// the result — so two records with different raw names can still become
+/// one member, or two members with one name. Refused when the reader keeps
+/// fewer members than [`check_member_names`] counted `records`, or when two
+/// decoded file names are equal ignoring ASCII case (what [`Container::find`]
+/// would confuse).
+fn check_decoded_names<R: Read + std::io::Seek>(
+    archive: &mut ZipArchive<R>,
+    records: usize,
+) -> Result<(), ContainerError> {
+    if archive.len() != records {
+        return Err(ContainerError::NameCollision {
+            records,
+            members: archive.len(),
+        });
+    }
+    let mut seen = std::collections::HashSet::new();
+    for i in 0..archive.len() {
+        let entry = archive
+            .by_index_raw(i)
+            .map_err(|e| ContainerError::NotAZip(e.to_string()))?;
+        if entry.is_dir() {
+            continue;
+        }
+        if !seen.insert(entry.name().to_ascii_lowercase()) {
+            return Err(ContainerError::DuplicateEntry {
+                path: entry.name().to_string(),
+            });
+        }
     }
     Ok(())
 }

@@ -1,3 +1,15 @@
+- **Last Agent:** Claude (fresh AR18 re-check round-2 reviewer, not the alpha owner)
+- **Timestamp:** 2026-10-06 17:55 CEST
+- **Completed:** Independent re-check round 2 on `863f72ad` (product code = `3ede4817`), done as `docs/review/AR18_RECHECK_BRIEF.md#round-2-n1n6` describes. Verdict **READY_WITH_CONDITIONS** in `docs/review/2026-10-06-alpha-recheck-round2.md`. It is on branch `review/alpha-recheck`, the name the user gave, with the brief's name `review/alpha-recheck-2` pointing at the same commit. Not merged.
+  - Gates reproduced green offline: Rust 3359/0/178 in 192 blocks (also with an empty fake `HOME` and no `XDG_DATA_HOME`, which stays empty), Vitest 2076, Chromium 142, xtask ×5, deny, npm audit 0, check-appimage. Corpus 143/143 (it needs `project_dump.json` linked as well as `OriginalData/`).
+  - Fixed: N2 (12 MB nested bomb now peaks at 31 MB, AppImage at 261 MB), N3 (read only), N4, N5. Every round-1 N1 scenario is refused. N6 is unchanged; it should not block.
+  - IMPORTANT residual **N7**: a Unicode Path field can make the real `0.xml` decode as a directory (`0.xml/`) and another member decode as `0.xml`. Directory records are skipped by both identity checks and by the inventory, so the forged project is imported (exit 0, `200` in the AppImage) and the real bytes vanish without a report line. A data-bearing directory record is also dropped silently. MINOR: N8 (import of a missing path → 500), N9 (local and central headers not compared), N10 (two stale statements).
+  - Log: `.ai/logs/2026-10-06_claude_ar18-recheck-round2.md`.
+- **Pending/Next Steps:** The alpha owner fixes R4 (`crates/knx-etsproj/src/container.rs`: refuse data-bearing decoded directories, and directory names that equal a file name once the `/` is removed, in the outer archive and the nested payload; `crates/knx-productdb/src/package.rs` already does both), or the user accepts it and qualifies §159. Then R5: regate and rebuild the AppImage. The MINOR findings are optional.
+- **Notes for Codex oder Claude:** No product code was changed. The corpus runner reports 137/143 if only `OriginalData/` is linked into a worktree; link the root's `project_dump.json` too.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 16:50 CEST
 - **Completed:** Merged the independent re-check (`b4a23730`, READY_WITH_CONDITIONS) and fixed its conditions R1–R3 and N3–N5: `79bee3c6` (decoded-name collisions refused, nested payload counted before unpacking), `30a5cfb4` (`422 projectNotImportable`; `AppState::new` opens no product DB, binaries use `with_user_product_db`), `9118c884` (restore never-connected), `3ede4817` (test header). Mutants 6/6. Gate on `3ede4817` green: Rust 3359/0/178, Vitest 2076, Chromium 142, corpus 143/143, AppImage SHA-256 ca3101fb…591e (evidence `ar18-recheck-fixes-20261006`). ALPHA_FINAL_GATES §9; brief round 2.

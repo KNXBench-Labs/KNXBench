@@ -201,6 +201,47 @@ on 2026-10-05. Open: `KL-142` and `UI-04`, both Web halves with the UI owner
 (handoff above). Every row keeps its safe fallback from the table above: an
 accepted boundary is a refusal or a bounded claim, not new support.
 
+## Owner status history
+
+Moved verbatim from `goal-commission.md` on 2026-10-06 (AR14D D5, agreed by
+the commissioning owner); only relative links changed. Every ID named here has
+its row in the [source-ID ledger](status/LEDGER.md), which is current.
+
+### Where things stood (goal-commission.md, 2026-10-01)
+
+K1–K19 have historical implementation evidence at their documented scope.
+CLI/Web download and button-driven address programming ran on MDT `1.1.67`
+with device-specific approval; complete and all three partial download
+scopes were read back. A
+pre-write region backup and restore ran on that device for complete and
+parameters-only download. K13 address reset was performed and recovered on
+that device; K14 destructive Master Reset remains hardware-refused. K12 serial
+address write was ignored by this device even after a system-priority fix;
+read-only identification succeeded. RF K16/K17 is simulator-only and has no RF
+hardware or product-facing route. K19 decoded 71 private cEMI frames offline;
+no raw frames belong in Git. See [RESEARCH](RESEARCH.md),
+[limitations](KNOWN_LIMITATIONS.md) and
+[implementation status](IMPLEMENTATION_STATUS.md) for the per-operation
+evidence and refusal boundaries.
+
+**Current safety boundary:** the historical address runs do not provide
+durable complete recovery for a later device. Confirmed public button
+programming (ADR-0059), serial address writes (ADR-0057) and K13 reset
+(ADR-0058) now refuse *before tunnel opening* until their respective
+device-specific pre-write backup/readback/abort contracts are verified.
+Read-only plans, identification and simulator work remain available. The
+Debug bit-2 route (ADR-0051) instead has an offline-tested, property-only
+backup gate and a default-off explicit UI action, not a full device restore
+or new live evidence. K7 has a simulator interrupted-run/retry regression;
+this is not a live interruption. No K14 erase or RF hardware test is claimed.
+The user approved experimental K6 investigation but no new write. The
+previous target `1.1.67` is reportedly off the bus; `1.1.32` is a read-only
+identification **candidate**, not a verified model or approved write target.
+Confirm its physical role, identity and per-device recovery before asking
+for a new operation-specific go. Never transfer the old go or infer complete
+storage from a diagnostic dump (RESEARCH §24). The current handover in
+`.ai/CURRENT_STATE.md` wins if evidence advances.
+
 ## Reconciliation check
 
 Parse the rows with owner `commission` in `docs/status/LEDGER.md` (until

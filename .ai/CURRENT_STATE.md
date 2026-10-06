@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-10-06 06:58
+Web lock: held by claude-goal-ui-owner for the UI closure residue; not taken or released by this entry
+- **Completed:** **AR14D D5, commissioning part (owner agreement given by doing it).** The `goal-commission.md` *Where things stand (2026-10-01)* narrative moved verbatim to `docs/COMMISSIONING_ALPHA_LEDGER.md#owner-status-history` (only relative links changed); the goal file now links ledger, dossier and IMPLEMENTATION_STATUS. `alpha-release-goal.md` AR14D D5 ticked, AR14D status `DONE`; ALPHA_SCOPE_MATRIX's "open outside the ledger" note replaced. `goal.md` is archived, so no ownership row remained. Doc gates: anchors 605, ledger 190, headers 155/155, diff check.
+- **Pending/Next Steps:** `UI-04` owner receipt: the UI owner is delivering the live-activity half in `ui-closure` right now; once it is published, the commissioning owner reviews it against the handoff table and closes the row.
+- **Notes for Codex oder Claude:** **For the UI session:** I appended an *Owner status history* section to COMMISSIONING_ALPHA_LEDGER just before *Reconciliation check*; your ui-closure diff touches the same file, so expect a trivial merge there. No row status changed here.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 06:53 CEST
 - **Completed:** **AR16 slice 1.** 21 manual screenshots regenerated from the real app with the fictional sample project (`tools/manual_sample_project.py` + 3 unit tests; `apps/knx-web/e2e/manual-screenshots.shots.ts`, `playwright.manual.config.ts`, not part of the normal suite). Screenshot passages and 7 "Discover gateways" mentions corrected. `docs/MANUAL_ACCEPTANCE.md` dated checklist. UI closure NOT final: the UI owner reopened two residues at 06:39 (UI-04 live activity, KL-61 binding wording) and holds the Web lock; AR16 item 1 stays open until its closure receipt.

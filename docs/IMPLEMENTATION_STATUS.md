@@ -1,5 +1,21 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — KL-61: a group address finally says what it declares, not just what it ends up with
+
+- Projection: `GroupAddressNode.dpt_detail` (optional on the wire) carries the
+  stored declaration (`Absent`/`Empty`/`Value`/`Malformed` with text), the
+  linked objects' types and the outcome, mirrored one to one from
+  `knx_core::GroupAddressTypeOutcome`; `dpts` is unchanged and both come from
+  one weighing. Bindings regenerated (four new types).
+- Web: the group-address Inspector shows **Declared on the address**,
+  **Linked objects state** and one outcome sentence (en/de); a size conflict
+  is marked as a conflict. Trees without the detail show nothing extra.
+- Tests: two projection tests (all six declaration states and four outcomes,
+  the unlifted-store case) and seven Inspector tests; mutation sweep 8/8
+  killed (four Rust, four Web), originals byte-compared.
+- Manual: the group-address chapter and a known issue were stale since
+  ADR-0078/T07 and are corrected.
+
 ## 2026-10-06 — The user signs the boundary list; AR18 gets a reviewer
 
 - Nine rows accepted as disclosed Alpha boundaries (ledger `ACCEPTED_BOUNDARY`,

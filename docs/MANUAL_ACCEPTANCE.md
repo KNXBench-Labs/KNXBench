@@ -83,6 +83,11 @@ Stale claims found and corrected:
 - **Developer pages:** thirteen crates (with `knx-build-stamp`), 83 ADRs, all six `xtask`
   checks.
 
+Late corrections (2026-10-06, with the `KL-61` display): the group-address
+chapter still said a group address carries no type of its own, and known
+issues still said the codec infers the input format (both stale since ADR-0078
+and T07). Both corrected; the chapter now describes the new Inspector rows.
+
 Not done: a sentence-by-sentence reading of the five KNX-basics chapters for KNX
 theory; only their statements about KNXBench were checked.
 

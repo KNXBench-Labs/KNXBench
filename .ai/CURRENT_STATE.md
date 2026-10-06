@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 07:44 CEST
+Web lock: released by claude-alpha-release (KL-61 delivered)
+- **Completed:** KL-61 declared-versus-linked DPT display: projection `GroupAddressNode.dpt_detail` (+4 generated bindings), group-address Inspector rows **Declared on the address** / **Linked objects state** + outcome sentence (en/de, `gaType.*` keys). Gate: Rust 3317/0/177, Vitest 2071, Chromium 139, clippy/fmt/xtask green; mutants 8/8. Manual group-address chapter + one known issue corrected.
+- **Pending/Next Steps:** AR18: rebuild AppImage on the new head (with `--remap-path-prefix` to drop `/home/…` build paths), full §5 gates incl. `cargo deny` and selected corpus tests, commit the independent-review brief; the user starts a fresh Claude session for the review. UI-04 closure: commissioning owner, or user acceptance as boundary.
+- **Notes for Codex oder Claude:** **For the UI owner:** new Web code in `Inspector.tsx` (GroupAddressInspector) and `gaType.*` messages; `.dpt-outcome` has no dedicated CSS (inherits paragraph style) — restyle freely. `docs/UI_ALPHA_READINESS.md` still says the KL-61 display waits on a backend field; that is now delivered. `newProject.styleHint` hand-over from AR16 still open.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 07:21 CEST
 Web lock: taken by claude-alpha-release for KL-61 (declared-versus-linked DPT display)
 - **Completed:** Lock taken only.

@@ -170,13 +170,72 @@ pub struct GroupAddressNode {
     /// one); one entry is the effective type; two or more is a conflict —
     /// linked objects disagreeing, or a declaration whose width differs
     /// from the linked one — reported, never settled by picking a winner.
-    /// Whether the declaration and the linked type agree is not carried
-    /// here (KNOWN_LIMITATIONS §61). Entries are `DptRef`'s `Display` text
+    /// Whether the declaration and the linked type agree is carried in
+    /// [`Self::dpt_detail`]. Entries are `DptRef`'s `Display` text
     /// (`"DPST-1-1"`, `"DPT-1"`), never the dotted `"1.001"` form.
     pub dpts: Vec<String>,
+    /// Both sides behind `dpts` and how they were weighed (ADR-0078,
+    /// KNOWN_LIMITATIONS §61). This server always sends it; it is optional
+    /// on the wire so that hand-written trees without it stay valid, and a
+    /// client shows no detail rather than inventing one when it is absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub dpt_detail: Option<GroupAddressDptDetail>,
     /// Every communication object linked to this address, in
     /// `ComObjectInstanceId` order — the reverse of `ComObjectNode::links`.
     pub links: Vec<GroupAddressLinkNode>,
+}
+
+/// What a group address declares about its own type, what its linked
+/// communication objects state, and which of them applies
+/// (`knx_core::group_address_type_from`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct GroupAddressDptDetail {
+    /// `GroupAddress/@DatapointType` as stored (ETS schema 21 and later).
+    pub declared: DeclaredDptNode,
+    /// The types the linked communication objects state: empty when none
+    /// does, two or more when they disagree among themselves.
+    pub linked: Vec<String>,
+    pub outcome: GroupAddressDptOutcome,
+}
+
+/// The declaration's stored state. `text` is the type's `Display` text for
+/// `Value`, the unreadable source text for `Malformed`, and `None` otherwise.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct DeclaredDptNode {
+    pub state: DeclaredDptState,
+    pub text: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub enum DeclaredDptState {
+    Absent,
+    Empty,
+    Value,
+    Malformed,
+}
+
+/// Mirrors `knx_core::GroupAddressTypeOutcome` one to one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub enum GroupAddressDptOutcome {
+    /// The declaration applies; linked objects state the same type or none.
+    Declared,
+    /// The declaration applies; a linked object states another type of the
+    /// same size.
+    DeclaredDiffersFromLinked,
+    /// Declaration and a linked object differ in size; no type applies.
+    SizeConflict,
+    /// The declaration applies, but a size could not be checked.
+    Unverifiable,
+    /// No declaration here, but the store holds declarations it could not
+    /// attribute; the linked types apply and may be incomplete.
+    DeclarationNotLifted,
+    /// No usable declaration; the linked types apply.
+    Inferred,
 }
 
 /// One communication object's link to a group address, seen from the
@@ -380,34 +439,73 @@ fn build_group_address_node(
     style: GroupAddressStyle,
     index: &GroupAddressLinkIndex,
 ) -> GroupAddressNode {
+    let ty = group_address_type(entry, index);
     GroupAddressNode {
         id: entry.id.0,
         name: entry.name.clone(),
         address: entry.address.format(style),
         range: entry.range.map(|r| r.0),
-        dpts: effective_dpts(entry, index),
+        dpts: dpt_strings(&ty.effective()),
+        dpt_detail: Some(dpt_detail(&ty)),
         links: index.links.get(&entry.id).cloned().unwrap_or_default(),
     }
 }
 
-/// `dpts` for one address: its effective type (ADR-0078), so the field
-/// reports exactly what the bus monitor decodes with.
-fn effective_dpts(entry: &GroupAddressEntry, index: &GroupAddressLinkIndex) -> Vec<String> {
+/// One address's type, weighed once (ADR-0078): `dpts` reports its
+/// effective type, exactly what the bus monitor decodes with, and the
+/// detail keeps both sides.
+fn group_address_type(
+    entry: &GroupAddressEntry,
+    index: &GroupAddressLinkIndex,
+) -> knx_core::GroupAddressType {
     let linked = index
         .dpts
         .get(&entry.id)
         .cloned()
         .unwrap_or(GroupAddressDpt::None);
-    match knx_core::group_address_type_from(
-        &entry.declared_dpt,
-        linked,
-        index.declarations_unlifted,
-    )
-    .effective()
-    {
+    knx_core::group_address_type_from(&entry.declared_dpt, linked, index.declarations_unlifted)
+}
+
+fn dpt_strings(dpt: &GroupAddressDpt) -> Vec<String> {
+    match dpt {
         GroupAddressDpt::None => Vec::new(),
         GroupAddressDpt::Single(dpt) => vec![dpt.to_string()],
         GroupAddressDpt::Conflict(dpts) => dpts.iter().map(|dpt| dpt.to_string()).collect(),
+    }
+}
+
+fn dpt_detail(ty: &knx_core::GroupAddressType) -> GroupAddressDptDetail {
+    use knx_core::{GroupAddressTypeOutcome as Core, Override};
+    let declared = match &ty.declared {
+        Override::Absent => DeclaredDptNode {
+            state: DeclaredDptState::Absent,
+            text: None,
+        },
+        Override::Empty => DeclaredDptNode {
+            state: DeclaredDptState::Empty,
+            text: None,
+        },
+        Override::Value(resolved) => DeclaredDptNode {
+            state: DeclaredDptState::Value,
+            text: Some(resolved.value.to_string()),
+        },
+        Override::Malformed(raw) => DeclaredDptNode {
+            state: DeclaredDptState::Malformed,
+            text: Some(raw.clone()),
+        },
+    };
+    let outcome = match ty.outcome {
+        Core::Declared => GroupAddressDptOutcome::Declared,
+        Core::DeclaredDiffersFromLinked => GroupAddressDptOutcome::DeclaredDiffersFromLinked,
+        Core::SizeConflict => GroupAddressDptOutcome::SizeConflict,
+        Core::Unverifiable => GroupAddressDptOutcome::Unverifiable,
+        Core::DeclarationNotLifted => GroupAddressDptOutcome::DeclarationNotLifted,
+        Core::Inferred => GroupAddressDptOutcome::Inferred,
+    };
+    GroupAddressDptDetail {
+        declared,
+        linked: dpt_strings(&ty.linked),
+        outcome,
     }
 }
 
@@ -1705,6 +1803,115 @@ mod tests {
                 vec!["DPST-9-1".to_string()],
                 vec!["DPST-1-1".to_string(), "DPST-5-1".to_string()],
             ]
+        );
+    }
+
+    #[test]
+    fn the_dpt_detail_keeps_the_declaration_the_linked_types_and_the_outcome_apart() {
+        // KNOWN_LIMITATIONS §61: `dpts` carries only the effective type;
+        // the detail must show both sides and how they were weighed.
+        let mut project = Project::new(Language("en".into()));
+        project.devices.insert(device(1, "Dimmer", None));
+        for (com, ga, dpt) in [(10, 8, (9, 4)), (11, 9, (5, 1)), (12, 10, (1, 1))] {
+            project.devices.insert_com_object(linked_com_object(
+                com,
+                1,
+                2,
+                "obj",
+                Some(dpt),
+                &[(ga, knx_core::Direction::Send)],
+            ));
+        }
+        let mut inst = empty_installation();
+        let declarations = [
+            (7, "1/0/1", declared(1, 1)),
+            (8, "1/0/2", declared(9, 1)),
+            (9, "1/0/3", declared(1, 1)),
+            (10, "1/0/4", knx_core::Override::Absent),
+            (11, "1/0/5", knx_core::Override::Malformed("DPT-x".into())),
+            (12, "1/0/6", knx_core::Override::Empty),
+        ];
+        for (id, address, declaration) in declarations {
+            let mut entry = group_address(id, "ga", address, None);
+            entry.declared_dpt = declaration;
+            inst.group_addresses.push(entry);
+        }
+        project.installations.push(inst);
+
+        let tree = build_project_tree(&project);
+        let details: Vec<_> = tree.installations[0]
+            .group_addresses
+            .iter()
+            .map(|ga| {
+                ga.dpt_detail
+                    .clone()
+                    .expect("this server always sends the detail")
+            })
+            .collect();
+        let value = |text: &str| DeclaredDptNode {
+            state: DeclaredDptState::Value,
+            text: Some(text.to_string()),
+        };
+        let strings = |items: &[&str]| items.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(
+            details,
+            vec![
+                GroupAddressDptDetail {
+                    declared: value("DPST-1-1"),
+                    linked: vec![],
+                    outcome: GroupAddressDptOutcome::Declared,
+                },
+                GroupAddressDptDetail {
+                    declared: value("DPST-9-1"),
+                    linked: strings(&["DPST-9-4"]),
+                    outcome: GroupAddressDptOutcome::DeclaredDiffersFromLinked,
+                },
+                GroupAddressDptDetail {
+                    declared: value("DPST-1-1"),
+                    linked: strings(&["DPST-5-1"]),
+                    outcome: GroupAddressDptOutcome::SizeConflict,
+                },
+                GroupAddressDptDetail {
+                    declared: DeclaredDptNode {
+                        state: DeclaredDptState::Absent,
+                        text: None,
+                    },
+                    linked: strings(&["DPST-1-1"]),
+                    outcome: GroupAddressDptOutcome::Inferred,
+                },
+                GroupAddressDptDetail {
+                    declared: DeclaredDptNode {
+                        state: DeclaredDptState::Malformed,
+                        text: Some("DPT-x".to_string()),
+                    },
+                    linked: vec![],
+                    outcome: GroupAddressDptOutcome::Inferred,
+                },
+                GroupAddressDptDetail {
+                    declared: DeclaredDptNode {
+                        state: DeclaredDptState::Empty,
+                        text: None,
+                    },
+                    linked: vec![],
+                    outcome: GroupAddressDptOutcome::Inferred,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn an_absent_declaration_in_a_store_with_unlifted_ones_says_so() {
+        let mut project = Project::new(Language("en".into()));
+        project.info.unlifted_group_address_dpt_declarations = 3;
+        let mut inst = empty_installation();
+        inst.group_addresses
+            .push(group_address(7, "Old store", "1/0/1", None));
+        project.installations.push(inst);
+
+        let ga = &build_project_tree(&project).installations[0].group_addresses[0];
+        assert_eq!(
+            ga.dpt_detail.as_ref().map(|detail| detail.outcome),
+            Some(GroupAddressDptOutcome::DeclarationNotLifted)
         );
     }
 

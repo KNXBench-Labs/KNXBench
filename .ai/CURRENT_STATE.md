@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-06 11:14 CEST
+- **Completed:** Docs only. Addendum to the UI closure receipt (`docs/UI_ALPHA_READINESS.md`): `KL-61`'s display was delivered by Alpha (`4b9e913e`) and `UI-04` closed by the user's acceptance (`f2b31538`), so the receipt's "left for others" is not read as current on them. Doc gates: anchors 617, ledger 190, headers 155/155, diff-check clean.
+- **Pending/Next Steps:** UI owner: the two follow-ups Alpha handed back (`newProject.styleHint` out of date + manual known-issues entry; `.dpt-outcome` styling) are prepared on branch `ui/style-hint-dpt-outcome`, not merged: any code change moves `main` past the AR18 candidate (`4b9e913e` + test fix). Merge timing is the user's / release owner's call.
+- **Notes for Codex oder Claude:** Web lock: free; not taken or released by this entry.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 09:00 CEST
 - **Completed:** By user decision: (1) `http_device_compare.rs` harness fixed test-only (`AppState::new(dir)`), corpus pair green, revert mutant red; (2) `UI-04` → `ACCEPTED_BOUNDARY` / `USER_ACCEPTED`. Dossier and review brief updated (candidate = `4b9e913e` + docs + this test file).

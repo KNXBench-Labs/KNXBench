@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — The minor findings M1–M9 fixed as well
+
+- M1: readers (*Open*, `doc-export`, `ga-export`, `diff`, compare, the
+  serial lookup) never create a file, and refuse a foreign SQLite file or a
+  store without a saved project untouched (`422 projectNotOpenable`). A
+  failed `knx import` leaves `--store` alone.
+- M2: Save writes everything in one transaction.
+- M3: a second project part gets a report line.
+- M6: a download whose tunnel never opened is recorded as `failed`,
+  `written: no`.
+- M7: `tools/run_corpus_tests.py` runs all corpus tests.
+- M8: test defaults no longer touch the developer's product database.
+- M9: `source-map-js` 1.2.2.
+- 17 of 17 mutants killed. Gate on `faa3955f`: Rust 3350/0/178, Vitest 2076,
+  Chromium 142, corpus 143/143, AppImage
+  ([ALPHA_FINAL_GATES §8](ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
+- The UI owner's follow-up `5d648560` is part of the candidate.
+- Next: the independent re-check ([brief](review/AR18_RECHECK_BRIEF.md)).
+
 ## 2026-10-06 — UI follow-ups from AR16 and KL-61: honest style hint, styled type outcome
 
 - New project dialog: the group-address style hint no longer says the style

@@ -166,12 +166,67 @@ held, offline, 11:31–11:51 CEST):
 | Offline start | Native Wayland start rendered `v0.1.0-alpha.4`. The API sequence passed: new project, save, import, reopen, missing file, non-ZIP. No non-loopback socket |
 | `git diff --check`, inputs frozen | ok |
 
-Not addressed, and named in the review: M1 (failure and read-only paths
-migrate a file in place; F4 and F1 now cover the import and open-over-edits
-cases), M2 (Save writes three transactions in place), M3 (a second project
-part is kept but not mentioned), M6–M9. They stay for the re-check and for
-the user at AR19.
+At the time of this section, the review's MINOR findings M1–M3 and M6–M9
+were still open. They are fixed in §8.
 
 **Re-check:** the fixes are the owner's own work. The reviewer asked that
 someone else check them. The brief is
 [review/AR18_RECHECK_BRIEF.md](review/AR18_RECHECK_BRIEF.md).
+
+## 8. AR18 minor findings M1–M9: fixed and re-gated
+
+On 2026-10-06 the user asked for the remaining findings to be implemented
+too. This section is the evidence for the code revision
+`faa3955ffd382763e6a7e4ad3a2ef1700b38844e`. That revision also contains the
+UI owner's follow-up `5d648560` (the new-project hint and the DPT-outcome
+styling, merged in `d7b4b4fd`).
+
+| Finding | Fix | Commit | Proof |
+| --- | --- | --- | --- |
+| M1a — a failed `knx import` upgrades the store | Imports into memory; `--store` is written only after success | `7bb3e12a` | `a_failed_import_creates_no_store_file`, `a_failed_replace_leaves_the_existing_store_byte_identical` |
+| M1b — a foreign SQLite file gets 22 tables | Readers and writers refuse a file without the `created_by = knx-store` marker, untouched | `7bb3e12a` | Three store tests, a CLI test and a route test (`422 projectNotOpenable`) |
+| M1c — GUI Open of an empty v3 store: 500 and the file upgraded | Readers refuse a store with no saved project before any migration | `7bb3e12a` | Two store tests and the route test |
+| M1d — a mistyped reader path leaves a `.knxdb` | `open_existing_and_migrate` never creates | `7bb3e12a` | Store test, CLI test, route test |
+| M2 — Save in three transactions | `save_project_with_passthrough`: one transaction | `7bb3e12a` | `a_save_that_fails_in_its_last_table_changes_none_of_the_three` (a trigger aborts the last table) |
+| M3 — a second project part goes unmentioned | One report line per further `P-xxxx` part | `9cb293d8` | `second_project_part.rs` (2 tests) |
+| M6 — a tunnel that never opened is recorded as `unknown` | `record_never_connected`: `failed`, `written: no`; refused once a send was possible | `a86b7ddd` | Two unit tests, and the corpus route test `a_tunnel_that_never_opens_is_recorded_as_failed_with_nothing_written` |
+| M7 — corpus tests in no routine gate | `tools/run_corpus_tests.py`, when to run it in [VERIFICATION](VERIFICATION.md#private-corpus-test-run) | `519633e0` | 4 Python tests; used by this gate |
+| M8 — tests read the developer's product database | `AppState::default` opens none; gates set `XDG_DATA_HOME` | `7bb3e12a` | `the_test_default_state_has_no_product_database` |
+| M9 — `npm audit`: 1 high | `source-map-js` 1.2.1 → 1.2.2 (build-time only) | `519633e0` | `npm audit`: 0 |
+
+**Mutation sweep:** 17 mutants, each killed by a named test, with the
+sources compared byte for byte after restore. Two survived the first run:
+- K3, a `schema_meta` table from another application;
+- K6, a KNXBench store without a saved project.
+
+Each got its own test and is now killed.
+
+**Integrated gate on `faa3955f`** (clean tree, both leases plus the browser
+fixture lease, `XDG_DATA_HOME` isolated, no `KNX_*`, 13:35–13:54 CEST):
+
+| Gate | Result |
+| --- | --- |
+| `npm ci`, build, `tsc`, flow study, theme fixtures | exit 0 |
+| Vitest | 2,076 passed in 117 files |
+| Chromium | 142 passed |
+| fmt, clippy `-D warnings` | exit 0 |
+| Workspace tests | 3,350 passed, 0 failed, 178 ignored, in 191 blocks |
+| Five `xtask` checks | ok (headers 556/155, anchors 620, ledger 190, corpus conventions 392 files) |
+| `cargo deny check`, `npm audit` | ok, 0 vulnerabilities |
+| `tools/run_corpus_tests.py` (offline) | **143 of 143 passed in 31 targets** |
+| AppImage | `check-appimage` ok; 107,858,424 bytes, SHA-256 `41ad3880da01a8964deefbe80517faa9f85d2bf8b5cc63b3fc7beae8020285f7`; build stamp `faa3955f`; no builder home path in any of the 337 files |
+| Offline start | Native start rendered `v0.1.0-alpha.4`. The API sequence passed: new project, save, import, reopen, missing file `400`, non-ZIP `500` (disclosed, ALPHA_CANDIDATE §3). No non-loopback socket |
+| `git diff --check`, inputs frozen | ok |
+
+The first run on `519633e0` was green except clippy: 16 `needless_borrow`
+warnings in the new `write_project`. `faa3955f` removes the redundant
+borrows, and this gate was rerun in full on it.
+
+**What stays:**
+- An older KNXBench file *with* a saved project is still upgraded in place
+  ([KNOWN_LIMITATIONS §157](KNOWN_LIMITATIONS.md#157-opening-an-older-project-upgrades-it-in-place)).
+- A non-ZIP import still answers `500`.
+- Whether ETS ever writes a multi-part archive is unknown.
+
+**Re-check:** the [brief](review/AR18_RECHECK_BRIEF.md) now covers §7 and
+§8.

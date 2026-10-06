@@ -63,6 +63,12 @@ daily use and how to change it later.
 what you saved is what you get back, including the parts of an imported ETS file that
 KNXBench preserves but does not model (see below).
 
+A file that is not a KNXBench project — another program's database, an empty file, or a
+KNXBench file in which nothing was ever saved — is refused with "this SQLite file was not
+created by KNXBench" or "no project has been saved to this file". KNXBench does not
+change the file. The command-line readers (`knx doc-export`, `knx ga-export`,
+`knx diff`) behave the same way, and a mistyped path is reported, never created.
+
 ![The file picker of the web build, titled "Open — /", listing one file named
 sample-house.knxproj, an Upload row with a file-choosing control, and a Cancel
 button. Every way into a file uses this picker; here it was opened from Import ETS

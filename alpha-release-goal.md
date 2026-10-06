@@ -1026,7 +1026,12 @@ findings F1–F4. All four were fixed by the release owner (`7e606e55`,
 Rust 3331/0/177, Vitest 2076, Chromium 139, corpus 142/0, AppImage with the
 build paths remapped
 ([ALPHA_FINAL_GATES §7](docs/ALPHA_FINAL_GATES.md#7-ar18-conditions-c1c5-fixed-and-re-gated)).
-Open: the independent re-check of the fixes
+The MINOR findings M1–M9 are fixed too (`7bb3e12a`, `9cb293d8`, `a86b7ddd`,
+`519633e0`, `faa3955f`). The full gate on `faa3955f` is green: Rust
+3350/0/178, Vitest 2076, Chromium 142, corpus 143/143 through
+`tools/run_corpus_tests.py`, `npm audit` 0, AppImage
+([ALPHA_FINAL_GATES §8](docs/ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
+Open: the independent re-check of all fixes
 ([brief](docs/review/AR18_RECHECK_BRIEF.md)), then the ready/not-ready record.
 
 - [x] Freeze the complete integrated candidate and artifact provenance. All actionable alpha-owned items are delivered, or their release exceptions have explicit user acceptance. Merely logging a blocker is not permission to call the alpha ready.

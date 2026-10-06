@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — Agent internals leave the public tree
+
+- No longer tracked (kept locally, ignored, still in history): `.ai/`, the
+  root goal and note files (`alpha-release-goal.md`, `goal-ui.md`,
+  `goal-commission.md`, `IDEA.md`, `compare.md`, `stats.md`), the shared
+  agent-memory tooling (`tools/agent_memory_sync.py`, its test,
+  `docs/PROJECT_CONTEXT.md`, its superpowers spec/plan) and the retired
+  cloud-session kit (`docs/CLOUD_SESSIONS.md`, `tools/cloud/`).
+- `.claude/settings.json` drops the cloud SessionStart hook; `AGENTS.md`,
+  `CLAUDE.md` and the settings file stay versioned.
+- 54 Markdown links to those files in 13 maintained documents became plain
+  text; `docs/history/` and `docs/archive/` stay verbatim.
+
 ## 2026-10-06 — Round 2's condition: a record's parts must agree
 
 - Re-check round 2: `READY_WITH_CONDITIONS`
@@ -1152,7 +1165,7 @@ readiness; prior U/UA/AR/K delivery receipts and accepted boundaries stay intact
   no new dead link (17 pre-existing ones in old plans and `../CLA.md` are
   unchanged and not part of this package).
 - The harder steps are planned as package AR14D D2–D5 in
-  [alpha-release-goal.md](../alpha-release-goal.md#ar14d--consolidate-status-tracking-before-ar15)
+  alpha-release-goal.md
   before AR15: one source-ID ledger with an ADR and an `xtask` check, a topic
   split of `RESEARCH.md`, resolved `KNOWN_LIMITATIONS` bodies moved to history
   behind stable stubs. They run under a new status-docs lock.

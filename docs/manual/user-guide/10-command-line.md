@@ -54,7 +54,7 @@ project file.
 
 | Flag | Effect |
 | --- | --- |
-| `--store <path.knxdb>` | Where to write the project file. An existing file is refused and left untouched |
+| `--store <path.knxdb>` | Where to write the project file. An existing file is refused and left untouched. The file is written only after the import succeeded; a failed import leaves no file behind |
 | `--replace` | With `--store`: overwrite the project in an existing file |
 | `--report-json <path.json>` | Write the full import report as JSON |
 | `--product-db <path>` | Use this product database instead of the default one |

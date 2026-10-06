@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 13:55 CEST
+- **Completed:** Merged the UI owner's `5d648560` into the candidate and fixed the AR18 review's MINOR findings M1–M9 (`7bb3e12a` store readers/one-transaction save/test default, `9cb293d8` second project part reported, `a86b7ddd` never-connected download recorded as failed, `519633e0` `tools/run_corpus_tests.py` + npm audit, `faa3955f` clippy). 17/17 mutants. Gate on `faa3955f` green: Rust 3350/0/178, Vitest 2076, Chromium 142, corpus 143/143, AppImage SHA-256 41ad3880…85f7 (evidence `ar18-minors-20261006`). ALPHA_FINAL_GATES §8; re-check brief extended to M1–M9.
+- **Pending/Next Steps:** The user starts a fresh Claude session for the independent re-check (`docs/review/AR18_RECHECK_BRIEF.md`, branch `review/alpha-recheck`). Then record AR18 ready/not-ready; AR19 is the user's release decision.
+- **Notes for Codex oder Claude:** **API change:** `/api/project/open` answers `422` kind `projectNotOpenable` for a foreign SQLite file, a store without a saved project, a newer schema or a missing file (was 500/400). Web shows the message as before; the UI owner may want a dedicated text. **Commissioning owner:** a download whose tunnel never opens is now `failed`/`written: no`/`cleanup: returnedError` (`DownloadGuard::record_never_connected`), no schema change. **Everyone:** run corpus tests with `python3 tools/run_corpus_tests.py` (see docs/VERIFICATION.md).
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-06 12:31 CEST
 - **Completed:** Handover only (no code on `main`). Branch `ui/style-hint-dpt-outcome` (`5d648560`) rebased onto `27c2480a` and gated there: anchors 620, ledger 190, headers 155/155, `tsc -b` 0, Web build 0, Vitest 2,076 / 117, Chromium 142 (139 + 3 new). Content: `newProject.styleHint` now points to the Project node (en/de) and the manual's known-issue for it is removed; `.dpt-outcome` styled as a muted note, a size conflict stays a warning. Alpha's `replaceConfirm` dialog checked: it reuses the quit-dialog rules, nothing unstyled (`replace-confirm` and `quit-confirm-save` are hooks), no change needed.

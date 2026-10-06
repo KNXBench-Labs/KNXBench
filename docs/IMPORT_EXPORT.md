@@ -112,6 +112,12 @@ knx_master.xml                  KNX master data: DPTs, manufacturers, mask versi
 ```
 
 The project identifier is recovered from the `P-*.signature` filename [V].
+An archive that carries a further `P-xxxx` part (by signature, nested
+payload or folder) imports only the first one. Since 2026-10-06 each further
+part gets its own line in the import report ("additional project part
+P-0002"). Its files are still kept unchanged as retained original files (AR18
+review M3; test `crates/knx-etsproj/tests/second_project_part.rs`). Whether
+ETS ever writes such an archive is not known.
 
 **Filename case differs by generation.** ETS4 writes `Project.xml`; ETS5 and
 ETS6 write `project.xml` [V]. Entry lookup is therefore case-insensitive over

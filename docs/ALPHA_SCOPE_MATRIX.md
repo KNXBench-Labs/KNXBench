@@ -41,12 +41,14 @@ Evidence levels used below:
 | Property-based downloader, master reset, RF configuration | Simulator-only | No hardware route | [KL §92](KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device), §141, §143–§144 |
 | Individual-address programming, reset, serial writes | Refused (fail closed) | Commands exist; refused before a tunnel until durable recovery exists | ADR-0057/0058/0059 |
 | KNX Secure (Data/IP) | Accepted boundary | Not implemented; deferred 2026-09-11 | `KL-8` |
+| Linux AppImage candidate | Verified on one machine | `0.1.0-alpha.4`, built from `6b9b6818`, offline smoke under X11 and native Wayland; needs an X server unless started as documented | [ALPHA_CANDIDATE](ALPHA_CANDIDATE.md), `KL-158` |
 | Multi-user server | Accepted boundary | One shared password, no roles/audit/TLS of its own | `KL-63`, [ALPHA_READINESS AR13](ALPHA_READINESS.md#deployment-and-privacy-checklist-for-ar15ar17-and-release-notes) |
 
 ## 2. Deployment, import and hardware boundaries
 
-- **Deployment.** Linux desktop (Tauri 2 on GTK3/WebKitGTK, `KL-16`) and a
-  container/web server. The server binds loopback unless a password is set; a
+- **Deployment.** Linux desktop (Tauri 2 on GTK3/WebKitGTK, `KL-16`; the
+  AppImage needs an X server unless started natively as documented, `KL-158`)
+  and a container/web server. The server binds loopback unless a password is set; a
   TLS proxy is required for networked use; release builds must use
   `KNX_REQUIRE_CLEAN_TREE=1` (AR13 checklist). Docker bridge tunnelling needs a
   gateway that honours Route Back (`KL-155`); discovery needs host networking.
@@ -60,7 +62,7 @@ Evidence levels used below:
 - **Storage.** A `.knxdb` is SQLite; review under Git via `knx diff`
   (`KL-9`). Opening an older file upgrades it in place (`KL-157`).
 
-## 3. Ledger totals (189 rows, 2026-10-06)
+## 3. Ledger totals (190 rows, 2026-10-06)
 
 | Status | Rows | Meaning for the release |
 | --- | --- | --- |
@@ -69,11 +71,11 @@ Evidence levels used below:
 | `LATER` | 23 | Out of the Alpha by decision |
 | `BLOCKED_EXTERNAL` | 8 | Needs a sample/source/run the project lacks — see §4 |
 | `WAITING_OWNER` | 3 | Release gates — see §4 |
-| `WAITING_DECISION` | 1 | Release decision — see §4 |
+| `WAITING_DECISION` | 2 | Release decisions — see §4 |
 | `IN_PROGRESS` | 1 | Commissioning owner — see §4 |
 
 Recount: `cargo run -p xtask -- check-ledger` (counts are enforced there).
-Limitations: 108 numbered boundaries, 107 rated
+Limitations: 109 numbered boundaries, 108 rated
 ([LIMITATION_TRIAGE](LIMITATION_TRIAGE.md)).
 
 ## 4. Not yet accepted — release disposition
@@ -83,11 +85,12 @@ Nothing below is waived. Each row says what has to happen before AR18/AR19.
 | ID | Owner | What is missing | Disposition |
 | --- | --- | --- | --- |
 | `RELEASE-01`, `RELEASE-02` | alpha (AR18) | Final integrated gates on a frozen candidate and an independent whole-product review | **Blocks release.** Cannot be produced from historical receipts. |
-| `RELEASE-03` | alpha (AR16) | UI owner's closure receipt, the user's manual location/screenshot policy, a dated manual checklist | **Blocks release.** Manual content was corrected in AR15 (`DOC-03`), acceptance is still open. |
+| `RELEASE-03` | alpha (AR16) | UI owner's closure receipt and a dated manual checklist; screenshots to add (policy decided 2026-10-06: GitHub, with screenshots) | **Blocks release.** Manual content was corrected in AR15 (`DOC-03`), acceptance is still open. |
 | `RELEASE-04` | user (AR19) | Explicit tag/version/publication decision on the reviewed candidate | **Blocks release** by design; no automatic tag. |
 | `UI-04` | commissioning | Owner receipt for the partial bus-activity snapshot (ADR-0055/0056) | **Owner must close or the user must accept it as a boundary before AR18.** |
 | `KL-1`, `KL-11`, `KL-125` | alpha | Independent project samples (other schemas, second ETS6 project) | **Proposed: ship as disclosed boundary** (no broader compatibility claim). Needs the user's acceptance at AR19. |
 | `KL-31` | alpha | Live router traffic on a custom multicast group | **Proposed: ship as disclosed boundary** (offline-tested only). Needs acceptance at AR19. |
+| `KL-158` | alpha (AR17 finding) | A launcher that does not need X11, or a decision to ship with the X server requirement | **Proposed: ship as disclosed boundary** with the tested Wayland workaround in troubleshooting. Needs the user's decision at AR19. |
 | `PDB-01`, `R-DYNAMIC-01`, `R-MODULE-03`, `R-MODULE-04` | alpha | Primary semantics/samples for unevaluated parameter logic and nested modules | **Proposed: ship as disclosed boundary** (raw values preserved, never guessed). Needs acceptance at AR19. |
 
 Also open outside the ledger: AR14D D5 (the `goal-commission.md` status
@@ -102,4 +105,5 @@ product blocker.
 | DPT encoding rulings (`KL-61`, K1) | A wrong ruling sends a valid-looking telegram | Explicit input formats, disclosed rulings |
 | Device writes on one device only (`KL-92`, K1) | A second device could behave differently | Plans refuse unknown shapes; backup before writes; per-device phrase |
 | Motion cost on large maps (`KL-154`) | The flow view can saturate the UI thread | Manual and known issues say Motion Off for large installations |
+| Release binary carries build paths ([ALPHA_CANDIDATE §4](ALPHA_CANDIDATE.md#4-findings)) | A locally built binary names the builder's home directory | Build releases in CI or with `--remap-path-prefix` (privacy checklist item 6) |
 | In-place upgrade (`KL-157`) | Older KNXBench cannot reopen an upgraded file | Atomic upgrade; manual tells users to copy first |

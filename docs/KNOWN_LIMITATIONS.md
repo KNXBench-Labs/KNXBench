@@ -8032,3 +8032,30 @@ that removes the transaction.
 the project if an older KNXBench must open it again. Current-schema files are
 not rewritten by read-only commands (measured: `knx diff` leaves both files
 byte-identical). Ledger row `KL-157`.
+
+## 158. The AppImage starts only with an X server
+
+**Limitation.** The Linux AppImage runs its window through X11 only. The GTK
+hook that the AppImage tooling (linuxdeploy's GTK plugin, used by `tauri
+bundle`) puts into every AppImage sets `GDK_BACKEND=x11` unconditionally,
+citing a Wayland crash ([tauri#8541](https://github.com/tauri-apps/tauri/issues/8541)).
+Without a reachable X server — no Xwayland, or an Xwayland that does not
+answer — the AppImage stops at once with `Failed to initialize GTK`
+(exit 101). Setting `GDK_BACKEND` yourself does not help: the hook overrides
+it.
+
+**Found 2026-10-06 (AR17)** on the candidate in
+[ALPHA_CANDIDATE](ALPHA_CANDIDATE.md): Hyprland's Xwayland was running but its
+socket refused every connection (also for `xprop`). The unmodified AppImage
+started fine under a private Xvfb.
+
+**Native Wayland works with two settings (measured on that machine).**
+Running the extracted AppImage with `GDK_BACKEND=wayland` alone ended with
+Wayland protocol error 71; with `WEBKIT_DISABLE_DMABUF_RENDERER=1` added the
+window came up and the full smoke check passed. The steps are in the
+[troubleshooting chapter](manual/reference/03-troubleshooting.md#the-appimage-stops-with-failed-to-initialize-gtk).
+Not tested on any other compositor or GPU.
+
+**Not changed.** Removing or rewriting the hook in the build would ship an
+untested launcher on every desktop; that is a packaging decision for the user
+at AR19. Ledger row `KL-158`.

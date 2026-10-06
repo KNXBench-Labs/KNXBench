@@ -85,7 +85,7 @@ Nothing below is waived. Each row says what has to happen before AR18/AR19.
 | ID | Owner | What is missing | Disposition |
 | --- | --- | --- | --- |
 | `RELEASE-01`, `RELEASE-02` | alpha (AR18) | Final integrated gates on a frozen candidate and an independent whole-product review | **Blocks release.** Cannot be produced from historical receipts. |
-| `RELEASE-03` | alpha (AR16) | Claim-by-claim pass over the chapters without screenshots, then acceptance ([MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md)); UI closure verified and screenshots regenerated 2026-10-06 | **Blocks release.** Manual content was corrected in AR15 (`DOC-03`), acceptance is still open. |
+| `RELEASE-03` | alpha (AR16) | Claim-by-claim pass over the chapters without screenshots, then acceptance ([MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md)); screenshots regenerated 2026-10-06; UI owner's closure receipt pending (UI-04, KL-61 residues) | **Blocks release.** Manual content was corrected in AR15 (`DOC-03`), acceptance is still open. |
 | `RELEASE-04` | user (AR19) | Explicit tag/version/publication decision on the reviewed candidate | **Blocks release** by design; no automatic tag. |
 | `UI-04` | commissioning | Owner receipt for the partial bus-activity snapshot (ADR-0055/0056) | **Owner must close or the user must accept it as a boundary before AR18.** |
 | `KL-1`, `KL-11`, `KL-125` | alpha | Independent project samples (other schemas, second ETS6 project) | **Proposed: ship as disclosed boundary** (no broader compatibility claim). Needs the user's acceptance at AR19. |

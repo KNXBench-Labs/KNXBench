@@ -1,3 +1,15 @@
+- **Last Agent:** Claude (fresh AR18 re-check reviewer, not the alpha owner)
+- **Timestamp:** 2026-10-06 15:50 CEST
+- **Completed:** Independent re-check of the AR18 fixes on `bd691b82` (product code = `faa3955f`), done as `docs/review/AR18_RECHECK_BRIEF.md` describes. Verdict **READY_WITH_CONDITIONS** in `docs/review/2026-10-06-alpha-conditions-recheck.md`, on branch `review/alpha-recheck` (not merged).
+  - Gates reproduced green offline: Rust 3350/0/178 in 191 blocks, Vitest 2076, Chromium 142, xtask ×5, deny, npm audit 0, check-appimage. Corpus 143/143.
+  - Fixed: F1, F4, M1–M4, M7, M9. Partly fixed: M6, M8.
+  - IMPORTANT residuals: **N1**, names that zip decodes to the same name (Unicode Path 0x7075, CP437 against UTF-8) bypass the raw-name duplicate check, and one member can silently replace `0.xml`. **N2**, a protected project's nested payload is unpacked fully before the 512 MiB budget is checked (12 MB file → 8 GB).
+  - Log: `.ai/logs/2026-10-06_claude_ar18-conditions-recheck.md`.
+- **Pending/Next Steps:** The alpha owner fixes R1/R2 (`crates/knx-etsproj/src/container.rs`: check identity on decoded names, e.g. CD record count against `archive.len()`, and keep a running total inside the nested loop), or the user accepts and discloses them. Then rerun the gates and rebuild the AppImage (R3). MINOR N3–N6 are optional. A fresh reviewer re-checks again.
+- **Notes for Codex oder Claude:** No product code was changed. The UI owner's pending merge (see the entry below) can now be scheduled; the candidate pin in the brief is no longer needed once the owner changes code for R1/R2 anyway.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 13:55 CEST
 - **Completed:** Merged the UI owner's `5d648560` into the candidate and fixed the AR18 review's MINOR findings M1–M9 (`7bb3e12a` store readers/one-transaction save/test default, `9cb293d8` second project part reported, `a86b7ddd` never-connected download recorded as failed, `519633e0` `tools/run_corpus_tests.py` + npm audit, `faa3955f` clippy). 17/17 mutants. Gate on `faa3955f` green: Rust 3350/0/178, Vitest 2076, Chromium 142, corpus 143/143, AppImage SHA-256 41ad3880…85f7 (evidence `ar18-minors-20261006`). ALPHA_FINAL_GATES §8; re-check brief extended to M1–M9.

@@ -405,11 +405,20 @@ async fn start(
                 "activity history unavailable; not sent",
             )
         })?;
-    let tunnel = state
-        .connector
-        .connect_tunnel(gateway)
-        .await
-        .map_err(|e| ApiError::with_status(StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let tunnel = match state.connector.connect_tunnel(gateway).await {
+        Ok(tunnel) => tunnel,
+        Err(e) => {
+            // No tunnel, no telegram: say so in the history rather than
+            // leaving it to the guard's drop, which records `unknown`
+            // (AR18 review M6). If even that cannot be recorded, the drop
+            // still does.
+            let _ = activity.record_never_connected();
+            return Err(ApiError::with_status(
+                StatusCode::BAD_GATEWAY,
+                e.to_string(),
+            ));
+        }
+    };
     let id = body.plan_id;
     let backups = BackupDestination {
         dir: state.data_dir.join(BACKUP_DIR),

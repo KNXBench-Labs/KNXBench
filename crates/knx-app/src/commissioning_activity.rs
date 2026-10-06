@@ -614,6 +614,39 @@ impl DownloadGuard {
         self.log.persist_download(&self.entry)
     }
 
+    /// The tunnel never opened, so nothing could have been sent (AR18 review
+    /// M6). Recorded as `failed` with `written: no` instead of letting the
+    /// drop say `unknown`, which told the user a write might have happened.
+    /// `cleanup: returnedError` is the adapter's own return: acquiring it
+    /// failed. Refused once a send was possible: from then on only the
+    /// worker's witnessed result may close the entry.
+    pub fn record_never_connected(mut self) -> io::Result<()> {
+        let send_possible = self
+            .entry
+            .write_evidence
+            .as_ref()
+            .is_some_and(|evidence| evidence.send_possible);
+        if self.entry.state != "running" || send_possible {
+            return Err(io::Error::other(
+                "only a download that could not have sent anything is recorded as never connected",
+            ));
+        }
+        let mut candidate = self.entry.clone();
+        candidate.state = "failed".into();
+        candidate.finished_at = Some(now());
+        let evidence = candidate
+            .download_evidence
+            .as_mut()
+            .expect("download evidence");
+        evidence.written = Some(Written::No);
+        evidence.restart = None;
+        evidence.cleanup = DownloadCleanup::ReturnedError;
+        self.log.persist_download(&candidate)?;
+        self.entry = candidate;
+        self.done = true;
+        Ok(())
+    }
+
     /// This is the adapter's return, not a device-level disconnect receipt.
     pub fn record_cleanup(mut self, returned_ok: bool) -> io::Result<()> {
         self.entry
@@ -764,6 +797,38 @@ mod tests {
         assert_eq!(value["downloadEvidence"]["written"], "yes");
         assert_eq!(value["downloadEvidence"]["restart"], "acknowledged");
         assert_eq!(value["downloadEvidence"]["cleanup"], "returnedOk");
+    }
+
+    #[test]
+    fn a_tunnel_that_never_opened_is_a_failed_download_that_wrote_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let log = Arc::new(OneShotLog::persistent(path, "synthetic".into()));
+        let guard = log.start_download(12, "1.1.1".parse().unwrap()).unwrap();
+        guard.record_never_connected().unwrap();
+        let (entries, _) = log.history_page(0, 100).unwrap();
+        let value = serde_json::to_value(&entries[0]).unwrap();
+        assert_eq!(value["state"], "failed");
+        assert_eq!(value["downloadEvidence"]["written"], "no");
+        assert!(value["downloadEvidence"]["restart"].is_null());
+        assert_eq!(value["downloadEvidence"]["cleanup"], "returnedError");
+        assert_eq!(value["writeEvidence"]["sendPossible"], false);
+        assert!(!value["finishedAt"].is_null());
+    }
+
+    #[test]
+    fn never_connected_is_refused_once_a_send_was_possible() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let log = Arc::new(OneShotLog::persistent(path, "synthetic".into()));
+        let mut guard = log.start_download(13, "1.1.1".parse().unwrap()).unwrap();
+        guard.mark_send_possible().unwrap();
+        assert!(guard.record_never_connected().is_err());
+        // The refused guard dropped: uncertainty, as before.
+        let (entries, _) = log.history_page(0, 100).unwrap();
+        let value = serde_json::to_value(&entries[0]).unwrap();
+        assert_eq!(value["state"], "unknown");
+        assert!(value["downloadEvidence"]["written"].is_null());
     }
 
     #[test]

@@ -250,8 +250,9 @@ CEST.
 - **Byte identity:** SHA-256 before and after.
 - **Corpus:** aggregates only. No name, id, path or value left the census,
   and the census only read the files.
-- **Scripts:** they live in the reviewer's scratch directory, not in the
-  repository.
+- **Scripts and logs:** kept outside the repository in the local evidence
+  directory `ar18-recheck-round2-20261006` (ZIP writer, case runners, gate
+  logs, result JSON). No archive, corpus data or screenshot is kept there.
 
 *The reviewer's one-line summary: the letters are now checked by the name
 on the envelope and by the name inside — but a letter can still mark itself

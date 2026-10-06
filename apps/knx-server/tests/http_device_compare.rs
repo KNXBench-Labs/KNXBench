@@ -181,7 +181,10 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
             calls: Arc::clone(&calls),
         }),
         device_download_timing: timing,
-        ..Default::default()
+        // A durable activity history in the test's own directory: since
+        // AUDIT-01 a download refuses to start without one (503), as the
+        // download tests' harness already provides.
+        ..knx_server::AppState::new(dir.path().to_path_buf())
     });
     let app = knx_server::app(Arc::clone(&state), None);
     let (status, body) = send(

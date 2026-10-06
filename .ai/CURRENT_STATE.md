@@ -1,8 +1,17 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 06:53 CEST
-- **Completed:** **AR16 slice 1.** 21 manual screenshots regenerated from the real app with the fictional sample project (`tools/manual_sample_project.py` + 3 unit tests; `apps/knx-web/e2e/manual-screenshots.shots.ts`, `playwright.manual.config.ts`, not part of the normal suite). Screenshot passages and 7 "Discover gateways" mentions corrected. `docs/MANUAL_ACCEPTANCE.md` dated checklist. UI closure verified from goal-ui.md.
+- **Completed:** **AR16 slice 1.** 21 manual screenshots regenerated from the real app with the fictional sample project (`tools/manual_sample_project.py` + 3 unit tests; `apps/knx-web/e2e/manual-screenshots.shots.ts`, `playwright.manual.config.ts`, not part of the normal suite). Screenshot passages and 7 "Discover gateways" mentions corrected. `docs/MANUAL_ACCEPTANCE.md` dated checklist. UI closure NOT final: the UI owner reopened two residues at 06:39 (UI-04 live activity, KL-61 binding wording) and holds the Web lock; AR16 item 1 stays open until its closure receipt.
 - **Pending/Next Steps:** AR16 row 6: claim-by-claim pass over chapters without screenshots (knx-basics, 06 configuration workflow, 08 reports, 09 settings, 10 CLI, reference 02/04, getting-started 01–05), then acceptance. AR17 candidate stays valid only while no code changes after `6b9b6818`; the screenshot spec and tools script are not shipped code.
-- **Notes for Codex oder Claude:** Run the screenshot spec offline (unshare --net) with a SHORT TMPDIR (Chromium socket path limit). The UI-owner Web lock is not needed: no file under apps/knx-web/src changed.
+- **Notes for Codex oder Claude:** To the UI owner: this slice added two NEW files under apps/knx-web (`e2e/manual-screenshots.shots.ts`, `playwright.manual.config.ts`; docs tooling, not in any suite) and touched nothing under `src/`; if your Web changes alter screens, rerun the spec (recipe in manual/development/01-contributing.md). KL-61 display needs a projection field — Alpha picks that up next. Run the screenshot spec offline (unshare --net) with a SHORT TMPDIR (Chromium socket path limit). The UI-owner Web lock is not needed: no file under apps/knx-web/src changed.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-06 06:39 CEST
+Web lock: taken by claude-goal-ui-owner for the UI closure residue (UI-04 live activity, KL-61 binding wording)
+- **Completed:** Lock taken only. The closing review for the UI closure receipt (`RELEASE-03` / AR16) found two Web halves still handed to the UI owner: `UI-04` (COMMISSIONING_ALPHA_LEDGER "Handoff to the UI owner": adopt `GET /api/bus/activity`, refresh running rows, render unavailable/interrupted/partial) and `KL-61`'s binding doc comment for `GroupAddressNode.dpts` (KNOWN_LIMITATIONS §61, ADR-0078 hand-over).
+- **Pending/Next Steps:** UI owner: deliver both, then the closure receipt with the full §2.5 gate on merged main. The declared-versus-linked *display* of KL-61 needs a projection field first (not on the wire) — Alpha's side.
+- **Notes for Codex oder Claude:** An earlier §2.5 gate on `4459e310` was stopped on purpose after fmt 0 / clippy 0 (350 units) because the receipt must be taken after these two packages.
 
 ---
 

@@ -33,7 +33,7 @@ and any theme other than Porcelain.
 
 | # | Check | Result |
 | --- | --- | --- |
-| 1 | UI owner's closure | `goal-ui.md`: U0–U13 done (U13 closed 2026-10-01 on the independent review), U14–U18 delivered, U19–U21 closed with AR21's acceptance (`4459e310`). Open verification gaps named by the owner: native WebKitGTK and real screen-reader checks. |
+| 1 | UI owner's closure | **Open.** `goal-ui.md`: U0–U13 done, U14–U18 delivered, U19–U21 closed with AR21's acceptance (`4459e310`). At 06:39 the owner's closing review reopened two Web residues (`UI-04` live activity, the `KL-61` binding wording) and took the Web lock; the closure receipt follows them. Named verification gaps: native WebKitGTK and real screen-reader checks. |
 | 2 | Location and screenshot policy | Recorded above. |
 | 3 | Every screenshot reference (26 places in README and 10 manual chapters) | Picture replaced; each alt text and its surrounding sentence re-read against the new picture and corrected. |
 | 4 | Claims found stale while doing 3 | Fixed: the bus monitor's button is **Search**, not "Discover gateways" (7 places); the start-up gateway search is now stated; the welcome screen has three cards (New project…, Open KNXBench project, Import ETS project); help has eleven topics; the catalog row shows `name (number) — description`; the Parameters example has no modules. |
@@ -42,6 +42,6 @@ and any theme other than Porcelain.
 
 ## Acceptance
 
-Not yet accepted. Rows 1–5 are done; row 6 is open. Acceptance needs row 6
+Not yet accepted. Rows 2–5 are done; rows 1 and 6 are open. Acceptance needs row 6
 and stays with the release owner at AR18, and with the user for anything that
 remains an exception at AR19.

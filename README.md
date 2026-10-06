@@ -1,177 +1,139 @@
-# KNXBench
+<p align="center">
+  <img src="docs/assets/KNXBench-logo-small.png" alt="KNXBench logo" width="180">
+</p>
 
-**A Linux-first, KNX-compatible engineering application — an independent, open alternative
-to ETS for working with KNX projects.**
+<h1 align="center">KNXBench</h1>
 
-![status: alpha](https://img.shields.io/badge/status-alpha-orange)
-![version 0.1.0-alpha](https://img.shields.io/badge/version-0.1.0--alpha-blue)
-![license AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-green)
+<p align="center">
+  <b>KNX engineering that feels at home on Linux.</b><br>
+  Import your ETS projects, edit them, and watch your building's bus think — natively, in the open.
+</p>
 
-> **Warning**
->
-> KNXBench is **alpha software under active development**. Every program reports a
-> `0.1.0-alpha.N` version, there is no git tag, and no release has ever been published. It is
-> useful and it is tested, but it is still moving. Keep backups.
+<p align="center">
+  <img src="https://img.shields.io/badge/status-alpha-orange" alt="status: alpha">
+  <img src="https://img.shields.io/badge/version-0.1.0--alpha-blue" alt="version 0.1.0-alpha">
+  <img src="https://img.shields.io/badge/license-AGPL--3.0--or--later-green" alt="license AGPL-3.0-or-later">
+  <img src="https://img.shields.io/badge/made%20for-Linux-black?logo=linux&logoColor=white" alt="made for Linux">
+</p>
 
-![KNXBench showing the group address table of an imported ETS project, with the project tree on the left and the properties inspector on the right](docs/assets/screenshots/porcelain-group-addresses.png)
+> [!WARNING]
+> **KNXBench is alpha software.** It works, it is tested, and it will still change under
+> your feet. There is no published release yet. Keep backups of every project you would
+> miss — a KNX project is the map of a building somebody paid for.
 
-*The group address table of the fictional sample project used for every screenshot in
-the manual: address, name, range, datapoint type and link counts, with a filter box and
-CSV import/export. Porcelain theme.*
+<p align="center">
+  <img src="docs/assets/readme/bus-nervous-system.svg" alt="Illustration of KNXBench's telegram flow: devices of a fictional house, connected by curved lines labelled with group addresses, with pulses travelling along them" width="100%">
+</p>
 
-## Why this exists
+## What is this?
 
-I moved to Linux and went looking for a KNX application that felt native there. I did not
-find one — ETS is a capable product and also a Windows program, and the usual workarounds
-get old quickly. So I started an AI assistant and began building one instead. Several
-hundred euros and a few million tokens later, KNXBench had its first working alpha.
+KNXBench is an independent, KNX-compatible engineering application for people who plan,
+document and maintain KNX installations. Think of it as a workbench: your project goes in,
+you get a clear view of every device, address and connection — and a live look at what
+the bus is actually saying.
 
-In hindsight: I must have been drunk.
+## Features
 
-## What it can do today
+- 📥 **Imports your ETS projects. Forgets nothing.**
+  `.knxproj` archives — including password-protected ETS4/ETS5 ones — come in with a report
+  of every warning and everything KNXBench can't model yet. Unknown data is kept verbatim,
+  never quietly thrown overboard.
+- 🧠 **Watch your bus think.**
+  Connect over KNXnet/IP tunnelling, discover interfaces, and follow every telegram live — as
+  a table, or as a [flow view](docs/manual/user-guide/07-bus-and-interfaces.md#the-flow-view)
+  where devices light up as they talk.
+- ✏️ **Edit what matters. Undo what you regret.**
+  Topology, buildings, devices, individual and group addresses, links, datapoint types,
+  flags and device parameters — all with undo/redo.
+- 📚 **A product database that eats `.knxprod` for breakfast.**
+  Feed it manufacturer packages or the product data inside your projects. 852 of 853 public
+  manufacturer downloads install; device objects get enriched from it.
+- 💾 **Its own file format, and it actually understands it.**
+  Projects live in a versioned `.knxdb` file (SQLite). Older files are upgraded safely, in place.
+- 📤 **Talks back, too.**
+  Send group values from the bus panel or the command line.
+- 📄 **Paperwork, automated.**
+  Group-address CSV export and import, a self-contained HTML project document, and a diff
+  between two projects that even plays nicely with Git.
+- ⌨️ **Keyboard first, mouse welcome.**
+  Command palette, search, project explorer, properties inspector, drag & drop.
+- 🎨 **Looks the way you like it.**
+  Light, dark, and a phosphor-green CRT theme for the nostalgic. English and German interface.
+- 🐧 **Linux-native, browser-ready.**
+  A desktop app for Linux, or a Docker container you open in any browser — plus `knx`,
+  a command line for the scriptable bits.
 
-- Import supported ETS `.knxproj` archives, with a report of warnings, errors and anything
-  it could not model. Unknown data is preserved verbatim, never silently dropped. Import is
-  one-way: KNXBench reads `.knxproj` and never writes one.
-- Save and reopen projects in its own versioned `.knxdb` SQLite format.
-- Inspect and edit topology, buildings, devices, individual and group addresses, group
-  links, communication-object datapoint types and flags, and top-level device parameters.
-- Undo/redo, search, a command palette, a project explorer, an inspector, themes and a
-  German/English interface.
-- Build up a product database from manufacturer data found in project archives or from
-  standalone `.knxprod` packages, and enrich device communication objects from it.
-- Export a group-address CSV, a self-contained HTML project document, and a diff between
-  two projects.
-- Watch a live KNX bus over KNXnet/IP tunneling, and send group values from the CLI or the
-  bus panel.
+## See it in action
 
-Not available, and not claimed: writing a `.knxproj` (withdrawn 2026-09-20 — once imported,
-a project stays in KNXBench's own format), general commissioning (a device download is
-verified on one device only, and address programming is refused for now), KNX IP Secure,
-and anything resembling certification or full ETS compatibility. The wording here
-is **KNX-compatible**, deliberately. See
-[Implementation status](docs/manual/implementation-status.md) and
-[Known issues](docs/manual/known-issues.md) for the honest current picture.
+<p align="center">
+  <img src="docs/assets/readme/telegram-flow.gif" alt="The real telegram flow view of KNXBench under the green CRT theme: devices appear as telegrams are observed, values show up and fade" width="100%">
+</p>
+
+<p align="center"><sub>The real flow view, fed with <b>synthetic traffic</b> from a fictional sample
+house — no actual building was switched on and off for this clip.</sub></p>
+
+<table>
+  <tr>
+    <td><img src="docs/assets/screenshots/porcelain-group-addresses.png" alt="Group address table with filter, datapoint types and link counts"></td>
+    <td><img src="docs/assets/screenshots/porcelain-device-tab-parameters.png" alt="Device parameters tab"></td>
+    <td><img src="docs/assets/screenshots/porcelain-command-palette.png" alt="Command palette"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Group addresses</sub></td>
+    <td align="center"><sub>Device parameters</sub></td>
+    <td align="center"><sub>Command palette</sub></td>
+  </tr>
+</table>
 
 ## Quick start
 
-Build the image, run it with a password, and open it in a browser:
+Thirty seconds to your first project, with Docker:
 
 ```bash
 docker build -t knxbench-server -f apps/knx-server/Dockerfile .
 docker run -d --name knxbench -p 8484:8080 \
   -e KNX_AUTH_PASSWORD='pick something long and boring' \
   -v "$(pwd)/data:/data" knxbench-server
-curl -sf http://127.0.0.1:8484/healthz
 ```
 
-That published-port form supports project work only: from Docker's default
-bridge a tunnel to a gateway gets no answer
-([§155](docs/KNOWN_LIMITATIONS.md#155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer)),
-and the multicast used by the bus monitor's interface **Search** is blocked. On
-Linux, use host networking for bus work (host mode ignores `-p`, hence
-`KNX_PORT`):
-
-```bash
-docker run -d --name knxbench --network host \
-  -e KNX_PORT=8484 \
-  -e KNX_AUTH_PASSWORD='pick something long and boring' \
-  -v "$(pwd)/data:/data" knxbench-server
-```
-
-Then open <http://127.0.0.1:8484> and sign in with that password. Your projects live in
-`data/` on the host, so they survive container restarts.
-
-The password is not decoration: `knx-server` refuses to serve an unguarded API to the
-network, so without a credential it binds loopback only — which inside a container is the
-*container's* loopback, unreachable through a published port. It is still one shared
-password with no accounts, no roles and no TLS, so put a TLS-terminating reverse proxy in
-front of anything that matters.
-
-The full deployment picture, including the reverse-proxy option and the full environment
-variable table, is in
+Open <http://127.0.0.1:8484>, sign in with that password, and import a `.knxproj`. Your
+projects live in `data/` and survive restarts. It is one shared password and no TLS of its
+own, so put a reverse proxy in front before it leaves your machine. Talking to a real bus
+from the container needs host networking — both are covered in
 [Web and Docker deployment](docs/manual/user-guide/11-web-and-docker.md).
 
-## Installing it
+**Prefer native?** [Build the desktop app from source](docs/manual/getting-started/04-installation.md#c-from-source)
+— and check the [Linux setup](docs/manual/getting-started/05-linux-setup.md) for the host
+packages it needs.
 
-| How | Where |
-| --- | --- |
-| Linux AppImage | [Installation §a](docs/manual/getting-started/04-installation.md#a-linux-appimage) — no published release yet, so this means building one |
-| Docker / web | [Installation §b](docs/manual/getting-started/04-installation.md#b-docker--web) |
-| From source | [Installation §c](docs/manual/getting-started/04-installation.md#c-from-source), and [Building from source](docs/manual/development/02-building-from-source.md) for the developer version |
-| Host packages KNXBench needs | [Linux setup](docs/manual/getting-started/05-linux-setup.md) |
-| The `knx` command line | [The command line](docs/manual/user-guide/10-command-line.md) |
+## Why this exists
+
+I moved to Linux and couldn't find a KNX tool that felt at home there. So I started an AI
+assistant and began building one; several hundred euros and a few million tokens later,
+KNXBench had its first working alpha. In hindsight: I must have been drunk.
 
 ## Documentation
 
-### Shared local agent memory
-
-Claude, Codex, and the Hermes `knxbench` profile can use the same local topic
-index without merging their private stores. Preview, publish, or validate it:
-
-```bash
-python3 tools/agent_memory_sync.py preview --project-root "$(pwd)"
-python3 tools/agent_memory_sync.py apply --project-root "$(pwd)"
-python3 tools/agent_memory_sync.py check --project-root "$(pwd)"
-```
-
-Optional local integration installs a stable user-systemd copy and bounded
-instruction blocks. Both are reversible:
-
-```bash
-python3 tools/agent_memory_sync.py install-agent-links --project-root "$(pwd)"
-python3 tools/agent_memory_sync.py install-timer --project-root "$(pwd)"
-
-python3 tools/agent_memory_sync.py uninstall-timer
-python3 tools/agent_memory_sync.py uninstall-agent-links --project-root "$(pwd)"
-```
-
-Generated snapshots stay ignored under `.agent-memory/`. See
-[`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) for the authority order and
-promotion rules.
-
-Self-contained tasks can also run in Claude Code cloud sessions. They cannot see the
-private corpus or the bus; boundaries, environment setup and task briefs are in
-[`docs/CLOUD_SESSIONS.md`](docs/CLOUD_SESSIONS.md).
-
-The manual is the place to start. It explains KNX itself where that is needed, and does not
-assume you have used ETS.
-
 - **[The KNXBench manual](docs/manual/README.md)** — installation, a KNX primer, the user
-  guide, reference and troubleshooting
-- [Implementation status](docs/manual/implementation-status.md) — what works, what is
-  partial, what is planned
-- [Known issues](docs/manual/known-issues.md) — what does not work yet, in plain words
-- [Ideas and roadmap](docs/manual/ideas-and-roadmap.md) — where this is going
-- [Contributing](docs/manual/development/01-contributing.md) — bug reports, quality gates,
-  conventions
+  guide, reference and troubleshooting. No ETS experience required.
+- [Implementation status](docs/manual/implementation-status.md) and
+  [known issues](docs/manual/known-issues.md) — the honest picture of what works and what
+  doesn't (yet).
+- [Ideas and roadmap](docs/manual/ideas-and-roadmap.md) — where this is going.
 - [Architecture tour](docs/manual/development/03-architecture-tour.md) — a readable map of
-  the code
+  the code, with the deeper engineering record in [`docs/`](docs/ARCHITECTURE.md) and the
+  [architecture decision records](docs/adr/README.md).
 
-The project's own engineering record — [Architecture](docs/ARCHITECTURE.md),
-[Data model](docs/DATA_MODEL.md), [Import and export](docs/IMPORT_EXPORT.md),
-[Compatibility](docs/COMPATIBILITY.md), [Known limitations](docs/KNOWN_LIMITATIONS.md),
-[Roadmap](docs/ROADMAP.md) and the [architecture decision records](docs/adr/README.md) —
-sits underneath the manual and is denser on purpose.
+## Contributing
 
-Found a bug, or something the manual gets wrong? The
-[issue tracker](https://github.com/KNXBench-Labs/KNXBench/issues) is the only place
-anything happens. KNXBench can prefill an issue for you: **File → Debug report**.
+Found a bug, or something the manual gets wrong? Open an issue on the
+[issue tracker](https://github.com/KNXBench-Labs/KNXBench/issues). **File → Debug report**
+writes a log-based report (IP addresses removed) you can attach after a quick read.
+Quality gates and conventions are in [Contributing](docs/manual/development/01-contributing.md).
 
 ## License
 
-KNXBench is free software licensed under the
-[GNU Affero General Public License version 3 or later](LICENSE).
-
-The license permits private and commercial use, modification, and redistribution under its
-terms. Modified versions made available to users over a network must also offer those users
-the corresponding source code as required by the AGPL.
-
-## Before you point it at anything expensive
-
-This is one person's alpha, developed in the open and changing weekly. Imports have been
-tested against real project files, and there are still 110 documented limitations to prove
-the point. Treat it the way you would treat any pre-1.0 engineering tool: read
-[Known issues](docs/manual/known-issues.md) first, and keep a backup of every project you
-would be unhappy to lose. A KNX project is a map of a building somebody paid for. Projects
-worth keeping deserve a backup.
+KNXBench is free software under the
+[GNU Affero General Public License v3.0 or later](LICENSE). Use it privately or
+commercially, modify it, share it — and if you offer a modified version over a network,
+offer its source too.

@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 960 440" width="960" height="440" role="img" aria-labelledby="t d" style="--mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+<title id="t">KNXBench bus nervous system (illustration)</title>
+<desc id="d">Illustration of the telegram-flow view: devices of a fictional sample house, curved connections labelled with group addresses, and pulses travelling along them when a telegram is observed.</desc>
+<style>
+  .bg { fill: #050505; }
+  .scan { opacity: .07; }
+  .node { fill: #050b06; stroke: #39ff14; stroke-width: 1.4; filter: url(#glow); }
+  .ganode { fill: #050505; stroke: #91b48b; stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .name { fill: #bedbbb; font: 500 12.5px var(--mono); }
+  .addr { fill: #39ff14; font: 600 13px var(--mono); }
+  .muted { fill: #91b48b; font: 11px var(--mono); }
+  .edge { fill: none; stroke: #31573b; stroke-width: 1.6; }
+  .edge-hot { fill: none; stroke: #39ff14; stroke-width: 2.2; filter: url(#glow); }
+  .galabel { fill: #b2ffc0; font: 600 11.5px var(--mono); }
+  .galbg { fill: #050505; }
+  .pulse { fill: #b2ffc0; filter: url(#glow); }
+  .value { fill: #050505; font: 700 11px var(--mono); }
+  .valbg { fill: #39ff14; }
+  .ring { fill: none; stroke: #39ff14; }
+  .title { fill: #39ff14; font: 600 14px var(--mono); }
+  @media (prefers-color-scheme: light) {
+    .bg { fill: #f5f6fa; }
+    .scan { opacity: 0; }
+    .node { fill: #ffffff; stroke: #137551; filter: none; }
+    .ganode { fill: #f5f6fa; stroke: #60697d; }
+    .name { fill: #202438; }
+    .addr { fill: #087a62; }
+    .muted { fill: #60697d; }
+    .edge { stroke: #c9d3cf; }
+    .edge-hot { stroke: #087a62; filter: none; }
+    .galabel { fill: #087a62; }
+    .galbg { fill: #f5f6fa; }
+    .pulse { fill: #087a62; filter: none; }
+    .value { fill: #ffffff; }
+    .valbg { fill: #087a62; }
+    .ring { stroke: #087a62; }
+    .title { fill: #087a62; }
+  }
+</style>
+<defs><filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="1.3" fill="#39ff14"/></pattern></defs>
+<rect class="bg" width="960" height="440" rx="10"/>
+<rect class="scan" width="960" height="440" rx="10" fill="url(#scan)"/>
+<text class="title" x="24" y="34">&gt; knx monitor --flow<tspan class="muted" dx="12">tunnelling · observing</tspan></text>
+<text class="muted" x="24" y="424">illustration · fictional sample house</text>
+<path id="e-pb_liv-sa_gf-0_0_1" class="edge" d="M214.5,117.0 Q300.5,193.3 415.5,195.0"/>
+<path id="e-sa_gf-ga_status-0_1_1" class="edge" d="M566.0,218.1 Q679.3,185.6 794.0,213.0"/>
+<path id="e-pb_kit-sa_gf-0_0_2" class="edge" d="M206.0,256.5 Q296.0,214.3 394.0,231.5"/>
+<path id="e-pb_bed-sa_ff-0_0_4" class="edge" d="M486.0,64.0 Q585.0,98.0 684.0,64.0"/>
+<path id="e-rt_liv-ga_valve-2_1_1" class="edge" d="M676.0,382.8 Q749.4,407.7 822.0,380.7"/>
+<path id="e-pb_hall-sa_gf-0_0_3" class="edge" d="M327.4,359.0 Q414.2,328.6 452.6,245.0"/>
+<path class="edge-hot" d="M214.5,117.0 Q300.5,193.3 415.5,195.0" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.0333;0.0344;0.1556;0.1567;1" values="0;0;1;1;0;0"/></path>
+<g opacity="0"><rect class="valbg" x="439.5" y="170.0" width="81.0" height="17" rx="3"/><text class="value" x="480" y="183.0" text-anchor="middle">0/0/1 = On</text><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.0333;0.0344;0.2778;0.2789;1" values="0;0;1;1;0;0"/></g>
+<path class="edge-hot" d="M566.0,218.1 Q679.3,185.6 794.0,213.0" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.1667;0.1678;0.2667;0.2678;1" values="0;0;1;1;0;0"/></path>
+<g opacity="0"><rect class="valbg" x="799.5" y="171.0" width="81.0" height="17" rx="3"/><text class="value" x="840" y="184.0" text-anchor="middle">0/1/1 = On</text><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.1667;0.1678;0.4111;0.4122;1" values="0;0;1;1;0;0"/></g>
+<path class="edge-hot" d="M206.0,256.5 Q296.0,214.3 394.0,231.5" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.2889;0.2900;0.4000;0.4011;1" values="0;0;1;1;0;0"/></path>
+<g opacity="0"><rect class="valbg" x="439.5" y="170.0" width="81.0" height="17" rx="3"/><text class="value" x="480" y="183.0" text-anchor="middle">0/0/2 = On</text><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.2889;0.2900;0.5333;0.5344;1" values="0;0;1;1;0;0"/></g>
+<path class="edge-hot" d="M486.0,64.0 Q585.0,98.0 684.0,64.0" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.3778;0.3789;0.5111;0.5122;1" values="0;0;1;1;0;0"/></path>
+<g opacity="0"><rect class="valbg" x="729.5" y="14.0" width="81.0" height="17" rx="3"/><text class="value" x="770" y="27.0" text-anchor="middle">0/0/4 = On</text><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.3778;0.3789;0.6222;0.6233;1" values="0;0;1;1;0;0"/></g>
+<path class="edge-hot" d="M676.0,382.8 Q749.4,407.7 822.0,380.7" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.5111;0.5122;0.6111;0.6122;1" values="0;0;1;1;0;0"/></path>
+<g opacity="0"><rect class="valbg" x="820.3" y="339.0" width="95.4" height="17" rx="3"/><text class="value" x="868" y="352.0" text-anchor="middle">2/1/1 = 38 %</text><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.5111;0.5122;0.7556;0.7567;1" values="0;0;1;1;0;0"/></g>
+<path class="edge-hot" d="M327.4,359.0 Q414.2,328.6 452.6,245.0" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.6111;0.6122;0.7222;0.7233;1" values="0;0;1;1;0;0"/></path>
+<g opacity="0"><rect class="valbg" x="435.9" y="170.0" width="88.2" height="17" rx="3"/><text class="value" x="480" y="183.0" text-anchor="middle">0/0/3 = Off</text><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.6111;0.6122;0.8556;0.8567;1" values="0;0;1;1;0;0"/></g>
+<path class="edge-hot" d="M566.0,218.1 Q679.3,185.6 794.0,213.0" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.7444;0.7456;0.8444;0.8456;1" values="0;0;1;1;0;0"/></path>
+<g opacity="0"><rect class="valbg" x="795.9" y="171.0" width="88.2" height="17" rx="3"/><text class="value" x="840" y="184.0" text-anchor="middle">0/1/1 = Off</text><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.7444;0.7456;0.9889;0.9900;1" values="0;0;1;1;0;0"/></g>
+<rect class="galbg" x="285.767438089478" y="165.6464486755646" width="44" height="17" rx="3"/><text class="galabel" x="307.767438089478" y="178.6464486755646" text-anchor="middle">0/0/1</text>
+<rect class="galbg" x="657.6667489407228" y="191.55925788808142" width="44" height="17" rx="3"/><text class="galabel" x="679.6667489407228" y="204.55925788808142" text-anchor="middle">0/1/1</text>
+<rect class="galbg" x="276.0175441986347" y="220.1315814897605" width="44" height="17" rx="3"/><text class="galabel" x="298.0175441986347" y="233.1315814897605" text-anchor="middle">0/0/2</text>
+<rect class="galbg" x="563.0" y="72.0" width="44" height="17" rx="3"/><text class="galabel" x="585.0" y="85.0" text-anchor="middle">0/0/4</text>
+<rect class="galbg" x="727.1870310003291" y="385.71088473869685" width="44" height="17" rx="3"/><text class="galabel" x="749.1870310003291" y="398.71088473869685" text-anchor="middle">2/1/1</text>
+<rect class="galbg" x="380.12281993130665" y="306.30553407094635" width="44" height="17" rx="3"/><text class="galabel" x="402.12281993130665" y="319.30553407094635" text-anchor="middle">0/0/3</text>
+<circle class="pulse" r="5" opacity="0"><animateMotion dur="9.0s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.0333;0.1556;1"><mpath xlink:href="#e-pb_liv-sa_gf-0_0_1" href="#e-pb_liv-sa_gf-0_0_1"/></animateMotion><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.0333;0.0344;0.1556;0.1567;1" values="0;0;1;1;0;0"/></circle>
+<circle class="pulse" r="5" opacity="0"><animateMotion dur="9.0s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.1667;0.2667;1"><mpath xlink:href="#e-sa_gf-ga_status-0_1_1" href="#e-sa_gf-ga_status-0_1_1"/></animateMotion><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.1667;0.1678;0.2667;0.2678;1" values="0;0;1;1;0;0"/></circle>
+<circle class="pulse" r="5" opacity="0"><animateMotion dur="9.0s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.2889;0.4000;1"><mpath xlink:href="#e-pb_kit-sa_gf-0_0_2" href="#e-pb_kit-sa_gf-0_0_2"/></animateMotion><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.2889;0.2900;0.4000;0.4011;1" values="0;0;1;1;0;0"/></circle>
+<circle class="pulse" r="5" opacity="0"><animateMotion dur="9.0s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.3778;0.5111;1"><mpath xlink:href="#e-pb_bed-sa_ff-0_0_4" href="#e-pb_bed-sa_ff-0_0_4"/></animateMotion><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.3778;0.3789;0.5111;0.5122;1" values="0;0;1;1;0;0"/></circle>
+<circle class="pulse" r="5" opacity="0"><animateMotion dur="9.0s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.5111;0.6111;1"><mpath xlink:href="#e-rt_liv-ga_valve-2_1_1" href="#e-rt_liv-ga_valve-2_1_1"/></animateMotion><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.5111;0.5122;0.6111;0.6122;1" values="0;0;1;1;0;0"/></circle>
+<circle class="pulse" r="5" opacity="0"><animateMotion dur="9.0s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.6111;0.7222;1"><mpath xlink:href="#e-pb_hall-sa_gf-0_0_3" href="#e-pb_hall-sa_gf-0_0_3"/></animateMotion><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.6111;0.6122;0.7222;0.7233;1" values="0;0;1;1;0;0"/></circle>
+<circle class="pulse" r="5" opacity="0"><animateMotion dur="9.0s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.7444;0.8444;1"><mpath xlink:href="#e-sa_gf-ga_status-0_1_1" href="#e-sa_gf-ga_status-0_1_1"/></animateMotion><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" keyTimes="0;0.7444;0.7456;0.8444;0.8456;1" values="0;0;1;1;0;0"/></circle>
+<rect class="ring" x="388.0" y="189.0" width="184" height="62" rx="8"><animate attributeName="stroke-opacity" values=".7;.1;.7" dur="2.4s" repeatCount="indefinite"/></rect>
+<text class="muted" x="480" y="267.0" text-anchor="middle">activity leader</text>
+<g><rect class="node" x="394.0" y="195.0" width="172" height="50" rx="4"/><text class="name" x="480" y="216" text-anchor="middle">Switch actuator GF</text><text class="addr" x="480" y="235" text-anchor="middle">1.1.1</text></g>
+<g><rect class="node" x="64.0" y="67.0" width="172" height="50" rx="4"/><text class="name" x="150" y="88" text-anchor="middle">Push button living</text><text class="addr" x="150" y="107" text-anchor="middle">1.1.10</text></g>
+<g><rect class="node" x="34.0" y="243.0" width="172" height="50" rx="4"/><text class="name" x="120" y="264" text-anchor="middle">Push button kitchen</text><text class="addr" x="120" y="283" text-anchor="middle">1.1.11</text></g>
+<g><rect class="node" x="214.0" y="359.0" width="172" height="50" rx="4"/><text class="name" x="300" y="380" text-anchor="middle">Push button hall</text><text class="addr" x="300" y="399" text-anchor="middle">1.2.11</text></g>
+<g><rect class="node" x="314.0" y="39.0" width="172" height="50" rx="4"/><text class="name" x="400" y="60" text-anchor="middle">Push button bedroom</text><text class="addr" x="400" y="79" text-anchor="middle">1.2.10</text></g>
+<g><rect class="node" x="684.0" y="39.0" width="172" height="50" rx="4"/><text class="name" x="770" y="60" text-anchor="middle">Switch actuator FF</text><text class="addr" x="770" y="79" text-anchor="middle">1.2.1</text></g>
+<g><rect class="node" x="504.0" y="359.0" width="172" height="50" rx="4"/><text class="name" x="590" y="380" text-anchor="middle">Thermostat living</text><text class="addr" x="590" y="399" text-anchor="middle">1.1.20</text></g>
+<g><rect class="ganode" x="794" y="195" width="92" height="34" rx="17"/><text class="addr" x="840" y="213" text-anchor="middle">0/1/1</text><text class="muted" x="840" y="242" text-anchor="middle">status · no receiver</text></g>
+<g><rect class="ganode" x="822" y="363" width="92" height="34" rx="17"/><text class="addr" x="868" y="381" text-anchor="middle">2/1/1</text><text class="muted" x="868" y="410" text-anchor="middle">valve · no receiver</text></g>
+</svg>

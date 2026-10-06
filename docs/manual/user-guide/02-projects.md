@@ -30,7 +30,7 @@ archive into a file you edit in place. Save the imported work as `.knxdb` later.
 | Project language | Starts with your current interface language. Select English, German or an installed language pack, or choose **Another language tag…** and type a well-formed tag such as `de-DE`. This labels the project texts; it does not switch the interface language. There is no restricted list of project languages. |
 | Group address style | `ThreeLevel` (`1/2/3`), `TwoLevel` (`1/2`) or `Free` (a plain number). |
 
-![The New project dialog over the welcome cards, with an explanation that Save chooses
+![The New project dialog over an open project, with an explanation that Save chooses
 the .knxdb filename, Project name "Untitled project" selected, Installation name
 "Installation 1", Project language "English" in a dropdown, Group address style
 "Three level (main/middle/sub)", and Cancel and Create project
@@ -63,9 +63,10 @@ daily use.
 what you saved is what you get back, including the parts of an imported ETS file that
 KNXBench preserves but does not model (see below).
 
-![The file picker of the web build, showing the path /, one file named
-kv-demo.knxdb, an Upload row with a file-choosing control, and a Cancel
-button](../../assets/screenshots/porcelain-open-project-dialog.png)
+![The file picker of the web build, titled "Open — /", listing one file named
+sample-house.knxproj, an Upload row with a file-choosing control, and a Cancel
+button. Every way into a file uses this picker; here it was opened from Import ETS
+project](../../assets/screenshots/porcelain-open-project-dialog.png)
 
 The picker looks different depending on how you run KNXBench. The desktop build opens
 your desktop's own file dialog. The web build — the one in the screenshot — browses
@@ -88,9 +89,9 @@ back to. Whatever you do afterwards happens in memory and, once you save, in a
 While the import runs, a banner shows the file name, the phase the importer is in, and
 a count where the server can give one.
 
-![The import banner over the welcome screen, reading "Importing KV v2.5 -
-demo.knxproj…", phase "Starting…", with a progress bar and the line "Aligning the
-floors with gravity"](../../assets/screenshots/porcelain-loading-progress.png)
+![The import banner over the welcome screen, reading "Importing
+sample-house.knxproj…", phase "Starting…", with a progress bar and one of the
+banner's playful status lines below it](../../assets/screenshots/porcelain-loading-progress.png)
 
 The banner walks through seventeen named phases — opening the archive, detecting the
 schema version, parsing the topology, validating references, inferring datapoint

@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — AR16 slice 1: the manual gets new photos of a house that does not exist
+
+- All 21 manual screenshots regenerated from the real application (release
+  `knx-server`, production frontend, offline namespace) with a fictional
+  "Sample house" built by `tools/manual_sample_project.py` (unit-tested).
+  Reproducible via `apps/knx-web/playwright.manual.config.ts`; recipe in the
+  contributing chapter.
+- Every screenshot passage re-read; stale claims fixed (the bus monitor's
+  button is **Search**, start-up gateway search stated, welcome cards, help
+  topics, catalog rows).
+- Checklist [MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md); the claim-by-claim pass
+  over chapters without screenshots is still open.
+
 ## 2026-10-06 — AR17: a real AppImage, weighed and sniffed (offline)
 
 - Local candidate `KNXBench_0.1.0-alpha.4_amd64.AppImage` from `6b9b6818`

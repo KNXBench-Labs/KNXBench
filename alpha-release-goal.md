@@ -961,8 +961,14 @@ user on 2026-10-06: the manual stays on GitHub (`docs/manual/`, read in the
 repository, not bundled — consistent with ADR-0024) **with screenshots**.
 Screenshots must show the finished application at its tested scope and use
 fictional data only.
+Slice 1 (2026-10-06): all 21 screenshots regenerated from the real
+application with a fictional project (`tools/manual_sample_project.py`,
+`apps/knx-web/e2e/manual-screenshots.shots.ts`); every screenshot passage
+re-read and corrected; stale "Discover gateways" wording fixed in 7 places.
+Dated checklist: [MANUAL_ACCEPTANCE](docs/MANUAL_ACCEPTANCE.md). Open: the
+claim-by-claim pass over the chapters without screenshots, then acceptance.
 
-- [ ] Verify the current UI owner's closure, actual tested surfaces and any native/accessibility exceptions; do not substitute a self-review or an old unsuccessful invocation.
+- [x] Verify the current UI owner's closure, actual tested surfaces and any native/accessibility exceptions; do not substitute a self-review or an old unsuccessful invocation.
 - [x] Resolve the reserved manual location/screenshot decision consistently with ADR-0024: maintainer `docs/` does not silently become a bundled in-app help system.
 - [ ] Review the existing manual claim by claim against the finished application, update workflows/screenshots at their actual tested scope, and remove stale “never written”, browser-export and count statements without broadening hardware claims.
 - [ ] Record explicit manual acceptance and unresolved user-owned exceptions.

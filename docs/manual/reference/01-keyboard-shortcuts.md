@@ -73,7 +73,7 @@ list behavior once open:
 | `Enter` | Activate the highlighted result |
 | `Escape` | Close the overlay |
 
-![The search overlay with the query "dimming" and five matching group addresses listed
+![The search overlay with the query "light" and eight matching group addresses listed
 underneath, reachable the same way by arrow keys and Enter](../../assets/screenshots/porcelain-search.png)
 
 **The File menu is keyboard-reachable even though it looks like a mouse dropdown.** It's

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 06:53 CEST
+- **Completed:** **AR16 slice 1.** 21 manual screenshots regenerated from the real app with the fictional sample project (`tools/manual_sample_project.py` + 3 unit tests; `apps/knx-web/e2e/manual-screenshots.shots.ts`, `playwright.manual.config.ts`, not part of the normal suite). Screenshot passages and 7 "Discover gateways" mentions corrected. `docs/MANUAL_ACCEPTANCE.md` dated checklist. UI closure verified from goal-ui.md.
+- **Pending/Next Steps:** AR16 row 6: claim-by-claim pass over chapters without screenshots (knx-basics, 06 configuration workflow, 08 reports, 09 settings, 10 CLI, reference 02/04, getting-started 01–05), then acceptance. AR17 candidate stays valid only while no code changes after `6b9b6818`; the screenshot spec and tools script are not shipped code.
+- **Notes for Codex oder Claude:** Run the screenshot spec offline (unshare --net) with a SHORT TMPDIR (Chromium socket path limit). The UI-owner Web lock is not needed: no file under apps/knx-web/src changed.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 06:35 CEST
 - **Completed:** **AR17 DONE.** Local AppImage candidate 0.1.0-alpha.4 from `6b9b6818` (desktop version raised to match knx-web alpha.4; check-appimage had refused alpha.1). Offline smoke under X11 (private Xvfb) and native Wayland; packaging manifest clean. Record `docs/ALPHA_CANDIDATE.md`. New `KL-158` (AppImage forces X11, WAITING_DECISION for AR19), privacy checklist item 6 (build paths in local binaries), troubleshooting + known-issues entries. AR16: user policy recorded (manual on GitHub with screenshots).
 - **Pending/Next Steps:** AR16: screenshots from the fictional sample project (generator script was in the AR17 scratch; recreate under `scripts/` or the e2e harness), claim-by-claim manual review, dated checklist; UI-owner closure receipt still needed. Any code change after `6b9b6818` requires a rebuild of the candidate before AR18.

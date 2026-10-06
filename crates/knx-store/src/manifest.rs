@@ -26,19 +26,27 @@ pub fn insert_manufacturer_refs(
     refs: &[ManufacturerRef],
 ) -> Result<usize, rusqlite::Error> {
     let tx = conn.unchecked_transaction()?;
-    tx.execute("DELETE FROM manufacturer_ref", [])?;
-    let mut count = 0;
-    {
-        let mut stmt = tx.prepare(
-            "INSERT INTO manufacturer_ref (source_path, sha256, len, kind)
-             VALUES (?1, ?2, ?3, ?4)",
-        )?;
-        for r in refs {
-            stmt.execute(params![r.source_path, r.sha256, r.len, r.kind])?;
-            count += 1;
-        }
-    }
+    let count = write_manufacturer_refs(&tx, refs)?;
     tx.commit()?;
+    Ok(count)
+}
+
+/// The body of [`insert_manufacturer_refs`], inside a transaction the
+/// caller owns (`save_project_with_passthrough`).
+pub(crate) fn write_manufacturer_refs(
+    conn: &Connection,
+    refs: &[ManufacturerRef],
+) -> Result<usize, rusqlite::Error> {
+    conn.execute("DELETE FROM manufacturer_ref", [])?;
+    let mut count = 0;
+    let mut stmt = conn.prepare(
+        "INSERT INTO manufacturer_ref (source_path, sha256, len, kind)
+         VALUES (?1, ?2, ?3, ?4)",
+    )?;
+    for r in refs {
+        stmt.execute(params![r.source_path, r.sha256, r.len, r.kind])?;
+        count += 1;
+    }
     Ok(count)
 }
 

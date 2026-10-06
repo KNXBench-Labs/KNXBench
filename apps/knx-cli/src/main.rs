@@ -278,6 +278,21 @@ fn parse_import_args(args: &[String]) -> Result<ImportArgs, String> {
     })
 }
 
+/// Copies an import held in the in-memory `staged` store to `path` in one
+/// transaction: the project, its opaque entries and its manufacturer
+/// manifest land together or not at all.
+fn write_imported_store(
+    path: &Path,
+    staged: &knx_store::Connection,
+    project: &knx_core::Project,
+) -> Result<(), String> {
+    let opaque = knx_store::load_opaque(staged).map_err(|e| e.to_string())?;
+    let refs = knx_store::load_manufacturer_refs(staged).map_err(|e| e.to_string())?;
+    let conn = knx_store::open_and_migrate(path).map_err(|e| e.to_string())?;
+    knx_store::save_project_with_passthrough(&conn, project, &opaque, &refs)
+        .map_err(|e| e.to_string())
+}
+
 /// The first line of standard input as a project password: everything up
 /// to the first newline, with one trailing `\r\n` or `\n` removed and
 /// nothing else trimmed (a password may start or end with a space). The
@@ -347,29 +362,14 @@ fn run_import(args: &[String]) -> ExitCode {
         None
     };
 
-    // `--store` names a persistent database; without it, this run's opaque
-    // entries live only in a temp file for the duration of the process —
-    // `open_and_migrate` always takes a path, so a plain "just show me the
-    // report" invocation still needs one to exist, just not to outlive it.
-    let _temp_dir;
-    let db_path: PathBuf = match &parsed.store {
-        Some(path) => PathBuf::from(path),
-        None => {
-            _temp_dir = match tempfile::tempdir() {
-                Ok(d) => d,
-                Err(e) => {
-                    eprintln!("failed to create a temporary store: {e}");
-                    return ExitCode::FAILURE;
-                }
-            };
-            _temp_dir.path().join("import.knxdb")
-        }
-    };
-
-    let conn = match knx_store::open_and_migrate(&db_path) {
+    // The import runs into an in-memory store first (AR18 review M1a/M2):
+    // a failed import must not create, migrate or touch the `--store` file,
+    // and a successful one writes project, opaque entries and manifest into
+    // it in one transaction.
+    let conn = match knx_store::open_and_migrate_in_memory() {
         Ok(conn) => conn,
         Err(e) => {
-            eprintln!("failed to open store at {}: {e}", db_path.display());
+            eprintln!("failed to prepare the import: {e}");
             return ExitCode::FAILURE;
         }
     };
@@ -420,10 +420,12 @@ fn run_import(args: &[String]) -> ExitCode {
         }
     };
 
-    // Save the project to the store so it can be loaded back later.
-    if let Err(e) = knx_store::save_project(&conn, &imported.project) {
-        eprintln!("failed to save project to store: {e}");
-        return ExitCode::FAILURE;
+    // Only now does the `--store` file come into play.
+    if let Some(store) = &parsed.store {
+        if let Err(e) = write_imported_store(Path::new(store), &conn, &imported.project) {
+            eprintln!("failed to save project to store {store}: {e}");
+            return ExitCode::FAILURE;
+        }
     }
 
     print_summary(&parsed.file, &imported);
@@ -576,7 +578,7 @@ fn run_ga_export(args: &[String]) -> ExitCode {
         }
     };
 
-    let conn = match knx_store::open_and_migrate(&PathBuf::from(&parsed.store)) {
+    let conn = match knx_store::open_existing_and_migrate(&PathBuf::from(&parsed.store)) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("failed to open store at {}: {e}", parsed.store);
@@ -669,7 +671,7 @@ fn run_doc_export(args: &[String]) -> ExitCode {
         }
     };
 
-    let conn = match knx_store::open_and_migrate(&PathBuf::from(&parsed.store)) {
+    let conn = match knx_store::open_existing_and_migrate(&PathBuf::from(&parsed.store)) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("failed to open store at {}: {e}", parsed.store);
@@ -1114,7 +1116,7 @@ fn run_ga_import(args: &[String]) -> ExitCode {
         }
     };
 
-    let conn = match knx_store::open_and_migrate(&PathBuf::from(&parsed.store)) {
+    let conn = match knx_store::open_existing_and_migrate(&PathBuf::from(&parsed.store)) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("failed to open store at {}: {e}", parsed.store);
@@ -2128,7 +2130,7 @@ fn run_device_download(args: &[String]) -> ExitCode {
     } else {
         None
     };
-    let (project, opaque) = match knx_store::open_and_migrate(Path::new(&parsed.project))
+    let (project, opaque) = match knx_store::open_existing_and_migrate(Path::new(&parsed.project))
         .map_err(|e| e.to_string())
         .and_then(|conn| {
             let project = knx_store::load_project(&conn).map_err(|e| e.to_string())?;
@@ -2284,6 +2286,10 @@ fn run_device_download(args: &[String]) -> ExitCode {
             Err(e) => {
                 eprintln!("could not connect to {gateway}: {e}");
                 println!("written to the device: no");
+                // The history agrees (AR18 review M6): failed, nothing written.
+                if let Err(error) = activity.record_never_connected() {
+                    eprintln!("activity history could not record the failed connection: {error}");
+                }
                 return ExitCode::FAILURE;
             }
         };
@@ -2340,7 +2346,7 @@ fn run_device_readiness(args: &[String]) -> ExitCode {
         eprintln!("project not found: {}", parsed.project);
         return ExitCode::FAILURE;
     }
-    let project = match knx_store::open_and_migrate(Path::new(&parsed.project))
+    let project = match knx_store::open_existing_and_migrate(Path::new(&parsed.project))
         .map_err(|e| e.to_string())
         .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
     {
@@ -2424,7 +2430,7 @@ fn run_device_compare(args: &[String]) -> ExitCode {
             Some(log)
         }
     };
-    let project = match knx_store::open_and_migrate(Path::new(&parsed.project))
+    let project = match knx_store::open_existing_and_migrate(Path::new(&parsed.project))
         .map_err(|e| e.to_string())
         .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
     {
@@ -4280,7 +4286,7 @@ fn load_project_individual_addresses(
             path.display()
         ));
     }
-    let conn = knx_store::migration::open_and_migrate(path).map_err(|e| e.to_string())?;
+    let conn = knx_store::open_existing_and_migrate(path).map_err(|e| e.to_string())?;
     let project = knx_store::project::load_project(&conn).map_err(|e| e.to_string())?;
     Ok(project.devices.iter().filter_map(|d| d.address).collect())
 }
@@ -4302,7 +4308,7 @@ struct ProjectBusView {
 /// Loads [`ProjectBusView`] from a stored project. Any failure to open or
 /// read a *given* path is reported, never swallowed.
 fn load_project_bus_view(path: &Path) -> Result<ProjectBusView, String> {
-    let conn = knx_store::migration::open_and_migrate(path).map_err(|e| e.to_string())?;
+    let conn = knx_store::open_existing_and_migrate(path).map_err(|e| e.to_string())?;
     let project = knx_store::project::load_project(&conn).map_err(|e| e.to_string())?;
     Ok(ProjectBusView {
         style: project.info.group_address_style,

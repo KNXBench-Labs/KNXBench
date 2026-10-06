@@ -40,26 +40,34 @@ pub fn insert_opaque(
     // back on drop unless committed, so an error partway through any one
     // entry leaves the table exactly as it was before this call.
     let tx = conn.unchecked_transaction()?;
-    tx.execute("DELETE FROM opaque_entry", [])?;
-    let mut count = 0;
-    {
-        let mut stmt = tx.prepare(
-            "INSERT INTO opaque_entry (source_path, xpath, kind, name, bytes, sha256)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        )?;
-        for entry in entries {
-            stmt.execute(params![
-                entry.source_path,
-                entry.xpath,
-                entry.kind,
-                entry.name,
-                entry.bytes,
-                entry.sha256,
-            ])?;
-            count += 1;
-        }
-    }
+    let count = write_opaque(&tx, entries)?;
     tx.commit()?;
+    Ok(count)
+}
+
+/// The body of [`insert_opaque`], inside a transaction the caller owns
+/// (`save_project_with_passthrough`).
+pub(crate) fn write_opaque(
+    conn: &Connection,
+    entries: &[StoredOpaqueEntry],
+) -> Result<usize, rusqlite::Error> {
+    conn.execute("DELETE FROM opaque_entry", [])?;
+    let mut count = 0;
+    let mut stmt = conn.prepare(
+        "INSERT INTO opaque_entry (source_path, xpath, kind, name, bytes, sha256)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+    )?;
+    for entry in entries {
+        stmt.execute(params![
+            entry.source_path,
+            entry.xpath,
+            entry.kind,
+            entry.name,
+            entry.bytes,
+            entry.sha256,
+        ])?;
+        count += 1;
+    }
     Ok(count)
 }
 

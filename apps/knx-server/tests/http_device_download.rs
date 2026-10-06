@@ -256,6 +256,7 @@ struct SimConnector {
     cleanup_fault: Arc<CleanupFault>,
     history_path: PathBuf,
     start_receipts_at_connect: Arc<Mutex<Vec<Option<Value>>>>,
+    refuse_connect: Arc<AtomicBool>,
 }
 
 impl GatewayConnector for SimConnector {
@@ -276,6 +277,9 @@ impl GatewayConnector for SimConnector {
                     })
                 });
         self.start_receipts_at_connect.lock().unwrap().push(receipt);
+        if self.refuse_connect.load(Ordering::SeqCst) {
+            return Box::pin(async { Err(BusSessionError::Transport(BusError::Timeout)) });
+        }
         if self.history_fault.enabled.load(Ordering::SeqCst) {
             // SQLite file-format §1.3.3: write/read versions, not user_version.
             // A marker alone with a rollback header did not force admission error.
@@ -349,6 +353,7 @@ struct Harness {
     history_fault: Arc<HistoryFault>,
     cleanup_fault: Arc<CleanupFault>,
     start_receipts_at_connect: Arc<Mutex<Vec<Option<Value>>>>,
+    refuse_connect: Arc<AtomicBool>,
 }
 
 /// An app with the product file installed and the saved K3 project open,
@@ -383,6 +388,7 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
     let history_fault = Arc::new(HistoryFault::default());
     let cleanup_fault = Arc::new(CleanupFault::default());
     let start_receipts_at_connect = Arc::new(Mutex::new(Vec::new()));
+    let refuse_connect = Arc::new(AtomicBool::new(false));
     let state = Arc::new(knx_server::AppState {
         product_db: Some(Mutex::new(products)),
         data_dir: dir.path().to_path_buf(),
@@ -394,6 +400,7 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
             cleanup_fault: Arc::clone(&cleanup_fault),
             history_path: dir.path().join("activity-history.sqlite"),
             start_receipts_at_connect: Arc::clone(&start_receipts_at_connect),
+            refuse_connect: Arc::clone(&refuse_connect),
         }),
         device_download_timing: timing,
         ..knx_server::AppState::new(dir.path().to_path_buf())
@@ -415,6 +422,7 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
         history_fault,
         cleanup_fault,
         start_receipts_at_connect,
+        refuse_connect,
     }
 }
 
@@ -520,6 +528,32 @@ async fn download_start_is_durable_before_tunnel_contact() {
     assert!(entry["downloadEvidence"]["cleanup"] == "pending");
     assert!(entry["writeEvidence"]["backupRecorded"] == false);
     assert!(entry["writeEvidence"]["sendPossible"] == false);
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn a_tunnel_that_never_opens_is_recorded_as_failed_with_nothing_written() {
+    // AR18 review M6: the guard's drop used to record `unknown`, telling the
+    // user a write might have happened when none could.
+    let h = harness(SimulatorConfig::default()).await;
+    h.refuse_connect.store(true, Ordering::SeqCst);
+    let shown = plan(&h).await;
+    let (status, body) = start(
+        &h,
+        &shown["planId"],
+        shown["confirmationPhrase"].as_str().unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_GATEWAY, "{body}");
+    assert_eq!(h.calls.load(Ordering::SeqCst), 1);
+    assert!(h.device.seen().is_empty(), "no frame may reach the device");
+    let (status, history) = send(&h.app, get("/api/bus/history")).await;
+    assert_eq!(status, StatusCode::OK, "{history}");
+    let entry = &history["entries"][0];
+    assert_eq!(entry["kind"], "deviceDownload", "{history}");
+    assert_eq!(entry["state"], "failed", "{entry}");
+    assert_eq!(entry["downloadEvidence"]["written"], "no", "{entry}");
+    assert_eq!(entry["writeEvidence"]["sendPossible"], false, "{entry}");
 }
 
 #[tokio::test]

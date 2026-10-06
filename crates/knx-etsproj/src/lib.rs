@@ -23,7 +23,9 @@ pub mod validate;
 pub mod values;
 pub(crate) mod xpath;
 
-pub use container::{Container, ContainerError, EncryptionScheme, EntryInfo};
+pub use container::{
+    Container, ContainerError, EncryptionScheme, EntryInfo, MAX_ARCHIVE_UNCOMPRESSED,
+};
 pub use detect::{detect, DetectError, Detected, SchemaVersion};
 pub use known::{known_schema, KnownElement, KnownSchema};
 pub use parse::{

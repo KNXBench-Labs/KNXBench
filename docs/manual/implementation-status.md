@@ -5,7 +5,8 @@
 This chapter is the honest inventory: what exists, what half exists, and what
 does not exist at all, area by area across the whole application.
 
-The version described is `0.1.0-alpha.1`. **No release has been published.**
+The version described is the `0.1.0-alpha` series (2026-10-06: CLI, desktop and web
+`alpha.4`, server `alpha.1`). **No release has been published.**
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
 
@@ -83,7 +84,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | Buildings, floors, rooms and building parts: read and edit | ✅ Implemented | 22 building parts in the reference project |
 | Creating a project from scratch in the interface | ✅ Implemented | Browser-verified — [§83](../KNOWN_LIMITATIONS.md#83-the-from-scratch-launcher-is-browser-verified--resolved-2026-09-16-goal-task-17) |
 | Five additional documented space types kept distinct on import | ✅ Implemented | `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` survive import and native save/load; synthetic coverage, with the Schema23 vocabulary inconsistency documented in [§89](../KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import) |
-| Moving a device by drag and drop | 🟡 Partial or experimental | Single device → line/building part in the first installation; other structural gestures remain unavailable — [Buildings and topology](user-guide/03-buildings-and-topology.md) |
+| Moving a device by drag and drop | 🟡 Partial or experimental | Single device → line/building part within its own installation; a group address dropped on a link row links it; other structural gestures remain unavailable — [Buildings and topology](user-guide/03-buildings-and-topology.md) |
 
 ## Group addresses
 
@@ -91,7 +92,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | --- | --- | --- |
 | Create, rename, delete, inline edit; duplicate and still-linked validation | ✅ Implemented | [Working with group addresses](user-guide/04-group-addresses.md) |
 | Choosing free, two-level or three-level style when the project is created | ✅ Implemented | The choice is made once |
-| Changing the style afterwards | ❌ Not implemented | The New project dialog says otherwise; it is wrong — [Known issues](known-issues.md) |
+| Changing the style afterwards | ✅ Implemented | On the Project node in the properties pane, undoable; the New project dialog's hint still says otherwise — [Known issues](known-issues.md) |
 | CSV export and re-import in KNXBench's own format | ✅ Implemented | Every address in the reference project round-trips unchanged |
 | CSV interoperability with ETS or `.esf` | ❌ Not implemented | Never claimed, never tested — [§38](../KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability) |
 | Explicit, preview-confirmed re-addressing and unreferenced deletion through CSV | ✅ Implemented | Stable ids, directional-link preview, state-bound confirmation |
@@ -146,7 +147,8 @@ raised. A project that has been imported stays in `.knxdb`.
 | The web panel's detail level | ✅ Implemented | Expandable per-entity list; long tables scroll (virtualised) with text and status filter; no search across tables — [§60](../KNOWN_LIMITATIONS.md#60-project-diffs-web-panel-shows-grouped-counts-only) |
 | Comparing against a raw `.knxproj`, in the interface and on the command line | ✅ Implemented | Import diagnostics shown; an import with errors is refused — [§57](../KNOWN_LIMITATIONS.md#57-project-diff-cannot-compare-against-a-raw-knxproj) |
 | Merging or applying a difference | ❌ Not implemented | [§55](../KNOWN_LIMITATIONS.md#55-project-diff-cannot-merge-or-apply-a-diff-back-onto-a-project) |
-| Three-way comparison, and a non-zero exit code for pipelines | ❌ Not implemented | [§56](../KNOWN_LIMITATIONS.md#56-project-diff-does-not-do-a-three-way-comparison), [§58](../KNOWN_LIMITATIONS.md#58-project-diff-has-no-ci-friendly-exit-nonzero-on-any-difference-flag) |
+| A non-zero exit code for pipelines | ✅ Implemented | `knx diff --exit-code`: 0 equal, 1 different, 2 failure — [Command line](user-guide/10-command-line.md) |
+| Three-way comparison | ❌ Not implemented | [§56](../KNOWN_LIMITATIONS.md#56-project-diff-does-not-do-a-three-way-comparison) |
 
 ## Command line
 
@@ -215,8 +217,8 @@ raised. A project that has been imported stays in `.knxdb`.
 | Capability | Status | Notes |
 | --- | --- | --- |
 | English and German interface | ✅ Implemented | [Settings and appearance](user-guide/09-settings-and-appearance.md) |
-| Any other interface language | ❌ Not implemented | — |
-| Using the translations that come with product data | ❌ Not implemented | Stored on import, never read for the interface — [§37](../KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12) |
+| Any other interface language | 🟡 Partial or experimental | Through an importable JSON language pack; none ships with KNXBench — [Settings and appearance](user-guide/09-settings-and-appearance.md#language-packs) |
+| Using the translations that come with product data | 🟡 Partial or experimental | **Product data language** in Settings picks the language for parameters, catalogue, product data and DPT texts; a missing translation falls back to the program's own text and is marked — [§37](../KNOWN_LIMITATIONS.md#37-translations-reach-selected-surfaces-not-every-imported-text-or-ui-output) |
 | Keyboard operation with documented shortcuts | ✅ Implemented | [Keyboard shortcuts](reference/01-keyboard-shortcuts.md) |
 | Respecting the system's reduced-motion preference | ✅ Implemented | Settings also offers motion style and level; the OS reduced-motion preference takes precedence — [Settings and appearance](user-guide/09-settings-and-appearance.md) |
 | Screen-reader support | 🟡 Partial or experimental | Successful project loads now announce a localized status; end-to-end assistive-technology validation is still missing — [Known issues](known-issues.md) |

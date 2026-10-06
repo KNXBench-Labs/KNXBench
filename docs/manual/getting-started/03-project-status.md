@@ -6,8 +6,10 @@ Read this chapter before you trust KNXBench with a project you care about.
 
 ## The version number
 
-Every part of KNXBench — the CLI, the server, the desktop shell, the web
-frontend — currently reports version `0.1.0-alpha.1`. There is no git tag and
+Every part of KNXBench carries its own version
+([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). On 2026-10-06 the CLI,
+the desktop shell and the web frontend report `0.1.0-alpha.4`, the standalone server
+`0.1.0-alpha.1`. There is no git tag and
 no published release. The GitHub Actions workflow that would build and
 publish a release AppImage exists but has never been run.
 
@@ -15,10 +17,11 @@ publish a release AppImage exists but has never been run.
 
 **KNXBench is Alpha software.** Concretely:
 
-- As of 2026-10-01, `docs/KNOWN_LIMITATIONS.md` has 110 numbered headings,
-  including six resolved/clarification-only entries. Of the 104 residual
-  boundaries, five are K1 (critical); the detailed triage is the authority,
-  not a count of headings interpreted as defects.
+- As of 2026-10-06, `docs/KNOWN_LIMITATIONS.md` has 120 numbered headings,
+  including eleven resolved or signpost entries. Of the 109 residual
+  boundaries, five are K1 (critical); the
+  [detailed triage](../../LIMITATION_TRIAGE.md) is the authority, not a count of
+  headings interpreted as defects.
 - The web/Docker server's protection is one shared password and one session
   cookie. No user accounts, no roles, no audit trail, and no TLS of its own.
   Without a password it refuses to leave loopback at all.

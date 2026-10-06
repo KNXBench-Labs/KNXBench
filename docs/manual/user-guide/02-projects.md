@@ -41,15 +41,15 @@ Creating the project does not choose a filename or write a project file. **Save*
 installation names are not paths. At narrow window sizes the dialog scrolls to
 keep every field and action reachable.
 
-The group-address style is a project-wide decision and it is made here. See
+The group-address style is a project-wide decision and it is first made here. See
 [Working with group addresses](04-group-addresses.md) for what that choice means in
-daily use.
+daily use and how to change it later.
 
-> **Warning**
+> **Note**
 >
-> The dialog's hint is deliberate: no control exists to change this style after
-> creating the project today. Choose carefully, and see [Known issues](../known-issues.md)
-> for the current limitation.
+> The dialog's hint says the style cannot be changed after creation. That hint is out
+> of date: the **Project** node in the properties pane changes it, as one undoable step
+> ([Known issues](../known-issues.md)).
 
 > **Warning**
 >
@@ -179,7 +179,12 @@ serialized `.knxdb` from the current in-memory project; it is not a substitute
 for saving changes on the server. The native desktop build uses its own file
 dialog for Save As and does not show the browser-only Export project item.
 
-There is no autosave. Nothing is written until you ask for it.
+**Autosave** is on by default, every five minutes, and only for a project that already
+has a file: it never asks for a filename on your behalf, and it skips the turn when
+nothing changed. Five seconds before it saves, a notice counts down with a **Cancel**
+button. A failed autosave says so and leaves the project marked unsaved. Turn it off
+or change the interval (1–120 minutes) in
+[Settings](09-settings-and-appearance.md#autosave).
 
 ### What "unsaved changes" means right now
 

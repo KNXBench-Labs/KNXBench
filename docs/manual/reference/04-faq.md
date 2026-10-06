@@ -80,9 +80,10 @@ exists," not certification by the KNX Association.
 
 **What does "alpha" mean for this project specifically?**
 
-`0.1.0-alpha.1` on every component, no git tag, and no release ever published. Concretely:
-`docs/KNOWN_LIMITATIONS.md` lists a large number of known limitations, several classified
-critical, and nothing in KNXBench writes to a real device. See
+Version `0.1.0-alpha` (each component counts its own `alpha.N`), no git tag, and no
+release ever published. Concretely: `docs/KNOWN_LIMITATIONS.md` lists a large number of
+known limitations, several classified critical, and writing to a real device is verified
+on exactly one device so far. See
 [Project status](../getting-started/03-project-status.md) for the current count and what
 it implies for trusting it with real work.
 

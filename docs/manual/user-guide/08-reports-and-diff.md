@@ -15,9 +15,8 @@ a single `.html` file with its stylesheet inlined, which opens in any browser an
 be emailed, printed to PDF from the browser, or committed next to the project.
 
 The document always includes its header, contents, and limits/warnings. Five
-content sections can be selected through the server API; the current application
-export still requests all five because its preview and selection controls have
-not landed yet. Every included section is linked from the table of contents:
+content sections can be selected, in the application's export dialog (below) or
+through the server API. Every included section is linked from the table of contents:
 
 | Section | What it holds |
 | --- | --- |

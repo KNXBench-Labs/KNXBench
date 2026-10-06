@@ -89,9 +89,12 @@ manufacturer file twice is a no-op.
 
 **`knx-net` — KNXnet/IP.** An own implementation against ISO 22510: discovery, tunneling,
 routing, cEMI encoding, telegram decoding, a line scan, and a commissioning management
-session. KNX IP Secure is not implemented. The commissioning write path refuses any target
-that is not a simulator — nothing in KNXBench writes configuration to a real device
-([`ARCHITECTURE.md` §8](../../ARCHITECTURE.md#8-knxnetip)).
+session. KNX IP Secure is not implemented. Writing to a real device is a guarded path:
+the memory-based download for mask `0701h`/`0705h` application programs, verified on one
+device, needs a plan, a device-specific confirmation phrase and a backup first; the
+property-based downloader is still simulator-only
+([`ARCHITECTURE.md` §8](../../ARCHITECTURE.md#8-knxnetip),
+[KNOWN_LIMITATIONS §7](../../KNOWN_LIMITATIONS.md#7-commissioning-a-verified-070nh-memory-path-not-general-device-support)).
 
 **`knx-secure` — key material, in quarantine.** It holds the `.knxproj` ZIP password
 derivation and nothing else, and the layering gate keeps it from reaching the domain model
@@ -226,7 +229,7 @@ upload), `auth_routes.rs` (login, logout, status) and `debug_report_routes.rs`.
 
 ## Where the decisions are written down
 
-[`docs/adr/`](../../adr/README.md) holds twenty-six architecture decision records. Each one
+[`docs/adr/`](../../adr/README.md) holds the architecture decision records (83 on 2026-10-06). Each one
 states a decision that has already been taken, together with the evidence that forced it —
 a measurement, a license, a standard — so that a later reader who disagrees can go back and
 check whether the evidence still holds, instead of re-arguing from memory.

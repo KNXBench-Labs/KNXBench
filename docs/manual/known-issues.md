@@ -15,7 +15,8 @@ only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-The software described here is version `0.1.0-alpha.1`. No release has been
+The software described here is the `0.1.0-alpha` series (2026-10-06: CLI, desktop and
+web `alpha.4`, server `alpha.1`). No release has been
 published, and the version number is not a promise that anything is finished.
 
 > A long list of known issues is what happens when a project writes its
@@ -182,32 +183,31 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   [§69](../KNOWN_LIMITATIONS.md#69-a-module-with-no-id-cannot-be-matched-to-a-project-instance),
   [§71](../KNOWN_LIMITATIONS.md#71-a-project-imported-before-store-schema-6-has-no-module-instance-ids-to-write-with)
 
-### Drag and drop covers only two structural moves
+### Drag and drop covers only a few gestures
 
-- **Affected:** the Project Explorer.
+- **Affected:** the Project Explorer and the device's link rows.
 - **Limitation:** one eligible device can be dragged onto a line or building
-  part in the first installation. Other structural gestures, especially
-  group-address-to-object linking, are not available by drag and drop;
-  linking requires an explicit send/receive direction. The web file picker
-  separately accepts dropped files and sequential multi-file uploads.
-- **Workaround:** use the Inspector selects or bulk controls for other moves,
-  and the explicit link/unlink action for group addresses.
+  part of its own installation, and a group address can be dropped on a
+  communication object's link row, which links it in the direction that row
+  shows. Lines, building parts and several devices at once cannot be moved by
+  dragging. The web file picker separately accepts dropped files and
+  sequential multi-file uploads.
+- **Workaround:** use the Inspector selects or bulk controls for other moves.
 - **Details:** [Buildings and topology](user-guide/03-buildings-and-topology.md),
   [Projects](user-guide/02-projects.md)
 
 ## Group addresses
 
-### The New project dialog promises a restyle that does not exist
+### The New project dialog says the style cannot be changed later
 
 - **Affected:** choosing a group-address style when creating a project.
-- **Limitation:** the dialog's hint reads "Pick the one you think in; the
-  project properties can restyle it later." The project properties cannot.
-  The group-address style is shown there read-only, and the server route
-  that would change it has no entry point in the user interface.
-- **Consequence:** the style you choose when you create the project is the
-  style you keep.
-- **Workaround:** choose deliberately at creation time. There is no way back
-  through the interface.
+- **Limitation:** the dialog's hint reads "Choose the group-address style now;
+  it cannot currently be changed after creation." That is out of date: since
+  2026-10-02 the **Project** node in the properties pane changes the style, as
+  one undoable step (checked 2026-10-06 against the running application).
+- **Consequence:** none for your project; only the hint is wrong. The text
+  belongs to the interface and is handed to its owner.
+- **Workaround:** change the style on the Project node if you need to.
 
 ### CSV import does not manage group ranges
 

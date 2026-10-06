@@ -134,11 +134,12 @@ a move-to-line select, a move-to-building-part select, and a delete button.
 > Undo restores the original project placement, not a bus state.
 
 In the Project Explorer you can also drag an eligible **single device** onto a
-line or building part in the first installation. The drop uses the same
+line or building part of the same installation. The drop uses the same
 validated, undoable move as the Inspector selects; it does not change the
 individual address. The Inspector selects remain the keyboard-accessible way
-to perform either move. Group-address links need an explicit send/receive
-direction and cannot be created by dragging.
+to perform either move. Group addresses can be dragged too, onto a
+communication object's link row; see
+[Devices and products](05-devices-and-products.md).
 
 ### Moving lines and building parts
 

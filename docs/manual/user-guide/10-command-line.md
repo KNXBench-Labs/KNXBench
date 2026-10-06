@@ -11,7 +11,7 @@ Run it with no arguments and it prints its own usage. Run `knx --version` (or `-
 it prints its version, for example:
 
 ```text
-knx 0.1.0-alpha.1+ge2e539a
+knx 0.1.0-alpha.4+g6a9204a4
 ```
 
 If you built from source, the binary is at `target/debug/knx` or `target/release/knx`;
@@ -31,13 +31,15 @@ at the very end. Everything before those headings touches files only.
 | --- | --- |
 | `0` | Success. For `import` and `ga-import`, warnings still count as success |
 | `1` | Failure: bad arguments, an I/O problem, a transport problem, or no usable data |
-| `2` | `import` and `ga-import` only: a project was produced, but the report contains errors |
+| `2` | `import` and `ga-import`: a project was produced, but the report contains errors |
 
-Exit code `2` is the interesting one. It means KNXBench got a project out of your file
-but had to record things it could not use — a dangling reference, a duplicate id. In CI
-that is the difference between "no project" and "a project with known holes in it", and
-neither should be mistaken for a clean run. No other subcommand, including every `bus`
-one, ever returns `2`.
+Exit code `2` is the interesting one. For `import` and `ga-import` it means KNXBench got
+a project out of your file but had to record things it could not use — a dangling
+reference, a duplicate id. In CI that is the difference between "no project" and "a
+project with known holes in it", and neither should be mistaken for a clean run. Two
+commands use their own codes and say so in `knx --help`: `knx diff --exit-code` (0
+equal, 1 different, 2 failure) and `knx device compare` (0 the device holds the plan, 2
+it differs, 1 not compared). No `bus` command returns `2`.
 
 ## Working with projects
 
@@ -157,16 +159,21 @@ path, a warning count and each warning.
 knx diff house-before.knxdb house-after.knxdb
 ```
 
-Compares two `.knxdb` projects and prints a tree of differences using `+` for added,
-`-` for removed, `~` for changed and `?` for ambiguous. When nothing differs it prints
-`no differences found`. The result format is described in
+Compares two projects — `.knxdb` or `.knxproj`, in any mix — and prints a tree of
+differences using `+` for added, `-` for removed, `~` for changed and `?` for ambiguous.
+When nothing differs it prints `no differences found`. With `--exit-code` it exits `1`
+when the projects differ (ambiguity included) and `2` when an argument, input, import or
+store fails, so a script can tell the two apart. The result format is described in
 [Documentation export and project comparison](08-reports-and-diff.md).
 
 ## Working with product databases
 
-These four subcommands manage the shared product database — manufacturer data, products
+These subcommands manage the shared product database — manufacturer data, products
 and application programs. All of them accept `--product-db <path>` to point at a
-specific database instead of the default one. See
+specific database instead of the default one. The four most used are described below;
+`identity`, `family`, `order-number` and `coverage` are listed in `knx --help` with one
+paragraph each (`coverage` reports, per application program, whether a download is
+verified on hardware, untested or unsupported — offline, without any connection). See
 [Products and product databases](../knx-basics/05-products-and-product-databases.md).
 
 ### `knx products list`
@@ -506,6 +513,20 @@ it. Some devices never acknowledge that restart
 
 Only memory downloads to products whose load procedure KNXBench can plan are supported;
 anything else is refused while planning, before a connection opens.
+
+### Other device commands
+
+`knx --help` documents these, each with its safety notes; they share the download's
+rules (plan first, a device-specific phrase, a backup before any write):
+
+| Command | What it does |
+| --- | --- |
+| `knx device readiness` | Offline: for every project device, whether a download is verified, untested, unsupported, excluded or has no address. Sends nothing |
+| `knx device compare` | Read only: reads what a download would write and lists every difference from the project |
+| `knx device restore` | Writes a backup file back through the same load procedure, after backing up the current state |
+| `knx device find-serial` | Read only: which address has a serial number, or which serial number a device has |
+| `knx device service-control` | Reads, and after a backup changes, the Individual Address Write Enable bit |
+| `knx device reset-address`, `knx device address-by-serial` | Plan only today: confirmed writes are refused before a tunnel opens, like `program-address` below |
 
 ### `knx device program-address` — give a device its individual address
 

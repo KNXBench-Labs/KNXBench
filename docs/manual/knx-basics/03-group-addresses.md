@@ -63,10 +63,13 @@ levels deep, matching the main/middle structure.
 
 ## How a group address ends up carrying a datapoint type
 
-A group address has no datapoint type field of its own — only the communication objects
-linked to it do, and they state it (or don't). KNXBench works out a group address's
-effective type by looking at every communication object linked to it, in either
-direction, and:
+In older project files a group address has no datapoint type field of its own — only
+the communication objects linked to it do, and they state it (or don't). Newer ETS
+projects (schema 21 and later) may also declare a type on the group address itself;
+KNXBench uses that declaration when its size matches the linked objects and reports a
+conflict when it does not ([ADR-0078](../../adr/0078-group-address-declared-dpt.md)).
+Without a declaration, KNXBench works out a group address's effective type by looking at
+every communication object linked to it, in either direction, and:
 
 - if none of them state a usable type, the address has none — this is the ordinary case
   for a fair number of addresses in a typical project, not a defect;

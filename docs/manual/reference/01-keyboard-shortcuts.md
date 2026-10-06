@@ -115,10 +115,11 @@ To be honest about the gaps rather than imply a keyboard path that doesn't exist
   keyboard equivalent for selecting several devices or group addresses at once for the
   bulk-action bar; `Escape` can clear a multi-selection once it exists, but nothing
   creates one from the keyboard.
-- **Drag-and-drop doesn't exist in KNXBench** — moving a device between lines or building
-  parts is done with the select fields in the properties pane, which are ordinary
-  keyboard-reachable controls (see
-  [Buildings and topology](../user-guide/03-buildings-and-topology.md)).
+- **Every drag-and-drop gesture has a keyboard path.** Dragging a device onto a line or
+  building part does what the select fields in the properties pane do, and dropping a
+  group address on a communication object's link row does what that row's Link button
+  does (see [Buildings and topology](../user-guide/03-buildings-and-topology.md) and
+  [Devices and products](../user-guide/05-devices-and-products.md)).
 - **List entries inside overlays and the group-address table have no arrow-key roving**
   beyond the highlight behavior described above; navigate them with `Tab` like any other
   set of buttons.

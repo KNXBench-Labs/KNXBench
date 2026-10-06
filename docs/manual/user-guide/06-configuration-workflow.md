@@ -4,8 +4,9 @@
 
 The previous five chapters described the workbench one surface at a time. This one
 walks a small job from the first click to the last file, in order, so you can see how
-the pieces fit. It uses the same demo project the screenshots come from: an imported
-ETS project called "KV v2.5 - demo".
+the pieces fit. It uses the same project the screenshots come from: the fictional
+"Sample house", an ETS-format project built by `tools/manual_sample_project.py` with an
+invented manufacturer.
 
 The job: add a presence detector to an existing line, give it an address, put it in a
 room, and wire its switching object to a new group address — then get the result back
@@ -16,8 +17,9 @@ follow the link rather than guessing.
 
 ## 1. Get the project in
 
-Start with **File → Open project…** for a `.knxproj`, or **Open (.knxdb)…** for a
-project you have already worked on in KNXBench.
+Start with **Import ETS project** on the welcome screen (or **File → Open project…**)
+for a `.knxproj`, or **Open KNXBench project** (**File → Open (.knxdb)…**) for a project
+you have already worked on in KNXBench.
 
 Importing a `.knxproj` is the slower path, and the progress banner names the phase it
 is in. When it finishes, do not skip the next step.
@@ -42,20 +44,21 @@ Switch between **Topology** and **Buildings** in the navigation pane. Topology s
 the electrical structure — areas, lines, and the devices wired to them. Buildings shows
 the same devices arranged by floor and room, when the project says so.
 
-The demo project has two areas: area 0 with an empty line, and area 1 with line 1.0
-holding four devices. Its buildings side is one building part, so the Buildings view is
-quiet.
+The sample project has one area, "House", with line 1.1 "Ground floor" holding five
+devices and line 1.2 "First floor" holding three. Its buildings side has a building
+with two floors, rooms and a distribution board, so the Buildings view shows each
+device in its room.
 
 See [Buildings and topology](03-buildings-and-topology.md).
 
 ## 4. Add the device
 
-Select the line you want the device on — line 1.0 in this example — then click
-**+ Add device** under it in the project explorer, or the `+` on the line in the
-Topology view.
+Pick the line you want the device on — line 1.1 in this example — and click the `+`
+on that line in the Topology view, or **+ Add device** under it in the project
+explorer.
 
 In the catalog, filter by manufacturer, search for the product, click the row, check
-the name, and press Enter.
+the name and the quantity, and press **Create**.
 
 Read the creation diagnostics if any appear. At least one always does: the device is
 created with every communication object its application program declares, because
@@ -66,11 +69,11 @@ See [Devices and products](05-devices-and-products.md).
 
 ## 5. Give it an individual address
 
-A new device has none. Select it, and in the properties pane type the address in
-`area.line.device` form — `1.0.5` for the fifth device on line 1.0.
+A new device has none, unless you ticked **Assign free addresses on the line** in the
+catalog. Select it, and in the properties pane type the **Device number**: the area and
+line part (`1.1.`) is fixed by the line the device sits on, so `30` gives `1.1.30`.
 
-KNXBench refuses a duplicate address. It does not check that the address matches the
-line the device sits in, so read what you typed once more.
+KNXBench refuses a duplicate address and a device number outside 1–255.
 
 See [Buildings and topology](03-buildings-and-topology.md).
 
@@ -127,8 +130,9 @@ See [Working with group addresses](04-group-addresses.md).
 
 ## 10. Save
 
-**File → Save** writes the `.knxdb`. There is no autosave, and the first Save of a
-project that has no file yet becomes a Save As.
+**File → Save** writes the `.knxdb`. The first Save of a project that has no file yet
+becomes a Save As; after that, autosave (on by default, every five minutes) keeps
+writing to the same file while you work.
 
 `.knxdb` is the format to keep. It is KNXBench's own working format, it holds
 everything, and nothing is lost on the way in or out.
@@ -144,6 +148,7 @@ Three exits, for three different purposes:
 | To keep the project | **File → Save** — the `.knxdb` keeps everything |
 | A list of group addresses for a spreadsheet | **Export group addresses (CSV)…** |
 | Something to read, print or archive | The documentation export |
+| A `.knxdb` copy on your own computer (web build) | **Export project…** |
 
 There is no `.knxproj` export. It existed until 2026-09-20 and was withdrawn
 ([ADR-0028](../../adr/0028-no-knxproj-export.md)): the archives it wrote were unsigned,

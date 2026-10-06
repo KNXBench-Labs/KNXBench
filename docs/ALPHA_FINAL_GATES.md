@@ -228,5 +228,58 @@ borrows, and this gate was rerun in full on it.
 - A non-ZIP import still answers `500`.
 - Whether ETS ever writes a multi-part archive is unknown.
 
-**Re-check:** the [brief](review/AR18_RECHECK_BRIEF.md) now covers §7 and
-§8.
+**Re-check:** the [brief](review/AR18_RECHECK_BRIEF.md) covers §7 and §8;
+its result and the fixes that followed are in §9.
+
+## 9. AR18 re-check: conditions R1–R3 fixed and re-gated
+
+The independent re-check
+([verdict](review/2026-10-06-alpha-conditions-recheck.md),
+`READY_WITH_CONDITIONS`) confirmed F1, F4 and M1–M9 against its own inputs.
+It reproduced the §8 gate counts and found no real project refused. It also
+found two bypasses of the same class as F2 and F3 (N1, N2: conditions
+R1–R3) and four MINOR findings, N3–N6. This section is the evidence for the
+code revision `3ede481741acbfcd5904f67c80e443077d1151c0`.
+
+| Finding | Fix | Commit | Proof |
+| --- | --- | --- | --- |
+| N1 (R1) — names the `zip` reader decodes to one name (Unicode Path field, CP437 against UTF-8) collapse or substitute members, even `0.xml` | Refused when the reader keeps fewer members than the central directory has records (`NameCollision`), or when two decoded names are equal ignoring case. Applies to the outer archive and the nested payload | `79bee3c6` | `decoded_member_names.rs` (7 tests on hand-written archives; 5 were RED before) |
+| N2 (R2) — the budget is checked after a protected payload is unpacked | The declared total of the payload is checked before its first member | `79bee3c6` | `a_protected_payload_declaring_more_than_the_budget_is_refused_before_unpacking` (RED before: it failed differently, after reading) |
+| N3 — `device restore` records a never-opened tunnel as `unknown` | `record_never_connected`, as for download | `9118c884` | Read only; it needs a backup file and a gateway, like the reviewer's own check |
+| N4 — `AppState::new` creates the developer's product database | `new` opens none. Only the server and desktop binaries call `with_user_product_db` | `30a5cfb4` | `the_plain_constructor_touches_no_product_database_outside_its_dir` |
+| N5 — refused archives answer `500` | Import failures caused by the file itself answer `422 projectNotImportable`, which also covers the earlier disclosed non-ZIP `500` | `30a5cfb4` | Route test, and the AppImage smoke (`import broken: 422`) |
+| N6 — after a reload the web shows the welcome page while the server holds a project | **Not changed:** a UI-owner change. Disclosed in [KNOWN_LIMITATIONS §82](KNOWN_LIMITATIONS.md#82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else) and handed over | — | — |
+
+**Mutation sweep:** 6 mutants, each killed by a named test (count check,
+decoded-name check, nested identity check, nested pre-count, `422` mapping,
+plain constructor). The sources were compared byte for byte after restore.
+
+**Integrated gate on `3ede4817`** (clean tree, three leases, `XDG_DATA_HOME`
+isolated, no `KNX_*`, 16:33–16:48 CEST):
+
+| Gate | Result |
+| --- | --- |
+| `npm ci`, build, `tsc`, flow study, theme fixtures | exit 0 |
+| Vitest / Chromium | 2,076 in 117 files / 142 |
+| fmt, clippy `-D warnings` | exit 0 |
+| Workspace tests | 3,359 passed, 0 failed, 178 ignored, in 192 blocks |
+| Five `xtask` checks | ok (headers 557/155, anchors 626, ledger 190, corpus conventions 393 files) |
+| `cargo deny check`, `npm audit` | ok, 0 vulnerabilities |
+| `tools/run_corpus_tests.py` (offline) | **143 of 143 in 31 targets** |
+| AppImage | `check-appimage` ok; 107,858,424 bytes, SHA-256 `ca3101fb3b4584dacb1e2d768f455f35bab772f38009a9dc504968aebc78591e`; build stamp `3ede4817`; no builder home path in any of the 337 files |
+| Offline start | Native start rendered `v0.1.0-alpha.4`. The API sequence passed, now with non-ZIP `422 projectNotImportable`. No non-loopback socket |
+| `git diff --check`, inputs frozen | ok |
+
+The first run on `9118c884` was green except `check-headers`: the new test
+file's header was 107 columns wide. `3ede4817` changes only that comment
+line, and the full gate was rerun on it. Evidence:
+`ar18-recheck-fixes-20261006`.
+
+**What stays:**
+- N6 (UI owner).
+- An import inside the budget still peaks at about three times the declared
+  total in memory (§159 update).
+- In-place upgrade of older projects that hold a saved project (§157).
+
+Because the candidate changed, AR18 asks for another independent look:
+[brief round 2](review/AR18_RECHECK_BRIEF.md#round-2-n1n6).

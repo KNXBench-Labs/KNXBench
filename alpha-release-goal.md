@@ -1039,8 +1039,14 @@ nested payload's budget. Both are fixed, together with N3–N5 (`79bee3c6`,
 to the UI owner. Full gate on `3ede4817`: Rust 3359/0/178, Vitest 2076,
 Chromium 142, corpus 143/143, AppImage
 ([ALPHA_FINAL_GATES §9](docs/ALPHA_FINAL_GATES.md#9-ar18-re-check-conditions-r1r3-fixed-and-re-gated)).
-Open: re-check round 2 on the changed candidate
-([brief](docs/review/AR18_RECHECK_BRIEF.md#round-2-n1n6)), then the
+**Re-check round 2:** `READY_WITH_CONDITIONS`
+([verdict](docs/review/2026-10-06-alpha-recheck-round2.md)). Condition R4
+(N7: directory records via Unicode Path) is fixed, together with N8–N10
+(`901933a1`, `a16141c6`, `754a66dd`). Full gate on `754a66dd`: Rust
+3367/0/178, Vitest 2076, Chromium 142, corpus 143/143, AppImage
+([ALPHA_FINAL_GATES §10](docs/ALPHA_FINAL_GATES.md#10-ar18-re-check-round-2-condition-r4-fixed-and-re-gated)).
+Open: re-check round 3 on the changed candidate
+([brief](docs/review/AR18_RECHECK_BRIEF.md#round-3-n7n10)), then the
 ready/not-ready record.
 
 - [x] Freeze the complete integrated candidate and artifact provenance. All actionable alpha-owned items are delivered, or their release exceptions have explicit user acceptance. Merely logging a blocker is not permission to call the alpha ready.

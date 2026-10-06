@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — Round 2's condition: a record's parts must agree
+
+- Re-check round 2: `READY_WITH_CONDITIONS`
+  ([verdict](review/2026-10-06-alpha-recheck-round2.md)).
+- N7: directory records that carry data, or that are named like a file, are
+  refused.
+- N9: local header names must match the central ones.
+- N8: a missing import file answers `422`.
+- N10: two stale statements corrected.
+- Gate on `754a66dd` green: Rust 3367/0/178, corpus 143/143
+  ([ALPHA_FINAL_GATES §10](ALPHA_FINAL_GATES.md#10-ar18-re-check-round-2-condition-r4-fixed-and-re-gated)).
+- Next: re-check round 3.
+
 ## 2026-10-06 — The re-check's conditions: the reader's names and the payload's budget
 
 - Independent re-check: `READY_WITH_CONDITIONS`

@@ -50,7 +50,7 @@ addresses; built by a script, no real data).
 | Import sample `.knxproj` → save as `sample.knxdb` | 200, 0 errors, 0 warnings / 200 | same |
 | Reopen both files | `Smoke`; `Sample house`, 15 group addresses, 2 lines | same |
 | Open a missing file | 400 `path does not exist` | same |
-| Import a non-ZIP file | 500 `not a zip archive: invalid Zip archive: Could not find EOCD` | same |
+| Import a non-ZIP file | 500 `not a zip archive: invalid Zip archive: Could not find EOCD` (422 `projectNotImportable` since 2026-10-06, see below) | same |
 | Non-loopback sockets after the steps | none | none |
 | Application still running | yes | yes |
 
@@ -66,7 +66,7 @@ removed. An import that fails because of the file itself answers `422`
 with kind `projectNotImportable`: not a ZIP, a refused archive, or not a
 KNX project. This is pinned by
 `a_file_that_is_not_an_importable_project_is_refused_as_the_callers_to_fix`.
-A missing file still answers `500`.
+A missing file answers `422` too, since re-check round 2 (N8).
 
 Native UI checks (keyboard, screen reader, every dialog) belong to the UI
 owner and were not claimed here.

@@ -8176,3 +8176,17 @@ hand-written archives), RED before the change, and four killed mutants.
 What remains: an import inside the budget still peaks at about three times
 the declared total in process memory (measured by the re-check: 480 MiB →
 1.6 GB). The budget bounds the archive's bytes, not the whole process.
+
+**Update 2026-10-06 (AR18 re-check round 2, N7/N9): a record's parts must
+agree.** A Unicode Path field could still turn the real `0.xml` into a
+"directory", whose bytes every later step skipped, and another member into
+`0.xml`. The following are now refused, in the outer archive and in a
+nested payload, with `InconsistentRecord` naming the reason:
+- a directory record that carries data;
+- a directory named like a file;
+- a local header whose name differs from its central record's raw name.
+
+The last one also catches two central records that share one local record.
+Empty directory records, as ETS6 writes them, and archives behind a prefix
+still import. Evidence: 8 more tests in `decoded_member_names.rs`, and four
+killed mutants.

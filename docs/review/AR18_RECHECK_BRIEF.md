@@ -102,3 +102,31 @@ Check:
 Write `docs/review/<date>-alpha-recheck-round2.md` on a branch
 `review/alpha-recheck-2`. Give the same verdict scale and include a gate
 table.
+
+## Round 3: N7–N10
+
+[Round 2](2026-10-06-alpha-recheck-round2.md) returned
+`READY_WITH_CONDITIONS` with condition R4 (N7). The release owner fixed it,
+and N8–N10 too
+([ALPHA_FINAL_GATES §10](../ALPHA_FINAL_GATES.md#10-ar18-re-check-round-2-condition-r4-fixed-and-re-gated)).
+Round 3 is narrow. The rules of §1–§3 above still apply.
+
+| Item | Value |
+| --- | --- |
+| Product code | `754a66dde05db9dd522720baa67d6bbc39290dbb`; `git diff --name-only 754a66dd HEAD` lists only documentation and handover files |
+| AppImage | `/home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar18-round2-fixes-20261006/KNXBench_0.1.0-alpha.4_amd64.AppImage`, SHA-256 `37015eb6fb8811deb1033818ba0a422cd2ba46d5d1637392058396b4fedf2a58` |
+
+Check:
+
+1. **N7 and N9:** your round-2 archives (directory tricks, local/central
+   mismatches, outer and nested), plus whatever else would let one record
+   look like two things. Try the data-descriptor (`0x08`) variant of N9,
+   which round 2 did not.
+2. **N8, N10** against their fixes.
+3. **Regressions:** the corpus subset; real projects; product packages
+   through `knx products ingest`; empty ETS6 directory records.
+4. Whether anything still open should block AR19.
+
+Write `docs/review/<date>-alpha-recheck-round3.md` on a branch
+`review/alpha-recheck-3`. Give the same verdict scale and include a gate
+table.

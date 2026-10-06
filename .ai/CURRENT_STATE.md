@@ -1,8 +1,34 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-06 07:13 CEST
-- **Completed:** **AR16 slice 2** (docs only, no apps/ change): claim-by-claim manual pass (CLI usage vs 95 invocations, UI labels vs en.ts, routes/env, versions, "not yet" sweep, live probes). Fixed: style change exists (Project node), autosave exists, drag/drop incl. GA→link row, doc-export section choices, `knx diff --exit-code`, translations/language packs, per-program versions, device writes on one device, ADR-0078 in KNX basics, workflow chapter on the sample house, dev page counts. Checklist row 6 done.
-- **Pending/Next Steps:** AR16 acceptance waits only on the UI owner's closure receipt. KL-61 declared-vs-linked display needs an Alpha projection field — touches generated bindings in apps/knx-web/src/bindings, so it needs the Web lock (currently held by the UI owner); pick it up when released. AR18 after AR16.
+- **Completed:** **AR16 slice 2 + acceptance** (docs only, no apps/ change): claim-by-claim manual pass (CLI usage vs 95 invocations, UI labels vs en.ts, routes/env, versions, "not yet" sweep, live probes). Fixed: style change exists (Project node), autosave exists, drag/drop incl. GA→link row, doc-export section choices, `knx diff --exit-code`, translations/language packs, per-program versions, device writes on one device, ADR-0078 in KNX basics, workflow chapter on the sample house, dev page counts. Checklist row 6 done.
+- **Pending/Next Steps:** AR16 DONE after the merge (UI closure receipt `84bc32c3` verified: 26 UI rows 15/10/1, issue plan 68/0, binding comment on main; bus-monitor screenshot re-shot for the new Live activity tab). Next: KL-61 projection field (declared DPT + outcome) — needs the Web lock for the regenerated binding; then AR18 (rebuild the AppImage candidate first: code changed after `6b9b6818`).
 - **Notes for Codex oder Claude:** **For the UI owner:** `newProject.styleHint` (en/de) still says the group-address style cannot be changed after creation; the Project node's select changes it (verified 2026-10-06, undoable). Manual known-issues now says the hint is out of date — please fix the string and drop that known-issues entry.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-06 07:09 CEST
+- **Completed:** **UI owner closure receipt** for `RELEASE-03` / AR16: `docs/UI_ALPHA_READINESS.md#ui-owner-closure-receipt--2026-10-06`, linked from `goal-ui.md`. All `goal-ui.md` §4 conditions met with evidence (U0–U13 `dfa0cc79`; issue plan 68/68; U14–U18 `1964fd6b` plus ADR-0079 user change; U19–U21 accepted by AR21; closing gate attempt 2 green; closing self-review found and fixed UI-04 Web half + KL-61 wording in `892b9948`; lock released). UI rows: 15 DONE, 10 ACCEPTED_BOUNDARY, 1 LATER. Tested surfaces and accepted native/AT/live exceptions listed. Docs only. Log: `.ai/logs/2026-10-06_claude_ui-closure-receipt.md`.
+- **Pending/Next Steps:** **Alpha (AR16):** verify the receipt and tick AR16's first item; manual location/screenshot policy is the user's (RELEASE-03). **Commissioning owner:** close `UI-04`. Backend: KL-61 projection field if wanted. UI owner: no open package.
+- **Notes for Codex oder Claude:** The receipt is a self-review by the owner; it says so. Web lock: free (released in `892b9948`); not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-06 07:08 CEST
+Web lock: released by claude-goal-ui-owner (UI closure residue delivered: UI-04 Web half, KL-61 binding wording)
+- **Completed:** `UI-04` Web half: Bus tools → *Live activity* reads `GET /api/bus/activity` (2 s, visible only; sessions, one-shots, eviction, busy locks, history-storage state, restart note; partial/volatile wording; whole-snapshot refusal) and *Activity history* reloads a first window that shows a running row; no global status bar (owner decision). `KL-61`: `GroupAddressNode.dpts` doc comment now says effective type, binding regenerated. 16/16 mutants; closing gate attempt 2 green (Rust 3,311/0/177 with corpus, Vitest 2,064, Chromium 139, bindings identical). Log: `.ai/logs/2026-10-06_claude_ui-closure-residue.md`.
+- **Pending/Next Steps:** **Commissioning owner:** review the UI-04 Web half against your handoff table and close the row. **Alpha:** KL-61 projection field (declared/outcome) if the display is wanted; `ALPHA_SCOPE_MATRIX` UI-04 row. UI owner: closure receipt next (docs only).
+- **Notes for Codex oder Claude:** Alpha's AR16 slice 1 added `apps/knx-web/e2e/manual-screenshots.shots.ts` and `playwright.manual.config.ts` while this lock was held (outside `src/`, outside the suites — acknowledged, no conflict). The new *Live activity* tab changes the Bus tools tab bar; rerun the manual screenshot spec if a shot shows it.
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-10-06 06:58
+Web lock: held by claude-goal-ui-owner for the UI closure residue; not taken or released by this entry
+- **Completed:** **AR14D D5, commissioning part (owner agreement given by doing it).** The `goal-commission.md` *Where things stand (2026-10-01)* narrative moved verbatim to `docs/COMMISSIONING_ALPHA_LEDGER.md#owner-status-history` (only relative links changed); the goal file now links ledger, dossier and IMPLEMENTATION_STATUS. `alpha-release-goal.md` AR14D D5 ticked, AR14D status `DONE`; ALPHA_SCOPE_MATRIX's "open outside the ledger" note replaced. `goal.md` is archived, so no ownership row remained. Doc gates: anchors 605, ledger 190, headers 155/155, diff check.
+- **Pending/Next Steps:** `UI-04` owner receipt: the UI owner is delivering the live-activity half in `ui-closure` right now; once it is published, the commissioning owner reviews it against the handoff table and closes the row.
+- **Notes for Codex oder Claude:** **For the UI session:** I appended an *Owner status history* section to COMMISSIONING_ALPHA_LEDGER just before *Reconciliation check*; your ui-closure diff touches the same file, so expect a trivial merge there. No row status changed here.
 
 ---
 

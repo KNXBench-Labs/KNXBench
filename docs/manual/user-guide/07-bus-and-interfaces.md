@@ -71,7 +71,7 @@ that address. You can replace it without changing the saved preference. **Search
 lists the interfaces that answered and lets you select one; the selection does not
 connect until you press Connect.
 
-![The KNXBench bus monitor before a session starts: the tabs Bus monitor, Line scan, Device checks, Download to device, Program address, Debug · service control and Activity history; separate gateway host and port fields, the Connect and Search buttons, and the note that the search could not be run because the network is unreachable](../../assets/screenshots/porcelain-bus-monitor.png)
+![The KNXBench bus monitor before a session starts: the tabs Bus monitor, Line scan, Device checks, Download to device, Program address, Debug · service control, Live activity and Activity history; separate gateway host and port fields, the Connect and Search buttons, and the note that the search could not be run because the network is unreachable](../../assets/screenshots/porcelain-bus-monitor.png)
 
 The screenshot was taken on a machine without any network, so the gateway search
 reports that it could not run. KNXBench runs that read-only search once on its own when
@@ -420,6 +420,27 @@ anything else. A property record is **not** a full device image and cannot
 restore other possible manufacturer side effects. Switching this option on
 never automatically enables it for a download or serial-address write. No
 live bus was contacted to validate this UI.
+
+## Live activity and activity history
+
+Two read-only tabs in the bus tools say what the server has done; neither
+contacts the bus.
+
+- **Live activity** shows what the server holds right now: a running download,
+  address programming, the bus monitor or a line scan with its progress, short
+  operations since the server started, and locks that are busy without telling
+  for what. It refreshes every two seconds while the tab is open. It is
+  *partial*: group writes and serial-address writes are not observed, and an
+  empty list does not mean the bus is idle. It is *volatile*: a server restart
+  clears it, and the tab says so when it happens.
+- **Activity history** lists stored records of device comparisons,
+  service-control reads and writes, serial lookups and downloads, newest
+  operation first by start order. While the first page shows an operation that
+  is still running, it reloads itself until that operation ends. After loading
+  older pages, use **Refresh from beginning** to see the latest state.
+
+Neither tab is a backup, a recovery image or proof that a device holds what
+was written.
 
 ## What KNXBench does and does not do on a bus
 

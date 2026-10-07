@@ -74,3 +74,23 @@ rather than deleting unseen work. Read back the entire remote branch list,
 require only main, prune tracking refs, and keep release tags unchanged.
 Final deletion/main/root/worktree state is recorded by a closing receipt after
 the operation; this pre-deletion commit does not certify future effects.
+
+## Closing deletion receipt
+
+At 2026-10-07 17:57 CEST, the leased atomic deletion completed and a fresh full
+remote-head read returned **only `main`**. Exactly **34 non-main refs** were
+deleted; every deleted ref/hash is retained in the durable inventory/bundle.
+KL-158 feature merge: `ae30674806b8211d7882e308d6a05f4b7a07c533`.
+Published consolidated head before this metadata receipt: `202dca90c19dece6eb14384643c6dbbf82363372`.
+
+A concurrent upstream statistics commit `91ee61f514125207642234a7e3c9ae09fac11dba` changed only
+`docs/ProjectStats.md`; it was inspected and merged, not overwritten. Source
+fingerprints stayed identical, so ordinary Rust/Web/build evidence carried over
+and all five repository gates were repeated. The initial expected-main guard
+refused before publication/deletion when that update appeared.
+
+Local retired branches/stashes remain available; this task deletes remote
+branches, not local preservation refs. Release tags, the existing downloadable
+alpha asset, private visibility and ignored root data are unchanged. Final
+metadata publication/readback and owned-worktree cleanup are verified after
+this commit; the final main hash is read from Git rather than embedded here.

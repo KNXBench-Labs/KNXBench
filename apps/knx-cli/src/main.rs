@@ -1413,9 +1413,19 @@ fn format_coverage(rows: &[knx_app::download_support::ProgramSupport]) -> String
     let mut out = String::new();
     for row in rows {
         let detail = match &row.level {
-            SupportLevel::Verified { steps, octets, .. }
-            | SupportLevel::Untested { steps, octets } => {
+            SupportLevel::Verified { steps, octets, .. } => {
                 format!("{steps} steps, {octets} octets")
+            }
+            SupportLevel::Untested {
+                steps,
+                octets,
+                inferences,
+            } => {
+                let mut detail = format!("{steps} steps, {octets} octets");
+                for inference in inferences {
+                    let _ = write!(detail, "; inference {inference}");
+                }
+                detail
             }
             SupportLevel::Unsupported { category, detail } => format!("{category}: {detail}"),
         };
@@ -2210,6 +2220,7 @@ fn run_device_download(args: &[String]) -> ExitCode {
         &prepared.request.program_id,
         partial_parts,
         &prepared.plan,
+        &prepared.image.inferences,
         &evidence,
     );
     print!(
@@ -2678,10 +2689,13 @@ fn run_device_restore(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    // A restore writes the backup's own octets; the product image and its
+    // inferences play no part in what is sent.
     let level = knx_app::download_support::download_level(
         &stored.application,
         stored.partial,
         &plan,
+        &[],
         &evidence,
     );
     let operator_key = match key_file.as_deref() {

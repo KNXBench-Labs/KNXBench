@@ -35,6 +35,7 @@ struct DeviceDto {
     category: Option<&'static str>,
     /// For `unsupported`: the refusal the download would give, in full.
     /// For `verified`: where the hardware run is documented.
+    /// For `untested`: the inferences the plan rests on (ADR-0086), if any.
     detail: Option<String>,
     /// For a plan (`verified`/`untested`): steps and segment octets.
     steps: Option<usize>,
@@ -89,9 +90,22 @@ async fn readiness(State(state): State<SharedState>) -> Result<Json<ReadinessRes
                     Some(*steps),
                     Some(*octets),
                 ),
-                DeviceReadiness::Graded(SupportLevel::Untested { steps, octets }) => {
-                    (None, None, Some(*steps), Some(*octets))
-                }
+                DeviceReadiness::Graded(SupportLevel::Untested {
+                    steps,
+                    octets,
+                    inferences,
+                }) => (
+                    None,
+                    (!inferences.is_empty()).then(|| {
+                        inferences
+                            .iter()
+                            .map(|inference| format!("inference {inference}"))
+                            .collect::<Vec<_>>()
+                            .join("; ")
+                    }),
+                    Some(*steps),
+                    Some(*octets),
+                ),
                 DeviceReadiness::Graded(SupportLevel::Unsupported { category, detail }) => {
                     (Some(category.code()), Some(detail.clone()), None, None)
                 }

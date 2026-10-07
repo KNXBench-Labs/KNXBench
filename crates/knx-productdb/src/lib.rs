@@ -14,6 +14,7 @@ pub mod enrich;
 pub mod identity;
 pub mod image;
 pub mod image_request;
+pub mod inference;
 pub mod ingest;
 pub mod master_evidence;
 pub mod migration;

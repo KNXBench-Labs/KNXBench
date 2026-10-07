@@ -176,12 +176,22 @@ pub fn format_support(level: &SupportLevel, target: IndividualAddress) -> String
              ({}, {}; {})\n",
             evidence.device, evidence.date, evidence.reference
         ),
-        SupportLevel::Untested { .. } => format!(
-            "support: UNTESTED — the plan is complete and built from the product data alone, \
-             but no download of this application this way has been verified on hardware.\n\
-             \x20        A write needs --accept-untested {:?} as well.\n",
-            untested_acknowledgement(target)
-        ),
+        SupportLevel::Untested { inferences, .. } => {
+            let mut shown = String::from(
+                "support: UNTESTED — the plan is complete and built from the product data alone, \
+                 but no download of this application this way has been verified on hardware.\n",
+            );
+            for inference in inferences {
+                shown.push_str(&format!(
+                    "         rests on an inference (ADR-0086): {inference}\n"
+                ));
+            }
+            shown.push_str(&format!(
+                "         A write needs --accept-untested {:?} as well.\n",
+                untested_acknowledgement(target)
+            ));
+            shown
+        }
         SupportLevel::Unsupported { category, detail } => {
             format!("support: unsupported ({}): {detail}\n", category.code())
         }
@@ -1101,7 +1111,20 @@ mod tests {
         let untested = SupportLevel::Untested {
             steps: 25,
             octets: 1416,
+            inferences: vec![knx_productdb::inference::Inference {
+                rule: "union-later-member",
+                detail: "UP-33_R-33 is not written".into(),
+                reference: "RESEARCH §19.12",
+            }],
         };
+        let shown = format_support(&untested, target);
+        assert!(
+            shown.contains(
+                "         rests on an inference (ADR-0086): union-later-member: UP-33_R-33 is \
+                 not written (RESEARCH §19.12)\n"
+            ),
+            "{shown}"
+        );
         let error = check_acknowledgement(&untested, target, None).unwrap_err();
         assert!(
             error.contains("--accept-untested \"I accept an untested download to 1.1.70\""),

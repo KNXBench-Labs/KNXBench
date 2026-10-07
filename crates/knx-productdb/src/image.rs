@@ -32,7 +32,12 @@
 //! - **Union members.** `[V]` A union member lies at the union's placement
 //!   plus its own `@Offset`/`@BitOffset`. No PDF states this. The rule
 //!   rebuilds a real device's parameter segment octet for octet
-//!   (docs/RESEARCH.md §19.1).
+//!   (docs/RESEARCH.md §19.1). `[A]` Union members are alternatives "not
+//!   active at the same time" (KNX MT help); where the parameter tree
+//!   activates two that share bits, the one later in the tree is written
+//!   and the other is not — the device ETS programmed holds that one
+//!   (RESEARCH §19.12). It is an inference (ADR-0086), recorded in
+//!   [`DownloadImage::inferences`].
 //! - **Values.** `TypeRestriction` (base `Value`) and unsigned `TypeNumber`
 //!   values are written as numbers. A signed `TypeNumber` is written only at
 //!   or above zero: `[V]` 213 signed fields of the corpus's `070nh` base
@@ -86,7 +91,12 @@ use crate::code::{
     ProgramCode, TablePlacement,
 };
 use crate::dynamic::{evaluate, load_program_trees, resolve_values, Diagnostic, ScopedDiagnostic};
+use crate::inference::Inference;
 use crate::ProductDbError;
+
+/// [`Inference::rule`] of the union rule: of two active members of one
+/// union that share bits, the one later in the parameter tree is written.
+pub const UNION_LATER_MEMBER: &str = "union-later-member";
 
 /// One group address link: object `object` (its `Number`) uses
 /// `group_address`; `sending` marks the address it transmits on.
@@ -178,6 +188,8 @@ pub struct DownloadImage {
     pub texts: BTreeMap<String, String>,
     /// The active group objects, by number.
     pub objects: Vec<ActiveObject>,
+    /// The inferences the image rests on (ADR-0086), in the order applied.
+    pub inferences: Vec<Inference>,
 }
 
 impl DownloadImage {
@@ -215,9 +227,8 @@ pub enum ImageError {
         /// The parameter.
         parameter: String,
     },
-    /// Two active parameters share bits of one segment. Members of one
-    /// `Union` are alternatives: the product data activates two of them,
-    /// and no source states which one a download writes (RESEARCH §19.12).
+    /// Two active parameters share bits of one segment and are not members
+    /// of one union (those are resolved by [`UNION_LATER_MEMBER`]).
     Overlap(Box<ParameterOverlap>),
     /// The parameter image refused a write.
     Parameter {
@@ -257,8 +268,6 @@ pub struct ParameterOverlap {
     pub earlier_field: ParameterField,
     /// The segment.
     pub segment: String,
-    /// The union both are members of, if they are members of one.
-    pub union: Option<MemoryPlacement>,
 }
 
 impl fmt::Display for ParameterOverlap {
@@ -269,28 +278,13 @@ impl fmt::Display for ParameterOverlap {
             earlier_ref,
             earlier_field,
             segment,
-            union,
         } = self;
-        match union {
-            Some(union) => write!(
-                f,
-                "{parameter_ref} (offset {} bit {}) and {earlier_ref} (offset {} bit {}) \
-                 are both active members of the union at {segment} offset {} bit {}; \
-                 a union holds one active member, and no source says which one is written",
-                field.offset,
-                field.bit_offset,
-                earlier_field.offset,
-                earlier_field.bit_offset,
-                union.offset,
-                union.bit_offset
-            ),
-            None => write!(
-                f,
-                "{parameter_ref} (offset {} bit {}) shares bits with {earlier_ref} \
-                 (offset {} bit {}) in {segment}; both are active",
-                field.offset, field.bit_offset, earlier_field.offset, earlier_field.bit_offset
-            ),
-        }
+        write!(
+            f,
+            "{parameter_ref} (offset {} bit {}) shares bits with {earlier_ref} \
+             (offset {} bit {}) in {segment}; both are active",
+            field.offset, field.bit_offset, earlier_field.offset, earlier_field.bit_offset
+        )
     }
 }
 
@@ -428,10 +422,12 @@ pub fn build_download_image(
 
     // 1. Parameters.
     let group_objects = com_object_span(&code)?;
+    let (superseded, inferences) =
+        superseded_union_members(&activation.parameter_refs, &types, &code);
     let mut written: BTreeMap<String, (String, Encoded)> = BTreeMap::new();
-    // Every field written so far, with its segment, `ParameterRef` and
-    // union, so that an overlap can name both parties.
-    let mut fields: Vec<(&str, ParameterField, &str, Option<&MemoryPlacement>)> = Vec::new();
+    // Every field written so far, with its segment and `ParameterRef`, so
+    // that an overlap can name both parties.
+    let mut fields: Vec<(&str, ParameterField, &str)> = Vec::new();
     let mut parameters = BTreeMap::new();
     let mut texts = BTreeMap::new();
     for active in &activation.parameter_refs {
@@ -447,6 +443,9 @@ pub fn build_download_image(
                 cause: "no value, and no default".to_string(),
             })?;
         let value = types.value(parameter_ref, raw)?;
+        if superseded.contains(parameter) {
+            continue; // A later union member holds its bits.
+        }
         match written.get(parameter) {
             Some((_, earlier)) if *earlier == value => continue,
             Some(_) => {
@@ -478,8 +477,8 @@ pub fn build_download_image(
             Encoded::Number(number) => image.write(field, *number),
             Encoded::Text { octets, .. } => image.write_octets(field, octets),
         }
-        .map_err(|error| overlap_or(error, parameter_ref, segment_id, placement, &fields))?;
-        fields.push((segment_id, field, parameter_ref, union_of(placement)));
+        .map_err(|error| overlap_or(error, parameter_ref, segment_id, &fields))?;
+        fields.push((segment_id, field, parameter_ref));
         match &value {
             Encoded::Number(number) => parameters.insert(parameter_ref.to_string(), *number),
             Encoded::Text { text, .. } => {
@@ -581,26 +580,90 @@ pub fn build_download_image(
         parameters,
         texts,
         objects,
+        inferences,
     })
 }
 
-/// The union a placement is a member of.
-fn union_of(placement: &ParameterPlacement) -> Option<&MemoryPlacement> {
-    match placement {
-        ParameterPlacement::UnionMember { union, .. } => Some(union),
-        _ => None,
+/// `[A]` (ADR-0086, RESEARCH §19.12) The parameters not written because a
+/// later member of their union holds the bits they share, and the
+/// inference that says so for each.
+///
+/// Walks `active` (document order) backwards, so the member written is the
+/// one later in the parameter tree; an earlier member of the same union
+/// whose bits overlap a member already kept is superseded. A member whose
+/// placement or size cannot be read is left to the write loop, which
+/// refuses it by name.
+fn superseded_union_members(
+    active: &[crate::dynamic::ActiveRef],
+    types: &ParameterTypes,
+    code: &ProgramCode,
+) -> (BTreeSet<String>, Vec<Inference>) {
+    let mut kept: Vec<(&MemoryPlacement, ParameterField, &str, &str)> = Vec::new();
+    let mut superseded = BTreeSet::new();
+    let mut inferences = Vec::new();
+    for active in active.iter().rev() {
+        let parameter_ref = active.ref_id.as_str();
+        let Ok(parameter) = types.parameter_of(parameter_ref) else {
+            continue;
+        };
+        let Some(placement @ ParameterPlacement::UnionMember { union, .. }) =
+            code.parameters.get(parameter)
+        else {
+            continue;
+        };
+        let Ok((_, field)) = types
+            .size(parameter_ref)
+            .and_then(|size| field_of(parameter, placement, size))
+        else {
+            continue;
+        };
+        if kept.iter().any(|(_, _, kept, _)| *kept == parameter) {
+            continue; // Another reference of a member already kept.
+        }
+        let (start, end) = bit_span(field);
+        let winner = kept.iter().find(|(kept_union, kept_field, _, _)| {
+            let (s, e) = bit_span(*kept_field);
+            *kept_union == union && s < end && start < e
+        });
+        match winner {
+            Some((_, _, _, winner_ref)) => {
+                if superseded.insert(parameter.to_string()) {
+                    inferences.push(Inference {
+                        rule: UNION_LATER_MEMBER,
+                        detail: format!(
+                            "{parameter_ref} is not written: {winner_ref}, later in the \
+                             parameter tree, holds the union at {} offset {} bit {}",
+                            union.code_segment, union.offset, union.bit_offset
+                        ),
+                        reference: "RESEARCH §19.12",
+                    });
+                }
+            }
+            None if !superseded.contains(parameter) => {
+                kept.push((union, field, parameter, parameter_ref));
+            }
+            None => {}
+        }
     }
+    // Reported in document order, like everything else in the image.
+    inferences.reverse();
+    (superseded, inferences)
+}
+
+/// The bits a field covers, counted MSB-first from the segment start.
+fn bit_span(field: ParameterField) -> (u64, u64) {
+    let start = u64::from(field.offset) * 8 + u64::from(field.bit_offset);
+    (start, start + u64::from(field.size_in_bit))
 }
 
 /// `error` as an [`ImageError`]: an overlap names the field written before
-/// (from `fields`, the fields written so far) and, if both lie in one
-/// union, that union. Every other refusal is passed on as it is.
+/// (from `fields`, the fields written so far). Every other refusal is
+/// passed on as it is.
 fn overlap_or(
     error: ParameterImageError,
     parameter_ref: &str,
     segment: &str,
-    placement: &ParameterPlacement,
-    fields: &[(&str, ParameterField, &str, Option<&MemoryPlacement>)],
+    fields: &[(&str, ParameterField, &str)],
 ) -> ImageError {
     let ParameterImageError::Overlap { field, earlier } = error else {
         return ImageError::Parameter {
@@ -608,9 +671,9 @@ fn overlap_or(
             error,
         };
     };
-    let Some((_, _, earlier_ref, earlier_union)) = fields
+    let Some((_, _, earlier_ref)) = fields
         .iter()
-        .find(|(id, written, _, _)| *id == segment && *written == earlier)
+        .find(|(id, written, _)| *id == segment && *written == earlier)
     else {
         // Every write is recorded, so this is not reached; refuse the same
         // way all the same rather than panic.
@@ -619,14 +682,12 @@ fn overlap_or(
             error,
         };
     };
-    let union = union_of(placement).filter(|union| Some(*union) == *earlier_union);
     ImageError::Overlap(Box::new(ParameterOverlap {
         parameter_ref: parameter_ref.to_string(),
         field,
         earlier_ref: (*earlier_ref).to_string(),
         earlier_field: earlier,
         segment: segment.to_string(),
-        union: union.cloned(),
     }))
 }
 
@@ -1402,40 +1463,40 @@ mod tests {
     }
 
     /// RESEARCH §19.12: `A-0019-13-B655` activates two members of one
-    /// union. The refusal names both references and says what they share,
-    /// instead of an offset that "overlaps" itself.
+    /// union, and the device ETS programmed holds the one later in the
+    /// parameter tree. ADR-0086: that member is written, the earlier one is
+    /// not, and the image says so.
     #[test]
-    fn two_active_members_of_one_union_are_refused_by_both_names() {
+    fn of_two_active_union_members_the_later_one_is_written_and_disclosed() {
         let xml = PROGRAM.replace(
             r#"<ParameterRefRef RefId="UP-1_R-3" />"#,
             r#"<ParameterRefRef RefId="UP-1_R-3" /><ParameterRefRef RefId="UP-2_R-4" />"#,
         );
-        let error = build(&xml, &[], vec![]).unwrap_err();
-        let ImageError::Overlap(overlap) = &error else {
-            panic!("not an overlap: {error}");
-        };
-        let ParameterOverlap {
-            parameter_ref,
-            earlier_ref,
-            segment,
-            union,
-            ..
-        } = overlap.as_ref();
+        let image = build(&xml, &[], vec![]).expect("builds");
+        let segment = octets(&image, "AS-4400");
         assert_eq!(
-            (
-                parameter_ref.as_str(),
-                earlier_ref.as_str(),
-                segment.as_str()
-            ),
-            ("UP-2_R-4", "UP-1_R-3", "AS-4400")
+            &segment[13..15],
+            &[0x0B, 0xBC],
+            "UP-2 = 2 at octet 14 bits 5-6; UP-1's 255 is not written"
         );
-        assert_eq!(union.as_ref().map(|union| union.offset), Some(13));
+        assert_eq!(image.parameters.get("UP-2_R-4"), Some(&2));
+        assert_eq!(image.parameters.get("UP-1_R-3"), None);
         assert_eq!(
-            error.to_string(),
-            "UP-2_R-4 (offset 14 bit 5) and UP-1_R-3 (offset 13 bit 0) are both active \
-             members of the union at AS-4400 offset 13 bit 0; a union holds one active \
-             member, and no source says which one is written"
+            image.inferences,
+            vec![Inference {
+                rule: UNION_LATER_MEMBER,
+                detail: "UP-1_R-3 is not written: UP-2_R-4, later in the parameter tree, \
+                         holds the union at AS-4400 offset 13 bit 0"
+                    .to_string(),
+                reference: "RESEARCH §19.12",
+            }]
         );
+    }
+
+    #[test]
+    fn product_defaults_need_no_inference() {
+        let image = build(PROGRAM, &[], vec![]).expect("builds");
+        assert!(image.inferences.is_empty());
     }
 
     #[test]
@@ -1451,7 +1512,6 @@ mod tests {
                 ImageError::Overlap(overlap)
                     if overlap.parameter_ref == "P-2_R-2"
                         && overlap.earlier_ref == "P-1_R-1"
-                        && overlap.union.is_none()
             ),
             "{error}"
         );

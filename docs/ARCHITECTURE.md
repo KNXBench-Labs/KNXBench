@@ -94,6 +94,8 @@ One Cargo workspace:
 ```text
 apps/
   knx-cli/         Headless entry point (bin name: knx)
+  knx-mcp/         Read-only MCP server over saved project files, stdio
+                   only (ADR-0090). Links no bus, key or HTTP crate.
   knx-server/      axum HTTP API + static frontend serving — the web/Docker
                    deployment target. Same _impl functions and AppState
                    knx-desktop used to own directly, now the only crate
@@ -162,6 +164,12 @@ knx-desktop ─> knx-server ─┬─> knx-app ─> knx-core
                            ├─> knx-projection ─> knx-core
                            ├─> knx-diff ──────> knx-core
                            └─> knx-net ──────> knx-core
+
+knx-mcp ─┬─> knx-store ─────> knx-core     (read-only openers, ADR-0090)
+         ├─> knx-productdb ─> knx-core
+         ├─> knx-projection ─> knx-core
+         ├─> knx-diff ──────> knx-core
+         └─> knx-csv ───────> knx-core
 
 knx-cli ────────────────────> knx-app ─> knx-core
                                  ├─> knx-store ────> knx-core

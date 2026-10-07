@@ -9,7 +9,9 @@ publish = false
 
 [dependencies]
 knx-core.workspace = true
-rusqlite.workspace = true
+# `backup`: `open_read_only` copies an older database into memory and
+# migrates the copy, never the file (ADR-0090). A feature flag, no new crate.
+rusqlite = { workspace = true, features = ["backup"] }
 quick-xml.workspace = true
 sha2.workspace = true
 zip.workspace = true

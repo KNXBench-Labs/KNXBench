@@ -243,6 +243,21 @@ policy, authorization identifies an operator and operation scope, and exact
 diff approval plus audit is testable. At that point, start with bounded reads
 and proposals; do not start with autonomous mutation. **[A]**
 
+
+### 13.7 Update 2026-10-07: the narrower read-only scope is built (ADR-0090)
+
+The maintainer accepted the narrower public scope §13.6 names: bounded reads
+and proposals only. [ADR-0090](../adr/0090-read-only-mcp-adapter.md)
+records the decision. `apps/knx-mcp` is a stdio MCP server over saved
+project files named at launch. It has eight read-only tools and no mutation.
+Group-address CSV proposals are validated against `knx-csv`'s plan and
+applied only by a person through the existing ADR-0033 path. **[V]** The
+prerequisites of §13.2 are therefore not closed but sidestepped: the adapter
+never touches the live server project, so it needs no operator identity,
+revision check or undo policy. A future mutating tool still needs all of
+them. The adapter cannot link `knx-net`, `knx-server`, `knx-secure` or an HTTP
+stack (`cargo xtask check-layering`). **[V]** In-app chat stays unbuilt.
+
 ---
 
 ## 14. Repetitive-task automation and macro-layer decision (2026-09-22, T20)

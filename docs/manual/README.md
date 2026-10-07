@@ -48,25 +48,26 @@ Enough KNX to use KNXBench. Not a KNX textbook.
 20. [Settings, themes and languages](user-guide/09-settings-and-appearance.md)
 21. [The command line](user-guide/10-command-line.md)
 22. [Web and Docker deployment](user-guide/11-web-and-docker.md)
+23. [AI agents over MCP](user-guide/12-ai-agents.md)
 
 ## Reference
 
-23. [Keyboard shortcuts](reference/01-keyboard-shortcuts.md)
-24. [Supported and unsupported KNX/ETS functionality](reference/02-supported-and-unsupported.md)
-25. [Troubleshooting](reference/03-troubleshooting.md)
-26. [FAQ](reference/04-faq.md)
+24. [Keyboard shortcuts](reference/01-keyboard-shortcuts.md)
+25. [Supported and unsupported KNX/ETS functionality](reference/02-supported-and-unsupported.md)
+26. [Troubleshooting](reference/03-troubleshooting.md)
+27. [FAQ](reference/04-faq.md)
 
 ## Status and plans
 
-27. [Known issues](known-issues.md)
-28. [Implementation status](implementation-status.md)
-29. [Ideas and roadmap](ideas-and-roadmap.md)
+28. [Known issues](known-issues.md)
+29. [Implementation status](implementation-status.md)
+30. [Ideas and roadmap](ideas-and-roadmap.md)
 
 ## For developers
 
-30. [Contributing](development/01-contributing.md)
-31. [Building from source](development/02-building-from-source.md)
-32. [Architecture tour](development/03-architecture-tour.md)
+31. [Contributing](development/01-contributing.md)
+32. [Building from source](development/02-building-from-source.md)
+33. [Architecture tour](development/03-architecture-tour.md)
 
 ## The engineering documents
 

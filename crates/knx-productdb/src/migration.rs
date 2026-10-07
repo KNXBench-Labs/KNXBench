@@ -2444,23 +2444,88 @@ pub fn open_and_migrate(path: &Path) -> Result<Connection, ProductDbError> {
         });
     }
     if found < CURRENT_PRODUCTDB_VERSION {
-        conn.execute_batch("BEGIN IMMEDIATE")?;
-        let result = (|| {
-            for migration in &migrations()[found as usize..CURRENT_PRODUCTDB_VERSION as usize] {
-                migration(&conn)?;
-            }
-            conn.pragma_update(None, "user_version", CURRENT_PRODUCTDB_VERSION)?;
-            Ok::<(), ProductDbError>(())
-        })();
-        match result {
-            Ok(()) => conn.execute_batch("COMMIT")?,
-            Err(error) => {
-                let _ = conn.execute_batch("ROLLBACK");
-                return Err(error);
-            }
-        }
+        migrate_from(&conn, found)?;
     }
     Ok(conn)
+}
+
+/// Runs every migration from `found` to `CURRENT_PRODUCTDB_VERSION` in one
+/// transaction. Shared by [`open_and_migrate`] and [`open_read_only`]'s
+/// in-memory copy so the two can never drift.
+fn migrate_from(conn: &Connection, found: i64) -> Result<(), ProductDbError> {
+    conn.execute_batch("BEGIN IMMEDIATE")?;
+    let result = (|| {
+        for migration in &migrations()[found as usize..CURRENT_PRODUCTDB_VERSION as usize] {
+            migration(conn)?;
+        }
+        conn.pragma_update(None, "user_version", CURRENT_PRODUCTDB_VERSION)?;
+        Ok::<(), ProductDbError>(())
+    })();
+    match result {
+        Ok(()) => conn.execute_batch("COMMIT")?,
+        Err(error) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            return Err(error);
+        }
+    }
+    Ok(())
+}
+
+/// How long [`open_read_only`]'s connection waits for a writer's lock.
+pub const READ_ONLY_BUSY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// A product database opened by [`open_read_only`].
+#[derive(Debug)]
+pub struct ReadOnlyProductDb {
+    /// At `CURRENT_PRODUCTDB_VERSION`. Either the file itself, opened
+    /// `SQLITE_OPEN_READ_ONLY` with `query_only` on, or an in-memory copy.
+    pub conn: Connection,
+    /// The file's own version when it was older than this build's, in which
+    /// case `conn` is an in-memory copy that was migrated instead of the
+    /// file (ADR-0090). `None` when the file was already current.
+    pub migrated_from: Option<i64>,
+}
+
+/// Opens an existing product database without ever writing to it
+/// (ADR-0090). Unlike [`open_and_migrate`] it creates neither the file nor
+/// its parent directory: a missing path is an SQLite open error. A newer
+/// version is refused. An older one is copied into memory with SQLite's
+/// online backup API and only the copy is migrated, so the file keeps its
+/// bytes and its version.
+pub fn open_read_only(path: &Path) -> Result<ReadOnlyProductDb, ProductDbError> {
+    use rusqlite::OpenFlags;
+    let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
+    let file = Connection::open_with_flags(path, flags)?;
+    file.pragma_update(None, "query_only", true)?;
+    // An install holds the exclusive lock while it commits; a reader waits
+    // for it rather than failing. Explicit, not left to the library default.
+    file.busy_timeout(READ_ONLY_BUSY_TIMEOUT)?;
+    let found: i64 = file.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if found > CURRENT_PRODUCTDB_VERSION {
+        return Err(ProductDbError::FutureVersion {
+            found,
+            supported: CURRENT_PRODUCTDB_VERSION,
+        });
+    }
+    if found == CURRENT_PRODUCTDB_VERSION {
+        return Ok(ReadOnlyProductDb {
+            conn: file,
+            migrated_from: None,
+        });
+    }
+    let mut memory = Connection::open_in_memory()?;
+    {
+        // All pages in one step; a busy source is retried after a pause.
+        let backup = rusqlite::backup::Backup::new(&file, &mut memory)?;
+        backup.run_to_completion(i32::MAX, std::time::Duration::from_millis(20), None)?;
+    }
+    drop(file);
+    memory.pragma_update(None, "foreign_keys", "ON")?;
+    migrate_from(&memory, found)?;
+    Ok(ReadOnlyProductDb {
+        conn: memory,
+        migrated_from: Some(found),
+    })
 }
 
 /// `$XDG_DATA_HOME/knx/products.sqlite`, falling back to

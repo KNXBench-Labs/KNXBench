@@ -20,8 +20,8 @@ pub mod topology;
 pub use command_sync::sync_after_command;
 pub use manifest::{insert_manufacturer_refs, load_manufacturer_refs, ManufacturerRef};
 pub use migration::{
-    open_and_migrate, open_and_migrate_in_memory, open_existing_and_migrate, MigrationError,
-    CURRENT_SCHEMA_VERSION,
+    open_and_migrate, open_and_migrate_in_memory, open_existing_and_migrate,
+    open_existing_read_only, MigrationError, ReadOnlyStore, CURRENT_SCHEMA_VERSION,
 };
 pub use opaque::{insert_opaque, load_opaque, StoredOpaqueEntry};
 pub use project::{

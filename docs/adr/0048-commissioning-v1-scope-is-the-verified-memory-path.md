@@ -1,7 +1,7 @@
 # ADR 0048: Commissioning v1 is the verified memory path for mask 070nh; everything else is refused by name
 
 Date: 2026-09-28
-Status: Accepted
+Status: Accepted; decision 5 superseded and decision 2 narrowed by ADR-0086
 Session: 7 (integration / hardening), goal-commission K9
 
 ## Context

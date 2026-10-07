@@ -1,0 +1,15 @@
+# U11 / ISSUE-09 — exact group-link order on undo (2026-09-30)
+
+## Review finding
+
+`UnlinkComObject` previously returned `LinkComObject` as its inverse. Linking appends: a failed atomic paired unlink with another link interleaved changed the existing link order during rollback, despite reporting failure. The source of the finding is `crates/knx-core/src/command.rs` (Unlink/Batch), not an undocumented ETS ordering rule. The named test `failed_unlink_both_and_undo_preserve_original_group_link_order` failed before the fix (exit 101; project inequality). No bus connection or device write was used.
+
+## Correction and focused evidence
+
+The internal `RestoreGroupLink` inverse retains the removed `GroupLink` and its index. It validates the index before insertion, restores imported duplicate/dangling links verbatim, and returns `UnlinkComObject` for redo. `knx-store/src/command_sync.rs` handles the new variant consistently with the existing no-op incremental group-link sync; server project saves use their existing whole-project path. Added regressions cover failed paired unlink, successful paired unlink undo/redo with an interleaved link, imported duplicate links, and out-of-bounds restore without mutation. A deliberate append-only mutation made the order regression RED (exit 101 without compilation error); restoring indexed insertion made it GREEN.
+
+Final branch evidence after the correction: `knx-core --lib` 614 passed, `knx-store --lib` 80 passed, `http_edit_routes` 19 passed; the 78-file web suite passed 1,213 with TypeScript/build and six local Chromium layout cases. The corpus-backed branch gate passed `cargo fmt`, strict workspace Clippy, 125 Rust suites / 2,588 passed / 0 failed / 148 ignored / 0 `SKIP:`, and all four `xtask` checks (layering, headers 311/161 at ceiling, anchors 397/215 none dead, corpus gates). `git diff --check` and the added-line security scan had zero findings. Secrets and credentials were not copied into this log.
+
+## Published integration and handoff
+
+Both upstream data changes (ISSUE-08 activation/channel and device compare) and the editor were retained on the rebased tree; the only textual conflicts were the handover and implementation-status entries, each resolved by retaining both sides. The merged candidate `f8ca043` passed the complete 78-file/1,213-test web suite, TypeScript, production build and six local Chromium checks. Rust passed fmt, strict Clippy and 130 corpus-backed suites / 2,636 passed / 0 failed / 152 ignored / 0 `SKIP:`. All four `xtask` checks passed (318 well-formed headers, 161 headerless at ceiling, 397 links in 216 Markdown files, none dead). It was fast-forward pushed to `main`; `git ls-remote` returned the exact candidate hash `f8ca04398bd2743fe40c086e30771da31b8bb349`. Root's unrelated modifications were not staged or changed. The closeout hands off U12 ISSUE-05, then ISSUE-08 UI after its data prerequisites, and U13's user-decided whole-track review. No productive KNX connection or write occurred.

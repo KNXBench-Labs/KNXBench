@@ -297,7 +297,7 @@ into the engineering application has been decided.
 
 Repository authority and existing product context remain in:
 
-- Project context
+- [Project context](PROJECT_CONTEXT.md)
 - [Architecture](ARCHITECTURE.md)
 - [Implementation status](IMPLEMENTATION_STATUS.md)
 - [Known limitations](KNOWN_LIMITATIONS.md)

@@ -90,6 +90,6 @@ The local implementation is not yet accepted or published, does not close
 SAFE-03/AUDIT-01 and does not
 change the device-specific fail-closed recovery boundaries. New hardware,
 power-loss, vendor and ETS experiments are accepted out of the goal per the
-user scope decision.
+[user scope decision](../../goal-commission.md#user-scope-decision--2026-10-04).
 Their absence remains a user notice, not a pending operator task. No compatibility,
 certification, universal recovery or native-package approval follows.

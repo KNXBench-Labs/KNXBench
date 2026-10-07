@@ -2,7 +2,7 @@
 
 Dated record of how the user manual (`docs/manual/`) was checked against the
 finished application for the Alpha. Source of the task: `RELEASE-03`,
-alpha-release-goal AR16.
+[alpha-release-goal AR16](../alpha-release-goal.md).
 
 ## Policy (user decision, 2026-10-06)
 

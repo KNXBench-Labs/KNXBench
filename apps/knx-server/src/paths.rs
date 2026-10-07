@@ -23,6 +23,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::errors::ApiError;
+use crate::tls_cert::TLS_DIR_NAME;
 
 /// Resolves `relative` against `data_dir` and confirms the result still
 /// lives under it — the only thing standing between `/api/fs/list` and a
@@ -39,6 +40,7 @@ pub(crate) fn resolve_in_data_dir(data_dir: &Path, relative: &str) -> Result<Pat
     if !canonical.starts_with(&canonical_root) {
         return Err(ApiError::bad_request("path escapes the data directory"));
     }
+    refuse_reserved(&canonical_root, &canonical)?;
     Ok(canonical)
 }
 
@@ -48,6 +50,12 @@ pub(crate) fn resolve_in_data_dir(data_dir: &Path, relative: &str) -> Result<Pat
 /// `/api/fs/*` is.
 pub(crate) fn resolve_project_path(data_dir: &Path, path: &str) -> Result<PathBuf, ApiError> {
     if Path::new(path).is_absolute() {
+        // Unconfined by design, except for the one directory no route may
+        // touch. A path that does not exist cannot be inside it.
+        if let (Ok(root), Ok(canonical)) = (data_dir.canonicalize(), Path::new(path).canonicalize())
+        {
+            refuse_reserved(&root, &canonical)?;
+        }
         return Ok(PathBuf::from(path));
     }
     resolve_in_data_dir(data_dir, path)
@@ -59,6 +67,14 @@ pub(crate) fn resolve_project_path(data_dir: &Path, path: &str) -> Result<PathBu
 /// and the file name is joined back on afterwards.
 pub(crate) fn resolve_new_project_path(data_dir: &Path, path: &str) -> Result<PathBuf, ApiError> {
     if Path::new(path).is_absolute() {
+        let target = Path::new(path);
+        if let (Ok(root), Some(parent), Some(name)) =
+            (data_dir.canonicalize(), target.parent(), target.file_name())
+        {
+            if let Ok(parent) = parent.canonicalize() {
+                refuse_reserved(&root, &parent.join(name))?;
+            }
+        }
         return Ok(PathBuf::from(path));
     }
     let candidate = data_dir.join(path.trim_start_matches('/'));
@@ -79,7 +95,33 @@ pub(crate) fn resolve_new_project_path(data_dir: &Path, path: &str) -> Result<Pa
     if !canonical_parent.starts_with(&canonical_root) {
         return Err(ApiError::bad_request("path escapes the data directory"));
     }
-    Ok(canonical_parent.join(file_name))
+    let target = canonical_parent.join(file_name);
+    refuse_reserved(&canonical_root, &target)?;
+    Ok(target)
+}
+
+/// Refuses any path at or under `<data dir>/.knxbench-tls`, where the
+/// server keeps its generated TLS key (ADR-0088). Without this, `save-as`
+/// could overwrite the key with a project file and `/api/fs/list` would
+/// walk into the directory; neither leaks the key, but the first turns the
+/// next restart into a new certificate the operator never asked for.
+/// Both the literal and the resolved form of the directory are checked,
+/// so a symlink in its place does not open a side door.
+fn refuse_reserved(canonical_root: &Path, canonical: &Path) -> Result<(), ApiError> {
+    let reserved = canonical_root.join(TLS_DIR_NAME);
+    let resolved = reserved.canonicalize().unwrap_or_else(|_| reserved.clone());
+    if canonical.starts_with(&reserved) || canonical.starts_with(&resolved) {
+        return Err(ApiError::bad_request(
+            "path is reserved for the server's TLS certificate and key",
+        ));
+    }
+    Ok(())
+}
+
+/// Whether `name`, listed directly in `dir`, is the reserved TLS directory
+/// — for `/api/fs/list` to leave it out of the data directory's listing.
+pub(crate) fn is_reserved_entry(data_dir: &Path, dir: &Path, name: &std::ffi::OsStr) -> bool {
+    name == TLS_DIR_NAME && canonical_root(data_dir).is_ok_and(|root| dir == root)
 }
 
 fn canonical_root(data_dir: &Path) -> Result<PathBuf, ApiError> {
@@ -166,5 +208,81 @@ mod tests {
         let absolute = dir.path().join("elsewhere.knxdb");
         let resolved = resolve_new_project_path(dir.path(), &absolute.to_string_lossy()).unwrap();
         assert_eq!(resolved, absolute);
+    }
+
+    fn data_dir_with_tls() -> tempfile::TempDir {
+        let dir = data_dir();
+        std::fs::create_dir(dir.path().join(TLS_DIR_NAME)).unwrap();
+        std::fs::write(dir.path().join(TLS_DIR_NAME).join("key.pem"), b"secret").unwrap();
+        dir
+    }
+
+    #[test]
+    fn the_tls_directory_cannot_be_listed_read_or_written_relatively() {
+        let dir = data_dir_with_tls();
+        for path in [
+            ".knxbench-tls",
+            ".knxbench-tls/key.pem",
+            "sub/../.knxbench-tls",
+        ] {
+            let error = resolve_in_data_dir(dir.path(), path).unwrap_err();
+            assert!(
+                format!("{error:?}").contains("reserved"),
+                "{path}: {error:?}"
+            );
+            assert!(resolve_project_path(dir.path(), path).is_err(), "{path}");
+        }
+        for path in [
+            ".knxbench-tls/key.pem",
+            ".knxbench-tls/new.knxdb",
+            ".knxbench-tls",
+        ] {
+            assert!(
+                resolve_new_project_path(dir.path(), path).is_err(),
+                "{path}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_tls_directory_cannot_be_reached_by_absolute_path_either() {
+        let dir = data_dir_with_tls();
+        let key = dir.path().join(TLS_DIR_NAME).join("key.pem");
+        assert!(resolve_project_path(dir.path(), &key.to_string_lossy()).is_err());
+        assert!(resolve_new_project_path(dir.path(), &key.to_string_lossy()).is_err());
+        let fresh = dir.path().join(TLS_DIR_NAME).join("fresh.knxdb");
+        assert!(resolve_new_project_path(dir.path(), &fresh.to_string_lossy()).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlink_into_the_tls_directory_is_no_side_door() {
+        let dir = data_dir_with_tls();
+        std::os::unix::fs::symlink(dir.path().join(TLS_DIR_NAME), dir.path().join("sub/door"))
+            .unwrap();
+        assert!(resolve_in_data_dir(dir.path(), "sub/door/key.pem").is_err());
+        assert!(resolve_new_project_path(dir.path(), "sub/door/key.pem").is_err());
+    }
+
+    #[test]
+    fn neighbours_of_the_tls_directory_are_unaffected() {
+        let dir = data_dir_with_tls();
+        std::fs::write(dir.path().join(".knxbench-tls-notes.knxdb"), b"x").unwrap();
+        assert!(resolve_in_data_dir(dir.path(), ".knxbench-tls-notes.knxdb").is_ok());
+        assert!(resolve_new_project_path(dir.path(), "sub/.knxbench-tls").is_ok());
+    }
+
+    #[test]
+    fn only_the_root_listing_hides_the_tls_directory() {
+        let dir = data_dir_with_tls();
+        let root = dir.path().canonicalize().unwrap();
+        let name = std::ffi::OsStr::new(TLS_DIR_NAME);
+        assert!(is_reserved_entry(dir.path(), &root, name));
+        assert!(!is_reserved_entry(dir.path(), &root.join("sub"), name));
+        assert!(!is_reserved_entry(
+            dir.path(),
+            &root,
+            std::ffi::OsStr::new("sub")
+        ));
     }
 }

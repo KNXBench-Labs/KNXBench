@@ -73,6 +73,18 @@ base64 = "0.22"
 # workspace as a transitive dependency of `tempfile` and `uuid`, so
 # depending on it directly adds an edge, not a crate.
 getrandom = "0.4"
+# `knx-server` terminates TLS itself (ADR-0088). `ring` is the crypto
+# provider throughout, chosen over rustls' default `aws-lc-rs` because the
+# latter's `aws-lc-sys` carries the OpenSSL licence, which `deny.toml` does
+# not allow. Every crate below is pinned to that provider explicitly so no
+# default feature can quietly pull the other one back in.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
+rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem", "ring"] }
+# Reads a certificate's validity window. Already resolved through `rcgen`
+# at this version and with this feature; naming it adds an edge, not a crate.
+yasna = { version = "0.6", features = ["time"] }
+time = "0.3"
 socket2 = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

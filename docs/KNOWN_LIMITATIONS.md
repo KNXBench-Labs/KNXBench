@@ -1643,6 +1643,19 @@ arbitrary-site surface. **[V]** These are boundaries, not proof that an
 unknown defect cannot exist. The concrete accepted cost is code whose
 maintainers no longer promise fixes, not a known exploit chain.
 
+
+*Update 2026-10-07.* GitHub Dependabot on the recreated repository reports
+[GHSA-wrw7-89jp-8q8g](https://github.com/advisories/GHSA-wrw7-89jp-8q8g)
+(medium): unsound `Iterator`/`DoubleEndedIterator` impls for
+`glib::VariantStrIter`, fixed in `glib` 0.20. The lockfile has `glib` 0.18.5,
+pulled in only by the GTK3 stack (`atk`, `cairo-rs`, `gdk`, `gtk`,
+`webkit2gtk`), which cannot move to 0.20 without the GTK4 migration named
+below. `cargo deny check advisories` does not fail on it. A source search of
+every crate in the tree that depends on `glib` 0.18.5 found no caller of
+`VariantStrIter` or `str_iter()` outside `glib` itself, and KNXBench's own code
+has none. **[V]** That is a static search of the locked sources, not a proof
+that no dynamic path reaches it. The alert stays open on GitHub.
+
 **Decision.** Keep Tauri 2 for this alpha. Tauri 3.0.0-alpha.2 was published
 on 2026-09-21, while Tauri's normal Wry Linux GTK4/WebKitGTK 6 migration
 ([tauri#14684](https://github.com/tauri-apps/tauri/pull/14684)) and Wry's own

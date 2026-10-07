@@ -1,5 +1,17 @@
 # Compatibility
 
+## DPT format coverage is not complete subtype conformance (2026-10-07)
+
+The [document-wide DPT inventory/review](spec-audits/2026-10-07-dpt-document-audit.md)
+maps 454 numbered DPT-AS IDs: 305 within implemented format families, 149
+explicitly unsupported. Inventory regressions cover format specimens/widths
+and unsupported refusals, not all enum tables, narrowed ranges, units or FB
+semantics (Known Limitations §61). Three numeric edge defects are fixed.
+Generic HTTP/CLI group writes refuse nine explicit parameter-only subtypes,
+also when resolved from a project and in legacy input-format mode; pure
+parameter/diagnostic codecs remain usable. FB exceptions are not guessed.
+No new structured-DPT, hardware or ETS compatibility claim follows.
+
 ## PDB-3 product-install report surface
 
 Schema v12 records measured installation facts and projects them losslessly to

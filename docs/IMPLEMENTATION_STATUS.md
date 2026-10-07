@@ -1,5 +1,30 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — DPT inventory, honest boundaries and rounding that stays in bounds
+
+- Audited the authorized DPT-AS v02.02.01 original: 251 extracted pages, 250
+  matched printed footers, 280 contents entries, 454 numbered IDs/103 main
+  numbers. Public audit matrices distinguish 305 format-coded IDs from 149
+  explicitly unsupported IDs; format coverage is not full subtype conformance.
+- RED/GREEN numeric fixes: 8.010 cannot round to invalid-data 7FFFh; F16 and
+  scaled V32 reject out-of-range engineering inputs before quantization.
+- Core `validate_group_write_dpt` is shared by HTTP/CLI generic writers. Nine
+  explicit parameter-only subtypes are refused for explicit/project-resolved
+  DPTs and explicit/legacy input formats, before sending. Parameter/diagnostic
+  encoding remains available; unverifiable FB exceptions fail closed.
+- Corrected §61’s blanket structured-DPT/LTE rationale and charset support
+  overclaim. Recorded 249.600’s overview omission and conflicting width label.
+- Tests/evidence: `dpt_spec_document_inventory`, `dpt_spec_semantics_audit`,
+  `http_bus_write`, `cli_bus_dpt`; integrated-root Rust gate 3418 passed / 0
+  failed / 178 ignored (191 blocks), workspace all-target Clippy `-D warnings`,
+  CLI/server debug build and five xtask audits passed. Fmt and whitespace
+  checks passed. Wider gate/provenance and local integration in
+  `.ai/logs/2026-10-07_codex_dpt-document-audit.md`. Self-review only; no Web,
+  native, ignored-corpus or hardware acceptance. Local, not committed/pushed.
+- Docs: [full inventory/scoped review](spec-audits/2026-10-07-dpt-document-audit.md),
+  KL-61, Compatibility, Roadmap. No UI/core-storage schema change, dependency,
+  bus contact, deployment, release, full ETS claim or automatic scope expansion.
+
 ## 2026-10-07 — Evidence of record, and the house downloads 32 of 35 devices
 
 - ADR-0086 (maintainer decision): the KNX specification, product databases and

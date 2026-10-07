@@ -146,8 +146,8 @@ const SIGNED64_RANGE_TYPO_CORRECTED: DptEncodingRuling = DptEncodingRuling {
 
 const TIME_PERIOD_RAW_COUNTER_PARAMETER_ONLY: DptEncodingRuling = DptEncodingRuling {
     id: "time-period-raw-counter-parameter-only",
-    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §3.8.3 footnote 6 and §3.9.3 footnote a",
-    decision: "keep the raw counter (1 = 10 ms, 100 ms or 1 min); the Standard allows these subtypes only for parameters and diagnostics, not runtime communication",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §3.8.2 footnote 6 and §3.9.2 footnote a",
+    decision: "keep the raw counter (1 = 10 ms, 100 ms or 1 min); the Standard restricts these subtypes to parameters/diagnostics unless a Functional Block explicitly specifies runtime use",
 };
 
 const NO_RULINGS: &[DptEncodingRuling] = &[];
@@ -206,6 +206,30 @@ pub const fn encoding_rulings(dpt: DptRef) -> &'static [DptEncodingRuling] {
         (29, _) => SIGNED64_RULINGS,
         _ => NO_RULINGS,
     }
+}
+
+/// Checks explicit parameter-only restrictions for a generic runtime writer.
+///
+/// DPT-AS v02.02.01 §§3.8.2 (p35), 3.8.3 (p36), 3.9.2 (p37),
+/// 3.9.3 (p38) and 3.21 (p57). The time-period footnotes allow a
+/// Functional Block exception; these generic writers cannot verify it and
+/// fail closed. This is not a comprehensive subtype/application validator:
+/// other FB use, ranges, enums and companion-DP requirements remain §61.
+/// Pure parameter and diagnostic codecs must NOT call this check.
+/// A bare main type makes no subtype claim, so no restriction is inferred.
+pub fn validate_group_write_dpt(dpt: DptRef) -> Result<(), DptCodecError> {
+    let standard_reference = match (dpt.main, dpt.sub) {
+        (7, Some(3 | 4 | 6)) => "DPT-AS §3.8.2 footnote 6 (p35)",
+        (7, Some(13)) => "DPT-AS §3.8.3 footnote 7 (p36)",
+        (8, Some(3 | 4 | 6)) => "DPT-AS §3.9.2 footnote a (p37)",
+        (8, Some(12)) => "DPT-AS §3.9.3 (p38)",
+        (20, Some(22)) => "DPT-AS §3.21 (p57)",
+        _ => return Ok(()),
+    };
+    Err(DptCodecError::RuntimeRestricted {
+        dpt,
+        standard_reference,
+    })
 }
 
 /// A decoded datapoint value. Variants mirror the Standard's own format
@@ -547,9 +571,14 @@ impl fmt::Display for DptValue {
 /// variant means "the codec invented an answer".
 #[derive(Debug, Clone, PartialEq)]
 pub enum DptCodecError {
-    /// `dpt.main` is not one of the main types 1 through 30 implemented by
-    /// this codec.
+    /// The requested main family or character-set variant is not implemented.
     UnsupportedDpt(DptRef),
+    /// The requested generic runtime group write uses a parameter-only DPT.
+    /// This does not prevent parameter/diagnostic encoding via `encode`.
+    RuntimeRestricted {
+        dpt: DptRef,
+        standard_reference: &'static str,
+    },
     /// The payload's length does not match what `dpt` requires.
     /// `expected_bits`/`got` are the DPT's own significant-bit width and
     /// the payload's, e.g. `WrongLength { expected_bits: 8, got: 6 }` for
@@ -583,6 +612,10 @@ impl fmt::Display for DptCodecError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DptCodecError::UnsupportedDpt(dpt) => write!(f, "unsupported datapoint type: {dpt}"),
+            DptCodecError::RuntimeRestricted { dpt, standard_reference } => write!(
+                f,
+                "{dpt}: not allowed for generic runtime group writes ({standard_reference}); parameter/diagnostic encoding remains available; any Functional Block exception requires a context this writer does not verify"
+            ),
             DptCodecError::WrongLength {
                 dpt,
                 expected_bits,
@@ -1391,7 +1424,16 @@ fn encode_v16(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
                 value: trimmed.to_string(),
             });
         }
-        (pct * 100.0).round() as i16
+        let rounded = (pct * 100.0).round();
+        // Check after quantization too: 327.665..327.67 would otherwise
+        // produce 7FFFh even though the input passed the range check.
+        if rounded == f64::from(i16::MAX) {
+            return Err(DptCodecError::OutOfRange {
+                dpt,
+                value: trimmed.to_string(),
+            });
+        }
+        rounded as i16
     } else {
         let v: i32 = trimmed.parse().map_err(|_| unparsable())?;
         if !(i32::from(i16::MIN)..=i32::from(i16::MAX)).contains(&v) {
@@ -1493,7 +1535,10 @@ fn encode_f16(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
         dpt,
         value: trimmed.to_string(),
     };
-    if !value.is_finite() {
+    // DPT-AS §3.10's engineering range excludes the invalid-data code.
+    // Validate the input before rounding; quantization is not permission
+    // to silently clamp a value just outside either printed endpoint.
+    if !(-671_088.64..=670_433.28).contains(&value) {
         return Err(out_of_range());
     }
     // Smallest E gives the finest resolution; try E=0 upward and stop at
@@ -1803,6 +1848,11 @@ fn encode_v32(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
     let trimmed = input.trim();
     let raw: i32 = if dpt.sub == Some(2) {
         let flow: f64 = trimmed.parse().map_err(|_| unparsable())?;
+        // §3.14.1: V32 counts at 0.0001 m³/h resolution. Check the
+        // engineering range before rounding, not only the rounded count.
+        if !(-214_748.364_8..=214_748.364_7).contains(&flow) {
+            return Err(out_of_range(trimmed));
+        }
         let scaled = (flow / 0.0001).round();
         if !(f64::from(i32::MIN)..=f64::from(i32::MAX)).contains(&scaled) {
             return Err(out_of_range(trimmed));
@@ -2117,7 +2167,8 @@ fn encode_a14(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 // own section, §3.19, does carry a matching +1 recommendation in NOTE 9
 // — see `decode_scene_control`'s comment. That is 18.001's citation,
 // not 17.001's, and does not change this type's answer.) `DptValue::Scene`
-// therefore holds and prints the wire value 0-63 exactly, undecorated.
+// therefore holds the wire value 0-63 without a +1 offset. Display labels
+// it as `scene N`; the write grammar accepts the decimal number alone.
 // A future UI slice can choose to display `wire + 1`; that is a
 // presentation decision, not this codec's.
 
@@ -2150,18 +2201,12 @@ fn encode_scene(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 //
 // 1 octet, `B1r1U6`: field `C` (bit 7, control: 0=activate, 1=learn),
 // `R` (bit 6, reserved, `{0}`), `SceneNumber` (bits 5-0, `[0...63]`, same
-// field as main type 17's) — DPT-AS §3.19. Significant content is
-// `C`(1) + `SceneNumber`(6) = 7 bits, one more than the AL-AS ≤6-bit
-// inline threshold — this type is *not* eligible for the short/inline
-// `GroupValue::Short` form and must always occupy its own octet, unlike
-// main type 17 (whose 6 significant bits qualify exactly). `encode`
-// always produces `GroupValue::Bytes([_])`, never `Short`, to keep that
-// distinction — the E4-D3 fix in `knx-net` protects a `Short` whose value
-// exceeds 0x3F from corrupting the APCI, but the cleaner discipline on
-// this side of the boundary is to never *propose* a `Short` for a DPT the
-// Standard does not put there in the first place. `decode` mirrors that:
-// a `Short` payload is `WrongLength`, same as any other wrong-shaped
-// payload, never silently accepted as if it were the inline form.
+// field as main type 17's) — DPT-AS §3.19. The declared format is one
+// octet, like main types 17 and 26; the six-bit scene subfield does not
+// make the complete value eligible for the short/inline payload form.
+// `encode` therefore always produces `GroupValue::Bytes([_])`, never
+// `Short`. `decode` mirrors the declared format: a `Short` payload is
+// `WrongLength`, never silently accepted as if it were an inline value.
 //
 // Ruling on the wire value vs. the human scene number (do not relitigate
 // — see the brief, corrected in Fix round 1): unlike main type 17, this

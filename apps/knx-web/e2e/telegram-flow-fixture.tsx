@@ -1,6 +1,8 @@
 /** Renders the real BusMonitorPanel with a resolved theme, as index.html's bootstrap does. */
 import { createRoot } from "react-dom/client";
 import BusMonitorPanel from "../src/BusMonitorPanel";
+import FlowWindow from "../src/FlowWindow";
+import { isFlowWindow } from "../src/flowWindow";
 import { setSetting } from "../src/settingsStore";
 import { UI_LANGUAGE_STORAGE_KEY } from "../src/uiLanguage";
 import "../src/styles.css";
@@ -16,7 +18,7 @@ document.documentElement.dataset.theme = params.get("theme") ?? "porcelain";
 if (params.get("motion")) document.documentElement.setAttribute("data-motion-level", params.get("motion")!);
 setSetting(UI_LANGUAGE_STORAGE_KEY, language);
 createRoot(document.getElementById("root")!).render(
-  <main className="workbench">
+  isFlowWindow(location.search) ? <FlowWindow /> : <main className="workbench">
     <BusMonitorPanel projectOpen />
   </main>,
 );

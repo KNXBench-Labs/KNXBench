@@ -40,6 +40,8 @@ export async function fakeServer(page: Page) {
   const state = {
     sessionId: 1,
     generation: "1",
+    droppedBefore: 0,
+    contextStatus: "current",
     rows: [] as ReturnType<typeof telegram>[],
     snapshots: [] as string[],
     unexpected: [] as string[],
@@ -55,8 +57,8 @@ export async function fakeServer(page: Page) {
       const rows = url.searchParams.get("contextOnly") ? [] : state.rows.filter((row) => row.seq >= since);
       const next = Math.max(since, ...state.rows.map((row) => row.seq + 1));
       return json(route, {
-        sessionId: state.sessionId, serverIncarnation: "fixture", contextStatus: "current", projectOpen: true,
-        status: "active", nextSince: next, droppedBefore: 0, telegrams: rows, flowGeneration: state.generation,
+        sessionId: state.sessionId, serverIncarnation: "fixture", contextStatus: state.contextStatus, projectOpen: true,
+        status: "active", nextSince: next, droppedBefore: state.droppedBefore, telegrams: rows, flowGeneration: state.generation,
       });
     }
     if (method === "GET" && url.pathname === "/api/bus/monitor/flow-snapshot") {

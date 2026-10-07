@@ -7899,6 +7899,35 @@ specification; schemes 15–19, 22 and 24 stay refused. KL-153 is DONE.
 
 ## 154. The telegram-flow view is checked and measured in Chromium only
 
+**Update 2026-10-07 — readability and source windows.**
+[ADR-0085](adr/0085-readable-flow-and-source-windows.md) and
+[Flow §23](TELEGRAM_FLOW_VISUALIZATION.md#23-readable-area-source-windows-and-project-links-2026-10-07)
+supersede the fixed box, reserved Inspector and activity-clustering description.
+Responsive sizing, closable/maximized details, switchable auto-fit and shared
+source-window history are implemented. Long visual labels are ellipsized, with
+full text retained in the Inspector/accessibility path. Sampled curve-crossing
+and foreign-footprint avoidance tests supplement the busy-hub bounding-box guard;
+**arbitrary graphs can still cross**, edge labels can still meet other paths,
+and fitted dense graphs can make text small. Detailed obstacle routing is reduced
+with a visible note beyond 80 nodes or 250 edges. No recorded edge is hidden.
+
+Secondary windows require BroadcastChannel and the same source lifetime. They
+retain the last map, mark it non-live and disable links when the source is lost;
+no persisted history or automatic rebinding after source reload. Source capture
+and context warnings remain visible. Full peer snapshots are not load-certified
+for many simultaneous windows or hours of retained history. Project links require
+a main-editor-bound scope; diagnostic-only sources cannot establish it. Replacing
+a project with identical participant facts can leave old generation links
+unavailable until a new interpretation/session rather than risk reused ids.
+
+Current evidence: full Chromium offline suite and unit/build gates; native
+capability compilation plus adapter outcome tests, **not** a real WebKitGTK or
+Orca run and not new live-bus evidence. Fresh production-load samples (one each):
+232 nodes / 239 edges, motion, 200 telegrams/s → main-thread share 0.523, marker
+lag max 33 ms; 502 nodes / 2,490 edges, Motion Off, 1,000/s → share 0.335, lag
+327 ms. Existing large-map Motion Off guidance remains. Measurements below
+are the historical U20/U21/AR21 receipts, not new measurements of this renderer.
+
 <a id="154-the-telegram-flow-view-is-checked-in-chromium-only-load-figures-follow-in-u21-part-c"></a>
 
 <a id="154-the-telegram-flow-view-is-static-and-checked-in-chromium-only"></a>

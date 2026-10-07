@@ -24,6 +24,15 @@
 - **Versions:** CLI, desktop shell and web frontend `0.1.0-alpha.5`. The
   `v0.1.0-alpha.4` tag and pre-release were withdrawn; `v0.1.0-alpha.5`
   replaces them ([ALPHA_FINAL_GATES §14](ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)).
+- **Gate on the tagged commit** `aca70fd7` (fresh build directory, offline):
+  Rust 3,430 passed / 0 failed / 178 ignored, Vitest 2,162, Playwright 155,
+  private corpus 143 in 31 targets, Clippy, fmt, `cargo deny`, `npm audit`,
+  the five repository gates and `check-appimage` green. The AppImage was
+  built with remapped build paths and scanned: no old identity string. Started
+  once natively on Wayland. Self-review; no independent review of alpha.5.
+- **Published:** the [`v0.1.0-alpha.5` pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5)
+  (AppImage SHA-256 `8f69064f…0e2ce2`, `SHA256SUMS`), downloaded back and
+  verified byte-identical.
 - `knxprod-crawler` is a separate private repository; its dead link was removed.
 - Agent instructions (`AGENTS.md`/`CLAUDE.md`), cloud-session rules and the
   session-start script commit as `KNXBench <github@knxbench.com>`.

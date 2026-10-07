@@ -73,3 +73,20 @@ acceptance gate and the release AppImage are produced in a fresh
 
 No public visibility change. Global git config, other Hermes profiles and the
 local backups/evidence keep their content.
+
+## Gate and publication
+
+Gate on `aca70fd7` in a fresh `CARGO_TARGET_DIR` under the shared leases,
+offline namespace: all steps green (counts in ALPHA_FINAL_GATES §14). The first
+Playwright attempt failed 155/155 at Chromium launch (`Socket path too long`,
+long `TMPDIR`); kept as `chromium-attempt1.log` in the scratch gate directory,
+rerun with a short `TMPDIR`: 155/155. The AppImage is copied to the evidence
+folder `alpha5-identity-20261007` with the gate scripts, `SHA256SUMS`, the
+first-start screenshot and its log.
+
+Publication: old repository deleted in the browser as the owner (no sudo
+prompt), recreated with `gh repo create --private --disable-wiki`; collaborators
+only the owner. `main` pushed and read back; "Linux AppImage" workflow disabled,
+tag pushed (no run triggered), `gh release create --verify-tag --prerelease`,
+assets downloaded back (`sha256sum -c` ok, `cmp` identical), workflow enabled
+again. Repository-delivery skill gained `references/identity-scrub.md`.

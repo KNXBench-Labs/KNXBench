@@ -1,5 +1,26 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — KL-158: the AppImage can choose Wayland without unpacking its suitcase
+
+- Packaging-only follow-up, requested after the alpha.4 release: the GTK hook
+  no longer unconditionally overrides `GDK_BACKEND`. Wayland session hints
+  select `wayland,x11`; explicit backend/renderer settings are preserved.
+- Tauri's verified before-bundle/local-tool extension points prepare a pinned,
+  checksum-validated GTK deploy source and inline the owned display policy;
+  no global cache patch, Rust/npm dependency or domain/API/schema change.
+- Actual development AppImage built on `b54cd5a5` + local launcher patch;
+  source/artifact hashes and bounded platform evidence in
+  [APPIMAGE_LAUNCHER](APPIMAGE_LAUNCHER.md#local-acceptance-receipt--2026-10-07).
+  The parallel owner's published first-run guide is included, not reverted.
+- Tests: launcher 19, eight isolated mutants caught, xtask 97; package check;
+  direct-image native Wayland/X11, fallback and refusal controls; private
+  Weston framebuffer inspected. Both workflow startup bodies replayed locally.
+- Full Python tools suite: 56 tests, one unrelated existing `CLAUDE.md`
+  shared-memory-marker contract failure, reproduced in the untouched root.
+- Docs: ADR-0021 amendment, KL §158, troubleshooting, roadmap, ledger/matrix.
+  **Local, uncommitted and unpublished**; the existing tag/asset stays unchanged.
+  No hardware/corpus or broader native-UI/GPU compatibility claim.
+
 ## 2026-10-07 — A first-run guide says what this build is before it says what to click
 
 - New four-page introduction (ADR-0084): what KNXBench is and which release

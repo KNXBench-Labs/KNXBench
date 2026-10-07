@@ -1,5 +1,16 @@
 # Roadmap
 
+## Post-alpha packaging follow-up (2026-10-07)
+
+The user requested the removal of the forced-X11 AppImage launcher boundary.
+The [launcher contract](APPIMAGE_LAUNCHER.md) and
+[ADR-0021 amendment](adr/0021-appimage-is-the-first-linux-package.md#2026-10-07-amendment-owned-display-policy-kl-158)
+keep this at the packaging layer: owned backend selection, caller overrides,
+pinned GTK deploy source, X11/native-Wayland verification. Publication state is
+in [the ledger](status/LEDGER.md); the existing alpha.4 tag and asset remain
+unchanged. No ETS, GPU portability, commissioning or broader native-UI claim
+follows from this launcher work.
+
 ## Cross-cutting — Telegram-flow nervous system (Alpha addition, 2026-10-04)
 
 Approved and authorized for the responsible Goal sessions, **not implemented**.

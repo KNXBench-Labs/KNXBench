@@ -5847,7 +5847,7 @@ reads as a path). And the home-directory prefix is matched textually with a
 word-boundary check on its right-hand side only, so `/home/knxbench-old` is
 still rewritten to `~-old` when `$HOME` is `/home/knxbench` — over-redaction
 that garbles a path rather than a leak, and the far more common
-`/home/andrea` case is left alone.
+`/home/knxbencha` case is left alone.
 
 A third is the mirror image of the second fix round's IPv4 change. The scan
 now slides a four-group window across a whole run of digits and dots rather
@@ -8355,3 +8355,47 @@ output were not checked.
 
 **Lifted when.** Per-user settings exist, or a per-browser record is wanted
 despite the second store.
+
+## 161. Alpha.5 does not pick up the alpha.4 data folder
+
+**Limitation.** `v0.1.0-alpha.5` changed the desktop app identifier to
+`com.knxbench.knxbench-labs` ([ADR-0087](adr/0087-desktop-app-identifier.md)).
+The desktop data folder follows the identifier, so alpha.5 reads and writes
+`~/.local/share/com.knxbench.knxbench-labs`. It does not look at the folder of
+the withdrawn alpha.4 build. Started without that copy, alpha.5 shows an
+empty project library and default settings.
+
+**Why.** An automatic migration would have to name the old folder in the code,
+and the old identifier carried a personal account name that was removed from
+the product on the user's decision (2026-10-07). alpha.4 was only published
+in a private repository with one user, whose folder was copied by hand and
+checked with `diff -r`.
+
+**Impact.** Whoever still runs an alpha.4 build copies its data folder (the one
+under `~/.local/share` named after the old identifier) to
+`~/.local/share/com.knxbench.knxbench-labs` while KNXBench is closed. alpha.5
+never deletes or changes the old folder. The Docker/web server is not
+affected: it takes its data folder from its own setting.
+
+**Lifted when.** Not planned. The identifier is a stable contract from alpha.5
+on.
+
+## 162. Commit hashes cited before 2026-10-07 refer to the rewritten history
+
+**Limitation.** On 2026-10-07 the whole Git history was rewritten to remove a
+personal identity from every commit, tag, message and file version (user
+decision). Every commit therefore has a new hash. Status logs, dossiers,
+ledger rows, evidence files and handovers written before that day cite the
+old hashes, which no longer exist in the repository. Commit messages were
+rewritten together with the history, so short hashes inside them already
+point at the new commits.
+
+**Impact.** To follow an old hash, look it up in
+[`docs/history/COMMIT_MAP_2026-10-07.txt`](history/COMMIT_MAP_2026-10-07.txt)
+(old hash → new hash, all 2,261 commits). Abbreviated hashes match on their
+prefix. Artifact digests, test counts and file contents cited in those
+documents are unaffected. The tag `v0.1.0-alpha.4` and its pre-release were
+withdrawn, and the archived release records describe a build that no longer
+exists for download.
+
+**Lifted when.** Not applicable; the mapping file is the permanent bridge.

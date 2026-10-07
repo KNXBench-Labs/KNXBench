@@ -321,7 +321,7 @@ fn scan_and_replace(
 
 /// Replaces the home directory prefix with `~`, but only where the path
 /// really ends there. A plain substring replace turns
-/// `/home/andrea/secret.knxproj` into `~a/secret.knxproj` when `$HOME` is
+/// `/home/knxbencha/secret.knxproj` into `~a/secret.knxproj` when `$HOME` is
 /// `/home/knxbench` — over-redaction rather than a leak, but it garbles a path
 /// a maintainer has to read. A following word character means a different
 /// directory whose name merely starts the same way.
@@ -869,8 +869,8 @@ mod tests {
     fn a_sibling_home_directory_is_not_half_rewritten() {
         let r = Redactor::new(Some("/home/knxbench".into()), None);
         assert_eq!(
-            r.apply("/home/andrea/secret.knxproj"),
-            "/home/andrea/secret.knxproj"
+            r.apply("/home/knxbencha/secret.knxproj"),
+            "/home/knxbencha/secret.knxproj"
         );
         assert_eq!(r.apply("saved in /home/knxbench."), "saved in ~.");
     }

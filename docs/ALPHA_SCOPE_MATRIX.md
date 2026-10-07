@@ -93,7 +93,7 @@ Nothing below is waived. Each row says what has to happen before AR18/AR19.
 | --- | --- | --- | --- |
 | `RELEASE-01`, `RELEASE-02` | alpha (AR18) | — | **Done 2026-10-07:** independent review plus four re-check rounds; round 4 `READY` on candidate `b8724d66` (product code `2254eed0`), full gate green ([ALPHA_FINAL_GATES §12](ALPHA_FINAL_GATES.md#12-ar18-outcome-ready)). |
 | `RELEASE-03` | alpha (AR16) | — | **Done 2026-10-06:** UI closure receipt verified, screenshots regenerated, claim-by-claim pass, manual accepted at its tested scope ([MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md)); its exceptions go to the user at AR19. |
-| `RELEASE-04` | user (AR19) | — | **Done 2026-10-07:** the user decided; tag `v0.1.0-alpha.4` on `514c0c54` and a GitHub [pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4) in the private repository. |
+| `RELEASE-04` | user (AR19) | — | **Done 2026-10-07:** the user decided; tag `v0.1.0-alpha.4` on `514c0c54` and a GitHub [pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4) in the private repository. **Later 2026-10-07:** alpha.4 withdrawn; replaced by `v0.1.0-alpha.5` ([§14](ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)). |
 | `UI-04` | commissioning | — | **Accepted by the user 2026-10-06 as a disclosed Alpha boundary** (Web half delivered in `892b9948`). |
 | `KL-1`, `KL-11`, `KL-125` | alpha | Independent project samples (other schemas, second ETS6 project) | **Accepted by the user 2026-10-06 as a disclosed boundary** (no broader compatibility claim). |
 | `KL-31` | alpha | Live router traffic on a custom multicast group | **Accepted by the user 2026-10-06 as a disclosed boundary** (offline-tested only). |

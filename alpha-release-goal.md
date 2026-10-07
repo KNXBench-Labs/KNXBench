@@ -1073,6 +1073,7 @@ GitHub pre-release in the private repository. Annotated tag `v0.1.0-alpha.4`
 → `514c0c54`; [pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4) with the AppImage (SHA-256 `138444b4…c3fc`)
 and `SHA256SUMS`, downloaded back and verified byte-identical
 ([ALPHA_FINAL_GATES §13](docs/ALPHA_FINAL_GATES.md#13-ar19-release-decision-and-publication)).
+**Later 2026-10-07:** the alpha.4 tag and pre-release were withdrawn with the identity rewrite and replaced by `v0.1.0-alpha.5` ([ALPHA_FINAL_GATES §14](docs/ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)).
 
 - [x] Present the exact candidate, tested scope, manual, remaining accepted limitations and independent review result. Request the user's explicit tag/version/publication decision once.
 - [x] If approved, follow the repository's version/tag/artifact procedure and verify the published target/artifact. If declined or deferred, record `READY_NOT_PUBLISHED` or `WAITING_DECISION`; do not invent approval.

@@ -318,7 +318,7 @@ Use concise commit messages describing actual change. A little humor is welcome 
 Commit using:
 
 ```text
-github@knxbench.com
+KNXBench <github@knxbench.com>
 ```
 
 Never add:

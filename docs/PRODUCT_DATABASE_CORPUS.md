@@ -453,8 +453,8 @@ procedures or reproduce manufacturer separator layout.
 
 A one-off test of the **production install path** against a second, much
 wider corpus: 853 files that the separate
-[`knxprod-crawler`](https://github.com/KNXBench-Labs/knxprod-crawler) tool
-(private repository) downloaded on 2026-10-03 from the public download
+`knxprod-crawler` tool
+(a separate private repository) downloaded on 2026-10-03 from the public download
 pages of Siemens, ABB/Busch-Jaeger, Hager/Berker and MDT (1.25 GiB). This was
 testing only: no KNXBench code was changed, and the downloaded files stay
 outside the repository. These are publicly offered manufacturer files, not

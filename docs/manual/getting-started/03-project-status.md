@@ -7,11 +7,11 @@ Read this chapter before you trust KNXBench with a project you care about.
 ## The version number
 
 Every part of KNXBench carries its own version
-([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). On 2026-10-06 the CLI,
-the desktop shell and the web frontend report `0.1.0-alpha.4`, the standalone server
-`0.1.0-alpha.1`. There is no git tag and
-no published release. The GitHub Actions workflow that would build and
-publish a release AppImage exists but has never been run.
+([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). On 2026-10-07 the CLI,
+the desktop shell and the web frontend report `0.1.0-alpha.5`, the standalone server
+`0.1.0-alpha.1`. The current pre-release is `v0.1.0-alpha.5` in the private
+repository, built and checked locally; the earlier `v0.1.0-alpha.4` was
+withdrawn. See [Installation](04-installation.md).
 
 ## What "alpha" means here
 

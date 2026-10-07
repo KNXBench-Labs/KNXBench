@@ -1,22 +1,32 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-07 — The repository moved to `KNXBench-Labs/KNXBench`
+## 2026-10-07 — One name everywhere: history rewritten, app identifier changed, alpha.5
 
-- The repository now lives at <https://github.com/KNXBench-Labs/KNXBench>
-  (still private). Verified with `gh`: same `main` HEAD `8d97a1f8`, issues
-  enabled, pre-release `v0.1.0-alpha.4` with the AppImage and `SHA256SUMS`
-  moved along; the maintainer account keeps `WRITE`.
-- Local `origin` points to the new URL. Every current-facing reference was
-  updated: `Cargo.toml` `repository`, README, the user manual, the in-app
-  **Debug report** issue link (`apps/knx-web/src/githubIssue.ts` and its
-  test), cloud-session procedure and the release links in the alpha records.
-- Historical records (`docs/history/`, `.ai/archive/`, `.ai/logs/`, older
-  handovers, dated plans/specs and `.superpowers/` reports) keep the old
-  `KNXBench-Labs/KNXBench` name verbatim. `knxprod-crawler` is a separate
-  repository that still lives under `KNXBench-Labs`.
-- Checks: `DebugReportButton` 12/12, `cargo metadata` repository field, and
-  the repository gates (layering, headers, anchors, ledger, corpus gates).
-  No product behavior, release asset or visibility changed.
+- **User decision:** no personal identity may remain in the repository, its
+  history, its artifacts or the agent instructions; everything is `KNXBench`.
+  The repository lives at <https://github.com/KNXBench-Labs/KNXBench>
+  (private), recreated from the rewritten history.
+- **History rewrite** with `git filter-repo` over all 2,261 commits, every
+  local branch, the three stashes and the tag: every author, committer and
+  tagger is `KNXBench <github@knxbench.com>`; the personal account name, the
+  personal address, the full name, the home-directory user name and the old
+  data-folder identifier were replaced in every text file version and every
+  commit message. A scan of all reachable objects found no remaining hit; no
+  binary file contained one, so no binary was touched. The old to new hash
+  mapping is [docs/history/COMMIT_MAP_2026-10-07.txt](history/COMMIT_MAP_2026-10-07.txt)
+  ([known limitation §162](KNOWN_LIMITATIONS.md#162-commit-hashes-cited-before-2026-10-07-refer-to-the-rewritten-history)).
+  A verified bundle of the pre-rewrite repository stays outside the
+  repository as a local, unpublished backup.
+- **Desktop app identifier** is now `com.knxbench.knxbench-labs`
+  ([ADR-0087](adr/0087-desktop-app-identifier.md)); the data folder moves with
+  it. No automatic migration ([§161](KNOWN_LIMITATIONS.md#161-alpha5-does-not-pick-up-the-alpha4-data-folder));
+  the single existing installation was copied by hand and checked with `diff -r`.
+- **Versions:** CLI, desktop shell and web frontend `0.1.0-alpha.5`. The
+  `v0.1.0-alpha.4` tag and pre-release were withdrawn; `v0.1.0-alpha.5`
+  replaces them ([ALPHA_FINAL_GATES §14](ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)).
+- `knxprod-crawler` is a separate private repository; its dead link was removed.
+- Agent instructions (`AGENTS.md`/`CLAUDE.md`), cloud-session rules and the
+  session-start script commit as `KNXBench <github@knxbench.com>`.
 
 ## 2026-10-07 — Branch consolidation integrates the post-alpha AppImage launcher
 

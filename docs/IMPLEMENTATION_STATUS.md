@@ -1,5 +1,38 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — Flow gets room to breathe, a window and actual project links
+
+- User-approved grill-me scope: larger measured canvas/growing world; Inspector
+  space only on selection with Close; maximized view with Escape/keyboard boundary;
+  dedicated browser/Tauri Flow role; initially-on, switchable auto zoom with manual
+  override and one-shot Show all.
+- Readability-first graph ranks/components and compact fan-out replace activity
+  clustering in the real view. Stronger movement is allowed by the user. Batched
+  rearrangement, explicit Rearrange and Freeze preserve data/pulse semantics.
+  Bounded curve avoidance uses label/value footprints; pulses follow the same
+  geometry. Dense-mode reduction is visible, with no hidden recorded edges.
+- Source monitor/model remains mounted across navigation and diagnostic/table
+  switches; hidden animation/timers stop. A Flow window adopts the already collected
+  source graph through BroadcastChannel, not another poll/tunnel. Times/expiry and
+  send-time freshness are converted between document origins; repeated snapshots
+  do not replay old events. Source loss retains a clearly non-live map and disables
+  links. Capture loss/context/error/end diagnostics are copied too.
+- Device, group-node and GA detail-row links reveal the exact entity in the main
+  editor. Scope/generation, unique installation/entity/address and current server
+  revision/incarnation guards refuse ambiguity, deletion/reused ids, external
+  replacement and replacement during navigation. No second editing workspace.
+- Regression discoveries fixed: SVG intrinsic-size/ResizeObserver feedback could
+  grow the area continuously and make nodes unclickable; cloned models replayed
+  old pulse events; UI scopes must not require secure-context-only randomUUID on
+  LAN HTTP. Existing UUID-formatted load-client tokens remain unchanged.
+- Gates: Vitest **2,162/2,162** (125 files), Web build, Chromium **155/155** in a
+  loopback-only namespace, native `cargo check -p knx-desktop` and native adapter
+  outcome tests. Production-load samples and boundaries: Flow §23 / KL §154.
+  Self-review, not an independent review or release acceptance. No live bus/hardware.
+- Docs: ADR-0085, Architecture, Flow §23, KL §154, Roadmap and user guide §7.
+  No project/product migration or new dependency. Real WebKitGTK/Orca and a new
+  packaged release remain unverified/separate; the existing Alpha tag is untouched.
+
 ## 2026-10-07 — The README hero does something, and Docker updates in one go
 
 - README hero is now `docs/assets/readme/hero-add-device.gif` (900 × 467,

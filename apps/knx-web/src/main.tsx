@@ -4,6 +4,8 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import AuthGate from "./AuthGate";
 import DiagnosticsCompanion from "./DiagnosticsCompanion";
+import FlowWindow from "./FlowWindow";
+import { isFlowWindow } from "./flowWindow";
 import { isCompanionView } from "./diagnosticsWindow";
 import { startSettingsRefresh } from "./settingsStore";
 import "@fontsource/space-grotesk/400.css";
@@ -50,7 +52,7 @@ createRoot(document.getElementById("root")!).render(
     <AuthGate>
       {(session) => (
         <SettingsBootstrap>
-          {companion ? <DiagnosticsCompanion /> : <App session={session} />}
+          {isFlowWindow(window.location.search) ? <FlowWindow /> : companion ? <DiagnosticsCompanion /> : <App session={session} />}
         </SettingsBootstrap>
       )}
     </AuthGate>

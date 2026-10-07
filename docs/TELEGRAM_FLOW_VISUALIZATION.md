@@ -1197,6 +1197,48 @@ plateau over hours is not shown. `FLOW-01` is accepted for the Alpha on this
 envelope; the receipt for AR18's whole-product review is this section plus
 §13–§21 and the closing log. No hardware, no bus and no KNX socket were used.
 
+## 23. Readable area, source windows and project links (2026-10-07)
+
+User-approved usability follow-up; [ADR-0085](adr/0085-readable-flow-and-source-windows.md)
+records the architecture and the bounded supersession of activity-distance tuning.
+The embedded canvas now uses its measured viewport and an unconstrained growing
+world, without a permanent empty Inspector column. Details are closable; the
+maximized view excludes background keyboard controls and restores on Escape.
+A dedicated Flow window receives the source's previously collected graph and live
+updates, with independent layout/camera/selection. Neither open nor close starts
+or stops a tunnel, and the secondary role never polls the bus or mounts an editor.
+
+Readability-first component/rank ordering and compact wide-star placement replace
+activity-driven clustering in this view. Rearrange on structural changes, not each
+telegram. Freeze fixes existing node positions while traffic/values continue.
+Auto zoom starts on, can be disabled, and yields to manual pan/zoom. Show all fits
+node/value footprints, routed paths and labels once; live expiry does not chase
+camera scale. Curves try foreign-footprint avoidance on small maps, with an
+explicit reduced-routing note beyond 80 nodes or 250 lines. No crossing-free claim.
+
+Device and all uniquely identified group-address links in the Inspector use the
+existing main-editor select/reveal path. A generation's captured editor scope,
+unique current entity/address and the server's current revision/incarnation guard
+against deleted, ambiguous or reused ids, including replacement during an await.
+A satellite keeps its graph open and requests selection in the main editor only.
+Missing/unverified bindings are explained, never guessed.
+
+Data age and pulse sequence baselines survive window snapshots: monotonic times
+are converted between document origins rather than restarting the 7-second TTL.
+Late packets do not establish newly live data. Source loss retains a non-live map
+and disables links after the heartbeat timeout. Capture gaps, table pruning,
+stale/unverified project context and polling/end diagnostics are preserved in the
+maximized and separate views too. Nothing is persisted or written to KNX.
+
+**Acceptance:** local self-review; full Vitest 2,162/2,162 (125 files), Web build,
+Chromium 155/155 offline (including nine new real-browser cases), and native
+`cargo check -p knx-desktop` plus adapter outcome tests. Real WebKitGTK/Orca/live
+hardware acceptance remains unverified. Fresh production-load samples on this
+host: 232 nodes / 239 edges at 200 telegrams/s with motion, main-thread share
+0.523 and 33 ms maximum marker lag; 502 nodes / 2,490 edges at 1,000/s with Motion
+Off, share 0.335 and 327 ms lag. One short sample per scenario, no all-window or
+hours-long envelope claim; the earlier measurements remain historical.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

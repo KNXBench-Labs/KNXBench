@@ -57,6 +57,9 @@ export interface FlowNode {
   kind: FlowNodeKind;
   label: string;
   deviceId?: number;
+  /** Participant interpretation behind the latest admitted node evidence. */
+  generation?: string;
+  gaRaw?: number;
   /** The observed individual address as the monitor formatted it. */
   address?: string;
   /** Devices holding an ambiguous source address. */
@@ -112,6 +115,9 @@ export interface ValueSlot {
 interface ParticipantContext {
   kind: "participants";
   complete: boolean;
+  /** Transient main-editor identity; never a server freshness claim. */
+  projectScope?: string;
+  groupAddressStyle: string | null;
   devicesById: Map<number, FlowDevice>;
   devicesByAddress: Map<number, number[]>;
   groupsByAddress: Map<number, FlowGroup[]>;
@@ -208,7 +214,7 @@ export function createFlowModel(
   };
 }
 
-function participants(snapshot: FlowSnapshot): FlowContext {
+function participants(snapshot: FlowSnapshot, projectScope?: string): FlowContext {
   if (snapshot.status !== "current") return { kind: "raw", reason: snapshot.status };
   const devicesById = new Map<number, FlowDevice>();
   const devicesByAddress = new Map<number, number[]>();
@@ -227,7 +233,7 @@ function participants(snapshot: FlowSnapshot): FlowContext {
     groupsByAddress.set(group.gaRaw, same);
   }
   const { devices, groups, members } = snapshot.truncated;
-  return { kind: "participants", complete: devices + groups + members === 0, devicesById, devicesByAddress, groupsByAddress };
+  return { kind: "participants", complete: devices + groups + members === 0, projectScope, groupAddressStyle: snapshot.groupAddressStyle, devicesById, devicesByAddress, groupsByAddress };
 }
 
 /**
@@ -236,7 +242,7 @@ function participants(snapshot: FlowSnapshot): FlowContext {
  * of another session, server or generation is refused (`false`); a context
  * that is already known is kept. Queued rows are admitted in sequence order.
  */
-export function provideContext(model: FlowModel, generation: string, snapshot: FlowSnapshot | null, nowMs: number): boolean {
+export function provideContext(model: FlowModel, generation: string, snapshot: FlowSnapshot | null, nowMs: number, projectScope?: string): boolean {
   if (snapshot !== null) {
     const { serverIncarnation, sessionId } = model.identity;
     if (snapshot.serverIncarnation !== serverIncarnation || snapshot.sessionId !== sessionId) return false;
@@ -244,7 +250,7 @@ export function provideContext(model: FlowModel, generation: string, snapshot: F
   }
   const known = model.contexts.get(generation);
   if (known === undefined || known.kind === "pending") {
-    model.contexts.set(generation, snapshot === null ? { kind: "raw", reason: "failed" } : participants(snapshot));
+    model.contexts.set(generation, snapshot === null ? { kind: "raw", reason: "failed" } : participants(snapshot, projectScope));
   }
   drain(model, nowMs);
   return true;
@@ -332,7 +338,7 @@ interface Resolution {
 
 function resolve(entry: QueuedRow, context: ParticipantContext | { kind: "raw"; reason: RawReason }): Resolution {
   const { row, sourceRaw, destinationRaw } = entry;
-  const groupNode: FlowNode = { id: `g:${destinationRaw}`, kind: "group", label: row.destination, ambiguous: false };
+  const groupNode: FlowNode = { id: `g:${destinationRaw}`, kind: "group", label: row.destination, gaRaw: destinationRaw, ambiguous: false };
   if (context.kind === "raw") {
     return {
       source: { id: `ia:${sourceRaw}`, kind: "rawSource", label: row.source, address: row.source, context: context.reason },
@@ -458,8 +464,8 @@ function apply(model: FlowModel, entry: QueuedRow, context: FlowContext, nowMs: 
   if (context.kind === "pending") throw new Error("flow: a queued row was applied before its context was known");
   model.counters.admitted += 1;
   const { source, sourceLabel, targets, group } = resolve(entry, context);
-  const sourceKept = ensureNode(model, source);
-  const keptTargets = targets.filter((target) => ensureNode(model, target));
+  const sourceKept = ensureNode(model, { ...source, generation: entry.generation });
+  const keptTargets = targets.filter((target) => ensureNode(model, { ...target, generation: entry.generation }));
   if (sourceKept) {
     for (const target of keptTargets) touchEdge(model, source, target, entry, group);
     recordActivity(model, entry, source, keptTargets, nowMs, keptTargets.length === targets.length);

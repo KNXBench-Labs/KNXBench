@@ -6,8 +6,13 @@ import type { BusMonitorStopResponse, BusTelegramRow } from "./api";
 import { CAPTURE_CAPACITY, appendCapturedRows, saveBusCapture } from "./busMonitorCapture";
 import { calculateBusMonitorStatistics } from "./busMonitorStatistics";
 import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
-import { useFlowFeed } from "./flowFeed";
+import { useFlowFeed, type FlowFeed } from "./flowFeed";
 import TelegramFlowView from "./TelegramFlowView";
+import { useFlowOwner } from "./flowChannel";
+import { openFlowWindow } from "./flowWindow";
+import { resolveFlowNavigation, type FlowNavigation, type FlowTarget } from "./flowNavigation";
+import type { FlowModel } from "./flowModel";
+import type { ProjectTree } from "./bindings/ProjectTree";
 import {
   type ContextLock,
   forgetSessionContext,
@@ -165,7 +170,13 @@ function responseContextLock(response: api.BusMonitorTelegramsResponse): Context
 /// `projectOpen` from `App.tsx` is only a hint until the server reports its
 /// actual project presence. Unknown server context still disables compose;
 /// this prop never establishes freshness or allows sending on its own.
-export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean }) {
+export default function BusMonitorPanel({ projectOpen, project, projectScope, onFlowNavigate, active = true }: {
+  projectOpen: boolean;
+  active?: boolean;
+  project?: ProjectTree | null;
+  projectScope?: string;
+  onFlowNavigate?: (model: FlowModel, target: FlowTarget) => Promise<boolean>;
+}) {
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
   const settingsState = useSettingsState();
@@ -202,11 +213,15 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   // U20: the flow view reads the same admitted batches as the table; this
   // feed never polls. It keeps running while the table tab is shown, so
   // switching views loses nothing.
-  const flowFeed = useFlowFeed((sessionId, generation) => api.fetchFlowSnapshot(sessionId, generation));
+  const flowFeed = useFlowFeed((sessionId, generation) => api.fetchFlowSnapshot(sessionId, generation), projectScope);
   const [monitorView, setMonitorView] = useState<"table" | "flow">("table");
   const rows = capture.rows;
   const statistics = useMemo(() => calculateBusMonitorStatistics(rows), [rows]);
   const [paused, setPaused] = useState(false);
+  const navigation: FlowNavigation = {
+    available: target => !!onFlowNavigate && !!flowFeed.model && !!resolveFlowNavigation(flowFeed.model, target, project ?? null, projectScope),
+    open: async target => !!flowFeed.model && !!onFlowNavigate && await onFlowNavigate(flowFeed.model, target),
+  };
   const [status, setStatus] = useState<"active" | "closed" | null>(null);
   const [droppedBefore, setDroppedBefore] = useState(0);
 
@@ -234,6 +249,14 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   // to was stopped somewhere else. Without this the panel would show a
   // permanent poll error for a session that ended perfectly normally.
   const [endedElsewhere, setEndedElsewhere] = useState(false);
+  const presentedFlow: FlowFeed = { ...flowFeed, source: { gaps: droppedBefore, pruned: capture.pruned, capacity: CAPTURE_CAPACITY, context: contextLock, ended: endedElsewhere || status === "closed", error: pollError } };
+  const flowOwner = useFlowOwner(presentedFlow, navigation, paused);
+  const [flowWindowError, setFlowWindowError] = useState<string | null>(null);
+  async function openFlow() {
+    if (!flowOwner.available) { setFlowWindowError(t("flow.channelUnavailable")); return; }
+    const result = await openFlowWindow(window.location.href, flowOwner.id);
+    setFlowWindowError(result === "blocked" ? t("companion.blocked") : result === "failed" ? t("companion.failed") : null);
+  }
 
   // The lowest `seq` that counts as "arrived in the most recent incremental
   // poll" (design D34: an entry highlight the stylesheet renders, driven by
@@ -913,7 +936,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         </p>
       )}
       {session && (
-        <BusComposeForm
+        <div hidden={monitorView !== "table"}><BusComposeForm
           key={composeSeed.key}
           destination={composeSeed.destination}
           resolution={composeSeed.resolution}
@@ -931,7 +954,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           // path locks on exactly the same condition the table does.
           contextStale={contextLock === "stale"}
           contextUnverified={contextLock === "unverified"}
-        />
+        /></div>
       )}
       {(session || rows.length > 0) && (
         <div className="bus-monitor-filters">
@@ -995,9 +1018,10 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           ))}
         </div>
       )}
-      {(session || rows.length > 0) && monitorView === "flow" && (
-        <div id="monitorview-panel-flow" role="tabpanel" aria-labelledby="monitorview-tab-flow">
-          <TelegramFlowView feed={flowFeed} />
+      {flowWindowError && <p role="alert" className="field-error">{flowWindowError}</p>}
+      {(session || rows.length > 0) && (
+        <div id="monitorview-panel-flow" role="tabpanel" hidden={monitorView !== "flow"} aria-labelledby="monitorview-tab-flow">
+          <TelegramFlowView key={flowFeed.model ? `${flowFeed.model.identity.serverIncarnation}:${flowFeed.model.identity.sessionId}` : "empty"} feed={presentedFlow} active={active && monitorView === "flow"} navigation={navigation} onOpenWindow={() => void openFlow()} />
         </div>
       )}
       {monitorView === "table" && <div id="monitorview-panel-table" role="tabpanel" aria-labelledby="monitorview-tab-table">

@@ -6,10 +6,12 @@
 // so a busy bus does not turn into a stream of announcements.
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { FlowAnimator, type AnimatorScheduler, type AnimatorSink, type DrawnPulse } from "./flowAnimator";
-import { createDynamics, type DynamicNode } from "./flowDynamics";
+import { type DynamicNode } from "./flowDynamics";
+import { readableLayout, fitFlowCamera, flowFootprint, displayFlowLabel, routeFlowEdge, DETAILED_ROUTING_NODES, DETAILED_ROUTING_EDGES } from "./flowPresentation";
+import { nodeFlowTarget, type FlowNavigation, type FlowTarget } from "./flowNavigation";
 import { useFlowMotion } from "./flowMotion";
-import { flowNow, type FlowFeed } from "./flowFeed";
-import { BADGE_LINE, NODE_RADIUS, TEXT_CLEARANCE, edgeGeometry, edgeOpacity, pointOnEdge, type Point } from "./flowLayout";
+import { flowNow, type FlowFeed, type FlowSourceDiagnostics } from "./flowFeed";
+import { BADGE_LINE, NODE_RADIUS, TEXT_CLEARANCE, edgeOpacity, pointOnEdge, type Point, type EdgeGeometry } from "./flowLayout";
 import {
   allCurrentValues,
   currentBadges,
@@ -26,7 +28,7 @@ import type { MessageKey } from "./messages/en";
 const VIEW_WIDTH = 960;
 const VIEW_HEIGHT = 520;
 const ZOOM_STEP = 1.25;
-const MIN_ZOOM = 0.25;
+const MIN_ZOOM = 0.01;
 const MAX_ZOOM = 4;
 const PAN_STEP = 60;
 const EDGE_LABELS = 2;
@@ -106,7 +108,25 @@ function ObjectTable({ objects }: { objects: FlowObjectEvidence[] }) {
   );
 }
 
-function Connection({ edge, model, outgoing }: { edge: FlowEdge; model: FlowModel; outgoing: boolean }) {
+function ProjectLink({ target, navigation, children }: { target: FlowTarget | null; navigation?: FlowNavigation; children: React.ReactNode }) {
+  const t = useTranslate();
+  const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const available = !!target && !!navigation?.available(target);
+  return <>
+    <button type="button" className="flow-project-link" disabled={!available || busy}
+      title={available ? undefined : t("flow.linkUnavailable")}
+      onClick={async () => {
+        if (!target || !navigation) return;
+        setBusy(true); setFailed(false);
+        try { setFailed(!await navigation.open(target)); } catch { setFailed(true); }
+        finally { setBusy(false); }
+      }}>{children}</button>
+    {failed && <span role="status" className="flow-inspector-note">{t("flow.linkUnavailable")}</span>}
+  </>;
+}
+
+function Connection({ edge, model, outgoing, navigation }: { edge: FlowEdge; model: FlowModel; outgoing: boolean; navigation?: FlowNavigation }) {
   const t = useTranslate();
   const other = model.nodes.get(outgoing ? edge.to : edge.from);
   return (
@@ -120,6 +140,7 @@ function Connection({ edge, model, outgoing }: { edge: FlowEdge; model: FlowMode
         {[...edge.groups].map(([gaRaw, group]) => (
           <li key={gaRaw}>
             <p>{t("flow.inspector.groupCount", { ga: group.label, count: group.count, generation: group.generation })}</p>
+            <ProjectLink target={{ kind: "group", id: gaRaw, generation: group.generation }} navigation={navigation}>{group.label}</ProjectLink>
             <ObjectTable objects={outgoing ? group.sourceObjects : group.targetObjects} />
           </li>
         ))}
@@ -128,14 +149,18 @@ function Connection({ edge, model, outgoing }: { edge: FlowEdge; model: FlowMode
   );
 }
 
-function Inspector({ model, node, nowMs }: { model: FlowModel; node: FlowNode; nowMs: number }) {
+function Inspector({ model, node, nowMs, navigation, onClose }: {
+  model: FlowModel; node: FlowNode; nowMs: number; navigation?: FlowNavigation; onClose: () => void;
+}) {
   const t = useTranslate();
   const values = allCurrentValues(model, node.id, nowMs);
   const outgoing = [...model.edges.values()].filter((edge) => edge.from === node.id);
   const incoming = [...model.edges.values()].filter((edge) => edge.to === node.id);
   return (
     <aside className="flow-inspector" aria-labelledby="flow-inspector-title">
-      <h3 id="flow-inspector-title">{node.label}</h3>
+      <div className="flow-inspector-heading"><h3 id="flow-inspector-title">{node.label}</h3>
+        <button type="button" onClick={onClose}>{t("flow.closeDetails")}</button></div>
+      <ProjectLink target={nodeFlowTarget(node)} navigation={navigation}>{t(node.kind === "group" ? "flow.openGroup" : "flow.openDevice")}</ProjectLink>
       <p>{kindText(t, node)}</p>
       {node.address && node.kind === "device" && <p>{t("flow.inspector.observedAddress", { address: node.address })}</p>}
       <h4>{t("flow.inspector.values")}</h4>
@@ -155,7 +180,7 @@ function Inspector({ model, node, nowMs }: { model: FlowModel; node: FlowNode; n
           <tbody>
             {values.map((slot) => (
               <tr key={slot.gaRaw}>
-                <th scope="row">{slot.gaLabel}</th>
+                <th scope="row"><ProjectLink target={{ kind: "group", id: slot.gaRaw, generation: slot.generation }} navigation={navigation}>{slot.gaLabel}</ProjectLink></th>
                 <td>{slot.value}</td>
                 <td>{t(ORIGIN_KEYS[slot.origin])}</td>
                 <td>{slot.sourceLabel}</td>
@@ -170,12 +195,25 @@ function Inspector({ model, node, nowMs }: { model: FlowModel; node: FlowNode; n
         <p className="flow-inspector-note">{t("flow.inspector.noConnections")}</p>
       ) : (
         <ul className="flow-connections">
-          {outgoing.map((edge) => <Connection key={edge.id} edge={edge} model={model} outgoing />)}
-          {incoming.map((edge) => <Connection key={edge.id} edge={edge} model={model} outgoing={false} />)}
+          {outgoing.map((edge) => <Connection key={edge.id} edge={edge} model={model} outgoing navigation={navigation} />)}
+          {incoming.map((edge) => <Connection key={edge.id} edge={edge} model={model} outgoing={false} navigation={navigation} />)}
         </ul>
       )}
     </aside>
   );
+}
+
+function SourceDiagnostics({ source, closed }: { source?: FlowSourceDiagnostics; closed?: boolean }) {
+  const t = useTranslate();
+  if (!source) return null;
+  const lines: string[] = [];
+  if (source.gaps > 0) lines.push(t("busMonitor.gapNotice", { count: source.gaps }));
+  if (source.pruned > 0) lines.push(t("busMonitor.capturePruned", { count: source.pruned, capacity: source.capacity ?? "?" }));
+  if (source.context === "stale") lines.push(t("busMonitor.contextStale"));
+  if (source.context === "unverified") lines.push(t("busMonitor.contextUnverified"));
+  if (source.ended && !closed) lines.push(t("flow.diag.closed"));
+  if (source.error) lines.push(source.error);
+  return lines.length ? <ul className="flow-source-diagnostics">{lines.map((line, i) => <li key={i}>{line}</li>)}</ul> : null;
 }
 
 function Diagnostics({ model }: { model: FlowModel }) {
@@ -229,7 +267,7 @@ interface EdgeElements {
   label: SVGTextElement;
 }
 
-function drawPulses(layer: SVGGElement | null, pulses: readonly DrawnPulse[], position: (id: string) => Point | undefined) {
+function drawPulses(layer: SVGGElement | null, pulses: readonly DrawnPulse[], geometry: (from: string, to: string) => EdgeGeometry | undefined) {
   if (!layer) return;
   while (layer.childNodes.length > pulses.length) layer.lastChild!.remove();
   while (layer.childNodes.length < pulses.length) {
@@ -240,13 +278,12 @@ function drawPulses(layer: SVGGElement | null, pulses: readonly DrawnPulse[], po
   }
   pulses.forEach((pulse, index) => {
     const group = layer.childNodes[index] as SVGGElement;
-    const from = position(pulse.from);
-    const to = position(pulse.to);
-    if (!from || !to) {
+    const curve = geometry(pulse.from, pulse.to);
+    if (!curve) {
       group.setAttribute("visibility", "hidden");
       return;
     }
-    const at = pointOnEdge(edgeGeometry(from, to), pulse.progress);
+    const at = pointOnEdge(curve, pulse.progress);
     group.removeAttribute("visibility");
     group.setAttribute("transform", `translate(${at.x.toFixed(1)} ${at.y.toFixed(1)})`);
     const circle = group.firstChild as SVGCircleElement;
@@ -258,12 +295,19 @@ function drawPulses(layer: SVGGElement | null, pulses: readonly DrawnPulse[], po
   });
 }
 
-export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
+export default function TelegramFlowView({ feed, navigation, onOpenWindow, active = true }: {
+  feed: Pick<FlowFeed, "model" | "version" | "source">; navigation?: FlowNavigation; onOpenWindow?: () => void; active?: boolean;
+}) {
   const t = useTranslate();
   const markerId = `flow-arrow-${useId().replace(/:/g, "")}`;
   const model = feed.model;
   const motion = useFlowMotion();
   const [frozen, setFrozen] = useState(false);
+  const [maximized, setMaximized] = useState(false);
+  const [autoZoom, setAutoZoom] = useState(true);
+  const [box, setBox] = useState(BOX);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
   const [view, setView] = useState<View>(HOME);
   const [selected, setSelected] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
@@ -272,6 +316,8 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
   const [, setTick] = useState(0);
   const nodeRefs = useRef(new Map<string, SVGGElement>());
   const edgeRefs = useRef(new Map<string, EdgeElements>());
+  const geometries = useRef(new Map<string, EdgeGeometry>());
+  const modelRef = useRef(model); modelRef.current = model;
   const pulseLayer = useRef<SVGGElement | null>(null);
   const sendingNodes = useRef(new Set<string>());
   const drag = useRef<{ x: number; y: number; view: View } | null>(null);
@@ -281,36 +327,49 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
   // Before the animator's first sync, positions come from the same seeding
   // (hex slots, clamped to the box), so nothing jumps when it takes over.
   const seeded = useMemo(
-    () => createDynamics(model ? [...model.nodes.keys()] : [], BOX).nodes,
+    () => readableLayout(model ? [...model.nodes.values()] : [], model ? [...model.edges.values()] : [], box),
     // `version` changes whenever the model changed in place.
-    [model, feed.version],
+    [model, feed.version, box],
   );
   const position = (id: string): Point | undefined => animatorRef.current?.layout.nodes.get(id) ?? seeded.get(id);
+
+  function geometryFor(fromId: string, toId: string): EdgeGeometry | undefined {
+    const key = `${fromId}→${toId}`;
+    const cached = geometries.current.get(key); if (cached) return cached;
+    const from = position(fromId); const to = position(toId); if (!from || !to) return;
+    const current = modelRef.current;
+    const obstacles = current && current.nodes.size <= DETAILED_ROUTING_NODES && current.edges.size <= DETAILED_ROUTING_EDGES ? [...current.nodes.values()].flatMap(n => {
+      if (n.id === fromId || n.id === toId) return [];
+      const p = position(n.id); return p ? [{ ...p, ...flowFootprint(n.label, 4) }] : [];
+    }) : [];
+    const geometry = routeFlowEdge(from, to, obstacles, fromId < toId ? 1 : 1.25);
+    geometries.current.set(key, geometry); return geometry;
+  }
 
   useEffect(() => {
     const sink: AnimatorSink = {
       // Only what moved is rewritten (§9.3): settled nodes and the edges
       // between them keep their attributes untouched.
       positions: (nodes: ReadonlyMap<string, DynamicNode>, moved: ReadonlySet<string>) => {
+        if (moved.size) geometries.current.clear();
         for (const id of moved) {
           const element = nodeRefs.current.get(id);
           const node = nodes.get(id);
           if (element && node) element.setAttribute("transform", `translate(${node.x.toFixed(1)} ${node.y.toFixed(1)})`);
         }
         for (const edge of edgeRefs.current.values()) {
-          if (!moved.has(edge.from) && !moved.has(edge.to)) continue;
+          if ((!modelRef.current || modelRef.current.nodes.size > DETAILED_ROUTING_NODES || modelRef.current.edges.size > DETAILED_ROUTING_EDGES) && !moved.has(edge.from) && !moved.has(edge.to)) continue;
           const from = nodes.get(edge.from);
           const to = nodes.get(edge.to);
           if (!from || !to) continue;
-          const geometry = edgeGeometry(from, to);
+          const geometry = geometryFor(edge.from, edge.to)!;
           edge.path.setAttribute("d", geometry.path);
           edge.label.setAttribute("x", geometry.label.x.toFixed(1));
           edge.label.setAttribute("y", geometry.label.y.toFixed(1));
         }
       },
       pulses: (pulses) => {
-        const animator = animatorRef.current;
-        drawPulses(pulseLayer.current, pulses, (id) => animator?.layout.nodes.get(id));
+        drawPulses(pulseLayer.current, pulses, geometryFor);
         // Only changes are written: an attribute write per node and frame
         // invalidated styles the measurement showed as native work.
         const sending = new Set(pulses.filter((pulse) => pulse.progress < SENDING_UNTIL).map((pulse) => pulse.from));
@@ -333,12 +392,13 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
   }, []);
 
   useEffect(() => {
-    animatorRef.current?.setMotion(motion);
+    animatorRef.current?.setVisible(active);
+    animatorRef.current?.setMotion(motion && active);
     if (!motion) {
       for (const element of nodeRefs.current.values()) element.removeAttribute("data-sending");
       sendingNodes.current = new Set();
     }
-  }, [motion]);
+  }, [motion, active]);
 
   useEffect(() => {
     animatorRef.current?.setFrozen(frozen);
@@ -348,6 +408,79 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
     if (model) animatorRef.current?.sync(model);
   }, [model, feed.version]);
 
+  const hasNodes = !!model?.nodes.size;
+  const graphShape = model ? `${model.identity.serverIncarnation}:${model.identity.sessionId}:` +
+    [...model.nodes.values()].map(n => `${n.id}:${n.label}`).join("|") + ";" + [...model.edges.keys()].join("|") : "";
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      const { width, height } = svg.getBoundingClientRect();
+      if (width > 0 && height > 0) setBox(old => old.width === width && old.height === height ? old : { width, height });
+    });
+    observer.observe(svg); return () => observer.disconnect();
+  }, [hasNodes]);
+
+  function fitAll() {
+    if (!model) return;
+    const at = animatorRef.current?.layout.targets;
+    const positions = new Map([...model.nodes.values()].flatMap(n => {
+      const p = frozen ? position(n.id) : at?.get(n.id) ?? position(n.id);
+      return p ? [[n.id, { ...p, ...flowFootprint(n.label, 4) }] as const] : [];
+    }));
+    const bounds = [...positions.values()];
+    for (const edge of model.edges.values()) {
+      const from = positions.get(edge.from); const to = positions.get(edge.to);
+      if (!from || !to) continue;
+      const obstacles = model.nodes.size <= DETAILED_ROUTING_NODES && model.edges.size <= DETAILED_ROUTING_EDGES ? [...positions].filter(([id]) => id !== edge.from && id !== edge.to).map(([, p]) => p) : [];
+      const curve = routeFlowEdge(from, to, obstacles, edge.from < edge.to ? 1 : 1.25);
+      const extrema = (a: number, b: number, c: number) => Math.max(0, Math.min(1, (a - b) / (a - 2 * b + c) || 0));
+      for (const t of [0, 1, extrema(curve.start.x, curve.control.x, curve.end.x), extrema(curve.start.y, curve.control.y, curve.end.y)]) {
+        bounds.push({ ...pointOnEdge(curve, t), halfWidth: 8, top: 8, bottom: 8 });
+      }
+      bounds.push({ ...curve.label, halfWidth: Math.min(160, edgeLabel(edge).length * 3.5), top: 12, bottom: 5 });
+    }
+    setView(fitFlowCamera(bounds, box));
+  }
+  useEffect(() => {
+    geometries.current.clear();
+    if (model) animatorRef.current?.rearrange(box);
+  }, [graphShape, box, frozen]);
+  useEffect(() => {
+    if (autoZoom) fitAll();
+    // Traffic/value expiry does not re-fit; only graph, viewport and camera settings.
+  }, [graphShape, box, frozen, autoZoom]);
+  useEffect(() => { if (!active) setMaximized(false); }, [active]);
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!maximized || !section) return;
+    const previousFocus = document.activeElement;
+    const outside = new Map<HTMLElement, boolean>();
+    let branch: HTMLElement = section;
+    while (branch.parentElement) {
+      for (const sibling of branch.parentElement.children) if (sibling !== branch && sibling instanceof HTMLElement) {
+        outside.set(sibling, sibling.inert); sibling.inert = true;
+      }
+      branch = branch.parentElement;
+    }
+    const key = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") { setMaximized(false); e.preventDefault(); e.stopPropagation(); }
+      if (e.key === "Tab") {
+        const controls = [...section.querySelectorAll<HTMLElement>("button:not(:disabled), [tabindex='0'], a[href], input:not(:disabled), select:not(:disabled)")].filter(el => el.getClientRects().length > 0);
+        const first = controls[0]; const last = controls[controls.length - 1];
+        if (first && (!section.contains(document.activeElement) || (e.shiftKey ? document.activeElement === first : document.activeElement === last))) {
+          e.preventDefault(); (e.shiftKey ? last : first).focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", key, true);
+    return () => {
+      document.removeEventListener("keydown", key, true);
+      for (const [el, inert] of outside) el.inert = inert;
+      if (previousFocus instanceof HTMLElement && document.contains(previousFocus)) previousFocus.focus();
+    };
+  }, [maximized]);
+
   const order = useMemo(
     () => (model ? [...model.nodes.values()].sort((a, b) => a.label.localeCompare(b.label) || a.id.localeCompare(b.id)).map((n) => n.id) : []),
     [model, feed.version],
@@ -355,9 +488,14 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
 
   if (!model || model.nodes.size === 0) {
     return (
-      <section className="telegram-flow" aria-label={t("flow.title")}>
+      <section ref={sectionRef} role={maximized ? "dialog" : undefined} aria-modal={maximized || undefined} className={`telegram-flow${maximized ? " flow-maximized" : ""}`} aria-label={t("flow.title")}>
         <p className="flow-explain">{t("flow.explain")}</p>
         <p className="flow-empty">{t("flow.empty")}</p>
+        <div className="flow-toolbar">
+          <button type="button" aria-pressed={maximized} onClick={() => setMaximized(v => !v)}>{t(maximized ? "flow.restore" : "flow.maximize")}</button>
+          {onOpenWindow && <button type="button" onClick={onOpenWindow}>{t("flow.openWindow")}</button>}
+        </div>
+        <SourceDiagnostics source={feed.source} closed={model?.closed} />
         {model && <Diagnostics model={model} />}
       </section>
     );
@@ -369,6 +507,7 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
   const metrics = animatorRef.current?.metrics;
 
   function zoomBy(factor: number) {
+    setAutoZoom(false);
     setView((current) => ({ ...current, zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current.zoom * factor)) }));
   }
 
@@ -380,6 +519,7 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const arrows: Record<string, [number, number]> = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
     if (event.shiftKey && event.key in arrows) {
+      setAutoZoom(false);
       const [dx, dy] = arrows[event.key];
       setView((current) => ({ ...current, x: current.x + dx * PAN_STEP, y: current.y + dy * PAN_STEP }));
     } else if (event.key === "+" || event.key === "=") {
@@ -387,6 +527,7 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
     } else if (event.key === "-") {
       zoomBy(1 / ZOOM_STEP);
     } else if (event.key === "0") {
+      setAutoZoom(false);
       setView(HOME);
     } else if (event.key in arrows || event.key === "Home" || event.key === "End") {
       const index = order.indexOf(tabStop);
@@ -406,6 +547,7 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
 
   function onPointerDown(event: PointerEvent<SVGSVGElement>) {
     if (event.target !== event.currentTarget) return;
+    setAutoZoom(false);
     drag.current = { x: event.clientX, y: event.clientY, view };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   }
@@ -413,18 +555,23 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
   function onPointerMove(event: PointerEvent<SVGSVGElement>) {
     const start = drag.current;
     if (!start) return;
-    const scale = VIEW_WIDTH / (event.currentTarget.clientWidth || VIEW_WIDTH);
+    const scale = box.width / (event.currentTarget.clientWidth || box.width);
     setView({ ...start.view, x: start.view.x + (event.clientX - start.x) * scale, y: start.view.y + (event.clientY - start.y) * scale });
   }
 
   return (
-    <section className="telegram-flow" aria-label={t("flow.title")}>
+    <section ref={sectionRef} role={maximized ? "dialog" : undefined} aria-modal={maximized || undefined} className={`telegram-flow${maximized ? " flow-maximized" : ""}`} aria-label={t("flow.title")}>
       <p className="flow-explain">{t("flow.explain")}</p>
       <div className="flow-toolbar" role="toolbar" aria-label={t("flow.toolbar")}>
         <button type="button" onClick={() => zoomBy(1 / ZOOM_STEP)}>{t("flow.zoomOut")}</button>
         <button type="button" onClick={() => zoomBy(ZOOM_STEP)}>{t("flow.zoomIn")}</button>
-        <button type="button" onClick={() => setView(HOME)}>{t("flow.resetView")}</button>
-        <button type="button" aria-pressed={frozen} disabled={!motion} onClick={() => setFrozen((value) => !value)}>
+        <button type="button" onClick={() => { setAutoZoom(false); setView(HOME); }}>{t("flow.resetView")}</button>
+        <button type="button" onClick={fitAll}>{t("flow.fitAll")}</button>
+        <button type="button" aria-pressed={autoZoom} onClick={() => setAutoZoom(v => !v)}>{t("flow.autoZoom")}</button>
+        <button type="button" disabled={frozen} onClick={() => { animatorRef.current?.rearrange(box); if (autoZoom) fitAll(); }}>{t("flow.rearrange")}</button>
+        <button type="button" aria-pressed={maximized} onClick={() => setMaximized(v => !v)}>{t(maximized ? "flow.restore" : "flow.maximize")}</button>
+        {onOpenWindow && <button type="button" onClick={onOpenWindow}>{t("flow.openWindow")}</button>}
+        <button type="button" aria-pressed={frozen} onClick={() => setFrozen((value) => !value)}>
           {t("flow.freeze")}
         </button>
         <span className="flow-keys">{t("flow.keys")}</span>
@@ -440,16 +587,20 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
         </p>
       )}
       <Diagnostics model={model} />
-      <div className="flow-body">
+      <SourceDiagnostics source={feed.source} closed={model.closed} />
+      {(model.nodes.size > DETAILED_ROUTING_NODES || model.edges.size > DETAILED_ROUTING_EDGES) && <p className="flow-layout-note">{t("flow.routingLimited")}</p>}
+      <div className={`flow-body${selectedNode ? " flow-body-with-inspector" : ""}`}>
         <div className="flow-canvas" onKeyDown={onKeyDown}>
           <svg
+            ref={svgRef}
             className="flow-svg"
-            viewBox={`${-VIEW_WIDTH / 2} ${-VIEW_HEIGHT / 2} ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
+            viewBox={`${-box.width / 2} ${-box.height / 2} ${box.width} ${box.height}`}
             role="group"
             aria-label={t("flow.graph")}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={() => { drag.current = null; }}
+            onPointerCancel={() => { drag.current = null; }}
           >
             <defs>
               <marker id={markerId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -462,7 +613,7 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
                   const from = position(edge.from);
                   const to = position(edge.to);
                   if (!from || !to) return null;
-                  const geometry = edgeGeometry(from, to);
+                  const geometry = geometryFor(edge.from, edge.to)!;
                   return (
                     <g
                       key={edge.id}
@@ -511,7 +662,7 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
                     ) : (
                       <circle r={NODE_RADIUS} />
                     )}
-                    <text className="flow-node-label" y={-NODE_RADIUS - TEXT_CLEARANCE} aria-hidden="true">{node.label}</text>
+                    <text className="flow-node-label" y={-NODE_RADIUS - TEXT_CLEARANCE} aria-hidden="true">{displayFlowLabel(node.label)}</text>
                     <g className="flow-badges" aria-hidden="true">
                       {badges.current.map((slot, index) => (
                         <text
@@ -519,7 +670,8 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
                           className={`flow-badge${slot.origin === "configuredTarget" ? " flow-badge-inferred" : ""}`}
                           y={NODE_RADIUS + TEXT_CLEARANCE + 10 + index * BADGE_LINE}
                         >
-                          {`${slot.origin === "configuredTarget" ? "◇ " : ""}${slot.gaLabel} ${slot.value}`}
+                          {displayFlowLabel(`${slot.origin === "configuredTarget" ? "◇ " : ""}${slot.gaLabel} ${slot.value}`)}
+
                         </text>
                       ))}
                       {badges.overflow > 0 && (
@@ -535,11 +687,7 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
           </svg>
           <p className="flow-legend">{t("flow.legend")}</p>
         </div>
-        {selectedNode ? (
-          <Inspector model={model} node={selectedNode} nowMs={nowMs} />
-        ) : (
-          <aside className="flow-inspector flow-inspector-empty"><p>{t("flow.inspector.choose")}</p></aside>
-        )}
+        {selectedNode && <Inspector model={model} node={selectedNode} nowMs={nowMs} navigation={navigation} onClose={() => setSelected(null)} />}
       </div>
     </section>
   );

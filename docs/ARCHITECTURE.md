@@ -1,5 +1,15 @@
 # Architecture
 
+## Readable Flow and source-bound secondary windows (2026-10-07)
+
+[ADR-0085](adr/0085-readable-flow-and-source-windows.md) records the user-approved
+presentation follow-up: measured/growing canvas, readability-first layout,
+switchable auto-fit, a read-only window subscribed to the source monitor, and
+exact main-editor navigation guarded by project scope/revision. No core/storage
+schema or bus protocol changed; no second tunnel or persistent traffic history.
+Historical acceptance below remains historical; native live verification has
+not been extended by browser tests or capability compilation.
+
 ## Approved Telegram-flow extension — session-local, not physical topology
 
 [ADR-0077](adr/0077-session-local-telegram-flow-view.md) and

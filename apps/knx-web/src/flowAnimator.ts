@@ -10,11 +10,13 @@ import {
   createDynamics,
   ensureDynamicNodes,
   reheatAround,
+  reheat,
   step,
   type DynamicEdge,
   type DynamicNode,
   type Dynamics,
 } from "./flowDynamics";
+import { readableLayout, type FlowBox } from "./flowPresentation";
 import { FRESH_EVENT_MS, currentBadges, currentLeader, edgeActivity, type FlowEvent, type FlowModel } from "./flowModel";
 
 export const PULSE_MS = 700;
@@ -102,7 +104,7 @@ export class FlowAnimator {
   private frozen = false;
   private frameId: number | null = null;
   private nudgeId: number | null = null;
-  private readonly refreshId: number;
+  private refreshId: number | null;
   private pulses: Pulse[] = [];
   private lastEventSeq = -1;
   /** The model the event baseline belongs to, and how many of its events
@@ -136,6 +138,13 @@ export class FlowAnimator {
     });
   }
 
+  setVisible(visible: boolean): void {
+    if (!visible && this.refreshId !== null) { this.scheduler.cancelEvery(this.refreshId); this.refreshId = null; }
+    if (visible && this.refreshId === null) this.refreshId = this.scheduler.every(REFRESH_MS, () => {
+      if (!this.scheduler.hidden()) this.sink.refresh();
+    });
+  }
+
   get currentLeader(): string | null {
     return this.leader;
   }
@@ -166,6 +175,11 @@ export class FlowAnimator {
 
   /** Takes in the model after a change: new nodes, rates, leader and events. */
   sync(model: FlowModel): void {
+    if (this.model && (this.model.identity.sessionId !== model.identity.sessionId || this.model.identity.serverIncarnation !== model.identity.serverIncarnation)) {
+      this.layout.nodes.clear(); this.layout.targets = undefined; this.layout.alpha = 0;
+      this.edgeClasses.clear(); this.badgeHighWater.clear(); this.drawnAt.clear();
+      this.pulses = []; this.sink.pulses([]);
+    }
     this.model = model;
     const now = this.scheduler.now();
     // Local reheat (§9.3): only what changed, plus its direct neighbours.
@@ -178,7 +192,7 @@ export class FlowAnimator {
 
     // A session change brings a new model whose sequence numbers start
     // again; the old session's high mark must not hide its telegrams.
-    if (model !== this.eventSource) {
+    if (!this.eventSource || model.identity.sessionId !== this.eventSource.identity.sessionId || model.identity.serverIncarnation !== this.eventSource.identity.serverIncarnation) {
       this.eventSource = model;
       this.lastEventSeq = -1;
       this.eventsRecordedSeen = 0;
@@ -201,6 +215,25 @@ export class FlowAnimator {
     this.wake();
   }
 
+  /** A batched graph/viewport change, or the explicit Rearrange action.
+   * Freeze is authoritative even when a new graph arrives. Motion Off
+   * permits an instantaneous static arrangement, never an animation. */
+  rearrange(box: FlowBox): void {
+    if (!this.model || this.frozen) return;
+    const first = !this.layout.targets;
+    const targets = readableLayout([...this.model.nodes.values()], [...this.model.edges.values()], box);
+    this.layout.targets = targets;
+    this.layout.width = Math.max(box.width, ...[...targets.values()].map(p => Math.abs(p.x) * 2 + 320));
+    this.layout.height = Math.max(box.height, ...[...targets.values()].map(p => Math.abs(p.y) * 2 + 240));
+    reheat(this.layout, 1);
+    if (!this.motion || first) {
+      for (const [id, at] of targets) Object.assign(this.layout.nodes.get(id)!, at, { heat: 0, vx: 0, vy: 0 });
+      this.layout.alpha = 0;
+      this.sink.positions(this.layout.nodes, new Set(targets.keys()));
+      this.sink.refresh();
+    } else this.wake();
+  }
+
   activePulses(): DrawnPulse[] {
     const now = this.scheduler.now();
     return this.pulses.map((pulse) => ({
@@ -212,7 +245,7 @@ export class FlowAnimator {
   dispose(): void {
     this.cancelFrame();
     this.stopNudges();
-    this.scheduler.cancelEvery(this.refreshId);
+    if (this.refreshId !== null) this.scheduler.cancelEvery(this.refreshId);
     this.pulses = [];
   }
 

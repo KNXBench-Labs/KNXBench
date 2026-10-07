@@ -67,6 +67,14 @@ function setup(motion = true) {
 const snapshotOf = (animator: FlowAnimator) => [...animator.layout.nodes.values()].map((n) => [n.id, n.x, n.y]);
 
 describe("FlowAnimator", () => {
+  it("does not replay an event when a cross-window snapshot replaces the model object", () => {
+    const { scheduler, animator } = setup();
+    const m = model(); admitRows(m, [row(1)], 0); animator.sync(m);
+    scheduler.run(PULSE_MS + 100);
+    expect(animator.activePulses()).toHaveLength(0);
+    animator.sync(structuredClone(m));
+    expect(animator.activePulses()).toHaveLength(0);
+  });
   it("settles the layout and then stops requesting frames", () => {
     const { scheduler, animator, drawn } = setup();
     const m = model();
@@ -339,9 +347,11 @@ describe("FlowAnimator", () => {
     admitRows(first, Array.from({ length: 5 }, (_, i) => row(i + 40)), 0);
     animator.sync(first);
     const second = model();
+    second.identity = { ...second.identity, sessionId: 8 };
     admitRows(second, [row(1)], 0);
     animator.sync(second);
-    expect(animator.activePulses().filter((p) => p.progress === 0)).toHaveLength(12);
+    // No pulse or layout history from the previous session survives.
+    expect(animator.activePulses().filter((p) => p.progress === 0)).toHaveLength(2);
   });
 
   it("does not pulse while the page is hidden, nor replay that time on return", () => {

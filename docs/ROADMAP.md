@@ -1,5 +1,15 @@
 # Roadmap
 
+## Post-Alpha Flow usability follow-up (2026-10-07)
+
+Implemented on the user's explicit go: larger/maximized area, closable Inspector,
+dedicated source-bound Flow window, stronger readability-first rearrangement,
+project links and switchable auto zoom. See [ADR-0085](adr/0085-readable-flow-and-source-windows.md)
+and [Flow follow-up](TELEGRAM_FLOW_VISUALIZATION.md#23-readable-area-source-windows-and-project-links-2026-10-07).
+Browser/offline acceptance is recorded there; native WebKitGTK/screen-reader
+validation and a new packaged release remain separate. This does not move the
+existing Alpha tag or authorize house-bus operations.
+
 ## Cross-cutting — Telegram-flow nervous system (Alpha addition, 2026-10-04)
 
 Approved and authorized for the responsible Goal sessions, **not implemented**.

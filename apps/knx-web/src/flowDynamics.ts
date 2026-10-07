@@ -51,6 +51,8 @@ export interface Dynamics {
   nodes: Map<string, DynamicNode>;
   /** The hottest node's heat: 0 once the whole map is at rest. */
   alpha: number;
+  /** Readability-first lane anchors, when the view explicitly arranges a graph. */
+  targets?: ReadonlyMap<string, { x: number; y: number }>;
 }
 
 function heatNode(layout: Dynamics, node: DynamicNode, alpha: number): void {
@@ -146,6 +148,25 @@ export function step(layout: Dynamics, edges: readonly DynamicEdge[], options: S
   }
   if (hot.length === 0) {
     layout.alpha = 0;
+    return moved;
+  }
+  if (layout.targets) {
+    let hottest = 0;
+    for (const node of hot) {
+      const target = layout.targets.get(node.id);
+      if (!target) continue;
+      const dx = target.x - node.x; const dy = target.y - node.y;
+      // Bounded transitions to lane anchors: activity never squeezes labels.
+      node.x += Math.max(-MAX_STEP, Math.min(MAX_STEP, dx * 0.2));
+      node.y += Math.max(-MAX_STEP, Math.min(MAX_STEP, dy * 0.2));
+      node.vx = 0; node.vy = 0;
+      node.heat *= options.cooling ?? ALPHA_DECAY;
+      if (Math.hypot(dx, dy) < 0.5 || node.heat < ALPHA_MIN) {
+        node.x = target.x; node.y = target.y; node.heat = 0;
+      }
+      hottest = Math.max(hottest, node.heat); moved.add(node.id);
+    }
+    layout.alpha = hottest;
     return moved;
   }
   const scale = areaScale(layout);

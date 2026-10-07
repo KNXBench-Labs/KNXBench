@@ -89,4 +89,11 @@ Only that container was stopped; unrelated isolated test servers were left alone
 Publication preflight: origin/main and root HEAD both the original base; 41 owned
 source/doc hashes still match final acceptance. Four foreign commissioning source/
 doc changes plus shared handover were backed up and excluded from feature staging.
-Commit/push status in this section is PENDING until remote readback is verified.
+Feature publication verified: `938a73c498a45f355fa132944bfae6950910c1f0` on origin/main; local feature HEAD,
+fetched tracking ref and live `ls-remote` agreed after push. The isolated publication
+checkout was rebased over already-published unrelated Rust work and then a docs-only
+ADR-0086 commit; the 41 feature source/doc hashes and product-code gate inputs did
+not change. Fresh publication Vitest 2,162/125, Web build and doc/header gates pass.
+Native compilation remains evidence on the original implementation candidate, not
+new native runtime or certification of unrelated commissioning work. Metadata
+closure records this already completed code publication.

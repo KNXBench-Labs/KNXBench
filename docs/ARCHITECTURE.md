@@ -10,6 +10,15 @@ schema or bus protocol changed; no second tunnel or persistent traffic history.
 Historical acceptance below remains historical; native live verification has
 not been extended by browser tests or capability compilation.
 
+## Post-alpha Linux launcher boundary (2026-10-07)
+
+[ADR-0021's launcher amendment](adr/0021-appimage-is-the-first-linux-package.md#2026-10-07-amendment-owned-display-policy-kl-158)
+and [the contract/receipt](APPIMAGE_LAUNCHER.md) keep Wayland/X11 selection
+in the AppImage packaging hook. A project-local, checksum-pinned deploy tool
+embeds the owned policy before GTK initializes; explicit caller settings win.
+No KNX core, application-service, storage/schema or HTTP dependency changes;
+the published alpha.4 artifact is not replaced by the local source-built image.
+
 ## Approved Telegram-flow extension — session-local, not physical topology
 
 [ADR-0077](adr/0077-session-local-telegram-flow-view.md) and

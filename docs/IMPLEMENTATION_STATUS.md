@@ -1,5 +1,28 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — Branch consolidation integrates the post-alpha AppImage launcher
+
+- User-authorized consolidation: retain `main`, integrate the complete KL-158
+  packaging source from `318955d189fb`, and retire the other remote branches
+  only after a verified full-branch Git bundle. Old Flow/native/stash WIP is
+  preserved outside GitHub, not replayed over newer main functionality.
+- Documentation conflicts preserve both current DPT/inference/Flow records
+  and the launcher records. Build prerequisites now state Python 3 and the
+  tested Tauri CLI pin. No Rust/npm dependency, domain/storage/schema or bus
+  behavior was added by this integration.
+- Fresh merged-candidate checks: Rust **3430 passed / 0 failed / 178 ignored**
+  in 194 result blocks, workspace all-target Clippy `-D warnings`, fmt,
+  launcher **19**, Web **2162**, frontend build. Ordinary workspace execution
+  was loopback-only/offline; ignored corpus suites were not promoted to passes.
+- Real Tauri AppImage build and package gate passed. Actual generated GTK
+  runtime hook contains the owned display policy; development artifact SHA-256
+  `c1cc776963f09117344b66b61832c281a9e7da1584febe0ae9b124938de8d910`. It names the earlier base plus
+  dirty candidate state, not a clean tagged release.
+- **Not rerun:** fresh native X11/Wayland startup, browser e2e, screen readers,
+  GPU portability and private corpus. Earlier native receipts remain historical.
+  No release/tag/asset replacement, deployment or KNX contact.
+- Consolidation/deletion receipt: `.ai/logs/2026-10-07_codex_remote-branch-prune.md`.
+
 ## 2026-10-07 — DPT inventory, honest boundaries and rounding that stays in bounds
 
 - Audited the authorized DPT-AS v02.02.01 original: 251 extracted pages, 250
@@ -111,6 +134,28 @@
   `--network host`, wait for `/healthz`. Run twice against real Docker (fresh
   start and replacing a running container; `data/` survived). Installation
   §b links to it instead of repeating a bridge-only recipe.
+
+## 2026-10-07 — KL-158: the AppImage can choose Wayland without unpacking its suitcase
+
+- Packaging-only follow-up, requested after the alpha.4 release: the GTK hook
+  no longer unconditionally overrides `GDK_BACKEND`. Wayland session hints
+  select `wayland,x11`; explicit backend/renderer settings are preserved.
+- Tauri's verified before-bundle/local-tool extension points prepare a pinned,
+  checksum-validated GTK deploy source and inline the owned display policy;
+  no global cache patch, Rust/npm dependency or domain/API/schema change.
+- Actual development AppImage built on `b54cd5a5` + local launcher patch;
+  source/artifact hashes and bounded platform evidence in
+  [APPIMAGE_LAUNCHER](APPIMAGE_LAUNCHER.md#local-acceptance-receipt--2026-10-07).
+  The parallel owner's published first-run guide is included, not reverted.
+- Tests: launcher 19, eight isolated mutants caught, xtask 97; package check;
+  direct-image native Wayland/X11, fallback and refusal controls; private
+  Weston framebuffer inspected. Both workflow startup bodies replayed locally.
+- Full Python tools suite: 56 tests, one unrelated existing `CLAUDE.md`
+  shared-memory-marker contract failure, reproduced in the untouched root.
+- Docs: ADR-0021 amendment, KL §158, troubleshooting, roadmap, ledger/matrix.
+  **Historical local receipt before source integration**; fresh integration
+  checks are recorded in the newer entry above. The existing tag/asset stays
+  unchanged. No hardware/corpus or broader native-UI/GPU compatibility claim.
 
 ## 2026-10-07 — A first-run guide says what this build is before it says what to click
 

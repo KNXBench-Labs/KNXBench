@@ -29,7 +29,9 @@ jobs:
             libssl-dev \
             libwebkit2gtk-4.1-dev \
             patchelf \
+            python3 \
             wget \
+            weston \
             xauth \
             xvfb
 
@@ -46,6 +48,9 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci --prefix apps/knx-web
+
+      - name: Test AppImage launcher policy
+        run: python3 -m unittest tools.tests.test_appimage_launcher -v
 
       - name: Build AppImage
         working-directory: apps/knx-desktop
@@ -65,10 +70,32 @@ jobs:
         run: |
           appimage=$(find target/release/bundle/appimage -maxdepth 1 -type f -name '*.AppImage')
           set +e
-          timeout 15s xvfb-run -a env APPIMAGE_EXTRACT_AND_RUN=1 "$appimage" >appimage-startup.log 2>&1
+          timeout 15s xvfb-run -a env -u WAYLAND_DISPLAY -u XDG_SESSION_TYPE -u GDK_BACKEND -u WEBKIT_DISABLE_DMABUF_RENDERER APPIMAGE_EXTRACT_AND_RUN=1 "$appimage" >appimage-startup.log 2>&1
           status=$?
           set -e
           test "$status" -eq 124 || { cat appimage-startup.log; exit 1; }
+
+      - name: Smoke test native Wayland startup
+        run: |
+          appimage=$(find target/release/bundle/appimage -maxdepth 1 -type f -name '*.AppImage')
+          export XDG_RUNTIME_DIR=$(mktemp -d)
+          chmod 700 "$XDG_RUNTIME_DIR"
+          weston --backend=headless-backend.so --renderer=pixman --shell=kiosk-shell.so \
+            --no-config --socket=knxbench-ci --idle-time=0 >weston-startup.log 2>&1 &
+          weston_pid=$!
+          trap 'kill "$weston_pid" 2>/dev/null || true; wait "$weston_pid" 2>/dev/null || true; rm -rf "$XDG_RUNTIME_DIR"' EXIT
+          for attempt in $(seq 1 100); do
+            test -S "$XDG_RUNTIME_DIR/knxbench-ci" && break
+            kill -0 "$weston_pid" || { cat weston-startup.log; exit 1; }
+            sleep 0.1
+          done
+          test -S "$XDG_RUNTIME_DIR/knxbench-ci"
+          set +e
+          timeout 15s env -u DISPLAY -u GDK_BACKEND -u WEBKIT_DISABLE_DMABUF_RENDERER \
+            WAYLAND_DISPLAY=knxbench-ci APPIMAGE_EXTRACT_AND_RUN=1 "$appimage" >appimage-wayland.log 2>&1
+          status=$?
+          set -e
+          test "$status" -eq 124 || { cat appimage-wayland.log; exit 1; }
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4

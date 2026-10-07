@@ -1071,6 +1071,15 @@ other unproved image shapes are refused rather than guessed.
 `PID_GROUP_RESPONSER_TABLE`, `A_Key_Write`, some master resets and RF writes
 have separate boundaries below (§110, §112, §141, §143–§144).
 
+**Inferences (ADR-0086, 2026-10-07).** Where the specification, product
+data and project files are silent but a working solution exists, a download
+applies it as a named inference and shows it in readiness, the plan and the
+acknowledgement; such a plan is always Untested and never counts as Verified.
+Current inferences: `union-later-member` (two active members of one union:
+the later one is written) and `machine-5-after-restart` (a machine-5 event
+after the final restart is not sent), both RESEARCH §19.12. Neither has been
+exercised by a KNXBench download on hardware.
+
 **Backup is bounded.** Before a permitted memory download's first mutation,
 the executor persists the overwritten memory regions and affected load
 states. A complete and parameters-only backup/restore roundtrip ran on

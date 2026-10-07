@@ -1566,7 +1566,7 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.limits.p1":
     "KNXBench ist eine unabhängige Anwendung. Sie stammt nicht von der KNX Association, ist von ihr weder unterstützt noch zertifiziert, und sie ist nicht die ETS. Wo sie eine ETS-Datei liest, tut sie das nach eigener Lesart dieser Datei.",
   "help.topic.limits.p2":
-    "KNX Secure wird nicht unterstützt. Ein kennwortgeschütztes Projekt lässt sich aus diesem Fenster nicht öffnen — es gibt keine Stelle, an der das Kennwort einzugeben wäre. Geräte über den Bus zu programmieren, ist hier ebenfalls nicht vorgesehen: die Busfunktionen sind Mitlesen und das Senden einzelner Telegramme. Zurück zur ETS führt kein Weg: KNXBench liest eine .knxproj und schreibt nie eine, ein hier importiertes Projekt lässt sich also nicht wieder als ETS-Projektdatei herausgeben.",
+    "KNX Secure wird nicht unterstützt, ETS6-Projektkennwörter ebenso wenig: Ein so geschütztes Projekt wird abgelehnt. Ein kennwortgeschützter Export aus ETS4 oder ETS5 öffnet sich, sobald Sie sein Kennwort in den Dialog eingeben, der danach fragt. Geräte zu programmieren ist neu und bewusst eng begrenzt: KNXBench schreibt nur dort in ein Gerät, wo es dafür ein geprüftes Verfahren hat, immer erst nach Ihrer Bestätigung, und lehnt alles andere ab. Zurück zur ETS führt kein Weg: KNXBench liest eine .knxproj und schreibt nie eine, ein hier importiertes Projekt lässt sich also nicht wieder als ETS-Projektdatei herausgeben.",
   "help.topic.limits.p3":
     "Was vorhanden ist, ist getestet, aber eine Testsuite ist keine Begehung. Bevor Sie sich in einer Anlage auf diese Anwendung verlassen, gleichen Sie ab, was sie Ihnen sagt, mit dem, was die Anlage tut.",
 

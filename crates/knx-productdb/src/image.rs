@@ -98,6 +98,12 @@ use crate::ProductDbError;
 /// union that share bits, the one later in the parameter tree is written.
 pub const UNION_LATER_MEMBER: &str = "union-later-member";
 
+/// [`Inference::rule`]: `Priority="Alert"` is written as urgent, `10b`.
+pub const ALERT_IS_URGENT: &str = "alert-is-urgent";
+
+/// [`Inference::rule`]: an enabled `ReadOnInitFlag` has no bit on `070nh`.
+pub const READ_ON_INIT_NOT_ON_070N: &str = "read-on-init-not-on-070n";
+
 /// One group address link: object `object` (its `Number`) uses
 /// `group_address`; `sending` marks the address it transmits on.
 pub type Link = TableLink;
@@ -135,6 +141,8 @@ pub struct FlagOverrides {
     pub transmit: Option<bool>,
     pub update: Option<bool>,
     pub communication: Option<bool>,
+    /// Has no bit on `070nh`; only decides whether its loss is disclosed.
+    pub read_on_init: Option<bool>,
 }
 
 impl FlagOverrides {
@@ -422,7 +430,7 @@ pub fn build_download_image(
 
     // 1. Parameters.
     let group_objects = com_object_span(&code)?;
-    let (superseded, inferences) =
+    let (superseded, mut inferences) =
         superseded_union_members(&activation.parameter_refs, &types, &code);
     let mut written: BTreeMap<String, (String, Encoded)> = BTreeMap::new();
     // Every field written so far, with its segment and `ParameterRef`, so
@@ -510,9 +518,23 @@ pub fn build_download_image(
         let view = views.get(*ref_id).ok_or_else(|| ImageError::Unsupported {
             what: format!("{ref_id}: no such ComObjectRef"),
         })?;
-        let mut object = active_object(ref_id, view)?;
-        if let Some(overrides) = request.flag_overrides.get(*ref_id) {
+        let (mut object, product_read_on_init) = active_object(ref_id, view, &mut inferences)?;
+        let overrides = request.flag_overrides.get(*ref_id);
+        if let Some(overrides) = overrides {
             overrides.apply(&mut object.flags);
+        }
+        if overrides
+            .and_then(|overrides| overrides.read_on_init)
+            .unwrap_or(product_read_on_init)
+        {
+            inferences.push(Inference {
+                rule: READ_ON_INIT_NOT_ON_070N,
+                detail: format!(
+                    "{ref_id}: ReadOnInit is enabled, but a 070nh group object has no \
+                     read-on-init bit; the device will not read the value after a reset"
+                ),
+                reference: "RESEARCH §19.18",
+            });
         }
         objects.push(object);
     }
@@ -854,11 +876,14 @@ fn check_masks(code: &ProgramCode, segments: &[SegmentImage]) -> Result<(), Imag
     Ok(())
 }
 
-/// One activated `ComObjectRef` as a group object table descriptor.
+/// One activated `ComObjectRef` as a group object table descriptor, and
+/// whether the product enables its `ReadOnInitFlag`. Inferences it applies
+/// are pushed onto `inferences`.
 fn active_object(
     ref_id: &str,
     view: &crate::query::ComObjectView,
-) -> Result<ActiveObject, ImageError> {
+    inferences: &mut Vec<Inference>,
+) -> Result<(ActiveObject, bool), ImageError> {
     let unsupported = |why: String| ImageError::Unsupported {
         what: format!("{ref_id}: {why}"),
     };
@@ -879,6 +904,15 @@ fn active_object(
     })?;
     let priority = match view.priority.as_deref() {
         None | Some("Low") => TransmissionPriority::Low,
+        // `[A]` RESEARCH §19.18: the corpus's own base images.
+        Some("Alert") => {
+            inferences.push(Inference {
+                rule: ALERT_IS_URGENT,
+                detail: format!("{ref_id}: Priority Alert is written as urgent (10b)"),
+                reference: "RESEARCH §19.18",
+            });
+            TransmissionPriority::Urgent
+        }
         Some(other) => return Err(unsupported(format!("Priority {other:?}"))),
     };
     let flag = |name: &str, value: &Option<String>| match value.as_deref() {
@@ -886,22 +920,28 @@ fn active_object(
         Some("Disabled") => Ok(false),
         other => Err(unsupported(format!("{name} {other:?}"))),
     };
-    match view.read_on_init.as_deref() {
-        None | Some("Disabled") => {}
-        other => return Err(unsupported(format!("ReadOnInitFlag {other:?}"))),
-    }
-    Ok(ActiveObject {
-        number,
-        flags: ObjectFlags {
-            update: flag("UpdateFlag", &view.update)?,
-            transmit: flag("TransmitFlag", &view.transmit)?,
-            write: flag("WriteFlag", &view.write)?,
-            read: flag("ReadFlag", &view.read)?,
-            communication: flag("CommunicationFlag", &view.communication)?,
-            priority,
+    // `[D]` Resources §4.18.6.2.4.1.3, NOTE 85: a System B feature, so
+    // the `070nh` descriptor carries no bit for it; whether its loss is
+    // disclosed is the caller's business (the project may override it).
+    let read_on_init = match view.read_on_init.as_deref() {
+        None => false,
+        Some(_) => flag("ReadOnInitFlag", &view.read_on_init)?,
+    };
+    Ok((
+        ActiveObject {
+            number,
+            flags: ObjectFlags {
+                update: flag("UpdateFlag", &view.update)?,
+                transmit: flag("TransmitFlag", &view.transmit)?,
+                write: flag("WriteFlag", &view.write)?,
+                read: flag("ReadFlag", &view.read)?,
+                communication: flag("CommunicationFlag", &view.communication)?,
+                priority,
+            },
+            value_type,
         },
-        value_type,
-    })
+        read_on_init,
+    ))
 }
 
 /// `ComObjectSize_t` (*Project Schema23* §1.1.2.5) in bits.
@@ -1781,11 +1821,87 @@ mod tests {
         );
     }
 
+    /// RESEARCH §19.18: 284 of 285 `Alert` objects in the corpus's `070nh`
+    /// base images carry `10b`, urgent. An inference (ADR-0086).
     #[test]
-    fn read_on_init_is_refused() {
+    fn alert_is_written_as_urgent_and_disclosed() {
+        let xml = PROGRAM.replace(r#"RefId="O-0" />"#, r#"RefId="O-0" Priority="Alert" />"#);
+        let image = build(&xml, &[], vec![]).expect("builds");
+        // Object 0's config octet: T, R, C as before, priority bits 10b.
+        assert_eq!(octets(&image, "AS-4400")[5], 0x4E);
+        assert_eq!(
+            image.inferences,
+            vec![Inference {
+                rule: ALERT_IS_URGENT,
+                detail: "O-0_R-1: Priority Alert is written as urgent (10b)".into(),
+                reference: "RESEARCH §19.18",
+            }]
+        );
+    }
+
+    /// `[D]` *Resources* §4.18.6.2.4.1.3, NOTE 85: "Value Read on
+    /// Initialisation" is a System B feature; the `070nh` descriptor has no
+    /// bit for it. The image is the same, and the loss is said.
+    #[test]
+    fn read_on_init_has_no_bit_on_070n_and_is_disclosed() {
         let xml = PROGRAM.replacen(
             r#"ReadOnInitFlag="Disabled""#,
             r#"ReadOnInitFlag="Enabled""#,
+            1,
+        );
+        let image = build(&xml, &[], vec![]).expect("builds");
+        let plain = build(PROGRAM, &[], vec![]).expect("builds");
+        assert_eq!(image.segments, plain.segments);
+        assert_eq!(
+            image.inferences,
+            vec![Inference {
+                rule: READ_ON_INIT_NOT_ON_070N,
+                detail: "O-0_R-1: ReadOnInit is enabled, but a 070nh group object has no \
+                         read-on-init bit; the device will not read the value after a reset"
+                    .into(),
+                reference: "RESEARCH §19.18",
+            }]
+        );
+    }
+
+    /// The project's own `ReadOnInitFlag` wins over the product's, both
+    /// ways.
+    #[test]
+    fn the_project_read_on_init_decides_the_disclosure() {
+        let (_dir, conn) = db(PROGRAM);
+        let mut request = request(&[], vec![]);
+        request.flag_overrides.insert(
+            "O-0_R-1".into(),
+            FlagOverrides {
+                read_on_init: Some(true),
+                ..FlagOverrides::default()
+            },
+        );
+        let image = build_download_image(&conn, &request).expect("builds");
+        assert_eq!(image.inferences.len(), 1, "{:?}", image.inferences);
+
+        let xml = PROGRAM.replacen(
+            r#"ReadOnInitFlag="Disabled""#,
+            r#"ReadOnInitFlag="Enabled""#,
+            1,
+        );
+        let (_dir, conn) = db(&xml);
+        request.flag_overrides.insert(
+            "O-0_R-1".into(),
+            FlagOverrides {
+                read_on_init: Some(false),
+                ..FlagOverrides::default()
+            },
+        );
+        let image = build_download_image(&conn, &request).expect("builds");
+        assert!(image.inferences.is_empty(), "{:?}", image.inferences);
+    }
+
+    #[test]
+    fn an_unreadable_read_on_init_is_refused() {
+        let xml = PROGRAM.replacen(
+            r#"ReadOnInitFlag="Disabled""#,
+            r#"ReadOnInitFlag="Sometimes""#,
             1,
         );
         let error = build(&xml, &[], vec![]).unwrap_err();

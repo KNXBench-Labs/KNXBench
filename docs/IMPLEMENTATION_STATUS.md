@@ -22,8 +22,15 @@
   *Load Controls* (`02_03_01` §2.3) names `AbsCObjSeg`, "not transmitted on the
   bus". Inference `machine-5-after-restart`: a machine-5 event after the final
   restart is not sent. A machine-5 event before it is still refused.
+- Group objects (RESEARCH §19.18): `Priority="Alert"` written as urgent
+  (inference `alert-is-urgent`, a 17 731-object census of the corpus's base
+  images); an enabled `ReadOnInitFlag` — product or project instance, now
+  carried as `FlagOverrides::read_on_init` — is disclosed as not representable
+  on `070nh` (`read-on-init-not-on-070n`, Resources NOTE 85). `High` and floats
+  stay refused (contradicting product data).
 - House project: 32 untested, 2 unsupported (`MV-0012`), 1 excluded (was 17/17/1).
-  Product corpus at defaults: see RESEARCH §19.12.
+  Product corpus at defaults: 1 verified + 89 untested of 246 programs (was
+  1 + 77; RESEARCH §19.12, §19.18).
 - Gates: unit tests per change (RED first), `house_readiness` and
   `download_coverage_corpus` against the root `OriginalData/` corpus, Rust tests
   of knx-productdb/knx-app/knx-server/knx-cli, clippy `-D warnings`, fmt, xtask.

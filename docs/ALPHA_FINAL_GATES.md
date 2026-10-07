@@ -441,3 +441,21 @@ against seven archives from real writers (Info-ZIP, Python `zipfile`, Java
 Any code change from here on invalidates this record for the affected
 surface and returns to AR18. What remains is AR19: the user's release
 decision. Nothing is tagged or published automatically.
+
+## 13. AR19: release decision and publication
+
+**Decision 2026-10-07 (user, explicitly, once):** tag `v0.1.0-alpha.4` on
+`514c0c54` and create a GitHub pre-release in the private repository with the
+AppImage and its SHA-256.
+
+| Item | Value |
+| --- | --- |
+| Tag | annotated `v0.1.0-alpha.4`, tag object `623c303bab5bf752a90f6565cddf0ac30736df85` → commit `514c0c546bf1c91391ff8b2d590d519525bcb187`. The commit's product sources equal `2254eed0`, the code that §11 gated and round 4 reviewed |
+| Release | [https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4): pre-release, not a draft |
+| Assets | `KNXBench_0.1.0-alpha.4_amd64.AppImage`, 107,870,712 bytes, SHA-256 `138444b4cf7f5664ce2f64e88b82574f88dcc5b382dca7f2e49ff1eae7d6c3fc` (GitHub's own digest agrees); `SHA256SUMS` |
+| Verification | Assets downloaded back from the release: `sha256sum -c SHA256SUMS` ok, `cmp` byte-identical to the evidence copy in `ar18-round3-fixes-20261006`. Tag read back with `git ls-remote` |
+
+The release notes list the tested scope, the review chain and the known
+limitations (N6, N14, KL-158, §157/§159, and the rows the user accepted),
+and they claim no ETS compatibility. Nothing beyond the decision was
+published: no public visibility change, and no CI release run.

@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — `v0.1.0-alpha.4`: the first alpha is tagged and pre-released
+
+- AR19, the user's decision: annotated tag `v0.1.0-alpha.4` on `514c0c54`
+  (product code `2254eed0`, AR18 `READY`).
+- A [GitHub pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4) in the private repository, with the AppImage
+  (SHA-256 `138444b4…c3fc`) and `SHA256SUMS`.
+- Assets downloaded back and verified byte-identical
+  ([ALPHA_FINAL_GATES §13](ALPHA_FINAL_GATES.md#13-ar19-release-decision-and-publication)).
+- `RELEASE-04` is `DONE`. The installation chapter points to the
+  pre-release.
+
 ## 2026-10-07 — AR18 recorded `READY`: the alpha candidate is release-ready, pending the user's decision
 
 - Re-check round 4 (a fresh Codex session) returned **`READY`**

@@ -21,8 +21,11 @@ const OUT_W = 900;
 const ZOOM_WIDTH = OUT_W;
 const OUT_H = 467;
 const FPS = 12;
-const MAX_SECONDS = 9.8;
-const CAMERA_MS = 450;
+// Every step stays on screen for at least HOLD_MS so a reader can follow it;
+// MAX_SECONDS only guards against a runaway recording.
+const HOLD_MS = 3000;
+const MAX_SECONDS = 60;
+const CAMERA_MS = 700;
 
 type Rect = { x: number; y: number; w: number; h: number };
 const FULL: Rect = { x: 0, y: 0, w: VIEW.width, h: VIEW.height };
@@ -121,6 +124,7 @@ test("records adding a device and linking it to a group address", async ({ page 
   const t0 = Date.now();
   const cameras: { t: number; rect: Rect }[] = [{ t: 0, rect: FULL }];
   const look = (rect: Rect) => cameras.push({ t: Date.now() - t0, rect });
+  const hold = () => page.waitForTimeout(HOLD_MS);
   await page.waitForTimeout(500);
 
   // 1. Add a device to the ground-floor line.
@@ -128,6 +132,8 @@ test("records adding a device and linking it to a group address", async ({ page 
   look(frameAround(await boxOf(add)));
   await page.waitForTimeout(250);
   await click(page, add);
+  await page.getByText(/Push button 4-fold, flush mounted \(3\)/).waitFor();
+  await hold();
 
   // 2. Pick the product.
   const product = page.getByText(/Push button 4-fold, flush mounted \(3\)/);
@@ -135,6 +141,7 @@ test("records adding a device and linking it to a group address", async ({ page 
   look(frameAround(await boxOf(page.getByRole("listbox").first())));
   await page.waitForTimeout(250);
   await click(page, product);
+  await hold();
 
   // 3. Name it, give it a free address, create it.
   const nameField = page.locator('input[value*="Push button"]').first();
@@ -144,8 +151,10 @@ test("records adding a device and linking it to a group address", async ({ page 
   look(frameAround(union(await boxOf(nameField), await boxOf(assign))));
   await click(page, nameField);
   await page.keyboard.press("Control+A");
-  await nameField.pressSequentially("Push button dining", { delay: 28 });
+  await nameField.pressSequentially("Push button dining", { delay: 90 });
+  await hold();
   await click(page, assign);
+  await hold();
   look(frameAround(union(await boxOf(nameField), await boxOf(create))));
   await click(page, create);
 
@@ -153,15 +162,16 @@ test("records adding a device and linking it to a group address", async ({ page 
   const done = page.getByRole("button", { name: "Done" });
   await done.waitFor();
   look(frameAround(union(await boxOf(page.getByText(/Device created/)), await boxOf(done))));
-  await page.waitForTimeout(450);
+  await hold();
   await click(page, done);
   look(FULL);
   await click(page, topology);
   const card = page.locator("main").getByRole("button", { name: "1.1.3 Push button dining" }).last();
   await card.waitFor();
   look(frameAround(await boxOf(card)));
-  await page.waitForTimeout(200);
+  await hold();
   await click(page, card);
+  await hold();
 
   // 5. Expand the first button's object and link it to the kitchen light.
   await page.getByRole("tablist", { name: "Push button dining" }).waitFor();
@@ -169,22 +179,23 @@ test("records adding a device and linking it to a group address", async ({ page 
   look(frameAround(await boxOf(channel)));
   await click(page, channel);
   await click(page, page.getByText("Button 1: Switch", { exact: true }));
+  await hold();
   const linkButton = page.getByRole("button", { name: "Link", exact: true });
   const linkRow = linkButton.locator("xpath=ancestor::li[1]");
   const groupSelect = linkRow.getByRole("combobox").first();
   await groupSelect.waitFor();
   look(frameAround(await boxOf(linkRow)));
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(500);
   await click(page, groupSelect);
   await groupSelect.selectOption({ label: "0/0/2 Kitchen light" });
-  await page.waitForTimeout(250);
+  await hold();
   await click(page, linkButton);
   const unlink = page.getByRole("button", { name: /Unlink/ }).first();
   await unlink.waitFor();
   look(frameAround(await boxOf(unlink.locator("xpath=ancestor::li[1]"))));
-  await page.waitForTimeout(900);
+  await hold();
   look(FULL);
-  await page.waitForTimeout(900);
+  await hold();
   await cdp.send("Page.stopScreencast");
   const rawSeconds = (Date.now() - t0) / 1000;
 

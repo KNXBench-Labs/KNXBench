@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { ERROR_WRAPPERS, HOLIDAYS, LATE_NIGHT_MESSAGES } from "./toastCopy";
 import type { HolidayEntry } from "./toastCopy";
 import { formatTemplate, translate } from "./i18n";
+import { emitAchievementEvent } from "./achievementEvents";
 import type { TranslatableKey } from "./i18n";
 import type { AchievementTier } from "./achievementCatalog";
 import type { WorkbenchIconName } from "./WorkbenchIcon";
@@ -123,6 +124,8 @@ export function useToasts() {
       ...ts.filter((t) => t.kind !== "error"),
       { id, kind: "error" as const, message: humorizeError(rawMessage), serverText },
     ]);
+    // Outside the state updater, which StrictMode may run twice.
+    emitAchievementEvent({ type: "errorToastShown" });
   }
 
   function clearErrors() {

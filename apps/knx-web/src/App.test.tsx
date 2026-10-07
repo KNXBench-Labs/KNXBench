@@ -144,6 +144,7 @@ vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => tauriWindowMo
 
 import App from "./App";
 import type { SessionControls } from "./session";
+import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
 import { resetSettingsForTests, setSetting, settingsStorage } from "./settingsStore";
 
 // F9's client half: every load generates its own token via
@@ -3550,6 +3551,79 @@ describe("App — the first-run guide on request (ADR-0084)", () => {
 
     expect(document.querySelector(".onboarding-guide")).toBeNull();
     expect(host!.querySelector(".workbench-center .catalog-workspace")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+});
+
+// ADR-0089: an ETS import reports the import report's own counts.
+describe("App — achievement events from loading a project", () => {
+  async function load(path: string, button = "Open project…"): Promise<{ seen: AchievementEvent[]; root: { unmount(): void } }> {
+    filePickerMock.pickOpenPath.mockResolvedValue(path);
+    const seen: AchievementEvent[] = [];
+    const stop = subscribeAchievementEvents((event) => seen.push(event));
+    const root = await renderApp();
+    try {
+      await act(async () => {
+        findButton(button).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      await act(async () => {});
+    } finally {
+      stop();
+    }
+    return { seen, root };
+  }
+
+  it("reports an ETS import with its losses, notices and devices", async () => {
+    apiMock.importProject.mockReset().mockResolvedValue({ ...treeWithDevice(), errors: 2, warnings: 5 });
+    const { seen, root } = await load("/tmp/villa.knxproj");
+    expect(seen.filter((event) => event.type === "etsImported")).toEqual([
+      { type: "etsImported", lostItems: 2, notices: 5, deviceCount: 1, passwordProtected: false },
+    ]);
+    // The opened project is measured too (counting itself: achievementObservation.test.ts).
+    expect(seen.filter((event) => event.type === "projectObserved").at(-1)).toMatchObject({ groupAddressCount: 0 });
+    await act(async () => root.unmount());
+  });
+
+  it("says when the imported project needed its password", async () => {
+    const refusal = Object.assign(new Error("project password needed"), {
+      status: 422,
+      body: { error: "project password needed", kind: "projectPasswordRequired" },
+    });
+    apiMock.importProject.mockReset().mockRejectedValueOnce(refusal).mockResolvedValueOnce(baseTree());
+    const seen: AchievementEvent[] = [];
+    const stop = subscribeAchievementEvents((event) => seen.push(event));
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/villa.knxproj");
+    const root = await renderApp();
+    try {
+      await act(async () => {
+        findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      await act(async () => {});
+      const input = document.querySelector<HTMLInputElement>('input[type="password"]')!;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "s3cret");
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      await act(async () => {
+        Array.from(document.querySelectorAll("button")).find((b) => b.textContent === "Import")!.click();
+      });
+      await act(async () => {});
+    } finally {
+      stop();
+    }
+    expect(seen.filter((event) => event.type === "etsImported")).toEqual([
+      { type: "etsImported", lostItems: 0, notices: 0, deviceCount: 0, passwordProtected: true },
+    ]);
+    // The password itself never travels on the achievement channel.
+    expect(JSON.stringify(seen)).not.toContain("s3cret");
+    await act(async () => root.unmount());
+  });
+
+  it("does not call opening a KNXBench project an ETS import", async () => {
+    apiMock.openProject.mockReset().mockResolvedValue(baseTree());
+    const { seen, root } = await load("/tmp/house.knxdb", "Open (.knxdb)…");
+    expect(seen.some((event) => event.type === "projectOpened")).toBe(true);
+    expect(seen.some((event) => event.type === "etsImported")).toBe(false);
     await act(async () => root.unmount());
   });
 });

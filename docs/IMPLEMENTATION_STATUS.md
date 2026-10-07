@@ -1,5 +1,36 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — Achievements, package 2: the other 27 (ADR-0089)
+
+- **Catalogue complete: 38.** Import and integrity (lossless-move,
+  archaeologist, spot-the-difference, spreadsheet-whisperer, documented,
+  open-sesame, clean-sheet), structure (name-giver 100, dpt-sommelier 10,
+  master-builder 10 rooms, drag-racer 25, assembly-line ≥ 50), read-only
+  bus (first-contact, fly-on-the-wire 60 min, census, chain-of-custody,
+  light-show ≥ 100, clean-bill, trust-but-verify), verified commissioning
+  (right-address, first-download, commissioner: 10 different addresses),
+  bug-hunter, the hidden read-only-friday, green-phosphor and
+  error-culture, and bus-master (all others).
+- **Rules:** `event` gains typed `where` conditions; new kinds `steps`,
+  `distinct` (subject markers in the record, within the server's id rule)
+  and `allOthers`; `threshold` works on any project measure;
+  `localHours` takes an optional weekday. The server is unchanged.
+- **Events:** 18 new event types, emitted where the outcome is confirmed
+  (table in ADR-0089). Downloads count only with every block read back and
+  the restart not left unconfirmed; address programming only when the
+  device answers at the new address. Still no send event.
+- **Changed triggers, reported:** #19, #26 and #34 were not detectable as
+  worded and were replaced (ADR-0089, KL §164).
+- **Found and fixed:** the overview would have shown a progress bar for a
+  locked *hidden* achievement with a goal (`error-culture`), giving it
+  away. It now shows none (regression test).
+- **Tests:** rule kinds (red first), project measurement, catalogue
+  invariants (38, no `--` in ids, one `allOthers` and it comes last),
+  emit sites (download, address programming, readiness/compare, error
+  toast under StrictMode, monitor start/minutes/disconnect, CSV applied
+  vs declined, ETS import incl. password). Mutation checks on the
+  verified conditions.
+
 ## 2026-10-07 — Boarisch and Klingonisch/Klingon join the language picker
 
 - Shipped playful `bar` and `tlh` packs, with 335 curated UI messages each.

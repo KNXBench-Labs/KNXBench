@@ -2,6 +2,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import type { DocumentationPreview } from "./api";
 import {
   DOCUMENTATION_SECTIONS,
@@ -93,6 +94,7 @@ export default function DocumentationDialog(props: {
     onClearErrors();
     try {
       const { warnings } = await api.exportDocumentation(path, options);
+      emitAchievementEvent({ type: "documentationExported" });
       const count = warnings.length;
       onSummary(
         count === 0

@@ -47,9 +47,24 @@ catalogues, the command palette and the motion guard for animations.
 **Catalogue in the frontend, record on the server.**
 `apps/knx-web/src/achievementCatalog.ts` is pure data. Each entry has a
 permanent id, a tier, a hidden flag, a glyph, two message keys and a
-declarative rule (`event`, `count`, `threshold`, `localHours`,
-`localDate`). Adding an achievement takes that entry plus two strings per
-language. Nothing else in the application lists achievements.
+declarative rule:
+
+- `event`, optionally with `where` conditions (`eq`, `gte`) on the event's
+  payload, type-checked against the event's fields;
+- `count`, `threshold` (on any `projectObserved` measure), `localHours`
+  (optionally on one weekday) and `localDate`;
+- `steps`: events in order, the step reached is the progress;
+- `distinct`: an event for `goal` different subjects;
+- `allOthers`: every other catalogue entry unlocked.
+
+Adding an achievement takes that entry plus two strings per language.
+Nothing else in the application lists achievements.
+
+A `distinct` rule remembers each subject as a progress entry
+`<id>--<slug>-<fnv1a>` with the value 1, within the server's id rule, and
+counts those entries. Ids therefore never contain `--`. Markers are only
+written until the achievement unlocks, so they stay far below the
+record's 1024-entry limit.
 
 **The server stores a grow-only record.**
 `apps/knx-server/src/achievements.rs` keeps
@@ -124,13 +139,46 @@ Achievement data never enters `crates/`.
   guide (KL §160). Two windows that increment the same counter at the same
   moment can lose one increment, because the server keeps the maximum and
   does not add. The CLI does not count. All of this is recorded in KL §164.
-- Delivery comes in two packages. Package 1 (this ADR) ships the mechanism
-  and 11 achievements. Package 2 adds the rest of the 38 agreed in the
-  interview, each with an event emitted from the place where the outcome
-  is known. A bus or commissioning event may only be added for a
-  *verified* outcome (see Context). A rule that would need a volume of
-  bus writes violates this ADR.
+- Delivery came in two packages. Package 1 shipped the mechanism and 11
+  achievements; package 2 the other 27 of the 38 agreed in the interview,
+  each with an event emitted where the outcome is known. A bus or
+  commissioning event may only be added for a *verified* outcome (see
+  Context). A rule that would need a volume of bus writes violates this
+  ADR.
+- A locked hidden achievement shows no progress bar either: "3 / 10" would
+  give it away.
 - Every rule kind, the merge rules, the persistence edge cases and the
   guard are under test (`achievement*.test.ts(x)`, `useAchievements.test.tsx`,
   `konami.test.ts`, `src/achievements.rs`, `tests/http_achievements.rs`,
   `tests/http_auth.rs`).
+
+## Package 2: where the outcomes come from
+
+Each event is emitted by the component that knows the outcome, after the
+server confirmed it. What counts as "verified" is the server's own
+statement, not a guess in the UI:
+
+| Event | Emitted by | Condition |
+|---|---|---|
+| `etsImported` | `App.tsx` after an ETS import | carries `ProjectTree.errors` (genuine losses, `Severity::Error`) and `.warnings` (warnings, unknown constructs, conflicts, unsupported features), filled by the server from the `ImportReport` (`apply_report_counts`); `passwordProtected` when the retry carried a password (the password never travels on the channel) |
+| `deviceDownloadVerified` | `DeviceDownloadPanel` | `finished`, `written: "yes"` (every block read back unchanged, `device_download.rs`) and a restart that was not left `unconfirmed`; `subject` is the individual address |
+| `individualAddressVerified` | `AddressProgrammingPanel` | `finished` with `written: "yes"`: the device answers at the new address (`unconfirmed`, `noNeed` and `no` do not count) |
+| `deviceCompared` | `DeviceInspectionPanel` | only a read-only comparison that passed the panel's own consistency checks |
+| `readinessChecked` | `DeviceInspectionPanel` | the offline grading; plannable means `verified` or `untested`, the panel's existing predicate |
+| `busMonitorStarted`, `busMonitorMinute` | `BusMonitorPanel` | a session the server opened; one tick per minute while it is `active` |
+| `flowWatched`, `busCaptureExported`, `lineScanCompleted` | monitor and scan panels | flow view on screen; capture actually saved; scan `completed` (once per session) |
+| `groupAddressCsvImported` | `GroupAddressCsvButtons` | only a response with `applied: true` |
+
+Three triggers from the interview catalogue were not detectable as
+worded. They were changed and reported, not simulated:
+
+- **#19 "zero defects with validation, ≥ 50 devices".** KNXBench has no
+  project-wide validation in the UI. `clean-sheet` is now an ETS import of
+  at least 50 devices whose report has neither losses nor notices.
+- **#26 "bus diagnosis: healthy".** There is no bus diagnosis.
+  `clean-bill` is the offline readiness check finding a download plannable
+  for every device.
+- **#34 "Friday after 3 pm without writing to the bus".** "Without
+  writing" cannot be shown without a send event, which this ADR forbids.
+  `read-only-friday` starts the (read-only) bus monitor on a Friday after
+  15:00.

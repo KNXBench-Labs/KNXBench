@@ -1,6 +1,7 @@
 /** Invariants of the achievement catalogue: ids, translations, rules and hidden entries. */
 import { describe, expect, it } from "vitest";
 import { ACHIEVEMENTS, ACHIEVEMENT_TIERS, achievementGoal } from "./achievementCatalog";
+import { distinctMarkerId } from "./achievementRules";
 import { messages as en } from "./messages/en";
 import { messages as de } from "./messages/de";
 
@@ -13,6 +14,30 @@ describe("ACHIEVEMENTS", () => {
     const ids = ACHIEVEMENTS.map((a) => a.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) expect(id, id).toMatch(SERVER_ID);
+  });
+
+  it("holds the 38 achievements agreed in the interview", () => {
+    expect(ACHIEVEMENTS).toHaveLength(38);
+  });
+
+  it("keeps the distinct-marker separator out of every id", () => {
+    // `distinctMarkerId` writes `<id>--<subject>`: an id with "--" could be
+    // mistaken for, or count, another achievement's markers.
+    for (const a of ACHIEVEMENTS) expect(a.id, a.id).not.toContain("--");
+  });
+
+  it("leaves room for a readable subject in every distinct marker", () => {
+    for (const a of ACHIEVEMENTS.filter((d) => d.rule.kind === "distinct")) {
+      const marker = distinctMarkerId(a.id, "15.15.255");
+      expect(marker, a.id).toMatch(SERVER_ID);
+      expect(marker, a.id).toContain("15-15-255");
+    }
+  });
+
+  it("has exactly one achievement above all others, and it comes last", () => {
+    const above = ACHIEVEMENTS.filter((a) => a.rule.kind === "allOthers");
+    expect(above).toHaveLength(1);
+    expect(ACHIEVEMENTS[ACHIEVEMENTS.length - 1]).toBe(above[0]);
   });
 
   it("names every title and description by its own id, in both languages", () => {
@@ -48,6 +73,17 @@ describe("ACHIEVEMENTS", () => {
       if (rule.kind === "threshold") expect(Number.isInteger(rule.min) && rule.min > 0, a.id).toBe(true);
       if (rule.kind === "localHours") {
         expect(rule.fromHour >= 0 && rule.fromHour < rule.toHour && rule.toHour <= 24, a.id).toBe(true);
+        if (rule.weekday !== undefined) expect(Number.isInteger(rule.weekday) && rule.weekday >= 0 && rule.weekday <= 6, a.id).toBe(true);
+      }
+      if (rule.kind === "steps") {
+        expect(rule.events.length, a.id).toBeGreaterThan(1);
+        expect(new Set(rule.events).size, a.id).toBe(rule.events.length);
+      }
+      if (rule.kind === "distinct") expect(Number.isInteger(rule.goal) && rule.goal > 1, a.id).toBe(true);
+      if (rule.kind === "event") {
+        for (const condition of rule.where ?? []) {
+          if (condition.op === "gte") expect(typeof condition.value, a.id).toBe("number");
+        }
       }
       if (rule.kind === "localDate") {
         const probe = new Date(2024, rule.month - 1, rule.day); // a leap year, so 29 Feb is valid
@@ -56,9 +92,9 @@ describe("ACHIEVEMENTS", () => {
     }
   });
 
-  it("gives a progress goal exactly to the counting and threshold achievements", () => {
+  it("gives a progress goal exactly to the achievements that build up", () => {
     for (const a of ACHIEVEMENTS) {
-      const counts = a.rule.kind === "count" || a.rule.kind === "threshold";
+      const counts = ["count", "threshold", "steps", "distinct"].includes(a.rule.kind);
       expect(achievementGoal(a) !== undefined, a.id).toBe(counts);
     }
   });

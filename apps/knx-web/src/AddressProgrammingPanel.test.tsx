@@ -26,6 +26,7 @@ vi.mock("./api", () => ({
 import AddressProgrammingPanel from "./AddressProgrammingPanel";
 import { messages as en } from "./messages/en";
 import type { AddressProgrammingStatusResponse } from "./api";
+import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -348,4 +349,31 @@ it("says 'no' when it gave up before writing", async () => {
   await render();
   expect(host!.querySelector("[data-written]")!.textContent).toBe(en["addressProgramming.written.no"]);
   expect(host!.querySelector(".form-error")!.textContent).toContain("gave up");
+});
+
+// ADR-0089: only an address the device answers at counts towards achievements.
+async function achievementEventsFor(status: AddressProgrammingStatusResponse["status"]): Promise<AchievementEvent[]> {
+  const seen: AchievementEvent[] = [];
+  const unsubscribe = subscribeAchievementEvents((event) => seen.push(event));
+  apiMock.pollAddressProgramming.mockReset().mockResolvedValue(response(status, [], 1));
+  try {
+    await render();
+  } finally {
+    unsubscribe();
+  }
+  if (root) await act(async () => root!.unmount());
+  host?.remove();
+  root = undefined;
+  host = undefined;
+  return seen;
+}
+
+it("reports a programmed address only when the device answers at it", async () => {
+  expect(await achievementEventsFor({ state: "finished", written: "yes", previousAddress: "15.15.255", wasFree: true }))
+    .toEqual([{ type: "individualAddressVerified" }]);
+  for (const written of ["unconfirmed", "noNeed", "no"] as const) {
+    expect(await achievementEventsFor({ state: "finished", written, previousAddress: "15.15.255", wasFree: true }), written)
+      .toEqual([]);
+  }
+  expect(await achievementEventsFor({ state: "failed", written: "unconfirmed", step: 3, error: "silent" })).toEqual([]);
 });

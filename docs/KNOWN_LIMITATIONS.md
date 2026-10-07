@@ -8486,8 +8486,23 @@ be repeated without counting twice. Maintainer decisions from 2026-10-07
 else is affected: achievements gate nothing, never reach a project or an
 export, and a reset moves the old record aside instead of deleting it.
 
-**Not yet complete.** Package 1 ships the mechanism and 11 of the 38
-agreed achievements. Package 2 adds the rest.
+**Counting edges (package 2).**
+
+- `commissioner` counts different *individual addresses*, not physical
+  devices: a replaced device at the same address does not count again,
+  and the same address in another project counts only once.
+- `fly-on-the-wire` counts whole minutes while a monitor session is open
+  in an editor window. A session shorter than a minute counts nothing.
+  With two editor windows showing the same session, minutes can count up
+  to twice as fast. The diagnostics companion and the separate flow window
+  count nothing (they have no tracker).
+- Three triggers from the interview were changed because KNXBench cannot
+  detect them as worded (ADR-0089, "Package 2"): `clean-sheet` (no
+  project validation in the UI), `clean-bill` (no bus diagnosis) and
+  `read-only-friday` (no send event, by design).
+- Hidden achievements are about 16 % of the catalogue (6 of 38), not the
+  25 % suggested in the interview, because the approved catalogue marked
+  exactly these six as hidden.
 
 **Also not verified.** The UI is tested in Vitest (happy-dom) and in
 Chromium. WebKitGTK in the desktop shell and screen-reader output were

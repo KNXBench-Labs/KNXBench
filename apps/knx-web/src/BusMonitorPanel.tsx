@@ -2,6 +2,7 @@
 // apps/knx-web/src/BusMonitorPanel.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import type { BusMonitorStopResponse, BusTelegramRow } from "./api";
 import { CAPTURE_CAPACITY, appendCapturedRows, saveBusCapture } from "./busMonitorCapture";
 import { calculateBusMonitorStatistics } from "./busMonitorStatistics";
@@ -170,6 +171,8 @@ function responseContextLock(response: api.BusMonitorTelegramsResponse): Context
 /// `projectOpen` from `App.tsx` is only a hint until the server reports its
 /// actual project presence. Unknown server context still disables compose;
 /// this prop never establishes freshness or allows sending on its own.
+const MINUTE_MS = 60_000;
+
 export default function BusMonitorPanel({ projectOpen, project, projectScope, onFlowNavigate, active = true }: {
   projectOpen: boolean;
   active?: boolean;
@@ -557,6 +560,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
     if (!validation.ok) return;
     try {
       const started = await api.startBusMonitor(validation.endpoint);
+      emitAchievementEvent({ type: "busMonitorStarted" });
       sinceRef.current = 0;
       setCapture({ rows: [], pruned: 0 });
       flowFeed.reset();
@@ -611,12 +615,25 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
     }
   }
 
+  // ADR-0089: a minute of an open session, and the flow view on screen.
+  // Both only read: the monitor never sends.
+  useEffect(() => {
+    if (status !== "active") return;
+    const minute = window.setInterval(() => emitAchievementEvent({ type: "busMonitorMinute" }), MINUTE_MS);
+    return () => window.clearInterval(minute);
+  }, [status]);
+  const flowTelegrams = flowFeed.model?.counters.admitted ?? 0;
+  const flowOnScreen = active && monitorView === "flow";
+  useEffect(() => {
+    if (flowOnScreen && flowTelegrams > 0) emitAchievementEvent({ type: "flowWatched", telegramCount: flowTelegrams });
+  }, [flowOnScreen, flowTelegrams]);
+
   async function exportCapture() {
     if (!captureIdentity || rows.length === 0 || exporting) return;
     setExportError(null);
     setExporting(true);
     try {
-      await saveBusCapture(rows, {
+      const saved = await saveBusCapture(rows, {
         sessionId: captureIdentity.sessionId,
         serverIncarnation: captureIdentity.serverIncarnation,
         status: status ?? "closed",
@@ -624,6 +641,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
         clientPrunedCount: capture.pruned,
         exportedAt: new Date().toISOString(),
       });
+      if (saved) emitAchievementEvent({ type: "busCaptureExported" });
     } catch (error) {
       setExportError(api.errorMessage(error));
     } finally {

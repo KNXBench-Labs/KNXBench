@@ -62,6 +62,7 @@ import { UI_LANGUAGE_STORAGE_KEY } from "./uiLanguage";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { snapshotJson } from "./flowTestFixtures";
 import { parseFlowSnapshot } from "./flowWire";
+import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
 
 // `act()` only flushes reliably when this is set (React 19's own check,
 // `isConcurrentActEnvironment`) — `LogPanel.test.tsx` never needs it
@@ -1600,5 +1601,53 @@ describe("BusMonitorPanel telegram flow", () => {
     expect(tab("Flow").getAttribute("aria-selected")).toBe("true");
     expect(document.activeElement).toBe(tab("Flow"));
     root.unmount();
+  });
+});
+
+// ADR-0089: the monitor reports that it is listening, and for how long.
+describe("BusMonitorPanel achievement events", () => {
+  it("reports the start and one event per open minute, and stops counting on disconnect", async () => {
+    const seen: AchievementEvent[] = [];
+    const stop = subscribeAchievementEvents((event) => seen.push(event));
+    try {
+      const root = await renderPanel();
+      await flushReattach();
+      // The session stays open: every poll after the mount finds it active.
+      apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({}));
+      await connect();
+      expect(seen.filter((event) => event.type === "busMonitorStarted")).toHaveLength(1);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2 * 60_000 + 1_000);
+      });
+      expect(seen.filter((event) => event.type === "busMonitorMinute")).toHaveLength(2);
+      // A stopped server answers the surviving-session check with 404.
+      apiMock.pollBusTelegrams.mockRejectedValue(notFoundError());
+      await act(async () => { clickButton("Disconnect"); await vi.advanceTimersByTimeAsync(0); });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5 * 60_000);
+      });
+      expect(seen.filter((event) => event.type === "busMonitorMinute")).toHaveLength(2);
+      await act(async () => root.unmount());
+    } finally {
+      stop();
+    }
+  });
+
+  it("reports nothing when the gateway refuses the connection", async () => {
+    apiMock.startBusMonitor.mockRejectedValue(new Error("gateway refused the connection"));
+    const seen: AchievementEvent[] = [];
+    const stop = subscribeAchievementEvents((event) => seen.push(event));
+    try {
+      const root = await renderPanel();
+      await flushReattach();
+      await connect();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3 * 60_000);
+      });
+      expect(seen.filter((event) => event.type === "busMonitorStarted" || event.type === "busMonitorMinute")).toEqual([]);
+      await act(async () => root.unmount());
+    } finally {
+      stop();
+    }
   });
 });

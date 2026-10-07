@@ -293,6 +293,12 @@ describe("one editing workspace", () => {
     // companion does not call the new live reader.
     const liveGraph = valueImportGraph("liveActivity.ts");
     expect([...liveGraph.keys()].sort()).toEqual(["activityHistory.ts", "liveActivity.ts"]);
+    //
+    // ADR-0089 adds `achievementEvents.ts`, reached from `BusMonitorPanel`
+    // (session started, minutes open, capture saved, flow watched). It
+    // imports nothing and holds a `Set` of listeners; only the editor's
+    // `useAchievements` subscribes, so in this window every emit is
+    // dropped. No request, no project state.
     expect(apiCallsIn(liveGraph)).toEqual([]);
     expect(liveGraph.get("liveActivity.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     // Shipped fun-language catalogues add only static copy and their registry.
@@ -306,6 +312,7 @@ describe("one editing workspace", () => {
       "LogPanel.tsx",
       "Overlay.tsx",
       "TelegramFlowView.tsx",
+      "achievementEvents.ts",
       "activityHistory.ts",
       "api.ts",
       "bundledLanguagePacks.ts",

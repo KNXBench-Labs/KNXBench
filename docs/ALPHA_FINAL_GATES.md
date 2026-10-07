@@ -459,3 +459,30 @@ The release notes list the tested scope, the review chain and the known
 limitations (N6, N14, KL-158, §157/§159, and the rows the user accepted),
 and they claim no ETS compatibility. Nothing beyond the decision was
 published: no public visibility change, and no CI release run.
+
+## 14. alpha.5: identity rewrite and replacement pre-release
+
+**Decision 2026-10-07 (user):** no personal identity may remain in the
+repository, its history or its artifacts. The history was rewritten, the
+repository recreated under `KNXBench-Labs`, the `v0.1.0-alpha.4` tag and
+pre-release withdrawn, and a newly built AppImage is published as the
+`v0.1.0-alpha.5` pre-release. Commit hashes cited in §1–§13 are pre-rewrite
+hashes ([KNOWN_LIMITATIONS §162](KNOWN_LIMITATIONS.md#162-commit-hashes-cited-before-2026-10-07-refer-to-the-rewritten-history)).
+
+**What alpha.5 contains beyond the reviewed alpha.4 product.** The withdrawn
+tag pointed at `5d8c36f7` (rewritten hash). Up to the alpha.5 candidate, 28
+commits changed 77 product files (+4,411/−218 lines; 48 of them in
+`apps/knx-web`): the post-alpha work recorded in
+[IMPLEMENTATION_STATUS](IMPLEMENTATION_STATUS.md) for 2026-10-07 (first-run
+guide, DPT inventory and boundaries, the KL-158 AppImage launcher), plus the
+desktop app identifier `com.knxbench.knxbench-labs`
+([ADR-0087](adr/0087-desktop-app-identifier.md)), the issue-tracker link and the
+version `0.1.0-alpha.5`.
+
+**Review status.** The AR18 `READY` verdict (§12) covers the alpha.4 product
+code only. alpha.5 has had **no independent review**; its acceptance is the
+gate below, run by the owner session (self-review).
+
+**Gate and publication:** PENDING — recorded in a follow-up docs-only commit
+once the gate on the tagged commit and the published assets have been
+verified.

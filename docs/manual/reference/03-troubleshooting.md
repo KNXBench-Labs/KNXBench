@@ -257,7 +257,7 @@ for what's tested and what isn't.
 **You see:** starting the AppImage prints `Failed to initialize gtk backend!` and it
 exits straight away.
 
-**Why, for the published `v0.1.0-alpha.4` image:** that AppImage always opens its
+**Why, for the withdrawn `v0.1.0-alpha.4` image:** that AppImage always opens its
 window through X11; its GTK start-up script overrides any `GDK_BACKEND` you set.
 Without a working X server — for example a Wayland session without Xwayland —
 there is nothing to draw on
@@ -291,7 +291,7 @@ GDK_BACKEND=x11 ./KNXBench.AppImage
 ```
 
 The [launcher contract](../../APPIMAGE_LAUNCHER.md) names exactly what was
-verified. This does not update the already-published alpha.4 download. If
+verified. The `v0.1.0-alpha.5` pre-release is built with this launcher. If
 neither display is reachable, the new launcher still cannot create a window.
 Broader compositor/GPU compatibility is not guaranteed.
 

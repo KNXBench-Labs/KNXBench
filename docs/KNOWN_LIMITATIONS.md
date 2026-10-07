@@ -1654,7 +1654,8 @@ below. `cargo deny check advisories` does not fail on it. A source search of
 every crate in the tree that depends on `glib` 0.18.5 found no caller of
 `VariantStrIter` or `str_iter()` outside `glib` itself, and KNXBench's own code
 has none. **[V]** That is a static search of the locked sources, not a proof
-that no dynamic path reaches it. The alert stays open on GitHub.
+that no dynamic path reaches it. On the user's decision the alert was
+dismissed on GitHub as "vulnerable code not used", pointing to this section.
 
 **Decision.** Keep Tauri 2 for this alpha. Tauri 3.0.0-alpha.2 was published
 on 2026-09-21, while Tauri's normal Wry Linux GTK4/WebKitGTK 6 migration

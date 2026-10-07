@@ -34,6 +34,9 @@
   (AppImage SHA-256 `8f69064f…0e2ce2`, `SHA256SUMS`), downloaded back and
   verified byte-identical.
 - `knxprod-crawler` is a separate private repository; its dead link was removed.
+- On the recreated repository the **"CI" workflow is disabled** for now (user
+  decision); "Linux AppImage" and Dependabot stay active. Re-enable CI with
+  `gh workflow enable CI` before relying on push checks again.
 - Agent instructions (`AGENTS.md`/`CLAUDE.md`), cloud-session rules and the
   session-start script commit as `KNXBench <github@knxbench.com>`.
 

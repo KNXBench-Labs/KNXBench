@@ -64,3 +64,15 @@ Compact scripts and aggregate receipts: maintainer evidence
 screenshot is kept. The root main checkout remains untouched. See the
 report's coverage limits before treating this as broader ETS/hardware
 compatibility evidence.
+
+## Publication / shutdown checkpoint — 2026-10-07 07:07 CEST
+
+Review commit `794e9593f0c352cc87d65ef3086cb7e1f765b549` is published
+on `origin/review/alpha-recheck-4`: local HEAD, fetched ref and exact live
+ref match; remote report bytes equal the retained reviewed payload. No
+outgoing commits remain at that checkpoint. Author/committer are
+`github@knxbench.com`; no co-author trailer. Root main is still clean at
+`b8724d66`; zero processes have a cwd under the owned worktree/scratch.
+This closing handover changes only metadata; product gates stay bound to
+the documented candidate and report digest. Final cleanup/publication
+receipts are retained in the evidence directory, outside Git.

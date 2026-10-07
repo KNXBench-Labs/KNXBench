@@ -1,5 +1,40 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — `knx-server` speaks HTTPS by itself (ADR-0088)
+
+- **User decisions (grill session):** protect browser ↔ `knx-server`
+  only; LAN/VPN, not internet; desktop shell untouched; TLS built in
+  rather than a Caddy proxy (host networking would leave the plain port
+  open beside a proxy); self-signed by default, own PEM files optional;
+  expired own certificate starts with a warning, broken files refuse.
+- **Behaviour:** `KNX_TLS` `auto` (default: HTTPS exactly when a password
+  is set or files are named) / `on` / `off` (loud warning on a networked
+  server). `KNX_TLS_CERT` + `KNX_TLS_KEY` for own files; `KNX_TLS_SAN` adds
+  names to the generated certificate. Generated certificate: ECDSA P-256,
+  SANs localhost/127.0.0.1/::1/host name/extras, EKU serverAuth, 825 days
+  (Apple's ceiling), kept in `KNX_DATA_DIR/.knxbench-tls` (`0700`/`0600`),
+  renewed at a start within 30 days of expiry or when names change, SHA-256
+  fingerprint in the banner. Plain HTTP on the TLS port gets a `307` to
+  `https://`. Handshakes run in their own tasks with a 10 s limit. Session
+  cookie is always `Secure` over HTTPS. `paths.rs` refuses the TLS
+  directory for every route (relative, absolute, symlink); `/api/fs/list`
+  hides it.
+- **Dependencies:** `rustls` (ring provider, no aws-lc: its OpenSSL licence
+  is not allowed by `deny.toml`), `tokio-rustls`, `rcgen`, `yasna`, `time`.
+  `cargo deny check`: advisories, bans, licenses, sources ok.
+- **Verified:** `knx-server` tests 663 passed / 0 failed / 45 ignored,
+  including `tests/https_listener.rs` (real rustls client: trusted
+  handshake, uncovered name refused, same-port redirect, silent clients do
+  not block, rejecting client does not break the listener). Clippy
+  `-D warnings`, fmt, five repository gates. Smoke test of the real binary:
+  banner fingerprint equals `openssl x509 -fingerprint -sha256`, SANs/EKU/
+  `CA:FALSE` as designed, curl with `--cacert` 200, without trust exit 60,
+  plain HTTP 307, login cookie `Secure`, reserved directory refused by
+  fs-list and save-as, restart reuses the certificate, `KNX_TLS=off`
+  warnings, broken PEM refuses to start, no password stays loopback HTTP.
+- **Not verified:** a real browser's warning/acceptance flow and Apple
+  devices; the Docker image was not rebuilt. Limitations: KL §22.
+
 ## 2026-10-07 — One name everywhere: history rewritten, app identifier changed, alpha.5
 
 - **User decision:** no personal identity may remain in the repository, its

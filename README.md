@@ -98,10 +98,12 @@ docker run -d --name knxbench -p 8484:8080 \
   -v "$(pwd)/data:/data" knxbench-server
 ```
 
-Open <http://127.0.0.1:8484>, sign in with that password, and import a `.knxproj`. Your
-projects live in `data/` and survive restarts. It is one shared password and no TLS of its
-own, so put a reverse proxy in front before it leaves your machine. Talking to a real bus
-from the container needs host networking — both are covered in
+Open <https://127.0.0.1:8484>, sign in with that password, and import a `.knxproj`. Your
+projects live in `data/` and survive restarts. With a password the server speaks HTTPS
+with a self-signed certificate, so the browser warns once: compare the fingerprint in
+`docker logs knxbench` before accepting it. It is still one shared password, made for a
+LAN or VPN rather than the internet. Talking to a real bus from the container needs host
+networking — both are covered in
 [Web and Docker deployment](docs/manual/user-guide/11-web-and-docker.md), along with
 [updating in one go](docs/manual/user-guide/11-web-and-docker.md#updating-in-one-go).
 

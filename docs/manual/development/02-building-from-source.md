@@ -263,7 +263,10 @@ ones — `apps/knx-server/src/main.rs` is the only place.
 | `KNX_STATIC_DIR` | Directory of the built frontend; unset means API only | unset |
 | `KNX_AUTH_PASSWORD_HASH` | The credential, as printed by `knx-server --hash-password` | unset |
 | `KNX_AUTH_PASSWORD` | A plaintext password, hashed at startup; weaker, because the value is visible in `docker inspect` and `/proc/<pid>/environ` | unset |
-| `KNX_AUTH_COOKIE_SECURE` | Marks the session cookie `Secure`, for use behind TLS | unset |
+| `KNX_AUTH_COOKIE_SECURE` | Marks the session cookie `Secure` on plain HTTP behind a TLS-terminating proxy; over the server's own HTTPS it is always `Secure` | unset |
+| `KNX_TLS` | `auto`: HTTPS whenever a password is set; `on` forces it, `off` disables it ([ADR-0088](../../adr/0088-server-terminates-tls-itself.md)) | `auto` |
+| `KNX_TLS_CERT`, `KNX_TLS_KEY` | Your own PEM certificate chain and private key, instead of the generated self-signed one | unset |
+| `KNX_TLS_SAN` | Extra comma-separated host names or IP addresses for the generated certificate, e.g. `knx.lan,192.168.1.10` | unset |
 | `KNX_TUNNEL_ROUTE_BACK` | Ask the gateway to answer the packet's source (KNXnet/IP Route Back); for tunnelling from Docker's bridge network | unset |
 | `KNX_BUILD_SHA` | Build-time only: the commit for `--version`, when git is not available | unset |
 

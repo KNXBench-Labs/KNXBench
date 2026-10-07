@@ -9,6 +9,22 @@ guard rails in the code rather than imagined in advance. If your problem isn't h
 the [issue tracker](https://github.com/KNXBench-Labs/KNXBench/issues) is where to report
 anything neither of those explains.
 
+## The browser warns that the connection is not private
+
+**You see:** a full-page warning such as "Your connection is not private" or "Warning:
+Potential Security Risk Ahead" when you open the server's address.
+
+**Why:** a server with a password speaks HTTPS with a certificate it generated itself
+([Web and Docker deployment](../user-guide/11-web-and-docker.md#https)). Nobody your
+browser trusts has signed it, so the browser cannot tell it apart from an impostor.
+
+**Do this:** open the certificate details from the warning and compare its SHA-256
+fingerprint with the line `HTTPS with a self-signed certificate ... fingerprint is ...`
+in the server's startup log. If they match, accept the warning. If they do not match,
+do not continue. Something between you and the server is presenting a different
+certificate. A new fingerprint after the log line `Generated a new self-signed TLS
+certificate` is expected; one without it is not.
+
 ## The server starts, but the browser shows nothing
 
 **You see:** `knx-server listening on ...` in the terminal, but the page in your browser

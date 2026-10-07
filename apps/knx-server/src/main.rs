@@ -39,17 +39,54 @@ async fn main() {
     // binds where it says (ADR-0026).
     let password_hash = std::env::var("KNX_AUTH_PASSWORD_HASH").ok();
     let plaintext_password = std::env::var("KNX_AUTH_PASSWORD").ok();
-    let cookie_secure = env_flag("KNX_AUTH_COOKIE_SECURE");
+    let cookie_secure_requested = env_flag("KNX_AUTH_COOKIE_SECURE");
     let setup = knx_server::resolve_auth(
         password_hash.as_deref().filter(|s| !s.is_empty()),
         plaintext_password.as_deref().filter(|s| !s.is_empty()),
-        cookie_secure,
+        cookie_secure_requested,
     )
     .unwrap_or_else(|e| panic!("authentication configuration is unusable: {e}"));
-    for notice in &setup.notices {
+    let auth_required = setup.config.is_required();
+
+    // TLS is decided after authentication because it depends on it: a
+    // server on the network encrypts unless told not to (ADR-0088). This is
+    // the only place that reads the TLS environment.
+    let tls_switch = std::env::var("KNX_TLS").ok();
+    let tls_cert = non_empty_env("KNX_TLS_CERT");
+    let tls_key = non_empty_env("KNX_TLS_KEY");
+    let tls_names = non_empty_env("KNX_TLS_SAN");
+    let hostname = system_hostname();
+    let tls = knx_server::resolve_tls(knx_server::TlsInputs {
+        switch: knx_server::TlsSwitch::from_env_value(tls_switch.as_deref()),
+        cert: tls_cert.as_deref(),
+        key: tls_key.as_deref(),
+        extra_names: tls_names.as_deref(),
+        hostname: hostname.as_deref(),
+        auth_required,
+        data_dir: &data_dir,
+    })
+    .unwrap_or_else(|e| panic!("TLS configuration is unusable: {e}"));
+    let prepared = knx_server::prepare_tls(&tls.plan, time::OffsetDateTime::now_utc())
+        .unwrap_or_else(|e| panic!("TLS configuration is unusable: {e}"));
+    let https = prepared.is_some();
+    // Over HTTPS the cookie is always Secure; the variable is only for a
+    // plain-HTTP server behind somebody else's TLS.
+    let cookie_secure = cookie_secure_requested || https;
+    let auth_config = setup.config.with_cookie_secure(cookie_secure);
+
+    let notices = setup
+        .notices
+        .iter()
+        .cloned()
+        .chain(knx_server::cookie_secure_notice(
+            auth_required,
+            cookie_secure,
+        ))
+        .chain(tls.notices)
+        .chain(prepared.iter().flat_map(|p| p.notices.clone()));
+    for notice in notices {
         eprintln!("knx-server: {notice}");
     }
-    let auth_required = setup.config.is_required();
 
     let mut app_state = knx_server::AppState::with_user_product_db(data_dir);
     let return_path = tunnel_return_path(std::env::var("KNX_TUNNEL_ROUTE_BACK").ok().as_deref());
@@ -62,7 +99,7 @@ async fn main() {
         app_state.connector = Box::new(knx_server::RealConnector::new(return_path));
     }
     let state = Arc::new(app_state);
-    let app = knx_server::app_with_auth(state, static_dir, setup.config);
+    let app = knx_server::app_with_auth(state, static_dir, auth_config);
 
     // Never `0.0.0.0` without a password, and never silently: the address
     // is a pure function of whether authentication is configured, and the
@@ -71,8 +108,34 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind((host, port))
         .await
         .unwrap_or_else(|e| panic!("failed to bind {host}:{port}: {e}"));
-    println!("knx-server listening on {host}:{port}");
-    axum::serve(listener, app).await.expect("server error");
+    match prepared {
+        Some(prepared) => {
+            let listener = knx_server::TlsListener::new(listener, prepared.config)
+                .unwrap_or_else(|e| panic!("failed to start the TLS listener: {e}"));
+            println!("knx-server listening on https://{host}:{port}");
+            axum::serve(listener, app).await.expect("server error");
+        }
+        None => {
+            println!("knx-server listening on http://{host}:{port}");
+            axum::serve(listener, app).await.expect("server error");
+        }
+    }
+}
+
+/// An environment variable, with an empty value read as unset.
+fn non_empty_env(name: &str) -> Option<String> {
+    std::env::var(name).ok().filter(|v| !v.trim().is_empty())
+}
+
+/// The kernel's host name, for the generated certificate's names. With
+/// `--network host` a container shares it with the machine. Absent rather
+/// than an error when unreadable: it is a convenience, and `KNX_TLS_SAN`
+/// covers every other name.
+fn system_hostname() -> Option<String> {
+    std::fs::read_to_string("/proc/sys/kernel/hostname")
+        .ok()
+        .map(|name| name.trim().to_string())
+        .filter(|name| !name.is_empty())
 }
 
 /// Reads a password from standard input and prints its stored form, so an

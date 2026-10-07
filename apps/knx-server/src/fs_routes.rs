@@ -20,7 +20,7 @@ use tower_http::services::ServeFile;
 
 use crate::domain;
 use crate::errors::ApiError;
-use crate::paths::resolve_in_data_dir;
+use crate::paths::{is_reserved_entry, resolve_in_data_dir};
 use crate::SharedState;
 
 /// Upload ceiling for `/api/fs/upload`, replacing axum's 2 MB default —
@@ -65,6 +65,9 @@ async fn list_dir(
     let mut entries = Vec::new();
     for entry in std::fs::read_dir(&dir).map_err(|e| ApiError::internal(e.to_string()))? {
         let entry = entry.map_err(|e| ApiError::internal(e.to_string()))?;
+        if is_reserved_entry(&state.data_dir, &dir, &entry.file_name()) {
+            continue; // The TLS key's directory is no route's business (ADR-0088).
+        }
         let is_dir = entry
             .file_type()
             .map_err(|e| ApiError::internal(e.to_string()))?

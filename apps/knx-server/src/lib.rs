@@ -10,9 +10,16 @@ use tower_http::services::ServeDir;
 
 mod auth;
 pub use auth::{
-    bind_address, resolve_auth, short_password_notice, AuthConfig, AuthSetup, DEFAULT_IDLE_TIMEOUT,
-    SESSION_COOKIE,
+    bind_address, cookie_secure_notice, resolve_auth, short_password_notice, AuthConfig, AuthSetup,
+    DEFAULT_IDLE_TIMEOUT, SESSION_COOKIE,
 };
+
+mod tls;
+pub use tls::{prepare_tls, resolve_tls, PreparedTls, TlsDecision, TlsInputs, TlsPlan, TlsSwitch};
+mod tls_cert;
+pub use tls_cert::{SubjectName, RENEW_WITHIN_DAYS, SELF_SIGNED_VALIDITY_DAYS, TLS_DIR_NAME};
+mod tls_listener;
+pub use tls_listener::{TlsListener, HANDSHAKE_TIMEOUT};
 
 mod auth_password;
 pub use auth_password::{

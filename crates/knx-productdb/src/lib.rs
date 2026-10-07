@@ -40,7 +40,10 @@ pub use identity::{
 };
 pub use ingest::{ingest_file, FileKind, IngestOutcome};
 pub use master_evidence::{rederive_master_language_evidence, MasterLanguageEvidenceReport};
-pub use migration::{default_path, open_and_migrate, ProductDbError, CURRENT_PRODUCTDB_VERSION};
+pub use migration::{
+    default_path, open_and_migrate, open_read_only, ProductDbError, ReadOnlyProductDb,
+    CURRENT_PRODUCTDB_VERSION,
+};
 pub use package::{
     install_package, install_package_with_limits, InstallCategory, InstallCount, InstallDiagnostic,
     InstallDiagnosticKind, InstallDisposition, InstallFacts, InstallReport, PackageError,

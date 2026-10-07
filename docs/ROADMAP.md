@@ -186,9 +186,13 @@ permissions are a deployment decision (limitations §79).
 
 ## Cross-cutting — LLM / natural-language interaction
 
-Research complete (RESEARCH §13); no mutation-capable LLM or MCP surface
-is scheduled. Require a mature command/authorization/revision-bound audit
-contract before proposing one. Bus and device writes remain excluded.
+Research complete (RESEARCH §13). **Delivered 2026-10-07 (ADR-0090):** the
+narrower read-only scope §13.6 allows — `apps/knx-mcp`, a stdio MCP server
+over saved project files (eight read tools, CSV proposals validated but
+never applied), plus an agent skill. No in-app chatbox. A mutation-capable
+LLM or MCP surface is still not scheduled and still requires a mature
+command/authorization/revision-bound audit contract. Bus and device writes
+remain excluded.
 
 ## Cross-cutting — Repetitive-task automation
 

@@ -91,10 +91,12 @@ idea list, and where an entry has a condition attached, it is a technical
 dependency somebody noticed — not a queue position.
 
 **Natural-language and MCP interaction.** Researched in
-[RESEARCH.md §13](../research/features-and-ui.md#13-natural-language-interaction-and-mcp-prerequisite-audit-2026-09-22-t19),
-not scheduled. The current command, authorization, revision and audit
-boundaries are not sufficient for mutation. Any later start is bounded reads
-and typed proposals with exact human approval, never raw commands or bus work.
+[RESEARCH.md §13](../research/features-and-ui.md#13-natural-language-interaction-and-mcp-prerequisite-audit-2026-09-22-t19).
+The read-only part now exists: [AI agents over MCP](user-guide/12-ai-agents.md)
+lets an agent query saved projects and check proposed group-address CSVs.
+Changing a project through an agent is still not planned. The current
+command, authorization, revision and audit boundaries are not sufficient
+for mutation, and bus work stays excluded.
 
 **Automating repetitive tasks.** Researched in
 [RESEARCH.md §14](../research/features-and-ui.md#14-repetitive-task-automation-and-macro-layer-decision-2026-09-22-t20),

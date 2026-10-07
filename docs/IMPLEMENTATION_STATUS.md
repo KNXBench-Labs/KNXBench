@@ -1,5 +1,51 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — Read-only MCP server and agent skill (ADR-0090)
+
+- **User decisions (grill-me):** power users bring their own agent; v1 is a
+  read-only MCP server plus an agent skill, **no chatbox**; bus and hardware
+  excluded absolutely; changes only as group-address CSV proposals a person
+  applies; privacy by documentation plus hard exclusions; saved files named
+  at launch, stdio only; `rmcp`; eight tools; experimental with
+  `schemaVersion`; separate release binary.
+- **Storage:** `knx_store::open_existing_read_only` and
+  `knx_productdb::open_read_only` open with `SQLITE_OPEN_READ_ONLY` +
+  `query_only`, refuse what the migrating openers refuse, create nothing,
+  and migrate an **older** file only as an in-memory copy (SQLite backup
+  API; rusqlite `backup` feature, no new crate). Byte-identity tests for
+  current, older, newer, foreign, empty, missing and non-SQLite files
+  (`read_only_open.rs` in both crates, 9 + 5 tests). Both wait up to 5 s
+  for a writer's lock (explicit `busy_timeout`, pinned by a test that holds
+  `BEGIN EXCLUSIVE`), and the in-memory copy runs in one backup step that
+  pauses instead of spinning on a busy source. The product database's
+  migration loop is shared (`migrate_from`), behaviour unchanged.
+- **`apps/knx-mcp`:** `args` (aliases, no path ever reaches a tool),
+  `workspace` (snapshots reloaded when length/mtime change; a vanished file
+  is an error), `tools` (`project_summary`, `search`, `get_device`,
+  `get_group_address`, `find_issues`, `diff_projects`, `explain_parameter`,
+  `validate_ga_csv`), `issues` (11 structural checks), `diff_render` (flat
+  change list), `server` (rmcp glue; all tools `readOnlyHint`, arguments
+  `deny_unknown_fields`, work on the blocking pool). Every response:
+  `schemaVersion`, `experimental`, `dataNotice`, `source`, `result`.
+- **Enforcement:** `check-layering` gains a production-graph rule: knx-mcp
+  reaches none of knx-net, knx-server, knx-secure, knx-etsproj, axum,
+  hyper, reqwest (negative control: adding knx-net fails the gate).
+- **Tests:** knx-mcp 6 unit + 13 tool + 2 real-binary stdio tests
+  (handshake, eight tools, refusals, clean exit, startup failure).
+  Mutation sweep: 8/8 guard mutants killed by the intended tests
+  (read-write open ×2, missing nothing-saved check, no reload, accepted
+  unknown arguments, inverted severity filter, disabled duplicate check,
+  zero busy timeout).
+  Live probe against copies of two real projects (one schema v9) with the
+  installed product database: decoded parameters, smuggled `path` refused,
+  every file byte-identical.
+- **Delivery:** `linux-appimage.yml` builds `knx-mcp-x86_64-linux` and
+  publishes it with a `SHA256SUMS` beside the AppImage on tags (not yet
+  exercised by a tag run). Skill: `integrations/agent-skill/knxbench/SKILL.md`.
+  Manual chapter 23 "AI agents over MCP".
+- **Limitations:** KL §165 (saved state only, visibility not evaluated,
+  experimental shapes, client coverage).
+
 ## 2026-10-07 — Achievements, package 2: the other 27 (ADR-0089)
 
 - **Catalogue complete: 38.** Import and integrity (lossless-move,

@@ -245,6 +245,25 @@ fn check_layering(root: &Path) -> ExitCode {
         "knx-secure",
         layering::SECURE_FORBIDDEN,
     ));
+    // knx-mcp (ADR-0090) serves saved project files read-only to an AI
+    // agent. Its shipped binary must not link the bus (knx-net, or
+    // knx-server's bus routes), key material (knx-secure), archive import
+    // (knx-etsproj) or any HTTP stack: "no bus, no network listener" is a
+    // build fact, not a promise in a tool description. Checked on the
+    // production graph, because knx-store's own tests import through
+    // knx-etsproj and that edge never reaches the binary.
+    let production = match layering::workspace_production_graph(root) {
+        Ok(g) => g,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    violations.extend(layering::forbidden_reachable(
+        &production,
+        "knx-mcp",
+        layering::MCP_FORBIDDEN,
+    ));
 
     if violations.is_empty() {
         println!(
@@ -254,12 +273,13 @@ fn check_layering(root: &Path) -> ExitCode {
              none of {:?}; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; \
              knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \
              knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \
-             knx-secure reaches none of {:?}",
+             knx-secure reaches none of {:?}; knx-mcp reaches none of {:?}",
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
-            layering::SECURE_FORBIDDEN
+            layering::SECURE_FORBIDDEN,
+            layering::MCP_FORBIDDEN
         );
         return ExitCode::SUCCESS;
     }

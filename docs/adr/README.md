@@ -89,3 +89,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0087](0087-desktop-app-identifier.md) | The desktop app identifier is `com.knxbench.knxbench-labs` | Accepted | 2026-10-07 |
 | [0088](0088-server-terminates-tls-itself.md) | `knx-server` terminates TLS itself, with a self-signed certificate by default | Accepted | 2026-10-07 |
 | [0089](0089-achievements.md) | Achievements are a frontend catalogue over a grow-only server record | Accepted | 2026-10-07 |
+| [0090](0090-read-only-mcp-adapter.md) | A read-only, stdio-only MCP adapter over saved project files | Accepted | 2026-10-07 |

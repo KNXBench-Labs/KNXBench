@@ -403,4 +403,4 @@ checks it and does a save-and-reopen cycle:
 apps/knx-server/scripts/smoke-test.sh
 ```
 
-[Manual index](../README.md) · Next: [Keyboard shortcuts](../reference/01-keyboard-shortcuts.md) →
+[Manual index](../README.md) · Next: [AI agents over MCP](12-ai-agents.md) →

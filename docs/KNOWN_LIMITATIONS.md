@@ -8510,3 +8510,40 @@ not checked.
 
 **Lifted when.** Per-user records exist, or counters move to an additive
 merge with request ids.
+
+## 165. The MCP adapter reads saved files only and does not evaluate parameter visibility
+
+**Limitation.** `knx-mcp` ([ADR-0090](adr/0090-read-only-mcp-adapter.md))
+answers from the last **saved** state of the project files named at launch.
+Edits not yet saved in a running KNXBench are invisible to it. It cannot change
+anything: a requested change comes back as a group-address CSV that a
+person applies. `explain_parameter` and `get_device` report the program's
+declaration and the stored raw value, but they do not run the program's
+`Dynamic` tree. Whether a parameter is currently visible or active is
+reported as `notEvaluated`, and a parameter of a module instance may show no
+declaration. The tool names and response shapes are experimental and may
+change (`schemaVersion`).
+
+**Why.** Maintainer decisions of 2026-10-07 (grill-me interview): read-only,
+stdio, saved files, no chatbox. Mutation through an agent needs operator
+identity, revision checks and audit that do not exist (RESEARCH §13;
+§22 and §63 here). Visibility evaluation lives in `knx-server`'s parameter panel, and the
+adapter deliberately does not link the server.
+
+**Impact.** An agent can be out of date by one save, and it can describe a
+parameter that the device's current settings hide. Answers carry the
+snapshot (`source.fileModified`) and `visibility: notEvaluated`, so neither
+is silent. A product database **older** than the running `knx-mcp` is copied
+into memory once at startup, so products installed afterwards stay
+invisible until the server restarts; a current one is read live. Anything the agent sees can reach its language model provider
+(see the manual chapter "AI agents over MCP").
+
+**Also not verified.** Exercised with the repository's synthetic fixtures
+and, on 2026-10-07, against copies of two real projects (one at schema v9)
+with the maintainer's installed product database: every file stayed
+byte-identical. Not tested with every MCP client: the stdio handshake is
+tested with protocol version 2025-11-25 only.
+
+**Lifted when.** Parameter visibility moves into a crate both the server and
+the adapter can use. Mutation needs its own ADR that closes RESEARCH §13.6
+first.

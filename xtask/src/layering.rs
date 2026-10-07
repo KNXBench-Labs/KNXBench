@@ -81,9 +81,36 @@ pub const CORE_FORBIDDEN: &[&str] = &[
 /// the point.
 pub const SECURE_FORBIDDEN: &[&str] = &["knx-core", "serde"];
 
+/// Packages the read-only MCP adapter must never reach (ADR-0090): the bus
+/// and the server that fronts it, key material, archive import, and every
+/// HTTP stack, so the adapter can neither talk to KNX hardware nor open a
+/// network listener or client. Checked against
+/// [`workspace_production_graph`]: what the shipped binary links, not what
+/// some dependency's own tests import.
+pub const MCP_FORBIDDEN: &[&str] = &[
+    "knx-net",
+    "knx-server",
+    "knx-secure",
+    "knx-etsproj",
+    "axum",
+    "hyper",
+    "reqwest",
+];
+
 /// Build the resolved dependency graph of the whole workspace, including
 /// transitive third-party dependencies.
 pub fn workspace_graph(root: &std::path::Path) -> Result<DepGraph, String> {
+    build_graph(root, true)
+}
+
+/// [`workspace_graph`] without development-only edges: what a binary
+/// actually links. A `[dev-dependencies]` edge (a crate's own tests) is
+/// dropped; normal and build edges stay.
+pub fn workspace_production_graph(root: &std::path::Path) -> Result<DepGraph, String> {
+    build_graph(root, false)
+}
+
+fn build_graph(root: &std::path::Path, include_dev: bool) -> Result<DepGraph, String> {
     let metadata = cargo_metadata::MetadataCommand::new()
         .manifest_path(root.join("Cargo.toml"))
         .current_dir(root)
@@ -108,6 +135,12 @@ pub fn workspace_graph(root: &std::path::Path) -> Result<DepGraph, String> {
         let deps = node
             .deps
             .iter()
+            .filter(|d| {
+                include_dev
+                    || d.dep_kinds
+                        .iter()
+                        .any(|k| k.kind != cargo_metadata::DependencyKind::Development)
+            })
             .filter_map(|d| name_of.get(&d.pkg).cloned())
             .collect();
         edges.insert(name.clone(), deps);

@@ -1,4 +1,4 @@
-← Previous: [Web and Docker deployment](../user-guide/11-web-and-docker.md) · [Manual index](../README.md)
+← Previous: [AI agents over MCP](../user-guide/12-ai-agents.md) · [Manual index](../README.md)
 
 # Keyboard shortcuts
 

@@ -1,4 +1,5 @@
 /** Keyboard-driven overlay listing and filtering the registered commands. */
+import { emitAchievementEvent } from "./achievementEvents";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { CommandContext, ResolvedPaletteCommand } from "./commandRegistry";
@@ -54,6 +55,7 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
   }, [results, ctx]);
 
   function runCommand(cmd: ResolvedPaletteCommand) {
+    emitAchievementEvent({ type: "commandPaletteUsed" });
     cmd.run(ctx);
     onClose();
   }
@@ -81,6 +83,12 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
       e.preventDefault();
       moveHighlight(-1);
     } else if (e.key === "Enter") {
+      // The command may open a dialog whose first focusable control is a
+      // button, and focus moves there before this key's activation is
+      // delivered: without this, Chromium clicks that button with the same
+      // Enter and the dialog closes as it opens (found with the achievements
+      // overview, whose first control is Close).
+      e.preventDefault();
       const cmd = results[highlight];
       if (cmd && cmd.isEnabled(ctx)) runCommand(cmd);
     }

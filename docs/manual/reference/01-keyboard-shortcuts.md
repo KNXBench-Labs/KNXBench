@@ -29,13 +29,13 @@ These work anywhere in the main window, with no field focused:
 | `Ctrl+Shift+Z` | Redo | Same field-focus exception as Undo |
 | `Escape` | Close whatever is on top | See [Escape, in order](#escape-in-order) below |
 
-Eleven more actions are reachable only through the command palette or a button, with no
+Twelve more actions are reachable only through the command palette or a button, with no
 shortcut of their own: New project, Open project, Open (`.knxdb`), Save, Save As, Log, Bus
-monitor, Settings, the Diagnostics window, the Product catalog, and Show introduction. All
-fifteen palette commands, with the shortcuts that exist, are visible at a glance in the
-command palette itself:
+monitor, Settings, the Diagnostics window, the Product catalog, Show introduction, and
+Achievements. All sixteen palette commands, with the shortcuts that exist, are visible in
+the command palette itself:
 
-![The command palette listing all fifteen commands as a filterable list, with Undo and
+![The command palette listing all sixteen commands as a filterable list, with Undo and
 Redo shown disabled and the keyboard hints Ctrl+Z, Ctrl+Shift+Z, Ctrl+K and F1 next to the
 rows that have them](../../assets/screenshots/porcelain-command-palette.png)
 

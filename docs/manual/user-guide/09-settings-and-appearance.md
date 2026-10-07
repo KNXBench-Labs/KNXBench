@@ -197,6 +197,38 @@ last save; it never opens a file dialog. A notice counts down the last five seco
 offers **Cancel**. If an autosave fails, a message says so and the project stays marked
 as unsaved, exactly as after a failed manual save.
 
+## Achievements
+
+KNXBench awards achievements for milestones in your work: a first project, a
+hundred undos, a very large project, and a few hidden ones. When one
+unlocks, a popup appears in the bottom-right corner for a few seconds. If
+several unlock at once, you see at most two popups and a "+N more" line. No
+sound plays, and the popup follows the motion settings.
+
+**File → Achievements…** and the command palette open the overview. It
+lists every achievement with its tier (bronze, silver, gold, legendary), the
+date it was unlocked or the progress made so far. Hidden achievements show
+neither name nor description until you unlock them.
+
+**Track and show achievements** is on by default. Switched off, nothing is
+counted, no popups appear and the File menu entry disappears. Achievements
+you have already unlocked stay saved. **Reset achievements…** asks first.
+It does not delete the old record: the server moves it aside as
+`achievements.reset-<time>.json` in its data directory and tells you the
+name.
+
+What achievements never do:
+
+- reward sending to the bus. Bus and commissioning achievements count
+  only results such as a verified download;
+- contact the internet;
+- appear in a project or an export;
+- gate anything.
+
+They are stored per server, not per person, and only actions in the
+application window count, not the command line
+([known limitation §164](../../KNOWN_LIMITATIONS.md#164-achievements-are-per-installation-count-only-in-the-ui-and-can-lose-a-concurrent-increment)).
+
 ## Debug · device control
 
 **Allow manual Individual Address Write Enable** is **off by default**. Its

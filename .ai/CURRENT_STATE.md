@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (README / docs session, not the alpha owner)
+- **Timestamp:** 2026-10-07 09:35 CEST
+- **Completed:** `f1c852ef` manual "Updating in one go" (11-web-and-docker.md; pull → build with KNX_BUILD_SHA → `docker rm -f` → `docker run --network host -e KNX_PORT=8484` → curl `/healthz` with retry); install §b links to it. Verified twice against real Docker under a test name/port (fresh + replacing a running container, data survived), test container/image removed. `f02d8b28` README hero = `docs/assets/readme/hero-add-device.gif` (8.5 s, 900×467, Graphite dark, real knx-server + sample house: catalog → Push button dining 1.1.3 → link 0/0/2), recorded by `apps/knx-web/e2e/readme-hero.shots.ts` + `playwright.readme-hero.config.ts` (CDP screencast PNGs, post-production camera zoom). SVG hero + `tools/readme_hero_svg.py` removed (that deletion landed in `f1c852ef` by accident; end state correct).
+- **Pending/Next Steps:** None for this package.
+- **Notes for Codex oder Claude:** CDP screencast frames are CSS pixels regardless of deviceScaleFactor, so the hero camera never zooms closer than 900 px wide. Native `<select>` popups are not in the screencast. The recording needs a release `knx-server` and `npm run build` first, inside the `unshare` loopback namespace.
+
+---
+
 - **Last Agent:** Claude (first-run guide session, not the alpha owner)
 - **Timestamp:** 2026-10-07 08:38 CEST
 - **Completed:** After a grill-me interview with the user (15 decisions, log `.ai/logs/2026-10-07_claude_first-run-guide.md`): `10928f9b` knx-server `0.1.0-alpha.1` → `0.1.0-alpha.2` (ADR-0018 catch-up bump; the alpha.4 release reported alpha.1 on `/api/version`); `7b61d6f8` Help "What this does not do" corrected (it denied the ETS4/5 password dialog and device download); `fdb625ba` first-run guide: `OnboardingGuide.tsx` + `useOnboardingGuide.ts` + `onboardingGuide.ts`, ADR-0084, KL §160 / `KL-160` (USER_ACCEPTED), palette commands `open-catalog` and `show-introduction` (+ File → Show introduction…), manual First start/UI/Projects/Keyboard updated, screenshots palette/File menu/New project retaken + new `porcelain-onboarding-guide.png`. Gate green: Vitest 2134/2134, Chromium 146 offline, guide spec ×3, knx-server 623/0/45, clippy -p knx-server, xtask ×5 (headers after a comment-only fix).

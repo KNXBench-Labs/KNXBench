@@ -377,15 +377,23 @@ pub fn resolve_auth(
         }
     };
     let config = config.with_cookie_secure(cookie_secure);
-    if config.is_required() && !cookie_secure {
-        notices.push(
-            "The session cookie is not marked Secure. Set KNX_AUTH_COOKIE_SECURE=1 when \
-             this server is reached over HTTPS; leave it unset for plain HTTP, where a \
-             Secure cookie would never be sent back at all."
-                .to_string(),
-        );
-    }
     Ok(AuthSetup { config, notices })
+}
+
+/// The complaint a password-protected server earns when its session
+/// cookie is not `Secure`, or `None`.
+///
+/// Separate from [`resolve_auth`] because the answer depends on TLS, which
+/// is decided after authentication (ADR-0088): a server that terminates
+/// TLS itself marks the cookie `Secure` on its own, and only a plain-HTTP
+/// server — `KNX_TLS=off`, typically behind a proxy — still needs telling.
+pub fn cookie_secure_notice(auth_required: bool, cookie_secure: bool) -> Option<String> {
+    (auth_required && !cookie_secure).then(|| {
+        "The session cookie is not marked Secure because this server speaks plain HTTP. \
+         Set KNX_AUTH_COOKIE_SECURE=1 when a TLS-terminating proxy is in front of it; \
+         leave it unset otherwise, where a Secure cookie would never be sent back at all."
+            .to_string()
+    })
 }
 
 /// The complaint a short password earns, or `None` if it is long enough.
@@ -720,11 +728,11 @@ mod tests {
 
     #[test]
     fn a_plain_http_deployment_is_told_why_the_cookie_is_not_secure() {
-        let stored = hash_password_with_iterations("open sesame", TEST_ITERATIONS).unwrap();
-        let setup = resolve_auth(Some(&stored), None, false).unwrap();
-        assert!(setup
-            .notices
-            .iter()
-            .any(|n| n.contains("KNX_AUTH_COOKIE_SECURE")));
+        assert!(cookie_secure_notice(true, false)
+            .unwrap()
+            .contains("KNX_AUTH_COOKIE_SECURE"));
+        assert_eq!(cookie_secure_notice(true, true), None);
+        // Loopback without a password has no cookie to worry about.
+        assert_eq!(cookie_secure_notice(false, false), None);
     }
 }

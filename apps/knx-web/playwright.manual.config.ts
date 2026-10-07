@@ -47,8 +47,10 @@ export default defineConfig({
     },
     {
       // Second instance with a password nobody knows: the login screenshot
-      // shows the form only and never signs in.
-      command: `${env(4811)} KNX_AUTH_PASSWORD=$(head -c 24 /dev/urandom | base64) exec ${server}`,
+      // shows the form only and never signs in. Since ADR-0088 a password
+      // turns TLS on by itself; this loopback-only instance stays on plain
+      // HTTP so the readiness check and the screenshot need no certificate.
+      command: `${env(4811)} KNX_TLS=off KNX_AUTH_PASSWORD=$(head -c 24 /dev/urandom | base64) exec ${server}`,
       url: "http://127.0.0.1:4811/",
       timeout: 60_000,
       reuseExistingServer: false,

@@ -48,6 +48,36 @@ describe("ToastStack", () => {
     root.unmount();
   });
 
+  it("renders an achievement toast with its label, title, description and tier", async () => {
+    const root = await renderStack([
+      {
+        id: 3,
+        kind: "achievement",
+        message: "Night Shift",
+        serverText: false,
+        achievement: { title: "Night Shift", description: "Saved at night.", tier: "gold", glyph: "moon" },
+      },
+    ]);
+    const toast = host!.querySelector(".toast--achievement")!;
+    expect(toast.getAttribute("role")).toBe("status");
+    expect(toast.textContent).toContain(enMessages["achievements.unlockedLabel"]);
+    expect(toast.textContent).toContain("Night Shift");
+    expect(toast.textContent).toContain("Saved at night.");
+    expect(toast.querySelector(".achievement-badge--gold")).not.toBeNull();
+    expect(toast.textContent).not.toContain(enMessages["toast.error.messageIsEnglish"]);
+    root.unmount();
+  });
+
+  it("renders an achievement summary toast without a badge", async () => {
+    const root = await renderStack([
+      { id: 4, kind: "achievement", message: "+2 more achievements unlocked", serverText: false },
+    ]);
+    const toast = host!.querySelector(".toast--achievement")!;
+    expect(toast.textContent).toContain("+2 more achievements unlocked");
+    expect(toast.querySelector(".achievement-badge")).toBeNull();
+    root.unmount();
+  });
+
   it("calls onDismiss with the toast's id when its close button is clicked", async () => {
     const onDismiss = vi.fn();
     const root = await renderStack(

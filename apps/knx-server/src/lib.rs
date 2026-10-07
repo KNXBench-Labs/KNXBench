@@ -8,6 +8,10 @@ use axum::{Json, Router};
 use serde::Serialize;
 use tower_http::services::ServeDir;
 
+mod achievements;
+/// Exported so integration tests can name the file without re-deriving it.
+pub use achievements::{ACHIEVEMENTS_FILE_NAME, ACHIEVEMENTS_SCHEMA_VERSION};
+mod achievement_routes;
 mod auth;
 pub use auth::{
     bind_address, cookie_secure_notice, resolve_auth, short_password_notice, AuthConfig, AuthSetup,
@@ -38,6 +42,7 @@ mod bus_routes;
 mod bus_scan;
 mod catalog_requests;
 mod com_object_activation;
+mod data_file;
 mod debug_report;
 mod device_compare_routes;
 mod device_download;
@@ -177,6 +182,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(service_control_routes::service_control_routes())
         .merge(debug_report_routes::debug_report_routes())
         .merge(settings_routes::settings_routes())
+        .merge(achievement_routes::achievement_routes())
         // Deliberately not in `routes::project_routes()`: this answers for
         // the build, not for the open project, and it works with no
         // project loaded at all. It is guarded all the same — a build

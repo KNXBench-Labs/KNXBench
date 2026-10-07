@@ -185,6 +185,10 @@ pub struct AppState {
     /// the same instant would otherwise both write back the document they
     /// read, and the later write would silently drop the earlier one.
     pub settings_lock: Mutex<()>,
+    /// Serializes the read-merge-write of `achievements.json`
+    /// (`crate::achievements`), for the same reason as `settings_lock`: two
+    /// windows reporting at the same instant must both land.
+    pub achievements_lock: Mutex<()>,
     /// Committed catalog requests by client `requestId` (DATA-03), so a
     /// resent batch replays instead of applying twice. Cleared together with
     /// the command stack whenever the open project is replaced. Lock order:
@@ -256,6 +260,7 @@ impl AppState {
             load_operations: std::sync::Arc::new(LoadOperations::default()),
             data_dir,
             settings_lock: Mutex::new(()),
+            achievements_lock: Mutex::new(()),
             catalog_requests: Mutex::new(Default::default()),
         }
     }

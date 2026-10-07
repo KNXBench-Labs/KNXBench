@@ -1,5 +1,16 @@
 # Roadmap
 
+## Achievements (2026-10-07)
+
+[ADR-0089](adr/0089-achievements.md): achievements in the UI, with a
+catalogue in the frontend and a record on the server that only grows.
+Package 1 (mechanism and 11 achievements) is implemented. Package 2 adds
+the remaining 27 from the interview catalogue: import and data integrity,
+structure and group addresses, read-only bus, verified commissioning, the
+remaining hidden ones, and the platinum achievement. Any bus or
+commissioning achievement must reward a *verified* result, never a volume
+of writes.
+
 ## DPT document inventory and scoped hardening (2026-10-07)
 
 The [DPT document review](spec-audits/2026-10-07-dpt-document-audit.md) supplies

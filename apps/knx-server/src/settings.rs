@@ -323,21 +323,7 @@ pub fn store(data_dir: &Path, document: &SettingsDocument) -> std::io::Result<()
     );
     let mut body = serde_json::to_string_pretty(&Value::Object(root))?;
     body.push('\n');
-
-    std::fs::create_dir_all(data_dir)?;
-    let target = settings_path(data_dir);
-    let temporary = data_dir.join(format!("{SETTINGS_FILE_NAME}.tmp"));
-    {
-        use std::io::Write;
-        let mut file = std::fs::File::create(&temporary)?;
-        file.write_all(body.as_bytes())?;
-        file.sync_all()?;
-    }
-    std::fs::rename(&temporary, &target)?;
-    // A rename is atomic, which is not the same as durable: without this
-    // the directory entry can survive a crash the payload did not.
-    std::fs::File::open(data_dir)?.sync_all()?;
-    Ok(())
+    crate::data_file::write_atomically(data_dir, SETTINGS_FILE_NAME, &body)
 }
 
 /// Moves a file this build cannot read out of the way, under a name that
@@ -351,8 +337,13 @@ fn quarantine(
     reason: SettingsQuarantineReason,
     detail: &str,
 ) -> std::io::Result<SettingsLoad> {
-    let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%SZ").to_string();
-    quarantine_at(data_dir, path, reason, detail, &stamp)
+    quarantine_at(
+        data_dir,
+        path,
+        reason,
+        detail,
+        &crate::data_file::utc_stamp(),
+    )
 }
 
 /// The body of [`quarantine`] with the clock handed in, so the
@@ -365,16 +356,7 @@ fn quarantine_at(
     detail: &str,
     stamp: &str,
 ) -> std::io::Result<SettingsLoad> {
-    let mut moved_to = data_dir.join(format!("settings.damaged-{stamp}.json"));
-    // Two damaged files in the same second is contrived, but overwriting
-    // the first one with the second would be exactly the data loss this
-    // function exists to avoid.
-    let mut attempt = 1;
-    while moved_to.exists() {
-        moved_to = data_dir.join(format!("settings.damaged-{stamp}-{attempt}.json"));
-        attempt += 1;
-    }
-    std::fs::rename(path, &moved_to)?;
+    let moved_to = crate::data_file::move_aside(data_dir, path, "settings", "damaged", stamp)?;
     Ok(SettingsLoad::Quarantined {
         moved_to,
         reason,

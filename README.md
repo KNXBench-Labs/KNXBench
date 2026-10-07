@@ -61,6 +61,10 @@ the bus is actually saying.
   Command palette, search, project explorer, properties inspector, drag & drop.
 - 🎨 **Looks the way you like it.**
   Light, dark, and a phosphor-green CRT theme for the nostalgic. English and German interface.
+- 🤖 **Your AI agent may look. It may not touch.**
+  `knx-mcp` lets Claude Code, Hermes or Cursor answer questions about your saved projects
+  over MCP — read-only, no bus, suggestions come back as a CSV you apply yourself
+  ([AI agents over MCP](docs/manual/user-guide/12-ai-agents.md), experimental).
 - 🐧 **Linux-native, browser-ready.**
   A desktop app for Linux, or a Docker container you open in any browser — plus `knx`,
   a command line for the scriptable bits.

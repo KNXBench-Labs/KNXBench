@@ -483,6 +483,38 @@ version `0.1.0-alpha.5`.
 code only. alpha.5 has had **no independent review**; its acceptance is the
 gate below, run by the owner session (self-review).
 
-**Gate and publication:** PENDING — recorded in a follow-up docs-only commit
-once the gate on the tagged commit and the published assets have been
-verified.
+**Gate on the tagged commit** `aca70fd7` (clean tree, inputs frozen from
+start to end, shared gate leases held, fresh `CARGO_TARGET_DIR`, no `KNX_*`
+variables, offline namespace for the workspace, Playwright and corpus runs):
+
+| Step | Result |
+| --- | --- |
+| Web | `npm ci`, production build, `tsc --noEmit`, flow-study and theme-fixture type checks: exit 0. Vitest 2,162/2,162 in 125 files |
+| Playwright (Chromium, offline) | 155/155. A first attempt failed all 155 at browser launch (`Socket path too long` for Chromium's singleton socket under a long `TMPDIR`); preserved, rerun with a short `TMPDIR` on the same commit |
+| Rust | `cargo fmt --check`; Clippy `--workspace --all-targets -D warnings`; workspace tests 3,430 passed, 0 failed, 178 ignored in 194 result blocks |
+| Repository gates | layering, headers (585/155), anchors (676 links), ledger (191 rows), corpus gates: ok |
+| Supply chain | `cargo deny` advisories/bans/licenses/sources ok; `npm audit` 0 vulnerabilities; `tools/tests` unittest ok |
+| Private corpus | 143/143 tests in 31 targets |
+| AppImage | built with `--remap-path-prefix` from the clean tree; `check-appimage --tag v0.1.0-alpha.5` ok; 110,053,880 bytes, SHA-256 `8f69064f967992315d7f62d5688123348593915ac9c1c152148eb44ce00e2ce2` |
+| Identity scan of the artifact | 0 hits for the old identity strings in the binaries and in every file of the AppDir; the new identifier is present in the desktop binary |
+| Start | once on the build host (x86_64 Arch Linux, Hyprland), offline, isolated data folder: native Wayland window titled KNXBench, first-run guide rendered, status bar `v0.1.0-alpha.5`, data folder `com.knxbench.knxbench-labs` created |
+
+An earlier, non-fresh run in the shared `target/` showed 10 `knx-store`
+migration failures: a test binary from a deleted worktree with its fixture
+paths baked in, which Cargo still treated as fresh. The fresh run above has
+none; that earlier run is not acceptance evidence.
+
+**Publication.** The repository `KNXBench-Labs/KNXBench` was deleted and
+recreated (private) from the rewritten history; `main` pushed and read back
+equal to `aca70fd7`.
+
+| Item | Value |
+| --- | --- |
+| Tag | annotated `v0.1.0-alpha.5`, tag object `0e1a3ac3e70b222541b6ed0845a49b8e77fe527a` → commit `aca70fd733963aa7b1e10d5f0792a75b0e9503e5`, tagger `KNXBench`; read back with `git ls-remote` |
+| Release | [https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5): pre-release, not a draft |
+| Assets | `KNXBench_0.1.0-alpha.5_amd64.AppImage`, 110,053,880 bytes, SHA-256 `8f69064f…0e2ce2` (GitHub's digest agrees); `SHA256SUMS` |
+| Verification | both assets downloaded back into an empty directory: `sha256sum -c` ok, `cmp` byte-identical to the evidence copy |
+| CI workflow | the tag-triggered "Linux AppImage" workflow uploads with `--clobber` and would have replaced the verified asset, so it was disabled for the tag push and enabled again afterwards; it did not run. The "CI" workflow did not run on the initial push of `main` either (observed, not investigated) |
+
+Not done: no public visibility change. The tag must not be moved or
+re-created.

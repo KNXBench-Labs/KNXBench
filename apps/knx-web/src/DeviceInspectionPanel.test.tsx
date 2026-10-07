@@ -13,6 +13,7 @@ vi.mock("./api", () => ({
 import DeviceInspectionPanel from "./DeviceInspectionPanel";
 import { messages as en } from "./messages/en";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const project = (): ProjectTree => ({ installations: [] }) as unknown as ProjectTree;
@@ -206,4 +207,46 @@ it("invalidates an in-flight comparison when the project changes", async () => {
   await act(async () => root.render(<DeviceInspectionPanel project={project()} />));
   await act(async () => resolve(comparison)); await flush();
   expect(host.querySelector(".device-checks-result")).toBeNull();
+});
+
+// ADR-0089: what the checks report to the achievement tracker.
+function recordAchievementEvents(): { seen: AchievementEvent[]; stop: () => void } {
+  const seen: AchievementEvent[] = [];
+  return { seen, stop: subscribeAchievementEvents((event) => seen.push(event)) };
+}
+
+it("reports how many graded devices cannot be planned", async () => {
+  const events = recordAchievementEvents();
+  try {
+    await render();
+  } finally {
+    events.stop();
+  }
+  // unsupported, excluded and no-address are not plannable; verified and untested are.
+  expect(events.seen).toEqual([{ type: "readinessChecked", deviceCount: 5, unplannableCount: 3 }]);
+});
+
+it("reports a comparison only once it passed the consistency checks", async () => {
+  const same = { ...comparison, differingOctets: 0, same: true, changes: [] };
+  apiMock.compareDevice.mockReset().mockResolvedValue(same);
+  const events = recordAchievementEvents();
+  try {
+    await render(); await prepare();
+    await act(async () => button(en["deviceChecks.confirm"]).click()); await flush();
+  } finally {
+    events.stop();
+  }
+  expect(events.seen.filter((event) => event.type === "deviceCompared")).toEqual([{ type: "deviceCompared", differingOctets: 0 }]);
+});
+
+it("reports nothing for a comparison it refuses", async () => {
+  apiMock.compareDevice.mockReset().mockResolvedValue({ ...comparison, written: true });
+  const events = recordAchievementEvents();
+  try {
+    await render(); await prepare();
+    await act(async () => button(en["deviceChecks.confirm"]).click()); await flush();
+  } finally {
+    events.stop();
+  }
+  expect(events.seen.filter((event) => event.type === "deviceCompared")).toEqual([]);
 });

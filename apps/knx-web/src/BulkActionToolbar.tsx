@@ -1,6 +1,7 @@
 /** Toolbar for bulk delete/move actions on multi-selected devices or group addresses. */
 import { useState } from "react";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { MultiSelection } from "./selection";
 import { deviceInstallations, flattenBuildingParts } from "./treeUtils";
@@ -30,6 +31,7 @@ export default function BulkActionToolbar(props: {
     try {
       const nextTree = await action;
       onTreeUpdate(nextTree);
+      emitAchievementEvent({ type: "bulkActionApplied", itemCount: count });
       onDone();
     } catch (e) {
       setError(api.errorMessage(e));

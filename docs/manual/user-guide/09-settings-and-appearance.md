@@ -207,8 +207,9 @@ as unsaved, exactly as after a failed manual save.
 
 ## Achievements
 
-KNXBench awards achievements for milestones in your work: a first project, a
-hundred undos, a very large project, and a few hidden ones. When one
+KNXBench awards 38 achievements for milestones in your work: a first
+project, a lossless ETS import, named group addresses, a completed line
+scan, a verified download, and a few hidden ones. When one
 unlocks, a popup appears in the bottom-right corner for a few seconds. If
 several unlock at once, you see at most two popups and a "+N more" line. No
 sound plays, and the popup follows the motion settings.
@@ -228,7 +229,9 @@ name.
 What achievements never do:
 
 - reward sending to the bus. Bus and commissioning achievements count
-  only results such as a verified download;
+  only results: a download counts when every block was read back
+  unchanged, an individual address when the device answers at it, and
+  "different devices" means different individual addresses;
 - contact the internet;
 - appear in a project or an export;
 - gate anything.

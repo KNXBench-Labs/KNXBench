@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
 import type { Translate } from "./i18n";
@@ -96,6 +97,7 @@ export default function GroupAddressCsvButtons(props: {
       const { warnings } = target === undefined
         ? await api.exportGroupAddressesCsv(path)
         : await api.exportGroupAddressesCsv(path, target);
+      emitAchievementEvent({ type: "groupAddressCsvExported" });
       const n = warnings.length;
       onSummary(
         n === 0
@@ -162,6 +164,7 @@ export default function GroupAddressCsvButtons(props: {
           : await api.importGroupAddressesCsv(path, response.confirmationToken, target);
       }
       onTreeUpdate(response.tree);
+      if (response.applied) emitAchievementEvent({ type: "groupAddressCsvImported" });
       onSummary(importSummary(t, response.report));
     } catch (e) {
       // A rejected import (400 — a row-level problem) never reaches the

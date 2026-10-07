@@ -90,7 +90,7 @@ test("the Konami code unlocks a popup, the record is saved, and the palette open
   await expect(dialog).toBeVisible();
   await page.waitForTimeout(300);
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("1 of 11 unlocked");
+  await expect(dialog).toContainText("1 of 38 unlocked");
   await expect(dialog.locator('[data-achievement="konami"]')).toContainText("Unlocked");
   await expect(dialog.locator('[data-achievement="night-shift"]')).toContainText("Hidden achievement");
   // The palette run counted towards its own achievement.

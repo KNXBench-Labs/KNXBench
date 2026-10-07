@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { useTranslate } from "./i18n";
 import { collectDevices } from "./treeUtils";
@@ -78,8 +79,18 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
   const running = status?.status.state === "running";
   const locked = planning || starting || running;
 
+  // ADR-0089: verified means every block was read back unchanged
+  // (`written: "yes"`) and the restart was not left unconfirmed; reported
+  // once per download.
+  const reportedRef = useRef<number | null>(null);
   function apply(next: api.DeviceDownloadStatusResponse) {
     if (downloadIdRef.current !== null && next.downloadId !== downloadIdRef.current) return;
+    const done = next.status;
+    if (done.state === "finished" && done.written === "yes" && done.restart !== "unconfirmed"
+      && reportedRef.current !== next.downloadId) {
+      reportedRef.current = next.downloadId;
+      emitAchievementEvent({ type: "deviceDownloadVerified", subject: next.address });
+    }
     downloadIdRef.current = next.downloadId;
     sinceRef.current = next.nextSince;
     setStatus(next);

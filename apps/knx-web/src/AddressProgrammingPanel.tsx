@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { useTranslate } from "./i18n";
 import { collectDevices } from "./treeUtils";
@@ -82,8 +83,15 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
     return () => { availabilityRequestRef.current += 1; };
   }, []);
 
+  // ADR-0089: only `written: "yes"` — the device answers at the new
+  // address — counts; reported once per programming run.
+  const reportedRef = useRef<number | null>(null);
   function apply(next: api.AddressProgrammingStatusResponse) {
     if (idRef.current !== null && next.programmingId !== idRef.current) return;
+    if (next.status.state === "finished" && next.status.written === "yes" && reportedRef.current !== next.programmingId) {
+      reportedRef.current = next.programmingId;
+      emitAchievementEvent({ type: "individualAddressVerified" });
+    }
     idRef.current = next.programmingId;
     sinceRef.current = next.nextSince;
     setStatus(next);

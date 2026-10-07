@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { pickOpenPath } from "./filePicker";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import type { ComparisonImport, ProjectDiffReport } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
@@ -169,6 +170,7 @@ export default function ProjectDiffPanel(props: {
     try {
       const result = await api.diffProject(path);
       setReport(result);
+      emitAchievementEvent({ type: "projectDiffed" });
       setRefusal(null);
       setGeneration((value) => value + 1);
       setOpen(true);

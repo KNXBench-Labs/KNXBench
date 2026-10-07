@@ -2,7 +2,8 @@
 export type WorkbenchIconName =
   | "overview" | "buildings" | "topology" | "addresses" | "catalog" | "log" | "monitor" | "panel"
   // Achievement glyphs (ADR-0089), drawn in the same 24-unit outline style.
-  | "trophy" | "star" | "command" | "palette" | "language" | "save" | "undo" | "moon" | "gift" | "gamepad";
+  | "trophy" | "star" | "command" | "palette" | "language" | "save" | "undo" | "moon" | "gift" | "gamepad"
+  | "lock" | "search" | "check" | "plug" | "download" | "bug";
 const paths: Record<WorkbenchIconName, string> = {
   overview: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   buildings: "M3 10l9-7 9 7 M5 9v12h14V9 M9 21v-8h6v8",
@@ -22,6 +23,12 @@ const paths: Record<WorkbenchIconName, string> = {
   moon: "M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z",
   gift: "M3 8h18v4H3z M5 12v9h14v-9 M12 8v13 M12 8c-2-4-6-4-6-1s4 1 6 1 M12 8c2-4 6-4 6-1s-4 1-6 1",
   gamepad: "M6 8h12a4 4 0 014 4v2a3 3 0 01-5.2 2L15 14H9l-1.8 2A3 3 0 012 14v-2a4 4 0 014-4z M7 11v3 M5.5 12.5h3 M15 12h.01 M18 13h.01",
+  lock: "M5 11h14v10H5z M8 11V7a4 4 0 018 0v4 M12 15v2",
+  search: "M4 11a7 7 0 1014 0 7 7 0 10-14 0 M21 21l-5-5",
+  check: "M4 12l5 5L20 6",
+  plug: "M9 2v5 M15 2v5 M6 7h12v4a6 6 0 01-12 0z M12 17v5",
+  download: "M12 3v12 M7 10l5 5 5-5 M4 21h16",
+  bug: "M9 7a3 3 0 016 0 M7 9h10v6a5 5 0 01-10 0z M12 9v11 M3 13h4 M17 13h4 M4 7l3 2 M20 7l-3 2 M4 20l3-2 M20 20l-3-2",
 };
 export default function WorkbenchIcon({ name }: { name: WorkbenchIconName }) {
   return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]} /></svg>;

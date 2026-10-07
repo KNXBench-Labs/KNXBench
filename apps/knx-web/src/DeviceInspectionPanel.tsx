@@ -1,6 +1,7 @@
 /** Offline project readiness and opt-in, read-only comparison of one device. */
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { splitGatewayEndpoint, validateGatewayFields } from "./gatewayEndpoint";
 import { useTranslate, type Translate } from "./i18n";
@@ -23,6 +24,11 @@ function hex(value: number, digits: number): string {
 
 function hexOctets(octets: number[]): string {
   return octets.map((octet) => octet.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+}
+
+/** A device the server can prepare a download plan for. */
+function isPlannable(device: api.DeviceReadinessRow): boolean {
+  return device.readiness === "verified" || device.readiness === "untested";
 }
 
 export default function DeviceInspectionPanel({ project }: { project: ProjectTree | null }) {
@@ -53,7 +59,14 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
     setLoading(true);
     try {
       const next = await api.getDeviceReadiness();
-      if (readinessVersion.current === version) setReadiness(next);
+      if (readinessVersion.current === version) {
+        setReadiness(next);
+        emitAchievementEvent({
+          type: "readinessChecked",
+          deviceCount: next.devices.length,
+          unplannableCount: next.devices.filter((device) => !isPlannable(device)).length,
+        });
+      }
     } catch (reason) {
       if (readinessVersion.current === version) setReadinessError(api.errorMessage(reason));
     } finally {
@@ -73,7 +86,7 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
   const ambiguous = [...addresses.values()].some((count) => count > 1);
   const eligible = readiness?.devices.filter((device) =>
     device.address !== null && addresses.get(device.address) === 1 &&
-    (device.readiness === "verified" || device.readiness === "untested"),
+    isPlannable(device),
   ) ?? [];
 
   function editAddress(value: string) {
@@ -124,7 +137,10 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
         next.changes.some((change) => change.device.length !== change.project.length) ||
         next.changes.reduce((sum, change) => sum + change.project.length, 0) !== next.differingOctets
       ) setCompareError(t("deviceChecks.inconsistentResult"));
-      else setResult(next);
+      else {
+        setResult(next);
+        emitAchievementEvent({ type: "deviceCompared", differingOctets: next.differingOctets });
+      }
     } catch (reason) {
       if (comparisonVersion.current === version) setCompareError(api.errorMessage(reason));
     } finally {

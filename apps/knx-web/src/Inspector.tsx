@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { carriesGroupAddress, readDraggedGroupAddress } from "./groupAddressDrag";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ComObjectActivation } from "./bindings/ComObjectActivation";
@@ -451,11 +452,12 @@ function NewGroupLinkRow(props: {
   const [dropReady, setDropReady] = useState(false);
   const canLink = gaId !== "";
 
-  async function linkTo(id: number) {
+  async function linkTo(id: number, viaDrop = false) {
     setError(null);
     try {
       const tree = await api.linkComObject(com.id, id, direction);
       onApplied(tree);
+      if (viaDrop) emitAchievementEvent({ type: "dragDropApplied" });
       setGaId("");
     } catch (e) {
       setError(api.errorMessage(e));
@@ -481,7 +483,7 @@ function NewGroupLinkRow(props: {
       setError(t("inspector.dropNotLinkable"));
       return;
     }
-    void linkTo(id);
+    void linkTo(id, true);
   }
 
   return (

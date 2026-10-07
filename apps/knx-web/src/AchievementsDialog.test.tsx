@@ -107,4 +107,23 @@ describe("AchievementsDialog", () => {
     await act(async () => close.click());
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("shows no progress for a locked hidden achievement, which would give it away", async () => {
+    const secretCounter: AchievementDefinition = {
+      id: "error-culture", tier: "bronze", hidden: true, glyph: "star",
+      titleKey: "achievement.error-culture.title", descriptionKey: "achievement.error-culture.description",
+      rule: { kind: "count", event: "errorToastShown", goal: 10 },
+    };
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    const snapshot: TrackerSnapshot = { status: "ready", record: { unlocked: {}, progress: { "error-culture": 3 } } };
+    await act(async () => {
+      root!.render(<AchievementsDialog snapshot={snapshot} enabled onClose={vi.fn()} catalog={[secretCounter]} />);
+    });
+    const entry = document.querySelector('[data-achievement="error-culture"]') as HTMLElement;
+    expect(entry.textContent).toContain(en["achievements.hiddenTitle"]);
+    expect(entry.querySelector("progress")).toBeNull();
+    expect(entry.textContent).not.toContain("10");
+  });
 });

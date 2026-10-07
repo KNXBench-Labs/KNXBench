@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import { buildIssueUrl } from "./githubIssue";
 import { isTauri, pickSavePath } from "./filePicker";
 import Overlay from "./Overlay";
@@ -137,6 +138,7 @@ function DebugReportDialog(props: {
     setBusy(true);
     try {
       const report = await api.createDebugReport(requestFor(path));
+      emitAchievementEvent({ type: "debugReportCreated" });
       onSummary(t("debugReport.saved", { count: report.files.length }));
       onClose();
     } catch (e) {

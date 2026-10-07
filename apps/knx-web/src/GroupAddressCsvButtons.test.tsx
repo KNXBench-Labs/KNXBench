@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
 
 const apiMock = vi.hoisted(() => ({
   exportGroupAddressesCsv: vi.fn(),
@@ -370,6 +371,55 @@ describe("GroupAddressCsvButtons — installation choice", () => {
       ["/data/annex.csv", undefined, 2],
       ["/data/annex.csv", "preview-token", 2],
     ]);
+    root.unmount();
+  });
+});
+
+// ADR-0089: export, then an import that was actually applied.
+describe("GroupAddressCsvButtons achievement events", () => {
+  const preview = (applied: boolean) => ({
+    tree: { installations: [] } as unknown as ProjectTree,
+    report: {
+      separator: ",", rowsRead: 1, created: 0, updated: 0, readdressed: 1, deleted: 0, unchanged: 0,
+      destructiveChanges: [{ row: 2, action: "readdress", id: 7, sourceAddress: 100, targetAddress: 200, affectedLinks: [] }],
+      ignoredColumns: [], problems: [],
+    },
+    applied,
+    confirmationToken: applied ? null : "preview-token",
+  });
+
+  async function eventsWhile(run: () => Promise<void>): Promise<AchievementEvent["type"][]> {
+    const seen: AchievementEvent["type"][] = [];
+    const stop = subscribeAchievementEvents((event) => seen.push(event.type));
+    try {
+      await run();
+    } finally {
+      stop();
+    }
+    return seen;
+  }
+
+  it("reports an export, and an import only once it was applied", async () => {
+    filePickerMock.pickSavePath.mockResolvedValueOnce("/data/out.csv");
+    apiMock.exportGroupAddressesCsv.mockResolvedValueOnce({ warnings: [] });
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/in.csv");
+    Object.defineProperty(window, "confirm", { configurable: true, value: vi.fn(() => true) });
+    apiMock.importGroupAddressesCsv.mockResolvedValueOnce(preview(false)).mockResolvedValueOnce(preview(true));
+    const { root } = await renderButtons();
+    const seen = await eventsWhile(async () => {
+      await click(exportButton());
+      await click(importButton());
+    });
+    expect(seen).toEqual(["groupAddressCsvExported", "groupAddressCsvImported"]);
+    root.unmount();
+  });
+
+  it("reports nothing when the destructive preview is declined", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/in.csv");
+    Object.defineProperty(window, "confirm", { configurable: true, value: vi.fn(() => false) });
+    apiMock.importGroupAddressesCsv.mockResolvedValueOnce(preview(false));
+    const { root } = await renderButtons();
+    expect(await eventsWhile(() => click(importButton()))).toEqual([]);
     root.unmount();
   });
 });

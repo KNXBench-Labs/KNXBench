@@ -282,7 +282,7 @@ export default function SettingsPanel(props: {
     // managed Appearance surface uses acknowledgment for every theme choice.
     if (!props.manageThemes && THEMES.some((theme) => theme.id === id)) {
       onSelectTheme(id);
-      emitAchievementEvent({ type: "themeChanged" });
+      emitAchievementEvent({ type: "themeChanged", themeId: id });
       return;
     }
     if (themeSelectionBusy) return;
@@ -294,7 +294,7 @@ export default function SettingsPanel(props: {
     try {
       const result = await commitThemeMutation(prepared.plan);
       setThemeSelectionOutcome("saved");
-      emitAchievementEvent({ type: "themeChanged" });
+      emitAchievementEvent({ type: "themeChanged", themeId: id });
       setThemeSelectionCacheError(result.cacheError);
     } catch { setThemeSelectionOutcome("failed"); }
     finally { setThemeSelectionBusy(false); }

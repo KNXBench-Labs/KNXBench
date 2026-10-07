@@ -44,6 +44,7 @@ import { pickStartupToast, useToasts } from "./toast";
 import { useAchievements } from "./useAchievements";
 import { useAchievementsEnabled } from "./achievementPreference";
 import { emitAchievementEvent } from "./achievementEvents";
+import { countDevices, observeProject } from "./achievementObservation";
 import AchievementsDialog from "./AchievementsDialog";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 import DocumentationExportButton from "./DocumentationExportButton";
@@ -211,8 +212,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const [achievementsOpen, setAchievementsOpen] = useState(false);
   useEffect(() => {
     if (!tree) return;
-    const groupAddressCount = tree.installations.reduce((n, installation) => n + installation.group_addresses.length, 0);
-    emitAchievementEvent({ type: "projectObserved", groupAddressCount });
+    emitAchievementEvent({ type: "projectObserved", ...observeProject(tree) });
   }, [tree]);
   // Bumped on every error path below, threaded into `LogPanel` as a second
   // effect dependency alongside `tree`. `tree` only changes on a
@@ -740,7 +740,14 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // Both ways a project enters the application, in one place: the same
   // duplicate guard, the same banner, the same polling. `storePath` is the
   // only thing that differs — an ETS import has no `.knxdb` location yet.
-  function finishLoadedProject(loadedTree: ProjectTree, path: string | null, storePath: boolean) {
+  // `imported` is set when an ETS archive was the source; the tree then
+  // carries that import report's counts (`apply_report_counts`, server).
+  function finishLoadedProject(
+    loadedTree: ProjectTree,
+    path: string | null,
+    storePath: boolean,
+    imported?: { passwordProtected: boolean },
+  ) {
     if (!resetTree(loadedTree)) return;
     setCatalogTarget(null); // Product search/selection is scoped to this project lifetime.
     setHasStorePath(storePath);
@@ -748,6 +755,15 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     setLoadSnapshot(null);
     pushFun(path === null ? t("loadProgress.recovered") : t("loadProgress.succeeded", { source: fileNameOf(path) }));
     emitAchievementEvent({ type: "projectOpened" });
+    if (imported) {
+      emitAchievementEvent({
+        type: "etsImported",
+        lostItems: loadedTree.errors,
+        notices: loadedTree.warnings,
+        deviceCount: countDevices(loadedTree),
+        passwordProtected: imported.passwordProtected,
+      });
+    }
   }
 
   async function runLoad(
@@ -755,7 +771,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     load: (p: string, clientToken: string) => Promise<ProjectTree>,
     storePath: boolean,
     kind: "import" | "open" = storePath ? "open" : "import",
+    passwordProtected = false,
   ) {
+    const imported = kind === "import" ? { passwordProtected } : undefined;
     if (loadingRef.current) return;
     loadingRef.current = true;
     clearErrors();
@@ -769,7 +787,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     loadClientTokenRef.current = crypto.randomUUID();
     setLoading(true);
     try {
-      finishLoadedProject(await load(path, loadClientTokenRef.current), path, storePath);
+      finishLoadedProject(await load(path, loadClientTokenRef.current), path, storePath, imported);
     } catch (e) {
       // The transport rejection is not necessarily a load failure: the
       // server may have committed our operation before its response was
@@ -783,7 +801,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         && ownsOperation({ clientToken: loadClientTokenRef.current }, final)) {
         try {
           const current = await api.currentProject();
-          finishLoadedProject(current, null, current.has_store_path);
+          finishLoadedProject(current, null, current.has_store_path, imported);
           return;
         } catch (recoveryError) {
           failure = recoveryError;
@@ -1296,7 +1314,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
             // discard already confirmed for this import stays confirmed.
             void runLoad(path, (p, clientToken) => (discardChanges
               ? api.importProject(p, clientToken, password, true)
-              : api.importProject(p, clientToken, password)), false, "import");
+              : api.importProject(p, clientToken, password)), false, "import", true);
           }} />
       )}
       {replaceConfirm && (

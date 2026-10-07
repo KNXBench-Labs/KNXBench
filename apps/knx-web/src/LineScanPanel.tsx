@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { type Translate, useTranslate } from "./i18n";
 import LineScanExclusionsEditor from "./LineScanExclusionsEditor";
@@ -123,8 +124,14 @@ export default function LineScanPanel({
     setEstimate(null);
   }
 
+  // ADR-0089: a completed scan is reported once per scan session.
+  const reportedScanRef = useRef<number | null>(null);
   function apply(next: api.LineScanResultsResponse, expectedSessionId: number | null) {
     if (expectedSessionId !== null && next.sessionId !== expectedSessionId) return;
+    if (next.status === "completed" && reportedScanRef.current !== next.sessionId) {
+      reportedScanRef.current = next.sessionId;
+      emitAchievementEvent({ type: "lineScanCompleted" });
+    }
     sessionIdRef.current = next.sessionId;
     gatewaySeedResolvedRef.current = true;
     sinceRef.current = next.nextSince;

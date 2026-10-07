@@ -68,7 +68,7 @@ export default function AchievementsDialog(props: {
                 <span className="achievement-item-description">
                   {secret ? t("achievements.hiddenDescription") : t(achievement.descriptionKey)}
                 </span>
-                {!done && goal !== undefined && (
+                {!done && !secret && goal !== undefined && (
                   <span className="achievement-item-progress">
                     <progress value={current} max={goal} />
                     <span>{t("achievements.progress", { current, goal })}</span>

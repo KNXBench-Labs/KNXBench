@@ -25,6 +25,7 @@ import DeviceDownloadPanel from "./DeviceDownloadPanel";
 import { messages as en } from "./messages/en";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDownloadStatusResponse } from "./api";
+import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -496,4 +497,37 @@ it("locks the scope while a plan is being prepared", async () => {
   await act(async () => finish(PLAN));
   await flush();
   expect(scopeRadio(en["deviceDownload.scope.parameters"]).disabled).toBe(false);
+});
+
+// ADR-0089: only a verified download counts towards achievements.
+async function achievementEventsFor(status: DeviceDownloadStatusResponse["status"]): Promise<AchievementEvent[]> {
+  const seen: AchievementEvent[] = [];
+  const unsubscribe = subscribeAchievementEvents((event) => seen.push(event));
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(response(status, [], 1));
+  try {
+    await render();
+  } finally {
+    unsubscribe();
+  }
+  return seen;
+}
+
+it("reports a download as verified when every block was read back and the restart was acknowledged", async () => {
+  const seen = await achievementEventsFor({ state: "finished", written: "yes", restart: "acknowledged", restartNote: null });
+  expect(seen).toEqual([{ type: "deviceDownloadVerified", subject: "1.1.67" }]);
+});
+
+it("also reports a verified download whose plan has no restart", async () => {
+  const seen = await achievementEventsFor({ state: "finished", written: "yes", restart: "notInPlan", restartNote: null });
+  expect(seen).toEqual([{ type: "deviceDownloadVerified", subject: "1.1.67" }]);
+});
+
+it("does not report a download whose restart was not confirmed, or one that failed", async () => {
+  expect(await achievementEventsFor({ state: "finished", written: "yes", restart: "unconfirmed", restartNote: "no T_ACK" })).toEqual([]);
+  if (root) await act(async () => root!.unmount());
+  host?.remove();
+  expect(await achievementEventsFor({ state: "failed", written: "partially", stoppedInStep: 2, error: "timeout" })).toEqual([]);
+  if (root) await act(async () => root!.unmount());
+  host?.remove();
+  expect(await achievementEventsFor({ state: "running" })).toEqual([]);
 });

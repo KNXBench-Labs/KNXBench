@@ -1,6 +1,7 @@
 /** Navigation tree for the project's installations, buildings, devices, and group addresses. */
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import * as api from "./api";
+import { emitAchievementEvent } from "./achievementEvents";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { InstallationNode } from "./bindings/InstallationNode";
 import type { AreaNode } from "./bindings/AreaNode";
@@ -1058,6 +1059,7 @@ export default function ProjectExplorer(
     try {
       const next = await api.moveDeviceToLine(device.id, line.id);
       onTreeUpdate(next);
+      emitAchievementEvent({ type: "dragDropApplied" });
       props.onSummary(t("dragDrop.movedToLine", {
         device: device.name,
         line: t("explorer.lineLabel", { address: line.address, name: line.name }),
@@ -1080,6 +1082,7 @@ export default function ProjectExplorer(
     try {
       const next = await api.moveDeviceToBuildingPart(device.id, building.id);
       onTreeUpdate(next);
+      emitAchievementEvent({ type: "dragDropApplied" });
       props.onSummary(t("dragDrop.movedToBuildingPart", {
         device: device.name,
         buildingPart: building.name,

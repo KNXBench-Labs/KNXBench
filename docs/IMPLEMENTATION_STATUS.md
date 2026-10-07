@@ -32,8 +32,18 @@
   plain HTTP 307, login cookie `Secure`, reserved directory refused by
   fs-list and save-as, restart reuses the certificate, `KNX_TLS=off`
   warnings, broken PEM refuses to start, no password stays loopback HTTP.
-- **Not verified:** a real browser's warning/acceptance flow and Apple
-  devices; the Docker image was not rebuilt. Limitations: KL §22.
+- **Container and browser (same day):** image rebuilt from `4cc0ec05`, the
+  local `knxbench` container (host network, port 8484, password set)
+  recreated with its previous configuration. It generated its certificate
+  (SANs include the host name), `http://127.0.0.1:8484/` redirected in
+  Chromium to an `NET::ERR_CERT_AUTHORITY_INVALID` warning (authority, not
+  name), the certificate Chromium received has the same SHA-256 as the
+  container log, login over HTTPS set `knx_session` with `Secure`,
+  `HttpOnly`, `SameSite=Strict`, a 35-device project opened through the
+  file picker (which does not list `.knxbench-tls`), zero non-HTTPS
+  resource requests, `isSecureContext` true.
+- **Not verified:** Firefox, Apple devices, a provided (non-generated)
+  certificate in a browser. Limitations: KL §22.
 
 ## 2026-10-07 — One name everywhere: history rewritten, app identifier changed, alpha.5
 

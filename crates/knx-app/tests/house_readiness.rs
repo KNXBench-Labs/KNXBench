@@ -21,24 +21,23 @@ fn expected(address: &str) -> (&'static str, Option<(UnsupportedCategory, &'stat
     let task_ctrl = Some((UnsupportedCategory::UnmodelledStep, "LdCtrlTaskCtrl1"));
     match device {
         1..=9 => ("unsupported", lsm5),
-        11..=13 => (
-            "unsupported",
-            Some((
-                UnsupportedCategory::ParameterValue,
-                "UP-1227_R-1227 (offset 1810 bit 0) and M-0083_A-0019-13-B655_UP-33_R-33 \
-                 (offset 1810 bit 0) are both active members of the union at",
-            )),
-        ),
         22 | 23 => (
             "unsupported",
             Some((UnsupportedCategory::NotMemoryMapped, "")),
         ),
         24 | 250 | 253 => ("unsupported", task_ctrl),
         220 => ("excluded", None),
-        10 | 14..=21 | 25..=32 => ("untested", None),
+        // 11-13: two active union members; the later one is written, an
+        // inference (ADR-0086, RESEARCH §19.12) checked below.
+        10..=21 | 25..=32 => ("untested", None),
         _ => panic!("{address} is not in RESEARCH §19.12"),
     }
 }
+
+/// The one inference the house's devices rest on.
+const UNION_13: &str = "union-later-member: M-0083_A-0019-13-B655_UP-33_R-33 is not written: \
+     M-0083_A-0019-13-B655_UP-1227_R-1227, later in the parameter tree, holds the union at \
+     M-0083_A-0019-13-B655_AS-4400 offset 1810 bit 0 (RESEARCH §19.12)";
 
 #[test]
 #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
@@ -87,8 +86,18 @@ fn the_house_plans_as_research_19_12_says() {
                     }) if *found == category && detail.contains(phrase)
                 )
             });
-        if !fits {
-            wrong.push(format!("{address} {}: {found}", row.name));
+        let inferences: Vec<String> = match &row.readiness {
+            DeviceReadiness::Graded(SupportLevel::Untested { inferences, .. }) => {
+                inferences.iter().map(ToString::to_string).collect()
+            }
+            _ => Vec::new(),
+        };
+        let expected_inferences: Vec<String> = match address.as_str() {
+            "1.1.11" | "1.1.12" | "1.1.13" => vec![UNION_13.to_string()],
+            _ => Vec::new(),
+        };
+        if !fits || inferences != expected_inferences {
+            wrong.push(format!("{address} {}: {found} {inferences:?}", row.name));
         }
     }
     assert!(
@@ -97,7 +106,7 @@ fn the_house_plans_as_research_19_12_says() {
         wrong.join("\n")
     );
     let summary = ReadinessSummary::of(&rows);
-    assert_eq!(summary.by_code.get("untested"), Some(&17));
-    assert_eq!(summary.by_code.get("unsupported"), Some(&17));
+    assert_eq!(summary.by_code.get("untested"), Some(&20));
+    assert_eq!(summary.by_code.get("unsupported"), Some(&14));
     assert_eq!(summary.by_code.get("excluded"), Some(&1));
 }

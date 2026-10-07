@@ -133,6 +133,9 @@ struct SupportDto {
     level: &'static str,
     /// For `verified`: where the hardware run is documented.
     evidence: Option<String>,
+    /// The inferences the plan rests on (ADR-0086), each as
+    /// `rule: detail (reference)`; empty when there are none.
+    inferences: Vec<String>,
 }
 
 /// The support level of `prepared`, against the evidence this build ships.
@@ -143,6 +146,7 @@ fn support_of(prepared: &PreparedDownload) -> Result<SupportLevel, ApiError> {
         &prepared.request.program_id,
         prepared.partial.as_ref().map(|(parts, _)| *parts),
         &prepared.plan,
+        &prepared.image.inferences,
         &evidence,
     ))
 }
@@ -263,6 +267,12 @@ async fn plan(
                     evidence.device, evidence.date, evidence.reference
                 )),
                 _ => None,
+            },
+            inferences: match &level {
+                SupportLevel::Untested { inferences, .. } => {
+                    inferences.iter().map(ToString::to_string).collect()
+                }
+                _ => Vec::new(),
             },
         },
         untested_acknowledgement: level

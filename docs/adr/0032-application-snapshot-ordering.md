@@ -21,7 +21,7 @@ application-state coherence failures, not KNX import-format or UI styling issues
 
 Evidence: `apps/knx-server/src/domain.rs` save/replacement paths,
 `apps/knx-web/src/App.tsx` publication paths, and the
-T13 review record.
+[T13 review record](../../.ai/logs/2026-09-23_codex__t13_ui_residue_batch_b.md).
 These are repository implementation findings, not external format claims.
 
 ## Decision

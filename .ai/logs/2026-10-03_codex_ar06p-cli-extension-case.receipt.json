@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-10-03 17:52 CEST",
+  "status": "candidate-accepted-not-upstream-integrated-or-published",
+  "candidate_base": "f15f7cd2",
+  "public16": {
+    "rust_passed": 3000,
+    "rust_failed": 0,
+    "rust_ignored": 165,
+    "rust_blocks": 151,
+    "web_passed": 1702,
+    "chromium_passed": 72,
+    "bindings_equal": 17,
+    "frozen_inputs": 700
+  },
+  "expanded_public7": {
+    "cli_passed": 154,
+    "cli_failed": 0,
+    "cli_ignored": 20,
+    "regression_cases": 5
+  },
+  "mutations": {
+    "compiled_snapshots": 2,
+    "named_assertion_failures": 4,
+    "canonical_never_mutated": true
+  },
+  "review": "separate full in-session, zero blocking code findings, not independent-model",
+  "release_pair9": {
+    "baseline_named_reds": 2,
+    "candidate_passed": 5,
+    "profile": "release"
+  },
+  "private853": {
+    "timestamp": "2026-10-03 17:43 CEST",
+    "status": "accepted-unpinned-private-same853-before-after-not-ci-or-semantic-compatibility",
+    "inputs": 853,
+    "unique_contents": 751,
+    "installed_before": 644,
+    "installed_after": 687,
+    "hager_before": 2,
+    "hager_after": 45,
+    "newly_admitted": 43,
+    "changed_uppercase_cases": 46,
+    "three_still_explicit_refusals": {
+      "zip_limit": 2,
+      "evidence_item_limit": 1
+    },
+    "no_other_outcome_regression": true,
+    "all_originals_manifest_sizes_hashes_independently_unchanged": true,
+    "source700_exact": true,
+    "binary_profiles_and_hashes_verified": true,
+    "refusal_three_tables_empty": true,
+    "retained_successful_archive_bytes_verified": true,
+    "private_raw_or_item_records_persisted": false,
+    "private_temporary_directories_remaining": 0,
+    "integration_publication_pending": true
+  },
+  "retained_rejections": [
+    "wrong project fixture count premise corrected",
+    "occupied foreign browser port",
+    "alternate origin correctly refused by20 guards",
+    "controlled incomplete debug56 interruption",
+    "cleanup file-vs-directory and notice blank-line verifier premises"
+  ],
+  "broader_alpha_open": true
+}

@@ -1010,7 +1010,7 @@ from a written brief; the nine externally blocked or pending rows (`KL-1`,
 `R-MODULE-04`, `KL-158`) are accepted as disclosed Alpha boundaries; the
 `KL-61` declared-versus-linked DPT display is built before AR18 (then the
 candidate and gates rerun).
-**Status 2026-10-06: `IN_PROGRESS` — gates done, review pending.** `KL-61`
+**Status 2026-10-07: `DONE` — recorded `READY`** ([ALPHA_FINAL_GATES §12](docs/ALPHA_FINAL_GATES.md#12-ar18-outcome-ready)): re-check round 4 `READY` on `b8724d66` (product code `2254eed0`), AppImage `138444b4…c3fc`. History: `KL-61`
 delivered in `4b9e913e`. The full §5 gate ran on that clean revision
 ([ALPHA_FINAL_GATES](docs/ALPHA_FINAL_GATES.md)): Rust 3317/0/177, Vitest 2071,
 Chromium 139, clippy/fmt/deny/xtask green, AppImage `check-appimage` ok with
@@ -1045,15 +1045,23 @@ Chromium 142, corpus 143/143, AppImage
 (`901933a1`, `a16141c6`, `754a66dd`). Full gate on `754a66dd`: Rust
 3367/0/178, Vitest 2076, Chromium 142, corpus 143/143, AppImage
 ([ALPHA_FINAL_GATES §10](docs/ALPHA_FINAL_GATES.md#10-ar18-re-check-round-2-condition-r4-fixed-and-re-gated)).
-Open: re-check round 3 on the changed candidate
-([brief](docs/review/AR18_RECHECK_BRIEF.md#round-3-n7n10)), then the
-ready/not-ready record.
+**Re-check round 3:** `READY_WITH_CONDITIONS`
+([verdict](docs/review/2026-10-06-alpha-recheck-round3.md)). Condition R6
+(N11: local/central record disagreement) is fixed, together with N12/N13
+(`296ba1bb`, `cba15ce4`, `2254eed0`). Full gate on `2254eed0`: Rust
+3402/0/178, corpus 143/143, AppImage `138444b4…c3fc`
+([ALPHA_FINAL_GATES §11](docs/ALPHA_FINAL_GATES.md#11-ar18-re-check-round-3-condition-r6-fixed-and-re-gated)).
+**Re-check round 4 (2026-10-07): `READY`**
+([verdict](docs/review/2026-10-07-alpha-recheck-round4.md)). No blocking
+finding; N14 (an empty directory's payload is not checksummed) is MINOR and
+disclosed in KL §159. AR18 recorded `READY`
+([ALPHA_FINAL_GATES §12](docs/ALPHA_FINAL_GATES.md#12-ar18-outcome-ready)).
 
 - [x] Freeze the complete integrated candidate and artifact provenance. All actionable alpha-owned items are delivered, or their release exceptions have explicit user acceptance. Merely logging a blocker is not permission to call the alpha ready.
 - [x] Run all explicit gates in §5 on that exact integrated revision, including private corpus cases that cover affected behavior; verify target, counts, changed-crate compilation and no silent skips.
 - [x] Obtain the separately chosen **independent whole-product** source/test/artifact review. U13's independent UI review is necessary but not a substitute for this review. Do not use a forbidden subagent or count an unavailable reviewer invocation/self-review as a verdict; obtain the user's reviewer/result decision if necessary.
-- [ ] Fix blocking findings in the owning track, integrate their receipts and rerun affected/full final gates and review as required. A reviewed old candidate is not evidence for a new candidate.
-- [ ] Record ready/not-ready, accepted remaining boundaries, test counts, exact revision/artifact and review verdict. If only an external gate remains, stop with its precise owner/unblock action.
+- [x] Fix blocking findings in the owning track, integrate their receipts and rerun affected/full final gates and review as required. A reviewed old candidate is not evidence for a new candidate.
+- [x] Record ready/not-ready, accepted remaining boundaries, test counts, exact revision/artifact and review verdict. If only an external gate remains, stop with its precise owner/unblock action.
 
 **Exit evidence:** final integrated gate dossier and independent verdict with no unresolved blocking finding. This is the **last readiness stage**; any new feature or fix afterward invalidates the affected evidence and returns here.
 

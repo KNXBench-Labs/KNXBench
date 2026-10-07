@@ -61,6 +61,8 @@ zip.workspace = true
 http-body-util = "0.1"
 knx-testsupport.workspace = true
 rusqlite.workspace = true
+# Paused clock for the stop-grace tests.
+tokio = { workspace = true, features = ["test-util"] }
 
 [build-dependencies]
 knx-build-stamp.workspace = true

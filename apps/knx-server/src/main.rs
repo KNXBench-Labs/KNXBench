@@ -17,6 +17,11 @@ async fn main() {
         }
         _ => {}
     }
+    // Before anything slow: in a container this process is PID 1, which the
+    // kernel never stops on SIGTERM by default, so without this `docker
+    // stop` ends in SIGKILL (exit 137).
+    let stop = knx_server::GracefulStop::install()
+        .unwrap_or_else(|e| panic!("failed to install the signal handlers: {e}"));
     let port: u16 = std::env::var("KNX_PORT")
         .ok()
         .and_then(|s| s.parse().ok())
@@ -99,7 +104,7 @@ async fn main() {
         app_state.connector = Box::new(knx_server::RealConnector::new(return_path));
     }
     let state = Arc::new(app_state);
-    let app = knx_server::app_with_auth(state, static_dir, auth_config);
+    let app = knx_server::app_with_auth(Arc::clone(&state), static_dir, auth_config);
 
     // Never `0.0.0.0` without a password, and never silently: the address
     // is a pure function of whether authentication is configured, and the
@@ -108,17 +113,53 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind((host, port))
         .await
         .unwrap_or_else(|e| panic!("failed to bind {host}:{port}: {e}"));
-    match prepared {
+    let end = match prepared {
         Some(prepared) => {
             let listener = knx_server::TlsListener::new(listener, prepared.config)
                 .unwrap_or_else(|e| panic!("failed to start the TLS listener: {e}"));
             println!("knx-server listening on https://{host}:{port}");
-            axum::serve(listener, app).await.expect("server error");
+            let server = axum::serve(listener, app).with_graceful_shutdown(stop.requested());
+            stop.serve(server).await
         }
         None => {
             println!("knx-server listening on http://{host}:{port}");
-            axum::serve(listener, app).await.expect("server error");
+            let server = axum::serve(listener, app).with_graceful_shutdown(stop.requested());
+            stop.serve(server).await
         }
+    }
+    .expect("server error");
+
+    match end {
+        knx_server::ServeEnd::Drained => {}
+        knx_server::ServeEnd::Forced(knx_server::ForceReason::GraceExpired) => eprintln!(
+            "knx-server: requests still open after {}s are cut off",
+            knx_server::STOP_GRACE.as_secs()
+        ),
+        knx_server::ServeEnd::Forced(knx_server::ForceReason::SecondSignal) => {
+            eprintln!("knx-server: second signal, open requests are cut off")
+        }
+    }
+    let release = knx_server::release_bus(&state, knx_server::BUS_RELEASE_TIMEOUT).await;
+    if release.monitor_stopped {
+        eprintln!("knx-server: bus monitor stopped, disconnect sent to the gateway");
+    }
+    if release.line_scan_cancelled {
+        eprintln!("knx-server: line scan cancelled");
+    }
+    if release.timed_out {
+        eprintln!(
+            "knx-server: releasing the bus took longer than {}s; the gateway frees \
+             the tunnel when its heartbeat times out",
+            knx_server::BUS_RELEASE_TIMEOUT.as_secs()
+        );
+    }
+    eprintln!("knx-server: stopped");
+    if end != knx_server::ServeEnd::Drained {
+        // Something is still running. Returning from `main` would drop the
+        // Tokio runtime, and that waits for every `spawn_blocking` task
+        // without a limit, which is exactly the hang this path exists to
+        // avoid.
+        std::process::exit(0);
     }
 }
 

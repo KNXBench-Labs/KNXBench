@@ -36,4 +36,7 @@ EXPOSE 8080
 # With a password set the server speaks HTTPS on KNX_PORT, with a self-signed
 # certificate kept in /data/.knxbench-tls (ADR-0088). KNX_TLS_CERT/KNX_TLS_KEY
 # name your own PEM files instead; KNX_TLS=off returns to plain HTTP.
+# knx-server runs as PID 1 and handles SIGTERM itself: `docker stop` lets open
+# requests finish (5 s), disconnects a bus monitor's tunnel and exits with 0,
+# well inside Docker's 10 s timeout. No init wrapper is needed.
 ENTRYPOINT ["/usr/local/bin/knx-server"]

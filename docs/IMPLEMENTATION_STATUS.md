@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — The repository moved to `KNXBench-Labs/KNXBench`
+
+- The repository now lives at <https://github.com/KNXBench-Labs/KNXBench>
+  (still private). Verified with `gh`: same `main` HEAD `8d97a1f8`, issues
+  enabled, pre-release `v0.1.0-alpha.4` with the AppImage and `SHA256SUMS`
+  moved along; the maintainer account keeps `WRITE`.
+- Local `origin` points to the new URL. Every current-facing reference was
+  updated: `Cargo.toml` `repository`, README, the user manual, the in-app
+  **Debug report** issue link (`apps/knx-web/src/githubIssue.ts` and its
+  test), cloud-session procedure and the release links in the alpha records.
+- Historical records (`docs/history/`, `.ai/archive/`, `.ai/logs/`, older
+  handovers, dated plans/specs and `.superpowers/` reports) keep the old
+  `KNXBench-Labs/KNXBench` name verbatim. `knxprod-crawler` is a separate
+  repository that still lives under `KNXBench-Labs`.
+- Checks: `DebugReportButton` 12/12, `cargo metadata` repository field, and
+  the repository gates (layering, headers, anchors, ledger, corpus gates).
+  No product behavior, release asset or visibility changed.
+
 ## 2026-10-07 — Branch consolidation integrates the post-alpha AppImage launcher
 
 - User-authorized consolidation: retain `main`, integrate the complete KL-158

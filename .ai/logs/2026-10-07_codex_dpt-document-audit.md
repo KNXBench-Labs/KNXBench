@@ -181,3 +181,17 @@ security scan is clean. Only closure Markdown and this log's tracking status
 change. Recheck staged whitespace and all five repository audits before
 commit; actual remote verification remains pending. The separate untracked
 `2026-10-07-dpt-scope-precheck.md` is excluded and preserved.
+
+### Verified publication — 2026-10-07 15:56 CEST
+
+Feature commit `eb0abc6a8e75c614a489af82ab9ac810b5ffb740` was pushed to
+`origin/main` from the task-owned detached checkout. Fetched and live remote
+main both matched that exact object. Author and committer are
+`KNXBench-Labs <github@knxbench.com>`; no co-author trailer. The exact 21-path
+commit excludes the separate scope-precheck file, whose bytes remain intact.
+All five repository audits, fmt and staged whitespace checks passed before
+commit. The staged check first caught an extra EOF blank line in this log;
+only that metadata whitespace was corrected. Existing code/CSV hashes remain
+identical to the accepted integrated Rust/clippy/build gate; no new full-suite
+execution or expanded conformance claim is implied. This closure-only
+bookkeeping is committed/pushed separately without product changes.

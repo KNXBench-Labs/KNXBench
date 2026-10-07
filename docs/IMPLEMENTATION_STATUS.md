@@ -3,7 +3,9 @@
 ## 2026-10-07 — The README hero does something, and Docker updates in one go
 
 - README hero is now `docs/assets/readme/hero-add-device.gif` (900 × 467,
-  39.8 s / 3.95 MB, each step held at least 3 s, dark Graphite theme): the real app against a real `knx-server` and
+  56.4 s / 7.9 MB at 10 fps, dark Graphite theme; per step the camera
+  glides for 1.6 s, the next click target is framed for 1.1 s, the result
+  holds for 1.8 s): the real app against a real `knx-server` and
   the fictional sample house adds a push button from the catalog with a free
   address and links its first object to `0/0/2`. The camera zooms into each
   action in post-production. Regenerate with `playwright.readme-hero.config.ts`

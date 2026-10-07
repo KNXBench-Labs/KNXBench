@@ -66,11 +66,11 @@ Evidence levels used below:
 
 | Status | Rows | Meaning for the release |
 | --- | --- | --- |
-| `DONE` | 43 | Delivered with evidence in the row |
+| `DONE` | 45 | Delivered with evidence in the row |
 | `ACCEPTED_BOUNDARY` | 121 | Kept for the Alpha by a named decision or ADR |
 | `LATER` | 23 | Out of the Alpha by decision |
 | `BLOCKED_EXTERNAL` | 0 | All eight accepted as disclosed boundaries by the user on 2026-10-06 |
-| `WAITING_OWNER` | 2 | Release gates — see §4 |
+| `WAITING_OWNER` | 0 | Release gates done 2026-10-07 (`RELEASE-01`, `RELEASE-02`) — see §4 |
 | `WAITING_DECISION` | 1 | The release decision (`RELEASE-04`, AR19) |
 | `IN_PROGRESS` | 0 | `UI-04` accepted by the user on 2026-10-06 |
 
@@ -84,7 +84,7 @@ Nothing below is waived. Each row says what has to happen before AR18/AR19.
 
 | ID | Owner | What is missing | Disposition |
 | --- | --- | --- | --- |
-| `RELEASE-01`, `RELEASE-02` | alpha (AR18) | Final integrated gates on a frozen candidate and an independent whole-product review | **Blocks release.** Cannot be produced from historical receipts. |
+| `RELEASE-01`, `RELEASE-02` | alpha (AR18) | — | **Done 2026-10-07:** independent review plus four re-check rounds; round 4 `READY` on candidate `b8724d66` (product code `2254eed0`), full gate green ([ALPHA_FINAL_GATES §12](ALPHA_FINAL_GATES.md#12-ar18-outcome-ready)). |
 | `RELEASE-03` | alpha (AR16) | — | **Done 2026-10-06:** UI closure receipt verified, screenshots regenerated, claim-by-claim pass, manual accepted at its tested scope ([MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md)); its exceptions go to the user at AR19. |
 | `RELEASE-04` | user (AR19) | Explicit tag/version/publication decision on the reviewed candidate | **Blocks release** by design; no automatic tag. |
 | `UI-04` | commissioning | — | **Accepted by the user 2026-10-06 as a disclosed Alpha boundary** (Web half delivered in `892b9948`). |

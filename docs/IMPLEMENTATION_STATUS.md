@@ -1,5 +1,21 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — AR18 recorded `READY`: the alpha candidate is release-ready, pending the user's decision
+
+- Re-check round 4 (a fresh Codex session) returned **`READY`**
+  ([verdict](review/2026-10-07-alpha-recheck-round4.md)). It tested 181
+  fictional archives across CLI and both servers, plus seven archives from
+  real writers. No blocking finding remains.
+- Candidate `b8724d66`, product code `2254eed0`. AppImage
+  `KNXBench_0.1.0-alpha.4_amd64.AppImage`, SHA-256 `138444b4…c3fc`.
+- Gates: Rust 3402/0/178, Vitest 2076, Chromium 142, corpus 143/143.
+- N14 (MINOR): an empty directory's payload is not checksummed. Disclosed
+  in KL §159 and left for post-Alpha hardening.
+- Record: [ALPHA_FINAL_GATES §12](ALPHA_FINAL_GATES.md#12-ar18-outcome-ready).
+  `RELEASE-01`/`RELEASE-02` are `DONE`.
+- Next: AR19, the user's release, tag and publication decision. Nothing is
+  tagged automatically.
+
 ## 2026-10-06 — Round 3's condition: every part of a record must agree
 
 - Re-check round 3: `READY_WITH_CONDITIONS`

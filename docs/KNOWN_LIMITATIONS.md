@@ -8232,3 +8232,13 @@ What remains:
   authoritative (APPNOTE), and every reader the re-check tried follows it; a
   streaming reader would see the extra record.
 - Encrypted nested payloads of real projects were not part of the census.
+
+**Update 2026-10-07 (AR18 re-check round 4, N14, MINOR): an empty
+directory's payload is not checksummed.** Round 4 found every local/central
+disagreement refused. One gap remains: a directory record with zero declared
+size whose CRC is not zero, or which declares deflate but carries no stream
+at all, is accepted. `unzip -t` reports both as damaged. The records agree
+with each other, so no member is hidden or replaced, and no content is
+lost. Round 4 judged it not blocking. It is left unfixed for the Alpha,
+because any code change would reopen AR18 for another review round. It is a
+candidate for the first post-Alpha hardening.

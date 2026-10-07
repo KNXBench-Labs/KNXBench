@@ -134,6 +134,27 @@ bridge. See [The command line](10-command-line.md) and
 On Linux, start the server with `--network host` and set `KNX_PORT` to the
 host port you want; `-p` has no effect in host mode.
 
+### Stopping
+
+`docker stop knxbench` (or Ctrl+C in a terminal) sends SIGTERM, and the
+server leaves in order:
+
+1. it stops accepting connections and gives requests in flight up to 5
+   seconds to finish; an idle browser tab does not hold it up,
+2. it stops a running bus monitor and cancels a line scan, so the gateway
+   gets a proper disconnect and frees the tunnel at once instead of after
+   its heartbeat timeout (up to 2 more seconds),
+3. it exits with code 0.
+
+Both limits together stay below Docker's 10-second stop timeout, so the
+container should show `Exited (0)`. `Exited (137)` means Docker had to kill
+it; images built before 2026-10-07 did not react to SIGTERM at all. A second
+SIGTERM or Ctrl+C skips the wait. A device download or address programming
+still running is not waited for and ends mid-way, so stop the server when
+no write to a device is in progress
+([KNOWN_LIMITATIONS.md §163](../../KNOWN_LIMITATIONS.md#163-stopping-the-server-does-not-wait-for-a-device-download-or-address-programming)).
+`docker rm -f` and `docker kill` skip all of this.
+
 ### Updating in one go
 
 Run this from your KNXBench checkout. It pulls the latest source, builds a new
@@ -144,7 +165,7 @@ health check — with host networking, so the bus monitor keeps working:
 git pull --ff-only \
   && docker build -t knxbench-server -f apps/knx-server/Dockerfile . \
        --build-arg KNX_BUILD_SHA=$(git rev-parse --short HEAD) \
-  && { docker rm -f knxbench 2>/dev/null || true; } \
+  && { docker stop knxbench >/dev/null 2>&1; docker rm knxbench >/dev/null 2>&1 || true; } \
   && docker run -d --name knxbench --network host \
        -e KNX_PORT=8484 \
        -e KNX_AUTH_PASSWORD='pick something long and boring' \
@@ -155,9 +176,10 @@ git pull --ff-only \
 
 - Every step runs only if the previous one succeeded: a failed pull or build
   leaves the running container untouched.
-- `docker rm -f` removes the old container, never `data/` — your projects stay
-  where they are. Run the command from the same directory as before, because
-  `$(pwd)/data` is the mount.
+- `docker stop` lets the old server finish open requests and release the bus
+  ([Stopping](#stopping)); `docker rm` then removes the old container, never
+  `data/` — your projects stay where they are. Run the command from the same
+  directory as before, because `$(pwd)/data` is the mount.
 - Use the same port and password you started with. If you use a password hash,
   replace the `KNX_AUTH_PASSWORD` line with
   `-e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH"` (see

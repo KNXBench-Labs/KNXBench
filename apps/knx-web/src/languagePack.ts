@@ -1,5 +1,6 @@
 /** User-importable UI language packs: validate, store, import, and export beyond built-in ones. */
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
+import { BUNDLED_LANGUAGE_PACKS } from "./bundledLanguagePacks";
 import { messages as enMessages } from "./messages/en";
 import { getSetting, setSettingOrThrow, subscribeToSettings } from "./settingsStore";
 
@@ -456,13 +457,28 @@ export function useLanguagePacks(): readonly LanguagePack[] {
   return useSyncExternalStore(subscribeToPacks, getListSnapshot);
 }
 
-/** The installed pack for `tag`, or `undefined` if none is installed —
- * including the case where `tag` names a pack that used to exist and was
- * removed, or an active tag hand-edited into `localStorage`. Callers (in
- * particular `i18n.ts`'s `translateFor`) treat `undefined` the same way:
- * fall straight through to English. */
+/** A user-installed pack wins over a shipped fun pack with the same tag.
+ * Removal reveals the shipped pack again; other absent tags resolve to
+ * undefined, which translateFor treats as a straight English fallback.
+ * Never merge catalogues: missing keys of an imported replacement still
+ * go directly to English, not to the shipped pack or its basedOn. */
 export function getLanguagePack(tag: string): LanguagePack | undefined {
-  return getCache()[tag];
+  return getCache()[tag] ?? BUNDLED_LANGUAGE_PACKS.find((pack) => pack.tag === tag);
+}
+
+/** Shipped packs plus user imports, one option per tag. An import replaces
+ * a shipped catalogue, but its shipped picker name remains recognizable.
+ * Installed-pack management still uses useLanguagePacks(), never this list. */
+export function useAvailableLanguagePacks(): readonly LanguagePack[] {
+  const installed = useLanguagePacks();
+  return useMemo(() => {
+    const byTag = new Map(BUNDLED_LANGUAGE_PACKS.map((pack) => [pack.tag, pack]));
+    for (const pack of installed) {
+      const shipped = BUNDLED_LANGUAGE_PACKS.find((candidate) => candidate.tag === pack.tag);
+      byTag.set(pack.tag, shipped ? { ...pack, name: shipped.name } : pack);
+    }
+    return [...byTag.values()];
+  }, [installed]);
 }
 
 /** Unwraps the message from whatever `window.localStorage.setItem` threw
@@ -545,9 +561,9 @@ export function removeLanguagePack(tag: string): void {
 }
 
 /**
- * Exports an installed pack exactly as stored — unknown fields and all —
+ * Exports the resolved installed or shipped pack — unknown fields and all —
  * so a user can share it or hand-edit and re-import it. `undefined` if
- * `tag` isn't installed.
+ * neither provides `tag`.
  */
 export function exportLanguagePack(tag: string): LanguagePack | undefined {
   const pack = getLanguagePack(tag);

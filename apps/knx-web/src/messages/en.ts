@@ -157,6 +157,8 @@ export const messages = {
   "settings.uiLanguage": "UI language",
   "language.en": "English",
   "language.de": "Deutsch",
+  "languagePack.bundledFunHint": "Playful, partial translations: missing interface strings use English. Detailed technical and safety notices remain in English.",
+
 
   "command.search": "Search…",
 

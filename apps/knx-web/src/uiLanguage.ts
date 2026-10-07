@@ -20,8 +20,8 @@ export type BuiltInUiLanguage = (typeof AVAILABLE_UI_LANGUAGES)[number];
 
 /**
  * The *active* UI language: a built-in id (`"en"`/`"de"`), or the `tag`
- * of a pack installed through `languagePack.ts` — Dutch, Klingon,
- * Bavarian, Sindarin, whatever a user imported (T25 task 6). Open by
+ * of a pack resolved through `languagePack.ts` — shipped playful Klingon
+ * or Bavarian, or Dutch, Sindarin and anything a user imports. Open by
  * design: unlike `BuiltInUiLanguage`, membership here isn't
  * compile-time-checked, because an imported pack's tag is only known at
  * runtime. `detectUiLanguage` below still only ever returns a

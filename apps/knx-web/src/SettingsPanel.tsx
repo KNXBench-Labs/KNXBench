@@ -9,6 +9,8 @@ import type { MotionLevelDef, MotionStyleDef } from "./motion";
 import type { ProductLanguage } from "./api";
 import { AVAILABLE_UI_LANGUAGES, useUiLanguage } from "./uiLanguage";
 import { useTranslate } from "./i18n";
+import { languageSelfName, productLanguageLabel } from "./languageSelfName";
+import { BUNDLED_LANGUAGE_PACKS } from "./bundledLanguagePacks";
 import type { Translate } from "./i18n";
 import Overlay from "./Overlay";
 import { usePreferredGateway } from "./gatewayPreference";
@@ -25,6 +27,7 @@ import {
   importLanguagePack,
   removeLanguagePack,
   useLanguagePacks,
+  useAvailableLanguagePacks,
 } from "./languagePack";
 import type { LanguagePackImportReport, LanguagePackRejectionReason } from "./languagePack";
 
@@ -358,7 +361,7 @@ export default function SettingsPanel(props: {
   // built-in in `i18n.ts`'s `resolveCatalog`, just a confusing duplicate.
   // It still appears in the management list below so it can be exported,
   // fixed and re-imported, or removed.
-  const selectablePacks = packs.filter((pack) => !isShadowedByBuiltIn(pack.tag));
+  const selectablePacks = useAvailableLanguagePacks().filter((pack) => !isShadowedByBuiltIn(pack.tag));
 
   return (
     <Overlay labelledBy="settings-panel-title" className="settings-panel" resizable={{ width: 860, height: 680 }} onClose={onClose}>
@@ -464,7 +467,7 @@ export default function SettingsPanel(props: {
             <option value="">{t("settings.packageDefault")}</option>
             {productLanguages.map((l) => (
               <option key={l.language} value={l.language}>
-                {t("settings.productLanguageOption", { language: l.language, count: l.rows })}
+                {t("settings.productLanguageOption", { language: productLanguageLabel(l.language), count: l.rows })}
               </option>
             ))}
           </select>
@@ -479,7 +482,7 @@ export default function SettingsPanel(props: {
         >
           {AVAILABLE_UI_LANGUAGES.map((language) => (
             <option key={language} value={language}>
-              {t(`language.${language}`)}
+              {languageSelfName(language)}
             </option>
           ))}
           {/* An installed pack names itself here in its own `name` —
@@ -494,6 +497,9 @@ export default function SettingsPanel(props: {
         </select>
       </label>
 
+      {BUNDLED_LANGUAGE_PACKS.some((pack) => pack.tag === uiLanguage) && (
+        <p className="language-pack-hint bundled-language-hint">{t("languagePack.bundledFunHint")}</p>
+      )}
       <div className="language-pack-manager">
         <label className="catalog-install">
           {t("languagePack.importLabel")}

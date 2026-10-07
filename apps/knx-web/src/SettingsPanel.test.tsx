@@ -357,8 +357,8 @@ describe("SettingsPanel", () => {
 
     expect(options).toEqual([
       { value: "", text: "Package default" },
-      { value: "de-DE", text: "de-DE (7385 strings)" },
-      { value: "en-US", text: "en-US (7327 strings)" },
+      { value: "de-DE", text: "Deutsch (de-DE) (7385 strings)" },
+      { value: "en-US", text: "English (en-US) (7327 strings)" },
     ]);
     expect(select.disabled).toBe(false);
 
@@ -391,7 +391,7 @@ describe("SettingsPanel", () => {
     act(() => root.unmount());
   });
 
-  it("lists exactly the catalogues messages/ actually ships, named in themselves", async () => {
+  it("lists shipped languages by their fixed self-names, including the fun packs", async () => {
     const { root } = await renderPanel();
 
     const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
@@ -400,9 +400,40 @@ describe("SettingsPanel", () => {
     expect(options).toEqual([
       { value: "en", text: "English" },
       { value: "de", text: "Deutsch" },
+      { value: "bar", text: "Boarisch" },
+      { value: "tlh", text: "Klingonisch/Klingon" },
     ]);
 
     act(() => root.unmount());
+  });
+
+  it.each([
+    ["bar", "Speichan", "Eistellunga"],
+    ["tlh", "pol", "DuHmey"],
+  ])("switches to the shipped %s pack without importing and can switch back", async (tag, save, title) => {
+    const { root } = await renderPanel();
+    try {
+      const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+      await act(async () => {
+        select.value = tag;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      expect(host!.querySelector('[data-testid="reader"]')?.textContent).toBe(save);
+      expect(host!.querySelector("#settings-panel-title")?.textContent).toBe(title);
+      expect([...select.options].map((option) => option.text)).toEqual([
+        "English", "Deutsch", "Boarisch", "Klingonisch/Klingon",
+      ]);
+      expect(getSetting("uiLanguage")).toBe(tag);
+      expect(document.documentElement.lang).toBe(tag);
+      expect(host!.querySelector(".bundled-language-hint")?.textContent).toContain("English");
+      await act(async () => {
+        select.value = "en";
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      expect(host!.querySelector('[data-testid="reader"]')?.textContent).toBe("Save");
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 
   it("the UI language select shows the active language", async () => {
@@ -438,6 +469,34 @@ describe("SettingsPanel", () => {
 });
 
 describe("SettingsPanel — language packs (T25 task 7)", () => {
+  it("keeps self-names even when the active imported pack translates language labels", async () => {
+    importLanguagePack(dutchPack({ messages: { "language.en": "Engels", "language.de": "Duits" } }));
+    const { root } = await renderPanel();
+    try {
+      const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+      await act(async () => { select.value = "nl-NL"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+      expect([...select.options].map((option) => option.text)).toEqual([
+        "English", "Deutsch", "Boarisch", "Klingonisch/Klingon", "Nederlands",
+      ]);
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it.each([["bar", "Speichan", "Boarisch"], ["tlh", "pol", "Klingonisch/Klingon"]])(
+    "offers %s once when a custom replacement is imported and restores it on removal",
+    async (tag, shippedSave, shippedName) => {
+      importLanguagePack(dutchPack({ tag, name: "Custom pack name", messages: { "toolbar.save": "Custom save" } }));
+      const { root } = await renderPanel();
+      try {
+        const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+        expect([...select.options].filter((option) => option.value === tag).map((option) => option.text)).toEqual([shippedName]);
+        await act(async () => { select.value = tag; select.dispatchEvent(new Event("change", { bubbles: true })); });
+        expect(host!.querySelector('[data-testid="reader"]')?.textContent).toBe("Custom save");
+        await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Remove Custom pack name"]')!.click());
+        expect(select.value).toBe(tag);
+        expect(host!.querySelector('[data-testid="reader"]')?.textContent).toBe(shippedSave);
+      } finally { await act(async () => root.unmount()); }
+    },
+  );
   it("an imported pack appears in the UI-language select, named in itself", async () => {
     importLanguagePack(dutchPack());
     const { root } = await renderPanel();
@@ -448,6 +507,8 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     expect(options).toEqual([
       { value: "en", text: "English" },
       { value: "de", text: "Deutsch" },
+      { value: "bar", text: "Boarisch" },
+      { value: "tlh", text: "Klingonisch/Klingon" },
       { value: "nl-NL", text: "Nederlands" },
     ]);
 
@@ -626,7 +687,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     expect(report.textContent).toMatch(/tag/i);
 
     const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
-    expect(Array.from(select.options).map((o) => o.value)).toEqual(["en", "de"]);
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(["en", "de", "bar", "tlh"]);
 
     act(() => root.unmount());
   });

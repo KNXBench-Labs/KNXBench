@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-07 07:18 CEST
+- **Completed:** AR19 on the user's explicit decision: annotated tag `v0.1.0-alpha.4` → `514c0c54`, GitHub pre-release (private repo) https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4 with the AppImage (SHA-256 `138444b4…c3fc`) and `SHA256SUMS`, downloaded back and verified byte-identical. Docs: ALPHA_FINAL_GATES §13, LEDGER `RELEASE-04` DONE, Matrix, goal AR19 DONE, installation chapter.
+- **Pending/Next Steps:** Alpha release goal complete through AR19. Open follow-ups (post-Alpha, not started): N6 (UI owner: adopt the server's project after a web reload), N14 (checksum empty directory payloads), KL-158 (AppImage without X server). Any further code change is post-alpha work and needs its own gates.
+- **Notes for Codex oder Claude:** Do not move or re-create the tag `v0.1.0-alpha.4`. The repository stays private; nothing else was published.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-07 07:15 CEST
 - **Completed:** Merged re-check round 4 (`c40fe914`, **READY**) and recorded AR18 `READY`: ALPHA_FINAL_GATES §12, LEDGER `RELEASE-01`/`RELEASE-02` → DONE, Matrix recount, KL §159 N14 (MINOR, disclosed, unfixed), goal AR18 DONE. Candidate `b8724d66` (product code `2254eed0`), AppImage SHA-256 `138444b4…c3fc` (evidence `ar18-round3-fixes-20261006`). Docs-only; doc gates green.
 - **Pending/Next Steps:** AR19: the user's explicit release/tag/publication decision on that candidate. If approved, follow the version/tag/artifact procedure; if deferred, record `READY_NOT_PUBLISHED`/`WAITING_DECISION`.

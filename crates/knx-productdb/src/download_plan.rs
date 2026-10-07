@@ -487,6 +487,7 @@ mod tests {
             parameters: BTreeMap::new(),
             texts: BTreeMap::new(),
             objects: Vec::new(),
+            inferences: Vec::new(),
         }
     }
 

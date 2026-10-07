@@ -93,9 +93,13 @@ fn grade(
     evidence: &BTreeMap<String, VerifiedEvidence>,
 ) -> SupportLevel {
     match prepare_device_download(conn, project, address) {
-        Ok(prepared) => {
-            download_level(&prepared.request.program_id, None, &prepared.plan, evidence)
-        }
+        Ok(prepared) => download_level(
+            &prepared.request.program_id,
+            None,
+            &prepared.plan,
+            &prepared.image.inferences,
+            evidence,
+        ),
         Err(error) => SupportLevel::Unsupported {
             category: prepare_category(&error),
             detail: error.to_string(),

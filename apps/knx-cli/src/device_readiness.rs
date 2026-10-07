@@ -68,8 +68,17 @@ pub fn format_readiness(rows: &[DeviceRow]) -> String {
             DeviceReadiness::Graded(SupportLevel::Verified { evidence, .. }) => {
                 format!("verified on {}, {}", evidence.device, evidence.date)
             }
-            DeviceReadiness::Graded(SupportLevel::Untested { steps, octets }) => {
-                format!("{steps} steps, {octets} octets; never downloaded on hardware")
+            DeviceReadiness::Graded(SupportLevel::Untested {
+                steps,
+                octets,
+                inferences,
+            }) => {
+                let mut detail =
+                    format!("{steps} steps, {octets} octets; never downloaded on hardware");
+                for inference in inferences {
+                    let _ = write!(detail, "\n           inference {inference}");
+                }
+                detail
             }
             DeviceReadiness::Graded(SupportLevel::Unsupported { category, detail }) => {
                 format!("{category}: {detail}")
@@ -104,6 +113,7 @@ pub fn format_readiness(rows: &[DeviceRow]) -> String {
 mod tests {
     use super::*;
     use knx_app::download_support::UnsupportedCategory;
+    use knx_productdb::inference::Inference;
 
     fn args(line: &str) -> Vec<String> {
         line.split_whitespace().map(String::from).collect()
@@ -135,6 +145,21 @@ mod tests {
                 readiness: DeviceReadiness::Graded(SupportLevel::Untested {
                     steps: 12,
                     octets: 1778,
+                    inferences: vec![],
+                }),
+            },
+            DeviceRow {
+                address: Some("1.1.11".parse().unwrap()),
+                name: "Schaltaktor A.2".into(),
+                program_ref: "P13".into(),
+                readiness: DeviceReadiness::Graded(SupportLevel::Untested {
+                    steps: 12,
+                    octets: 1778,
+                    inferences: vec![Inference {
+                        rule: "union-later-member",
+                        detail: "UP-33_R-33 is not written".into(),
+                        reference: "RESEARCH §19.12",
+                    }],
                 }),
             },
             DeviceRow {
@@ -169,7 +194,15 @@ mod tests {
             "{out}"
         );
         assert!(
-            out.contains("3 devices: 1 excluded, 1 unsupported, 1 untested"),
+            out.contains(
+                "1.1.11     untested    Schaltaktor A.2  12 steps, 1778 octets; never downloaded \
+                 on hardware\n           inference union-later-member: UP-33_R-33 is not written \
+                 (RESEARCH §19.12)\n"
+            ),
+            "{out}"
+        );
+        assert!(
+            out.contains("4 devices: 1 excluded, 1 unsupported, 2 untested"),
             "{out}"
         );
         assert!(out.contains("  unsupported not-memory-mapped: 1"), "{out}");

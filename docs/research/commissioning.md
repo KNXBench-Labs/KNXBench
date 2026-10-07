@@ -1321,7 +1321,7 @@ contain 0 `ModuleDef`s between them, so the module-instance refusal
 | 1.1.25–26 | MDT binary input 16f/8f (`A-0030-20`, `A-0031-20`) | plan |
 | 1.1.27–31 | MDT dimming actuator AKD-0401 (`A-001B-13`) | plan¹ |
 | 1.1.1–9 | Presence detectors (`M-006A_A-0001-22`) | refused: load procedure uses `LsmIdx 5` |
-| 1.1.11–13 | MDT AMS-1216 (`A-0019-13-B655`) | refused: two members of one union at offset 1810 |
+| 1.1.11–13 | MDT AMS-1216 (`A-0019-13-B655`) | plan² (inference: later union member at offset 1810) |
 | 1.1.22–23 | Gira SmartSensor (`MV-0012`) | refused: not memory-mapped |
 | 1.1.24 | Merten blind actuator (`A-5701-10`) | refused: `LdCtrlTaskCtrl1`, then `LsmIdx 5` |
 | 1.1.250, 1.1.253 | EIBMARKT IP interface (`A-0702-10`) | refused: `LdCtrlTaskCtrl1`, then `LsmIdx 5` |
@@ -1332,7 +1332,11 @@ configuration (`UP-5001`'s default `0` is not in its empty enumeration);
 the house's own parameter values leave that parameter inactive, so the
 device plan does not reach it.
 
-17 of the 32 bus devices plan (17 of 35 overall); every plan is **Untested** — only 1.1.67 (the test device,
+² Refused until 2026-10-07 for two active members of one union; since
+ADR-0086 the later member is written as a disclosed inference (follow-up
+below). The house now plans 20 of its 32 bus devices.
+
+On 2026-09-30, 17 of the 32 bus devices planned (17 of 35 overall; 20 since the union inference); every plan is **Untested** — only 1.1.67 (the test device,
 not in this project) is Verified. `knx device readiness` (2026-09-30) reproduces this table from
 the project in one command, and `crates/knx-app/tests/house_readiness.rs`
 pins it device by device; the union overlap on 1.1.11–13 is reported as
@@ -1438,11 +1442,20 @@ says that should not happen:
 So two active members are a product-data defect by the authoring rule, not
 a case the format defines. One consequence for the candidate rules above:
 "the `DefaultUnionParameter` member wins" would have written `UP-33` (230),
-and 1.1.11 holds `01h` — the device read rules that one out. The refusal
-stays; since 2026-10-07 it names both references and the union
-(`ImageError::Overlap`), instead of an offset that "overlaps" itself. Asking
-MDT what ETS writes for `A-0019-13-B655` (or whether the hidden `UP-1227`
-reference is the defect `A-0019-16` fixed) is the cheapest next source.
+and 1.1.11 holds `01h` — the device read rules that one out.
+
+**Resolved as an inference (2026-10-07, ADR-0086).** With the specification,
+product data and project files declared enough evidence, the image builder
+now writes, of two active members of one union that share bits, the one
+later in the parameter tree (`image::UNION_LATER_MEMBER`), and does not
+write the other. That reproduces the octet ETS wrote on 1.1.11 and the
+"later writer wins" order of the two open-source builders. It is an
+inference, not a rule from a source: the image carries it
+(`DownloadImage::inferences`), the plan is never `Verified` by evidence of
+a run without it, and readiness, `knx device download` and
+`/api/device-download/plan` (`support.inferences`) name it. 1.1.11–13 now
+plan (Untested). Two active parameters that overlap *outside* a union are
+still refused, naming both references.
 
 **Follow-up on 1.1.1–9 and 1.1.24: `LsmIdx 5` on a `0701h` device.** Three
 of the house's programs name a fifth load state machine:

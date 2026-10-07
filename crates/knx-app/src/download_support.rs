@@ -30,6 +30,7 @@ use knx_core::IndividualAddress;
 use knx_productdb::code::load_program_code;
 use knx_productdb::download_plan::{check_program_kind, plan_memory_download, DownloadPlanError};
 use knx_productdb::image::{build_download_image, ImageError, ImageRequest};
+use knx_productdb::inference::Inference;
 use knx_productdb::query::programs;
 use knx_productdb::{Connection, ProductDbError};
 use serde::Deserialize;
@@ -187,12 +188,16 @@ pub enum SupportLevel {
         /// Segment octets the offline plan writes.
         octets: usize,
     },
-    /// The plan builds offline; no download of it was seen on a bus.
+    /// The plan builds offline; no download of it was seen on a bus, or it
+    /// rests on an inference the hardware run did not need.
     Untested {
         /// Steps of the offline plan.
         steps: usize,
         /// Segment octets the offline plan writes.
         octets: usize,
+        /// The inferences the plan rests on (ADR-0086), for the user to
+        /// see before acknowledging a write.
+        inferences: Vec<Inference>,
     },
     /// The plan does not build.
     Unsupported {
@@ -220,19 +225,23 @@ impl SupportLevel {
     }
 
     /// The level of a program whose plan built (`Some`) or was refused.
+    /// A plan resting on `inferences` is `Untested` even with evidence: the
+    /// hardware run did not exercise them (ADR-0086).
     pub fn from_outcome(
         outcome: Result<&MemoryDownloadPlan, (UnsupportedCategory, String)>,
         evidence: Option<&VerifiedEvidence>,
+        inferences: &[Inference],
     ) -> Self {
         match (outcome, evidence) {
-            (Ok(plan), Some(evidence)) => Self::Verified {
+            (Ok(plan), Some(evidence)) if inferences.is_empty() => Self::Verified {
                 evidence: evidence.clone(),
                 steps: plan.steps.len(),
                 octets: plan.data_octets(),
             },
-            (Ok(plan), None) => Self::Untested {
+            (Ok(plan), _) => Self::Untested {
                 steps: plan.steps.len(),
                 octets: plan.data_octets(),
+                inferences: inferences.to_vec(),
             },
             // Evidence never overrides a refusal: a program that no longer
             // plans is unsupported, whatever ran once.
@@ -252,10 +261,16 @@ impl fmt::Display for SupportLevel {
                 evidence.date,
                 evidence.reference
             ),
-            Self::Untested { .. } => f.write_str(
-                "untested: the product's load procedure plans completely offline, \
-                 but no download of this application has been seen on a bus",
-            ),
+            Self::Untested { inferences, .. } => {
+                f.write_str(
+                    "untested: the product's load procedure plans completely offline, \
+                     but no download of this application has been seen on a bus",
+                )?;
+                for inference in inferences {
+                    write!(f, "; inference {inference}")?;
+                }
+                Ok(())
+            }
             Self::Unsupported { category, detail } => {
                 write!(f, "unsupported ({category}): {detail}")
             }
@@ -299,6 +314,14 @@ pub fn offline_plan(
     conn: &Connection,
     program_id: &str,
 ) -> Result<MemoryDownloadPlan, (UnsupportedCategory, String)> {
+    offline_download(conn, program_id).map(|(plan, _)| plan)
+}
+
+/// [`offline_plan`] and the inferences it rests on.
+pub fn offline_download(
+    conn: &Connection,
+    program_id: &str,
+) -> Result<(MemoryDownloadPlan, Vec<Inference>), (UnsupportedCategory, String)> {
     check_kind(conn, program_id)?;
     let request = ImageRequest {
         program_id: program_id.to_owned(),
@@ -311,7 +334,9 @@ pub fn offline_plan(
     };
     let image = build_download_image(conn, &request)
         .map_err(|e| (image_category(&e), format!("memory image: {e}")))?;
-    plan_memory_download(&image).map_err(|e| (plan_category(&e), format!("load procedure: {e}")))
+    let plan = plan_memory_download(&image)
+        .map_err(|e| (plan_category(&e), format!("load procedure: {e}")))?;
+    Ok((plan, image.inferences))
 }
 
 /// Refuses a program of a kind no download translates, before its image is
@@ -339,11 +364,12 @@ pub fn support_level(
     program_id: &str,
     evidence: &BTreeMap<String, VerifiedEvidence>,
 ) -> SupportLevel {
-    let outcome = offline_plan(conn, program_id);
-    SupportLevel::from_outcome(
-        outcome.as_ref().map_err(Clone::clone),
-        evidence.get(program_id),
-    )
+    let outcome = offline_download(conn, program_id);
+    let (plan, inferences) = match &outcome {
+        Ok((plan, inferences)) => (Ok(plan), inferences.as_slice()),
+        Err(refusal) => (Err(refusal.clone()), &[][..]),
+    };
+    SupportLevel::from_outcome(plan, evidence.get(program_id), inferences)
 }
 
 /// The evidence-file name of a download's scope: `complete`,
@@ -358,20 +384,21 @@ pub fn scope_code(partial: Option<PartialDownloadParts>) -> &'static str {
 }
 
 /// The level of one prepared download: its plan built, so it is
-/// `Verified` when the evidence names this program *and this scope*, and
-/// `Untested` otherwise. A partial download of a program verified only
-/// complete is untested: it runs other steps.
+/// `Verified` when the evidence names this program *and this scope* and the
+/// plan rests on no inference, and `Untested` otherwise. A partial download
+/// of a program verified only complete is untested: it runs other steps.
 pub fn download_level(
     program_id: &str,
     partial: Option<PartialDownloadParts>,
     plan: &MemoryDownloadPlan,
+    inferences: &[Inference],
     evidence: &BTreeMap<String, VerifiedEvidence>,
 ) -> SupportLevel {
     let scope = scope_code(partial);
     let matching = evidence
         .get(program_id)
         .filter(|evidence| evidence.scopes.iter().any(|s| s == scope));
-    SupportLevel::from_outcome(Ok(plan), matching)
+    SupportLevel::from_outcome(Ok(plan), matching, inferences)
 }
 
 /// The phrase that acknowledges an untested download to `target`. Spelled
@@ -514,18 +541,51 @@ mod tests {
     #[test]
     fn a_plan_with_evidence_is_verified_and_without_is_untested() {
         let plan = plan();
-        let verified = SupportLevel::from_outcome(Ok(&plan), Some(&evidence("P")));
+        let verified = SupportLevel::from_outcome(Ok(&plan), Some(&evidence("P")), &[]);
         assert_eq!(verified.code(), "verified");
         assert!(!verified.needs_acknowledgement());
-        let untested = SupportLevel::from_outcome(Ok(&plan), None);
+        let untested = SupportLevel::from_outcome(Ok(&plan), None, &[]);
         assert_eq!(
             untested,
             SupportLevel::Untested {
                 steps: 3,
-                octets: 3
+                octets: 3,
+                inferences: vec![],
             }
         );
         assert!(untested.needs_acknowledgement());
+    }
+
+    /// ADR-0086: a hardware run of a program does not cover a plan that
+    /// rests on an inference the run did not need.
+    #[test]
+    fn a_plan_resting_on_an_inference_is_untested_and_names_it() {
+        let plan = plan();
+        let inference = Inference {
+            rule: "union-later-member",
+            detail: "UP-1_R-1 is not written".into(),
+            reference: "RESEARCH §19.12",
+        };
+        let level = SupportLevel::from_outcome(
+            Ok(&plan),
+            Some(&evidence("P")),
+            std::slice::from_ref(&inference),
+        );
+        assert_eq!(
+            level,
+            SupportLevel::Untested {
+                steps: 3,
+                octets: 3,
+                inferences: vec![inference],
+            }
+        );
+        assert!(level.needs_acknowledgement());
+        assert!(
+            level
+                .to_string()
+                .contains("union-later-member: UP-1_R-1 is not written (RESEARCH §19.12)"),
+            "{level}"
+        );
     }
 
     #[test]
@@ -533,6 +593,7 @@ mod tests {
         let level = SupportLevel::from_outcome(
             Err((UnsupportedCategory::UnmodelledStep, "LdCtrlMerge".into())),
             Some(&evidence("P")),
+            &[],
         );
         assert_eq!(level.code(), "unsupported");
         assert!(!level.needs_acknowledgement());
@@ -641,22 +702,22 @@ mod tests {
             })
         };
         assert_eq!(
-            download_level("P", None, &plan, &evidence).code(),
+            download_level("P", None, &plan, &[], &evidence).code(),
             "verified"
         );
         assert_eq!(
-            download_level("P", parts(true, false), &plan, &evidence).code(),
+            download_level("P", parts(true, false), &plan, &[], &evidence).code(),
             "verified"
         );
         for untested in [parts(false, true), parts(true, true)] {
             assert_eq!(
-                download_level("P", untested, &plan, &evidence).code(),
+                download_level("P", untested, &plan, &[], &evidence).code(),
                 "untested",
                 "{untested:?}"
             );
         }
         assert_eq!(
-            download_level("Q", None, &plan, &evidence).code(),
+            download_level("Q", None, &plan, &[], &evidence).code(),
             "untested"
         );
         assert_eq!(
@@ -707,6 +768,7 @@ mod tests {
                 SupportLevel::Untested {
                     steps: 9,
                     octets: 10,
+                    inferences: vec![],
                 },
             ),
             row(

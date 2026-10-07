@@ -163,6 +163,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | Distinct exit codes (`0` success, `1` failure, `2` import produced a project whose report has errors) | ✅ Implemented | `2` is raised by `import` and `ga-import` only |
 | Creating a project from the command line | ❌ Not implemented | No command exists; create one in the application |
 | Writing to a device from the command line | 🟡 Partial or experimental | `knx device download` (one verified device); address programming is refused for now — see *Commissioning and device download*, below |
+| `knx-mcp`: read-only questions from an AI agent over MCP | 🟡 Partial or experimental | Eight read tools over saved files; never writes, no bus; parameter visibility not evaluated — [AI agents over MCP](user-guide/12-ai-agents.md), [§165](../KNOWN_LIMITATIONS.md#165-the-mcp-adapter-reads-saved-files-only-and-does-not-evaluate-parameter-visibility) |
 
 ## KNXnet/IP and the bus
 

@@ -42,6 +42,8 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openSettings: () => {},
     openCompanion: () => {},
     openHelp: () => {},
+    openCatalog: () => {},
+    openIntroduction: () => {},
     ...overrides,
   };
 }
@@ -102,10 +104,11 @@ describe("command enablement", () => {
     expect(called).toBe(true);
   });
 
-  it("lists all thirteen commands in palette order, with an unconditionally enabled first entry", () => {
+  it("lists all fifteen commands in palette order, with an unconditionally enabled first entry", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
       "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "search",
-      "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window", "open-help",
+      "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
+      "open-catalog", "show-introduction", "open-help",
     ]);
     expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
   });
@@ -141,5 +144,23 @@ describe("command enablement", () => {
       cmd.run(ctx);
     }
     expect(opened).toEqual(["log", "monitor", "settings", "companion"]);
+  });
+
+  // The first-run guide's "Add product data" task runs `open-catalog`, and
+  // the guide itself is reopened through `show-introduction`; both are
+  // used exactly where no project is open yet.
+  it("keeps the product catalog and the introduction runnable with no project open", () => {
+    const opened: string[] = [];
+    const ctx = noopCtx({
+      tree: null,
+      openCatalog: () => opened.push("catalog"),
+      openIntroduction: () => opened.push("introduction"),
+    });
+    for (const id of ["open-catalog", "show-introduction"]) {
+      const cmd = COMMANDS.find((c) => c.id === id)!;
+      expect(cmd.isEnabled(ctx)).toBe(true);
+      cmd.run(ctx);
+    }
+    expect(opened).toEqual(["catalog", "introduction"]);
   });
 });

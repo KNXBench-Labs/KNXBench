@@ -17,6 +17,8 @@ export interface CommandContext {
   openSettings: () => void;
   openCompanion: () => void;
   openHelp: () => void;
+  openCatalog: () => void;
+  openIntroduction: () => void;
 }
 
 /**
@@ -143,6 +145,23 @@ export const COMMANDS: PaletteCommand[] = [
     isEnabled: () => true,
     run: (ctx) => ctx.openCompanion(),
   },
+  // The product catalog is where `.knxprod` files are installed. Its only
+  // other entry is a button in the collapsible navigation pane, and the
+  // first-run guide's "Add product data" task runs this command.
+  {
+    id: "open-catalog",
+    labelKey: "workbench.catalog",
+    isEnabled: () => true,
+    run: (ctx) => ctx.openCatalog(),
+  },
+  // The first-run guide opens by itself once per release stage; this row
+  // (and the File menu's twin) is how it is read again (ADR-0084).
+  {
+    id: "show-introduction",
+    labelKey: "command.showIntroduction",
+    isEnabled: () => true,
+    run: (ctx) => ctx.openIntroduction(),
+  },
   // Last, and enabled with nothing loaded. F1 is the shortcut people who
   // already know it will use; this row is for everyone else, and it is
   // the reason `shortcutHint` says F1 at all (ADR-0024).
@@ -162,7 +181,7 @@ export const COMMANDS: PaletteCommand[] = [
  * into this shape before calling here; see its `resolvedCommands`). Unlike
  * `matchEntries` (search overlay), an empty query returns every command —
  * the palette is a browsable list on open, not a search-only box — and
- * there is no ranking: thirteen static entries need no scoring algorithm.
+ * there is no ranking: fifteen static entries need no scoring algorithm.
  */
 export function filterCommands(
   commands: ResolvedPaletteCommand[],

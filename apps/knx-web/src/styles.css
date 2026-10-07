@@ -2815,6 +2815,40 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .programming-consent-stage-alpha, .programming-consent-stage-beta, .programming-consent-stage-preRelease, .programming-consent-stage-unknown { color: var(--knx-warning-color); }
 .programming-consent-risk { border-left: 3px solid var(--knx-warning-color); padding-left: 10px; }
 .programming-consent-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; border-top: 1px solid var(--knx-border); padding-top: 12px; }
+
+/* ADR-0084 — the first-run guide. Four short pages in one card: wider than
+   About because step 3 lays its task cards out two abreast, and taller
+   than the default overlay cap so a page rarely needs to scroll. The task
+   cards borrow the welcome page's card look, smaller. */
+/* `align-self`: the overlay is a row flexbox, which would stretch the card to its cap. */
+.search-panel.onboarding-guide { align-self: flex-start; width: min(46rem, 94vw); max-height: 82vh; padding: 1rem 1.15rem; display: flex; flex-direction: column; }
+.onboarding-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.onboarding-header h2 { margin: 0 0 8px; font-size: 20px; }
+.onboarding-progress { margin: 0; color: var(--knx-muted); font-size: 12px; }
+/* Shrinks (and scrolls) when the window is short; never grows past its content. */
+.onboarding-step { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+.onboarding-step h3 { margin: 4px 0 10px; font-size: 16px; }
+.onboarding-step h4 { margin: 12px 0 6px; font-size: 13px; color: var(--knx-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.onboarding-step p { margin: 0 0 10px; font-size: 13px; line-height: 1.55; max-width: 72ch; }
+.onboarding-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 0 0 8px; }
+.onboarding-facts dt { color: var(--knx-muted); font-size: 12px; }
+.onboarding-facts dd { margin: 0; font-size: 13px; }
+.onboarding-stage { font-weight: 700; }
+.onboarding-stage-alpha, .onboarding-stage-beta, .onboarding-stage-preRelease, .onboarding-stage-unknown { color: var(--knx-warning-color); }
+.onboarding-stage-meaning { border-left: 3px solid var(--knx-warning-color); padding-left: 10px; }
+.onboarding-language { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; font-size: 13px; }
+/* A two-way toggle: the chosen language is the filled one. Buttons are
+   filled by default, so the other one is drawn neutral rather than tinted. */
+.onboarding-language button { background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); box-shadow: none; }
+.onboarding-language button[aria-pressed="true"] { background: var(--knx-accent); color: var(--knx-on-accent); border-color: var(--knx-accent); }
+.onboarding-list { margin: 0 0 6px; padding-left: 1.2rem; font-size: 13px; line-height: 1.55; }
+.onboarding-list li { margin-bottom: 4px; max-width: 72ch; }
+.onboarding-link { margin-top: 6px; }
+.onboarding-tasks { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 10px; margin: 0 0 12px; }
+.welcome-card.onboarding-task { min-height: 0; padding: 12px 14px; gap: 6px; }
+.onboarding-hint { color: var(--knx-muted); }
+.onboarding-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; border-top: 1px solid var(--knx-border); padding-top: 12px; }
+.onboarding-skip { margin-right: auto; }
 .settings-field-programming-consent { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 
 /* T28/F4 — the question asked before unsaved work goes in the bin. The

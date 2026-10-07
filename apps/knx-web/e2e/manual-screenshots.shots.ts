@@ -48,6 +48,14 @@ test("manual screenshots of the finished application", async ({ page }) => {
   page.on("pageerror", (error) => failures.push(String(error)));
 
   await page.goto("/");
+  // ADR-0084: a fresh data directory is a first start, so the guide opens
+  // over the welcome page. Photograph it, then close it as a user would;
+  // every later screenshot is taken with it seen.
+  const guide = page.getByRole("dialog", { name: "Welcome to KNXBench" });
+  await expect(guide).toBeVisible();
+  await shot(page, "onboarding-guide");
+  await page.keyboard.press("Escape");
+  await expect(guide).toBeHidden();
   await expect(page.getByRole("button", { name: /Import ETS project/ })).toBeVisible();
   await shot(page, "welcome");
 

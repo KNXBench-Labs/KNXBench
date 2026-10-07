@@ -15,6 +15,10 @@ That is the whole window before any project exists. Notice that the navigation p
 the workspace and the properties pane are already there and already empty — the layout
 does not change shape when a project arrives, it only fills up.
 
+On the very first start, and again when the build reaches a new release stage, a
+four-page introduction opens over this window first; [First
+start](../getting-started/06-first-start.md#the-introduction) describes it.
+
 ## The header
 
 The top row, left to right:
@@ -122,7 +126,8 @@ deleted. The chapters that follow say which is which.
 
 One line at the bottom: the installation names of the open project (or just
 "KNXBench" when nothing is open) on the left, and the version on the right. The
-screenshots in this manual were taken from `v0.1.0-alpha.4`.
+screenshots in this manual were taken from `v0.1.0-alpha.4` and the development
+build after it, which still reports that version.
 
 ## Resizing
 
@@ -151,7 +156,7 @@ limits.
 
 ## The overlays
 
-Six things open on top of the window instead of inside it. All of them close with
+Seven things open on top of the window instead of inside it. All of them close with
 `Escape` or with their own Close button.
 
 **Search** (`Ctrl+K`) searches the open project — devices, group addresses and
@@ -166,11 +171,12 @@ Searching the sample project for "light": eight group addresses match, each show
 its name and its address.
 
 **The command palette** (`Ctrl+Shift+P`) lists every command KNXBench has as a
-keyboard-reachable list. There are thirteen: New project, Open project, Open
+keyboard-reachable list. There are fifteen: New project, Open project, Open
 (.knxdb), Save, Save As, Undo, Redo, Search, Log, Bus monitor, Settings, Diagnostics
-window, Help. Typing filters the list by substring.
+window, Product catalog, Show introduction, Help. Typing filters the list by
+substring.
 
-![The command palette showing all thirteen commands, with Undo and Redo grayed out and
+![The command palette showing all fifteen commands, with Undo and Redo grayed out and
 the keyboard hints Ctrl+Z, Ctrl+Shift+Z, Ctrl+K and F1 on the rows that have
 them](../../assets/screenshots/porcelain-command-palette.png)
 
@@ -210,6 +216,10 @@ They are covered in [Devices and products](05-devices-and-products.md) and
 [Projects](02-projects.md).
 
 **About KNXBench** shows version and license information.
+
+**The introduction** (**File → Show introduction…**, or the palette) is the
+four-page guide described in [First
+start](../getting-started/06-first-start.md#the-introduction).
 
 ## The second window
 

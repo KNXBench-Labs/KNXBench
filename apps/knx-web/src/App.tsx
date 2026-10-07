@@ -46,6 +46,8 @@ import LoadProgressBanner from "./LoadProgressBanner";
 import { localFailure, ownsOperation } from "./loadProgress";
 import HelpPanel from "./HelpPanel";
 import AboutDialog from "./AboutDialog";
+import OnboardingGuide from "./OnboardingGuide";
+import { useOnboardingGuide } from "./useOnboardingGuide";
 import Overlay from "./Overlay";
 import { canQuit, onWindowCloseRequested, quitApp } from "./quit";
 import type { SessionControls } from "./session";
@@ -253,6 +255,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpTopicId, setHelpTopicId] = useState<HelpTopicId>(DEFAULT_HELP_TOPIC_ID);
   const [aboutOpen, setAboutOpen] = useState(false);
+  // ADR-0084: opens by itself once per release stage over an empty
+  // workbench; the File menu and the palette open it any time.
+  const guide = useOnboardingGuide({ projectOpen: tree !== null, busy: loading });
   // F4. Only ever true inside the Tauri shell, and only with edits the
   // command stack can still undo — see `quitRequested` below for why that
   // is the dirty signal.
@@ -1056,6 +1061,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     openSettings: () => setSettingsOpen(true),
     openCompanion: () => void openCompanion(),
     openHelp: () => requestHelpTopic(DEFAULT_HELP_TOPIC_ID),
+    openCatalog: () => openCatalog(null),
+    openIntroduction: guide.show,
   };
 
   // With no project, the welcome routes should precede the navigation in
@@ -1127,6 +1134,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       />
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
       <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
+      <button onClick={guide.show}>{t("command.showIntroduction")}</button>
       <button onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</button>
       {/* ADR-0026: only where a session exists to end. On the desktop shell
           — and on any server started without a password — `required` is
@@ -1255,6 +1263,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
       {helpOpen && <HelpPanel key={helpTopicId} initialTopicId={helpTopicId} onClose={() => setHelpOpen(false)} />}
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {guide.open && <OnboardingGuide stage={guide.open.stage} ctx={ctx} onClose={guide.close} />}
       {quitConfirmOpen && (
         <Overlay labelledBy="quit-confirm-title" className="quit-confirm" onClose={dismissQuitConfirm}>
           <h2 id="quit-confirm-title">{t("quit.title")}</h2>

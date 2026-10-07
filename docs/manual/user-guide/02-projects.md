@@ -239,7 +239,7 @@ is not a file KNXBench should write.
 
 ## The rest of the File menu
 
-Three more items are covered elsewhere:
+Four more items are covered elsewhere:
 
 - **Export group addresses (CSV)…** and **Import group addresses (CSV)…** —
   [Working with group addresses](04-group-addresses.md).
@@ -250,5 +250,7 @@ Three more items are covered elsewhere:
   read it before you attach it to anything public. The larger dialog scrolls inside
   its window; drag its lower-right corner or focus the top-right resize button and
   press the arrow keys to make room for the contents and privacy notice.
+- **Show introduction…** reopens the four-page introduction that appears on the
+  first start — [First start](../getting-started/06-first-start.md#the-introduction).
 
 [Manual index](../README.md) · Next: [Buildings and topology](03-buildings-and-topology.md) →

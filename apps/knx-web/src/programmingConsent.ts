@@ -45,6 +45,15 @@ export type ReleaseStage = "alpha" | "beta" | "releaseCandidate" | "stable" | "p
 /** Stages a consent may be remembered for: those the dialog can name. */
 const REMEMBERABLE: ReadonlySet<ReleaseStage> = new Set(["alpha", "beta", "releaseCandidate", "stable"]);
 
+/**
+ * Whether `stage` is one a remembered answer may be keyed by: a stage the
+ * UI can name. The first-run guide (`onboardingGuide.ts`) remembers "seen"
+ * by the same rule, so the two cannot disagree about what a stage is.
+ */
+export function isRememberableStage(stage: ReleaseStage): boolean {
+  return REMEMBERABLE.has(stage);
+}
+
 // SemVer 2.0.0 core, optional pre-release, optional build metadata. Kept
 // deliberately small: leading-zero rules and the like do not change which
 // stage a version is in.

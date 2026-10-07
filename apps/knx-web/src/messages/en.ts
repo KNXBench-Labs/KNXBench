@@ -2047,6 +2047,73 @@ export const messages = {
   "addressProgramming.round": "Round {number}:",
   "addressProgramming.nobody": "no device in programming mode",
   "addressProgramming.tab": "Program address",
+  "command.showIntroduction": "Show introduction…",
+  // First-run guide (ADR-0084). It says what this build is before it says
+  // what to click, so the stage paragraph comes first and the task list
+  // third. Every claim here is coarse on purpose: counts and device names
+  // live in Help and in docs/ALPHA_SCOPE_MATRIX.md, where they are kept
+  // current, not in a dialog shown once.
+  "onboarding.title": "Welcome to KNXBench",
+  "onboarding.progress": "Step {current} of {total}",
+  "onboarding.skip": "Skip introduction",
+  "onboarding.back": "Back",
+  "onboarding.next": "Next",
+  "onboarding.finish": "Get started",
+  "onboarding.step.about.title": "What this is",
+  "onboarding.step.about.p1":
+    "KNXBench is an independent application for engineering KNX installations: importing ETS projects, structuring buildings, topology and group addresses, configuring devices and watching the bus. It is not made, endorsed or certified by the KNX Association, and it is not ETS.",
+  "onboarding.step.about.stageLabel": "This build",
+  "onboarding.stage.alpha":
+    "Alpha means the features are here and tested — against real project files, a simulator and, so far, very little real hardware. Expect rough edges, and expect things to change between versions.",
+  "onboarding.stage.beta":
+    "Beta means the features planned for this release are in and are being tested more widely. Expect remaining bugs.",
+  "onboarding.stage.releaseCandidate":
+    "A release candidate is meant to become the release unless a serious problem turns up.",
+  "onboarding.stage.stable": "This is a released version.",
+  "onboarding.stage.preRelease": "This is a pre-release build whose stage has no name here.",
+  "onboarding.stage.unknown": "The server did not say which build is running.",
+  "onboarding.step.about.trust":
+    "Keep backups of your projects. Before you rely on what KNXBench tells you about an installation, check it against the installation itself.",
+  "onboarding.step.about.language": "Language",
+  "onboarding.step.scope.title": "What works, and what does not yet",
+  "onboarding.step.scope.worksTitle": "Works",
+  "onboarding.step.scope.works.import":
+    "Import ETS projects (.knxproj), including password-protected exports from ETS4 and ETS5. Whatever cannot be mapped is listed, not dropped.",
+  "onboarding.step.scope.works.edit":
+    "Edit buildings, topology, group addresses, devices and parameters, with undo and redo.",
+  "onboarding.step.scope.works.products": "Install manufacturer product data (.knxprod) into a local product catalog.",
+  "onboarding.step.scope.works.bus":
+    "Watch the bus and send single group telegrams through a KNXnet/IP gateway.",
+  "onboarding.step.scope.works.export": "Export group addresses as CSV and the project as HTML documentation.",
+  "onboarding.step.scope.notYetTitle": "Not (yet)",
+  "onboarding.step.scope.notYet.export": "No .knxproj export: a project lives on as a .knxdb, and no file leads back to ETS.",
+  "onboarding.step.scope.notYet.secure": "No ETS6 project passwords and no KNX Secure.",
+  "onboarding.step.scope.notYet.programming":
+    "Writing to devices only where a verified procedure exists, always after you confirm; everything else is refused.",
+  "onboarding.step.scope.more": "More in Help: What this does not do",
+  "onboarding.step.start.title": "Where to start",
+  "onboarding.step.start.intro": "Each button closes this introduction and runs the command.",
+  "onboarding.task.importEts.title": "Import an ETS project",
+  "onboarding.task.importEts.description": "Reads a .knxproj and reports what it could not map. The file itself is left untouched.",
+  "onboarding.task.newProject.title": "Start a new project",
+  "onboarding.task.newProject.description": "An empty project with a name, a project language and a group address style.",
+  "onboarding.task.openNative.title": "Open a KNXBench project",
+  "onboarding.task.openNative.description": "Opens a .knxdb you saved earlier.",
+  "onboarding.task.productData.title": "Add product data",
+  "onboarding.task.productData.description":
+    "Opens the product catalog, where a manufacturer's .knxprod file is installed so its devices can be added to a project.",
+  "onboarding.task.busMonitor.title": "Watch the bus",
+  "onboarding.task.busMonitor.description": "Finds KNXnet/IP gateways, shows telegrams live and sends single group values.",
+  "onboarding.step.start.palette":
+    "Every command is also in the command palette: Ctrl+Shift+P. Once a project exists, Save writes it as a .knxdb.",
+  "onboarding.step.help.title": "Help and feedback",
+  "onboarding.step.help.p1":
+    "F1 opens Help on the topic that fits what has focus. It explains KNX terms the way KNXBench uses them, and where this application stops.",
+  "onboarding.step.help.p2":
+    "Found a bug? File → Debug report… collects what a report needs, lists every file before anything is written, and can open a prefilled GitHub issue for you to submit. Nothing is uploaded by itself.",
+  "onboarding.step.help.p3":
+    "This introduction stays one step away: File → Show introduction…, or the same entry in the command palette.",
+  "onboarding.step.help.openHelp": "Open Help",
 } as const;
 
 export type Messages = typeof messages;

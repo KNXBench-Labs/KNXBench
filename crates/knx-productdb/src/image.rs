@@ -215,6 +215,10 @@ pub enum ImageError {
         /// The parameter.
         parameter: String,
     },
+    /// Two active parameters share bits of one segment. Members of one
+    /// `Union` are alternatives: the product data activates two of them,
+    /// and no source states which one a download writes (RESEARCH §19.12).
+    Overlap(Box<ParameterOverlap>),
     /// The parameter image refused a write.
     Parameter {
         /// The `ParameterRef`.
@@ -240,6 +244,56 @@ pub enum ImageError {
     },
 }
 
+/// Two active parameters that share bits ([`ImageError::Overlap`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParameterOverlap {
+    /// The `ParameterRef` being written.
+    pub parameter_ref: String,
+    /// Where it lies.
+    pub field: ParameterField,
+    /// The `ParameterRef` written before, whose bits it shares.
+    pub earlier_ref: String,
+    /// Where that one lies.
+    pub earlier_field: ParameterField,
+    /// The segment.
+    pub segment: String,
+    /// The union both are members of, if they are members of one.
+    pub union: Option<MemoryPlacement>,
+}
+
+impl fmt::Display for ParameterOverlap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ParameterOverlap {
+            parameter_ref,
+            field,
+            earlier_ref,
+            earlier_field,
+            segment,
+            union,
+        } = self;
+        match union {
+            Some(union) => write!(
+                f,
+                "{parameter_ref} (offset {} bit {}) and {earlier_ref} (offset {} bit {}) \
+                 are both active members of the union at {segment} offset {} bit {}; \
+                 a union holds one active member, and no source says which one is written",
+                field.offset,
+                field.bit_offset,
+                earlier_field.offset,
+                earlier_field.bit_offset,
+                union.offset,
+                union.bit_offset
+            ),
+            None => write!(
+                f,
+                "{parameter_ref} (offset {} bit {}) shares bits with {earlier_ref} \
+                 (offset {} bit {}) in {segment}; both are active",
+                field.offset, field.bit_offset, earlier_field.offset, earlier_field.bit_offset
+            ),
+        }
+    }
+}
+
 impl std::error::Error for ImageError {}
 
 impl fmt::Display for ImageError {
@@ -262,6 +316,7 @@ impl fmt::Display for ImageError {
             ImageError::ConflictingValues { parameter } => {
                 write!(f, "{parameter}: two active references hold different values")
             }
+            ImageError::Overlap(overlap) => write!(f, "{overlap}"),
             ImageError::Parameter {
                 parameter_ref,
                 error,
@@ -374,6 +429,9 @@ pub fn build_download_image(
     // 1. Parameters.
     let group_objects = com_object_span(&code)?;
     let mut written: BTreeMap<String, (String, Encoded)> = BTreeMap::new();
+    // Every field written so far, with its segment, `ParameterRef` and
+    // union, so that an overlap can name both parties.
+    let mut fields: Vec<(&str, ParameterField, &str, Option<&MemoryPlacement>)> = Vec::new();
     let mut parameters = BTreeMap::new();
     let mut texts = BTreeMap::new();
     for active in &activation.parameter_refs {
@@ -420,10 +478,8 @@ pub fn build_download_image(
             Encoded::Number(number) => image.write(field, *number),
             Encoded::Text { octets, .. } => image.write_octets(field, octets),
         }
-        .map_err(|error| ImageError::Parameter {
-            parameter_ref: parameter_ref.to_string(),
-            error,
-        })?;
+        .map_err(|error| overlap_or(error, parameter_ref, segment_id, placement, &fields))?;
+        fields.push((segment_id, field, parameter_ref, union_of(placement)));
         match &value {
             Encoded::Number(number) => parameters.insert(parameter_ref.to_string(), *number),
             Encoded::Text { text, .. } => {
@@ -526,6 +582,52 @@ pub fn build_download_image(
         texts,
         objects,
     })
+}
+
+/// The union a placement is a member of.
+fn union_of(placement: &ParameterPlacement) -> Option<&MemoryPlacement> {
+    match placement {
+        ParameterPlacement::UnionMember { union, .. } => Some(union),
+        _ => None,
+    }
+}
+
+/// `error` as an [`ImageError`]: an overlap names the field written before
+/// (from `fields`, the fields written so far) and, if both lie in one
+/// union, that union. Every other refusal is passed on as it is.
+fn overlap_or(
+    error: ParameterImageError,
+    parameter_ref: &str,
+    segment: &str,
+    placement: &ParameterPlacement,
+    fields: &[(&str, ParameterField, &str, Option<&MemoryPlacement>)],
+) -> ImageError {
+    let ParameterImageError::Overlap { field, earlier } = error else {
+        return ImageError::Parameter {
+            parameter_ref: parameter_ref.to_string(),
+            error,
+        };
+    };
+    let Some((_, _, earlier_ref, earlier_union)) = fields
+        .iter()
+        .find(|(id, written, _, _)| *id == segment && *written == earlier)
+    else {
+        // Every write is recorded, so this is not reached; refuse the same
+        // way all the same rather than panic.
+        return ImageError::Parameter {
+            parameter_ref: parameter_ref.to_string(),
+            error,
+        };
+    };
+    let union = union_of(placement).filter(|union| Some(*union) == *earlier_union);
+    ImageError::Overlap(Box::new(ParameterOverlap {
+        parameter_ref: parameter_ref.to_string(),
+        field,
+        earlier_ref: (*earlier_ref).to_string(),
+        earlier_field: earlier,
+        segment: segment.to_string(),
+        union: union.cloned(),
+    }))
 }
 
 /// The segment and field a parameter's placement puts it at.
@@ -1297,6 +1399,67 @@ mod tests {
         let image = build(PROGRAM, &[("P-1_R-1", "2"), ("UP-2_R-5", "2")], vec![]).expect("builds");
         assert_eq!(image.parameters.get("UP-2_R-4"), Some(&2));
         assert_eq!(image.parameters.get("UP-2_R-5"), None);
+    }
+
+    /// RESEARCH §19.12: `A-0019-13-B655` activates two members of one
+    /// union. The refusal names both references and says what they share,
+    /// instead of an offset that "overlaps" itself.
+    #[test]
+    fn two_active_members_of_one_union_are_refused_by_both_names() {
+        let xml = PROGRAM.replace(
+            r#"<ParameterRefRef RefId="UP-1_R-3" />"#,
+            r#"<ParameterRefRef RefId="UP-1_R-3" /><ParameterRefRef RefId="UP-2_R-4" />"#,
+        );
+        let error = build(&xml, &[], vec![]).unwrap_err();
+        let ImageError::Overlap(overlap) = &error else {
+            panic!("not an overlap: {error}");
+        };
+        let ParameterOverlap {
+            parameter_ref,
+            earlier_ref,
+            segment,
+            union,
+            ..
+        } = overlap.as_ref();
+        assert_eq!(
+            (
+                parameter_ref.as_str(),
+                earlier_ref.as_str(),
+                segment.as_str()
+            ),
+            ("UP-2_R-4", "UP-1_R-3", "AS-4400")
+        );
+        assert_eq!(union.as_ref().map(|union| union.offset), Some(13));
+        assert_eq!(
+            error.to_string(),
+            "UP-2_R-4 (offset 14 bit 5) and UP-1_R-3 (offset 13 bit 0) are both active \
+             members of the union at AS-4400 offset 13 bit 0; a union holds one active \
+             member, and no source says which one is written"
+        );
+    }
+
+    #[test]
+    fn two_overlapping_plain_parameters_are_refused_by_both_names() {
+        let xml = PROGRAM.replace(
+            r#"<Memory CodeSegment="AS-4400" Offset="12" BitOffset="0" />"#,
+            r#"<Memory CodeSegment="AS-4400" Offset="11" BitOffset="0" />"#,
+        );
+        let error = build(&xml, &[], vec![]).unwrap_err();
+        assert!(
+            matches!(
+                &error,
+                ImageError::Overlap(overlap)
+                    if overlap.parameter_ref == "P-2_R-2"
+                        && overlap.earlier_ref == "P-1_R-1"
+                        && overlap.union.is_none()
+            ),
+            "{error}"
+        );
+        assert_eq!(
+            error.to_string(),
+            "P-2_R-2 (offset 11 bit 0) shares bits with P-1_R-1 (offset 11 bit 0) in \
+             AS-4400; both are active"
+        );
     }
 
     #[test]

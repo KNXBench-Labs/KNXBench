@@ -275,6 +275,7 @@ pub fn image_category(error: &ImageError) -> UnsupportedCategory {
         }
         ImageError::Value { .. }
         | ImageError::ConflictingValues { .. }
+        | ImageError::Overlap(_)
         | ImageError::Parameter { .. } => UnsupportedCategory::ParameterValue,
         _ => UnsupportedCategory::ImageStructure,
     }

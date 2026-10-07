@@ -25,7 +25,8 @@ fn expected(address: &str) -> (&'static str, Option<(UnsupportedCategory, &'stat
             "unsupported",
             Some((
                 UnsupportedCategory::ParameterValue,
-                "offset 1810 bit 0 overlaps",
+                "UP-1227_R-1227 (offset 1810 bit 0) and M-0083_A-0019-13-B655_UP-33_R-33 \
+                 (offset 1810 bit 0) are both active members of the union at",
             )),
         ),
         22 | 23 => (

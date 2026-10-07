@@ -20,7 +20,8 @@
   CLI/server debug build and five xtask audits passed. Fmt and whitespace
   checks passed. Wider gate/provenance and local integration in
   `.ai/logs/2026-10-07_codex_dpt-document-audit.md`. Self-review only; no Web,
-  native, ignored-corpus or hardware acceptance. Local, not committed/pushed.
+  native, ignored-corpus or hardware acceptance. Published by explicit user
+  request as `eb0abc6a8e75c614a489af82ab9ac810b5ffb740`; exact live main ref verified.
 - Docs: [full inventory/scoped review](spec-audits/2026-10-07-dpt-document-audit.md),
   KL-61, Compatibility, Roadmap. No UI/core-storage schema change, dependency,
   bus contact, deployment, release, full ETS claim or automatic scope expansion.

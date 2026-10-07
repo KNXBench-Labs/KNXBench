@@ -84,5 +84,6 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0082](0082-large-product-packages-are-a-cli-opt-in.md) | Large product packages are an explicit command-line opt-in | Accepted | 2026-10-05 |
 | [0083](0083-admit-exact-product-scheme-10.md) | Admit exact product scheme 10 through the strict namespace path | Accepted | 2026-10-05 |
 | [0084](0084-first-run-guide-once-per-release-stage.md) | A first-run guide opens once per release stage and gates nothing | Accepted | 2026-10-07 |
+| [0085](0085-readable-flow-and-source-windows.md) | Readability-first flow layout and source-bound secondary windows | Accepted | 2026-10-07 |
 | [0086](0086-specs-product-data-and-projects-are-enough-evidence.md) | The specification, product data and project files are enough evidence; a working inference is shipped and disclosed | Accepted | 2026-10-07 |
 | [0087](0087-desktop-app-identifier.md) | The desktop app identifier is `com.knxbench.knxbench-labs` | Accepted | 2026-10-07 |

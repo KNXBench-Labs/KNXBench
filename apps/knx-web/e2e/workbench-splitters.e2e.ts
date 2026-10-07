@@ -1,5 +1,6 @@
 /** The left column's splitters resize their blocks with a project loaded (user bug report). */
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { achievementsFixtureAnswer } from "./achievements-fixture";
 
 // Forty installations: an explorer much taller than the column, as in a real project.
 const tree = {
@@ -23,6 +24,7 @@ async function openProject(page: Page) {
     // The sidebar's automatic search is intercepted, never a real UDP scan.
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) body = [];
+    else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
     else {
       unexpected.push(`${method} ${path}`);
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"local fixture only"}' });

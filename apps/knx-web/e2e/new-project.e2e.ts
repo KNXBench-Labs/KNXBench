@@ -2,6 +2,7 @@
 
 import { expect, test } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
+import { achievementsFixtureAnswer } from "./achievements-fixture";
 
 const styles = ["ThreeLevel", "TwoLevel", "Free"] as const;
 
@@ -41,6 +42,8 @@ for (const style of styles) {
         body = current;
       } else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) {
         body = [];
+      } else if (achievementsFixtureAnswer(method, path) !== undefined) {
+        body = achievementsFixtureAnswer(method, path);
       } else {
         unexpected.push(`${method} ${path}`);
         return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"local fixture only"}' });

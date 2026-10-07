@@ -1,4 +1,4 @@
-/** Playful Klingon-inspired UI overlay; missing keys use English, not a linguistic accuracy claim. */
+/** Playful Klingon-inspired overlay with English fallback, without linguistic accuracy claims. */
 import type { MessageKey } from "./en";
 
 export const messages = {

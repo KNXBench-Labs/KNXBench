@@ -24,6 +24,52 @@
 - Details: [Language packs](LANGUAGE_PACKS.md), manual settings chapter,
   KNOWN_LIMITATIONS §66; handover receipt `.ai/logs/2026-10-07_codex_fantasy-language-packs.md`.
 
+## 2026-10-07 — Achievements, package 1: mechanism and 11 achievements (ADR-0089)
+
+- **User decisions (grill session):**
+  - **Who and default:** every user, on by default; off means nothing is
+    counted and nothing is shown.
+  - **Content:** light-hearted and serious themes mixed. Bus and
+    commissioning only as verified results, never telegram volume.
+  - **Storage:** separate `achievements.json`, never in a project.
+  - **Where it runs:** detection in the frontend.
+  - **Presentation:** Steam-style popups (no sound) and an overview dialog.
+  - **Rarity:** no telemetry; tiers instead of rarity percentages.
+  - **Mix and names:** about 25 % hidden and 20 % with progress; names per
+    language.
+  - **Delivery:** two packages, 38 achievements in total.
+- **Server:** `achievements.rs` keeps a record that only grows. Unlocks keep
+  their earliest time, counters their highest value, and unknown ids and
+  members are kept. A newer file is refused untouched and writes to it get
+  409. A damaged file is moved aside. A reset moves the record aside
+  instead of deleting it. Ids, timestamps, counters and sizes are checked.
+  - Routes: `GET /api/achievements`, `POST /api/achievements/record` and
+    `/reset`, behind the guard, under their own lock. Refusals, quarantines
+    and resets go to the session log.
+  - Atomic write and move-aside are shared with `settings.rs` through
+    `data_file.rs` (a refactor; settings tests unchanged and green).
+- **Web:**
+  - `achievementCatalog.ts` (pure data, 5 rule kinds), `achievementRules.ts`
+    (evaluate/merge) and `achievementTracker.ts`. The tracker buffers
+    events until the record has loaded, keeps failed saves in an outbox
+    without a retry loop, and turns read-only on `refusedNewer`/409.
+  - `achievementEvents.ts` is the channel; it has no event type for
+    sending to the bus. `useAchievements` and `konami.ts` handle the hook
+    and the Konami code (ignored in text fields).
+  - New `achievement` toast kind (at most 2 popups plus a summary,
+    animation behind the motion guard), `AchievementsDialog`, and an
+    Achievements section in Settings (switch, confirmed reset).
+  - Entries in the File menu (hidden while off) and the command palette
+    (`open-achievements`). Ten new outline glyphs. DE/EN strings.
+- **Achievements in this package:** welcome-site, foundation, palette-pro
+  (25), dark-side, polyglot, seatbelt (successful autosave), time-traveller
+  (100 undos), mega-site (≥ 1000 GAs), and the hidden night-shift (save
+  at 2–4 am), christmas-elf and konami.
+- **Limitations:** KL §164 (per installation, UI only, a concurrent
+  increment can be lost, hidden only in the UI).
+- **Next:** package 2, the remaining 27 achievements from the interview
+  catalogue.
+
 ## 2026-10-07 — `knx-server` leaves on SIGTERM instead of being killed
 
 - **Finding:** the binary installed no signal handler. As PID 1 in the

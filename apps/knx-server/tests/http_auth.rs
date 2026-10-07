@@ -104,6 +104,9 @@ const GUARDED_ROUTES: &[(&str, &str)] = &[
     ("GET", "/api/bus/activity"),
     ("POST", "/api/debug-report"),
     ("GET", "/api/version"),
+    ("GET", "/api/achievements"),
+    ("POST", "/api/achievements/record"),
+    ("POST", "/api/achievements/reset"),
 ];
 
 async fn call(app: &Router, method: &str, uri: &str, cookie: Option<&str>) -> Response<Body> {

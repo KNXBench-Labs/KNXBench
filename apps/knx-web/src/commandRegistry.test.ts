@@ -44,6 +44,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openHelp: () => {},
     openCatalog: () => {},
     openIntroduction: () => {},
+    openAchievements: () => {},
     ...overrides,
   };
 }
@@ -104,11 +105,11 @@ describe("command enablement", () => {
     expect(called).toBe(true);
   });
 
-  it("lists all fifteen commands in palette order, with an unconditionally enabled first entry", () => {
+  it("lists all sixteen commands in palette order, with an unconditionally enabled first entry", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
       "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "search",
       "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
-      "open-catalog", "show-introduction", "open-help",
+      "open-catalog", "show-introduction", "open-achievements", "open-help",
     ]);
     expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
   });
@@ -162,5 +163,16 @@ describe("command enablement", () => {
       cmd.run(ctx);
     }
     expect(opened).toEqual(["catalog", "introduction"]);
+  });
+
+  // ADR-0089: the overview opens with or without a project, and even with
+  // achievements switched off — the dialog then says how to switch them on.
+  it("keeps the achievements overview runnable with no project open", () => {
+    let opened = false;
+    const ctx = noopCtx({ tree: null, openAchievements: () => (opened = true) });
+    const cmd = COMMANDS.find((c) => c.id === "open-achievements")!;
+    expect(cmd.isEnabled(ctx)).toBe(true);
+    cmd.run(ctx);
+    expect(opened).toBe(true);
   });
 });

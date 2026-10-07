@@ -52,6 +52,7 @@ fn state() -> Arc<knx_server::AppState> {
         load_operations: Default::default(),
         data_dir: std::env::temp_dir(),
         settings_lock: Default::default(),
+        achievements_lock: Default::default(),
         catalog_requests: Default::default(),
     })
 }

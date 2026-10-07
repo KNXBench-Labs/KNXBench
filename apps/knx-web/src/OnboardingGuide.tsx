@@ -9,6 +9,7 @@
 // The task buttons run the command palette's own commands (`COMMANDS`),
 // so the guide has no second route to anything. They close the guide
 // first, so the dialog the command opens is the only one on screen.
+import { emitAchievementEvent } from "./achievementEvents";
 import { useEffect, useRef, useState } from "react";
 import { COMMANDS, type CommandContext } from "./commandRegistry";
 import { requestHelpTopic } from "./help";
@@ -186,7 +187,11 @@ export default function OnboardingGuide(props: OnboardingGuideProps) {
           type="button"
           ref={nextRef}
           className="primary-action"
-          onClick={() => (last ? onClose() : setStep(step + 1))}
+          onClick={() => {
+            if (!last) { setStep(step + 1); return; }
+            emitAchievementEvent({ type: "onboardingCompleted" });
+            onClose();
+          }}
         >
           {last ? t("onboarding.finish") : t("onboarding.next")}
         </button>

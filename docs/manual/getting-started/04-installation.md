@@ -155,22 +155,12 @@ native save/reopen cycle):
 apps/knx-server/scripts/smoke-test.sh
 ```
 
-**Updating.** Rebuild the image, stop and remove the old container, and start
-a new one with the same port and volume:
-
-```bash
-docker build -t knxbench-server -f apps/knx-server/Dockerfile .
-docker stop knxbench
-docker rm knxbench
-docker run -d --name knxbench -p 8484:8080 \
-  -e KNX_AUTH_PASSWORD='pick something long and boring' \
-  -v "$(pwd)/data:/data" knxbench-server
-curl -sf http://127.0.0.1:8484/healthz
-```
-
-`docker rm knxbench` removes only the container, not the `data/` directory or
-the projects inside it. If your running container has a different name,
-find it with `docker ps` first.
+**Updating.** Pull, rebuild, replace the container and wait for the health
+check — one command, host networking included, in
+[Updating in one go](../user-guide/11-web-and-docker.md#updating-in-one-go).
+Replacing the container never touches the `data/` directory or the projects
+inside it. If your running container has a different name, find it with
+`docker ps` first.
 
 **Removing.** Stop and remove the container (`docker stop knxbench && docker
 rm knxbench`), then remove the image (`docker rmi knxbench-server`) if you

@@ -21,3 +21,12 @@ Before treating a memory item as project truth, verify it against current code,
 tests, Git history, or other direct evidence. Update the responsible repository
 document, then correct or retire the private note that led to it. Do not edit the
 generated index by hand.
+
+## Evidence for device support
+
+ADR-0086 (maintainer decision, 2026-10-07): the KNX specification, product
+databases and project files are enough evidence. Where they are silent but a
+working solution exists, implement it as a named inference and disclose it
+in readiness and the download acknowledgement; a real device run is needed
+only for **Verified**. Aim for as many working devices as possible, not only
+those the maintainer owns.

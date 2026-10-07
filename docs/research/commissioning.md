@@ -1405,6 +1405,45 @@ The rule is settled only by a device where the candidate rules disagree.
 Before its next download, each of the house's three devices keeps its
 current octet on the device.
 
+**Online search for the union rule (2026-10-07).** Nothing found states
+what ETS writes when two members of one union are active; what was found
+says that should not happen:
+
+- `[A]` KNX Association's Manufacturer Tool help, *Define Parameters*
+  (`support.knx.org/hc/en-us/articles/360000129320`; the page is behind a
+  bot check, read as quoted by the search index): *"To save space, often
+  several parameters that are not active at the same time can be put at
+  the same location. In this situation, the memory (or property) region
+  containing the overlapping parameters must be explicitly declared as
+  memory (or property) union."*
+- `[A]` *KNX XML Project Schema v1.0 Description* (v1.2, 24.06.2011; read
+  as quoted by the search index from copies on yumpu/scribd, not from a
+  KNX download), `Parameter_t`: memory parameters "must not overlap … For
+  such cases, the Union construct must be used"; `UnionParameter_t`:
+  `DefaultUnionParameter` (`xs:boolean`, default `false`) is *"Used during
+  image creation"* — nothing more. The ETS4 XSD (namespace `project/11`)
+  carries the attribute with no semantics.
+- Three independent open-source tools that build download images each pick
+  their own rule, none citing ETS behaviour: *bussard*
+  (`tmbo/bussard@d309faa9`, `bussard-prod/src/image.rs`) writes the
+  `DefaultUnionParameter` member only for a union none of whose members is
+  reached and lets reached members, written later, win; *zweidraehte*
+  (`ntrnnr/zweidraehte@37459796`) seeds union storage from the default
+  member and overlays every visible reference; *koolenex*
+  (`jgrahamc/koolenex@2818ee79`) prefers a member with an explicit value,
+  then its "default" member, else leaves the group alone, and warns that
+  "two members of a <Union> cannot both be live". koolenex reads
+  `DefaultUnionParameter="0"` as the marker, the opposite of the boolean.
+
+So two active members are a product-data defect by the authoring rule, not
+a case the format defines. One consequence for the candidate rules above:
+"the `DefaultUnionParameter` member wins" would have written `UP-33` (230),
+and 1.1.11 holds `01h` — the device read rules that one out. The refusal
+stays; since 2026-10-07 it names both references and the union
+(`ImageError::Overlap`), instead of an offset that "overlaps" itself. Asking
+MDT what ETS writes for `A-0019-13-B655` (or whether the hidden `UP-1227`
+reference is the defect `A-0019-16` fixed) is the cheapest next source.
+
 **Follow-up on 1.1.1–9 and 1.1.24: `LsmIdx 5` on a `0701h` device.** Three
 of the house's programs name a fifth load state machine:
 
@@ -1436,6 +1475,19 @@ learned from a trace of a real ETS download to one of these devices; none
 exists in the corpus. The TaskCtrl1 event itself *is* documented (§3.31.2,
 segment type 04h: address + interface-object count) but translating it alone
 would still leave 1.1.24 on `LsmIdx 5`.
+
+`[A]` **Outside evidence (2026-10-07), for the post-restart tail only.** The
+open-source *bussard* (`tmbo/bussard@d309faa9`, `docs/system7-spec.md` §3)
+describes the same tail — `LdCtrlRestart`, `LdCtrlTaskSegment LsmIdx="5"`,
+`LdCtrlLoad LsmIdx="5"` — in "converted (pre-ETS4) procedures" (Theben FIX2
+`M-0048_A-4947`, mask `0701h`; Jung `M-0004_A-2088-11`) and reports from its
+own bus captures that "ETS sends nothing after the restart"; the Jung device
+answers a `PID_LOAD_STATE_CONTROL` read of object 5 with count 0. bussard
+therefore cuts the procedure at the terminal restart. That is a third
+party's capture, not ours, and covers 1.1.24 and 1.1.250/253 (which still
+need `LdCtrlTaskCtrl1`), not the presence detectors, whose `LsmIdx 5` task
+segment sits *before* `LoadCompleted`. A capture of an ETS download to one
+of the house's own devices would make it `[V]`.
 
 ### 19.13 The house read back: the image against what ETS wrote (2026-09-29)
 

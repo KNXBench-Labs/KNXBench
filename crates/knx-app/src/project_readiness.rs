@@ -97,7 +97,7 @@ fn grade(
             &prepared.request.program_id,
             None,
             &prepared.plan,
-            &prepared.image.inferences,
+            &prepared.inferences,
             evidence,
         ),
         Err(error) => SupportLevel::Unsupported {

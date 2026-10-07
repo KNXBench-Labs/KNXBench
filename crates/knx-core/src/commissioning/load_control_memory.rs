@@ -226,6 +226,16 @@ pub struct TaskSegment {
     pub version: u8,
 }
 
+/// A `TaskCtrl1` (segment type 4): the interface objects' address and count.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TaskControl1 {
+    /// `AAAA`: *"Interface Object address"*, the user KNX object table
+    /// (Cookbook *Load Controls* `02_03_01` §2.1).
+    pub interface_objects: u16,
+    /// `NN`: *"Interface Object count"*.
+    pub count: u8,
+}
+
 /// Why a record was not built. Every refusal names the rule it enforces, so
 /// nothing is silently clamped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -240,6 +250,9 @@ pub enum MemoryLoadRecordError {
     /// `[D]` MP §3.31.1's event table: `AllocAbsStackSeg` exists only for the
     /// application program and the PEI program.
     StackSegmentNotAllowed(MemoryLoadStateMachine),
+    /// `[D]` MP §3.31.1's event table: `TaskCtrl1` exists only for the
+    /// application program.
+    TaskControlNotAllowed(MemoryLoadStateMachine),
 }
 
 impl std::error::Error for MemoryLoadRecordError {}
@@ -258,6 +271,10 @@ impl fmt::Display for MemoryLoadRecordError {
             MemoryLoadRecordError::StackSegmentNotAllowed(machine) => write!(
                 f,
                 "MP §3.31.1 allows AllocAbsStackSeg only for the application and PEI programs, not the {machine}"
+            ),
+            MemoryLoadRecordError::TaskControlNotAllowed(machine) => write!(
+                f,
+                "MP §3.31.1 allows TaskCtrl1 only for the application program, not the {machine}"
             ),
         }
     }
@@ -319,10 +336,32 @@ pub fn abs_task_segment(machine: MemoryLoadStateMachine, task: TaskSegment) -> M
     ])
 }
 
+/// `TaskCtrl1`: `L3 04h 00h AAAA NN` and five reserved `00h` (MP §3.31.2).
+pub fn task_control_1(
+    machine: MemoryLoadStateMachine,
+    control: TaskControl1,
+) -> Result<MemoryLoadRecord, MemoryLoadRecordError> {
+    if machine != MemoryLoadStateMachine::ApplicationProgram {
+        return Err(MemoryLoadRecordError::TaskControlNotAllowed(machine));
+    }
+    let address = control.interface_objects.to_be_bytes();
+    let mut octets = [0u8; MEMORY_LOAD_RECORD_OCTETS];
+    octets[..6].copy_from_slice(&[
+        machine.first_octet(LoadEvent::AdditionalLoadControls),
+        SEGMENT_TYPE_TASK_CONTROL_1,
+        SEGMENT_ID,
+        address[0],
+        address[1],
+        control.count,
+    ]);
+    Ok(MemoryLoadRecord(octets))
+}
+
 /// Segment type octets, `[D]` MP §3.31.2's `LoadEvent` headings.
 const SEGMENT_TYPE_DATA: u8 = 0x00;
 const SEGMENT_TYPE_STACK: u8 = 0x01;
 const SEGMENT_TYPE_TASK: u8 = 0x02;
+const SEGMENT_TYPE_TASK_CONTROL_1: u8 = 0x04;
 
 /// `[D]` MP §3.31.2: the segment ID is `00h` in every record it shows; the
 /// procedure *"shall support only one state machine of each type"*.
@@ -482,6 +521,44 @@ mod tests {
             },
         );
         assert_eq!(hex(&record), "23 02 00 42 00 80 00 02 A0 4A 10");
+    }
+
+    /// `[D]` MP §3.31.2, `TaskCtrl1` (segment type 4): `L3 04h 00h AAAA NN`
+    /// then five reserved octets. `M-006A_A-0702-10-7779`:
+    /// `LdCtrlTaskCtrl1 LsmIdx="3" Address="16463" Count="1"`.
+    #[test]
+    fn a_task_control_1_record_names_the_interface_objects() {
+        let record = task_control_1(
+            MemoryLoadStateMachine::ApplicationProgram,
+            TaskControl1 {
+                interface_objects: 16463,
+                count: 1,
+            },
+        )
+        .unwrap();
+        assert_eq!(hex(&record), "33 04 00 40 4F 01 00 00 00 00 00");
+    }
+
+    /// `[D]` MP §3.31.1's event table: `TaskCtrl1` exists only for the
+    /// application program.
+    #[test]
+    fn a_task_control_1_on_another_machine_is_refused() {
+        for machine in [
+            MemoryLoadStateMachine::AddressTable,
+            MemoryLoadStateMachine::AssociationTable,
+            MemoryLoadStateMachine::PeiProgram,
+        ] {
+            assert_eq!(
+                task_control_1(
+                    machine,
+                    TaskControl1 {
+                        interface_objects: 0x4000,
+                        count: 1
+                    }
+                ),
+                Err(MemoryLoadRecordError::TaskControlNotAllowed(machine))
+            );
+        }
     }
 
     /// `A-0027-15-0BAC`'s stack segment:

@@ -146,7 +146,7 @@ fn support_of(prepared: &PreparedDownload) -> Result<SupportLevel, ApiError> {
         &prepared.request.program_id,
         prepared.partial.as_ref().map(|(parts, _)| *parts),
         &prepared.plan,
-        &prepared.image.inferences,
+        &prepared.inferences,
         &evidence,
     ))
 }

@@ -2220,7 +2220,7 @@ fn run_device_download(args: &[String]) -> ExitCode {
         &prepared.request.program_id,
         partial_parts,
         &prepared.plan,
-        &prepared.image.inferences,
+        &prepared.inferences,
         &evidence,
     );
     print!(

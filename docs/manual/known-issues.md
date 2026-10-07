@@ -15,9 +15,9 @@ only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-The software described here is the `0.1.0-alpha` series (2026-10-06: CLI, desktop and
-web `alpha.4`, server `alpha.1`). No release has been
-published, and the version number is not a promise that anything is finished.
+The software described here is the `0.1.0-alpha` series (2026-10-07: CLI, desktop and
+web `alpha.5`, server `alpha.1`). The only published build is a pre-release in
+the private repository, and the version number is not a promise that anything is finished.
 
 > A long list of known issues is what happens when a project writes its
 > problems down, not proof that it has more of them than software that

@@ -1,3 +1,16 @@
+- **Last Agent:** Claude (achievements, package 1)
+- **Timestamp:** 2026-10-07 22:31 CEST
+- **Completed:** After a grill-me interview the user approved Steam-like achievements: 38 in total, in two packages. Package 1 ships the mechanism and 11 achievements (ADR-0089).
+  - Server: a grow-only `achievements.json` (earliest unlock, highest counter), quarantine, refusal of newer files, and a reset that moves the file aside. Routes under `/api/achievements` behind the guard. `data_file.rs` is shared with `settings.rs`.
+  - Web: catalogue, rules, tracker (admits only real answers, outbox on failed saves, read-only on a newer file), event channel without any bus-send event, popups (at most 2 plus a summary, no sound), overview, Settings section (on by default, off means off), File menu entry and palette command.
+  - Fixed along the way: the palette now consumes Enter, so a dialog with a button first no longer closes as it opens. App tests stub `fetch` and no longer reach localhost:3000. The manual screenshot config sets `KNX_TLS=off` for the login instance (a breakage from ADR-0088).
+  - KL §164 (upstream already took §163).
+  - Gates: gate 1 web/Chromium 157, gate 2 on the rebased HEAD (Vitest 2243, workspace Clippy, knx-server 699/0/45, five repository gates). Details in `.ai/logs/2026-10-07_claude_achievements.md`.
+- **Pending/Next Steps:** Package 2: the remaining 27 achievements from the interview catalogue (import and integrity, structure and GAs, read-only bus, verified commissioning, the remaining hidden ones, platinum). Each event must be emitted where its outcome is known. Bus and commissioning achievements only for *verified* results (ADR-0089 Consequences).
+- **Notes for Codex oder Claude:** Achievement ids are permanent: they are the record's keys on disk. Rename titles freely, never ids. Fixtures that mount the whole app answer the routes through `apps/knx-web/e2e/achievements-fixture.ts`. The codex LCARS-theme interview (entry below) is unaffected. Achievement badges take their tier colours from theme tokens, so a new theme needs no special rules. The root checkout had an uncommitted foreign edit to `.ai/CURRENT_STATE.md` at publication time; it was left untouched.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-07 22:01 CEST
 - **Completed:** Started the user-invoked grill-me interview for a modernized, animated and usable LCARS-inspired KNXBench theme. Inspected current theme registry, pack admission, motion settings and ADR-0022/0060/0079. Existing v1 packs carry declarative visual tokens, not arbitrary CSS, layout or animation; motion and density remain independent user preferences. No product implementation or design decision approved.

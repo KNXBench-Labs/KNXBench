@@ -6,6 +6,21 @@ section index and the sources. Section numbers are global and stable;
 dated entries are newest first. Moved here verbatim from `RESEARCH.md` on
 2026-10-04 (AR14D D4); only relative links changed.
 
+## 2026-10-07 — DPT source inventory and generic runtime admission
+
+[V] The authorized DPT-AS v02.02.01 original has 251 pages and 454 distinct
+numbered IDs, not just the reference master catalogue. The
+[document-wide inventory/scoped review](../spec-audits/2026-10-07-dpt-document-audit.md)
+records source identity, all section/page/type rows, regression evidence and
+remaining subtype/FB boundaries. §1.2 p13 makes the structured HVAC subnumber
+range 100–499 LTE-only, not the whole structured 200-series.
+
+[V] Generic runtime writers now refuse nine explicit parameter-only subtypes
+using a core policy shared by CLI/HTTP; pure parameter/diagnostic codecs remain
+available. Time-period FB exceptions require a context these writers cannot
+verify. Three numeric quantization/input-bound defects are corrected.
+No structured codec, installed-device coverage or ETS/hardware proof follows.
+
 ## 8. KNXnet/IP and bus access
 
 ### 8.1 Verified live [V]

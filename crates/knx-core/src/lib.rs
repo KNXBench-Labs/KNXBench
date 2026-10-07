@@ -45,9 +45,9 @@ pub use devices::Devices;
 pub use dpt::{
     decode, default_input_format, encode, encode_inferred_format, encoding_rulings,
     format_width_bits, group_address_dpt_from, group_address_type_from, resolve_group_address_dpt,
-    resolve_group_address_type, resolve_project_group_address_dpts, DptCodecError,
-    DptEncodingRuling, DptInputFormat, DptParseError, DptRef, DptValue, GroupAddressDpt,
-    GroupAddressType, GroupAddressTypeOutcome, GroupValue,
+    resolve_group_address_type, resolve_project_group_address_dpts, validate_group_write_dpt,
+    DptCodecError, DptEncodingRuling, DptInputFormat, DptParseError, DptRef, DptValue,
+    GroupAddressDpt, GroupAddressType, GroupAddressTypeOutcome, GroupValue,
 };
 pub use flags::{ComFlagKind, ComFlags, Direction, GroupLink, ObjectSize, ResolvedFlags};
 pub use group::{GroupAddressEntry, GroupRange};

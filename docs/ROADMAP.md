@@ -1,5 +1,15 @@
 # Roadmap
 
+## DPT document inventory and scoped hardening (2026-10-07)
+
+The [DPT document review](spec-audits/2026-10-07-dpt-document-audit.md) supplies
+a 454-ID/280-section/251-page inventory, numeric edge fixes and bounded
+parameter-only runtime admission. The implemented main-family scope stays
+1–30; subtype/FB semantics and structured DPTs remain disclosed boundaries.
+Future expansion requires measured installed-device relevance and authoritative
+subtype/application evidence, not a blanket LTE classification or an inferred
+release blocker. No release or hardware authorization follows.
+
 ## Post-Alpha Flow usability follow-up (2026-10-07)
 
 Implemented on the user's explicit go: larger/maximized area, closable Inspector,

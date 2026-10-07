@@ -3000,6 +3000,15 @@ not change for this. Delivered 2026-10-04 as described above.
 
 ## 61. The DPT codec covers thirty main types with explicit input formats and disclosed encoding rulings
 
+**2026-10-07: document-wide inventory, scoped fixes, no full-conformance claim.**
+The [DPT document audit](spec-audits/2026-10-07-dpt-document-audit.md) maps 251
+pages, 280 contents entries and 454 numbered IDs: 305 within the implemented
+format families and 149 explicitly unsupported. It fixes V16-percent sentinel
+rounding, F16/scaled-V32 input bounds and generic runtime admission for nine
+explicit parameter-only subtypes (including the FB exception boundary).
+Subtype/application semantics remain partial; the older scoped audits do not
+prove full Standard or ETS compatibility.
+
 **2026-10-05 (AR09): 17.001 is a 1-octet value on the wire.** A format-width audit against DPT-AS found that 17.001 DPT_SceneNumber ("1 octet: r2U6") was encoded in the 6-bit optimised A_GroupValue_Write form. It now uses its own data octet and refuses the inline form. All other main types matched the spec width. See [the audit](spec-audits/2026-10-05-dpt-format-widths.md). Ranges and special values are not yet re-audited, so this entry stays open.
 
 **Limitation.** `crates/knx-core/src/dpt/codec.rs` (2026-09-11, T29;
@@ -3009,10 +3018,15 @@ through 30 inclusive, with no gaps** — thirty main types, counted from
 (`grep -cE '^        [0-9]+ => decode_' crates/knx-core/src/dpt/codec.rs`
 → `30`). Main type 31 and everything above it returns
 `DptCodecError::UnsupportedDpt` unconditionally; nothing about those is
-guessed. The eighteen 200-series LTE/system types are an **accepted scope
-decision**, not an open codec backlog: neither `knx-core` nor `knx-net`
-implements LTE addressing, so standalone value codecs would not form a usable
-system.
+guessed. Leaving the eighteen structured 200-series types in the historical
+master catalogue unsupported remains an **accepted scope decision**, not an
+automatically reopened codec backlog. The former blanket LTE/system rationale
+was wrong: DPT-AS §1.2 p13 restricts the LTE-only classification to structured
+HVAC subnumbers 100–499; lighting examples 232.600/251.600 are not in it.
+Absent LTE addressing is a dependency for that HVAC scope, not a reason that
+every structured value codec would be unusable. The full Standard inventory
+has 148 unsupported structured IDs plus 31.101; catalogue counts are not
+Standard-wide support counts.
 
 **2026-09-21 (T07): the bus-facing encoder no longer infers the input
 grammar.** `encode(dpt, input, DptInputFormat)` requires the caller to declare
@@ -3037,15 +3051,22 @@ this document. The inventory is: `scaled-angle-linear-mapping` (5.003),
 `datetime-src-is-reserved` and `datetime-invalid-fields-keep-width-only`
 (19.*), `format-level-validation-only` (20.*, 21.*, 22.*, 23.*, 25.*, 27.*,
 30.*), `strict-null-termination` (24.*, 28.*), and
-`signed64-range-typo-corrected` (29.*), and since AR09 (2026-10-05) `time-period-raw-counter-parameter-only` (7.003, 7.004, 7.006, 8.003, 8.004, 8.006: raw counter, Standard allows them for parameters and diagnostics only). This is metadata only: T07 changed no
-wire encoding.
+`signed64-range-typo-corrected` (29.*), and since AR09 (2026-10-05)
+`time-period-raw-counter-parameter-only` (7.003, 7.004, 7.006, 8.003, 8.004,
+8.006: raw counter; DPT-AS §§3.8.2/3.9.2 limit runtime use unless an FB
+specification explicitly permits it). The ruling is metadata; the 2026-10-07
+`validate_group_write_dpt` guard separately refuses these six plus 7.013,
+8.012 and 20.022 in generic HTTP/CLI writes, which cannot verify an FB
+exception. Parameter/diagnostic codecs remain usable. This does not constitute
+a comprehensive subtype/FB validator; raw mode and bare-main types make no
+subtype claim. T07 itself changed no wire encoding.
 
 Against the ETS master data that number reads differently, and the
 difference is worth stating plainly because it has been misread before.
 `knx_master.xml` defines 46 *main types* (`docs/RESEARCH.md` §5) — 46 is a
 count, not an identifier, and there is no "main type 46": its 46 ids are
 `DPT-1` through `DPT-23`, then `DPT-25`, `DPT-26`, `DPT-27`, `DPT-29`,
-`DPT-30`, then eighteen LTE/system types in the 200-series (`DPT-206`,
+`DPT-30`, then eighteen structured types in the 200-series (`DPT-206`,
 `DPT-217`, `DPT-219`, `DPT-222`, `DPT-229`, `DPT-230`, `DPT-232`,
 `DPT-234`, `DPT-235`, `DPT-237`, `DPT-238`, `DPT-240`, `DPT-241`,
 `DPT-244`, `DPT-245`, `DPT-249`, `DPT-250`, `DPT-251`). So of those 46 the
@@ -3061,16 +3082,19 @@ count as of T29's date, 2026-09-11; the E4 rounds of 2026-09-13 and
 the rest. This heading states the current total, re-measured, not the
 count at any one task's snapshot in time.)
 
-**No subtype-level exclusion remains inside an implemented main type.**
+**All numbered Standard subtypes in implemented families have format codecs,
+not full subtype-semantic support.**
 `6.020 DPT_Status_Mode3` used to be one: its wire layout (`B5N3` — five
 status bits plus a one-hot three-bit mode field, DPT-AS §3.7) fits none of
 `DptValue`'s pre-existing shapes, so it returned `UnsupportedDpt` rather
 than being misread as the plain signed 8-bit integer the rest of main type
 6 is. The second E4 round (2026-09-14) gave it its own
 `DptValue::StatusMode3` variant, so every subtype of every implemented
-main type now decodes. No subtype-level exclusion inside an implemented
-main type is known any more; if one is found, it belongs in this
-paragraph.
+main type in the 454-ID inventory has a format specimen that decodes. This
+does not extend to arbitrary charset subnumbers: `char_set_is_ascii` supports
+only 4.001/4.002 and 16.000/16.001 (plus the documented bare DPT-16 default);
+bare DPT-4 and unknown charset subnumbers return `UnsupportedDpt`. Nor does
+a successful format decode certify a subtype range, enum or runtime use.
 
 **2026-09-13 (E4): main types 4, 10, 11, 15, and 19 added, each with one
 Standard-reading judgment call recorded here rather than silently

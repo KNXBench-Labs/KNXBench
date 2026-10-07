@@ -54,6 +54,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openHelp: () => {},
     openCatalog: () => {},
     openIntroduction: () => {},
+    openAchievements: () => {},
     ...overrides,
   };
 }
@@ -89,6 +90,26 @@ describe("CommandPalette", () => {
       if (previous) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", previous);
       else delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
     }
+  });
+
+  // Found with the achievements overview (ADR-0089): the command opened a
+  // dialog whose first control is Close, focus moved there during this
+  // keydown, and Chromium then delivered the same Enter's activation to
+  // that button, closing the dialog as it opened. The palette consumes the
+  // key; the command runs exactly once either way.
+  it("runs the highlighted command on Enter and consumes the key", async () => {
+    const opened: string[] = [];
+    const { root, onClose } = await renderPalette(noopCtx({ openAchievements: () => opened.push("achievements") }));
+    await act(async () => setQuery("Achievements"));
+    const input = host!.querySelector("input")!;
+    const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    await act(async () => {
+      input.dispatchEvent(enter);
+    });
+    expect(opened).toEqual(["achievements"]);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(enter.defaultPrevented).toBe(true);
+    root.unmount();
   });
 
   it("closes on Escape (the Overlay shell's handler, not a local one)", async () => {

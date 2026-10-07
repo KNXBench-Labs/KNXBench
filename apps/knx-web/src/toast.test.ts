@@ -9,7 +9,8 @@
 // rest of this file passes its own fixture arrays and doesn't touch the
 // DOM at all, so the switch from `node` is otherwise a no-op for it.
 import { afterEach, describe, expect, it } from "vitest";
-import { findHoliday, humorizeError, isLateNight, pickStartupToast } from "./toast";
+import { findHoliday, humorizeError, isLateNight, pickStartupToast, planAchievementToasts } from "./toast";
+import type { AchievementPopup } from "./toast";
 import { ERROR_WRAPPERS, HOLIDAYS, LATE_NIGHT_MESSAGES } from "./toastCopy";
 import type { HolidayEntry } from "./toastCopy";
 import { messages as enMessages } from "./messages/en";
@@ -189,5 +190,25 @@ describe("toastCopy has enough material to stop repeating itself", () => {
     const de = allKeys.map((key) => resolveIn("de", key));
     expect(new Set(en).size).toBe(en.length);
     expect(new Set(de).size).toBe(de.length);
+  });
+});
+
+describe("planAchievementToasts", () => {
+  const popup = (title: string): AchievementPopup => ({ title, description: `${title}!`, tier: "bronze", glyph: "star" });
+  const summary = (count: number) => `+${count} more`;
+
+  it("shows one or two unlocks as they are", () => {
+    expect(planAchievementToasts([popup("a")], summary)).toEqual([{ message: "a", achievement: popup("a") }]);
+    expect(planAchievementToasts([popup("a"), popup("b")], summary).map((t) => t.message)).toEqual(["a", "b"]);
+  });
+
+  it("shows two unlocks and one summary for the rest", () => {
+    const plan = planAchievementToasts([popup("a"), popup("b"), popup("c"), popup("d")], summary);
+    expect(plan.map((t) => t.message)).toEqual(["a", "b", "+2 more"]);
+    expect(plan[2].achievement).toBeUndefined();
+  });
+
+  it("plans nothing for nothing", () => {
+    expect(planAchievementToasts([], summary)).toEqual([]);
   });
 });

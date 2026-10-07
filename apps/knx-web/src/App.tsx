@@ -41,6 +41,10 @@ import type { ProductLanguage } from "./api";
 import { useTranslate } from "./i18n";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
+import { useAchievements } from "./useAchievements";
+import { useAchievementsEnabled } from "./achievementPreference";
+import { emitAchievementEvent } from "./achievementEvents";
+import AchievementsDialog from "./AchievementsDialog";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 import DocumentationExportButton from "./DocumentationExportButton";
 import DebugReportButton from "./DebugReportButton";
@@ -194,7 +198,22 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     revision: 0,
     retiredServerIncarnations: new Set(),
   });
-  const { toasts, pushError, clearErrors, pushFun, dismiss } = useToasts();
+  const { toasts, pushError, clearErrors, pushFun, pushAchievements, dismiss } = useToasts();
+  // ADR-0089. Unlocks are announced in the language of the moment they
+  // happen; the tracker itself never translates anything.
+  const achievements = useAchievements((definitions) =>
+    pushAchievements(
+      definitions.map((d) => ({ title: t(d.titleKey), description: t(d.descriptionKey), tier: d.tier, glyph: d.glyph })),
+      (count) => t("achievements.moreUnlocked", { count }),
+    ),
+  );
+  const [achievementsEnabled] = useAchievementsEnabled();
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
+  useEffect(() => {
+    if (!tree) return;
+    const groupAddressCount = tree.installations.reduce((n, installation) => n + installation.group_addresses.length, 0);
+    emitAchievementEvent({ type: "projectObserved", groupAddressCount });
+  }, [tree]);
   // Bumped on every error path below, threaded into `LogPanel` as a second
   // effect dependency alongside `tree`. `tree` only changes on a
   // *successful* operation, so without this a failed save/export/edit/
@@ -703,6 +722,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // own `store_path` for exactly the same reason (`new_project_impl`).
   function newProjectCreated(newTree: ProjectTree) {
     if (!resetTree(newTree)) return;
+    emitAchievementEvent({ type: "projectCreated" });
     setCatalogTarget(null); // Never carry a former project's target line into this one.
     setHasStorePath(false);
     // The banner outlives a failed load on purpose, but only until that
@@ -727,6 +747,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     setLoadSource(null);
     setLoadSnapshot(null);
     pushFun(path === null ? t("loadProgress.recovered") : t("loadProgress.succeeded", { source: fileNameOf(path) }));
+    emitAchievementEvent({ type: "projectOpened" });
   }
 
   async function runLoad(
@@ -902,6 +923,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     const current = await api.currentProject();
     if (!publishTree(current)) return false;
     setHasStorePath(current.has_store_path);
+    // Every save path (Save, Save as, autosave, save-before-replace) lands
+    // here after the server wrote the file, so this is where it counts.
+    emitAchievementEvent({ type: "projectSaved" });
     return !current.is_modified;
   }
 
@@ -959,6 +983,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     clearErrors();
     await api.saveProject();
     await refreshSavedProject();
+    emitAchievementEvent({ type: "autosaveSucceeded" });
   }
 
   function exportProject() {
@@ -972,6 +997,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     clearErrors();
     try {
       await handleTreeUpdate(await api.undo());
+      emitAchievementEvent({ type: "undo" });
     } catch (e) {
       reportError(e);
     }
@@ -1091,6 +1117,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     openHelp: () => requestHelpTopic(DEFAULT_HELP_TOPIC_ID),
     openCatalog: () => openCatalog(null),
     openIntroduction: guide.show,
+    openAchievements: () => setAchievementsOpen(true),
   };
 
   // With no project, the welcome routes should precede the navigation in
@@ -1164,6 +1191,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
       <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
       <button onClick={guide.show}>{t("command.showIntroduction")}</button>
+      {achievementsEnabled && <button onClick={() => setAchievementsOpen(true)}>{t("achievements.command")}</button>}
       <button onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</button>
       {/* ADR-0026: only where a session exists to end. On the desktop shell
           — and on any server started without a password — `required` is
@@ -1293,6 +1321,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       {helpOpen && <HelpPanel key={helpTopicId} initialTopicId={helpTopicId} onClose={() => setHelpOpen(false)} />}
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
       {guide.open && <OnboardingGuide stage={guide.open.stage} ctx={ctx} onClose={guide.close} />}
+      {achievementsOpen && (
+        <AchievementsDialog snapshot={achievements.snapshot} enabled={achievementsEnabled} onClose={() => setAchievementsOpen(false)} />
+      )}
       {quitConfirmOpen && (
         <Overlay labelledBy="quit-confirm-title" className="quit-confirm" onClose={dismissQuitConfirm}>
           <h2 id="quit-confirm-title">{t("quit.title")}</h2>
@@ -1335,6 +1366,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           onSelectAutosaveEnabled={autosaveSettings.setEnabled}
           autosaveIntervalMinutes={autosaveSettings.intervalMinutes}
           onSelectAutosaveIntervalMinutes={autosaveSettings.setIntervalMinutes}
+          achievementTracker={achievements.tracker}
           onClose={() => setSettingsOpen(false)}
         />
       )}

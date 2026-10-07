@@ -1,6 +1,7 @@
 /** Verifies real-editor Flow links, including external and in-flight project replacement. */
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { snapshot, telegram, node } from "./telegram-flow-server";
+import { achievementsFixtureAnswer } from "./achievements-fixture";
 
 function project(revision = 1) {
   return { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
@@ -34,6 +35,8 @@ async function editor(page: Page, context: BrowserContext) {
     if (path === "/api/bus/monitor/flow-snapshot" && method === "GET") return json(snapshot(1, "1", [2]));
     if (path === "/api/device/2" && method === "GET") return json({ ...state.tree.installations[0].unassigned[1], com_objects: [], product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" } });
     if (path === "/api/device/2/parameters" && method === "GET") return json({ programId: null, sections: [], stale: [], diagnostics: [] });
+    const achievements = achievementsFixtureAnswer(method, path);
+    if (achievements !== undefined) return json(achievements);
     state.unexpected.push(`${method} ${path}`); return json({ error: "offline fixture only" }, 404);
   });
   await page.setViewportSize({ width: 1500, height: 1000 });

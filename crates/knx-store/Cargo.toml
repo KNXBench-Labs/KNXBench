@@ -10,7 +10,9 @@ publish = false
 [dependencies]
 chrono.workspace = true
 knx-core.workspace = true
-rusqlite.workspace = true
+# `backup`: `open_existing_read_only` copies an older store into memory and
+# migrates the copy, never the file (ADR-0090). A feature flag, no new crate.
+rusqlite = { workspace = true, features = ["backup"] }
 
 [dev-dependencies]
 # Test-only: `tests/reference_project.rs` round-trips the real reference

@@ -608,6 +608,87 @@ pub fn open_existing_and_migrate(path: &Path) -> Result<Connection, MigrationErr
     Ok(conn)
 }
 
+/// How long [`open_existing_read_only`] waits for a writer's lock.
+pub const READ_ONLY_BUSY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Pause before an in-memory copy retries a busy source.
+const BACKUP_RETRY_PAUSE: std::time::Duration = std::time::Duration::from_millis(20);
+
+/// A project store opened by [`open_existing_read_only`].
+#[derive(Debug)]
+pub struct ReadOnlyStore {
+    /// At `CURRENT_SCHEMA_VERSION`, ready for `load_project`. Either the
+    /// file itself, opened `SQLITE_OPEN_READ_ONLY` with `query_only` on, or
+    /// an in-memory copy of it.
+    pub conn: Connection,
+    /// The file's own schema version when it was older than this build's,
+    /// in which case `conn` is an in-memory copy that was migrated instead
+    /// of the file (ADR-0090). `None` when the file was already current.
+    pub migrated_from: Option<i64>,
+}
+
+/// Opens an existing project store for reading without ever writing to it
+/// (ADR-0090) — the opener for callers that must not change the user's
+/// file, such as the read-only MCP adapter.
+///
+/// Refuses exactly what [`open_existing_and_migrate`] refuses (a missing
+/// path, a foreign database, a store with nothing saved, a newer schema),
+/// and creates nothing. A current store is returned as a read-only
+/// connection to the file. An older one is copied into memory with SQLite's
+/// online backup API and only the copy is migrated, so the file keeps its
+/// bytes and its schema version.
+pub fn open_existing_read_only(path: &Path) -> Result<ReadOnlyStore, MigrationError> {
+    use rusqlite::OpenFlags;
+    if !path.exists() {
+        return Err(MigrationError::NotFound);
+    }
+    let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
+    let file = Connection::open_with_flags(path, flags).map_err(|error| {
+        match error.sqlite_error_code() {
+            Some(rusqlite::ErrorCode::CannotOpen) => MigrationError::NotFound,
+            _ => MigrationError::Sqlite(error),
+        }
+    })?;
+    file.pragma_update(None, "query_only", true)?;
+    // A save's commit holds the file's exclusive lock for a moment; a
+    // reader waits for it rather than failing with "database is locked".
+    // Explicit, not left to the library's own default.
+    file.busy_timeout(READ_ONLY_BUSY_TIMEOUT)?;
+    let version: i64 = file.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version > CURRENT_SCHEMA_VERSION {
+        return Err(MigrationError::FutureSchemaVersion {
+            found: version,
+            supported: CURRENT_SCHEMA_VERSION,
+        });
+    }
+    if !is_own_or_empty(&file, version)? {
+        return Err(MigrationError::ForeignDatabase);
+    }
+    if !has_saved_project(&file)? {
+        return Err(MigrationError::NothingSaved);
+    }
+    if version == CURRENT_SCHEMA_VERSION {
+        return Ok(ReadOnlyStore {
+            conn: file,
+            migrated_from: None,
+        });
+    }
+    let mut memory = Connection::open_in_memory()?;
+    {
+        // All pages in one step; a busy source is retried after a pause,
+        // never in a tight loop.
+        let backup = rusqlite::backup::Backup::new(&file, &mut memory)?;
+        backup.run_to_completion(i32::MAX, BACKUP_RETRY_PAUSE, None)?;
+    }
+    drop(file);
+    memory.pragma_update(None, "foreign_keys", "ON")?;
+    migrate(&memory)?;
+    Ok(ReadOnlyStore {
+        conn: memory,
+        migrated_from: Some(version),
+    })
+}
+
 /// Whether a saved project is present. Only schema v4 and later can hold
 /// one (`project_info` arrives in `migrate_v3_to_v4`); an older or empty
 /// file has nothing a reader could load, migrated or not.

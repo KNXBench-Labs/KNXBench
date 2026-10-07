@@ -17,6 +17,7 @@ members = [
     "apps/knx-cli",
     "apps/knx-desktop/src-tauri",
     "apps/knx-server",
+    "apps/knx-mcp",
     "xtask",
 ]
 
@@ -92,5 +93,8 @@ yaml-rust2 = { version = "0.13", default-features = false }
 ts-rs = "12"
 axum = "0.8"
 tokio = "1"
+# Official Rust MCP SDK, only for `apps/knx-mcp` (ADR-0090). Reduced to the
+# stdio server: no HTTP transport, no auth/OAuth, no client.
+rmcp = { version = "3.5.1", default-features = false, features = ["server", "macros", "transport-io"] }
 tower = "0.5"
 tower-http = "0.6"

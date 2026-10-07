@@ -20,17 +20,19 @@ const VIEW = { width: 1440, height: 748 }; // same aspect as the 900 × 467 GIF
 const OUT_W = 900;
 const ZOOM_WIDTH = OUT_W;
 const OUT_H = 467;
-const FPS = 12;
-// Every step stays on screen for at least HOLD_MS so a reader can follow it;
-// MAX_SECONDS only guards against a runaway recording.
-const HOLD_MS = 3000;
-const MAX_SECONDS = 60;
-const CAMERA_MS = 700;
+const FPS = 10;
+// Rhythm per step: the camera glides to the area (CAMERA_MS), the next
+// target is framed (MARK_MS), it is clicked, and the result stays on screen
+// (HOLD_MS). MAX_SECONDS only guards against a runaway recording.
+const CAMERA_MS = 1600;
+const MARK_MS = 1100;
+const HOLD_MS = 1800;
+const MAX_SECONDS = 90;
 
 type Rect = { x: number; y: number; w: number; h: number };
 const FULL: Rect = { x: 0, y: 0, w: VIEW.width, h: VIEW.height };
 
-/** A visible pointer with a click ripple: Chromium's screencast draws none. */
+/** A visible pointer, a click ripple and a target frame: Chromium's screencast draws none. */
 function installCursor() {
   const style = document.createElement("style");
   style.textContent = `
@@ -40,13 +42,27 @@ function installCursor() {
     .hero-ripple { position: fixed; z-index: 2147483646; pointer-events: none; width: 34px; height: 34px;
       margin: -17px 0 0 -17px; border-radius: 50%; border: 2px solid #b79cff;
       animation: hero-ripple .45s ease-out forwards; }
-    @keyframes hero-ripple { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }`;
+    @keyframes hero-ripple { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+    #hero-mark { position: fixed; z-index: 2147483645; pointer-events: none; border-radius: 8px;
+      border: 2px solid #b79cff; box-shadow: 0 0 0 4px #b79cff33, 0 0 16px #b79cff88;
+      animation: hero-mark .25s ease-out; }
+    /* Fades in once and then holds still: a pulsing glow repaints every frame and doubles the GIF. */
+    @keyframes hero-mark { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: scale(1); } }`;
   const cursor = document.createElement("div");
   cursor.id = "hero-cursor";
   cursor.innerHTML = '<svg viewBox="0 0 22 22" width="22" height="22"><path d="M3 2 L3 18 L7.5 14 L10.5 20.5 L13 19.4 L10.1 13 L16 13 Z" fill="#fff" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   const attach = () => { document.head.append(style); document.body.append(cursor); };
   if (document.body) attach(); else document.addEventListener("DOMContentLoaded", attach);
   addEventListener("mousemove", (event) => { cursor.style.transform = `translate(${event.clientX - 3}px, ${event.clientY - 2}px)`; }, true);
+  // The next click target, framed until the click lands.
+  (window as unknown as { heroMark: (r: { x: number; y: number; w: number; h: number } | null) => void }).heroMark = (r) => {
+    document.getElementById("hero-mark")?.remove();
+    if (!r) return;
+    const mark = document.createElement("div");
+    mark.id = "hero-mark";
+    Object.assign(mark.style, { left: `${r.x - 5}px`, top: `${r.y - 5}px`, width: `${r.w + 10}px`, height: `${r.h + 10}px` });
+    document.body.append(mark);
+  };
   addEventListener("mousedown", (event) => {
     const ripple = document.createElement("div");
     ripple.className = "hero-ripple";
@@ -78,12 +94,18 @@ async function boxOf(locator: Locator): Promise<Rect> {
   return { x: b.x, y: b.y, w: b.width, h: b.height };
 }
 
-/** Glide the pointer to an element and click it, as a person would. */
+type MarkWindow = { heroMark: (r: Rect | null) => void };
+
+/** Frame the target, glide the pointer to it and click it, as a person would. */
 async function click(page: Page, locator: Locator): Promise<void> {
   const b = await boxOf(locator);
-  await page.mouse.move(b.x + Math.min(b.w / 2, 60), b.y + b.h / 2, { steps: 12 });
+  await page.evaluate((r) => (window as unknown as MarkWindow).heroMark(r), b);
+  await page.waitForTimeout(MARK_MS * 0.55);
+  await page.mouse.move(b.x + Math.min(b.w / 2, 60), b.y + b.h / 2, { steps: 18 });
+  await page.waitForTimeout(MARK_MS * 0.45);
   await page.mouse.down();
   await page.mouse.up();
+  await page.evaluate(() => (window as unknown as MarkWindow).heroMark(null));
 }
 
 test("records adding a device and linking it to a group address", async ({ page }) => {
@@ -123,14 +145,17 @@ test("records adding a device and linking it to a group address", async ({ page 
   await cdp.send("Page.startScreencast", { format: "png", maxWidth: VIEW.width, maxHeight: VIEW.height });
   const t0 = Date.now();
   const cameras: { t: number; rect: Rect }[] = [{ t: 0, rect: FULL }];
-  const look = (rect: Rect) => cameras.push({ t: Date.now() - t0, rect });
+  /** Start a camera move and wait until it has arrived. */
+  const look = async (rect: Rect) => {
+    cameras.push({ t: Date.now() - t0, rect });
+    await page.waitForTimeout(CAMERA_MS);
+  };
   const hold = () => page.waitForTimeout(HOLD_MS);
   await page.waitForTimeout(500);
 
   // 1. Add a device to the ground-floor line.
   const add = page.getByRole("button", { name: "Device · Ground floor" });
-  look(frameAround(await boxOf(add)));
-  await page.waitForTimeout(250);
+  await look(frameAround(await boxOf(add)));
   await click(page, add);
   await page.getByText(/Push button 4-fold, flush mounted \(3\)/).waitFor();
   await hold();
@@ -138,8 +163,7 @@ test("records adding a device and linking it to a group address", async ({ page 
   // 2. Pick the product.
   const product = page.getByText(/Push button 4-fold, flush mounted \(3\)/);
   await product.waitFor();
-  look(frameAround(await boxOf(page.getByRole("listbox").first())));
-  await page.waitForTimeout(250);
+  await look(frameAround(await boxOf(page.getByRole("listbox").first())));
   await click(page, product);
   await hold();
 
@@ -148,35 +172,34 @@ test("records adding a device and linking it to a group address", async ({ page 
   await nameField.waitFor();
   const assign = page.getByLabel(/Assign free addresses on the line/);
   const create = page.getByRole("button", { name: "Create", exact: true });
-  look(frameAround(union(await boxOf(nameField), await boxOf(assign))));
+  await look(frameAround(union(await boxOf(nameField), await boxOf(assign))));
   await click(page, nameField);
   await page.keyboard.press("Control+A");
   await nameField.pressSequentially("Push button dining", { delay: 90 });
   await hold();
   await click(page, assign);
   await hold();
-  look(frameAround(union(await boxOf(nameField), await boxOf(create))));
+  await look(frameAround(union(await boxOf(nameField), await boxOf(create))));
   await click(page, create);
 
   // 4. Done; open the new device from the topology (wide shot for the view change).
   const done = page.getByRole("button", { name: "Done" });
   await done.waitFor();
-  look(frameAround(union(await boxOf(page.getByText(/Device created/)), await boxOf(done))));
+  await look(frameAround(union(await boxOf(page.getByText(/Device created/)), await boxOf(done))));
   await hold();
   await click(page, done);
-  look(FULL);
+  await look(FULL);
   await click(page, topology);
   const card = page.locator("main").getByRole("button", { name: "1.1.3 Push button dining" }).last();
   await card.waitFor();
-  look(frameAround(await boxOf(card)));
-  await hold();
+  await look(frameAround(await boxOf(card)));
   await click(page, card);
   await hold();
 
   // 5. Expand the first button's object and link it to the kitchen light.
   await page.getByRole("tablist", { name: "Push button dining" }).waitFor();
   const channel = page.getByText("Button 1", { exact: true });
-  look(frameAround(await boxOf(channel)));
+  await look(frameAround(await boxOf(channel)));
   await click(page, channel);
   await click(page, page.getByText("Button 1: Switch", { exact: true }));
   await hold();
@@ -184,17 +207,16 @@ test("records adding a device and linking it to a group address", async ({ page 
   const linkRow = linkButton.locator("xpath=ancestor::li[1]");
   const groupSelect = linkRow.getByRole("combobox").first();
   await groupSelect.waitFor();
-  look(frameAround(await boxOf(linkRow)));
-  await page.waitForTimeout(500);
+  await look(frameAround(await boxOf(linkRow)));
   await click(page, groupSelect);
   await groupSelect.selectOption({ label: "0/0/2 Kitchen light" });
   await hold();
   await click(page, linkButton);
   const unlink = page.getByRole("button", { name: /Unlink/ }).first();
   await unlink.waitFor();
-  look(frameAround(await boxOf(unlink.locator("xpath=ancestor::li[1]"))));
+  await look(frameAround(await boxOf(unlink.locator("xpath=ancestor::li[1]"))));
   await hold();
-  look(FULL);
+  await look(FULL);
   await hold();
   await cdp.send("Page.stopScreencast");
   const rawSeconds = (Date.now() - t0) / 1000;

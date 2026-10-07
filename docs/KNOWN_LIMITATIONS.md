@@ -8169,7 +8169,8 @@ Each guard is backed by a killed mutant
 
 ## 158. The AppImage starts only with an X server
 
-**Limitation.** The Linux AppImage runs its window through X11 only. The GTK
+**Limitation of the published `v0.1.0-alpha.4` AppImage.** That image runs its
+window through X11 only. The GTK
 hook that the AppImage tooling (linuxdeploy's GTK plugin, used by `tauri
 bundle`) puts into every AppImage sets `GDK_BACKEND=x11` unconditionally,
 citing a Wayland crash ([tauri#8541](https://github.com/tauri-apps/tauri/issues/8541)).
@@ -8190,12 +8191,32 @@ window came up and the full smoke check passed. The steps are in the
 [troubleshooting chapter](manual/reference/03-troubleshooting.md#the-appimage-stops-with-failed-to-initialize-gtk).
 Not tested on any other compositor or GPU.
 
-**Not changed.** Removing or rewriting the hook in the build would ship an
-untested launcher on every desktop; that is a packaging decision for the user
-at AR19. Ledger row `KL-158`.
+**Original alpha.4 release boundary (historical).** The hook was not changed
+for that release: rewriting it at that point would have shipped an untested
+launcher on every desktop. That was the user's packaging decision at AR19;
+the post-alpha request and its bounded verification are recorded below.
+Ledger row `KL-158`.
 
 **Update 2026-10-06 (user decision):** accepted for the Alpha as a disclosed
 boundary with the documented Wayland workaround; the launcher stays as built.
+
+**Post-alpha update 2026-10-07 (user-requested; source integration).** New
+source-built AppImages no longer force X11. The pinned, project-local GTK
+deploy hook embeds an owned policy: native Wayland with GTK-managed X11
+fallback when the session hints at Wayland, exact caller backend overrides,
+and the measured DMABUF workaround by default only when Wayland is allowed.
+The global Tauri cache is not modified. Direct-image X11/Wayland, stale-hint
+fallback, explicit overrides/refusals and a private-Weston rendered-frame
+check passed; 19 launcher tests and 8/8 isolated mutants. Exact source/artifact
+identity, the baseline tools-test failure and tested limits are in the
+[launcher receipt](APPIMAGE_LAUNCHER.md#local-acceptance-receipt--2026-10-07).
+The source is integrated during the user-authorized branch consolidation,
+with fresh merged workspace/Web/launcher checks and a real AppImage build.
+Current-image native startup was not rerun (the extracted Xvfb/Weston tools
+were no longer available); the earlier native receipt remains historical.
+**The already-released alpha.4 asset still has the original limitation** and
+needs the old workaround. No universal compositor/GPU support or broad
+native-UI acceptance follows.
 
 ## 159. A project archive may unpack to at most 512 MiB, and every member name must be unique
 

@@ -12,7 +12,8 @@ and wants to know what each part is and how to build it on its own.
 | --- | --- | --- |
 | Rust | **1.98.0** | `rust-toolchain.toml`, and `rust-version` in `Cargo.toml` |
 | Node.js | **22.12.0 or later** | `engines.node` in `apps/knx-web/package.json` |
-| Tauri CLI | version 2 | only needed for the desktop shell and the AppImage |
+| Tauri CLI | **2.11.4** | pinned by the AppImage workflow and launcher contract |
+| Python | **3** | standard library only; required when bundling the AppImage |
 
 If you install Rust with `rustup`, `rust-toolchain.toml` selects 1.98.0 for you the first
 time you run `cargo` in the repository, including `rustfmt` and `clippy`. You do not have

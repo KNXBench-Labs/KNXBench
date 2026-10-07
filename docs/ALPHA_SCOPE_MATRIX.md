@@ -41,13 +41,15 @@ Evidence levels used below:
 | Property-based downloader, master reset, RF configuration | Simulator-only | No hardware route | [KL §92](KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device), §141, §143–§144 |
 | Individual-address programming, reset, serial writes | Refused (fail closed) | Commands exist; refused before a tunnel until durable recovery exists | ADR-0057/0058/0059 |
 | KNX Secure (Data/IP) | Accepted boundary | Not implemented; deferred 2026-09-11 | `KL-8` |
-| Linux AppImage candidate | Verified on one machine | `0.1.0-alpha.4`; the AR18 candidate is built from `4b9e913e` with build paths remapped (offline smoke, native Wayland); AR17 checked X11 and Wayland on `6b9b6818`; needs an X server unless started as documented | [ALPHA_FINAL_GATES](ALPHA_FINAL_GATES.md), [ALPHA_CANDIDATE](ALPHA_CANDIDATE.md), `KL-158` |
+| Linux AppImage candidate | Verified on one machine | `0.1.0-alpha.4`; the AR18 candidate is built from `4b9e913e` with build paths remapped (offline smoke, native Wayland); AR17 checked X11 and Wayland on `6b9b6818`; needs an X server unless started as documented **in the published alpha.4 asset**; the post-alpha [launcher change](APPIMAGE_LAUNCHER.md) is separately, locally verified | [ALPHA_FINAL_GATES](ALPHA_FINAL_GATES.md), [ALPHA_CANDIDATE](ALPHA_CANDIDATE.md), `KL-158` |
 | Multi-user server | Accepted boundary | One shared password, no roles/audit/TLS of its own | `KL-63`, [ALPHA_READINESS AR13](ALPHA_READINESS.md#deployment-and-privacy-checklist-for-ar15ar17-and-release-notes) |
 
 ## 2. Deployment, import and hardware boundaries
 
 - **Deployment.** Linux desktop (Tauri 2 on GTK3/WebKitGTK, `KL-16`; the
-  AppImage needs an X server unless started natively as documented, `KL-158`)
+  published alpha.4 AppImage needs an X server unless started natively as
+  documented, `KL-158`; the post-alpha [launcher contract](APPIMAGE_LAUNCHER.md)
+  removes that requirement in newer source-built images)
   and a container/web server. The server binds loopback unless a password is set; a
   TLS proxy is required for networked use; release builds must use
   `KNX_REQUIRE_CLEAN_TREE=1` (AR13 checklist). Docker bridge tunnelling needs a
@@ -62,11 +64,16 @@ Evidence levels used below:
 - **Storage.** A `.knxdb` is SQLite; review under Git via `knx diff`
   (`KL-9`). Opening an older file upgrades it in place (`KL-157`).
 
-## 3. Ledger totals (190 rows, 2026-10-06)
+## 3. Ledger totals (191 rows, 2026-10-07)
+
+These are the current working ledger totals, including post-alpha work, not a
+retrospective change to the released alpha.4 artifact. The launcher follow-up
+is locally verified; its source/artifact receipt is in
+[APPIMAGE_LAUNCHER](APPIMAGE_LAUNCHER.md), and it is not yet published.
 
 | Status | Rows | Meaning for the release |
 | --- | --- | --- |
-| `DONE` | 46 | Delivered with evidence in the row |
+| `DONE` | 47 | Delivered with evidence in the row |
 | `ACCEPTED_BOUNDARY` | 121 | Kept for the Alpha by a named decision or ADR |
 | `LATER` | 23 | Out of the Alpha by decision |
 | `BLOCKED_EXTERNAL` | 0 | All eight accepted as disclosed boundaries by the user on 2026-10-06 |

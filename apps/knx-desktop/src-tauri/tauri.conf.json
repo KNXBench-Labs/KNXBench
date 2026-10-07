@@ -5,7 +5,8 @@
   "build": {
     "frontendDist": "../../knx-web/dist",
     "beforeDevCommand": "npm --prefix ../knx-web run dev",
-    "beforeBuildCommand": "npm --prefix ../knx-web run build"
+    "beforeBuildCommand": "npm --prefix ../knx-web run build",
+    "beforeBundleCommand": "python3 ../../tools/prepare_appimage_tools.py"
   },
   "app": {
     "withGlobalTauri": true,
@@ -13,6 +14,7 @@
   },
   "bundle": {
     "active": true,
+    "useLocalToolsDir": true,
     "targets": ["appimage"],
     "category": "Development",
     "shortDescription": "KNX-compatible engineering application",

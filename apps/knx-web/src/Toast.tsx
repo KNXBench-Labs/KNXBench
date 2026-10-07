@@ -1,6 +1,7 @@
 /** Renders the active toast queue as a dismissible alert/status stack. */
 import type { ToastEntry } from "./toast";
 import { useTranslate } from "./i18n";
+import AchievementBadge from "./AchievementBadge";
 
 export default function ToastStack(props: { toasts: ToastEntry[]; onDismiss: (id: number) => void }) {
   const t = useTranslate();
@@ -13,8 +14,11 @@ export default function ToastStack(props: { toasts: ToastEntry[]; onDismiss: (id
           role={toast.kind === "error" ? "alert" : "status"}
           className={`toast toast--${toast.kind}`}
         >
+          {toast.achievement && <AchievementBadge tier={toast.achievement.tier} glyph={toast.achievement.glyph} />}
           <div className="toast-body">
-            <span>{toast.message}</span>
+            {toast.achievement && <span className="toast-label">{t("achievements.unlockedLabel")}</span>}
+            <span className={toast.achievement ? "toast-title" : undefined}>{toast.message}</span>
+            {toast.achievement && <span className="toast-detail">{toast.achievement.description}</span>}
             {/* §66/§67 disclosure (fix round 2, B4; corrected round 3, B1):
                 the joke wrapper above is translated, but when `serverText`
                 is true the `{msg}` it quotes is the server's raw English

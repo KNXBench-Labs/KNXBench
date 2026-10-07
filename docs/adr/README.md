@@ -88,3 +88,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0086](0086-specs-product-data-and-projects-are-enough-evidence.md) | The specification, product data and project files are enough evidence; a working inference is shipped and disclosed | Accepted | 2026-10-07 |
 | [0087](0087-desktop-app-identifier.md) | The desktop app identifier is `com.knxbench.knxbench-labs` | Accepted | 2026-10-07 |
 | [0088](0088-server-terminates-tls-itself.md) | `knx-server` terminates TLS itself, with a self-signed certificate by default | Accepted | 2026-10-07 |
+| [0089](0089-achievements.md) | Achievements are a frontend catalogue over a grow-only server record | Accepted | 2026-10-07 |

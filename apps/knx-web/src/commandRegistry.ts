@@ -19,6 +19,7 @@ export interface CommandContext {
   openHelp: () => void;
   openCatalog: () => void;
   openIntroduction: () => void;
+  openAchievements: () => void;
 }
 
 /**
@@ -161,6 +162,14 @@ export const COMMANDS: PaletteCommand[] = [
     labelKey: "command.showIntroduction",
     isEnabled: () => true,
     run: (ctx) => ctx.openIntroduction(),
+  },
+  // ADR-0089. Enabled even with achievements switched off: the overview
+  // then explains that they are off and where to switch them back on.
+  {
+    id: "open-achievements",
+    labelKey: "achievements.command",
+    isEnabled: () => true,
+    run: (ctx) => ctx.openAchievements(),
   },
   // Last, and enabled with nothing loaded. F1 is the shortcut people who
   // already know it will use; this row is for everyone else, and it is

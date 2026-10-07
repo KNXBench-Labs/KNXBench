@@ -4,8 +4,18 @@ import { ERROR_WRAPPERS, HOLIDAYS, LATE_NIGHT_MESSAGES } from "./toastCopy";
 import type { HolidayEntry } from "./toastCopy";
 import { formatTemplate, translate } from "./i18n";
 import type { TranslatableKey } from "./i18n";
+import type { AchievementTier } from "./achievementCatalog";
+import type { WorkbenchIconName } from "./WorkbenchIcon";
 
-export type ToastKind = "error" | "fun";
+export type ToastKind = "error" | "fun" | "achievement";
+
+/** What an unlocked achievement's popup shows, already translated (ADR-0089). */
+export interface AchievementPopup {
+  title: string;
+  description: string;
+  tier: AchievementTier;
+  glyph: WorkbenchIconName;
+}
 
 export interface ToastEntry {
   id: number;
@@ -16,6 +26,25 @@ export interface ToastEntry {
    * `Toast.tsx`. Meaningless for `kind === "fun"`, which never quotes the
    * server. */
   serverText: boolean;
+  /** Set on an achievement popup; absent on the "+N more" summary. */
+  achievement?: AchievementPopup;
+}
+
+/** How many achievement popups one batch shows before summarising the rest. */
+export const MAX_ACHIEVEMENT_POPUPS = 2;
+
+/**
+ * One batch of unlocks as toasts: up to two popups, then one summary line
+ * for the rest. Opening a big project can unlock several achievements at
+ * once, and a wall of popups would cover the work it is celebrating.
+ */
+export function planAchievementToasts(
+  popups: AchievementPopup[],
+  summary: (count: number) => string,
+): { message: string; achievement?: AchievementPopup }[] {
+  const shown = popups.slice(0, MAX_ACHIEVEMENT_POPUPS).map((achievement) => ({ message: achievement.title, achievement }));
+  const rest = popups.length - shown.length;
+  return rest > 0 ? [...shown, { message: summary(rest) }] : shown;
 }
 
 /** Local-hour window treated as "late night": 23:00-04:59. */
@@ -106,5 +135,14 @@ export function useToasts() {
     setTimeout(() => dismiss(id), autoDismissMs);
   }
 
-  return { toasts, pushError, clearErrors, pushFun, dismiss };
+  /** Shows a batch of unlocks; each popup leaves by itself like a fun toast. */
+  function pushAchievements(popups: AchievementPopup[], summary: (count: number) => string, autoDismissMs = 6000) {
+    for (const planned of planAchievementToasts(popups, summary)) {
+      const id = nextId.current++;
+      setToasts((ts) => [...ts, { id, kind: "achievement" as const, serverText: false, ...planned }]);
+      setTimeout(() => dismiss(id), autoDismissMs);
+    }
+  }
+
+  return { toasts, pushError, clearErrors, pushFun, pushAchievements, dismiss };
 }

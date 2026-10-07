@@ -125,7 +125,10 @@ The image reads these environment variables:
 | `KNX_STATIC_DIR` | Where the built frontend is served from | set by the image |
 | `KNX_AUTH_PASSWORD_HASH` | The login credential, as printed by `knx-server --hash-password` | unset |
 | `KNX_AUTH_PASSWORD` | A plaintext password, hashed at startup | unset |
-| `KNX_AUTH_COOKIE_SECURE` | Marks the session cookie `Secure`, for use behind TLS | unset |
+| `KNX_AUTH_COOKIE_SECURE` | Marks the session cookie `Secure` on plain HTTP behind a TLS-terminating proxy; over the server's own HTTPS it is always `Secure` | unset |
+| `KNX_TLS` | `auto`: HTTPS whenever a password is set; `on` forces it, `off` disables it ([ADR-0088](../../adr/0088-server-terminates-tls-itself.md)) | `auto` |
+| `KNX_TLS_CERT`, `KNX_TLS_KEY` | Your own PEM certificate chain and private key, instead of the generated self-signed one | unset |
+| `KNX_TLS_SAN` | Extra comma-separated host names or IP addresses for the generated certificate, e.g. `knx.lan,192.168.1.10` | unset |
 | `KNX_TUNNEL_ROUTE_BACK` | Ask the gateway to answer the packet's source (KNXnet/IP Route Back); for tunnelling from Docker's bridge network | unset |
 
 > **Warning**
@@ -133,10 +136,11 @@ The image reads these environment variables:
 > Read this before you make the server reachable from another machine.
 >
 > The password protects the API; it is not a security perimeter. There is one
-> shared password, no user accounts, no roles, no audit trail and **no TLS**.
-> Over plain HTTP the password and the session cookie both cross the network in
-> the clear, so anything beyond your own machine wants a TLS-terminating
-> reverse proxy in front of it.
+> shared password, no user accounts, no roles and no audit trail. With a
+> password set the server speaks **HTTPS with a self-signed certificate** by
+> default, so your browser warns once: compare the SHA-256 fingerprint the
+> server prints at startup with the one the browser shows before you accept
+> it. Bring your own certificate with `KNX_TLS_CERT` and `KNX_TLS_KEY`.
 >
 > Prefer `KNX_AUTH_PASSWORD_HASH` over `KNX_AUTH_PASSWORD` for anything that
 > lasts: a plaintext password in the environment is readable in

@@ -26,15 +26,17 @@ meant for container health checks, and `GET /api/version`, which reports the bui
 When it starts, it prints the address it is listening on:
 
 ```text
-knx-server listening on 0.0.0.0:8080
+knx-server listening on https://0.0.0.0:8080
 ```
 
-Read that line. The address at the front of it is not decoration — see
-[Authentication](#authentication) below.
+Read that line. Neither the scheme nor the address is decoration: the address says
+whether the server is reachable from the network at all (see
+[Authentication](#authentication)), and the scheme whether it speaks HTTPS (see
+[HTTPS](#https)). A server without a password says `http://127.0.0.1:8080`.
 
 ## Configuration
 
-Five environment variables, and nothing else. There is no configuration file.
+Environment variables, and nothing else. There is no configuration file. The core five:
 
 | Variable | Meaning | Default |
 | --- | --- | --- |
@@ -44,8 +46,8 @@ Five environment variables, and nothing else. There is no configuration file.
 | `KNX_AUTH_PASSWORD_HASH` | The login credential, as a hash | Unset |
 | `KNX_AUTH_PASSWORD` | The login credential, in plaintext | Unset |
 
-One more, `KNX_AUTH_COOKIE_SECURE`, is covered under
-[Authentication](#authentication).
+`KNX_AUTH_COOKIE_SECURE` is covered under [Authentication](#authentication), and the
+four `KNX_TLS*` variables under [HTTPS](#https).
 
 `KNX_DATA_DIR` is the one to get right. Unset, it defaults to your system's temporary
 directory, which is convenient for a look around and wrong for anything you intend to
@@ -258,12 +260,10 @@ endpoint that hands an open project back — an unmount would lose your unsaved 
 
 ### What the password does not protect you from
 
-- **There is no TLS.** Over plain HTTP the password crosses the network in the clear in
-  the login request, and the session cookie crosses it in the clear on every request
-  after that. Anyone who can watch that traffic can replay the cookie. Put a
-  TLS-terminating reverse proxy in front of anything that matters, and set
-  `KNX_AUTH_COOKIE_SECURE=1` when you do. Leave that variable unset on plain HTTP,
-  where a `Secure` cookie would simply never be sent back.
+- **A certificate you accepted without looking.** The server encrypts by default (see
+  [HTTPS](#https)), but a self-signed certificate is only as good as the fingerprint
+  check you did before accepting it. With `KNX_TLS=off` the password and the session
+  cookie cross the network in the clear again.
 - **One password means one identity.** Everyone holding it can do everything, including
   writing to the KNX bus. Nothing records who did what, because there is no "who".
 - **Brute-force resistance is a delay, not a lockout.** A failed login costs the caller
@@ -279,6 +279,55 @@ endpoint that hands an open project back — an unmount would lose your unsaved 
 Run the container on a network you have thought about, behind a transport you secured
 yourself. It is not built to face the internet. For the full list of what is and is not
 defended, see [known limitations](../../KNOWN_LIMITATIONS.md).
+
+## HTTPS
+
+A server with a password speaks HTTPS on its own port. You do not have to configure
+anything for that ([ADR-0088](../../adr/0088-server-terminates-tls-itself.md)).
+
+| Variable | Meaning | Default |
+| --- | --- | --- |
+| `KNX_TLS` | `auto`: HTTPS exactly when a password is set. `on`: always, loopback included. `off`: never | `auto` |
+| `KNX_TLS_CERT`, `KNX_TLS_KEY` | Your own PEM certificate chain and private key. Set both or neither | unset |
+| `KNX_TLS_SAN` | Extra names for the generated certificate, comma-separated: `knx.lan,192.168.1.10` | unset |
+
+**The generated certificate.** On the first start with a password, the server makes a
+self-signed certificate and keeps it in `KNX_DATA_DIR/.knxbench-tls/`, so it survives
+restarts and container rebuilds that keep the volume. It covers `localhost`, `127.0.0.1`,
+`::1`, the machine's host name and whatever you list in `KNX_TLS_SAN`. It is valid for
+825 days, the most Apple devices accept, and is replaced automatically at a start within
+30 days of expiry, or when the list of names changes. The startup log says when it made
+a new one, and why. No API route can list, read or overwrite that directory.
+
+Every HTTPS start prints the certificate's fingerprint:
+
+```text
+knx-server: HTTPS with a self-signed certificate for localhost, 127.0.0.1, ::1, knx-box,
+valid until 2029-01-10 11:00 UTC. Its SHA-256 fingerprint is 3F:A2:…:9C; compare it with
+the one your browser shows before accepting the warning.
+```
+
+Your browser will warn the first time, because nobody it trusts signed this
+certificate. Open the certificate details in the warning, compare the SHA-256
+fingerprint with the log line, and only then continue. To get rid of the warning
+altogether, either trust the certificate on your devices, or use your own certificate
+from a CA your devices already trust (for example one made with `mkcert`) via
+`KNX_TLS_CERT` and `KNX_TLS_KEY`.
+
+**Your own certificate** must be readable and must match its key; otherwise the server
+refuses to start and names the file. An *expired* certificate is the exception: the
+server starts anyway and warns loudly, so a forgotten renewal does not lock you out of
+your own installation.
+
+**Old `http://` links keep working.** A plain HTTP request to the HTTPS port is
+answered with a redirect to the same address under `https://`.
+
+**The session cookie** is always marked `Secure` over HTTPS. Behind your own
+TLS-terminating proxy, run the server with `KNX_TLS=off` and set
+`KNX_AUTH_COOKIE_SECURE=1`; note that with `--network host` the server's own port stays
+reachable next to the proxy.
+
+Certificates are read when the server starts; restart it after replacing them.
 
 ## Web build versus desktop build
 

@@ -1,5 +1,37 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — `knx-server` leaves on SIGTERM instead of being killed
+
+- **Finding:** the binary installed no signal handler. As PID 1 in the
+  container the kernel discarded SIGTERM, so every `docker stop` waited
+  10 s and ended in SIGKILL (exit 137; reproduced with the image from
+  4cc0ec05, `SigCgt` of PID 1 without SIGTERM). A running bus monitor's
+  tunnel stayed occupied on the gateway until its heartbeat timeout.
+- **Behaviour:** `apps/knx-server/src/graceful_stop.rs`. SIGTERM/SIGINT
+  stop accepting connections (`axum::serve(..).with_graceful_shutdown`,
+  plain and TLS listener); requests in flight get 5 s (`STOP_GRACE`), a
+  second signal ends the wait; then the bus monitor is stopped and a line
+  scan cancelled (`release_bus`, 2 s), exit 0. After a forced end the
+  process exits via `process::exit` because dropping the Tokio runtime
+  would wait for `spawn_blocking` work without a limit. Device download
+  and address programming are not waited for (KL §163).
+- **Also fixed:** `.dockerignore` sent `data/` (the usual bind mount with
+  user projects and the root-owned `0700` TLS directory), `OriginalData/`
+  and other private local data into the build context; with the TLS
+  directory present `docker build` failed with `permission denied`. The
+  manual's update recipe used `docker rm -f` (SIGKILL) and now stops first.
+- **Verified:** 7 unit tests (paused clock: drained, grace expired, second
+  signal, server error, no signal, bus monitor tunnel disconnected via
+  `FakeTunnel`, idle bus) and 4 tests against the real binary
+  (`tests/signal_stop.rs`: SIGTERM with an idle keep-alive connection
+  < 3 s, SIGINT, stalled request cut off after ≈5 s with exit 0, second
+  signal). `knx-server` 674 passed / 0 failed / 45 ignored, Clippy
+  `-D warnings`, fmt, five repository gates. Docker image rebuilt: PID 1
+  `SigCgt` now includes SIGINT/SIGTERM; `docker stop` 181 ms (HTTP) and
+  306 ms (HTTPS with password), exit 0 instead of 137.
+- **Not verified:** release of a real gateway tunnel on stop (fake tunnel
+  only; no hardware run).
+
 ## 2026-10-07 — `knx-server` speaks HTTPS by itself (ADR-0088)
 
 - **User decisions (grill session):** protect browser ↔ `knx-server`

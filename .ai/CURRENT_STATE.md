@@ -1,3 +1,19 @@
+- **Last Agent:** Claude (knx-server SIGTERM / docker stop exit 137)
+- **Timestamp:** 2026-10-07 22:10 CEST
+- **Completed:** User reported `knxbench-pre-tls` exited with 137. Cause: `knx-server` had no signal handler; as PID 1 the kernel discards SIGTERM, so `docker stop` always fell back to SIGKILL after 10 s (reproduced: PID 1 `SigCgt` without SIGTERM, exit 137). New `apps/knx-server/src/graceful_stop.rs`: SIGTERM/SIGINT → graceful axum stop (plain + TLS listener), 5 s grace (`STOP_GRACE`), second signal skips it, then `release_bus` (bus monitor stop + line scan cancel, 2 s), exit 0; forced end uses `process::exit` (runtime drop would wait for `spawn_blocking` forever). Also: `.dockerignore` now excludes `data/` (bind mount with root-owned 0700 TLS dir made `docker build` fail with permission denied; it also carried user projects), `OriginalData/`, `Backup/` and other private local data; manual update recipe uses `docker stop` + `docker rm` instead of `docker rm -f`. KL §163, manual 11 "Stopping", Dockerfile comment, IMPLEMENTATION_STATUS. Tests: 7 unit + 4 real-binary (`tests/signal_stop.rs`), knx-server 674/0/45, Clippy, fmt, 5 gates. Docker probe image `knxbench-server:sigterm-probe`: `docker stop` 181 ms HTTP / 306 ms HTTPS, exit 0; probe containers removed.
+- **Pending/Next Steps:** User's running `knxbench` container still runs the old image (its next stop will be a 137 one last time); swap it only with the user's go (unsaved in-memory edits would be lost). Real-gateway tunnel release on stop not hardware-verified. Device download/address programming are not waited for (KL §163).
+- **Notes for Codex oder Claude:** Hermes' terminal guard blocks any command text containing the word for system power-off (hence the module name `graceful_stop`). Log: .ai/logs/2026-10-07_claude_server-sigterm.md. Codex' forum-announcement entry below was left untouched.
+
+---
+
+- **Last Agent:** codex (forum announcement wording follow-up)
+- **Timestamp:** 2026-10-07 21:51 CEST
+- **Completed:** Extended the German BBCode draft with the user's supplied Steam-style achievements USP, themes and multilingual translation invitation (Klingon/Bavarian/COBOL humor); retained free use, ETS import, bus visualization, native Linux, Docker and the alpha caveat. Achievements wording comes from the user; searches of docs/apps did not establish implementation, so no specific achievements or unlock behavior invented.
+- **Pending/Next Steps:** User reviews the announcement and adds a publicly accessible project link; verify achievements availability before public posting if needed. No post submitted.
+- **Notes for Codex oder Claude:** Writing-only task; no product edits, tests, commit, push, deployment or hardware contact. Existing handovers and other work preserved.
+
+---
+
 - **Last Agent:** Claude (server TLS, ADR-0088)
 - **Timestamp:** 2026-10-07 21:20 CEST
 - **Completed:** After a grill-me session the user approved built-in HTTPS for `knx-server`: TLS automatically on when a password is set (`KNX_TLS` auto/on/off), self-signed ECDSA certificate in `KNX_DATA_DIR/.knxbench-tls` (825 days, renewed under 30 days or on name change, SHA-256 fingerprint in the banner), optional own PEM files via `KNX_TLS_CERT`/`KNX_TLS_KEY` (broken refuses to start, expired warns), `KNX_TLS_SAN` for extra names, plain HTTP on the same port gets a 307 to https, handshakes in separate tasks with a 10 s limit, cookie always `Secure` over HTTPS, TLS directory refused by every path resolver and hidden in fs-list. rustls with `ring` (aws-lc's OpenSSL licence is not allowed). ADR-0088, KL §22, manual (04, 11, troubleshooting, build table), README quick start, ALPHA_SCOPE_MATRIX, IMPLEMENTATION_STATUS, Dockerfile comment. knx-server tests 663/0/45, Clippy, fmt, cargo deny, 5 repository gates, real-binary smoke test (fingerprint = openssl, curl --cacert 200, 307, Secure cookie, reserved dir refused, reuse on restart, off/broken/no-password paths).

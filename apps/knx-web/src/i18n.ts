@@ -41,9 +41,9 @@ const catalogs: Record<BuiltInUiLanguage, Record<string, string>> = {
 
 /**
  * The catalogue for `language`: a built-in catalogue when `language` is
- * `"en"`/`"de"`, otherwise the `messages` of an installed pack matching
- * that tag (`languagePack.ts`). `undefined` when `language` names a pack
- * that isn't installed — removed, or a stale/hand-edited active tag —
+ * `"en"`/`"de"`, otherwise the `messages` of a user-installed or shipped
+ * fun pack matching that tag (`languagePack.ts`). `undefined` when
+ * neither exists — removed, or a stale/hand-edited active tag —
  * which `translateFor` treats exactly like a catalogue with no entries at
  * all: straight through to the English fallback, never an error.
  */

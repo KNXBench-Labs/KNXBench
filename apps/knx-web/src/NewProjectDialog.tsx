@@ -4,7 +4,8 @@ import * as api from "./api";
 import type { GroupAddressStyle } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import Overlay from "./Overlay";
-import { isWellFormedBcp47Tag, useLanguagePacks } from "./languagePack";
+import { isWellFormedBcp47Tag, useAvailableLanguagePacks } from "./languagePack";
+import { languageSelfName } from "./languageSelfName";
 import { useTranslate } from "./i18n";
 import { AVAILABLE_UI_LANGUAGES, useUiLanguage } from "./uiLanguage";
 
@@ -49,7 +50,7 @@ export default function NewProjectDialog(props: {
   const { onCreated, onClose, onSaveFirst } = props;
   const t = useTranslate();
   const [uiLanguage] = useUiLanguage();
-  const languagePacks = useLanguagePacks().filter(
+  const languagePacks = useAvailableLanguagePacks().filter(
     ({ tag }) => !(AVAILABLE_UI_LANGUAGES as readonly string[]).includes(tag),
   );
   const listedLanguages: readonly string[] = [
@@ -198,7 +199,7 @@ export default function NewProjectDialog(props: {
             onChange={(e) => setLanguageChoice(e.target.value)}
           >
             {AVAILABLE_UI_LANGUAGES.map((tag) => (
-              <option key={tag} value={tag}>{t(`language.${tag}`)}</option>
+              <option key={tag} value={tag}>{languageSelfName(tag)}</option>
             ))}
             {languagePacks.map((pack) => (
               <option key={pack.tag} value={pack.tag}>{pack.name}</option>

@@ -801,6 +801,76 @@ async fn redoing_a_style_change_refreshes_monitor_formatting_and_write_parsing()
 // ---------------------------------------------------------------------------
 
 #[tokio::test]
+async fn generic_group_writes_refuse_parameter_only_dpts_without_sending() {
+    let (tunnel, handle) = fake_tunnel();
+    let state = state_with_project_and_connector(
+        project_with_write_dpt_outcomes(),
+        FakeConnector::succeeding(tunnel),
+    );
+    let app = knx_server::app(Arc::new(state), None);
+    start_session(&app).await;
+    for dpt in [
+        "DPST-7-3",
+        "DPST-7-4",
+        "DPST-7-6",
+        "DPST-7-13",
+        "DPST-8-3",
+        "DPST-8-4",
+        "DPST-8-6",
+        "DPST-8-12",
+        "DPST-20-22",
+    ] {
+        for explicit in [false, true] {
+            let mut request = json!({"destination": "0/0/1", "dpt": dpt, "value": "1"});
+            if explicit {
+                request["inputFormat"] = json!("decimal");
+            }
+            let response = call(&app, "POST", "/api/bus/write", Some(request)).await;
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{dpt}");
+            let body = body_json(response).await;
+            assert!(body
+                .to_string()
+                .contains("not allowed for generic runtime group writes"));
+            assert!(body.to_string().contains(dpt));
+            assert!(handle.sent_calls().is_empty(), "{dpt} reached the tunnel");
+        }
+    }
+}
+
+#[tokio::test]
+async fn project_resolved_parameter_only_dpt_is_refused_before_send() {
+    let (tunnel, handle) = fake_tunnel();
+    let mut project = project_with_write_dpt_outcomes();
+    project
+        .devices
+        .com_object_mut(ComObjectInstanceId(1))
+        .unwrap()
+        .dpt = Override::Value(Resolved {
+        value: knx_core::DptRef {
+            main: 7,
+            sub: Some(13),
+        },
+        layer: Layer::Instance,
+    });
+    let state = state_with_project_and_connector(project, FakeConnector::succeeding(tunnel));
+    let app = knx_server::app(Arc::new(state), None);
+    start_session(&app).await;
+    for explicit in [false, true] {
+        let mut request = json!({"destination": "0/0/1", "value": "1"});
+        if explicit {
+            request["inputFormat"] = json!("decimal");
+        }
+        let response = call(&app, "POST", "/api/bus/write", Some(request)).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert!(body_json(response)
+            .await
+            .to_string()
+            .contains("not allowed for generic runtime group writes"));
+        assert!(handle.sent_calls().is_empty());
+    }
+}
+
+#[tokio::test]
 async fn a_tunnel_send_failure_is_reported_as_a_bad_gateway() {
     let (tunnel, handle) = fake_tunnel();
     let state = state_with_project_and_connector(

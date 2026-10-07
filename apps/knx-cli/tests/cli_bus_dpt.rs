@@ -358,6 +358,77 @@ fn declared_decimal_format_rejects_a_hexadecimal_prefix_before_connecting() {
 }
 
 #[test]
+fn generic_group_writes_refuse_parameter_only_dpts_in_dry_run() {
+    for dpt in [
+        "DPST-7-3",
+        "DPST-7-4",
+        "DPST-7-6",
+        "DPST-7-13",
+        "DPST-8-3",
+        "DPST-8-4",
+        "DPST-8-6",
+        "DPST-8-12",
+        "DPST-20-22",
+    ] {
+        for explicit in [false, true] {
+            let mut args = vec![
+                "bus",
+                "write",
+                "--gateway",
+                "127.0.0.1:3671",
+                "--dpt",
+                dpt,
+                "--dry-run",
+            ];
+            if explicit {
+                args.extend(["--input-format", "decimal"]);
+            }
+            args.extend(["1/2/3", "1"]);
+            let out = run_cli(&args);
+            assert!(
+                !out.status.success(),
+                "{dpt} was accepted as a runtime write"
+            );
+            let error = String::from_utf8(out.stderr).unwrap();
+            assert!(
+                error.contains("not allowed for generic runtime group writes"),
+                "{error}"
+            );
+            assert!(error.contains(dpt), "{error}");
+            assert!(out.stdout.is_empty());
+        }
+    }
+}
+
+#[test]
+fn project_resolved_parameter_only_dpt_is_refused_in_dry_run() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("parameter.knxdb");
+    write_store(&path, &project_with_group_address("1/2/3", &[(7, 13)]));
+    for explicit in [false, true] {
+        let mut args = vec![
+            "bus",
+            "write",
+            "--gateway",
+            "127.0.0.1:3671",
+            "--project",
+            path.to_str().unwrap(),
+            "--dry-run",
+        ];
+        if explicit {
+            args.extend(["--input-format", "decimal"]);
+        }
+        args.extend(["1/2/3", "1"]);
+        let out = run_cli(&args);
+        assert!(!out.status.success());
+        assert!(String::from_utf8(out.stderr)
+            .unwrap()
+            .contains("not allowed for generic runtime group writes"));
+        assert!(out.stdout.is_empty());
+    }
+}
+
+#[test]
 fn a_dpt_naming_an_unimplemented_main_type_fails_with_the_unsupported_error() {
     // This used to name DPST-20-102, which stopped being unimplemented when
     // main types 20-30 landed. DPST-31-101 replaces it, and stays

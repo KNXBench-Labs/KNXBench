@@ -13,7 +13,8 @@ pub mod resolve;
 
 pub use codec::{
     decode, default_input_format, encode, encode_inferred_format, encoding_rulings,
-    format_width_bits, DptCodecError, DptEncodingRuling, DptInputFormat, DptValue,
+    format_width_bits, validate_group_write_dpt, DptCodecError, DptEncodingRuling, DptInputFormat,
+    DptValue,
 };
 pub use resolve::{
     group_address_dpt_from, group_address_type_from, resolve_group_address_dpt,

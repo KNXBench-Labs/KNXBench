@@ -1100,6 +1100,7 @@ async fn write_value(
         }
     };
 
+    knx_core::validate_group_write_dpt(dpt).map_err(|e| ApiError::bad_request(e.to_string()))?;
     let value = match body.input_format.as_deref() {
         Some(name) => {
             let format = knx_core::DptInputFormat::parse_name(name).ok_or_else(|| {

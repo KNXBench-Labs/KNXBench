@@ -3718,6 +3718,7 @@ fn resolve_write_value(
 ) -> Result<(String, knx_net::GroupValue), String> {
     if let Some(dpt_str) = &parsed.dpt {
         let dpt = knx_core::DptRef::parse(dpt_str).map_err(|e| e.to_string())?;
+        knx_core::validate_group_write_dpt(dpt).map_err(|e| e.to_string())?;
         let value = match parsed.input_format {
             Some(format) => knx_core::encode(dpt, &parsed.value, format),
             None => knx_core::encode_inferred_format(dpt, &parsed.value),
@@ -3742,6 +3743,7 @@ fn resolve_write_value(
                 ))
             }
             Some(knx_core::GroupAddressDpt::Single(dpt)) => {
+                knx_core::validate_group_write_dpt(*dpt).map_err(|e| e.to_string())?;
                 let value = match parsed.input_format {
                     Some(format) => knx_core::encode(*dpt, &parsed.value, format),
                     None => knx_core::encode_inferred_format(*dpt, &parsed.value),

@@ -1,3 +1,27 @@
+- **Last Agent:** codex (KNX user forum announcement draft)
+- **Timestamp:** 2026-10-07 16:16 CEST
+- **Completed:** Prepared a short German BBCode announcement from the maintained README and project handover: free/AGPL, ETS project import, live bus/flow visualization, Docker/browser and native Linux, with an explicit alpha/compatibility caveat. Revised the draft on the user's request with a little more engineering humor; feature scope and alpha caveat unchanged. No public URL invented and no forum post submitted.
+- **Pending/Next Steps:** User may add an accessible project/download link before posting; no publication or repository delivery authorized.
+- **Notes for Codex oder Claude:** Writing-only task; no product changes, tests, commit, push, deployment or bus contact. Existing local modifications and all prior handovers preserved.
+
+---
+
+- **Last Agent:** codex (user-authorized repository closeout)
+- **Timestamp:** 2026-10-07 16:26 CEST
+- **Completed:** User requested committing/pushing all retained local work and cleaning inactive worktrees. Source snapshots published and exact live refs verified: fix/kl-158 = 318955d189fb52ba08a35d0781f9519e069592bb (16 paths); historical WIP u21-fix = e28decb3a0892a2e97396b42c28aeec6a27da292 (9 paths). All 28 pre-existing local branch tips preserved remotely, 23 refs updated atomically. Durable byte-verified patches/tars, development AppImage and verified Git bundle retained at /mnt/daten-i/Sourcecode/KNXBench.backups/2026-10-07-pre-transfer-161629. Both inactive worktrees removed normally after clean-status, process-cwd and remote checks. Launcher 19, Flow 27/2 files, flow-study typecheck and explicit-root repository gates passed. DPT precheck retained as historical documentation. No product changes integrated into main, tag/asset replacement, deployment, bus contact, repository transfer or visibility change.
+- **Pending/Next Steps:** Deliberate integration of preserved branch work, if wanted, is a separate task with its own review/gates. GitHub account rename/transfer and any public-release audit remain separate; current private visibility is preserved. No automatic continuation into implementation or release work.
+- **Notes for Codex oder Claude:** Detailed scope, original receipts and cleanup safeguards: .ai/logs/2026-10-07_codex_repository-closeout.md. Do not confuse published preservation branches with current-main feature acceptance; old handovers below are historical. Keep the root's ignored private data/settings/corpus untouched. This commit records verified source preservation and original-worktree cleanup; final main publication/readback is checked after committing, not asserted by a self-referential hash.
+
+---
+
+- **Last Agent:** codex (pre-transfer status inspection only)
+- **Timestamp:** 2026-10-07 16:09 CEST
+- **Completed:** Read-only inspection of all 3 registered worktrees and 28 local branches; local main and live GitHub refs/heads/main both equal 41f202fcfe6d6b6033f7d5a64803a2766790f771. Before this receipt root had one untracked DPT precheck; KL-158 has 15 dirty/untracked paths and its handover explicitly retains local uncommitted work; u21-fix has 9 dirty/untracked paths. Five local branches have commits unreachable from all live remote heads/tags (some may be historical/reworked equivalents, not proof of missing features); ui-native-verification retains WIP 4fe16f9c. No live subagents or observed compiler/test/standalone coding-agent processes; two Hermes Python kernels remain, so process presence alone cannot certify all other conversations ended. No commit, push, transfer, deletion, cleanup of foreign work or root synchronization performed.
+- **Pending/Next Steps:** Report that main is pushed but not every local artifact is committed/published. User must separately authorize preservation/integration/cleanup of retained work before any such operation. Do not treat a status question as publication permission.
+- **Notes for Codex oder Claude:** This local receipt itself makes .ai/CURRENT_STATE.md dirty again. Preserve the untracked docs/spec-audits/2026-10-07-dpt-scope-precheck.md and both retained worktrees. KL-158 has no launcher files in current main; do not silently discard or publish it. All inherited handovers retained below.
+
+---
+
 - **Last Agent:** codex (DPT committed and pushed)
 - **Timestamp:** 2026-10-07 15:56 CEST
 - **Completed:** User-requested DPT publication completed: feature commit `eb0abc6a8e75c614a489af82ab9ac810b5ffb740` (`fix(dpt): keep rounding and runtime writes on a short leash`) pushed to origin/main from the owned detached push checkout; live `ls-remote` and fetched origin/main both equalled that commit. Exactly 21 reviewed paths committed as author and committer KNXBench-Labs <github@knxbench.com>, no co-author. Source/CSV hashes unchanged from the accepted integrated gate: Rust 3418/0/178, Clippy, CLI/server build. All five repository audits and staged whitespace/fmt rechecked before commit. Full Rust execution was carried over, not repeated. No deployment, restart, release tag or bus contact.

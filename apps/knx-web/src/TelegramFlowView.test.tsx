@@ -56,8 +56,8 @@ function model(setup?: (m: FlowModel) => void): FlowModel {
   return m;
 }
 
-async function render(m: FlowModel | null) {
-  const feed: FlowFeed = { model: m, version: 1, admit: () => {}, reset: () => {} };
+async function render(m: FlowModel | null, source?: FlowFeed["source"]) {
+  const feed: FlowFeed = { model: m, version: 1, source, admit: () => {}, reset: () => {} };
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
@@ -71,6 +71,37 @@ const button = (label: string) => Array.from(host!.querySelectorAll("button")).f
 const zoomGroup = () => host!.querySelector<SVGGElement>("g[data-zoom]")!;
 
 describe("TelegramFlowView", () => {
+  it("keeps capture-loss and stale-context warnings inside the maximizable/shareable view", async () => {
+    await render(model(), { gaps: 3, pruned: 2, context: "stale", ended: false, error: null });
+    expect(host!.querySelector(".flow-source-diagnostics")?.textContent).toContain("3");
+    expect(host!.querySelector(".flow-source-diagnostics")?.textContent).toContain(translateFor("en", "busMonitor.contextStale"));
+  });
+  it("reserves no Inspector until selection and lets it be closed", async () => {
+    await render(model());
+    expect(host!.querySelector(".flow-inspector")).toBeNull();
+    await act(async () => node("Switch").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(host!.querySelector(".flow-inspector")).not.toBeNull();
+    await act(async () => button("Close details").click());
+    expect(host!.querySelector(".flow-inspector")).toBeNull();
+  });
+
+  it("offers automatic fit, rearrange and an in-app maximized view", async () => {
+    await render(model());
+    expect(button("Auto zoom")?.getAttribute("aria-pressed")).toBe("true");
+    expect(button("Rearrange layout")).toBeTruthy();
+    await act(async () => button("Maximize view").click());
+    expect(host!.querySelector(".telegram-flow")?.classList.contains("flow-maximized")).toBe(true);
+    await act(async () => button("Restore view").click());
+    expect(host!.querySelector(".telegram-flow")?.classList.contains("flow-maximized")).toBe(false);
+  });
+
+  it("manual zoom disables automatic fit until explicitly enabled", async () => {
+    await render(model());
+    await act(async () => button("Zoom in").click());
+    expect(button("Auto zoom")?.getAttribute("aria-pressed")).toBe("false");
+    await act(async () => button("Auto zoom").click());
+    expect(button("Auto zoom").getAttribute("aria-pressed")).toBe("true");
+  });
   it("explains itself and says when nothing was observed yet", async () => {
     await render(null);
     expect(host!.textContent).toContain("not proof that the device received");
@@ -139,10 +170,12 @@ describe("TelegramFlowView", () => {
 
   it("zooms, pans and resets with buttons and keys", async () => {
     await render(model());
+    const initial = Number(zoomGroup().getAttribute("data-zoom"));
     await act(async () => button("Zoom in").click());
-    expect(zoomGroup().getAttribute("data-zoom")).toBe("1.25");
+    expect(Number(zoomGroup().getAttribute("data-zoom"))).toBeCloseTo(initial * 1.25);
     await key(node("Actuator"), "-");
-    expect(zoomGroup().getAttribute("data-zoom")).toBe("1");
+    expect(Number(zoomGroup().getAttribute("data-zoom"))).toBeCloseTo(initial);
+    await key(node("Actuator"), "0");
     await key(node("Actuator"), "ArrowLeft", true);
     expect(zoomGroup().getAttribute("transform")).toBe("translate(60 0) scale(1)");
     expect(node("Actuator").tabIndex).toBe(0);
@@ -166,7 +199,7 @@ describe("TelegramFlowView motion", () => {
     await act(async () => root!.render(<TelegramFlowView feed={feed} />));
   }
 
-  it("offers Freeze with motion on, and disables it with an explanation when motion is off", async () => {
+  it("offers Freeze even with motion off, so automatic static rearrangement can be held", async () => {
     await render(model());
     const freeze = button("Freeze layout");
     expect(freeze.disabled).toBe(false);
@@ -174,8 +207,8 @@ describe("TelegramFlowView motion", () => {
     await act(async () => freeze.click());
     expect(freeze.getAttribute("aria-pressed")).toBe("true");
     await act(async () => { document.documentElement.setAttribute("data-motion-level", "off"); await Promise.resolve(); });
-    expect(button("Freeze layout").disabled).toBe(true);
-    expect(host!.textContent).toContain("Motion is off: the layout stays still and no pulses are drawn.");
+    expect(button("Freeze layout").disabled).toBe(false);
+    expect(host!.textContent).toContain("Motion is off: layout changes are instantaneous and no pulses are drawn.");
   });
 
   it("names the most active sender of the last 60 s and marks its node", async () => {

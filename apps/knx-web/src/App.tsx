@@ -30,6 +30,9 @@ import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
 import { publishProjectContext, rebasePublishedSessionContext } from "./busContext";
 import { ensureBusDiscovery } from "./busDiscovery";
 import { openCompanionWindow } from "./diagnosticsWindow";
+import { resolveFlowNavigation, type FlowTarget } from "./flowNavigation";
+import type { FlowModel } from "./flowModel";
+import { createFlowScope } from "./flowIdentity";
 import { useAppearance } from "./appearance";
 import { getThemeDefinitions, useThemeId } from "./theme";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
@@ -168,6 +171,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const etsProjectFilter = [{ name: t("app.filterName.etsProject"), extensions: ["knxproj"] }];
   const knxdbFilter = [{ name: t("app.filterName.knxDesktopProject"), extensions: ["knxdb"] }];
   const [tree, setTree] = useState<ProjectTree | null>(null);
+  const treeRef = useRef(tree); treeRef.current = tree;
+  const [flowProjectScope, setFlowProjectScope] = useState(() => createFlowScope());
+  const flowScopeRef = useRef(flowProjectScope); flowScopeRef.current = flowProjectScope;
   // AR08: which import is waiting for its project password, and why.
   const [passwordPrompt, setPasswordPrompt] = useState<
     { path: string; reason: ProjectPasswordRefusal; discardChanges: boolean } | null
@@ -251,6 +257,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
+  const [monitorMounted, setMonitorMounted] = useState(false);
+  useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpTopicId, setHelpTopicId] = useState<HelpTopicId>(DEFAULT_HELP_TOPIC_ID);
@@ -489,12 +497,14 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     if (!publishProjectContext(newTree)) return false;
     snapshotLifetimeRef.current = nextLifetime;
     rebasePublishedSessionContext(newTree);
+    treeRef.current = newTree;
     setTree(newTree);
     return true;
   }
 
   function resetTree(newTree: ProjectTree): boolean {
     if (!publishTree(newTree)) return false;
+    const scope = createFlowScope(); flowScopeRef.current = scope; setFlowProjectScope(scope);
     setBuildingScope(null);
     setAddressScope(null);
     // Ids from the previous project mean nothing in this one, and a stale
@@ -568,6 +578,24 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   function selectSearchResult(sel: Selection): void {
     setRevealRequest({ selection: sel, generation: ++revealGenerationRef.current });
     void selectEntity(sel);
+  }
+
+  async function navigateFlow(model: FlowModel, target: FlowTarget): Promise<boolean> {
+    const scope = flowScopeRef.current;
+    const currentTree = treeRef.current;
+    if (!resolveFlowNavigation(model, target, currentTree, scope) || !currentTree?.server_incarnation || currentTree.snapshot_revision === undefined) return false;
+    try {
+      // GET verifies the currently open server project, including replacements
+      // outside this editor. The revision changes on mutations, not reads.
+      const current = await api.currentProject();
+      if (flowScopeRef.current !== scope || treeRef.current !== currentTree || current.server_incarnation !== currentTree.server_incarnation || current.snapshot_revision !== currentTree.snapshot_revision) return false;
+      const selection = resolveFlowNavigation(model, target, current, scope);
+      if (!selection) return false;
+      clearMultiSelection();
+      setNavigationOpen(true); setInspectorOpen(true); setAddressScope(null);
+      selectSearchResult(selection);
+      return true;
+    } catch { return false; }
   }
 
   function completeSearchReveal(generation: number): void {
@@ -1071,7 +1099,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const welcomeVisible = !tree && !logOpen && !monitorOpen && view !== "catalog";
   const centerWorkspace = (
     <div className="workbench-center">
-      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusDiagnosticsPanel project={tree} onTreeUpdate={handleTreeUpdate} /> : view === "catalog" ? null : tree ? (
+      {(monitorMounted || monitorOpen) && <div hidden={!monitorOpen}><BusDiagnosticsPanel active={monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} /></div>}
+      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
           rangeScope={addressScope} onRangeScope={setAddressScope}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate} onDeleted={resetTree}

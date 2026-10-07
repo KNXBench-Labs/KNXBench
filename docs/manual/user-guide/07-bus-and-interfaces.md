@@ -203,20 +203,22 @@ send anything.
   map; nothing is stored.
 
 - **Motion.** Each telegram sends a short pulse along its lines; the sender's
-  ring lights up as it leaves. Pairs that talk often move closer, quiet ones
-  drift apart, and the most active sender of the last 60 seconds moves
-  towards the centre and is named above the map. Lines that stay quiet fade
+  ring lights up as it leaves. The most active sender of the last 60 seconds
+  is highlighted and named above the map. Readability-first placement replaces
+  activity-driven clustering; it is not a physical-distance measurement. Lines that stay quiet fade
   after ten seconds to a faint resting line; they never disappear while the
   session lasts. A pulse is an illustration: the value is already shown when
   the telegram arrives, not when the pulse does.
-- Only what changed moves: a new device or connection shifts its own
-  neighbourhood, and the rest of the map stays where it is. Neighbours keep
-  clear of a node's name and of its values, also around a busy sender.
+- New devices/connections trigger a bounded rearrangement favouring fewer
+  crossings and clearer labels, even if existing devices change position.
+  **Rearrange layout** requests it explicitly. Dense or non-planar graphs can
+  still cross; above 80 nodes / 250 edges detailed obstacle routing is reduced
+  with a visible note, not by hiding recorded connections.
 - **Freeze layout** stops the movement of the nodes. Pulses, values and the
   sender ranking keep running.
-- **Motion Off** (in the settings) or the system's *reduce motion* stops all
-  movement and pulses at once; values, arrows and the Inspector stay. Freeze
-  is then not needed and is greyed out.
+- **Motion Off** (in the settings) or the system's *reduce motion* stops
+  animated movement and pulses at once. Static new data may be arranged
+  instantly; **Freeze layout** remains available to hold existing positions.
 - On a very busy bus, many telegrams on the same path are drawn as one pulse
   marked ×*n*, and more than 160 at once are counted rather than drawn. When
   the map is full (1,000 nodes) or more telegrams arrive at once than the view
@@ -232,9 +234,39 @@ appear up to about a second late; switch *Motion Off* for such an
 installation. Motion Off loses no information. See [known limitations
 §154](../../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only).
 
+### Space, windows and project links
+
+The canvas uses available width without reserving an empty Inspector column.
+Select a node to open its details; **Close details** gives the width back.
+**Maximize view** temporarily hides competing panels; **Escape** restores the
+workbench. **Open in new window** opens a dedicated Flow window and a second
+click focuses it without resetting its camera. It receives the source monitor's
+already collected map and updates, without starting another connection or polling
+the bus. Layout, selection and camera can differ between window sizes.
+
+**Auto zoom** is on initially and fits graph/viewport changes, not every pulse.
+Switch it off to keep your camera, or pan/zoom manually (which switches it off).
+**Show all** fits everything once. A large map may still make text small when
+fitted; zoom in or use the text Inspector. Long visual names/values are ellipsized,
+not erased from their Inspector/accessibility text.
+
+The Inspector's **Open device in project** / **Open group address in project**
+links and the group addresses in its values/connections open and reveal the
+exact entity in the main editor. The secondary window stays open. Missing,
+ambiguous, replaced or unverified targets are explained rather than guessed.
+Links require a source bound to the main editing project; a diagnostic-only
+companion cannot establish that binding. Switching to the project or telegram
+table retains the source graph and camera; hidden views stop their animation.
+
+The graph is not persisted. If its source window is closed/reloaded, the secondary
+window retains the last map with a non-live notice and disabled project links.
+Values still expire at their original deadlines. Opening/closing a Flow window
+never disconnects the monitor. Source capture-gap, pruning and project-context
+warnings remain visible inside maximized and secondary views.
+
 ## Sending a value
 
-The bus monitor includes a **Send a value** form, with three fields — Destination,
+The **Telegrams** view includes a **Send a value** form, with three fields — Destination,
 DPT, Value — and a **Send** button.
 
 This form transmits a group-value write to the connected installation. Lights change,

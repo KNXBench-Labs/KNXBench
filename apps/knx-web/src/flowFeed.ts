@@ -21,7 +21,13 @@ export interface FlowIdentity {
   sessionId: number;
 }
 
+export interface FlowSourceDiagnostics {
+  gaps: number; pruned: number; capacity?: number;
+  context: "synced" | "stale" | "unverified";
+  ended: boolean; error: string | null;
+}
 export interface FlowFeed {
+  source?: FlowSourceDiagnostics;
   model: FlowModel | null;
   /** Changes whenever the model changed; renderers key on it. */
   version: number;
@@ -37,10 +43,13 @@ const sameSession = (model: FlowModel, identity: FlowIdentity) =>
 
 export function useFlowFeed(
   fetchSnapshot: (sessionId: number, generation: string) => Promise<FlowSnapshot>,
+  projectScope?: string,
 ): FlowFeed {
   const modelRef = useRef<FlowModel | null>(null);
   const fetchRef = useRef(fetchSnapshot);
   fetchRef.current = fetchSnapshot;
+  const scopeRef = useRef(projectScope);
+  scopeRef.current = projectScope;
   const [version, setVersion] = useState(0);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
 
@@ -52,6 +61,7 @@ export function useFlowFeed(
     }
     const owner = model;
     for (const generation of admitRows(owner, rows, flowNow())) {
+      const requestedScope = scopeRef.current;
       // The reply only ever reaches the model that asked (`owner`); after a
       // session change that model is no longer rendered, so a late reply
       // cannot touch the new session. A refused or failed snapshot draws
@@ -60,7 +70,7 @@ export function useFlowFeed(
         .then(() => fetchRef.current(identity.sessionId, generation))
         .then(
           (snapshot) => {
-            if (!provideContext(owner, generation, snapshot, flowNow())) provideContext(owner, generation, null, flowNow());
+            if (!provideContext(owner, generation, snapshot, flowNow(), requestedScope)) provideContext(owner, generation, null, flowNow());
             bump();
           },
           () => {

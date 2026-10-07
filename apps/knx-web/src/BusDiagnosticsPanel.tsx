@@ -1,6 +1,8 @@
 /** Switches the bus workspace between monitor, scan, checks, download, address and Debug tools. */
 
 import { useState } from "react";
+import type { FlowModel } from "./flowModel";
+import type { FlowTarget } from "./flowNavigation";
 import AddressProgrammingPanel from "./AddressProgrammingPanel";
 import BusActivityHistory from "./BusActivityHistory";
 import BusActivityLive from "./BusActivityLive";
@@ -15,9 +17,15 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 export default function BusDiagnosticsPanel({
   project,
   onTreeUpdate,
+  projectScope,
+  onFlowNavigate,
+  active = true,
 }: {
   project: ProjectTree | null;
+  active?: boolean;
   onTreeUpdate: (tree: ProjectTree) => void | Promise<void>;
+  projectScope?: string;
+  onFlowNavigate?: (model: FlowModel, target: FlowTarget) => Promise<boolean>;
 }) {
   const t = useTranslate();
   const [tab, setTab] = useState<"monitor" | "scan" | "checks" | "download" | "address" | "service" | "live" | "history">("monitor");
@@ -33,7 +41,7 @@ export default function BusDiagnosticsPanel({
         <button aria-current={tab === "live" ? "page" : undefined} onClick={() => setTab("live")}>{t("activityLive.tab")}</button>
         <button aria-current={tab === "history" ? "page" : undefined} onClick={() => setTab("history")}>{t("activityHistory.title")}</button>
       </nav>
-      {tab === "monitor" && <BusMonitorPanel projectOpen={project !== null} />}
+      <div hidden={tab !== "monitor"}><BusMonitorPanel active={active && tab === "monitor"} projectOpen={project !== null} project={project} projectScope={projectScope} onFlowNavigate={onFlowNavigate} /></div>
       {tab === "scan" && <LineScanPanel projectOpen={project !== null} projectRevision={project} onTreeUpdate={onTreeUpdate} />}
       {tab === "checks" && <DeviceInspectionPanel project={project} />}
       {tab === "download" && <DeviceDownloadPanel project={project} />}

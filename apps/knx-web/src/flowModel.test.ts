@@ -165,8 +165,8 @@ describe("flow reducer — participants", () => {
     expect(model.nodes.get("g:2049")).toMatchObject({ ambiguous: true });
     provideContext(model, "2", snapshot("2", [], [], { status: "historical", groupAddressStyle: null }), 1000);
     admitRows(model, [row(2, { flowGeneration: "2" })], 1100);
-    expect(model.nodes.get("ia:4353")).toEqual({ id: "ia:4353", kind: "rawSource", label: "1.1.1", address: "1.1.1", context: "historical" });
-    expect(model.nodes.get("g:2049")).toEqual({ id: "g:2049", kind: "group", label: "1/0/1", ambiguous: false });
+    expect(model.nodes.get("ia:4353")).toEqual({ id: "ia:4353", kind: "rawSource", label: "1.1.1", address: "1.1.1", context: "historical", generation: "2" });
+    expect(model.nodes.get("g:2049")).toEqual({ id: "g:2049", kind: "group", label: "1/0/1", gaRaw: 2049, ambiguous: false, generation: "2" });
   });
 
   it("says when the participant list was truncated", () => {

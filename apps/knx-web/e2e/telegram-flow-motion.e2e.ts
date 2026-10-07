@@ -59,7 +59,7 @@ test("draws pulses for live traffic and stops every frame when Motion is switche
   await expect(page.locator(".flow-pulse")).toHaveCount(0);
   const latest = traffic.last();
   await expect(node(page, "Dimmer").locator(".flow-badge")).not.toHaveText(`◇ 1/0/1 v${latest - 20}`);
-  await expect(page.getByText("Motion is off: the layout stays still")).toBeVisible();
+  await expect(page.getByText("Motion is off: layout changes are instantaneous")).toBeVisible();
   traffic.stop();
 });
 
@@ -72,7 +72,7 @@ test("stops when the OS asks to reduce motion mid-flight", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator(".flow-pulse")).toHaveCount(0);
   expect(await framesStopped(page)).toBe(0);
-  await expect(page.getByRole("button", { name: "Freeze layout" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Freeze layout" })).toBeEnabled();
   traffic.stop();
 });
 

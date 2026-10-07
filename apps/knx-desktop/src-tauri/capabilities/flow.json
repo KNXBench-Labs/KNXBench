@@ -1,0 +1,7 @@
+{
+  "identifier": "flow",
+  "description": "Read-only Flow windows can enumerate and focus the main editor; no file, bus or project write capability",
+  "windows": ["flow-*"],
+  "permissions": ["core:window:allow-get-all-windows", "core:window:allow-set-focus"],
+  "remote": { "urls": ["http://localhost:1420", "http://127.0.0.1:*"] }
+}

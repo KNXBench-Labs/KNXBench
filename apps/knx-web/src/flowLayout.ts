@@ -85,12 +85,12 @@ export interface EdgeGeometry {
 
 /** A quadratic curve bending to the left of the direction of travel, so the
  * two directions of one pair never share a line. Trimmed at the circles. */
-export function edgeGeometry(from: Point, to: Point): EdgeGeometry {
+export function edgeGeometry(from: Point, to: Point, bendOverride?: number): EdgeGeometry {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy) || 1;
   const normal = { x: -dy / length, y: dx / length };
-  const bend = Math.min(MAX_BEND, 0.2 * length);
+  const bend = bendOverride ?? Math.min(MAX_BEND, 0.2 * length);
   const middle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
   const control = { x: middle.x + normal.x * bend * 2, y: middle.y + normal.y * bend * 2 };
   const label = { x: middle.x + normal.x * bend, y: middle.y + normal.y * bend };

@@ -55,7 +55,7 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0044](0044-download-data-is-read-from-the-stored-product-file.md) | An application's download data is read on demand from the stored product file | Accepted | 2026-09-28 |
 | [0045](0045-device-download-route-demands-phrase-and-plan.md) | The device-download route demands the device's confirmation phrase and the exact plan the user saw | Accepted | 2026-09-28 |
 | [0046](0046-address-programming-route-one-phrase-stoppable-wait.md) | Address programming from the web: one phrase covers write and restart, and the button wait can be stopped | Accepted | 2026-09-28 |
-| [0048](0048-commissioning-v1-scope-is-the-verified-memory-path.md) | Commissioning v1 is the verified memory path for mask 070nh; everything else is refused by name | Accepted | 2026-09-28 |
+| [0048](0048-commissioning-v1-scope-is-the-verified-memory-path.md) | Commissioning v1 is the verified memory path for mask 070nh; everything else is refused by name | Accepted (decision 5 superseded by ADR-0086) | 2026-09-28 |
 | [0050](0050-com-object-activation-is-evaluated-and-four-valued.md) | A communication object's evaluated activation is four-valued and separate from the stored `is_active` | Accepted | 2026-09-29 |
 | [0051](0051-individual-address-write-enable-is-opt-in-debug.md) | Individual Address Write Enable is an opt-in debug action, never automatic | Accepted | 2026-09-30 |
 | [0053](0053-contributions-come-with-a-license-grant-for-dual-licensing.md) | Contributions come with a license grant, so KNXBench can be dual-licensed | Superseded by ADR-0054 | 2026-09-30 |
@@ -84,3 +84,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0082](0082-large-product-packages-are-a-cli-opt-in.md) | Large product packages are an explicit command-line opt-in | Accepted | 2026-10-05 |
 | [0083](0083-admit-exact-product-scheme-10.md) | Admit exact product scheme 10 through the strict namespace path | Accepted | 2026-10-05 |
 | [0084](0084-first-run-guide-once-per-release-stage.md) | A first-run guide opens once per release stage and gates nothing | Accepted | 2026-10-07 |
+| [0086](0086-specs-product-data-and-projects-are-enough-evidence.md) | The specification, product data and project files are enough evidence; a working inference is shipped and disclosed | Accepted | 2026-10-07 |

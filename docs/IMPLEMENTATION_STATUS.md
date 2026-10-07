@@ -1,5 +1,40 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — A first-run guide says what this build is before it says what to click
+
+- New four-page introduction (ADR-0084): what KNXBench is and which release
+  stage the running build is in (with an English/German switch), what works
+  and what does not yet, where to start, and where Help and the debug report
+  are. It opens by itself **once per release stage**, only over an empty
+  workbench with no other dialog, and only when the server has acknowledged
+  the settings record; every way out counts as seen. It gates nothing — the
+  programming consent and `WriteAuthorisation` stay the safety boundary.
+- Seen state: `onboardingGuide: { seenStage, version }` in `settings.json`,
+  per installation (KL §160, `KL-160` accepted by the user).
+- Its task buttons run the command palette's commands. Two commands were
+  added: `open-catalog` and `show-introduction` (also **File → Show
+  introduction…**). The palette now has fifteen entries.
+- Corrected on the way: the Help topic "What this does not do" denied the
+  ETS4/5 password dialog and device download (both stale); `knx-server`
+  reported `0.1.0-alpha.1` in the `v0.1.0-alpha.4` release and is now
+  `0.1.0-alpha.2` (ADR-0018 catch-up bump; programs still version
+  independently, so no "all versions equal" check was added).
+- Two layout faults in the first draft were caught in its own screenshot and
+  now have e2e guards with negative controls: the chosen language button was
+  accent-on-accent (invisible), and the card stretched to the overlay cap.
+- Manual: First start describes the introduction (new screenshot); The user
+  interface, Projects and Keyboard shortcuts updated; the command palette,
+  File menu and (already stale) New project screenshots retaken.
+- Gates: Vitest 2134/2134 (120 files), Chromium 146 passed (offline), the
+  guide's spec ×3 12/12, `knx-server` tests 623/0/45 ignored, Clippy
+  `-p knx-server` clean, xtask layering/headers/anchors/ledger/corpus-gates
+  ok, manual screenshot run 2/2 in a loopback-only namespace. The header
+  check first failed on one 101-column test header (comment-only fix, then
+  rechecked).
+- Not verified: WebKitGTK in the desktop shell, screen readers. `knx-web` and
+  `knx-desktop` stay at `0.1.0-alpha.4`; the release that ships this bumps
+  them together (`check-appimage` ties them).
+
 ## 2026-10-07 — `v0.1.0-alpha.4`: the first alpha is tagged and pre-released
 
 - AR19, the user's decision: annotated tag `v0.1.0-alpha.4` on `514c0c54`

@@ -83,3 +83,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0081](0081-parameter-attributes-are-reported.md) | `Parameter` and `ParameterRef` report every attribute they do not store | Accepted | 2026-10-05 |
 | [0082](0082-large-product-packages-are-a-cli-opt-in.md) | Large product packages are an explicit command-line opt-in | Accepted | 2026-10-05 |
 | [0083](0083-admit-exact-product-scheme-10.md) | Admit exact product scheme 10 through the strict namespace path | Accepted | 2026-10-05 |
+| [0084](0084-first-run-guide-once-per-release-stage.md) | A first-run guide opens once per release stage and gates nothing | Accepted | 2026-10-07 |

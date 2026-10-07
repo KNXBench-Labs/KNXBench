@@ -1882,4 +1882,66 @@ export const messages: Record<MessageKey, string> = {
   "addressProgramming.round": "Runde {number}:",
   "addressProgramming.nobody": "kein Gerät im Programmiermodus",
   "addressProgramming.tab": "Adresse programmieren",
+  "command.showIntroduction": "Einführung anzeigen…",
+  "onboarding.title": "Willkommen bei KNXBench",
+  "onboarding.progress": "Schritt {current} von {total}",
+  "onboarding.skip": "Einführung überspringen",
+  "onboarding.back": "Zurück",
+  "onboarding.next": "Weiter",
+  "onboarding.finish": "Los geht’s",
+  "onboarding.step.about.title": "Was das ist",
+  "onboarding.step.about.p1":
+    "KNXBench ist eine unabhängige Anwendung für die Planung von KNX-Anlagen: ETS-Projekte importieren, Gebäude, Topologie und Gruppenadressen strukturieren, Geräte konfigurieren und den Bus beobachten. Sie stammt nicht von der KNX Association, ist von ihr weder unterstützt noch zertifiziert, und sie ist nicht die ETS.",
+  "onboarding.step.about.stageLabel": "Dieser Build",
+  "onboarding.stage.alpha":
+    "Alpha heißt: Die Funktionen sind da und getestet — mit echten Projektdateien, einem Simulator und bisher sehr wenig echter Hardware. Rechnen Sie mit Ecken und Kanten und damit, dass sich zwischen Versionen noch Dinge ändern.",
+  "onboarding.stage.beta":
+    "Beta heißt: Die für dieses Release geplanten Funktionen sind enthalten und werden breiter getestet. Rechnen Sie mit verbliebenen Fehlern.",
+  "onboarding.stage.releaseCandidate":
+    "Ein Release Candidate soll das Release werden, sofern kein ernstes Problem mehr auftaucht.",
+  "onboarding.stage.stable": "Dies ist eine veröffentlichte Version.",
+  "onboarding.stage.preRelease": "Dies ist ein Vorab-Build, dessen Stufe hier keinen Namen hat.",
+  "onboarding.stage.unknown": "Der Server hat nicht mitgeteilt, welcher Build läuft.",
+  "onboarding.step.about.trust":
+    "Sichern Sie Ihre Projekte. Bevor Sie sich darauf verlassen, was KNXBench Ihnen über eine Anlage sagt, gleichen Sie es mit der Anlage selbst ab.",
+  "onboarding.step.about.language": "Sprache",
+  "onboarding.step.scope.title": "Was geht – und was noch nicht",
+  "onboarding.step.scope.worksTitle": "Funktioniert",
+  "onboarding.step.scope.works.import":
+    "ETS-Projekte (.knxproj) importieren, auch kennwortgeschützte Exporte aus ETS4 und ETS5. Was sich nicht abbilden lässt, wird aufgelistet, nicht verworfen.",
+  "onboarding.step.scope.works.edit":
+    "Gebäude, Topologie, Gruppenadressen, Geräte und Parameter bearbeiten, mit Rückgängig und Wiederherstellen.",
+  "onboarding.step.scope.works.products": "Herstellerdaten (.knxprod) in einen lokalen Produktkatalog einspielen.",
+  "onboarding.step.scope.works.bus":
+    "Den Bus über ein KNXnet/IP-Gateway mitlesen und einzelne Gruppentelegramme senden.",
+  "onboarding.step.scope.works.export": "Gruppenadressen als CSV und das Projekt als HTML-Dokumentation exportieren.",
+  "onboarding.step.scope.notYetTitle": "(Noch) nicht",
+  "onboarding.step.scope.notYet.export": "Kein .knxproj-Export: Ein Projekt lebt als .knxdb weiter, und keine Datei führt zurück zur ETS.",
+  "onboarding.step.scope.notYet.secure": "Keine ETS6-Projektkennwörter und kein KNX Secure.",
+  "onboarding.step.scope.notYet.programming":
+    "In Geräte schreiben nur, wo ein geprüftes Verfahren existiert, und immer erst nach Ihrer Bestätigung; alles andere wird abgelehnt.",
+  "onboarding.step.scope.more": "Mehr in der Hilfe: Was diese Anwendung nicht tut",
+  "onboarding.step.start.title": "Wo anfangen",
+  "onboarding.step.start.intro": "Jede Schaltfläche schließt diese Einführung und führt den Befehl aus.",
+  "onboarding.task.importEts.title": "ETS-Projekt importieren",
+  "onboarding.task.importEts.description": "Liest eine .knxproj und meldet, was sich nicht abbilden ließ. Die Datei selbst bleibt unangetastet.",
+  "onboarding.task.newProject.title": "Neues Projekt anlegen",
+  "onboarding.task.newProject.description": "Ein leeres Projekt mit Name, Projektsprache und Gruppenadressstil.",
+  "onboarding.task.openNative.title": "KNXBench-Projekt öffnen",
+  "onboarding.task.openNative.description": "Öffnet eine früher gespeicherte .knxdb.",
+  "onboarding.task.productData.title": "Produktdaten hinzufügen",
+  "onboarding.task.productData.description":
+    "Öffnet den Produktkatalog. Dort wird die .knxprod-Datei eines Herstellers eingespielt, damit seine Geräte in ein Projekt aufgenommen werden können.",
+  "onboarding.task.busMonitor.title": "Den Bus beobachten",
+  "onboarding.task.busMonitor.description": "Findet KNXnet/IP-Gateways, zeigt Telegramme live und sendet einzelne Gruppenwerte.",
+  "onboarding.step.start.palette":
+    "Jeder Befehl steht auch in der Befehlspalette: Strg+Umschalt+P. Sobald ein Projekt existiert, schreibt „Speichern“ es als .knxdb.",
+  "onboarding.step.help.title": "Hilfe und Rückmeldung",
+  "onboarding.step.help.p1":
+    "F1 öffnet die Hilfe zu dem Thema, das zum fokussierten Element passt. Sie erklärt KNX-Begriffe so, wie KNXBench sie verwendet, und wo diese Anwendung aufhört.",
+  "onboarding.step.help.p2":
+    "Einen Fehler gefunden? Datei → Fehlerbericht… sammelt, was ein Fehlerbericht braucht, listet jede Datei auf, bevor etwas geschrieben wird, und kann ein vorausgefülltes GitHub-Issue öffnen, das Sie selbst absenden. Von allein wird nichts hochgeladen.",
+  "onboarding.step.help.p3":
+    "Diese Einführung bleibt einen Schritt entfernt: Datei → Einführung anzeigen…, oder derselbe Eintrag in der Befehlspalette.",
+  "onboarding.step.help.openHelp": "Hilfe öffnen",
 };

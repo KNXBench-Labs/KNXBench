@@ -1265,6 +1265,8 @@ describe("App — the File menu by keyboard alone", () => {
       "Export documentation…",
       "Compare with…",
       "Debug report…",
+      // ADR-0084: the first-run guide, reopened on request.
+      "Show introduction…",
       // T28/F5. No "Quit" after it: `isTauri()` is mocked `false` here,
       // and a browser tab cannot close itself.
       "About KNXBench…",
@@ -3486,5 +3488,36 @@ describe("App — unsaved edits before opening another project", () => {
     expect(apiMock.importProject).toHaveBeenCalledTimes(2);
     expect(apiMock.importProject.mock.calls[1].slice(2)).toEqual(["s3cret", true]);
     root.unmount();
+  });
+});
+
+describe("App — the first-run guide on request (ADR-0084)", () => {
+  // The start-up decision needs an acknowledged settings record, which this
+  // file never serves, so the guide only appears when asked for; its timing
+  // rules are `useOnboardingGuide.test.tsx`'s. What is pinned here is the
+  // wiring: the File menu opens it, and a task button reaches the real
+  // workspace through the palette's command context.
+  it("opens from the File menu and its product-data task lands in the catalog workspace", async () => {
+    const root = await renderApp();
+    expect(host!.querySelector(".onboarding-guide")).toBeNull();
+    await act(async () => findButton(enMessages["command.showIntroduction"]).click());
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    const guide = document.querySelector<HTMLElement>(".onboarding-guide");
+    expect(guide).not.toBeNull();
+    // `serverVersion` answers "0.0.0-test" in this file: a pre-release whose
+    // label names no stage — which is also why it never opens by itself.
+    expect(guide!.querySelector(".onboarding-stage")?.textContent).toBe(enMessages["programmingConsent.stage.preRelease"]);
+
+    const next = () => Array.from(guide!.querySelectorAll("button")).find((b) => b.textContent === enMessages["onboarding.next"])!;
+    await act(async () => next().click());
+    await act(async () => next().click());
+    const task = Array.from(guide!.querySelectorAll<HTMLButtonElement>(".onboarding-task"))
+      .find((b) => b.textContent?.includes(enMessages["onboarding.task.productData.title"]))!;
+    await act(async () => task.click());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+
+    expect(document.querySelector(".onboarding-guide")).toBeNull();
+    expect(host!.querySelector(".workbench-center .catalog-workspace")).not.toBeNull();
+    await act(async () => root.unmount());
   });
 });

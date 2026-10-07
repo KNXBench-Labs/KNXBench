@@ -6,6 +6,39 @@ This chapter walks through the first few minutes with KNXBench: what you see
 before any project is open, how to open or import one, and a short tour of
 the screen so the rest of the manual makes sense.
 
+## The introduction
+
+The very first time KNXBench starts, a short introduction opens on top of the
+empty workspace. It has four pages:
+
+1. **What this is** — an independent application, not ETS, and which release
+   stage the running build is in (Alpha, at the moment) with a sentence on
+   what that stage means. A switch on this page sets the interface language
+   to English or German.
+2. **What works, and what does not yet** — two short lists, and a link to the
+   Help topic *What this does not do* for the details.
+3. **Where to start** — import an ETS project, start a new project, open a
+   `.knxdb`, add product data, or watch the bus. Each button closes the
+   introduction and runs the same command as the command palette.
+4. **Help and feedback** — where Help and the debug report are.
+
+![The KNXBench introduction on its first page, titled "Welcome to KNXBench",
+step 1 of 4, naming the build's release stage as Alpha with a sentence on what
+that means, a backup reminder and an English/Deutsch language
+switch](../../assets/screenshots/porcelain-onboarding-guide.png)
+
+Nothing in it is required. **Skip introduction**, `Escape` or a click outside
+closes it, and closing it in any way counts as having seen it. It does not
+open by itself again until the build reaches a new release stage (a beta, for
+example); to read it again, use **File → Show introduction…** or the same
+entry in the command palette.
+
+It opens by itself only over an empty workspace with no other dialog showing,
+and only when KNXBench can remember that it was shown. In the web/Docker
+build that memory lives in the server's settings, so it is shared: once one
+person closes the introduction, it stays closed for everyone using that
+server.
+
 ## The empty workspace
 
 The first thing KNXBench shows, with nothing open yet, is a workspace with no

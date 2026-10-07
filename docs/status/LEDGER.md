@@ -34,7 +34,7 @@ evidence, fallback, unblock) and [UI_ALPHA_READINESS](../UI_ALPHA_READINESS.md)
 ## Counts
 
 - **Snapshot IDs** (180 rows) — status: DONE=38, ACCEPTED_BOUNDARY=119, LATER=23; owner: alpha=94, commission=41, later=19, ui=26; priority: P0=4, P1=29, P2=87, P3=60.
-- **Post-snapshot IDs** (10 rows) — status: DONE=8, ACCEPTED_BOUNDARY=2; owner: alpha=10; priority: P1=3, P2=7.
+- **Post-snapshot IDs** (11 rows) — status: DONE=8, ACCEPTED_BOUNDARY=3; owner: alpha=10, ui=1; priority: P1=3, P2=7, P3=1.
 
 ## Snapshot IDs
 
@@ -242,6 +242,8 @@ Origin of `KL-157`: AR15's check of storage claims against the code
 (2026-10-05); P2 because a failed upgrade could make a project unopenable.
 Origin of `KL-158`: the AR17 local AppImage candidate (2026-10-06); P2 because
 a Wayland session without a working Xwayland cannot start the AppImage.
+Origin of `KL-160`: the first-run guide (ADR-0084, 2026-10-07); P3 because
+it affects only when an advisory dialog opens in a shared deployment.
 
 | ID | P | Owner | Route | Status | Owner disposition | Evidence and remaining work |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -255,6 +257,7 @@ a Wayland session without a working Xwayland cannot start the AppImage.
 | `KL-156` | P2 | alpha | AR05 follow-up | DONE | — | docs/KNOWN_LIMITATIONS.md §156; found by AR07 2026-10-05: unstored `Parameter`/`ParameterRef` attributes are neither stored nor reported (probe-confirmed); bytes retained. Fix: report them and re-derive unknown rows/install reports by migration, matrix re-pinned. **KL-156 closure 2026-10-05 (ADR-0081, schema v21): parameter_attribute_unknowns 8 tests + 6 compiled mutants caught; workspace 3,289/0/177; corpus-gated knx-productdb/knx-server/knx-app 81 passed, only the pre-existing http_device_compare pair failing; 102-package corpus probe: migrated equals fresh in every unknown/report table; matrix re-pinned, its five changed aggregates predicted exactly by an independent recount.** |
 | `KL-157` | P2 | alpha | AR15 finding | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §157; found 2026-10-05 while reconciling storage claims: the project-store upgrade ran step by step without a transaction, so a failed upgrade could leave a file that never opens again. Fixed 2026-10-05 (one transaction, RED test + mutant); the in-place upgrade without a copy stays a documented boundary. |
 | `KL-158` | P2 | alpha | AR17 finding | ACCEPTED_BOUNDARY | USER_ACCEPTED | docs/KNOWN_LIMITATIONS.md §158; found 2026-10-06 on the local AppImage candidate (docs/ALPHA_CANDIDATE.md): the bundled GTK hook forces `GDK_BACKEND=x11`, so without a reachable X server the AppImage exits with "Failed to initialize GTK". Native Wayland works from the extracted AppImage with `GDK_BACKEND=wayland WEBKIT_DISABLE_DMABUF_RENDERER=1` (measured, one machine, documented in troubleshooting). Whether to ship as documented or change the launcher is the user's AR19 decision. Workaround documented in troubleshooting. **User decision 2026-10-06 (AR18 prerequisite):** accepted for the Alpha as a disclosed boundary; no broader claim. |
+| `KL-160` | P3 | ui | first-run guide (ADR-0084) | ACCEPTED_BOUNDARY | USER_ACCEPTED | docs/KNOWN_LIMITATIONS.md §160; the guide's "seen" flag lives in the server's `settings.json`, so a shared web/Docker deployment shows it once per installation, not per person. **User decision 2026-10-07** (guide interview, Q9): accepted; reopen via File → Show introduction… or the command palette. Chromium-only evidence (`apps/knx-web/e2e/onboarding-guide.e2e.ts`). |
 
 ## Reconciliation record (AR14D D2, 2026-10-04)
 

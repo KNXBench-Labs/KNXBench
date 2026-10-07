@@ -132,6 +132,36 @@ bridge. See [The command line](10-command-line.md) and
 On Linux, start the server with `--network host` and set `KNX_PORT` to the
 host port you want; `-p` has no effect in host mode.
 
+### Updating in one go
+
+Run this from your KNXBench checkout. It pulls the latest source, builds a new
+image with its commit stamped in, replaces the container, and waits for the
+health check — with host networking, so the bus monitor keeps working:
+
+```bash
+git pull --ff-only \
+  && docker build -t knxbench-server -f apps/knx-server/Dockerfile . \
+       --build-arg KNX_BUILD_SHA=$(git rev-parse --short HEAD) \
+  && { docker rm -f knxbench 2>/dev/null || true; } \
+  && docker run -d --name knxbench --network host \
+       -e KNX_PORT=8484 \
+       -e KNX_AUTH_PASSWORD='pick something long and boring' \
+       -v "$(pwd)/data:/data" knxbench-server \
+  && curl -sf --retry 15 --retry-delay 1 --retry-all-errors http://127.0.0.1:8484/healthz \
+  && echo " — KNXBench is up on http://127.0.0.1:8484"
+```
+
+- Every step runs only if the previous one succeeded: a failed pull or build
+  leaves the running container untouched.
+- `docker rm -f` removes the old container, never `data/` — your projects stay
+  where they are. Run the command from the same directory as before, because
+  `$(pwd)/data` is the mount.
+- Use the same port and password you started with. If you use a password hash,
+  replace the `KNX_AUTH_PASSWORD` line with
+  `-e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH"` (see
+  [Setting a password](#setting-a-password)).
+- Old images pile up; `docker image prune` clears the untagged ones.
+
 ## Authentication
 
 This section is not optional reading. Nothing in it is a joke.

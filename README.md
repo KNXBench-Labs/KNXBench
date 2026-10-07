@@ -22,8 +22,10 @@
 > miss — a KNX project is the map of a building somebody paid for.
 
 <p align="center">
-  <img src="docs/assets/readme/bus-nervous-system.svg" alt="Illustration of KNXBench's telegram flow: devices of a fictional house, connected by curved lines labelled with group addresses, with pulses travelling along them" width="100%">
+  <img src="docs/assets/readme/hero-add-device.gif" alt="KNXBench in dark mode: a push button is added from the product catalog, gets a free address on the ground-floor line, and its first object is linked to the group address 0/0/2 Kitchen light" width="100%">
 </p>
+
+<p align="center"><sub>Add a device, link it to a group address — the real app, the fictional sample house.</sub></p>
 
 ## What is this?
 
@@ -100,7 +102,8 @@ Open <http://127.0.0.1:8484>, sign in with that password, and import a `.knxproj
 projects live in `data/` and survive restarts. It is one shared password and no TLS of its
 own, so put a reverse proxy in front before it leaves your machine. Talking to a real bus
 from the container needs host networking — both are covered in
-[Web and Docker deployment](docs/manual/user-guide/11-web-and-docker.md).
+[Web and Docker deployment](docs/manual/user-guide/11-web-and-docker.md), along with
+[updating in one go](docs/manual/user-guide/11-web-and-docker.md#updating-in-one-go).
 
 **Prefer native?** [Build the desktop app from source](docs/manual/getting-started/04-installation.md#c-from-source)
 — and check the [Linux setup](docs/manual/getting-started/05-linux-setup.md) for the host

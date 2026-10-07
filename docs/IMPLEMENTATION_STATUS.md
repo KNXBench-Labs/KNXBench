@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — The README hero does something, and Docker updates in one go
+
+- README hero is now `docs/assets/readme/hero-add-device.gif` (900 × 467,
+  8.5 s, dark Graphite theme): the real app against a real `knx-server` and
+  the fictional sample house adds a push button from the catalog with a free
+  address and links its first object to `0/0/2`. The camera zooms into each
+  action in post-production. Regenerate with `playwright.readme-hero.config.ts`
+  (command in `e2e/readme-hero.shots.ts`). The illustrated SVG hero and
+  `tools/readme_hero_svg.py` are gone; the flow-view GIF stays further down.
+- Manual: [Updating in one go](manual/user-guide/11-web-and-docker.md#updating-in-one-go)
+  — pull, build with the commit stamped in, replace the container with
+  `--network host`, wait for `/healthz`. Run twice against real Docker (fresh
+  start and replacing a running container; `data/` survived). Installation
+  §b links to it instead of repeating a bridge-only recipe.
+
 ## 2026-10-07 — A first-run guide says what this build is before it says what to click
 
 - New four-page introduction (ADR-0084): what KNXBench is and which release

@@ -16,9 +16,12 @@ use knx_core::commissioning::partial_memory_download::{
 };
 use knx_core::{DeviceId, IndividualAddress, Project};
 use knx_productdb::code::load_program_code;
-use knx_productdb::download_plan::{check_program_kind, plan_memory_download, DownloadPlanError};
+use knx_productdb::download_plan::{
+    check_program_kind, plan_memory_download_with_inferences, DownloadPlanError,
+};
 use knx_productdb::image::{build_download_image, DownloadImage, ImageError, ImageRequest};
 use knx_productdb::image_request::{image_request_for_device, DeviceRequestError};
+use knx_productdb::inference::Inference;
 use knx_productdb::Connection;
 
 /// Everything a download to one device needs, built and checked offline.
@@ -36,6 +39,9 @@ pub struct PreparedDownload {
     pub image: DownloadImage,
     /// The steps that put it there.
     pub plan: MemoryDownloadPlan,
+    /// The inferences image and plan rest on (ADR-0086), for the user to
+    /// see before acknowledging a write.
+    pub inferences: Vec<Inference>,
     /// `Some` once [`PreparedDownload::into_partial`] has replaced `plan`
     /// with a partial one: the parts, and the application writes CP
     /// §3.9.2.4 rule 3 ignores, as `(address, octets)`.
@@ -147,7 +153,8 @@ pub fn prepare_device_download(
         check_program_kind(&code).map_err(PrepareError::Plan)?;
     }
     let image = build_download_image(conn, &request).map_err(PrepareError::Image)?;
-    let plan = plan_memory_download(&image).map_err(PrepareError::Plan)?;
+    let (plan, inferences) =
+        plan_memory_download_with_inferences(&image).map_err(PrepareError::Plan)?;
     Ok(PreparedDownload {
         device: device.id,
         device_name: device.name.clone(),
@@ -155,6 +162,7 @@ pub fn prepare_device_download(
         request,
         image,
         plan,
+        inferences,
         partial: None,
     })
 }

@@ -32,8 +32,8 @@ use std::fmt;
 
 use knx_core::commissioning::load_control_memory::{
     abs_data_segment, abs_stack_segment, abs_task_segment, event_record, loads_through_memory,
-    AbsoluteSegment as SegmentRecord, MemoryLoadRecordError, MemoryLoadStateMachine,
-    SegmentMemoryType, TaskSegment,
+    task_control_1, AbsoluteSegment as SegmentRecord, MemoryLoadRecordError,
+    MemoryLoadStateMachine, SegmentMemoryType, TaskControl1, TaskSegment,
 };
 use knx_core::commissioning::load_state::{LoadEvent, MaskVersion};
 use knx_core::commissioning::memory_download::{
@@ -42,6 +42,7 @@ use knx_core::commissioning::memory_download::{
 
 use crate::code::{LoadStep, ProgramCode};
 use crate::image::DownloadImage;
+use crate::inference::Inference;
 
 /// The `LoadProcedureStyle` this module translates.
 const PRODUCT_PROCEDURE: &str = "ProductProcedure";
@@ -190,6 +191,21 @@ pub fn check_program_kind(code: &ProgramCode) -> Result<MaskVersion, DownloadPla
 pub fn plan_memory_download(
     image: &DownloadImage,
 ) -> Result<MemoryDownloadPlan, DownloadPlanError> {
+    plan_memory_download_with_inferences(image).map(|(plan, _)| plan)
+}
+
+/// [`Inference::rule`]: a machine-5 event after the final restart is not
+/// sent (RESEARCH §19.12).
+pub const MACHINE_5_AFTER_RESTART: &str = "machine-5-after-restart";
+
+/// `LsmIdx` of the fifth machine some converted procedures name.
+const MACHINE_5: u8 = 5;
+
+/// Builds the plan for `image`, with every inference it rests on: the
+/// image's, then the procedure's (ADR-0086).
+pub fn plan_memory_download_with_inferences(
+    image: &DownloadImage,
+) -> Result<(MemoryDownloadPlan, Vec<Inference>), DownloadPlanError> {
     let code = &image.code;
     let mask = check_program_kind(code)?;
     let manufacturer = manufacturer_of(&code.program_id)?;
@@ -213,13 +229,42 @@ pub fn plan_memory_download(
         return Err(DownloadPlanError::DoesNotConnectFirst);
     }
 
+    let mut inferences = image.inferences.clone();
     let mut steps = Vec::new();
     let mut allocated = BTreeSet::new();
+    let mut restarted = false;
     for step in &procedure.steps {
         match step {
+            // `[D]` Cookbook *Load Controls* (`02_03_01` v01.00.02) §2.3: a
+            // task segment of machine 5 is `AbsCObjSeg`, "for
+            // MT-information only. ETS ignores it and will hence not be
+            // transmitted on the bus."
+            LoadStep::TaskSegment { lsm: MACHINE_5, .. } => {}
+            // `[A]` (ADR-0086) After the restart, which "also closes the
+            // transport layer connection" (Cookbook §2.2), a machine-5 event
+            // is not sent: a BIM M112 has no fifth machine (MP §3.31.2).
+            // bussard's captures of ETS show nothing sent after the restart.
+            LoadStep::Load { lsm: MACHINE_5 }
+            | LoadStep::Unload { lsm: MACHINE_5 }
+            | LoadStep::LoadCompleted { lsm: MACHINE_5 }
+                if restarted =>
+            {
+                inferences.push(Inference {
+                    rule: MACHINE_5_AFTER_RESTART,
+                    detail: format!(
+                        "{} LsmIdx=5 after LdCtrlRestart is not sent: the restart closed the \
+                         connection and a BIM M112 has no fifth load state machine",
+                        element_name(step)
+                    ),
+                    reference: "RESEARCH §19.12",
+                });
+            }
             LoadStep::Connect => steps.push(MemoryDownloadStep::Connect),
             LoadStep::Disconnect => steps.push(MemoryDownloadStep::Disconnect),
-            LoadStep::Restart => steps.push(MemoryDownloadStep::Restart),
+            LoadStep::Restart => {
+                restarted = true;
+                steps.push(MemoryDownloadStep::Restart);
+            }
             LoadStep::CompareProp {
                 object_index,
                 property_id,
@@ -281,6 +326,17 @@ pub fn plan_memory_download(
                     machine, task,
                 )));
             }
+            LoadStep::TaskCtrl1 {
+                lsm,
+                address,
+                count,
+            } => steps.push(MemoryDownloadStep::LoadRecord(task_control_1(
+                machine(*lsm)?,
+                TaskControl1 {
+                    interface_objects: *address,
+                    count: *count,
+                },
+            )?)),
             LoadStep::Unmodelled { name, .. } => {
                 return Err(DownloadPlanError::Unmodelled(name.clone()))
             }
@@ -295,11 +351,24 @@ pub fn plan_memory_download(
         }
     }
 
-    Ok(MemoryDownloadPlan {
-        mask,
-        manufacturer,
-        steps,
-    })
+    Ok((
+        MemoryDownloadPlan {
+            mask,
+            manufacturer,
+            steps,
+        },
+        inferences,
+    ))
+}
+
+/// The product element a step was read from, for an inference's text.
+fn element_name(step: &LoadStep) -> &'static str {
+    match step {
+        LoadStep::Load { .. } => "LdCtrlLoad",
+        LoadStep::Unload { .. } => "LdCtrlUnload",
+        LoadStep::LoadCompleted { .. } => "LdCtrlLoadCompleted",
+        _ => "a load control",
+    }
 }
 
 /// The writes for the segment allocated at `address`, if the image has one
@@ -657,6 +726,115 @@ mod tests {
                 "LsmIdx {lsm}"
             );
         }
+    }
+
+    /// Index of `LoadCompleted { lsm: 3 }` and of `Restart` in [`image`].
+    const APPLICATION_COMPLETED: usize = 12;
+    const RESTART: usize = 13;
+
+    /// `[D]` MP §3.31.2 segment type 4, after the application's task
+    /// segment as in `M-006A_A-0702-10-7779`.
+    #[test]
+    fn a_task_control_1_becomes_its_record() {
+        let mut image = image();
+        image.code.load_procedures[0].steps.insert(
+            APPLICATION_COMPLETED,
+            LoadStep::TaskCtrl1 {
+                lsm: 3,
+                address: 0x404F,
+                count: 1,
+            },
+        );
+        let shown = records(&plan_memory_download(&image).expect("a plan"));
+        let task = shown
+            .iter()
+            .position(|record| record.contains(": 33 02 00"))
+            .expect("the task segment");
+        assert_eq!(
+            shown[task + 1],
+            "A_Memory_Write 0104h: 33 04 00 40 4F 01 00 00 00 00 00 (segment application program)"
+        );
+    }
+
+    #[test]
+    fn a_task_control_1_on_a_table_machine_is_refused() {
+        let mut image = image();
+        image.code.load_procedures[0].steps.insert(
+            APPLICATION_COMPLETED,
+            LoadStep::TaskCtrl1 {
+                lsm: 1,
+                address: 0x404F,
+                count: 1,
+            },
+        );
+        assert_eq!(
+            plan_memory_download(&image),
+            Err(DownloadPlanError::Record(
+                MemoryLoadRecordError::TaskControlNotAllowed(MemoryLoadStateMachine::AddressTable)
+            ))
+        );
+    }
+
+    /// `[D]` Cookbook *Load Controls* `02_03_01` §2.3: a task segment of
+    /// machine 5 is `AbsCObjSeg`, *"for MT-information only. ETS ignores it
+    /// and will hence not be transmitted on the bus."* The presence
+    /// detectors `M-006A_A-0001-22` carry it before `LoadCompleted`.
+    #[test]
+    fn the_machine_5_task_segment_is_not_sent_and_needs_no_inference() {
+        let mut image = image();
+        image.code.load_procedures[0].steps.insert(
+            APPLICATION_COMPLETED,
+            LoadStep::TaskSegment {
+                lsm: 5,
+                address: 0x4400,
+            },
+        );
+        let (plan, inferences) = plan_memory_download_with_inferences(&image).expect("a plan");
+        assert_eq!(plan, plan_memory_download(&self::image()).unwrap());
+        assert!(inferences.is_empty());
+    }
+
+    /// The tail of `M-000C_A-5701-10-DCC4` and `M-006A_A-0702-10-7779`:
+    /// after the restart, a machine-5 task segment and `Load`. The restart
+    /// closed the connection (Cookbook §2.2) and a BIM M112 has no fifth
+    /// machine (MP §3.31.2), so nothing is sent — an inference, disclosed.
+    #[test]
+    fn machine_5_steps_after_the_restart_are_not_sent_and_disclosed() {
+        let mut image = image();
+        let steps = &mut image.code.load_procedures[0].steps;
+        steps.insert(
+            RESTART + 1,
+            LoadStep::TaskSegment {
+                lsm: 5,
+                address: 0x4400,
+            },
+        );
+        steps.insert(RESTART + 2, LoadStep::Load { lsm: 5 });
+        let (plan, inferences) = plan_memory_download_with_inferences(&image).expect("a plan");
+        assert_eq!(plan, plan_memory_download(&self::image()).unwrap());
+        assert_eq!(
+            inferences,
+            vec![Inference {
+                rule: MACHINE_5_AFTER_RESTART,
+                detail: "LdCtrlLoad LsmIdx=5 after LdCtrlRestart is not sent: the restart \
+                         closed the connection and a BIM M112 has no fifth load state machine"
+                    .into(),
+                reference: "RESEARCH §19.12",
+            }]
+        );
+    }
+
+    #[test]
+    fn the_image_inferences_come_with_the_plan() {
+        let mut image = image();
+        let inference = Inference {
+            rule: "union-later-member",
+            detail: "UP-1 is not written".into(),
+            reference: "RESEARCH §19.12",
+        };
+        image.inferences.push(inference.clone());
+        let (_, inferences) = plan_memory_download_with_inferences(&image).expect("a plan");
+        assert_eq!(inferences, vec![inference]);
     }
 
     #[test]

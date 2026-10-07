@@ -17,24 +17,24 @@ use knx_app::project_readiness::{project_readiness, DeviceReadiness, ReadinessSu
 /// refusal, per address range (RESEARCH §19.12's table).
 fn expected(address: &str) -> (&'static str, Option<(UnsupportedCategory, &'static str)>) {
     let device: u16 = address.rsplit('.').next().unwrap().parse().unwrap();
-    let lsm5 = Some((UnsupportedCategory::ProcedureContents, "LsmIdx 5"));
-    let task_ctrl = Some((UnsupportedCategory::UnmodelledStep, "LdCtrlTaskCtrl1"));
     match device {
-        1..=9 => ("unsupported", lsm5),
         22 | 23 => (
             "unsupported",
             Some((UnsupportedCategory::NotMemoryMapped, "")),
         ),
-        24 | 250 | 253 => ("unsupported", task_ctrl),
         220 => ("excluded", None),
-        // 11-13: two active union members; the later one is written, an
-        // inference (ADR-0086, RESEARCH §19.12) checked below.
-        10..=21 | 25..=32 => ("untested", None),
+        // 1-9: the machine-5 task segment is AbsCObjSeg, not sent
+        // (Cookbook 02_03_01 §2.3). 11-13 and 24/250/253 rest on
+        // inferences (ADR-0086, RESEARCH §19.12), checked below.
+        1..=21 | 24..=32 | 250 | 253 => ("untested", None),
         _ => panic!("{address} is not in RESEARCH §19.12"),
     }
 }
 
-/// The one inference the house's devices rest on.
+/// The inferences the house's devices rest on.
+const MACHINE_5: &str = "machine-5-after-restart: LdCtrlLoad LsmIdx=5 after LdCtrlRestart is not \
+     sent: the restart closed the connection and a BIM M112 has no fifth load state machine \
+     (RESEARCH §19.12)";
 const UNION_13: &str = "union-later-member: M-0083_A-0019-13-B655_UP-33_R-33 is not written: \
      M-0083_A-0019-13-B655_UP-1227_R-1227, later in the parameter tree, holds the union at \
      M-0083_A-0019-13-B655_AS-4400 offset 1810 bit 0 (RESEARCH §19.12)";
@@ -94,6 +94,7 @@ fn the_house_plans_as_research_19_12_says() {
         };
         let expected_inferences: Vec<String> = match address.as_str() {
             "1.1.11" | "1.1.12" | "1.1.13" => vec![UNION_13.to_string()],
+            "1.1.24" | "1.1.250" | "1.1.253" => vec![MACHINE_5.to_string()],
             _ => Vec::new(),
         };
         if !fits || inferences != expected_inferences {
@@ -106,7 +107,7 @@ fn the_house_plans_as_research_19_12_says() {
         wrong.join("\n")
     );
     let summary = ReadinessSummary::of(&rows);
-    assert_eq!(summary.by_code.get("untested"), Some(&20));
-    assert_eq!(summary.by_code.get("unsupported"), Some(&14));
+    assert_eq!(summary.by_code.get("untested"), Some(&32));
+    assert_eq!(summary.by_code.get("unsupported"), Some(&2));
     assert_eq!(summary.by_code.get("excluded"), Some(&1));
 }

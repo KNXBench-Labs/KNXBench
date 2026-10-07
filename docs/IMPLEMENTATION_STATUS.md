@@ -1,5 +1,34 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — Evidence of record, and the house downloads 32 of 35 devices
+
+- ADR-0086 (maintainer decision): the KNX specification, product databases and
+  project files are enough evidence; where they are silent but a working
+  solution exists, it ships as a named, disclosed **inference**. Supersedes
+  ADR-0048 decision 5 (a real device per family). Safety gates unchanged: a plan
+  resting on an inference is always Untested and needs the acknowledgement.
+- `knx_productdb::inference::Inference` travels image → plan
+  (`plan_memory_download_with_inferences`) → `PreparedDownload::inferences` →
+  `SupportLevel::Untested { inferences }`; shown by `knx device readiness`,
+  `knx products coverage`, `knx device download` (under the UNTESTED line),
+  `/api/device-readiness` (`detail`) and `/api/device-download/plan`
+  (`support.inferences`).
+- Inference `union-later-member`: of two active members of one union that share
+  bits, the later one in the parameter tree is written (matches the octet ETS
+  left on 1.1.11). A non-union overlap is still refused, now naming both
+  references (`ImageError::Overlap`).
+- Documented, no inference: `LdCtrlTaskCtrl1` (MP §3.31.2 segment type 4,
+  `task_control_1`) and the machine-5 task segment, which the KNX Cookbook
+  *Load Controls* (`02_03_01` §2.3) names `AbsCObjSeg`, "not transmitted on the
+  bus". Inference `machine-5-after-restart`: a machine-5 event after the final
+  restart is not sent. A machine-5 event before it is still refused.
+- House project: 32 untested, 2 unsupported (`MV-0012`), 1 excluded (was 17/17/1).
+  Product corpus at defaults: see RESEARCH §19.12.
+- Gates: unit tests per change (RED first), `house_readiness` and
+  `download_coverage_corpus` against the root `OriginalData/` corpus, Rust tests
+  of knx-productdb/knx-app/knx-server/knx-cli, clippy `-D warnings`, fmt, xtask.
+  No bus contact; no new download has run on hardware.
+
 ## 2026-10-07 — Flow gets room to breathe, a window and actual project links
 
 - User-approved grill-me scope: larger measured canvas/growing world; Inspector

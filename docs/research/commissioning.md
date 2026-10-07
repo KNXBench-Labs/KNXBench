@@ -1320,11 +1320,11 @@ contain 0 `ModuleDef`s between them, so the module-instance refusal
 | 1.1.16–21, 1.1.32 | MDT push button 8f (`A-0024-15`) | plan |
 | 1.1.25–26 | MDT binary input 16f/8f (`A-0030-20`, `A-0031-20`) | plan |
 | 1.1.27–31 | MDT dimming actuator AKD-0401 (`A-001B-13`) | plan¹ |
-| 1.1.1–9 | Presence detectors (`M-006A_A-0001-22`) | refused: load procedure uses `LsmIdx 5` |
+| 1.1.1–9 | Presence detectors (`M-006A_A-0001-22`) | plan³ (machine-5 task segment is `AbsCObjSeg`, not sent) |
 | 1.1.11–13 | MDT AMS-1216 (`A-0019-13-B655`) | plan² (inference: later union member at offset 1810) |
 | 1.1.22–23 | Gira SmartSensor (`MV-0012`) | refused: not memory-mapped |
-| 1.1.24 | Merten blind actuator (`A-5701-10`) | refused: `LdCtrlTaskCtrl1`, then `LsmIdx 5` |
-| 1.1.250, 1.1.253 | EIBMARKT IP interface (`A-0702-10`) | refused: `LdCtrlTaskCtrl1`, then `LsmIdx 5` |
+| 1.1.24 | Merten blind actuator (`A-5701-10`) | plan³ (`TaskCtrl1`; inference: machine 5 after the restart) |
+| 1.1.250, 1.1.253 | EIBMARKT IP interface (`A-0702-10`) | plan³ (`TaskCtrl1`; inference: machine 5 after the restart) |
 | 1.1.220 | Gira alarm panel (`A-C004-03`) | excluded: never contacted |
 
 ¹ The corpus coverage refuses this program in its *default*
@@ -1334,9 +1334,15 @@ device plan does not reach it.
 
 ² Refused until 2026-10-07 for two active members of one union; since
 ADR-0086 the later member is written as a disclosed inference (follow-up
-below). The house now plans 20 of its 32 bus devices.
+below).
 
-On 2026-09-30, 17 of the 32 bus devices planned (17 of 35 overall; 20 since the union inference); every plan is **Untested** — only 1.1.67 (the test device,
+³ Refused until 2026-10-07 for `LsmIdx 5` (and `LdCtrlTaskCtrl1`); since
+then planned as the follow-up on `LsmIdx 5` below describes. The house now
+plans 32 of its 35 devices — every one that loads through memory (`knx
+device readiness`: 32 untested, 2 unsupported — the `MV-0012` SmartSensors
+— 1 excluded).
+
+On 2026-09-30, 17 of the 32 bus devices planned (17 of 35 overall; 32 since ADR-0086); every plan is **Untested** — only 1.1.67 (the test device,
 not in this project) is Verified. `knx device readiness` (2026-09-30) reproduces this table from
 the project in one command, and `crates/knx-app/tests/house_readiness.rs`
 pins it device by device; the union overlap on 1.1.11–13 is reported as
@@ -1501,6 +1507,36 @@ party's capture, not ours, and covers 1.1.24 and 1.1.250/253 (which still
 need `LdCtrlTaskCtrl1`), not the presence detectors, whose `LsmIdx 5` task
 segment sits *before* `LoadCompleted`. A capture of an ETS download to one
 of the house's own devices would make it `[V]`.
+
+**Resolved (2026-10-07, ADR-0086): a documented record, a documented step
+and one inference.**
+
+- `[D]` The KNX Cookbook *Load Controls* (`02_03_01` v01.00.02 §2.3)
+  documents the presence detectors' step exactly: a task segment of
+  machine 5 (`53 02 00 SSSS …`) is `AbsCObjSeg`, which *"announce[s] the CO
+  table to a software tool (typically MT) … This record is for
+  MT-information only. ETS ignores it and will hence not be transmitted on
+  the bus."* Its worked example puts it right after the application's task
+  segment at the same address — the presence detectors' `TaskSegment
+  LsmIdx 3 @16628` then `TaskSegment LsmIdx 5 @16628`. The plan leaves it
+  out; that is the document, not an inference.
+- `[D]` `LdCtrlTaskCtrl1` is MP §3.31.2's segment type 4, `L3 04h 00h AAAA
+  NN` and five reserved octets, application program only (MP §3.31.1
+  table; Cookbook §2.1: "sets the user KNX object table start address and
+  the number of user KNX objects"). `load_control_memory::task_control_1`
+  builds it; the product's `Address`/`Count` fill `AAAA`/`NN`.
+- `[A]` After `LdCtrlRestart` — which "also closes the transport layer
+  connection" (Cookbook §2.2) — the converted procedures' `LdCtrlLoad
+  LsmIdx="5"` is not sent (`download_plan::MACHINE_5_AFTER_RESTART`): no
+  connection is left to send it on, a BIM M112 has no fifth machine, and
+  bussard's ETS captures show nothing after the restart. Disclosed as an
+  inference. A machine-5 event *before* the restart is still refused
+  (`LsmIdx 5 is not loaded here`): nothing documents one.
+
+With these, 1.1.1–9, 1.1.24 and 1.1.250/253 plan (Untested; the last three
+name the inference). The product corpus at its defaults (103 packages, 246
+programs) now plans 1 verified + 79 untested (was 77); no program is
+refused for an unmodelled step any more.
 
 ### 19.13 The house read back: the image against what ETS wrote (2026-09-29)
 

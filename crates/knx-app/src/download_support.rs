@@ -28,7 +28,9 @@ use knx_core::commissioning::memory_download::MemoryDownloadPlan;
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::IndividualAddress;
 use knx_productdb::code::load_program_code;
-use knx_productdb::download_plan::{check_program_kind, plan_memory_download, DownloadPlanError};
+use knx_productdb::download_plan::{
+    check_program_kind, plan_memory_download_with_inferences, DownloadPlanError,
+};
 use knx_productdb::image::{build_download_image, ImageError, ImageRequest};
 use knx_productdb::inference::Inference;
 use knx_productdb::query::programs;
@@ -334,9 +336,8 @@ pub fn offline_download(
     };
     let image = build_download_image(conn, &request)
         .map_err(|e| (image_category(&e), format!("memory image: {e}")))?;
-    let plan = plan_memory_download(&image)
-        .map_err(|e| (plan_category(&e), format!("load procedure: {e}")))?;
-    Ok((plan, image.inferences))
+    plan_memory_download_with_inferences(&image)
+        .map_err(|e| (plan_category(&e), format!("load procedure: {e}")))
 }
 
 /// Refuses a program of a kind no download translates, before its image is

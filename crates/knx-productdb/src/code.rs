@@ -114,6 +114,15 @@ pub enum LoadStep {
         /// `@Address`.
         address: u16,
     },
+    /// `LdCtrlTaskCtrl1`: the interface objects' address and count.
+    TaskCtrl1 {
+        /// `@LsmIdx`.
+        lsm: u8,
+        /// `@Address`.
+        address: u16,
+        /// `@Count`.
+        count: u8,
+    },
     /// Anything else, kept by name so that it can be refused by name.
     Unmodelled {
         /// The element's local name.
@@ -682,6 +691,7 @@ impl<'a> Parser<'a> {
                 "LsmIdx", "SegType", "Address", "Size", "Access", "MemType", "SegFlags",
             ],
             "LdCtrlTaskSegment" => &["LsmIdx", "Address"],
+            "LdCtrlTaskCtrl1" => &["LsmIdx", "Address", "Count"],
             _ => return Ok(unmodelled(element, has_children)),
         };
         let exact = a.names().all(|attribute| known.contains(&attribute))
@@ -717,6 +727,11 @@ impl<'a> Parser<'a> {
                 access: octet("Access")?,
                 memory_type: octet("MemType")?,
                 flags: octet("SegFlags")?,
+            },
+            "LdCtrlTaskCtrl1" => LoadStep::TaskCtrl1 {
+                lsm: octet("LsmIdx")?,
+                address: word("Address")?,
+                count: octet("Count")?,
             },
             _ => LoadStep::TaskSegment {
                 lsm: octet("LsmIdx")?,
@@ -1009,6 +1024,25 @@ mod tests {
             ]
         );
         assert_eq!(code.load_procedures[0].unmodelled().count(), 0);
+    }
+
+    /// `M-006A_A-0702-10-7779`'s task control step (MP §3.31.2 segment
+    /// type 4).
+    #[test]
+    fn a_task_control_1_step_reads_its_address_and_count() {
+        let code = parsed(
+            r#"<LoadProcedures><LoadProcedure>
+                 <LdCtrlTaskCtrl1 LsmIdx="3" Address="16463" Count="1" />
+               </LoadProcedure></LoadProcedures>"#,
+        );
+        assert_eq!(
+            code.load_procedures[0].steps,
+            vec![LoadStep::TaskCtrl1 {
+                lsm: 3,
+                address: 16463,
+                count: 1
+            }]
+        );
     }
 
     #[test]

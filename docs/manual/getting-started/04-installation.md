@@ -10,10 +10,21 @@ underneath.
 ## a) Linux AppImage
 
 The AppImage is the intended first Linux desktop package for KNXBench (see
-[ADR-0021](../../adr/0021-appimage-is-the-first-linux-package.md)), but there
-is no published release yet — the GitHub Actions workflow that would build
-and publish one exists in the repository and has never been run. For now,
-"installing the AppImage" means building it yourself. Chapter
+[ADR-0021](../../adr/0021-appimage-is-the-first-linux-package.md)).
+
+**Since 2026-10-07 there is a first pre-release:**
+[`v0.1.0-alpha.4`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4), with `KNXBench_0.1.0-alpha.4_amd64.AppImage` and
+its `SHA256SUMS`. The repository is private, so the link works only for
+people with access to it.
+1. Check the download with `sha256sum -c SHA256SUMS`.
+2. Make the file executable with `chmod +x`.
+3. Start it. It needs an X server; XWayland is enough
+   ([troubleshooting](../reference/03-troubleshooting.md)).
+
+The GitHub Actions workflow that would build releases has still never run.
+This pre-release was built and checked locally
+([ALPHA_FINAL_GATES §11–§13](../../ALPHA_FINAL_GATES.md#13-ar19-release-decision-and-publication)).
+Otherwise, "installing the AppImage" means building it yourself. Chapter
 [Linux setup](05-linux-setup.md) covers the host libraries it needs and
 exactly what has been tested.
 

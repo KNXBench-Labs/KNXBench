@@ -1068,9 +1068,14 @@ disclosed in KL §159. AR18 recorded `READY`
 ### AR19 — User-controlled release decision; never auto-tag
 
 **Source:** `RELEASE-04`. **Dependencies:** AR18.
+**Status 2026-10-07: `DONE`.** The user decided, explicitly, on a tag plus a
+GitHub pre-release in the private repository. Annotated tag `v0.1.0-alpha.4`
+→ `514c0c54`; [pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4) with the AppImage (SHA-256 `138444b4…c3fc`)
+and `SHA256SUMS`, downloaded back and verified byte-identical
+([ALPHA_FINAL_GATES §13](docs/ALPHA_FINAL_GATES.md#13-ar19-release-decision-and-publication)).
 
-- [ ] Present the exact candidate, tested scope, manual, remaining accepted limitations and independent review result. Request the user's explicit tag/version/publication decision once.
-- [ ] If approved, follow the repository's version/tag/artifact procedure and verify the published target/artifact. If declined or deferred, record `READY_NOT_PUBLISHED` or `WAITING_DECISION`; do not invent approval.
+- [x] Present the exact candidate, tested scope, manual, remaining accepted limitations and independent review result. Request the user's explicit tag/version/publication decision once.
+- [x] If approved, follow the repository's version/tag/artifact procedure and verify the published target/artifact. If declined or deferred, record `READY_NOT_PUBLISHED` or `WAITING_DECISION`; do not invent approval.
 
 **Exit evidence:** a recorded release decision, and only if authorized an actual verified publication. A “go” to continue alpha hardening is not consent to create a hosted release.
 

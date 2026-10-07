@@ -1,3 +1,16 @@
+- **Last Agent:** Claude (achievements, package 2)
+- **Timestamp:** 2026-10-07 23:15 CEST
+- **Completed:** ADR-0089 achievements are complete: all 38 from the interview catalogue are on `main`.
+  - Package 2 adds 27 entries, typed `where` conditions, the rule kinds `steps`/`distinct`/`allOthers`, project measurement (`achievementObservation.ts`) and 18 events emitted where the server confirmed the outcome. Verified commissioning means: download `written: "yes"` with a restart not left unconfirmed; address programming `written: "yes"`.
+  - Triggers #19, #26 and #34 were not detectable as worded. They were replaced and documented (ADR-0089 "Package 2", KL §164).
+  - Fixed: the overview no longer shows progress for locked hidden achievements.
+  - Explained: the probe's 502 is `/api/bus/discover` in the offline namespace.
+  - Gate 2 on the rebased HEAD: Vitest 2317, Chromium 157, knx-server 699/0/45, Clippy, five repository gates. Details in `.ai/logs/2026-10-07_claude_achievements-package-2.md`.
+- **Pending/Next Steps:** None for achievements. Optional: language packs (bar/tlh) may translate `achievement.*` keys; they fall back to English today.
+- **Notes for Codex oder Claude:** Ids are permanent record keys, and ids must never contain `--` (distinct markers, catalogue test). A new achievement needs a catalogue entry, EN/DE strings and, where needed, an event emitted at the point the outcome is confirmed. A new bus or commissioning event needs a *verified* outcome; a send event stays forbidden. Gate scripts: keep `TMPDIR` short, or Chromium cannot create its singleton socket.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-07 22:52 CEST
 - **Completed:** User-requested playful language packs integrated with the published Achievement package at 4c4f3b05. Boarisch and exactly Klingonisch/Klingon ship 335 typed UI messages each; picker self-names, imported override/removal and direct English fallback preserved. Feature commit d5f82ae5; both implementation-status entries retained. Merged-result verification: 2,274 frontend tests / 135 files, TypeScript/Vite build, theme/flow fixture checks, all five repository gates and staged diff-check passed. Header-width violation fixed; source self-review only (no independent reviewer).

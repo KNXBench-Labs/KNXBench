@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (first-run guide session, not the alpha owner)
+- **Timestamp:** 2026-10-07 08:38 CEST
+- **Completed:** After a grill-me interview with the user (15 decisions, log `.ai/logs/2026-10-07_claude_first-run-guide.md`): `10928f9b` knx-server `0.1.0-alpha.1` → `0.1.0-alpha.2` (ADR-0018 catch-up bump; the alpha.4 release reported alpha.1 on `/api/version`); `7b61d6f8` Help "What this does not do" corrected (it denied the ETS4/5 password dialog and device download); `fdb625ba` first-run guide: `OnboardingGuide.tsx` + `useOnboardingGuide.ts` + `onboardingGuide.ts`, ADR-0084, KL §160 / `KL-160` (USER_ACCEPTED), palette commands `open-catalog` and `show-introduction` (+ File → Show introduction…), manual First start/UI/Projects/Keyboard updated, screenshots palette/File menu/New project retaken + new `porcelain-onboarding-guide.png`. Gate green: Vitest 2134/2134, Chromium 146 offline, guide spec ×3, knx-server 623/0/45, clippy -p knx-server, xtask ×5 (headers after a comment-only fix).
+- **Pending/Next Steps:** None for this package. Next release: bump `knx-web` and `knx-desktop` together (check-appimage ties them); the guide is in that release.
+- **Notes for Codex oder Claude:** Deviation from the user's Q10: no "all versions equal" xtask check — it would contradict ADR-0018 §1; the user was told. The guide auto-opens only with an acknowledged settings record (`conditionalPatchVersion: 1`) **and** a nameable `/api/version` stage — e2e fixtures serving both must close it or seed `onboardingGuide: { seenStage }`. `.search-overlay` is a row flexbox without `align-items`: any new dialog with `display:flex` stretches to its max-height unless it sets `align-self: flex-start`. WebKitGTK/screen readers unverified.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-07 07:18 CEST
 - **Completed:** AR19 on the user's explicit decision: annotated tag `v0.1.0-alpha.4` → `514c0c54`, GitHub pre-release (private repo) https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4 with the AppImage (SHA-256 `138444b4…c3fc`) and `SHA256SUMS`, downloaded back and verified byte-identical. Docs: ALPHA_FINAL_GATES §13, LEDGER `RELEASE-04` DONE, Matrix, goal AR19 DONE, installation chapter.

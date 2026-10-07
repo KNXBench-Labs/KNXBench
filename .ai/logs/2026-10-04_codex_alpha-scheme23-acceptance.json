@@ -1,0 +1,87 @@
+{
+  "status": "published-scoped-exact23-import-storage-report-replay-not-whole-KL153-or-Alpha",
+  "published_revision": "aadd88204de154cfcf5c1638310831a0a316dd86",
+  "feature_revision": "0ec9d1955853c49d4b570e6b77666877f7662329",
+  "initial_integrated_public_revision": "a346fa30b95109e04c0acc5b064beebec518c6c3",
+  "final_integrated_revision": "aadd88204de154cfcf5c1638310831a0a316dd86",
+  "actual_public22": {
+    "source_count": 770,
+    "rust_blocks": 161,
+    "rust_passed": 3089,
+    "rust_failed": 0,
+    "rust_ignored": 176,
+    "productdb": [
+      638,
+      0,
+      25
+    ],
+    "web_passed": 1739,
+    "chromium_passed": 82,
+    "binding_pairs_fresh_byte_bound": 17
+  },
+  "actual_final10": {
+    "commands_exited_zero": 10,
+    "all_log_hashes_checked": true,
+    "same_rust_web_browser_counts": true,
+    "only_owner_story_changes": 6
+  },
+  "caller_tests": {
+    "baseline_semantic_red": 4,
+    "candidate_green": 4,
+    "not_added_twice_to_workspace_totals": true
+  },
+  "native_tests": 6,
+  "compiled_guard_controls": 6,
+  "private_full853": {
+    "producer_source_counts": [
+      712,
+      713
+    ],
+    "unchanged_table_content_imports": 690,
+    "unchanged_atomic_refusals": 161,
+    "exact23_admissions": 2,
+    "original_hashes_verified": 853,
+    "retained_archives_verified": 1382,
+    "current_importer_storage_evidence_code_continuity_verified": true,
+    "not_a_new_current_source_private_matrix": true
+  },
+  "review": "separate in-session,no independent-model approval",
+  "retained_refusals_and_survivors": [
+    "colon-signature baseline verifier",
+    "shared-target candidate attempt",
+    "parser-owned-only master witness survivor",
+    "ordinary/exact-path redundant member witness survivors",
+    "master wrong failure-token verifier",
+    "pre-stage namespace proof PermissionError",
+    "pre-edit UTF8 byte/character preservation guard",
+    "final post-stage old-vs-current Git-stamped binary hash assertion"
+  ],
+  "published_artifact_readback": {
+    "live_fetched_equal": true,
+    "owned_blobs_exact": 17,
+    "complete_upstream_owner_handover_retained": true,
+    "web_source_writes": 0
+  },
+  "current_release_cli": {
+    "version": "knx 0.1.0-alpha.1+gaadd8820",
+    "sha256": "e9985cc83731ccd11b2cdecd9afd511dbbbbd151e22772e7ba83411d3043528a",
+    "archived": true
+  },
+  "limits": [
+    "scheme10/unresearched namespaces refused",
+    "unknown manufacturer semantics preserved/reported,not activated",
+    "no signature verification/ETS parity/runtime/commissioning claim",
+    "KL151/153/AR06P/AR07/Alpha remain open"
+  ],
+  "private_raw_or_item_records_persisted": false,
+  "bus_actions": 0,
+  "cleanup": "completed:176 verified permanent public/synthetic receipt/log files and working release preserved; two owned worktrees,one published branch and completed owned scratch/build/snapshots removed; foreign root/data/locks untouched",
+  "closing_metadata_revision": "d69278e7138568f371064741ee2c363667df20d7",
+  "closing_metadata_doc5_exits": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
+}

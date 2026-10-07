@@ -243,7 +243,7 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   offline recovery/abort/restore contracts remain implementation requirements.
   This documentation notice is not a claim that an in-app warning is wired up.
 - **Details:** [Commissioning history contract](../COMMISSIONING_ACTIVITY_HISTORY.md),
-  commissioning goal.
+  [commissioning goal](../../goal-commission.md).
 
 ### There is no address reset in the app
 

@@ -350,9 +350,9 @@ leaves the Alpha scope as `ACCEPTED_BOUNDARY`; these remain disclosed,
 unverified boundaries, not claims. MODEL-03 and KL-127 get research first and
 close as known gaps without reliable evidence. DATA-03, MODEL-01, MODEL-02,
 MODEL-04 and UX-01 are now implementation packages UA2–UA6 in
-goal-ui.md. The [source-ID ledger](status/LEDGER.md) carries
+[goal-ui.md](../goal-ui.md). The [source-ID ledger](status/LEDGER.md) carries
 the per-row status (until 2026-10-04 the parent ledger in
-alpha-release-goal.md did).
+[alpha-release-goal.md](../alpha-release-goal.md) did).
 
 **Handoff 2026-10-04 11:27.** The backend halves of MODEL-01/02/03/04 and DATA-03 are
 published (ADR-0069, ADR-0070, ADR-0071, RESEARCH §25); UX-01 needs no

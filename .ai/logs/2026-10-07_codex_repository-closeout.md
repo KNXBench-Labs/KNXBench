@@ -77,6 +77,29 @@ only-root worktree registry and zero locally unpushed branch commits are checked
 after publication; the final commit hash is reported from Git, not embedded
 self-referentially in this receipt.
 
+## Late stash preservation
+
+The final check also found three older commissioning stashes. Their working,
+index and (where present) untracked-parent trees were inspected for sensitive
+file types and key/token patterns; no findings. They are preserved as their
+original merge commits, including every parent, rather than flattened and
+losing the captured untracked files:
+
+| Original stash | Published preservation branch | Original object |
+| --- | --- | --- |
+| `stash@{0}` | `archive/2026-10-07/stash-0-cb18aaee` | `cb18aaeedf2f37e87f790018999ff17fe9864f81` |
+| `stash@{1}` | `archive/2026-10-07/stash-1-66e82007` | `66e82007d4b498d547b7269049fc178ff325b17d` |
+| `stash@{2}` | `archive/2026-10-07/stash-2-9d14c93c` | `9d14c93ced6fb6018f3dc8aeebf520cd1caec11d` |
+
+All three remote refs were read back at those exact hashes. The original local
+stash list remains unchanged: no pop, apply or clear into the current checkout.
+A verified `all-local-heads-with-stashes.bundle` and a stash inventory are in the
+durable backup. This increases the retained local branch count from 28 to 31.
+The archived commissioning WIP has **not** been integrated or feature-regated;
+these branches preserve its original source and history only. To recover a
+stash elsewhere, use its preservation ref as a stash object, so Git also knows
+about any captured index/untracked-parent state.
+
 ## Remaining boundaries
 
 `fix/kl-158`, `u21-fix` and the older parked branches are preserved, not declared

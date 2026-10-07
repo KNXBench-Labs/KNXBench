@@ -402,3 +402,42 @@ Evidence: `ar18-round3-fixes-20261006`.
 
 Because the candidate changed again, AR18 asks for one more look:
 [brief round 4](review/AR18_RECHECK_BRIEF.md#round-4-n11n13).
+
+## 12. AR18 outcome: READY
+
+**Recorded 2026-10-07.** Re-check round 4
+([verdict](review/2026-10-07-alpha-recheck-round4.md)) returned **`READY`**.
+It ran in a fresh Codex session that wrote none of the fixes, on candidate
+`b8724d66acad05c30328ef54fd61cdd799e87cea`. That candidate's product sources (`apps/`, `crates/`,
+`Cargo.toml`, `Cargo.lock`) are identical to `2254eed002e1c8a0988cd5bab89910559371342e`, so §11's gate and
+artifact apply.
+
+N11–N13 were fixed against the reviewer's 181 own fictional archives, each
+run through three surfaces (CLI, standalone server, AppImage server), and
+against seven archives from real writers (Info-ZIP, Python `zipfile`, Java
+`jar`). No CRITICAL or IMPORTANT finding remains.
+
+| Item | Value |
+| --- | --- |
+| Verdict chain | Independent review `READY_WITH_CONDITIONS` (F1–F4) → round 1 (N1–N2) → round 2 (N7) → round 3 (N11) → round 4 **`READY`** |
+| Candidate | `b8724d66acad05c30328ef54fd61cdd799e87cea`; product code `2254eed002e1c8a0988cd5bab89910559371342e` |
+| Artifact | `KNXBench_0.1.0-alpha.4_amd64.AppImage`, 107,870,712 bytes, SHA-256 `138444b4cf7f5664ce2f64e88b82574f88dcc5b382dca7f2e49ff1eae7d6c3fc`, build stamp `2254eed0`; evidence `ar18-round3-fixes-20261006` |
+| Versions | CLI, desktop, web `0.1.0-alpha.4`; server `0.1.0-alpha.1` (ADR-0018) |
+| Gate counts (owner §11 and reviewer, same) | Rust 3,402 passed / 0 failed / 178 ignored; Vitest 2,076; Chromium 142; corpus 143/143 in 31 targets; fmt, clippy, five `xtask` checks, `cargo deny`, `npm audit` 0 |
+| Real data | 3 `.knxproj` (0 refused), 103/103 `.knxprod`, corpus files unchanged |
+
+**Accepted remaining boundaries** (disclosed, none blocking):
+- The nine rows the user accepted on 2026-10-06: `KL-1`, `KL-11`, `KL-125`,
+  `KL-31`, `PDB-01`, `R-DYNAMIC-01`, `R-MODULE-03`, `R-MODULE-04`, `KL-158`.
+- `UI-04`.
+- N6: after a web reload the welcome page shows a held project (UI owner,
+  KL §82).
+- N14: an empty directory's payload is not checksummed (KL §159).
+- The ~3× in-budget memory peak, and the accepted archive prefix (§159).
+- The in-place upgrade of older projects that hold a saved project (§157).
+- The 109 rated limitations in
+  [LIMITATION_TRIAGE](LIMITATION_TRIAGE.md).
+
+Any code change from here on invalidates this record for the affected
+surface and returns to AR18. What remains is AR19: the user's release
+decision. Nothing is tagged or published automatically.

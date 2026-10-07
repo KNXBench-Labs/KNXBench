@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-07 07:15 CEST
+- **Completed:** Merged re-check round 4 (`c40fe914`, **READY**) and recorded AR18 `READY`: ALPHA_FINAL_GATES §12, LEDGER `RELEASE-01`/`RELEASE-02` → DONE, Matrix recount, KL §159 N14 (MINOR, disclosed, unfixed), goal AR18 DONE. Candidate `b8724d66` (product code `2254eed0`), AppImage SHA-256 `138444b4…c3fc` (evidence `ar18-round3-fixes-20261006`). Docs-only; doc gates green.
+- **Pending/Next Steps:** AR19: the user's explicit release/tag/publication decision on that candidate. If approved, follow the version/tag/artifact procedure; if deferred, record `READY_NOT_PUBLISHED`/`WAITING_DECISION`.
+- **Notes for Codex oder Claude:** Any product-code change now reopens AR18 for the touched surface (another review round). N6 (UI owner) and N14 are disclosed, not blocking.
+
+---
+
 - **Last Agent:** codex (independent AR18 round-4 reviewer in Hermes, not the alpha owner)
 - **Timestamp:** 2026-10-07 07:07 CEST
 - **Completed:** Independently re-checked current `origin/main` `b8724d66` (product sources equal to `2254eed0`) per `docs/review/AR18_RECHECK_BRIEF.md#round-4-n11n13`. Verdict **READY** in `docs/review/2026-10-07-alpha-recheck-round4.md`, branch `review/alpha-recheck-4`; no product edits, no subagents, no hardware contact. N11/N12/N13 verified, R6/R7 met: own 181-fixture matrix (142 refusals, 33 valid controls, 6 observations) through release CLI, standalone server and AppImage; 16 additional CLI refusals; real Info-ZIP, Python streaming/Zip64 and Java jar controls. Gates 06:23:53–06:46:16: Rust 3402/0/178 in 192 blocks; Vitest 2076/117; Chromium 142; xtask ×5, deny, audit 0; selected corpus 143/143 in 31 targets. Real census: 3 project imports (2 exit 0, 1 exit 2), same 3 products ingests and 103/103 product packages; all 106 input files unchanged. AppImage digest matches `138444b4…c3fc`, stamp `2254eed0`, native offline window inspected; both servers preserve a real edit after a refused discard-import. Review and owned log published as `794e9593f0c352cc87d65ef3086cb7e1f765b549` on `origin/review/alpha-recheck-4`; local, fetched and live ref agree and published report bytes equal the reviewed artifact. This closing handover is documentation only. Main remains `b8724d66`, clean and untouched.

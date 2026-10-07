@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (read-only MCP server + agent skill, ADR-0090)
+- **Timestamp:** 2026-10-08 00:44 CEST
+- **Completed:** Grill-me (Q1–Q16 accepted) → v1 = read-only stdio MCP server `apps/knx-mcp` + agent skill `integrations/agent-skill/knxbench/SKILL.md`, no chatbox. New `knx_store::open_existing_read_only` / `knx_productdb::open_read_only` (read-only + query_only, 5 s busy wait, older files migrated only as in-memory copy; byte-identity tests). Eight tools (project_summary, search, get_device, get_group_address, find_issues, diff_projects, explain_parameter, validate_ga_csv); aliases only, no path arguments, unknown fields denied; snapshots reload on save; CSV proposals validated, never applied. `check-layering` production-graph rule: knx-mcp reaches no knx-net/knx-server/knx-secure/knx-etsproj/axum/hyper/reqwest (negative control fails). Release workflow ships `knx-mcp-x86_64-linux` + SHA256SUMS (not yet exercised by a tag). ADR-0090, KL §165, manual ch. 23, RESEARCH §13.7, ROADMAP, ARCHITECTURE, README. Gate on `ea1f1645`: workspace tests 4,376/0/178, Clippy, fmt, deny, 5 xtask checks green; corpus: oracle 5/5 + legacy names green; matrix stopped at inventory pin 115≠117 (scope list private), AR05×2 + nested_module_private not run (need private setup). Mutation 8/8 killed. Live probe on copies of two real projects + installed product DB: all files byte-identical. Receipt: .ai/logs/2026-10-07_claude_mcp-adapter.md.
+- **Pending/Next Steps:** First tag run of `linux-appimage.yml` should be watched (new knx-mcp + SHA256SUMS steps). Optional later: move parameter visibility evaluation out of knx-server so `explain_parameter` can report it (KL §165); test more MCP clients (only protocol 2025-11-25 handshake tested).
+- **Notes for Codex oder Claude:** `/mnt/daten-i` ran full (shared `KNXBench/target` ≈165 GB); attempt-1 gate died with ENOSPC/ld bus errors. User did not answer whether the shared cache may be cleaned — not touched. Builds for this package ran with CARGO_TARGET_DIR under the Hermes scratch dir on /home. Never reuse `open_existing_and_migrate`/`open_and_migrate` for any read-only path: they migrate in place.
+
+---
+
 - **Last Agent:** Claude (achievements, package 2)
 - **Timestamp:** 2026-10-07 23:15 CEST
 - **Completed:** ADR-0089 achievements are complete: all 38 from the interview catalogue are on `main`.

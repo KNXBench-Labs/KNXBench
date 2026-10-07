@@ -1848,14 +1848,29 @@ login) and was the sharpest edge of this limitation — answers `401` with the u
 
 **What is still a limitation, and belongs to the deployer.**
 
-- **No TLS.** Unchanged from the original entry. Over plain HTTP the
-  password crosses the network in the clear in the login body, and the
-  session cookie crosses it in the clear on every later request. A
-  compromised host on the same LAN can read and replay that cookie. Put a
-  TLS-terminating reverse proxy in front of anything that matters, and set
-  `KNX_AUTH_COOKIE_SECURE=1` when you do — the cookie is not marked
-  `Secure` by default, because on plain HTTP a `Secure` cookie is simply
-  never sent back.
+- **TLS: since 2026-10-07 the server's own, self-signed by default**
+  ([ADR-0088](adr/0088-server-terminates-tls-itself.md)). A server with a
+  password speaks HTTPS on its port unless `KNX_TLS=off`; plain HTTP on
+  that port is redirected. What remains:
+  - The generated certificate is **self-signed**: every browser warns until
+    the deployer trusts it. The startup banner prints its SHA-256
+    fingerprint so the warning can be checked rather than clicked away; a
+    user who accepts it without comparing is not protected against an
+    active attacker on the LAN.
+  - **No ACME/Let's Encrypt, no HSTS, no HTTP/2, no client certificates.**
+  - **Certificates are read at startup only.** Replacing provided files or
+    renewing the generated one (within 30 days of its 825-day expiry) needs
+    a restart; a provided certificate that expires while running is served
+    expired, and one that is expired at startup is served with a loud
+    warning rather than refused.
+  - **Pending handshakes are time-limited (10 s) but not counted.** Fine for
+    LAN/VPN; not a defence against a flood from the internet, which this
+    server still does not claim to face.
+  - `KNX_TLS=off` (e.g. behind a TLS-terminating proxy) brings back the old
+    situation: password and cookie in the clear unless the proxy encrypts,
+    and with `--network host` the server's port stays reachable beside the
+    proxy. Set `KNX_AUTH_COOKIE_SECURE=1` there; over the server's own TLS
+    the cookie is always `Secure`.
 - **One password, no accounts, no roles, no audit trail.** Anyone holding
   the password can do everything, including writing to the KNX bus.
   Nothing records who did what, because there is no "who". Authentication
@@ -1880,7 +1895,9 @@ login) and was the sharpest edge of this limitation — answers `401` with the u
 
 **Not claimed.** This is not a statement that the server is safe to expose
 to the internet. It is safe to expose to a network you have thought about,
-over a transport you have secured yourself.
+over a transport you have secured yourself — which, since ADR-0088, the
+server does by default with a certificate you still have to decide to
+trust.
 
 **AR13 (2026-10-04) — verified offline, boundary retained.** The guard test
 no longer samples seven routes: `every_declared_route_refuses_a_caller_without_a_session_except_the_documented_four`
@@ -1889,8 +1906,9 @@ method/path pairs on 89 paths at the time) and expects `401` from each,
 except `/healthz` and the three `/api/auth/*` routes; a reverting mutant that
 adds one unguarded `/api` route fails it, while the old seven-route test
 stays green. The listening address has no override: `main.rs` binds only
-`bind_address(auth_required)`. TLS, roles, audit and CSRF remain the
-deployer's, exactly as stated above.
+`bind_address(auth_required)`. Roles, audit and CSRF remain the
+deployer's, exactly as stated above; TLS moved into the server with
+ADR-0088 (2026-10-07).
 
 ## 23. `/api/project/download` buffers the whole `.knxdb` file in memory
 

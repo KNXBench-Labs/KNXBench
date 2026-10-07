@@ -42,7 +42,7 @@ Evidence levels used below:
 | Individual-address programming, reset, serial writes | Refused (fail closed) | Commands exist; refused before a tunnel until durable recovery exists | ADR-0057/0058/0059 |
 | KNX Secure (Data/IP) | Accepted boundary | Not implemented; deferred 2026-09-11 | `KL-8` |
 | Linux AppImage candidate | Verified on one machine | `0.1.0-alpha.4`; the AR18 candidate is built from `4b9e913e` with build paths remapped (offline smoke, native Wayland); AR17 checked X11 and Wayland on `6b9b6818`; needs an X server unless started as documented **in the published alpha.4 asset**; the post-alpha [launcher change](APPIMAGE_LAUNCHER.md) is separately, locally verified | [ALPHA_FINAL_GATES](ALPHA_FINAL_GATES.md), [ALPHA_CANDIDATE](ALPHA_CANDIDATE.md), `KL-158` |
-| Multi-user server | Accepted boundary | One shared password, no roles/audit/TLS of its own | `KL-63`, [ALPHA_READINESS AR13](ALPHA_READINESS.md#deployment-and-privacy-checklist-for-ar15ar17-and-release-notes) |
+| Multi-user server | Accepted boundary | One shared password, no roles/audit; TLS of its own only after alpha.5 ([ADR-0088](adr/0088-server-terminates-tls-itself.md)) | `KL-63`, [ALPHA_READINESS AR13](ALPHA_READINESS.md#deployment-and-privacy-checklist-for-ar15ar17-and-release-notes) |
 
 ## 2. Deployment, import and hardware boundaries
 
@@ -51,7 +51,8 @@ Evidence levels used below:
   documented, `KL-158`; the post-alpha [launcher contract](APPIMAGE_LAUNCHER.md)
   removes that requirement in newer source-built images)
   and a container/web server. The server binds loopback unless a password is set; a
-  TLS proxy is required for networked use; release builds must use
+  TLS proxy is required for networked use in alpha.5 (main after alpha.5 terminates
+  TLS itself, self-signed by default, ADR-0088); release builds must use
   `KNX_REQUIRE_CLEAN_TREE=1` (AR13 checklist). Docker bridge tunnelling needs a
   gateway that honours Route Back (`KL-155`); discovery needs host networking.
 - **Import.** Project data is imported, never written back as `.knxproj`

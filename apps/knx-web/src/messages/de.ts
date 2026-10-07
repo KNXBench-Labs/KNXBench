@@ -133,6 +133,7 @@ export const messages: Record<MessageKey, string> = {
   // slip that skipped translation.
   "language.en": "English",
   "language.de": "Deutsch",
+  "languagePack.bundledFunHint": "Spielerische, unvollständige Übersetzungen: Fehlende Oberflächentexte erscheinen auf English. Ausführliche Technik- und Sicherheitshinweise bleiben auf Englisch.",
 
   // Distinct from `toolbar.search`: the toolbar button carries the
   // "(Ctrl+K)"/"(Strg+K)" shortcut suffix, the palette row does not — its

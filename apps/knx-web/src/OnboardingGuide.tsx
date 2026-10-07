@@ -19,6 +19,8 @@ import Overlay from "./Overlay";
 import type { ReleaseStage } from "./programmingConsent";
 import { STAGE_LABEL } from "./ProgrammingConsentDialog";
 import { AVAILABLE_UI_LANGUAGES, useUiLanguage } from "./uiLanguage";
+import { BUNDLED_LANGUAGE_PACKS } from "./bundledLanguagePacks";
+import { languageSelfName } from "./languageSelfName";
 
 /** What the stage means, one paragraph each. Coarse on purpose (see `messages/en.ts`). */
 const STAGE_MEANING: Record<ReleaseStage, MessageKey> = {
@@ -107,7 +109,12 @@ export default function OnboardingGuide(props: OnboardingGuideProps) {
               <span id="onboarding-language-label">{t("onboarding.step.about.language")}</span>
               {AVAILABLE_UI_LANGUAGES.map((id) => (
                 <button key={id} type="button" aria-pressed={language === id} onClick={() => setLanguage(id)}>
-                  {t(`language.${id}`)}
+                  {languageSelfName(id)}
+                </button>
+              ))}
+              {BUNDLED_LANGUAGE_PACKS.map((pack) => (
+                <button key={pack.tag} type="button" aria-pressed={language === pack.tag} onClick={() => setLanguage(pack.tag)}>
+                  {pack.name}
                 </button>
               ))}
             </div>

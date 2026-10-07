@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-07 — Boarisch and Klingonisch/Klingon join the language picker
+
+- Shipped playful `bar` and `tlh` packs, with 335 curated UI messages each.
+  Available without import; typed partial catalogues preserve placeholders and
+  use the existing direct English fallback. Detailed technical/safety notices
+  intentionally stay English, disclosed in Settings. No linguistic accuracy claim.
+- Picker labels are fixed self-names: English, Deutsch, Boarisch and exactly
+  Klingonisch/Klingon. Settings, New Project and the first-run guide agree.
+  Imported languages retain their own names; an imported replacement of a
+  shipped fun pack keeps its data/name on export, appears once, and removal
+  restores the shipped pack. Missing replacement keys never merge from it.
+- Product-data language options show autonyms and the exact regional tag
+  (e.g. Deutsch (de-DE)); unknown/malformed/runtime-unsupported names fall
+  back to the raw tag. Option values, project data and storage schema unchanged.
+- Verified in the integrated root: Vitest **2,193 passed / 127 files**,
+  `npm run build` (TypeScript and Vite), `git diff --check`. Real Chromium
+  on the offline existing Settings fixture: all four languages switch, names
+  remain fixed, `tlh` persists across reload, foreign settings retained,
+  no page errors or unhandled/API-external requests. Self-review only.
+- No Rust changes, production-server restart, Docker rebuild, hardware
+  interaction, commit or push. Native WebKitGTK not exercised in this package.
+- Details: [Language packs](LANGUAGE_PACKS.md), manual settings chapter,
+  KNOWN_LIMITATIONS §66; handover receipt `.ai/logs/2026-10-07_codex_fantasy-language-packs.md`.
+
 ## 2026-10-07 — `knx-server` leaves on SIGTERM instead of being killed
 
 - **Finding:** the binary installed no signal handler. As PID 1 in the

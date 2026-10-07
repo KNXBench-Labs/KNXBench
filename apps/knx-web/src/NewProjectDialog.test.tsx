@@ -119,6 +119,7 @@ describe("NewProjectDialog", () => {
     expect(host!.querySelector("#new-project-language-hint")?.textContent).toContain("Choose a listed language");
     expect([...languageSelect().options].map((option) => option.value)).toEqual([
       ...AVAILABLE_UI_LANGUAGES,
+      "bar", "tlh",
       "__custom__",
     ]);
     expect(host!.querySelector<HTMLSelectElement>('select[aria-label="Group address style"]')!.value).toBe("ThreeLevel");
@@ -189,6 +190,8 @@ describe("NewProjectDialog", () => {
     expect([...languageSelect().options].map((option) => [option.value, option.textContent])).toEqual([
       ["en", "English"],
       ["de", "Deutsch"],
+      ["bar", "Boarisch"],
+      ["tlh", "Klingonisch/Klingon"],
       ["nl", "Nederlands"],
       ["__custom__", "Another language tag…"],
     ]);
@@ -227,6 +230,7 @@ describe("NewProjectDialog", () => {
     const { root } = await renderDialog();
     expect([...languageSelect().options].map((option) => option.value)).toEqual([
       ...AVAILABLE_UI_LANGUAGES,
+      "bar", "tlh",
       "__custom__",
     ]);
     root.unmount();

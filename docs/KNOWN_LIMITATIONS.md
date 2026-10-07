@@ -3961,6 +3961,13 @@ names a commit, never a tree.
 <a id="66-server-composed-prose-and-documentation-are-only-partly-localized--partially-resolved-2026-09-23-t14"></a>
 ## 66. Server-composed prose is only partly localized
 
+**Included fun languages (2026-10-07):** `bar` (**Boarisch**) and `tlh`
+(**Klingonisch/Klingon**) intentionally translate only 335 interface keys each.
+They are playful overlays, not full or authoritative language translations.
+Missing keys, including detailed technical/safety notices, use the unchanged
+English fallback. The Settings panel discloses this boundary; product and
+project content are not translated by these packs. See [Language packs](LANGUAGE_PACKS.md).
+
 **Resolved, one surface.** `ParameterDiagnostic.message` — the parameter
 panel's own diagnostic headline — now follows the `CreationDiagnostic`
 pattern this section's own "Lifted when" paragraph named as the way

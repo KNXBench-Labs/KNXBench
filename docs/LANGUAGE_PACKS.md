@@ -24,8 +24,28 @@ completely independent of each other:
   loaded product database carries a translation for them. A language pack
   has no effect on this at all; see "The honest boundary" below.
 
-Built in, the UI language field offers English (`en`) and German (`de`).
-A language pack adds a third option — any language you write one for.
+The UI language field offers **English** (`en`), **Deutsch** (`de`), and
+two included fun-language packs: **Boarisch** (`bar`) and
+**Klingonisch/Klingon** (`tlh`). Picker names are fixed self-names rather
+than translations in the currently selected interface language. The Klingon
+entry deliberately stays exactly `Klingonisch/Klingon`, not `tlhIngan Hol`.
+
+The fun packs contain 335 curated interface strings each, covering the
+workbench, settings, project creation, catalog, search, properties, address
+table, bus controls and flow view. They are playful partial translations,
+not linguistically authoritative or complete translations. Missing messages
+and detailed technical/safety notices use the unchanged English fallback;
+Settings displays this boundary when either fun language is active.
+
+They ship with the frontend and need no import or settings migration.
+Language detection still selects English or German; fun languages are an
+explicit choice. They are separate from user-installed packs and cannot be
+removed by the pack manager. An imported pack with `bar` or `tlh` replaces
+that shipped catalogue, without merging its missing keys with the shipped
+copy. Removing the imported replacement reveals the shipped pack again.
+The picker still uses the fixed shipped name; exports preserve the imported
+pack's actual name, unknown fields and messages. More languages can be added
+by importing a pack, as before.
 
 ## Getting a starting point: export the template
 

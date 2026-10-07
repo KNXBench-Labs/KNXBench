@@ -295,6 +295,8 @@ describe("one editing workspace", () => {
     expect([...liveGraph.keys()].sort()).toEqual(["activityHistory.ts", "liveActivity.ts"]);
     expect(apiCallsIn(liveGraph)).toEqual([]);
     expect(liveGraph.get("liveActivity.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    // Shipped fun-language catalogues add only static copy and their registry.
+    // The API-call and mutation inventories below remain unchanged.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -306,6 +308,7 @@ describe("one editing workspace", () => {
       "TelegramFlowView.tsx",
       "activityHistory.ts",
       "api.ts",
+      "bundledLanguagePacks.ts",
       "busContext.ts",
       "busDiscovery.ts",
       "busMonitorCapture.ts",
@@ -333,8 +336,10 @@ describe("one editing workspace", () => {
       "languagePack.ts",
       "liveActivity.ts",
       "localJsonDownload.ts",
+      "messages/bar.ts",
       "messages/de.ts",
       "messages/en.ts",
+      "messages/tlh.ts",
       "modalIsolation.ts",
       "session.ts",
       "sessionLogExport.ts",

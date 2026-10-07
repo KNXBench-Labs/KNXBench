@@ -132,7 +132,8 @@ See [Products and product databases](../knx-basics/05-products-and-product-datab
 for what a product database is.
 
 The list is built from the database that is actually installed. Each entry names the
-language and how many strings it has, so a language with twelve translated strings
+language in itself (for example **Deutsch (de-DE)** or **English (en-US)**)
+and how many strings it has, so a language with twelve translated strings
 does not look like a complete one. **Package default** means "whatever the package
 itself declares", and is the default choice.
 
@@ -152,8 +153,12 @@ communication object's datapoint-type text.
 
 ## UI language
 
-KNXBench ships two interface languages: **English** and **Deutsch**. On first start it
-picks one from your browser's or system's language — anything whose primary language
+KNXBench ships **English**, **Deutsch**, and the playful partial packs
+**Boarisch** and **Klingonisch/Klingon**. Language names stay unchanged when
+you switch the interface; the Klingon entry is intentionally not translated.
+The two fun packs contain 335 translated strings each; missing strings and
+detailed technical/safety notices remain English, as the note in Settings explains.
+On first start it picks English or German from your browser's or system's language — anything whose primary language
 tag is `de` gets German, everything else gets English — and after that it uses whatever
 you chose here.
 
@@ -185,7 +190,10 @@ interface language from a JSON file at runtime, without a rebuild:
 An installed pack appears in the UI language selector under its own name. A pack whose
 language tag collides with a built-in language is not offered for selection — the
 built-in wins — and the import report tells you so rather than leaving you wondering
-why nothing changed. Rejected packs get a specific reason, not a generic failure.
+why nothing changed. The included `bar` and `tlh` packs are different: an
+import with the same tag replaces their translation, and removing that user
+import restores the included copy. There is only one picker entry per tag.
+Rejected packs get a specific reason, not a generic failure.
 
 For the pack format itself, see [Language packs](../../LANGUAGE_PACKS.md).
 

@@ -1077,8 +1077,13 @@ applies it as a named inference and shows it in readiness, the plan and the
 acknowledgement; such a plan is always Untested and never counts as Verified.
 Current inferences: `union-later-member` (two active members of one union:
 the later one is written) and `machine-5-after-restart` (a machine-5 event
-after the final restart is not sent), both RESEARCH §19.12. Neither has been
-exercised by a KNXBench download on hardware.
+after the final restart is not sent), both RESEARCH §19.12;
+`alert-is-urgent` (§19.18). `read-on-init-not-on-070n` discloses a loss
+instead: a `070nh` group object cannot read its value after a reset
+(Resources NOTE 85), so an enabled `ReadOnInitFlag` is not carried out.
+None of these has been exercised by a KNXBench download on hardware.
+`Priority="High"` and `TypeFloat` parameters stay refused: the product data
+contradicts every reading (§19.18).
 
 **Backup is bounded.** Before a permitted memory download's first mutation,
 the executor persists the overwritten memory regions and affected load

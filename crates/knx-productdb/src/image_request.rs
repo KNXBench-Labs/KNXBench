@@ -394,6 +394,7 @@ fn flag_overrides(
             transmit: stated("TransmitFlag", &flags.transmit)?,
             update: stated("UpdateFlag", &flags.update)?,
             communication: stated("CommunicationFlag", &flags.communication)?,
+            read_on_init: stated("ReadOnInitFlag", &flags.read_on_init)?,
         };
         if object_overrides.is_empty() {
             continue;

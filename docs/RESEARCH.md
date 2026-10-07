@@ -20,6 +20,7 @@ stay at the end of this file.
 
 | Section | Where |
 | --- | --- |
+| [2026-10-07 — Inferences under ADR-0086: the house plans 32 of 35 devices](research/commissioning.md#2026-10-07--inferences-under-adr-0086-the-house-plans-32-of-35-devices) | Commissioning and device download |
 | [2026-10-04 — Product scheme23: project documentation is not manufacturer grammar](research/product-database.md#2026-10-04--product-scheme23-project-documentation-is-not-manufacturer-grammar) | Manufacturer and product data |
 | [2026-10-04 — Telegram-flow Alpha design](research/features-and-ui.md#2026-10-04--telegram-flow-alpha-design) | Features and UI research |
 | [2026-10-01 — Backup directory chains, not only the final directory](research/commissioning.md#2026-10-01--backup-directory-chains-not-only-the-final-directory) | Commissioning and device download |

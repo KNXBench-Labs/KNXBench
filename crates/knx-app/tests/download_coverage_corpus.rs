@@ -61,7 +61,9 @@ fn the_corpus_coverage_is_pinned() {
     // (§19.11): the other 4 of those programs plan too (73 -> 77).
     // LdCtrlTaskCtrl1 and the machine-5 steps translate (ADR-0086,
     // RESEARCH §19.12): the 2 unmodelled-step programs plan (77 -> 79).
-    assert_eq!((summary.verified, summary.untested), (1, 79));
+    // An enabled ReadOnInitFlag is disclosed instead of refused (RESEARCH
+    // §19.18, Resources NOTE 85): the 10 programs it stopped plan (79 -> 89).
+    assert_eq!((summary.verified, summary.untested), (1, 89));
     let unsupported: BTreeMap<&str, usize> = summary
         .unsupported
         .iter()
@@ -82,13 +84,12 @@ fn the_corpus_coverage_is_pinned() {
             // image-structure. 6 conflicting refs, 3 enumeration values
             // remain.
             ("parameter-value", 9),
-            // 19 TypeFloat, 10 ReadOnInitFlag, 9 placed by Property,
-            // 3 Priority High.
-            ("image-structure", 41),
+            // 19 TypeFloat, 9 placed by Property, 3 Priority High.
+            ("image-structure", 31),
         ])
     );
     assert_eq!(summary.by_mask.get("MV-0701"), Some(&(40, 37)));
-    assert_eq!(summary.by_mask.get("MV-0705"), Some(&(141, 43)));
+    assert_eq!(summary.by_mask.get("MV-0705"), Some(&(141, 53)));
 
     // Every mask outside 070nh is refused for its mask, and none of them
     // for a reason that sounds like "almost".

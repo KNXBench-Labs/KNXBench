@@ -171,12 +171,12 @@ Searching the sample project for "light": eight group addresses match, each show
 its name and its address.
 
 **The command palette** (`Ctrl+Shift+P`) lists every command KNXBench has as a
-keyboard-reachable list. There are fifteen: New project, Open project, Open
+keyboard-reachable list. There are sixteen: New project, Open project, Open
 (.knxdb), Save, Save As, Undo, Redo, Search, Log, Bus monitor, Settings, Diagnostics
-window, Product catalog, Show introduction, Help. Typing filters the list by
-substring.
+window, Product catalog, Show introduction, Achievements, Help. Typing filters the
+list by substring.
 
-![The command palette showing all fifteen commands, with Undo and Redo grayed out and
+![The command palette showing all sixteen commands, with Undo and Redo grayed out and
 the keyboard hints Ctrl+Z, Ctrl+Shift+Z, Ctrl+K and F1 on the rows that have
 them](../../assets/screenshots/porcelain-command-palette.png)
 
@@ -220,6 +220,10 @@ They are covered in [Devices and products](05-devices-and-products.md) and
 **The introduction** (**File → Show introduction…**, or the palette) is the
 four-page guide described in [First
 start](../getting-started/06-first-start.md#the-introduction).
+
+**Achievements** (**File → Achievements…**, or the palette) lists the
+achievements you have unlocked and the ones still ahead. See
+[Settings and appearance](09-settings-and-appearance.md#achievements).
 
 ## The second window
 

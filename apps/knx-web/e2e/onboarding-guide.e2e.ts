@@ -1,6 +1,7 @@
 /** Verifies the first-run guide in Chromium: once per stage, remembered, and its buttons real. */
 
 import { expect, test, type Page } from "@playwright/test";
+import { achievementsFixtureAnswer } from "./achievements-fixture";
 
 interface Fixture {
   settings: Record<string, unknown>;
@@ -32,6 +33,8 @@ async function serve(page: Page, fixture: Fixture, version = "0.1.0-alpha.2+gfix
       body = { interfaces: [] };
     } else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) {
       body = [];
+    } else if (achievementsFixtureAnswer(method, path) !== undefined) {
+      body = achievementsFixtureAnswer(method, path);
     } else {
       fixture.unexpected.push(`${method} ${path}`);
       await route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"local fixture only"}' });

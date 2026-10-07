@@ -161,9 +161,26 @@ beforeEach(() => {
   // midnight, and on CI runners in another timezone.
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-02-03T12:00:00Z"));
+  // Most `/api/` calls in this file go through the mocked `./api`; two
+  // modules talk HTTP by themselves: the achievement tracker (ADR-0089) and
+  // the settings record's server-confirmed reads (`settingsStore.ts`, used
+  // by the Settings panel). happy-dom's real `fetch` would reach whatever
+  // listens on localhost:3000, so every request is refused here — the same
+  // answer as an unreachable server, which both handle — and any other URL
+  // is recorded as a leak.
+  unexpectedFetches.length = 0;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (!EXPECTED_SELF_FETCHES.some((path) => url.includes(path))) unexpectedFetches.push(url);
+    throw new TypeError(`no network in unit tests: ${url}`);
+  }));
 });
 
+const unexpectedFetches: string[] = [];
+const EXPECTED_SELF_FETCHES = ["/api/achievements", "/api/settings"];
+
 afterEach(() => {
+  vi.unstubAllGlobals();
   host?.remove();
   host = undefined;
   // App publishes accepted server lifetimes to the same origin-wide record
@@ -187,6 +204,8 @@ afterEach(() => {
   document.title = "";
   resetUiLanguageForTests();
   vi.useRealTimers();
+  // Last, so a failure here cannot skip the cleanup above.
+  expect(unexpectedFetches, "App must not reach the network outside the mocked api").toEqual([]);
 });
 
 function baseTree(): ProjectTree {
@@ -1267,6 +1286,8 @@ describe("App — the File menu by keyboard alone", () => {
       "Debug report…",
       // ADR-0084: the first-run guide, reopened on request.
       "Show introduction…",
+      // ADR-0089: present while achievements are switched on (the default).
+      "Achievements…",
       // T28/F5. No "Quit" after it: `isTauri()` is mocked `false` here,
       // and a browser tab cannot close itself.
       "About KNXBench…",
@@ -1283,6 +1304,17 @@ describe("App — the File menu by keyboard alone", () => {
     expect(menu.hasAttribute("open")).toBe(false);
     expect(document.activeElement).toBe(summary);
 
+    await act(async () => root.unmount());
+  });
+
+  // ADR-0089: "off means off" — no menu entry while achievements are switched off.
+  it("leaves the achievements entry out of the File menu while achievements are switched off", async () => {
+    settingsStorage.setItem("achievementsEnabled", "false");
+    const root = await renderApp();
+    await openFileMenu();
+    const entries = [...host!.querySelectorAll<HTMLButtonElement>(".file-menu-content button")].map((b) => b.textContent);
+    expect(entries).toContain("Show introduction…");
+    expect(entries).not.toContain("Achievements…");
     await act(async () => root.unmount());
   });
 

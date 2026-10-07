@@ -325,6 +325,131 @@ main {
   backdrop-filter: blur(12px);
 }
 
+/* ADR-0089: achievements. Tier colours are mixed from the active theme's
+   own tokens rather than fixed medal colours, so every theme (retro green
+   included) keeps its palette; the tier is also always written out. */
+.achievement-badge {
+  --achievement-tier: var(--knx-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  color: var(--knx-on-accent);
+  background: var(--achievement-tier);
+  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--achievement-tier) 60%, var(--knx-foreground));
+}
+.achievement-badge--bronze { --achievement-tier: color-mix(in oklab, var(--knx-warning-color) 65%, var(--knx-error-color)); }
+.achievement-badge--silver { --achievement-tier: color-mix(in oklab, var(--knx-muted) 80%, var(--knx-surface)); }
+.achievement-badge--gold { --achievement-tier: var(--knx-warning-color); }
+.achievement-badge--legendary { --achievement-tier: var(--knx-accent); }
+.achievement-badge--locked {
+  color: var(--knx-muted);
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--knx-border);
+}
+
+.toast--achievement {
+  color: var(--knx-foreground);
+  border: 1px solid var(--knx-border);
+  border-left: 4px solid var(--knx-accent);
+  background: var(--knx-surface);
+  backdrop-filter: blur(12px);
+  min-width: 18rem;
+}
+.toast-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--knx-muted);
+}
+.toast-title { font-weight: 600; }
+.toast-detail { font-size: 0.8rem; color: var(--knx-muted); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast--achievement {
+    animation: knx-achievement-in var(--knx-transition-duration) var(--knx-motion-easing);
+  }
+}
+@keyframes knx-achievement-in {
+  from { transform: translateY(0.75rem); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* Header and footer stay put; only the list scrolls, so the initial focus
+   on Close (in the footer) does not scroll the unlocked entries away. */
+.search-panel.achievements-dialog {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: min(40rem, 94vw);
+  max-height: 80vh;
+  padding: 1rem 1.15rem;
+}
+.achievements-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+.achievements-header h2 { margin: 0; font-size: 20px; }
+.achievements-summary { color: var(--knx-muted); font-size: 13px; }
+.achievements-note {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--knx-warning-color);
+  border-radius: var(--knx-radius-card);
+  font-size: 13px;
+}
+.achievements-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.achievement-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+}
+.achievement-item--unlocked { border-color: color-mix(in oklab, var(--knx-accent) 45%, var(--knx-border)); }
+.achievement-item-text { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
+.achievement-item-title { font-weight: 600; }
+.achievement-item-description { font-size: 13px; color: var(--knx-muted); }
+.achievement-item-progress { display: flex; align-items: center; gap: 0.5rem; font-size: 12px; color: var(--knx-muted); }
+.achievement-item-progress progress { flex: 1; max-width: 12rem; accent-color: var(--knx-accent); }
+.achievement-item-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; text-align: right; }
+.achievement-tier { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.achievement-tier--bronze,
+.achievement-tier--silver { color: var(--knx-muted); }
+.achievement-tier--gold { color: var(--knx-warning-color); }
+.achievement-tier--legendary { color: var(--knx-accent); }
+.achievement-item-state { font-size: 12px; color: var(--knx-muted); }
+.achievements-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  border-top: 1px solid var(--knx-border);
+  padding-top: 12px;
+}
+/* `.settings-section` is a grid that stretches its items; a reset is not a
+   primary action and keeps its natural width. */
+.settings-section-achievements > button { justify-self: start; }
+.achievements-reset-confirm { display: flex; flex-direction: column; gap: 0.5rem; }
+.achievements-reset-actions { display: flex; gap: 0.5rem; }
+
 .project-explorer ul {
   list-style: none;
   padding-left: 1.25rem;

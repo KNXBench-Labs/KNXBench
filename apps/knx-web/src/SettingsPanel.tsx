@@ -1,4 +1,7 @@
 /** Settings overlay for theme, motion, UI/product language, and language-pack management. */
+import { emitAchievementEvent } from "./achievementEvents";
+import AchievementSettings from "./AchievementSettings";
+import type { AchievementTracker } from "./achievementTracker";
 import { ACCENTS, DENSITIES, type useAppearance } from "./appearance";
 import { useState } from "react";
 import type { ThemeDef } from "./theme";
@@ -232,6 +235,8 @@ export default function SettingsPanel(props: {
   onSelectAutosaveEnabled: (enabled: boolean) => void;
   autosaveIntervalMinutes: number;
   onSelectAutosaveIntervalMinutes: (minutes: number) => void;
+  /** ADR-0089: the window's tracker; without it the section is not shown. */
+  achievementTracker?: AchievementTracker;
   onClose: () => void;
 }) {
   const {
@@ -274,6 +279,7 @@ export default function SettingsPanel(props: {
     // managed Appearance surface uses acknowledgment for every theme choice.
     if (!props.manageThemes && THEMES.some((theme) => theme.id === id)) {
       onSelectTheme(id);
+      emitAchievementEvent({ type: "themeChanged" });
       return;
     }
     if (themeSelectionBusy) return;
@@ -285,6 +291,7 @@ export default function SettingsPanel(props: {
     try {
       const result = await commitThemeMutation(prepared.plan);
       setThemeSelectionOutcome("saved");
+      emitAchievementEvent({ type: "themeChanged" });
       setThemeSelectionCacheError(result.cacheError);
     } catch { setThemeSelectionOutcome("failed"); }
     finally { setThemeSelectionBusy(false); }
@@ -474,7 +481,7 @@ export default function SettingsPanel(props: {
         <span className="settings-field-label">{t("settings.uiLanguage")}</span>
         <select
           value={uiLanguage}
-          onChange={(e) => setUiLanguage(e.target.value)}
+          onChange={(e) => { setUiLanguage(e.target.value); emitAchievementEvent({ type: "uiLanguageChanged" }); }}
           aria-label={t("settings.uiLanguage")}
         >
           {AVAILABLE_UI_LANGUAGES.map((language) => (
@@ -606,6 +613,7 @@ export default function SettingsPanel(props: {
           </p>
         )}
       </section>
+      {props.achievementTracker && <AchievementSettings tracker={props.achievementTracker} />}
       <ServiceControlDebugSetting />
     </Overlay>
   );

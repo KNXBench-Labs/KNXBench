@@ -3,3 +3,19 @@ node_modules/
 .git/
 .worktrees/
 .claude/
+# Local and private data the image never needs. `data/` is also the usual
+# bind mount of a running container: it holds user projects and the
+# root-owned TLS key directory, which `docker build` cannot even read.
+data/
+Backup/
+OriginalData/
+.private/
+.ai/
+.agent-memory/
+memory/
+bus_traffic.jsonl
+devices.json
+devices.md
+group_addresses.json
+project_dump.json
+*_project_dump.json

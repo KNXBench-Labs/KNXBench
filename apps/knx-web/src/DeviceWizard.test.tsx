@@ -15,6 +15,7 @@ const apiMock = vi.hoisted(() => ({
   catalogManufacturers: vi.fn(),
   catalogItems: vi.fn(),
   installProductPackage: vi.fn(),
+  installLegacyProductDatabase: vi.fn(),
 }));
 
 // `isPreviewStale` mirrors the real one (status 409 + kind), so the stale

@@ -26,6 +26,17 @@ pub(crate) struct Args {
 }
 
 pub(crate) fn parse(args: &[String]) -> Result<Args, String> {
+    let (file, password) = parse_password_args(args)?;
+    Ok(Args {
+        file: file.ok_or("missing <file.vd3|file.vd4|file.vd5|file.pr5>")?,
+        password,
+    })
+}
+
+/// The password flags plus at most one positional argument (the file).
+pub(crate) fn parse_password_args(
+    args: &[String],
+) -> Result<(Option<String>, PasswordSource), String> {
     let mut file = None;
     let mut password = PasswordSource::None;
     let mut i = 0;
@@ -59,10 +70,7 @@ pub(crate) fn parse(args: &[String]) -> Result<Args, String> {
         }
         i += 1;
     }
-    Ok(Args {
-        file: file.ok_or("missing <file.vd3|file.vd4|file.vd5|file.pr5>")?,
-        password,
-    })
+    Ok((file, password))
 }
 
 /// The first line of `text`, one trailing `\r\n` or `\n` removed and

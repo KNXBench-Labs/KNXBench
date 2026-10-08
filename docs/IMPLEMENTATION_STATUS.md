@@ -1,5 +1,31 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Clean parameter editor and dedicated inspection tabs
+
+- Owner request: add Diagnostics and Manufacturer fields beside Product data;
+  evaluation prose no longer repeats above/inside the normal parameter editor.
+- Repeated diagnostics grouped by kind/severity/exact scope/fallback message,
+  with occurrence counts, concise no-branch explanation, every original detail
+  inspectable/copyable, and unmatched stored values retained in Diagnostics.
+- Evaluated Access Read/None fields move to inspection-only Manufacturer fields
+  with access-specific reasons; malformed editable/write flags cannot enable them.
+  Other read-only fields remain in Parameters. One shared read model/no tab refetch.
+- Test-first workspace RED/GREEN; integrated root **2312 frontend tests /
+  139 files**, build and both fixture type gates pass. Actual Chromium:
+  **278 checks**, EN/DE × 400/1440px × Porcelain/Graphite/LCARS CSS, exact 24
+  synthetic intercepted GET/POST requests, no errors/unexpected/external calls.
+- All five repository gates pass on a fresh xtask with explicit root/nonzero
+  scope (layering, headers, anchors, ledger, corpus source lint); diff check passes.
+- UI-only; no server/DTO/core/storage/protocol change or broader compatibility
+  claim. Source self-review, not independent approval. Native accessibility and
+  full static manufacturer inventory remain outside scope.
+- [Contract](PARAMETER_WORKSPACE.md),
+  [source/test/browser receipt](parameter-workspace/verification.json).
+  The original receipt is historical local-source evidence. The owner authorized
+  merge/commit/push separately; merged-source delivery evidence is recorded in
+  `docs/parameter-workspace/delivery-verification.json`. No Docker activation
+  or hardware contact is part of this delivery.
+
 ## 2026-10-08 — Legacy VD files: programs imported for offline use (L2, ADR-0094)
 
 - **What:** every application program of a legacy ETS3 `.vd3`/`.vd4`/`.vd5`

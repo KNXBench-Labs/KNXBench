@@ -111,12 +111,12 @@ const fixture: ParameterPanelDto = {
   tree: panelTree,
 };
 
-async function renderPanel(deviceId = 1) {
+async function renderPanel(deviceId = 1, view: "parameters" | "diagnostics" | "restricted" = "parameters") {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<ParameterPanel deviceId={deviceId} onValueApplied={() => {}} />);
+    root.render(<ParameterPanel deviceId={deviceId} view={view} onValueApplied={() => {}} />);
   });
   return root;
 }
@@ -158,23 +158,23 @@ describe("ParameterPanel", () => {
     await act(async () => root.unmount());
   });
 
-  it("renders both sections' field rows, the stale entry, and the collapsed diagnostic count", async () => {
+  it("renders field rows without evaluation prose or stored unmatched values", async () => {
     apiMock.deviceParameters.mockResolvedValue(fixture);
     const root = await renderPanel();
 
     expect(apiMock.deviceParameters).toHaveBeenCalledWith(1, null);
     expect(host!.querySelectorAll(".parameter-field").length).toBe(2);
     expect(host!.textContent).toContain("Module #7");
-    expect(host!.textContent).toContain("P3");
-    expect(host!.textContent).toContain("99");
-    expect(host!.textContent).toContain("1 note");
+    expect(host!.textContent).not.toContain("P3");
+    expect(host!.textContent).not.toContain("99");
+    expect(host!.querySelector(".parameter-diagnostics-banner")).toBeNull();
 
     root.unmount();
   });
 
   it("labels a no-branch diagnostic as information rather than a warning", async () => {
     apiMock.deviceParameters.mockResolvedValue(fixture);
-    const root = await renderPanel();
+    const root = await renderPanel(1, "diagnostics");
     const banner = host!.querySelector<HTMLDetailsElement>(".parameter-diagnostics-banner")!;
     expect(banner.querySelector("summary")?.textContent).toContain("1 note");
     expect(banner.querySelector("summary")?.textContent).not.toContain("warning");
@@ -194,10 +194,26 @@ describe("ParameterPanel", () => {
       diagnostics: [{ ...fixture.diagnostics[0], severity: wireSeverity as "warning" }],
     };
     apiMock.deviceParameters.mockResolvedValue(response);
-    const root = await renderPanel();
+    const root = await renderPanel(1, "diagnostics");
     const banner = host!.querySelector(".parameter-diagnostics-banner")!;
     expect(banner.querySelector("summary")?.textContent).toContain("1 warning");
     expect(banner.querySelector('li[data-severity="warning"]')?.textContent).toContain("Warning");
+    root.unmount();
+  });
+
+  it("copies every raw record in a repeated diagnostic group without duplicating the headline", async () => {
+    const details = Array.from({ length: 6 }, (_, index) => `NoBranchMatched { choose_node: ${index} }`);
+    apiMock.deviceParameters.mockResolvedValue({
+      ...fixture, diagnostics: details.map((detail) => ({ ...fixture.diagnostics[0], detail })),
+    });
+    const root = await renderPanel(1, "diagnostics");
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    expect(host!.querySelectorAll("li[data-severity]")).toHaveLength(1);
+    expect(host!.textContent).toContain("6 occurrences");
+    expect([...host!.querySelectorAll(".parameter-diagnostic-details pre")].map((item) => item.textContent)).toEqual(details);
+    await act(async () => host!.querySelector<HTMLButtonElement>(".parameter-diagnostics-banner button")!.click());
+    expect(writeText).toHaveBeenCalledWith(details.join("\n"));
     root.unmount();
   });
 
@@ -268,11 +284,9 @@ describe("ParameterPanel", () => {
       tree: null,
     };
     apiMock.deviceParameters.mockResolvedValue(noProgram);
-    const root = await renderPanel();
+    const root = await renderPanel(1, "diagnostics");
 
-    expect(host!.textContent).toContain(
-      "This device has no resolvable application program",
-    );
+    expect(host!.textContent).toContain("No parameter evaluation warnings or notes.");
     expect(host!.querySelectorAll(".parameter-field").length).toBe(0);
     expect(host!.textContent).toContain("P9");
     expect(host!.textContent).toContain("legacy-raw");
@@ -323,7 +337,7 @@ describe("ParameterPanel", () => {
       ],
     };
     apiMock.deviceParameters.mockResolvedValue(twoDiagnostics);
-    const root = await renderPanel();
+    const root = await renderPanel(1, "diagnostics");
 
     const banner = host!.querySelector(".parameter-diagnostics-banner")!;
     expect(banner.querySelector("summary")?.textContent).toContain("1 warning");
@@ -484,7 +498,7 @@ describe("ParameterPanel", () => {
     root.unmount();
   });
 
-  it("shows a read-only section's own diagnostic reason inside that section", async () => {
+  it("keeps module reasons once in Diagnostics with their section identity", async () => {
     const reason = "No imported module instance matches this module; its fields are read-only.";
     const panelWithSectionDiagnostic: ParameterPanelDto = {
       ...fixture,
@@ -506,8 +520,11 @@ describe("ParameterPanel", () => {
     expect(sections.length).toBe(2);
     // The device-scope section (no matching diagnostic) must not show it.
     expect(sections[0].textContent).not.toContain(reason);
-    // The module-scoped section (matching scope) must.
-    expect(sections[1].textContent).toContain(reason);
+    // The reason is no longer repeated within module sections.
+    expect(sections[1].textContent).not.toContain(reason);
+    await act(async () => root.render(<ParameterPanel deviceId={1} view="diagnostics" onValueApplied={() => {}} />));
+    const item = [...host!.querySelectorAll("li[data-severity]")].find((li) => li.textContent?.includes(reason));
+    expect(item?.textContent).toContain("Module #7");
 
     root.unmount();
   });
@@ -523,10 +540,10 @@ describe("ParameterPanel", () => {
   it("§66: a diagnostic's message is translated with the UI language; its detail stays English", async () => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
     apiMock.deviceParameters.mockResolvedValue(fixture);
-    const root = await renderPanel();
+    const root = await renderPanel(1, "diagnostics");
 
     expect(host!.textContent).toContain(
-      "Eine Auswahl passte auf keine ihrer Optionen.",
+      "Der aktuelle Steuerwert passt zu keiner Option; für diese Auswahl wurde kein Zweig gewählt.",
     );
     expect(host!.textContent).not.toContain(
       "A choice did not match any of its options.",
@@ -539,7 +556,9 @@ describe("ParameterPanel", () => {
     // "copy details" button's `copyDetail` handler (`ParameterPanel.tsx`);
     // asserting on that handler's clipboard payload is the real claim
     // `KNOWN_LIMITATIONS.md` cites this test for.
-    expect(host!.textContent).not.toContain("NoBranchMatched");
+    const technical = host!.querySelector<HTMLDetailsElement>(".parameter-diagnostic-details")!;
+    expect(technical.open).toBe(false);
+    expect(technical.querySelector("pre")!.textContent).toBe("NoBranchMatched { choose_node: 4821 }");
 
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
@@ -587,63 +606,57 @@ describe("ParameterPanel", () => {
   ])("translates the %s reason instead of showing the server's English", async (kind, german) => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
     apiMock.deviceParameters.mockResolvedValue(authorityPanel([field("A", "ReadWrite")], [kind]));
-    const root = await renderPanel();
-    expect(host!.querySelector(".parameter-section")!.textContent).toContain(german);
+    const root = await renderPanel(1, "diagnostics");
+    expect(host!.querySelector(".parameter-diagnostics-banner")!.textContent).toContain(german);
     expect(host!.textContent).not.toContain(`server English for ${kind}`);
     root.unmount();
   });
 
-  it("folds Access=None fields away by default, counts them, and shows them read-only on request", async () => {
+  it("moves manufacturer-restricted fields out of the editor, preserving their order and values", async () => {
     apiMock.deviceParameters.mockResolvedValue(authorityPanel(
       [field("A", "ReadWrite"), field("B", "None"), field("C", "Read"), field("D", "None")], ["parameterAccessReadOnly"]));
     const root = await renderPanel();
-    const section = host!.querySelector(".parameter-section")!;
-    const shown = () => [...section.querySelectorAll(".parameter-field")].map((row) => row.getAttribute("data-ets-id"));
-    expect(shown()).toEqual(["A", "C"]);
-    const toggle = section.querySelector<HTMLButtonElement>(".parameter-hidden-toggle")!;
-    expect(toggle.textContent).toBe("Show 2 fields without user access (Access None)");
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    await act(async () => toggle.click());
-    expect(shown()).toEqual(["A", "B", "C", "D"]);
-    expect(toggle.textContent).toBe("Hide 2 fields without user access (Access None)");
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    for (const id of ["B", "C", "D"]) {
-      const row = section.querySelector(`.parameter-field[data-ets-id="${id}"]`)!;
-      expect(row.querySelector<HTMLInputElement | HTMLSelectElement>("input, select")!.disabled).toBe(true);
-    }
-    root.unmount();
-  });
-
-  it("offers no fold for a section without Access=None fields", async () => {
-    apiMock.deviceParameters.mockResolvedValue(authorityPanel([field("A", "ReadWrite"), field("C", "Read")], []));
-    const root = await renderPanel();
+    const ids = () => [...host!.querySelectorAll(".parameter-field")].map((row) => row.getAttribute("data-ets-id"));
+    expect(ids()).toEqual(["A"]);
     expect(host!.querySelector(".parameter-hidden-toggle")).toBeNull();
-    expect(host!.querySelectorAll(".parameter-field").length).toBe(2);
+    await act(async () => root.render(<ParameterPanel deviceId={1} view="restricted" onValueApplied={() => {}} />));
+    expect(ids()).toEqual(["B", "C", "D"]);
+    const inputs = [...host!.querySelectorAll<HTMLInputElement>("input")];
+    expect(inputs.map((input) => input.value)).toEqual(["5", "5", "5"]);
+    expect(inputs.every((input) => input.disabled)).toBe(true);
+    expect(host!.textContent).toContain("Hidden by the manufacturer (Access None)");
+    expect(host!.textContent).toContain("Read-only by the manufacturer (Access Read)");
+    expect(apiMock.deviceParameters).toHaveBeenCalledTimes(1);
     root.unmount();
   });
 
-  it("counts a single hidden field in the singular", async () => {
-    apiMock.deviceParameters.mockResolvedValue(authorityPanel([field("B", "None")], ["parameterAccessReadOnly"]));
-    const root = await renderPanel();
-    expect(host!.querySelector(".parameter-hidden-toggle")!.textContent).toBe("Show 1 field without user access (Access None)");
-    expect(host!.querySelectorAll(".parameter-field").length).toBe(0);
-    root.unmount();
-  });
-
-  it("does not call a device-level read-only field shared across module instantiations", async () => {
-    apiMock.deviceParameters.mockResolvedValue({
-      ...authorityPanel([field("C", "Read")], ["parameterAccessReadOnly"]),
-      sections: [
-        { scope: null, fields: [field("C", "Read")] },
-        fixture.sections[1],
-      ],
+  it.each(["Read", "None"])("refuses Access %s edits even if the response falsely claims write authority", async (access) => {
+    apiMock.deviceParameters.mockResolvedValue(authorityPanel([field("B", access, true)], []));
+    const root = await renderPanel(1, "restricted");
+    const input = host!.querySelector<HTMLInputElement>("input")!;
+    expect(input.disabled).toBe(true);
+    await act(async () => {
+      setInputValue(input, "9");
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
     });
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  it("states when no manufacturer-restricted fields were evaluated", async () => {
+    apiMock.deviceParameters.mockResolvedValue(authorityPanel([field("A", "ReadWrite")], []));
+    const root = await renderPanel(1, "restricted");
+    expect(host!.textContent).toContain("No manufacturer-restricted fields in the evaluated sections.");
+    expect(host!.querySelectorAll(".parameter-field")).toHaveLength(0);
+    root.unmount();
+  });
+
+  it("keeps non-manufacturer read-only module fields in the editor with a Diagnostics pointer", async () => {
+    apiMock.deviceParameters.mockResolvedValue(fixture);
     const root = await renderPanel();
-    const [device, module] = [...host!.querySelectorAll(".parameter-section")];
-    expect(device.querySelector(".parameter-field-caption")!.textContent).toBe(
-      "Not editable here — see the warnings for why.");
-    expect(module.querySelector(".parameter-field-caption")!.textContent).toContain(
+    expect(host!.querySelectorAll(".parameter-section")[1].textContent).toContain(
       "Shared across every instantiation of this module");
+    expect(host!.querySelectorAll(".parameter-section")[1].textContent).toContain("diagnostics");
     root.unmount();
   });
 
@@ -692,6 +705,8 @@ describe("ParameterPanel", () => {
     expect(badgeOf("E")).toBeNull();
     expect(badgeOf("F")).toBeNull();
     expect(badgeOf("G")).toBeNull();
+    expect(host!.querySelector(".parameter-language-summary")).toBeNull();
+    await act(async () => root.render(<ParameterPanel deviceId={1} view="diagnostics" onValueApplied={() => {}} />));
     expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
       "2 fields are not fully translated into de; they show the program's own text (en-US).");
     root.unmount();
@@ -710,6 +725,8 @@ describe("ParameterPanel", () => {
     apiMock.deviceParameters.mockResolvedValue(languagePanel(null, [lang("B", { text: "Channel A" })]));
     const root = await renderPanel();
     expect(badgeOf("B")!.textContent).toBe("Untranslated");
+    expect(host!.querySelector(".parameter-language-summary")).toBeNull();
+    await act(async () => root.render(<ParameterPanel deviceId={1} view="diagnostics" onValueApplied={() => {}} />));
     expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
       "1 field is not fully translated into de; it shows the program's own text.");
     root.unmount();
@@ -731,6 +748,8 @@ describe("ParameterPanel", () => {
     const root = await renderPanel();
     expect(badgeOf("B")!.textContent).toBe("Unübersetzt (en-US)");
     expect(badgeOf("C")!.textContent).toBe("Optionen unübersetzt (en-US)");
+    expect(host!.querySelector(".parameter-language-summary")).toBeNull();
+    await act(async () => root.render(<ParameterPanel deviceId={1} view="diagnostics" onValueApplied={() => {}} />));
     expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
       "2 Felder sind nicht vollständig in de übersetzt; sie zeigen den eigenen Text des Programms (en-US).");
     root.unmount();

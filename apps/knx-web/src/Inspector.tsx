@@ -20,7 +20,7 @@ import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { LineNode } from "./bindings/LineNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
-import ParameterPanel from "./ParameterPanel";
+import { ParameterPanelContent, useDeviceParameters } from "./ParameterPanel";
 import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { useProductLanguage } from "./productLanguage";
@@ -920,17 +920,19 @@ export function DeviceWorkspace(props: {
 }) {
   const { detail, tree, onApplied } = props;
   const groupAddresses = linkableGroupAddresses(tree, detail.id);
+  const parameterState = useDeviceParameters(detail.id, tree);
   const t = useTranslate();
   const [tab, setTab] = useState(0);
   const [expandedGroups, setExpandedGroups] = useState<{ deviceId: number; keys: Set<string> }>({
     deviceId: detail.id, keys: new Set(),
   });
   const groups = groupComObjects(detail.com_objects);
-  // One array, three panels, and index arithmetic derived from its length:
+  // One array and index arithmetic derived from its length:
   // the previous `1 - tab` toggle silently encoded "there are exactly two
   // tabs" three times over (it also hardcoded `End` and treated both arrow
   // keys as the same key, which a left-arrow-only test could never catch).
-  const tabs = [t("inspector.communicationObjects"), t("workbench.parameters"), t("deviceIdentity.tab")];
+  const tabs = [t("inspector.communicationObjects"), t("workbench.parameters"), t("deviceIdentity.tab"),
+    t("parameters.diagnosticsTab"), t("parameters.restrictedTab")];
   return <section className="device-workspace">
     <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div></header>
     <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
@@ -944,7 +946,7 @@ export function DeviceWorkspace(props: {
     }}>
       {tabs.map((label, index) => <button key={label} id={`device-tab-${detail.id}-${index}`} role="tab" aria-selected={tab === index} aria-controls={`device-panel-${detail.id}-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}>{label}</button>)}
     </div>
-    {/* `tabIndex={0}` on all three panels, not only the ones that can end up
+    {/* `tabIndex={0}` on every panel, not only the ones that can end up
         with nothing focusable inside them: a panel's content is data-driven
         (a device with no communication objects, an application with no
         parameters, an identity that is one sentence of prose under
@@ -996,13 +998,19 @@ export function DeviceWorkspace(props: {
           can_redo: false, is_modified: true }` overlay assembled from a tree this component
           happened to be holding. `onApplied` takes exactly that shape, so
           it wires straight through, the same as every field above it. */}
-      <ParameterPanel deviceId={detail.id} refreshKey={tree} onValueApplied={onApplied} />
+      <ParameterPanelContent deviceId={detail.id} state={parameterState} onValueApplied={onApplied} />
     </div>
     {/* Hidden, not unmounted — the same shape as the parameter panel above,
         whose fetch is keyed to its mount and must not restart on every tab
         switch. */}
     <div role="tabpanel" id={`device-panel-${detail.id}-2`} aria-labelledby={`device-tab-${detail.id}-2`} hidden={tab !== 2} tabIndex={0}>
       <DeviceIdentity product={detail.product} />
+    </div>
+    <div role="tabpanel" id={`device-panel-${detail.id}-3`} aria-labelledby={`device-tab-${detail.id}-3`} hidden={tab !== 3} tabIndex={0}>
+      <ParameterPanelContent deviceId={detail.id} state={parameterState} view="diagnostics" onValueApplied={onApplied} />
+    </div>
+    <div role="tabpanel" id={`device-panel-${detail.id}-4`} aria-labelledby={`device-tab-${detail.id}-4`} hidden={tab !== 4} tabIndex={0}>
+      <ParameterPanelContent deviceId={detail.id} state={parameterState} view="restricted" onValueApplied={onApplied} />
     </div>
   </section>;
 }

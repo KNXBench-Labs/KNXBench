@@ -113,6 +113,12 @@ raised. A project that has been imported stays in `.knxdb`.
 
 ## Parameters
 
+**2026-10-08 presentation:** the editor is separated from **Diagnostics** and
+inspection-only **Manufacturer fields** (evaluated Access Read/None). Repeated
+causes are grouped while every detail and unmatched stored value is retained.
+See [Device parameter workspace](../PARAMETER_WORKSPACE.md) for contract and
+source-bound browser/unit/build evidence; this does not expand KNX compatibility.
+
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Reading, storing and displaying parameters from the application program | ✅ Implemented | 1,390 parameter values from the reference project |

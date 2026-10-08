@@ -21,7 +21,7 @@ archive into a file you edit in place. Save the imported work as `.knxdb` later.
 
 ## Starting a new project
 
-**New project…** opens a small dialog with four fields:
+**New project…** opens a wizard. The first step asks for four fields:
 
 | Field | What it does |
 | --- | --- |
@@ -30,11 +30,35 @@ archive into a file you edit in place. Save the imported work as `.knxdb` later.
 | Project language | Starts with your current interface language. Select English, German or an installed language pack, or choose **Another language tag…** and type a well-formed tag such as `de-DE`. This labels the project texts; it does not switch the interface language. There is no restricted list of project languages. |
 | Group address style | `ThreeLevel` (`1/2/3`), `TwoLevel` (`1/2`) or `Free` (a plain number). |
 
-![The New project dialog over an open project, with an explanation that Save chooses
-the .knxdb filename, Project name "Untitled project" selected, Installation name
-"Installation 1", Project language "English" in a dropdown, Group address style
-"Three level (main/middle/sub)", and Cancel and Create project
-buttons](../../assets/screenshots/porcelain-new-project.png)
+![The New project wizard over an open project, on step 1 of 5 with the steps Project,
+Topology, Building, Group structure and Review listed above. It explains that Save
+chooses the .knxdb filename and shows Project name "Untitled project" selected,
+Installation name "Installation 1", Project language "English" in a dropdown, Group
+address style "Three level (main/middle/sub)", and Cancel, Back, Next and Create
+project buttons](../../assets/screenshots/porcelain-new-project.png)
+
+The next steps are optional and describe a starting structure:
+
+| Step | What you can set up |
+| --- | --- |
+| Topology | Areas and lines with number, name and medium reference (`MT-0` by default; stored as typed, not interpreted). Area 1 with line 1.1 is pre-filled; remove it if you do not want it. |
+| Building | Buildings with floors, rooms and distribution boards. **Add floors** adds a number of consecutively numbered floors at once. Other building-part kinds remain available in the project explorer. |
+| Group structure | Main groups and, in three-level style, middle groups. A preset fills the list from a fixed set of functions (lighting, shading, heating, ventilation, central functions) and the floors of the Building step, either *function, then floor* or *floor, then function*. Main groups are numbered from 1, middle groups from 0; everything stays editable. Free-style projects skip this step. No group addresses are created. |
+| Review | What will be created, and links back to any step that still has a problem. |
+
+**Create project** works from every step, and **Enter** in a field of the first step
+or on Review creates the project straight away with whatever is entered so far.
+Problems such as a duplicate line number or a middle group above 7 are shown on
+their step and keep **Create project** disabled until they are fixed. The server
+checks the structure again with the same rules the explorer uses; if it refuses,
+nothing is replaced and the wizard stays open with the server's message. The
+structure arrives together with the new project, so it is not an undo step: the new
+project is its own starting point.
+
+After creating, the wizard shows that the project is open but not yet saved and
+offers **Add devices now**, which opens the product catalog on the project's first
+line. Leaving the wizard with **Cancel** or **Escape** after you typed something asks
+first; pressing **Escape** again keeps you in the wizard.
 
 Creating the project does not choose a filename or write a project file. **Save** or
 **Save As** later chooses the `.knxdb` filename and location; the project and
@@ -43,13 +67,8 @@ keep every field and action reachable.
 
 The group-address style is a project-wide decision and it is first made here. See
 [Working with group addresses](04-group-addresses.md) for what that choice means in
-daily use and how to change it later.
-
-> **Note**
->
-> The dialog's hint says the style cannot be changed after creation. That hint is out
-> of date: the **Project** node in the properties pane changes it, as one undoable step
-> ([Known issues](../known-issues.md)).
+daily use and how to change it later; the **Project** node in the properties pane
+changes it as one undoable step.
 
 > **Warning**
 >

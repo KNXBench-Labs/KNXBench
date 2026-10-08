@@ -1,4 +1,4 @@
-/** Overlay that creates a project from scratch, including the honest 409 unsaved-changes prompt. */
+/** Stepped wizard that creates a project from scratch, with the honest 409 prompt. */
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type { GroupAddressStyle } from "./api";
@@ -6,8 +6,20 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import Overlay from "./Overlay";
 import { isWellFormedBcp47Tag, useAvailableLanguagePacks } from "./languagePack";
 import { languageSelfName } from "./languageSelfName";
-import { useTranslate } from "./i18n";
+import { useTranslate, type MessageKey } from "./i18n";
 import { AVAILABLE_UI_LANGUAGES, useUiLanguage } from "./uiLanguage";
+import {
+  defaultStructure,
+  structureCounts,
+  toSeed,
+  validateStructure,
+  type ProjectStructureDraft,
+  type WizardStructureStep,
+} from "./projectSeed";
+import ProjectWizardTopology from "./ProjectWizardTopology";
+import ProjectWizardBuilding from "./ProjectWizardBuilding";
+import ProjectWizardGroups from "./ProjectWizardGroups";
+import ProjectWizardReview from "./ProjectWizardReview";
 
 // Wire values, in the order a user is most likely to want them: the ETS
 // default first, the rest after. `newProject.style.<value>` is the label
@@ -17,6 +29,32 @@ const STYLES: readonly GroupAddressStyle[] = ["ThreeLevel", "TwoLevel", "Free"];
 // This is not a language tag (so it cannot collide with a custom BCP-47
 // value). Project text languages are not limited to the UI catalogues.
 const CUSTOM_LANGUAGE_OPTION = "__custom__";
+
+type WizardStep = "details" | WizardStructureStep | "review";
+const STEP_LABEL: Record<WizardStep, MessageKey> = {
+  details: "projectWizard.step.details",
+  topology: "projectWizard.step.topology",
+  building: "projectWizard.step.building",
+  groups: "projectWizard.step.groups",
+  review: "projectWizard.step.review",
+};
+
+/** Free-style projects have no group ranges, so their wizard skips that step. */
+function stepsFor(style: GroupAddressStyle): WizardStep[] {
+  return style === "Free"
+    ? ["details", "topology", "building", "review"]
+    : ["details", "topology", "building", "groups", "review"];
+}
+
+/** The first line of the first installation, where "Add devices now" points. */
+function firstLineId(tree: ProjectTree): number | null {
+  for (const installation of tree.installations) {
+    for (const area of installation.topology) {
+      if (area.lines.length > 0) return area.lines[0].id;
+    }
+  }
+  return null;
+}
 
 /**
  * The only way to a project that never came from a file — an ETS import
@@ -35,6 +73,14 @@ const CUSTOM_LANGUAGE_OPTION = "__custom__";
  *
  * Built on the shared `Overlay` shell (T31) — `role="dialog"`, Escape,
  * focus trap and focus restoration all come from there.
+ *
+ * Since ADR-0093 it is a wizard: after the details come optional steps for
+ * a starting topology (area 1 / line 1.1 pre-filled), a building tree and a
+ * group-range skeleton, then a review. "Create project" is available on
+ * every step, so the fast path is unchanged; the structure travels as one
+ * `seed` the server applies together with the new project, or refuses
+ * without replacing anything. After success the wizard stays open on a
+ * short "created, not yet saved" page that offers adding devices.
  */
 export default function NewProjectDialog(props: {
   onCreated: (tree: ProjectTree) => void;
@@ -46,8 +92,10 @@ export default function NewProjectDialog(props: {
    * edit — keeps this prompt up and creates nothing.
    */
   onSaveFirst: () => Promise<boolean>;
+  /** "Add devices now" on the final page: the new project's first line, or `null`. */
+  onAddDevices: (lineId: number | null) => void;
 }) {
-  const { onCreated, onClose, onSaveFirst } = props;
+  const { onCreated, onClose, onSaveFirst, onAddDevices } = props;
   const t = useTranslate();
   const [uiLanguage] = useUiLanguage();
   const languagePacks = useAvailableLanguagePacks().filter(
@@ -77,6 +125,16 @@ export default function NewProjectDialog(props: {
     ? languageChoice === CUSTOM_LANGUAGE_OPTION ? customLanguage : languageChoice
     : languageChoice;
   const [style, setStyle] = useState<GroupAddressStyle>("ThreeLevel");
+  const [step, setStep] = useState<WizardStep>("details");
+  const [structure, setStructure] = useState<ProjectStructureDraft>(() => defaultStructure({
+    area: (area) => t("projectWizard.topology.defaultArea", { area }),
+    line: (area, line) => t("projectWizard.topology.defaultLine", { area, line }),
+  }));
+  // Anything typed or changed since opening; only then does leaving ask first.
+  const [touched, setTouched] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [created, setCreated] = useState<{ name: string; lineId: number | null } | null>(null);
+  const doneRef = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // The server's own 409 sentence, held rather than shown as an error:
@@ -95,9 +153,30 @@ export default function NewProjectDialog(props: {
       dismissedRef.current = true;
     };
   }, []);
-  function dismiss() {
+  function close() {
     dismissedRef.current = true;
     onClose();
+  }
+  // Entered data is not dropped on a single stray key: the first Escape or
+  // backdrop click asks, a second Escape on the question keeps editing.
+  function dismiss() {
+    if (created || conflict !== null || !touched) {
+      close();
+    } else {
+      setConfirmDiscard((showing) => !showing);
+    }
+  }
+  // Cancel always leads to the question (or straight out with nothing typed).
+  function cancel() {
+    if (!touched) close();
+    else setConfirmDiscard(true);
+  }
+  function edit<T>(setter: (value: T) => void): (value: T) => void {
+    return (value) => {
+      setTouched(true);
+      setConfirmDiscard(false);
+      setter(value);
+    };
   }
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -110,7 +189,11 @@ export default function NewProjectDialog(props: {
   const languageError = isWellFormedBcp47Tag(trimmedLanguage)
     ? null
     : t("newProject.languageInvalid");
-  const canSubmit = nameError === null && languageError === null && !busy;
+  const structureIssues = validateStructure(structure, style);
+  const steps = stepsFor(style);
+  const visibleStep: WizardStep = steps.includes(step) ? step : "review";
+  const stepIndex = steps.indexOf(visibleStep);
+  const canSubmit = nameError === null && languageError === null && structureIssues.length === 0 && !busy;
 
   async function submit(discardChanges: boolean, saveFirst = false) {
     if (!canSubmit) return;
@@ -136,8 +219,11 @@ export default function NewProjectDialog(props: {
         language: trimmedLanguage,
         groupAddressStyle: style,
         discardChanges,
+        seed: toSeed(structure),
       });
       onCreated(tree);
+      setConflict(null);
+      setCreated({ name: trimmedName, lineId: firstLineId(tree) });
     } catch (e) {
       if (api.isUnsavedChangesConflict(e)) {
         setConflict(api.errorMessage(e));
@@ -150,98 +236,202 @@ export default function NewProjectDialog(props: {
     }
   }
 
+  useEffect(() => {
+    if (created) doneRef.current?.focus();
+  }, [created]);
+
+  function goTo(next: WizardStep) {
+    setConfirmDiscard(false);
+    setStep(next);
+  }
+
+  const setStructurePart = <K extends keyof ProjectStructureDraft>(key: K) =>
+    edit((value: ProjectStructureDraft[K]) => setStructure((current) => ({ ...current, [key]: value })));
+  const issuesFor = (which: WizardStructureStep) => structureIssues.filter((issue) => issue.step === which);
+
+  if (created) {
+    return (
+      <Overlay labelledBy="new-project-title" className="new-project-panel" onClose={close} initialFocusRef={doneRef}>
+        <h2 className="settings-panel-title" id="new-project-title">{t("projectWizard.done.title")}</h2>
+        <p role="status">{t("projectWizard.done.body", { name: created.name })}</p>
+        <div className="new-project-actions">
+          <button type="button" onClick={() => { close(); onAddDevices(created.lineId); }}>
+            {t("projectWizard.done.addDevices")}
+          </button>
+          <button ref={doneRef} type="button" className="primary-action" onClick={close}>
+            {t("projectWizard.done.close")}
+          </button>
+        </div>
+      </Overlay>
+    );
+  }
+
   return (
-    <Overlay labelledBy="new-project-title" className="new-project-panel" onClose={dismiss} initialFocusRef={nameRef}>
+    <Overlay labelledBy="new-project-title" className="new-project-panel project-wizard" onClose={dismiss} initialFocusRef={nameRef}>
       <h2 className="settings-panel-title" id="new-project-title">
         {t("newProject.title")}
       </h2>
-      <p className="new-project-intro">{t("newProject.intro")}</p>
-      <p className="new-project-filename-hint" id="new-project-filename-hint">
-        {t("newProject.filenameHint")}
-      </p>
+      <ol className="project-wizard-steps" aria-label={t("projectWizard.stepsLabel")}>
+        {steps.map((which, index) => {
+          const problems = which === "details"
+            ? Number(nameError !== null) + Number(languageError !== null)
+            : which === "review" ? 0 : issuesFor(which).length;
+          return (
+            <li key={which}>
+              <button type="button" aria-current={which === visibleStep ? "step" : undefined}
+                className={problems > 0 ? "project-wizard-step-link has-issues" : "project-wizard-step-link"}
+                onClick={() => goTo(which)}>
+                <span className="project-wizard-step-number" aria-hidden="true">{index + 1}</span>
+                {t(STEP_LABEL[which])}
+                {problems > 0 && <span className="project-wizard-step-issues">{t("projectWizard.stepIssues", { count: problems })}</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
       <form
+        onKeyDown={(e) => {
+          // Enter creates the project from the details and the review only;
+          // in a structure editor it would fire halfway through typing a
+          // room name. Blocking the key also blocks the browser's implicit
+          // submission, which would otherwise "click" Create.
+          const structureStep = visibleStep !== "details" && visibleStep !== "review";
+          if (structureStep && e.key === "Enter" && e.target instanceof HTMLInputElement) e.preventDefault();
+        }}
         onSubmit={(e) => {
           e.preventDefault();
-          void submit(false);
+          if (visibleStep === "details" || visibleStep === "review") void submit(false);
         }}
       >
-        <label className="settings-field">
-          <span className="settings-field-label">{t("newProject.name")}</span>
-          <input
-            ref={nameRef}
-            value={name}
-            aria-label={t("newProject.name")}
-            aria-describedby="new-project-filename-hint"
-            aria-invalid={nameError !== null}
-            // Select-on-focus so the seeded default is one keystroke from
-            // gone — it exists to make Enter work, not to be deleted by
-            // hand first.
-            onFocus={(e) => e.currentTarget.select()}
-            onChange={(e) => setName(e.target.value)}
-          />
-          {nameError && <span className="field-error">{nameError}</span>}
-        </label>
-        <label className="settings-field">
-          <span className="settings-field-label">{t("newProject.installation")}</span>
-          <input
-            value={installationName}
-            aria-label={t("newProject.installation")}
-            aria-describedby="new-project-filename-hint"
-            onChange={(e) => setInstallationName(e.target.value)}
-          />
-        </label>
-        <label className="settings-field">
-          <span className="settings-field-label">{t("newProject.language")}</span>
-          <select
-            value={customSelected ? CUSTOM_LANGUAGE_OPTION : languageChoice}
-            aria-label={t("newProject.language")}
-            aria-describedby="new-project-language-hint"
-            onChange={(e) => setLanguageChoice(e.target.value)}
-          >
-            {AVAILABLE_UI_LANGUAGES.map((tag) => (
-              <option key={tag} value={tag}>{languageSelfName(tag)}</option>
-            ))}
-            {languagePacks.map((pack) => (
-              <option key={pack.tag} value={pack.tag}>{pack.name}</option>
-            ))}
-            <option value={CUSTOM_LANGUAGE_OPTION}>{t("newProject.languageOther")}</option>
-          </select>
-          {customSelected && (
+        <h3 className="project-wizard-step-title">
+          {t("projectWizard.stepOf", { current: stepIndex + 1, total: steps.length, step: t(STEP_LABEL[visibleStep]) })}
+        </h3>
+        {visibleStep === "details" && (
+          <>
+            <p className="new-project-intro">{t("newProject.intro")}</p>
+            <p className="new-project-filename-hint" id="new-project-filename-hint">
+              {t("newProject.filenameHint")}
+            </p>
+          <label className="settings-field">
+            <span className="settings-field-label">{t("newProject.name")}</span>
             <input
-              value={language}
-              aria-label={t("newProject.customLanguage")}
-              aria-invalid={languageError !== null}
-              aria-describedby={languageError ? "new-project-language-hint new-project-language-error" : "new-project-language-hint"}
-              onChange={(e) => { setLanguageChoice(CUSTOM_LANGUAGE_OPTION); setCustomLanguage(e.target.value); }}
+              ref={nameRef}
+              value={name}
+              aria-label={t("newProject.name")}
+              aria-describedby="new-project-filename-hint"
+              aria-invalid={nameError !== null}
+              // Select-on-focus so the seeded default is one keystroke from
+              // gone — it exists to make Enter work, not to be deleted by
+              // hand first.
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => edit(setName)(e.target.value)}
             />
-          )}
-          <span className="settings-field-hint" id="new-project-language-hint">{t("newProject.languageHint")}</span>
-          {languageError && <span className="field-error" id="new-project-language-error" role="alert">{languageError}</span>}
-        </label>
-        <label className="settings-field">
-          <span className="settings-field-label">{t("newProject.style")}</span>
-          <select
-            value={style}
-            aria-label={t("newProject.style")}
-            onChange={(e) => setStyle(e.target.value as GroupAddressStyle)}
-          >
-            {STYLES.map((option) => (
-              <option key={option} value={option}>
-                {t(`newProject.style.${option}`)}
-              </option>
-            ))}
-          </select>
-          <span className="settings-field-hint">{t("newProject.styleHint")}</span>
-        </label>
+            {nameError && <span className="field-error">{nameError}</span>}
+          </label>
+          <label className="settings-field">
+            <span className="settings-field-label">{t("newProject.installation")}</span>
+            <input
+              value={installationName}
+              aria-label={t("newProject.installation")}
+              aria-describedby="new-project-filename-hint"
+              onChange={(e) => edit(setInstallationName)(e.target.value)}
+            />
+          </label>
+          <label className="settings-field">
+            <span className="settings-field-label">{t("newProject.language")}</span>
+            <select
+              value={customSelected ? CUSTOM_LANGUAGE_OPTION : languageChoice}
+              aria-label={t("newProject.language")}
+              aria-describedby="new-project-language-hint"
+              onChange={(e) => edit(setLanguageChoice)(e.target.value)}
+            >
+              {AVAILABLE_UI_LANGUAGES.map((tag) => (
+                <option key={tag} value={tag}>{languageSelfName(tag)}</option>
+              ))}
+              {languagePacks.map((pack) => (
+                <option key={pack.tag} value={pack.tag}>{pack.name}</option>
+              ))}
+              <option value={CUSTOM_LANGUAGE_OPTION}>{t("newProject.languageOther")}</option>
+            </select>
+            {customSelected && (
+              <input
+                value={language}
+                aria-label={t("newProject.customLanguage")}
+                aria-invalid={languageError !== null}
+                aria-describedby={languageError ? "new-project-language-hint new-project-language-error" : "new-project-language-hint"}
+                onChange={(e) => { setTouched(true); setLanguageChoice(CUSTOM_LANGUAGE_OPTION); setCustomLanguage(e.target.value); }}
+              />
+            )}
+            <span className="settings-field-hint" id="new-project-language-hint">{t("newProject.languageHint")}</span>
+            {languageError && <span className="field-error" id="new-project-language-error" role="alert">{languageError}</span>}
+          </label>
+          <label className="settings-field">
+            <span className="settings-field-label">{t("newProject.style")}</span>
+            <select
+              value={style}
+              aria-label={t("newProject.style")}
+              onChange={(e) => edit(setStyle)(e.target.value as GroupAddressStyle)}
+            >
+              {STYLES.map((option) => (
+                <option key={option} value={option}>
+                  {t(`newProject.style.${option}`)}
+                </option>
+              ))}
+            </select>
+            <span className="settings-field-hint">{t("newProject.styleHint")}</span>
+          </label>
+          </>
+        )}
+        {visibleStep === "topology" && (
+          <ProjectWizardTopology areas={structure.areas} issues={issuesFor("topology")}
+            onChange={setStructurePart("areas")} t={t} />
+        )}
+        {visibleStep === "building" && (
+          <ProjectWizardBuilding buildings={structure.buildings} issues={issuesFor("building")}
+            onChange={setStructurePart("buildings")} t={t} />
+        )}
+        {visibleStep === "groups" && (
+          <ProjectWizardGroups groupRanges={structure.groupRanges} buildings={structure.buildings} style={style}
+            issues={issuesFor("groups")} onChange={setStructurePart("groupRanges")} t={t} />
+        )}
+        {visibleStep === "review" && (
+          <ProjectWizardReview name={name} installationName={installationName} language={language} style={style}
+            counts={structureCounts(structure)} issues={structureIssues} onGoTo={goTo} t={t} />
+        )}
+        {confirmDiscard && (
+          <section className="project-wizard-discard" role="alert">
+            <p><strong>{t("projectWizard.discard.title")}</strong> {t("projectWizard.discard.body")}</p>
+            <div className="new-project-actions">
+              <button type="button" onClick={() => setConfirmDiscard(false)}>{t("projectWizard.discard.keep")}</button>
+              <button type="button" onClick={close}>{t("projectWizard.discard.confirm")}</button>
+            </div>
+          </section>
+        )}
         {conflict === null && (
           <div className="new-project-actions">
-            <button type="button" onClick={dismiss}>
+            <button type="button" onClick={cancel}>
               {t("newProject.cancel")}
             </button>
-            <button type="submit" className="primary-action" disabled={!canSubmit}>
+            <button type="button" disabled={stepIndex === 0} onClick={() => goTo(steps[stepIndex - 1])}>
+              {t("projectWizard.back")}
+            </button>
+            {stepIndex < steps.length - 1 && (
+              <button type="button" onClick={() => goTo(steps[stepIndex + 1])}>
+                {t("projectWizard.next")}
+              </button>
+            )}
+            <button type="submit" className="primary-action" disabled={!canSubmit}
+              onClick={(e) => {
+                // A click is always a deliberate create, whatever the step.
+                e.preventDefault();
+                void submit(false);
+              }}>
               {busy ? t("newProject.creating") : t("newProject.create")}
             </button>
           </div>
+        )}
+        {conflict === null && structureIssues.length > 0 && (
+          <p className="field-error">{t("projectWizard.issueSummary", { count: structureIssues.length })}</p>
         )}
       </form>
       {conflict !== null && (

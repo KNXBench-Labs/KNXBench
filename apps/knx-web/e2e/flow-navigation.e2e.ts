@@ -43,6 +43,7 @@ async function editor(page: Page, context: BrowserContext) {
   await page.goto("/");
   await page.getByRole("button", { name: "New project…" }).first().click();
   await page.getByRole("dialog", { name: "New project", exact: true }).getByRole("button", { name: "Create project" }).click();
+  await page.getByRole("dialog", { name: "Project created" }).getByRole("button", { name: "Done" }).click();
   await page.getByRole("navigation", { name: "Bus monitor", exact: true }).getByRole("button", { name: "Bus monitor", exact: true }).first().click();
   await page.getByRole("tab", { name: "Flow", exact: true }).click();
   await expect(node(page, "Dimmer")).toBeVisible();

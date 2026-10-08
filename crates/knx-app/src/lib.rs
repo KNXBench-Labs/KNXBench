@@ -21,6 +21,7 @@ pub mod individual_address_programming_recovery;
 pub mod individual_address_reset_recovery;
 pub mod progress;
 pub mod project_readiness;
+pub mod project_seed;
 pub mod serial_address_recovery;
 pub mod serial_number;
 pub mod service_control_backup;

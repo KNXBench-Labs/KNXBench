@@ -1485,10 +1485,33 @@ describe("App — starting a project from scratch", () => {
 
     expect(apiMock.newProject).toHaveBeenCalledTimes(1);
     expect(apiMock.newProject.mock.calls[0][0].discardChanges).toBe(false);
-    // The dialog is gone, and so is the welcome screen it was opened from.
-    expect(host!.querySelector('[role="dialog"]')).toBeNull();
+    // The welcome screen is gone behind the wizard's "created" page
+    // (ADR-0093), which closes on Done.
     expect(host!.querySelector(".welcome-workspace")).toBeNull();
     expect(host!.querySelector(".workbench")?.classList.contains("workbench--welcome")).toBe(false);
+    expect(host!.querySelector('[role="dialog"]')?.textContent).toContain("Project created");
+    await act(async () => {
+      findButton("Done").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector('[role="dialog"]')).toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  it("opens the device catalog from the wizard's Add devices now", async () => {
+    apiMock.newProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+    await act(async () => {
+      findButton("New project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      host!.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await act(async () => {
+      findButton("Add devices now").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector('[role="dialog"]')).toBeNull();
+    expect(host!.querySelector('section.catalog-workspace:not([hidden])')).not.toBeNull();
 
     await act(async () => root.unmount());
   });

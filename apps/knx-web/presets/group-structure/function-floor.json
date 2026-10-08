@@ -1,0 +1,8 @@
+{
+  "format": "knxbench-group-structure-preset",
+  "version": 1,
+  "id": "function-floor",
+  "main": "functions",
+  "middle": "floors",
+  "functions": ["lighting", "shading", "heating", "ventilation", "central"]
+}

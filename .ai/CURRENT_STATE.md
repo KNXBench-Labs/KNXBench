@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-08 12:50 CEST
+- **Completed:** Owner-authorized parameter-workspace delivery integrated with current main ca1ed483. Feature a4a21d7d, initial merge 50a7f373, concurrent-main merge 2046e16a. Final 2388/144 frontend tests, build/types, 278 retained browser checks/24 synthetic requests and all five repository gates green. Full Chromium suite 170 passed on 50a7f373; every tracked frontend byte/config/fixture unchanged after concurrent main integration. Both competing documentation/handover additions preserved.
+- **Pending/Next Steps:** No parameter implementation work remains. Complete remote-ref verification after publishing this metadata. Deployment not requested; do not activate a container or contact hardware.
+- **Notes for Codex oder Claude:** Receipt docs/parameter-workspace/delivery-verification.json; original 2312-test receipt remains historical. Root stale/dirty checkout and all foreign local work preserved; publishing from isolated integration branch. In-session self-review only.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-08 12:37 CEST
 - **Completed:** Owner-authorized parameter-workspace delivery prepared atop origin/main 5a0a39c2 in isolated feature worktree. Only the parameter package integrated; newer Du-form and drag-drop event changes retained. Targeted 67 tests pass. Root dirty work and active deployment untouched.
 - **Pending/Next Steps:** Commit feature, no-ff merge, run merged-source frontend/browser/repository gates, record receipt and push main after green.

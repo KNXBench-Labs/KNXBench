@@ -1,5 +1,14 @@
 # Architecture
 
+## Static marketing companion (2026-10-08)
+
+[ADR-0095](adr/0095-static-marketing-companion.md) keeps `website/` independent
+of the engineering app, domain and server: curated DE/EN HTML, minimal JS, a
+stdlib-only deterministic preview build, hash-inventoried local media and the
+pinned existing story; loopback serving only. No tracking, no new app
+dependency, no live demo and no automatic publication.
+[Website contract](WEBSITE.md).
+
 ## Device parameter inspection tabs (2026-10-08)
 
 [Parameter workspace](PARAMETER_WORKSPACE.md) keeps one UI-owned parameter read

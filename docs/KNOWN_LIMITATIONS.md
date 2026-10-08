@@ -1,5 +1,19 @@
 # Known limitations
 
+## Website is a preview in the repository, not a deployed site
+
+The DE/EN marketing companion is built and browser-checked, not deployed.
+`build.py --release` refuses. The legal notice carries the owner-supplied name,
+address and e-mail (committed on purpose, owner decision 2026-10-08); hosting/privacy details are pending, and nothing here is a
+legal-compliance certification. The story is pinned for local review, not
+approved for publication. Clips show fictional or synthetic data; edited timing
+is no performance or hardware evidence. Chromium desktop/mobile/no-JS checks do
+not certify screen readers, every browser or public hosting. Rolling headlines
+reuse the Story treatment in a separate script; the manual pause is per page,
+OS reduced motion stays authoritative, the tested visibility lifecycle is
+simulated. [Contract and launch gates](WEBSITE.md);
+[ADR-0095](adr/0095-static-marketing-companion.md).
+
 ## LCARS presentation is Chromium-verified, not an executable imported pack
 
 The optional built-in LCARS palette and workbench framing are implemented

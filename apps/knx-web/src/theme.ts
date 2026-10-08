@@ -22,6 +22,7 @@ const PALETTE_THEMES: readonly ThemeDef[] = [
   { id: "porcelain", name: "Porcelain", hasAccentVariations: true },
   { id: "graphite", name: "Graphite", hasAccentVariations: true },
   { id: "cupertino", name: "Cupertino", hasAccentVariations: false },
+  { id: "lcars", name: "LCARS", hasAccentVariations: false },
 ];
 
 /**
@@ -123,11 +124,18 @@ export function useThemeId(): [string, (id: string) => void] {
     const root = document.documentElement;
     const application = pack ? applyThemePack(root, pack, loadAppearance(settingsStorage).accent) : undefined;
     const appliedId = application && !application.ok ? "system" : id;
-    const apply = () => { root.dataset.theme = resolveThemeId(appliedId, query.matches); };
+    const apply = () => {
+      root.dataset.theme = resolveThemeId(appliedId, query.matches);
+      // Built-in presentation only (ADR-0092): imported v1 packs cannot
+      // request geometry or executable effects through metadata/tokens.
+      if (appliedId === "lcars" && !pack) root.dataset.presentation = "lcars";
+      else root.removeAttribute("data-presentation");
+    };
     apply();
     query.addEventListener("change", apply);
     return () => {
       query.removeEventListener("change", apply);
+      root.removeAttribute("data-presentation");
       if (application?.ok) application.release();
     };
   }, [id, revision]);

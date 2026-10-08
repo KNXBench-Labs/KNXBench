@@ -81,7 +81,7 @@ const CRT_ID = "user-modern-retro-green-crt";
 
 test("the Theme dropdown is the only theme list: shipped CRT included, no preview cards, storage location shown", async ({ page }) => {
   const { writes, check } = await fixture(page);
-  await expect(themeSelect(page).locator("option")).toHaveText(["System", "Porcelain", "Graphite", "Cupertino", "Modern Retro Green CRT"]);
+  await expect(themeSelect(page).locator("option")).toHaveText(["System", "Porcelain", "Graphite", "Cupertino", "LCARS", "Modern Retro Green CRT"]);
   await expect(page.getByRole("button", { name: /^Preview/ })).toHaveCount(0);
   await expect(page.locator(".theme-manager-list")).toHaveCount(0);
   await expect(page.locator("[data-theme-storage]")).toContainText("settings.json");

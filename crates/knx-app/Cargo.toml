@@ -13,6 +13,9 @@ knx-etsproj.workspace = true
 knx-productdb.workspace = true
 knx-report.workspace = true
 knx-store.workspace = true
+# Decrypts legacy EX-IM product files with the user's password (`legacy`,
+# ADR-0093); knx-productdb itself must not link key material (ADR-0090).
+knx-secure.workspace = true
 chrono.workspace = true
 # Independent activity/run identity through the existing workspace OS randomness adapter.
 getrandom.workspace = true

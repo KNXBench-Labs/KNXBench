@@ -176,11 +176,13 @@ fn check_layering(root: &Path) -> ExitCode {
     // must not reach the project-import crate or the project store: a
     // .knxprod ingest added later must not have to travel through the
     // .knxproj importer, and product data must stay separable from project
-    // files (ADR-0005).
+    // files (ADR-0005). It must not reach knx-secure either: legacy EX-IM
+    // files are decrypted by knx-app, so the MCP adapter, which links
+    // knx-productdb, links no key material (ADR-0090, ADR-0094).
     violations.extend(layering::forbidden_reachable(
         &graph,
         "knx-productdb",
-        &["knx-etsproj", "knx-store"],
+        &["knx-etsproj", "knx-store", "knx-secure"],
     ));
     // knx-projection turns Project into display-shaped structs for the
     // desktop UI (ADR-0009, Session 5). It must stay exactly as free of IO
@@ -268,7 +270,7 @@ fn check_layering(root: &Path) -> ExitCode {
     if violations.is_empty() {
         println!(
             "layering ok: knx-core reaches none of {:?}; knx-etsproj reaches neither knx-store \
-             nor knx-productdb; knx-productdb reaches neither knx-etsproj nor knx-store; \
+             nor knx-productdb; knx-productdb reaches none of knx-etsproj, knx-store, knx-secure; \
              knx-projection reaches \
              none of {:?}; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; \
              knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \

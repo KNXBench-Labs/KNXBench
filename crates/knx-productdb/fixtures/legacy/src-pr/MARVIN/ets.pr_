@@ -1,0 +1,27 @@
+EX-IM
+N C:\synthetic\ets.pr_
+K ETS3
+K 
+D 2026-10-08 09:00:00
+V 6.2
+H project
+-------------------------------------
+T 4 project
+C1 T4 1 4 N PROJECT_ID
+C2 T4 3 50 Y PROJECT_NAME
+C3 T4 3 20 Y PROJECT_PASSWORD
+R 1 T 4 project
+1
+Synthetic Project
+
+-------------------------------------
+T 7 manufacturer
+C1 T7 1 4 N MANUFACTURER_ID
+C2 T7 3 50 Y MANUFACTURER_NAME
+R 1 T 7 manufacturer
+4242
+Marvin Test
+-------------------------------------
+T 8 application_program
+C1 T8 1 4 N PROGRAM_ID
+XXX

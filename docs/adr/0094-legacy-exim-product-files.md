@@ -178,6 +178,39 @@ Evidence (`[V]` measured on 2026-10-08 unless noted):
   translations and 36 visibility cases. Three deviations remain, each named
   in the test and in the research note; none is adjusted away.
 
+## Amendment: L3 (2026-10-08), upload, password dialog, one remembered password
+
+- **Routes.** `POST /api/catalog/install-legacy` takes multipart `file`,
+  optional `password` and `remember` (`"true"`). Refusals are `422` with a
+  stable `kind`: `legacyPasswordRequired`, `legacyWrongPassword`,
+  `legacyRememberedPasswordDoesNotFit`, `legacyRememberedPasswordUnusable`.
+  `POST /api/catalog/install` names a legacy product database (by `.vd3`–
+  `.vd5` name or by content) as `422 legacyProductDatabase`, so the client
+  can move on; `.pr*` stays a plain `400`. `GET`/`DELETE
+  /api/legacy-password` report and forget the remembered password, never
+  its value.
+- **Password policy** (`knx_app::legacy::open_with_password_policy`): a
+  non-empty given password wins; without one, the one remembered password
+  is tried; otherwise `PasswordRequired`. Nothing else is ever tried, and an
+  unencrypted file needs none. A remembered password that does not open the
+  file is its own refusal, so the dialog can say which one failed.
+- **Remembered password** (`RememberedPassword`, grilling Q3/Q12): one plain
+  file, `$XDG_CONFIG_HOME/knx/legacy-vd-password` (else
+  `$HOME/.config/knx/…`), mode 0600 in a directory created 0700, written to
+  a temporary file and renamed. A file group or others may read is refused,
+  not used, and so is one whose first line is empty. Concurrent stores
+  write separate temporary files, so one cannot delete the other's. It is
+  remembered only when asked and only after the import with that password
+  succeeded. Only `AppState::with_user_product_db` (the server binary and
+  the desktop app) points at it; tests use temporary directories.
+- **CLI.** `knx products legacy-password set|forget|status` (set reads stdin
+  or a file; argv is refused), and `import-legacy --remember`.
+- **Web.** One `ProductInstallControl` serves the catalog and the device
+  wizard: a `.vd*` goes to the legacy route, a renamed one follows the
+  `legacyProductDatabase` refusal, and a password refusal opens
+  `LegacyPasswordDialog` (with "Remember"). Settings show whether one is
+  remembered and forget it.
+
 ## Alternatives considered
 
 - **Built-in or "known" password.** Rejected. VD4_PRODUCT_DATABASE_IMPORT.md

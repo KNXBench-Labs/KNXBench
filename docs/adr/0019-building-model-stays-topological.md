@@ -12,7 +12,7 @@ devices, as keyboard-navigable hierarchies. `apps/knx-web/src/StructureWorkspace
 says so in its own header — "no invented physical coordinates". What was
 left open was a spatial canvas or floor-plan editor, and the reason it was
 left open was that the domain model has no notion of *where* anything is.
-[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/aa0ff14ff536/docs/GAP_ANALYSIS_ETS.md) D1/D2 and `goal.md` §3 both
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md) D1/D2 and `goal.md` §3 both
 record it as "needs a domain decision about coordinates before it needs a
 UI". This is that decision.
 

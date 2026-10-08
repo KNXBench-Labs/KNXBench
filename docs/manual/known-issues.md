@@ -81,7 +81,7 @@ the private repository, and the version number is not a promise that anything is
 - **Consequence:** the common ETS habit of copying a working subsystem out of
   an old project has no equivalent here.
 - **Workaround:** none.
-- **Details:** [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/aa0ff14ff536/docs/GAP_ANALYSIS_ETS.md), row C3
+- **Details:** [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md), row C3
 
 ## Export
 
@@ -126,7 +126,7 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   can still be refused. A picker filter is guidance, not format validation.
 - **Workaround:** obtain the product as a `.knxprod` package.
 - **Details:** [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md),
-  [UI follow-up evidence](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md)
+  [UI follow-up evidence](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md)
 
 ### Some newer `.knxprod` master-data schemes are not installable directly
 
@@ -243,7 +243,7 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   offline recovery/abort/restore contracts remain implementation requirements.
   This documentation notice is not a claim that an in-app warning is wired up.
 - **Details:** [Commissioning history contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md),
-  [commissioning goal](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/goal-commission.md).
+  [commissioning goal](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/goal-commission.md).
 
 ### There is no address reset in the app
 

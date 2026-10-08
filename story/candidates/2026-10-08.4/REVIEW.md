@@ -1,8 +1,8 @@
-# Review checklist for candidate 2026-10-08.3
+# Review checklist for candidate 2026-10-08.4
 
 This candidate is **private** and **not approved for publication**. Preparing it does not
 approve it. Publication needs a separate, explicit approval of exactly
-`story_sha256 = ac02cbb4e7e1fcaa6fd394c935976535b0db64782699304154d24e3bfaf01821`; any later change needs a new approval.
+`story_sha256 = 347dfcfbff359f7387a9336412071dac34891dc70a30e6ac69519d0a55b1e0a2`; any later change needs a new approval.
 
 ## Manual checks
 

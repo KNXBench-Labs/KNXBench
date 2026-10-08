@@ -81,7 +81,7 @@ Origin advanced again to a642eaf98c09cc6ddc6a1820affff6d0fdd4c927 (device wizard
 
 ## Verified main publication and live activation
 
-Source merge 6711af9a published; feature c0237937/test fix8ccc6958, KNXBench.com
+Source merge 37e7f642 published; feature 490eed98/test fix8ccc6958, KNXBench.com
 identity/no co-author. Joined latest main (5d979361) passed 2375/143 frontend,
 170 Chromium, 54 native workbench, targeted seed/device/legacy synthetic and
 full repo/build/type gates on frozen complete app/crate source. No stale forced

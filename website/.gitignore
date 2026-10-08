@@ -1,0 +1,4 @@
+# Website-only generated files; app and story outputs have their own rules.
+/dist/
+/output/
+__pycache__/

@@ -1,5 +1,30 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Marketing website lands in the repository (ADR-0095)
+
+- **Why:** the DE/EN marketing companion for knxbench.com was built by Codex
+  on 2026-10-08 in the shared root checkout and never committed; the root sync
+  after the public launch parked it on a local branch. This package delivers it.
+- **What it is:** `website/`, a static site independent of the app, core and
+  server: curated DE/EN pages (English at `/`), minimal JS, Story-style rolling
+  headlines with live reduced-motion/pause handling, a stdlib-only
+  deterministic builder, a loopback-only preview server, hash-inventoried
+  self-hosted media (three real-app clips with DE/EN captions, theme
+  screenshots, OFL fonts) and the pinned existing story. Contract:
+  [WEBSITE.md](WEBSITE.md).
+- **Changed on delivery:** ADR renumbered 0094 → 0095 (number taken by the
+  legacy EX-IM ADR meanwhile); the archived manual-acceptance link pinned; the
+  launch note now says repository and downloads are public and the site is
+  still a preview (DE/EN content and the browser recipe's assertion); the five
+  historical per-step receipt files dropped (they bound earlier local
+  candidates). Launch gate 2 (public entry points) is done: repository,
+  manual, Docker guide, releases page, the alpha.5 AppImage and the
+  contributions repository answered signed out. The imprint's name and postal
+  address are committed on purpose (owner decision 2026-10-08).
+- **Not done:** no deployment, no Pages workflow, `build.py --release` still
+  refuses. Open launch gates: deployment go and release-mode design, exact
+  story edition approval, host-specific privacy page, domain/DNS/HTTPS.
+
 ## 2026-10-08 — Public launch: history purged of third-party files, repository public
 
 - **Why:** the user decided to make the repository public. An audit of every

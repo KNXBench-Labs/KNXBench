@@ -84,3 +84,14 @@ This is Chromium/self-review evidence, not native WebKitGTK/Orca, Firefox,
 complete accessibility certification or an official licensed series product.
 Light mode, sounds, arbitrary CSS import and workflow redesign are out of scope.
 See [LCARS guide](../DESIGN_LCARS.md) for operation and verification boundaries.
+
+## LCARS ambient timing reference and live rollout
+
+The header/emblem cycles use the existing transition-duration token, not a
+separate clock setting. Standard 10s/16s and Subtle 18s/24s are reference
+periods at 200ms and 120ms respectively. Existing timing overrides scale the
+periods: the verified live Standard token `.25s` gives 12.5s/20s. No saved
+timing preference is overwritten. Off and OS reduced motion cancel the
+effects immediately. Source/image/live proof is recorded in
+`docs/design-studies/lcars/ambient-deployment-verification.json` relative to
+the repository root.

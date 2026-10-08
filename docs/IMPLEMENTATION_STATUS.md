@@ -1,5 +1,27 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Calm LCARS ambient source published and activated
+
+- Tested merge **6711af9a** is published on main and stamped into matching Docker
+  client/server image; feature **c0237937**, keyboard-test correction **8ccc6958**.
+  Parallel wizard/achievement/localization/legacy main source retained.
+- Frozen complete app/crate source: **2375 frontend / 143 files**, **170 Chromium**,
+  **54 native production-workbench assertions**, targeted Rust/synthetic legacy,
+  build/types and five repository gates. In-session self-review only.
+- Isolated HTTPS/auth/PID1 probe: all **89 frontend assets** match exercised build;
+  both handlers installed, graceful stop **0 in 0.27s**; probe/volume removed.
+- Fresh authenticated pre-stop: no modified project/download/address session.
+  Live **3b65051a**: HTTPS/version/login/all-89-assets/runtime/bind/env/hostname/
+  restart/log/TLS-fingerprint readback accepted. Checksum equality is scoped to
+  **4 explicitly inventoried noncredential files**, not all database sidecars.
+- Saved LCARS/Standard preference retained; vault login succeeds and both native
+  ambient clocks advance. Actual `.25s` token gives **12.5s/20s**; 10s/16s and
+  18s/24s are reference-token periods, not forced overrides. No user setting changed.
+- Rollback **knxbench-pre-ambient-20261008** and earlier LCARS rollback retained.
+  Receipt: `design-studies/lcars/ambient-deployment-verification.json`. No tag,
+  hardware request, native WebKitGTK/Orca/full accessibility certification.
+
+
 ## 2026-10-08 — Calm LCARS ambient animation follow-up (integrated publication accepted)
 
 - **Final merge with main `5d979361`:** **2,375 frontend / 143 files**, **170 Chromium**, **54 native workbench assertions**, **83 targeted Rust tests** including synthetic legacy container/grammar/password/CLI controls, build/types/five repo gates on frozen full app/crate source. Both wizards, achievement timing and latest localization/legacy inspection preserved. Proof: `design-studies/lcars/ambient-merged-verification.json`; earlier receipts remain source-specific history. No private-corpus or hardware claim. Image/probe/live acceptance pending.

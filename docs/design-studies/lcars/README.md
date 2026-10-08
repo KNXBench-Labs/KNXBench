@@ -14,7 +14,10 @@ historical 2332/158/54 local-only source receipt; neither receipt alone proves
 live deployment.
 Latest both-wizards/achievement/ambient candidate: `ambient-publication-verification.json`
 (2373 frontend / 142 files, 170 Chromium, 54 workbench, 27 targeted Rust checks).
-Its image/live result is recorded separately after actual activation.
+Final merged-source and actual live acceptance: `ambient-merged-verification.json`
+and `ambient-deployment-verification.json` (6711af9a, 2375/143 frontend, 170 Chromium,
+54 workbench, real live two-clock progression). Existing duration-token overrides
+remain effective; the live `.25s` token gives 12.5s/20s.
 
 ## Design tokens and composition
 

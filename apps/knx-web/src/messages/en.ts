@@ -484,6 +484,17 @@ export const messages = {
   "buildingPartKind.segment": "Segment",
 
   // `ParameterPanel.tsx`.
+  "parameters.diagnosticsTab": "Diagnostics",
+  "parameters.restrictedTab": "Manufacturer fields",
+  "parameters.restrictedDescription": "These fields are read-only or hidden by the manufacturer. They are shown here for inspection only; editing is not permitted.",
+  "parameters.accessNoneCaption": "Hidden by the manufacturer (Access None); inspection only.",
+  "parameters.accessReadCaption": "Read-only by the manufacturer (Access Read); editing is not permitted.",
+  "parameters.noDiagnostics": "No parameter evaluation warnings or notes.",
+  "parameters.noRestrictedFields": "No manufacturer-restricted fields in the evaluated sections.",
+  "parameters.noUserFields": "No user-accessible fields in the evaluated sections. Check Manufacturer fields and Diagnostics.",
+  "parameters.occurrences": "{count} occurrences",
+  "parameters.technicalDetails": "Technical details",
+
   "parameters.deviceScope": "Device",
   "parameters.moduleNumber": "Module #{number}",
   "untranslated.label": "Untranslated ({source})",
@@ -495,7 +506,7 @@ export const messages = {
   "parameters.untranslated.summary.other": "{count} fields are not fully translated into {language}; they show the program's own text ({source}).",
   "parameters.untranslated.summaryUnknown.one": "{count} field is not fully translated into {language}; it shows the program's own text.",
   "parameters.untranslated.summaryUnknown.other": "{count} fields are not fully translated into {language}; they show the program's own text.",
-  "parameters.readOnlyCaption": "Not editable here — see the warnings for why.",
+  "parameters.readOnlyCaption": "Not editable here — see Diagnostics for the reason.",
   "parameters.sharedReadOnlyCaption":
     "Shared across every instantiation of this module; not editable here — see the diagnostics for why.",
   "parameters.staleValuesHeading": "Stale values ({count})",
@@ -533,7 +544,7 @@ export const messages = {
     "Two or more imported module instances share this module; its fields are read-only.",
   "parameters.diagnostic.malformedModuleInstanceId":
     "An imported module instance's identifier has an unexpected shape; this module's fields are read-only.",
-  "parameters.diagnostic.noBranchMatched": "A choice did not match any of its options.",
+  "parameters.diagnostic.noBranchMatched": "No option matches the current controlling value; no branch was selected for this choice.",
   "parameters.diagnostic.unparsableTest": "A choice's condition could not be understood.",
   "parameters.diagnostic.unresolvedParamRef": "A choice's controlling parameter could not be found.",
   "parameters.diagnostic.nonNumericValue": "A choice's controlling value was not a valid number.",

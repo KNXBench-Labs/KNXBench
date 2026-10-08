@@ -1,5 +1,14 @@
 # Architecture
 
+## Device parameter inspection tabs (2026-10-08)
+
+[Parameter workspace](PARAMETER_WORKSPACE.md) keeps one UI-owned parameter read
+model shared by Parameters, Diagnostics and Manufacturer fields. Pure
+presentation grouping preserves all raw diagnostic occurrences/scope;
+manufacturer Access Read/None fields move to inspection-only views without
+changing backend authority, DTOs, storage or KNX semantics. No extra fetch on
+tab switches. ADR-0080 presentation amendment documents the replaced fold.
+
 ## LCARS built-in presentation (2026-10-08)
 
 [ADR-0092](adr/0092-lcars-built-in-presentation.md) separates the complete LCARS

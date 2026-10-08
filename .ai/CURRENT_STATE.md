@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-08 12:37 CEST
+- **Completed:** Owner-authorized parameter-workspace delivery prepared atop origin/main 5a0a39c2 in isolated feature worktree. Only the parameter package integrated; newer Du-form and drag-drop event changes retained. Targeted 67 tests pass. Root dirty work and active deployment untouched.
+- **Pending/Next Steps:** Commit feature, no-ff merge, run merged-source frontend/browser/repository gates, record receipt and push main after green.
+- **Notes for Codex oder Claude:** UI-only Parameters/Diagnostics/Manufacturer fields. No backend/KNX schema/bus change. No deployment authorization; historical 2312/278 receipt describes earlier root snapshot, not new merged source.
+
+---
+
 - **Last Agent:** Claude (legacy VD L2)
 - **Timestamp:** 2026-10-08 12:07 CEST
 - **Completed:** L2 of legacy ETS3 product databases (ADR-0094, Amendment: L2): `knx_productdb::legacy::{map_legacy_database, publish_legacy}` publish every application program of a `.vd3`/`.vd4`/`.vd5` into the product DB in one transaction (ids `M-<hex>_A-LX<sha8>-<PROGRAM_ID>`; catalog, grouped/union parameters, enums, overrides, visibility tree, objects, 5 languages), schema v22 provenance tables, download refused as `CodeError::LegacyProgram`, `knx_app::legacy::import_legacy_file`, CLI `knx products import-legacy` (decrypts before opening the DB). Oracle N000520 vs ETS 6.3: three named deviations only; both real files pinned. Mutation sweep 20/20 named. Full gate green (see IMPLEMENTATION_STATUS), product-matrix commitment re-pinned for the four empty v22 tables (v16 projection proved unchanged). Log: `.ai/logs/2026-10-08_claude_legacy-vd-l2-publish.md`.

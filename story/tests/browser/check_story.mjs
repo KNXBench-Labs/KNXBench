@@ -83,17 +83,21 @@ async function scrollToChapter(page, number) {
 async function narrative(page, label) {
   const visibleCounts = [];
   const chapters = [];
-  for (let n = 1; n <= 8; n += 1) {
+  // The chapter count comes from the edition itself, so new chapters need no harness change.
+  const chapterCount = await page.evaluate(() => JSON.parse(document.getElementById("story-data").textContent).chapters.length);
+  for (let n = 1; n <= chapterCount; n += 1) {
     await scrollToChapter(page, n);
     chapters.push(await state(page, "chapter"));
     visibleCounts.push(await page.$$eval("#story-graph .node:not(.is-hidden)", (nodes) => nodes.length));
   }
   const total = await totalSteps(page);
-  check(`${label}: scrolling advances through all eight chapters`, chapters.join() === "0,1,2,3,4,5,6,7", chapters);
+  const expected = Array.from({ length: chapterCount }, (_, index) => index).join();
+  check(`${label}: scrolling advances through all ${chapterCount} chapters`, chapterCount > 0 && chapters.join() === expected, chapters);
   const grows = visibleCounts.every((count, index) => index === 0 || count > visibleCounts[index - 1]);
-  check(`${label}: the tree grows with every chapter and ends complete`, grows && visibleCounts[7] === total, visibleCounts);
+  check(`${label}: the tree grows with every chapter and ends complete`, grows && visibleCounts[chapterCount - 1] === total, visibleCounts);
   const progress = await page.textContent("#graph-progress");
-  check(`${label}: progress text reports the final state`, progress.includes(`Chapter 8 of 8 · ${total} of ${total} steps`), progress);
+  check(`${label}: progress text reports the final state`,
+    progress.includes(`Chapter ${chapterCount} of ${chapterCount} · ${total} of ${total} steps`), progress);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   check(`${label}: no horizontal page overflow`, overflow <= 1, overflow);
 }
@@ -142,11 +146,12 @@ async function atlas(page, label, mobile) {
   await page.fill("#atlas-search", "");
   await page.click('.chip[data-strand="bus"]');
   const pressed = await page.getAttribute('.chip[data-strand="bus"]', "aria-pressed");
-  const focusDims = await page.$$eval("#atlas-canvas .node", (nodes) => nodes.every((node) => {
-    const bus = ["live-bus-first", "test-transmitting-building", "first-device-programmed", "fail-closed-writes"]
-      .includes(node.dataset.event);
-    return bus === !node.classList.contains("is-dimmed");
-  }));
+  const focusDims = await page.$$eval("#atlas-canvas .node", (nodes) => {
+    // Bus steps come from the edition, so new bus steps need no harness change.
+    const data = JSON.parse(document.getElementById("story-data").textContent);
+    const busSteps = new Set(data.events.filter((event) => event.strand === "bus").map((event) => event.id));
+    return busSteps.size > 0 && nodes.every((node) => busSteps.has(node.dataset.event) === !node.classList.contains("is-dimmed"));
+  });
   check(`${label}: strand focus highlights only the bus strand`, pressed === "true" && focusDims, pressed);
   await page.click('.chip[data-strand=""]');
 

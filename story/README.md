@@ -33,10 +33,10 @@ Run from this directory.
 ```bash
 python3 -m storytool validate
 python3 -m storytool prepare --private-provenance ../../KNXBench.story-private/provenance.json
-python3 -m storytool build 2026-10-08.2          # writes dist/2026-10-08.2/index.html
-python3 -m storytool build 2026-10-08.2 --preview  # writes previews/2026-10-08.2.html (commit it)
-python3 -m storytool serve 2026-10-08.2          # http://127.0.0.1:8765/, loopback only
-python3 -m storytool release-check 2026-10-08.2 --approval <approval.json>
+python3 -m storytool build 2026-10-08.3          # writes dist/2026-10-08.3/index.html
+python3 -m storytool build 2026-10-08.3 --preview  # writes previews/2026-10-08.3.html (commit it)
+python3 -m storytool serve 2026-10-08.3          # http://127.0.0.1:8765/, loopback only
+python3 -m storytool release-check 2026-10-08.3 --approval <approval.json>
 python3 -m storytool publish                     # always refuses, exit code 3
 ```
 
@@ -101,13 +101,25 @@ record naming the exact `story_sha256` of one candidate
 `approved_by`, `approved_at`). `release-check` only verifies that match; no
 deployment step exists. Any change after approval needs a new approval.
 
-## Source archaeology, editions 2026-10-04 and 2026-10-05
+## Source archaeology, editions 2026-10-04 to 2026-10-08
 
-Pinned baseline: published history `origin/main` at
-`75ad9650351f80fd147d683f3a6aeb34ec0dfd64` (4 October 2026, 00:42 CEST), 1,909
-commits from 2 September 2026. When this edition was started, the shared root
-checkout was 112 commits behind it; the root is not the baseline. Edition `.2` adds this story's own local,
-unpublished worktree as a separately labelled source.
+Pinned baseline since edition `2026-10-08.3`: published history `origin/main` at
+`6a1ba6ae5d54b8308326e55a28ee7beaa5e280a5` (8 October 2026, 13:18 CEST), 2,295
+commits from 2 September 2026. The first editions were pinned to the 4 October
+state (old hash `75ad9650…`, now `4a4e89b3`).
+
+**Hashes after the 7 October rewrite.** On 7 October the whole history was
+rewritten to the single identity `KNXBench <github@knxbench.com>`, so every
+commit hash changed. Edition `2026-10-08.3` remapped all commit references
+through `docs/history/COMMIT_MAP_2026-10-07.txt` (each one unique, each one an
+ancestor of the pinned baseline). Later editions must cite current hashes only.
+
+Edition `2026-10-08.3` adds 13 steps from 4 to 8 October 2026 (exact-or-refused
+save, telegram flow, independent alpha review, first alpha and its replacement,
+one project identity, built-in HTTPS, evidence of record, achievements and fun
+languages, LCARS, read-only MCP, wizards, legacy ETS3 product files, goals
+closed) and a ninth chapter. Sources: Git, ADRs 0067–0094, the implementation
+status and user prompts in the project's Hermes profile up to the cutoff.
 
 Read locally, KNXBench-attributable only:
 
@@ -116,7 +128,7 @@ Read locally, KNXBench-attributable only:
   `KNX`, the renamed `KNXBench` folder, its worktrees and `knx-spec-kb`
   (2–24 September), plus `~/.claude/history.jsonl`.
 - Codex: 202 project threads (7–25 September) plus `~/.codex/history.jsonl`.
-- Hermes: 81 sessions in the `knxbench` profile (22 September – 4 October) and
+- Hermes: 120 sessions in the `knxbench` profile (22 September – 8 October) and
   cwd-filtered project sessions in the default profile.
 - Paperclip: local database backups (25–27 September); only the issue, agent,
   goal, project and company tables. Secret and credential tables, `.env` files

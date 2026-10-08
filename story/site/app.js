@@ -179,9 +179,15 @@
       else kept.push({ y, box });
     });
     let lastRow = -Infinity;
+    // Date labels sit left of the lanes; a step label reaching into that column wins over the date.
+    const dateRight = (geometry.left_gutter - 14) * scale;
     graph.dateLabels.forEach(({ label, row }) => {
       if (!dateVisible(row)) return;
-      const show = (row - lastRow) * geometry.row_height * scale >= 15;
+      const y = (geometry.top_margin + row * geometry.row_height) * scale;
+      const width = label.textContent.length * 7.6 * 0.85 + 6;
+      const covered = kept.some((other) => Math.abs(other.y - y) < 14 &&
+        other.box[0] < dateRight && dateRight - width < other.box[1]);
+      const show = !covered && (row - lastRow) * geometry.row_height * scale >= 15;
       label.classList.toggle("date-thinned", !show);
       if (show) lastRow = row;
     });

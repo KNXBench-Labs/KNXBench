@@ -14,18 +14,18 @@ use knx_productdb::legacy::{
 /// Bytes read from a `--password-file`; far beyond any real password line.
 const MAX_PASSWORD_FILE_READ: u64 = 4096;
 
-enum PasswordSource {
+pub(crate) enum PasswordSource {
     None,
     Stdin,
     File(String),
 }
 
-struct Args {
-    file: String,
-    password: PasswordSource,
+pub(crate) struct Args {
+    pub(crate) file: String,
+    pub(crate) password: PasswordSource,
 }
 
-fn parse(args: &[String]) -> Result<Args, String> {
+pub(crate) fn parse(args: &[String]) -> Result<Args, String> {
     let mut file = None;
     let mut password = PasswordSource::None;
     let mut i = 0;
@@ -76,7 +76,7 @@ fn first_line(text: &str) -> Result<LegacyPassword, String> {
     Ok(LegacyPassword::new(line))
 }
 
-fn read_password(source: &PasswordSource) -> Result<Option<LegacyPassword>, String> {
+pub(crate) fn read_password(source: &PasswordSource) -> Result<Option<LegacyPassword>, String> {
     match source {
         PasswordSource::None => Ok(None),
         PasswordSource::Stdin => {
@@ -100,7 +100,7 @@ fn read_password(source: &PasswordSource) -> Result<Option<LegacyPassword>, Stri
     }
 }
 
-fn read_bounded(file: &str) -> Result<Vec<u8>, String> {
+pub(crate) fn read_bounded(file: &str) -> Result<Vec<u8>, String> {
     let len = std::fs::metadata(file)
         .map_err(|e| format!("failed to read {file}: {e}"))?
         .len();
@@ -182,6 +182,9 @@ fn diagnostic_line(diagnostic: &ExImDiagnostic) -> String {
         ExImDiagnostic::Windows1252OnlyBytes { count } => format!(
             "{count} byte(s) in 0x80-0x9F, decoded as Windows-1252 (ISO-8859-1 would differ)"
         ),
+        ExImDiagnostic::UnknownEscapes { count } => {
+            format!("{count} backslash(es) in values start no known escape; kept verbatim")
+        }
     }
 }
 

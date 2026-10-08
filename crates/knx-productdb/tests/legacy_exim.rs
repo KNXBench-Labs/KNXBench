@@ -376,3 +376,53 @@ fn a_value_that_starts_with_the_continuation_prefix_is_refused_not_guessed() {
     let (line, reason) = syntax_line(parse_exim(&payload(&text)));
     assert_eq!(line, 11, "{reason}");
 }
+
+/// One manufacturer row whose name is `name` (raw EX-IM text, escapes
+/// included), optionally followed by continuation lines.
+fn with_name(name_lines: &str) -> Vec<u8> {
+    payload(&MINIMAL.replace("Marvin Test", name_lines))
+}
+
+#[test]
+fn value_escapes_are_decoded_and_the_raw_bytes_kept() {
+    // Measured in real files: `\'`, `\r`, `\n` and `\\` (ETS's own
+    // conversion shows `\'` as `'`).
+    let doc = parse_exim(&with_name(r"l\'objet\r\nC:\\ETS3")).unwrap();
+    let table = doc.table("manufacturer").unwrap();
+    assert_eq!(table.text(0, 1), "l'objet\r\nC:\\ETS3");
+    assert_eq!(table.raw(0, 1), br"l\'objet\r\nC:\\ETS3");
+    assert!(doc.diagnostics().is_empty(), "{:?}", doc.diagnostics());
+}
+
+#[test]
+fn an_escape_split_across_a_continuation_is_decoded_after_joining() {
+    let doc = parse_exim(&with_name("first line ends in a backslash\\\n\\\\rsecond")).unwrap();
+    assert_eq!(
+        doc.table("manufacturer").unwrap().text(0, 1),
+        "first line ends in a backslash\rsecond"
+    );
+}
+
+#[test]
+fn unknown_escapes_are_kept_verbatim_and_reported() {
+    let doc = parse_exim(&with_name(r"tab\there\")).unwrap();
+    assert_eq!(doc.table("manufacturer").unwrap().text(0, 1), r"tab\there\");
+    assert_eq!(
+        doc.diagnostics(),
+        [ExImDiagnostic::UnknownEscapes { count: 2 }]
+    );
+}
+
+#[test]
+fn header_paths_keep_their_single_backslashes() {
+    // `N` holds a raw Windows path, not an escaped value.
+    let doc = parse_exim(&payload(
+        &MINIMAL.replace("N C:\\x\\ets.vd_", r"N C:\Program Files\ets.vd_"),
+    ))
+    .unwrap();
+    assert!(doc
+        .header()
+        .iter()
+        .any(|(k, v)| k == "N" && v == r"C:\Program Files\ets.vd_"));
+    assert!(doc.diagnostics().is_empty(), "{:?}", doc.diagnostics());
+}

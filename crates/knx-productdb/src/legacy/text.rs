@@ -39,6 +39,61 @@ pub(crate) fn windows_1252_only_bytes(bytes: &[u8]) -> usize {
     bytes.iter().filter(|b| (0x80..=0x9F).contains(*b)).count()
 }
 
+/// Value escapes, measured in every real file at hand (after continuation
+/// lines are joined): `\'`, `\r`, `\n` and `\\`. ETS's own conversion
+/// shows `\'` as `'`. Header lines are not values and are not escaped.
+fn escaped(byte: u8) -> Option<char> {
+    match byte {
+        b'r' => Some('\r'),
+        b'n' => Some('\n'),
+        b'\'' => Some('\''),
+        b'\\' => Some('\\'),
+        _ => None,
+    }
+}
+
+/// Resolves the known value escapes. An unknown one, or a backslash at the
+/// end, stays verbatim (and is counted by [`unknown_escapes`]).
+pub(crate) fn unescape(text: Cow<'_, str>) -> Cow<'_, str> {
+    if !text.contains('\\') {
+        return text;
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars();
+    while let Some(c) = chars.next() {
+        if c != '\\' {
+            out.push(c);
+            continue;
+        }
+        let rest = chars.as_str();
+        match rest.bytes().next().and_then(escaped) {
+            Some(resolved) => {
+                out.push(resolved);
+                chars.next();
+            }
+            None => out.push('\\'),
+        }
+    }
+    Cow::Owned(out)
+}
+
+/// Counts backslashes in raw value bytes that start no known escape.
+pub(crate) fn unknown_escapes(bytes: &[u8]) -> usize {
+    let mut count = 0;
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'\\' {
+            if bytes.get(i + 1).copied().and_then(escaped).is_some() {
+                i += 2;
+                continue;
+            }
+            count += 1;
+        }
+        i += 1;
+    }
+    count
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

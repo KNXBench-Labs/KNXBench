@@ -26,7 +26,7 @@
 use std::borrow::Cow;
 
 use super::error::LegacyError;
-use super::text::{decode_windows_1252, windows_1252_only_bytes};
+use super::text::{decode_windows_1252, unescape, unknown_escapes, windows_1252_only_bytes};
 
 /// Type codes seen in the measured files: `1 4`, `2 2`, `3 n`, `4 32767`,
 /// `5 8`, `6 16`/`6 255`, `8 32767`. Their meaning is undocumented.
@@ -99,6 +99,9 @@ pub enum ExImDiagnostic {
     /// Value bytes in `0x80`–`0x9F`, where Windows-1252 and ISO-8859-1
     /// disagree; decoded as Windows-1252.
     Windows1252OnlyBytes { count: usize },
+    /// Backslashes in values that start none of the measured escapes
+    /// (`\'`, `\r`, `\n`, `\\`); kept verbatim.
+    UnknownEscapes { count: usize },
 }
 
 /// One declared column.
@@ -158,9 +161,10 @@ impl ExImTable {
         &self.arena[start as usize..end as usize]
     }
 
-    /// One value decoded as Windows-1252.
+    /// One value decoded as Windows-1252, with the value escapes (`\'`,
+    /// `\r`, `\n`, `\\`) resolved. [`ExImTable::raw`] keeps the bytes.
     pub fn text(&self, row: usize, column: usize) -> Cow<'_, str> {
-        decode_windows_1252(self.raw(row, column))
+        unescape(decode_windows_1252(self.raw(row, column)))
     }
 
     /// One value by column name; `None` when the column is not declared.
@@ -355,6 +359,7 @@ struct Parser<'a> {
     values: usize,
     continuation_lines: usize,
     high_control_bytes: usize,
+    unknown_escapes: usize,
 }
 
 impl<'a> Parser<'a> {
@@ -373,6 +378,7 @@ impl<'a> Parser<'a> {
             values: 0,
             continuation_lines: 0,
             high_control_bytes: 0,
+            unknown_escapes: 0,
         }
     }
 
@@ -405,6 +411,11 @@ impl<'a> Parser<'a> {
         if self.high_control_bytes > 0 {
             self.diagnostics.push(ExImDiagnostic::Windows1252OnlyBytes {
                 count: self.high_control_bytes,
+            });
+        }
+        if self.unknown_escapes > 0 {
+            self.diagnostics.push(ExImDiagnostic::UnknownEscapes {
+                count: self.unknown_escapes,
             });
         }
         Ok(ExImDocument {
@@ -617,6 +628,7 @@ impl<'a> Parser<'a> {
             }
             let value = &table.arena[start..end];
             self.high_control_bytes += windows_1252_only_bytes(value);
+            self.unknown_escapes += unknown_escapes(value);
             if value.is_empty() && !table.columns[column].nullable {
                 *empty += 1;
             }

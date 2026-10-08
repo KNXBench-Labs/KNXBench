@@ -94,7 +94,7 @@ the oldest summaries and describe the project as it was then, not now.
   focused tests before source restoration.
 - No hardware connection or device write occurred in this UI package.
 - Scope and remaining limits: [KNOWN_LIMITATIONS.md](../KNOWN_LIMITATIONS.md#146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined)
-  and the ISSUE-08 row in the [issue plan](../superpowers/plans/2026-09-21-user-reported-issues.md#issue-08-product-data-fidelity-and-communication-object-organization).
+  and the ISSUE-08 row in the [issue plan](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/plans/2026-09-21-user-reported-issues.md#issue-08-product-data-fidelity-and-communication-object-organization).
 
 ## 2026-09-30 — U12 / ISSUE-05 structure editor (published on main)
 
@@ -1808,7 +1808,7 @@ PDB-10 pin); see PRODUCT_DATABASE_CORPUS for the identity aggregates.
 ## 2026-09-28 — Claude Code cloud sessions prepared (tooling, no product change)
 
 - **Files:**
-  - [`docs/CLOUD_SESSIONS.md`](../archive/CLOUD_SESSIONS.md) states what a cloud session
+  - [`docs/CLOUD_SESSIONS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/CLOUD_SESSIONS.md) states what a cloud session
     can and cannot do. It has no corpus, no bus, and its results are
     integrated locally.
   - The same file holds the one-time environment configuration and five task
@@ -2623,11 +2623,11 @@ in scope.
 | Session | Scope | Status |
 | --- | --- | --- |
 | 0 | Technical research | **Done** — see [RESEARCH.md](../RESEARCH.md) |
-| 1 | Architecture | **Done** — see [ARCHITECTURE.md](../ARCHITECTURE.md), [adr/](../adr), [design spec](../superpowers/specs/2026-09-02-knx-architecture-design.md) |
+| 1 | Architecture | **Done** — see [ARCHITECTURE.md](../ARCHITECTURE.md), [adr/](../adr), [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-02-knx-architecture-design.md) |
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](../DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](../IMPORT_EXPORT.md), [COMPATIBILITY.md](../COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](../IMPORT_EXPORT.md), [ADR-0011](../adr/0011-product-database-storage.md), [ADR-0012](../adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](../superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](../superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](../superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](../superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](../superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](../superpowers/specs/2026-09-04-dashboard-design.md)), cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) — CLAUDE.md's full UI/UX deliverable list complete as of cycle 9 — and cycle 10 (a toast notification stack replacing the old persistent error banner, humor-wrapped error text, and a one-shot holiday/late-night startup toast, [design spec](../superpowers/specs/2026-09-05-toast-easter-eggs-design.md)) and cycle 11 (user-customizable theme tokens — accent/background/surface/text — plus a three-level motion setting, layered on top of the cycle 7 theme toggle, via a new `ThemePanel.tsx`) and cycle 12 (device and communication-object descriptions are now editable, not just displayed: `Command::SetDeviceDescription` and `Command::SetComObjectDescription`/`RestoreComObjectDescription` clone the `SetIndividualAddress`/`SetComObjectDpt` command-layer pattern exactly, wired through `knx-store::command_sync`, `knx-server`'s `/api/device-description` and `/api/com-object-description` routes, and two new `Inspector.tsx` fields; `ComObjectNode` also gains `description`/`description_layer` so a communication object's description — modelled and persisted since Session 5 cycle 2 but never shown — is finally visible at all. An ETS feature audit done alongside this found no other silently-missing field: `GroupAddress`/`GroupRange`/`BuildingPart` genuinely carry no `Description` attribute in the one schema-11 project this project's evidence comes from — see [KNOWN_LIMITATIONS.md #1](../KNOWN_LIMITATIONS.md#1-single-sample-bias), not a bug here) and cycle 13 (a named, selectable theme replacing cycle 7's System/Light/Dark cycle and cycle 11's four-token palette override outright — a complete visual package, not a per-user tweak layered on a light/dark base — with "Bitcoin DeFi" as the first theme and today's default, [design spec](../superpowers/specs/2026-09-08-bitcoin-defi-theme-design.md)): `theme.ts` rewritten from a cycling function into a `ThemeDef`/`THEMES` registry (`loadThemeId`/`saveThemeId`/`useThemeId`); `palette.ts`, `palette.test.ts`, and `ThemePanel.tsx` deleted outright; `ThemeToggle.tsx` replaced by `ThemeSwitcher.tsx`, a `<select>` built against the registry (itself deleted 2026-09-12 by T27, its `<select>` moved into a new `SettingsPanel.tsx` — see the T27 entry below); `index.html` now always sets `data-theme` (Bitcoin DeFi is dark-only by design, no more "system"/unthemed state) and silently falls back cycle 7's old stored values to the new default; self-hosted `@fontsource` fonts and a Google Fonts `<link>` both load Space Grotesk/Inter/JetBrains Mono; and a full `styles.css` restyle — a 24-custom-property design-token layer plus component recipes app-wide (pill gradient/glow buttons, glass-morphism overlays, mono/gold technical text, gradient-text Dashboard heading, card hover-lift, fading grid-pattern background) done, see [ROADMAP.md](../ROADMAP.md) |
+| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-04-dashboard-design.md)), cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) — CLAUDE.md's full UI/UX deliverable list complete as of cycle 9 — and cycle 10 (a toast notification stack replacing the old persistent error banner, humor-wrapped error text, and a one-shot holiday/late-night startup toast, [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-05-toast-easter-eggs-design.md)) and cycle 11 (user-customizable theme tokens — accent/background/surface/text — plus a three-level motion setting, layered on top of the cycle 7 theme toggle, via a new `ThemePanel.tsx`) and cycle 12 (device and communication-object descriptions are now editable, not just displayed: `Command::SetDeviceDescription` and `Command::SetComObjectDescription`/`RestoreComObjectDescription` clone the `SetIndividualAddress`/`SetComObjectDpt` command-layer pattern exactly, wired through `knx-store::command_sync`, `knx-server`'s `/api/device-description` and `/api/com-object-description` routes, and two new `Inspector.tsx` fields; `ComObjectNode` also gains `description`/`description_layer` so a communication object's description — modelled and persisted since Session 5 cycle 2 but never shown — is finally visible at all. An ETS feature audit done alongside this found no other silently-missing field: `GroupAddress`/`GroupRange`/`BuildingPart` genuinely carry no `Description` attribute in the one schema-11 project this project's evidence comes from — see [KNOWN_LIMITATIONS.md #1](../KNOWN_LIMITATIONS.md#1-single-sample-bias), not a bug here) and cycle 13 (a named, selectable theme replacing cycle 7's System/Light/Dark cycle and cycle 11's four-token palette override outright — a complete visual package, not a per-user tweak layered on a light/dark base — with "Bitcoin DeFi" as the first theme and today's default, [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-08-bitcoin-defi-theme-design.md)): `theme.ts` rewritten from a cycling function into a `ThemeDef`/`THEMES` registry (`loadThemeId`/`saveThemeId`/`useThemeId`); `palette.ts`, `palette.test.ts`, and `ThemePanel.tsx` deleted outright; `ThemeToggle.tsx` replaced by `ThemeSwitcher.tsx`, a `<select>` built against the registry (itself deleted 2026-09-12 by T27, its `<select>` moved into a new `SettingsPanel.tsx` — see the T27 entry below); `index.html` now always sets `data-theme` (Bitcoin DeFi is dark-only by design, no more "system"/unthemed state) and silently falls back cycle 7's old stored values to the new default; self-hosted `@fontsource` fonts and a Google Fonts `<link>` both load Space Grotesk/Inter/JetBrains Mono; and a full `styles.css` restyle — a 24-custom-property design-token layer plus component recipes app-wide (pill gradient/glow buttons, glass-morphism overlays, mono/gold technical text, gradient-text Dashboard heading, card hover-lift, fading grid-pattern background) done, see [ROADMAP.md](../ROADMAP.md) |
 | 6 | KNXnet/IP | Cycles 1-5 shipped (tunnelling, sending, discovery, routing, connection management/diagnostics). KNX IP Secure scoped, then shelved indefinitely (2026-09-06) — see [ROADMAP.md](../ROADMAP.md), [KNOWN_LIMITATIONS.md §26](../KNOWN_LIMITATIONS.md) |
 | 7 | Integration & hardening | Fixtures/performance/packaging/licence done; commissioning (T30) simulator-verified, real-device write still blocked — see below |
 
@@ -2659,7 +2659,7 @@ rather than silently drop it) — all additive, no behavior change (see
 [DATA_MODEL.md §11](../DATA_MODEL.md)). 49 tests.
 
 **`knx-store` gains full entity persistence for `knx_core::Project`**
-this cycle (schema v4, [design spec](../superpowers/specs/2026-09-03-knx-entity-persistence-design.md)):
+this cycle (schema v4, [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-03-knx-entity-persistence-design.md)):
 one persistence module per entity area — `strings.rs`
 (`string_table_entry`), `topology.rs` (`installation`/`area`/`line`),
 `building.rs` (`building_part`/`building_part_device`), `devices.rs`
@@ -2822,7 +2822,7 @@ unmeasured. 1 test (round-trips the reference project through
 `open_reference_project.rs` already established for ETS import).
 
 Cycle 4 adds device selection, a properties inspector, and undo/redo
-([design spec](../superpowers/specs/2026-09-04-selection-inspector-design.md)).
+([design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-04-selection-inspector-design.md)).
 `AppState` gains `command_stack: Mutex<CommandStack>` (every applied
 command's inverse; reset on `open_project`/`open_native_project`, never
 persisted to `.knxdb` — undo history is session-only by design) and
@@ -2997,7 +2997,7 @@ of `cargo test --workspace`) — up from 32 with cycle 10's new
 **Web/Docker deployment target** (cross-cutting, added alongside Session 5
 rather than as one of its cycles — not on the original Session 0-7
 roadmap, see [ROADMAP.md](../ROADMAP.md) and
-[the design spec](../superpowers/specs/2026-09-05-web-docker-deployment-design.md)).
+[the design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-05-web-docker-deployment-design.md)).
 `apps/knx-desktop`'s Tauri IPC layer (the `#[tauri::command]` wrappers that
 used to live in `src-tauri/src/lib.rs`) is gone. All of it — routes, state,
 the `_impl` functions underneath — moved into a new crate, **`apps/knx-server`**:
@@ -3325,7 +3325,7 @@ and group-range nesting/overlap (`check_group_range_nests_in_parent`,
 this cycle: `apps/knx-server` gains one route each (`/api/areas`,
 `/api/lines`, `/api/move-device`, `/api/group-ranges`,
 `/api/group-links`), but no frontend UI exists for any of them yet — see
-[the design spec](../superpowers/specs/2026-09-06-topology-group-range-commands-design.md)
+[the design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-06-topology-group-range-commands-design.md)
 for the deliberate scope cut (`knx-projection`'s `GroupAddressNode` has no
 real main/middle/address nesting yet; that redesign is its own future
 cycle — as of 2026-09-13 it carries `range: Option<u32>`, the id of the
@@ -3466,7 +3466,7 @@ banner one-for-one, wrapped in a randomly chosen humor template that
 keeps the original backend message verbatim inside it; `kind: "fun"`
 toasts auto-dismiss after ~6s and appear at most once at startup, for a
 listed holiday or (failing that) a late-night session — never both, see
-the [design spec](../superpowers/specs/2026-09-05-toast-easter-eggs-design.md).
+the [design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-05-toast-easter-eggs-design.md).
 
 Known gaps carried forward, none blocking Session 5:
 
@@ -3538,7 +3538,7 @@ Known gaps carried forward, none blocking Session 5:
   branch is not auto-revealed — the tree does not expand or scroll to it,
   only the Inspector reflects the new selection. This is an explicit,
   approved scope decision recorded in
-  [the search design spec](../superpowers/specs/2026-09-04-search-design.md),
+  [the search design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-04-search-design.md),
   not an oversight; see [KNOWN_LIMITATIONS.md §19](../KNOWN_LIMITATIONS.md).
 - `manifest.rs`/`opaque.rs` still open their own internal SQL transaction
   the same way `strings.rs` did before this cycle's `SAVEPOINT` fix
@@ -3816,7 +3816,7 @@ flag name) and 1 new `vitest` test. Closes **T7**
 
 **T24, standalone `.knxprod` product-package install + honest creation
 diagnostics (2026-09-10, plan
-[2026-09-09-standalone-product-database-install.md](../superpowers/plans/2026-09-09-standalone-product-database-install.md),
+[2026-09-09-standalone-product-database-install.md](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/plans/2026-09-09-standalone-product-database-install.md),
 Tasks 1-5).** Four code tasks plus this documentation reconciliation.
 
 *Task 1 — first-winner provenance.* Fixed a pre-existing gap where a
@@ -4641,8 +4641,8 @@ value no `when` covers) and a defensive parser posture, both ordinary
 implementation work, not research.
 
 **T18 slice 1, `Dynamic` tree parse/store/evaluate (2026-09-11).** The
-first of three planned slices ([design spec](../superpowers/specs/2026-09-11-dynamic-tree-parse-and-evaluate-design.md),
-[plan](../superpowers/plans/2026-09-11-dynamic-tree-parse-and-evaluate.md)).
+first of three planned slices ([design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-11-dynamic-tree-parse-and-evaluate-design.md),
+[plan](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/plans/2026-09-11-dynamic-tree-parse-and-evaluate.md)).
 `knx-productdb` gains a `dynamic` module, no other crate touched:
 
 - **Parse and store (schema v3).** A new `dynamic_node` table stores one
@@ -4721,8 +4721,8 @@ unresearched.
 
 **T18 slice 2, `Module` expansion (2026-09-11).** The second of the three
 slices planned above, same day as slice 1
-([design spec](../superpowers/specs/2026-09-11-module-expansion-design.md),
-decisions D12-D19; [plan](../superpowers/plans/2026-09-11-module-expansion.md)).
+([design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-11-module-expansion-design.md),
+decisions D12-D19; [plan](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/plans/2026-09-11-module-expansion.md)).
 `knx-productdb`'s evaluator now follows a `Module` node into its
 referenced `ModuleDef`'s own stored tree instead of stopping at it. No
 schema change — the product database stays at **v3**; `dynamic_node`
@@ -4753,7 +4753,7 @@ already stored everything this slice reads (D12).
   task 11, below, expands nested modules to a bounded depth and removes
   `NestedModuleNotExpanded` from the codebase entirely. D15 is described
   here exactly as slice 2 shipped it, for the record; D44/D45 in
-  [docs/superpowers/specs/2026-09-11-module-expansion-design.md](../superpowers/specs/2026-09-11-module-expansion-design.md)'s
+  [docs/superpowers/specs/2026-09-11-module-expansion-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-11-module-expansion-design.md)'s
   task-11 addendum are its successors.)* A `Module` found while already
   inside a module scope was not followed: it produced
   `Diagnostic::NestedModuleNotExpanded` and its subtree was not descended.
@@ -4859,7 +4859,7 @@ ETS behavioural parity, or KNX certification.
 
 **T18 slice 3, the parameter editor (2026-09-11).** The third and last of
 the three planned slices, same day as slices 1 and 2
-([design spec](../superpowers/specs/2026-09-11-parameter-editor-design.md),
+([design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-11-parameter-editor-design.md),
 decisions D20-D26). Wires the now-complete evaluator (slice 2) into
 something a user can see and write to. No schema change in either
 database — the product database stays at **v3**, `knx-store`'s
@@ -4991,8 +4991,8 @@ with what actually shipped. Never claimed here or anywhere else: ETS
 behavioural parity, or KNX certification.
 
 **T29, DPT codec (2026-09-11), branch `t29-dpt-codec`.** KNXBench's first
-Datapoint Type codec ([design spec](../superpowers/specs/2026-09-11-dpt-codec-design.md),
-decisions E4-D1 through E4-D9; [plan](../superpowers/plans/2026-09-11-dpt-codec.md);
+Datapoint Type codec ([design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-11-dpt-codec-design.md),
+decisions E4-D1 through E4-D9; [plan](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/plans/2026-09-11-dpt-codec.md);
 [ADR-0016](../adr/0016-dpt-codec-in-knx-core.md)). `crates/knx-core/src/dpt.rs`
 became a module directory (`dpt/mod.rs`, `dpt/codec.rs`, `dpt/resolve.rs`);
 `GroupValue` moved down out of `knx-net` into `knx-core`, re-exported so no
@@ -5102,7 +5102,7 @@ as the row's remaining open item. Out of scope by design: `apps/knx-web` and
 task, not assumed.
 
 **T15, Group Monitor GUI (2026-09-11), branch `t15-group-monitor`.** Builds
-on T29's codec ([design spec](../superpowers/specs/2026-09-11-group-monitor-design.md);
+on T29's codec ([design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-11-group-monitor-design.md);
 [ADR-0017](../adr/0017-knx-server-depends-on-knx-net.md)). Gives
 `apps/knx-server` and `apps/knx-web` what T29 gave the CLI: a live,
 DPT-decoded telegram table and a send-from-the-table form, over a
@@ -5243,8 +5243,8 @@ gateway models. Full accounting: [KNOWN_LIMITATIONS.md §62](../KNOWN_LIMITATION
 
 **T27, in-app motion control (2026-09-12), branch `t27-motion-control`.**
 Restores the user-facing motion setting cycle 13's theme rewrite deleted
-by accident ([design spec](../superpowers/specs/2026-09-12-motion-control-design.md),
-decisions D27-D34; [plan](../superpowers/plans/2026-09-12-motion-control.md)).
+by accident ([design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-12-motion-control-design.md),
+decisions D27-D34; [plan](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/plans/2026-09-12-motion-control.md)).
 Closes `GAP_ANALYSIS_ETS.md` gap **D11**; partially addresses **D8**.
 
 - **`apps/knx-web/src/motion.ts`** (new, modeled on `theme.ts`'s
@@ -5351,8 +5351,8 @@ claim to make in either direction.
 each hand-rolled `styles.css`'s `.search-overlay`/`.search-panel` shape,
 and `KNOWN_LIMITATIONS.md` §20's "lifted when a third overlay is added"
 trigger had already fired twice, unnoticed, before this slice ([design
-spec](../superpowers/specs/2026-09-12-modal-overlay-shell-design.md);
-[plan](../superpowers/plans/2026-09-12-modal-overlay-shell.md)). Closes
+spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-12-modal-overlay-shell-design.md);
+[plan](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/plans/2026-09-12-modal-overlay-shell.md)). Closes
 `GAP_ANALYSIS_ETS.md` gap **D9**.
 
 - **`apps/knx-web/src/Overlay.tsx`** (new, 94 lines): the one component
@@ -5987,7 +5987,7 @@ before T25's first task: 271/29).
 
 **T18, module-scoped editing slice, Task 2 — the `MI-` component, retained
 (2026-09-12), branch `t18-module-scoped-editing`.** Second of six planned
-tasks ([design spec](../superpowers/specs/2026-09-12-module-scoped-editing-design.md),
+tasks ([design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md),
 D38). `crates/knx-etsproj/src/parse/installation_v21.rs` already parsed
 `ModuleInstance/@Id`; `map.rs` used it only as a local wiring key and threw
 it away afterward — exactly the datum a per-channel write needs, since it
@@ -6014,7 +6014,7 @@ read-only, reported, never guessed.
 
 **T18, module-scoped editing slice, closing entry (2026-09-12), branch
 `t18-module-scoped-editing`.** Covers Tasks 1, 3, 4 and 5 of the same six
-([design spec](../superpowers/specs/2026-09-12-module-scoped-editing-design.md),
+([design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md),
 decisions D35-D43); Task 2 (`instance_ets_id`, above) has its own entry.
 Together these close **D25**, the deliberate hole T18 slice 3 left open
 (`docs/superpowers/specs/2026-09-11-parameter-editor-design.md`): a
@@ -6095,7 +6095,7 @@ slice 4's sixth task) reconciles
 [GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md), [DATA_MODEL.md §11](../DATA_MODEL.md),
 and [RESEARCH.md §4.4](../RESEARCH.md) with what actually shipped, and
 corrects two passages in
-[the design spec](../superpowers/specs/2026-09-12-module-scoped-editing-design.md)
+[the design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md)
 itself (D40's heading, D41's "unreachable" claim) that no longer matched
 the shipped behaviour once a Task 3 reviewer traced through it.
 
@@ -8138,7 +8138,7 @@ reproduction command.
 
 Phase 1 was a design document; this is the code it specified. The
 commissioning download protocol of
-[docs/superpowers/specs/2026-09-13-commissioning-download-design.md](../superpowers/specs/2026-09-13-commissioning-download-design.md)
+[docs/superpowers/specs/2026-09-13-commissioning-download-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-13-commissioning-download-design.md)
 (§5.4, §5.5, §6.2–§6.5, §7.2, §7.3, §9.1, §10.9, §11.1–§11.3) now exists,
 entirely against a simulator written alongside it. **No socket was opened to
 any gateway, no device was addressed, and no frame left the machine** —
@@ -8776,7 +8776,7 @@ A separate **948** purely numeric `{{<digits>}}` placeholders belong to
 `TextParameterRefId` and are deliberately left alone. Details and the full
 table in [RESEARCH.md §4.4](../RESEARCH.md)'s task-12 addendum; the design
 decisions D47–D51 in
-[the module-expansion design spec](../superpowers/specs/2026-09-11-module-expansion-design.md).
+[the module-expansion design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-11-module-expansion-design.md).
 
 **`AllocatorRef`: 0, and the bases searched are named.** **[D]** §1.1.2.38
 `ModuleDefArgType_t` lists it as a facet and `Value_t` gives it one
@@ -11164,7 +11164,7 @@ recorded here rather than made.
 
 The repository's top-ranked non-commissioning risk —
 [KNOWN_LIMITATIONS.md §22](../KNOWN_LIMITATIONS.md#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback),
-`K1` in [LIMITATION_TRIAGE.md](../archive/alpha-0.1/LIMITATION_TRIAGE.md) — is closed in the only
+`K1` in [LIMITATION_TRIAGE.md](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/LIMITATION_TRIAGE.md) — is closed in the only
 shape that does not also close the Docker target: the server gains real
 password authentication, and refuses to bind anything but `127.0.0.1`
 without it. The reasoning, the costs and the seven things it deliberately

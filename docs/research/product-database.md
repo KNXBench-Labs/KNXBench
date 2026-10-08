@@ -328,7 +328,7 @@ node: it evaluates to a `ModuleNotExpanded` diagnostic and its subtree is
 not entered. This spike answers how following it — slice 2, which did not
 exist yet at spike time — would actually have to work, before any design
 is written. Read-only research; no production code changed. **Slice 2
-shipped later the same day** ([design](../superpowers/specs/2026-09-11-module-expansion-design.md)
+shipped later the same day** ([design](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-11-module-expansion-design.md)
 D12-D19, [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)'s T18 slice
 2 entry): `Diagnostic::ModuleNotExpanded` no longer exists in the crate,
 replaced by `ModuleDefNotFound`/`NestedModuleNotExpanded`. This section
@@ -908,7 +908,7 @@ on every test run, so the zero above is an assertion, not a memory.
 ## 18. Legacy VD/PR (`EX-IM`) product files (DIN-9, 2026-09-26)
 
 The full design, with every measurement and its reproduction, is
-[2026-09-26-legacy-vd-pr-product-import-design.md](../superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md).
+[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md).
 It extends [VD4_PRODUCT_DATABASE_IMPORT.md](../VD4_PRODUCT_DATABASE_IMPORT.md).
 Only the findings that change what KNXBench knows about external formats are
 listed here.

@@ -470,4 +470,4 @@ hardware go. Test page refresh/pagination, malformed/unavailable responses,
 restart identity and cancellation rendering before claiming UI/native support.
 
 The full source-ID and dependency ledger is
-[COMMISSIONING_ALPHA_LEDGER](../archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md).
+[COMMISSIONING_ALPHA_LEDGER](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md).

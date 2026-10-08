@@ -83,7 +83,7 @@ unshare --user --map-root-user --net sh -c 'ip link set lo up && exec "$@"' sh \
   - network isolation is the `unshare` wrapper's job.
 
 **When it must run:** on every release candidate (part of the
-[final gates](archive/alpha-0.1/ALPHA_FINAL_GATES.md)), and before merging a change to import,
+[final gates](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md)), and before merging a change to import,
 storage, enrichment, the server's project routes or device download. The
 2026-10-06 selection was 143 tests in 31 targets (`--list`).
 

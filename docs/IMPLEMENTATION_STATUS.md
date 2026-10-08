@@ -1,5 +1,89 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Legacy VD files L3: web upload, password dialog, one remembered password (ADR-0094)
+
+- **Why:** L2 made `.vd3`–`.vd5` programs usable offline, but only through
+  the CLI. L3 brings the import to the web app and the server, together with
+  the one remembered password the user approved in the grilling (Q3/Q12).
+- **What:**
+  - `knx_app::legacy::RememberedPassword` (`legacy/remembered.rs`) keeps one
+    password in a plain file, `$XDG_CONFIG_HOME/knx/legacy-vd-password`
+    (else `$HOME/.config/knx/…`), with mode 0600 in a directory created
+    0700. It is written atomically, with a temporary file per call. A file
+    group or others may read, or one with an empty first line, is refused
+    by name.
+  - `open_with_password_policy` decides which password opens a file. A
+    non-empty given password wins; otherwise the remembered one is tried;
+    otherwise `PasswordRequired`. Nothing else is ever tried. A remembered
+    password that does not fit is its own refusal.
+  - Server:
+    - `POST /api/catalog/install-legacy` takes multipart `file`, optional
+      `password` and `remember`. Refusals are `422` kinds:
+      `legacyPasswordRequired`, `legacyWrongPassword`,
+      `legacyRememberedPasswordDoesNotFit`,
+      `legacyRememberedPasswordUnusable`.
+    - `POST /api/catalog/install` names a legacy product database (by
+      `.vd3`–`.vd5` name or by content) as `422 legacyProductDatabase`.
+    - `GET`/`DELETE /api/legacy-password` report and forget the password,
+      never returning its value.
+    - The password is remembered only after a successful import.
+  - CLI: `knx products legacy-password set|forget|status` and
+    `import-legacy --remember`. Without a password, `import-legacy` tries
+    the remembered one.
+  - Web:
+    - `ProductInstallControl` serves the catalog and the device wizard.
+      Their file pickers now accept `.vd3`–`.vd5`.
+    - A renamed legacy file follows the `legacyProductDatabase` refusal to
+      the legacy route.
+    - `LegacyPasswordDialog` (with "Remember") and `LegacyInstallReportView`
+      are new. The report ends with an "offline only, no download yet" note.
+    - A Settings section shows whether a password is remembered and can
+      forget it. It is injected into `SettingsPanel` like the achievement
+      tracker.
+    - en and de copy.
+  - CSS fix: `.device-wizard-step .settings-field input { width: 100% }`
+    stretched the dialog's "Remember" checkbox to 486 px, because the
+    nested Overlay renders inside the wizard step. Checkboxes are now
+    excluded. Measured in Chromium and pinned by the e2e spec.
+- **Real data:**
+  - The real `.vd4` was uploaded to a locally started `knx-server` with
+    temporary XDG and data directories. It asked for its password, then
+    published 2 programs, 334 parameters, 520 refs, 56 object refs and
+    10,428 translations, matching the corpus pins.
+  - A second upload used the remembered password and was skipped as
+    already imported. The file was 0600 in a 0700 directory. The password
+    was in neither the server log nor the data directories.
+  - In the web app, N000520 was placed with 28 objects, and the umlauts
+    rendered correctly. Switching "Objekttyp für Ausgang - Licht" to
+    "Dimmen absolut" swapped "Objektwert für EIN/AUS" from on/off to
+    percentage fields (100 %, 0 %).
+- **Found, not fixed here** (KNOWN_LIMITATIONS §128): untyped spacer
+  parameters (kind `None`, ETS `TypeNone`, e.g. `d_space`) are reported as
+  `editable`. The web app therefore shows empty text fields, and the server
+  refuses any write by name. The same panel path serves ETS `TypeNone`
+  parameters, so this is queued as its own fix.
+- **Review (in-session, before fixing):** three minor findings, all fixed
+  test-first:
+  - Concurrent stores shared one temporary file name. The new test was red
+    4 of 4 times and is green after the fix.
+  - An empty-first-line file was treated as "none remembered".
+  - The ADR named only the server binary, not the desktop app.
+- **Mutation sweep:** **19/19**, each killed by a named test. It covers
+  Rust (policy, file modes, server, CLI), TypeScript and the CSS fix (e2e).
+- **Gate:** on the rebased feature head `ec4a2b07` (the new history after the
+  8 October rewrite), under both gate locks with inputs frozen:
+  - Web: build, `tsc`, flow-study and theme-fixture checks; Vitest **147
+    files, 2,402 tests**; Chromium **175 passed**; the legacy spec repeated
+    3× (15/15).
+  - Rust: `cargo fmt`, workspace clippy `-D warnings`; workspace tests
+    **3,697 passed, 0 failed, 182 ignored**.
+  - Corpus: `legacy_corpus` plus `legacy_oracle` with
+    `--include-ignored` 4/4.
+  - All five xtask gates and `git diff --check` pass.
+  - Attempt 1 failed only to compile: a full `AppState` literal in
+    `http_load_progress.rs` lacked the new field (fixed there and in
+    `http_settings_conditional.rs`).
+
 ## 2026-10-08 — Gap analysis, cloud tooling and the memory index retire
 
 - User decision: removed `docs/GAP_ANALYSIS_ETS.md`, `docs/Issues.md`, `.serena/`,

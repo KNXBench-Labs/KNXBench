@@ -19,6 +19,9 @@ mod container;
 mod error;
 mod exim;
 mod inspect;
+mod mapping;
+mod mapping_program;
+mod publish;
 mod text;
 
 pub use container::{
@@ -34,3 +37,10 @@ pub use inspect::{
     inspect_payload, LegacyInspection, LegacyProductSummary, LegacyTableSummary,
     PAYLOAD_CHARSET_ASSUMPTION,
 };
+pub use mapping::{
+    map_legacy_database, LegacyMapping, MappedCatalogItem, MappedCatalogSection, MappedComObject,
+    MappedComObjectRef, MappedDynamicNode, MappedEnumeration, MappedHardware,
+    MappedHardware2Program, MappedManufacturer, MappedParameter, MappedParameterRef,
+    MappedParameterType, MappedProduct, MappedProgram, MappedTranslation, MappingDiagnostic,
+};
+pub use publish::{publish_legacy, LegacyPublishError, LegacyPublishReport};

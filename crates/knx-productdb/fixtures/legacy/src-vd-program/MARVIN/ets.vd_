@@ -1,0 +1,605 @@
+EX-IM
+N C:\synthetic\ets.vd_
+K ETS3
+K 
+D 2026-10-08 09:00:00
+V 6.2
+H virtual_device
+-------------------------------------
+T 3 manufacturer
+C1 T3 1 4 N MANUFACTURER_ID
+C2 T3 3 50 Y MANUFACTURER_NAME
+R 1 T 3 manufacturer
+4242
+Marvin Test
+-------------------------------------
+T 5 ete_language
+C1 T5 1 4 N LANGUAGE_ID
+C2 T5 3 50 Y LANGUAGE_NAME
+C3 T5 2 2 Y DATABASE_LANGUAGE
+R 1 T 5 ete_language
+1031
+Deutsch
+1
+R 2 T 5 ete_language
+1033
+English
+0
+-------------------------------------
+T 8 mask
+C1 T8 1 4 N MASK_ID
+C2 T8 2 2 Y MASK_VERSION
+C3 T8 3 10 Y MASK_VERSION_NAME
+R 1 T 8 mask
+900
+1793
+7.1
+-------------------------------------
+T 9 hw_product
+C1 T9 1 4 N PRODUCT_ID
+C2 T9 1 4 Y MANUFACTURER_ID
+C3 T9 3 50 Y PRODUCT_NAME
+C4 T9 2 2 Y PRODUCT_VERSION_NUMBER
+C5 T9 3 30 Y PRODUCT_SERIAL_NUMBER
+C6 T9 1 4 Y BUS_CURRENT
+C7 T9 1 4 Y ORIGINAL_MANUFACTURER_ID
+R 1 T 9 hw_product
+100
+4242
+Heart of Gold Sensor
+1
+HG-1
+10
+4242
+-------------------------------------
+T 10 catalog_entry
+C1 T10 1 4 N CATALOG_ENTRY_ID
+C2 T10 1 4 Y PRODUCT_ID
+C3 T10 1 4 Y MANUFACTURER_ID
+C4 T10 3 20 Y ORDER_NUMBER
+C5 T10 3 50 Y ENTRY_NAME
+C6 T10 1 4 Y ENTRY_WIDTH_IN_MILLIMETERS
+C7 T10 2 2 Y DIN_FLAG
+R 1 T 10 catalog_entry
+200
+100
+4242
+MT-42
+Heart of Gold Sensor
+18
+1
+-------------------------------------
+T 11 application_program
+C1 T11 1 4 N PROGRAM_ID
+C2 T11 1 4 Y MASK_ID
+C3 T11 3 50 Y PROGRAM_NAME
+C4 T11 2 2 Y PROGRAM_VERSION
+C5 T11 1 4 Y MANUFACTURER_ID
+C6 T11 2 2 Y LINKABLE
+C7 T11 2 2 Y PEI_TYPE
+C8 T11 1 4 Y PROGRAM_TYPE
+C9 T11 1 4 Y ORIGINAL_MANUFACTURER_ID
+C10 T11 2 2 Y DEVICE_TYPE
+R 1 T 11 application_program
+300
+900
+Improbability Drive
+22
+4242
+0
+0
+1
+4242
+7
+-------------------------------------
+T 12 product_to_program
+C1 T12 1 4 N PROD2PROG_ID
+C2 T12 1 4 Y PRODUCT_ID
+C3 T12 1 4 Y PROGRAM_ID
+C4 T12 3 20 Y REGISTRATION_NUMBER
+R 1 T 12 product_to_program
+400
+100
+300
+42/2026
+-------------------------------------
+T 6 functional_entity
+C1 T6 1 4 N FUNCTIONAL_ENTITY_ID
+C2 T6 1 4 Y MANUFACTURER_ID
+C3 T6 3 50 Y FUNCTIONAL_ENTITY_NAME
+C4 T6 3 20 Y FUNCTIONAL_ENTITY_NUMB
+C5 T6 1 4 Y FUN_FUNCTIONAL_ENTITY_ID
+R 1 T 6 functional_entity
+50
+4242
+Sensors
+1
+
+R 2 T 6 functional_entity
+51
+4242
+Presence
+1.1
+50
+-------------------------------------
+T 13 virtual_device
+C1 T13 1 4 N VIRTUAL_DEVICE_ID
+C2 T13 1 4 Y CATALOG_ENTRY_ID
+C3 T13 1 4 Y PROGRAM_ID
+C4 T13 3 50 Y VIRTUAL_DEVICE_NAME
+C5 T13 1 4 Y FUNCTIONAL_ENTITY_ID
+R 1 T 13 virtual_device
+500
+200
+300
+Heart of Gold Sensor
+51
+-------------------------------------
+T 14 parameter_atomic_type
+C1 T14 1 4 N ATOMIC_TYPE_NUMBER
+C2 T14 3 50 Y ATOMIC_TYPE_NAME
+R 1 T 14 parameter_atomic_type
+0
+none
+R 2 T 14 parameter_atomic_type
+1
+unsigned
+R 3 T 14 parameter_atomic_type
+2
+signed
+R 4 T 14 parameter_atomic_type
+4
+enum
+-------------------------------------
+T 15 parameter_type
+C1 T15 1 4 N PARAMETER_TYPE_ID
+C2 T15 1 4 Y ATOMIC_TYPE_NUMBER
+C3 T15 1 4 Y PROGRAM_ID
+C4 T15 3 50 Y PARAMETER_TYPE_NAME
+C5 T15 1 4 Y PARAMETER_MINIMUM_VALUE
+C6 T15 1 4 Y PARAMETER_MAXIMUM_VALUE
+C7 T15 1 4 Y PARAMETER_TYPE_SIZE
+R 1 T 15 parameter_type
+10
+0
+300
+t_none
+
+
+0
+R 2 T 15 parameter_type
+11
+1
+300
+t_byte
+0
+255
+8
+R 3 T 15 parameter_type
+12
+2
+300
+t_offset
+-10
+10
+8
+R 4 T 15 parameter_type
+13
+4
+300
+t_switch
+
+
+1
+R 5 T 15 parameter_type
+14
+4
+300
+t_mode
+
+
+8
+-------------------------------------
+T 16 parameter_list_of_values
+C1 T16 1 4 Y PARAMETER_TYPE_ID
+C2 T16 1 4 Y REAL_VALUE
+C3 T16 3 50 Y DISPLAYED_VALUE
+C4 T16 1 4 Y DISPLAY_ORDER
+C5 T16 1 4 N PARAMETER_VALUE_ID
+R 1 T 16 parameter_list_of_values
+13
+1
+On
+1
+600
+R 2 T 16 parameter_list_of_values
+13
+0
+Off
+2
+601
+R 3 T 16 parameter_list_of_values
+14
+0
+Mostly harmless
+1
+602
+R 4 T 16 parameter_list_of_values
+14
+2
+Panic
+2
+603
+R 5 T 16 parameter_list_of_values
+14
+1
+Towel
+3
+604
+-------------------------------------
+T 17 parameter
+C1 T17 1 4 N PARAMETER_ID
+C2 T17 1 4 Y PROGRAM_ID
+C3 T17 1 4 Y PARAMETER_TYPE_ID
+C4 T17 3 50 Y PARAMETER_NUMBER
+C5 T17 3 50 Y PARAMETER_NAME
+C6 T17 2 2 Y PARAMETER_LOW_ACCESS
+C7 T17 2 2 Y PARAMETER_HIGH_ACCESS
+C8 T17 3 20 Y PARENT_PARM_VALUE
+C9 T17 1 4 Y PARAMETER_SIZE
+C10 T17 1 4 Y PARAMETER_DISPLAY_ORDER
+C11 T17 1 4 Y PARAMETER_ADDRESS
+C12 T17 2 2 Y PARAMETER_BITOFFSET
+C13 T17 3 255 Y PARAMETER_DESCRIPTION
+C14 T17 1 4 Y PAR_PARAMETER_ID
+C15 T17 1 4 Y PARAMETER_DEFAULT_LONG
+R 1 T 17 parameter
+1000
+300
+10
+1000
+p_general
+2
+2
+
+0
+1
+
+
+General
+
+
+R 2 T 17 parameter
+1001
+300
+13
+1001
+p_mode
+2
+2
+
+1
+10
+16640
+7
+Mode
+1000
+1
+R 3 T 17 parameter
+1002
+300
+11
+1002
+p_level
+2
+2
+1
+8
+20
+16641
+0
+Level
+1001
+42
+R 4 T 17 parameter
+1003
+300
+11
+1003
+p_level_off
+0
+0
+0
+8
+30
+16641
+0
+Level (off)
+1001
+7
+R 5 T 17 parameter
+1004
+300
+14
+1004
+p_reaction
+2
+2
+1
+8
+40
+16642
+0
+Reaction
+1001
+2
+R 6 T 17 parameter
+1005
+300
+12
+1005
+p_offset
+2
+2
+0
+8
+50
+16642
+0
+Offset
+1001
+-3
+R 7 T 17 parameter
+1006
+300
+10
+1006
+p_heading
+2
+2
+1
+0
+15
+
+
+Details
+1001
+
+R 8 T 17 parameter
+1010
+300
+13
+1010
+p_hidden
+0
+0
+
+1
+2000
+
+
+Hidden
+
+1
+R 9 T 17 parameter
+1011
+300
+11
+1011
+p_governed
+2
+2
+1
+8
+60
+16643
+0
+Governed
+1010
+5
+R 10 T 17 parameter
+2000
+300
+10
+2000
+p_expert
+2
+2
+
+0
+100
+
+
+Expert
+
+
+R 11 T 17 parameter
+2001
+300
+12
+2001
+p_trim
+2
+2
+
+8
+110
+16644
+0
+Trim
+2000
+0
+-------------------------------------
+T 18 object_type
+C1 T18 1 4 N OBJECT_TYPE_CODE
+C2 T18 3 20 Y OBJECT_TYPE_NAME
+C3 T18 1 4 Y LENGTH_IN_BIT
+R 1 T 18 object_type
+0
+1 Bit
+1
+R 2 T 18 object_type
+8
+2 Byte
+16
+-------------------------------------
+T 19 object_priority
+C1 T19 1 4 N OBJECT_PRIORITY_CODE
+C2 T19 3 20 Y OBJECT_PRIORITY_NAME
+R 1 T 19 object_priority
+3
+Low
+-------------------------------------
+T 20 communication_object
+C1 T20 1 4 Y PROGRAM_ID
+C2 T20 3 50 Y OBJECT_NAME
+C3 T20 3 50 Y OBJECT_FUNCTION
+C4 T20 2 2 Y OBJECT_READENABLED
+C5 T20 2 2 Y OBJECT_WRITEENABLED
+C6 T20 2 2 Y OBJECT_COMMENABLED
+C7 T20 2 2 Y OBJECT_TRANSENABLED
+C8 T20 1 4 Y OBJECT_DISPLAY_ORDER
+C9 T20 3 20 Y PARENT_PARAMETER_VALUE
+C10 T20 1 4 N OBJECT_ID
+C11 T20 1 4 Y PARAMETER_ID
+C12 T20 1 4 Y OBJECT_NUMBER
+C13 T20 3 50 Y OBJECT_DESCRIPTION
+C14 T20 2 2 Y OBJECT_TYPE
+C15 T20 2 2 Y OBJECT_PRIORITY
+C16 T20 2 2 Y OBJECT_UPDATEENABLED
+C17 T20 1 4 Y OBJECT_UNIQUE_NUMBER
+C18 T20 2 2 Y OBJECT_READONINITENABLED
+R 1 T 20 communication_object
+300
+Alarm
+Send
+0
+0
+1
+1
+1
+
+700
+
+0
+
+0
+3
+0
+10000
+0
+R 2 T 20 communication_object
+300
+Level
+Receive
+0
+1
+1
+0
+2
+1
+701
+1001
+1
+
+0
+3
+0
+10001
+0
+R 3 T 20 communication_object
+300
+Level
+Value
+1
+1
+1
+0
+3
+0
+702
+1001
+1
+
+8
+3
+1
+10002
+0
+-------------------------------------
+T 21 text_attribute
+C1 T21 1 4 N TEXT_ATTRIBUTE_ID
+C2 T21 1 4 Y LANGUAGE_ID
+C3 T21 1 4 Y COLUMN_ID
+C4 T21 1 4 Y ENTITY_ID
+C5 T21 3 255 Y TEXT_ATTRIBUTE_TEXT
+R 1 T 21 text_attribute
+800
+1033
+10
+1001
+Mode (en)
+R 2 T 21 text_attribute
+801
+1033
+11
+600
+On (en)
+R 3 T 21 text_attribute
+802
+1033
+20
+701
+Level (en)
+R 4 T 21 text_attribute
+803
+1033
+22
+701
+Receive (en)
+R 5 T 21 text_attribute
+804
+1033
+1
+200
+Heart of Gold Sensor (en)
+R 6 T 21 text_attribute
+806
+1033
+10
+1002
+Level (en)
+R 7 T 21 text_attribute
+807
+1033
+10
+1003
+Level (en)
+R 8 T 21 text_attribute
+808
+1033
+20
+702
+Level (en)
+R 9 T 21 text_attribute
+809
+1033
+22
+702
+Receive (en)
+R 10 T 21 text_attribute
+805
+1033
+99
+1001
+Unknown column
+-------------------------------------
+T 22 s19_block
+C1 T22 1 4 N BLOCK_ID
+C2 T22 1 4 Y PROGRAM_ID
+C3 T22 8 32767 Y BLOCK_DATA
+R 1 T 22 s19_block
+900
+300
+00FF
+XXX

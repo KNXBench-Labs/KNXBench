@@ -247,6 +247,13 @@ pub enum CodeError {
         /// What is wrong, naming the element.
         cause: String,
     },
+    /// The program came from a legacy EX-IM product database (ADR-0094):
+    /// it has no XML `Static/Code`, and its memory image comes from
+    /// `s19_block` rows a later package reads. Refused, never guessed.
+    LegacyProgram {
+        /// The program.
+        program_id: String,
+    },
 }
 
 impl std::error::Error for CodeError {}
@@ -260,6 +267,10 @@ impl fmt::Display for CodeError {
                 "{program_id}: its source file {sha256} is not in the product database"
             ),
             CodeError::Malformed { program_id, cause } => write!(f, "{program_id}: {cause}"),
+            CodeError::LegacyProgram { program_id } => write!(
+                f,
+                "{program_id}: imported from a legacy ETS3 product database; downloading it is not supported yet"
+            ),
         }
     }
 }
@@ -292,6 +303,18 @@ pub fn load_program_code(
     let Some(sha256) = sha256 else {
         return Ok(None);
     };
+    let legacy: Option<i64> = conn
+        .query_row(
+            "SELECT 1 FROM legacy_program WHERE program_id = ?1",
+            [program_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if legacy.is_some() {
+        return Err(CodeError::LegacyProgram {
+            program_id: program_id.to_string(),
+        });
+    }
     let Some(bytes) = crate::load_source_file(conn, &sha256)? else {
         return Err(CodeError::MissingSource {
             program_id: program_id.to_string(),

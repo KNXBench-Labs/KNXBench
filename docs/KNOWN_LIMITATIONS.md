@@ -6878,6 +6878,39 @@ triage.
 
 ## 128. Legacy `.vd3`–`.vd5` and `.pr3`–`.pr5` files are refused, and the refusal misnames the format
 
+**Update 2026-10-08 (legacy VD package L2, ADR-0094 *Amendment: L2*).**
+`.vd3`–`.vd5` application programs can now be imported for offline use:
+`knx products import-legacy <file> [--product-db <path>] [--password-stdin |
+--password-file <path>]` (or `knx_app::legacy::import_legacy_file`)
+publishes catalog entries, parameters (types, enumerations, defaults,
+access, memory), communication objects, visibility and translations.
+The real `.vd3` and `.vd4` publish completely. N000520 evaluates like ETS's
+own conversion apart from three named deviations
+([legacy-vd-mapping.md](research/legacy-vd-mapping.md#oracle-result-l2-acceptance)).
+A device from such a file can be placed, parameterised and linked to
+group addresses (`apps/knx-server/tests/http_legacy_device.rs`).
+**Still limited:**
+- **No download.** `load_program_code` refuses a legacy program as
+  `CodeError::LegacyProgram`. The memory image (`s19_block`) is not read
+  yet; that is L4.
+- **No DPTs.** `EIB_DATA_TYPE_CODE` is reported as an unmapped column,
+  because its encoding is not measured. Objects carry size and flags but no
+  DPT until the user sets one.
+- **Server and web upload (L3) are not there yet.** For now the import runs
+  through the CLI.
+- **Unmapped tables stay in the stored payload and are reported:**
+  `s19_block`, `device_*`, `mask*`, `symbol`, `help_file`, and others.
+  Text is decoded as Windows-1252, which is an assumption.
+- **Not merged.** A legacy program sits in its own `LX<sha8>` namespace.
+  `knx products family` lists it next to an ETS program with the same
+  manufacturer and ApplicationNumber, but nothing is merged or replaced.
+- **Stays refused:** `.pr*` project exports and `.vd2`.
+- **The one real `.vd5` is refused.** The Siemens `.vd5` (Nov 2016)
+  exceeds the 64 MiB bounds (173 MB payload). It also has four members, an
+  installer path tree with three mask images, where the rules expect one
+  `ets.vd_`. Lifting this needs measured bounds and the multi-member layout
+  ([legacy-vd-mapping.md](research/legacy-vd-mapping.md#the-first-real-vd5-structure-only-not-imported)).
+
 **Update 2026-10-08 (legacy VD package L1, ADR-0094).** The design's
 decisions are taken: the maintainer approved the 2026-09-26 design on
 2026-10-08, with amendments (interview receipt

@@ -1,0 +1,215 @@
+{
+  "verifiedAt": "2026-10-08 19:03 CEST",
+  "sourceCommit": "608a204bf28aa9df83413aa5ccb65241c32478aa",
+  "scope": "Repository destination and actual rendered browser handoff only, not broad KNX compatibility or deployment acceptance.",
+  "mainRepository": {
+    "branch": "main",
+    "issues": true,
+    "repository": "KNXBench-Labs/KNXBench",
+    "visibility": "public"
+  },
+  "remoteSourceSha256": {
+    ".github/ISSUE_TEMPLATE/analysis.yml": "542ecfdb6dc2e85e06f8f7e03cf6f656e9879f4abaa99a3bb433b25896795f8d",
+    ".github/ISSUE_TEMPLATE/config.yml": "2d6534cd0d3d023b0768b382964a9bc514608b78090c1517a7ba341d72b77724",
+    "docs/contribution-intake/README.md": "8d2e0e5d24d917661b82e8e11b70719188de538c071010a070cb16c2ae4ca509",
+    "docs/contribution-intake/DEUTSCH.md": "6eed843ac434cefb3e3d72297274de95063921e7f072622944fd0a8f71112bea",
+    "apps/knx-web/src/ContributionButton.tsx": "4ca4e9c98726b64cdc9de6c4e03eb7b773d90b9f7ffe99dad789246a9ca8d5be"
+  },
+  "anonymousHttp": {
+    "mainRepo": {
+      "status": 200,
+      "finalUrl": "https://github.com/KNXBench-Labs/KNXBench",
+      "bodySha256": "8aa1fdd277cd1370d69e2e7e6d700a9934e8074a80e09bafb03ce673376de79c"
+    },
+    "englishGuide": {
+      "status": 200,
+      "finalUrl": "https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/contribution-intake/README.md",
+      "bodySha256": "89c4699444557de567d26db5644d314bd14f8477d6566dc6ff9007c84dc67c3e"
+    },
+    "germanGuide": {
+      "status": 200,
+      "finalUrl": "https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/contribution-intake/DEUTSCH.md",
+      "bodySha256": "673b0bfe4eaff6699941ea46b9470faaea43bbdf665633c7800434a09fb52d55"
+    },
+    "issueTemplate": {
+      "status": 200,
+      "finalUrl": "https://github.com/KNXBench-Labs/KNXBench/blob/main/.github/ISSUE_TEMPLATE/analysis.yml",
+      "bodySha256": "4e7ed657022b0e997fda7cd46e338d6f9eca807f35d5b7d4520560cbd694e1a4"
+    },
+    "issueHandoff": {
+      "status": 200,
+      "finalUrl": "https://github.com/login?return_to=https%3A%2F%2Fgithub.com%2FKNXBench-Labs%2FKNXBench%2Fissues%2Fnew%3Ftemplate%3Danalysis.yml%26analyzer-version%3Dlink-audit",
+      "bodySha256": "d7d0618b5090d3bc1cbe5b21a1c6f428f7b00b5169584dea8ef9a641ead769ea"
+    },
+    "retiredRepo": {
+      "status": 404,
+      "finalUrl": "https://github.com/KNXBench-Labs/KNXBench-Contributions"
+    },
+    "websiteEnglish": {
+      "status": 200,
+      "finalUrl": "https://knxbench.com/en/",
+      "bodySha256": "f73e14a74cedaa4cae0decd2f9ee1dd4e008a5fb90d3770d9b80134b55d3a452",
+      "retiredRepoMentioned": false,
+      "mainGuideLinked": true
+    },
+    "websiteGerman": {
+      "status": 200,
+      "finalUrl": "https://knxbench.com/de/",
+      "bodySha256": "56026f5928229586f5221da0c3cc744e08b42ca2d453ba6df3797e4b97442d43",
+      "retiredRepoMentioned": false,
+      "mainGuideLinked": true
+    }
+  },
+  "retiredNameInventory": [
+    {
+      "path": "docs/COMMUNITY_EVIDENCE.md",
+      "line": 12,
+      "isHyperlink": false,
+      "text": "`KNXBench-Contributions` repository had no reports and was deleted by the owner on 2026-10-08 after its four files were confirmed"
+    },
+    {
+      "path": "docs/IMPLEMENTATION_STATUS.md",
+      "line": 42,
+      "isHyperlink": false,
+      "text": "  support link point here instead of the interim `KNXBench-Contributions`"
+    },
+    {
+      "path": "docs/OPEN_WORK.md",
+      "line": 43,
+      "isHyperlink": false,
+      "text": "  `KNXBench-Contributions` repository was deleted on 2026-10-08."
+    },
+    {
+      "path": "docs/adr/0091-community-evidence-analysis.md",
+      "line": 16,
+      "isHyperlink": false,
+      "text": "The existing `KNXBench-Contributions` publication is a temporary pre-launch"
+    },
+    {
+      "path": "docs/adr/0091-community-evidence-analysis.md",
+      "line": 36,
+      "isHyperlink": false,
+      "text": "`KNXBench-Contributions` had no issues and was deleted by the owner on 2026-10-08 after its four files were confirmed"
+    },
+    {
+      "path": "docs/research/community-intake.md",
+      "line": 10,
+      "isHyperlink": false,
+      "text": "`KNXBench-Contributions` repository was deleted afterwards. The sections below"
+    },
+    {
+      "path": "docs/research/community-intake.md",
+      "line": 18,
+      "isHyperlink": false,
+      "text": "`KNXBench-Contributions` is transitional, not a required permanent architecture."
+    },
+    {
+      "path": "docs/research/community-intake.md",
+      "line": 33,
+      "isHyperlink": false,
+      "text": "separate public intake. `KNXBench-Labs/KNXBench-Contributions` is PUBLIC with issues"
+    },
+    {
+      "path": "website/tests/test_build.py",
+      "line": 121,
+      "isHyperlink": false,
+      "text": "            self.assertNotIn(\"KNXBench-Contributions\", html, page)"
+    }
+  ],
+  "issueForm": {
+    "uniqueFieldIds": [
+      "problem",
+      "evidence",
+      "analyzer-version",
+      "input-kind",
+      "provenance",
+      "disclosure"
+    ],
+    "requiredDataFields": [
+      "problem"
+    ],
+    "blankIssuesAllowed": true,
+    "versionField": "analyzer-version",
+    "authenticatedSubmissionExercised": false
+  },
+  "frontend": {
+    "passedTests": 10,
+    "failedTests": 0,
+    "pendingTests": 0,
+    "productionBuild": "passed",
+    "themeFixtureTypes": "passed",
+    "flowStudyTypes": "passed",
+    "warning": "Existing Vite chunk-size warning; threshold unchanged."
+  },
+  "browser": {
+    "checks": [
+      "en: correct language guide",
+      "en: guide opens separately",
+      "en: guide opener protected",
+      "en: opening dialog did not analyze",
+      "en: no issue handoff before preview and download",
+      "en: manual ZIP download",
+      "en: issue points to main repository",
+      "en: native form selected",
+      "en: version survives URL encoding",
+      "en: only intended query keys",
+      "en: source filename excluded",
+      "en: issue opens separately",
+      "en: issue opener protected",
+      "en: no retired link in dialog",
+      "de: correct language guide",
+      "de: guide opens separately",
+      "de: guide opener protected",
+      "de: opening dialog did not analyze",
+      "de: no issue handoff before preview and download",
+      "de: manual ZIP download",
+      "de: issue points to main repository",
+      "de: native form selected",
+      "de: version survives URL encoding",
+      "de: only intended query keys",
+      "de: source filename excluded",
+      "de: issue opens separately",
+      "de: issue opener protected",
+      "de: no retired link in dialog",
+      "only two synthetic analysis requests",
+      "two synthetic previews and exports",
+      "no unexpected API or external requests",
+      "no browser exceptions"
+    ],
+    "requests": [
+      "GET /api/settings",
+      "POST /api/contributions/analyze",
+      "POST /api/contributions/preview",
+      "POST /api/contributions/export",
+      "GET /api/settings",
+      "POST /api/contributions/analyze",
+      "POST /api/contributions/preview",
+      "POST /api/contributions/export"
+    ],
+    "links": [
+      {
+        "language": "en",
+        "guide": "https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/contribution-intake/README.md",
+        "issue": "https://github.com/KNXBench-Labs/KNXBench/issues/new?template=analysis.yml&analyzer-version=synthetic+link+audit+%2B1"
+      },
+      {
+        "language": "de",
+        "guide": "https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/contribution-intake/DEUTSCH.md",
+        "issue": "https://github.com/KNXBench-Labs/KNXBench/issues/new?template=analysis.yml&analyzer-version=synthetic+link+audit+%2B1"
+      }
+    ],
+    "unexpected": [],
+    "errors": [],
+    "scope": "Real Chromium and real ContributionButton; synthetic settings and refused analysis responses. No parser, upload, external issue submission, production or hardware proof."
+  },
+  "limits": [
+    "No logged-in GitHub form submission or attachment upload.",
+    "Synthetic settings, refused analysis and deterministic synthetic ZIP in browser; not parser, corpus or hardware proof.",
+    "No running application deployment or native-runtime verification.",
+    "Private contribution mailbox remains unverified."
+  ],
+  "changes": [
+    "No runtime link modification needed: current source already targets the main repository.",
+    "ADR-0091 current-decision wording corrected; former pre-launch plan marked historical."
+  ]
+}

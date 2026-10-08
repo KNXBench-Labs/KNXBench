@@ -6,6 +6,10 @@
 
 ## Repository destination — owner clarification (2026-10-08)
 
+This section records the earlier pre-launch decision. The same-day execution is
+recorded under **Consolidation done** below; the temporary endpoint is no longer
+the current contribution destination.
+
 The owner clarified that `KNXBench-Labs/KNXBench` is private only while pre-launch
 work is completed and will become public later. The long-term destination is
 therefore **the main application repository**, including contribution guides,
@@ -45,9 +49,9 @@ Return ordered findings with their owning check, location, occurrence count and 
 
 Export a versioned ZIP containing a manifest, findings and reproduction/validation guidance. Default reduced reports omit source filenames, attribute values, full diagnostics, concrete object identities and source hashes. Contextual samples require explicit selection and preview; they are source data, not automatically anonymized. An original requires separate private-only consent. Known secret-bearing XML/key files and password-protected input are not contribution samples; no comprehensive anonymity/secrets guarantee is made for other source data. Whole XML-member context preserves same-document references, not a guarantee of a self-contained complete project. Refuse unsupported disclosure/format combinations rather than silently dropping requested content.
 
-The contribution UI must truthfully show the exact content and selected disclosure tier. Public handoff opens the separate public GitHub contribution issue/form; attachment and submission remain the user's browser actions. Private handoff prepares an email to `contribute@knxbench.com`; manual attachment and send remain the user's actions. No embedded maintainer token, SMTP password, success claim for external submission or public original attachment. Mailbox setup/delivery remains unverified until actually configured and tested.
+The contribution UI must truthfully show the exact content and selected disclosure tier. Public handoff opens the public main repository's support-gap issue form; attachment and submission remain the user's browser actions. Private handoff prepares an email to `contribute@knxbench.com`; manual attachment and send remain the user's actions. No embedded maintainer token, SMTP password, success claim for external submission or public original attachment. Mailbox setup/delivery remains unverified until actually configured and tested.
 
-GitHub hosts documentation, issue forms and explicitly public evidence; originals do not enter public Git history. The main application repository remains private during pre-launch work only; after public launch it is the canonical contribution destination (see owner clarification above). Platform constraints and primary sources: [community intake research](../research/community-intake.md).
+GitHub hosts documentation, issue forms and explicitly public evidence; originals do not enter public Git history. The main application repository is public and is the canonical contribution destination (see consolidation above). Platform constraints and primary sources: [community intake research](../research/community-intake.md).
 
 ## Validation workflow
 

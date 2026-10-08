@@ -1,5 +1,13 @@
 # Architecture
 
+## LCARS built-in presentation (2026-10-08)
+
+[ADR-0092](adr/0092-lcars-built-in-presentation.md) separates the complete LCARS
+palette from a trusted UI-only presentation marker. The existing Theme dropdown
+and settings lifecycle select both without extending declarative v1 packs or
+adding a persistent layout preference. Motion and density remain independently
+owned. No core/API/project schema/protocol change. See [LCARS guide](DESIGN_LCARS.md).
+
 ## Readable Flow and source-bound secondary windows (2026-10-07)
 
 [ADR-0085](adr/0085-readable-flow-and-source-windows.md) records the user-approved

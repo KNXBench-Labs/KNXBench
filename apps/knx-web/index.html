@@ -32,13 +32,14 @@
         // Keep this id list in sync with THEMES in src/theme.ts — duplicated
         // here because this script runs before any module loads, so it cannot
         // import from theme.ts. themeTokens.test.ts fails if the two drift.
-        var knownThemes = ["porcelain", "graphite", "cupertino"];
+        var knownThemes = ["porcelain", "graphite", "cupertino", "lcars"];
         var t = read("theme", "knx-desktop:theme");
         if (t === "light") t = "porcelain";
         if (t === "dark") t = "graphite";
         if (knownThemes.indexOf(t) === -1)
           t = matchMedia("(prefers-color-scheme: dark)").matches ? "graphite" : "porcelain";
         document.documentElement.dataset.theme = t;
+        if (t === "lcars") document.documentElement.dataset.presentation = "lcars";
         var accent = read("accent", "knx-desktop:accent");
         document.documentElement.dataset.accent = ["violet", "mint", "blue", "amber", "rose"].indexOf(accent) === -1 ? "violet" : accent;
         document.documentElement.dataset.density = read("density", "knx-desktop:density") === "comfortable" ? "comfortable" : "compact";

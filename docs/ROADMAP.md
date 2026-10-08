@@ -1,5 +1,16 @@
 # Roadmap
 
+## Modern LCARS theme (2026-10-08)
+
+The visually approved study is integrated as an optional built-in dark theme
+with controlled workbench geometry, finite navigation feedback and independent
+motion/density. [ADR-0092](adr/0092-lcars-built-in-presentation.md) and the
+[LCARS guide](DESIGN_LCARS.md) record its verified local scope. Native
+WebKitGTK/Orca and complete accessibility validation remain separate; light
+mode, sound, arbitrary CSS imports and workflow redesign are outside this
+package. The UI change itself did not authorize deployment; the user separately
+authorized commit, push and server deployment on 2026-10-08. No release tag.
+
 ## Achievements (2026-10-07)
 
 [ADR-0089](adr/0089-achievements.md): achievements in the UI, with a

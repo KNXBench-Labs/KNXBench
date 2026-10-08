@@ -107,6 +107,7 @@ afterEach(() => {
   resetLanguagePacksForTests();
   localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
+  document.documentElement.removeAttribute("data-presentation");
   document.documentElement.removeAttribute("style");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -115,7 +116,7 @@ afterEach(() => {
 describe("Appearance theme choice", () => {
   it("offers the shipped CRT theme in the dropdown, drops Neon Grid and Bitcoin DeFi, and shows no preview cards", async () => {
     await mount({ theme: "graphite" });
-    expect(optionNames()).toEqual(["System", "Porcelain", "Graphite", "Cupertino", "Modern Retro Green CRT"]);
+    expect(optionNames()).toEqual(["System", "Porcelain", "Graphite", "Cupertino", "LCARS", "Modern Retro Green CRT"]);
     expect(host.textContent).not.toMatch(/Preview|Neon Grid|Bitcoin DeFi|Included with the application/);
     expect(host.querySelector(".theme-manager-list")).toBeNull();
   });
@@ -156,6 +157,28 @@ describe("Appearance theme choice", () => {
     expect(themeSelect().value).toBe("system");
     expect(writes).toEqual([]);
     expect(host.querySelector('[data-theme-diagnostic="missingSelection"]')?.textContent).toContain("neon-grid");
+  });
+});
+
+describe("LCARS presentation", () => {
+  it("selects only the theme, preserves independent preferences and removes framing on another theme", async () => {
+    await mount({ theme: "graphite", motionLevel: "off", motionStyle: "glitch", density: "comfortable", foreign: "preserved" });
+    await choose("lcars");
+    expect(writes).toEqual([{ theme: "lcars" }]);
+    expect(document.documentElement.dataset.theme).toBe("lcars");
+    expect(document.documentElement.dataset.presentation).toBe("lcars");
+    expect(server).toMatchObject({ motionLevel: "off", motionStyle: "glitch", density: "comfortable", accent: "mint", foreign: "preserved" });
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="Accent color"]')!.disabled).toBe(true);
+    await choose("graphite");
+    expect(document.documentElement.hasAttribute("data-presentation")).toBe(false);
+    expect(document.documentElement.style.getPropertyValue("--knx-bg")).toBe("");
+  });
+
+  it("restores saved LCARS on mount without installing a pack or writing settings", async () => {
+    await mount({ theme: "lcars" });
+    expect(themeSelect().value).toBe("lcars");
+    expect(document.documentElement.dataset.presentation).toBe("lcars");
+    expect(writes).toEqual([]);
   });
 });
 

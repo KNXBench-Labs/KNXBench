@@ -51,6 +51,7 @@ The **Theme** menu is the one place to choose a theme. It lists:
 | Porcelain | Light |
 | Graphite | Dark |
 | Cupertino | A light theme with its own fixed accent |
+| LCARS | Dark orange/lavender palette with recognizable framing and rounded navigation; quiet engineering surfaces |
 | Modern Retro Green CRT | Shipped with KNXBench: a dark phosphor-green theme with its own fixed accent |
 | *your imported themes* | Every theme file you imported, by its name |
 
@@ -63,6 +64,16 @@ theme is not available; the saved value is left as it was until you pick another
 **System** is not a palette of its own. It resolves to Porcelain when your desktop asks
 for a light appearance and Graphite when it asks for a dark one, and it re-resolves
 live — change your desktop's setting while KNXBench is open and the window follows.
+
+### LCARS
+
+Pick **LCARS** in the same Theme menu. It is built in, not an imported file;
+other themes retain their own presentation when you switch back. The warm
+frame is decoration, not a bus connection or successful-save indicator.
+Compact/Comfortable and the motion controls remain independent. Standard
+adds a finite navigation underline reveal; Subtle uses brief transitions;
+Off or OS reduced motion cancels running LCARS effects. No sound or light
+variant. LCARS cannot be exported or removed through Theme files.
 
 ## Theme files
 
@@ -91,7 +102,7 @@ The accent tints interactive elements only. Status colors — the red of an erro
 amber of a warning — never depend on it, because a color that means something must not
 change meaning when you pick a nicer purple.
 
-Cupertino and Modern Retro Green CRT carry their own accent as part of their
+Cupertino, LCARS and Modern Retro Green CRT carry their own accent as part of their
 identity (as can an imported theme), and under those the control is disabled with the reason spelled out on screen: *"This theme keeps its own
 accent; the accent setting has no effect here."*
 

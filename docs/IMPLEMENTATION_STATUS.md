@@ -1,5 +1,63 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Approved LCARS theme integrated locally
+
+**Delivery follow-up:** user authorized commit, push and server deployment.
+Integrated on current main with existing MCP work preserved; LCARS decision
+renumbered to ADR-0092 (0090 is MCP; 0091 is reserved by the intake workstream).
+Publication/deployment results are recorded separately after actual verification.
+
+- Visually approved study integrated into the actual application as the optional
+  **LCARS** Theme dropdown entry. Complete dark/warm palette, existing fonts,
+  recognizable elbow/segmented framing and rounded navigation; quiet native
+  tables, explorer, inspector and diagnostics retain their existing workflows.
+- [ADR-0092](adr/0092-lcars-built-in-presentation.md): controlled built-in
+  `data-presentation` geometry, not an executable/importable v1 pack. Existing
+  palette-token/contrast gates and acknowledged theme persistence retained;
+  no new dependencies, schema, API/core/protocol or imported-pack capability.
+- Density remains independent; finite Standard navigation feedback and Subtle
+  transitions use existing motion settings. Off/OS reduction cancels live effects.
+  Refused Save As remains an error/unsaved state, never decorative success.
+- Root delivery verified: **2,286 frontend tests / 136 files**, TypeScript/Vite
+  production build and fixture type check pass. Root build's **89 files** are
+  byte-identical to the browser-exercised candidate build. Complete intercepted
+  browser suite **158 passed**; real production-workbench CLI proof **33 named
+  assertions**, with no unexpected requests/errors. Actual UI scale 1.5 and
+  720×620/480×900 viewports exercised; screenshots visually inspected.
+- Five repository gates pass on both the explicitly selected isolated candidate
+  and delivered root;
+  source self-review/static added-line scan performed, no independent reviewer.
+  Documentation/manual/status and the study's superseded approval note updated.
+- Local source delivery only: **no commit, push, deployment, Docker rebuild,
+  release or live bus operation**. Native WebKitGTK/Orca, Firefox, native browser
+  zoom and whole-app accessibility acceptance remain unverified. Details:
+  [LCARS guide](DESIGN_LCARS.md), `design-studies/lcars/application-verification.json`.
+
+## 2026-10-07 — LCARS interactive offline study; visual approval pending
+
+**Update 2026-10-08:** visual approval received and production integration
+delivered locally; see the newer entry above. The evidence below remains the
+historical, standalone study scope.
+
+- User approved the modernized LCARS brief and explicitly started the offline
+  study. Delivered self-contained `docs/design-studies/lcars/index.html`,
+  embedded existing fonts/OFL notices, a plain CLI browser verifier, exact-source
+  receipt and screenshots. This is **not a shipped application theme or an
+  importable v1 pack**; production integration requires separate visual approval.
+- Native address table and independent marking/activation, project-room filters,
+  retained form drafts, validated/duplicate-safe local edits, inspector controls,
+  density/motion/neutral comparison and explicitly memory-only save simulation
+  with progress/success/error/cancellation and newer-edit protection.
+- Verified in system Chromium: **50 browser assertions**, no external page
+  requests or console/script errors; embedded JavaScript syntax passed. Actual
+  running effects stop on motion-off or OS reduction; no idle animation loop.
+  Small-window table-space regression is covered. The 720px layout represents
+  a 200%-zoom-sized layout viewport, not a native browser-chrome zoom test.
+- No application/core/server source or dependencies changed. No live project,
+  bus, Docker, deployment or release touched. Native WebKitGTK/Orca and full
+  accessibility acceptance remain unverified. Details and source fingerprints:
+  [study README](design-studies/lcars/README.md) and `verification.json`.
+
 ## 2026-10-08 — MCP: parameter visibility, paging and two real clients (ADR-0090 amendment)
 
 - **Shared evaluation:** the parameter panel's stored-value evaluation

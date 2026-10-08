@@ -1,5 +1,17 @@
 # Known limitations
 
+## LCARS presentation is Chromium-verified, not an executable imported pack
+
+The optional built-in LCARS palette and workbench framing are implemented
+([ADR-0092](adr/0092-lcars-built-in-presentation.md), [guide](DESIGN_LCARS.md)).
+The palette applies application-wide; distinctive framing targets the main
+workbench. Imported v1 packs cannot request this geometry or animations; LCARS
+is not exportable as a lossless v1 pack. Density and motion remain independent.
+No light variant or sounds. Native WebKitGTK/Orca, Firefox, browser-chrome zoom
+and complete WCAG acceptance are unverified. Chromium proof uses only
+intercepted synthetic API replies, including a deliberately refused save; it
+does not establish live project persistence, bus operation or deployment.
+
 ## Telegram-flow visualization is approved but not implemented
 
 User scope decision 2026-10-04: [the session-local nervous-system view](TELEGRAM_FLOW_VISUALIZATION.md)

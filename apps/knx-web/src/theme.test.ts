@@ -13,7 +13,7 @@ function fakeStorage(initial: Record<string, string> = {}) {
 
 describe("THEMES", () => {
   it("no longer offers Neon Grid or Bitcoin DeFi (removed 2026-10-05, ADR-0079)", () => {
-    expect(THEMES.map((t) => t.id)).toEqual(["system", "porcelain", "graphite", "cupertino"]);
+    expect(THEMES.map((t) => t.id)).toEqual(["system", "porcelain", "graphite", "cupertino", "lcars"]);
   });
 
   it("offers at least three palettes besides the System entry", () => {

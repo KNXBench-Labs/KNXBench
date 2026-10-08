@@ -6905,6 +6905,11 @@ group addresses (`apps/knx-server/tests/http_legacy_device.rs`).
   `knx products family` lists it next to an ETS program with the same
   manufacturer and ApplicationNumber, but nothing is merged or replaced.
 - **Stays refused:** `.pr*` project exports and `.vd2`.
+- **The one real `.vd5` is refused.** The Siemens `.vd5` (Nov 2016)
+  exceeds the 64 MiB bounds (173 MB payload). It also has four members, an
+  installer path tree with three mask images, where the rules expect one
+  `ets.vd_`. Lifting this needs measured bounds and the multi-member layout
+  ([legacy-vd-mapping.md](research/legacy-vd-mapping.md#the-first-real-vd5-structure-only-not-imported)).
 
 **Update 2026-10-08 (legacy VD package L1, ADR-0094).** The design's
 decisions are taken: the maintainer approved the 2026-09-26 design on

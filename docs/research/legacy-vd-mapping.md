@@ -161,6 +161,27 @@ except three named deviations:
    legacy tree. It is not editable there either, because its access is
    `None`.
 
+## The first real `.vd5` (structure only, not imported)
+
+`SIEMENS_KNX_PDB_Nov_2016_ETS3.vd5` (67,538,254 bytes, sha256
+`6459190d…87df2b3`) appeared in the corpus on 2026-10-08. Its ZIP central
+directory, read without decryption, differs from every `.vd3`/`.vd4`/`.pr5`
+at hand:
+
+- **Four members, not one.** Three mask images
+  (`…/eteC/MASK/mask0011.bin`, `mask0012.bin` stored, `MASK0705.BIN`
+  deflated) and the payload at
+  `Program Files (x86)/Ets/Database/@PDB/@PDB_Ges/_Novmber_2016/ets.vd_`.
+  All four are ZipCrypto-encrypted (flags `0x1`).
+- **Size.** The file exceeds the 64 MiB input bound, and the payload
+  inflates to 173,230,269 bytes, also beyond the 64 MiB payload bound.
+
+KNXBench therefore refuses it by name (`SizeLimit`, before any decryption).
+Supporting it needs its own package: the multi-member layout (an installer
+tree, mask images preserved), bounds raised on measured memory use, and the
+parser's footprint at that size. Its format version is unknown until it is
+decrypted.
+
 ## Both real files (ignored corpus test)
 
 `knx-app/tests/legacy_corpus.rs` publishes both files into one database

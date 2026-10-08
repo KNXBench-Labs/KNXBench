@@ -1,5 +1,79 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Legacy VD files: programs imported for offline use (L2, ADR-0094)
+
+- **What:** every application program of a legacy ETS3 `.vd3`/`.vd4`/`.vd5`
+  product database can be imported into the product database and then used
+  like any other: catalog entry, placement, parameters with visibility and
+  translations, communication objects linked to group addresses. Download
+  stays out (L4).
+- **knx-productdb::legacy:**
+  - `map_legacy_database` turns the parsed payload into plain rows. The
+    rules are measured against ETS 6.3's conversion and recorded in
+    `docs/research/legacy-vd-mapping.md`: grouping by memory cell, unions,
+    enumerations, default/access/text overrides, the dynamic tree from
+    `PAR_PARAMETER_ID`/`PARENT_PARM_VALUE`, five LCIDs, the catalog from
+    functional entities.
+  - Ids live in an `LX<sha8>` namespace inside ETS's own segment
+    (`M-1092_A-LX…-300`). A namespace owned by another payload is refused
+    by name.
+  - `publish_legacy` writes everything in one transaction, idempotent per
+    payload digest. Provenance goes to **schema v22** (`legacy_source`,
+    `legacy_source_file`, `legacy_program`, `legacy_diagnostic`, additive).
+    `write_authority_recorded` is set, since EX-IM has no calculations.
+  - Value escapes `\'`, `\r`, `\n`, `\\` are decoded; unknown ones are
+    counted. Unmapped tables, skipped rows (summed per table and reason),
+    orphan or conflicting translations, unknown access levels and parent
+    chains deeper than 64 are reported, never dropped.
+  - A group member's translation is left out only where it adds nothing;
+    a member that overrides the text keeps every translation.
+- **Download refuses** a legacy program as `CodeError::LegacyProgram`.
+- **knx-app:** `import_legacy_file`. **CLI:** `knx products import-legacy
+  <file> [--product-db] [--password-stdin | --password-file]`. It decrypts
+  before it opens the product database, so a wrong or missing password
+  leaves no file behind.
+- **Acceptance (private corpus, ignored tests):**
+  - N000520 from the `.vd4` against ETS's conversion through KNXBench's
+    evaluator: 260 parameter refs, 28 object refs, 3,535 translations,
+    36 visibility cases. Three named deviations: 5008 access, one extra
+    en-US program-name translation, and 5008's placement.
+  - Both real files publish with pinned counts (VD3: 3 programs, 1,366
+    translations; VD4: 2 programs, 10,428 translations) and evaluate with
+    `NoBranchMatched` as the only evaluator diagnostic, the same kind ETS's
+    own conversion shows.
+- **Synthetic tests:** mapping 17, publish 8, CLI import 5, HTTP 1 (catalog
+  listing, placement, parameter edit that switches the visible branch and
+  the object activation, group link). The program fixture is new
+  (`marvin-program*.vd4`, "Improbability Drive").
+- **Found on the way:** the product-DB rewind fixtures did not drop the new
+  v22 tables. That broke 36 migration tests across 11 files, all with
+  `table legacy_source already exists`. `v20_rewind::drop_v22_objects` now
+  runs in every rewind.
+- **Mutation sweep:** 20/20 realistic reverts fail a named test. The first
+  sweep left one survivor (text overrides always set); its test now pins
+  the ref texts.
+- **Self-review** (in-session, not independent) found the CLI's DB-before-
+  decrypt order (fixed test-first), the unnamed namespace collision (fixed
+  test-first) and an untested catalog listing (test added, no code change).
+- **Gate:** on `d110de30` (rebased on `8e8aa6b6`), under both gate
+  locks, inputs frozen (empty diff at start and end):
+  - Web build, fmt and clippy `-D warnings` (workspace) pass; all five xtask
+    gates pass; `git diff --check` is clean.
+  - Workspace tests: **3,663 passed, 0 failed, 182 ignored** (217 result
+    blocks).
+  - Corpus: legacy corpus 3/3 and oracle 1/1; `standalone_packages` ignored
+    3/3; `legacy_member_names_corpus` 1/1.
+  - Product matrix (release): the first run was red on the aggregate
+    commitment only. It now counts the four new, empty v22 tables. With them
+    left out, the v16-shaped projection proved unchanged, so the commitment
+    was re-pinned (`7b558cdd…` → `541d0afc…`) and each table pinned at 0.
+    The rerun passes 1/1, and clippy for `knx-productdb` passes again.
+- **Not done:** server/web upload with password dialog and the remembered
+  password (L3); DPTs (`EIB_DATA_TYPE_CODE` is unmeasured); download (L4).
+  The visual web check moves to L3, where the upload makes it reachable.
+  The first real `.vd5` (Siemens, Nov 2016) is refused: 173 MB payload,
+  four members (KNOWN_LIMITATIONS §128); it needs its own package.
+
 ## 2026-10-08 — Calm LCARS ambient source published and activated
 
 - Tested merge **6711af9a** is published on main and stamped into matching Docker

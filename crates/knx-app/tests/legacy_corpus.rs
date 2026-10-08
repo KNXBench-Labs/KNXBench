@@ -184,3 +184,126 @@ fn no_tracked_file_contains_the_real_legacy_password() {
         "only {scanned} files scanned; the scan is vacuous"
     );
 }
+
+/// What publishing one real database must yield (ADR-0094, package L2).
+struct Published {
+    name: &'static str,
+    programs: usize,
+    catalog_items: usize,
+    parameters: usize,
+    parameter_refs: usize,
+    com_object_refs: usize,
+    translations: usize,
+    /// Mapping diagnostics by kind.
+    diagnostics: &'static [(&'static str, usize)],
+    /// The `skipped-rows` details: rows the file has but nothing maps.
+    skipped: &'static [&'static str],
+}
+
+const PUBLISHED: [Published; 2] = [
+    Published {
+        name: "EIBMARKT.VD3",
+        programs: 3,
+        catalog_items: 3,
+        parameters: 302,
+        parameter_refs: 572,
+        com_object_refs: 148,
+        translations: 1366,
+        diagnostics: &[("orphan-translation", 5), ("skipped-rows", 2), ("unmapped-table", 18)],
+        skipped: &[
+            "3 product_to_program rows were not mapped (PROD2PROG_ID, PRODUCT_ID or PROGRAM_ID is empty); they stay in the payload",
+            "385 text_attribute rows were not mapped (LANGUAGE_ID, COLUMN_ID, ENTITY_ID or the text is empty); they stay in the payload",
+        ],
+    },
+    Published {
+        name: "Eibmarkt Motion Sensor N520_IRBM_N530_IRBM.vd4",
+        programs: 2,
+        catalog_items: 2,
+        parameters: 334,
+        parameter_refs: 520,
+        com_object_refs: 56,
+        translations: 10428,
+        diagnostics: &[("orphan-translation", 5), ("skipped-rows", 2), ("unmapped-table", 18)],
+        skipped: &[
+            "2 product_to_program rows were not mapped (PROD2PROG_ID, PRODUCT_ID or PROGRAM_ID is empty); they stay in the payload",
+            "1 text_attribute rows were not mapped (LANGUAGE_ID, COLUMN_ID, ENTITY_ID or the text is empty); they stay in the payload",
+        ],
+    },
+];
+
+#[test]
+#[ignore = "private corpus: needs KNXBENCH_PRODUCT_CORPUS and KNXBENCH_VD_PASSWORD_FILE"]
+fn both_real_databases_publish_completely_and_evaluate() {
+    let root = corpus_root();
+    let dir = tempfile::tempdir().unwrap();
+    let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    for expected in &PUBLISHED {
+        let bytes = read(&root, expected.name);
+        let report =
+            knx_app::legacy::import_legacy_file(&conn, expected.name, &bytes, Some(&password()))
+                .unwrap_or_else(|e| panic!("{}: {e}", expected.name));
+        assert!(!report.skipped, "{}", expected.name);
+        let mut kinds = std::collections::BTreeMap::<&str, usize>::new();
+        for (kind, _) in &report.diagnostics {
+            *kinds.entry(kind.as_str()).or_default() += 1;
+        }
+        let actual = (
+            report.programs.len(),
+            report.catalog_items,
+            report.parameters,
+            report.parameter_refs,
+            report.com_object_refs,
+            report.translations,
+            kinds.into_iter().collect::<Vec<_>>(),
+        );
+        let pinned = (
+            expected.programs,
+            expected.catalog_items,
+            expected.parameters,
+            expected.parameter_refs,
+            expected.com_object_refs,
+            expected.translations,
+            expected.diagnostics.to_vec(),
+        );
+        assert_eq!(actual, pinned, "{}", expected.name);
+        let skipped: Vec<&str> = report
+            .diagnostics
+            .iter()
+            .filter(|(kind, _)| kind == "skipped-rows")
+            .map(|(_, detail)| detail.as_str())
+            .collect();
+        assert_eq!(skipped, expected.skipped, "{}", expected.name);
+        // Every program evaluates under its defaults; what the evaluator
+        // could not decide is counted, never hidden.
+        for program in &report.programs {
+            let evaluation =
+                knx_productdb::device_evaluation::evaluate_device(&conn, program, Vec::new(), &[])
+                    .unwrap();
+            let active = evaluation.activation.parameter_refs.len();
+            let undecided = evaluation.activation.diagnostics.len();
+            println!(
+                "{program}: {active} active parameter refs, {undecided} evaluator diagnostics"
+            );
+            let mut kinds = std::collections::BTreeMap::<String, usize>::new();
+            for d in &evaluation.activation.diagnostics {
+                let shown = format!("{:?}", d.diagnostic);
+                let kind = shown
+                    .split([' ', '{', '('])
+                    .next()
+                    .unwrap_or_default()
+                    .to_string();
+                *kinds.entry(kind).or_default() += 1;
+            }
+            // ETS3 attaches children to some parameter values only, so a
+            // value without children leaves its `choose` unmatched. That is
+            // the one kind expected here. ETS's own conversion of N000520
+            // shows the same kind under defaults (docs/research/
+            // legacy-vd-mapping.md, "Both real files").
+            assert!(
+                kinds.keys().all(|k| k == "NoBranchMatched"),
+                "{program}: unexpected evaluator diagnostics {kinds:?}"
+            );
+            assert!(active > 0, "{program} shows nothing");
+        }
+    }
+}

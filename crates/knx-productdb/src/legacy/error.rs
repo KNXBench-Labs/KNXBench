@@ -35,6 +35,9 @@ pub enum LegacyError {
     /// The EX-IM text does not follow the observed grammar. `line` is
     /// 1-based.
     Syntax { line: usize, reason: String },
+    /// The file parsed, but cannot be published (not a product database,
+    /// or nothing to identify it by).
+    Mapping { reason: String },
 }
 
 impl fmt::Display for LegacyError {
@@ -72,6 +75,7 @@ impl fmt::Display for LegacyError {
             Self::Syntax { line, reason } => {
                 write!(f, "legacy EX-IM text, line {line}: {reason}")
             }
+            Self::Mapping { reason } => write!(f, "legacy product database: {reason}"),
         }
     }
 }

@@ -106,7 +106,8 @@ Evidence (`[V]` measured on 2026-10-08 unless noted):
    create no file. Publication into the product database (L2), the
    server/web surfaces with the password dialog (L3) and download (L4, a
    separate package) follow under this ADR.
-7. **Decisions recorded for L2.** These are binding but not implemented yet:
+7. **Decisions recorded for L2.** Implemented 2026-10-08; the identifier
+   scheme was revised during implementation (see *Amendment: L2* below):
    - Legacy rows go directly into the existing product tables, including
      `dynamic_node` for visibility. No synthetic `.knxprod` XML is generated.
    - Manufacturers map to `M-xxxx` by their numeric id, backed by three
@@ -119,6 +120,53 @@ Evidence (`[V]` measured on 2026-10-08 unless noted):
      only hinted at.
    - Acceptance is semantic equivalence, judged by KNXBench's own evaluator,
      against ETS's conversion in the house project.
+
+## Amendment: L2 (2026-10-08), publication into the product database
+
+- **Shape.** `knx_productdb::legacy::map_legacy_database` turns a parsed
+  payload into plain rows (`LegacyMapping`, testable without a database);
+  `publish_legacy` writes them in one transaction. `knx_app::legacy::
+  import_legacy_file` decrypts first, and `knx products import-legacy`
+  exposes it (`--password-stdin` / `--password-file`, never argv). The
+  mapping rules are measured, see
+  [legacy-vd-mapping.md](../research/legacy-vd-mapping.md).
+- **Identifiers (revises decision 7).** The marker moves into the segment
+  ETS itself uses, so a legacy id keeps the segment count of a real ETS id
+  and every existing id parser keeps working:
+  `M-<hex manufacturer>_A-LX<sha8>-<PROGRAM_ID>`, with
+  `_P-<PARAMETER_NUMBER>` (`_UP-` for unions), `_R-<PARAMETER_NUMBER>`,
+  `_O-<OBJECT_NUMBER>_R-<OBJECT_UNIQUE_NUMBER>`, `_PT-<type id>`,
+  `_EN-<value>`, `_PB-<page>`; catalog rows use `_H-LX<sha8>-…`,
+  `_CS-LX<sha8>…` and `_CI-LX<sha8>-<VIRTUAL_DEVICE_ID>`. `<sha8>` is the
+  first 8 hex digits (upper case) of the decrypted payload's SHA-256. ETS
+  ids never contain `LX` in that position, so nothing collides with them.
+  Two different payloads whose digests share the first eight hex digits
+  would share ids; the second is refused by name, never merged. The manufacturer is `M-` and the number in hex,
+  which agrees with the three verified pairs.
+- **Provenance (schema v22).** `legacy_source` (keyed by the payload digest,
+  with the namespace and header facts), `legacy_source_file` (every original
+  file and name that delivered it, encrypted or not), `legacy_program` and
+  `legacy_diagnostic`. Original and payload are stored byte for byte in
+  `source_file`; the password never is. Publishing is idempotent over the
+  payload digest: the same content again, renamed or re-encrypted, only adds
+  a `legacy_source_file` row.
+- **Write authority.** `write_authority_recorded` is set for legacy programs
+  (ADR-0080): `parameter_ref.access` holds each member's own level, and the
+  EX-IM format has no `ParameterCalculation`.
+- **Download is refused by name.** `application_program.source_sha256`
+  points at the EX-IM payload, not XML, so `code::load_program_code` returns
+  `CodeError::LegacyProgram` instead of misreading it. L4 owns download.
+- **Nothing is dropped silently.** Tables the mapping does not read
+  (`s19_block`, `device_*`, `mask*`, …) are `unmapped-table` diagnostics;
+  rows with an empty key or no mapped owner are `skipped-rows` (summed per
+  table and reason); both stay in the stored payload. Unknown access levels,
+  conflicting or orphan translations and unplaced parameters (including
+  parent chains deeper than 64) are reported the same way.
+- **Acceptance.** `knx-app/tests/legacy_oracle.rs` (ignored, private
+  corpus) compares N000520 from the `.vd4` with ETS 6.3's conversion through
+  KNXBench's own evaluator: 260 parameter refs, 28 object refs, 3,535
+  translations and 36 visibility cases. Three deviations remain, each named
+  in the test and in the research note; none is adjusted away.
 
 ## Alternatives considered
 
@@ -144,7 +192,9 @@ Evidence (`[V]` measured on 2026-10-08 unless noted):
   (CLI or server upload) is refused as `LegacyExIm`, not as an encrypted or
   unsafe member.
 - A user can see what a legacy file contains before anything is imported.
-  The `.knxproj` and filename-based refusals stay as they were until L2.
+- Since L2 the CLI imports `.vd3`–`.vd5`; the server/web upload with a
+  password dialog is L3. `knx products ingest` and the `.knxproj` path keep
+  their filename refusal.
 - New tests:
   - the grammar (`knx-productdb/tests/legacy_exim.rs`);
   - the container (`knx-productdb/tests/legacy_container.rs`, no

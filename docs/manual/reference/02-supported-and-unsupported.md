@@ -71,7 +71,7 @@ from KNXBench's own native `.knxdb` file format, covered separately below.
 | Standalone `.knxprod`, schemes 15–19 and 22 | ❌ Not implemented | No observed standalone sample or verified namespace support — [COMPATIBILITY.md §4](../../COMPATIBILITY.md#4-not-supported) |
 | Product data ingested from inside a `.knxproj` | ✅ Implemented | The reference project's manufacturer data — 4 manufacturers, 12 application programs — ingests completely — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 | Encrypted `.knxprod` packages | ❌ Not implemented, deliberately | Rejected as a typed error with no rows published; this is a scope exclusion, not a gap to close — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
-| Legacy ETS3 `.vd3`/`.vd4`/`.vd5` product databases | 🟡 Inspection only | `knx products inspect-legacy` reads and summarises them with your password; importing them into the product database is the next step — [ADR-0094](../../adr/0094-legacy-exim-product-files.md) |
+| Legacy ETS3 `.vd3`/`.vd4`/`.vd5` product databases | 🟡 Offline use, CLI only | `knx products inspect-legacy` summarises them and `knx products import-legacy` imports them with your password: catalog, parameters, objects and visibility work offline. Not yet: upload in the web app, data point types, download — [ADR-0094](../../adr/0094-legacy-exim-product-files.md) |
 | Legacy `.vd2` product data | ❌ Not implemented, deliberately | A distinct pre-2013 ETS2-era container family, not the `.knxprod` ZIP/XML family at all; permanently out of scope — [COMPATIBILITY.md §4](../../COMPATIBILITY.md#4-not-supported) |
 
 > **Note**

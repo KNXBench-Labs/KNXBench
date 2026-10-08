@@ -6,6 +6,9 @@
 //!
 //! Synthetic fixture: attribute *names* follow the AR07 corpus census, every
 //! value is invented.
+
+mod v20_rewind;
+
 use std::io::{Cursor, Write};
 
 use knx_productdb::{ingest_file, install_package, open_and_migrate, sha256_hex};
@@ -251,6 +254,7 @@ fn rewind_to_v20(conn: &Connection) {
         [],
     )
     .unwrap();
+    v20_rewind::drop_v22_objects(conn);
     conn.execute_batch("PRAGMA user_version = 20;").unwrap();
 }
 
@@ -370,6 +374,7 @@ fn v20_to_v21_changes_nothing_a_current_install_already_reports() {
     let (_dir, path, fresh) = installed();
     {
         let conn = Connection::open(&path).unwrap();
+        v20_rewind::drop_v22_objects(&conn);
         conn.execute_batch("PRAGMA user_version = 20;").unwrap();
     }
     let conn = open_and_migrate(&path).unwrap();
@@ -424,6 +429,13 @@ fn v20_to_v21_names_a_damaged_blob_and_downgrades_its_report() {
 }
 
 #[test]
-fn the_current_schema_is_v21() {
-    assert_eq!(knx_productdb::CURRENT_PRODUCTDB_VERSION, 21);
+fn the_current_schema_includes_v21() {
+    // v22 (ADR-0094) is additive; the v21 backfill stays part of the chain.
+    let dir = tempfile::tempdir().unwrap();
+    let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |r| r.get(0))
+        .unwrap();
+    assert!(version >= 21, "{version}");
+    assert_eq!(version, knx_productdb::CURRENT_PRODUCTDB_VERSION);
 }

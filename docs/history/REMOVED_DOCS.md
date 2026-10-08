@@ -38,3 +38,16 @@ Web: `https://github.com/KNXBench-Labs/KNXBench/tree/6a1ba6ae5d54/<path>`.
   figures stay at the commit above.
 - `xtask check-ledger` still skips any `archive/` or `history/` directory; that
   rule is harmless without the folder.
+
+## Second round, 2026-10-08 (at `62a54e70cbc4`)
+
+Also removed on the user's request; readable with
+`git show 62a54e70cbc4:<path>`, links pinned to that commit.
+
+| Removed path | What it held |
+| --- | --- |
+| `docs/GAP_ANALYSIS_ETS.md` | Feature-by-feature gap analysis against ETS (rows B1–D12). Ledger evidence, limitations and source comments (`GAP_ANALYSIS_ETS.md B9`, `C2`, `C3` …) still cite its row IDs; current claims live in [COMPATIBILITY](../COMPATIBILITY.md) |
+| `docs/Issues.md` | The user's empty intake note for observations |
+| `.serena/` | Tracked `.gitignore` of the Serena MCP config; the local folder moved to `KNXBench.backups/root-cleanup-2026-10-08/serena` |
+| `tools/agent_memory_sync.py`, `tools/tests/test_agent_memory_sync.py` | Generator of the shared agent-memory index `.agent-memory/`. Decommissioned: systemd user timer `knxbench-memory-sync` disabled and removed, marker blocks removed from the root `MEMORY.md` and the Hermes `SOUL.md` by its own `uninstall-*` commands; installed copy, unit files, the old index and pre-change copies are in `KNXBench.backups/memory-sync-removal-2026-10-08` |
+| `tools/cloud/` | Claude Code cloud-session hook, setup script and rules (cloud sessions paused since 2026-09-28); the `SessionStart` hook in `.claude/settings.json` was removed with it |

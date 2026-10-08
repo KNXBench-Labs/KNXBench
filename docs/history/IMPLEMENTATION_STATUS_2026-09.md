@@ -3305,7 +3305,7 @@ which was specifically the three gaps above.
 
 **Topology & group-range command layer (2026-09-06).** `knx-core::command`
 gains ten `Command` variants closing the first item of
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)'s Tier 1 backlog: `CreateArea`/
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)'s Tier 1 backlog: `CreateArea`/
 `DeleteArea`, `CreateLine`/`DeleteLine`, `MoveDeviceToLine`,
 `CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange`, and
 `LinkComObject`/`UnlinkComObject` — each following `CreateGroupAddress`/
@@ -3434,7 +3434,7 @@ directly, C14 landing differential-download data preservation in
 Phase 3 (real hardware) has run read-only twice (2026-09-14, 2026-09-18); no
 write has reached a real device. Session 7 stays open on that one point —
 see [ROADMAP.md](../ROADMAP.md)'s Session 7 section and
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md) row E1, both updated 2026-09-20 to
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md) row E1, both updated 2026-09-20 to
 say the same thing this paragraph does.
 
 Session 6's KNX IP Secure was scoped after cycle 4 (routing), then shelved
@@ -3559,7 +3559,7 @@ Known gaps carried forward, none blocking Session 5:
   `apps/knx-web`'s parameter panel — for top-level fields; module-scoped
   (per-channel) fields are read and displayed but not editable (D25). See
   the dated entries below and T18
-  ([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md) Tier 5).
+  ([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md) Tier 5).
 - A program value behind an instance-level `Empty` slot stays invisible in
   the model ([KNOWN_LIMITATIONS.md](../KNOWN_LIMITATIONS.md) §12); lifted by
   a layer stack in `Override<T>`, a domain-model change deliberately not
@@ -3587,7 +3587,7 @@ Known gaps carried forward, none blocking Session 5:
 **T23, first slice (2026-09-07) — Group-Ranges UI.** `apps/knx-web`
 gains a "Group Ranges" tree branch (sibling to cycle 9's "Group
 Addresses" branch) and a range picker on group-address creation, closing
-**B5** ([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)) and the picker half
+**B5** ([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)) and the picker half
 of [KNOWN_LIMITATIONS.md §21](../KNOWN_LIMITATIONS.md#21-resolved-export-refuses-a-group-address-without-a-range).
 Brainstormed and scoped as the first of three deliberately separate
 bounded slices of T23 (Group Ranges → link/unlink → topology tree-edit),
@@ -3620,7 +3620,7 @@ run. 10 new `vitest` tests (`treeUtils.test.ts` — `findGroupRange`,
 comm-object rows in the properties Inspector gain a link list with an
 Unlink button per existing `GroupLink` and an inline add-link row
 (group-address picker + Send/Receive select), closing **B7**
-([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)). Unlike the first slice, a
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)). Unlike the first slice, a
 real backend gap surfaced during scoping, not just a missing frontend
 caller: `knx-projection`'s `ComObjectNode` had no field for a comm
 object's *existing* `GroupLink`s at all — `Command::LinkComObject`/
@@ -3673,7 +3673,7 @@ convention as every other create affordance; `medium_ref` pre-filled
 `"MT-0"`, ETS's own default for twisted-pair, since `Line.medium_ref` is
 an opaque product reference `knx-core` deliberately doesn't interpret,
 per that field's own doc comment, so no dropdown is possible). Closes
-**B3** ([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)) and, with it, T23 as
+**B3** ([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)) and, with it, T23 as
 a whole. `Inspector.tsx` gains `AreaInspector`/`LineInspector`
 (summary — line/device count — plus Delete, `installations[0]`-gated
 like every other Delete in this file; no rename field, since no
@@ -3729,7 +3729,7 @@ cycle, the same "backend now, UI later" shape as the 2026-09-06
 topology/group-range/group-link command layer (T4-T6), which got its
 frontend in T23 a day later. 16 new tests across
 `crates/knx-core`/`crates/knx-productdb`/`apps/knx-server`. Closes
-**B1**/**B2** ([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)), backend
+**B1**/**B2** ([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)), backend
 only; **T2** stays open.
 
 **T2, device catalog browser UI (2026-09-08).** Frontend-only, bounded
@@ -3792,7 +3792,7 @@ selectable kind) now also reaches the device branch, so a successful
 delete clears the selection via `App.tsx`'s existing `resetTree`. No
 backend change — `DELETE /api/devices/{id}` shipped with T1/T3's backend
 cycle above. 1 new `vitest` test in `api.test.ts`, for 90 total. Closes
-**T3**'s frontend half ([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)).
+**T3**'s frontend half ([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)).
 
 **T7, communication-object flag editing (2026-09-08).** `crates/knx-core`
 gains `Command::SetComObjectFlag`/`RestoreComObjectFlag`, generic over
@@ -3812,7 +3812,7 @@ before this cycle, contrary to what this task's own backlog text assumed.
 No `knx-projection` change was needed. 3 new `cargo test` tests
 (`knx-core` x2, `knx-server` x2 — one positive, one rejecting an unknown
 flag name) and 1 new `vitest` test. Closes **T7**
-([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)), **B6**.
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)), **B6**.
 
 **T24, standalone `.knxprod` product-package install + honest creation
 diagnostics (2026-09-10, plan
@@ -3900,7 +3900,7 @@ exist. Resolves
 [KNOWN_LIMITATIONS.md §35](../KNOWN_LIMITATIONS.md#35-device-creation-enrichmentissues-are-silently-dropped--resolved-2026-09-10).
 
 *Task 5 — this reconciliation.* Updated
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md) (A5 partially closed; B1/B2/
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md) (A5 partially closed; B1/B2/
 B3/B5/B6/B7 marked closed against their already-"Done" task-backlog
 entries, which the table rows had not reflected; D3 closed and
 extended; new **T24** entry), [KNOWN_LIMITATIONS.md](../KNOWN_LIMITATIONS.md)
@@ -3969,7 +3969,7 @@ previously-private `flattenBuildingParts`. New `cargo test` tests in
 `knx-core` (create/delete/rename/move round trips, plus the not-found/
 not-empty rejection paths) and `knx-server` (4 HTTP integration tests),
 and 8 new `vitest` tests (`api.test.ts` x5, `treeUtils.test.ts` x3).
-Closes **T8** ([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)), **B4**.
+Closes **T8** ([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)), **B4**.
 
 **T10, wire up `export_ets_project` to a real interface (2026-09-10).**
 `export_ets_project` (in `knx-app`) previously had no user-facing caller
@@ -4058,7 +4058,7 @@ issues (`knx-etsproj`'s `large_enum_variant`, `knx-server`'s
 `http_product_install.rs` `field_reassign_with_default`), `xtask
 check-layering` clean, `npx tsc --noEmit` / `npm test` (104/104) /
 `npm run build` clean on `knx-web`. Closes **C4**
-([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)).
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)).
 
 **T9, bulk/multi-select operations (2026-09-10).** `crates/knx-core`
 gains `Command::Batch(Vec<Command>)`, composing existing single-entity
@@ -4108,7 +4108,7 @@ copy/paste with parameters, mixed-kind batch edit. New tests: 3 in
 clippy --workspace --all-targets -- -D warnings`, `cargo test
 --workspace`, `cargo run -p xtask -- check-layering`, and `npm test` /
 `npm run build` on `knx-web` all clean. Closes **T9**
-([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)), **B9**. Design spec:
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)), **B9**. Design spec:
 `docs/superpowers/specs/2026-09-10-bulk-operations-design.md`.
 
 **T11, session log / import-report review screen (2026-09-10).** A new
@@ -4221,7 +4221,7 @@ Parked as a new `KNOWN_LIMITATIONS.md` entry rather than fixed in this
 round: the Log tab is unreachable without an open project even though
 `GET /api/log` deliberately works with none, and `SessionLog` has no cap
 on entry count. Closes **T11**, **D7**
-([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)). Design spec:
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)). Design spec:
 `docs/superpowers/specs/2026-09-08-session-log-design.md`.
 
 **T11 follow-up, Log tab reachability and a session-log growth cap
@@ -4345,7 +4345,7 @@ arm in that same file is one more no-op stub alongside the topology/
 group-range/group-link/device-create-delete arms already there, which made
 the doc/reality gap easier to notice, not the cause of it — see
 `KNOWN_LIMITATIONS.md`. Closes **T12**, **C2**
-([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)). Design spec:
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)). Design spec:
 `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.
 
 **T16, data-integrity-safe group-address CSV editing (2026-09-23).** The
@@ -4477,7 +4477,7 @@ browser) remain open, and new `KNOWN_LIMITATIONS.md` entries (§44-§50)
 record those plus no ETS report parity, no manufacturer/product/program
 name resolution, no parameter/module-argument listing, single-language
 rendering, and no section selection. Closes **T13**, **D4**
-([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)). `ROADMAP.md` was checked
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)). `ROADMAP.md` was checked
 and names neither T13 nor D4, so it was left untouched by this task (a
 separate, unrelated memo about future motion/animation style direction
 was added to its existing Motion and animation section, at explicit
@@ -4612,7 +4612,7 @@ values — project-level and installation-level `FieldChange`s are the
 exception and do render both values — and the web panel shows grouped
 counts only, no tree view, no inline before/after highlighting (design
 spec §9 names both as out of scope). Closes **T14**, **C1**
-([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)). `ROADMAP.md` was checked
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)). `ROADMAP.md` was checked
 and names neither T14 nor C1, so it was left untouched by this task.
 Design spec: `docs/superpowers/specs/2026-09-10-project-diff-design.md`.
 
@@ -4634,7 +4634,7 @@ as a research question. It changes no code and lifts no limitation**: no
 parameter evaluator or editor exists, `ParameterInstance` values are still
 held as opaque raw strings, and [KNOWN_LIMITATIONS.md §3](../KNOWN_LIMITATIONS.md)
 stays open. What changed is that T18 (parameter interpretation and editor,
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md) Tier 5) is no longer blocked on
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md) Tier 5) is no longer blocked on
 research — it now needs a design decision on the no-match-branch policy
 (common in the corpus: 5570/8732 no-default `choose` elements have a legal
 value no `when` covers) and a defensive parser posture, both ordinary
@@ -4712,7 +4712,7 @@ passed / 0 failed / 3 ignored, up from 784 before this slice. Closes no
 to "partially closed": an evaluator exists, nothing surfaces it. This
 docs-only pass (T18 slice 1's third task) reconciles
 [KNOWN_LIMITATIONS.md §3/§12/§47](../KNOWN_LIMITATIONS.md), [COMPATIBILITY.md](../COMPATIBILITY.md),
-[DATA_MODEL.md §10](../DATA_MODEL.md), [GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md),
+[DATA_MODEL.md §10](../DATA_MODEL.md), [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md),
 [ROADMAP.md](../ROADMAP.md), [ARCHITECTURE.md](../ARCHITECTURE.md) and
 [IMPORT_EXPORT.md](../IMPORT_EXPORT.md) with what actually shipped, and
 retires the two source comments (`knx-core/src/parameter.rs`,
@@ -4845,7 +4845,7 @@ slice (task 1: +6 net to 815 — 7 new unit tests minus the one deleted;
 task 2: +2 to 817 — the two new corpus regression tests). This docs-only
 pass (T18 slice 2's third task) reconciles
 [KNOWN_LIMITATIONS.md §3/§12](../KNOWN_LIMITATIONS.md),
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md), [DATA_MODEL.md §10](../DATA_MODEL.md),
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md), [DATA_MODEL.md §10](../DATA_MODEL.md),
 [ARCHITECTURE.md](../ARCHITECTURE.md) and [ROADMAP.md](../ROADMAP.md) with what
 actually shipped, and retires every remaining `ModuleNotExpanded`
 reference in `docs/` and `crates/` that stated the old behaviour as
@@ -4985,7 +4985,7 @@ moves from "partially closed" to a still-partial but stronger statement:
 a UI now exists and can write a top-level value; module-scoped editing
 (D25) is the named remainder. This docs-only pass (T18 slice 3's fifth
 task) reconciles [KNOWN_LIMITATIONS.md §3/§12](../KNOWN_LIMITATIONS.md),
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md), [DATA_MODEL.md §10](../DATA_MODEL.md),
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md), [DATA_MODEL.md §10](../DATA_MODEL.md),
 [ARCHITECTURE.md](../ARCHITECTURE.md) and [RESEARCH.md §4.4](../RESEARCH.md)
 with what actually shipped. Never claimed here or anywhere else: ETS
 behavioural parity, or KNX certification.
@@ -6092,7 +6092,7 @@ exceptions above; neither claims full closure, and nothing here or
 anywhere else claims ETS behavioural parity. This docs-only pass (T18
 slice 4's sixth task) reconciles
 [KNOWN_LIMITATIONS.md §3/§68-§71](../KNOWN_LIMITATIONS.md),
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md), [DATA_MODEL.md §11](../DATA_MODEL.md),
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md), [DATA_MODEL.md §11](../DATA_MODEL.md),
 and [RESEARCH.md §4.4](../RESEARCH.md) with what actually shipped, and
 corrects two passages in
 [the design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md)
@@ -7851,7 +7851,7 @@ settle whether to read enumeration names out of the ETS master data, so
 this task ruled it out: an enumeration whose names are invented is not a
 feature, the master file's catalogue is a property of that file rather than
 of the Standard (`docs/RESEARCH.md` §5), and
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md) row **E4** already carries
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md) row **E4** already carries
 catalogue consultation as its own open item.
 
 **Re-measured, not remembered.**

@@ -11,7 +11,6 @@ Backup/
 OriginalData/
 .private/
 .ai/
-.agent-memory/
 memory/
 bus_traffic.jsonl
 devices.json

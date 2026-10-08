@@ -81,7 +81,7 @@ the private repository, and the version number is not a promise that anything is
 - **Consequence:** the common ETS habit of copying a working subsystem out of
   an old project has no equivalent here.
 - **Workaround:** none.
-- **Details:** [`docs/GAP_ANALYSIS_ETS.md`](../GAP_ANALYSIS_ETS.md), row C3
+- **Details:** [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md), row C3
 
 ## Export
 

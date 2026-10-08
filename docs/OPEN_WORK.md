@@ -41,9 +41,9 @@ launch; its two finished local packages are delivered:
 - **Community evidence** (File → Analyze support gaps…) is in the repository,
   and its intake lives here (ADR-0091). Retiring the interim
   `KNXBench-Contributions` repository is the owner's call.
-- **Marketing website** is in the repository (`website/`, ADR-0095). Its
-  remaining launch gates are deployment go and release-mode design, host
-  privacy page and Pages/domain/HTTPS ([WEBSITE.md](WEBSITE.md)).
+- **Marketing website** is in the repository (`website/`, ADR-0095) and
+  deployed to knxbench.com by `.github/workflows/pages.yml`
+  ([WEBSITE.md](WEBSITE.md)).
 
 Do not work in the root checkout; publish each package from its own worktree
 off `origin/main`.

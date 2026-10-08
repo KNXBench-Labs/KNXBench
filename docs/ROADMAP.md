@@ -17,11 +17,10 @@ validated evidence, tests and review. See [COMMUNITY_EVIDENCE.md](COMMUNITY_EVID
 
 ## Marketing website (2026-10-08)
 
-The calm-dark DE/EN marketing companion is in the repository under
-`website/`: real-app clips, optional CRT/LCARS gallery, Evolution Story link
-and the Docker/AppImage start paths; the full manual stays on GitHub. Deploying
-it is a separate step: deployment go and release-mode design, exact story
-approval, host-specific privacy details, Pages/domain/HTTPS. See
+The calm-dark DE/EN marketing companion is live at knxbench.com (GitHub
+Pages, deployed by `.github/workflows/pages.yml` from a release build):
+real-app clips, optional CRT/LCARS gallery, the published Evolution Story and
+the Docker/AppImage start paths; the full manual stays on GitHub. See
 [website contract](WEBSITE.md) and ADR-0095.
 
 ## Modern LCARS theme (2026-10-08)

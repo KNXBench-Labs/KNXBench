@@ -9,7 +9,7 @@ from datetime import date
 from html import escape
 from pathlib import Path
 
-from .release import verify_candidate
+from .release import check_approval, verify_candidate
 
 SITE_DIR = Path(__file__).resolve().parent.parent / "site"
 
@@ -150,7 +150,7 @@ def render_event_card(event: dict, payload: dict, strands: dict[str, dict], sour
     return "".join(parts)
 
 
-def render_body(payload: dict, story_sha: str) -> str:
+def render_body(payload: dict, story_sha: str, published: bool = False) -> str:
     strands = {strand["id"]: strand for strand in payload["strands"]}
     sources = {source["id"]: source for source in payload["edition"]["sources"]}
     events = {event["id"]: event for event in payload["events"]}
@@ -170,9 +170,11 @@ def render_body(payload: dict, story_sha: str) -> str:
         '<circle cx="3" cy="25" r="2.5" fill="currentColor"/><circle cx="24" cy="25" r="2.5" fill="currentColor"/></svg>'
         'KNXBench</div>'
         f'<div class="masthead-note">Project evolution · Edition {e(edition["id"])}'
-        '<span>Private review candidate · Not published</span></div></header>')
-    add('<p class="preview-banner" role="note"><strong>Private preview.</strong> This candidate has not been '
-        'approved for publication. Its content is awaiting manual review.</p>')
+        + ('<span>Published edition</span></div></header>' if published
+           else '<span>Private review candidate · Not published</span></div></header>'))
+    if not published:
+        add('<p class="preview-banner" role="note"><strong>Private preview.</strong> This candidate has not been '
+            'approved for publication. Its content is awaiting manual review.</p>')
 
     add('<main id="main">')
     add('<section class="hero" aria-labelledby="title"><div class="intro">'
@@ -291,21 +293,35 @@ def render_body(payload: dict, story_sha: str) -> str:
         'is never treated as cause.</li>'
         '<li><strong>Verified (bounded)</strong>: checked in the stated, limited setting only.</li></ul></section>')
     add("</main>")
-    add('<footer class="footer"><div>Offline preview. No analytics. No remote assets. No cookies; the motion '
+    add(f'<footer class="footer"><div>{"Static page" if published else "Offline preview"}. No analytics. '
+        'No remote assets. No cookies; the motion '
         'and text-only preferences are kept in this browser\'s local storage.</div>'
         f'<div>Edition {e(edition["id"])} · content digest <code>{e(story_sha[:16])}</code> · '
-        'not approved for publication</div></footer>')
+        + ('approved for publication by the project owner' if published else 'not approved for publication')
+        + '</div></footer>')
     add("</div>")
     return "\n".join(out)
 
 
-def build(candidate_dir: Path, out_dir: Path, filename: str = "index.html") -> Path:
+class PublicationRefused(Exception):
+    """The approval record does not match this exact candidate; nothing was written."""
+
+
+def build(candidate_dir: Path, out_dir: Path, filename: str = "index.html",
+          approval: Path | None = None) -> Path:
     """Verifies the candidate, then writes out_dir/filename; returns the file path.
 
     The output is a pure function of the candidate and the site sources (no timestamps),
-    so a committed preview can be checked by rebuilding it.
+    so a committed preview can be checked by rebuilding it. With ``approval`` the
+    published variant is rendered (no preview banner, indexable), but only when the
+    record matches this exact candidate; otherwise nothing is written.
     """
     manifest = verify_candidate(candidate_dir)
+    published = approval is not None
+    if published:
+        gate = check_approval(candidate_dir, approval)
+        if not gate.eligible:
+            raise PublicationRefused("; ".join(gate.reasons))
     payload = json.loads((candidate_dir / "story.json").read_text(encoding="utf-8"))
     css = (SITE_DIR / "style.css").read_text(encoding="utf-8")
     script = (SITE_DIR / "app.js").read_text(encoding="utf-8")
@@ -318,11 +334,13 @@ def build(candidate_dir: Path, out_dir: Path, filename: str = "index.html") -> P
         "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         '<meta name="color-scheme" content="dark">\n'
-        '<meta name="robots" content="noindex, nofollow">\n'
-        f'<meta http-equiv="Content-Security-Policy" content="{e(policy)}">\n'
-        f"<title>{e(edition['title'])} — KNXBench project evolution (private preview {e(edition['id'])})</title>\n"
-        f"<style>{css}</style>\n</head>\n<body>\n"
-        + render_body(payload, manifest["story_sha256"])
+        + ('' if published else '<meta name="robots" content="noindex, nofollow">\n')
+        + f'<meta http-equiv="Content-Security-Policy" content="{e(policy)}">\n'
+        + (f"<title>{e(edition['title'])} — KNXBench project evolution (edition {e(edition['id'])})</title>\n"
+           if published else
+           f"<title>{e(edition['title'])} — KNXBench project evolution (private preview {e(edition['id'])})</title>\n")
+        + f"<style>{css}</style>\n</head>\n<body>\n"
+        + render_body(payload, manifest["story_sha256"], published)
         + f'\n<script id="story-data" type="application/json">{data}</script>\n'
         + f"<script>{script}</script>\n</body>\n</html>\n"
     )

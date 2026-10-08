@@ -105,11 +105,50 @@ class BuildTests(unittest.TestCase):
         self.assertNotEqual(self.build().returncode, 0)
         self.assertTrue(self.out.is_symlink())
 
-    def test_release_mode_refuses_before_writing_anything(self):
+    def test_release_build_is_public_and_bound_to_the_story_approval(self):
         result = self.build("--release")
-        self.assertEqual(result.returncode, 3)
-        self.assertIn("publication", result.stderr.lower())
+        self.assertEqual(result.returncode, 0, result.stderr)
+        manifest = json.loads((self.out / "build-manifest.json").read_text())
+        self.assertEqual(manifest["mode"], "release")
+        self.assertEqual((self.out / "CNAME").read_text(), "knxbench.com\n")
+        self.assertEqual((self.out / "robots.txt").read_text(), "User-agent: *\nAllow: /\n")
+        for page in self.out.rglob("*.html"):
+            html = page.read_text()
+            self.assertNotIn("noindex", html, page)
+            self.assertNotIn('class="preview-note"', html, page)
+            self.assertNotIn('class="launch-note"', html, page)
+            self.assertNotIn('class="preview-banner"', html, page)
+            self.assertNotIn("KNXBench-Contributions", html, page)
+        self.assertIn("<span>Published edition</span>", (self.out / "story/index.html").read_text())
+        for lang, title in (("de", "Datenschutz"), ("en", "Privacy")):
+            privacy = (self.out / lang / "privacy/index.html").read_text()
+            self.assertIn(f"<h1>{title}</h1>", privacy)
+            self.assertIn("GitHub Pages", privacy)
+            self.assertIn('href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"', privacy)
+
+    def test_release_refuses_a_mismatched_story_approval_before_writing(self):
+        approval = Path(self.temp.name) / "approval.json"
+        approval.write_text(json.dumps({"schema": "knxbench-evolution-approval/1", "decision": "publish-exact-version",
+                                        "candidate_id": "2026-10-08.4", "story_sha256": "0" * 64,
+                                        "approved_by": "x", "approved_at": "x"}))
+        result = self.build("--release", "--story-approval", str(approval))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("approval", result.stderr)
         self.assertFalse(self.out.exists())
+
+    def test_story_approval_override_only_applies_to_release(self):
+        result = self.build("--story-approval", "x.json")
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse(self.out.exists())
+
+    def test_preview_stays_unindexed_and_marked(self):
+        self.require_build()
+        self.assertEqual((self.out / "robots.txt").read_text(), "User-agent: *\nDisallow: /\n")
+        self.assertFalse((self.out / "CNAME").exists())
+        for lang in ("de", "en"):
+            html = (self.out / lang / "index.html").read_text()
+            self.assertIn("noindex", html)
+            self.assertIn('class="preview-note"', html)
 
     def test_page_assets_are_local_exist_and_videos_do_not_autoplay(self):
         self.require_build()

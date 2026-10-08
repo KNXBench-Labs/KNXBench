@@ -102,7 +102,7 @@
   "privacy_body": "Die Website verwendet keine Analyse-Skripte, Marketing-Cookies, eingebetteten Videodienste oder extern geladenen Schriften. Medien und Schriften werden vom selben Seitenhost geladen. Die Links zu GitHub führen zu einem externen Dienst.",
   "privacy_pending": "Vor dem öffentlichen Launch werden die Informationen zum tatsächlichen Hosting, möglichen Server-Logs und zu Datenschutzanfragen ergänzt und geprüft. Diese lokale Vorschau ist keine abschließende Datenschutzerklärung für den späteren Betrieb.",
   "contact_title": "Impressum",
-  "contact_body": "Öffentliches Projektfeedback und Unterstützungslücken können im KNXBench-Contributions-Repository gemeldet werden. Dorthin gehören nur ausdrücklich für die Öffentlichkeit freigegebene Informationen — keine vertraulichen Projekte oder Zugangsdaten.",
+  "contact_body": "Öffentliches Projektfeedback und Unterstützungslücken können auf GitHub im KNXBench-Repository über das Formular für Unterstützungslücken gemeldet werden. Dorthin gehören nur ausdrücklich für die Öffentlichkeit freigegebene Informationen — keine vertraulichen Projekte oder Zugangsdaten.",
   "contact_email": "contact@knxbench.com",
   "back_home": "Zurück zur Werkbank",
   "contact_provider_label": "Anbieter dieser Website",
@@ -110,5 +110,8 @@
   "contact_street": "Schusterstrasse 3",
   "contact_city": "48268 Greven",
   "motion_pause": "Animationen pausieren",
-  "motion_resume": "Animationen fortsetzen"
+  "motion_resume": "Animationen fortsetzen",
+  "privacy_title_release": "Datenschutz",
+  "privacy_hosting": "Diese Website wird über GitHub Pages bereitgestellt, einen Dienst der GitHub, Inc. Laut GitHubs Dokumentation wird beim Besuch einer GitHub-Pages-Seite die IP-Adresse der Besucher aus Sicherheitsgründen protokolliert und gespeichert. Für Datenschutzanfragen nutze den Kontakt im Impressum.",
+  "privacy_policy_label": "Datenschutzerklärung von GitHub (englisch)"
 }

@@ -97,3 +97,14 @@ The original local integration did not include deployment. On 2026-10-08 the
 user separately authorized publication and a Docker rollout, now verified on
 HTTPS port 8484; see [deployment receipt](design-studies/lcars/deployment-verification.json).
 No release tag or live hardware operation was performed.
+
+## LCARS ambient timing reference and live rollout
+
+The header/emblem cycles use the existing transition-duration token, not a
+separate clock setting. Standard 10s/16s and Subtle 18s/24s are reference
+periods at 200ms and 120ms respectively. Existing timing overrides scale the
+periods: the verified live Standard token `.25s` gives 12.5s/20s. No saved
+timing preference is overwritten. Off and OS reduced motion cancel the
+effects immediately. Source/image/live proof is recorded in
+`docs/design-studies/lcars/ambient-deployment-verification.json` relative to
+the repository root.

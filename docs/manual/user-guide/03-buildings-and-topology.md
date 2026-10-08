@@ -2,6 +2,12 @@
 
 # Buildings and topology
 
+**Goal:** organise devices by electrical line and by building location.
+**Prerequisites:** an open practice project; use the project wizard for starting structure.
+**Expected result:** the same device appears under its chosen line and room.
+**Watch out:** changing its project address does not program a physical device;
+drag-and-drop is limited to supported targets within the same installation.
+
 A KNX project describes the same set of devices twice, from two directions.
 
 **Topology** is the electrical truth: which bus line a device is physically wired to.

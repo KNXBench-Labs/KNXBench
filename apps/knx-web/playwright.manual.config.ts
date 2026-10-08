@@ -8,12 +8,12 @@ import { fileURLToPath } from "node:url";
 
 const here = fileURLToPath(new URL(".", import.meta.url));
 
-// The server binary is built beforehand (`cargo build --release -p
+// The server binary is built beforehand (`cargo build -p
 // knx-server`); its path comes from the environment so this config never
 // guesses a target directory. The frontend is the production build in
 // `dist/` (`npm run build`).
 const server = process.env.KNX_SERVER_BIN;
-if (!server) throw new Error("set KNX_SERVER_BIN to a release knx-server binary");
+if (!server) throw new Error("set KNX_SERVER_BIN to a freshly built knx-server binary");
 const repo = resolve(here, "../..");
 const scratch = mkdtempSync(join(process.env.TMPDIR ?? tmpdir(), "knx-manual-"));
 const data = join(scratch, "projects");
@@ -33,9 +33,11 @@ export default defineConfig({
   reporter: "line",
   use: {
     baseURL: "http://127.0.0.1:4810",
+    actionTimeout: 10_000,
+    screenshot: "only-on-failure",
     locale: "en-US",
     viewport: { width: 1440, height: 900 },
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 1,
     launchOptions: { executablePath: "/usr/bin/chromium" },
   },
   webServer: [

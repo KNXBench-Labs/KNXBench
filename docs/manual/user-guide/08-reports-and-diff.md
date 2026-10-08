@@ -2,6 +2,12 @@
 
 # Documentation export and project comparison
 
+**Goal:** produce a readable project report or compare two saved snapshots.
+**Prerequisites:** an open project for a report; a second compatible `.knxdb` for comparison.
+**Expected result:** a self-contained HTML file or a list of differences.
+**Watch out:** review names and addresses before sharing a report. A diff does not
+merge changes, and browser Print to PDF is not a native PDF exporter.
+
 Two things you will eventually want from any engineering project: a document that
 describes it to someone who cannot open it, and an answer to "what changed?". KNXBench
 has one feature for each.

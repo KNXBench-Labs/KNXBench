@@ -1,0 +1,78 @@
+ M .ai/CURRENT_STATE.md
+ M README.md
+ M apps/knx-web/e2e/manual-screenshots.shots.ts
+ M apps/knx-web/playwright.manual.config.ts
+ M docs/IMPLEMENTATION_STATUS.md
+ M docs/OPEN_WORK.md
+ M docs/PRODUCT_SCHEME_10_RESEARCH.md
+ M docs/ROADMAP.md
+ M docs/assets/screenshots/porcelain-buildings.png
+ M docs/assets/screenshots/porcelain-bus-monitor.png
+ M docs/assets/screenshots/porcelain-command-palette.png
+ M docs/assets/screenshots/porcelain-dashboard.png
+ M docs/assets/screenshots/porcelain-device-inspector.png
+ M docs/assets/screenshots/porcelain-device-tab-communication-objects.png
+ M docs/assets/screenshots/porcelain-device-tab-parameters.png
+ M docs/assets/screenshots/porcelain-device-tab-product-data.png
+ M docs/assets/screenshots/porcelain-file-menu.png
+ M docs/assets/screenshots/porcelain-group-addresses.png
+ M docs/assets/screenshots/porcelain-help-panel.png
+ M docs/assets/screenshots/porcelain-loading-progress.png
+ M docs/assets/screenshots/porcelain-log.png
+ M docs/assets/screenshots/porcelain-login.png
+ M docs/assets/screenshots/porcelain-new-project.png
+ M docs/assets/screenshots/porcelain-onboarding-guide.png
+ M docs/assets/screenshots/porcelain-open-project-dialog.png
+ M docs/assets/screenshots/porcelain-product-catalog.png
+ M docs/assets/screenshots/porcelain-search.png
+ M docs/assets/screenshots/porcelain-settings.png
+ M docs/assets/screenshots/porcelain-topology.png
+ M docs/assets/screenshots/porcelain-welcome.png
+ M docs/contribution-intake/DEUTSCH.md
+ M docs/contribution-intake/README.md
+ M docs/manual/README.md
+ M docs/manual/development/01-contributing.md
+ M docs/manual/development/02-building-from-source.md
+ M docs/manual/development/03-architecture-tour.md
+ M docs/manual/getting-started/01-what-is-knxbench.md
+ M docs/manual/getting-started/03-project-status.md
+ M docs/manual/getting-started/04-installation.md
+ M docs/manual/getting-started/06-first-start.md
+ M docs/manual/ideas-and-roadmap.md
+ M docs/manual/implementation-status.md
+ M docs/manual/known-issues.md
+ M docs/manual/knx-basics/04-datapoint-types.md
+ M docs/manual/reference/02-supported-and-unsupported.md
+ M docs/manual/reference/04-faq.md
+ M docs/manual/user-guide/01-user-interface.md
+ M docs/manual/user-guide/02-projects.md
+ M docs/manual/user-guide/03-buildings-and-topology.md
+ M docs/manual/user-guide/04-group-addresses.md
+ M docs/manual/user-guide/05-devices-and-products.md
+ M docs/manual/user-guide/06-configuration-workflow.md
+ M docs/manual/user-guide/07-bus-and-interfaces.md
+ M docs/manual/user-guide/08-reports-and-diff.md
+ M docs/manual/user-guide/09-settings-and-appearance.md
+ M docs/manual/user-guide/10-command-line.md
+ M docs/manual/user-guide/11-web-and-docker.md
+ M docs/manual/user-guide/12-ai-agents.md
+?? .playwright-cli/
+?? apps/knx-web/e2e/manual-recording.ts
+?? docs/DOCUMENTATION.md
+?? docs/README.md
+?? docs/assets/README.md
+?? docs/assets/media-manifest.json
+?? docs/assets/screenshots/porcelain-device-wizard-placement.png
+?? docs/assets/screenshots/porcelain-device-wizard-product.png
+?? docs/assets/screenshots/porcelain-device-wizard-result.png
+?? docs/assets/screenshots/porcelain-device-wizard-review.png
+?? docs/assets/screenshots/porcelain-practice-project-reopened.png
+?? docs/assets/screenshots/porcelain-project-wizard-building.png
+?? docs/assets/screenshots/porcelain-project-wizard-groups.png
+?? docs/assets/screenshots/porcelain-project-wizard-review.png
+?? docs/assets/screenshots/porcelain-project-wizard-topology.png
+?? docs/assets/screenshots/porcelain-support-gap-analysis.png
+?? docs/assets/workflows/
+?? docs/evidence/documentation-refresh-2026-10-08/
+?? tools/check_documentation.py
+?? tools/tests/test_check_documentation.py

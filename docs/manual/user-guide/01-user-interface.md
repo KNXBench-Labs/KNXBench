@@ -2,6 +2,11 @@
 
 # The user interface
 
+**Goal:** find the explorer, workspace, inspector, search and command palette.
+**Prerequisites:** a running app; open a disposable project to explore populated views.
+**Expected result:** you can select an item and find its properties without changing
+the project. **Watch out:** selecting is not editing, and closing a tab is not saving.
+
 KNXBench opens as one window with one job: show you a KNX project and let you change
 it. There is no ribbon, no floating tool window, and nothing that has to be docked
 before it works. This chapter walks around the window once, names every part, and
@@ -90,7 +95,7 @@ The tree on the left shows the same project, opened at its first line.
 ## The workspace
 
 The center is whatever the selected view shows. When you select a device anywhere —
-tree, topology diagram or search — a device panel with three tabs appears underneath
+tree, topology diagram or search — a device panel with tabs appears underneath
 the current view. That panel is the subject of
 [Devices and products](05-devices-and-products.md).
 
@@ -243,6 +248,10 @@ is the point: you can keep the monitor on a second screen while you work in the 
 > [Bus monitor and KNXnet/IP](07-bus-and-interfaces.md) covers sessions properly.
 
 ## Keyboard
+
+![Real porcelain-theme search: Ctrl+K opens Search, typing light filters the fictional project results, and Escape closes it](../../assets/workflows/search.gif)
+
+*Search filters project results; it does not scan the KNX bus.*
 
 The shortcuts that work anywhere in the main window:
 

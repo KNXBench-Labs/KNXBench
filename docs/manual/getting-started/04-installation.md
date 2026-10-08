@@ -2,215 +2,141 @@
 
 # Installation
 
-There are three ways to run KNXBench: the Linux desktop AppImage, a Docker
-container serving the web frontend, or building it yourself from source.
-Pick whichever fits how you work; all three run the same domain code
-underneath.
+**Goal:** run KNXBench and reach its welcome screen. No KNX hardware is needed.
+Choose one route below; you do not need all three. Collecting installations is
+not an achievement.
+
+| Route | Best for | You need |
+| --- | --- | --- |
+| [Docker / browser](#b-docker--web) | Trying the workbench, or a Linux server on your LAN | Git, Docker and a browser |
+| [Linux AppImage](#a-linux-appimage) | A native Linux window without a source build | An x86-64 Linux host; see [Linux setup](05-linux-setup.md) |
+| [From source](#c-from-source) | Development or source changes newer than the pre-release | Rust, Node.js; native host libraries for the desktop shell |
+
+The paths share domain code, not identical platform evidence. In particular,
+Docker Desktop networking is not a verified substitute for Linux host networking.
 
 ## a) Linux AppImage
 
-The AppImage is the intended first Linux desktop package for KNXBench (see
-[ADR-0021](../../adr/0021-appimage-is-the-first-linux-package.md)).
+The public pre-release checked on **8 October 2026** is
+[`v0.1.0-alpha.5`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5).
+Download **both** `KNXBench_0.1.0-alpha.5_amd64.AppImage` and `SHA256SUMS` from
+that release page into the same directory.
 
-**The current pre-release is**
-[`v0.1.0-alpha.5`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5), with `KNXBench_0.1.0-alpha.5_amd64.AppImage` and
-its `SHA256SUMS`. The repository is private, so the link works only for
-people with access to it.
-1. Check the download with `sha256sum -c SHA256SUMS`.
-2. Make the file executable with `chmod +x`.
-3. Start it. On Wayland it prefers a native window and falls back to X11
-   ([troubleshooting](../reference/03-troubleshooting.md)).
-
-This pre-release was built and checked locally, not by the GitHub Actions
-workflow ([ALPHA_FINAL_GATES §14](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)).
-The earlier `v0.1.0-alpha.4` was withdrawn on 2026-10-07. alpha.5 stores its
-data in `~/.local/share/com.knxbench.knxbench-labs` and does not read the
-alpha.4 data folder
-([known limitation §161](../../KNOWN_LIMITATIONS.md#161-alpha5-does-not-pick-up-the-alpha4-data-folder)).
-Otherwise, "installing the AppImage" means building it yourself. Chapter
-[Linux setup](05-linux-setup.md) covers the host libraries it needs and
-exactly what has been tested.
-
-To build it from a checkout of the repository:
+From that directory:
 
 ```bash
-npm ci --prefix apps/knx-web
-cd apps/knx-desktop
-NO_STRIP=1 APPIMAGE_EXTRACT_AND_RUN=1 cargo tauri build --bundles appimage --ci
+sha256sum -c SHA256SUMS
+chmod +x KNXBench_0.1.0-alpha.5_amd64.AppImage
+./KNXBench_0.1.0-alpha.5_amd64.AppImage
 ```
 
-Once you have an AppImage file — built locally, or, once one exists,
-downloaded from a GitHub release — make it executable and run it:
+**Expected result:** the checksum reports `OK`, then the application opens a
+welcome screen. Stop if the checksum differs; do not solve an integrity warning
+by becoming less interested in it.
 
-```bash
-chmod +x "KNXBench_0.1.0-alpha.5_amd64.AppImage"
-"./KNXBench_0.1.0-alpha.5_amd64.AppImage"
-```
+The package was built and checked locally, not by GitHub Actions. It prefers a
+native Wayland window and can fall back to X11. [Linux setup](05-linux-setup.md)
+and [troubleshooting](../reference/03-troubleshooting.md) explain host requirements.
+The [launcher contract](../../APPIMAGE_LAUNCHER.md) records the tested boundary.
 
-> **Note**
->
-> If a future release publishes an AppImage under a different file name, use
-> that name instead. No specific download location exists to link to today.
+> [!IMPORTANT]
+> The AppImage is a release snapshot. This manual also documents newer source
+> changes. Compare the running build's version and commit before expecting a
+> new wizard or editor change to appear in a downloaded build.
 
-**Updating.** There is no auto-updater. Close KNXBench, replace the AppImage
-file with a newly built one, and start it again.
+**Existing alpha.4 users:** alpha.5 stores data under
+`~/.local/share/com.knxbench.knxbench-labs` and does not automatically read the
+older data directory. Keep the old files and open/copy them deliberately; see
+[known limitation §161](../../KNOWN_LIMITATIONS.md#161-alpha5-does-not-pick-up-the-alpha4-data-folder).
 
-**Removing.** Delete the AppImage file. Its application data — your projects
-— lives separately (see [Linux setup](05-linux-setup.md)) and is not removed
-with it; delete that directory yourself only once you no longer need the
-projects stored there. The AppImage does not install or modify your system's
-GTK or WebKitGTK packages, so removing it leaves your system libraries alone.
+**Update:** close KNXBench, download and verify the replacement AppImage, then
+start it. There is no auto-updater. **Remove:** delete the AppImage. Project data
+lives separately and is not removed with it. Keep independent project backups.
 
 ## b) Docker / web
 
-This runs the KNXbench server and the built web frontend behind one HTTP
-port, from a container.
+Run these commands in a terminal. If you already have a checkout, skip `git clone`
+and `cd` and work from its root. Choose your own password instead of the example.
 
 ```bash
+git clone https://github.com/KNXBench-Labs/KNXBench.git
+cd KNXBench
 docker build -t knxbench-server -f apps/knx-server/Dockerfile .
-docker run -d --name knxbench -p 8484:8080 \
-  -e KNX_AUTH_PASSWORD='pick something long and boring' \
-  -v "$(pwd)/data:/data" knxbench-server
-curl -sf http://127.0.0.1:8484/healthz
-```
-
-This published-port form supports project work only. It cannot reach the
-bus: a tunnel to a gateway gets no answer, because the server tells the
-gateway its private container address ([§155](../../KNOWN_LIMITATIONS.md#155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer)),
-and gateway discovery needs multicast that Docker's default bridge does not
-carry onto the LAN. On Linux, use host networking for anything that talks to
-the bus. If you must stay on the bridge, add `-e KNX_TUNNEL_ROUTE_BACK=1`:
-the server then asks the gateway to answer to wherever the packet came from
-(KNXnet/IP "Route Back"), which gets through Docker's address translation.
-Tunnelling then works with gateways that support Route Back; discovery still
-does not. Host networking:
-
-```bash
-docker run -d --name knxbench --network host \
-  -e KNX_PORT=8484 \
+docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
   -e KNX_AUTH_PASSWORD='pick something long and boring' \
   -v "$(pwd)/data:/data" knxbench-server
 ```
 
-Open `http://127.0.0.1:8484` once the health check passes, and sign in with
-that password. The `data/` directory on the host is mounted into the container
-at `/data`, so your projects survive container restarts and rebuilds.
+The first build can take several minutes. Open **https://127.0.0.1:8484**.
+A password enables HTTPS by default. The generated certificate is self-signed:
+compare the browser's certificate fingerprint with the one in
+`docker logs knxbench` before accepting it. Then sign in using your chosen password.
 
-The password is not optional here, and the reason is worth one paragraph.
-`knx-server` refuses to serve an unauthenticated API to the network: with no
-credential set it binds loopback only, and inside a container that is the
-*container's* loopback, which a published port cannot reach. Give it a
-credential and it binds `0.0.0.0`, the published port works, and the browser
-asks you for the password before it shows anything.
+**Expected result:** the introduction or welcome screen appears. Saved projects
+live in the host's `data/` directory and survive container replacement.
+**New project…** works without an ETS file. Continue to [First start](06-first-start.md).
 
-If you only want a quick local look and no password at all on Linux Docker
-Engine, run it on the host's own loopback instead:
+The example publishes the port on host loopback, for this machine only. For
+remote access, authentication hashes, trusted certificates, host networking,
+configuration variables and troubleshooting, use the canonical
+[Web and Docker deployment](../user-guide/11-web-and-docker.md) guide.
 
-```bash
-docker run -d --name knxbench --network host \
-  -e KNX_PORT=8484 -v "$(pwd)/data:/data" knxbench-server
-```
+> [!WARNING]
+> Do not expose this server directly to the internet. It uses one shared
+> password, not separate users or roles. The quick-start plaintext password is
+> visible in the container environment and can enter shell history. Prefer
+> `KNX_AUTH_PASSWORD_HASH` for a lasting setup, as described in the deployment guide.
 
-That form is reachable from that machine and nowhere else. Docker Desktop
-4.34 and later also offers opt-in host networking, but KNXBench has not
-verified multicast discovery or loopback-only exposure through that layer;
-keep authentication enabled there.
+### Common first-run problems
 
-The image reads these environment variables:
+| Symptom | Check |
+| --- | --- |
+| Name `knxbench` already exists | Use `docker ps -a`; do not delete an unfamiliar container or its data |
+| Port 8484 is occupied | Choose another **host** port in `-p`; open that port in the browser |
+| An HTTP health check fails | This authenticated setup speaks **HTTPS**; follow [HTTPS](../user-guide/11-web-and-docker.md#https) for certificate-aware checks |
+| No gateway is discovered | The Docker bridge does not carry KNX multicast; [networking](../user-guide/11-web-and-docker.md#networking) explains the separate bus setup |
+| Refreshing loses the current edits | Save to `.knxdb`; a running server's memory is not a backup |
 
-| Variable | Meaning | Default |
-| --- | --- | --- |
-| `KNX_PORT` | Internal listening port | `8080` |
-| `KNX_DATA_DIR` | Where projects are stored | `/data` |
-| `KNX_STATIC_DIR` | Where the built frontend is served from | set by the image |
-| `KNX_AUTH_PASSWORD_HASH` | The login credential, as printed by `knx-server --hash-password` | unset |
-| `KNX_AUTH_PASSWORD` | A plaintext password, hashed at startup | unset |
-| `KNX_AUTH_COOKIE_SECURE` | Marks the session cookie `Secure` on plain HTTP behind a TLS-terminating proxy; over the server's own HTTPS it is always `Secure` | unset |
-| `KNX_TLS` | `auto`: HTTPS whenever a password is set; `on` forces it, `off` disables it ([ADR-0088](../../adr/0088-server-terminates-tls-itself.md)) | `auto` |
-| `KNX_TLS_CERT`, `KNX_TLS_KEY` | Your own PEM certificate chain and private key, instead of the generated self-signed one | unset |
-| `KNX_TLS_SAN` | Extra comma-separated host names or IP addresses for the generated certificate, e.g. `knx.lan,192.168.1.10` | unset |
-| `KNX_TUNNEL_ROUTE_BACK` | Ask the gateway to answer the packet's source (KNXnet/IP Route Back); for tunnelling from Docker's bridge network | unset |
+Do not run a second container with `--name knxbench` to change networking.
+Stop and replace the existing one deliberately, preserving its data mount.
+The [update-in-one-go procedure](../user-guide/11-web-and-docker.md#updating-in-one-go)
+builds before replacing the running container.
 
-> **Warning**
->
-> Read this before you make the server reachable from another machine.
->
-> The password protects the API; it is not a security perimeter. There is one
-> shared password, no user accounts, no roles and no audit trail. With a
-> password set the server speaks **HTTPS with a self-signed certificate** by
-> default, so your browser warns once: compare the SHA-256 fingerprint the
-> server prints at startup with the one the browser shows before you accept
-> it. Bring your own certificate with `KNX_TLS_CERT` and `KNX_TLS_KEY`.
->
-> Prefer `KNX_AUTH_PASSWORD_HASH` over `KNX_AUTH_PASSWORD` for anything that
-> lasts: a plaintext password in the environment is readable in
-> `docker inspect`, in `/proc/<pid>/environ`, and in your shell history. The
-> server says so at startup, every time.
->
-> Never publish the credential-less form. Whoever reaches that port holds your
-> project, the file browser and the KNX bus routes, and "it's just my home LAN"
-> is not a threat model.
->
-> [Web and Docker deployment](../user-guide/11-web-and-docker.md) has the full
-> picture, including the reverse-proxy setup and what the login does and does
-> not defend.
-
-To verify the image works end to end (build, boot, health check, and a
-native save/reopen cycle):
-
-```bash
-apps/knx-server/scripts/smoke-test.sh
-```
-
-**Updating.** Pull, rebuild, replace the container and wait for the health
-check — one command, host networking included, in
-[Updating in one go](../user-guide/11-web-and-docker.md#updating-in-one-go).
-Replacing the container never touches the `data/` directory or the projects
-inside it. If your running container has a different name, find it with
-`docker ps` first.
-
-**Removing.** Stop and remove the container (`docker stop knxbench && docker
-rm knxbench`), then remove the image (`docker rmi knxbench-server`) if you
-want it gone entirely. Delete the `data/` directory separately, and only once
-its projects are no longer needed.
+**Remove:** `docker stop knxbench && docker rm knxbench` removes the container,
+not the bind-mounted project directory. `docker rmi knxbench-server` removes the
+image if you no longer need it. Delete project files only after backing them up.
 
 ## c) From source
 
-Building from source gives you the CLI, the server, and the desktop shell.
+Prerequisites: the repository-pinned **Rust 1.98.0** toolchain, **Node.js 22.12 or
+later**, and Git. Desktop development also needs the host libraries listed in
+[Linux setup](05-linux-setup.md).
 
-Prerequisites:
-
-- The Rust toolchain pinned in the repository: **1.98.0** (`rust-toolchain.toml`
-  selects it automatically if you use `rustup`).
-- **Node.js 22.12 or later**, needed for the web frontend used by both the
-  server and the desktop shell.
-
-Build everything and run the server directly:
+From the repository root, build a browser workbench with persistent local storage:
 
 ```bash
-cargo build
-cargo run -p knx-server
+npm ci --prefix apps/knx-web
+npm run build --prefix apps/knx-web
+cargo build --locked -p knx-server
+mkdir -p data
+KNX_DATA_DIR="$PWD/data" KNX_STATIC_DIR="$PWD/apps/knx-web/dist" \
+  cargo run --locked -p knx-server
 ```
 
-`cargo run -p knx-server` reads the same `KNX_PORT`, `KNX_DATA_DIR`, and
-`KNX_STATIC_DIR` variables described above; unset, it listens on `8080` and
-stores projects under your system's temporary directory, which is convenient
-for a quick look and wrong for anything you intend to keep.
+**Expected result:** the startup line names `http://127.0.0.1:8080`. Open that
+address. This no-password variant binds loopback only; it is not a remote-access
+recipe. Setting an authentication password changes the default to HTTPS.
 
-To run the native desktop shell instead:
+For the native development shell:
 
 ```bash
-cargo install tauri-cli --version "^2" --locked  # once
+cargo install tauri-cli --version 2.11.4 --locked  # once
 npm ci --prefix apps/knx-web
 cd apps/knx-desktop
 cargo tauri dev
 ```
 
-`npm ci --prefix apps/knx-web` installs the frontend's dependencies — the
-frontend now lives in `apps/knx-web`, not inside `apps/knx-desktop` — and
-`cargo tauri dev` starts the desktop shell, which in turn starts the web
-frontend's own development server for you. See
-[Linux setup](05-linux-setup.md) for the host packages `cargo tauri dev`
-needs to have anything to draw a window with.
+The shell starts Vite for you. The [source-build guide](../development/02-building-from-source.md)
+also covers the CLI, AppImage packaging, tests and build metadata.
 
 [Manual index](../README.md) · Next: [Linux setup](05-linux-setup.md) →

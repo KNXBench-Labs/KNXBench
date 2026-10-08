@@ -5,23 +5,32 @@
 This chapter is the honest inventory: what exists, what half exists, and what
 does not exist at all, area by area across the whole application.
 
-The version described is the `0.1.0-alpha` series (2026-10-07: CLI, desktop and web
-`alpha.5`, server `alpha.2`). The only published build is the `v0.1.0-alpha.5`
-pre-release in the private repository.
+This chapter describes source checked on **8 October 2026**: CLI, desktop and web
+`0.1.0-alpha.5`, server `0.1.0-alpha.2`. The public
+[`v0.1.0-alpha.5` pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5)
+is a separate build snapshot, not a promise that every newer source feature is bundled.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
+
+The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
+source `608a204b`, actual UI callers and recorded boundaries. An accepted
+alpha boundary is not implemented functionality or an active work package.
 
 ## How to read the tables
 
 | Marker | Meaning |
 | --- | --- |
-| ✅ Implemented | Verified by an automated test against real data, or by a documented run against a real file, gateway or container |
+| ✅ Implemented | Reachable and backed by named tests or a documented run at the stated scope; the evidence may be synthetic/offline |
 | 🟡 Partial or experimental | Works for part of its scope, or works but has never been verified against a real-world sample |
 | 🚧 In progress | Started, not usable end to end |
 | ❌ Not implemented | Does not exist, or exists only somewhere a user cannot reach |
 
 Two rules were applied while filling these tables in. A ✅ needs evidence
 that can be pointed at — no marker was awarded for code that looks finished.
+**Evidence is a separate axis:** synthetic tests, real-file/corpus runs,
+real-gateway/device runs and native/assistive-technology checks prove different
+things. A ✅ never upgrades one into another. Real-data counts below remain
+scoped measurements, not universal compatibility or a newly repeated corpus run.
 And where the choice was close, the row got 🟡, because "partial" is a
 smaller lie than "done" when it turns out to be wrong.
 
@@ -38,21 +47,23 @@ gives five, with the measured counts behind them.
 | --- | --- | --- |
 | Native `.knxdb` project file (SQLite, store schema version 10) | ✅ Implemented | Open, save, save as — [Projects](user-guide/02-projects.md) |
 | Schema migration of an older project file, with a refusal rather than a guess when the file is newer than the build | ✅ Implemented | Migration tests per version step — [`docs/DATA_MODEL.md`](../DATA_MODEL.md) |
-| Undo and redo across every project edit | ✅ Implemented | One shared undo stack per open project |
+| Undo and redo across project edits | ✅ Implemented | One shared undo stack per open project; it is not saved as persistent history and cannot undo bus writes |
 | New-project wizard with an optional starting structure (areas/lines, building tree, main/middle group ranges, two presets) | ✅ Implemented | Applied with the new project in one step or refused without replacing anything — [Projects](user-guide/02-projects.md), [ADR-0093](../adr/0093-wizards-are-views-over-existing-commands.md) |
-| Add-device wizard: product, placement (installation, line, building part), server preview of names and addresses, confirmed create | ✅ Implemented | Creation and placement are one undo step; a project changed since the preview is refused and previewed again — [Devices and products](user-guide/05-devices-and-products.md#the-add-device-wizard), [ADR-0093](../adr/0093-wizards-are-views-over-existing-commands.md) |
-| Provenance: every attribute knows which layer it came from, and an override is distinguishable from an inherited value | ✅ Implemented | [`docs/DATA_MODEL.md`](../DATA_MODEL.md), [ADR-0010](../adr/0010-per-attribute-override-representation.md) |
+| Add-device wizard: product, placement (installation, line, building part), server preview of names and addresses, confirmed create | ✅ Implemented | Creation/placement are one undo step. Changed computed names/addresses cause stale-preview refusal; this is not a whole-project revision lock — [Devices and products](user-guide/05-devices-and-products.md#the-add-device-wizard), [ADR-0093](../adr/0093-wizards-are-views-over-existing-commands.md) |
+| Provenance for modelled layered values | ✅ Implemented | `Override` distinguishes absent/empty/malformed/value, and `Resolved` carries the source layer. Not every ordinary project attribute is layered — [Data model](../DATA_MODEL.md), [ADR-0010](../adr/0010-per-attribute-override-representation.md) |
 | Exporting the open project through the browser | ✅ Implemented | File → Export project… streams a newly serialized `.knxdb`; Save As still writes to the server's directory — [Projects](user-guide/02-projects.md) |
-| Automatic backup or version history | ❌ Not implemented | Copy the `.knxdb` file yourself |
+| Autosave for a project that already has a file | ✅ Implemented | Configurable interval, cancellation notice and reported failures — [Projects](user-guide/02-projects.md#saving) |
+| Versioned backups or persistent undo history | ❌ Not implemented | Autosave replaces the saved file; keep independent copies |
 
 ## ETS project import
 
 | Capability | Status | Notes |
 | --- | --- | --- |
 | `.knxproj` at schema 11 (ETS4) and schema 21 | ✅ Implemented | Measured counts on real files — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
-| `.knxproj` at schemes 12–14, 20, 22, 23 | 🟡 Partial or experimental | Either documented but never sampled, or sampled in one direction only — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
+| `.knxproj` at schema 23 | 🟡 Bounded evidence | Real reference import and native `.knxdb` roundtrip exist; module handling is inferred from schema 21 without an independent module-using schema-23 sample. No ETS roundtrip — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
+| `.knxproj` at schemas 12–14, 20, 22 | 🟡 Unverified sample coverage | Parser-family admission is not verification against real project files at those schemas — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
 | Import report with errors, warnings, unsupported constructs and conflicts | ✅ Implemented | Also available as JSON from the command line |
-| Preserving unknown attributes, elements and whole container members untouched | ✅ Implemented | 38 container entries stored with the content hash they arrived with |
+| Preserving opaque source data and reporting unsupported constructs | ✅ Implemented | See the import report and [data-integrity contract](../IMPORT_EXPORT.md); retained bytes do not imply editable semantics |
 | ZipCrypto-protected projects (ETS4/ETS5) | 🟡 Partial or experimental | Implemented and tested against synthetic fixtures only |
 | AES-protected projects (ETS6) | ❌ Not implemented | Refused by name — [§13](../KNOWN_LIMITATIONS.md#13-password-protected-projects-zipcrypto-ets4ets5-is-decrypted-aes-ets6-is-still-refused) |
 | Importing part of a project into an existing one | ❌ Not implemented | Import is whole-file — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md), row C3 |
@@ -69,16 +80,26 @@ raised. A project that has been imported stays in `.knxdb`.
 
 ## Product databases
 
+**Support-gap reporting:** source builds include **File → Analyze support gaps…**
+for own-instance, read-only analysis and an explicitly previewed evidence ZIP.
+It does not change the active project or install into your product database.
+See the [contribution guide](../contribution-intake/README.md) and
+[evidence contract](../COMMUNITY_EVIDENCE.md). Analysis completion is not
+verified ETS/device support, and submission remains manual.
+
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Product data ingested from inside a `.knxproj` | ✅ Implemented | The reference project's 4 manufacturers and 12 application programs ingest completely |
 | Standalone `.knxprod` at master data scheme 11 or 20 | ✅ Implemented | Four real files, content-addressed, idempotent re-install — [Devices and products](user-guide/05-devices-and-products.md) |
 | Legacy ETS3 `.vd3`/`.vd4` product databases, offline use (web, CLI) | 🟡 Partial or experimental | The real `.vd3` and `.vd4` import completely; password dialog and one remembered password; no download and no DPTs yet — [Devices and products](user-guide/05-devices-and-products.md#old-ets3-product-databases-vd3-vd4-vd5), [ADR-0094](../adr/0094-legacy-exim-product-files.md) |
 | Standalone `.knxprod` at schemes 12, 13, 14 and exact-namespace 21 | 🟡 Partial or experimental | Synthetic tests and the passing read-only corpus matrix verify parser/persistence behavior, not full manufacturer semantics |
+| Standalone `.knxprod` at exact namespaces 10 and 23 | 🟡 Scope-limited | Strict parser/persistence admission is delivered, not full manufacturer or project-module semantics — [ADR-0083](../adr/0083-admit-exact-product-scheme-10.md), [product namespace admission](../../crates/knx-productdb/src/package.rs) |
 | Standalone `.knxprod` at schemes 15–19 and 22 | ❌ Not implemented | No observed standalone sample or verified namespace support |
 | Encrypted `.knxprod` packages, and legacy `.vd2` files | ❌ Not implemented, deliberately | A permanent scope exclusion, refused as a typed error |
 | Online catalog update from a manufacturer | ❌ Not implemented | Files are installed by hand — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md), row C6 |
 | Devices configured by a manufacturer plug-in | ❌ Not implemented | No plug-in host exists and none is planned — [§6](../KNOWN_LIMITATIONS.md#6-devices-behind-vendor-plug-in-dlls) |
+| Package/version identity inspection | 🟡 Bounded implementation | Source/candidate identity is recorded; a version pin/selector is not implemented. First-installed normalized rows remain the winner — [§135](../KNOWN_LIMITATIONS.md) |
+| Manufacturer signature verification | ❌ Not implemented | Signature members are retained and labelled, not cryptographically verified — [§85](../KNOWN_LIMITATIONS.md) |
 
 ## Topology and buildings
 
@@ -95,7 +116,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Create, rename, delete, inline edit; duplicate and still-linked validation | ✅ Implemented | [Working with group addresses](user-guide/04-group-addresses.md) |
-| Choosing free, two-level or three-level style when the project is created | ✅ Implemented | The choice is made once |
+| Choosing free, two-level or three-level style when the project is created | ✅ Implemented | Initial display/address structure; the next row describes changing it later |
 | Changing the style afterwards | ✅ Implemented | On the Project node in the properties pane, undoable |
 | CSV export and re-import in KNXBench's own format | ✅ Implemented | Every address in the reference project round-trips unchanged |
 | CSV interoperability with ETS or `.esf` | ❌ Not implemented | Never claimed, never tested — [§38](../KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability) |
@@ -132,9 +153,10 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Encoding and decoding main types 1 to 30, every subtype | ✅ Implemented | [Datapoint types](knx-basics/04-datapoint-types.md) |
-| The 200-series LTE/system types | ❌ Not implemented | Out of scope for this version |
+| Encoding and decoding across DPT main families 1–30 | 🟡 Scope-limited | Main-family coverage is not complete subtype/application semantics — [DPT audit](../spec-audits/2026-10-07-dpt-document-audit.md), [Datapoint types](knx-basics/04-datapoint-types.md) |
+| Types outside implemented main families 1–30 | ❌ Not implemented | Includes structured/system types; not every higher-numbered type is LTE. No blanket subtype conformance — [DPT audit](../spec-audits/2026-10-07-dpt-document-audit.md) |
 | Resolving a group address's type from its linked objects, reporting conflicts instead of guessing | ✅ Implemented | — |
+| Declared versus linked group-address DPT | ✅ Implemented at stated scope | Typed declaration, linked alternatives and conflict/outcome are kept distinct and shown in the Inspector — [ADR-0078](../adr/0078-group-address-declared-dpt.md) |
 | Explicitly declaring a typed value's input grammar | ✅ Implemented | CLI, HTTP, and web callers can pass the format explicitly; omitted legacy CLI/HTTP fields retain their prior inferred grammar, while new web writes are explicit. Project-judgment encodings are queryable metadata — [§61](../KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) |
 
 ## Documentation export
@@ -169,7 +191,7 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 | `knx doc-export`, `knx diff` | ✅ Implemented | — |
 | `knx products list / ingest / show / verify` | ✅ Implemented | `ingest` accepts a `.knxproj` or a `.knxprod`; a `.vd2` argument is listed but always refused |
 | `knx bus discover / monitor / write / route-monitor / route-send / scan` | ✅ Implemented | Some with the limitations under *KNXnet/IP and the bus* |
-| Distinct exit codes (`0` success, `1` failure, `2` import produced a project whose report has errors) | ✅ Implemented | `2` is raised by `import` and `ga-import` only |
+| Command-specific exit codes | ✅ Implemented | Import/GA-import use `2` for report errors; `diff --exit-code` uses 0 equal / 1 different / 2 failure. Read the command's contract, not one global meaning for `2` |
 | Creating a project from the command line | ❌ Not implemented | No command exists; create one in the application |
 | Writing to a device from the command line | 🟡 Partial or experimental | `knx device download` (one verified device); address programming is refused for now — see *Commissioning and device download*, below |
 | `knx-mcp`: read-only questions from an AI agent over MCP | 🟡 Partial or experimental | Eight read tools over saved files; never writes, no bus; parameter visibility from the `Dynamic` tree, access not applied — [AI agents over MCP](user-guide/12-ai-agents.md), [§165](../KNOWN_LIMITATIONS.md#165-the-mcp-adapter-reads-saved-files-only-and-its-visibility-ignores-access) |
@@ -182,7 +204,7 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 | Tunnelling: connect, monitor, decode | ✅ Implemented | Verified live against one gateway; a 34-minute session read 1,299 telegrams with no drops |
 | Flow view: who talks to whom in the running session | ✅ Implemented | Read-only, session-local; checked in Chromium with synthetic traffic, not on a real bus; Motion Off advised for large installations — [§154](../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only) |
 | Routing (multicast) | 🟡 Partial or experimental, command line only | The graphical monitor is tunnelling only — [§62](../KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence) |
-| Sending a group value write | ✅ Implemented | The only bus write KNXBench performs; project undo does not cover it |
+| Sending a group value write | 🟡 Implemented, live evidence limited | Tested write paths are reachable; passive receive evidence does not prove every live send/UI/gateway combination. Undo does not reverse a bus write |
 | Line scan | 🟡 Partial or experimental | CLI and graphical diagnostics; live bus load, cannot identify products or cross couplers — [§72](../KNOWN_LIMITATIONS.md#72-line-scan-t17-an-unthrottled-scan-is-a-live-bus-cost-not-a-theoretical-one--shipped-2026-09-13-still-true) |
 | Verification against more than one gateway model | 🟡 Partial or experimental | Exactly one model so far |
 | USB and other non-IP interfaces | ❌ Not implemented | KNXnet/IP only |
@@ -192,9 +214,10 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Downloading a project device's configuration to the device | 🟡 Partial or experimental | `knx device download` and the **Download to device** tab: plan first, confirmation, live progress. Verified in the simulator; one real device (`1.1.67`, MDT, mask `0701h`) via both the command and the tab, every octet read back — [Bus](user-guide/07-bus-and-interfaces.md#downloading-to-a-device) |
-| Programming an individual address | 🚧 In progress | `knx device program-address` and the Bus → **Program address** tab exist, but a confirmed start is refused before any connection until durable device-specific recovery exists; an earlier live round trip on one device is history, not current permission — [web](user-guide/07-bus-and-interfaces.md#programming-an-individual-address), [ADR-0058](../adr/0058-individual-address-reset-requires-durable-recovery.md) |
-| The load/unload/reset/memory-write procedures inside the core library | 🚧 In progress | The memory-write path used by a download has run on one real device; the property-based procedures are verified only against a simulator this project wrote — [§7](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [§92](../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
+| Programming an individual address | 🟡 Refused safety boundary | The command/tab exist, but confirmed writes fail before connection until device-specific durable recovery exists. Not a working write or an active task; historical live evidence does not grant permission — [web](user-guide/07-bus-and-interfaces.md#programming-an-individual-address), [ADR-0058](../adr/0058-individual-address-reset-requires-durable-recovery.md) |
+| The load/unload/reset/memory-write procedures inside the core library | 🟡 Bounded implementation | One real memory-download device; property procedures have simulator-only evidence. No generic real-device coverage or new hardware authorization — [§7](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [§92](../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
 | Read-only verification against a real installation | 🟡 Partial or experimental | Reading device state has been exercised against real hardware — [§7](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
+| Live activity and persisted commissioning metadata | ✅ Implemented at bounded scope | Bus → Live/History shows supported activity, partial coverage and untracked categories. Not project undo, a complete traffic journal or a recovery image — [Bus](user-guide/07-bus-and-interfaces.md), [history UI](../../apps/knx-web/src/BusActivityHistory.tsx) |
 
 ## KNX Secure
 
@@ -211,24 +234,38 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 | Docker image, reached through a published port | ✅ Implemented | Needs a credential, which is also what makes it safe to publish — measured against the built image |
 | Password authentication, server side | ✅ Implemented | PBKDF2-HMAC-SHA256, session cookie, loopback-only binding when unset — [ADR-0026](../adr/0026-server-authentication-or-loopback.md) |
 | Logging in from the browser | ✅ Implemented | A login card in front of the workbench, driven by `GET /api/auth/status`; verified end to end — [Web and Docker](user-guide/11-web-and-docker.md) |
-| TLS, user accounts, roles, audit trail | ❌ Not implemented | One password, no identities — [§22](../KNOWN_LIMITATIONS.md#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback) |
+| HTTPS with self-signed or supplied certificates | ✅ Implemented | Enabled by default with authentication — [Web and Docker](user-guide/11-web-and-docker.md#https), [ADR-0088](../adr/0088-server-terminates-tls-itself.md) |
+| User accounts, roles and per-user audit trail | ❌ Not implemented | One password, no identities — [§22](../KNOWN_LIMITATIONS.md#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback) |
 | Two people editing the same project | ❌ Not implemented | One project, one undo stack, no conflict detection — [§63](../KNOWN_LIMITATIONS.md#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all) |
 
 ## Desktop application
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Tauri desktop shell with the same workbench and a native file dialog | ✅ Implemented | [Installation](getting-started/04-installation.md) |
+| Tauri desktop shell and native file-dialog path | 🟡 Implemented, platform evidence bounded | Shell/dialog code is present and scoped native runs exist, but there is no complete native-dialog/Orca/host-matrix acceptance — [Installation](getting-started/04-installation.md) |
 | Linux AppImage | 🟡 Partial or experimental | Built and launched on one host, x86-64 only |
+| Owned Wayland/X11 AppImage launcher | 🟡 Source-integrated, one-host evidence | Current/tagged alpha.5 source includes the packaging hook; historical direct-image tests are not a new native run of every released asset/GPU — [Launcher contract](../APPIMAGE_LAUNCHER.md) |
 | Code signing, auto-update, distribution packages, other architectures | ❌ Not implemented | Build from source, or use the server |
 | Windows and macOS builds | ❌ Not implemented | Linux-first, by design |
+
+## Additional workbench features
+
+| Capability | Status | Notes |
+| --- | --- | --- |
+| Themes, System selection and managed declarative packs | ✅ Implemented | Porcelain/Graphite/Cupertino/LCARS plus bundled/importable packs; no arbitrary CSS or code — [Settings](user-guide/09-settings-and-appearance.md) |
+| Achievements | ✅ Implemented at stated scope | Shipped catalogue and server record; does not authorize device operations — [ADR-0089](../adr/0089-achievements.md) |
+| Humour templates | ✅ Implemented | Thirty error wrappers and thirty late-night entries plus holiday pairs; extra copy is optional |
+| Dashboard | 🟡 Partial | Counts/diagnostics work; clickable count-to-detail drill-down does not |
+| Project notes | ❌ Not implemented | ADR-0031 defines the shape only; not F1 help or HTML report export |
+| Generic repetitive-task automation | ❌ Not implemented | Atomic command batches exist, but no macro recorder, template UI or scheduler |
 
 ## Language and accessibility
 
 | Capability | Status | Notes |
 | --- | --- | --- |
 | English and German interface | ✅ Implemented | [Settings and appearance](user-guide/09-settings-and-appearance.md) |
-| Any other interface language | 🟡 Partial or experimental | Through an importable JSON language pack; none ships with KNXBench — [Settings and appearance](user-guide/09-settings-and-appearance.md#language-packs) |
+| Playful Bavarian and Klingon language packs | ✅ Implemented | Shipped packs (`bar`, `tlh`) supplement the English/German catalogues; playful translations, not a technical-language certification — [Settings and appearance](user-guide/09-settings-and-appearance.md#language-packs) |
+| Other interface languages | 🟡 Partial or experimental | Importable JSON language packs; completeness depends on the supplied pack — [Settings and appearance](user-guide/09-settings-and-appearance.md#language-packs) |
 | Using the translations that come with product data | 🟡 Partial or experimental | **Product data language** in Settings picks the language for parameters, catalogue, product data and DPT texts; a missing translation falls back to the program's own text and is marked — [§37](../KNOWN_LIMITATIONS.md#37-translations-reach-selected-surfaces-not-every-imported-text-or-ui-output) |
 | Keyboard operation with documented shortcuts | ✅ Implemented | [Keyboard shortcuts](reference/01-keyboard-shortcuts.md) |
 | Respecting the system's reduced-motion preference | ✅ Implemented | Settings also offers motion style and level; the OS reduced-motion preference takes precedence — [Settings and appearance](user-guide/09-settings-and-appearance.md) |
@@ -239,7 +276,9 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 ## What this adds up to
 
 KNXBench reads, understands, edits and writes back KNX project data, and it
-can watch a bus. It can download a device's configuration only within a very
+can watch a non-secure bus. “Writes back” means native `.knxdb`, not an ETS
+archive; supported editable semantics are narrower than retained source bytes.
+It can download a device's configuration only within a very
 narrow verified scope (one device so far), cannot handle KNX Secure, and
 cannot be shared between two people. The last two are absences, the first is
 a beginning, and the next chapter is careful about what it does and does not
@@ -249,5 +288,9 @@ The engineering record behind every row is
 [`docs/IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md), which is a
 running log rather than a summary — long, chronological, and written for
 maintainers.
+
+The [known-issues/status audit](../status/2026-10-08-known-issues-status-audit.md)
+maps these areas to source consumers and evidence. It does not rewrite dated
+historical test results or close another owner's ledger rows.
 
 [Manual index](README.md) · Next: [Ideas and roadmap](ideas-and-roadmap.md) →

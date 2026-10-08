@@ -5,6 +5,22 @@
 finished; they were removed from the tree on 2026-10-08
 ([where to find them](history/REMOVED_DOCS.md)).
 
+## Current reading guide — 8 October 2026
+
+Checked against source `608a204b`. The [ideas/roadmap audit](status/2026-10-08-ideas-roadmap-audit.md)
+maps all twelve original ideas to actual callers, tests and remaining scope.
+Read the sections below as a delivery record, not a fresh implementation queue.
+
+| Already usable at its documented scope | Still absent or separately bounded |
+| --- | --- |
+| Read-only MCP, Flow and secondary window, dashboard, theme packs/LCARS, motion and humour | Agent mutation, macros, project notes, dashboard drill-down, mobile/native Windows/macOS apps |
+| Project/device wizards, autosave, browser project export, parameter tabs, achievements and language packs | Persistent undo, versioned backups, specialized parameter widgets, version pinning/selection |
+| Legacy VD web/CLI offline import with password handling; commissioning activity/history UI | Oversized VD5 coverage, legacy download, complete long-session journalling and device-specific recovery |
+| Public alpha.5, repository and website/story publication | A new release is a separate decision; native/accessibility/real-hardware coverage does not expand with publication |
+
+Per-ID dispositions remain only in the [ledger](status/LEDGER.md). An accepted
+alpha limitation is not functionality, and a later idea is not a promised date.
+
 ## Community evidence (2026-10-08)
 
 Own-instance read-only analysis, exact disclosure previews and versioned ZIP
@@ -76,7 +92,8 @@ follows from this launcher work.
 
 ## Cross-cutting — Telegram-flow nervous system (Alpha addition, 2026-10-04)
 
-Approved and authorized for the responsible Goal sessions, **not implemented**.
+Delivered at the evidenced scope described below; broader platform validation
+remains separate. The following records the original contract and delivery sequence.
 The [contract/research](TELEGRAM_FLOW_VISUALIZATION.md) and
 [ADR-0077](adr/0077-session-local-telegram-flow-view.md) define a session-local,
 read-only dynamic communication map: directional/group-labelled pulses, immediate
@@ -84,7 +101,8 @@ per-group values with 7-second expiry, an observed-sender activity center,
 freezable layout and resting edges that never silently vanish. Theme/motion
 preferences apply; inferred endpoints stay visibly distinct from receipt proof.
 Execution order: UI U19 → alpha AR20 → UI U20/U21 → alpha AR21, then finished
-AR15–AR18 acceptance; AR19 still needs a separate exact release decision.
+AR15–AR18 acceptance. That original alpha closeout and publication are complete;
+another release still needs its own exact decision.
 No new commissioning work, floor-plan editor, permanent coordinates or traffic
 history. Existing historical milestones and owner work are not reopened.
 **Done 2026-10-05:** U19–U21 and AR20 delivered, AR21 accepted the feature for
@@ -110,7 +128,8 @@ device (`1.1.67`). Confirmed public K6/serial/K13 address writes currently
 fail closed before any tunnel until action- and device-specific durable
 pre-write recovery exists (ADRs 0057–0059). This is **not** full ETS,
 manufacturer or KNX hardware coverage.
-Remaining v1 decisions and UI/manual/release work are tracked in
+The following goal links are **historical**, not current work queues. Remaining
+work is in [OPEN_WORK](OPEN_WORK.md); the old v1/UI/commissioning decisions are recorded in
 [`goal.md`](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/goal.md), [`goal-ui.md`](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/goal-ui.md) and
 [`goal-commission.md`](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/goal-commission.md). Historical milestone detail
 remains in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
@@ -147,9 +166,10 @@ Done for the implemented versioned product database and the evidenced
 (since 2026-10-04/05 also exact 23 and exact 10, ADR-0072/ADR-0083).
 PDB-1–PDB-11 landed; source blobs and unknowns are retained/reported, not
 claimed to be fully interpreted. Legacy `.vd`/`.pr` uses a separate path
-(ADR-0094): read-only inspection of `.vd3`–`.vd5` and the CLI import into
-the product database (L2, offline use) landed 2026-10-08; the web upload
-(L3) is next, then download (L4);
+(ADR-0094): inspection and CLI offline import landed, followed by L3 web
+upload, password dialog and one remembered password on 2026-10-08. Real
+VD3/VD4 evidence does not prove the oversized VD5 case; resource measurement
+and legacy download (L4) remain separate;
 unknown vendor semantics and encrypted packages stay refused. Evidence:
 [PRODUCT_DATABASE_CORPUS](PRODUCT_DATABASE_CORPUS.md),
 [COMPATIBILITY](COMPATIBILITY.md), [KNOWN_LIMITATIONS](KNOWN_LIMITATIONS.md).
@@ -207,7 +227,7 @@ localization. See [LANGUAGE_PACKS](LANGUAGE_PACKS.md).
 
 ## Cross-cutting — Motion and animation
 
-T27 shipped user-selectable level and smooth/glitch styles. The OS
+T27 shipped user-selectable level and Smooth/Glitch/CRT styles. The OS
 `prefers-reduced-motion` setting wins, and a style guard covers the
 `styles.css` transitions it can measure. Per-category controls and other
 CSS surfaces are not claimed (KNOWN_LIMITATIONS §43).
@@ -273,27 +293,36 @@ Public confirmed address writes are now pre-tunnel refused pending verified
 durable recovery (ADRs 0057–0059); no prior go transfers to another device.
 Other masks, device families and RF hardware remain refused or simulator-only.
 The application-download backup is not a universal rollback (ADR-0049).
-ADR-0064 adds a separate durable one-shot activity-metadata backend and bounded
-history API; complete long-session journalling and the global Web consumer
-remain open. See [COMMISSIONING_ALPHA_LEDGER](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md)
+ADR-0064 adds a separate durable activity-metadata backend and bounded history
+API. The Web Live/History consumers are implemented in the Bus workspace;
+they disclose partial/untracked coverage. Complete long-session journalling,
+universal device recovery and persistent project undo are not supplied. See
+[COMMISSIONING_ALPHA_LEDGER](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md)
 for all 42 commissioning-routed source IDs, safe fallbacks and exact unblocks.
-The remaining v1 closeout is manual acceptance, the user's alpha-tag decision
-and the final review (`goal.md` §5/§10). No public release or blanket ETS
-compatibility follows from this milestone.
+The historical alpha closeout, final review and public alpha.5 release are
+delivered; see [historical final gates](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b9692e7a6ece18804d187ecdda6968f/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md)
+and the ledger.
+This closes the recorded alpha scope, not every v1 ambition or every KNX
+device. Further release decisions and broader evidence remain separate.
 
 ## Cross-cutting — In-application help and user documentation
 
 T28 shipped translated in-app tips and F1 help. A separate
-[user manual](manual/README.md) exists but still needs its location,
-screenshot and claim-by-claim acceptance after UI U13. In-app *project*
-notes are another, unscheduled domain feature requiring an ADR (ADR-0024).
+[user manual](manual/README.md) exists with stable chapter navigation and
+source-checked workflows. The local documentation refresh adds real captures
+and automated documentation checks; its commit/publication is still pending,
+not an application feature. Broader native capture/accessibility evidence
+remains separate. In-app *project* notes are another, unimplemented feature;
+their domain shape is already decided in ADR-0031 (F1 help: ADR-0024).
 
 ## Open questions and where they land
 
 - Independent `.knxproj` samples (especially module-using schema 23) and an
   AES-protected ETS6 sample are prerequisites for broader claims (§1/§13).
-- The user decides whether and when to publish an alpha tag; CI configuration
-  and one local AppImage run are not proof of a distributable release.
-- KNX Secure, legacy formats, `Functions`, multi-user support and RF hardware
-  each need their own evidence/scope decision. See `goal.md` §6 and
+- The public alpha.5 is a separate build snapshot; newer source features need
+  a new gated build and release decision. The documentation refresh remains
+  local until reviewed and published.
+- KNX Secure, legacy download/oversized VD5, `Functions`, multi-user support
+  and RF hardware need their own evidence/scope decision. Legacy offline
+  import is already delivered. See the historical `goal.md` §6 and
   `goal-commission.md` §3c; none is silently scheduled here.

@@ -2,6 +2,12 @@
 
 # Settings, themes and languages
 
+**Goal:** choose readable appearance, language and autosave preferences.
+**Prerequisites:** a running app; no project or bus connection is required.
+**Expected result:** ordinary settings apply immediately and survive reload when storage succeeds.
+**Watch out:** server settings are shared. OS reduced motion takes priority, and
+debug device-control switches are not appearance preferences or hardware permission.
+
 KNXBench's settings are grouped into **Appearance**, **Language & data**,
 **Autosave**, **Bus & diagnostics**, and a separate **Debug · device control**
 section.
@@ -333,8 +339,6 @@ Consequences worth knowing:
   preference and protected addresses as well as your other settings. Neither
   saving settings nor making a backup sends bus traffic.
 
-[Manual index](../README.md) · Next: [The command line](10-command-line.md) →
-
 ## LCARS ambient timing reference and live rollout
 
 The header/emblem cycles use the existing transition-duration token, not a
@@ -342,6 +346,7 @@ separate clock setting. Standard 10s/16s and Subtle 18s/24s are reference
 periods at 200ms and 120ms respectively. Existing timing overrides scale the
 periods: the verified live Standard token `.25s` gives 12.5s/20s. No saved
 timing preference is overwritten. Off and OS reduced motion cancel the
-effects immediately. Source/image/live proof is recorded in
-`docs/design-studies/lcars/ambient-deployment-verification.json` relative to
-the repository root.
+effects immediately. See the maintained [LCARS guide](../../DESIGN_LCARS.md)
+for the evidence and platform limitations; older receipts are historical.
+
+[Manual index](../README.md) · Next: [The command line](10-command-line.md) →

@@ -2,6 +2,13 @@
 
 # Devices and products
 
+**Goal:** install product data, add a device and edit its project configuration.
+**Prerequisites:** an open project and an authorised product package, or product data
+from an imported project. The fictional sample is enough for practice.
+**Expected result:** a device in the explorer, with its application objects and parameters.
+**Watch out:** installation diagnostics matter; an offline editor does not establish
+download compatibility. Legacy VD support is partial and offline-only.
+
 A KNX device is not much use to an engineering tool on its own. What makes it
 configurable is its **application program**: the manufacturer's description of what the
 device can do, which **communication objects** it exposes, and which parameters change
@@ -9,8 +16,8 @@ its behavior. That description comes from a **product database** — a file the
 manufacturer publishes, not something KNXBench invents. See
 [Products and product databases](../knx-basics/05-products-and-product-databases.md).
 
-This chapter covers the catalog, adding a device from it, and the three tabs of the
-device panel.
+This chapter covers the catalog, adding a device, and the device panel's objects,
+parameters, product data, diagnostics and inspection-only manufacturer fields.
 
 ## The product catalog
 
@@ -67,8 +74,8 @@ downloaded yet, and their objects carry no data point type until you set one. Se
 > whose contents are encrypted cannot be installed either. See
 > [Known issues](../known-issues.md).
 
-Product data can also come out of a `.knxproj`, because an ETS project carries the
-product data of the devices in it. That route is command-line only:
+Normal project import also ingests the product data carried inside a `.knxproj`.
+To ingest that data separately from a project editing session, use the CLI:
 
 ```bash
 knx products ingest project.knxproj --product-db products.db
@@ -77,6 +84,10 @@ knx products ingest project.knxproj --product-db products.db
 See [The command line](10-command-line.md).
 
 ## The add-device wizard
+
+![The real add-device wizard selecting a product, reviewing placement and an allocated project address, then confirming one created fictional actuator](../../assets/workflows/add-device.gif)
+
+*A project edit only. The clip uses the fictional Sample house and does not talk to hardware.*
 
 The wizard is a guided path to the same result as the catalog, in five steps:
 **Product**, **Placement**, **Name and quantity**, **Review** and **Result**.
@@ -99,16 +110,27 @@ Open it from:
 | Review | The server computes, on a copy of the project, exactly which names and addresses would be created, with the product diagnostics. Nothing changes yet. |
 | Result | What was created. **Open device** selects the first one; **Add more of this product** goes back to the naming step. |
 
-**Create** sends the previewed names and addresses along. If the project changed in
-between, for example because another window took one of those addresses, the server
-refuses with nothing created. The wizard then says so and shows a fresh preview to
+**Create** sends the previewed names and addresses along. If the server would now
+compute different names or addresses, for example because another window took an
+address, it refuses with nothing created. This does not lock the whole project:
+other edits may leave that expectation unchanged, and deleted placements can
+cause an ordinary validation refusal. The wizard shows a fresh preview after a stale-name/address refusal to
 confirm. Creation and placement are **one undo step**. Parameters and group links are
 not part of the wizard; edit them in the device panel afterwards.
+
+![The real wizard's Review step lists Practice actuator at its computed address before the Create device button is pressed](../../assets/screenshots/porcelain-device-wizard-review.png)
+
+Check the computed address, not just the green-looking button. A preview describes
+the current project; it does not reserve a bus address or confirm hardware compatibility.
 
 **Cancel** or **Escape** asks before discarding a choice; a second **Escape** keeps
 you in the wizard. A lost response is treated like in the catalog: **Retry safely**
 resends the same request id while the same server is running and never creates a
 duplicate.
+
+The new-project wizard's optional seed is the project's initial structure,
+not a separate undo step. Device creation afterwards is undoable; neither
+wizard programs physical devices.
 
 ## Adding a device
 
@@ -138,11 +160,12 @@ its outcome cannot be confirmed from that response. The catalog asks you to
 inspect or reload the project before another attempt rather than offering an
 immediate duplicate-producing retry.
 
-Two things it does not have:
+Two things to decide before creating:
 
-- **No individual address.** Placement on a line does not reserve or invent a
-  physical address, even if every device slot is already occupied. Assign an
-  address separately in the properties pane. See
+- **Address allocation is optional.** With a target line, **Assign free addresses
+  on the line** previews and assigns available project addresses. Without that
+  choice the device remains unaddressed. This does not program physical hardware.
+  You can also assign an address separately in Properties. See
   [Buildings and topology](03-buildings-and-topology.md).
 - **No name change afterwards.** Devices cannot be renamed in KNXBench yet, so the
   name you type in this workspace is the one you keep.
@@ -174,7 +197,8 @@ contain.
 ## The device panel
 
 Select a device and the center of the workbench shows its panel: the name, the
-individual address, and three tabs. `←` and `→` move between them, `Home` and `End`
+individual address and tabs for objects, parameters, product data, diagnostics
+and manufacturer fields. `←` and `→` move between tabs, `Home` and `End`
 jump to the first and last.
 
 ### Address and line
@@ -278,16 +302,16 @@ Next to the datapoint type and the description you may see a small badge — `Pr
 came from: the application program's default, the program's per-variant override, the
 value stored in the imported project, something KNXBench derived, or your own edit.
 
-That badge is not decoration. On export, only `Instance` and `UserEdit` values are
-written back to the file. Values that came from the product database stay in the
-product database, and values KNXBench derived are never written back as though someone
-had set them deliberately.
+That badge distinguishes imported values, product defaults, derived values and
+your edits. It is not a promise of ETS export: there is no `.knxproj` writer.
+Save the native project and retain the product database; product defaults and
+an explicit user override are different evidence, even when their values match.
 
 The same rule drives **product-data enrichment**, which runs at the end of an import
 and once per device created from the catalog: for every communication object, slots the
 project left empty are filled from the installed application program. Only genuinely
 empty slots. A value the project file stated — even an empty or a malformed one — is
-left exactly as it was, because the exporter has to be able to reproduce the file.
+left exactly as it was, rather than replacing preserved source evidence with a guess.
 Nothing is guessed: a datapoint type stated as a list of alternatives fills nothing and
 is reported instead.
 

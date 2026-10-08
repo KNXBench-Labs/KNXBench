@@ -2,6 +2,13 @@
 
 # Web and Docker deployment
 
+**Goal:** run a persistent, authenticated browser workbench with the right network scope.
+**Prerequisites:** a checkout, Docker for the container path, and a chosen persistent
+data directory. Start with the loopback-only example in [Installation](../getting-started/04-installation.md#b-docker--web).
+**Expected result:** a reachable welcome/login page and saved projects that survive restart.
+**Watch out:** match HTTP/HTTPS to startup output; preserve data and stop hardware
+writes before an update. One shared password is not multi-user access control.
+
 KNXBench can run as a server: one process, one HTTP port, the whole application in a
 browser. This chapter covers what that process actually serves, how to configure it,
 how the browser build differs from the desktop one, and — at length, because it is the
@@ -170,8 +177,9 @@ git pull --ff-only \
        -e KNX_PORT=8484 \
        -e KNX_AUTH_PASSWORD='pick something long and boring' \
        -v "$(pwd)/data:/data" knxbench-server \
-  && curl -sf --retry 15 --retry-delay 1 --retry-all-errors http://127.0.0.1:8484/healthz \
-  && echo " — KNXBench is up on http://127.0.0.1:8484"
+  && curl --fail --silent --show-error --insecure \
+       --retry 15 --retry-delay 1 --retry-all-errors https://127.0.0.1:8484/healthz \
+  && echo " — KNXBench is up on https://127.0.0.1:8484"
 ```
 
 - Every step runs only if the previous one succeeded: a failed pull or build
@@ -184,6 +192,10 @@ git pull --ff-only \
   replace the `KNX_AUTH_PASSWORD` line with
   `-e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH"` (see
   [Setting a password](#setting-a-password)).
+- The unauthenticated, loopback `/healthz` probe uses `--insecure` only to check
+  readiness with the generated self-signed certificate. It sends no credential
+  or project data and **does not verify server identity**. Compare the certificate
+  fingerprint before signing in; never copy this option into authenticated requests.
 - Old images pile up; `docker image prune` clears the untagged ones.
 
 ## Authentication
@@ -389,8 +401,14 @@ listens on port `4777`, and Vite's dev server on port `1420` proxies `/api` to i
 ## Checking that it works
 
 ```bash
-curl -sf http://127.0.0.1:8484/healthz
+curl --fail --silent --show-error --insecure https://127.0.0.1:8484/healthz
 ```
+
+Use HTTPS for the authenticated default. This loopback readiness probe deliberately
+does not authenticate the self-signed certificate; [HTTPS](#https) explains the
+fingerprint check before login. With a certificate you have verified, use
+`--cacert /path/to/cert.pem` instead of `--insecure`. A no-password or explicitly
+`KNX_TLS=off` server needs `http://` and no certificate option.
 
 `ok` means the process is up and serving. It does not mean you can log in, and it does
 not mean the frontend was bundled — `/healthz` answers without a session on purpose, so

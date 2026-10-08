@@ -6,14 +6,14 @@ This chapter is in three parts, and the boundaries between them matter more
 than anything inside them:
 
 1. **What is already built** — a short backward look.
-2. **Planned** — work the project's roadmap commits to, none of it finished,
-   none of it dated.
+2. **Planned** — unfinished or deferred scope, with prerequisites and no dates.
 3. **Ideas and experiments** — things someone wrote down. Not commitments.
 
-There are no dates anywhere in this chapter, and no release schedule exists.
-KNXBench is in its `0.1.0-alpha` series with nothing published. An item's position in
-part 2 says it is intended; it does not say when, or that it will happen at
-all.
+No future release schedule is promised here. KNXBench is in its `0.1.0-alpha`
+series with a public alpha.5 pre-release. This source-level overview was checked
+on **8 October 2026**. An item's position in
+part 2 does not schedule it or reopen a recorded alpha boundary. This audit
+covers source `608a204b`; the released AppImage is a separate snapshot.
 
 > The distinction is boring until the day somebody buys hardware because a
 > documentation page sounded confident. So: part 3 is daydreaming, part 2 is
@@ -27,11 +27,12 @@ all.
 The full inventory is [Implementation status](implementation-status.md), with
 finer-grained format detail in
 [Supported and unsupported](reference/02-supported-and-unsupported.md). In
-one paragraph: KNXBench imports ETS project files at the two schemas it has
-real samples for (and, since 2026-09-20, writes none —
-[ADR-0028](../adr/0028-no-knxproj-export.md)), keeps everything it does not understand
-rather than dropping it, stores projects in its own SQLite format with full
-undo, ingests product databases, edits topology, buildings, group addresses,
+one paragraph: KNXBench imports real ETS project samples at schemas 11, 21
+and 23, with schema-23 module evidence still bounded (and, since 2026-09-20,
+writes none — [ADR-0028](../adr/0028-no-knxproj-export.md)), preserves opaque data
+where technically possible and reports unsupported data, stores projects in
+its own SQLite format with undo during the open session, ingests product
+databases, edits topology, buildings, group addresses,
 communication objects, links and parameters, exports HTML documentation,
 compares two projects, and monitors a KNX bus over KNXnet/IP.
 
@@ -41,20 +42,46 @@ themes, small interface animations, a project status dashboard, gateway
 discovery, the in-application help panel, and the lightly humorous tone in
 messages and toasts.
 
+### Original wish list: the useful part and the remainder
+
+| Original idea | Available now | Real remainder |
+| --- | --- | --- |
+| Small animations | Motion level/style settings and reduced-motion handling | Per-category controls; broader native/accessibility evidence |
+| MCP | Experimental read-only saved-project tools and agent skill | No agent edits, chatbox or bus control |
+| Device discovery | Gateway search, one-line occupancy scan, explicit reconciliation | No product identity from a scan or coupler traversal |
+| Repetitive-task automation | Undoable batch primitive, not a macro feature | No templates/recorder/scheduler UI |
+| Humour templates | Thirty error wrappers, thirty late-night entries and holiday pairs | Optional extra copy, not an absent mechanism |
+| Project notes | Domain shape decided in ADR-0031 | No collection, persistence or note editor |
+| Project status | Dashboard counts and diagnostics | No clickable count-to-detail drill-down |
+| Animated GA/device connections | Flow view, values, readable layout and a separate window | Session-local only; inferred recipients are not receipt/effect proof |
+| Mobile app | Browser workbench is a separate existing option | No dedicated mobile application |
+| Other operating systems | Other OSes can reach a running server through a browser | No native Windows/macOS build |
+| Themes | Built-ins, System, bundled/importable packs and LCARS | No arbitrary CSS/code plug-ins; native accessibility stays bounded |
+| Schema 21/23 import | Project import, exact product/master admission and native save/reopen | Missing independent module-using schema-23 evidence; no ETS project export |
+
+For maintainers, the [source/test audit](../status/2026-10-08-ideas-roadmap-audit.md)
+preserves all twelve original entries. A wish list is not a completion
+percentage. Some wishes are considerably larger than others.
+
 ## Planned
 
-Everything below is on the roadmap, unfinished, and waiting on something
-specific. The "waiting on" column is the honest part — most of these are not
-waiting on somebody finding time.
+These are real remainders, **not a promised implementation queue**. Some were
+explicitly deferred by the user and need a new decision before work resumes.
+The maintained list is [Open work](../OPEN_WORK.md); historical alpha goals
+are finished at their recorded scope, not proof that every feature exists.
 
 | Item | Where it stands | Waiting on |
 | --- | --- | --- |
+| Persistent project undo and versioned backups | Neither exists. Autosave replaces the saved file; it is not a version history. Commissioning metadata is a different history. | Separate history/storage work. Keep independent copies meanwhile. |
+| Legacy device download and oversized `.vd5` coverage | Web/CLI offline import, password dialog and one remembered password already exist for the evidenced legacy scope. | Resource measurement before raising legacy limits; separate L4 mapping and recovery evidence. |
+| Selective import, diff apply/merge and three-way comparison | Whole-file import and two-file comparison already work; these extensions do not. | Separate scoped design, data-integrity contracts and tests. |
+| Specialized parameter widgets and online manufacturer updates | Generic supported parameter editing and manual product-file installation exist. | Supported type/UIHint evidence and separate catalog/update design. |
 | Commissioning more real devices | A device download (application tables and parameters) has been run and read back on one real device after an explicit go-ahead; the property-based procedures are verified against a simulator this project wrote. Address programming is refused until durable recovery exists. | Test hardware and a per-target go-ahead. The only bus available is a house people live in, so every new device, write scope or experiment needs its own explicit approval. |
 | Import support for ETS schemas 12, 13, 14, 20 and 22 | The parser handles the schema family; these versions have never been tested against a real file. | One real project file per schema. No sample-hunting is scheduled. |
 | Opening AES-protected ETS6 projects | The key derivation already exists in the `knx-secure` crate. | A genuine AES-protected sample. Verifying against a self-made one would only prove the implementation agrees with itself. |
-| The `Functions` element in the KNX project model | Absent from every reference sample, so there is nothing to model against. | New KNX specification documentation. Deferred by decision, explicitly not rejected. |
+| The `Functions` element in the KNX project model | No project entity/import/storage/UI implementation; master `FunctionType` is not the same thing. | Dedicated ADR and representative project evidence. Deferred, not rejected. |
 | Whether Data Secure runtime keys can be read from a project file | An open question with a named home in the `knx-secure` crate; nothing built. | Its own scheduling. See also *KNX Secure*, below. |
-| End-user documentation | The in-application help panel shipped. The written manual half stayed open — this document is that half being written. | Nothing. It is in progress. |
+| Broader platform and accessibility validation | Chromium/offline UI evidence exists; native WebKitGTK, Orca and wider host coverage remain separate. | Real platform runs, not screenshots interpreted as accessibility proof. |
 
 ### Decided against, or parked on purpose
 
@@ -72,9 +99,10 @@ nobody waits for them.
   topological. A later placement layer has had its shape pre-committed so it
   cannot be improvised, but building it needs its own architecture decision
   — [ADR-0019](../adr/0019-building-model-stays-topological.md).
-- **The 200-series LTE and system datapoint types: out of scope for 1.0.0.**
-  The application cannot speak LTE addressing at all, so codecs for those
-  types would improve a coverage table and nothing else.
+- **DPTs outside implemented main families 1–30:** unsupported at the current
+  codec boundary, not a blanket claim that every higher-numbered type is LTE.
+  Expansion needs measured device relevance and authoritative subtype evidence
+  — [DPT audit](../spec-audits/2026-10-07-dpt-document-audit.md).
 - **Legacy `.vd2` files and encrypted `.knxprod` packages: permanently out of
   scope.** Both are refused by name rather than half-attempted.
 - **Multi-user editing: parked.** It is not a version 1.0.0 requirement.
@@ -105,11 +133,11 @@ an explicit selection, expanded into a previewed, revision-bound and atomic
 `Command::Batch` with one-step undo. Raw command recording, partial mutation,
 a script engine and bus-facing macros are not the plan.
 
-**A live "who talks to whom" view.** Research now narrows this to an
-evidence-labelled flow for one selected bus-monitor telegram, not a topology
-canvas that pretends configured recipients were observed. See
-[RESEARCH §16](../research/features-and-ui.md#16-who-talks-to-whom-flow-view-decision-2026-09-22).
-It is designed neither implemented nor scheduled.
+**A live "who talks to whom" view is already built.** The session-local,
+read-only [flow view](user-guide/07-bus-and-interfaces.md#the-flow-view) shows observed
+traffic and labels configured/inferred recipients separately. It is not proof that
+each recipient acted on a telegram. A separate window and readability controls
+also exist; native accessibility and wider platform evidence remain open.
 
 **A mobile application.** Possible in principle over a KNX IP interface. It
 is an entirely new platform, which makes it a much larger project than it
@@ -127,14 +155,13 @@ project-owned collection with typed targets and explicit report opt-in. It is
 not implemented.
 
 **More humour in the messages.** The existing toast and error copy should be
-expanded considerably — the note in the idea list asks for at least thirty
-different sentences per case, in the spirit of Dungeon Keeper II or Marvin
-from *The Hitchhiker's Guide to the Galaxy*. Purely cosmetic, entirely
-optional, and the only idea on this page that can never corrupt a project
-file.
+expanded only if more variety is wanted. The original thirty-entry error and
+late-night lists already exist, along with holiday pairs. This is optional
+copy expansion, not a missing feature. A joke must never hide the real error
+or weaken a safety warning; the bus is quite capable of comedy without help.
 
-**A project logo.** In progress, in the sense that somebody is thinking about
-it.
+**The project logo already exists.** It is used on the repository front page;
+it is no longer a roadmap item.
 
 ### Suggestions from this documentation pass
 
@@ -142,18 +169,26 @@ Marked separately because they are exactly that — suggestions written down
 while this manual was being checked against the code, not decisions anybody
 has taken.
 
-- Removing `.vd2` from the command-line help (`knx products ingest`) that
-  still offers it, given that it is always refused. The web file pickers no
-  longer offer it.
+- Removing `.vd2` from the command-line help remains an unscheduled copy fix;
+  that format is always refused. Legacy `.vd3`–`.vd5` uses its own supported
+  inspection/import path, not `products ingest`.
 
-Resolved since this pass (checked against the code on 2026-10-06): the New
-project dialog now says the group-address style cannot be changed after
-creation, and the web File menu has **Export project…** for a local `.knxdb`
-copy.
+Already delivered: project and add-device wizards, autosave, parameter-workspace
+separation, the web **Export project…** action, LCARS, achievements and playful
+language packs. The group-address style **can** be changed on the Project node.
+See [Implementation status](implementation-status.md) and
+[open work](../OPEN_WORK.md), rather than treating old wish-list entries as promises.
 
-None of these are scheduled. They are listed here so they are not lost, and
-because a manual that spots a defect and says nothing is not much of a
-manual.
+Only the remaining suggestions are unscheduled; the paragraph above lists
+delivered features, not a second backlog.
+
+### Delivered outside the original wish list
+
+The repository and alpha.5 download are public. The marketing website and
+approved Evolution Story are deployed. Community support-gap analysis and
+manual evidence export also exist; the temporary intake repository was
+retired. Website maintenance, privacy-text review and unverified mailbox
+delivery remain separate from implementation. See [Open work](../OPEN_WORK.md).
 
 ---
 

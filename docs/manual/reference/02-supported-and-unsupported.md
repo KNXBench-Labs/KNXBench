@@ -68,6 +68,7 @@ from KNXBench's own native `.knxdb` file format, covered separately below.
 | --- | --- | --- |
 | Standalone `.knxprod` product package, master data scheme 11 or 20 | ✅ Implemented | Four real files installed, content-addressed, idempotent re-install — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 | Standalone `.knxprod`, schemes 12, 13, 14 and exact-namespace 21 | 🟡 Partial or experimental | Synthetic tests and the passing 115-instance read-only corpus matrix verify parser/persistence behavior, not full manufacturer semantics or ETS parity — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
+| Standalone `.knxprod`, exact namespaces 10 and 23 | 🟡 Scope-limited | Namespace admission and bounded parser/persistence support exist; this is not every-vendor semantic compatibility — [ADR-0083](../../adr/0083-admit-exact-product-scheme-10.md), [namespace gate](../../../crates/knx-productdb/src/package.rs) |
 | Standalone `.knxprod`, schemes 15–19 and 22 | ❌ Not implemented | No observed standalone sample or verified namespace support — [COMPATIBILITY.md §4](../../COMPATIBILITY.md#4-not-supported) |
 | Product data ingested from inside a `.knxproj` | ✅ Implemented | The reference project's manufacturer data — 4 manufacturers, 12 application programs — ingests completely — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 | Encrypted `.knxprod` packages | ❌ Not implemented, deliberately | Rejected as a typed error with no rows published; this is a scope exclusion, not a gap to close — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
@@ -85,8 +86,8 @@ from KNXBench's own native `.knxdb` file format, covered separately below.
 
 | Item | Status | Evidence |
 | --- | --- | --- |
-| Decoding and encoding DPT main types 1 through 30, every subtype | ✅ Implemented | `crates/knx-core/src/dpt/codec.rs` implements all thirty, with no subtype-level gap left inside any of them — [KNOWN_LIMITATIONS.md §61](../../KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) |
-| The eighteen LTE/system 200-series datapoint types (`DPT-206` and others) | ❌ Not implemented | Not covered by the codec — [KNOWN_LIMITATIONS.md §61](../../KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) |
+| Decoding and encoding across DPT main families 1–30 | 🟡 Scope-limited | The codec covers those main families, not every subtype's application semantics. Structured types and project-judgment encodings have explicit boundaries — [DPT audit](../../spec-audits/2026-10-07-dpt-document-audit.md), [KNOWN_LIMITATIONS.md §61](../../KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) |
+| Types outside implemented main families 1–30, including higher structured/system types | ❌ Not implemented | Do not classify every higher-numbered type as LTE; expansion needs subtype/application evidence — [DPT audit](../../spec-audits/2026-10-07-dpt-document-audit.md) |
 | Resolving a group address's datapoint type from its linked communication objects, with conflicts reported rather than guessed | ✅ Implemented | — |
 
 See [Datapoint types](../knx-basics/04-datapoint-types.md) for what a DPT is and how
@@ -94,10 +95,9 @@ KNXBench names them.
 
 > **Note**
 >
-> [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today)'s own DPT row still
-> reads as if main types above 19 were not implemented at all. That text has not kept
-> pace with the code: the codec has covered main types 1 through 30 since 2026-09-14.
-> This chapter follows the code.
+> A supported main family does not prove every subtype, functional block or device
+> uses it correctly. Check the [codec evidence](../../spec-audits/2026-10-07-dpt-document-audit.md)
+> and the actual object's declaration rather than guessing from payload length.
 
 ## Group-address CSV
 
@@ -129,13 +129,10 @@ workflow itself.
 
 > **Note**
 >
-> [COMPATIBILITY.md §4](../../COMPATIBILITY.md#4-not-supported) currently describes
-> device parameter editing itself as unsupported ("no parameter value is ever written —
-> parameter values are preserved but not editable"). That text predates the parameter
-> editor: editing a value **in the project** is implemented, undoable, and re-evaluates
-> the program, as the Devices and products chapter of this manual describes. What
-> remains unimplemented is writing that value **to a physical device**, which is a
-> separate thing. This chapter reflects the code as it stands.
+> Editing a value **in the project** and downloading it **to a physical device** are
+> different operations. The editor is undoable. Device download is safety-gated and
+> verified only within the narrow commissioning scope below; project undo cannot
+> undo a hardware write.
 
 ## KNX Secure
 
@@ -151,8 +148,8 @@ secured installation cannot currently be fully represented or monitored by KNXBe
 | Item | Status | Evidence |
 | --- | --- | --- |
 | Downloading a device: application tables and parameters | 🟡 Partial or experimental | `knx device download` and the **Download to device** tab, plan first and confirmed per device; verified on one device (MDT, mask `0701h`) with read-back, others unverified — [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device), [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
-| Programming an individual address | 🚧 In progress | The command and tab exist, but a confirmed start is refused before any connection until durable recovery exists — [ADR-0058](../../adr/0058-individual-address-reset-requires-durable-recovery.md) |
-| The generic load/unload/reset/memory-write commissioning procedures | 🚧 In progress | The memory-write path used by a download has run on one real device; the property-based procedures remain verified only against KNXBench's own simulator — [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [§92](../../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
+| Programming an individual address | 🟡 Refused safety boundary | Confirmed starts fail before connection until device-specific durable recovery exists; not a working write or an active task — [ADR-0058](../../adr/0058-individual-address-reset-requires-durable-recovery.md) |
+| The generic load/unload/reset/memory-write commissioning procedures | 🟡 Bounded implementation | One real memory-download device; property procedures remain simulator-verified. No generic real-device coverage — [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [§92](../../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
 
 > **Warning**
 >
@@ -167,7 +164,7 @@ secured installation cannot currently be fully represented or monitored by KNXBe
 | KNXnet/IP discovery | ✅ Implemented | CLI and graphical bus monitor — [Bus monitor and KNXnet/IP](../user-guide/07-bus-and-interfaces.md) |
 | Tunneling: connect, monitor, decode telegrams | ✅ Implemented | Verified live against one real gateway; a 34-minute session read 1,299 telegrams with zero drops and 100% of destination names resolved — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
 | Routing (multicast) | 🟡 Partial or experimental, command line only | `knx bus route-monitor` and `knx bus route-send`; the graphical bus monitor supports tunneling only — [Bus monitor and KNXnet/IP](../user-guide/07-bus-and-interfaces.md) |
-| Sending a group-value write from the bus monitor or the command line | ✅ Implemented | The only kind of bus write KNXBench performs; project Undo does not cover it |
+| Sending a group-value write from the bus monitor or the command line | ✅ Implemented | A live bus operation, distinct from device download; project Undo does not cover it |
 | A line scan (finding which individual addresses answer on a line) | 🟡 Partial or experimental | Live and unthrottled by default; cannot identify a product, distinguish a busy device from an absent one, or cross a coupler — [KNOWN_LIMITATIONS.md §72](../../KNOWN_LIMITATIONS.md#72-line-scan-t17-an-unthrottled-scan-is-a-live-bus-cost-not-a-theoretical-one--shipped-2026-09-13-still-true) |
 | KNXnet/IP against multiple gateway models | 🟡 Partial or experimental | Verified against exactly one gateway model so far — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
 

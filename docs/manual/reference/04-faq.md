@@ -30,8 +30,8 @@ use a commissioning tool that covers your devices. See
 **Is my project safe with KNXBench?**
 
 KNXBench never silently discards information it doesn't understand — unknown data is
-preserved or reported, not dropped. That said, it is alpha software with no release ever
-cut, so keep independent backups of any project you care about, the same way you would
+preserved or reported, not dropped. That said, the published build is an alpha
+pre-release, so keep independent backups of any project you care about, the same way you would
 for any pre-1.0 tool. [Project status](../getting-started/03-project-status.md) is worth
 reading before you commit anything important to it.
 
@@ -80,11 +80,11 @@ exists," not certification by the KNX Association.
 
 **What does "alpha" mean for this project specifically?**
 
-Version `0.1.0-alpha` (each component counts its own `alpha.N`), no git tag, and no
-release ever published. Concretely: `docs/KNOWN_LIMITATIONS.md` lists a large number of
+Version `0.1.0-alpha` (each component counts its own `alpha.N`), with a public
+`v0.1.0-alpha.5` pre-release. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
 known limitations, several classified critical, and writing to a real device is verified
 on exactly one device so far. See
-[Project status](../getting-started/03-project-status.md) for the current count and what
+[Project status](../getting-started/03-project-status.md) for the evidence boundaries and what
 it implies for trusting it with real work.
 
 **Is KNXBench free, and under what license?**

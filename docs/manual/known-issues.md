@@ -2,22 +2,38 @@
 
 # Known issues
 
+**Current-source review: 8 October 2026, `608a204b`.** This page separates
+remaining defects, intentional safety/scope boundaries and missing evidence.
+Historical titles do not mean that their old defect is still present. The
+[source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
+the reconciliation; formal task dispositions remain in the engineering ledger.
+
+## Read these before your first serious project
+
+| Boundary | Practical meaning | Next check |
+| --- | --- | --- |
+| Import is one-way | Keep the original ETS archive; your edited working copy is `.knxdb`, not an ETS export | [Projects](user-guide/02-projects.md#there-is-no-knxproj-export) |
+| Autosave is not a backup history | Save once to choose a file, then keep independent copies | [Saving](user-guide/02-projects.md#saving) |
+| Browser files live on the server | Save is not a download; Export project gives you a local copy | [Web and desktop differences](user-guide/11-web-and-docker.md#web-build-versus-desktop-build) |
+| Shared server, shared project | One password and one undo stack are not collaborative editing | [Deployment](user-guide/11-web-and-docker.md#authentication) |
+| Hardware support is narrow | A project edit is not commissioning, and undo does not reverse a bus write | [Bus boundaries](user-guide/07-bus-and-interfaces.md#what-knxbench-does-and-does-not-do-on-a-bus) |
+| Some legacy spacer fields look editable | An untyped `TypeNone` spacer can appear as an empty text field; the server refuses edits | [Known limitations, §128](../KNOWN_LIMITATIONS.md) |
+
 This chapter collects the limitations most likely to be noticed by someone
 who actually uses KNXBench, grouped by the part of the application they show
 up in. Each entry says what is affected, what the limitation is, what it
 means in practice, and whether a workaround exists.
 
 It is a selection, not the catalogue. The full engineering record lives in
-[`docs/KNOWN_LIMITATIONS.md`](../KNOWN_LIMITATIONS.md), which currently holds
-121 numbered headings as of 2026-10-06: 110 remaining boundaries and eleven
-resolved or clarification-only entries, including ones that
+[`docs/KNOWN_LIMITATIONS.md`](../KNOWN_LIMITATIONS.md), including entries that
 only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-The software described here is the `0.1.0-alpha` series (2026-10-07: CLI, desktop and
-web `alpha.5`, server `alpha.1`). The only published build is a pre-release in
-the private repository, and the version number is not a promise that anything is finished.
+This is the source-level `0.1.0-alpha` series, checked on **8 October 2026**.
+A [public alpha.5 AppImage](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5)
+exists, but may precede newer changes described here. The version number is not a
+promise that anything is finished.
 
 > A long list of known issues is what happens when a project writes its
 > problems down, not proof that it has more of them than software that
@@ -37,11 +53,12 @@ the private repository, and the version number is not a promise that anything is
   one error and nothing else:
   `UnresolvedReference { kind: "Installation/@DefaultLine", target: "" }`.
 - **Consequence:** the import report looks worse than the import went. The
-  import itself completes and the project is fully usable; in the measured
+  import completes, but the empty default-line reference is not resolved. In the measured
   case all 2 areas, 2 lines, 4 devices, 13 group addresses and 75
   communication objects arrived.
 - **Workaround:** read the error, confirm it is this one, and continue. There
-  is nothing to repair in the project.
+  is no missing line to invent. Review other diagnostics independently; an
+  error-bearing `.knxproj` is refused as input to project comparison.
 
 ### Everything KNXBench knows about `.knxproj` comes from a small corpus
 
@@ -49,13 +66,14 @@ the private repository, and the version number is not a promise that anything is
   measured.
 - **Limitation:** the parser was built against a handful of real files (an
   ETS4 schema-11 project, an ETS 6.3.0 schema-23 project, a vendor schema-21
-  demo). No authoritative XSD for the format is publicly available, so
-  "correct" here means "agrees with the files we have".
+  demo). Authoritative XSD validation is unavailable to this project;
+  structural validation and sample evidence are not complete format conformance.
 - **Consequence:** a construct that never appeared in those files may be
   reported as unknown, or mapped conservatively, even though ETS considers it
   ordinary.
-- **Workaround:** none, but nothing is silently dropped — unknown attributes
-  and elements are preserved and listed in the import report.
+- **Workaround:** inspect the report. Opaque source data is retained where
+  technically possible; unsupported, malformed and lost mappings are reported.
+  Retained bytes are not proof that the application understands or can edit them.
 - **Details:** [§1 single-sample bias](../KNOWN_LIMITATIONS.md#1-single-sample-bias),
   [§2 no authoritative XSD](../KNOWN_LIMITATIONS.md#2-no-authoritative-xsd-is-publicly-available)
 
@@ -114,13 +132,15 @@ the private repository, and the version number is not a promise that anything is
 
 ### The catalog file picker offers `.vd2`, and `.vd2` is always rejected
 
-**UI offer corrected, 2026-10-02.** This historical heading is retained for
-links. The catalog picker now offers `.knxprod` and ZIP packages only; `.vd2`
-is no longer advertised. The legacy-format refusal itself remains intentional.
+**UI offer corrected.** This historical heading is retained for links. The
+current shared catalog/wizard picker offers `.knxprod`, ZIP and
+`.vd3`/`.vd4`/`.vd5`, not `.vd2`. The CLI `products ingest` help still names
+`.vd2`, but its importer refuses it. That help text, not the web picker,
+is the remaining copy defect.
 
 - **Affected:** installing a product database.
 - **Limitation:** the package reader rejects every file whose name
-  ends in `.vd2` before looking inside it — the legacy ETS3 format is out of
+  ends in `.vd2` before looking inside it — that legacy format is out of
   scope by decision, not by accident.
 - **Consequence:** a file selected by overriding the operating system's filter
   can still be refused. A picker filter is guidance, not format validation.
@@ -138,9 +158,10 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   than complete semantics or ETS parity. The unobserved schemes 15-19, 22 and
   24 are not supported. Encrypted packages are refused
   permanently, by decision rather than by omission.
-- **Consequence:** packages at unmeasured schemes, encrypted packages and legacy
-  formats cannot be installed directly; successful import at a supported scheme
-  does not guarantee full device semantics.
+- **Consequence:** unsupported namespaces and encrypted modern packages are
+  refused. Legacy VD3/VD4 offline import uses a separate supported path; an
+  oversized or differently structured VD5 can still be refused. Successful
+  import does not guarantee full device semantics.
 - **Workaround:** product data that arrives inside a `.knxproj` is imported
   with the project, which covers the common case of working on an existing
   installation.
@@ -162,11 +183,39 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 
 - **Affected:** display of manufacturer, product and application-program
   names.
-- **Limitation:** resolution works for communication objects; three
-  documented gaps remain elsewhere.
+- **Limitation:** supported object defaults and matching installed
+  product/program names resolve. Missing, mismatched or blank product data and
+  ambiguous DPT alternatives remain disclosed; these are different problems,
+  not three uniformly unimplemented resolution features.
 - **Consequence:** a device may show an identifier where you expect a
   product name.
 - **Details:** [§12 manufacturer data resolution](../KNOWN_LIMITATIONS.md#12-manufacturer-data-resolution--one-of-three-gaps-closed-2026-09-20)
+
+### Legacy import is offline use, not legacy device download
+
+- **Affected:** `.vd3`–`.vd5` product databases.
+- **Available:** web/CLI import, password dialog, optional remembered password,
+  catalog placement, supported parameters, visibility and object links.
+- **Remaining:** no legacy download or mapped legacy DPT codes. The measured
+  VD5 has an oversized payload and a multi-member layout outside current
+  admission. Untyped spacers can look editable even though the server refuses
+  their value writes.
+- **Privacy:** the optional remembered password is one plaintext file with
+  restrictive permissions on the **server**, not a keyring. Unencrypted
+  originals may still contain source secrets; never post them publicly.
+- **Details:** [Legacy product guide](user-guide/05-devices-and-products.md#old-ets3-product-databases-vd3-vd4-vd5),
+  [ADR-0094](../adr/0094-legacy-exim-product-files.md), [§128](../KNOWN_LIMITATIONS.md).
+
+### A device preview is not a lock on the whole project
+
+- **Affected:** the add-device wizard's Review → Create step.
+- **Limitation:** the server rechecks the previewed **names and addresses**.
+  It does not bind the entire project/product database to a revision. Deleted
+  placements can cause an ordinary validation refusal; other unrelated edits
+  need not invalidate the preview. The wizard configures no parameters or links.
+- **Workaround:** re-read the result and its product diagnostics. A computed
+  free project address is neither reserved nor checked against the live bus.
+- **Details:** [§167](../KNOWN_LIMITATIONS.md), [Add-device wizard](user-guide/05-devices-and-products.md#the-add-device-wizard).
 
 ### Three module limits in application programs
 
@@ -239,9 +288,11 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 - **Safety:** original values must be saved before any property mutation,
   including the original `PID_DEVICE_CONTROL`. If saving the backup fails,
   no property write may follow. Explicit confirmation cannot bypass this gate.
-- **Scope:** broader software lifecycle coverage, Web/client adoption and
-  offline recovery/abort/restore contracts remain implementation requirements.
-  This documentation notice is not a claim that an in-app warning is wired up.
+- **Current implementation:** the Web Live/History views and scoped offline
+  caller/recovery checks are delivered. The views show their validation,
+  partial-coverage and not-a-recovery notices. Do not read the old lifecycle
+  handoff as an active unfinished alpha package. Hardware/power-loss evidence,
+  complete journal coverage and universal recovery are still not supplied.
 - **Details:** [Commissioning history contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md),
   [commissioning goal](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/goal-commission.md).
 
@@ -266,25 +317,43 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   downloaded and read back so far. Other devices, application versions and
   masks are unverified; procedures KNXBench cannot plan are refused by name.
   Programming an individual address is currently refused until durable
-  recovery exists. Unloading and secure devices are not supported.
+  recovery exists. Unloading and secure devices are not supported. A successful
+  byte read-back does not confirm the final restart; the verified device's
+  restart outcome is explicitly unconfirmed.
 - **Consequence:** for most installations, plan for another commissioning
   tool for now.
 - **Workaround:** none beyond the verified scope.
 - **Details:** [§7 commissioning](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked),
   [Downloading to a device](user-guide/07-bus-and-interfaces.md#downloading-to-a-device)
 
+### Stopping the server is not a safe cancellation of a device write
+
+- **Affected:** server/container shutdown during commissioning.
+- **Limitation:** the bounded HTTP shutdown window does not wait indefinitely
+  for or roll back a device download. A remaining worker ends with the process;
+  unsaved project edits are not saved on exit.
+- **Workaround:** finish and check the device operation, then save the project
+  before stopping. An empty **Live** view is not proof that the physical bus
+  is idle. Never test recovery on an occupied installation without a fresh go.
+- **Details:** [§163](../KNOWN_LIMITATIONS.md), [Live/History contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md).
+
 ### KNX Secure is not implemented
 
 - **Affected:** secured installations, both Data Secure and IP Secure.
 - **Limitation:** not implemented. IP Secure was scoped and then shelved
   indefinitely.
-- **Consequence:** a secured installation cannot be monitored or worked on
-  over the bus features here, and secured projects are outside what this
-  application handles.
+- **Consequence:** secured bus communication is unsupported. This does not
+  mean every project containing secure metadata is refused: readable archives
+  can retain unsupported metadata without providing runtime security or keys.
+  AES archive protection is a separate import refusal described above.
 - **Details:** [§8 KNX Secure is not implemented](../KNOWN_LIMITATIONS.md#8-knx-secure-is-not-implemented),
   [§26 `BusConnection` does not support KNX IP Secure](../KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure)
 
 ### The DPT codec infers the format of what you type, and some encodings are this project's ruling
+
+**Historical title:** new Web writes declare their grammar explicitly. Legacy
+CLI/API callers may omit it and use the compatibility parser; the two paths
+must not be described as either universally guessed or universally explicit.
 
 - **Affected:** writing a value to a group address, and reading the decoded
   value of a telegram.
@@ -333,9 +402,10 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 ### Movement in the flow view is heavy on large installations
 
 - **Affected:** the bus monitor's Flow view with Motion on.
-- **Limitation:** the cost of movement grows with the size of the map. With
-  several hundred devices it keeps the processor almost fully busy even at a
-  few telegrams a second, and values can appear up to about a second late.
+- **Limitation:** the recorded large-map Chromium tests kept the processor
+  almost fully busy even at a few telegrams a second, with visible-value lag
+  up to about a second. These are source-bound recorded measurements, not
+  a new benchmark of every build or host.
   There is no automatic switch. Checked in Chromium only; the packaged desktop
   app and screen readers were not measured.
 - **Workaround:** switch *Motion Off* in the settings. Values, arrows, counts
@@ -345,11 +415,13 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 ### Opening an older project upgrades the file
 
 - **Affected:** a project saved by an older KNXBench version.
-- **Limitation:** opening it — in the application or with any `knx` command
-  that takes a `.knxdb` file, including `knx diff` and `knx doc-export` —
+- **Limitation:** normal application/project readers and CLI commands such as
+  `knx diff` and `knx doc-export`
   upgrades the file itself to the current format. No copy is made, and the
   older KNXBench then refuses the file as "newer". A failed upgrade leaves the
   file unchanged.
+- **Exception:** the read-only MCP adapter migrates an older database's
+  in-memory copy, not the source file. It sees only saved state, not unsaved UI edits.
 - **Workaround:** copy the project file first if an older version must still
   open it.
 - **Details:** [§157](../KNOWN_LIMITATIONS.md#157-opening-an-older-project-upgrades-it-in-place)
@@ -383,8 +455,10 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 ### What the server's access control is, and is not
 
 - **Affected:** any deployment beyond a single trusted machine.
-- **Limitation:** there is no TLS, one password rather than accounts, no
-  roles, no audit trail, and no CSRF protection. A failed attempt is delayed,
+- **Limitation:** HTTPS is enabled by default with a password, but a self-signed
+  certificate needs a fingerprint check. There is one password rather than accounts,
+  no roles or per-user audit trail, and no CSRF token (the cookie uses SameSite=Strict).
+  A failed attempt is delayed,
   not locked out. Supplying the password as `KNX_AUTH_PASSWORD` is weaker than
   supplying a hash via `KNX_AUTH_PASSWORD_HASH`, because the plain value is
   visible to anything that can read the process environment.
@@ -401,7 +475,9 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   server's deliberate refusal to expose an unguarded API, not a bug.
 - **Consequence:** the published-port form only works with a password
   configured. With one, it works: build, `-p 8484:8080`, `KNX_AUTH_PASSWORD`,
-  sign in, API answers `200` — verified end to end.
+  sign in, API answers `200` — evidenced by the earlier image run, not repeated
+  by this audit. Current authenticated builds default to HTTPS; follow the
+  [certificate/start recipe](user-guide/11-web-and-docker.md#https).
 - **Workaround:** set `KNX_AUTH_PASSWORD_HASH` (or `KNX_AUTH_PASSWORD`), or on
   Linux run the credential-less form on the host network instead:
   `docker run -d --name knxbench --network host -e KNX_PORT=8484 -v "$(pwd)/data:/data" knxbench-server`.
@@ -421,8 +497,9 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 ### One project, one undo stack, no matter how many browsers
 
 - **Affected:** two people opening the same server.
-- **Limitation:** there is no multi-user support of any kind: one shared
-  project, one shared undo stack, no conflict detection.
+- **Limitation:** one shared project and undo stack, with no general
+  multi-user conflict-resolution model. Specific CSV/creation previews have
+  their own stale-state guards; those are not collaborative editing.
 - **Consequence:** a second browser is a second pair of hands on the same
   keyboard. One person's undo reverses the other person's edit.
 - **Workaround:** one editor at a time. This is a discipline, not a lock —
@@ -446,39 +523,58 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 - **Limitation:** the AppImage has been built and launched on a single Linux
   host. It is unsigned, has no auto-update, is x86-64 only, and there are no
   distribution packages.
-- **Consequence:** treat the desktop build as an early convenience, not as a
-  supported installation route.
+- **Consequence:** the public AppImage is an available Linux installation
+  route, but evidence from one host is not universal compositor/GPU support.
 - **Workaround:** build from source, or run the server and use a browser.
 
-### The AppImage needs an X server
+### Alpha.5 can start with a different native data folder
 
-- **Affected:** the desktop AppImage on Wayland sessions.
-- **Limitation:** the AppImage always opens its window through X11. Without a
-  working Xwayland it stops at once with "Failed to initialize GTK".
-- **Workaround:** enable Xwayland, or start the unpacked AppImage natively on
+- **Affected:** upgrading the desktop application from alpha.4 to alpha.5.
+- **Limitation:** the application identifier/data location changed; the new
+  native app does not automatically adopt the old folder. An empty start is
+  not proof that the old project was deleted. Server/product/settings paths
+  are separate and must not be assumed to be one directory.
+- **Workaround:** keep independent copies, reopen the old saved `.knxdb` through
+  the normal file picker, and inspect which catalog/settings installation you
+  are using. Do not merge live SQLite files or discard the old folder blindly.
+- **Details:** [§161](../KNOWN_LIMITATIONS.md), [Installation](getting-started/04-installation.md).
+
+<a id="the-appimage-needs-an-x-server"></a>
+
+### Old AppImages may force X11; current builds have an owned display policy
+
+- **Affected:** the exact AppImage/build you are running on Wayland.
+- **Historical limitation:** the unchanged alpha.4 image forces X11 and needs
+  a reachable X server. Current source and the alpha.5 tagged source include
+  the owned launcher hook: automatic Wayland/X11 selection, caller overrides
+  and the measured DMABUF workaround. That source comparison is not a new
+  native run of the downloaded asset or every GPU/compositor.
+- **Workaround for an old forced-X11 image:** enable Xwayland, or start the unpacked image natively on
   Wayland as shown in
   [Troubleshooting](reference/03-troubleshooting.md#the-appimage-stops-with-failed-to-initialize-gtk)
   (tested on one Hyprland machine).
 - **Details:** [§158](../KNOWN_LIMITATIONS.md#158-the-appimage-starts-only-with-an-x-server)
+  and [launcher contract](../APPIMAGE_LAUNCHER.md).
 
 ### The desktop shell has no login, on purpose
 
 - **Affected:** nothing you can do about it, but worth knowing.
 - **Limitation:** the desktop application talks to an in-process server that
-  is deliberately not behind the password check — there is no network
-  exposure to protect.
+  is deliberately not behind the password check. Its HTTP listener binds
+  **127.0.0.1**, not the LAN; it is still a local endpoint, not a promise of
+  isolation from other software on the machine.
 - **Consequence:** anyone at the machine has the project. The protection is
   the machine's own.
 
 ### The Linux backend still uses GTK3
 
 - **Affected:** the desktop build's platform lifecycle.
-- **Current state (2026-09-22):** `gtk3-rs` is maintained again and RustSec
-  withdrew its ten former warnings. Tauri 2 still uses GTK3; Tauri 3 and the
-  normal Wry GTK4 migration are not stable yet.
-- **Consequence:** there is no current GTK3 maintenance advisory to work
-  around. KNXBench will revisit the backend after the Wry GTK4 path ships
-  stably instead of moving this alpha to an experimental runtime.
+- **Current repository boundary:** the pinned Linux desktop stack uses GTK3.
+  The 2026-09-22/2026-10-06 advisory reviews in §16 are dated evidence, not
+  a claim about today's upstream releases or advisories.
+- **Consequence:** backend migration needs its own verified platform work;
+  this documentation audit neither changes the runtime nor certifies its
+  whole dependency/security lifecycle.
 - **Details:** [§16 Tauri Linux backend](../KNOWN_LIMITATIONS.md#16-tauri-v2-remains-on-gtk3-former-maintenance-advisories-are-resolved)
 
 #### Historical note (superseded in 2026)
@@ -522,8 +618,9 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   long tables scroll and can be filtered by text and status, but there is
   no search across tables. A
   comparison cannot merge or apply a
-  difference back onto a project, does not do a three-way comparison, and
-  has no exit code for use in a pipeline.
+  difference back onto a project or do a three-way comparison. The web panel
+  has no process exit code, but **`knx diff --exit-code` already exists**:
+  0 equal, 1 different, 2 comparison failure.
 - **Consequence:** finding one entity in a large comparison means
   opening its table and filtering there.
 - **Details:** [§55](../KNOWN_LIMITATIONS.md#55-project-diff-cannot-merge-or-apply-a-diff-back-onto-a-project),
@@ -538,13 +635,48 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 ### The interface is English and German; some text is neither
 
 - **Affected:** everyone not reading English.
-- **Limitation:** the interface ships English and German. Translations
-  imported from product data are stored but not used to translate the
-  interface, and `Languages` blocks outside an application program are
-  discarded on import. Documentation export renders in one language.
+- **Available:** English/German UI, bundled Bavarian/Klingon packs and
+  importable language packs. Product translations from program, catalog,
+  hardware and master scopes are ingested; supported display overlays and
+  fallback markers already work. Product data is not a UI language pack.
+- **Remaining:** not every source text is translated or has a consumer.
+  Some server/error/detail prose stays English; reports have their own bounded
+  EN/DE catalogue, not third-party pack support. Project-authored text and
+  parameter values are not silently rewritten by display language.
 - **Details:** [§37 imported translations are stored but never read](../KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12),
   [§64 `Languages` blocks outside an application program](../KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import),
   [§66 server-composed prose and documentation export](../KNOWN_LIMITATIONS.md#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14)
+
+### Shared preferences and achievements are not per-user records
+
+- **Affected:** several people/windows using one server.
+- **Limitation:** the first-run guide is remembered per installation and can
+  be reopened manually. Achievements are shared, count UI actions rather than
+  every CLI/API action, and concurrent increments can merge to the higher value
+  rather than their sum. They confer no device-write authority.
+- **Details:** [§160](../KNOWN_LIMITATIONS.md), [§164](../KNOWN_LIMITATIONS.md).
+
+### AI answers can lag unsaved work
+
+- **Affected:** agents using the experimental read-only MCP adapter.
+- **Limitation:** saved snapshots only; dynamic activation is not full access
+  or ETS visibility semantics. An older product database is copied/migrated in
+  memory at startup, so newly installed products may require an MCP restart.
+  Agent tool results can reach that agent's model provider.
+- **Workaround:** save first, check snapshot/visibility reasons, and review CSV
+  proposals yourself. The adapter cannot apply them or operate the bus.
+- **Details:** [AI agents](user-guide/12-ai-agents.md), [§165](../KNOWN_LIMITATIONS.md).
+
+### Support-gap evidence is not automatically anonymous or submitted
+
+- **Affected:** File → Analyze support gaps… and exported evidence ZIPs.
+- **Limitation:** analysis and preview/export are implemented, not support for
+  every analyzed format. Selected XML/originals can contain identifying data;
+  secret detection is conservative, not exhaustive. Opening an issue/mail draft
+  posts nothing; private mailbox operation is unverified.
+- **Workaround:** inspect the exact disclosure preview, share only deliberately,
+  and never attach private originals to public issues.
+- **Details:** [Community evidence](../COMMUNITY_EVIDENCE.md), [contribution guide](../contribution-intake/README.md).
 
 ### Screen reader support is incomplete
 
@@ -571,12 +703,18 @@ other. These are the ones found while writing this manual.
 
 ### `COMPATIBILITY.md` understates datapoint type coverage
 
+**Resolved documentation defect.** Current compatibility text describes main
+families 1–30 and explicitly limits subtype/application semantics. The old
+“20 and above” assertion is no longer a current statement; this heading remains
+for historical links. The [DPT audit](../spec-audits/2026-10-07-dpt-document-audit.md)
+does not turn family coverage into complete KNX conformance.
+
 - **Affected:** readers of the compatibility document.
-- **Limitation:** its section 2 excludes "main types this codec does not
+- **Historical limitation:** its section 2 excluded "main types this codec does not
   implement (20 and above)". The codec implements and tests main types up to
   30 — types 20, 21, 25, 29 and 30 among them.
-- **Consequence:** the document is more pessimistic than the software. Where
-  the two disagree about DPT coverage, the code is right.
+- **Current consequence:** none from that obsolete sentence. Actual codec
+  limitations remain documented separately; code alone is not a conformance oracle.
 - **Details:** [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md), section 2
 
 ### Some repository documents predate the server login
@@ -586,8 +724,10 @@ other. These are the ones found while writing this manual.
   login and the browser login screen that arrived the same day. Older
   engineering documents — `PROJECT_ANALYSIS_2026-09-15.md`, for one —
   still describe a server with no authentication at all, because that was
-  true when they were written. The internal triage list also still carries
-  the Read-on-Init entry as open, although it was closed the same day.
+  true when they were written. Those snapshots and the former triage have
+  since been removed from the active tree and pinned in Git history; they
+  are not current task queues. Read-on-Init is stored and undoable in native
+  projects; there is no `.knxproj` exporter to discard it.
 - **Consequence:** where a dated analysis document contradicts this chapter
   about authentication or about the sixth flag, this chapter is the newer one.
   [`KNOWN_LIMITATIONS.md` §22](../KNOWN_LIMITATIONS.md#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback)

@@ -1,5 +1,55 @@
 # IMPLEMENTATION_STATUS.md
 
+This is a **newest-first delivery history**, not the live feature inventory.
+Older dates, failures, counts and compatibility milestones remain historical.
+For current source capabilities use [manual implementation status](manual/implementation-status.md);
+for practical boundaries use [known issues](manual/known-issues.md), and for
+formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
+does not erase a broader platform/device limitation or imply a new release.
+
+## 2026-10-08 — Known issues and implementation status: fewer fossils wearing “current” badges
+
+- Extended the documentation audit across all 40 original user-facing issue
+  topics, the whole manual status chapter and the complete technical
+  heading/anchor inventory. Added seven existing boundaries to the manual,
+  not seven new bugs; [source/evidence audit](status/2026-10-08-known-issues-status-audit.md).
+- Corrected non-program translation loss, blanket legacy refusal, history/Web
+  handoffs, CLI diff exit codes, native loopback exposure and AppImage source/
+  old-asset distinctions. Source-bound evidence is separate from current
+  hardware/native/advisory verification; historical log results stay intact.
+- Narrowed the wizard contract to previewed names/addresses, layered provenance
+  to modelled values and green status markers to their actual evidence scope.
+  Sibling tutorials/troubleshooting now say the same thing. Program-DPT fallback
+  UI consumption and exact product namespace admission are no longer “missing”.
+- Public address writes remain fail-closed; recovery/history are bounded, and
+  interrupted device writes, shared preferences, MCP snapshots and private
+  contribution evidence have explicit practical notices. Owner ledger unchanged.
+- Focused tests: Web 270, HTTP 56, CLI diff 8, read-only store 9, projection 2,
+  translation-install 1; tooling/build/documentation gates recorded in
+  [the receipt](evidence/known-issues-status-audit-2026-10-08.json). No new hardware,
+  private-corpus, full native or advisory run. Documentation-only, local edits;
+  existing README owner's combined-delivery handoff remains separate.
+
+## 2026-10-08 — Ideas and roadmap audit: stop putting shipped features back in the queue
+
+- Checked all twelve original root-local `ideas.md` entries against `608a204b`,
+  code, actual UI/API consumers, tests, ADRs and the owner ledger. The ignored
+  idea file is updated locally; the [source/test audit](status/2026-10-08-ideas-roadmap-audit.md)
+  preserves its assessment in maintained documentation.
+- Corrected stale Flow/MCP/humour/theme/schema-23 claims, L3 legacy web import,
+  commissioning history consumers, historical alpha closeout and public
+  website/story/intake state. Kept research, missing functionality, accepted
+  scope and missing validation distinct; no new dates or scope decisions.
+- Updated roadmap/open-work summaries, manual ideas/status/compatibility and
+  related historical VD/website entry points. Preserved stable manual navigation,
+  published launch records and prior real-app captures. Owner ledger unchanged.
+- Focused verification: 255 web tests, 18 MCP tests, 10 HTTP tests and 38 tooling
+  tests pass. Five repository gates and documentation/navigation checks verify
+  the local result; [receipt](evidence/ideas-roadmap-audit-2026-10-08.json).
+- Documentation only: no application behaviour authored, deployment, hardware,
+  private-corpus or broader native/accessibility acceptance. Local edits remain
+  uncommitted/unpublished in `docs-refresh-20261008`.
+
 ## 2026-10-08 — Website goes live on GitHub Pages (knxbench.com)
 
 - **Why:** owner go for publication; DNS at Host Europe was set up by the
@@ -19,6 +69,31 @@
   release checks, zero unexpected requests/errors; doc gates.
 - **Limits:** privacy text is drafted from GitHub's documentation for owner
   review, not legally certified; no WebKit/screen-reader check.
+
+## 2026-10-08 — Documentation refresh: clearer routes, real visuals, fewer time machines
+
+- README is an entry point with public AppImage and browser/source installation
+  paths; the 33-chapter manual keeps its stable URLs and has checked Previous/Next
+  navigation, explicit tutorial prerequisites/results/caveats and a no-hardware
+  create/save/reopen exercise. New [docs hub](README.md) and
+  [maintenance guide](DOCUMENTATION.md) separate user instructions from engineering records.
+- Stale release/private-repository wording, HTTPS, autosave/backups, protected
+  project input, CSV actions, DPT subtype claims, wizard paths and parameter tabs
+  were corrected against source and maintained evidence. Parallel website and
+  community-evidence deliveries and their published link repairs are preserved.
+- **32 real Porcelain screenshots** and **three short workflow GIFs** were
+  captured from freshly built source `4c84ab9f`, a real server, fictional data and
+  an isolated loopback-only namespace. [Capture/provenance guide](assets/README.md)
+  and [media manifest](assets/media-manifest.json) explain regeneration and gaps.
+- Verified: 38 tooling tests including 12 new documentation regressions, 19
+  focused language tests, two complete capture tests with real project/device
+  operations, frontend TypeScript/Vite and server builds, five xtask gates and
+  whitespace check. The documented HTTPS health probe ran twice on a disposable
+  native server; this is not a new Docker replacement or hardware run.
+- [Source-bound validation receipt](evidence/documentation-refresh-2026-10-08/validation.json)
+  scopes the evidence. No application behaviour authored, no new compatibility
+  claim, no full workspace/native accessibility run, and no publication implied.
+
 
 ## 2026-10-08 — Community evidence lands, intake moves into the public main repository (ADR-0091)
 
@@ -5086,7 +5161,8 @@ Published `ab31ca292f536602e6338692e04a39759566cd1c` (UI) and
 
 ## 2026-09-30 — Contributor License Agreement (ADR-0053)
 
-- The license stays `AGPL-3.0-or-later`. New [`CLA.md`](../CLA.md): each
+- The license stays `AGPL-3.0-or-later`. Then-new `CLA.md`
+  ([historical decision](adr/0053-contributions-come-with-a-license-grant-for-dual-licensing.md)): each
   contributor grants the maintainer a non-exclusive license, including the
   right to license proprietary terms, so KNXBench can be dual-licensed. The
   contributor keeps the copyright. The maintainer promises the contribution

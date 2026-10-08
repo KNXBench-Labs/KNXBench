@@ -87,8 +87,12 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// 9,382 -> 10,023 (+641) — and an independent instance-level Python recount
 /// of the same 115 instances / 113 unique packages / 302 program blobs
 /// predicts all five deltas and the new rows' 247,734 occurrences exactly.
+/// Re-pinned for ADR-0094 (schema v22): the commitment now also counts the
+/// four legacy provenance tables, all empty here (pinned below). With them
+/// left out, the v16-shaped projection is unchanged (97f3a9d3…), so no
+/// outcome, report total or other table count moved. Previous pin 7b558cdd….
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "7b558cdda1b2311dab471b5a375ff64508e300c1d6cb0021a0927e326f1dd115";
+    "541d0afc77ef69433bdc28c95bb2235938a249dc7f3262662fbdff3f750317a0";
 /// Current v21 outcomes/counts projected without the four v17 tables, the
 /// v20 table and PDB-11 identity; the v20 pin a2181d65… moved only by the
 /// five ADR-0081 unknown totals above. Historical v16 pin: c204acc8… (see
@@ -106,6 +110,15 @@ const V17_TABLES: [&str; 4] = [
 /// the projection must stay equal, i.e. the write-authority index moves no
 /// install outcome, report total or pre-existing table count.
 const V20_TABLES: [&str; 1] = ["parameter_calculation_ref"];
+/// Tables schema v22 added (ADR-0094), left out of the v16 projection too:
+/// they record legacy EX-IM imports, which this `.knxprod` corpus has none
+/// of, so every one of them must stay empty and move nothing else.
+const V22_TABLES: [&str; 4] = [
+    "legacy_diagnostic",
+    "legacy_program",
+    "legacy_source",
+    "legacy_source_file",
+];
 
 fn configured_output() -> PathBuf {
     std::env::var_os("KNXBENCH_PRODUCT_MATRIX_OUTPUT")
@@ -749,6 +762,12 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
                 "v20 table {table} not counted"
             );
         }
+        for table in V22_TABLES {
+            assert!(
+                counts.remove(table).is_some(),
+                "v22 table {table} not counted"
+            );
+        }
         v16
     };
     let v16_commitment = baseline_commitment(&private_records, v16_projection);
@@ -793,6 +812,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "identity": matrix["pdb11_identity"],
             "v17_tables": V17_TABLES.map(|t| (t, matrix["shared_final_database_counts"][t].clone())),
             "v20_tables": V20_TABLES.map(|t| (t, matrix["shared_final_database_counts"][t].clone())),
+            "v22_tables": V22_TABLES.map(|t| (t, matrix["shared_final_database_counts"][t].clone())),
             "baseline_commitment": matrix["aggregate_identity_and_outcome_commitment"].clone(),
         })
     );
@@ -1008,6 +1028,11 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         ("source_identity_scan", 528),
         ("source_producer", 629),
         ("parameter_calculation_ref", 4849),
+        // ADR-0094 (schema v22): no legacy import in this corpus.
+        ("legacy_diagnostic", 0),
+        ("legacy_program", 0),
+        ("legacy_source", 0),
+        ("legacy_source_file", 0),
     ] {
         assert_eq!(
             matrix["shared_final_database_counts"][table], rows,

@@ -7,7 +7,7 @@
 - **Date:** 2026-10-06, 15:05–15:45 CEST.
 - **Candidate:** `bd691b82126f3fefe4fef4e1f2b81120c72b3888`. This is the
   `origin/main` commit that last changed the brief. `git diff --name-only
-  faa3955f bd691b82` lists only `docs/`, `.ai/` and `alpha-release-goal.md`
+  faa3955f bd691b82` lists only `docs/`, `.ai/` and `docs/archive/alpha-0.1/alpha-release-goal.md`
   (verified), so the product code is the code of `faa3955f`.
 - **Artifact:** a copy of `KNXBench_0.1.0-alpha.4_amd64.AppImage`. I
   recomputed its SHA-256, `41ad3880…0285f7`, and it matches the brief. The

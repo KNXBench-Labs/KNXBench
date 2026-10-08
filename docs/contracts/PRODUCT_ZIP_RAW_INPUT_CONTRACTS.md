@@ -4,7 +4,7 @@
 
 This slice protects existing raw-input admission, not ZIP member declarations,
 successful import of large payloads, a cap raise or a streaming decision.
-Source status belongs only in [status/LEDGER](status/LEDGER.md).
+Source status belongs only in [status/LEDGER](../status/LEDGER.md).
 
 On published base `59fb1fc4`, `install_package` in
 `crates/knx-productdb/src/package.rs` compares `bytes.len()` with private

@@ -86,12 +86,12 @@ compatibility → maintainability → UX → performance.**
 7. **The application as a user meets it**: run the AppImage offline with the
    fictional sample (`tools/manual_sample_project.py` generates one), and the
    web build; compare with the manual (`docs/manual/`, accepted 2026-10-06 in
-   `docs/MANUAL_ACCEPTANCE.md`). Note that the AppImage needs an X server
-   (accepted boundary KL-158; a Wayland recipe is in `docs/ALPHA_CANDIDATE.md`).
+   `docs/archive/alpha-0.1/MANUAL_ACCEPTANCE.md`). Note that the AppImage needs an X server
+   (accepted boundary KL-158; a Wayland recipe is in `docs/archive/alpha-0.1/ALPHA_CANDIDATE.md`).
 8. **Privacy and packaging**: no corpus, secrets or maintainer files in the
-   AppImage; the known build-path strings (`docs/ALPHA_CANDIDATE.md` §4) —
+   AppImage; the known build-path strings (`docs/archive/alpha-0.1/ALPHA_CANDIDATE.md` §4) —
    judge whether they block a public release.
-9. **Honesty of claims**: README, manual and `docs/ALPHA_SCOPE_MATRIX.md` must
+9. **Honesty of claims**: README, manual and `docs/archive/alpha-0.1/ALPHA_SCOPE_MATRIX.md` must
    not claim more than the code does (no "full ETS compatibility", no
    verified hardware path beyond what was verified).
 
@@ -111,14 +111,14 @@ Feature acceptances made by the release owner (self-reviews, not independent),
 which you should look at again: the telegram-flow view (AR21,
 `docs/TELEGRAM_FLOW_VISUALIZATION.md` §13–§22, accepted on a Chromium-only,
 Motion-Off-for-large-maps envelope), the manual
-(`docs/MANUAL_ACCEPTANCE.md`), the declared-versus-linked group-address type
-(`KL-61`, ADR-0078), and the scope matrix (`docs/ALPHA_SCOPE_MATRIX.md`).
+(`docs/archive/alpha-0.1/MANUAL_ACCEPTANCE.md`), the declared-versus-linked group-address type
+(`KL-61`, ADR-0078), and the scope matrix (`docs/archive/alpha-0.1/ALPHA_SCOPE_MATRIX.md`).
 
 ## 4. Accepted boundaries — not findings by themselves
 
 The user accepted these for the Alpha on 2026-10-06 and the earlier owner
 receipts; report them only if the code or the docs **misstate** them:
-`docs/ALPHA_SCOPE_MATRIX.md` (all `ACCEPTED_BOUNDARY` / `USER_ACCEPTED` rows),
+`docs/archive/alpha-0.1/ALPHA_SCOPE_MATRIX.md` (all `ACCEPTED_BOUNDARY` / `USER_ACCEPTED` rows),
 in particular `KL-1`, `KL-11`, `KL-125` (other ETS schemas / AES projects),
 `KL-31` (live routing multicast), `PDB-01`, `R-DYNAMIC-01`, `R-MODULE-03`,
 `R-MODULE-04` (parameter logic, nested modules), `KL-158` (AppImage needs X),

@@ -166,4 +166,4 @@ Expected product changes are limited to:
 - `docs/IMPLEMENTATION_STATUS.md` and the normal `.ai` handover evidence.
 
 No Rust production file, API route, dependency, generic drag service, or
-`docs/LIMITATION_TRIAGE.md` edit is expected.
+`docs/archive/alpha-0.1/LIMITATION_TRIAGE.md` edit is expected.

@@ -10,9 +10,9 @@ mockup, collector dump, or fictional tree. Do not publish it.
 
 The user approved the stronger **Phosphor Atlas** visual study and its finite
 growth animation. Do not restart general style discovery. Use the
-[agreed brief](PROJECT_EVOLUTION_STORY_BRIEF.md),
-[approved HTML study](design/project-evolution-phosphor-atlas.html), and
-[desktop capture](design/project-evolution-phosphor-atlas.png).
+[agreed brief](../PROJECT_EVOLUTION_STORY_BRIEF.md),
+[approved HTML study](../design/project-evolution-phosphor-atlas.html), and
+[desktop capture](../design/project-evolution-phosphor-atlas.png).
 Approval covers the visual direction and motion sample, not historical content,
 implementation quality, or a public release.
 

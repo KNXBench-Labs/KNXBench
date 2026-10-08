@@ -1,11 +1,11 @@
 # KNXBench goal — everything still open, minus commissioning
 
 **Execution routing (2026-10-01, AR00):** the user has started
-[`alpha-release-goal.md`](../../alpha-release-goal.md). Its AR queue is the sole
+[`alpha-release-goal.md`](alpha-0.1/alpha-release-goal.md). Its AR queue is the sole
 executor for overlapping non-UI/non-commissioning work; this file is retained
 as historical scope and decision evidence, not a parallel dispatch queue.
 Current per-ID evidence and unresolved decisions are in
-[`docs/ALPHA_READINESS.md`](../ALPHA_READINESS.md).
+[`docs/ALPHA_READINESS.md`](alpha-0.1/ALPHA_READINESS.md).
 
 Current open work outside commissioning and the UI-owned track. The old
 Paperclip takeover, T01–T17 and PDB-1–PDB-11 have been completed or retired;
@@ -20,8 +20,8 @@ release tag is authorized.
 ## 0. What this goal deliberately excludes
 
 This file excludes commissioning and every real-device write; those are
-owned by [`goal-commission.md`](../../goal-commission.md). UI work and the Web lock
-are owned by [`goal-ui.md`](../../goal-ui.md). See §12.3 for current handover.
+owned by [`goal-commission.md`](alpha-0.1/goal-commission.md). UI work and the Web lock
+are owned by [`goal-ui.md`](alpha-0.1/goal-ui.md). See §12.3 for current handover.
 
 Commissioning has a narrow live-verified `070nh` path on one MDT device,
 not a general device-support claim. No approval from that track transfers to
@@ -118,7 +118,7 @@ claim needs independent evidence and a separate scoped decision.
 
 The diagnostics UI, scan reconciliation, settings, drag/drop, discovery,
 project creation and the closed search/accessibility bugs have shipped. The
-remaining user-facing backlog is in [`goal-ui.md`](../../goal-ui.md), not in old
+remaining user-facing backlog is in [`goal-ui.md`](alpha-0.1/goal-ui.md), not in old
 T08–T13 checklists. AR00 verified the formerly listed §23/§24 assertions
 against the existing implementation and regression tests: downloads stream
 bounded chunks while retaining temporary SQLite serialization, and the

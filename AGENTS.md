@@ -42,9 +42,12 @@ docs/
 ├── ROADMAP.md
 ├── IMPLEMENTATION_STATUS.md
 ├── KNOWN_LIMITATIONS.md
+├── OPEN_WORK.md   (everything not done, one page)
+├── status/LEDGER.md   (per-ID status of record)
+├── contracts/   (focused behavioural contracts)
 ├── adr/
 ├── history/   (older IMPLEMENTATION_STATUS entries, verbatim)
-└── archive/   (superseded goals and dated snapshots, read-only)
+└── archive/   (finished goals, alpha dossiers, dated snapshots; read-only)
 ```
 
 Keep relevant documentation synchronized with implementation.

@@ -83,7 +83,7 @@ unshare --user --map-root-user --net sh -c 'ip link set lo up && exec "$@"' sh \
   - network isolation is the `unshare` wrapper's job.
 
 **When it must run:** on every release candidate (part of the
-[final gates](ALPHA_FINAL_GATES.md)), and before merging a change to import,
+[final gates](archive/alpha-0.1/ALPHA_FINAL_GATES.md)), and before merging a change to import,
 storage, enrichment, the server's project routes or device download. The
 2026-10-06 selection was 143 tests in 31 targets (`--list`).
 
@@ -109,7 +109,7 @@ No KNX hardware, ETS corpus or UI/platform acceptance is implied by these gates.
 
 ## Storage command verification
 
-The [storage command contract](STORAGE_COMMAND_CONTRACT.md) explicitly uses a
+The [storage command contract](contracts/STORAGE_COMMAND_CONTRACT.md) explicitly uses a
 transactional whole-project-save fallback, not successful incremental no-op
 arms. Its AR04 regression receipt distinguishes complete source routing from
 individually executed behaviors, native reopen equality from external ETS

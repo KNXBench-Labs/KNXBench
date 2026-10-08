@@ -74,14 +74,14 @@ owner and were not claimed here.
 ## 4. Findings
 
 1. **The AppImage starts only with an X server** —
-   [KNOWN_LIMITATIONS §158](KNOWN_LIMITATIONS.md#158-the-appimage-starts-only-with-an-x-server).
+   [KNOWN_LIMITATIONS §158](../../KNOWN_LIMITATIONS.md#158-the-appimage-starts-only-with-an-x-server).
    The bundled GTK hook sets `GDK_BACKEND=x11` unconditionally. On this
    machine Xwayland was running but its socket refused every connection
    (also for `xprop`), so the unmodified AppImage stopped with
    `Failed to initialize GTK` (exit 101). Started natively on Wayland, it
    needs `WEBKIT_DISABLE_DMABUF_RENDERER=1`, otherwise Wayland protocol error
    71 ends it. The tested workaround is in the
-   [troubleshooting chapter](manual/reference/03-troubleshooting.md#the-appimage-stops-with-failed-to-initialize-gtk).
+   [troubleshooting chapter](../../manual/reference/03-troubleshooting.md#the-appimage-stops-with-failed-to-initialize-gtk).
 2. **Build paths in the binary.** The release binary contains about 540
    strings with the builder's home directory (`~/.cargo` and `~/.rustup`
    source paths in panic locations). Not a secret, but the account name of

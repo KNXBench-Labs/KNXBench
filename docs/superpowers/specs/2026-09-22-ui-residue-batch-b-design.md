@@ -219,7 +219,7 @@ current sRGB breakpoint `0.04045` and never rounds a failing ratio into acceptan
 
 ## 6. Cross-cutting constraints
 
-- `docs/LIMITATION_TRIAGE.md` is not edited.
+- `docs/archive/alpha-0.1/LIMITATION_TRIAGE.md` is not edited.
 - No KNX, LAN, multicast, gateway, or hardware traffic is generated.
 - No private-LAN literals or the prohibited T12 individual-address fixture are
   introduced.

@@ -20,7 +20,7 @@ withdrawn. See [Installation](04-installation.md).
 - As of 2026-10-06, `docs/KNOWN_LIMITATIONS.md` has 121 numbered headings,
   including eleven resolved or signpost entries. Of the 110 residual
   boundaries, five are K1 (critical); the
-  [detailed triage](../../LIMITATION_TRIAGE.md) is the authority, not a count of
+  [detailed triage](../../archive/alpha-0.1/LIMITATION_TRIAGE.md) is the authority, not a count of
   headings interpreted as defects.
 - The web/Docker server's protection is one shared password and one session
   cookie. No user accounts, no roles, no audit trail, and no TLS of its own.

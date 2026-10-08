@@ -2,7 +2,7 @@
 
 This native KNXBench record is **property-only recovery evidence**, not a device
 image, target identity proof, write authorization, or an automatic restore plan.
-See [ADR-0051](adr/0051-individual-address-write-enable-is-opt-in-debug.md) and
+See [ADR-0051](../adr/0051-individual-address-write-enable-is-opt-in-debug.md) and
 [activity history](COMMISSIONING_ACTIVITY_HISTORY.md) for the separate operation
 and durable lifecycle boundaries.
 
@@ -44,7 +44,7 @@ App suite (98 passed, 0 failed, 21 ignored), format/strict Clippy/whitespace and
 13 compiled, registered, runtime-killed and restored semantic/writer controls
 passed on the frozen candidate. All four control batches reran seven canonical
 backup tests. The final five-stage App gate used a fresh Cargo target and
-actually rebuilt alpha.3. [The receipt](evidence/service-control-backup-validation-2026-10-05.json)
+actually rebuilt alpha.3. [The receipt](../evidence/service-control-backup-validation-2026-10-05.json)
 binds the dirty source snapshot to its base commit; it is **not** acceptance of
 unchanged base-commit source, a newer upstream, or the integrated workspace.
 

@@ -6,7 +6,7 @@ This chapter is the honest inventory: what exists, what half exists, and what
 does not exist at all, area by area across the whole application.
 
 The version described is the `0.1.0-alpha` series (2026-10-07: CLI, desktop and web
-`alpha.5`, server `alpha.1`). The only published build is the `v0.1.0-alpha.5`
+`alpha.5`, server `alpha.2`). The only published build is the `v0.1.0-alpha.5`
 pre-release in the private repository.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.

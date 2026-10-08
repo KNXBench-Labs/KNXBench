@@ -79,7 +79,7 @@ links into them wherever the detail matters.
 - [Data model](../DATA_MODEL.md)
 - [Import and export](../IMPORT_EXPORT.md)
 - [Compatibility](../COMPATIBILITY.md)
-- [Known limitations](../KNOWN_LIMITATIONS.md) and their [triage by severity](../LIMITATION_TRIAGE.md)
+- [Known limitations](../KNOWN_LIMITATIONS.md) and their [triage by severity](../archive/alpha-0.1/LIMITATION_TRIAGE.md)
 - [Implementation status](../IMPLEMENTATION_STATUS.md)
 - [Roadmap](../ROADMAP.md) and the [gap analysis against ETS](../GAP_ANALYSIS_ETS.md)
 - [Language packs](../LANGUAGE_PACKS.md)

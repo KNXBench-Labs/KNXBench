@@ -16,7 +16,7 @@ The user removed the status report's item 4 (new real-hardware, power-loss,
 vendor and ETS validation) from this goal because they cannot provide it.
 Those experiments are **accepted out of scope**, not pending operator work
 and not completion blockers. Keep their absence explicit in
-[user notices](docs/manual/known-issues.md#commissioning-validation-boundary).
+[user notices](../../manual/known-issues.md#commissioning-validation-boundary).
 Existing bounded evidence is retained; no certification, general hardware
 compatibility, ETS parity or power-loss recovery guarantee follows.
 
@@ -33,12 +33,12 @@ operation is proposed. Do not reopen the excluded experiments automatically.
 ## Where things stand
 
 Row status of the commissioning-owned source IDs lives in the
-[source-ID ledger](docs/status/LEDGER.md) (owner `commission`), per-row
+[source-ID ledger](../../status/LEDGER.md) (owner `commission`), per-row
 evidence, fallbacks and the UI handoff in
-[COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md), deliveries in
-[IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md). The status narrative
+[COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md), deliveries in
+[IMPLEMENTATION_STATUS](../../IMPLEMENTATION_STATUS.md). The status narrative
 that stood here (as of 2026-10-01) moved verbatim to
-[COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md#owner-status-history)
+[COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md#owner-status-history)
 on 2026-10-06 (AR14D D5, agreed by the commissioning owner). The safety
 boundary itself is in §1 and §3 below; the newest handover entry wins if
 evidence advances.
@@ -172,8 +172,8 @@ product commands in K4 to K6 in particular.
 ## 3. Delivered commissioning packages and current boundary
 
 K1–K19 have their dated outcomes in
-[IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md) and
-[RESEARCH §19](docs/RESEARCH.md); the former implementation checklists are
+[IMPLEMENTATION_STATUS](../../IMPLEMENTATION_STATUS.md) and
+[RESEARCH §19](../../RESEARCH.md); the former implementation checklists are
 not a queue. K11 access-key handling, K15 all partial modes, K16/K17 RF
 simulator procedures and K19 offline cEMI capture analysis are delivered at
 their verified scope. No RF device was tested, and no raw private telegram
@@ -196,7 +196,7 @@ partial-scope selector and any reset UI still need separate contracts and
 the Web lock; read-only Device checks already shipped without a write go.
 **User decisions 2026-10-05:** the Web partial-scope selector (and the history
 UI adoption) are handed to the UI owner with the backend contract in
-[COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05);
+[COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05);
 no reset route/UI is built, the missing reset UI is an accepted, safely
 refused unsupported boundary with a user notice. Commissioning CLI and server
 callers record durable history since `ae567d00`.

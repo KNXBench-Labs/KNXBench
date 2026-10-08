@@ -1,7 +1,7 @@
 # Limitierungen nach Kritikalität
 
 Sortierung der **110 verbleibenden nummerierten Grenzen** aus
-[`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md), gezählt mit
+[`KNOWN_LIMITATIONS.md`](../../KNOWN_LIMITATIONS.md), gezählt mit
 `grep -cE '^## (§)?[0-9]' docs/KNOWN_LIMITATIONS.md` (Stand 2026-10-06, AR15, §158 aus AR17 und §159 aus dem AR18-Review ergänzt;
 vorher 2026-10-01: 110 Überschriften/103 Grenzen).
 Die Datei enthält 121 nummerierte Überschriften: 110 Grenzen und elf
@@ -10,7 +10,7 @@ gelöste/historische Wegweiser (§18/23/24/42/90/95/130-GATE/149/150/152/156).
 §105 bleibt wegen fehlender Hardwareevidenz ohne Einstufung. Der Befehl oben
 zählt Überschriften, nicht automatisch offene Defekte. Geschlossene oder zurückgezogene Einträge sind aus der aktiven
 Liste entfernt; frühere Nummern und Fragment-Links werden nicht wiederverwendet.
-Der datierte [Implementierungsverlauf](IMPLEMENTATION_STATUS.md) und Git
+Der datierte [Implementierungsverlauf](../../IMPLEMENTATION_STATUS.md) und Git
 bewahren die Nachweise.
 
 §94 existiert nicht; §130 ist zweimal vergeben (Gate-Binary und
@@ -181,12 +181,12 @@ wird hier gewichtet, nicht seine historische Überschrift.
 - **§149/150/152/156** sind gelöst (2026-10-03 bis 2026-10-05): CLI-Endung
   ohne Groß-/Kleinschreibung, verschachtelte `ModuleDef`s, Evidenzbudget,
   gemeldete `Parameter`/`ParameterRef`-Attribute; Nachweise im jeweiligen
-  Eintrag und im [Ledger](status/LEDGER.md).
+  Eintrag und im [Ledger](../../status/LEDGER.md).
 - **§42** ist durch AR04 gelöst: dokumentierter vollständiger transaktionaler
   Speicher-Fallback statt erfolgreicher No-Op-Arme; Offline-Regressionen prüfen
   Wiederöffnen, Undo/Redo, Reihenfolge, SQL-Fehler und unveränderte opaque/Manifest-
   Daten. Kein inkrementeller Performance- oder neuer UI-Vertrag; siehe
-  [Speichervertrag](STORAGE_COMMAND_CONTRACT.md).
+  [Speichervertrag](../../contracts/STORAGE_COMMAND_CONTRACT.md).
 - **§18/23/24** sind gegen aktuelle Implementierung und vorhandene
   Regressionen abgeglichen (AR00): ETS-Import veröffentlicht `store_path=None`,
   Download streamt begrenzte Blöcke und der Dateipicker unterstützt
@@ -199,7 +199,7 @@ wird hier gewichtet, nicht seine historische Überschrift.
   explizite Workspace- und Nichtleer-Prüfung, ausgewiesener Scanumfang,
   negative/positive Fixtures und verhaltenswirksame Guard-Mutationen.
   Der gleich nummerierte Zoom-Eintrag bleibt offen; siehe
-  [Prüfzielvertrag](VERIFICATION.md).
+  [Prüfzielvertrag](../../VERIFICATION.md).
 
 - **§105** (Ctrl1-Priorität `SYSTEM` bei den vier verbindungsorientierten
   TL-Frames) ist gemerged und existiert, ist aber absichtlich nicht

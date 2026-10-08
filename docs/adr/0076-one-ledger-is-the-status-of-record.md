@@ -9,15 +9,15 @@ Session: docs consolidation (alpha-release-goal AR14D D2)
 The alpha queue tracks 180 source IDs from the frozen
 [OFFENE_PUNKTE](../archive/OFFENE_PUNKTE.md) inventory plus post-snapshot
 findings (`KL-149` to `KL-153`). By 2026-10-04 their status was written in up
-to six places: the routing table in `alpha-release-goal.md` §7, two owner
+to six places: the routing table in `docs/archive/alpha-0.1/alpha-release-goal.md` §7, two owner
 checkpoint tables in the same section, the post-snapshot table in §8, the
-per-ID ledger and post-snapshot table in `docs/ALPHA_READINESS.md`, the
-disposition column of `docs/COMMISSIONING_ALPHA_LEDGER.md` and the disposition
-prose of `docs/UI_ALPHA_READINESS.md`.
+per-ID ledger and post-snapshot table in `docs/archive/alpha-0.1/ALPHA_READINESS.md`, the
+disposition column of `docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md` and the disposition
+prose of `docs/archive/alpha-0.1/UI_ALPHA_READINESS.md`.
 
 The copies had drifted, measured by script on 2026-10-04:
 
-- 23 of 180 rows differed between `alpha-release-goal.md` §7 and
+- 23 of 180 rows differed between `docs/archive/alpha-0.1/alpha-release-goal.md` §7 and
   `ALPHA_READINESS`. 21 were owner updates written into one file only; two
   (`DATA-02`, `KL-42`) still said `TODO` in §7 although package AR04 is
   `DONE` and published as `216c673e`.
@@ -36,7 +36,7 @@ of them could tell which copy was current.
 the status of a tracked source ID. It holds one row per ID with: ID, priority,
 owner, route, status, owner disposition, and evidence with the remaining work.
 
-- **Status** uses the vocabulary of `alpha-release-goal.md` §2.2: `TODO`,
+- **Status** uses the vocabulary of `docs/archive/alpha-0.1/alpha-release-goal.md` §2.2: `TODO`,
   `IN_PROGRESS`, `DONE`, `BLOCKED_EXTERNAL`, `WAITING_OWNER`,
   `WAITING_DECISION`, `ACCEPTED_BOUNDARY`, `LATER`. It is the release-level
   status the alpha decision reads.
@@ -68,7 +68,7 @@ elsewhere in `docs/` or the goal files.
   easier to parse, but every reader of the project would then read a generated
   file, and a generator is one more tool to maintain. A single Markdown table
   is readable as is and simple to parse with fixed columns.
-- **Keep the ledger inside `alpha-release-goal.md`.** The goal file is a work
+- **Keep the ledger inside `docs/archive/alpha-0.1/alpha-release-goal.md`.** The goal file is a work
   plan of over 1,000 lines that several sessions edit at once. A separate file
   keeps status edits out of plan edits and makes the ledger easy to find.
 - **Fold the LIMITATION_TRIAGE criticality (K1–K4) into the ledger.** It rates
@@ -84,7 +84,7 @@ elsewhere in `docs/` or the goal files.
   the ledger stays a table.
 - The goal files and track readiness documents must link to the ledger
   instead of restating statuses. Where those files belong to another session
-  (`goal-ui.md`, `goal-commission.md`), their text changes only with that
+  (`docs/archive/alpha-0.1/goal-ui.md`, `docs/archive/alpha-0.1/goal-commission.md`), their text changes only with that
   owner's agreement (AR14D D5).
 - Package-level status lines (for example AR06 `DONE_SCOPED`) stay in the
   goal file. They describe a package, not an ID; a package delivery without a

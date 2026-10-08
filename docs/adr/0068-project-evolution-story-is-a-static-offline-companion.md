@@ -8,7 +8,7 @@ Session: outside the numbered sessions (project-evolution story, user request)
 
 The user asked for a public, English, interactive story of how KNXBench grew
 from its earliest prompt ([brief](../PROJECT_EVOLUTION_STORY_BRIEF.md),
-[goal](../PROJECT_EVOLUTION_GOAL.md)). The approved Phosphor Atlas study fixes
+[goal](../archive/PROJECT_EVOLUTION_GOAL.md)). The approved Phosphor Atlas study fixes
 the visual direction. The goal requires: real, source-backed events; private
 originals that never reach a browser; hostile text that cannot execute;
 reviewable, versioned candidates; and a permanent separation between preparing

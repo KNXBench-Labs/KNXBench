@@ -132,7 +132,7 @@ block AR19 on the evidence reproduced in this round.
   interpretation or a missing declared member; this is not a new N11.
 - A 4 KiB self-extractor-style prefix still imports. The accepted prefix
   exception, including unreferenced initial records, is disclosed in
-  [KNOWN_LIMITATIONS §159](../KNOWN_LIMITATIONS.md#159-a-project-archive-may-unpack-to-at-most-512-mib-and-every-member-name-must-be-unique).
+  [KNOWN_LIMITATIONS §159](../../../KNOWN_LIMITATIONS.md#159-a-project-archive-may-unpack-to-at-most-512-mib-and-every-member-name-must-be-unique).
 - N6 (welcome page after reload over a held server project) has no source
   change in this candidate. I did not repeat the interactive reload probe.
   The earlier nonblocking classification still applies: F1 is intact over

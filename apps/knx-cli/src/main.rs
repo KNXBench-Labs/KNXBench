@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 mod activity_history_paths;
+mod contribution;
 mod device_address;
 mod device_compare;
 mod device_download;
@@ -29,6 +30,10 @@ const USAGE: &str =
      \x20                   [--installation <id>]\n\
      \x20     knx doc-export <store.knxdb> <out.html>\n\
      \x20     knx diff [--exit-code] <a.knxdb|a.knxproj> <b.knxdb|b.knxproj>\n\
+     \x20     knx contribution analyze <file.knxproj|file.knxprod>\n\
+     \x20     knx contribution preview <file> --options <options.json>\n\
+     \x20     knx contribution export <file> <out.zip> --options <options.json>\n\
+     \x20         (offline evidence, no installation or upload; export never overwrites)\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
      \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>] [--allow-large-package]\n\
      \x20     knx products inspect-legacy <file.vd3|file.vd4|file.vd5|file.pr5>\n\
@@ -168,6 +173,7 @@ fn main() -> ExitCode {
         Some("doc-export") => run_doc_export(&args[1..]),
         Some("diff") => run_diff(&args[1..]),
         Some("products") => run_products(&args[1..]),
+        Some("contribution") => contribution::run(&args[1..]),
         Some("bus") => run_bus(&args[1..]),
         Some("device") => run_device(&args[1..]),
         Some("--version" | "-V") => {

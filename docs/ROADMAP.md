@@ -5,6 +5,16 @@
 finished; they were removed from the tree on 2026-10-08
 ([where to find them](history/REMOVED_DOCS.md)).
 
+## Community evidence (2026-10-08)
+
+Own-instance read-only analysis, exact disclosure previews and versioned ZIP
+export via UI, API and CLI are in the repository; the support-gap issue form
+and EN/DE guides live in this (now public) repository. Attaching and posting
+stay the user's own steps; there is no central upload service. The private
+mailbox, its handling/retention terms and confirmed delivery are unverified;
+originals never go into public issues. New adapter support still needs
+validated evidence, tests and review. See [COMMUNITY_EVIDENCE.md](COMMUNITY_EVIDENCE.md).
+
 ## Marketing website (2026-10-08)
 
 The calm-dark DE/EN marketing companion is in the repository under

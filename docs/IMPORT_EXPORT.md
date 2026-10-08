@@ -1,5 +1,14 @@
 # Import and export
 
+## Community evidence export, not project export (2026-10-08)
+
+[COMMUNITY_EVIDENCE.md](COMMUNITY_EVIDENCE.md) defines read-only own-instance
+analysis of `.knxproj`/`.knxprod` and version-1 evidence ZIPs. Reduced findings
+omit source values and identity; explicitly selected context and separately
+consented private originals are unmodified and source-bearing. Preview hashes
+bind the reviewed export, and no original or persistent user data changes.
+This is neither an ETS project exporter nor an automatic submission.
+
 ## Bounded exact23 standalone product-package import (2026-10-04)
 
 The package adapter admits only `http://knx.org/xml/project/23`, reusing the

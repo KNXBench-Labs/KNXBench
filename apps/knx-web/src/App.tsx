@@ -53,6 +53,7 @@ import AchievementsDialog from "./AchievementsDialog";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 import DocumentationExportButton from "./DocumentationExportButton";
 import DebugReportButton from "./DebugReportButton";
+import ContributionButton from "./ContributionButton";
 import ProjectDiffPanel from "./ProjectDiffPanel";
 import LoadProgressBanner from "./LoadProgressBanner";
 import { localFailure, ownsOperation } from "./loadProgress";
@@ -1217,6 +1218,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       />
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
       <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
+      <ContributionButton />
       <button onClick={guide.show}>{t("command.showIntroduction")}</button>
       {achievementsEnabled && <button onClick={() => setAchievementsOpen(true)}>{t("achievements.command")}</button>}
       <button onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</button>

@@ -50,6 +50,10 @@ Enough KNX to use KNXBench. Not a KNX textbook.
 22. [Web and Docker deployment](user-guide/11-web-and-docker.md)
 23. [AI agents over MCP](user-guide/12-ai-agents.md)
 
+For support gaps: [step-by-step contribution guide (English)](../contribution-intake/README.md)
+/ [Deutsch](../contribution-intake/DEUTSCH.md). No Git/XML/schema expertise is required;
+a description without a report ZIP is welcome.
+
 ## Reference
 
 24. [Keyboard shortcuts](reference/01-keyboard-shortcuts.md)

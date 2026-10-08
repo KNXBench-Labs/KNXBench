@@ -35,21 +35,18 @@ the root checkout, (3) deferred items with a recorded user decision, and
 
 ## 2. Unpublished local work in the root checkout
 
-The shared root checkout (`main` at `e99a94e9`, 31+ commits behind
-`origin/main`) holds finished work that exists **only** there, uncommitted.
-It is not lost, but nothing on `main` contains it:
+None since 2026-10-08. The root checkout was synchronized after the public
+launch; its two finished local packages are delivered:
 
-| Package | Owner | Root-only paths | Open before publishing |
-| --- | --- | --- | --- |
-| Community evidence analysis/export (File → Analyze support gaps…) | codex, delivered locally 2026-10-08 | `crates/knx-app/src/contribution*.rs`, `apps/knx-{cli,server}/src/contribution*.rs`, `apps/knx-web/src/Contribution*.tsx`, tests, `docs/COMMUNITY_EVIDENCE.md`, `docs/community-evidence/`, `docs/contribution-intake/`, `docs/research/community-intake.md`, `docs/adr/0091-community-evidence-analysis.md` | Integrate onto current `main`, rerun gates, commit/push. Mailbox `contribute@knxbench.com`, retention and automatic submission stay unverified. |
+- **Community evidence** (File → Analyze support gaps…) is in the repository,
+  and its intake lives here (ADR-0091). Retiring the interim
+  `KNXBench-Contributions` repository is the owner's call.
+- **Marketing website** is in the repository (`website/`, ADR-0095). Its
+  remaining launch gates are deployment go and release-mode design, host
+  privacy page and Pages/domain/HTTPS ([WEBSITE.md](WEBSITE.md)).
 
-Do not reset or stage the root wholesale; publish each package from its own
-worktree off `origin/main`.
-
-**Update 2026-10-08:** the marketing website is in the repository (`website/`,
-ADR-0095); its remaining launch gates are deployment go and release-mode
-design, exact story edition approval, host privacy page and
-Pages/domain/HTTPS ([WEBSITE.md](WEBSITE.md)).
+Do not work in the root checkout; publish each package from its own worktree
+off `origin/main`.
 
 ## 3. Deferred by a recorded user decision
 

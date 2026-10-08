@@ -1,5 +1,38 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Community evidence lands, intake moves into the public main repository (ADR-0091)
+
+- **Why:** Codex built the read-only community-evidence package and its
+  beginner guide on 2026-10-08 in the shared root checkout and never committed
+  them; the root sync after the public launch parked them on a local branch.
+  With the main repository public, ADR-0091's launch consolidation applies too.
+- **What it is:** own-instance analysis of `.knxproj`/`.knxprod` on a
+  disposable product database (production parsers, encounter reports, offline
+  evaluation/download preparation, a bounded structural inventory for refused
+  namespaces), version-1 evidence ZIPs in three disclosure tiers (reduced
+  report, explicitly selected context, private original with separate consent)
+  with exact previews and preview-bound export. Reachable through File →
+  Analyze support gaps… (EN/DE six-step help), `POST /api/contributions/
+  {analyze,preview,export}` behind the session guard (one worker, body limit)
+  and `knx contribution analyze|preview|export` (export never overwrites). No
+  user project/product mutation, no bus access, no upload.
+- **Consolidated:** the issue form is now `.github/ISSUE_TEMPLATE/analysis.yml`
+  in this repository (blank issues stay enabled), the EN/DE guides stay in
+  `docs/contribution-intake/`, and the app, guides, form and the website's
+  support link point here instead of the interim `KNXBench-Contributions`
+  (which had no issues; its retirement is the owner's call).
+- **Left out on purpose:** the parked branch's LCARS and parameter-workspace
+  files (already on `main` in newer form or archived), its older doc drafts
+  and the per-step receipt files.
+- **Gate (worktree, fresh target):** clippy `-D warnings`, fmt; Rust workspace
+  3,721 passed / 0 failed / 182 ignored (224 result blocks); Vitest 2,415 / 0
+  in 149 files; web build and both fixture type checks; Playwright 175 passed;
+  five xtask gates. The package has no corpus or ignored tests. Cargo added the
+  new `quick-xml` dependency line to `Cargo.lock` during the run (committed).
+  In-session review only.
+- **Not verified:** the `contribute@knxbench.com` mailbox, native WebKitGTK/Orca,
+  live hardware. Contract: [COMMUNITY_EVIDENCE.md](COMMUNITY_EVIDENCE.md).
+
 ## 2026-10-08 — Marketing website lands in the repository (ADR-0095)
 
 - **Why:** the DE/EN marketing companion for knxbench.com was built by Codex

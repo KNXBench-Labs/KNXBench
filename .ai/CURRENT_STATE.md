@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-08 12:54 CEST
+- **Completed:** Parameter-workspace owner-authorized merge/commit/push accepted. Main 8b13787e verified by exact ls-remote readback; feature a4a21d7d, tested final source 2046e16a. Concurrent legacy-secret and story/handover deliveries preserved. 2388/144 frontend + build/types, 170 Chromium suite, 278 retained browser checks and five repository gates green; all tracked frontend bytes/config/fixtures identical across final upstream merges. Closure metadata does not change source.
+- **Pending/Next Steps:** None for this parameter package. No deployment requested; do not activate Docker or contact KNX hardware.
+- **Notes for Codex oder Claude:** docs/parameter-workspace/delivery-verification.json binds actual tests/source and verified publication. Original receipt historical; no independent-review/native-accessibility/full-Rust-test claim. Root checkout is intentionally older/dirty: foreign work and root index untouched, remote main published from isolated integration.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-08 12:50 CEST
 - **Completed:** Owner-authorized parameter-workspace delivery integrated with current main ca1ed483. Feature a4a21d7d, initial merge 50a7f373, concurrent-main merge 2046e16a. Final 2388/144 frontend tests, build/types, 278 retained browser checks/24 synthetic requests and all five repository gates green. Full Chromium suite 170 passed on 50a7f373; every tracked frontend byte/config/fixture unchanged after concurrent main integration. Both competing documentation/handover additions preserved.
 - **Pending/Next Steps:** No parameter implementation work remains. Complete remote-ref verification after publishing this metadata. Deployment not requested; do not activate a container or contact hardware.

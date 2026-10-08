@@ -25,6 +25,10 @@
   merge/commit/push separately; merged-source delivery evidence is recorded in
   `docs/parameter-workspace/delivery-verification.json`. No Docker activation
   or hardware contact is part of this delivery.
+- Delivery: main publication `8b13787e` verified by exact remote
+  readback. Final merged frontend **2388 tests / 144 files**, full Chromium suite
+  **170 tests**, retained verifier **278 checks**, build/types and five gates pass.
+  Subsequent closure metadata leaves every tracked frontend byte unchanged.
 
 ## 2026-10-08 — Legacy VD files: secret-class values withheld from the stored payload (ADR-0094)
 

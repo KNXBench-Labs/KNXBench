@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-08 13:15
+- **Completed:** Story edition `2026-10-08.2` on the user's request: removed every remark about AI session/weekly usage limits (chapter `ch-interface` "ran out of quota", chapter `ch-hands` "rationed AI quota … paused at limits", `ui-redesign` summary and the "limit … available again in 5 hours" sentence of its quote (now marked `shortened`), `split-goals` "99 percent used" summary sentence and its quota quote). Search placeholder in `render.py` no longer suggests "quota". All older candidates and previews (`2026-10-04.1/.2/.3`, `2026-10-05.1`, `2026-10-08.1`) removed from the tree at the user's request; they remain in Git history. `.2`'s CHANGES.md diffs against `2026-10-08.1`. README (editorial rules), brief, ADR-0068 and IMPLEMENTATION_STATUS updated. Gates: 62 unit tests OK, browser 46/46 in Chromium and Firefox, anchors ok, diff check clean.
+- **Pending/Next Steps:** User review of `2026-10-08.2`; WebKit test, hosting and a publication approval remain user decisions.
+- **Notes for Codex oder Claude:** Editorial rules (user, 2026-10-08): never describe KNXBench as mirroring/cloning/copying ETS ("independent alternative", "comparable functionality"); no remarks about AI usage/session/weekly limits in the story. Keep only the latest edition in the tree.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-08 12:54 CEST
 - **Completed:** Parameter-workspace owner-authorized merge/commit/push accepted. Main 8b13787e verified by exact ls-remote readback; feature a4a21d7d, tested final source 2046e16a. Concurrent legacy-secret and story/handover deliveries preserved. 2388/144 frontend + build/types, 170 Chromium suite, 278 retained browser checks and five repository gates green; all tracked frontend bytes/config/fixtures identical across final upstream merges. Closure metadata does not change source.

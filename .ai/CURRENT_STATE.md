@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (public launch)
+- **Timestamp:** 2026-10-08 14:47 CEST
+- **Completed:** User "go live": repository `KNXBench-Labs/KNXBench` is **public** (anonymous web/API/release/clone checks 200/ok). Pre-flip audit of every reachable object: no secret/token/identity; two long-deleted third-party payloads (`az-and-sensor-data/` alarm-panel plugin data + manufacturer firmware, `KV v2.5 - demo.knxproj`) purged from the whole history with git filter-repo (2,279 commits rehashed, 2 empty dropped, final tree identical). Repo recreated under the same name; old one renamed `KNXBench-prepublic-20261008` (private rollback). Tag `v0.1.0-alpha.5` → `a0ff1f55`, pre-release republished with byte-identical AppImage. Map `docs/history/COMMIT_MAP_2026-10-08-public.txt`, KL §162 addendum. Dependabot restored, secret scanning + push protection on. Root local main moved to tree-identical `9fd91108` (status byte-identical, now behind 61).
+- **Pending/Next Steps:** ADR-0091 launch consolidation (issue forms/guides into main, app/contact links, intake repo); README/website "private" wording; story commit-link remap; user deletes the private rollback repo when satisfied.
+- **Notes for Codex oder Claude:** Every branch/stash/worktree from before 14:30 is OLD history and still contains the purged files: never push or merge it as is; rebase `--onto` via the map. Hashes in docs are not rewritten in place; chain maps 10-07 → 10-08 → 10-08-public. Backup outside repo: `KNXBench.backups/2026-10-08-pre-golive-purge` (never publish). Log `.ai/logs/2026-10-08_claude_public-launch.md`.
+
+---
+
 - **Last Agent:** Claude (legacy VD L3)
 - **Timestamp:** 2026-10-08 14:26 CEST
 - **Completed:**

@@ -11,8 +11,9 @@
 - **What:** both paths were removed from the whole history with
   `git filter-repo`; the final tree of `main` is byte-identical. The
   repository was recreated under the same name from the purged history, the
-  pre-release `v0.1.0-alpha.5` is republished on the rewritten tag before
-  the visibility switch. The pre-purge repository stays private under
+  pre-release `v0.1.0-alpha.5` was republished on the rewritten tag, and
+  the repository is public since 2026-10-08 (checked anonymously: web, API,
+  release asset, clone). The pre-purge repository stays private under
   a different name as a rollback until the user removes it.
 - **Hash bridge:** [`docs/history/COMMIT_MAP_2026-10-08-public.txt`](history/COMMIT_MAP_2026-10-08-public.txt),
   details and branch rules in

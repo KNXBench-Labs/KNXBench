@@ -1,5 +1,57 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Legacy VD files: read-only inspection (L1, ADR-0094)
+
+- **Requested** in a recorded grill-me interview
+  (`.ai/logs/2026-10-08_claude_legacy-vd-grilling.md`, Q1–Q18). The goal is
+  offline parameterisation of devices that ship only as ETS3 `.vd3`/`.vd4`
+  files; download is a later, separate package. The 2026-09-26 design is
+  accepted with amendments.
+- **New in `knx-productdb::legacy`**:
+  - Content detection of one-member `ets.vd_`/`ets2.vd_`/`ets.pr_`
+    containers through the existing package ZIP validator.
+  - Observed-layout, encryption and method checks.
+  - Bounded inflate with CRC-32.
+  - A strict, bounded EX-IM grammar. Raw bytes are kept, Windows-1252 is
+    labelled as an assumption, and unknowns become diagnostics.
+  - `install_package` refuses a legacy container under any name as
+    `PackageError::LegacyExIm`.
+- **Decryption lives in `knx_app::legacy`**, with a user-supplied password
+  and `knx-secure`'s single ZipCrypto implementation. A new `check-layering`
+  rule forbids `knx-productdb → knx-secure`, dev edges included. That edge
+  had made `knx-mcp` link key material, which ADR-0090 forbids, and the gate
+  caught it.
+- **CLI:** `knx products inspect-legacy <file> --password-stdin |
+  --password-file <path>` writes nothing. It refuses argv passwords, empty
+  passwords and unbounded password files.
+- **Real files:** `EIBMARKT.VD3` (37 tables, 4,214 rows), the Eibmarkt
+  `.vd4` (37 tables, 14,734 rows) and the MDT `.pr5` (16 tables, 12 rows)
+  all read with **zero diagnostics**. Pinned hashes match. The real password
+  occurs in no tracked or untracked file; a planted canary proves the scan
+  works.
+- **Tests:**
+  - 20 grammar, 16 container, 7 password, 9 CLI and 2 ignored corpus tests,
+    on synthetic "Marvin Test" fixtures (Info-ZIP `zip` + `zipcloak`).
+  - Mutation sweep: **25/25** realistic guard reverts fail a named test.
+    The first sweep left two survivors; their tests now also assert the
+    refusal reason.
+- **Gate on `d01cc58d`** (rebased on `e96bfb5d`):
+  - Web build, fmt and clippy `-D warnings` pass; all five xtask gates pass;
+    `git diff --check` is clean.
+  - Corpus tests: `knx-app` legacy corpus 2/2, `legacy_member_names_corpus`
+    1/1, `standalone_packages` ignored 3/3, and the product matrix (release)
+    1/1. Every matrix pin is unchanged: no modern package behaves
+    differently.
+  - Workspace tests: **3,618 passed, 0 failed, 180 ignored** (211 result blocks, exit 0,
+  HEAD unchanged during the run). The first attempt died before any
+    test ran (`ld` killed by signal 9). It is kept, and the step was rerun
+    with `-j 2`.
+- **ADR number:** 0093 was taken upstream meanwhile (wizards), so this is
+  ADR-0094.
+- **Not done:** product-database import (L2) and server/web upload (L3).
+  `knx products ingest`/`.knxproj` keep their filename refusal for
+  `.vd*`/`.pr*`.
+
 ## 2026-10-08 — German UI uses the informal du-form throughout
 
 - User decision: the German catalogue addresses the reader as "du". 53

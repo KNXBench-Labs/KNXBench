@@ -4,7 +4,7 @@
   "target": "origin/main",
   "review": "In-session self-review; no independent subagent review.",
   "package": "Combined documentation refresh, owner-approved README redesign, ideas/roadmap and Known Issues/status audits; real media and documentation/capture tooling.",
-  "publication": "Prepared for user-authorized commit/push. Earlier receipts retain their dated audit-time unpublished state; readback proof is appended separately.",
+  "publication": "Documentation package 696f25b629aaefc78199c3b5204e7613a53db90b was pushed to origin/main and verified on 2026-10-08 19:35 CEST: local HEAD, fetched origin/main and live refs/heads/main all matched. Author and committer are KNXBench <github@knxbench.com>; no co-author trailer. Earlier receipts retain their dated audit-time unpublished state. This later bookkeeping change records that completed publication.",
   "delivery_checks": {
     "tools_tests": 38,
     "frontend_build": "npm run build --prefix apps/knx-web: exit 0",

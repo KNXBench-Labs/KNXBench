@@ -934,6 +934,33 @@ listed here.
 - **Text encoding.** The `.vd4` payload is not UTF-8. It reads correctly as
   Windows-1252, but no byte falls in `0x80`–`0x9F`, so ISO-8859-1 cannot be
   excluded **[A]**.
+- **Update 2026-10-08 (measured, ADR-0094).**
+  - **`EIBMARKT.VD3`** (2006, `V 5.10`) is the same family. It is a
+    one-member ZipCrypto ZIP that the same password decrypts. Its payload has
+    37 tables and 4,214 rows. Its masks are `MASK_VERSION` 32/33, i.e. BCU1
+    `MV-0020`/`MV-0021`.
+  - **Value wrapping:** in both product databases, every value that
+    continues on `\\` lines has a first line of exactly 40 or 80 bytes.
+    Continuation lines are at most 82 bytes. That supports the
+    continuation-as-wrap reading **[V]**.
+  - **Dash values:** lines of dashes also occur as *values* (`----`, `-`),
+    so a parser must count values per column instead of looking for
+    separators.
+  - **Column drift:** column sets differ between format versions. The VD3
+    adds `address_fixup` and `mask_entry`. The VD4 adds `MinEtsVersion`,
+    `OBJECT_READONINIT*`, `s19_block.Record/MERGE_ID/PROC_MASK`,
+    `ApplicationProgramAttributes` and `program_to_mask_feature`.
+  - **Header keys:** the header holds only `N K D V H`.
+  - **Type codes:** the only type codes are 1–6 and 8.
+  - **No passwords:** no product database has a password or key column.
+  - **ETS oracle:** ETS's own conversion of the VD4 program
+    `N000520_IRBM_20` v34 is embedded in the house project. It maps the 260
+    legacy parameters to 260 `ParameterRef`s with `P-<PARAMETER_NUMBER>` and
+    the 28 legacy objects to 28 `ComObjectRef`s. Page parameters (atomic type
+    0, "none") become `ParameterBlock`s. A child with an empty
+    `PARENT_PARM_VALUE` is shown whenever its parent is (`when default`). A
+    child with a value is shown only for that value (`when test`). This
+    conversion is the L2 acceptance oracle.
 - **Consequence.** A legacy importer must stay a separate, content-detected,
   bounded path that decrypts only with a user-supplied password. It must never
   go through the modern XML-package parser. Implementation waits for review

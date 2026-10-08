@@ -10,10 +10,11 @@ It records the intended experience, not permission to publish.
 documentation and local Claude Code, Codex, Hermes and Paperclip records. The
 stack is a static, offline companion prepared by a stdlib-only tool
 ([ADR-0068](adr/0068-project-evolution-story-is-a-static-offline-companion.md)).
-The current candidate is `2026-10-08.4`; earlier editions were
-removed from the tree on 8 October 2026 at the user's request and remain in Git
-history. No hosting provider, schedule, publication mechanism or
-production integration has been selected.
+The current candidate is `2026-10-08.4`, **approved for publication by the
+owner on 8 October 2026** (`story/approvals/2026-10-08.4.json`); earlier
+editions were removed from the tree at the user's request and remain in Git
+history. The owner has a domain; hosting, the public page variant and the
+deployment step are not designed yet.
 
 The central question is:
 

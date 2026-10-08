@@ -49,7 +49,7 @@ stale-pointer scenario above could attach one project's opaque/manifest
 data to a different project's export. Closed for that one code path by
 reading `AppState.opaque`/`AppState.manufacturer_refs` (the live,
 in-memory copies) instead of re-opening the file — see
-[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)'s C4 row. The underlying gap
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/aa0ff14ff536/docs/GAP_ANALYSIS_ETS.md)'s C4 row. The underlying gap
 above (`store_path` itself can point at the wrong file) is unchanged.
 
 ## 23. `/api/project/download` buffers the whole `.knxdb` file in memory

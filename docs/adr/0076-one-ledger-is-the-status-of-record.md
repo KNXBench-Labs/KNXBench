@@ -7,7 +7,7 @@ Session: docs consolidation (alpha-release-goal AR14D D2)
 ## Context
 
 The alpha queue tracks 180 source IDs from the frozen
-[OFFENE_PUNKTE](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/OFFENE_PUNKTE.md) inventory plus post-snapshot
+[OFFENE_PUNKTE](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/OFFENE_PUNKTE.md) inventory plus post-snapshot
 findings (`KL-149` to `KL-153`). By 2026-10-04 their status was written in up
 to six places: the routing table in `alpha-release-goal.md` §7, two owner
 checkpoint tables in the same section, the post-snapshot table in §8, the

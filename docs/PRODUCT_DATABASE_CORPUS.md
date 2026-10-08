@@ -547,7 +547,7 @@ application XML). Exactly **one** package nests `ModuleDef`s: MDT
 **Ten** packages pass module arguments through `NumericArg … AllocatorRefId=`,
 with 1,070 uses in total (ABB 4, MDT 5, Siemens HVAC bundle 1). Three more
 MDT packages declare an `Allocator` without referencing it. This is local
-evidence for the R-MODULE-03/04 rows in [ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_READINESS.md#post-snapshot-findings-outside-the-180-id-ledger).
+evidence for the R-MODULE-03/04 rows in [ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_READINESS.md#post-snapshot-findings-outside-the-180-id-ledger).
 It is not a committed fixture.
 
 **What this run does not show.** It is parser/persistence evidence for

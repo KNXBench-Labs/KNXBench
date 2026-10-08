@@ -1,6 +1,6 @@
 # Open work after the 0.1 alpha
 
-**Audit:** 2026-10-08, against `origin/main` `741968a8`. This page is the one
+**Audit:** 2026-10-08, against `origin/main` `b34afcc8`. This page is the one
 place that answers "what is not done?". It replaces the three finished alpha
 goals (removed 2026-10-08, see [REMOVED_DOCS](history/REMOVED_DOCS.md)). It does not change any
 status by itself: per-ID status stays in the [ledger](status/LEDGER.md),
@@ -30,7 +30,7 @@ the root checkout, (3) deferred items with a recorded user decision, and
 | --- | --- | --- | --- |
 | Legacy ETS3 product databases (`.vd3`–`.vd5`) | L1 inspection, L2 import and secret withholding are on `main` | **L3:** server upload, password dialog, remembered password (one 0600 file under `$XDG_CONFIG_HOME/knx/`), visual web check. Then the `.vd5` package (Siemens sample: 173 MB payload exceeds the 64 MiB bounds; measure memory first). **L4** download later. | [ADR-0094](adr/0094-legacy-exim-product-files.md), [VD4 import](VD4_PRODUCT_DATABASE_IMPORT.md), KL §128; worktree `legacy-vd-l3-20261008` |
 | Devices navigation ("Geräte" view, every device mention links to the editor) | Grill-me round 1 (Q1–Q5) asked, not answered | Answers, then synthesis and an explicit go | `.ai/logs/2026-10-08_claude_devices-view-grilling.md` |
-| Project-evolution story | Edition `2026-10-08.3` (cutoff 8 October) on `main`; [goal](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/PROJECT_EVOLUTION_GOAL.md) delivered as a private first version | Exact-edition publication approval (user) | [story/](../story/README.md), ADR-0068 |
+| Project-evolution story | Edition `2026-10-08.3` (cutoff 8 October) on `main`; [goal](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/PROJECT_EVOLUTION_GOAL.md) delivered as a private first version | Exact-edition publication approval (user) | [story/](../story/README.md), ADR-0068 |
 | Commissioning refusal buckets (ADR-0086) | House: 32 untested / 2 unsupported / 1 excluded; corpus 1 verified + 89 untested of 246 programs | Remaining buckets need better evidence: module instances (placement rule, §19.11), `placed by Property` (9 MDT programs), floats (contradicting data), `Priority=High`, parameter-value, non-memory masks (`07B0`, `2705`, `0912` …) | [research/commissioning.md](research/commissioning.md) §19.11–§19.18 |
 
 ## 2. Unpublished local work in the root checkout

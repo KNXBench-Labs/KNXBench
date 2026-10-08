@@ -71,8 +71,8 @@ root HEAD e99a94e9 and unstaged index unchanged; no deployment/publication.
 
 ## Owner-authorized Git delivery — 2026-10-08 12:50 CEST
 
-Feature a4a21d7d, no-ff merge 50a7f373, current-main merge 2046e16a
-(ca1ed483 legacy-secret treatment preserved). Only handover/status additions
+Feature 8ef2d31b, no-ff merge 0294c38a, current-main merge 08e52cb7
+(3fc111f9 legacy-secret treatment preserved). Only handover/status additions
 conflicted; both retained. Every tracked frontend byte/config/fixture identical
 after concurrent main integration. Final 2388/144 frontend tests, build, types,
 170 full-suite Chromium tests, 278 retained checks/24 synthetic requests and five

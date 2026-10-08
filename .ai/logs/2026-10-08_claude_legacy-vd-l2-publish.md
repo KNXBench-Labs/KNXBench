@@ -34,7 +34,7 @@ Download (L4) and the server/web upload (L3) stay out.
   and evaluate with only `NoBranchMatched`. ETS's conversion shows the same
   kind (6 against 1 under defaults).
 - Mutation sweep 20/20 with named failing tests.
-- Gate: on `d110de30` (rebased on `8e8aa6b6`), under both gate
+- Gate: on `12ba7c68` (rebased on `bcb23598`), under both gate
 locks, inputs frozen (empty diff at start and end):
 - Web build, fmt and clippy `-D warnings` (workspace) pass; all five xtask
   gates pass; `git diff --check` is clean.

@@ -6,7 +6,7 @@ application and does not touch the KNX domain, project files or any bus.
 
 Status: first private version. Nothing here is approved for publication.
 Design and boundaries: [ADR-0068](../docs/adr/0068-project-evolution-story-is-a-static-offline-companion.md),
-[brief](../docs/PROJECT_EVOLUTION_STORY_BRIEF.md), [goal](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/PROJECT_EVOLUTION_GOAL.md).
+[brief](../docs/PROJECT_EVOLUTION_STORY_BRIEF.md), [goal](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/PROJECT_EVOLUTION_GOAL.md).
 
 ## Layout
 
@@ -33,10 +33,10 @@ Run from this directory.
 ```bash
 python3 -m storytool validate
 python3 -m storytool prepare --private-provenance ../../KNXBench.story-private/provenance.json
-python3 -m storytool build 2026-10-08.3          # writes dist/2026-10-08.3/index.html
-python3 -m storytool build 2026-10-08.3 --preview  # writes previews/2026-10-08.3.html (commit it)
-python3 -m storytool serve 2026-10-08.3          # http://127.0.0.1:8765/, loopback only
-python3 -m storytool release-check 2026-10-08.3 --approval <approval.json>
+python3 -m storytool build 2026-10-08.4          # writes dist/2026-10-08.4/index.html
+python3 -m storytool build 2026-10-08.4 --preview  # writes previews/2026-10-08.4.html (commit it)
+python3 -m storytool serve 2026-10-08.4          # http://127.0.0.1:8765/, loopback only
+python3 -m storytool release-check 2026-10-08.4 --approval <approval.json>
 python3 -m storytool publish                     # always refuses, exit code 3
 ```
 
@@ -104,7 +104,7 @@ deployment step exists. Any change after approval needs a new approval.
 ## Source archaeology, editions 2026-10-04 to 2026-10-08
 
 Pinned baseline since edition `2026-10-08.3`: published history `origin/main` at
-`6a1ba6ae5d54b8308326e55a28ee7beaa5e280a5` (8 October 2026, 13:18 CEST), 2,295
+`138403ed60846d7cf2a964c3e0a360e52ae6155e` (8 October 2026, 13:18 CEST), 2,295
 commits from 2 September 2026. The first editions were pinned to the 4 October
 state (old hash `75ad9650…`, now `4a4e89b3`).
 
@@ -112,9 +112,12 @@ state (old hash `75ad9650…`, now `4a4e89b3`).
 rewritten to the single identity `KNXBench <github@knxbench.com>`, so every
 commit hash changed. Edition `2026-10-08.3` remapped all commit references
 through `docs/history/COMMIT_MAP_2026-10-07.txt` (each one unique, each one an
-ancestor of the pinned baseline). Later editions must cite current hashes only.
+ancestor of the pinned baseline). After the partial rewrite of 8 October
+(`docs/history/COMMIT_MAP_2026-10-08.txt`), edition `2026-10-08.4` remapped the
+three affected hashes, including the baseline, which is now `138403ed`. Later
+editions must cite current hashes only.
 
-Edition `2026-10-08.3` adds 13 steps from 4 to 8 October 2026 (exact-or-refused
+Edition `2026-10-08.3` added 13 steps from 4 to 8 October 2026 (exact-or-refused
 save, telegram flow, independent alpha review, first alpha and its replacement,
 one project identity, built-in HTTPS, evidence of record, achievements and fun
 languages, LCARS, read-only MCP, wizards, legacy ETS3 product files, goals

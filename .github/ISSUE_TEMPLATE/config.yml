@@ -1,0 +1,6 @@
+# Blank issues stay allowed: this is the main repository, not an intake-only one.
+blank_issues_enabled: true
+contact_links:
+  - name: Contribution guide and private-intake status
+    url: https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/contribution-intake/README.md
+    about: Read before sharing. Private intake and the proposed mailbox are not operationally verified.

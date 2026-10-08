@@ -1,5 +1,15 @@
 # Compatibility
 
+## Contribution evidence is not compatibility admission (2026-10-08)
+
+The [community analyzer](COMMUNITY_EVIDENCE.md) can inventory an unfamiliar XML
+namespace without admitting it to production import. Reports distinguish actual
+parser counts, unknown/unsupported/conflict/inference findings, partial scans,
+unavailable XSD and unexecuted hardware stages. A complete analysis is not full
+format support; offline plans are not hardware Verified. No namespace gate or
+native/product model version changed. Contribution samples need maintainer
+validation and regression-driven adapter changes before any support claim.
+
 ## DPT format coverage is not complete subtype conformance (2026-10-07)
 
 The [document-wide DPT inventory/review](spec-audits/2026-10-07-dpt-document-audit.md)

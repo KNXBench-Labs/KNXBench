@@ -1,5 +1,17 @@
 # Architecture
 
+## Read-only community evidence boundary (2026-10-08)
+
+[ADR-0091](adr/0091-community-evidence-analysis.md) and
+[the service/disclosure contract](COMMUNITY_EVIDENCE.md) reuse production
+project import and product install/offline planning in disposable storage. A
+separate value-free, namespace-expanded shape inventory is structural
+observation only, not typed compatibility. API and CLI expose the same
+versioned report, exact preview and deterministic consent-gated ZIP. The UI
+chooses the disclosure and offers a manual GitHub/mail handoff; the service
+has no AppState mutation, bus access or external submission. Native, project
+and product schemas and parser admission stay unchanged.
+
 ## Static marketing companion (2026-10-08)
 
 [ADR-0095](adr/0095-static-marketing-companion.md) keeps `website/` independent

@@ -1,0 +1,63 @@
+name: Support-gap report / Unterstützungsproblem
+description: English / Deutsch. Describe the problem in your own words; report ZIP and technical details are optional.
+title: "[Evidence] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **No Git, XML or schema knowledge needed. A few sentences are enough.**
+        **Keine Git-, XML- oder Schema-Kenntnisse nötig. Ein paar Sätze reichen.**
+        [English guide](https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/contribution-intake/README.md) · [Deutsche Anleitung](https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/contribution-intake/DEUTSCH.md)
+        **This is a public issue. Attachments become publicly accessible as soon as you upload them, even before you post the issue.**
+        Never attach original .knxproj/.knxprod files, customer data, passwords, keys, keyrings or confidential manufacturer files.
+        Start with KNXBench's reduced report ZIP. If analysis/export was not possible, describe the problem without a ZIP.
+        Private intake is not confirmed. Submission starts human review; it does not prove compatibility or hardware support.
+        **Öffentlicher Beitrag:** Anhänge sind bereits beim Hochladen öffentlich – auch vor dem Absenden. Keine Originalarchive, Kundendaten, vertraulichen Herstellerdateien, Passwörter oder Schlüssel anhängen. Ohne ZIP kannst du das Problem trotzdem beschreiben. Der private Posteingang ist noch nicht bestätigt.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What did you do, and what happened? / Was hast du getan, was ist passiert?
+      description: English or Deutsch. Beschreibe kurz dein Vorgehen und das Ergebnis; wenn bekannt, auch deine Erwartung. Keine Befund-IDs oder Spezifikationsangaben nötig.
+      placeholder: "Example: I selected a product package and clicked Analyze. The import was refused. I expected the product to be available; I do not know why it failed."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Report ZIP (optional) / Berichts-ZIP (optional)
+      description: Attach knxbench-evidence.zip and wait for the upload link. ZIP hier anhängen und Upload-Link abwarten; nicht entpacken. Ohne Export leer lassen; kein Original stattdessen anhängen.
+    validations:
+      required: false
+  - type: input
+    id: analyzer-version
+    attributes:
+      label: Analyzer or KNXBench version (optional) / Version (optional)
+      description: The app supplies the analyzer version when available. Die App übergibt die Analyzer-Version, falls vorhanden. Sonst bei bekannter Version aus Ergebnissen/Manifest übernehmen oder leer lassen.
+    validations:
+      required: false
+  - type: dropdown
+    id: input-kind
+    attributes:
+      label: File type (optional) / Dateityp (optional)
+      options:
+        - Project (.knxproj)
+        - Product package (.knxprod)
+        - Not yet analyzed / other
+    validations:
+      required: false
+  - type: textarea
+    id: provenance
+    attributes:
+      label: Extra context (optional) / Zusätzlicher Kontext (optional)
+      description: If useful, describe synthetic/unchanged/changed material. Optional angeben, ob synthetische Testdaten, eigenes unverändertes erlaubtes Material oder ein verändertes Sample vorliegen. Keine Kundennamen; keine technische Erklärung nötig.
+    validations:
+      required: false
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Check before attaching or posting / Vor Anhängen oder Absenden prüfen
+      options:
+        - label: I reviewed the contents and may publish them / Ich habe die Inhalte geprüft und darf sie veröffentlichen; keine Originalarchive, Kundendaten, vertraulichen Daten, Passwörter oder Schlüssel angehängt.
+          required: true
+        - label: I understand this is public / Mir ist bewusst, dass der Beitrag öffentlich ist und Anhänge schon beim Hochladen öffentlich werden – vor dem Absenden des Issues.
+          required: true

@@ -24,6 +24,9 @@ base64.workspace = true
 # `download_support` reads its shipped evidence file, `data/verified_downloads.json`.
 serde.workspace = true
 serde_json.workspace = true
+zip.workspace = true
+quick-xml.workspace = true
+tempfile.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

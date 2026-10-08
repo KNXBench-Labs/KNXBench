@@ -42,6 +42,7 @@ mod bus_routes;
 mod bus_scan;
 mod catalog_requests;
 mod com_object_activation;
+mod contribution_routes;
 mod data_file;
 mod debug_report;
 mod device_compare_routes;
@@ -181,6 +182,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(serial_address_routes::serial_address_routes())
         .merge(service_control_routes::service_control_routes())
         .merge(debug_report_routes::debug_report_routes())
+        .merge(contribution_routes::contribution_routes())
         .merge(settings_routes::settings_routes())
         .merge(achievement_routes::achievement_routes())
         // Deliberately not in `routes::project_routes()`: this answers for

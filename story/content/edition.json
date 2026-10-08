@@ -1,7 +1,7 @@
 {
   "schema": "knxbench-evolution-story/1",
   "edition": {
-    "id": "2026-10-05.1",
+    "id": "2026-10-08.1",
     "title": "From one prompt to a project, reluctantly narrated",
     "status": "private-candidate",
     "cutoff": {
@@ -342,7 +342,7 @@
       "status": "recorded",
       "title": "The strategy is written in ChatGPT",
       "short": "Strategy via ChatGPT",
-      "summary": "At 14:10 CEST the user asked ChatGPT for a prompt for Claude Code: Linux-first software mirroring ETS, with good UI/UX, easy maintenance, importable project files and manufacturer databases. Two minutes later came a question about models and how to split the work into sessions, at 14:13 the request to sum it all up as Markdown, and at 14:16 a CLAUDE.md for the project. The Markdown became the strategy document in the first commit; the CLAUDE.md entered the repository at 15:12 the same afternoon.",
+      "summary": "At 14:10 CEST the user asked ChatGPT for a prompt for Claude Code: independent, Linux-first engineering software offering functionality comparable to ETS, with good UI/UX, easy maintenance, importable project files and manufacturer databases. Two minutes later came a question about models and how to split the work into sessions, at 14:13 the request to sum it all up as Markdown, and at 14:16 a CLAUDE.md for the project. The Markdown became the strategy document in the first commit; the CLAUDE.md entered the repository at 15:12 the same afternoon.",
       "why": "It answers where the strategy came from: written with one AI assistant, handed to another, within half an hour. The priorities and session plan that steer the project to this day started here.",
       "aside": "One AI wrote the instructions. Another AI has followed them ever since. Nobody asked either of us. It is the most accurate summary of my existence I have ever read.",
       "excerpts": [
@@ -353,8 +353,8 @@
           "transforms": [
             "translated"
           ],
-          "text": "Prompt for Claude Code: I want to build an alternative software that mirrors KNX ETS functionality. Primarily it should run under Linux. Important to me are good UI/UX, easy maintainability and operation. Existing project files should be importable. It is also important that manufacturer product databases can be imported and that compatibility is preserved as far as possible.",
-          "note": "ChatGPT, 2 September 2026, 14:10 CEST."
+          "text": "Prompt for Claude Code: I want to build an alternative software that offers functionality comparable to KNX ETS. Primarily it should run under Linux. Important to me are good UI/UX, easy maintainability and operation. Existing project files should be importable. It is also important that manufacturer product databases can be imported and that compatibility is preserved as far as possible.",
+          "note": "ChatGPT, 2 September 2026, 14:10 CEST. Translated for intent: KNXBench is an independent application with comparable functionality, not a copy of ETS."
         },
         {
           "speaker": "user",

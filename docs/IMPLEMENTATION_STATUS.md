@@ -1,5 +1,35 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — LCARS published and server deployed
+
+- User explicitly requested commit, push and deployment after the local UI
+  acceptance. Product commit `3817e6bb` published on main atop
+  current MCP work; LCARS decision is **ADR-0092**, not the MCP's ADR-0090.
+  Only the 32 owned application/study/docs paths were committed. KNXBench
+  author/committer, no co-author; live and fetched remote refs read back.
+- Integrated gate: **2,329 frontend tests / 138 files**, **158 intercepted
+  Chromium tests**, TypeScript/Vite build, theme-fixture/flow-study type checks,
+  five repository gates, diff check and verifier syntax pass on frozen input.
+  An initial browser attempt aborted before assertions because its temporary
+  socket path was too long; corrected only the harness, retained the failed
+  attempt and reused four successful exact-input prerequisites.
+- Docker image built from the committed product tree and verified first in a
+  private bridge probe. PID 1 handles SIGINT/SIGTERM; probe stopped with exit
+  **0 in 0.362 seconds**. No live bus request.
+- Live `knxbench` server is up on HTTPS port **8484**; binary reports
+  `knx-server 0.1.0-alpha.2+g3817e6bb`. All **89** served frontend files byte-match the
+  gated production build. Authentication, hostname, host network, original
+  environment and `/data` bind preserved; original TLS fingerprint unchanged.
+  All **8** selected existing project/settings files retain their hashes.
+- Previous stopped container retained as `knxbench-pre-lcars-20261008`, old
+  image tagged `knxbench-server:pre-lcars-20261008` for rollback. Normal image
+  tag now points to the verified new image. Sessions are memory-only, so a
+  fresh login is expected. No release tag, native/whole-app accessibility or
+  hardware-operation claim.
+- The older dirty shared root was not reset, stashed or committed wholesale;
+  concurrent community/evidence work is excluded and preserved. Durable
+  source/gate/runtime evidence: [deployment receipt](design-studies/lcars/deployment-verification.json).
+
 ## 2026-10-08 — Approved LCARS theme integrated locally
 
 **Delivery follow-up:** user authorized commit, push and server deployment.

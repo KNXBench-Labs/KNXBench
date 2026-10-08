@@ -1,13 +1,13 @@
 {
- "base_candidate": "2026-10-05.1",
- "candidate_id": "2026-10-08.1",
- "content_sha256": "c6aa54c7ab33925959835aeef56c3e16cc0753fc9f49f4d254ea626c07d768b3",
+ "base_candidate": "2026-10-08.1",
+ "candidate_id": "2026-10-08.2",
+ "content_sha256": "12745db6e217a09c4d0df712bbdb47387aa22752edd1a815edf80dd0a4e23e78",
  "counts": {
   "chapters": 8,
   "editorial_relations": 9,
   "events": 38,
   "events_with_uncertainty": 22,
-  "excerpts": 34,
+  "excerpts": 33,
   "gaps": 4,
   "relations": 50
  },
@@ -19,17 +19,28 @@
   "label": "Published Git history up to 4 October 2026, 00:42 CEST; local agent conversations up to 3 October 2026, late evening; plus this story's own local, unpublished first preview from 4 October 2026; and the request of 4 October 2026 that handed the narration to an AI; plus personal chat exports (ChatGPT, claude.ai) that the user provided on 4 October 2026, searched locally for this project"
  },
  "diff": {
-  "base": "2026-10-05.1",
+  "base": "2026-10-08.1",
   "chapters": {
    "added": [],
-   "changed": {},
+   "changed": {
+    "ch-hands": [
+     "body"
+    ],
+    "ch-interface": [
+     "body"
+    ]
+   },
    "removed": []
   },
   "cutoff_changed": false,
   "events": {
    "added": [],
    "changed": {
-    "strategy-written": [
+    "split-goals": [
+     "excerpts",
+     "summary"
+    ],
+    "ui-redesign": [
      "excerpts",
      "summary"
     ]
@@ -55,7 +66,7 @@
    "changed": {},
    "removed": []
   },
-  "target": "2026-10-08.1"
+  "target": "2026-10-08.2"
  },
  "privacy_warnings": [
   {
@@ -114,6 +125,6 @@
    "status": "unavailable"
   }
  ],
- "story_sha256": "81692108d5b9101e9aaa0821fe33bbd3d7c4b312bf96e0434415fa12cf6ff992",
+ "story_sha256": "3a7bf4a6469512ab830f6aaf738cc0e4b3352adf6f69f1b8b42a0547f6dd2636",
  "tool_version": "0.1.0"
 }

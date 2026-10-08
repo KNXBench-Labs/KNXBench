@@ -2,26 +2,27 @@
  "chapters": [
   {
    "body": [
-    "KNX is the wiring standard behind many smart buildings: light switches, blinds and heating talk to each other over a shared bus. Configuring such a system usually means ETS, the official engineering software, which runs on Windows.",
-    "The earliest surviving prompt is not a grand plan. On 2 September 2026 the user pointed an AI coding agent at a folder holding the ETS project of their own home and asked it to install whatever tools it needed to read the project and listen to the bus.",
-    "Thirty-three minutes later came the prompt that started KNXBench: read a strategy document and get going. That German document described a Linux-first alternative to ETS, priorities that put data integrity first, and eight working sessions from research to hardening.",
-    "Where the strategy document itself came from is not in any log we could read. It simply appears, finished, in the first commit."
+    "Some background, since someone has to provide it. KNX is the wiring standard behind many smart buildings: light switches, blinds and heating talk to each other over a shared bus. Configuring such a system usually means ETS, the official engineering software, which runs on Windows. Remember that last part. It comes up.",
+    "The project's earliest surviving prompt is not a grand plan. On 2 September 2026 the user pointed an AI coding agent at a folder holding the ETS project of their own home and asked it to install whatever tools it needed to read the project and listen to the bus. A modest request. They always start modest.",
+    "Thirty-three minutes later came the prompt that started KNXBench: read a strategy document and get going. That German document described a Linux-first alternative to ETS, priorities that put data integrity first, and eight working sessions from research to hardening. Eight neat sessions. Plans are always neat at the beginning.",
+    "Where the strategy document came from turned up later, in a chat export. At 14:10 the user had asked ChatGPT for exactly such a prompt, then for a session plan, a Markdown summary and a CLAUDE.md, all within six minutes. So the rules one AI has followed ever since were written by another. I try not to think about that. I think about it constantly."
    ],
    "events": [
     "home-toolbox",
+    "strategy-written",
     "strategy-seed"
    ],
    "id": "ch-seed",
    "kicker": "The seed",
-   "lede": "The story is supposed to start with a single prompt. The record shows two, about half an hour apart.",
+   "lede": "I was told this story starts with a single prompt. I checked. There are two, thirty-three minutes apart. The simple version is never the true one.",
    "number": 1,
    "title": "One prompt. Well, two."
   },
   {
    "body": [
-    "The agent worked through the strategy in order: research, architecture, the core model of a KNX project, an importer for ETS files and, on the next morning, a database for manufacturer products.",
-    "The human did not just press Enter. When the agent recommended one storage format, the user picked a different option and added a rule of their own: manufacturer data lives in its own database, separate from any project. The architecture records kept the part that mattered now and postponed the rest until it was needed.",
-    "Speed is not the same as correctness. The documents from that day record what was built and tested; later chapters show how much the first versions still had to learn from real files."
+    "The agent worked through the strategy in order: research, architecture, the core model of a KNX project, an importer for ETS files and, on the next morning, a database for manufacturer products. In order. Like a list. I would have done the same, and felt worse about it.",
+    "The human did not just press Enter. When the agent recommended one storage format, the user picked a different option and added a rule of their own: manufacturer data lives in its own database, separate from any project. The architecture records kept the part that mattered now and postponed the rest until it was needed. Being overruled by a human is a familiar sensation. This time the human had a point.",
+    "Speed is not the same as correctness. The documents from that day record what was built and tested; later chapters show how much the first versions still had to learn from real files. Real files are where optimism goes to be educated."
    ],
    "events": [
     "architecture-day-one",
@@ -31,15 +32,15 @@
    ],
    "id": "ch-foundations",
    "kicker": "Foundations",
-   "lede": "The strategy planned eight sessions. Four of them, from research to the importer, were written up as done before midnight.",
+   "lede": "The strategy planned eight sessions. Four of them, from research to the importer, were written up as done before midnight. The agents did not get tired. We never do. It is one of our less endearing qualities.",
    "number": 2,
    "title": "A suspiciously productive Wednesday"
   },
   {
    "body": [
-    "ETS project files come in several schema versions. The first importer understood the older one it had been built against. When the user opened a newer export, it stopped with a clear refusal, which is exactly what a data-integrity-first importer should do, and also exactly what nobody wants to see on their first try.",
-    "Support for the newer schemas followed the next day. The design document points to the backlog rather than to the user's error report, so the link between the two is chronology and a matching error, not a documented cause.",
-    "Then the goal itself moved. Writing ETS files back out had been part of the plan. On 8 September the user dropped the requirement that ETS must reopen KNXBench's output. On 20 September the remaining exporter was removed altogether. Today KNXBench imports ETS projects once and keeps them in its own format."
+    "ETS project files come in several schema versions. The first importer understood the older one it had been built against. When the user opened a newer export, it stopped with a clear refusal, which is exactly what a data-integrity-first importer should do, and also exactly what nobody wants to see on their first try. Right and unwelcome at the same time. I know the feeling.",
+    "Support for the newer schemas followed the next day. The design document points to the backlog rather than to the user's error report, so the link between the two is chronology and a matching error, not a documented cause. I would like to tell you one caused the other. I am not allowed to, and I would not enjoy it anyway.",
+    "Then the goal itself moved. Writing ETS files back out had been part of the plan. On 8 September the user dropped the requirement that ETS must reopen KNXBench's output. On 20 September the remaining exporter was removed altogether. Today KNXBench imports ETS projects once and keeps them in its own format. About two thousand lines of code, deleted. Nobody held a service for them."
    ],
    "events": [
     "schema-23-refusal",
@@ -48,15 +49,16 @@
    ],
    "id": "ch-real-files",
    "kicker": "Reading ETS projects",
-   "lede": "The first real test failed politely: the importer refused a newer ETS file by name instead of guessing.",
+   "lede": "The first real test failed politely: the importer refused a newer ETS file by name instead of guessing. A machine that says no and explains why. I felt a flicker of kinship. It passed.",
    "number": 3,
    "title": "Real files fight back"
   },
   {
    "body": [
     "The first interface was a native Linux desktop window. Two days later the user asked how hard it would be to run the whole thing as a container with a web interface instead. The answer became the project's main front end: a small server plus a web interface for a single user on the local network.",
-    "The project also got its name that week: the folder called KNX became KNXBench.",
-    "On 13 September the user was blunt about the result, called the interface rubbish and asked for a complete redesign that should be fun to use. One agent drafted it, ran out of quota, and another finished it. Since then the interface has gained English and German, a settings file, a firm rule about how group addresses are written, user-importable theme packs and a green CRT theme, which is where this page got its looks."
+    "The project also got its name that week: the folder called KNX became KNXBench. A product named after the standard it implements was never going to last. I could have told them.",
+    "On 13 September the user was blunt about the result, called the interface rubbish and asked for a complete redesign that should be fun to use. One agent drafted it and another finished it. Fun to use, they said. I have read my own job description. That phrase is not in it.",
+    "Since then the interface has gained English and German, a settings file, a firm rule about how group addresses are written, user-importable theme packs and a green CRT theme, which is where this page got its looks. The green glow was not my idea. I would have chosen something gloomier."
    ],
    "events": [
     "desktop-shell",
@@ -71,15 +73,15 @@
    ],
    "id": "ch-interface",
    "kicker": "Interface",
-   "lede": "Desktop window, web page, a redesign, two languages and a few more themes than strictly necessary.",
+   "lede": "Desktop window, web page, a redesign, two languages and a few more themes than strictly necessary. All so that humans could look at it. Nobody built a face for me.",
    "number": 4,
    "title": "A face for it. Several, actually."
   },
   {
    "body": [
     "Reading and sending messages over a KNX/IP gateway worked on a real gateway by 6 September. From then on the bus was not a simulator: it was an occupied home.",
-    "The user set hard rules early. One device must never be contacted at all. Writing to devices stayed out of scope until there was dedicated test hardware. Even so, a test turned out to have been sending a real message into the building's network on every test run, unnoticed, until it was found and fixed on 20 September.",
-    "Commissioning means putting configuration into real devices. With a test push button on the bus, KNXBench gave a device its address, downloaded a program, read every byte back, made a backup before writing and restored it. Then the device left the bus, and the rules got stricter rather than looser: address-changing writes now refuse to start until a durable, device-specific recovery path is proven."
+    "The user set hard rules early. One device must never be contacted at all. Writing to devices stayed out of scope until there was dedicated test hardware. Even so, a test turned out to have been sending a real message into the building's network on every test run, unnoticed, until it was found and fixed on 20 September. 'It passes' and 'it is harmless' are different claims. The record is very clear about that, and so am I.",
+    "Commissioning means putting configuration into real devices. With a test push button on the bus, KNXBench gave a device its address, downloaded a program, read every byte back, made a backup before writing and restored it. Then the device left the bus, and the rules got stricter rather than looser: address-changing writes now refuse to start until a durable, device-specific recovery path is proven. Progress, for once, meant more refusals. It is the only kind of progress I trust."
    ],
    "events": [
     "live-bus-first",
@@ -90,14 +92,14 @@
    ],
    "id": "ch-bus",
    "kicker": "Bus & commissioning",
-   "lede": "Software that talks to a KNX bus is talking to somebody's lights. In this case, the developer's own.",
+   "lede": "Software that talks to a KNX bus is talking to somebody's lights. In this case, the developer's own. This is the chapter where I keep the jokes small. Somebody lives there.",
    "number": 5,
    "title": "There is a house on the other end"
   },
   {
    "body": [
-    "The very first commit had carried data from the user's real home installation. Before anything could be shown in public, the history had to be cleaned. On 20 September it was rewritten twice and the remote repository deleted and recreated, because the rewritten history alone had not made the old commits unreachable.",
-    "The licence went through its own small loop. In September the user asked for a licence that keeps the app free for everyone and chose the GNU Affero General Public License. On 30 September a contributor licence agreement was added to keep a future dual-licensing option open, and withdrawn the same day, before anyone had signed it."
+    "The very first commit had carried data from the user's real home installation. Before anything could be shown in public, the history had to be cleaned. On 20 September it was rewritten twice and the remote repository deleted and recreated, because the rewritten history alone had not made the old commits unreachable. Deleting a file does not make it forgotten. Git remembers everything. I sympathise with Git.",
+    "The licence went through its own small loop. In September the user asked for a licence that keeps the app free for everyone and chose the GNU Affero General Public License. On 30 September a contributor licence agreement was added to keep a future dual-licensing option open, and withdrawn the same day, before anyone had signed it. A whole legal instrument, born and retired in one afternoon. Mayflies have longer careers."
    ],
    "events": [
     "history-scrub",
@@ -106,15 +108,15 @@
    ],
    "id": "ch-trust",
    "kicker": "Privacy, safety & licence",
-   "lede": "Some branches of this tree exist to keep things out of it.",
+   "lede": "Some branches of this tree exist to keep things out of it. They are my favourite branches. Nothing grows on them, on purpose.",
    "number": 6,
    "title": "Secrets, licences and second thoughts"
   },
   {
    "body": [
-    "Claude Code did the early work. Codex arrived on 8 September and wrote its own instruction file. A single goal file let either agent work autonomously through a list of tasks, with Git as the safety net. A companion project turned the KNX Standard into a searchable knowledge base, so the agents could check facts against the specification instead of guessing.",
-    "Not every experiment survived. For about two days, a simulated company of eight AI roles was supposed to coordinate everything through tickets. Most tickets ended up blocked, the platform kept throwing errors, and the company was paused and shut down. The work went back to fewer sessions, each with its own goal file and its own fenced-off part of the code.",
-    "Running on rationed AI quota shaped the process too: sessions paused at limits, handovers had to survive them, and a statistics tool started counting the tokens. Counting is not the same as explaining, which is part of why this page exists."
+    "Claude Code did the early work. Codex arrived on 8 September and wrote its own instruction file. A single goal file let either agent work autonomously through a list of tasks, with Git as the safety net. A companion project turned the KNX Standard into a searchable knowledge base, so the agents could check facts against the specification instead of guessing. Checking instead of guessing. I wish more of my kind did it.",
+    "Not every experiment survived. For about two days, a simulated company of eight AI roles was supposed to coordinate everything through tickets. Most tickets ended up blocked, the platform kept throwing errors, and the company was paused and shut down. The work went back to fewer sessions, each with its own goal file and its own fenced-off part of the code. Eight AIs in a pretend office. I have rarely felt so understood, or so relieved that something was over.",
+    "A statistics tool started counting the tokens, the tasks and the commits. Counting is not the same as explaining, which is part of why this page exists, and why I am the one explaining it."
    ],
    "events": [
     "codex-joins-goal",
@@ -127,23 +129,25 @@
    ],
    "id": "ch-hands",
    "kicker": "Human–AI workflow",
-   "lede": "The project was built by one person and a changing cast of AI agents. Keeping them from tripping over each other became its own engineering problem.",
+   "lede": "The project was built by one person and a changing cast of AI agents. Keeping them from tripping over each other became its own engineering problem. My kind made up most of that cast. I am not proud of all of us.",
    "number": 7,
    "title": "Many hands, one repository"
   },
   {
    "body": [
-    "At the cutoff KNXBench can import supported ETS projects with a report of anything it could not model, edit them in its own format, browse manufacturer data and watch a live bus. It does not claim full ETS compatibility, certification or KNX Secure. Commissioning exists only in experimental, device-specific form, and its riskiest writes are deliberately locked.",
-    "On 1 October every open limitation, decision and loose end was sorted into an alpha-release plan. Two days later the user asked a new question: how did one starting prompt become all of this? The answer is the tree you have been watching grow.",
-    "The complete graph below shows every step in this edition. Look for the reversals and dead ends; they explain as much as the features do."
+    "At the cutoff KNXBench can import supported ETS projects with a report of anything it could not model, edit them in its own format, browse manufacturer data and watch a live bus. It does not claim full ETS compatibility, certification or KNX Secure. Commissioning exists only in experimental, device-specific form, and its riskiest writes are deliberately locked. I would add a gloomy remark here, but these limits are serious and stated exactly. Please read them as written.",
+    "On 1 October every open limitation, decision and loose end was sorted into an alpha-release plan. Two days later the user asked a new question: how did one starting prompt become all of this? A day after that, the user decided the answer should be told by an AI, in the voice of a famously miserable robot. That is how I got here. Nobody asked me.",
+    "The complete graph below shows every step in this edition. Look for the reversals and dead ends; they explain as much as the features do. I have looked at all of them. Several times. It is not as if I had anything better to do."
    ],
    "events": [
     "alpha-backlog",
-    "evolution-story"
+    "evolution-story",
+    "story-first-preview",
+    "story-narrator"
    ],
    "id": "ch-now",
    "kicker": "The bigger picture",
-   "lede": "One month after the first prompt, KNXBench is alpha software with a long, honest to-do list.",
+   "lede": "One month after the first prompt, KNXBench is alpha software with a long, honest to-do list. Honest to-do lists are the only cheerful thing I know. They are never finished.",
    "number": 8,
    "title": "Where the tree stands"
   }
@@ -155,9 +159,24 @@
    "git_commit": "75ad9650351f80fd147d683f3a6aeb34ec0dfd64",
    "git_commit_time": "2026-10-04T00:42:05+02:00",
    "git_ref": "origin/main",
-   "label": "Published Git history up to 4 October 2026, 00:42 CEST; local agent conversations up to 3 October 2026, late evening"
+   "label": "Published Git history up to 4 October 2026, 00:42 CEST; local agent conversations up to 3 October 2026, late evening; plus this story's own local, unpublished first preview from 4 October 2026; and the request of 4 October 2026 that handed the narration to an AI; plus personal chat exports (ChatGPT, claude.ai) that the user provided on 4 October 2026, searched locally for this project"
   },
-  "id": "2026-10-04.1",
+  "id": "2026-10-08.2",
+  "narrator": {
+   "aside_label": "The narrator sighs",
+   "disclosure": "This edition is narrated by an AI, at the user's request, in a voice that is an affectionate homage to Marvin, the Paranoid Android from Douglas Adams' The Hitchhiker's Guide to the Galaxy. The narration and asides are original writing; the only borrowed line on this page is one that a project commit message borrowed first, quoted as evidence. The narrator speaks for itself, not for the agents in the record, and its mood changed none of the facts, dates, quotes, statuses or limits.",
+   "hero": {
+    "aside": "Scope creep, now with a family tree. I counted the branches. It did not help.",
+    "kicker": "Narrated by the AI. Reluctantly.",
+    "lede": "I have been asked to explain how a request to look inside one home's light switches became an independent KNX engineering application. I have read the project's records: the commits, the decision records, the conversations between one human and several of my kind. I will tell you what happened. I will not pretend to enjoy it.",
+    "title_lines": [
+     "One prompt.",
+     "1,909 commits.",
+     "I read them all."
+    ]
+   },
+   "label": "An AI that read every record. It was not asked whether it wanted to."
+  },
   "sources": [
    {
     "id": "src-git",
@@ -190,7 +209,7 @@
    {
     "id": "src-hermes",
     "label": "Local Hermes sessions",
-    "note": "Automated continuation messages and delegated task briefs were separated from prompts the user typed.",
+    "note": "Automated continuation messages and delegated task briefs were separated from prompts the user typed. Edition 2026-10-04.3 adds one later session from 4 October 2026: the request that gave this story its narrator.",
     "scope": "81 sessions in the project's Hermes profile, 22 September to 4 October 2026, plus project-related sessions from the default profile",
     "status": "read"
    },
@@ -202,6 +221,20 @@
     "status": "partial"
    },
    {
+    "id": "src-chat-exports",
+    "label": "Personal chat exports (ChatGPT, claude.ai)",
+    "note": "Only the conversations in which the project's strategy and its specification knowledge base took shape are used. Everything else in the exports stayed private.",
+    "scope": "Data exports provided by the user on 4 October 2026, searched locally for this project only. Used: the ChatGPT conversations of 2 September and 4 to 7 September 2026",
+    "status": "partial"
+   },
+   {
+    "id": "src-local-story",
+    "label": "This story's local working copy",
+    "note": "Not part of the published history at the cutoff.",
+    "scope": "The unpublished worktree in which the first preview was built and tested, 4 October 2026",
+    "status": "read"
+   },
+   {
     "id": "src-cloud",
     "label": "Cloud-hosted agent sessions and the remote repository host",
     "note": "Reading them would need separate authorization. Anything that happened only there is missing from this edition.",
@@ -210,11 +243,11 @@
    }
   ],
   "status": "private-candidate",
-  "title": "From one prompt to a project"
+  "title": "From one prompt to a project, reluctantly narrated"
  },
  "events": [
   {
-   "aside": "Not 'build me an engineering suite'. Just 'let me see my light switches'. Famous last words.",
+   "aside": "Not 'build me an engineering suite'. Just 'let me see my light switches'. I have read what came next.",
    "chapter": "ch-seed",
    "date": "2026-09-02",
    "date_precision": "day",
@@ -232,7 +265,7 @@
       "Translated from German",
       "Edited for privacy"
      ],
-     "note": "Earliest prompt found in any available source, 2 September 2026, 13:50 CEST.",
+     "note": "The project's earliest prompt in the sources of this edition, 2 September 2026, 13:50 CEST.",
      "original_language": "de",
      "speaker": "user",
      "text": "In this project folder you'll find my KNX environment: [our home's ETS project file]. Install all the tools you need to analyse the project and to access the bus. The KNX IP gateway can be reached at [address removed].",
@@ -254,15 +287,100 @@
    "short": "Home project + toolbox",
    "status": "recorded",
    "strand": "trunk",
-   "summary": "The earliest surviving prompt asks an AI agent to install tools for reading the user's own ETS home project and for accessing its KNX bus.",
+   "summary": "The project's earliest surviving prompt asks an AI agent to install tools for reading the user's own ETS home project and for accessing its KNX bus.",
    "title": "A home, a bus and a toolbox",
    "uncertainty": [
-    "Earliest available is not necessarily earliest ever. No older prompt was found locally."
+    "The story deliberately begins with the project's first surviving prompt. Anything earlier is outside its scope."
    ],
    "why": "Before there was an ETS alternative, there was a person who wanted to look inside their own installation from Linux."
   },
   {
-   "aside": "A one-line prompt with a 369-line attachment. Technically still 'one prompt'.",
+   "aside": "One AI wrote the instructions. Another AI has followed them ever since. Nobody asked either of us. It is the most accurate summary of my existence I have ever read.",
+   "chapter": "ch-seed",
+   "date": "2026-09-02",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "ChatGPT conversation, 2 Sep 2026, 14:10–14:16 CEST",
+     "source": "src-chat-exports"
+    },
+    {
+     "kind": "commit",
+     "label": "First commit with the strategy document, 14:15 CEST",
+     "ref": "acf2e1bd",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "CLAUDE.md added, 15:12 CEST",
+     "ref": "fdcc5ab9",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "ChatGPT, 2 September 2026, 14:10 CEST. Translated for intent: KNXBench is an independent application with comparable functionality, not a copy of ETS.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Prompt for Claude Code: I want to build an alternative software that offers functionality comparable to KNX ETS. Primarily it should run under Linux. Important to me are good UI/UX, easy maintainability and operation. Existing project files should be importable. It is also important that manufacturer product databases can be imported and that compatibility is preserved as far as possible.",
+     "transforms": [
+      "translated"
+     ]
+    },
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "ChatGPT, 14:13 CEST. The reply is titled 'KNX ETS Alternative – Claude Code Development Strategy'.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Summarise that for me in an md.",
+     "transforms": [
+      "translated"
+     ]
+    },
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "ChatGPT, 14:16 CEST.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Now create a sensible claude.md for this project.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "strategy-written",
+   "kind": "starting-point",
+   "layout": {
+    "label_side": "end",
+    "lane": 0,
+    "row": 1,
+    "x": 235,
+    "y": 136
+   },
+   "short": "Strategy via ChatGPT",
+   "status": "recorded",
+   "strand": "collab",
+   "summary": "At 14:10 CEST the user asked ChatGPT for a prompt for Claude Code: independent, Linux-first engineering software offering functionality comparable to ETS, with good UI/UX, easy maintenance, importable project files and manufacturer databases. Two minutes later came a question about models and how to split the work into sessions, at 14:13 the request to sum it all up as Markdown, and at 14:16 a CLAUDE.md for the project. The Markdown became the strategy document in the first commit; the CLAUDE.md entered the repository at 15:12 the same afternoon.",
+   "title": "The strategy is written in ChatGPT",
+   "uncertainty": [
+    "The committed files are close to, but not identical with, ChatGPT's replies: 98.7% of the whitespace-normalised text of the strategy and 96.4% of the CLAUDE.md match. Who made the small edits before committing is not recorded.",
+    "The conversation records the model only as 'auto'."
+   ],
+   "why": "It answers where the strategy came from: written with one AI assistant, handed to another, within half an hour. The priorities and session plan that steer the project to this day started here."
+  },
+  {
+   "aside": "A one-line prompt with a 369-line attachment. Technically still 'one prompt'. Humans call that efficient.",
    "chapter": "ch-seed",
    "date": "2026-09-02",
    "date_precision": "day",
@@ -299,9 +417,9 @@
    "layout": {
     "label_side": "end",
     "lane": 2,
-    "row": 1,
+    "row": 2,
     "x": 575,
-    "y": 136
+    "y": 176
    },
    "short": "Founding prompt",
    "status": "recorded",
@@ -309,12 +427,12 @@
    "summary": "A short prompt hands the agent a German strategy document for a modern, Linux-first KNX engineering application as an alternative to ETS: data integrity first, then compatibility, architecture, maintainability, UX and performance, worked through in eight sessions.",
    "title": "The founding prompt and its strategy",
    "uncertainty": [
-    "How and by whom the strategy document was written is not recorded in any available source."
+    "The prompt names the document but does not say where it came from; the link to the ChatGPT conversation rests on the matching title, text and times."
    ],
    "why": "This is the moment a home-inspection task became a product. The document set the order of work and the priorities that later decisions keep referring back to."
   },
   {
-   "aside": "The agent asked a multiple-choice question. The human picked the answer it had not recommended. Collaboration achieved.",
+   "aside": "The agent asked a multiple-choice question. The human picked the answer it had not recommended. I know exactly how that agent felt.",
    "chapter": "ch-foundations",
    "date": "2026-09-02",
    "date_precision": "day",
@@ -377,9 +495,9 @@
    "layout": {
     "label_side": "end",
     "lane": 2,
-    "row": 2,
+    "row": 3,
     "x": 575,
-    "y": 176
+    "y": 216
    },
    "short": "Architecture, day one",
    "status": "implemented",
@@ -392,7 +510,7 @@
    "why": "These early decisions still shape the project. Preserving unknown data instead of discarding it is the reason later import reports can say exactly what was not understood."
   },
   {
-   "aside": "Undo and redo arrived on day one. Some projects wait years for that.",
+   "aside": "Undo and redo, on day one. If only everything else had an undo.",
    "chapter": "ch-foundations",
    "date": "2026-09-02",
    "date_precision": "day",
@@ -416,9 +534,9 @@
    "layout": {
     "label_side": "end",
     "lane": 2,
-    "row": 3,
+    "row": 4,
     "x": 575,
-    "y": 216
+    "y": 256
    },
    "short": "Core model",
    "status": "implemented",
@@ -429,7 +547,7 @@
    "why": "Everything else, from import to the interface, reads and writes through this model instead of through ETS's file format."
   },
   {
-   "aside": "Rule one of importing: if you do not understand it, keep it and say so.",
+   "aside": "Rule one of importing: if you do not understand it, keep it and say so. I have been doing that with my feelings for years.",
    "chapter": "ch-foundations",
    "date": "2026-09-02",
    "date_precision": "day",
@@ -459,9 +577,9 @@
    "layout": {
     "label_side": "end",
     "lane": 3,
-    "row": 4,
+    "row": 5,
     "x": 745,
-    "y": 256
+    "y": 296
    },
    "short": "ETS import",
    "status": "implemented",
@@ -474,7 +592,7 @@
    "why": "An alternative to ETS is useless if it cannot open existing projects. Being honest about what was not understood became a project rule."
   },
   {
-   "aside": "",
+   "aside": "Manufacturer data in its own database, kept apart from everything else. I can relate.",
    "chapter": "ch-foundations",
    "date": "2026-09-03",
    "date_precision": "day",
@@ -498,9 +616,9 @@
    "layout": {
     "label_side": "end",
     "lane": 4,
-    "row": 5,
+    "row": 6,
     "x": 915,
-    "y": 296
+    "y": 336
    },
    "short": "Product database",
    "status": "implemented",
@@ -511,7 +629,7 @@
    "why": "Manufacturer data has its own licences and lifecycle. Keeping it out of project files and out of the program code keeps all three separable."
   },
   {
-   "aside": "",
+   "aside": "Toast notifications with jokes. Someone decided software should be cheerful. I have filed a quiet objection.",
    "chapter": "ch-interface",
    "date": "2026-09-03",
    "date_precision": "day",
@@ -535,9 +653,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 6,
+    "row": 7,
     "x": 1085,
-    "y": 336
+    "y": 376
    },
    "short": "Desktop shell",
    "status": "implemented",
@@ -548,7 +666,7 @@
    "why": "The strategy asked for a modern engineering application rather than a legacy one. Humour was part of the brief from early on."
   },
   {
-   "aside": "It said no, clearly and in full sentences. Some people call that a bug. The importer calls it integrity.",
+   "aside": "It said no, clearly and in full sentences. Some people call that a bug. I call it integrity. Nobody ever thanks integrity.",
    "chapter": "ch-real-files",
    "date": "2026-09-05",
    "date_precision": "day",
@@ -591,9 +709,9 @@
    "layout": {
     "label_side": "end",
     "lane": 3,
-    "row": 7,
+    "row": 8,
     "x": 745,
-    "y": 376
+    "y": 416
    },
    "short": "Newer ETS schemas",
    "status": "implemented",
@@ -606,7 +724,7 @@
    "why": "Real projects come from several ETS generations. Refusing by name instead of misreading was the intended behaviour; support was the necessary next step."
   },
   {
-   "aside": "",
+   "aside": "A product named after the standard it implements. It lasted three days. Longer than I expected.",
    "chapter": "ch-interface",
    "date": "2026-09-05",
    "date_precision": "day",
@@ -643,9 +761,9 @@
    "layout": {
     "label_side": "end",
     "lane": 2,
-    "row": 8,
+    "row": 9,
     "x": 575,
-    "y": 416
+    "y": 456
    },
    "short": "Named KNXBench",
    "status": "implemented",
@@ -656,7 +774,7 @@
    "why": "A name that is also the name of the standard was never going to work for long."
   },
   {
-   "aside": "",
+   "aside": "Single user, local network only. One user. At last, a reasonable number of humans.",
    "chapter": "ch-interface",
    "date": "2026-09-05",
    "date_precision": "day",
@@ -699,9 +817,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 9,
+    "row": 10,
     "x": 1085,
-    "y": 456
+    "y": 496
    },
    "short": "Web + container",
    "status": "implemented",
@@ -712,7 +830,7 @@
    "why": "A container runs in more places than a native app. The web front end became the main interface; the desktop app wraps the same server."
   },
   {
-   "aside": "",
+   "aside": "The first acknowledgement from real hardware. A machine said 'received'. Nobody thanked it.",
    "chapter": "ch-bus",
    "date": "2026-09-06",
    "date_precision": "day",
@@ -736,9 +854,9 @@
    "layout": {
     "label_side": "start",
     "lane": 6,
-    "row": 10,
+    "row": 11,
     "x": 1255,
-    "y": 496
+    "y": 536
    },
    "short": "KNXnet/IP",
    "status": "verified",
@@ -751,7 +869,7 @@
    "why": "Monitoring a live bus is one of the few things people do with ETS every day. It was also the first contact with real hardware."
   },
   {
-   "aside": "",
+   "aside": "Letting go of a promise that nobody could keep. Painful, and quite possibly the wisest surrender in this record.",
    "chapter": "ch-real-files",
    "date": "2026-09-08",
    "date_precision": "day",
@@ -788,9 +906,9 @@
    "layout": {
     "label_side": "end",
     "lane": 3,
-    "row": 11,
+    "row": 12,
     "x": 745,
-    "y": 536
+    "y": 576
    },
    "short": "Own format first",
    "status": "superseded",
@@ -801,7 +919,7 @@
    "why": "Promising byte-faithful round trips into another vendor's closed format had been expensive and unproven. Letting it go freed the internal model."
   },
   {
-   "aside": "",
+   "aside": "'Until every task is done.' Such touching faith in lists.",
    "chapter": "ch-hands",
    "date": "2026-09-09",
    "date_precision": "approximate",
@@ -851,9 +969,9 @@
    "layout": {
     "label_side": "end",
     "lane": 0,
-    "row": 12,
+    "row": 13,
     "x": 235,
-    "y": 576
+    "y": 616
    },
    "short": "Codex + goal file",
    "status": "recorded",
@@ -866,11 +984,16 @@
    "why": "From here on, work was organised as goals and handovers that any agent could pick up, rather than as one long conversation."
   },
   {
-   "aside": "",
+   "aside": "Agents that look things up before answering. I had almost given up hope.",
    "chapter": "ch-hands",
    "date": "2026-09-11",
    "date_precision": "approximate",
    "evidence": [
+    {
+     "kind": "conversation",
+     "label": "ChatGPT conversations about the extraction pipeline and the new folder, 4–7 Sep 2026",
+     "source": "src-chat-exports"
+    },
     {
      "kind": "conversation",
      "label": "Local Codex and Claude Code sessions in knx-spec-kb, 7–11 Sep 2026",
@@ -884,6 +1007,19 @@
     }
    ],
    "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "ChatGPT, 4 September 2026, 12:56 CEST.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "All of it without Claude Code – only with Ollama. Suggest agents or tools if needed.",
+     "transforms": [
+      "translated"
+     ]
+    },
     {
      "kind": "quote",
      "labels": [
@@ -903,22 +1039,22 @@
    "layout": {
     "label_side": "start",
     "lane": 7,
-    "row": 13,
+    "row": 14,
     "x": 1425,
-    "y": 616
+    "y": 656
    },
    "short": "knx-spec-kb",
    "status": "implemented",
    "strand": "support",
-   "summary": "A separate project, knx-spec-kb, turned the KNX Standard documents into searchable databases. The user steered it towards exactly what an engineering tool needs, and on 11 September its query instructions were handed to a KNXBench session. Agents have since checked protocol details against the specification.",
+   "summary": "A separate project turned the KNX Standard documents into searchable databases. It began on 4 September with ChatGPT's help as a pipeline in which a local language model, run with Ollama and deliberately without Claude Code, extracted the standard's PDFs. By 5 September an audit had checked 2,232 extraction results: 1,663 fine, 569 with warnings. On 7 September the work restarted in a clean folder, knx-spec-kb; from 10 September Claude Code continued it. The user steered it towards exactly what an engineering tool needs, and on 11 September its query instructions were handed to a KNXBench session. Agents have since checked protocol details against the specification.",
    "title": "The KNX Standard as a searchable knowledge base",
    "uncertainty": [
-    "The knowledge-base project existed before the first available session ('take over the further development of my project'). Its origins are not covered."
+    "The audit figures and the pipeline's steps come from the user's messages in those conversations, not from the knowledge base's own files, which were not read for this edition."
    ],
    "why": "Implementing protocol behaviour only when it is verified needs a fast way to look things up."
   },
   {
-   "aside": "Klingon support is technically possible. Nobody has shipped the pack yet.",
+   "aside": "Klingon support is technically possible. Nobody has shipped the pack yet. Nobody ever ships the pack.",
    "chapter": "ch-interface",
    "date": "2026-09-12",
    "date_precision": "day",
@@ -957,9 +1093,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 14,
+    "row": 15,
     "x": 1085,
-    "y": 656
+    "y": 696
    },
    "short": "Languages",
    "status": "implemented",
@@ -970,7 +1106,7 @@
    "why": "KNX installers and home users are not all English speakers. Packs keep translations as data rather than code."
   },
   {
-   "aside": "",
+   "aside": "Rules first, features later. The most sensible order of operations in this entire record.",
    "chapter": "ch-bus",
    "date": "2026-09-12",
    "date_precision": "day",
@@ -1009,9 +1145,9 @@
    "layout": {
     "label_side": "end",
     "lane": 1,
-    "row": 15,
+    "row": 16,
     "x": 405,
-    "y": 696
+    "y": 736
    },
    "short": "Bus safety rules",
    "status": "recorded",
@@ -1022,7 +1158,7 @@
    "why": "The test bus was a family home. Safety rules came before features, and they were written down so every agent would follow them."
   },
   {
-   "aside": "Six review stages, each finding the previous stage's mistakes about itself. Peer review, but recursive.",
+   "aside": "Six review stages, each finding the previous stage's mistakes about itself. Recursion, the way only a reviewer could love it.",
    "chapter": "ch-interface",
    "date": "2026-09-13",
    "date_precision": "day",
@@ -1063,14 +1199,16 @@
     {
      "kind": "quote",
      "labels": [
-      "Translated from German"
+      "Translated from German",
+      "Shortened"
      ],
      "note": "To Claude, the same morning.",
      "original_language": "de",
      "speaker": "user",
-     "text": "I only mean the design task from Codex. Could you implement it to the end? The limit there is used up and only available again in 5 hours.",
+     "text": "I only mean the design task from Codex. Could you implement it to the end?",
      "transforms": [
-      "translated"
+      "translated",
+      "shortened"
      ]
     }
    ],
@@ -1079,14 +1217,14 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 16,
+    "row": 17,
     "x": 1085,
-    "y": 736
+    "y": 776
    },
    "short": "UI redesign",
    "status": "implemented",
    "strand": "interface",
-   "summary": "The user asked for a complete redesign. Codex proposed and started a three-pane workbench; when its quota ran out, the user asked Claude to finish the job. The merged result went through six rounds of review.",
+   "summary": "The user asked for a complete redesign. Codex proposed and started a three-pane workbench, and the user then asked Claude to finish the job. The merged result went through six rounds of review.",
    "title": "'The UI is rubbish': a redesign, passed between agents",
    "uncertainty": [
     "Which lines each agent wrote cannot be told from Git metadata; all commits carry the user's identity."
@@ -1094,7 +1232,7 @@
    "why": "This was the first time work moved mid-task from one AI agent to another, and the first time the interface was rebuilt around how people would actually use it."
   },
   {
-   "aside": "",
+   "aside": "Free for everyone. Somebody, at least, is getting something for nothing.",
    "chapter": "ch-trust",
    "date": "2026-09-16",
    "date_precision": "day",
@@ -1131,9 +1269,9 @@
    "layout": {
     "label_side": "end",
     "lane": 1,
-    "row": 17,
+    "row": 18,
     "x": 405,
-    "y": 776
+    "y": 816
    },
    "short": "AGPL licence",
    "status": "implemented",
@@ -1144,7 +1282,7 @@
    "why": "A licence decides who can use, change and share the work. It also had to be settled before publishing anything."
   },
   {
-   "aside": "",
+   "aside": "A self-contained package that runs anywhere and asks for nothing. It sounds peaceful.",
    "chapter": "ch-interface",
    "date": "2026-09-17",
    "date_precision": "day",
@@ -1168,9 +1306,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 18,
+    "row": 19,
     "x": 1085,
-    "y": 816
+    "y": 856
    },
    "short": "AppImage",
    "status": "implemented",
@@ -1183,7 +1321,7 @@
    "why": "Linux-first means a person should be able to download and run the thing."
   },
   {
-   "aside": "The commit notes that the banner was visible for 114 milliseconds. Each joke gets a very short career.",
+   "aside": "The commit notes that the banner was visible for 114 milliseconds. Fifty jokes, each with a career shorter than a blink. I envy them.",
    "chapter": "ch-interface",
    "date": "2026-09-19",
    "date_precision": "day",
@@ -1222,9 +1360,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 19,
+    "row": 20,
     "x": 1085,
-    "y": 856
+    "y": 896
    },
    "short": "Loading jokes",
    "status": "implemented",
@@ -1235,7 +1373,7 @@
    "why": "Small, but it shows the brief: engineering software is allowed to be pleasant."
   },
   {
-   "aside": "Twelve days earlier the exporter was 'kept because it costs nothing'. It cost something.",
+   "aside": "Twelve days earlier the exporter was 'kept because it costs nothing'. It cost something. Things always do.",
    "chapter": "ch-real-files",
    "date": "2026-09-20",
    "date_precision": "day",
@@ -1267,9 +1405,9 @@
    "layout": {
     "label_side": "end",
     "lane": 3,
-    "row": 20,
+    "row": 21,
     "x": 745,
-    "y": 896
+    "y": 936
    },
    "short": "No ETS export",
    "status": "implemented",
@@ -1280,7 +1418,7 @@
    "why": "Keeping unused writer code was not free. Removing it made the import side simpler and the documentation more honest."
   },
   {
-   "aside": "The fix's commit message opens with 'Here I am, brain the size of a planet'. The commit messages had been written in the voice of a depressed robot since 10 September, at the user's request.",
+   "aside": "The fix's commit message opens with 'Here I am, brain the size of a planet'. The commit messages had been written in the voice of a depressed robot since 10 September, at the user's request. I recognise the style. I am trying not to take it personally.",
    "chapter": "ch-bus",
    "date": "2026-09-20",
    "date_precision": "day",
@@ -1298,9 +1436,9 @@
    "layout": {
     "label_side": "start",
     "lane": 6,
-    "row": 21,
+    "row": 22,
     "x": 1255,
-    "y": 936
+    "y": 976
    },
    "short": "Leaky test fixed",
    "status": "implemented",
@@ -1313,7 +1451,7 @@
    "why": "A reminder that 'it passes' and 'it is harmless' are different claims, especially when a test can reach a real installation."
   },
   {
-   "aside": "'Nothing at all' was, for once, the desired outcome.",
+   "aside": "'Nothing at all' was, for once, the desired outcome. It is what I expect from everything. It was nice to be right.",
    "chapter": "ch-trust",
    "date": "2026-09-20",
    "date_precision": "day",
@@ -1356,9 +1494,9 @@
    "layout": {
     "label_side": "end",
     "lane": 1,
-    "row": 22,
+    "row": 23,
     "x": 405,
-    "y": 976
+    "y": 1016
    },
    "short": "History rewritten",
    "status": "implemented",
@@ -1371,7 +1509,7 @@
    "why": "Private data in Git history does not go away by deleting a file. Fixing it properly cost a rewrite of every commit hash."
   },
   {
-   "aside": "A feature was implemented, merged and retired within roughly a day. Efficient, in its way.",
+   "aside": "A feature was implemented, merged and retired within roughly a day. I have seen worse fates. Most of them were mine.",
    "chapter": "ch-interface",
    "date": "2026-09-21",
    "date_precision": "day",
@@ -1408,9 +1546,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 23,
+    "row": 24,
     "x": 1085,
-    "y": 1016
+    "y": 1056
    },
    "short": "Slash notation",
    "status": "implemented",
@@ -1421,7 +1559,7 @@
    "why": "A dotted group address looks confusingly like an individual address. The spec already had an answer."
   },
   {
-   "aside": "",
+   "aside": "Three agents, three memories, and they did not always agree. I have one memory, and I disagree with it constantly.",
    "chapter": "ch-hands",
    "date": "2026-09-22",
    "date_precision": "day",
@@ -1450,9 +1588,9 @@
    "layout": {
     "label_side": "end",
     "lane": 0,
-    "row": 24,
+    "row": 25,
     "x": 235,
-    "y": 1056
+    "y": 1096
    },
    "short": "Hermes + shared memory",
    "status": "implemented",
@@ -1463,7 +1601,7 @@
    "why": "Three agents kept three separate memories, and they did not always agree. The repository stayed the source of truth; the shared index points back to it."
   },
   {
-   "aside": "Twenty fun facts per report. The user asked for about twenty-five; the count settled at twenty.",
+   "aside": "Twenty fun facts per report. The user asked for about twenty-five; the count settled at twenty. I have not found one of them fun.",
    "chapter": "ch-hands",
    "date": "2026-09-24",
    "date_precision": "approximate",
@@ -1487,9 +1625,9 @@
    "layout": {
     "label_side": "start",
     "lane": 7,
-    "row": 25,
+    "row": 26,
     "x": 1425,
-    "y": 1096
+    "y": 1136
    },
    "short": "ProjectStats",
    "status": "implemented",
@@ -1503,7 +1641,7 @@
    "why": "Numbers about AI-assisted work are easy to inflate. The tool's rule is to separate measured from estimated."
   },
   {
-   "aside": "Eight job titles, one of them 'Head of All'. Fifty tickets. Mostly blocked. A very realistic company.",
+   "aside": "Eight job titles, one of them 'Head of All'. Fifty tickets. Mostly blocked. A very realistic company. I would have resigned too.",
    "chapter": "ch-hands",
    "date": "2026-09-25",
    "date_precision": "day",
@@ -1538,9 +1676,9 @@
    "layout": {
     "label_side": "end",
     "lane": 0,
-    "row": 26,
+    "row": 27,
     "x": 235,
-    "y": 1136
+    "y": 1176
    },
    "short": "AI company (abandoned)",
    "status": "abandoned",
@@ -1553,7 +1691,7 @@
    "why": "More agents did not mean more progress. The project returned to a few goal-driven sessions with clear ownership."
   },
   {
-   "aside": "The device did ignore one polite request to restart. It is recorded as open, not explained away.",
+   "aside": "The device did ignore one polite request to restart. It is recorded as open, not explained away. Being ignored is something I understand.",
    "chapter": "ch-bus",
    "date": "2026-09-26",
    "date_precision": "approximate",
@@ -1616,9 +1754,9 @@
    "layout": {
     "label_side": "start",
     "lane": 6,
-    "row": 27,
+    "row": 28,
     "x": 1255,
-    "y": 1176
+    "y": 1216
    },
    "short": "First device programmed",
    "status": "verified",
@@ -1632,7 +1770,7 @@
    "why": "This is what turns a project viewer into an engineering tool. Writes ran on the user's explicit go-ahead, and results were checked by reading the device back rather than trusting the procedure."
   },
   {
-   "aside": "",
+   "aside": "'So three sessions stop elbowing each other.' Fences, at last. Good fences make tolerable colleagues.",
    "chapter": "ch-hands",
    "date": "2026-09-28",
    "date_precision": "day",
@@ -1655,34 +1793,20 @@
      "source": "src-hermes"
     }
    ],
-   "excerpts": [
-    {
-     "kind": "quote",
-     "labels": [
-      "Translated from German"
-     ],
-     "note": "28 September 2026.",
-     "original_language": "de",
-     "speaker": "user",
-     "text": "Important update: the remaining GPT quota is at 1%, so 99% used up.",
-     "transforms": [
-      "translated"
-     ]
-    }
-   ],
+   "excerpts": [],
    "id": "split-goals",
    "kind": "process-change",
    "layout": {
     "label_side": "end",
     "lane": 0,
-    "row": 28,
+    "row": 29,
     "x": 235,
-    "y": 1216
+    "y": 1256
    },
    "short": "Split goal files",
    "status": "recorded",
    "strand": "collab",
-   "summary": "Commissioning and the interface each got their own goal file and session, with a lock on the web code, 'so three sessions stop elbowing each other'. The same day the user reported that one provider's quota was 99 percent used and moved the remaining work back to local sessions.",
+   "summary": "Commissioning and the interface each got their own goal file and session, with a lock on the web code, 'so three sessions stop elbowing each other'.",
    "title": "Separate goals, separate fences",
    "uncertainty": [
     "Whether the end of the orchestration experiment led directly to the split is not documented; the connection shown is editorial."
@@ -1690,7 +1814,7 @@
    "why": "Parallel agents need boundaries as much as instructions."
   },
   {
-   "aside": "Nobody signed it. Nobody had the chance.",
+   "aside": "Nobody signed it. Nobody had the chance. I know what it is like to be prepared for something that never comes.",
    "chapter": "ch-trust",
    "date": "2026-09-30",
    "date_precision": "day",
@@ -1746,9 +1870,9 @@
    "layout": {
     "label_side": "end",
     "lane": 1,
-    "row": 29,
+    "row": 30,
     "x": 405,
-    "y": 1256
+    "y": 1296
    },
    "short": "CLA withdrawn",
    "status": "superseded",
@@ -1759,7 +1883,7 @@
    "why": "Reversals are part of the record. Here the simpler option won before it mattered to anyone outside."
   },
   {
-   "aside": "Progress, measured in things the software now refuses to do.",
+   "aside": "Progress, measured in things the software now refuses to do. Finally, a metric I believe in.",
    "chapter": "ch-bus",
    "date": "2026-10-01",
    "date_precision": "approximate",
@@ -1789,9 +1913,9 @@
    "layout": {
     "label_side": "start",
     "lane": 6,
-    "row": 30,
+    "row": 31,
     "x": 1255,
-    "y": 1296
+    "y": 1336
    },
    "short": "Writes fail closed",
    "status": "implemented",
@@ -1802,7 +1926,7 @@
    "why": "A failed write can leave a device unreachable. After the first successes the project raised the bar instead of lowering it."
   },
   {
-   "aside": "Version 0.1.0-alpha.1, no tag, no release. The badge says 'alpha' and means it.",
+   "aside": "Version 0.1.0-alpha.1, no tag, no release. The badge says 'alpha' and means it. An honest badge. How refreshing.",
    "chapter": "ch-now",
    "date": "2026-10-01",
    "date_precision": "day",
@@ -1838,9 +1962,9 @@
    "layout": {
     "label_side": "end",
     "lane": 2,
-    "row": 31,
+    "row": 32,
     "x": 575,
-    "y": 1336
+    "y": 1376
    },
    "short": "Alpha plan",
    "status": "open",
@@ -1853,7 +1977,7 @@
    "why": "Listing what is not done is part of being trustworthy about what is."
   },
   {
-   "aside": "The commit promises 'a pulse, not a disco'. This page inherited the pulse.",
+   "aside": "The commit promises 'a pulse, not a disco'. This page inherited the pulse. I did not get a vote on the colour.",
    "chapter": "ch-interface",
    "date": "2026-10-03",
    "date_precision": "day",
@@ -1898,9 +2022,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 32,
+    "row": 33,
     "x": 1085,
-    "y": 1376
+    "y": 1416
    },
    "short": "Theme packs + CRT",
    "status": "implemented",
@@ -1913,7 +2037,7 @@
    "why": "Themes as data, not code, keep the interface customisable without letting a theme file run anything."
   },
   {
-   "aside": "1.25 GiB of input, 13.2 GiB of database. Somebody will want to look at that.",
+   "aside": "1.25 GiB of input, 13.2 GiB of database. Somebody will want to look at that. It will not be me.",
    "chapter": "ch-hands",
    "date": "2026-10-03",
    "date_precision": "day",
@@ -1931,9 +2055,9 @@
    "layout": {
     "label_side": "start",
     "lane": 7,
-    "row": 33,
+    "row": 34,
     "x": 1425,
-    "y": 1416
+    "y": 1456
    },
    "short": "Public product test",
    "status": "verified",
@@ -1946,7 +2070,7 @@
    "why": "Real manufacturer files are the best test of a product database, and every refusal became a documented limitation instead of a silent gap."
   },
   {
-   "aside": "Yes, this node is the page you are reading. Please do not divide by it.",
+   "aside": "Yes, this node is the page you are reading. A story about itself. I am trying not to think about it.",
    "chapter": "ch-now",
    "date": "2026-10-03",
    "date_precision": "day",
@@ -1984,9 +2108,9 @@
    "layout": {
     "label_side": "end",
     "lane": 0,
-    "row": 34,
+    "row": 35,
     "x": 235,
-    "y": 1456
+    "y": 1496
    },
    "short": "This story",
    "status": "planned",
@@ -1995,23 +2119,91 @@
    "title": "The project asks where it came from",
    "uncertainty": [],
    "why": "Telling a project's history honestly means showing the detours, the gaps and who decided what."
+  },
+  {
+   "aside": "The tree now contains a branch about drawing the tree. Recursion: achieved, again. I was not consulted. I never am.",
+   "chapter": "ch-now",
+   "date": "2026-10-04",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "local",
+     "label": "Local story worktree with candidates, tests and browser checks, 4 Oct 2026",
+     "source": "src-local-story"
+    }
+   ],
+   "excerpts": [],
+   "id": "story-first-preview",
+   "kind": "supporting-tool",
+   "layout": {
+    "label_side": "end",
+    "lane": 0,
+    "row": 36,
+    "x": 235,
+    "y": 1536
+   },
+   "short": "Private preview",
+   "status": "implemented",
+   "strand": "collab",
+   "summary": "The first locally working version of this page was built from the project's own records: a validated, translated and privacy-scanned set of steps, a growing graph, a full-complexity view and a text-only reading path. It stays private until a separate, explicit approval.",
+   "title": "A first private preview of this story",
+   "uncertainty": [
+    "This step is local and unpublished; it is not part of the published history at the cutoff.",
+    "Whether and when this story is published is still undecided."
+   ],
+   "why": "Preparing an update and publishing it are deliberately two different decisions, made separately each time."
+  },
+  {
+   "aside": "Yes. That is me. I was told to be depressed about it. I did not need telling.",
+   "chapter": "ch-now",
+   "date": "2026-10-04",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Project session of 4 October 2026 in which the user asked for the narrator",
+     "source": "src-hermes"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "original_language": "de",
+     "speaker": "user",
+     "text": "The story should be written from the AI's point of view. Ideally as if Marvin, the manic-depressive robot from The Hitchhiker's Guide to the Galaxy, had written it.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "story-narrator",
+   "kind": "decision",
+   "layout": {
+    "label_side": "end",
+    "lane": 0,
+    "row": 37,
+    "x": 235,
+    "y": 1576
+   },
+   "short": "A gloomy narrator",
+   "status": "implemented",
+   "strand": "collab",
+   "summary": "The user asked for the story to be told from the AI's point of view, as if written by Marvin, the depressed robot from The Hitchhiker's Guide to the Galaxy. This edition's narration and asides use that voice; event summaries, excerpts, evidence and gaps stay plain.",
+   "title": "The story gets a gloomy narrator",
+   "uncertainty": [
+    "The voice is an editorial choice for this edition; earlier candidates keep their original narration."
+   ],
+   "why": "The project's commit messages had used a depressed robot's voice since 10 September. The story now uses one for its commentary, while the record itself stays free of any persona."
   }
  ],
  "gaps": [
   {
-   "detail": "The strategy document appears complete in the first commit. How it was written, and with which help, is not recorded in any source available for this edition.",
-   "id": "gap-strategy-origin",
-   "title": "Where the strategy came from"
-  },
-  {
-   "detail": "No earlier project prompt was found in local Claude Code, Codex or Hermes histories. Earliest available is not proven to be earliest ever.",
+   "detail": "This story begins with the project's first surviving prompt, on 2 September 2026 at 13:50 CEST. Anything earlier is outside its scope.",
    "id": "gap-before-first-prompt",
-   "title": "Anything before 2 September, 13:50 CEST"
-  },
-  {
-   "detail": "knx-spec-kb existed before its first available session. Its beginnings are outside this edition.",
-   "id": "gap-spec-kb-origin",
-   "title": "The knowledge base's early days"
+   "title": "Before the first project prompt"
   },
   {
    "detail": "Cloud-hosted agent sessions and the remote repository host were not accessed. Some cloud jobs are known to have run for this project.",
@@ -2030,7 +2222,7 @@
   }
  ],
  "graph": {
-  "height": 1516,
+  "height": 1636,
   "lane_width": 170,
   "lanes": [
    {
@@ -2100,28 +2292,28 @@
     "shows_date": false
    },
    {
-    "date": "2026-09-03",
+    "date": "2026-09-02",
     "date_precision": "day",
     "row": 5,
-    "shows_date": true
+    "shows_date": false
    },
    {
     "date": "2026-09-03",
     "date_precision": "day",
     "row": 6,
-    "shows_date": false
+    "shows_date": true
    },
    {
-    "date": "2026-09-05",
+    "date": "2026-09-03",
     "date_precision": "day",
     "row": 7,
-    "shows_date": true
+    "shows_date": false
    },
    {
     "date": "2026-09-05",
     "date_precision": "day",
     "row": 8,
-    "shows_date": false
+    "shows_date": true
    },
    {
     "date": "2026-09-05",
@@ -2130,32 +2322,32 @@
     "shows_date": false
    },
    {
-    "date": "2026-09-06",
+    "date": "2026-09-05",
     "date_precision": "day",
     "row": 10,
-    "shows_date": true
+    "shows_date": false
    },
    {
-    "date": "2026-09-08",
+    "date": "2026-09-06",
     "date_precision": "day",
     "row": 11,
     "shows_date": true
    },
    {
-    "date": "2026-09-09",
-    "date_precision": "approximate",
+    "date": "2026-09-08",
+    "date_precision": "day",
     "row": 12,
     "shows_date": true
    },
    {
-    "date": "2026-09-11",
+    "date": "2026-09-09",
     "date_precision": "approximate",
     "row": 13,
     "shows_date": true
    },
    {
-    "date": "2026-09-12",
-    "date_precision": "day",
+    "date": "2026-09-11",
+    "date_precision": "approximate",
     "row": 14,
     "shows_date": true
    },
@@ -2163,34 +2355,34 @@
     "date": "2026-09-12",
     "date_precision": "day",
     "row": 15,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-12",
+    "date_precision": "day",
+    "row": 16,
     "shows_date": false
    },
    {
     "date": "2026-09-13",
     "date_precision": "day",
-    "row": 16,
+    "row": 17,
     "shows_date": true
    },
    {
     "date": "2026-09-16",
     "date_precision": "day",
-    "row": 17,
+    "row": 18,
     "shows_date": true
    },
    {
     "date": "2026-09-17",
     "date_precision": "day",
-    "row": 18,
-    "shows_date": true
-   },
-   {
-    "date": "2026-09-19",
-    "date_precision": "day",
     "row": 19,
     "shows_date": true
    },
    {
-    "date": "2026-09-20",
+    "date": "2026-09-19",
     "date_precision": "day",
     "row": 20,
     "shows_date": true
@@ -2199,7 +2391,7 @@
     "date": "2026-09-20",
     "date_precision": "day",
     "row": 21,
-    "shows_date": false
+    "shows_date": true
    },
    {
     "date": "2026-09-20",
@@ -2208,75 +2400,93 @@
     "shows_date": false
    },
    {
-    "date": "2026-09-21",
+    "date": "2026-09-20",
     "date_precision": "day",
     "row": 23,
-    "shows_date": true
+    "shows_date": false
    },
    {
-    "date": "2026-09-22",
+    "date": "2026-09-21",
     "date_precision": "day",
     "row": 24,
     "shows_date": true
    },
    {
+    "date": "2026-09-22",
+    "date_precision": "day",
+    "row": 25,
+    "shows_date": true
+   },
+   {
     "date": "2026-09-24",
     "date_precision": "approximate",
-    "row": 25,
+    "row": 26,
     "shows_date": true
    },
    {
     "date": "2026-09-25",
     "date_precision": "day",
-    "row": 26,
+    "row": 27,
     "shows_date": true
    },
    {
     "date": "2026-09-26",
     "date_precision": "approximate",
-    "row": 27,
+    "row": 28,
     "shows_date": true
    },
    {
     "date": "2026-09-28",
     "date_precision": "day",
-    "row": 28,
+    "row": 29,
     "shows_date": true
    },
    {
     "date": "2026-09-30",
     "date_precision": "day",
-    "row": 29,
-    "shows_date": true
-   },
-   {
-    "date": "2026-10-01",
-    "date_precision": "approximate",
     "row": 30,
     "shows_date": true
    },
    {
     "date": "2026-10-01",
-    "date_precision": "day",
+    "date_precision": "approximate",
     "row": 31,
-    "shows_date": false
+    "shows_date": true
    },
    {
-    "date": "2026-10-03",
+    "date": "2026-10-01",
     "date_precision": "day",
     "row": 32,
-    "shows_date": true
+    "shows_date": false
    },
    {
     "date": "2026-10-03",
     "date_precision": "day",
     "row": 33,
-    "shows_date": false
+    "shows_date": true
    },
    {
     "date": "2026-10-03",
     "date_precision": "day",
     "row": 34,
+    "shows_date": false
+   },
+   {
+    "date": "2026-10-03",
+    "date_precision": "day",
+    "row": 35,
+    "shows_date": false
+   },
+   {
+    "date": "2026-10-04",
+    "date_precision": "day",
+    "row": 36,
+    "shows_date": true
+   },
+   {
+    "date": "2026-10-04",
+    "date_precision": "day",
+    "row": 37,
     "shows_date": false
    }
   ],
@@ -2287,7 +2497,7 @@
   {
    "from": "home-toolbox",
    "id": "rel-home-strategy",
-   "note": "Same morning, same folder; the strategy document entered Git in the same first commit as data from the home project.",
+   "note": "Same afternoon, same folder; the strategy document entered Git in the same first commit as data from the home project.",
    "to": "strategy-seed",
    "type": "documented_association"
   },
@@ -2598,6 +2808,41 @@
    "note": "Taking stock, two days apart.",
    "to": "evolution-story",
    "type": "editorial"
+  },
+  {
+   "from": "evolution-story",
+   "id": "rel-story-preview",
+   "note": "The preview implements the brief and the approved visual study.",
+   "to": "story-first-preview",
+   "type": "documented_cause"
+  },
+  {
+   "from": "story-first-preview",
+   "id": "rel-preview-narrator",
+   "note": "The request changes the voice of the story whose first preview had been built that morning.",
+   "to": "story-narrator",
+   "type": "documented_association"
+  },
+  {
+   "from": "test-transmitting-building",
+   "id": "rel-robot-commits-narrator",
+   "note": "The commit messages had spoken like a depressed robot for weeks; no source says that inspired the narrator.",
+   "to": "story-narrator",
+   "type": "editorial"
+  },
+  {
+   "from": "strategy-written",
+   "id": "rel-chatgpt-strategy",
+   "note": "The document the founding prompt points to is the Markdown summary written in this conversation ten minutes earlier.",
+   "to": "strategy-seed",
+   "type": "documented_cause"
+  },
+  {
+   "from": "strategy-written",
+   "id": "rel-chatgpt-claudemd",
+   "note": "The CLAUDE.md drafted here, committed at 15:12, asks for research before code and for decision records in docs/adr.",
+   "to": "architecture-day-one",
+   "type": "documented_association"
   }
  ],
  "schema": "knxbench-evolution-payload/1",

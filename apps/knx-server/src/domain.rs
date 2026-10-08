@@ -25,6 +25,9 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64URL;
 use base64::Engine as _;
 use knx_app::comparison::{load_comparison_input, ComparisonInput, ComparisonInputKind};
 use knx_app::{AppError, ImportOptions};
+use knx_productdb::device_evaluation::{
+    decompose_module_qualified, resolve_mi_authority, take_digits, EvaluationFinding, MiAuthority,
+};
 use knx_projection::ProjectTree;
 use sha2::{Digest, Sha256};
 
@@ -3973,56 +3976,6 @@ fn module_scope_dto(scope: &knx_productdb::dynamic::ModuleScope) -> crate::route
     }
 }
 
-/// Takes the longest run of ASCII digits at the start of `s`, returning
-/// `None` for zero digits (`\d+` needs at least one) — `(digits, rest)`.
-fn take_digits(s: &str) -> Option<(&str, &str)> {
-    let end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
-    if end == 0 {
-        None
-    } else {
-        Some((&s[..end], &s[end..]))
-    }
-}
-
-/// Hand-rolled stand-in for `^(.*)_M-(\d+)_MI-(\d+)_(.*)$` — no `regex`
-/// crate exists anywhere in this workspace (checked; see the parameter
-/// editor design D21). A regex engine's greedy `.*` for the first group
-/// backtracks only as far as it must, which — since the trailing `.*`
-/// matches anything, including empty — is equivalent to picking the
-/// *rightmost* position in `ets_id` where the literal
-/// `_M-<digits>_MI-<digits>_` shape occurs. This scans left to right and
-/// keeps overwriting its candidate on every syntactically valid match, so
-/// whatever is left standing after the scan is that rightmost one.
-/// Returns `(prefix, module_digits, mi_digits, suffix)`.
-fn decompose_module_qualified(ets_id: &str) -> Option<(String, String, String, String)> {
-    const MARKER: &str = "_M-";
-    let mut best: Option<(usize, String, String, String, String)> = None;
-    let mut search_from = 0;
-    while let Some(relative) = ets_id.get(search_from..).and_then(|tail| tail.find(MARKER)) {
-        let start = search_from + relative;
-        let after_marker = &ets_id[start + MARKER.len()..];
-        if let Some((module_digits, rest)) = take_digits(after_marker) {
-            if let Some(rest) = rest.strip_prefix("_MI-") {
-                if let Some((mi_digits, rest)) = take_digits(rest) {
-                    if let Some(suffix) = rest.strip_prefix('_') {
-                        best = Some((
-                            start,
-                            ets_id[..start].to_string(),
-                            module_digits.to_string(),
-                            mi_digits.to_string(),
-                            suffix.to_string(),
-                        ));
-                    }
-                }
-            }
-        }
-        search_from = start + 1;
-    }
-    best.map(|(_, prefix, module_digits, mi_digits, suffix)| {
-        (prefix, module_digits, mi_digits, suffix)
-    })
-}
-
 /// The trailing `_M-<digits>` component of a program-side `Module/@Id`,
 /// split into `module_id`'s own prefix (D39: "its text before `_M-<n>`")
 /// and the digits. Same hand-rolled greedy-rightmost scan as
@@ -4061,67 +4014,6 @@ fn module_scoped_write_id(module_id: &str, mi_digits: &str, declared_id: &str) -
     Some(format!("{module_id}_MI-{mi_digits}_{suffix}"))
 }
 
-/// D39 rules 2-3: whether one imported `ModuleInstance` can serve as the
-/// `MI-` authority for a program-side `module_id`, and if not, exactly
-/// why — never a guess, never a default (D40).
-enum MiAuthority {
-    /// Exactly one imported `ModuleInstance` matches, and its
-    /// `instance_ets_id` decomposes cleanly — these are the `MI-` digits
-    /// a write target uses.
-    Found(String),
-    /// No imported `ModuleInstance`'s `source.ets_id` is the trailing
-    /// component of `module_id` (D39 rule 2, zero matches).
-    NoMatch,
-    /// Two or more imported `ModuleInstance`s match one `module_id` — a
-    /// genuinely repeated module (`MI-` > 1) whose channels this slice
-    /// cannot tell apart on the read side (D40). Carries the shared
-    /// `RefId` and every matching `instance_ets_id`, for the diagnostic.
-    Ambiguous {
-        source_ets_id: String,
-        instance_ets_ids: Vec<String>,
-    },
-    /// Exactly one match, but its `instance_ets_id` is empty or does not
-    /// decompose as `<source.ets_id>_MI-<digits>` (D39 rule 3) — D38's
-    /// migration note treats empty exactly like a missing instance.
-    Malformed {
-        source_ets_id: String,
-        instance_ets_id: String,
-    },
-}
-
-/// D39 rules 2-3, verbatim: the instance-matching rule is
-/// `module_id.ends_with("_" + instance.source.ets_id)` — the leading
-/// underscore is what keeps `MD-1_M-2` from matching a `..._MD-11_M-2`
-/// module id. `digits` must be all-ASCII (`\d+`), matching
-/// `decompose_module_qualified`'s own definition of a valid `MI-`.
-fn resolve_mi_authority(instances: &[knx_core::ModuleInstance], module_id: &str) -> MiAuthority {
-    let matches: Vec<&knx_core::ModuleInstance> = instances
-        .iter()
-        .filter(|m| module_id.ends_with(&format!("_{}", m.source.ets_id)))
-        .collect();
-    match matches.as_slice() {
-        [] => MiAuthority::NoMatch,
-        [one] => {
-            let expected_prefix = format!("{}_MI-", one.source.ets_id);
-            match one
-                .instance_ets_id
-                .strip_prefix(expected_prefix.as_str())
-                .filter(|digits| !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit()))
-            {
-                Some(digits) => MiAuthority::Found(digits.to_string()),
-                None => MiAuthority::Malformed {
-                    source_ets_id: one.source.ets_id.clone(),
-                    instance_ets_id: one.instance_ets_id.clone(),
-                },
-            }
-        }
-        many => MiAuthority::Ambiguous {
-            source_ets_id: many[0].source.ets_id.clone(),
-            instance_ets_ids: many.iter().map(|m| m.instance_ets_id.clone()).collect(),
-        },
-    }
-}
-
 /// Everything `parameter_panel_impl`/`set_parameter_value_impl` share:
 /// the assembled read model, plus the raw program-level ingredients D24's
 /// write validation needs (kind/bounds/enum live on a declared
@@ -4153,9 +4045,9 @@ fn empty_assembly(stale: Vec<(String, String)>) -> PanelAssembly {
 }
 
 /// One device's evaluated `Dynamic` tree, from its stored parameter values
-/// (design D21/D42). Shared by the parameter panel and, since ISSUE-08, by
-/// the device detail's communication objects, so both read the same
-/// activation instead of two implementations drifting apart.
+/// (design D21/D42), in the server's DTO terms. The evaluation itself lives
+/// in `knx_productdb::device_evaluation` (ADR-0090), shared with the MCP
+/// adapter; this keeps the panel's stale/diagnostic wording unchanged.
 struct DeviceEvaluation {
     ref_ids: HashSet<String>,
     supplied: HashMap<String, String>,
@@ -4173,151 +4065,65 @@ fn evaluate_device(
     stored: Vec<(String, String)>,
     module_instances: &[knx_core::ModuleInstance],
 ) -> Result<DeviceEvaluation, String> {
-    let ref_ids =
-        knx_productdb::query::parameter_ref_ids(products, program_id).map_err(|e| e.to_string())?;
-
-    let mut diagnostics: Vec<crate::routes::ParameterDiagnosticDto> = Vec::new();
-
-    // Pass A (design D21): sort every stored value into unscoped-supplied,
-    // a regex candidate awaiting module-id validation, or outright
-    // undecomposable (no verbatim match, no regex match at all).
-    let mut supplied: HashMap<String, String> = HashMap::new();
-    let mut candidates: Vec<(String, String, String, String, String, String)> = Vec::new();
-    let mut stale: Vec<crate::routes::StaleParameterDto> = Vec::new();
-    for (ets_id, raw) in stored {
-        if ref_ids.contains(&ets_id) {
-            // I1 (fix round 2): a second stored row for the same
-            // unscoped id must not vanish the way the first committed
-            // round let it -- named in a diagnostic and kept in `stale`,
-            // the same loud treatment Pass B already gives a module-
-            // scoped collision (D41) below.
-            if let Some(previous_raw) = supplied.get(&ets_id) {
-                diagnostics.push(crate::routes::ParameterDiagnosticDto {
-                    scope: None,
-                    kind: crate::routes::ParameterDiagnosticKindDto::DuplicateUnscopedValue,
-                    severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
-                    message:
-                        "Two stored values target the same parameter; the later one is ignored."
-                            .to_string(),
-                    detail: format!(
-                        "'{ets_id}' has more than one stored row for this device; keeping '{previous_raw}'."
-                    ),
-                });
-                stale.push(crate::routes::StaleParameterDto { ets_id, raw });
-            } else {
-                supplied.insert(ets_id, raw);
-            }
-        } else if let Some((prefix, module_digits, mi_digits, suffix)) =
-            decompose_module_qualified(&ets_id)
-        {
-            candidates.push((ets_id, raw, prefix, module_digits, mi_digits, suffix));
-        } else {
-            stale.push(crate::routes::StaleParameterDto { ets_id, raw });
-        }
-    }
-
-    // D42, step 1 of 2: the unscoped-only `ValueMap`, evaluated once to
-    // learn which `Module/@Id`s this program's `choose` chain actually
-    // reaches — Pass B needs that set before it can validate a single
-    // scoped candidate, and `evaluate` is the only place that set is
-    // computed (E3: no parallel module-expansion implementation).
-    let mut values = knx_productdb::dynamic::resolve_values(products, program_id, &supplied)
-        .map_err(|e| e.to_string())?;
-    let trees = knx_productdb::dynamic::load_program_trees(products, program_id)
-        .map_err(|e| e.to_string())?;
-    let provisional_activation = knx_productdb::dynamic::evaluate(&trees, &values);
-
-    // The declared `Module/@Id` set this provisional activation reached —
-    // D21's second half of candidate validation.
-    let module_ids: HashSet<String> = provisional_activation
-        .parameter_refs
-        .iter()
-        .filter_map(|r| r.scope.as_ref().and_then(|s| s.module_id.clone()))
-        .collect();
-
-    // Pass B (D21, D41): validate every regex candidate against
-    // `module_ids` and `ref_ids` as before, plus two new conditions —
-    // its `MI-` digits must agree with the one authoritative
-    // `ModuleInstance` when one exists (no authority: not checked, so a
-    // pre-migration project displays exactly as it did before this
-    // slice), and it must not collide with an already-validated row on
-    // the same `(module_id, declared_id)` key (no silent overwrite: the
-    // loser is `stale`, named alongside the winner in a diagnostic).
-    let mut validated_scoped: HashMap<(String, String), String> = HashMap::new();
-    let mut validated_scoped_ets_id: HashMap<(String, String), String> = HashMap::new();
-    for (ets_id, raw, prefix, module_digits, mi_digits, suffix) in candidates {
-        let module_id = format!("{prefix}_M-{module_digits}");
-        let declared_id = format!("{prefix}_{suffix}");
-        if !module_ids.contains(&module_id) || !ref_ids.contains(&declared_id) {
-            stale.push(crate::routes::StaleParameterDto { ets_id, raw });
-            continue;
-        }
-        if let MiAuthority::Found(authoritative_digits) =
-            resolve_mi_authority(module_instances, &module_id)
-        {
-            if authoritative_digits != mi_digits {
-                stale.push(crate::routes::StaleParameterDto { ets_id, raw });
-                continue;
-            }
-        }
-        let key = (module_id, declared_id);
-        if let Some(winner_ets_id) = validated_scoped_ets_id.get(&key) {
-            // I2 (fix round 2): every other section-scoped diagnostic
-            // carries a real `scope` the UI can filter by; this one used
-            // to say `None` despite naming one specific module. The
-            // provisional activation already resolved this exact
-            // `module_id` (that is what `module_ids.contains` above just
-            // checked), so its own `ModuleScope` is looked up rather
-            // than reinvented.
-            let scope_dto = provisional_activation.parameter_refs.iter().find_map(|r| {
-                r.scope
-                    .as_ref()
-                    .filter(|s| s.module_id.as_deref() == Some(key.0.as_str()))
-                    .map(|s| module_scope_dto(s))
-            });
-            diagnostics.push(crate::routes::ParameterDiagnosticDto {
-                scope: scope_dto,
-                kind: crate::routes::ParameterDiagnosticKindDto::DuplicateModuleScopedValue,
-                severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
-                message:
-                    "Two stored values target the same module-scoped parameter; the later one is ignored."
-                        .to_string(),
-                detail: format!(
-                    "'{winner_ets_id}' and '{ets_id}' both resolve to module '{}' parameter '{}'; keeping '{winner_ets_id}'.",
-                    key.0, key.1
-                ),
-            });
-            stale.push(crate::routes::StaleParameterDto { ets_id, raw });
-            continue;
-        }
-        validated_scoped_ets_id.insert(key.clone(), ets_id);
-        validated_scoped.insert(key, raw);
-    }
-
-    // D42, step 2 of 2: feed the validated scoped values back into the
-    // same `ValueMap` and evaluate again, so a module-scoped `choose`
-    // sees its own channel's value instead of the program default (D16).
-    // Skipped entirely when there is nothing to feed — every corpus
-    // project except KV (E2) — since a second `evaluate` over an
-    // unchanged `ValueMap` can only reproduce the first activation.
-    let activation = if validated_scoped.is_empty() {
-        provisional_activation
-    } else {
-        for ((module_id, ref_id), raw) in validated_scoped.clone() {
-            values.insert_scoped(module_id, ref_id, raw);
-        }
-        knx_productdb::dynamic::evaluate(&trees, &values)
-    };
-
+    let evaluation = knx_productdb::device_evaluation::evaluate_device(
+        products,
+        program_id,
+        stored,
+        module_instances,
+    )
+    .map_err(|e| e.to_string())?;
     Ok(DeviceEvaluation {
-        ref_ids,
-        supplied,
-        validated_scoped,
-        stale,
-        diagnostics,
-        values,
-        activation,
+        ref_ids: evaluation.ref_ids,
+        supplied: evaluation.supplied,
+        validated_scoped: evaluation.validated_scoped,
+        stale: evaluation
+            .stale
+            .into_iter()
+            .map(|s| crate::routes::StaleParameterDto {
+                ets_id: s.ets_id,
+                raw: s.raw,
+            })
+            .collect(),
+        diagnostics: evaluation.findings.iter().map(finding_dto).collect(),
+        values: evaluation.values,
+        activation: evaluation.activation,
     })
+}
+
+/// The panel's wording for one evaluation finding, unchanged from before
+/// the evaluation moved to `knx-productdb`.
+fn finding_dto(finding: &EvaluationFinding) -> crate::routes::ParameterDiagnosticDto {
+    match finding {
+        EvaluationFinding::DuplicateUnscopedValue { ets_id, kept_raw } => {
+            crate::routes::ParameterDiagnosticDto {
+                scope: None,
+                kind: crate::routes::ParameterDiagnosticKindDto::DuplicateUnscopedValue,
+                severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
+                message: "Two stored values target the same parameter; the later one is ignored."
+                    .to_string(),
+                detail: format!(
+                    "'{ets_id}' has more than one stored row for this device; keeping '{kept_raw}'."
+                ),
+            }
+        }
+        EvaluationFinding::DuplicateModuleScopedValue {
+            scope,
+            winner_ets_id,
+            ets_id,
+            module_id,
+            declared_id,
+        } => crate::routes::ParameterDiagnosticDto {
+            scope: scope.as_ref().map(|s| module_scope_dto(s)),
+            kind: crate::routes::ParameterDiagnosticKindDto::DuplicateModuleScopedValue,
+            severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
+            message:
+                "Two stored values target the same module-scoped parameter; the later one is ignored."
+                    .to_string(),
+            detail: format!(
+                "'{winner_ets_id}' and '{ets_id}' both resolve to module '{module_id}' parameter '{declared_id}'; keeping '{winner_ets_id}'."
+            ),
+        },
+    }
 }
 
 /// Builds a device's parameter panel (design D20-D23, D26): project state
@@ -6052,6 +5858,34 @@ mod tests {
     // semantics (D21). This id's first marker (`_M-1_MI-1_`) is itself
     // immediately followed by a second, later one (`_M-2_MI-2_`); only the
     // rightmost split's prefix/suffix are correct.
+    #[test]
+    fn evaluation_findings_keep_the_panels_wording() {
+        let unscoped = finding_dto(&EvaluationFinding::DuplicateUnscopedValue {
+            ets_id: "P-1_R-1".into(),
+            kept_raw: "3".into(),
+        });
+        assert!(unscoped.scope.is_none());
+        assert_eq!(
+            unscoped.message,
+            "Two stored values target the same parameter; the later one is ignored."
+        );
+        assert_eq!(
+            unscoped.detail,
+            "'P-1_R-1' has more than one stored row for this device; keeping '3'."
+        );
+        let scoped = finding_dto(&EvaluationFinding::DuplicateModuleScopedValue {
+            scope: None,
+            winner_ets_id: "MOD-1_M-1_MI-1_P-1_R-1".into(),
+            ets_id: "MOD-1_M-1_MI-2_P-1_R-1".into(),
+            module_id: "MOD-1_M-1".into(),
+            declared_id: "MOD-1_P-1_R-1".into(),
+        });
+        assert_eq!(
+            scoped.detail,
+            "'MOD-1_M-1_MI-1_P-1_R-1' and 'MOD-1_M-1_MI-2_P-1_R-1' both resolve to module 'MOD-1_M-1' parameter 'MOD-1_P-1_R-1'; keeping 'MOD-1_M-1_MI-1_P-1_R-1'."
+        );
+    }
+
     #[test]
     fn decompose_module_qualified_keeps_the_rightmost_of_two_valid_markers() {
         let id = "P_M-1_MI-1_P_M-2_MI-2_TAIL";

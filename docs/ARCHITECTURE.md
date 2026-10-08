@@ -166,7 +166,7 @@ knx-desktop ─> knx-server ─┬─> knx-app ─> knx-core
                            └─> knx-net ──────> knx-core
 
 knx-mcp ─┬─> knx-store ─────> knx-core     (read-only openers, ADR-0090)
-         ├─> knx-productdb ─> knx-core
+         ├─> knx-productdb ─> knx-core     (device_evaluation, shared with knx-server)
          ├─> knx-projection ─> knx-core
          ├─> knx-diff ──────> knx-core
          └─> knx-csv ───────> knx-core

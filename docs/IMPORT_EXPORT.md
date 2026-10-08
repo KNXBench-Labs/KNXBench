@@ -712,6 +712,11 @@ installed 22,599 → 24,513 (+1,914), `ingest_unknown` 22,997 → 24,911
 (+1,914) and `package_install_unknown` 9,382 → 10,023 (+641). An independent
 instance-level Python recount of the same 115 instances / 113 unique packages
 predicts all five deltas and the new rows' 247,734 occurrences exactly.
+Schema v22 ([ADR-0094](adr/0094-legacy-exim-product-files.md)) re-pinned
+the aggregate commitment only: it now counts the four legacy provenance
+tables, all empty in this `.knxprod` corpus (pinned at 0). With them left
+out, the v16-shaped projection stayed equal, so no outcome, report total or
+other table count moved.
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

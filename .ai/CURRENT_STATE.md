@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (root sync after public launch)
+- **Timestamp:** 2026-10-08 14:53 CEST
+- **Completed:** Shared root checkout synchronized and clean on `origin/main`. All local uncommitted work was backed up (`KNXBench.backups/2026-10-08-root-sync/`) and parked hash-exact on two LOCAL branches based on the new history: `wip/website-20261008` (website + WEBSITE.md + static-marketing ADR, whose number 0094 collides with main) and `wip/community-evidence-20261008` (community evidence package, parameter-presentation/LCARS files, older drafts, and the root handover with 39 entries not verbatim on main). `.serena/` added to `.gitignore` (local Serena state was unprotected after `203b601b`). Website preview on :4198 still serves (local `.git/info/exclude` for `website/dist|output`).
+- **Pending/Next Steps:** Deliver website and community evidence each as its own package from a fresh worktree: rebase the parked branch onto main, separate already published drafts, renumber the website ADR, review and gate. ADR-0091 launch consolidation now applies (repo is public).
+- **Notes for Codex oder Claude:** Work in worktrees, not in the root. The parked branches are not reviewed or gated and not pushed. Old-history branches (before 14:30) must never be pushed. Log `.ai/logs/2026-10-08_claude_root-sync.md`.
+
+---
+
 - **Last Agent:** Claude (public launch)
 - **Timestamp:** 2026-10-08 14:47 CEST
 - **Completed:** User "go live": repository `KNXBench-Labs/KNXBench` is **public** (anonymous web/API/release/clone checks 200/ok). Pre-flip audit of every reachable object: no secret/token/identity; two long-deleted third-party payloads (`az-and-sensor-data/` alarm-panel plugin data + manufacturer firmware, `KV v2.5 - demo.knxproj`) purged from the whole history with git filter-repo (2,279 commits rehashed, 2 empty dropped, final tree identical). Repo recreated under the same name; old one renamed `KNXBench-prepublic-20261008` (private rollback). Tag `v0.1.0-alpha.5` → `a0ff1f55`, pre-release republished with byte-identical AppImage. Map `docs/history/COMMIT_MAP_2026-10-08-public.txt`, KL §162 addendum. Dependabot restored, secret scanning + push protection on. Root local main moved to tree-identical `9fd91108` (status byte-identical, now behind 61).

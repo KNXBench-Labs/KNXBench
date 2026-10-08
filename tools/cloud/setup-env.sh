@@ -3,7 +3,7 @@
 #
 # This file is the versioned source of truth. It does not run by itself:
 # paste its full content into the "Setup script" field of the KNXBench
-# environment at claude.ai/code (see docs/archive/CLOUD_SESSIONS.md §2).
+# environment at claude.ai/code (CLOUD_SESSIONS.md §2, see docs/history/REMOVED_DOCS.md).
 #
 # Constraints from the cloud-environment documentation (checked 2026-09-28):
 #   * runs as root on Ubuntu 24.04, after the repository clone;

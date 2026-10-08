@@ -2,7 +2,7 @@
 
 **Audit:** 2026-10-08, against `origin/main` `741968a8`. This page is the one
 place that answers "what is not done?". It replaces the three finished alpha
-goals ([archived](archive/alpha-0.1/README.md)). It does not change any
+goals (removed 2026-10-08, see [REMOVED_DOCS](history/REMOVED_DOCS.md)). It does not change any
 status by itself: per-ID status stays in the [ledger](status/LEDGER.md),
 behaviour boundaries in [KNOWN_LIMITATIONS](KNOWN_LIMITATIONS.md).
 
@@ -30,7 +30,7 @@ the root checkout, (3) deferred items with a recorded user decision, and
 | --- | --- | --- | --- |
 | Legacy ETS3 product databases (`.vd3`–`.vd5`) | L1 inspection, L2 import and secret withholding are on `main` | **L3:** server upload, password dialog, remembered password (one 0600 file under `$XDG_CONFIG_HOME/knx/`), visual web check. Then the `.vd5` package (Siemens sample: 173 MB payload exceeds the 64 MiB bounds; measure memory first). **L4** download later. | [ADR-0094](adr/0094-legacy-exim-product-files.md), [VD4 import](VD4_PRODUCT_DATABASE_IMPORT.md), KL §128; worktree `legacy-vd-l3-20261008` |
 | Devices navigation ("Geräte" view, every device mention links to the editor) | Grill-me round 1 (Q1–Q5) asked, not answered | Answers, then synthesis and an explicit go | `.ai/logs/2026-10-08_claude_devices-view-grilling.md` |
-| Project-evolution story | Edition `2026-10-08.3` (cutoff 8 October) on `main`; [goal](archive/PROJECT_EVOLUTION_GOAL.md) delivered as a private first version | Exact-edition publication approval (user) | [story/](../story/README.md), ADR-0068 |
+| Project-evolution story | Edition `2026-10-08.3` (cutoff 8 October) on `main`; [goal](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/PROJECT_EVOLUTION_GOAL.md) delivered as a private first version | Exact-edition publication approval (user) | [story/](../story/README.md), ADR-0068 |
 | Commissioning refusal buckets (ADR-0086) | House: 32 untested / 2 unsupported / 1 excluded; corpus 1 verified + 89 untested of 246 programs | Remaining buckets need better evidence: module instances (placement rule, §19.11), `placed by Property` (9 MDT programs), floats (contradicting data), `Priority=High`, parameter-value, non-memory masks (`07B0`, `2705`, `0912` …) | [research/commissioning.md](research/commissioning.md) §19.11–§19.18 |
 
 ## 2. Unpublished local work in the root checkout
@@ -57,7 +57,7 @@ These stay open on purpose. Reopen only on a new decision.
 | Package/application version pinning and a selector | Continued deferral (2026-10-04); first-installed winner with disclosed candidates | `KL-135` ACCEPTED_BOUNDARY |
 | Live tunnel from a Docker bridge container (Route Back) | Optional, only with a user go; offline HPAI tests are delivered | `KL-155` DONE (residue in §155) |
 | New real-hardware, power-loss, vendor and ETS validation | Removed from commissioning scope (2026-10-04) | many `commission` rows ACCEPTED_BOUNDARY |
-| Durable pre-write recovery for K6 button / serial / K13 address writes | Confirmed public address writes fail closed before any tunnel until device-specific recovery exists; every new write needs its own go | ADR-0057–0059, `goal-commission.md` §3 (archived) |
+| Durable pre-write recovery for K6 button / serial / K13 address writes | Confirmed public address writes fail closed before any tunnel until device-specific recovery exists; every new write needs its own go | ADR-0057–0059, `goal-commission.md` §3 (removed, see REMOVED_DOCS) |
 | Reset UI, Web partial-scope selector | Reset UI: accepted refused boundary with a user notice; selector handed to UI and delivered (`KL-142` DONE) | `UI-04` ACCEPTED_BOUNDARY |
 
 ## 4. Later scope (never alpha tasks)

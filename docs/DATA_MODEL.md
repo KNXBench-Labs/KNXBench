@@ -595,7 +595,7 @@ parts, devices and communication objects (including a normalized
 ranges/addresses, parameter instances — plus `project_info` and
 `id_allocators` for the project's own scalar/counter state. Full detail,
 including the owned-list-vs-flat-list `position`-column reasoning, is in
-[the design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md),
+[the design spec](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-03-knx-entity-persistence-design.md),
 not repeated here. Unlike Sessions 3 and 4, this one *does* change
 `knx-core`'s Rust shape, though only by derive: `Project`, `Devices`,
 `StringTable` and `IdAllocators` all gain `#[derive(PartialEq)]`, and

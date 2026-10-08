@@ -16,7 +16,7 @@
 //! addresses, `L`, TPCI, APCI, data) has to come back octet for octet.
 //!
 //! Not an importer: KNXBench does not read this format for users
-//! (`docs/archive/alpha-0.1/goal-commission.md` K19).
+//! (commissioning goal K19, see `docs/history/REMOVED_DOCS.md`).
 
 use std::collections::BTreeMap;
 

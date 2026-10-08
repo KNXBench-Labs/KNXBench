@@ -6,7 +6,7 @@ application and does not touch the KNX domain, project files or any bus.
 
 Status: first private version. Nothing here is approved for publication.
 Design and boundaries: [ADR-0068](../docs/adr/0068-project-evolution-story-is-a-static-offline-companion.md),
-[brief](../docs/PROJECT_EVOLUTION_STORY_BRIEF.md), [goal](../docs/archive/PROJECT_EVOLUTION_GOAL.md).
+[brief](../docs/PROJECT_EVOLUTION_STORY_BRIEF.md), [goal](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/PROJECT_EVOLUTION_GOAL.md).
 
 ## Layout
 

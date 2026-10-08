@@ -22,10 +22,14 @@ test("renders a synthetic map without any API request and names an activity lead
 
 test("reaches a device and its current values with the keyboard alone", async ({ page }) => {
   await open(page);
-  const first = page.getByRole("list", { name: "Devices and group nodes" }).getByRole("button").first();
-  await first.focus();
+  const list = page.getByRole("list", { name: "Devices and group nodes" });
+  // Generated nodes can change the sorted first entry between focus and assertion.
+  const id = await list.getByRole("button").first().innerText();
+  const device = list.getByRole("button", { name: id, exact: true });
+  await device.focus();
+  await expect(device).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(first).toHaveAttribute("aria-pressed", "true");
+  await expect(device).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("inspector")).toContainText("Current values");
 });
 

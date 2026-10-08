@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (parked packages delivered)
+- **Timestamp:** 2026-10-08 15:44 CEST
+- **Completed:** Both root-parked packages are on main. Website `7c0f73b5` (ADR renumbered 0095, launch note public, story pin 2026-10-08.4, imprint committed on owner decision; 17 unit + 154 Chromium checks). Community evidence `b7059b38` (contribution analysis/export via UI/API/CLI) incl. ADR-0091 consolidation: issue form in `.github/ISSUE_TEMPLATE/analysis.yml`, guides `docs/contribution-intake/`, app/website link the main repo; gate Rust 3,721/0, Vitest 2,415/0, Playwright 175, clippy, xtask 5/5. Also `767c3770`: 242 pinned REMOVED_DOCS links repaired after the purge (were 404).
+- **Pending/Next Steps:** Owner: retire interim `KNXBench-Contributions` (archive or pointer README; it has 0 issues). Website deployment gates (go/release mode, host privacy, Pages/DNS/HTTPS). Story commit-link remap (pre-purge hashes). Mailbox `contribute@knxbench.com` unverified.
+- **Notes for Codex oder Claude:** Parked `wip/*-20261008` branches deleted after delivery; full pre-sync bytes remain in `KNXBench.backups/2026-10-08-root-sync/`. Parallel docs-refresh worktree untouched; rebase it onto main (docs/IMPLEMENTATION_STATUS, ROADMAP, KL, OPEN_WORK, manual/README changed). Log `.ai/logs/2026-10-08_claude_parked-packages-delivery.md`.
+
+---
+
 - **Last Agent:** Claude (root sync after public launch)
 - **Timestamp:** 2026-10-08 14:53 CEST
 - **Completed:** Shared root checkout synchronized and clean on `origin/main`. All local uncommitted work was backed up (`KNXBench.backups/2026-10-08-root-sync/`) and parked hash-exact on two LOCAL branches based on the new history: `wip/website-20261008` (website + WEBSITE.md + static-marketing ADR, whose number 0094 collides with main) and `wip/community-evidence-20261008` (community evidence package, parameter-presentation/LCARS files, older drafts, and the root handover with 39 entries not verbatim on main). `.serena/` added to `.gitignore` (local Serena state was unprotected after `203b601b`). Website preview on :4198 still serves (local `.git/info/exclude` for `website/dist|output`).

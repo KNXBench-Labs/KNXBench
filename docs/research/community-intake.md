@@ -6,8 +6,9 @@
 ## 2026-10-08 — Consolidated into the public main repository
 
 The main repository went public on 2026-10-08; the issue form and guides were
-moved there the same day (see ADR-0091). The section below is the plan that
-led to it.
+moved there the same day (see ADR-0091), and the interim
+`KNXBench-Contributions` repository was deleted afterwards. The sections below
+are the plan that led to it and keep their historical wording.
 
 ## 2026-10-08 — Owner clarification: one main repository after public launch
 

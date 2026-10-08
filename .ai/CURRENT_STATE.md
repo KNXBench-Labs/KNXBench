@@ -1,3 +1,32 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-08 10:00
+- **Completed:** ADR-0093 package P2 — add-device wizard delivered on `main`
+  (`60e16158`). Server: `POST /api/devices` gains `installationId`,
+  `buildingPartId` (placement via `MoveDeviceToBuildingPart` in the same
+  `Batch`, one undo step) and `expected` (409 `catalogPreviewStale` when the
+  create would now produce other names/addresses); new read-only
+  `POST /api/devices/preview` (plan + apply + enrich on a project copy, no ID
+  reservation). `domain::resolve_catalog_installation` makes line,
+  installation and building part agree. Web: `DeviceWizard.tsx`,
+  `DeviceWizardProduct.tsx`, `deviceWizardPlacement.ts`, shared
+  `CatalogInstallReport.tsx` (extracted from `CatalogBrowser.tsx`); explorer
+  add rows under lines, every installation's Unassigned and rooms; palette
+  `add-device`; catalog **Add with wizard…**; project wizard's **Add devices
+  now** opens the device wizard. Docs: ADR-0093 status "both wizards
+  implemented", KNOWN_LIMITATIONS U12 sentence + new §167, manual 05/02,
+  implementation-status, IMPLEMENTATION_STATUS. Gate: Vitest 2,370/142 files, Chromium 170 + repeat ×3 39, Rust 3,571 passed/0 failed/178 ignored, fmt, clippy, xtask checks, inputs frozen; two over-long header lines shortened afterwards and re-checked (headers ok 155/155).
+- **Pending/Next Steps:** Wizard goal (Q1–Q18) complete. Possible follow-ups,
+  none requested: catalog workspace could also send `installationId` for its
+  unassigned target; manual screenshot of the device wizard (none committed).
+- **Notes for Codex oder Claude:** The device wizard is a view over the catalog
+  routes (ADR-0093 §1); never add domain rules to it. `expected` is part of the
+  replay fingerprint, so a retry after a lost response must resend the same
+  `expected` (the wizard does). Replay is checked before `expected`, so a
+  committed request replays instead of answering 409. Explorer `Unassigned`
+  is now shown for every installation (it hosts the add row).
+
+---
+
 - **Last Agent:** Claude (achievement popup timing and exit)
 - **Timestamp:** 2026-10-08 09:17 CEST
 - **Completed:** At the user's request achievement popups stay 9 s (was 6 s) and slide out (`knx-achievement-out`, twice the entry duration, motion settings respected); × uses the same exit. `useToasts` marks `leaving`, `ToastStack` removes on that animation's `animationend`, a 1 s fallback covers reduced/no motion. Error and fun toasts unchanged. Unit + Chromium tests (incl. reduced motion); a CSS mutation turns the browser test red. ADR-0089, manual and IMPLEMENTATION_STATUS updated.

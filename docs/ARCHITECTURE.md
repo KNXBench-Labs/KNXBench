@@ -186,7 +186,8 @@ knx-cli ────────────────────> knx-app �
                                  ├─> knx-productdb ─> knx-core
                                  ├─> knx-net ──────> knx-core
                                  ├─> knx-diff ──────> knx-core
-                                 └─> knx-secure
+                                 └─> knx-secure     (also knx-app's own edge:
+                                                     legacy EX-IM files, ADR-0094)
 ```
 
 (`knx-web` has no place in this graph — it is an npm package, not a Cargo
@@ -456,6 +457,18 @@ into a log or a report. `zipcrypto::decrypt` takes `&[u8]` rather than
 schema ≥ 21, a different thing from the raw ZipCrypto password, and
 conflating the two would be exactly the kind of convenience this section
 exists to prevent.
+
+A second caller since 2026-10-08 (ADR-0094): `knx_app::legacy` decrypts
+legacy ETS3 EX-IM product files (`.vd3`–`.vd5`) with a password the user
+types, through the same `zipcrypto::decrypt`. The split is deliberate.
+`knx-productdb` reads the legacy container and grammar but never decrypts:
+it hands out the raw stream and its check bytes
+(`LegacyMember::encrypted_stream`) and finishes from the decrypted bytes
+(`LegacyMember::open_decrypted`). `check-layering` forbids
+`knx-productdb → knx-secure`, dev edges included. Without that rule
+`knx-mcp`, which links `knx-productdb`, would link key material, and
+ADR-0090 rules that out. The password lives only in `knx_app::legacy::LegacyPassword`.
+It has a redacting `Debug`, no `Display`/`Clone`/serde, and is never stored.
 
 Retrofitting isolation is how secrets leak, which is why the boundary exists
 before the feature does (ADR-0008).

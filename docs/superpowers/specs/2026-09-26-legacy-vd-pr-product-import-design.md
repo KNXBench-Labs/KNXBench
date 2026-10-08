@@ -1,5 +1,13 @@
 # Design — legacy VD/PR (`.vd3`–`.vd5`, `.pr3`–`.pr5`) product import
 
+**Status update 2026-10-08:** accepted by the maintainer with amendments.
+ADR-0094 records the decisions, and
+`.ai/logs/2026-10-08_claude_legacy-vd-grilling.md` holds the interview.
+Amendments: B-1/B-2 `.pr*` out of scope; parameters, communication objects
+and visibility join the mapping (L2); an optional locally remembered
+password (L3); direct table mapping with the ETS-converted program as the
+acceptance oracle. L1 (read-only inspection) is implemented.
+
 **Status:** proposed, 2026-09-26 (DIN-9, `goal.md` §7 "Legacy VD/PR product
 import"). This is a research and design document. It contains no code and
 authorizes no implementation. An implementation issue may be opened only after

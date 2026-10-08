@@ -91,3 +91,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0089](0089-achievements.md) | Achievements are a frontend catalogue over a grow-only server record | Accepted | 2026-10-07 |
 | [0090](0090-read-only-mcp-adapter.md) | A read-only, stdio-only MCP adapter over saved project files | Accepted | 2026-10-07 |
 | [0093](0093-wizards-are-views-over-existing-commands.md) | Wizards are views over existing commands; a new project's structure is seeded atomically | Accepted (both wizards implemented) | 2026-10-08 |
+| [0094](0094-legacy-exim-product-files.md) | Legacy EX-IM product files get a separate, content-detected path with a user-supplied password | Accepted | 2026-10-08 |

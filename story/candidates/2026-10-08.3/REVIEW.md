@@ -1,8 +1,8 @@
-# Review checklist for candidate 2026-10-08.2
+# Review checklist for candidate 2026-10-08.3
 
 This candidate is **private** and **not approved for publication**. Preparing it does not
 approve it. Publication needs a separate, explicit approval of exactly
-`story_sha256 = 3a7bf4a6469512ab830f6aaf738cc0e4b3352adf6f69f1b8b42a0547f6dd2636`; any later change needs a new approval.
+`story_sha256 = ac02cbb4e7e1fcaa6fd394c935976535b0db64782699304154d24e3bfaf01821`; any later change needs a new approval.
 
 ## Manual checks
 
@@ -22,7 +22,8 @@ Automatic scanning cannot prove that content is safe to publish; it only flags p
 
 ## Automatic privacy scan
 
-- warning: possible KNX individual address or version number at `events[alpha-backlog].aside`: “Version 0.1.0-alpha.1, no tag, no…”
+- warning: possible KNX individual address or version number at `events[alpha-backlog].aside`: “…as written: version 0.1.0-alpha.1, no tag, no…”
+- warning: possible KNX individual address or version number at `events[first-alpha].summary`: “…s decision, version 0.1.0-alpha.4 was tagged …”
 
 ## Private traceability
 
@@ -63,6 +64,15 @@ Automatic scanning cannot prove that content is safe to publish; it only flags p
 - `theme-packs-crt` (user): Translated from German · Shortened
 - `evolution-story` (user): Translated from German · Shortened
 - `story-narrator` (user): Translated from German
+- `telegram-flow` (user): Translated from German · Shortened
+- `telegram-flow` (user): Translated from German · Shortened
+- `alpha-review` (user): Shortened
+- `first-alpha` (user): Translated from German
+- `evidence-of-record` (user): Translated from German · Shortened · Edited for privacy
+- `fun-features` (user): Translated from German
+- `fun-features` (user): Translated from German · Shortened
+- `lcars-theme` (user): Translated from German · Shortened
+- `goals-closed` (user): Translated from German · Shortened
 
 ## Editorial links
 
@@ -75,6 +85,8 @@ Automatic scanning cannot prove that content is safe to publish; it only flags p
 - `project-stats` → `evolution-story`: Counting the project came first; explaining it came next.
 - `alpha-backlog` → `evolution-story`: Taking stock, two days apart.
 - `test-transmitting-building` → `story-narrator`: The commit messages had spoken like a depressed robot for weeks; no source says that inspired the narrator.
+- `loading-jokes` → `fun-features`: The same appetite for jokes, now with trophies.
+- `hermes-shared-memory` → `mcp-adapter`: From agents sharing notes about the project to agents reading the project itself.
 
 ## Recorded uncertainty
 
@@ -90,10 +102,10 @@ Automatic scanning cannot prove that content is safe to publish; it only flags p
 - `codex-joins-goal`: date precision is approximate
 - `spec-knowledge-base`: The audit figures and the pipeline's steps come from the user's messages in those conversations, not from the knowledge base's own files, which were not read for this edition.
 - `spec-knowledge-base`: date precision is approximate
-- `ui-redesign`: Which lines each agent wrote cannot be told from Git metadata; all commits carry the user's identity.
-- `appimage`: README at the cutoff states that no release has ever been published.
+- `ui-redesign`: Which lines each agent wrote cannot be told from Git metadata; every commit carries the same project identity.
+- `appimage`: The first AppImage pre-release followed on 7 October 2026, in the still private repository.
 - `test-transmitting-building`: What, if anything, the stray messages did in the building is not recorded.
-- `history-scrub`: Because of the rewrite, commit hashes from before 20 September differ from the hashes the agents saw at the time.
+- `history-scrub`: Commit hashes from before 20 September differ from the hashes the agents saw at the time, and all hashes changed again on 7 October.
 - `project-stats`: The script itself lives outside this repository; only its reports are versioned here.
 - `project-stats`: The date marks reports from late September; the script's own start date is not established here.
 - `project-stats`: date precision is approximate
@@ -103,9 +115,13 @@ Automatic scanning cannot prove that content is safe to publish; it only flags p
 - `first-device-programmed`: date precision is approximate
 - `split-goals`: Whether the end of the orchestration experiment led directly to the split is not documented; the connection shown is editorial.
 - `fail-closed-writes`: date precision is approximate
-- `alpha-backlog`: The README is committed under the user's name; whether its wording was drafted with AI help is not recorded.
+- `alpha-backlog`: Whether the README's wording was drafted with AI help is not recorded.
 - `theme-packs-crt`: Native desktop rendering and screen-reader behaviour of the theme are documented as not yet accepted.
 - `crawler-corpus`: Evidence from one run, not a repeatable gate; the downloaded files are not part of the repository.
-- `story-first-preview`: This step is local and unpublished; it is not part of the published history at the cutoff.
-- `story-first-preview`: Whether and when this story is published is still undecided.
+- `story-first-preview`: The page itself is published only after a separate approval of one exact edition.
 - `story-narrator`: The voice is an editorial choice for this edition; earlier candidates keep their original narration.
+- `alpha-review`: The reviewers were AI sessions, independent of the work, but not of the kind of tool that did it.
+- `first-alpha`: The pre-releases were published in a private repository, so they were not publicly downloadable.
+- `one-name`: The user's requests for this change are not quoted because they contain the very details that were removed.
+- `evidence-of-record`: 'Untested' means exactly that: these plans have not been tried on the devices.
+- `legacy-vd`: The largest sample file exceeds the current size limits, and download from these programs is not implemented.

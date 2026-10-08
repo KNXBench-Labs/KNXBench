@@ -2561,6 +2561,11 @@ See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
 - Follow-up 2026-10-08: editions `2026-10-08.1` (ETS wording: "comparable
   functionality", not "mirrors") and `2026-10-08.2` (no remarks about AI usage
   limits). Only `2026-10-08.2` is kept in the tree.
+- Follow-up 2026-10-08: edition `2026-10-08.3` moves the cutoff to `origin/main`
+  `6a1ba6ae` (2,295 commits), remaps every commit reference through the
+  7 October commit map, and adds 13 steps (4–8 October) plus a ninth chapter.
+  The browser check now reads the chapter count and the bus steps from the
+  edition; date labels yield to step labels that reach into the date column.
 - Story motion update (user request, site only, no content change): scrolling
   back retracts later steps and refocuses the current chapter; looping signal
   pulses travel each visible connection (paused off screen); random headline

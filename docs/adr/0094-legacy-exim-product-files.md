@@ -1,0 +1,162 @@
+# ADR 0094: Legacy EX-IM product files get a separate, content-detected path with a user-supplied password
+
+Date: 2026-10-08
+Status: Accepted
+Session: 7 (integration / hardening), legacy VD package L1
+
+## Context
+
+Some KNX devices are only available as ETS3-era product databases
+(`.vd3`–`.vd5`). The maintainer has such a device and wants to use it in
+KNXBench. The decisions here were settled in a recorded interview on
+2026-10-08 (`.ai/logs/2026-10-08_claude_legacy-vd-grilling.md`), which
+accepted the design study
+[2026-09-26-legacy-vd-pr-product-import-design.md](../superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md)
+as the basis, with amendments.
+
+Evidence (`[V]` measured on 2026-10-08 unless noted):
+
+- *The KNX Standard* v3.0.0 names `vd3`–`vd5` as the ETS3 end-user product
+  database format and directs conversion to `.knxprod`. It does not describe
+  the bytes `[D]` (design study §3.4).
+- Three real files share one container family: `EIBMARKT.VD3` (2006, `V 5.10`),
+  an Eibmarkt `.vd4` (2012, `V 6.2`) and an MDT `.pr5` (2014, `V 6.3`). Each
+  file is a ZIP with exactly one ZipCrypto-encrypted, deflated member
+  (`ets.vd_` or `ets.pr_`). The local header sits at offset 0 and nothing lies
+  between the member and the central directory. All three decrypt with the
+  same password, which is held only in a local ignored file.
+- All three payloads follow one line grammar: `T`/`C`/`R` records, a
+  37-dash separator before each table, `\\` continuation lines and a final
+  `XXX`. The parser reads them with zero diagnostics: 37 tables with 4,214
+  rows, 37 with 14,734, and 16 with 12. Long values wrap at exactly 40 or
+  80 bytes, which supports the continuation reading. Dash lines also occur
+  as values (`----`, `-`).
+- Column sets differ between format versions. For example, the VD3 has
+  `address_fixup` and `mask_entry`, and the VD4 has `MinEtsVersion` and
+  `OBJECT_READONINIT*`. Tables and columns therefore have to be addressed by
+  name.
+- No payload has a byte in `0x80`–`0x9F`. Windows-1252 and ISO-8859-1 give
+  the same text for all of them, so the charset cannot be decided from these
+  samples.
+- ETS's own conversion of the VD4's `N000520_IRBM_20` program is embedded in
+  the maintainer's house project. It has 260 parameter references for the
+  program's 260 legacy parameters, 28 com-object references for its 28
+  legacy objects, `P-<PARAMETER_NUMBER>` ids and mask `MV-0701` (legacy
+  `MASK_VERSION 1793`). This is the oracle for the later mapping.
+
+## Decision
+
+1. **A separate module, `knx-productdb::legacy`, handles these files.** It
+   has its own grammar (`exim`), container (`container`) and summary
+   (`inspect`). It never uses `quick_xml`. The modern package parser never
+   calls it, except through the content detector named in point 2. A legacy
+   file never reaches the `.knxproj` importer.
+2. **Detection is by content.** A file is legacy when it passes the existing
+   package ZIP validator and has exactly one member whose base name is
+   `ets.vd_`, `ets2.vd_` or `ets.pr_` (ASCII, case-insensitive). The detector
+   reads metadata only. `install_package` runs it after the filename checks
+   and refuses a hit with `PackageError::LegacyExIm`, so a legacy file named
+   `.knxprod` is named for what it is. `.vd3` and `.vd5` are accepted
+   whenever the content matches; their support is not claimed until a sample
+   of that version has been measured (the VD3 is now measured). `.vd2`
+   stays permanently refused (KNOWN_LIMITATIONS §11).
+3. **The ZIP container is reused, not re-implemented, and decryption stays
+   out of `knx-productdb`.**
+   - Structure, identity and local/central agreement come from the package
+     validator (`validated_zip_members`).
+   - `read_legacy_member` additionally requires the observed layout: the
+     local header at offset 0 and the member contiguous with the central
+     directory. It refuses strong encryption, AES and compression methods
+     other than stored or deflate. It caps the file and the declared payload
+     at 64 MiB.
+   - For an encrypted member it hands out the raw ZipCrypto stream and both
+     check bytes. `knx_app::legacy::open_legacy_file` decrypts that stream
+     with `knx-secure::zipcrypto`, the single implementation. It then passes
+     the plaintext to `LegacyMember::open_decrypted`, which inflates at most
+     one byte beyond the declared size and requires the CRC-32 to match.
+   - `knx-productdb` must not reach `knx-secure`, not even through
+     dev-dependencies. A new `check-layering` rule enforces this. The design
+     study proposed the edge `knx-productdb → knx-secure` (B-4), but the
+     gate showed that it would make `knx-mcp` link key material
+     (`knx-mcp → knx-productdb → knx-secure`), which ADR-0090 forbids.
+4. **The password is always supplied by the user.** No password exists in
+   source, tests, fixtures, documents, binaries or logs, and none is ever
+   guessed or tried from a list. `knx_app::legacy::LegacyPassword` redacts
+   `Debug` and has no `Display`, `Clone` or serialisation. An empty password counts as missing.
+   A failed check byte is reported as `WrongPassword`. When the data fails to
+   inflate or its CRC does not match after the check byte passed, the error
+   is `WrongPasswordOrCorrupt`, because ZipCrypto cannot tell the two cases
+   apart. An ignored corpus test scans every tracked and untracked
+   non-ignored file for the real password, read from
+   `KNXBENCH_VD_PASSWORD_FILE`. A planted negative control proves that the
+   scan finds it. Remembering one password locally on the server is a later
+   slice (L3, Q12 of the interview).
+5. **Parsing is bounded, strict and lossless.** One linear pass with
+   look-ahead of one line. Values are read strictly by column count. Raw
+   bytes are kept, and the decoded text is Windows-1252, labelled as an
+   assumption. Unknown header keys, unknown type codes, empty values in `N`
+   columns and bytes in `0x80`–`0x9F` are reported as diagnostics, never
+   dropped. Structural deviations are refused with their line number. One
+   example is a value that starts with `\\`, which the observed encoding
+   cannot represent.
+6. **The first slice (L1) is read-only.** `knx_app::legacy::inspect_legacy_file`
+   (decrypt, then `knx_productdb::legacy::inspect_payload`) and
+   `knx products inspect-legacy` decrypt, parse and summarise a file
+   (identity, tables, products, diagnostics). They write no database and
+   create no file. Publication into the product database (L2), the
+   server/web surfaces with the password dialog (L3) and download (L4, a
+   separate package) follow under this ADR.
+7. **Decisions recorded for L2.** These are binding but not implemented yet:
+   - Legacy rows go directly into the existing product tables, including
+     `dynamic_node` for visibility. No synthetic `.knxprod` XML is generated.
+   - Manufacturers map to `M-xxxx` by their numeric id, backed by three
+     verified pairs: 131 → `M-0083`, 106 → `M-006A` and 121 → `M-0079`.
+   - Every other id uses the marked space `M-xxxx_LX-<sha8>_A-<PROGRAM_ID>`,
+     with `_P-<PARAMETER_NUMBER>` and `_O-<OBJECT_NUMBER>_R-<OBJECT_UNIQUE_NUMBER>`.
+     The original file and the decrypted payload are kept as blobs. The
+     password is never kept.
+   - Nothing is merged with modern data; a possible modern equivalent is
+     only hinted at.
+   - Acceptance is semantic equivalence, judged by KNXBench's own evaluator,
+     against ETS's conversion in the house project.
+
+## Alternatives considered
+
+- **Built-in or "known" password.** Rejected. VD4_PRODUCT_DATABASE_IMPORT.md
+  sets out the legal assessment (UrhG §§ 69f, 95a). The user decided against
+  it on 2026-10-08 (Q3).
+- **Generating a synthetic `.knxprod` and feeding the existing parser.**
+  Rejected for L2. It would invent manufacturer-looking XML and imply
+  equivalence that has not been shown. Nothing that needs offline parameters
+  reads that XML.
+- **A second ZIP reader for the legacy container.** Rejected. It would
+  duplicate the hardened validator and its identity checks.
+- **Loosening the validator to accept Info-ZIP's streamed encryption
+  layout** (bit 3 with real local values). Rejected. No real legacy file
+  uses that layout. The synthetic fixtures are produced with `zipcloak`
+  instead, which writes the observed layout.
+- **Porting `knxReTk` or `sbtools-vdio`.** Rejected (GPL provenance, design
+  study §7). Neither source was opened for this implementation.
+
+## Consequences
+
+- A legacy file renamed `.knxprod` and given to the product installer
+  (CLI or server upload) is refused as `LegacyExIm`, not as an encrypted or
+  unsafe member.
+- A user can see what a legacy file contains before anything is imported.
+  The `.knxproj` and filename-based refusals stay as they were until L2.
+- New tests:
+  - the grammar (`knx-productdb/tests/legacy_exim.rs`);
+  - the container (`knx-productdb/tests/legacy_container.rs`, no
+    decryption);
+  - the password paths (`knx-app/tests/legacy_files.rs`);
+  - the CLI (`apps/knx-cli/tests/cli_legacy_inspect.rs`);
+  - an ignored corpus test (`knx-app/tests/legacy_corpus.rs`).
+
+  The corpus test needs `KNXBENCH_PRODUCT_CORPUS` and
+  `KNXBENCH_VD_PASSWORD_FILE`. It pins the hashes and counts of all three
+  real files and fails loudly without them. Every guard was checked with a
+  mutation sweep: each realistic revert fails a named test.
+- The synthetic fixtures (`crates/knx-productdb/fixtures/legacy/`) are
+  rebuilt by `build_fixtures.py` with Info-ZIP `zip` and `zipcloak`. They
+  use the public test password `marvin-synthetic` and invented content.

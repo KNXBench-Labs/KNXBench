@@ -230,6 +230,27 @@ a `.knxproj` it prints:
 > legacy `.vd2` product data is not supported, and the installer says so rather than
 > half-importing it. See [Known issues](../known-issues.md).
 
+### `knx products inspect-legacy`
+
+```bash
+knx products inspect-legacy EIBMARKT.VD3 --password-stdin
+```
+
+Reads an old ETS3-era product database (`.vd3`, `.vd4`, `.vd5`) or project
+export (`.pr5`) and shows what is inside: the container, the table list and
+every product with its order number, application program and mask version.
+**It imports nothing** and creates no file. Importing these products is the
+next step and is not available yet.
+
+These files are usually password-protected. Type the password on standard
+input with `--password-stdin`, or name a file whose first line holds it with
+`--password-file <path>`. A password given on the command line is refused,
+because other users of the machine could read it from the process list.
+KNXBench ships no password for these files and never guesses one.
+
+If you need the product in KNXBench today, the official route still works:
+convert the file to `.knxprod` with ETS (`KnxCvNext.exe`) and install that.
+
 ### `knx products show`
 
 ```bash

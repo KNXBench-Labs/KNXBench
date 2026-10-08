@@ -773,6 +773,38 @@ risking the export change ADR-0012 rules out; `.knxprod` direct ingest for
 master data scheme ≥ 12 (KNOWN_LIMITATIONS §11); schema 23 manufacturer
 data (same blocker as schema 23 project data).
 
+### 10.x Legacy EX-IM product files (`.vd3`–`.vd5`): inspection only (ADR-0094)
+
+```text
+.vd*/.pr* bytes ──► package ZIP validator (one member, ets.vd_/ets2.vd_/ets.pr_)
+                ──► layout check (offset 0, contiguous) ──► ZipCrypto with the user's password
+                ──► bounded inflate + CRC-32 ──► EX-IM grammar (strict, by column count)
+                ──► inspection report (identity, tables, products, diagnostics)
+```
+
+- **Entry points:** `knx_productdb::legacy::{detect_legacy_container,
+  read_legacy_member, parse_exim, inspect_payload}` (no decryption),
+  `knx_app::legacy::{open_legacy_file, inspect_legacy_file}` (decrypts with
+  the user's password through `knx-secure`) and the CLI command
+  `knx products inspect-legacy <file> [--password-stdin | --password-file <path>]`.
+  A password on the command line is refused without echoing it.
+- **Writes nothing.** Neither a product database nor a file is created
+  (asserted by `cli_legacy_inspect.rs`).
+- **Refusals** are typed `LegacyError`s that name the format:
+  `NotLegacyContainer`, `InvalidContainer`, `UnsupportedEncryption`,
+  `UnsupportedCompression`, `PasswordRequired`, `WrongPassword`,
+  `WrongPasswordOrCorrupt` (a check byte passed but the data did not
+  inflate or failed its CRC), `Corrupt`, `SizeLimit` and
+  `Syntax { line }`.
+- **Diagnostics are reported, never dropped:** unknown header keys,
+  unknown type codes, empty values in non-nullable columns, and bytes in
+  `0x80`–`0x9F`. The text decodes as Windows-1252, which is an assumption.
+- **Renamed files:** `install_package` refuses a legacy container under any
+  name as `PackageError::LegacyExIm` before any transaction. The modern XML
+  parser and the `.knxproj` importer never see its bytes.
+- **Not yet:** import into the product database (L2) and the server/web
+  upload (L3).
+
 ## 11. Group-address CSV exchange
 
 **This is a format KNXBench defines and owns, not an ETS one.** ETS has its

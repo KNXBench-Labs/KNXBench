@@ -13,7 +13,7 @@ import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { MultiSelection, Selection } from "./selection";
 import type { ItemClickHandler } from "./multiSelection";
 import { deviceInstallations, nestGroupRanges, owningInstallation, type GroupRangeTreeNode } from "./treeUtils";
-import CatalogBrowser from "./CatalogBrowser";
+import type { DeviceWizardTarget } from "./deviceWizardPlacement";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 import { writeDraggedGroupAddress } from "./groupAddressDrag";
@@ -368,11 +368,10 @@ export function NewAreaRow(props: { installationId?: number; onCreated: (tree: P
   );
 }
 
-// The trigger for CatalogBrowser (T2, GAP_ANALYSIS_ETS.md) — opens the
-// modal targeting this line (or `null` for the Unassigned bucket below).
-// A device on a line goes to that line's installation (ADR-0070); the
-// catalog route has no installation field, so an unassigned device always
-// lands in the first installation and only that one offers the row.
+// The trigger for the add-device wizard (ADR-0093), aimed at this line,
+// this installation's Unassigned bucket, or this room. A device on a line
+// goes to that line's installation (ADR-0070); a line-less one names its
+// installation explicitly, so every installation offers the row.
 function AddDeviceRow(props: { onAdd: () => void }) {
   const t = useTranslate();
   return (
@@ -744,6 +743,7 @@ function BuildingItem(
   props: {
     building: BuildingNode;
     onCreated: (tree: ProjectTree) => void;
+    onAddDevice: (target: DeviceWizardTarget) => void;
     buildingDeviceRevealTarget?: BuildingDeviceRevealTarget;
   } & SelectionProps & DeviceDragProps & BuildingDropProps & { revealRequest?: RevealRequest | null },
 ) {
@@ -779,6 +779,7 @@ function BuildingItem(
           key={c.id}
           building={c}
           onCreated={onCreated}
+          onAddDevice={props.onAddDevice}
           selection={selection}
           onSelect={onSelect}
           multiSelection={multiSelection}
@@ -815,6 +816,9 @@ function BuildingItem(
             && props.buildingDeviceRevealTarget.deviceId === d.id}
         />
       ))}
+      {building.kind === "Room" && (
+        <AddDeviceRow onAdd={() => props.onAddDevice({ buildingPartId: building.id })} />
+      )}
       <NewBuildingPartRow parentId={building.id} onCreated={onCreated} />
     </TreeNode>
   );
@@ -862,15 +866,12 @@ function GroupRangeItem(
 function InstallationItem(
   props: {
     installation: InstallationNode;
-    /** Only the first installation receives unassigned catalog devices. */
-    isFirst: boolean;
     onTreeUpdate: (tree: ProjectTree) => void;
-    onAddDevice: (lineId: number | null) => void;
+    onAddDevice: (target: DeviceWizardTarget) => void;
   } & SelectionProps & DeviceDragProps & LineDropProps & BuildingDropProps & { revealRequest?: RevealRequest | null },
 ) {
   const {
     installation,
-    isFirst,
     onTreeUpdate,
     onAddDevice,
     selection,
@@ -907,7 +908,7 @@ function InstallationItem(
             key={a.id}
             area={a}
             onCreated={onTreeUpdate}
-            onAddDevice={onAddDevice}
+            onAddDevice={(lineId) => onAddDevice({ lineId })}
             selection={selection}
             onSelect={onSelect}
             multiSelection={multiSelection}
@@ -928,6 +929,7 @@ function InstallationItem(
             key={b.id}
             building={b}
             onCreated={onTreeUpdate}
+            onAddDevice={onAddDevice}
             selection={selection}
             onSelect={onSelect}
             multiSelection={multiSelection}
@@ -943,8 +945,7 @@ function InstallationItem(
         ))}
         <NewBuildingPartRow installationId={installation.id} onCreated={onTreeUpdate} />
       </TreeNode>
-      {(installation.unassigned.length > 0 || isFirst) && (
-        <TreeNode label={t("explorer.unassigned")} revealGeneration={revealGeneration(props.revealRequest, unassignedReveal)}>
+      <TreeNode label={t("explorer.unassigned")} revealGeneration={revealGeneration(props.revealRequest, unassignedReveal)}>
           {installation.unassigned.map((d) => (
             <DeviceItem
               key={d.id}
@@ -964,9 +965,8 @@ function InstallationItem(
               scrollOnReveal={selectionIs(props.revealRequest, "device", d.id)}
             />
           ))}
-          {isFirst && <AddDeviceRow onAdd={() => onAddDevice(null)} />}
+          <AddDeviceRow onAdd={() => onAddDevice({ lineId: null, installationId: installation.id })} />
         </TreeNode>
-      )}
       <TreeNode label={t("explorer.groupAddresses")} revealGeneration={revealGeneration(props.revealRequest, groupAddressesReveal)}>
         {installation.group_addresses.map((ga) => (
           <GroupAddressItem
@@ -1006,13 +1006,12 @@ export default function ProjectExplorer(
     onSummary: (message: string) => void;
     onError: (error: unknown) => void;
     onRevealComplete?: (generation: number) => void;
+    /** ADR-0093: opens the add-device wizard; the App owns it. */
+    onAddDevice: (target: DeviceWizardTarget) => void;
   } & SelectionProps & { revealRequest?: RevealRequest | null },
 ) {
   const { tree, onTreeUpdate, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
-  // `undefined` = closed; `number | null` = open, targeting that line
-  // (or `null` for unassigned, which always means the first installation).
-  const [catalogTarget, setCatalogTarget] = useState<number | null | undefined>(undefined);
   const [dragSource, setDragSource] = useState<DragSource | null>(null);
   // MODEL-01 / ADR-0070: a device can be moved inside the one installation
   // whose topology places it; each installation only accepts its own.
@@ -1116,13 +1115,12 @@ export default function ProjectExplorer(
           selected={selection?.kind === "project"}
           onSelect={() => onSelect({ kind: "project", id: 0 })}
         />
-        {tree.installations.map((inst, idx) => (
+        {tree.installations.map((inst) => (
           <InstallationItem
             key={inst.id}
             installation={inst}
-            isFirst={idx === 0}
             onTreeUpdate={onTreeUpdate}
-            onAddDevice={setCatalogTarget}
+            onAddDevice={props.onAddDevice}
             selection={selection}
             onSelect={onSelect}
             multiSelection={multiSelection}
@@ -1137,13 +1135,6 @@ export default function ProjectExplorer(
           />
         ))}
       </ul>
-      {catalogTarget !== undefined && (
-        <CatalogBrowser
-          lineId={catalogTarget}
-          onCreated={onTreeUpdate}
-          onClose={() => setCatalogTarget(undefined)}
-        />
-      )}
       {(tree.errors > 0 || tree.warnings > 0) && (
         <footer>
           {tree.errors > 0 && (

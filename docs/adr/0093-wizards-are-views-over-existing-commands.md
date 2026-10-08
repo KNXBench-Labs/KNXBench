@@ -1,7 +1,7 @@
 # ADR 0093: Wizards are views over existing commands; a new project's structure is seeded atomically
 
 Date: 2026-10-08
-Status: Accepted (new-project wizard implemented; add-device wizard decided, implementation pending)
+Status: Accepted (both wizards implemented)
 Session: Post-alpha UX (wizards)
 
 ## Context
@@ -69,16 +69,23 @@ The user settled the shape in an interview (receipt
    Main groups are numbered from 1, middle groups from 0. An axis that does
    not fit its level refuses the whole preset; it is never truncated.
 
-5. **Add-device wizard (decided, not yet implemented).** A modal stepper
-   beside the catalog workspace. It reuses the catalog's API, replay and
-   diagnostics logic. Steps: product (search or install), placement
+5. **Add-device wizard.** A modal stepper beside the catalog workspace. It
+   reuses the catalog's API, replay and diagnostics logic (the install report
+   and diagnostic wording moved to `CatalogInstallReport.tsx`, shared by both). Steps: product (search or install), placement
    (installation, line, room), name/quantity/addresses, review, result.
    Parameters and group links are not part of it. `POST /api/devices` gains
    optional `installationId` and `buildingPartId`, applied in the same `Batch`
    and part of the replay fingerprint. A new read-only
    `POST /api/devices/preview` computes names and addresses without mutating
-   or reserving IDs. The create request carries the previewed values, and the
-   server answers `409` when it would now allocate different ones.
+   or reserving IDs. The create request carries the previewed values
+   (`expected`), and the server answers `409` (kind `catalogPreviewStale`)
+   when it would now allocate different ones. Line, installation and building
+   part must agree on one installation (`domain::resolve_catalog_installation`);
+   a disagreement or an unknown id is a `400` from preview and create alike.
+   Entry points: explorer rows under each line, each installation's
+   Unassigned bucket and each room; **Add device…** in the command palette;
+   **Add devices now** after a new project; **Add with wizard…** in the
+   catalog, which starts at the placement step.
 
 ## Alternatives considered
 
@@ -106,5 +113,12 @@ The user settled the shape in an interview (receipt
   (`tests/http_project_seed.rs`), web unit tests for draft checks, preset
   admission and every wizard step, and intercepted Chromium runs at 1440 px and
   400 px in English and German.
+- Add-device tests: placement agreement across two installations (domain
+  unit test), `tests/http_device_wizard.rs` (preview mutates nothing and
+  reserves nothing, create equals preview in one undo step, stale `409`,
+  line-less placement, unknown targets, replay fingerprint, malformed
+  expectation), web unit tests for placement defaults and the wizard, and
+  intercepted Chromium runs in English and German at 1440 px and 400 px.
+- What the stale check does not cover is listed in KNOWN_LIMITATIONS §167.
 - Floor names in the quick fill are generic and numbered (`Floor 1`); the
   wizard does not guess regional floor naming.

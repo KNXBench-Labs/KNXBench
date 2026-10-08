@@ -1498,7 +1498,7 @@ describe("App — starting a project from scratch", () => {
     await act(async () => root.unmount());
   });
 
-  it("opens the device catalog from the wizard's Add devices now", async () => {
+  it("opens the add-device wizard from the project wizard's Add devices now", async () => {
     apiMock.newProject.mockResolvedValue(baseTree());
     const root = await renderApp();
     await act(async () => {
@@ -1510,8 +1510,9 @@ describe("App — starting a project from scratch", () => {
     await act(async () => {
       findButton("Add devices now").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(host!.querySelector('[role="dialog"]')).toBeNull();
-    expect(host!.querySelector('section.catalog-workspace:not([hidden])')).not.toBeNull();
+    const dialogs = Array.from(host!.querySelectorAll('[role="dialog"]'));
+    expect(dialogs).toHaveLength(1);
+    expect(dialogs[0].querySelector("#device-wizard-title")?.textContent).toBe("Add device");
 
     await act(async () => root.unmount());
   });

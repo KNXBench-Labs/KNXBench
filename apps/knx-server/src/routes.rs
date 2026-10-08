@@ -104,6 +104,7 @@ pub fn project_routes() -> Router<SharedState> {
             post(install_catalog_package).layer(DefaultBodyLimit::max(MAX_CATALOG_PACKAGE_BYTES)),
         )
         .route("/api/devices", post(create_device))
+        .route("/api/devices/preview", post(preview_devices))
         .route("/api/devices/{id}", delete(delete_device))
         .route("/api/devices/batch-delete", post(batch_delete_devices))
         .route(
@@ -2903,6 +2904,146 @@ struct CreateDeviceBody {
     allocate_addresses: bool,
     #[serde(default)]
     unique_names: bool,
+    /// ADR-0093: optional placement, applied in the same undoable step.
+    #[serde(default)]
+    installation_id: Option<u8>,
+    #[serde(default)]
+    building_part_id: Option<u32>,
+    /// ADR-0093: the preview's names and addresses; a mismatch is a `409`.
+    #[serde(default)]
+    expected: Option<Vec<ExpectedDeviceDto>>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ExpectedDeviceDto {
+    name: String,
+    /// `area.line.device`, absent or `null` when no address is allocated.
+    #[serde(default)]
+    address: Option<String>,
+}
+
+impl CreateDeviceBody {
+    fn into_request(self) -> Result<domain::CatalogCreateRequest, ApiError> {
+        let expected = self
+            .expected
+            .map(|items| {
+                items
+                    .into_iter()
+                    .map(|item| {
+                        let address = item
+                            .address
+                            .map(|text| {
+                                text.parse::<knx_core::IndividualAddress>()
+                                    .map_err(|error| {
+                                        ApiError::bad_request(format!(
+                                            "expected address {text:?}: {error}"
+                                        ))
+                                    })
+                            })
+                            .transpose()?;
+                        Ok(domain::ExpectedCatalogDevice {
+                            name: item.name,
+                            address,
+                        })
+                    })
+                    .collect::<Result<Vec<_>, ApiError>>()
+            })
+            .transpose()?;
+        Ok(domain::CatalogCreateRequest {
+            line_id: self.line_id,
+            catalog_item_id: self.catalog_item_id,
+            name: self.name,
+            quantity: self.quantity,
+            request_id: self.request_id,
+            allocate_addresses: self.allocate_addresses,
+            unique_names: self.unique_names,
+            installation_id: self.installation_id,
+            building_part_id: self.building_part_id,
+            expected,
+        })
+    }
+}
+
+fn catalog_error(error: domain::CatalogCreateError) -> ApiError {
+    match error {
+        domain::CatalogCreateError::Refused(reason) => ApiError::bad_request(reason),
+        domain::CatalogCreateError::PreviewStale(reason) => {
+            ApiError::conflict("catalogPreviewStale", reason)
+        }
+    }
+}
+
+/// `POST /api/devices/preview` body: a create request without the replay
+/// token and the expectation, which only mean something to a create.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct PreviewDevicesBody {
+    #[serde(default)]
+    line_id: Option<u32>,
+    catalog_item_id: String,
+    name: String,
+    #[serde(default = "default_catalog_quantity")]
+    quantity: u32,
+    #[serde(default)]
+    allocate_addresses: bool,
+    #[serde(default)]
+    unique_names: bool,
+    #[serde(default)]
+    installation_id: Option<u8>,
+    #[serde(default)]
+    building_part_id: Option<u32>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PreviewDevicesResponseDto {
+    items: Vec<PreviewDeviceDto>,
+    diagnostics: Vec<CreationDiagnosticDto>,
+    installation_id: Option<u8>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PreviewDeviceDto {
+    index: u32,
+    name: String,
+    address: Option<String>,
+}
+
+async fn preview_devices(
+    State(state): State<SharedState>,
+    Json(body): Json<PreviewDevicesBody>,
+) -> Result<Json<PreviewDevicesResponseDto>, ApiError> {
+    let preview = domain::preview_catalog_devices_impl(
+        &state,
+        domain::CatalogCreateRequest {
+            line_id: body.line_id,
+            catalog_item_id: body.catalog_item_id,
+            name: body.name,
+            quantity: body.quantity,
+            request_id: None,
+            allocate_addresses: body.allocate_addresses,
+            unique_names: body.unique_names,
+            installation_id: body.installation_id,
+            building_part_id: body.building_part_id,
+            expected: None,
+        },
+    )
+    .map_err(catalog_error)?;
+    Ok(Json(PreviewDevicesResponseDto {
+        items: preview
+            .items
+            .into_iter()
+            .map(|item| PreviewDeviceDto {
+                index: item.index,
+                name: item.name,
+                address: item.address.map(|a| a.to_string()),
+            })
+            .collect(),
+        diagnostics: preview.diagnostics.into_iter().map(Into::into).collect(),
+        installation_id: preview.installation_id,
+    }))
 }
 
 fn default_catalog_quantity() -> u32 {
@@ -3023,21 +3164,10 @@ async fn create_device(
     State(state): State<SharedState>,
     Json(body): Json<CreateDeviceBody>,
 ) -> Result<Json<CreateDeviceResponseDto>, ApiError> {
-    domain::create_catalog_devices_impl(
-        &state,
-        domain::CatalogCreateRequest {
-            line_id: body.line_id,
-            catalog_item_id: body.catalog_item_id,
-            name: body.name,
-            quantity: body.quantity,
-            request_id: body.request_id,
-            allocate_addresses: body.allocate_addresses,
-            unique_names: body.unique_names,
-        },
-    )
-    .map(CreateDeviceResponseDto::from)
-    .map(Json)
-    .map_err(ApiError::bad_request)
+    domain::create_catalog_devices_impl(&state, body.into_request()?)
+        .map(CreateDeviceResponseDto::from)
+        .map(Json)
+        .map_err(catalog_error)
 }
 
 async fn delete_device(

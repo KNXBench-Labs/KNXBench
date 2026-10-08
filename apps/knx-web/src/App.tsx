@@ -17,6 +17,9 @@ import WorkbenchIcon from "./WorkbenchIcon";
 import StructureWorkspace, { type StructureView } from "./StructureWorkspace";
 import CatalogBrowser from "./CatalogBrowser";
 import NewProjectDialog from "./NewProjectDialog";
+import DeviceWizard from "./DeviceWizard";
+import { wizardTargetFor, type DeviceWizardTarget } from "./deviceWizardPlacement";
+import type { CatalogItem } from "./api";
 import ProjectPasswordDialog from "./ProjectPasswordDialog";
 import { projectPasswordRefusal, type ProjectPasswordRefusal } from "./projectPassword";
 import Inspector, { DeviceWorkspace } from "./Inspector";
@@ -328,6 +331,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     return () => window.removeEventListener("resize", onResize);
   }, []);
   const [catalogTarget, setCatalogTarget] = useState<{ lineId: number | null } | null>(null);
+  // ADR-0093: the add-device wizard and where it was opened from.
+  const [deviceWizard, setDeviceWizard] = useState<{ target: DeviceWizardTarget; product?: CatalogItem } | null>(null);
   // The from-scratch project launcher. Owned here rather than inside the
   // welcome screen because the File menu and the command palette open the
   // same dialog, and a project can be started with one already open.
@@ -1135,6 +1140,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     openCompanion: () => void openCompanion(),
     openHelp: () => requestHelpTopic(DEFAULT_HELP_TOPIC_ID),
     openCatalog: () => openCatalog(null),
+    addDevice: () => setDeviceWizard({ target: wizardTargetFor(selection) }),
     openIntroduction: guide.show,
     openAchievements: () => setAchievementsOpen(true),
   };
@@ -1173,7 +1179,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         </section>
       )}
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} active={!logOpen && !monitorOpen && view === "catalog"}
-        serverIncarnation={tree?.server_incarnation} onCreated={handleTreeUpdate} onClose={() => { setCatalogTarget(null); setView("overview"); }} />}
+        serverIncarnation={tree?.server_incarnation} onCreated={handleTreeUpdate} onClose={() => { setCatalogTarget(null); setView("overview"); }}
+        onWizard={tree ? (item) => setDeviceWizard({ target: { lineId: catalogTarget.lineId }, product: item }) : undefined} />}
       {tree && selection?.kind === "device" && deviceDetail?.id === selection.id && !logOpen && !monitorOpen && view !== "catalog" && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
     </div>
   );
@@ -1265,7 +1272,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
               explorer between these three, so there is nothing to
               redistribute and no separator to offer. */}
           {tree && <PaneSplitter label={t("workbench.resizeNavigation")} target={navBlockRef} resizes="above" value={navHeight} onChange={setNavHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
-          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} onRevealComplete={completeSearchReveal} />}
+          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onAddDevice={(target) => setDeviceWizard({ target })} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} onRevealComplete={completeSearchReveal} />}
           {tree && <PaneSplitter label={t("workbench.resizeDiagnostics")} target={diagnosticsBlockRef} resizes="below" value={diagnosticsHeight} onChange={setDiagnosticsHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
           <nav ref={diagnosticsBlockRef} className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")} style={{ height: diagnosticsHeight ?? undefined }}>
             <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen((open) => !open); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
@@ -1303,7 +1310,12 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
 
       {newProjectOpen && (
         <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} onSaveFirst={saveProject}
-          onAddDevices={openCatalog} />
+          onAddDevices={(lineId) => setDeviceWizard({ target: { lineId } })} />
+      )}
+      {tree && deviceWizard && (
+        <DeviceWizard tree={tree} target={deviceWizard.target} product={deviceWizard.product}
+          onCreated={handleTreeUpdate} onClose={() => setDeviceWizard(null)}
+          onOpenDevice={(id) => void selectEntity({ kind: "device", id })} />
       )}
       {passwordPrompt && (
         <ProjectPasswordDialog fileName={fileNameOf(passwordPrompt.path)} reason={passwordPrompt.reason}

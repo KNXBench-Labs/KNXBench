@@ -56,8 +56,9 @@ structure arrives together with the new project, so it is not an undo step: the 
 project is its own starting point.
 
 After creating, the wizard shows that the project is open but not yet saved and
-offers **Add devices now**, which opens the product catalog on the project's first
-line. Leaving the wizard with **Cancel** or **Escape** after you typed something asks
+offers **Add devices now**, which opens the
+[add-device wizard](05-devices-and-products.md#the-add-device-wizard) on the
+project's first line. Leaving the wizard with **Cancel** or **Escape** after you typed something asks
 first; pressing **Escape** again keeps you in the wizard.
 
 Creating the project does not choose a filename or write a project file. **Save** or

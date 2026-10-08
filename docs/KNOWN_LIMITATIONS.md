@@ -215,9 +215,12 @@ several installations or moves that would connect two installations
 (2026-10-04) the Project Explorer and the centre workspace offer creation in
 every installation: root creates name their installation, children follow
 their parent, devices move by drag and drop only inside one installation,
-and the project node renames installations. An unassigned catalog device
-still lands in the first installation, because the catalog route has no
-installation field; add it on a line of the target installation instead.
+and the project node renames installations. Since ADR-0093 (2026-10-08)
+`POST /api/devices` takes an optional `installationId` and `buildingPartId`:
+the add-device wizard and every installation's **Unassigned** row create a
+line-less device in the named installation and place it in a building part in
+the same undo step. The catalog workspace itself still sends neither, so an
+unassigned device created there lands in the first installation as before.
 Since part 2 (same day) the Inspector edits, deletes, moves and links an
 entity in the installation that owns it, and every move or link list offers
 only that installation's targets. The bulk toolbar moves a selection only
@@ -8597,3 +8600,26 @@ than code, and no guessed language-specific floor names.
 group addresses and devices are added afterwards in the explorer, as before.
 A larger structure is built in several steps. The seed is not an undo step:
 it is part of the new project's starting point.
+
+## 167. The add-device wizard confirms names and addresses, not the whole project
+
+**Limitation.** The wizard's review ([ADR-0093](adr/0093-wizards-are-views-over-existing-commands.md))
+is computed by `POST /api/devices/preview` on a copy of the project. The create
+sends back only the previewed names and addresses (`expected`); the server
+refuses with `409 catalogPreviewStale` when it would now produce different
+ones. Other changes in between are not detected as staleness: a line or
+building part deleted meanwhile is refused as an ordinary `400`, and a
+product package replaced in the database between preview and create yields
+the new package's diagnostics in the result. The wizard sets no parameters
+or group links. In the explorer only rooms offer an add-device row among
+building parts; other kinds are chosen in the wizard's placement step or
+through the palette with the part selected. The wizard keeps its state in
+memory only; closing it keeps no draft.
+
+**Why.** User decisions of 2026-10-08 (grill-me Q4, Q8, Q13, Q16): the
+expectation is tied to what the user saw, not to a revision counter whose
+meaning (`snapshot_revision` only orders responses) does not fit.
+
+**Impact.** A create can still be refused after a successful preview; the
+wizard says why and nothing is created. Parameters and links are edited in
+the device panel afterwards, as for catalog devices.

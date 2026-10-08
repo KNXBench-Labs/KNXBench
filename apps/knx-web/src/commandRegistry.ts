@@ -18,6 +18,8 @@ export interface CommandContext {
   openCompanion: () => void;
   openHelp: () => void;
   openCatalog: () => void;
+  /** ADR-0093: the add-device wizard, aimed at the selected line or building part. */
+  addDevice: () => void;
   openIntroduction: () => void;
   openAchievements: () => void;
 }
@@ -154,6 +156,12 @@ export const COMMANDS: PaletteCommand[] = [
     labelKey: "workbench.catalog",
     isEnabled: () => true,
     run: (ctx) => ctx.openCatalog(),
+  },
+  {
+    id: "add-device",
+    labelKey: "command.addDevice",
+    isEnabled: (ctx) => ctx.tree !== null,
+    run: (ctx) => ctx.addDevice(),
   },
   // The first-run guide opens by itself once per release stage; this row
   // (and the File menu's twin) is how it is read again (ADR-0084).

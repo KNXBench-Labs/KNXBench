@@ -2929,6 +2929,24 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .project-wizard-discard p { margin: 0; }
 .project-wizard .project-wizard-remove { flex: 0 0 auto; padding: 2px 9px; border: 1px solid var(--knx-border); background: transparent; box-shadow: none; color: var(--knx-muted); }
 .project-wizard .project-wizard-remove:hover { border-color: var(--knx-error-color); color: var(--knx-error-color); }
+/* ADR-0093 §5: the add-device wizard reuses the project wizard's shell. */
+.device-wizard-step { display: grid; gap: 10px; }
+.device-wizard-step .settings-field select, .device-wizard-step .settings-field input { width: 100%; }
+.device-wizard-product { margin: 0 0 10px; color: var(--knx-muted); font-size: 12px; overflow-wrap: anywhere; }
+.device-wizard-results { display: grid; gap: 4px; max-height: 18rem; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.device-wizard .device-wizard-result { display: grid; width: 100%; gap: 2px; padding: 6px 10px; border: 1px solid var(--knx-border); border-radius: 8px; background: transparent; box-shadow: none; color: var(--knx-foreground); text-align: left; }
+.device-wizard .device-wizard-result.selected { border-color: var(--knx-accent); background: color-mix(in srgb, var(--knx-accent) 14%, var(--knx-surface)); }
+/* The global button hover scales by 1.05, which the scrolling list would clip. */
+.device-wizard .device-wizard-result:hover:not(:disabled) { transform: none; box-shadow: none; border-color: var(--knx-accent); }
+.device-wizard-result-name { font-size: 13px; overflow-wrap: anywhere; }
+.device-wizard-result-meta { color: var(--knx-muted); font-size: 12px; overflow-wrap: anywhere; }
+.device-wizard-install { margin: 0; }
+.device-wizard-install input { display: block; margin-top: 4px; max-width: 100%; font-size: 12px; }
+.device-wizard-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.device-wizard-preview { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.device-wizard-preview li { overflow-wrap: anywhere; }
+.device-wizard-diagnostics { margin: 4px 0 0; padding-left: 18px; color: var(--knx-muted); font-size: 12px; }
+.device-wizard-step h4 { margin: 4px 0 0; font-size: 13px; }
 
 /* The project-load banner (`LoadProgressBanner.tsx`, ADR-0023). Sits under
    the toolbar for the whole of a load, and stays there afterwards only if

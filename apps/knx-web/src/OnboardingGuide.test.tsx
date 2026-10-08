@@ -34,6 +34,7 @@ function ctx(): CommandContext {
     openCompanion: record("openCompanion"),
     openHelp: record("openHelp"),
     openCatalog: record("openCatalog"),
+    addDevice: record("addDevice"),
     openIntroduction: record("openIntroduction"),
     openAchievements: record("openAchievements"),
   };

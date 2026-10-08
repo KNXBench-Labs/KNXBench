@@ -738,10 +738,58 @@ export async function installProductPackage(file: File): Promise<CatalogInstallR
   return response.json() as Promise<CatalogInstallReport>;
 }
 
-/** MODEL-04: opt-in catalog batch options; both are part of the replay fingerprint. */
+/** MODEL-04: opt-in catalog batch options; all are part of the replay fingerprint. */
 export interface CatalogCreateOptions {
   allocateAddresses: boolean;
   uniqueNames: boolean;
+  /** ADR-0093: installation of a line-less device; must agree with line and part. */
+  installationId?: number;
+  /** ADR-0093: building part (e.g. room) every new device is placed in, same undo step. */
+  buildingPartId?: number;
+  /** ADR-0093: the preview's names/addresses; a mismatch is refused with `409`. */
+  expected?: ExpectedCatalogDevice[];
+}
+
+export interface ExpectedCatalogDevice {
+  name: string;
+  address?: string | null;
+}
+
+/** `POST /api/devices/preview`: what a create would do now; nothing is changed. */
+export interface CatalogPreview {
+  items: { index: number; name: string; address: string | null }[];
+  diagnostics: CreationDiagnostic[];
+  installationId: number | null;
+}
+
+export interface CatalogPreviewRequest {
+  lineId: number | null;
+  catalogItemId: string;
+  name: string;
+  quantity: number;
+  allocateAddresses: boolean;
+  uniqueNames: boolean;
+  installationId?: number;
+  buildingPartId?: number;
+}
+
+export function previewDevices(body: CatalogPreviewRequest): Promise<CatalogPreview> {
+  return request("/api/devices/preview", {
+    method: "POST",
+    body: JSON.stringify({ ...(body.lineId === null ? {} : { lineId: body.lineId }),
+      catalogItemId: body.catalogItemId, name: body.name,
+      ...(body.quantity === 1 ? {} : { quantity: body.quantity }),
+      ...(body.allocateAddresses ? { allocateAddresses: true } : {}),
+      ...(body.uniqueNames ? { uniqueNames: true } : {}),
+      ...(body.installationId === undefined ? {} : { installationId: body.installationId }),
+      ...(body.buildingPartId === undefined ? {} : { buildingPartId: body.buildingPartId }) }),
+  });
+}
+
+/** Whether a create was refused because the project changed since its preview. */
+export function isPreviewStale(e: unknown): boolean {
+  const error = e as { status?: unknown; body?: { kind?: unknown } } | null;
+  return error?.status === 409 && error.body?.kind === "catalogPreviewStale";
 }
 
 export function createDevice(
@@ -758,7 +806,10 @@ export function createDevice(
       ...(quantity === 1 ? {} : { quantity }), ...(requestId === undefined ? {} : { requestId }),
       // Both default to false on the server; only a chosen option travels.
       ...(options.allocateAddresses ? { allocateAddresses: true } : {}),
-      ...(options.uniqueNames ? { uniqueNames: true } : {}) }),
+      ...(options.uniqueNames ? { uniqueNames: true } : {}),
+      ...(options.installationId === undefined ? {} : { installationId: options.installationId }),
+      ...(options.buildingPartId === undefined ? {} : { buildingPartId: options.buildingPartId }),
+      ...(options.expected === undefined ? {} : { expected: options.expected }) }),
   });
 }
 

@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — German UI uses the informal du-form throughout
+
+- User decision: the German catalogue addresses the reader as "du". 53
+  formal places in `apps/knx-web/src/messages/de.ts` rewritten by hand
+  (imperatives, "wenn Sie …", "Ihr/Ihre/Ihnen …"); the pronoun "Sie"
+  (she/it/they) is unchanged. The convention is recorded in the catalogue's
+  header comment.
+- New guard `i18n.duForm.test.ts` refuses formal address in the German
+  catalogue; negative control: it flags the previous catalogue.
+- Verified on the frozen candidate (`inputs_frozen=1`, base `a642eaf9`): web
+  build, `tsc`, flow-study/theme-fixture checks, **2,372 Vitest tests / 143
+  files**, **170 intercepted Chromium tests**, five xtask checks and
+  `git diff --check`. No Rust changed.
+
 ## 2026-10-08 — Add-device wizard with server preview and placement (ADR-0093)
 
 - New modal **Add device** wizard (`DeviceWizard.tsx`): product (search the

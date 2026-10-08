@@ -3,8 +3,8 @@
 mod common;
 
 use common::*;
-use knx_mcp::tools::{self, Page};
-use serde_json::Value;
+use knx_mcp::tools::{self, DeviceView, Page};
+use serde_json::{json, Value};
 
 fn page() -> Page {
     Page::new(Some(500), None).unwrap()
@@ -21,7 +21,7 @@ fn every_response_carries_the_envelope() {
     let ws = workspace(&[("home", &path)], None);
 
     let out = tools::project_summary(&ws, Some("home")).unwrap();
-    assert_eq!(out["schemaVersion"], 1);
+    assert_eq!(out["schemaVersion"], 2);
     assert_eq!(out["experimental"], true);
     assert!(out["dataNotice"]
         .as_str()
@@ -106,31 +106,63 @@ fn get_device_resolves_ids_addresses_and_refuses_ambiguity() {
     let products = product_db(dir.path());
     let ws = workspace(&[("home", &path)], Some(&products));
 
-    let out = tools::get_device(&ws, "home", "1.1.1").unwrap();
+    let out = tools::get_device(&ws, "home", "1.1.1", DeviceView::default()).unwrap();
     let result = &out["result"];
     assert_eq!(result["device"]["name"], "Dimmer kitchen");
-    assert_eq!(result["device"]["com_objects"].as_array().unwrap().len(), 3);
+    assert_eq!(result["comObjects"]["total"], 3);
+    assert_eq!(result["comObjects"]["items"].as_array().unwrap().len(), 3);
+    assert!(result["device"].get("com_objects").is_none());
     assert_eq!(result["location"]["line"]["name"], "Line 1.1");
     assert_eq!(result["productDatabase"]["state"], "resolved");
     assert_eq!(result["productDatabase"]["programId"], PROGRAM_ID);
+    // The projection's placeholder never leaves the adapter.
+    assert_eq!(result["device"]["product"]["resolution"], "Resolved");
+    assert_eq!(
+        result["device"]["product"]["catalog"]["order_number"],
+        "DIM-1"
+    );
+    let empty_dir = tempfile::tempdir().unwrap();
+    let empty = empty_dir.path().join("products.sqlite");
+    knx_productdb::open_and_migrate(&empty).unwrap();
+    let missing = tools::get_device(
+        &workspace(&[("home", &path)], Some(&empty)),
+        "home",
+        "#1",
+        DeviceView::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        missing["result"]["device"]["product"]["resolution"],
+        "NotInDatabase"
+    );
+    assert_eq!(
+        missing["result"]["productDatabase"]["state"],
+        "programNotInstalled"
+    );
+    let unreferenced = tools::get_device(&ws, "home", "#4", DeviceView::default()).unwrap();
+    assert_eq!(
+        unreferenced["result"]["device"]["product"]["resolution"],
+        "NoReference"
+    );
     let parameter = &result["parameters"]["items"][0];
     assert_eq!(parameter["refId"], MODE_REF);
     assert_eq!(parameter["raw"], "1");
     assert_eq!(parameter["valueText"], "Dimming");
-    assert_eq!(result["parameters"]["visibility"], "notEvaluated");
+    assert_eq!(parameter["visibility"], "active");
+    assert_eq!(result["parameters"]["visibility"], "evaluated");
 
-    let by_id = tools::get_device(&ws, "home", "#4").unwrap();
+    let by_id = tools::get_device(&ws, "home", "#4", DeviceView::default()).unwrap();
     assert_eq!(by_id["result"]["device"]["name"], "Unplaced sensor");
     assert_eq!(by_id["result"]["location"]["line"], Value::Null);
 
-    let ambiguous = tools::get_device(&ws, "home", "1.1.2").unwrap_err();
+    let ambiguous = tools::get_device(&ws, "home", "1.1.2", DeviceView::default()).unwrap_err();
     assert!(
         ambiguous.contains("#2") && ambiguous.contains("#3"),
         "{ambiguous}"
     );
-    assert!(tools::get_device(&ws, "home", "9.9.9").is_err());
-    assert!(tools::get_device(&ws, "home", "kitchen").is_err());
-    assert!(tools::get_device(&ws, "home", "#99").is_err());
+    assert!(tools::get_device(&ws, "home", "9.9.9", DeviceView::default()).is_err());
+    assert!(tools::get_device(&ws, "home", "kitchen", DeviceView::default()).is_err());
+    assert!(tools::get_device(&ws, "home", "#99", DeviceView::default()).is_err());
 }
 
 #[test]
@@ -139,10 +171,14 @@ fn without_a_product_database_meaning_is_reported_unknown() {
     let path = save(dir.path(), "home.knxdb", &project("Home"));
     let ws = workspace(&[("home", &path)], None);
 
-    let device = tools::get_device(&ws, "home", "1.1.1").unwrap();
+    let device = tools::get_device(&ws, "home", "1.1.1", DeviceView::default()).unwrap();
     assert_eq!(
         device["result"]["productDatabase"]["state"],
         "noProductDatabase"
+    );
+    assert_eq!(
+        device["result"]["device"]["product"]["resolution"],
+        "NoDatabase"
     );
     assert_eq!(
         device["result"]["parameters"]["items"][0]["valueText"],
@@ -177,13 +213,14 @@ fn explain_parameter_decodes_the_stored_option_and_offers_text_matches() {
         .collect();
     assert_eq!(selected.len(), 1);
     assert_eq!(selected[0]["value"], "1");
-    assert_eq!(result["visibility"], "notEvaluated");
+    assert_eq!(result["visibility"], "active");
 
     // Declared but not stored: the default applies and is not invented.
     let delay =
         tools::explain_parameter(&ws, "home", "#1", "M-00FA_A-0001-10-ABCD_P-2_R-1").unwrap();
     assert_eq!(delay["result"]["storedValue"], Value::Null);
     assert_eq!(delay["result"]["definition"]["maxInclusive"], "99");
+    assert_eq!(delay["result"]["visibility"], "active");
     assert!(delay["result"]["notes"]
         .to_string()
         .contains("program default applies"));
@@ -193,6 +230,177 @@ fn explain_parameter_decodes_the_stored_option_and_offers_text_matches() {
         suggestion.contains("M-00FA_A-0001-10-ABCD_P-2_R-1"),
         "{suggestion}"
     );
+}
+
+#[test]
+fn visibility_follows_the_programs_dynamic_tree_and_says_why_when_it_cannot() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = save(dir.path(), "home.knxdb", &project("Home"));
+    let products = product_db(dir.path());
+    let ws = workspace(&[("home", &path)], Some(&products));
+
+    let device = tools::get_device(&ws, "home", "#1", DeviceView::default()).unwrap();
+    let items = device["result"]["parameters"]["items"].as_array().unwrap();
+    let by_ref = |id: &str| items.iter().find(|i| i["refId"] == id).unwrap().clone();
+    assert_eq!(by_ref(MODE_REF)["visibility"], "active");
+    assert_eq!(by_ref(SWITCH_ON_REF)["visibility"], "inactive");
+    assert_eq!(by_ref(SWITCH_ON_REF)["text"], "Switch-on level");
+    assert_eq!(by_ref(STALE_REF)["visibility"], "stale");
+    let counts = &device["result"]["parameters"]["visibilityCounts"];
+    assert_eq!(
+        (&counts["active"], &counts["inactive"], &counts["stale"]),
+        (&json!(1), &json!(1), &json!(1))
+    );
+
+    let hidden = tools::explain_parameter(&ws, "home", "#1", SWITCH_ON_REF).unwrap();
+    assert_eq!(hidden["result"]["storedValue"], "4");
+    assert_eq!(hidden["result"]["visibility"], "inactive");
+    assert!(hidden["result"]["notes"]
+        .to_string()
+        .contains("depends on the program"));
+    let stale = tools::explain_parameter(&ws, "home", "#1", STALE_REF).unwrap();
+    assert_eq!(stale["result"]["visibility"], "stale");
+    assert_eq!(stale["result"]["definition"], Value::Null);
+
+    // Without a Dynamic tree, or without a product database, nothing is
+    // claimed and the reason is named.
+    let static_dir = tempfile::tempdir().unwrap();
+    let static_products = product_db_without_dynamic_tree(static_dir.path());
+    let static_ws = workspace(&[("home", &path)], Some(&static_products));
+    let device = tools::get_device(&static_ws, "home", "#1", DeviceView::default()).unwrap();
+    assert_eq!(device["result"]["parameters"]["visibility"], "notEvaluated");
+    assert_eq!(
+        device["result"]["parameters"]["visibilityReason"],
+        "noDynamicTree"
+    );
+    assert_eq!(
+        device["result"]["parameters"]["items"][0]["visibility"],
+        "notEvaluated"
+    );
+    let delay = tools::explain_parameter(&static_ws, "home", "#1", DELAY_REF).unwrap();
+    assert_eq!(delay["result"]["visibility"], "notEvaluated");
+    assert_eq!(delay["result"]["visibilityReason"], "noDynamicTree");
+
+    let bare = workspace(&[("home", &path)], None);
+    let mode = tools::explain_parameter(&bare, "home", "#1", MODE_REF).unwrap();
+    assert_eq!(mode["result"]["visibility"], "notEvaluated");
+    assert_eq!(mode["result"]["visibilityReason"], "noProductDatabase");
+}
+
+#[test]
+fn a_module_value_gets_its_modules_declaration_and_a_repeated_row_is_stale() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut home = project("Home");
+    let parameters = &mut home.installations[0].parameters;
+    for (id, ets_id, raw) in [(4, MODULE_VALUE_REF, "12"), (5, MODE_REF, "0")] {
+        parameters.push(knx_core::ParameterInstance {
+            id: knx_core::ParameterInstanceId(id),
+            device: knx_core::DeviceId(1),
+            source: knx_core::SourceRef {
+                ets_id: ets_id.into(),
+                ..parameters[0].source.clone()
+            },
+            raw: raw.into(),
+        });
+    }
+    let path = save(dir.path(), "home.knxdb", &home);
+    let products = product_db_with_module(dir.path());
+    let ws = workspace(&[("home", &path)], Some(&products));
+
+    let device = tools::get_device(&ws, "home", "#1", DeviceView::default()).unwrap();
+    let items = device["result"]["parameters"]["items"].as_array().unwrap();
+    let module = items
+        .iter()
+        .find(|i| i["refId"] == MODULE_VALUE_REF)
+        .unwrap();
+    assert_eq!(module["visibility"], "active");
+    assert_eq!(module["text"], "Channel delay");
+    // The first stored mode ("1") counts; the repeated "0" row is stale.
+    let modes: Vec<(&Value, &Value)> = items
+        .iter()
+        .filter(|i| i["refId"] == MODE_REF)
+        .map(|i| (&i["raw"], &i["visibility"]))
+        .collect();
+    assert_eq!(
+        modes,
+        vec![
+            (&json!("1"), &json!("active")),
+            (&json!("0"), &json!("stale"))
+        ]
+    );
+
+    let explained = tools::explain_parameter(&ws, "home", "#1", MODULE_VALUE_REF).unwrap();
+    assert_eq!(explained["result"]["visibility"], "active");
+    assert_eq!(explained["result"]["definition"]["text"], "Channel delay");
+    assert_eq!(explained["result"]["definition"]["maxInclusive"], "60");
+}
+
+#[test]
+fn get_device_pages_objects_and_values_and_counts_everything() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = save(dir.path(), "home.knxdb", &project("Home"));
+    let products = product_db(dir.path());
+    let ws = workspace(&[("home", &path)], Some(&products));
+    let page = |limit, offset| Page::new(Some(limit), Some(offset)).unwrap();
+
+    let first = tools::get_device(
+        &ws,
+        "home",
+        "#1",
+        DeviceView {
+            com_objects: page(2, 0),
+            parameters: page(1, 1),
+            ..DeviceView::default()
+        },
+    )
+    .unwrap();
+    let com = &first["result"]["comObjects"];
+    assert_eq!(
+        (&com["total"], &com["truncated"]),
+        (&json!(3), &json!(true))
+    );
+    assert_eq!(com["items"].as_array().unwrap().len(), 2);
+    // Absent means null: an object without a description carries no key.
+    assert!(com["items"][1].get("description").is_none());
+    let values = &first["result"]["parameters"];
+    assert_eq!(
+        (&values["total"], &values["stored"]),
+        (&json!(3), &json!(3))
+    );
+    assert_eq!(values["items"][0]["refId"], SWITCH_ON_REF);
+
+    let linked = tools::get_device(
+        &ws,
+        "home",
+        "#1",
+        DeviceView {
+            linked_only: true,
+            visibility: Some("inactive"),
+            ..DeviceView::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(linked["result"]["comObjects"]["total"], 2);
+    assert_eq!(linked["result"]["comObjects"]["linkedOnly"], true);
+    let inactive = &linked["result"]["parameters"];
+    assert_eq!(inactive["total"], 1);
+    assert_eq!(inactive["items"][0]["refId"], SWITCH_ON_REF);
+    assert_eq!(inactive["filter"], "inactive");
+    // The counts still describe every stored value, not only the filter.
+    assert_eq!(inactive["visibilityCounts"]["active"], 1);
+    assert_eq!(inactive["stored"], 3);
+
+    let refused = tools::get_device(
+        &ws,
+        "home",
+        "#1",
+        DeviceView {
+            visibility: Some("hidden"),
+            ..DeviceView::default()
+        },
+    )
+    .unwrap_err();
+    assert!(refused.contains("expected one of"), "{refused}");
 }
 
 #[test]
@@ -400,7 +608,7 @@ fn an_older_project_file_is_served_and_never_upgraded() {
     let summary = tools::project_summary(&ws, Some("old")).unwrap();
     assert_eq!(summary["source"]["migratedInMemoryFrom"], 9);
     tools::search(&ws, "old", "kitchen", None, page()).unwrap();
-    tools::get_device(&ws, "old", "1.1.1").unwrap();
+    tools::get_device(&ws, "old", "1.1.1", DeviceView::default()).unwrap();
     tools::get_group_address(&ws, "old", "1/1/1").unwrap();
     tools::find_issues(&ws, "old", None, page()).unwrap();
     tools::diff_projects(&ws, "old", "old", page()).unwrap();
@@ -444,8 +652,8 @@ fn imported_text_is_returned_as_data_and_opaque_members_never_leave() {
     let outputs = [
         tools::project_summary(&ws, None).unwrap(),
         tools::search(&ws, "home", "e", None, page()).unwrap(),
-        tools::get_device(&ws, "home", "#2").unwrap(),
-        tools::get_device(&ws, "home", "1.1.1").unwrap(),
+        tools::get_device(&ws, "home", "#2", DeviceView::default()).unwrap(),
+        tools::get_device(&ws, "home", "1.1.1", DeviceView::default()).unwrap(),
         tools::get_group_address(&ws, "home", "1/1/2").unwrap(),
         tools::find_issues(&ws, "home", None, page()).unwrap(),
         tools::diff_projects(&ws, "home", "home", page()).unwrap(),

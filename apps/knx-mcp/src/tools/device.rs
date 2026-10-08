@@ -1,16 +1,14 @@
 //! Single-entity tools: a device, one of its parameters, a group address.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use knx_core::{DeviceId, GroupAddress, IndividualAddress, ParameterInstance, Project};
+use knx_productdb::device_evaluation::{DeviceEvaluation, ValueStatus};
 use knx_productdb::query::ParameterView;
 use serde_json::{json, Value};
 
-use super::{envelope, ToolResult};
+use super::{envelope, Page, ToolResult};
 use crate::workspace::{Snapshot, Workspace};
-
-/// How many stored parameter values `get_device` lists inline.
-pub const MAX_DEVICE_PARAMETERS: usize = 200;
 
 /// Resolves `#12`/`12` (a device id) or `1.1.5` (an individual address).
 /// Several devices sharing an address is an error that names them all.
@@ -57,40 +55,125 @@ fn stored_parameters(project: &Project, device: DeviceId) -> Vec<&ParameterInsta
 }
 
 /// Where a device's program stands in the product database, plus its
-/// declared parameters when the program is installed.
+/// declared parameters and the evaluation of its stored values when the
+/// program is installed.
 struct ProgramLookup {
     state: &'static str,
     program_id: Option<String>,
     views: HashMap<String, ParameterView>,
+    visibility: Visibility,
 }
 
-fn lookup_program(ws: &Workspace, program_ref: &str) -> Result<ProgramLookup, String> {
-    let none = |state| ProgramLookup {
+/// Whether the program's `Dynamic` tree was run over the stored values.
+enum Visibility {
+    /// Not run; the reason is reported as `visibilityReason`.
+    NotEvaluated(&'static str),
+    Evaluated(Box<DeviceEvaluation>),
+}
+
+impl ProgramLookup {
+    /// The declaration behind a stored or declared id: verbatim, or for a
+    /// module-scoped stored id the module's declared `ParameterRef`.
+    fn view(&self, ets_id: &str) -> Option<&ParameterView> {
+        self.views.get(ets_id).or_else(|| match &self.visibility {
+            Visibility::Evaluated(evaluation) => evaluation
+                .scoped_ids
+                .get(ets_id)
+                .and_then(|(_, declared)| self.views.get(declared)),
+            Visibility::NotEvaluated(_) => None,
+        })
+    }
+
+    /// `(visibility, visibilityReason)` for one stored id.
+    fn stored_visibility(&self, ets_id: &str) -> (&'static str, Option<&'static str>) {
+        match &self.visibility {
+            Visibility::NotEvaluated(reason) => ("notEvaluated", Some(reason)),
+            Visibility::Evaluated(evaluation) => match evaluation.value_status(ets_id) {
+                ValueStatus::Active => ("active", None),
+                ValueStatus::Inactive => ("inactive", None),
+                ValueStatus::Stale => ("stale", None),
+                ValueStatus::Unknown => ("unknown", unknown_reason(evaluation)),
+            },
+        }
+    }
+
+    /// The list-level summary for `get_device`.
+    fn summary(&self) -> (&'static str, Option<&'static str>) {
+        match &self.visibility {
+            Visibility::NotEvaluated(reason) => ("notEvaluated", Some(reason)),
+            Visibility::Evaluated(evaluation) if !evaluation.traversal_complete() => {
+                ("incomplete", Some(TRUNCATED))
+            }
+            Visibility::Evaluated(_) => ("evaluated", None),
+        }
+    }
+}
+
+const TRUNCATED: &str = "evaluationBudgetExhausted";
+
+fn unknown_reason(evaluation: &DeviceEvaluation) -> Option<&'static str> {
+    (!evaluation.traversal_complete()).then_some(TRUNCATED)
+}
+
+fn lookup_program(
+    ws: &Workspace,
+    project: &Project,
+    device: DeviceId,
+    program_ref: &str,
+) -> Result<ProgramLookup, String> {
+    let none = |state, reason| ProgramLookup {
         state,
         program_id: None,
         views: HashMap::new(),
+        visibility: Visibility::NotEvaluated(reason),
     };
     if program_ref.is_empty() {
-        return Ok(none("noApplicationProgram"));
+        return Ok(none("noApplicationProgram", "noApplicationProgram"));
     }
     let Some(db) = ws.products() else {
-        return Ok(none("noProductDatabase"));
+        return Ok(none("noProductDatabase", "noProductDatabase"));
     };
     let conn = db.conn.lock().expect("product database mutex poisoned");
     let Some(program_id) =
         knx_productdb::query::resolve_program(&conn, program_ref).map_err(|e| e.to_string())?
     else {
-        return Ok(none("programNotInstalled"));
+        return Ok(none("programNotInstalled", "programNotInstalled"));
     };
     let views = knx_productdb::query::parameter_views(&conn, &program_id, None)
         .map_err(|e| e.to_string())?
         .into_iter()
         .map(|view| (view.id.clone(), view))
         .collect();
+    let has_tree = knx_productdb::dynamic::load_program_trees(&conn, &program_id)
+        .map_err(|e| e.to_string())?
+        .has_program_tree();
+    let visibility = if has_tree {
+        let stored = stored_parameters(project, device)
+            .into_iter()
+            .map(|p| (p.source.ets_id.clone(), p.raw.clone()))
+            .collect();
+        let module_instances: Vec<knx_core::ModuleInstance> = project
+            .devices
+            .module_instances()
+            .filter(|m| m.device == device)
+            .cloned()
+            .collect();
+        let evaluation = knx_productdb::device_evaluation::evaluate_device(
+            &conn,
+            &program_id,
+            stored,
+            &module_instances,
+        )
+        .map_err(|e| e.to_string())?;
+        Visibility::Evaluated(Box::new(evaluation))
+    } else {
+        Visibility::NotEvaluated("noDynamicTree")
+    };
     Ok(ProgramLookup {
         state: "resolved",
         program_id: Some(program_id),
         views,
+        visibility,
     })
 }
 
@@ -151,43 +234,189 @@ fn building_paths(roots: &[knx_projection::BuildingNode], id: u32) -> Vec<Vec<St
     out
 }
 
+/// Replaces the projection's `resolution` placeholder with the product
+/// database's answer, as `knx-server` does before any response leaves it
+/// (`knx_projection::DeviceProductNode::resolution`): `Resolved` with the
+/// catalogue entry, `NotInDatabase`, or a confirmed `NoDatabase`.
+fn resolve_product(
+    ws: &Workspace,
+    product: &mut knx_projection::DeviceProductNode,
+) -> Result<(), String> {
+    use knx_projection::ProductResolution;
+    if product.resolution == ProductResolution::NoReference {
+        return Ok(());
+    }
+    let Some(db) = ws.products() else {
+        product.resolution = ProductResolution::NoDatabase;
+        product.catalog = None;
+        return Ok(());
+    };
+    let conn = db.conn.lock().expect("product database mutex poisoned");
+    let row = knx_productdb::query::device_product(
+        &conn,
+        product.product_ref.as_deref().unwrap_or_default(),
+        product.program_ref.as_deref().unwrap_or_default(),
+        None,
+    )
+    .map_err(|e| e.to_string())?;
+    match row {
+        Some(row) => {
+            product.resolution = ProductResolution::Resolved;
+            product.catalog = Some(knx_projection::DeviceProductCatalog {
+                manufacturer_id: row.manufacturer_id,
+                manufacturer_name: row.manufacturer_name,
+                product_text: row.product_text,
+                order_number: row.order_number,
+                hardware_name: row.hardware_name,
+                hardware_version: row.hardware_version,
+                hardware_serial_number: row.hardware_serial_number,
+                catalog_item_name: row.catalog_item_name,
+                catalog_item_number: row.catalog_item_number,
+                application_program_id: row.application_program_id,
+                application_name: row.application_name,
+                application_number: row.application_number,
+                application_version: row.application_version,
+                mask_version: row.mask_version,
+                product_text_language: row.product_text_language,
+                catalog_item_name_language: row.catalog_item_name_language,
+                application_name_language: row.application_name_language,
+                product_source_language: row.product_source_language,
+                catalog_item_source_language: row.catalog_item_source_language,
+                application_source_language: row.application_source_language,
+            });
+        }
+        None => {
+            product.resolution = ProductResolution::NotInDatabase;
+            product.catalog = None;
+        }
+    }
+    Ok(())
+}
+
+/// The visibility values `get_device` can filter its parameters by.
+pub const VISIBILITY_VALUES: [&str; 5] = ["active", "inactive", "stale", "unknown", "notEvaluated"];
+
+/// How much of a device `get_device` returns: one page of communication
+/// objects and one page of stored parameter values, optionally narrowed.
+#[derive(Debug, Clone, Copy)]
+pub struct DeviceView<'a> {
+    pub com_objects: Page,
+    /// Only communication objects with at least one group-address link.
+    pub linked_only: bool,
+    pub parameters: Page,
+    /// Only parameter values with this `visibility`.
+    pub visibility: Option<&'a str>,
+}
+
+impl Default for DeviceView<'_> {
+    fn default() -> Self {
+        let page = Page::new(None, None).expect("the default page is valid");
+        Self {
+            com_objects: page,
+            linked_only: false,
+            parameters: page,
+            visibility: None,
+        }
+    }
+}
+
+/// Drops `null` members of an object, so a communication object costs
+/// only the fields it actually has (an absent field means `null`).
+fn without_nulls(value: Value) -> Value {
+    match value {
+        Value::Object(map) => {
+            Value::Object(map.into_iter().filter(|(_, v)| !v.is_null()).collect())
+        }
+        other => other,
+    }
+}
+
 /// `get_device`: the device as the UI's detail panel shows it, its place in
-/// topology and buildings, and its stored parameter values.
-pub fn get_device(ws: &Workspace, alias: &str, reference: &str) -> ToolResult {
+/// topology and buildings, one page of its communication objects and one
+/// page of its stored parameter values with their visibility. Totals and
+/// `visibilityCounts` always cover every object and value, so a page never
+/// hides how much exists.
+pub fn get_device(ws: &Workspace, alias: &str, reference: &str, view: DeviceView) -> ToolResult {
+    if let Some(wanted) = view.visibility {
+        if !VISIBILITY_VALUES.contains(&wanted) {
+            return Err(format!(
+                "parameterVisibility {wanted:?}: expected one of {}",
+                VISIBILITY_VALUES.join(", ")
+            ));
+        }
+    }
     let snapshot = ws.snapshot(alias)?;
     let project = &snapshot.project;
     let id = resolve_device(project, reference)?;
     let device = project.devices.get(id).ok_or("device vanished")?;
-    let detail = knx_projection::build_device_detail(project, id).ok_or("device vanished")?;
-    let program = lookup_program(ws, &device.program_ref)?;
+    let mut detail = knx_projection::build_device_detail(project, id).ok_or("device vanished")?;
+    resolve_product(ws, &mut detail.product)?;
+    let program = lookup_program(ws, project, id, &device.program_ref)?;
+
+    let com_objects: Vec<Value> = std::mem::take(&mut detail.com_objects)
+        .into_iter()
+        .filter(|c| !view.linked_only || !c.links.is_empty())
+        .map(|c| serde_json::to_value(c).map(without_nulls))
+        .collect::<Result<_, _>>()
+        .map_err(|e| e.to_string())?;
+
     let stored = stored_parameters(project, id);
-    let parameters: Vec<Value> = stored
-        .iter()
-        .take(MAX_DEVICE_PARAMETERS)
-        .map(|p| {
-            let view = program.views.get(&p.source.ets_id);
-            json!({
-                "refId": p.source.ets_id,
-                "raw": p.raw,
-                "text": view.and_then(|v| v.text.clone()),
-                "kind": view.map(|v| v.kind.clone()),
-                "valueText": view.and_then(|v| value_text(v, &p.raw)),
-            })
-        })
-        .collect();
-    let detail = serde_json::to_value(&detail).map_err(|e| e.to_string())?;
+    let mut seen: HashSet<&str> = HashSet::new();
+    let mut counts: HashMap<&'static str, usize> = HashMap::new();
+    let mut parameters: Vec<Value> = Vec::new();
+    for p in &stored {
+        let ets_id = p.source.ets_id.as_str();
+        // A repeated id: the first row counts, a later one is stale.
+        let (visibility, reason) = if seen.insert(ets_id) {
+            program.stored_visibility(ets_id)
+        } else if matches!(program.visibility, Visibility::Evaluated(_)) {
+            ("stale", None)
+        } else {
+            program.stored_visibility(ets_id)
+        };
+        *counts.entry(visibility).or_default() += 1;
+        if view.visibility.is_some_and(|wanted| wanted != visibility) {
+            continue;
+        }
+        let definition = program.view(ets_id);
+        parameters.push(json!({
+            "refId": ets_id,
+            "raw": p.raw,
+            "text": definition.and_then(|v| v.text.clone()),
+            "kind": definition.map(|v| v.kind.clone()),
+            "valueText": definition.and_then(|v| value_text(v, &p.raw)),
+            "visibility": visibility,
+            "visibilityReason": reason,
+        }));
+    }
+    let (summary, summary_reason) = program.summary();
+
+    let mut com_page = view.com_objects.apply(&com_objects);
+    com_page["linkedOnly"] = json!(view.linked_only);
+    let mut parameter_page = view.parameters.apply(&parameters);
+    let extra = json!({
+        "stored": stored.len(),
+        "filter": view.visibility,
+        "visibility": summary,
+        "visibilityReason": summary_reason,
+        "visibilityCounts": counts,
+    });
+    for (key, value) in extra.as_object().expect("an object literal") {
+        parameter_page[key] = value.clone();
+    }
+    let mut detail = serde_json::to_value(&detail).map_err(|e| e.to_string())?;
+    if let Some(map) = detail.as_object_mut() {
+        // Paged separately below; the empty list would only mislead.
+        map.remove("com_objects");
+    }
     Ok(envelope(
         snapshot.source_json(),
         json!({
             "device": detail,
             "location": device_location(&snapshot, id.0),
             "productDatabase": { "state": program.state, "programId": program.program_id },
-            "parameters": {
-                "stored": stored.len(),
-                "truncated": stored.len() > MAX_DEVICE_PARAMETERS,
-                "items": parameters,
-                "visibility": "notEvaluated",
-            },
+            "comObjects": com_page,
+            "parameters": parameter_page,
         }),
     ))
 }
@@ -205,12 +434,12 @@ pub fn explain_parameter(
     let project = &snapshot.project;
     let id = resolve_device(project, reference)?;
     let device = project.devices.get(id).ok_or("device vanished")?;
-    let program = lookup_program(ws, &device.program_ref)?;
+    let program = lookup_program(ws, project, id, &device.program_ref)?;
     let parameter = parameter.trim();
     let stored = stored_parameters(project, id)
         .into_iter()
         .find(|p| p.source.ets_id == parameter);
-    let view = program.views.get(parameter);
+    let view = program.view(parameter);
 
     if stored.is_none() && view.is_none() {
         let needle = parameter.to_lowercase();
@@ -245,9 +474,24 @@ pub fn explain_parameter(
         });
     }
 
-    let mut notes: Vec<&str> = vec![
-        "Whether this parameter is currently visible or active is not evaluated (the program's Dynamic tree is not run).",
-    ];
+    let (visibility, visibility_reason, active_in_modules) =
+        explain_visibility(&program, parameter, stored.is_some());
+    let mut notes: Vec<&str> = Vec::new();
+    match visibility {
+        "active" => notes.push(
+            "The program's Dynamic tree activates this parameter with the saved values. Its access (definition.access, definition.refAccess) is not applied and may still hide it from display.",
+        ),
+        "inactive" => notes.push(
+            "The program's Dynamic tree does not activate this parameter with the saved values: the parameter panel hides it. The stored value is kept; whether a hidden value is still written to the device on download depends on the program and is not decided here.",
+        ),
+        "stale" => notes.push(
+            "No declared parameter accepts this stored value (unknown id, a module instance that does not validate, or a duplicate row).",
+        ),
+        "notEvaluated" => notes.push(
+            "Whether this parameter is visible was not evaluated; see visibilityReason.",
+        ),
+        _ => notes.push("Whether this parameter is visible could not be decided; see visibilityReason."),
+    }
     match program.state {
         "noProductDatabase" => notes.push("No product database: the value's meaning is unknown."),
         "programNotInstalled" => notes.push(
@@ -257,7 +501,7 @@ pub fn explain_parameter(
         _ => {}
     }
     if stored.is_some() && view.is_none() && program.state == "resolved" {
-        notes.push("The program declares no parameter with this refId; it may belong to a module instance.");
+        notes.push("The program declares no parameter with this refId.");
     }
     if stored.is_none() {
         notes.push("The project stores no value for this parameter; the program default applies and is not shown here.");
@@ -302,10 +546,55 @@ pub fn explain_parameter(
             },
             "definition": definition,
             "productDatabase": { "state": program.state, "programId": program.program_id },
-            "visibility": "notEvaluated",
+            "visibility": visibility,
+            "visibilityReason": visibility_reason,
+            "activeInModules": active_in_modules,
             "notes": notes,
         }),
     ))
+}
+
+/// `(visibility, reason, activeInModules)` for `explain_parameter`. A stored
+/// id is classified like `get_device` does; a declared id without a stored
+/// value is active when the tree activates it at program level, or in the
+/// listed module instances when only those activate it.
+fn explain_visibility(
+    program: &ProgramLookup,
+    parameter: &str,
+    stored: bool,
+) -> (&'static str, Option<&'static str>, Option<Vec<String>>) {
+    if stored {
+        let (visibility, reason) = program.stored_visibility(parameter);
+        return (visibility, reason, None);
+    }
+    let evaluation = match &program.visibility {
+        Visibility::NotEvaluated(reason) => return ("notEvaluated", Some(reason), None),
+        Visibility::Evaluated(evaluation) => evaluation,
+    };
+    let refs = evaluation
+        .activation
+        .parameter_refs
+        .iter()
+        .filter(|r| r.ref_id == parameter);
+    let mut modules: Vec<String> = Vec::new();
+    for r in refs {
+        match &r.scope {
+            None => return ("active", None, None),
+            Some(scope) => {
+                let module = scope.module_id.clone().unwrap_or_default();
+                if !modules.contains(&module) {
+                    modules.push(module);
+                }
+            }
+        }
+    }
+    if !modules.is_empty() {
+        ("active", None, Some(modules))
+    } else if evaluation.traversal_complete() {
+        ("inactive", None, None)
+    } else {
+        ("unknown", Some(TRUNCATED), None)
+    }
 }
 
 /// The root-first names of the ranges containing `range`.

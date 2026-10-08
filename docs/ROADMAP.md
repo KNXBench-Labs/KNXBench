@@ -189,7 +189,9 @@ permissions are a deployment decision (limitations §79).
 Research complete (RESEARCH §13). **Delivered 2026-10-07 (ADR-0090):** the
 narrower read-only scope §13.6 allows — `apps/knx-mcp`, a stdio MCP server
 over saved project files (eight read tools, CSV proposals validated but
-never applied), plus an agent skill. No in-app chatbox. A mutation-capable
+never applied), plus an agent skill. Since 2026-10-08 it reports parameter
+visibility with the parameter panel's own evaluation, now shared in
+`knx_productdb::device_evaluation`. No in-app chatbox. A mutation-capable
 LLM or MCP surface is still not scheduled and still requires a mature
 command/authorization/revision-bound audit contract. Bus and device writes
 remain excluded.

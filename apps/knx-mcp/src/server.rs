@@ -53,6 +53,25 @@ pub struct DeviceArgs {
     pub project: String,
     /// A device id such as "#12" or an individual address such as "1.1.5".
     pub device: String,
+    /// Communication objects per page, 1-500 (default 50).
+    #[serde(default)]
+    pub com_object_limit: Option<usize>,
+    /// Communication objects to skip (default 0).
+    #[serde(default)]
+    pub com_object_offset: Option<usize>,
+    /// Only communication objects linked to at least one group address.
+    #[serde(default)]
+    pub linked_only: Option<bool>,
+    /// Stored parameter values per page, 1-500 (default 50).
+    #[serde(default)]
+    pub parameter_limit: Option<usize>,
+    /// Stored parameter values to skip (default 0).
+    #[serde(default)]
+    pub parameter_offset: Option<usize>,
+    /// Only values with this visibility: active, inactive, stale, unknown or
+    /// notEvaluated.
+    #[serde(default)]
+    pub parameter_visibility: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -200,7 +219,7 @@ impl KnxMcp {
 
     #[tool(
         name = "get_device",
-        description = "One device: individual address, product and program references, communication objects with flags, datapoint types and linked group addresses, its line and building location, and its stored parameter values (decoded when the product database knows the program).",
+        description = "One device: individual address, product and program references, communication objects with flags, datapoint types and linked group addresses, its line and building location, and its stored parameter values (decoded when the product database knows the program), each with its `visibility` under the program's Dynamic tree. Objects and values come in pages (default 50 each, with totals and visibility counts over all); narrow with linkedOnly or parameterVisibility.",
         annotations(
             read_only_hint = true,
             destructive_hint = false,
@@ -213,7 +232,13 @@ impl KnxMcp {
         Parameters(args): Parameters<DeviceArgs>,
     ) -> Result<CallToolResult, ErrorData> {
         run(self.ws.clone(), move |ws| {
-            tools::get_device(ws, &args.project, &args.device)
+            let view = tools::DeviceView {
+                com_objects: Page::new(args.com_object_limit, args.com_object_offset)?,
+                linked_only: args.linked_only.unwrap_or(false),
+                parameters: Page::new(args.parameter_limit, args.parameter_offset)?,
+                visibility: args.parameter_visibility.as_deref(),
+            };
+            tools::get_device(ws, &args.project, &args.device, view)
         })
         .await
     }
@@ -282,7 +307,7 @@ impl KnxMcp {
 
     #[tool(
         name = "explain_parameter",
-        description = "One device parameter: the program's declaration (text, kind, bounds, options) from the product database and the value the project stores, with the selected option's text. Visibility is not evaluated.",
+        description = "One device parameter: the program's declaration (text, kind, bounds, options) from the product database and the value the project stores, with the selected option's text, and whether the program's Dynamic tree activates it with the saved values (`visibility`: active, inactive, stale, unknown or notEvaluated).",
         annotations(
             read_only_hint = true,
             destructive_hint = false,
@@ -364,6 +389,11 @@ mod tests {
         refuses_unknown::<SummaryArgs>(json!({}));
         refuses_unknown::<SearchArgs>(json!({ "project": "a", "query": "q" }));
         refuses_unknown::<DeviceArgs>(json!({ "project": "a", "device": "#1" }));
+        refuses_unknown::<DeviceArgs>(json!({
+            "project": "a", "device": "#1", "comObjectLimit": 10, "comObjectOffset": 5,
+            "linkedOnly": true, "parameterLimit": 20, "parameterOffset": 0,
+            "parameterVisibility": "inactive"
+        }));
         refuses_unknown::<GroupAddressArgs>(json!({ "project": "a", "address": "1/1/1" }));
         refuses_unknown::<IssuesArgs>(json!({ "project": "a" }));
         refuses_unknown::<DiffArgs>(json!({ "left": "a", "right": "b" }));

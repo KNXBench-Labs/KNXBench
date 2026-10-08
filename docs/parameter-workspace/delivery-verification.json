@@ -73,6 +73,11 @@
   ],
   "publication": {
     "target": "origin/main",
-    "verification": "Executing agent must verify exact remote commit/ref after push; this file binds the tested source before delivery metadata commit."
+    "verifiedCommit": "8b13787e7e7abcaf93eaf16bf0aab1a3ee98f30c",
+    "verifiedAt": "2026-10-08 12:54 CEST",
+    "remoteExactReadback": "passed",
+    "concurrentUpstreamIncluded": "c64e4a5a",
+    "frontendSourceEquivalentToTestedMerge": true,
+    "note": "Closure metadata follows this verified publication; it does not alter tested frontend sources."
   }
 }

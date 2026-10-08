@@ -14,7 +14,7 @@ knx-productdb.workspace = true
 knx-report.workspace = true
 knx-store.workspace = true
 # Decrypts legacy EX-IM product files with the user's password (`legacy`,
-# ADR-0093); knx-productdb itself must not link key material (ADR-0090).
+# ADR-0094); knx-productdb itself must not link key material (ADR-0090).
 knx-secure.workspace = true
 chrono.workspace = true
 # Independent activity/run identity through the existing workspace OS randomness adapter.
@@ -46,3 +46,6 @@ knx-diff.workspace = true
 # open, search and export. No production `knx-app` code builds a
 # projection yet — that is the desktop/web UI's job, one layer up.
 knx-projection.workspace = true
+# Only `tests/legacy_corpus.rs` needs this: the ETS oracle program is read
+# from inside a private `.knxproj` archive.
+zip.workspace = true

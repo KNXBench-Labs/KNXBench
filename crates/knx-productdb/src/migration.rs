@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 21;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 22;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -294,7 +294,51 @@ fn migrations() -> Vec<Migration> {
         migrate_v18_to_v19,
         migrate_v19_to_v20,
         migrate_v20_to_v21,
+        migrate_v21_to_v22,
     ]
+}
+
+/// v21 -> v22 (ADR-0094, legacy EX-IM product databases). Additive DDL only.
+///
+/// A published legacy file is keyed by its decrypted payload. Both the
+/// payload and the original file stay in `source_file`, byte for byte; the
+/// password is stored nowhere. `legacy_program` marks every application
+/// program that came from such a file: its `source_sha256` names EX-IM text,
+/// not XML, and consumers that read program XML (the download path) must
+/// refuse it by name. `legacy_diagnostic` keeps the publication report.
+fn migrate_v21_to_v22(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE legacy_source (
+             payload_sha256 TEXT PRIMARY KEY,
+             namespace TEXT NOT NULL UNIQUE,
+             member_name TEXT NOT NULL,
+             member_kind TEXT NOT NULL,
+             format_version TEXT,
+             exported_at TEXT,
+             producer TEXT,
+             charset TEXT NOT NULL
+         ) STRICT;
+         CREATE TABLE legacy_source_file (
+             payload_sha256 TEXT NOT NULL REFERENCES legacy_source (payload_sha256),
+             original_sha256 TEXT NOT NULL,
+             source_name TEXT NOT NULL,
+             encrypted INTEGER NOT NULL,
+             PRIMARY KEY (payload_sha256, original_sha256, source_name)
+         ) STRICT;
+         CREATE TABLE legacy_program (
+             program_id TEXT PRIMARY KEY,
+             payload_sha256 TEXT NOT NULL REFERENCES legacy_source (payload_sha256),
+             exim_program_id TEXT NOT NULL
+         ) STRICT;
+         CREATE TABLE legacy_diagnostic (
+             payload_sha256 TEXT NOT NULL REFERENCES legacy_source (payload_sha256),
+             ordinal INTEGER NOT NULL,
+             kind TEXT NOT NULL,
+             detail TEXT NOT NULL,
+             PRIMARY KEY (payload_sha256, ordinal)
+         ) STRICT;",
+    )?;
+    Ok(())
 }
 
 /// v20 -> v21 (ADR-0081, KNOWN_LIMITATIONS §156). `Parameter` and

@@ -2,6 +2,9 @@
 
 ## 2026-10-08 — Calm LCARS ambient animation follow-up (integrated publication accepted)
 
+- **Final merge with main `5d979361`:** **2,375 frontend / 143 files**, **170 Chromium**, **54 native workbench assertions**, **83 targeted Rust tests** including synthetic legacy container/grammar/password/CLI controls, build/types/five repo gates on frozen full app/crate source. Both wizards, achievement timing and latest localization/legacy inspection preserved. Proof: `design-studies/lcars/ambient-merged-verification.json`; earlier receipts remain source-specific history. No private-corpus or hardware claim. Image/probe/live acceptance pending.
+
+
 - **Latest publication candidate `a642eaf9` preserves both delivered wizards and achievement timing:** **2,373 frontend tests / 142 files**, **170 un-retried Chromium**, **54 actual production-workbench assertions**, **27 targeted Rust tests** (13 seed, 5 HTTP seed, 3 catalog requests, 6 HTTP device-wizard), build/types and five repository gates pass on frozen input. Source/build/phase evidence: `design-studies/lcars/ambient-publication-verification.json`. Earlier f5/e3 receipts are historical, not reused as current acceptance. Image/probe/live readback remains pending.
 
 
@@ -31,6 +34,77 @@
 - First combined Chromium attempt caught an inherited dynamic-first-node test target: selected 9.1.10 but asserted newly arrived 9.1.1. Stable accessible identity and explicit focus retain real Enter/current-value checks; 20 repeated controls and complete un-retried suite pass. Separate focused test correction; no product-code workaround.
 - Current-source/build/phase receipts: `design-studies/lcars/ambient-integrated-verification.json`; original 2332/158/54 receipt stays historical. Image/probe/live acceptance is still pending; no bus operation.
 
+## 2026-10-08 — Legacy VD files: read-only inspection (L1, ADR-0094)
+
+- **Requested** in a recorded grill-me interview
+  (`.ai/logs/2026-10-08_claude_legacy-vd-grilling.md`, Q1–Q18). The goal is
+  offline parameterisation of devices that ship only as ETS3 `.vd3`/`.vd4`
+  files; download is a later, separate package. The 2026-09-26 design is
+  accepted with amendments.
+- **New in `knx-productdb::legacy`**:
+  - Content detection of one-member `ets.vd_`/`ets2.vd_`/`ets.pr_`
+    containers through the existing package ZIP validator.
+  - Observed-layout, encryption and method checks.
+  - Bounded inflate with CRC-32.
+  - A strict, bounded EX-IM grammar. Raw bytes are kept, Windows-1252 is
+    labelled as an assumption, and unknowns become diagnostics.
+  - `install_package` refuses a legacy container under any name as
+    `PackageError::LegacyExIm`.
+- **Decryption lives in `knx_app::legacy`**, with a user-supplied password
+  and `knx-secure`'s single ZipCrypto implementation. A new `check-layering`
+  rule forbids `knx-productdb → knx-secure`, dev edges included. That edge
+  had made `knx-mcp` link key material, which ADR-0090 forbids, and the gate
+  caught it.
+- **CLI:** `knx products inspect-legacy <file> --password-stdin |
+  --password-file <path>` writes nothing. It refuses argv passwords, empty
+  passwords and unbounded password files.
+- **Real files:** `EIBMARKT.VD3` (37 tables, 4,214 rows), the Eibmarkt
+  `.vd4` (37 tables, 14,734 rows) and the MDT `.pr5` (16 tables, 12 rows)
+  all read with **zero diagnostics**. Pinned hashes match. The real password
+  occurs in no tracked or untracked file; a planted canary proves the scan
+  works.
+- **Tests:**
+  - 20 grammar, 16 container, 7 password, 9 CLI and 2 ignored corpus tests,
+    on synthetic "Marvin Test" fixtures (Info-ZIP `zip` + `zipcloak`).
+  - Mutation sweep: **25/25** realistic guard reverts fail a named test.
+    The first sweep left two survivors; their tests now also assert the
+    refusal reason.
+- **Gate on `d01cc58d`** (rebased on `e96bfb5d`):
+  - Web build, fmt and clippy `-D warnings` pass; all five xtask gates pass;
+    `git diff --check` is clean.
+  - Corpus tests: `knx-app` legacy corpus 2/2, `legacy_member_names_corpus`
+    1/1, `standalone_packages` ignored 3/3, and the product matrix (release)
+    1/1. Every matrix pin is unchanged: no modern package behaves
+    differently.
+  - Workspace tests: **3,618 passed, 0 failed, 180 ignored** (211 result blocks, exit 0,
+  HEAD unchanged during the run). The first attempt died before any
+    test ran (`ld` killed by signal 9). It is kept, and the step was rerun
+    with `-j 2`.
+- **Re-gate after the second rebase** (onto `a642eaf9`, the add-device
+  wizard; it changed only `knx-server` and the web app, which build
+  against the changed crates): `3d8eef7f` passes fmt, clippy `-D warnings`
+  (whole workspace) and all five xtask gates. `knx-server`, `knx-app`,
+  `knx-productdb` and `knx-cli` tests: **1,786 passed, 0 failed, 113
+  ignored**.
+- **ADR number:** 0093 was taken upstream meanwhile (wizards), so this is
+  ADR-0094.
+- **Not done:** product-database import (L2) and server/web upload (L3).
+  `knx products ingest`/`.knxproj` keep their filename refusal for
+  `.vd*`/`.pr*`.
+
+## 2026-10-08 — German UI uses the informal du-form throughout
+
+- User decision: the German catalogue addresses the reader as "du". 53
+  formal places in `apps/knx-web/src/messages/de.ts` rewritten by hand
+  (imperatives, "wenn Sie …", "Ihr/Ihre/Ihnen …"); the pronoun "Sie"
+  (she/it/they) is unchanged. The convention is recorded in the catalogue's
+  header comment.
+- New guard `i18n.duForm.test.ts` refuses formal address in the German
+  catalogue; negative control: it flags the previous catalogue.
+- Verified on the frozen candidate (`inputs_frozen=1`, base `a642eaf9`): web
+  build, `tsc`, flow-study/theme-fixture checks, **2,372 Vitest tests / 143
+  files**, **170 intercepted Chromium tests**, five xtask checks and
+  `git diff --check`. No Rust changed.
 
 ## 2026-10-08 — Add-device wizard with server preview and placement (ADR-0093)
 

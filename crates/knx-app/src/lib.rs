@@ -19,6 +19,7 @@ pub mod download_support;
 pub mod import;
 pub mod individual_address_programming_recovery;
 pub mod individual_address_reset_recovery;
+pub mod legacy;
 pub mod progress;
 pub mod project_readiness;
 pub mod project_seed;

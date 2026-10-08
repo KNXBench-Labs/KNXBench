@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-08T10:47:52+02:00",
+  "publication": "merged latest-main source accepted; image/live acceptance pending",
+  "joinedGate": {
+    "accepted": true,
+    "inputsFrozen": true,
+    "sourceFingerprint": "4673a7a70cf71afc7d3d77df8a62d59eb1069786c7f62eb877cb8ac8d31c402d",
+    "upstream": "5d9793619940cadd86533417932e48c87328600e",
+    "localAmbientCommit": "c02379370613f505f8ff96d02f9fd8889b531981",
+    "frontendTests": 2375,
+    "frontendFiles": 143,
+    "chromiumTests": 170,
+    "stages": [
+      {
+        "stage": "joined-project-seed",
+        "exit": 0
+      },
+      {
+        "stage": "joined-vitest",
+        "exit": 0
+      },
+      {
+        "stage": "joined-build",
+        "exit": 0
+      },
+      {
+        "stage": "joined-theme-fixtures",
+        "exit": 0
+      },
+      {
+        "stage": "joined-flow-study",
+        "exit": 0
+      },
+      {
+        "stage": "joined-http-project-seed",
+        "exit": 0
+      },
+      {
+        "stage": "joined-catalog-requests",
+        "exit": 0
+      },
+      {
+        "stage": "joined-http-device-wizard",
+        "exit": 0
+      },
+      {
+        "stage": "joined-productdb-legacy",
+        "exit": 0
+      },
+      {
+        "stage": "joined-app-legacy",
+        "exit": 0
+      },
+      {
+        "stage": "joined-cli-legacy",
+        "exit": 0
+      },
+      {
+        "stage": "check-layering",
+        "exit": 0
+      },
+      {
+        "stage": "check-headers",
+        "exit": 0
+      },
+      {
+        "stage": "check-anchors",
+        "exit": 0
+      },
+      {
+        "stage": "check-ledger",
+        "exit": 0
+      },
+      {
+        "stage": "check-corpus-gates",
+        "exit": 0
+      },
+      {
+        "stage": "joined-chromium",
+        "exit": 0
+      }
+    ]
+  },
+  "actualWorkbench": {
+    "count": 54,
+    "uniqueCount": 54,
+    "unexpected": [],
+    "errors": [],
+    "fixtureOnly": true,
+    "productionBuild": true,
+    "failure": null,
+    "checks": [
+      "saved LCARS resolves on the actual application",
+      "built-in presentation is active",
+      "theme does not install packs or rewrite independent settings",
+      "characteristic elbow and segmented band render",
+      "navigation feedback is a real finite animation",
+      "navigation feedback finishes without an idle loop",
+      "native table has 30 data rows",
+      "exactly two real decorative ambient effects run",
+      "standard cycles are slow: 10s band and 16s emblem",
+      "the real animation clock advances without interaction",
+      "idle colour and band opacity really change",
+      "idle animation does not change geometry or data rows",
+      "idle animation never causes backend mutations",
+      "standard band dims gently and never disappears",
+      "checkbox and address activation remain separate native controls",
+      "row activation selects the actual inspector",
+      "marking another row does not erase first selection",
+      "existing filter is usable",
+      "comfortable density remains independent and changes real rows",
+      "actual table keyboard focus stays visible",
+      "existing search shortcut still opens",
+      "existing command palette shortcut still opens",
+      "motion cancellation starts with a live effect",
+      "motion Off starts with two live ambient effects",
+      "motion Off cancels already running ambient effects",
+      "motion Off restores stable static colours and full band opacity",
+      "motion Off cancels an already running navigation effect",
+      "motion Off prevents new feedback",
+      "OS cancellation starts with a live effect",
+      "OS reduction starts with two live ambient effects",
+      "OS reduction cancels already running ambient effects",
+      "OS reduction cancels the running effect",
+      "OS reduction prevents new feedback",
+      "Subtle slows cycles to 18s band and 24s emblem",
+      "Subtle also reduces both visual amplitudes",
+      "subtle uses transitions without the standard reveal",
+      "a refused save cannot become a decorative success",
+      "save failure never causes a bus write",
+      "theme removal starts with live ambient effects",
+      "switching to another theme cancels ambient effects",
+      "switching away removes the presentation and restores the original shell",
+      "shipped imported-format palette cannot acquire LCARS geometry",
+      "an imported-format palette never acquires LCARS ambient loops",
+      "LCARS persists after cold reload",
+      "saved Subtle ambient preference survives cold reload",
+      "saved Off prevents ambient animation after cold startup",
+      "OS reduction prevents ambient animation after cold startup",
+      "removing OS reduction restores the saved allowed level",
+      "actual application UI scale reaches 1.5 without global horizontal overflow",
+      "720px preserves usable table rows and no global horizontal overflow",
+      "480px preserves usable table rows and no global horizontal overflow",
+      "all API traffic stayed inside the explicitly intercepted fixture",
+      "no unexpected browser errors",
+      "independent preferences and foreign settings survived theme switches"
+    ]
+  },
+  "productionBuildSha256": {
+    "assets/index-B3ErZF22.js": "7d106bd1b39456838e104a959e49758eb3bdafa7f7bfaeba91a8dee1ee8c5db0",
+    "assets/index-DGYe7S9A.css": "6c33665d0dac28e66821f2f1c0c33f294218e5d776f6ce013e8c7a7d782a5132",
+    "assets/inter-cyrillic-400-normal-HOLc17fK.woff": "6e441a6c94788318fa02b6d0a633aa29eebe27b69c6567eb1e59b4edc68ed70e",
+    "assets/inter-cyrillic-400-normal-obahsSVq.woff2": "f0bb586459ce8f09b238285040f17e3e9e9538b2c5a7aae0775194e33c36c3c3",
+    "assets/inter-cyrillic-500-normal-BasfLYem.woff2": "b77a86ec16aadc157f4a99e8898d71cd75ea264753d9bdf13f962f8c3988cbb0",
+    "assets/inter-cyrillic-500-normal-CxZf_p3X.woff": "5be18e0345781cb882a267798518553c0e915174fc70731ab5f085ca64ba1ebc",
+    "assets/inter-cyrillic-600-normal-4D_pXhcN.woff": "cc190ed1b64eb650a4ad7e97c7a668cb8b34acd9c4c7f7bf4372c0cbacd35795",
+    "assets/inter-cyrillic-600-normal-CWCymEST.woff2": "6c2a37f82a676bcd441b735e4e2cda4edb8873a059ab9c362a84f0711f257041",
+    "assets/inter-cyrillic-ext-400-normal-BQZuk6qB.woff2": "ef572f9187a8be018d9d9c2c6b77c1f6cb2af4199f02fc16c292ea10ab25a2cc",
+    "assets/inter-cyrillic-ext-400-normal-DQukG94-.woff": "5cb2f1cc0936f89a42ceae34f5a5720248dc5b8114c12b1c33a7d2ef01a9b6b9",
+    "assets/inter-cyrillic-ext-500-normal-B0yAr1jD.woff2": "1c2db92d3cd9b237ca7c9c07af556d542f28ded1db54cd4382cf776501c5291f",
+    "assets/inter-cyrillic-ext-500-normal-BmqWE9Dz.woff": "e250c05aebcf49971e0b25f476992dd463c28c0292ebb204d9db542fb5066ca7",
+    "assets/inter-cyrillic-ext-600-normal-Bcila6Z-.woff": "a5073285409443f4653c858de58c5dc0bfc2fd33e60d8747388345e7c5ab1ab3",
+    "assets/inter-cyrillic-ext-600-normal-Dfes3d0z.woff2": "509fca9c59564f9a846fa69bc647f9b050fc11abf1c9f6f3da71fb2d5ed425bd",
+    "assets/inter-greek-400-normal-B4URO6DV.woff2": "c15ddd00a9927b56f5c655a41f976f79bd848a20cce91fc14227751872a1cc27",
+    "assets/inter-greek-400-normal-q2sYcFCs.woff": "bdae9d28729e8c68587d5d54e216d771a40d7a6800e824586a6e2f570c2f10df",
+    "assets/inter-greek-500-normal-BIZE56-Y.woff2": "cc197d79d33a3615a047baae85f4d1957f6f98b8898313658e160b1d519b1b6f",
+    "assets/inter-greek-500-normal-Xzm54t5V.woff": "86d55a4b1b9cbced7e61e76d5d44cf49d0bd1c814d3df2de67b7136ab4fdcece",
+    "assets/inter-greek-600-normal-BZpKdvQh.woff": "090b24e22fc4ddf41450d13bdec81c8a74808b9fc7edaf8df06c909b177a8992",
+    "assets/inter-greek-600-normal-plRanbMR.woff2": "9c5a897f9d9fcfe60d90631d766ae62b4bf1edd76633fa7a4b2f8c87e036789b",
+    "assets/inter-greek-ext-400-normal-DGGRlc-M.woff2": "eadedd9e13c2582430a9fb1519eb86152fdabb483a6f66d90f8d8a52e977a1b7",
+    "assets/inter-greek-ext-400-normal-KugGGMne.woff": "4f2b6f92ddfece8812e79774d446218aa6e0773ff8c2d31130fe2bdc23bd22d0",
+    "assets/inter-greek-ext-500-normal-2j5mBUwD.woff": "c85d11bde719108cc9a4f6f5b008087f6c36493b47395580d4f5336182b0f0c7",
+    "assets/inter-greek-ext-500-normal-C4iEst2y.woff2": "75a9ec9383a3b7a7bf7cfb94f64edf38d9cfdc5f7ffa0cbed2733627a6e4426d",
+    "assets/inter-greek-ext-600-normal-B8X0CLgF.woff": "efc7aa9cce5c505dd8cc4c4daf00247fa805f37bcda96079239ba3358ab27dfb",
+    "assets/inter-greek-ext-600-normal-DRtmH8MT.woff2": "399f94d75aa73403e40e2353e8c0cc75c38f7362a6ca263b3b02d9723157ffe5",
+    "assets/inter-latin-400-normal-C38fXH4l.woff2": "8909904ab6c872eb994093482a88a28eca2cd95912d7b6fecd72103b0dc07edc",
+    "assets/inter-latin-400-normal-CyCys3Eg.woff": "e20fa0b4fd2dd26e4d14b3ac3cc922509c3a63fa5e910e90c614544aa042dd45",
+    "assets/inter-latin-500-normal-BL9OpVg8.woff": "9b42c108da48b5ed55a3072e815ffee2d271562e6c0dd6998910e8f9c09e0a3d",
+    "assets/inter-latin-500-normal-Cerq10X2.woff2": "f3779f1efccc4bdcdf9c0a02ab95bf6bd092ed09c48c08cedc725889edd1d19f",
+    "assets/inter-latin-600-normal-CiBQ2DWP.woff": "6a9cb3a509b4eeaf12b7dda6c4aacac3e85d07f4201bf4dd716e332e692b87bd",
+    "assets/inter-latin-600-normal-LgqL8muc.woff2": "f9a06e79cd3a2a20951c0f0e28f66dd0e6d3fda73911d640a2125c8fcb78f21a",
+    "assets/inter-latin-ext-400-normal-77YHD8bZ.woff": "22ae8360fbad24d2af7c6c9898a346c881774dc87f7cf94bd262c48ad58d7116",
+    "assets/inter-latin-ext-400-normal-C1nco2VV.woff2": "6744a7f509ebc6ab220a6cd4ea77e898adf014f03d88dcda5d45d8a9feefb4e9",
+    "assets/inter-latin-ext-500-normal-BxGbmqWO.woff": "30d2903ce97f8a89ea0e9c083b42cb8bf97e7bbb5607e7f00352815f19cb0d5b",
+    "assets/inter-latin-ext-500-normal-CV4jyFjo.woff2": "2c6fbc42d315528beb06c1096df45487bf4186c4b78b8111d12c9c951f8acca2",
+    "assets/inter-latin-ext-600-normal-CIVaiw4L.woff": "22ff20a6170674fb9637c2a072227be86303bb6ec52b829b9d7077405f7196a6",
+    "assets/inter-latin-ext-600-normal-D2bJ5OIk.woff2": "e4bdf67b0cd15ca9e184509275be95db942195d3cc2b17f6a0452f2adf75d0bf",
+    "assets/inter-vietnamese-400-normal-Bbgyi5SW.woff": "54aa42d325bcdfd623ecb9eac4a5e3c6420c63d7b86e9d8545fb479f653beb57",
+    "assets/inter-vietnamese-400-normal-DMkecbls.woff2": "547ad9fdaeb0ae43487f4b8a02e47c36553c0c0cb73c8aa98f93b7b615f6b55d",
+    "assets/inter-vietnamese-500-normal-DOriooB6.woff2": "44e36aa5a8f12130029a29bb0e6695d0262b67446ce321e878b1fb56162b5de6",
+    "assets/inter-vietnamese-500-normal-mJboJaSs.woff": "18a4a09f751671cd8929d7c66e8fe7d820b511c36e51cf6047ffceab88eec4a4",
+    "assets/inter-vietnamese-600-normal-BuLX-rYi.woff": "24a01e7bd947aeef91ae8f7b8edeb23fadaf5ceda34a610ce62d2bbdaea57e83",
+    "assets/inter-vietnamese-600-normal-Cc8MFFhd.woff2": "1aeb94ae9db052a4a2fe6f3046f928cff1fdbd7abdf870a9a01c13cae6faeba5",
+    "assets/jetbrains-mono-cyrillic-400-normal-BEIGL1Tu.woff2": "522f5827308102a9c0ea7860b5a11306043610ecf03d150ba32056a06e8c56e2",
+    "assets/jetbrains-mono-cyrillic-400-normal-ugxPyKxw.woff": "67c9cc7864b4940dbfb246c7b452c1de8e96f140f334d363fcdd87dbfeadab72",
+    "assets/jetbrains-mono-cyrillic-500-normal-DJqRU3vO.woff": "d408a664dc721f614e6346e09f3f32b2837005db28f5e4797ce8dd19da07e4ea",
+    "assets/jetbrains-mono-cyrillic-500-normal-DmUKJPL_.woff2": "26c9ed511def1f0fd3d1b5fe6d5c0c594d9ef8dd2435d2ff240ea265a416b6e4",
+    "assets/jetbrains-mono-greek-400-normal-B9oWc5Lo.woff": "09f89e8369d7745ac5fe92e62a9ea13f66f40fd95b5495fac014c54b3a1ca6cc",
+    "assets/jetbrains-mono-greek-400-normal-C190GLew.woff2": "365b7a8eaff022b13ed0561fde3890a04a30507d773ecd5adb3aca8e766a285c",
+    "assets/jetbrains-mono-greek-500-normal-D7SFKleX.woff": "89656e472646bf4d52c23d499fa2e467ad3ee73447fda24eefb96e176b1312d6",
+    "assets/jetbrains-mono-greek-500-normal-JpySY46c.woff2": "5b6dee4610cdaab7c4218c1692aa9a536414010eef4e5b3cfb25f45007811bcc",
+    "assets/jetbrains-mono-latin-400-normal-6-qcROiO.woff": "658b9ee07b0249cf910a8d6f3d812d46c962bae81d7379a0355b1db35c61586f",
+    "assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2": "14425ba9c695763c1547f48a206b7aa60350a33ae23de09f0407877f3fcd89eb",
+    "assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2": "cb182feeed4d798ff6961d3c79f7026279448fca0676438aaecb21f3fc39553a",
+    "assets/jetbrains-mono-latin-500-normal-CJOVTJB7.woff": "a270dd0bf13d91053b8999b7c120ffadb59680cfd63fe1a6b388a13bf2809fe1",
+    "assets/jetbrains-mono-latin-ext-400-normal-Bc8Ftmh3.woff2": "505dfba8ecbe77e82765f36d317ed7ef4ac42719dc5f4ae68d1c483fd22d0d14",
+    "assets/jetbrains-mono-latin-ext-400-normal-fXTG6kC5.woff": "e7131bbf591e1ed9b74e44e162f6a39affa00ac21654cb683585d085733f6355",
+    "assets/jetbrains-mono-latin-ext-500-normal-Cut-4mMH.woff2": "879df9319f1cbf633bee1dd489e376a9e1e8c458f4abddcfe381cb83b5e6b027",
+    "assets/jetbrains-mono-latin-ext-500-normal-ckzbgY84.woff": "8006c29f8ec53d12d281774d669a02a70b599590d110ff1a4b4a40a6fd975676",
+    "assets/jetbrains-mono-vietnamese-400-normal-CqNFfHCs.woff": "1dfe0f740fa86409034058e49474b01126ae9ea8c1ecda905917b90d57f03b00",
+    "assets/jetbrains-mono-vietnamese-500-normal-DNRqzVM1.woff": "6b14186bc983291a126aa8d6d9c3044415c968262279eecbb9bb194f1daf7800",
+    "assets/space-grotesk-latin-400-normal-BnQMeOim.woff": "d3fcfce61e3792f35b7c95c2f7f4f26c8d19c93998c03ad77d7bf0cd6d334e35",
+    "assets/space-grotesk-latin-400-normal-CJ-V5oYT.woff2": "65fd17fcbd2e2f522940b5f67ead3d23329e02891aa5495e74d11a499c0b0673",
+    "assets/space-grotesk-latin-500-normal-CNSSEhBt.woff": "aa3f2941f6db6ca253c9f55bb173e1a1ade690dcc50e501119814a4414027df3",
+    "assets/space-grotesk-latin-500-normal-lFbtlQH6.woff2": "1b1a8131d9edf975d9decee81e2f2bf504812f7a4f498e5500f28a613e22e64c",
+    "assets/space-grotesk-latin-600-normal-BflQw4A9.woff": "1c7ffb357cef0950935783c5a50e140e092f05c814da5b196e67a64e69cb2991",
+    "assets/space-grotesk-latin-600-normal-DjKNqYRj.woff2": "685bbbf69fa616df1ef81847c85fc76be097ddfb3468ff2257be54511ab3130f",
+    "assets/space-grotesk-latin-700-normal-CwsQ-cCU.woff": "145016049aa47932e2d116f70151edc5a53df894cb367514c52ea2d11289bee7",
+    "assets/space-grotesk-latin-700-normal-RjhwGPKo.woff2": "35f8aec56cfd5cbfdb03cc68733a54a0b05bb3617ffcd5fd332badc0b045ca55",
+    "assets/space-grotesk-latin-ext-400-normal-CfP_5XZW.woff2": "a6658ce608a36f9ece7a65842725deebeb5f01df2debeb696b79c8536bf2ddc8",
+    "assets/space-grotesk-latin-ext-400-normal-DRPE3kg4.woff": "41c5af675d526f6df3941159158f9eb6e75ac2903f0834e479205cbccccb6dfc",
+    "assets/space-grotesk-latin-ext-500-normal-3dgZTiw9.woff": "b1faf7147e8b2fd11385c78412b2ba9d120645e68336ec9982d2e0f645accd7a",
+    "assets/space-grotesk-latin-ext-500-normal-DUe3BAxM.woff2": "ed7e064eda944f88ce2f40101ec20e214004decdf5c0b9ad9219ae21be2dbf13",
+    "assets/space-grotesk-latin-ext-600-normal-DxxdqCpr.woff2": "0bdc872e2806e0eb2ecca08221ea0b49d36efd9b9239a5744b81afbc0376e9cf",
+    "assets/space-grotesk-latin-ext-600-normal-VcznFIpX.woff": "28cace551126b0ba507486a08717f42c69a3b709ac3a104c9cafca897af6fc45",
+    "assets/space-grotesk-latin-ext-700-normal-BQnZhY3m.woff2": "7ce350b706d79c955ebf91314295f39fa82999f980b7e9beee743c2f3580a15e",
+    "assets/space-grotesk-latin-ext-700-normal-HVCqSBdx.woff": "215b0cac2778da21525aab1d204b59b4261099b64afd010864f73ec9613ec5ba",
+    "assets/space-grotesk-vietnamese-400-normal-B7xT_GF5.woff2": "4e7fc2191af9ee0b3c0bf285beb6ec2a1fcfb02695f0eb7cb5f75c600df0e4b0",
+    "assets/space-grotesk-vietnamese-400-normal-BIWiOVfw.woff": "48f21f0daa88ba31d169375c535c9eae4d2d9d24201fa75799b2ca6244557e3b",
+    "assets/space-grotesk-vietnamese-500-normal-BTqKIpxg.woff": "ff7d1c4604ba397e816ac21f0bb3ff9fa871f6ef71e023bd75e9fe9bb6aaaba3",
+    "assets/space-grotesk-vietnamese-500-normal-BmEvtly_.woff2": "d5eb999d825de1ad0c6f81ccca6958906f3288d1368106a71fa16f4b36b57933",
+    "assets/space-grotesk-vietnamese-600-normal-D6zpsUhD.woff": "edfca93b659dcef0d0cf9382c49bd6857fd07c63c0cb75bab568e42d361da0a5",
+    "assets/space-grotesk-vietnamese-600-normal-DUi7WF5p.woff2": "21ea402c1d5a8f928f5d338b7c8b5f807efa12795cca0cbdc9938cad1474a6d8",
+    "assets/space-grotesk-vietnamese-700-normal-DMty7AZE.woff2": "96a6d0a746a024bfbcc0b09ed15278755070d73b686e6856458dd0ca8f5d772a",
+    "assets/space-grotesk-vietnamese-700-normal-Duxec5Rn.woff": "10bc4d15c6fded3cb97fc0f36ceb55c7273133e5f9de9b5504a9f4e1171ba812",
+    "assets/webviewWindow-BwHDpVP8.js": "d0595b581f13f80e607764d3e8204c7408481768ba1607258c970d6c141c5477",
+    "assets/window-CctbOMNs.js": "19b5b7a3c56f0c257b8372dbeb45fd509f3f5ff9e202ff70f49deda0f04d2c85",
+    "index.html": "80c7ca533ef9d2be05e2416ff5587befc7439d26c815d9525c0dc1d94cf16655"
+  },
+  "targetedRustTests": {
+    "joined-project-seed": 13,
+    "joined-http-project-seed": 5,
+    "joined-catalog-requests": 3,
+    "joined-http-device-wizard": 6,
+    "joined-productdb-legacy": 4,
+    "joined-app-legacy": 7,
+    "joined-cli-legacy": 9,
+    "joined-legacy-integration": 36
+  },
+  "review": "in-session self-review",
+  "inheritedMain": "Both wizards, achievement timing, localization and read-only legacy inspection preserved; no ambient-specific core/API/protocol edits",
+  "history": "f5 local, e3 combined and a642 publication receipts remain historical. Guards never force-pushed stale source. Local feature commit preceded clean-tree guard; only owned browser artifacts were untracked and are now archived.",
+  "exclusions": [
+    "live KNX requests",
+    "private-corpus legacy acceptance claim",
+    "native WebKitGTK/Orca/full accessibility certification",
+    "release tag"
+  ]
+}

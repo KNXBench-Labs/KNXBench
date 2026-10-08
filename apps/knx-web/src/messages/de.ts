@@ -12,6 +12,10 @@
 // `i18n.ts`'s `translate()` and its test. That fallback exists precisely
 // because this compile-time guarantee is the normal case, not the only
 // line of defence.
+//
+// Address: the informal du-form throughout (user decision 2026-10-08).
+// `i18n.duForm.test.ts` refuses a formal "Sie"/"Ihr" address; the pronoun
+// "Sie" (she/it/they) stays legal.
 import type { MessageKey } from "./en";
 
 export const messages: Record<MessageKey, string> = {
@@ -393,12 +397,12 @@ export const messages: Record<MessageKey, string> = {
   "inspector.assignedArea": "Zugeordneter Bereich",
   "inspector.duplicateStructureId": "Diese Struktur-ID kommt mehrfach vor. Die Bearbeitung ist gesperrt, bis die importierten IDs eindeutig sind.",
   "inspector.placementConflict": "Platzierungskonflikt",
-  "inspector.placementConflictHint": "Dieses Gerät steht {count}-mal in der Topologie. Behalten Sie eine Platzierung; die anderen werden in einem rückgängig machbaren Schritt entfernt. Adressen, Verknüpfungen, Parameter und Gebäudezuordnung bleiben unverändert.",
+  "inspector.placementConflictHint": "Dieses Gerät steht {count}-mal in der Topologie. Behalte eine Platzierung; die anderen werden in einem rückgängig machbaren Schritt entfernt. Adressen, Verknüpfungen, Parameter und Gebäudezuordnung bleiben unverändert.",
   "inspector.placementLine": "Linie {area}.{line} {name} — {installation}",
   "inspector.placementUnassigned": "Nicht zugeordnet — {installation}",
   "inspector.placementListedTimes": "({count}-mal aufgeführt)",
   "inspector.keepPlacement": "Diese Platzierung behalten",
-  "inspector.lineOwnerConflictHint": "Diese Linie wird von {count} Bereichen aufgeführt. Behalten Sie sie unter einem davon; die anderen Verweise werden in einem rückgängig machbaren Schritt entfernt.",
+  "inspector.lineOwnerConflictHint": "Diese Linie wird von {count} Bereichen aufgeführt. Behalte sie unter einem davon; die anderen Verweise werden in einem rückgängig machbaren Schritt entfernt.",
   "inspector.keepLineOwner": "Unter diesem Bereich behalten",
   "inspector.linePlacementAmbiguous": "Verschieben nicht möglich: Die Linie ist mehreren Bereichen zugeordnet oder Bereichs-IDs sind mehrdeutig. Zuerst die Topologie reparieren.",
   "inspector.lineLabel": "Linie {address}: {name}",
@@ -533,7 +537,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.diagnostic.evaluationWorkBudgetExhausted": "Dieses Programm hat die Auswertungsgrenze überschritten; seine unvollständige Parameteransicht ist schreibgeschützt.",
   "parameters.diagnostic.parameterAccessReadOnly": "Einige Felder hat der Hersteller schreibgeschützt oder verborgen (Access); sie sind nicht beschreibbar.",
   "parameters.diagnostic.manufacturerCalculation": "Einige Felder sind Ein- oder Ausgaben einer Herstellerberechnung, die KNXBench nicht ausführt; sie sind schreibgeschützt.",
-  "parameters.diagnostic.writeAuthorityUnavailable": "Die Produktdatenbank hat für dieses Programm keine Schreibberechtigung erfasst; seine Felder sind schreibgeschützt. Installieren Sie das Produkt neu, um sie zu erfassen.",
+  "parameters.diagnostic.writeAuthorityUnavailable": "Die Produktdatenbank hat für dieses Programm keine Schreibberechtigung erfasst; seine Felder sind schreibgeschützt. Installiere das Produkt neu, um sie zu erfassen.",
   "parameters.noAccess.show.one": "{count} Feld ohne Benutzerzugriff anzeigen (Access None)",
   "parameters.noAccess.show.other": "{count} Felder ohne Benutzerzugriff anzeigen (Access None)",
   "parameters.noAccess.hide.one": "{count} Feld ohne Benutzerzugriff ausblenden (Access None)",
@@ -707,7 +711,7 @@ export const messages: Record<MessageKey, string> = {
   "flow.flagName.readOnInit": "Lesen bei Init",
   "flow.direction.send": "Senden",
   "flow.direction.receive": "Empfangen",
-  "flow.inspector.choose": "Wählen Sie einen Knoten, um Werte, Verbindungen und verknüpfte Objekte zu sehen.",
+  "flow.inspector.choose": "Wähle einen Knoten, um Werte, Verbindungen und verknüpfte Objekte zu sehen.",
   "flow.inspector.observedAddress": "Beobachtet unter der Adresse {address}.",
   "flow.inspector.values": "Aktuelle Werte",
   "flow.inspector.noValues": "Kein aktueller Wert.",
@@ -741,11 +745,11 @@ export const messages: Record<MessageKey, string> = {
   "busMonitor.gatewayLabel": "Gateway-Adresse",
   "busMonitor.gatewayHost": "Gateway-Host",
   "busMonitor.gatewayPort": "Gateway-Port",
-  "busMonitor.invalidHost": "Geben Sie nur einen numerischen IPv4-Host ein; der Port gehört in das eigene Portfeld. Hostnamen und IPv6 werden von diesem Tunnel noch nicht unterstützt.",
+  "busMonitor.invalidHost": "Gib nur einen numerischen IPv4-Host ein; der Port gehört in das eigene Portfeld. Hostnamen und IPv6 werden von diesem Tunnel noch nicht unterstützt.",
   "busMonitor.invalidPort": "Der Gateway-Port muss zwischen 1 und 65535 liegen.",
   "busMonitor.gatewayLocked":
-    "Trennen Sie die laufende Sitzung, bevor Sie die Gateway-Adresse ändern.",
-  "busMonitor.connectNeedsGateway": "Geben Sie zuerst eine Gateway-Adresse ein.",
+    "Trenne die laufende Sitzung, bevor du die Gateway-Adresse änderst.",
+  "busMonitor.connectNeedsGateway": "Gib zuerst eine Gateway-Adresse ein.",
   "busMonitor.connect": "Verbinden",
   "busMonitor.disconnect": "Trennen",
   "busMonitor.pause": "Pausieren",
@@ -899,7 +903,7 @@ export const messages: Record<MessageKey, string> = {
   "catalog.addressUnassigned": "Physikalische Adressen bleiben unzugewiesen; nach der Anlage vergeben.",
   "catalog.optionsLegend": "Optionen",
   "catalog.allocateAddresses": "Freie Adressen der Linie vergeben",
-  "catalog.allocateNeedsLine": "Adressen lassen sich nur auf einer Ziel-Linie vergeben; wählen Sie zuerst eine Linie.",
+  "catalog.allocateNeedsLine": "Adressen lassen sich nur auf einer Ziel-Linie vergeben; wähle zuerst eine Linie.",
   "catalog.uniqueNames": "Namen eindeutig halten",
   "catalog.addressAllocated": "Freie Adressen der Linie werden der Reihe nach vergeben; .0 sowie belegte oder ausgeschlossene Adressen werden übersprungen. Reichen sie nicht, wird nichts angelegt.",
   "catalog.uniqueNamesNote": "Bereits vorhandene Namen werden übersprungen; die endgültigen Namen erscheinen nach dem Anlegen.",
@@ -911,7 +915,7 @@ export const messages: Record<MessageKey, string> = {
   "catalog.unconfirmedBatch": "Es konnte nicht bestätigt werden, ob der Server die Geräte angelegt hat. Vor einem neuen Versuch das Projekt prüfen oder neu laden; kein automatischer Neuversuch.",
   "catalog.retrySafely": "Sicher wiederholen",
   "catalog.retryHint": "Der Server hat diese Anfrage gespeichert, daher kann eine Wiederholung die Geräte nicht doppelt anlegen.",
-  "catalog.retryServerRestarted": "Der Server wurde seit dieser Anfrage neu gestartet und weiß nicht mehr, ob er die Geräte angelegt hat. Prüfen Sie das Projekt, bevor Sie sie erneut hinzufügen.",
+  "catalog.retryServerRestarted": "Der Server wurde seit dieser Anfrage neu gestartet und weiß nicht mehr, ob er die Geräte angelegt hat. Prüfe das Projekt, bevor du sie erneut hinzufügst.",
   "catalog.creationNeedsReview": "Anlage muss geprüft werden. Vor dem Fortfahren das Projekt prüfen.",
   "catalog.itemLabel": "Gerät {index}: {name}",
   "catalog.noDiagnostics": "Keine Hinweise bei der Anlage.",
@@ -1386,7 +1390,7 @@ export const messages: Record<MessageKey, string> = {
   "newProject.style.TwoLevel": "Zweistufig (Haupt/Unter)",
   "newProject.style.ThreeLevel": "Dreistufig (Haupt/Mittel/Unter)",
   "newProject.nameRequired": "Ein Projekt braucht einen Namen.",
-  "newProject.languageInvalid": "Kein wohlgeformtes Sprachkennzeichen. Versuchen Sie en, de oder de-DE.",
+  "newProject.languageInvalid": "Kein wohlgeformtes Sprachkennzeichen. Versuche en, de oder de-DE.",
   "newProject.create": "Projekt anlegen",
   "newProject.creating": "Wird angelegt…",
   "newProject.cancel": "Abbrechen",
@@ -1486,8 +1490,8 @@ export const messages: Record<MessageKey, string> = {
   "projectWizard.done.addDevices": "Jetzt Geräte hinzufügen",
   "projectWizard.done.close": "Fertig",
   "projectPassword.title": "Projektpasswort für {file}",
-  "projectPassword.required": "Dieses ETS-Projekt ist passwortgeschützt. Geben Sie das Projektpasswort ein, um es zu importieren.",
-  "projectPassword.wrong": "Das Passwort wurde nicht akzeptiert. Prüfen Sie es und versuchen Sie es erneut.",
+  "projectPassword.required": "Dieses ETS-Projekt ist passwortgeschützt. Gib das Projektpasswort ein, um es zu importieren.",
+  "projectPassword.wrong": "Das Passwort wurde nicht akzeptiert. Prüfe es und versuche es erneut.",
   "projectPassword.label": "Projektpasswort",
   "projectPassword.notStored": "Das Passwort wird nur für diesen Import verwendet und nicht gespeichert.",
   "projectPassword.cancel": "Abbrechen",
@@ -1602,9 +1606,9 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.gettingStarted.p1":
     "KNXBench öffnet zwei Arten von Datei. Das eigene Format, ein .knxdb-Projekt, liest „Öffnen (.knxdb)…“ und schreibt „Speichern“. Einen ETS-Projektexport, eine .knxproj-Datei, liest „Projekt öffnen…“ und wandelt sie beim Einlesen in ein KNXBench-Projekt um — einmal. Danach lebt das Projekt als .knxdb weiter; KNXBench schreibt keine .knxproj-Dateien.",
   "help.topic.gettingStarted.p2":
-    "Ein Import schreibt nie in die importierte Datei zurück. Die .knxproj wird gelesen und bleibt unangetastet; was entsteht, ist ein Projekt im Arbeitsspeicher, und auf die Festplatte kommt es erst, wenn Sie es als .knxdb speichern.",
+    "Ein Import schreibt nie in die importierte Datei zurück. Die .knxproj wird gelesen und bleibt unangetastet; was entsteht, ist ein Projekt im Arbeitsspeicher, und auf die Festplatte kommt es erst, wenn du es als .knxdb speicherst.",
   "help.topic.gettingStarted.p3":
-    "Ohne Ausgangsdatei legt „Neues Projekt…“ ein leeres Projekt mit Name, Projektsprache und Gruppenadressstil an; die Struktur bauen Sie danach im Baum links auf.",
+    "Ohne Ausgangsdatei legt „Neues Projekt…“ ein leeres Projekt mit Name, Projektsprache und Gruppenadressstil an; die Struktur baust du danach im Baum links auf.",
 
   "help.topic.workbench.title": "Das Fenster",
   "help.topic.workbench.p1":
@@ -1626,7 +1630,7 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.topology.p2":
     "Die drei Teile sind unterschiedlich breit. Bereich geht von 0 bis 15, Linie von 0 bis 15, Gerät von 0 bis 255. Eine Adresse außerhalb dieser Bereiche wird abgelehnt und nicht stillschweigend abgeschnitten.",
   "help.topic.topology.p3":
-    "Eine physikalische Adresse ist im Projekt eindeutig: zwei Geräte können nicht dieselbe tragen. In der Topologie-Ansicht sehen Sie, an welcher Linie ein Gerät hängt, und dort verschieben Sie es auch.",
+    "Eine physikalische Adresse ist im Projekt eindeutig: zwei Geräte können nicht dieselbe tragen. In der Topologie-Ansicht siehst du, an welcher Linie ein Gerät hängt, und dort verschiebst du es auch.",
 
   "help.topic.groupAddresses.title": "Gruppenadressen",
   "help.topic.groupAddresses.p1":
@@ -1648,7 +1652,7 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.comObjectFlags.p2":
     "C, Kommunikation, ist der Hauptschalter: ist es aus, nimmt das Objekt am Busverkehr gar nicht teil, und die übrigen fünf haben nichts, woran sie wirken könnten. R, Lesen, lässt das Objekt eine Leseanfrage mit seinem aktuellen Wert beantworten. W, Schreiben, lässt ein eintreffendes Telegramm diesen Wert ändern.",
   "help.topic.comObjectFlags.p3":
-    "T, Übertragen, lässt das Objekt von sich aus senden, wenn sein Wert sich ändert — das Flag, das aus einem Sensor einen Sender macht. U, Aktualisieren, lässt es einen Wert übernehmen, den es in der Leseantwort eines anderen Geräts sieht. I, Lesen bei Initialisierung, fragt den Wert der Adresse einmal beim Start am Bus ab, damit das Objekt mit einem echten Wert beginnt und nicht mit einer Annahme. KNXBench speichert die sechs so, wie Sie sie setzen, und beurteilt nicht, welche Kombination zu Ihrem Gerät passt.",
+    "T, Übertragen, lässt das Objekt von sich aus senden, wenn sein Wert sich ändert — das Flag, das aus einem Sensor einen Sender macht. U, Aktualisieren, lässt es einen Wert übernehmen, den es in der Leseantwort eines anderen Geräts sieht. I, Lesen bei Initialisierung, fragt den Wert der Adresse einmal beim Start am Bus ab, damit das Objekt mit einem echten Wert beginnt und nicht mit einer Annahme. KNXBench speichert die sechs so, wie du sie setzt, und beurteilt nicht, welche Kombination zu deinem Gerät passt.",
 
   "help.topic.busMonitor.title": "Busmonitor",
   "help.topic.busMonitor.p1":
@@ -1670,7 +1674,7 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.keyboard.p1":
     "Strg+K öffnet die Suche über das Projekt. Strg+Umschalt+P öffnet die Befehlspalette, die zeigt, was gerade möglich ist, samt Tastenkürzel. F1 öffnet diese Hilfe — nur F1 allein; ein F1 mit Zusatztaste bleibt dem Browser und der Arbeitsumgebung überlassen.",
   "help.topic.keyboard.p2":
-    "Strg+Z macht rückgängig, Strg+Umschalt+Z stellt wieder her, und zwar am Projekt, nicht an dem Text, den Sie gerade tippen: in einem Eingabefeld, einem Dialog oder beim Umbenennen im Baum gilt das Rückgängig des Feldes.",
+    "Strg+Z macht rückgängig, Strg+Umschalt+Z stellt wieder her, und zwar am Projekt, nicht an dem Text, den du gerade tippst: in einem Eingabefeld, einem Dialog oder beim Umbenennen im Baum gilt das Rückgängig des Feldes.",
   "help.topic.keyboard.p3":
     "Esc schließt, was obenauf liegt — zuerst einen offenen Hilfehinweis, dann den Dialog darum herum. Solange ein Dialog offen ist, wandert Tab nur in ihm und kann ihn nicht verlassen; beim Schließen kehrt der Fokus dorthin zurück, wo er herkam.",
 
@@ -1678,9 +1682,9 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.limits.p1":
     "KNXBench ist eine unabhängige Anwendung. Sie stammt nicht von der KNX Association, ist von ihr weder unterstützt noch zertifiziert, und sie ist nicht die ETS. Wo sie eine ETS-Datei liest, tut sie das nach eigener Lesart dieser Datei.",
   "help.topic.limits.p2":
-    "KNX Secure wird nicht unterstützt, ETS6-Projektkennwörter ebenso wenig: Ein so geschütztes Projekt wird abgelehnt. Ein kennwortgeschützter Export aus ETS4 oder ETS5 öffnet sich, sobald Sie sein Kennwort in den Dialog eingeben, der danach fragt. Geräte zu programmieren ist neu und bewusst eng begrenzt: KNXBench schreibt nur dort in ein Gerät, wo es dafür ein geprüftes Verfahren hat, immer erst nach Ihrer Bestätigung, und lehnt alles andere ab. Zurück zur ETS führt kein Weg: KNXBench liest eine .knxproj und schreibt nie eine, ein hier importiertes Projekt lässt sich also nicht wieder als ETS-Projektdatei herausgeben.",
+    "KNX Secure wird nicht unterstützt, ETS6-Projektkennwörter ebenso wenig: Ein so geschütztes Projekt wird abgelehnt. Ein kennwortgeschützter Export aus ETS4 oder ETS5 öffnet sich, sobald du sein Kennwort in den Dialog eingibst, der danach fragt. Geräte zu programmieren ist neu und bewusst eng begrenzt: KNXBench schreibt nur dort in ein Gerät, wo es dafür ein geprüftes Verfahren hat, immer erst nach deiner Bestätigung, und lehnt alles andere ab. Zurück zur ETS führt kein Weg: KNXBench liest eine .knxproj und schreibt nie eine, ein hier importiertes Projekt lässt sich also nicht wieder als ETS-Projektdatei herausgeben.",
   "help.topic.limits.p3":
-    "Was vorhanden ist, ist getestet, aber eine Testsuite ist keine Begehung. Bevor Sie sich in einer Anlage auf diese Anwendung verlassen, gleichen Sie ab, was sie Ihnen sagt, mit dem, was die Anlage tut.",
+    "Was vorhanden ist, ist getestet, aber eine Testsuite ist keine Begehung. Bevor du dich in einer Anlage auf diese Anwendung verlässt, vergleiche, was sie dir sagt, mit dem, was die Anlage tut.",
 
   "help.tip.comFlags.label": "Was die Flags der Kommunikationsobjekte bedeuten",
   "help.tip.comFlags.text":
@@ -1709,16 +1713,16 @@ export const messages: Record<MessageKey, string> = {
   // Werbezeile.
   "login.eyebrow": "KNX-compatible · Linux-first",
   "login.intro":
-    "Dieser Server ist passwortgeschützt. Geben Sie das Passwort ein, um weiterzuarbeiten.",
+    "Dieser Server ist passwortgeschützt. Gib das Passwort ein, um weiterzuarbeiten.",
   "login.password": "Passwort",
   "login.submit": "Anmelden",
   "login.pending": "Wird angemeldet…",
   "login.rejected": "Dieses Passwort wurde nicht akzeptiert.",
   "login.checking": "Der Server wird gefragt, ob er ein Passwort verlangt…",
   "login.expiredNotice":
-    "Ihre Sitzung ist beendet — entweder durch Zeitablauf oder weil der Server neu gestartet wurde. Melden Sie sich erneut an, um weiterzuarbeiten; was auf dem Bildschirm steht, ist erhalten geblieben. Wurde der Server allerdings neu gestartet, ist seine Kopie des Projekts weg und Sie müssen es erneut öffnen.",
+    "Deine Sitzung ist beendet — entweder durch Zeitablauf oder weil der Server neu gestartet wurde. Melde dich erneut an, um weiterzuarbeiten; was auf dem Bildschirm steht, ist erhalten geblieben. Wurde der Server allerdings neu gestartet, ist seine Kopie des Projekts weg und du musst es erneut öffnen.",
   "login.signedOutNotice":
-    "Sie sind abgemeldet. Nach erneuter Anmeldung steht die Arbeitsfläche wieder genauso da, wie Sie sie verlassen haben.",
+    "Du bist abgemeldet. Nach erneuter Anmeldung steht die Arbeitsfläche wieder genauso da, wie du sie verlassen hast.",
   "login.footnote":
     "Ein Passwort für den ganzen Server, festgelegt beim Start. Benutzerkonten gibt es noch nicht.",
 
@@ -1740,7 +1744,7 @@ export const messages: Record<MessageKey, string> = {
 
   "autosave.countdown": "Automatisches Speichern in {seconds}s…",
   "autosave.cancel": "Abbrechen",
-  "autosave.failed": "Automatisches Speichern fehlgeschlagen. Ihre Änderungen sind sicher, aber ungespeichert — bitte manuell speichern.",
+  "autosave.failed": "Automatisches Speichern fehlgeschlagen. Deine Änderungen sind sicher, aber ungespeichert — bitte manuell speichern.",
 
   "about.title": "Über KNXBench",
   "about.version": "Version",
@@ -1772,11 +1776,11 @@ export const messages: Record<MessageKey, string> = {
   "programmingConsent.risk.stable":
     "Das Programmieren ändert das Gerät sofort. Eine falsche Projekteinstellung wird so geschrieben, wie sie ist.",
   "programmingConsent.risk.preRelease":
-    "Dieser Build trägt eine Vorabversions-Kennung, die KNXBench nicht kennt. Behandeln Sie ihn als ungetestet.",
+    "Dieser Build trägt eine Vorabversions-Kennung, die KNXBench nicht kennt. Behandle ihn als ungetestet.",
   "programmingConsent.risk.unknown":
-    "KNXBench konnte nicht feststellen, welcher Build läuft. Behandeln Sie ihn als ungetestet.",
+    "KNXBench konnte nicht feststellen, welcher Build läuft. Behandle ihn als ungetestet.",
   "programmingConsent.backup":
-    "Fahren Sie nur fort, wenn Sie wissen, wie Sie dieses Gerät wiederherstellen. KNXBench ist nicht von der KNX Association zertifiziert.",
+    "Fahre nur fort, wenn du weißt, wie du dieses Gerät wiederherstellst. KNXBench ist nicht von der KNX Association zertifiziert.",
   "programmingConsent.remember": "Für {stage}-Builds nicht erneut fragen",
   "programmingConsent.rememberUnavailable":
     "Weil der Entwicklungsstand nicht bekannt ist, wird diese Frage jedes Mal gestellt.",
@@ -1789,11 +1793,11 @@ export const messages: Record<MessageKey, string> = {
   "debugReport.button": "Fehlerbericht…",
   "debugReport.title": "Fehlerbericht",
   "debugReport.intro":
-    "Sammelt das, was zur Fehlersuche taugt, in einer Zip-Datei auf diesem Rechner. Es wird nichts verschickt: die Datei entsteht dort, wo Sie sie hinlegen, und die GitHub-Schaltfläche öffnet lediglich eine vorausgefüllte Issue-Seite im Browser, die Sie vor dem Absenden lesen.",
+    "Sammelt das, was zur Fehlersuche taugt, in einer Zip-Datei auf diesem Rechner. Es wird nichts verschickt: die Datei entsteht dort, wo du sie hinlegst, und die GitHub-Schaltfläche öffnet lediglich eine vorausgefüllte Issue-Seite im Browser, die du vor dem Absenden liest.",
   "debugReport.descriptionLabel": "Was ist passiert?",
-  "debugReport.descriptionPlaceholder": "Was Sie getan haben, was Sie erwartet haben, was stattdessen geschah.",
+  "debugReport.descriptionPlaceholder": "Was du getan hast, was du erwartet hast, was stattdessen geschah.",
   "debugReport.descriptionHint":
-    "Kommt in Ihren eigenen Worten in den Bericht. Alles Weitere unten wird automatisch gesammelt.",
+    "Kommt in deinen eigenen Worten in den Bericht. Alles Weitere unten wird automatisch gesammelt.",
   "debugReport.filterName": "Zip-Archiv",
   "debugReport.include.log.label": "Sitzungsprotokoll",
   "debugReport.include.log.hint":
@@ -1803,18 +1807,18 @@ export const messages: Record<MessageKey, string> = {
     "Wie viele Geräte, Linien und Gruppenadressen das geöffnete Projekt hat. Nur Anzahlen — keine Namen, keine Adressen.",
   "debugReport.include.busTelegrams.label": "Telegramme des Busmonitors",
   "debugReport.include.busTelegrams.hint":
-    "Die Telegramme, die gerade im Puffer des Monitors liegen. Sie behalten die physikalischen und Gruppenadressen Ihrer Geräte.",
+    "Die Telegramme, die gerade im Puffer des Monitors liegen. Sie behalten die physikalischen und Gruppenadressen deiner Geräte.",
   "debugReport.contentsTitle": "Was in der Datei stehen wird",
-  "debugReport.contents.report": "report.md — Ihre Beschreibung, die Versionen und die Umgebung.",
+  "debugReport.contents.report": "report.md — deine Beschreibung, die Versionen und die Umgebung.",
   "debugReport.contents.environment": "environment.json — dieselben Angaben maschinenlesbar.",
   "debugReport.contents.log":
     "log.json — die Protokolleinträge dieser Sitzung; kann KNX-Adressen und importierte Elemente benennen.",
   "debugReport.contents.projectSummary": "project-summary.json — Anzahlen zum geöffneten Projekt.",
   "debugReport.contents.busTelegrams": "bus-telegrams.json — der Puffer des Busmonitors.",
   "debugReport.privacyRedacted":
-    "IP-Adressen, Ihr Home-Verzeichnis und der Name dieses Rechners werden in report.md, environment.json und log.json durch Platzhalter ersetzt. KNX-Adressen und Namen aus Ihrem Projekt werden nirgends ersetzt.",
+    "IP-Adressen, dein Home-Verzeichnis und der Name dieses Rechners werden in report.md, environment.json und log.json durch Platzhalter ersetzt. KNX-Adressen und Namen aus deinem Projekt werden nirgends ersetzt.",
   "debugReport.privacyTelegrams":
-    "bus-telegrams.json wird nicht geschwärzt. Die Datei behält die physikalischen Adressen und die Gruppenadressen Ihrer Anlage, die Namen der Gruppenadressen, soweit das geöffnete Projekt sie kennt — „Küche Deckenlicht“ —, sowie jeden Telegrammwert (auch Textwerte) mit seinem Zeitstempel. Zusammen können diese Angaben zeigen, wann die Anlage benutzt wurde. Ohne sie sagt ein Telegrammmitschnitt nichts aus, deshalb bleiben sie stehen. Nehmen Sie die Datei nur auf, wenn Sie all das weitergeben wollen.",
+    "bus-telegrams.json wird nicht geschwärzt. Die Datei behält die physikalischen Adressen und die Gruppenadressen deiner Anlage, die Namen der Gruppenadressen, soweit das geöffnete Projekt sie kennt — „Küche Deckenlicht“ —, sowie jeden Telegrammwert (auch Textwerte) mit seinem Zeitstempel. Zusammen können diese Angaben zeigen, wann die Anlage benutzt wurde. Ohne sie sagt ein Telegrammmitschnitt nichts aus, deshalb bleiben sie stehen. Nimm die Datei nur auf, wenn du all das weitergeben willst.",
   "debugReport.save": "Zip speichern…",
   "debugReport.openIssue": "GitHub-Issue öffnen…",
   "debugReport.close": "Schließen",
@@ -1822,14 +1826,14 @@ export const messages: Record<MessageKey, string> = {
   "debugReport.saved.one": "Fehlerbericht gespeichert, {count} Datei.",
   "debugReport.saved.other": "Fehlerbericht gespeichert, {count} Dateien.",
   "debugReport.issueOpened":
-    "Im Browser wurde ein vorausgefülltes Issue geöffnet. Abgeschickt ist nichts — lesen Sie es, hängen Sie die Zip-Datei an und senden Sie es selbst ab.",
+    "Im Browser wurde ein vorausgefülltes Issue geöffnet. Abgeschickt ist nichts — lies es, häng die Zip-Datei an und schick es selbst ab.",
   "debugReport.issueTruncated":
-    "Im Browser wurde ein vorausgefülltes Issue geöffnet. Der Bericht war für einen Link zu lang und wurde gekürzt — speichern Sie bitte zusätzlich die Zip-Datei und hängen Sie sie an.",
+    "Im Browser wurde ein vorausgefülltes Issue geöffnet. Der Bericht war für einen Link zu lang und wurde gekürzt — speichere bitte zusätzlich die Zip-Datei und häng sie an.",
   "debugReport.issueTitle": "Fehlerbericht aus KNXBench",
   "serviceControl.tab": "Debug · Gerätesteuerung",
   "serviceControl.title": "Freigabe der Individualadress-Schreibfunktion",
   "serviceControl.intro": "Ein separates Steuerverfahren am Gerät. Das Öffnen dieser Ansicht liest kein Gerät; dies ist weder Teil eines Downloads noch der Adressprogrammierung.",
-  "serviceControl.projectRequired": "Öffnen Sie vor dem Gerätezugriff ein Projekt.",
+  "serviceControl.projectRequired": "Öffne vor dem Gerätezugriff ein Projekt.",
   "serviceControl.warning": "Debug-Schreibvorgang: Diese Aktion ändert eine dauerhafte Geräteeigenschaft. Vorher andere Busaktionen beenden. Der Server sichert die ursprünglichen zwei Bytes vor dem Schreiben; dies ist kein vollständiges Geräteabbild und keine automatische Wiederherstellung. Erst nach ausdrücklichem Lesen, Prüfen und Eingabe des gerätebezogenen Satzes wird geschrieben. Das Verlassen dieser Ansicht bricht einen bereits gestarteten Schreibvorgang nicht ab.",
   "serviceControl.address": "Bisherige Geräteadresse",
   "serviceControl.gateway": "KNXnet/IP-Gateway",
@@ -1855,8 +1859,8 @@ export const messages: Record<MessageKey, string> = {
   "deviceChecks.tab": "Geräteprüfung",
   "deviceChecks.eyebrow": "Projekt · Zuerst offline",
   "deviceChecks.title": "Bereitschaft & Gerätevergleich",
-  "deviceChecks.intro": "Die Bereitschaft prüft die Ladepläne des aktuellen Projekts offline. Der Vergleich liest ein echtes Gerät erst nach Ihrer ausdrücklichen Bestätigung; keine Prüfung lädt Daten ins Gerät.",
-  "deviceChecks.projectRequired": "Öffnen Sie zuerst ein Projekt, um seine Geräte zu prüfen.",
+  "deviceChecks.intro": "Die Bereitschaft prüft die Ladepläne des aktuellen Projekts offline. Der Vergleich liest ein echtes Gerät erst nach deiner ausdrücklichen Bestätigung; keine Prüfung lädt Daten ins Gerät.",
+  "deviceChecks.projectRequired": "Öffne zuerst ein Projekt, um seine Geräte zu prüfen.",
   "deviceChecks.refresh": "Bereitschaft aktualisieren",
   "deviceChecks.loading": "Projektpläne werden geprüft…",
   "deviceChecks.count": "{count} Projektgeräte bewertet",
@@ -1905,7 +1909,7 @@ export const messages: Record<MessageKey, string> = {
   "deviceDownload.eyebrow": "KNXnet/IP · Schreibt in ein Gerät",
   "deviceDownload.title": "In Gerät laden",
   "deviceDownload.explainer": "Lädt die Konfiguration des geöffneten Projekts über den Bus in ein Gerät (KNX: Download). Das ist kein Speichern oder Exportieren einer Datei: Das Projekt bleibt, wie es ist, das Gerät ändert sich.",
-  "deviceDownload.projectRequired": "Öffnen Sie zuerst ein Projekt: Was ins Gerät geladen wird, entsteht aus Gerät, Parametern und Gruppenverknüpfungen des Projekts.",
+  "deviceDownload.projectRequired": "Öffne zuerst ein Projekt: Was ins Gerät geladen wird, entsteht aus Gerät, Parametern und Gruppenverknüpfungen des Projekts.",
   "deviceDownload.device": "Gerät",
   "deviceDownload.chooseDevice": "Gerät mit physikalischer Adresse wählen",
   "deviceDownload.gateway": "Gateway-Adresse",
@@ -1953,7 +1957,7 @@ export const messages: Record<MessageKey, string> = {
   "deviceDownload.written.yes": "Ins Gerät geschrieben: ja, {count} Oktette, jeder Block unverändert zurückgelesen.",
   "deviceDownload.written.no": "Ins Gerät geschrieben: nein. Das Gerät wurde nicht verändert.",
   "deviceDownload.written.partially": "Ins Gerät geschrieben: teilweise. Das Gerät ist möglicherweise nur teilweise geladen; erneut ins Gerät laden.",
-  "deviceDownload.restartUnconfirmed": "Neustart: NICHT bestätigt. Die Daten sind geschrieben und zurückgelesen, aber das Gerät hat den Neustart nicht quittiert. Manche Geräte starten ohne Antwort neu; prüfen Sie, ob es arbeitet.",
+  "deviceDownload.restartUnconfirmed": "Neustart: NICHT bestätigt. Die Daten sind geschrieben und zurückgelesen, aber das Gerät hat den Neustart nicht quittiert. Manche Geräte starten ohne Antwort neu; prüfe, ob es arbeitet.",
   "deviceDownload.restartAcknowledged": "Neustart: vom Gerät bestätigt.",
   "deviceDownload.blocksCaption": "Geschriebene Daten, jeder Block erst angezeigt, nachdem das Gerät ihn unverändert zurückgelesen hat",
   "deviceDownload.step": "Schritt",
@@ -1980,7 +1984,7 @@ export const messages: Record<MessageKey, string> = {
   "addressProgramming.start": "{address} programmieren",
   "addressProgramming.consentTarget": "das Gerät im Programmiermodus → {address}",
   "addressProgramming.progressTitle": "{address} wird programmiert",
-  "addressProgramming.pressButton": "Drücken Sie die Programmiertaste an dem Gerät, das diese Adresse bekommen soll.",
+  "addressProgramming.pressButton": "Drück die Programmiertaste an dem Gerät, das diese Adresse bekommen soll.",
   "addressProgramming.foundOne": "Ein Gerät ist im Programmiermodus ({device}).",
   "addressProgramming.releaseAllButOne": "Mehrere Geräte sind im Programmiermodus ({devices}): alle bis auf eines loslassen.",
   "addressProgramming.waiting": "Warte · Runde {rounds} · Abbruch nach {seconds} s",
@@ -2043,16 +2047,16 @@ export const messages: Record<MessageKey, string> = {
     "KNXBench ist eine unabhängige Anwendung für die Planung von KNX-Anlagen: ETS-Projekte importieren, Gebäude, Topologie und Gruppenadressen strukturieren, Geräte konfigurieren und den Bus beobachten. Sie stammt nicht von der KNX Association, ist von ihr weder unterstützt noch zertifiziert, und sie ist nicht die ETS.",
   "onboarding.step.about.stageLabel": "Dieser Build",
   "onboarding.stage.alpha":
-    "Alpha heißt: Die Funktionen sind da und getestet — mit echten Projektdateien, einem Simulator und bisher sehr wenig echter Hardware. Rechnen Sie mit Ecken und Kanten und damit, dass sich zwischen Versionen noch Dinge ändern.",
+    "Alpha heißt: Die Funktionen sind da und getestet — mit echten Projektdateien, einem Simulator und bisher sehr wenig echter Hardware. Rechne mit Ecken und Kanten und damit, dass sich zwischen Versionen noch Dinge ändern.",
   "onboarding.stage.beta":
-    "Beta heißt: Die für dieses Release geplanten Funktionen sind enthalten und werden breiter getestet. Rechnen Sie mit verbliebenen Fehlern.",
+    "Beta heißt: Die für dieses Release geplanten Funktionen sind enthalten und werden breiter getestet. Rechne mit verbliebenen Fehlern.",
   "onboarding.stage.releaseCandidate":
     "Ein Release Candidate soll das Release werden, sofern kein ernstes Problem mehr auftaucht.",
   "onboarding.stage.stable": "Dies ist eine veröffentlichte Version.",
   "onboarding.stage.preRelease": "Dies ist ein Vorab-Build, dessen Stufe hier keinen Namen hat.",
   "onboarding.stage.unknown": "Der Server hat nicht mitgeteilt, welcher Build läuft.",
   "onboarding.step.about.trust":
-    "Sichern Sie Ihre Projekte. Bevor Sie sich darauf verlassen, was KNXBench Ihnen über eine Anlage sagt, gleichen Sie es mit der Anlage selbst ab.",
+    "Sichere deine Projekte. Bevor du dich darauf verlässt, was KNXBench dir über eine Anlage sagt, gleiche es mit der Anlage selbst ab.",
   "onboarding.step.about.language": "Sprache",
   "onboarding.step.scope.title": "Was geht – und was noch nicht",
   "onboarding.step.scope.worksTitle": "Funktioniert",
@@ -2068,7 +2072,7 @@ export const messages: Record<MessageKey, string> = {
   "onboarding.step.scope.notYet.export": "Kein .knxproj-Export: Ein Projekt lebt als .knxdb weiter, und keine Datei führt zurück zur ETS.",
   "onboarding.step.scope.notYet.secure": "Keine ETS6-Projektkennwörter und kein KNX Secure.",
   "onboarding.step.scope.notYet.programming":
-    "In Geräte schreiben nur, wo ein geprüftes Verfahren existiert, und immer erst nach Ihrer Bestätigung; alles andere wird abgelehnt.",
+    "In Geräte schreiben nur, wo ein geprüftes Verfahren existiert, und immer erst nach deiner Bestätigung; alles andere wird abgelehnt.",
   "onboarding.step.scope.more": "Mehr in der Hilfe: Was diese Anwendung nicht tut",
   "onboarding.step.start.title": "Wo anfangen",
   "onboarding.step.start.intro": "Jede Schaltfläche schließt diese Einführung und führt den Befehl aus.",
@@ -2089,7 +2093,7 @@ export const messages: Record<MessageKey, string> = {
   "onboarding.step.help.p1":
     "F1 öffnet die Hilfe zu dem Thema, das zum fokussierten Element passt. Sie erklärt KNX-Begriffe so, wie KNXBench sie verwendet, und wo diese Anwendung aufhört.",
   "onboarding.step.help.p2":
-    "Einen Fehler gefunden? Datei → Fehlerbericht… sammelt, was ein Fehlerbericht braucht, listet jede Datei auf, bevor etwas geschrieben wird, und kann ein vorausgefülltes GitHub-Issue öffnen, das Sie selbst absenden. Von allein wird nichts hochgeladen.",
+    "Einen Fehler gefunden? Datei → Fehlerbericht… sammelt, was ein Fehlerbericht braucht, listet jede Datei auf, bevor etwas geschrieben wird, und kann ein vorausgefülltes GitHub-Issue öffnen, das du selbst absendest. Von allein wird nichts hochgeladen.",
   "onboarding.step.help.p3":
     "Diese Einführung bleibt einen Schritt entfernt: Datei → Einführung anzeigen…, oder derselbe Eintrag in der Befehlspalette.",
   "onboarding.step.help.openHelp": "Hilfe öffnen",
@@ -2136,7 +2140,7 @@ export const messages: Record<MessageKey, string> = {
   "achievement.polyglot.title": "Polyglott",
   "achievement.polyglot.description": "Die Sprache der Oberfläche gewechselt.",
   "achievement.seatbelt.title": "Sicherheitsgurt angelegt",
-  "achievement.seatbelt.description": "Die automatische Sicherung hat das Projekt für Sie gespeichert.",
+  "achievement.seatbelt.description": "Die automatische Sicherung hat das Projekt für dich gespeichert.",
   "achievement.time-traveller.title": "Zeitreisender",
   "achievement.time-traveller.description": "100 Änderungen rückgängig gemacht.",
   "achievement.mega-site.title": "Großbaustelle",

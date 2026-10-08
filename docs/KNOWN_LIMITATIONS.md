@@ -6878,6 +6878,22 @@ triage.
 
 ## 128. Legacy `.vd3`–`.vd5` and `.pr3`–`.pr5` files are refused, and the refusal misnames the format
 
+**Update 2026-10-08 (legacy VD package L1, ADR-0094).** The design's
+decisions are taken: the maintainer approved the 2026-09-26 design on
+2026-10-08, with amendments (interview receipt
+`.ai/logs/2026-10-08_claude_legacy-vd-grilling.md`). The amendments add
+parameters, communication objects and visibility to the planned mapping.
+`.pr*` and `.vd2` stay out of scope. The password is always supplied by the
+user, never built in. L1 is done: `knx products inspect-legacy` and
+`knx_app::legacy::inspect_legacy_file` decrypt, parse and summarise a
+`.vd3`/`.vd4`/`.vd5`/`.pr5` file with a user-supplied password and write
+nothing. All three real files read with zero diagnostics: `EIBMARKT.VD3`,
+the Eibmarkt `.vd4` and the MDT `.pr5`. A legacy file renamed `.knxprod` is
+now refused by content as `PackageError::LegacyExIm`. **Still open:**
+importing into the product database (L2) and the server/web upload with a
+password dialog (L3). `knx products ingest` and the `.knxproj` path keep
+their filename refusal until L2.
+
 **Update 2026-10-05 (AR06 row reconciliation).** The misnaming is fixed since
 AR06 (95e6bcb0): these filename extensions get a typed unsupported-legacy
 refusal before any archive parsing or destination creation, on the import,
@@ -6908,7 +6924,11 @@ direct importer anyway: its `application_program` table has zero rows, so even
 a perfect import yields a catalogue entry with no parameters and no
 communication objects **[V]**.
 
-**Lifted when.** The design
+**Lifted when.** L2 publishes `.vd*` application programs (parameters,
+communication objects, visibility) into the product database. It must pass
+the semantic-equivalence check against ETS's own conversion in the house
+project (ADR-0094 decision 7). *Superseded condition, kept for history:*
+the design
 [2026-09-26-legacy-vd-pr-product-import-design.md](superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md)
 has an independent review verdict and Board approval of its decisions B-1 to
 B-6. After that, its slices are implemented one at a time: L1 is named

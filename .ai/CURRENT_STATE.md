@@ -1,4 +1,18 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-08 10:20
+- **Completed:** German UI catalogue switched to the informal du-form (user
+  decision "Per Du"): 53 places in `de.ts`, guard test
+  `i18n.duForm.test.ts`, one German assertion in `ParameterPanel.test.tsx`.
+  Gate green (Vitest 2,372/143, Chromium 170, xtask, inputs frozen).
+- **Pending/Next Steps:** None for this package. The wizard goal (ADR-0093)
+  is complete.
+- **Notes for Codex oder Claude:** New German strings use "du". The guard
+  refuses "Ihr/Ihre/Ihnen", "<verb>en Sie" and "wenn/wie/die/für … Sie";
+  sentence-initial pronoun "Sie" stays legal. `bar.ts`/`tlh.ts` untouched.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-08 10:00
 - **Completed:** ADR-0093 package P2 — add-device wizard delivered on `main`
   (`60e16158`). Server: `POST /api/devices` gains `installationId`,

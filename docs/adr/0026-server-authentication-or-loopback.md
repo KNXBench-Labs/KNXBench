@@ -12,10 +12,10 @@ no session and no authorisation of any kind. Whoever reached the port
 owned the open project.
 [KNOWN_LIMITATIONS.md §22](../KNOWN_LIMITATIONS.md#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback)
 recorded that as a deliberate scope decision — the
-[2026-09-05 web/Docker design spec](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/superpowers/specs/2026-09-05-web-docker-deployment-design.md)
+[2026-09-05 web/Docker design spec](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-05-web-docker-deployment-design.md)
 says "LAN-only, no auth", and the stated use case was a self-hosted
 container on a trusted network, not internet exposure.
-[LIMITATION_TRIAGE.md](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/LIMITATION_TRIAGE.md) ranks it **K1**: the
+[LIMITATION_TRIAGE.md](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/LIMITATION_TRIAGE.md) ranks it **K1**: the
 highest-risk open item in the repository that is not about commissioning.
 
 **What was actually exposed.** Roughly forty routes, and they are not all

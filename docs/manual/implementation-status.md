@@ -55,7 +55,7 @@ gives five, with the measured counts behind them.
 | Preserving unknown attributes, elements and whole container members untouched | ✅ Implemented | 38 container entries stored with the content hash they arrived with |
 | ZipCrypto-protected projects (ETS4/ETS5) | 🟡 Partial or experimental | Implemented and tested against synthetic fixtures only |
 | AES-protected projects (ETS6) | ❌ Not implemented | Refused by name — [§13](../KNOWN_LIMITATIONS.md#13-password-protected-projects-zipcrypto-ets4ets5-is-decrypted-aes-ets6-is-still-refused) |
-| Importing part of a project into an existing one | ❌ Not implemented | Import is whole-file — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/aa0ff14ff536/docs/GAP_ANALYSIS_ETS.md), row C3 |
+| Importing part of a project into an existing one | ❌ Not implemented | Import is whole-file — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md), row C3 |
 
 ## ETS project export
 
@@ -77,7 +77,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | Standalone `.knxprod` at schemes 12, 13, 14 and exact-namespace 21 | 🟡 Partial or experimental | Synthetic tests and the passing read-only corpus matrix verify parser/persistence behavior, not full manufacturer semantics |
 | Standalone `.knxprod` at schemes 15–19 and 22 | ❌ Not implemented | No observed standalone sample or verified namespace support |
 | Encrypted `.knxprod` packages, and legacy `.vd2` files | ❌ Not implemented, deliberately | A permanent scope exclusion, refused as a typed error |
-| Online catalog update from a manufacturer | ❌ Not implemented | Files are installed by hand — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/aa0ff14ff536/docs/GAP_ANALYSIS_ETS.md), row C6 |
+| Online catalog update from a manufacturer | ❌ Not implemented | Files are installed by hand — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md), row C6 |
 | Devices configured by a manufacturer plug-in | ❌ Not implemented | No plug-in host exists and none is planned — [§6](../KNOWN_LIMITATIONS.md#6-devices-behind-vendor-plug-in-dlls) |
 
 ## Topology and buildings

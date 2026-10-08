@@ -11,7 +11,7 @@ Some KNX devices are only available as ETS3-era product databases
 KNXBench. The decisions here were settled in a recorded interview on
 2026-10-08 (`.ai/logs/2026-10-08_claude_legacy-vd-grilling.md`), which
 accepted the design study
-[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md)
+[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md)
 as the basis, with amendments.
 
 Evidence (`[V]` measured on 2026-10-08 unless noted):

@@ -2,18 +2,19 @@
 
 On 2026-10-08 the user decided to take these paths out of the working tree.
 They are **not lost**: every file is unchanged in Git at commit
-`138403ed60846d7cf2a964c3e0a360e52ae6155e` (the last `main` commit that
-contains them; before the same-day identity history rewrite this commit was
-`6a1ba6ae5d54`). Links in maintained docs that pointed into them were rewritten
+`bca2d3336b9692e7a6ece18804d187ecdda6968f` (the last `main` commit that
+contains them; it was `138403ed6084` until the public-launch history purge and
+`6a1ba6ae5d54` before the same-day identity rewrite, see
+[known limitation §162](../KNOWN_LIMITATIONS.md#162-commit-hashes-cited-before-2026-10-07-refer-to-the-rewritten-history)). Links in maintained docs that pointed into them were rewritten
 to pinned GitHub URLs at that commit, so they still open the exact old file.
 
 ```sh
-git show 138403ed6084:<path>                 # read one file
-git ls-tree -r --name-only 138403ed6084 docs/superpowers   # list a folder
-git restore --source=138403ed6084 -- <path>  # bring a file back
+git show bca2d3336b96:<path>                 # read one file
+git ls-tree -r --name-only bca2d3336b96 docs/superpowers   # list a folder
+git restore --source=bca2d3336b96 -- <path>  # bring a file back
 ```
 
-Web: `https://github.com/KNXBench-Labs/KNXBench/tree/138403ed6084/<path>`.
+Web: `https://github.com/KNXBench-Labs/KNXBench/tree/bca2d3336b96/<path>`.
 
 | Removed path | Files | What it held |
 | --- | ---: | --- |
@@ -40,10 +41,10 @@ Web: `https://github.com/KNXBench-Labs/KNXBench/tree/138403ed6084/<path>`.
 - `xtask check-ledger` still skips any `archive/` or `history/` directory; that
   rule is harmless without the folder.
 
-## Second round, 2026-10-08 (at `aa0ff14ff536`, pre-rewrite `62a54e70cbc4`)
+## Second round, 2026-10-08 (at `a584007fc05a`; `aa0ff14ff536` before the public-launch purge, `62a54e70cbc4` before the identity rewrite)
 
 Also removed on the user's request; readable with
-`git show aa0ff14ff536:<path>`, links pinned to that commit.
+`git show a584007fc05a:<path>`, links pinned to that commit.
 
 | Removed path | What it held |
 | --- | --- |

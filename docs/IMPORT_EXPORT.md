@@ -818,6 +818,10 @@ data (same blocker as schema 23 project data).
   even a new database file. The report lists the programs, counts and every
   `unmapped-table`, `skipped-rows`, `orphan-translation` or other mapping
   diagnostic; diagnostics are also stored (`legacy_diagnostic`).
+- **Secret-class values** (`*PASSWORD*` columns) are blanked in the stored
+  payload, which is also the copy that is parsed and keyed, and reported as
+  `secret-withheld` by count. See ADR-0094 *Amendment: L2* and
+  KNOWN_LIMITATIONS §128 for the unencrypted-original caveat.
 - **Not yet:** the server/web upload (L3) and download of legacy programs
   (L4, refused as `CodeError::LegacyProgram`).
 

@@ -17,6 +17,7 @@ pub mod image;
 pub mod image_request;
 pub mod inference;
 pub mod ingest;
+pub mod legacy;
 pub mod master_evidence;
 pub mod migration;
 pub mod package;

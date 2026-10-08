@@ -70,7 +70,7 @@ It is nevertheless **not started**, and four things block it:
 3. Vendor `Baggages` DLLs participate in download for some devices.
 4. KNX Secure devices require the key material handling of §9.
 
-**Ruling, 2026-09-11.** Asked whether commissioning is permanently out of scope, the user said no: it must work too, but the work waits until the KNX specification database is finished. The four blockers above are unchanged — they are why it has not started, not a reason it never will. See [KNOWN_LIMITATIONS.md §7](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md) row **E1** (which stays open), and backlog task **T30**.
+**Ruling, 2026-09-11.** Asked whether commissioning is permanently out of scope, the user said no: it must work too, but the work waits until the KNX specification database is finished. The four blockers above are unchanged — they are why it has not started, not a reason it never will. See [KNOWN_LIMITATIONS.md §7](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md) row **E1** (which stays open), and backlog task **T30**.
 
 Recommendation: build toward *read/diagnose/monitor* first (Session 6), and treat programming as a separate, later, explicitly-flagged research effort. Nothing in the architecture should preclude it — hence keeping `LoadProcedures`, `Memory`, `AbsoluteSegment` and mask data in the model rather than discarding them at import.
 
@@ -623,7 +623,7 @@ anywhere.
 **This spike documents a procedure. Nothing described here is implemented,
 and the measurements in this section were taken by the controller against
 their own installation, not by this repository's code.**
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md) row **T17** guessed that a line
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md) row **T17** guessed that a line
 scan would be built on "individual-address serial-number read services".
 That guess was wrong, and this spike exists to correct it and to name the
 service the Standard actually defines for this purpose. It extends §8.4's
@@ -643,7 +643,7 @@ the device-descriptor APCIs (`crates/knx-net/src/cemi.rs`); `ProbePolicy`,
 `ProbeOutcome`, `probe_address`, `scan_line`
 (`crates/knx-net/src/scan.rs`); and `knx bus scan`
 (`apps/knx-cli/src/scan.rs`, `apps/knx-cli/src/main.rs`). See
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)'s **T17** entry for what
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)'s **T17** entry for what
 shipped measured against what this section specified. Finding 4, appended
 at the end of this subsection, adds what a live run of the shipped binary
 against real hardware confirmed and narrowed; everything else below this
@@ -950,7 +950,7 @@ names, or manufacturer inventory belonging to this installation are
 written into it.
 
 This mismatch is not a scan defect; it is the reason **E2**
-([GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)) is a gap worth closing at
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)) is a gap worth closing at
 all. An ETS project file is a *plan*; the bus is the *installation*. They
 drift apart in ordinary use — devices get added by hand, replaced,
 re-addressed, or removed without the project file being updated to

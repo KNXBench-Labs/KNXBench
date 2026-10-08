@@ -1152,7 +1152,7 @@ retrofitting secret handling into the model
 hardware/sample key material exist, the user answered "raus erstmal, aber
 als limitation dokumentieren" — deferred for now, but document it as a
 limitation. This entry already does; nothing here is rejected, only deferred
-behind the precondition above. See [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s
+behind the precondition above. See [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)'s
 **T19** for the tracked task.
 
 ## 9. Project files are not diffable
@@ -2343,7 +2343,7 @@ the *stored project* depend on a display setting, the same integrity
 line T26 was careful not to cross for parameter values, and T33 did not
 cross it either. The UI chrome itself, tracked separately as **T25**, is
 no longer hard-coded English — it shipped 2026-09-12, see the T25 entry
-in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6 — but this closes
+in [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)'s Tier 6 — but this closes
 only the *chrome* half of D10; the data half's own residue below is
 unaffected. `knx_core::string_table`'s `StringTable`
 still has no resolver anywhere except `build_device_detail`'s own
@@ -2367,7 +2367,7 @@ default" and stays there until a user picks explicitly.
 **Lifted when.** Partially, 2026-09-12: first the parameter panel (T26's
 first slice), then communication-object text (T33, same day), then the
 UI chrome itself (T25, same day — see its own entry in
-[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, closing more of gap
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)'s Tier 6, closing more of gap
 **D10**). What remains is a later T26/T33 follow-up: the project's own
 `Language` field, and `StringTable`/`LocalizedString` resolution against
 a user-selected language — neither touched by any slice so far; every
@@ -3730,7 +3730,7 @@ that a change came from outside its own actions.
 
 **Lifted when.** **T22** (multi-user/concurrent-edit support for
 `knx-server`) is designed and implemented. Per its own backlog entry
-([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md#f-non-functional--operational-gaps)),
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md#f-non-functional--operational-gaps)),
 it "needs its own design (locking vs. merge vs. last-writer-wins, and
 what 'conflict' even means for a `Command`-based undo model)" — that
 design question is unresolved, and this limitation stands until it is
@@ -3917,7 +3917,7 @@ slice 1, branch `d10-master-translations`). `FunctionType`/
 `FunctionPoint`/`SpaceUsage`: lifted 2026-09-14 (T13, branch
 `d10-language-data`). This section's own residue (other `MasterData`
 sections, collision counting, frontend locale tags) stays open; see
-**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and §37's own
+**D10** in [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md) and §37's own
 "still open" list. Not scheduled.
 
 **Update 2026-10-05 (AR10 slice 2b): accepted boundary.** Every reader of

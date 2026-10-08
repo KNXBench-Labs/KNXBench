@@ -22,7 +22,7 @@ people with access to it.
    ([troubleshooting](../reference/03-troubleshooting.md)).
 
 This pre-release was built and checked locally, not by the GitHub Actions
-workflow ([ALPHA_FINAL_GATES §14](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)).
+workflow ([ALPHA_FINAL_GATES §14](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)).
 The earlier `v0.1.0-alpha.4` was withdrawn on 2026-10-07. alpha.5 stores its
 data in `~/.local/share/com.knxbench.knxbench-labs` and does not read the
 alpha.4 data folder

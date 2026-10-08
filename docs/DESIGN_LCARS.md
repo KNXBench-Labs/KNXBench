@@ -1,7 +1,7 @@
 # Modern LCARS presentation
 
 Implemented locally on 2026-10-08 after visual approval of the
-[interactive offline study](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/design-studies/lcars/README.md).
+[interactive offline study](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/design-studies/lcars/README.md).
 Decision: [ADR-0092](adr/0092-lcars-built-in-presentation.md).
 
 ## Use
@@ -60,7 +60,7 @@ mutations, live Off/OS/theme cancellation, cold startup, lower Subtle amplitude,
 independent preferences, truthful refused save and small-window usability.
 Warm/lavender header captures were inspected. This is local, offline synthetic
 API/self-review evidence, not a new live deployment or native certification.
-Exact final source, build and checks: [ambient receipt](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/design-studies/lcars/ambient-verification.json).
+Exact final source, build and checks: [ambient receipt](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/design-studies/lcars/ambient-verification.json).
 
 ## Original integration verification
 
@@ -95,7 +95,7 @@ save implementation. Native WebKitGTK/Orca, Firefox, browser-chrome zoom and a
 complete WCAG audit are unverified. This is not an official Star Trek product.
 The original local integration did not include deployment. On 2026-10-08 the
 user separately authorized publication and a Docker rollout, now verified on
-HTTPS port 8484; see [deployment receipt](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/design-studies/lcars/deployment-verification.json).
+HTTPS port 8484; see [deployment receipt](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/design-studies/lcars/deployment-verification.json).
 No release tag or live hardware operation was performed.
 
 ## LCARS ambient timing reference and live rollout

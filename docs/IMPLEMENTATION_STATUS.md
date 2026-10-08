@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Achievement popups linger longer and leave animated (ADR-0089)
+
+- At the user's request: an achievement popup now stays **9 s** (was 6 s)
+  and then **slides out** instead of vanishing; × uses the same exit.
+- `useToasts` marks the popup `leaving`; `ToastStack` removes it on the
+  `animationend` of `knx-achievement-out` (twice the entry duration, motion
+  easing). Without motion the leaving toast is invisible at once and a 1 s
+  fallback removes it. Error and fun toasts are unchanged.
+- Tests: hook timing (9 s, leaving, fallback, early removal), stack
+  (`toast--leaving`, only the exit animation's end counts), and Chromium:
+  the exit animation runs and removes the popup in under 800 ms; with
+  reduced motion the popup is at once invisible and removed by the
+  fallback. Removing the CSS exit rule turns the browser test red.
+
 ## 2026-10-08 — New-project wizard with an atomic starting structure (ADR-0093)
 
 - **New project…** is now a five-step wizard (project, topology, building,

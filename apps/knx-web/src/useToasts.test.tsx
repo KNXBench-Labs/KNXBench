@@ -1,10 +1,10 @@
-/** Verifies that every error toast is reported to the achievement tracker exactly once. */
+/** Verifies the toast queue: errors reported once, achievement popups linger and leave animated. */
 // @vitest-environment happy-dom
 import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
-import { useToasts } from "./toast";
+import { ACHIEVEMENT_TOAST_MS, TOAST_EXIT_FALLBACK_MS, useToasts, type AchievementPopup } from "./toast";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -18,6 +18,7 @@ function Probe() {
 }
 
 afterEach(async () => {
+  vi.useRealTimers();
   if (root) await act(async () => root!.unmount());
   host?.remove();
   host = undefined;
@@ -40,4 +41,47 @@ it("reports each error toast once, even under StrictMode, and nothing for other 
     stop();
   }
   expect(seen).toEqual([{ type: "errorToastShown" }, { type: "errorToastShown" }]);
+});
+
+const popup: AchievementPopup = { title: "Bus Master", description: "Unlocked every other achievement.", tier: "legendary", glyph: "trophy" };
+
+async function mount() {
+  host = document.createElement("div");
+  document.body.appendChild(host);
+  root = createRoot(host);
+  await act(async () => root!.render(<StrictMode><Probe /></StrictMode>));
+}
+
+it("keeps an achievement popup for nine seconds, then lets it leave before removing it", async () => {
+  vi.useFakeTimers();
+  await mount();
+  await act(async () => toasts!.pushAchievements([popup], (n) => `+${n} more`));
+  expect(ACHIEVEMENT_TOAST_MS).toBe(9000);
+  await act(async () => vi.advanceTimersByTime(ACHIEVEMENT_TOAST_MS - 1));
+  expect(toasts!.toasts).toMatchObject([{ kind: "achievement", message: "Bus Master" }]);
+  expect(toasts!.toasts[0].leaving).toBeFalsy();
+  await act(async () => vi.advanceTimersByTime(1));
+  // Leaving, not gone: the stack plays the exit animation first.
+  expect(toasts!.toasts).toHaveLength(1);
+  expect(toasts!.toasts[0].leaving).toBe(true);
+  await act(async () => vi.advanceTimersByTime(TOAST_EXIT_FALLBACK_MS));
+  expect(toasts!.toasts).toEqual([]);
+});
+
+it("removes a leaving popup as soon as its exit animation has ended", async () => {
+  vi.useFakeTimers();
+  await mount();
+  await act(async () => toasts!.pushAchievements([popup], (n) => `+${n} more`));
+  const id = toasts!.toasts[0].id;
+  await act(async () => toasts!.dismiss(id));
+  expect(toasts!.toasts[0].leaving).toBe(true);
+  await act(async () => toasts!.finishExit(id));
+  expect(toasts!.toasts).toEqual([]);
+});
+
+it("still removes other toasts at once when dismissed", async () => {
+  await mount();
+  await act(async () => toasts!.pushFun("Saved."));
+  await act(async () => toasts!.dismiss(toasts!.toasts[0].id));
+  expect(toasts!.toasts).toEqual([]);
 });

@@ -119,3 +119,54 @@ test("switched off, nothing is counted, nothing pops up and the File menu has no
   await expect(page.locator(".file-menu-content").getByRole("button", { name: "Achievements…" })).toHaveCount(0);
   expect(fixture.unexpected).toEqual([]);
 });
+
+/** Dismisses the popup and measures, in the page, how long it took from
+ * `toast--leaving` to removal, and which animation was running. */
+async function dismissAndMeasure(page: Page) {
+  const popup = page.locator(".toast--achievement");
+  await expect(popup).toBeVisible();
+  const measured = popup.evaluate((el) => new Promise<{ animation: string; opacity: string; ms: number }>((done) => {
+    let start = 0;
+    let animation = "";
+    let opacity = "";
+    new MutationObserver((_, observer) => {
+      if (!start && el.classList.contains("toast--leaving")) {
+        start = performance.now();
+        animation = getComputedStyle(el).animationName;
+        opacity = getComputedStyle(el).opacity;
+      }
+      if (start && !el.isConnected) {
+        observer.disconnect();
+        done({ animation, opacity, ms: performance.now() - start });
+      }
+    }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+  }));
+  await popup.getByRole("button", { name: "Dismiss" }).click();
+  return measured;
+}
+
+test("a dismissed popup slides out and is removed when its exit animation ends", async ({ page }) => {
+  const fixture = fresh();
+  await serve(page, fixture);
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "New project…" }).first()).toBeVisible();
+  await konami(page);
+  const result = await dismissAndMeasure(page);
+  expect(result.animation).toBe("knx-achievement-out");
+  // Removed by `animationend`, well before the one-second fallback.
+  expect(result.ms).toBeLessThan(800);
+  await expect(page.locator(".toast--achievement")).toHaveCount(0);
+});
+
+test("with reduced motion the popup vanishes at once and the fallback removes it", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const fixture = fresh();
+  await serve(page, fixture);
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "New project…" }).first()).toBeVisible();
+  await konami(page);
+  const result = await dismissAndMeasure(page);
+  expect(result.animation).toBe("none");
+  expect(result.opacity).toBe("0");
+  expect(result.ms).toBeGreaterThanOrEqual(900);
+});

@@ -199,7 +199,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     revision: 0,
     retiredServerIncarnations: new Set(),
   });
-  const { toasts, pushError, clearErrors, pushFun, pushAchievements, dismiss } = useToasts();
+  const { toasts, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit } = useToasts();
   // ADR-0089. Unlocks are announced in the language of the moment they
   // happen; the tracker itself never translates anything.
   const achievements = useAchievements((definitions) =>
@@ -1291,7 +1291,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         )}
         <span>v{manifestVersion}</span>
       </footer>
-      <ToastStack toasts={toasts} onDismiss={dismiss} />
+      <ToastStack toasts={toasts} onDismiss={dismiss} onExited={finishExit} />
       {autosave.secondsRemaining !== null && (
         <div className="autosave-countdown" role="status">
           <span>{t("autosave.countdown", { seconds: autosave.secondsRemaining })}</span>

@@ -221,9 +221,11 @@ as unsaved, exactly as after a failed manual save.
 KNXBench awards 38 achievements for milestones in your work: a first
 project, a lossless ETS import, named group addresses, a completed line
 scan, a verified download, and a few hidden ones. When one
-unlocks, a popup appears in the bottom-right corner for a few seconds. If
-several unlock at once, you see at most two popups and a "+N more" line. No
-sound plays, and the popup follows the motion settings.
+unlocks, a popup appears in the bottom-right corner for nine seconds and
+then slides out; × closes it earlier. If several unlock at once, you see at
+most two popups and a "+N more" line. No sound plays, and both animations
+follow the motion settings: with reduced or no motion the popup simply
+appears and disappears.
 
 **File → Achievements…** and the command palette open the overview. It
 lists every achievement with its tier (bronze, silver, gold, legendary), the

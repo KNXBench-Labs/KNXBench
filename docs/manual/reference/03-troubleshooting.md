@@ -134,9 +134,9 @@ host, this is working as intended, and no password is needed.
 **You see:** after importing a `.knxproj` file, an **Import: N errors · M warnings**
 button appears in the strip under the header.
 
-**Why:** KNXBench never silently drops anything it fails to fully understand. Unknown
-elements, inferred values, conflicts, unsupported features and outright errors are all
-counted and reported rather than swallowed — see
+**Why:** import reports distinguish unknown elements, inferred values, conflicts,
+unsupported features and errors. Source bytes are retained where possible;
+preservation does not mean editable semantics or a universally lossless mapping — see
 [the import report](../user-guide/02-projects.md#the-import-report) for the full
 breakdown of what falls into which bucket.
 
@@ -307,7 +307,8 @@ GDK_BACKEND=x11 ./KNXBench.AppImage
 ```
 
 The [launcher contract](../../APPIMAGE_LAUNCHER.md) names exactly what was
-verified. The `v0.1.0-alpha.5` pre-release is built with this launcher. If
+verified. The `v0.1.0-alpha.5` tagged source includes this launcher hook;
+that source check is not a new native test of the downloaded image. If
 neither display is reachable, the new launcher still cannot create a window.
 Broader compositor/GPU compatibility is not guaranteed.
 

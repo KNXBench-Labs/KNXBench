@@ -2,6 +2,12 @@
 
 # Projects: create, open, import, save, export
 
+**Goal:** choose the right file operation and keep a reopenable working copy.
+**Prerequisites:** a running app, plus a backed-up file if importing or opening one.
+**Expected result:** a saved `.knxdb`; an ETS import also has a report to review.
+**Watch out:** browser Save writes on the server; Export project downloads a copy.
+Neither produces an edited ETS `.knxproj`.
+
 KNXBench works with two project files, and it is worth being clear about them before
 anything else:
 
@@ -146,11 +152,10 @@ schema. The full evidence table, test names included, is in
 
 > **Note**
 >
-> Password-protected project files cannot be opened from the user interface or the
-> command line today. The decryption for older (ETS 4/ETS 5) containers exists in the
-> library and is tested, but nothing in the application asks you for a password yet,
-> so there is no way to hand one over. Newer (ETS 6, AES) containers are refused by
-> name, not attempted.
+> Older ZipCrypto-protected ETS4/ETS5 projects can request a project password in
+> the interface; the CLI also accepts password input. This path has synthetic
+> regression coverage, not a verified protected ETS export. AES-protected ETS6
+> containers are still refused by name. See [Supported and unsupported](../reference/02-supported-and-unsupported.md#password-protected-projects).
 
 ### The import report
 

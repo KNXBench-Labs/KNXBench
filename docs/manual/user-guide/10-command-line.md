@@ -2,6 +2,13 @@
 
 # The command line
 
+**Goal:** import, inspect, compare and report from a terminal using explicit commands.
+**Prerequisites:** the `knx` binary from a source build; practice files and an output
+directory you control. Bus commands additionally need authorised hardware access.
+**Expected result:** a file or report plus a meaningful exit code.
+**Watch out:** inspect paths before running commands; a bus write is not a dry run,
+and an import that returns a project can still report errors through its exit code.
+
 KNXBench ships a headless binary called `knx`. It is not a cut-down version of the
 application — it runs the same domain code — and it exists partly so that importing,
 exporting and comparing projects can happen in a script or a CI job with no display

@@ -6,6 +6,42 @@ This chapter walks through the first few minutes with KNXBench: what you see
 before any project is open, how to open or import one, and a short tour of
 the screen so the rest of the manual makes sense.
 
+## Tutorial: create, save and reopen your first project
+
+**Goal:** make a small project and prove you can reopen the saved file.
+**Prerequisites:** a running KNXBench build from [Installation](04-installation.md).
+No ETS export, product package or gateway is needed. Use a new project name so
+this exercise does not replace something you care about.
+
+1. Dismiss the introduction after reading its scope and backup reminder.
+2. Choose **New project…**. Enter `Practice house` as the project name and keep
+   the three-level group-address style for this exercise.
+3. Use **Next** to inspect the starting topology. Area 1 and line 1.1 are
+   pre-filled. The Building and Group structure steps are optional; a group
+   preset creates ranges, **not group addresses**.
+4. On **Review**, check the structure, then choose **Create project**.
+5. Read the **Project created** page: the project is open, **not saved yet**.
+   Choose **Done**. You can add devices later.
+6. Choose **File → Save** (`Ctrl+S`). Use `practice-house.knxdb` as the filename.
+   In the browser this writes to the server's storage, not Downloads.
+7. Choose **File → Open (.knxdb)…** and reopen that file. The saved starting
+   structure should return.
+
+**Expected result:** a reopened native project containing the structure you
+reviewed. Saving a file is the first milestone; buying an actuator is not required.
+
+![The real new-project wizard moving from details through optional structure to review and creation; the final page says the project is not yet saved](../../assets/workflows/new-project.gif)
+
+*Creating a project, not saving it. The following Save step is still required.*
+
+![The reopened Practice house file shows one area and one line in the explorer and overview, with no devices or group addresses](../../assets/screenshots/porcelain-practice-project-reopened.png)
+
+**Common mistakes:** a created project is not automatically saved; autosave
+needs an existing filename. **Export project…** downloads a browser-side copy
+but does not replace Save on the server. If the wizard asks about unsaved work,
+choose **Keep editing** or save that work first. Never discard a real project
+just to finish a tutorial. See [Projects](../user-guide/02-projects.md#saving).
+
 ## The introduction
 
 The very first time KNXBench starts, a short introduction opens on top of the

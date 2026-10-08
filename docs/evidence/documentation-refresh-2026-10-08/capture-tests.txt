@@ -1,0 +1,92 @@
+[WebServer] knx-server: NO AUTHENTICATION CONFIGURED. Binding 127.0.0.1 instead of 0.0.0.0: this server would otherwise hand the open project, the KNX bus routes and the host filesystem browser to anyone who can reach the port. Set KNX_AUTH_PASSWORD_HASH (see `knx-server --hash-password`) to listen on the network.
+
+[WebServer] knx-server: KNX_AUTH_PASSWORD holds a plaintext password. It is readable in /proc/<pid>/environ, in `docker inspect` and in your shell history; prefer KNX_AUTH_PASSWORD_HASH from `knx-server --hash-password`.
+[WebServer] knx-server: The session cookie is not marked Secure because this server speaks plain HTTP. Set KNX_AUTH_COOKIE_SECURE=1 when a TLS-terminating proxy is in front of it; leave it unset otherwise, where a Secure cookie would never be sent back at all.
+[WebServer] knx-server: TLS IS SWITCHED OFF (KNX_TLS=off) on a server that listens on the network. The password and the session cookie cross it in the clear; anything between the browser and this server can read and replay them. Only do this behind a TLS-terminating proxy.
+
+
+Running 2 tests using 1 worker
+
+[1/2] e2e/manual-screenshots.shots.ts:53:1 › manual screenshots of the finished application
+e2e/manual-screenshots.shots.ts:53:1 › manual screenshots of the finished application
+Captured porcelain-onboarding-guide.png
+
+Captured porcelain-welcome.png
+
+Captured porcelain-open-project-dialog.png
+
+Captured porcelain-loading-progress.png
+
+Captured porcelain-dashboard.png
+
+Captured porcelain-file-menu.png
+
+Captured porcelain-support-gap-analysis.png
+
+Captured porcelain-new-project.png
+
+Captured porcelain-project-wizard-topology.png
+
+Captured porcelain-project-wizard-building.png
+
+Captured porcelain-project-wizard-groups.png
+
+Captured porcelain-project-wizard-review.png
+
+Captured porcelain-buildings.png
+
+Captured porcelain-topology.png
+
+Captured porcelain-device-inspector.png
+
+Captured porcelain-device-tab-communication-objects.png
+
+Captured porcelain-device-tab-parameters.png
+
+Captured porcelain-device-tab-product-data.png
+
+Captured porcelain-group-addresses.png
+
+Captured porcelain-product-catalog.png
+
+Captured porcelain-device-wizard-product.png
+
+Captured porcelain-device-wizard-placement.png
+
+Captured porcelain-device-wizard-review.png
+
+Captured porcelain-device-wizard-result.png
+
+
+
+Recorded add-device.gif from 67 real browser frames
+
+Captured porcelain-search.png
+
+
+
+Recorded search.gif from 39 real browser frames
+
+Captured porcelain-command-palette.png
+
+Captured porcelain-help-panel.png
+
+Captured porcelain-bus-monitor.png
+
+Captured porcelain-log.png
+
+Captured porcelain-settings.png
+
+
+
+Recorded new-project.gif from 61 real browser frames
+
+Captured porcelain-practice-project-reopened.png
+
+First-project tutorial: created, saved and reopened through the real UI
+
+[2/2] e2e/manual-screenshots.shots.ts:262:1 › manual screenshot of the sign-in page
+e2e/manual-screenshots.shots.ts:262:1 › manual screenshot of the sign-in page
+Captured porcelain-login.png
+
+  2 passed (55.9s)

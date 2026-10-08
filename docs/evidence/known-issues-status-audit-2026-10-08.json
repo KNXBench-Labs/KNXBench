@@ -1,0 +1,169 @@
+{
+  "source_commit": "608a204bf28aa9df83413aa5ccb65241c32478aa",
+  "scope": "Current manual/limitation/status reconciliation; source and existing evidence plus focused offline tests. No new hardware, private-corpus, native-platform or advisory investigation.",
+  "original_known_issue_topics": [
+    "An empty default line is reported as an import error",
+    "Everything KNXBench knows about `.knxproj` comes from a small corpus",
+    "AES-protected ETS6 project files are refused",
+    "There is no partial or selective import",
+    "`.knxproj` export was withdrawn on 2026-09-20",
+    "The catalog file picker offers `.vd2`, and `.vd2` is always rejected",
+    "Some newer `.knxprod` master-data schemes are not installable directly",
+    "Devices configured through a manufacturer plug-in cannot be configured here",
+    "Some manufacturer references still cannot be resolved to a name",
+    "Three module limits in application programs",
+    "Drag and drop covers only a few gestures",
+    "CSV import does not manage group ranges",
+    "The CSV format is KNXBench's own",
+    "Commissioning validation boundary",
+    "There is no address reset in the app",
+    "Device download is verified on one device only",
+    "KNX Secure is not implemented",
+    "The DPT codec infers the format of what you type, and some encodings are this project's ruling",
+    "The group monitor is tunnelling only, one session at a time",
+    "A line scan costs real bus time and cannot distinguish every case",
+    "Movement in the flow view is heavy on large installations",
+    "Opening an older project upgrades the file",
+    "A running monitor keeps the group-address style it started with",
+    "A server restart logs everyone out",
+    "What the server's access control is, and is not",
+    "A container without a password cannot be reached through a published port",
+    "Discovery does not work inside Docker's default network",
+    "One project, one undo stack, no matter how many browsers",
+    "Browser Save As is not a local download",
+    "One host, one architecture, one build",
+    "The AppImage needs an X server",
+    "The desktop shell has no login, on purpose",
+    "The Linux backend still uses GTK3",
+    "Documentation export is HTML, and less than ETS's",
+    "Project comparison is read-only in the web panel",
+    "The interface is English and German; some text is neither",
+    "Screen reader support is incomplete",
+    "Motion settings do not override reduced motion",
+    "`COMPATIBILITY.md` understates datapoint type coverage",
+    "Some repository documents predate the server login"
+  ],
+  "current_known_issue_topic_count": 47,
+  "implementation_status_sections": [
+    "How to read the tables",
+    "Project storage",
+    "ETS project import",
+    "ETS project export",
+    "Product databases",
+    "Topology and buildings",
+    "Group addresses",
+    "Communication objects and links",
+    "Parameters",
+    "Datapoint types",
+    "Documentation export",
+    "Project comparison",
+    "Command line",
+    "KNXnet/IP and the bus",
+    "Commissioning and device download",
+    "KNX Secure",
+    "Web interface and Docker",
+    "Desktop application",
+    "Additional workbench features",
+    "Language and accessibility",
+    "What this adds up to"
+  ],
+  "numbered_catalog_headings": 129,
+  "distinct_numbered_catalog_headings": 128,
+  "historical_duplicate_numbers": [
+    130
+  ],
+  "test_counts": {
+    "web-tests": {
+      "passed": 270
+    },
+    "http-tests": {
+      "passed": 56,
+      "failed": 0,
+      "ignored": 0
+    },
+    "cli-tests": {
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    "store-tests": {
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0
+    },
+    "projection-tests": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0
+    },
+    "translation-install": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "tooling": {
+      "passed": 38,
+      "failed": 0
+    }
+  },
+  "test_runtime_summaries": [
+    "## web-tests",
+    "Test Files  11 passed (11)",
+    "Tests  270 passed (270)",
+    "## http-tests",
+    "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+    "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s",
+    "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s",
+    "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s",
+    "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s",
+    "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s",
+    "## cli-tests",
+    "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s",
+    "## store-tests",
+    "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s",
+    "## projection-tests",
+    "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 47 filtered out; finished in 0.00s",
+    "test result: ok. 1 passed; 0 failed; 0 ignored"
+  ],
+  "formal_ledger_modified": false,
+  "application_behavior_modified": false,
+  "documentation_gates": {
+    "documentation": "Documentation: markdown_files=200, local_targets=1839, images=48, chapters=33\nPASS: 0 errors; external URLs are not checked.\nRun xtask check-anchors separately for heading anchors.",
+    "anchors": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\nanchors ok: 474 links checked across 200 markdown files, none dead",
+    "ledger": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\nledger ok: 191 rows in docs/status/LEDGER.md",
+    "headers": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\nheaders ok: 716 files with a well-formed header, 155 without one (ceiling 155), 21 generated files skipped",
+    "layering": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\nlayering scope: 478 resolved packages\nlayering ok: knx-core reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-etsproj reaches neither knx-store nor knx-productdb; knx-productdb reaches none of knx-etsproj, knx-store, knx-secure; knx-projection reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-secure reaches none of [\"knx-core\", \"serde\"]; knx-mcp reaches none of [\"knx-net\", \"knx-server\", \"knx-secure\", \"knx-etsproj\", \"axum\", \"hyper\", \"reqwest\"]",
+    "corpus": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\ncorpus gates ok: 465 Rust files scanned, no silent early return on a missing corpus"
+  },
+  "rust_runtime_tests_passed": 76,
+  "tooling_summary": "Ran 38 tests in 0.193s",
+  "review_invariants": {
+    "translation_current": true,
+    "no_whole_project_wizard_lock": true,
+    "cli_diff_codes": true,
+    "native_loopback_not_isolation": true,
+    "read_only_mcp_exception": true,
+    "historical_dpt_defect_resolved": true,
+    "primary_issues_preserved": 40,
+    "current_issue_topics": 47,
+    "retired_explicit_aliases_preserved": 91,
+    "application_and_ledger_unchanged": true,
+    "existing_media_hashes_valid": true
+  },
+  "self_review": "0 Critical / 0 Important / 0 Minor unresolved within this documentation audit; in-session, not independent or whole-platform acceptance.",
+  "verifier_correction": "Initial semantic matcher rejected the capitalized Program/catalog/hardware/master phrase; exact-case/whitespace matcher corrected, all invariants pass. No application behavior failure.",
+  "production_frontend_build": {
+    "command": "npm run build --prefix apps/knx-web",
+    "exit_code": 0
+  },
+  "verified_at": "2026-10-08 19:10 CEST",
+  "publication": "Local, uncommitted/unpublished. README owner records an authorized combined-delivery handoff; no publication performed by this audit.",
+  "preserve_parallel_root_work": "Root-local community main-link verification handover/evidence dated 19:03 exists outside this worktree; preserve it during later promotion. Do not capture or discard foreign uncommitted work.",
+  "last_documentation_readback": {
+    "python3 tools/check_documentation.py": "Documentation: markdown_files=200, local_targets=1840, images=48, chapters=33\nPASS: 0 errors; external URLs are not checked.\nRun xtask check-anchors separately for heading anchors.",
+    "target/debug/xtask check-anchors": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\nanchors ok: 474 links checked across 200 markdown files, none dead",
+    "target/debug/xtask check-ledger": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\nledger ok: 191 rows in docs/status/LEDGER.md",
+    "git diff --check": ""
+  },
+  "staged_or_unmerged_paths": []
+}

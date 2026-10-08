@@ -1,0 +1,12 @@
+
+> knx-web@0.1.0-alpha.5 test
+> vitest run src/bundledLanguagePacks.test.ts src/uiLanguage.test.tsx
+
+
+ RUN  v5.0.0 <worktree>/apps/knx-web
+
+
+ Test Files  2 passed (2)
+      Tests  19 passed (19)
+   Start at  16:32:45
+   Duration  384ms (environment 51%, transform 31%, import 10%, tests 7%, worker 1%)

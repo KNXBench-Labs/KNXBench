@@ -1,0 +1,80 @@
+{
+  "source_commit": "608a204bf28aa9df83413aa5ccb65241c32478aa",
+  "original_idea_count": 12,
+  "idea_assessments": {
+    "implemented_at_stated_scope": 5,
+    "partial": 3,
+    "not_implemented": 4
+  },
+  "application_and_ledger_unchanged": true,
+  "scope": "Documentation/source audit; no new hardware, private-corpus, native-platform acceptance or publication.",
+  "test_summaries": [
+    "## web-tests",
+    " Test Files  15 passed (15)",
+    "      Tests  255 passed (255)",
+    "## mcp-tests",
+    "    Finished `test` profile [unoptimized + debuginfo] target(s) in 18.48s",
+    "     Running tests/stdio.rs (target/debug/deps/stdio-6e3bde65009e7f2b)",
+    "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
+    "     Running tests/tools.rs (target/debug/deps/tools-7b440256edc1fbe5)",
+    "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s",
+    "## http-tests",
+    "    Finished `test` profile [unoptimized + debuginfo] target(s) in 26.20s",
+    "     Running tests/http_activity_history.rs (target/debug/deps/http_activity_history-cd4b6d6bad7425ca)",
+    "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+    "     Running tests/http_legacy_install.rs (target/debug/deps/http_legacy_install-49590abfa9a7c575)",
+    "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s"
+  ],
+  "final_documentation_gates": {
+    "documentation-final": "Documentation: markdown_files=199, local_targets=1765, images=48, chapters=33\nPASS: 0 errors; external URLs are not checked.\nRun xtask check-anchors separately for heading anchors.",
+    "anchors-final": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\nanchors ok: 468 links checked across 199 markdown files, none dead",
+    "ledger-final": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\nledger ok: 191 rows in docs/status/LEDGER.md",
+    "headers-gate": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\nheaders ok: 716 files with a well-formed header, 155 without one (ceiling 155), 21 generated files skipped",
+    "layering-gate": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\nlayering scope: 478 resolved packages\nlayering ok: knx-core reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-etsproj reaches neither knx-store nor knx-productdb; knx-productdb reaches none of knx-etsproj, knx-store, knx-secure; knx-projection reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-secure reaches none of [\"knx-core\", \"serde\"]; knx-mcp reaches none of [\"knx-net\", \"knx-server\", \"knx-secure\", \"knx-etsproj\", \"axum\", \"hyper\", \"reqwest\"]",
+    "corpus-gate": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/docs-refresh-20261008\ncorpus gates ok: 465 Rust files scanned, no silent early return on a missing corpus"
+  },
+  "verified_at": "2026-10-08 18:18 CEST",
+  "source_checks": {
+    "manual_ideas": 12,
+    "copy_counts": {
+      "error_wrappers": 30,
+      "late_night": 30
+    },
+    "mcp_tools": 8,
+    "root_ideas_still_ignored": true,
+    "self_review": "0 critical, 0 important, 0 minor unresolved. In-session source/document review, not independent acceptance."
+  },
+  "web_build": {
+    "command": "npm run build --prefix apps/knx-web",
+    "exit_code": 0,
+    "scope": "TypeScript and Vite production build; no deployment."
+  },
+  "test_counts": {
+    "web": 255,
+    "mcp": 18,
+    "http": 10,
+    "tooling": 38
+  },
+  "ledger_counts": {
+    "distinct_ids": 191,
+    "DONE": 47,
+    "ACCEPTED_BOUNDARY": 121,
+    "LATER": 23,
+    "active_or_waiting": 0
+  },
+  "publication": "Local, uncommitted and unpublished. Root-local ideas.md remains ignored.",
+  "existing_media": {
+    "screenshots": 32,
+    "gifs": 3,
+    "hashes_verified": true,
+    "application_source_commit": "4c84ab9f2d80b7a7118402e8cb0c901dc5e4c14d",
+    "app_source_unchanged_through_audit_base": true
+  },
+  "preserved_prior_refresh_paths": 77,
+  "outside_audit_change": {
+    "path": "README.md",
+    "disposition": "Current bytes differ from both sync-backup snapshots; audit authored no README edit. Current version retained, both task-owned stashes retained for publication review. No actor inferred."
+  },
+  "unmerged_paths": [],
+  "staged_paths": []
+}

@@ -182,10 +182,10 @@ The tagged form additionally checks that the artifact's file name matches the ta
 
 > **Note**
 >
-> The release workflow exists and has never been run, so there is no published AppImage to
-> download. Building one locally is currently the only way to have one. It has been built
-> and launched on exactly one host: x86_64 Arch Linux under XWayland, with GTK 3 and
-> WebKitGTK 4.1. That is the tested boundary, not a portability claim.
+> A public alpha.5 AppImage is available through [Installation](../getting-started/04-installation.md#a-linux-appimage).
+> It was built locally, not by the release workflow. Native display policy and
+> tested host boundaries are documented in [the launcher contract](../../APPIMAGE_LAUNCHER.md).
+> One successful host is evidence, not a Linux-wide portability certificate.
 
 ## Building the Docker image
 
@@ -283,8 +283,9 @@ it leaves loopback.
 
 > **Note**
 >
-> There is still no TLS, no user accounts, no roles and no audit trail: one shared password
-> is the whole identity model. See
+> HTTPS is enabled by default when a password is configured; the generated
+> certificate needs a fingerprint check. There are no user accounts, roles or
+> per-user audit trail: one shared password is the identity model. See
 > [Known issues](../known-issues.md) and
 > [`KNOWN_LIMITATIONS.md` §22](../../KNOWN_LIMITATIONS.md#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback).
 

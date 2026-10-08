@@ -1,5 +1,31 @@
 # Known limitations
 
+## Current reading guide — 8 October 2026
+
+Reconciled against source `608a204b`, the current owner ledger and the
+[known-issues/status audit](status/2026-10-08-known-issues-status-audit.md).
+This catalogue contains current boundaries **and dated evidence**. A historical
+heading or “Lifted when” paragraph is not a new work assignment; later updates
+and recorded owner decisions take precedence. Formal source-ID status lives
+only in [LEDGER](status/LEDGER.md), not in a second table here.
+
+- Flow, scoped parameter editing, non-program translation ingestion, exact
+  product namespaces 10/23, legacy L1–L3 and Web activity/history consumers
+  are implemented; none is universal vendor/runtime compatibility.
+- Address-write recovery, native/accessibility/real-device evidence, full
+  traffic/recovery history, version selection and later-scope features remain
+  separately bounded. Alpha closeout is complete at its recorded scope.
+- The AppImage source launcher no longer universally forces X11; old release
+  assets and one-host native evidence remain separate (§158).
+- Resolved entries retain anchors in the section below and in Git history.
+  Recounting headings is not counting open bugs. The inherited number 130
+  names both a resolved gate-root defect and application-zoom evidence; no
+  renumbering or owner-ledger reassignment is made by this documentation audit.
+
+The audit inspects the complete heading/anchor inventory and current manual
+claims, with targeted source/test verification. It does **not** re-run every
+historical corpus, protocol, hardware, native-platform or advisory investigation.
+
 ## Community evidence is bounded, manually shared and not anonymous (2026-10-08)
 
 [The contribution contract](COMMUNITY_EVIDENCE.md) records the archive, XML,
@@ -46,7 +72,14 @@ and complete WCAG acceptance are unverified. Chromium proof uses only
 intercepted synthetic API replies, including a deliberately refused save; it
 does not establish live project persistence, bus operation or deployment.
 
-## Telegram-flow visualization is approved but not implemented
+<a id="telegram-flow-visualization-is-approved-but-not-implemented"></a>
+
+## Telegram-flow visualization is implemented with bounded evidence
+
+**Current reading, 2026-10-08:** implemented and accepted, with the later
+readability/source-window follow-up delivered. Chromium/offline, capacity,
+performance and inference boundaries remain in §154. The original approval
+paragraph below is historical, not an unimplemented-feature notice.
 
 User scope decision 2026-10-04: [the session-local nervous-system view](TELEGRAM_FLOW_VISUALIZATION.md)
 is required for the Alpha and authorized for UI U19–U21 / alpha AR20–AR21.
@@ -76,10 +109,12 @@ complete the commissioning goal: the user explicitly removed these experiments
 because they cannot provide them. Their absence remains disclosed in
 [KNXBench user notices](manual/known-issues.md#commissioning-validation-boundary)
 and is not a hardware/ETS compatibility or recovery guarantee. Existing scoped
-evidence and historical limitations stay intact. Broader caller coverage,
-Web/client adoption and offline recovery/abort/restore contracts remain open;
-original-value backup, authorization and fail-closed runtime gates are unchanged.
-This decision does not mark SAFE-03/AUDIT-01 or the Alpha release complete.
+evidence and historical limitations stay intact. The old caller/Web/offline
+handoff is superseded by its delivered scoped contracts and consumers; the
+current ledger records the owner dispositions. Complete journalling and
+universal recovery are not implied. Original-value backup, authorization and
+fail-closed gates remain unchanged; this notice is neither new write permission
+nor a fresh alpha release blocker.
 
 ## CRT motion is browser-verified application behavior, not theme-pack v2
 
@@ -534,18 +569,19 @@ matrix and real upgrade pass after independently reconciling the +230 isolated /
 +226 shared keys; no normalized values or prior unknown evidence were lost.
 Repair-path regressions also preserve unexamined status for identity-invalid
 bytes while clearing stale exact-owner markers after authentic recovery.
-Renewed integrated acceptance of that last correction and publication remain
-pending; see [the AR05 contract](contracts/MANUFACTURER_REPORT_CONTRACT.md). Persisted subtree
+The former acceptance/publication handoff is historical: the owning AR05
+delivery and per-ID evidence are recorded in the current ledger. See
+[the AR05 contract](contracts/MANUFACTURER_REPORT_CONTRACT.md). Persisted subtree
 diagnostics are validated for shape, not re-derived from the blob. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only. See §134 for what it deliberately does not do.
 
-Each entry states the limitation, its cause, what it costs the user, and the
-condition under which it would be lifted. Nothing here is a defect to be fixed
-by trying harder — these are consequences of evidence we do not have or of
-decisions recorded in [docs/adr/](adr/).
+Each entry states the limitation, cause, practical cost and lift condition.
+Some are actual defects; others are evidence limits or recorded design/safety
+decisions in [docs/adr/](adr/). Do not describe all three as either inevitable
+or merely unfinished work.
 
 The companion document is [COMPATIBILITY.md](COMPATIBILITY.md), which states
-what is verified. Nothing may appear as verified there and as a limitation
-here.
+what is verified. A verified narrower capability may coexist with a remaining
+limitation here; the scopes must agree rather than erase each other.
 
 ## PDB-7 catalogue metadata are source strings, not capabilities
 
@@ -618,9 +654,11 @@ table, commented as such), with no independent module-using schema-23
 sample to confirm the inference. Schema 12/13/14/20/22 remain fully
 undocumented-by-evidence, unaffected by this work.
 
-**Implemented (schema 21/23 import support).** Schema 21 import and export
-shipped, round-trip verified on one sample (`knx-etsproj`'s
-`importing_the_kv_schema_21_project_succeeds_with_zero_unknown_constructs`).
+**Current import/native persistence scope.** Schema 21 import shipped;
+native `.knxdb` save/reopen is verified on the reference samples. The old
+schema-21 writer was withdrawn by ADR-0028, so no current ETS roundtrip is
+claimed. Import evidence includes `knx-etsproj`'s
+`importing_the_kv_schema_21_project_succeeds_with_zero_unknown_constructs`.
 Schema 23 import shipped, with no round-trip claim; its module handling is
 flagged as inferred both here and in `ImportReport.unsupported` at runtime.
 [ADR-0013](adr/0013-module-instance-representation.md) and
@@ -703,6 +741,11 @@ checks: an XSD says a `Links` attribute is a string of the right shape, not
 that the group address it names exists.
 
 ## 3. Device parameters are preserved but not interpreted
+
+**Current reading, 2026-10-08:** supported top-level and single-authoritative
+module parameters can be evaluated and edited. Calculations, repeated-module
+expansion, unsupported controls and value encodings retain the named boundaries
+below; the historical title does not mean that all parameter editing is absent.
 
 **AR07 validation candidate (2026-10-02).** Nonfinite Float bounds are rejected
 before comparison rather than letting a NaN declaration bypass an inclusive
@@ -1093,6 +1136,12 @@ application does, on any platform.
 <a id="7-commissioning-and-device-download-are-required-but-blocked"></a>
 ## 7. Commissioning: a verified `070nh` memory path, not general device support
 
+**Current public address-write boundary:** confirmed K6/serial/K13 address
+operations fail before a tunnel until action- and device-specific durable
+recovery exists (ADRs 0057–0059). The earlier address-change/reset experiments
+below are dated evidence, not current permission or a working public write.
+Memory downloads retain their separately evidenced, bounded backup scope.
+
 **Scope (ADR-0048/0049, verified 2026-09-29/30).** `knx device download`
 and the Web download tab, plus individual-address programming, are real
 product commands. They require the identified target, a plan, a
@@ -1219,12 +1268,18 @@ upgrades an older-schema working file in place (§157). Recipe in the manual:
 
 ## 11. `.knxprod` support is evidenced for schemes 11, 12, 13, 14, 20, and exact-namespace 21
 
+**Current reading, 2026-10-08:** accepted namespaces are 10/11/12/13/14/20
+and exact 21/23. Unsupported namespaces, encrypted modern packages and `.vd2`
+stay refused; legacy VD3/VD4 offline import has its own L1–L3 path (§128).
+Older namespace/blocker statements below are dated history, not the current
+admission table. Parser/storage admission is not complete device semantics.
+
 **Update 2026-10-05 (AR06 row reconciliation).** Exact-namespace scheme 23
 now also has bounded standalone import/storage/report/replay support; see
 [§153](#153-master-data-schemes-10-and-23-are-refused-for-standalone-knxprod)
 and COMPATIBILITY.md. Statements below that list only 11/12/13/14/20/21 predate
-that package. Schemes 15–19/22 still need a sample (`KL-11` is
-`BLOCKED_EXTERNAL` in the ledger).
+that package. Schemes 15–19/22 still need evidence before broader admission;
+the old external-blocker assignment is superseded by the current owner ledger.
 
 **Update 2026-10-05 (ADR-0083).** Exact-namespace scheme 10 is admitted too,
 on corpus vocabulary evidence (146 public packages, no name outside scheme
@@ -1388,9 +1443,10 @@ side table `knx-store` persists (`com_object_program_default`, schema 9)
 and the exporter never reads. `ProgramDefaults` and its map replace
 ADR-0012's originally-rejected "extend `Override<T>` into a layer stack"
 alternative with an additive side table instead — see ADR-0027 for why.
-**What this does not yet do:** no UI reads `program_defaults`; the value
-is model- and store-level only, a decision recorded in ADR-0027 rather
-than silently left undone.
+**Current display scope:** the projection exposes a `program_dpt` fallback
+beside an unstated/cleared instance DPT, and the Inspector reads it without
+rewriting the instance override. This is not a generic UI inventory of every
+stored program-default field.
 
 **Narrower than it read: parameter interpretation.** The paragraph this
 section used to carry duplicated [§3](#3-device-parameters-are-preserved-but-not-interpreted),
@@ -1423,8 +1479,7 @@ there regardless), 0 land on `Empty`, and only 22 land on a genuinely
 spread across 11 devices; 51 distinct `ComObjectRef`s carry an ambiguous
 list in total. **Blocker.** The brief for this task floated one way to
 close it — surface `AmbiguousDpt` to the user as a choice, rather than
-resolve it automatically — but no mechanism to present or persist that
-choice exists anywhere in the stack today: `EnrichmentReport` reaches the
+resolve it automatically — but no dedicated import-ambiguity alternative-selection workflow exists: `EnrichmentReport` reaches the
 CLI's summary line and, for device creation only, `apps/knx-server`'s
 `CreationDiagnostic` ([§35](#35-device-creation-enrichmentissues-are-silently-dropped--resolved-2026-09-10)),
 but a project-level *import*'s `EnrichmentReport` is not surfaced to
@@ -1439,15 +1494,18 @@ linked group address's own datapoint type, floated in an earlier draft of
 this section, was not re-considered this session and is not assumed to be
 the answer.
 
-**Impact.** A project opens completely and round-trips its manufacturer
-data byte-for-byte. Communication-object defaults resolve where the
+**Impact on the measured reference scope.** Native storage retains the
+manufacturer source bytes. This is not ETS export or a universal successful
+import promise. Communication-object defaults resolve where the
 instance did not override them, and now also where it explicitly cleared
-them and a program value exists — visible in the model, not written into
-the exported file either way. A top-level or single-instance module-scoped
+them and a program value exists — kept separately in the model rather than
+overwriting the cleared instance slot. A top-level or single-instance module-scoped
 parameter value can be read and written from the parameter editor. An
 ambiguous DPT list is visible in the product database and in
 `EnrichmentReport`, but still fills nothing, and nothing in the current
-stack lets a user resolve it by hand.
+stack offers that dedicated ambiguity workflow. The Inspector's ordinary
+typed DPT edit is already available as an explicit user override; it does not
+evaluate the manufacturer's whole alternatives list or make a hardware claim.
 
 **Lifted when.** Gap 2 is closed. For the parameter-interpretation
 residue, see §3's own "Lifted when". For the ambiguous-DPT gap, see the
@@ -3771,6 +3829,13 @@ design question is unresolved, and this limitation stands until it is
 answered and built.
 
 ## 64. `Languages` blocks outside an application program are discarded on import
+
+**Current reading, 2026-10-08:** the heading describes the pre-T32 defect,
+not current ingestion. Program/catalog/hardware/master translations are
+ingested; supported overlays and fallback markers have consumers. Remaining
+gaps concern specific unmodelled master semantics/consumers, selected project
+language and English technical prose, not blanket loss of non-program Languages.
+The dated updates below retain the evidence and their narrower scope.
 
 **Resolved for ingestion (2026-09-12, T32); reading closed for every
 entity family this project's corpus has found a `Master`-scope
@@ -6923,6 +6988,12 @@ triage.
 
 ## 128. Legacy `.vd3`–`.vd5` and `.pr3`–`.pr5` files are refused, and the refusal misnames the format
 
+**Current reading, 2026-10-08:** L1–L3 VD inspection/offline CLI/web import
+and password handling are delivered. The title records the original refusal;
+it is not a blanket current VD3/VD4 refusal. VD5 bounds/layout, `.pr*`/`.vd2`,
+legacy DPT/download semantics, plaintext remembered-password storage and the
+TypeNone spacer presentation remain the explicit limits below.
+
 **Update 2026-10-08 (legacy VD package L3, ADR-0094 *Amendment: L3*).**
 The web catalog and the device wizard install `.vd3`–`.vd5` through
 `POST /api/catalog/install-legacy`, with a password dialog. One password may
@@ -7050,11 +7121,11 @@ is unaffected.
 
 ## 129. A stale id-allocator snapshot can duplicate ids, and saving then drops one entity
 
-**Status.** Open, but the data-loss path is closed: phases 1–2 of ADR-0039
+**Current reading.** The data-loss path is closed: phases 1–2 of ADR-0039
 landed on 2026-09-27. A colliding id is refused, and no caller rewinds the
 counters any more. AR02 also refuses allocator exhaustion. Structural
-phases 3–5 remain `WAITING_DECISION`; an unanswered activation prompt is
-neither approval nor accepted continued deferral. See the pinned
+phases 3–5 were explicitly deferred past the alpha by the user on 2026-10-04;
+they are not an unanswered activation request. See the pinned
 [AR03 audit](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/ADR0039_ENFORCEMENT_AUDIT.md) at `e691bc13`.
 
 **Historical limitation (before phases 1–2, at `7b64496`).**
@@ -8055,6 +8126,11 @@ degrades to a counted summary instead of refusing the package.
 
 <a id="153-master-data-schemes-10-and-23-are-refused-for-standalone-knxprod"></a>
 ## §153 Product scheme10 is refused; exact23 support is bounded
+
+**Current reading, 2026-10-08:** exact namespaces 10 and 23 are both admitted
+at their evidenced parser/persistence scope. The title and earlier refusal
+census are historical; the 2026-10-05 admission update below supersedes them.
+Unknown manufacturer semantics and unresearched namespaces remain unsupported.
 
 **2026-10-04 delivered exact23 support (`aadd8820`).** Exact
 namespace23 reuses the strict21 typed-member/qualified-attribute boundary,

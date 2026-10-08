@@ -2,6 +2,14 @@
 
 Investigation date: **2026-09-16**.
 
+> **Current implementation, 8 October 2026:** this is a dated investigation,
+> not the current install guide. Direct legacy VD3/VD4 offline import is now
+> implemented in CLI and web, with a password dialog and one optional remembered
+> password (L1–L3). Oversized VD5 coverage, DPT mapping and legacy device download
+> remain separate. See [ADR-0094](adr/0094-legacy-exim-product-files.md) and
+> [the user guide](manual/user-guide/05-devices-and-products.md#old-ets3-product-databases-vd3-vd4-vd5).
+> The historical converter/research sections below do not reopen closed work.
+
 This document covers the supplied file
 `OriginalData/ProductDatabases/Eibmarkt Motion Sensor N520_IRBM_N530_IRBM.vd4`,
 the available installation paths, and prior public reverse engineering of the
@@ -23,9 +31,10 @@ includes a reader, writer, table model, schema, and fixtures. `knxReTk` is also
 useful because it includes conversion from pre-ETS4 data into its newer model.
 Neither project is currently integrated into KNXBench.
 
-The supplied `.vd4` still **cannot be installed directly in KNXBench**. It is a
+On the investigation date, the supplied `.vd4` **could not be installed directly**
+(superseded by L1–L3 above). It is a
 legacy encrypted product-database container rather than a modern `.knxprod`
-package. Today there are three practical paths:
+package. The original investigation identified three practical paths:
 
 1. **Use the original file in ETS6.** ETS6 accepts `.vd1` through `.vd5`.
 2. **Convert it with the official KNX converter**, then install the generated
@@ -302,6 +311,11 @@ it runs.
 
 ### Check before installing in KNXBench
 
+**Historical namespace list below:** current admission also includes exact
+namespaces 10/12/13/14/21/23. Use [current compatibility](COMPATIBILITY.md),
+not this September snapshot, to judge a converted file. Namespace admission
+does not guarantee complete manufacturer semantics.
+
 KNXBench's standalone installer currently accepts a root `knx_master.xml` only
 with one of these namespaces:
 
@@ -340,9 +354,10 @@ cargo run -p knx-cli -- products verify \
   --product-db /tmp/knx-vd4-probe.sqlite
 ```
 
-The official conversion and subsequent KNXBench install remain unverified for
-this exact product. The Linux-only direct-import path is technically plausible
-because the password and format are known, but it has not been implemented.
+At the original investigation date, the official conversion/install and the
+direct importer had not been verified/implemented. The independent direct
+importer has since shipped at the L1–L3 scope stated above; its acceptance does
+not retroactively verify the separate official-converter path.
 
 **Update 2026-09-26 (DIN-9).** The supplied MDT `.pr5` was measured as the
 same `EX-IM` container family (`ets.pr_`, header `H project`), and it has no

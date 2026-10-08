@@ -1,4 +1,4 @@
-[Manual index](../README.md)
+← Previous: [Manual index](../README.md) · [Repository overview](../../../README.md)
 
 # What is KNXBench?
 
@@ -72,7 +72,7 @@ Equally important is what KNXBench does not do, at least not yet:
 
 > **Note**
 >
-> KNXBench is in **alpha**. The next chapter,
+> KNXBench is in **alpha**. Before installing, read
 > [Project status](03-project-status.md), says exactly what that means before
 > you install anything.
 

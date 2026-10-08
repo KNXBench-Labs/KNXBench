@@ -98,7 +98,7 @@ headless evaluator over the stored tree was built afterward (T18 slice 1,
 2026-09-11); no editor exists still. See
 [KNOWN_LIMITATIONS.md §3](../KNOWN_LIMITATIONS.md). What follows is the
 research; the implementation is future work (T18,
-[GAP_ANALYSIS_ETS.md](../GAP_ANALYSIS_ETS.md)). Full spike report:
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)). Full spike report:
 `.ai/logs/2026-09-11_claude_r3_dynamic_grammar.md`; this section is the
 durable summary that survives outside that log.
 

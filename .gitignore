@@ -15,7 +15,6 @@ OriginalData
 node_modules/
 AGENTS.md.bak.*
 .claude/.headroom_wrap_settings.lock
-.serena/project.yml
 .ai/
 DREAMS.md
 SOUL.md
@@ -24,13 +23,12 @@ IDENTITY.md
 MEMORY.md
 MEMORY.md.bak.*
 # Local Claude Code state stays private; only the shared project settings
-# (cloud-session hook, attribution off) are versioned. `.claude/*` rather
+# (attribution off) are versioned. `.claude/*` rather
 # than `.claude/` because git cannot re-include a file below an ignored
 # directory.
 .claude/*
 !.claude/settings.json
 memory/
-.agent-memory/
 
 # Lokale Projekt-Exporte (Privatinstallation, nichts fuer die Nachwelt)
 devices.md

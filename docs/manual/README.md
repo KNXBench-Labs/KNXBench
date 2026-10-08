@@ -79,9 +79,9 @@ links into them wherever the detail matters.
 - [Data model](../DATA_MODEL.md)
 - [Import and export](../IMPORT_EXPORT.md)
 - [Compatibility](../COMPATIBILITY.md)
-- [Known limitations](../KNOWN_LIMITATIONS.md) and their [triage by severity](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/LIMITATION_TRIAGE.md)
+- [Known limitations](../KNOWN_LIMITATIONS.md) and [open work](../OPEN_WORK.md)
 - [Implementation status](../IMPLEMENTATION_STATUS.md)
-- [Roadmap](../ROADMAP.md) and the [gap analysis against ETS](../GAP_ANALYSIS_ETS.md)
+- [Roadmap](../ROADMAP.md) and [compatibility](../COMPATIBILITY.md)
 - [Language packs](../LANGUAGE_PACKS.md)
 
 ## Where to ask

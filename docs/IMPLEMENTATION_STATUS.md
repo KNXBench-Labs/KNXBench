@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Gap analysis, cloud tooling and the memory index retire
+
+- User decision: removed `docs/GAP_ANALYSIS_ETS.md`, `docs/Issues.md`, `.serena/`,
+  `tools/cloud/` (and its `SessionStart` hook in `.claude/settings.json`) and
+  `tools/agent_memory_sync.py` with its test. 40 links pinned to `62a54e70cbc4`;
+  [REMOVED_DOCS](history/REMOVED_DOCS.md) has the second-round table.
+- The shared memory index is decommissioned, not just unversioned: the systemd
+  user timer is disabled and removed, the marker blocks are uninstalled, and
+  `PROJECT_CONTEXT` no longer ranks a generated index. Backups outside the repo.
+- Gates: five xtask checks green, remaining `tools/tests` unittest suite OK.
+
 ## 2026-10-08 — Archive, design studies and superpowers leave the tree
 
 - User decision: removed `docs/archive/`, `docs/design/`, `docs/design-studies/`,

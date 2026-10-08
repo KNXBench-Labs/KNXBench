@@ -1291,6 +1291,7 @@ describe("App — the File menu by keyboard alone", () => {
       "Export documentation…",
       "Compare with…",
       "Debug report…",
+      "Analyze support gaps…",
       // ADR-0084: the first-run guide, reopened on request.
       "Show introduction…",
       // ADR-0089: present while achievements are switched on (the default).
@@ -2593,6 +2594,23 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     expect(document.body.querySelector(".documentation-dialog")).toBeNull();
     expect(document.activeElement).toBe(host!.querySelector(".file-menu summary"));
 
+    await act(async () => root.unmount());
+  });
+
+  it("opens contribution analysis outside the closed File menu and restores visible focus", async () => {
+    const root = await renderApp();
+    const menu = await openMenu();
+    const summary = menu.querySelector("summary")!;
+    await act(async () => findButton("Analyze support gaps…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(menu.open).toBe(false);
+    const panel = document.body.querySelector<HTMLElement>(".contribution-panel")!;
+    expect(panel).not.toBeNull();
+    expect(panel.closest(".file-menu")).toBeNull();
+    expect(document.activeElement).toBe(panel.querySelector("input[type=file]"));
+    const close = [...panel.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === "Close")!;
+    await act(async () => close.click());
+    expect(document.body.querySelector(".contribution-panel")).toBeNull();
+    expect(document.activeElement).toBe(summary);
     await act(async () => root.unmount());
   });
 

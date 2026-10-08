@@ -224,6 +224,12 @@ PROGRAM_DATABASE = document("ets.vd_", "virtual_device", [
     table(22, "s19_block", [(I, 4, "N", "BLOCK_ID"), (I, 4, "Y", "PROGRAM_ID"),
                             (B, 32767, "Y", "BLOCK_DATA")],
           [["900", "300", "00FF"]]),
+    # A secret-class column (ADR-0094, design decision B-3): the non-empty
+    # value, wrapped over a continuation line, is withheld from the stored
+    # copy; the empty one has nothing to withhold.
+    table(23, "device", [(I, 4, "N", "DEVICE_ID"), (V, 50, "Y", "DEVICE_BCU_PASSWORD"),
+                         (V, 50, "Y", "DEVICE_NAME")],
+          [["1", ["Zaphod42", "\\\\" + "Beeblebrox"], "Kept"], ["2", "", "Also kept"]]),
 ])
 
 PROJECT_EXPORT = document("ets.pr_", "project", [

@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (knxbench.com live)
+- **Timestamp:** 2026-10-08 16:23 CEST
+- **Completed:** knxbench.com is live on GitHub Pages. `0f4963d1`: website `--release` mode, story published variant behind the exact approval record, privacy page naming GitHub Pages and its documented IP logging (draft for owner review), `.github/workflows/pages.yml`. Pages enabled (source: Actions), custom domain verified, certificate approved, HTTPS enforced. First deploy green; all 34 live files hash-equal to the local release build; live page checked in Chromium.
+- **Pending/Next Steps:** Re-check http→https redirect (still 200 right after enabling). IPv6 reachability not measurable from this host. Bump Pages workflow actions off Node 20 (annotation). Owner: review privacy wording; retire interim `KNXBench-Contributions`.
+- **Notes for Codex oder Claude:** Every push to main touching `website/` or `story/` deploys publicly. Release build refuses unless `story/approvals/<edition>.json` matches the pinned edition: a new story edition needs a new approval before the site can be rebuilt. Log `.ai/logs/2026-10-08_claude_github-pages-live.md`.
+
+---
+
 - **Last Agent:** Claude (parked packages delivered)
 - **Timestamp:** 2026-10-08 15:44 CEST
 - **Completed:** Both root-parked packages are on main. Website `7c0f73b5` (ADR renumbered 0095, launch note public, story pin 2026-10-08.4, imprint committed on owner decision; 17 unit + 154 Chromium checks). Community evidence `b7059b38` (contribution analysis/export via UI/API/CLI) incl. ADR-0091 consolidation: issue form in `.github/ISSUE_TEMPLATE/analysis.yml`, guides `docs/contribution-intake/`, app/website link the main repo; gate Rust 3,721/0, Vitest 2,415/0, Playwright 175, clippy, xtask 5/5. Also `767c3770`: 242 pinned REMOVED_DOCS links repaired after the purge (were 404).

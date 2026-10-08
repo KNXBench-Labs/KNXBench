@@ -822,8 +822,12 @@ data (same blocker as schema 23 project data).
   payload, which is also the copy that is parsed and keyed, and reported as
   `secret-withheld` by count. See ADR-0094 *Amendment: L2* and
   KNOWN_LIMITATIONS §128 for the unencrypted-original caveat.
-- **Not yet:** the server/web upload (L3) and download of legacy programs
-  (L4, refused as `CodeError::LegacyProgram`).
+- **Upload (L3, 2026-10-08):** `POST /api/catalog/install-legacy` and the
+  web file pickers, with a password dialog and one remembered password
+  (ADR-0094 *Amendment: L3*). The CLI gained `knx products legacy-password
+  set|forget|status` and `import-legacy --remember`.
+- **Not yet:** download of legacy programs (L4, refused as
+  `CodeError::LegacyProgram`).
 
 ## 11. Group-address CSV exchange
 

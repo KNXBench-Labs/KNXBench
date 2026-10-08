@@ -5,6 +5,15 @@
 finished; they were removed from the tree on 2026-10-08
 ([where to find them](history/REMOVED_DOCS.md)).
 
+## Marketing website (2026-10-08)
+
+The calm-dark DE/EN marketing companion is in the repository under
+`website/`: real-app clips, optional CRT/LCARS gallery, Evolution Story link
+and the Docker/AppImage start paths; the full manual stays on GitHub. Deploying
+it is a separate step: deployment go and release-mode design, exact story
+approval, host-specific privacy details, Pages/domain/HTTPS. See
+[website contract](WEBSITE.md) and ADR-0095.
+
 ## Modern LCARS theme (2026-10-08)
 
 The visually approved study is integrated as an optional built-in dark theme

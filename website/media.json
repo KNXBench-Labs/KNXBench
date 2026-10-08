@@ -1,0 +1,213 @@
+{
+  "schema": "knxbench-website-media/1",
+  "applicationSource": "a642eaf9",
+  "exercisedRecordingScriptSha256": "a5b70959dc8ab5c6b30670500f7f930008063e84a1763ad54ca54e295b317e0e",
+  "portableRecordingDifference": "Only destination-directory literals changed in website/tools/record-app.js; capture fixture/actions are unchanged.",
+  "recordingChecks": {
+    "checks": [
+      "real production workbench renders 15 fictional addresses",
+      "real inspector selects the kitchen light",
+      "actual application filter narrows the demo project",
+      "crt uses the app's real theme",
+      "lcars uses the app's real theme",
+      "no unhandled/external requests escaped the fixture",
+      "no page script errors"
+    ],
+    "count": 7,
+    "requests": [
+      "GET /api/auth/status",
+      "GET /api/achievements",
+      "GET /api/product-languages",
+      "POST /api/bus/discover",
+      "GET /api/settings",
+      "GET /api/version",
+      "POST /api/project/new",
+      "GET /api/settings",
+      "GET /api/settings",
+      "GET /api/settings",
+      "PUT /api/settings",
+      "GET /api/settings",
+      "PUT /api/settings"
+    ],
+    "unexpected": [],
+    "errors": [],
+    "frames": 44,
+    "themeWrites": "synthetic only",
+    "source": "production frontend, fictional API answers; no live KNX server"
+  },
+  "assets": {
+    "FONT-LICENSES.txt": {
+      "sha256": "f805bd44ab9f82058b69bb524ea50439cb4d3f8b92dfbd3785e84d0faee8f927",
+      "bytes": 8962
+    },
+    "KNXBench-LICENSE.txt": {
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "bytes": 34523
+    },
+    "brand-symbol.webp": {
+      "sha256": "1be242df8548a1edb6de6b6e15dcd251deb2e035bad2cdb2679459b9bb6eb37e",
+      "bytes": 3978,
+      "source": "docs/assets/KNXBench-logo-small.png",
+      "kind": "cropped existing project logo",
+      "sourceSha256": "9534e3835923c53a2bcef13826927cc18edd0e5f6765a0414df752c79ffce027"
+    },
+    "bus-flow-de.vtt": {
+      "sha256": "2634bc7a07a30222cd9305967e7c37754b123d7461b6aff3c598f926b199bc52",
+      "bytes": 133
+    },
+    "bus-flow-en.vtt": {
+      "sha256": "82423f13d33a73494bf57f8802da3dc4681fa8fb8a62199303aacec386625070",
+      "bytes": 131
+    },
+    "bus-flow.mp4": {
+      "sha256": "ba0a9de836af863fd0ad9dbc32e1168cfb3058bcb8bac0558024ba8424a2c533",
+      "bytes": 761738,
+      "source": "docs/assets/readme/telegram-flow.gif",
+      "kind": "actual monitor component; synthetic telegrams; no live bus",
+      "sourceSha256": "4822b792e07f7421cfd2817d05244ba678cfb3ec9e0567c141b4140fda4ef414",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 466,
+            "pix_fmt": "yuv420p"
+          }
+        ],
+        "format": {
+          "duration": "11.700000"
+        }
+      }
+    },
+    "bus-flow.webp": {
+      "sha256": "fb7baecef3e4c6c9964d3214280981ff9368bf77cb219def0edc4477527bd4c9",
+      "bytes": 14904,
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 466,
+            "pix_fmt": "yuv420p"
+          }
+        ],
+        "format": {
+          "duration": "11.700000"
+        }
+      }
+    },
+    "crt.webp": {
+      "sha256": "4ea305d097e59843015a9ac102c1dfed3008499e294b5609cb3564b6c1a6bf93",
+      "bytes": 49788,
+      "source": "website/tools/record-app.js",
+      "kind": "actual app optional CRT theme; fictional data",
+      "sourceSha256": "353378dbd0f7150629b5a773f399ded65cd755c50f7b75584d877da5234cc938"
+    },
+    "graphite.webp": {
+      "sha256": "92dcf42cbf76cb47f72006f564be5ad23a3ed4ee08cd41bd6a05e594123313ce",
+      "bytes": 42240,
+      "source": "website/tools/record-app.js",
+      "kind": "actual production workbench; 15 fictional group addresses",
+      "sourceSha256": "353378dbd0f7150629b5a773f399ded65cd755c50f7b75584d877da5234cc938"
+    },
+    "group-details-de.vtt": {
+      "sha256": "2005ef1a7ab7cae7414565fd9651aeccd188f6dad29ed07669f190d1fd67b227",
+      "bytes": 125
+    },
+    "group-details-en.vtt": {
+      "sha256": "649c285e463bacf21964f2af49947c341e9cddec195bd5cc7a931b4e7564e9ba",
+      "bytes": 114
+    },
+    "group-details.mp4": {
+      "sha256": "d6f9bf4201efc4883c24216de6377d6de33863bdfdcec53cb00528157de074b0",
+      "bytes": 96504,
+      "source": "website/tools/record-app.js",
+      "kind": "actual production frontend; fully intercepted fictional API; no live backend or bus",
+      "sourceSha256": "353378dbd0f7150629b5a773f399ded65cd755c50f7b75584d877da5234cc938",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1440,
+            "height": 900,
+            "pix_fmt": "yuv420p"
+          }
+        ],
+        "format": {
+          "duration": "8.800000"
+        }
+      }
+    },
+    "inter.woff2": {
+      "sha256": "8909904ab6c872eb994093482a88a28eca2cd95912d7b6fecd72103b0dc07edc",
+      "bytes": 23664
+    },
+    "lcars.webp": {
+      "sha256": "686cb0547874c5aa2442980c49538399ca36dce80ff77658da58c8a6cfa18db6",
+      "bytes": 51384,
+      "source": "website/tools/record-app.js",
+      "kind": "actual app optional LCARS theme; fictional data",
+      "sourceSha256": "353378dbd0f7150629b5a773f399ded65cd755c50f7b75584d877da5234cc938"
+    },
+    "project-work-de.vtt": {
+      "sha256": "7d85bd6ee6693e6504d91bb508fe7823168c1dae719bda83302c4c1a545f33fb",
+      "bytes": 138
+    },
+    "project-work-en.vtt": {
+      "sha256": "9932c018afc213a455853125b4c8633e7036f0b4cef9ce05450dbe22f5fcb2ca",
+      "bytes": 139
+    },
+    "project-work.mp4": {
+      "sha256": "dcb7b65a54caee46bbad13cfce90019dd8dbc52f54c107d9444585a18efa2145",
+      "bytes": 1256389,
+      "source": "docs/assets/readme/hero-add-device.gif",
+      "kind": "actual app with fictional project; camera zoom/time compression in source",
+      "sourceSha256": "257479fc372202997ffe5735ed5e73d0bfe7651fd3abfdf2c77d4713f6f38951",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 466,
+            "pix_fmt": "yuv420p"
+          }
+        ],
+        "format": {
+          "duration": "28.200000"
+        }
+      },
+      "encoding": "H.264/yuv420p, faststart, no audio; half-duration of existing edited README GIF"
+    },
+    "project-work.webp": {
+      "sha256": "06b30dc85a0b6afb95a6476587de65db04ea56afae1da949c4581dc34d43bd2c",
+      "bytes": 11604,
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 466,
+            "pix_fmt": "yuv420p"
+          }
+        ],
+        "format": {
+          "duration": "56.400000"
+        }
+      }
+    },
+    "space-grotesk.woff2": {
+      "sha256": "685bbbf69fa616df1ef81847c85fc76be097ddfb3468ff2257be54511ab3130f",
+      "bytes": 13284
+    }
+  }
+}

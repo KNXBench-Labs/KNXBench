@@ -42,10 +42,14 @@ It is not lost, but nothing on `main` contains it:
 | Package | Owner | Root-only paths | Open before publishing |
 | --- | --- | --- | --- |
 | Community evidence analysis/export (File → Analyze support gaps…) | codex, delivered locally 2026-10-08 | `crates/knx-app/src/contribution*.rs`, `apps/knx-{cli,server}/src/contribution*.rs`, `apps/knx-web/src/Contribution*.tsx`, tests, `docs/COMMUNITY_EVIDENCE.md`, `docs/community-evidence/`, `docs/contribution-intake/`, `docs/research/community-intake.md`, `docs/adr/0091-community-evidence-analysis.md` | Integrate onto current `main`, rerun gates, commit/push. Mailbox `contribute@knxbench.com`, retention and automatic submission stay unverified. |
-| Marketing website (DE/EN, knxbench.com) | codex, built locally 2026-10-08 | `website/`, `docs/WEBSITE.md`, `docs/adr/0094-static-marketing-companion.md` | **ADR number collision:** `main` already has `0094-legacy-exim-product-files.md`; the website ADR needs a new number before it lands. Launch gates: host privacy page, exact story edition approval, public install targets, authorized Pages/domain/HTTPS. |
 
 Do not reset or stage the root wholesale; publish each package from its own
 worktree off `origin/main`.
+
+**Update 2026-10-08:** the marketing website is in the repository (`website/`,
+ADR-0095); its remaining launch gates are deployment go and release-mode
+design, exact story edition approval, host privacy page and
+Pages/domain/HTTPS ([WEBSITE.md](WEBSITE.md)).
 
 ## 3. Deferred by a recorded user decision
 

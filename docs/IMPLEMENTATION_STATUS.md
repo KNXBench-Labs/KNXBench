@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Public launch: history purged of third-party files, repository public
+
+- **Why:** the user decided to make the repository public. An audit of every
+  reachable object (secrets, tokens, private keys, personal identity, private
+  corpus files, large blobs) found no secret and no identity, but two deleted
+  third-party payloads still in the history: `az-and-sensor-data/` (ETS-plugin
+  data of an alarm panel, manufacturer firmware) and a third-party demo
+  project.
+- **What:** both paths were removed from the whole history with
+  `git filter-repo`; the final tree of `main` is byte-identical. The
+  repository was recreated under the same name from the purged history, the
+  pre-release `v0.1.0-alpha.5` is republished on the rewritten tag before
+  the visibility switch. The pre-purge repository stays private under
+  a different name as a rollback until the user removes it.
+- **Hash bridge:** [`docs/history/COMMIT_MAP_2026-10-08-public.txt`](history/COMMIT_MAP_2026-10-08-public.txt),
+  details and branch rules in
+  [known limitation §162](KNOWN_LIMITATIONS.md#162-commit-hashes-cited-before-2026-10-07-refer-to-the-rewritten-history).
+
 ## 2026-10-08 — Legacy VD files L3: web upload, password dialog, one remembered password (ADR-0094)
 
 - **Why:** L2 made `.vd3`–`.vd5` programs usable offline, but only through

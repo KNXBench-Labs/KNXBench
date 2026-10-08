@@ -8561,6 +8561,33 @@ same tree as the old `6a1ba6ae5d54`. A branch created from `main` between
 (`git rebase --onto <new base> <old base> <branch>`, bases from the map) and
 must never be merged back as it is.
 
+**Third rewrite: public launch (2026-10-08).** Before the repository went
+public, an audit of every reachable object found two things in the history
+that were deleted from the tree long ago but must not be published: the
+directory `az-and-sensor-data/` (added 2026-09-02, removed 2026-09-06:
+third-party ETS-plugin AutoSave data of an alarm panel and a sensor plugin,
+28 manufacturer firmware files, plugin help and compiler files) and
+`KV v2.5 - demo.knxproj` (2026-09-06 to 2026-09-10, a third-party demo
+project). On the user's decision both paths were removed from the whole
+history with `git filter-repo --invert-paths`. 2,279 of 2,311 commits got
+new hashes; the 30 commits before 2026-09-02 kept theirs. Two commits
+became empty and were dropped: the removal commit `b79a1c40` and
+`a25bbad6`, which only added the demo project (both map to forty zeros).
+Every commit tree that did not contain one of the two paths is
+byte-identical to its predecessor, including the final tree of `main`.
+The tag `v0.1.0-alpha.5` was rewritten with its commit (`aca70fd7` →
+`a0ff1f55`). The secret, identity and private-data scan found no other hit.
+Map: [`docs/history/COMMIT_MAP_2026-10-08-public.txt`](history/COMMIT_MAP_2026-10-08-public.txt).
+Hashes are **not** updated in place this time: to follow any hash cited
+before this rewrite, chain the maps (2026-10-07, then 2026-10-08 for the 27
+commits it covers, then this one). The repository was recreated under the
+same name, so no rewritten-away commit is reachable on GitHub. Every local
+branch, stash and worktree created before this rewrite belongs to the old
+history: move it with `git rebase --onto` (bases from the map) and never
+push or merge it back as it is, because that would republish the removed
+files. The story companion's commit links still cite pre-rewrite hashes and
+need a remap by its owner before the next edition.
+
 **Lifted when.** Not applicable; the mapping file is the permanent bridge.
 
 ## 163. Stopping the server does not wait for a device download or address programming

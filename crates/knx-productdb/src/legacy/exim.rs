@@ -126,6 +126,9 @@ pub struct ExImTable {
     columns: Vec<ExImColumn>,
     rows: usize,
     spans: Vec<(u32, u32)>,
+    /// Where each value sits in the source, continuation lines included and
+    /// the final CRLF excluded; same order as `spans`.
+    source_spans: Vec<(u32, u32)>,
     arena: Vec<u8>,
 }
 
@@ -163,6 +166,13 @@ impl ExImTable {
 
     /// One value decoded as Windows-1252, with the value escapes (`\'`,
     /// `\r`, `\n`, `\\`) resolved. [`ExImTable::raw`] keeps the bytes.
+    /// The bytes of this value in the source document: its first line through
+    /// its last continuation line, without the final CRLF.
+    pub fn source_range(&self, row: usize, column: usize) -> std::ops::Range<usize> {
+        let (start, end) = self.source_spans[row * self.columns.len() + column];
+        start as usize..end as usize
+    }
+
     pub fn text(&self, row: usize, column: usize) -> Cow<'_, str> {
         unescape(decode_windows_1252(self.raw(row, column)))
     }
@@ -307,6 +317,11 @@ impl<'a> Lines<'a> {
             self.line += 1;
         }
         Ok(next)
+    }
+
+    /// Byte offset of `line`, a slice this reader returned, in the source.
+    fn offset_of(&self, line: &[u8]) -> usize {
+        line.as_ptr() as usize - self.bytes.as_ptr() as usize
     }
 
     /// The next line, or a syntax error naming what was expected.
@@ -476,6 +491,7 @@ impl<'a> Parser<'a> {
             columns: Vec::new(),
             rows: 0,
             spans: Vec::new(),
+            source_spans: Vec::new(),
             arena: Vec::new(),
         };
         self.columns(&mut table)?;
@@ -602,6 +618,8 @@ impl<'a> Parser<'a> {
             }
             self.values += 1;
             let start = table.arena.len();
+            let source_start = self.lines.offset_of(first);
+            let mut source_end = source_start + first.len();
             table.arena.extend_from_slice(first);
             let mut continuations = 0usize;
             while let Some(next) = self.lines.peek()? {
@@ -609,6 +627,7 @@ impl<'a> Parser<'a> {
                     break;
                 };
                 self.lines.next()?;
+                source_end = self.lines.offset_of(next) + next.len();
                 continuations += 1;
                 if continuations > self.limits.max_continuations_per_value {
                     return Err(limit(
@@ -637,6 +656,12 @@ impl<'a> Parser<'a> {
                 u32::try_from(end).map_err(|_| limit("payload size", u32::MAX as usize))?,
             );
             table.spans.push(span);
+            let source = (
+                u32::try_from(source_start)
+                    .map_err(|_| limit("payload size", u32::MAX as usize))?,
+                u32::try_from(source_end).map_err(|_| limit("payload size", u32::MAX as usize))?,
+            );
+            table.source_spans.push(source);
         }
         Ok(())
     }

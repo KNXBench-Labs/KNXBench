@@ -298,6 +298,13 @@ pub enum MappingDiagnostic {
     /// Two translations for one element, attribute and language with
     /// different texts; the first is kept.
     ConflictingTranslation { ref_id: String, language: String },
+    /// Non-empty values of a secret-class column (`*PASSWORD*`) were blanked
+    /// in the stored payload. Only the count is kept, never a value.
+    SecretWithheld {
+        table: String,
+        column: String,
+        rows: usize,
+    },
     /// Rows that cannot be mapped (a key is empty, or they belong to
     /// nothing that was mapped). They stay in the stored payload.
     SkippedRows {
@@ -324,6 +331,7 @@ impl MappingDiagnostic {
             Self::UnmappedColumn { .. } => "unmapped-column",
             Self::UnplacedParameter { .. } => "unplaced-parameter",
             Self::ConflictingTranslation { .. } => "conflicting-translation",
+            Self::SecretWithheld { .. } => "secret-withheld",
             Self::SkippedRows { .. } => "skipped-rows",
         }
     }
@@ -376,6 +384,16 @@ impl std::fmt::Display for MappingDiagnostic {
             Self::ConflictingTranslation { ref_id, language } => write!(
                 f,
                 "conflicting {language} translations for {ref_id}; the first was kept"
+            ),
+            Self::SecretWithheld {
+                table,
+                column,
+                rows,
+            } => write!(
+                f,
+                "{rows} value{} of {table}.{column} {} withheld from the stored payload (secret-class column)",
+                if *rows == 1 { "" } else { "s" },
+                if *rows == 1 { "was" } else { "were" }
             ),
             Self::SkippedRows { table, reason, rows } => write!(
                 f,

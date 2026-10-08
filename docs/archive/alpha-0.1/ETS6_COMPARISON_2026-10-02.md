@@ -2,7 +2,7 @@
 
 *Snapshot: October 2, 2026. Current capabilities, not roadmap wishful thinking.*
 
-KNXBench is an independent, Linux-first alpha—not a certified or fully compatible ETS replacement. Repository evidence: [overview](README.md), [implementation status](docs/IMPLEMENTATION_STATUS.md), [limitations](docs/KNOWN_LIMITATIONS.md), and [compatibility](docs/COMPATIBILITY.md).
+KNXBench is an independent, Linux-first alpha—not a certified or fully compatible ETS replacement. Repository evidence: [overview](../../../README.md), [implementation status](../../IMPLEMENTATION_STATUS.md), [limitations](../../KNOWN_LIMITATIONS.md), and [compatibility](../../COMPATIBILITY.md).
 
 | Topic | KNXBench | ETS6 | Practical verdict |
 | --- | --- | --- | --- |

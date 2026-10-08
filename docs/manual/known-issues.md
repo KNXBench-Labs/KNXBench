@@ -126,7 +126,7 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   can still be refused. A picker filter is guidance, not format validation.
 - **Workaround:** obtain the product as a `.knxprod` package.
 - **Details:** [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md),
-  [UI follow-up evidence](../UI_ALPHA_READINESS.md)
+  [UI follow-up evidence](../archive/alpha-0.1/UI_ALPHA_READINESS.md)
 
 ### Some newer `.knxprod` master-data schemes are not installable directly
 
@@ -242,8 +242,8 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 - **Scope:** broader software lifecycle coverage, Web/client adoption and
   offline recovery/abort/restore contracts remain implementation requirements.
   This documentation notice is not a claim that an in-app warning is wired up.
-- **Details:** [Commissioning history contract](../COMMISSIONING_ACTIVITY_HISTORY.md),
-  [commissioning goal](../../goal-commission.md).
+- **Details:** [Commissioning history contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md),
+  [commissioning goal](../archive/alpha-0.1/goal-commission.md).
 
 ### There is no address reset in the app
 

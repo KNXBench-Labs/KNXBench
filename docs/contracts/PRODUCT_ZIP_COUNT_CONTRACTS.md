@@ -6,7 +6,7 @@ AR06V verifies the currently enforced entry-count boundary in
 `crates/knx-productdb/src/package.rs`, not a proposed limit change.
 `MAX_MEMBERS` remains 4096. This is evidence for part of KL-151, not its
 byte-size, caller or resource-policy decision. Per-ID status belongs only in
-[the source-ID ledger](status/LEDGER.md); this dossier is evidence, not a
+[the source-ID ledger](../status/LEDGER.md); this dossier is evidence, not a
 second status table.
 
 No production code, manufacturer grammar, hardware behavior or Web source was

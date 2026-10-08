@@ -269,7 +269,7 @@ D8; ADR-0029 is amended to state that `settings.json` may now contain an
 unencrypted user-entered gateway endpoint (never credentials), is included in
 data-directory backups and therefore carries installation-network metadata;
 `docs/KNOWN_LIMITATIONS.md` §122 is marked resolved while §121 stays open.
-`docs/LIMITATION_TRIAGE.md` is generated/guarded and must not be hand-edited.
+`docs/archive/alpha-0.1/LIMITATION_TRIAGE.md` is generated/guarded and must not be hand-edited.
 
 Required completion gates are frontend Vitest and TypeScript, Rust formatting,
 workspace Clippy/tests, layering, headers, anchors and `cargo deny`; no real

@@ -8,7 +8,7 @@ then structural/parser metadata binding, then all advertised member sizes 64 MiB
 and their total 256 MiB, and only afterwards decodes payloads. These constants
 are unchanged. A declared-size fixture is malformed payload metadata, not an
 actual successfully installed 64/256 MiB payload and not a peak-memory benchmark.
-Source-ID status belongs solely in [status/LEDGER](status/LEDGER.md).
+Source-ID status belongs solely in [status/LEDGER](../status/LEDGER.md).
 
 The fresh standalone baseline on committed `44746183` passed 40, failed 0,
 ignored 3; 121

@@ -17,9 +17,9 @@ publication; this receipt follows as a docs-only commit.
 | Condition | State | Evidence |
 | --- | --- | --- |
 | U0–U13 done | Met | U13 receipt `dfa0cc79` (independent GPT-6.1-Sol review, findings fixed); [owner status history](#owner-status-history) |
-| Issue-plan checkboxes | Met | [Issue plan](superpowers/plans/2026-09-21-user-reported-issues.md): 68 ticked, 0 open |
-| U14–U18 | Met, one user-approved change | U18 `1964fd6b`; the user's 2026-10-05 request replaced U17's preview with one dropdown and retired two palettes ([ADR-0079](adr/0079-theme-choice-is-one-dropdown.md), `03609b60`) |
-| U19–U21 and AR21 hand-off | Met | AR21 accepted `FLOW-01` after Alpha's independent reruns of findings 1–7 ([TELEGRAM_FLOW_VISUALIZATION §22](TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05)) |
+| Issue-plan checkboxes | Met | [Issue plan](../../superpowers/plans/2026-09-21-user-reported-issues.md): 68 ticked, 0 open |
+| U14–U18 | Met, one user-approved change | U18 `1964fd6b`; the user's 2026-10-05 request replaced U17's preview with one dropdown and retired two palettes ([ADR-0079](../../adr/0079-theme-choice-is-one-dropdown.md), `03609b60`) |
+| U19–U21 and AR21 hand-off | Met | AR21 accepted `FLOW-01` after Alpha's independent reruns of findings 1–7 ([TELEGRAM_FLOW_VISUALIZATION §22](../../TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05)) |
 | §2.5 gates green on the merged result | Met | Closing gate below |
 | Closing review, findings fixed | Met (self-review) | Below; two findings fixed in `892b9948` |
 | Web lock released | Met | Released in `892b9948`'s handover entry |
@@ -38,7 +38,7 @@ gate under the shared leases, log under `.ai/logs/`.
 
 ### Source-ID rows owned by UI
 
-26 rows in the [ledger](status/LEDGER.md): 15 `DONE`, 10 `ACCEPTED_BOUNDARY`,
+26 rows in the [ledger](../../status/LEDGER.md): 15 `DONE`, 10 `ACCEPTED_BOUNDARY`,
 1 `LATER` (`KL-43`, owner decision 2026-10-04). Rows owned elsewhere whose Web
 half was handed to this owner: `KL-142` (delivered, `DONE`), `KL-37`
 (delivered, `ACCEPTED_BOUNDARY`), `UI-04` (Web half delivered; closing the
@@ -116,7 +116,7 @@ owner and the user, not by this receipt.
 
 ## Telegram-flow owner addition — user decision 2026-10-04
 
-[The approved Alpha feature](TELEGRAM_FLOW_VISUALIZATION.md) adds UI U19–U21
+[The approved Alpha feature](../../TELEGRAM_FLOW_VISUALIZATION.md) adds UI U19–U21
 and alpha AR20/AR21 without reopening completed UI source-ID/UA/theme receipts.
 The UI owner resolves a tested design/handoff in U19, consumes integrated AR20
 in U20, and closes productive layout/pulse/value/theme/motion/load evidence in
@@ -264,11 +264,11 @@ forward requests to the development backend and every test intercepts API calls.
 
 ## All UI-routed inventory rows
 
-These are the exact 24 UI-owned IDs of the [source-ID ledger](status/LEDGER.md). `Open` names absent behavior,
+These are the exact 24 UI-owned IDs of the [source-ID ledger](../../status/LEDGER.md). `Open` names absent behavior,
 not merely missing validation. `Retained` describes the current contract, not
 release consent. Final ledger status follows verified delivery.
 
-Status of these rows: [source-ID ledger](status/LEDGER.md) (AR14D D2).
+Status of these rows: [source-ID ledger](../../status/LEDGER.md) (AR14D D2).
 
 | ID | Owner evidence | Remaining condition |
 | --- | --- | --- |
@@ -350,9 +350,9 @@ leaves the Alpha scope as `ACCEPTED_BOUNDARY`; these remain disclosed,
 unverified boundaries, not claims. MODEL-03 and KL-127 get research first and
 close as known gaps without reliable evidence. DATA-03, MODEL-01, MODEL-02,
 MODEL-04 and UX-01 are now implementation packages UA2–UA6 in
-[goal-ui.md](../goal-ui.md). The [source-ID ledger](status/LEDGER.md) carries
+[goal-ui.md](goal-ui.md). The [source-ID ledger](../../status/LEDGER.md) carries
 the per-row status (until 2026-10-04 the parent ledger in
-[alpha-release-goal.md](../alpha-release-goal.md) did).
+[alpha-release-goal.md](alpha-release-goal.md) did).
 
 **Handoff 2026-10-04 11:27.** The backend halves of MODEL-01/02/03/04 and DATA-03 are
 published (ADR-0069, ADR-0070, ADR-0071, RESEARCH §25); UX-01 needs no
@@ -365,7 +365,7 @@ ledger. None of these rows is `DONE` before its web half is published.
 
 Moved verbatim from `goal-ui.md` on 2026-10-04 (AR14D D5, agreed by the
 goal-ui owner); only relative links changed. Every ID and status named here
-has its row in the [source-ID ledger](status/LEDGER.md), which is current.
+has its row in the [source-ID ledger](../../status/LEDGER.md), which is current.
 
 ### Where things stood (goal-ui.md, updated 2026-10-02)
 

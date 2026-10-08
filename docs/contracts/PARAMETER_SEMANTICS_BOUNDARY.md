@@ -99,9 +99,9 @@ source-byte retention or a working parameter panel. No vendor script, Button
 handler, DLL, download/placement formula or unknown RepeatIndex is executed.
 No native domain/storage schema or UI implementation changes in this checkpoint.
 
-Read current implementation, [ADR-0041](adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md),
-[RESEARCH §4.3](RESEARCH.md), [KNOWN_LIMITATIONS §3](KNOWN_LIMITATIONS.md) and
-[§146](KNOWN_LIMITATIONS.md). Dated research/design descriptions are historical:
+Read current implementation, [ADR-0041](../adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md),
+[RESEARCH §4.3](../RESEARCH.md), [KNOWN_LIMITATIONS §3](../KNOWN_LIMITATIONS.md) and
+[§146](../KNOWN_LIMITATIONS.md). Dated research/design descriptions are historical:
 current source and later ADRs take precedence over their original slice scope.
 
 ## Primary evidence reread locally
@@ -177,7 +177,7 @@ No original or private product payload is copied into this document.
 
 ## Bounded controller candidate (2026-10-02)
 
-[ADR-0061](adr/0061-unsupported-choose-controller-kinds.md) confines comparison
+[ADR-0061](../adr/0061-unsupported-choose-controller-kinds.md) confines comparison
 to stored Number/Restriction, retaining the separately documented None policy.
 Known unsupported kinds receive UnsupportedControlKind rather than masquerading
 as a missing declaration. Matching/default branches remain inert; their refs
@@ -360,7 +360,7 @@ successful argument binding are sibling repeated-work paths; separate public
 regressions subsequently compiled and each reproduced the missing marker;
 the original inert RED stopped at its first Assign case. Other inert kinds
 are covered by the later GREEN run, not separately claimed as original REDs.
-[ADR-0062](adr/0062-dynamic-evaluation-work-admission.md) records the proposed
+[ADR-0062](../adr/0062-dynamic-evaluation-work-admission.md) records the proposed
 shared work-admission contract before production changes. The reproduction
 checkpoint did not claim implementation or GREEN; the later candidate below
 does not claim a full memory/latency guarantee, UI acceptance or delivery.
@@ -449,7 +449,7 @@ hashes unchanged. The first test attempt was a rejected compilation-only
 instrumentation error (`ProgramTrees` has no `PartialEq`), not behavioral RED;
 the corrected test compares activation and retained source bytes instead.
 
-[ADR-0063](adr/0063-parameter-scopes-preserve-evaluation-identity.md) adds only
+[ADR-0063](../adr/0063-parameter-scopes-preserve-evaluation-identity.md) adds only
 `nodeChain` to non-null manual parameter scopes, outermost first and ending in
 `moduleNode`. Top-level scope remains null; legacy innermost fields remain.
 This response-local identity is not stable across product reinstall, not an ETS

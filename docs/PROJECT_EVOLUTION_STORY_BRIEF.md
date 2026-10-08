@@ -168,7 +168,7 @@ stage controls replay it. A Motion off checkbox and OS reduced-motion preference
 both immediately stop active effects and show the complete selected-stage state.
 This is a motion design sample, not the full scroll-driven historical experience.
 
-The [first-private-version goal](PROJECT_EVOLUTION_GOAL.md) supplies the bounded
+The [first-private-version goal](archive/PROJECT_EVOLUTION_GOAL.md) supplies the bounded
 implementation and verification handover for a new user-started `/goal` session.
 Preparing that goal document does not activate it or authorize publication.
 

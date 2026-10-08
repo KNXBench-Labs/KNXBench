@@ -2,7 +2,7 @@
 
 ## New Telegram-flow Alpha prerequisite — user decision 2026-10-04
 
-The user confirmed and authorized [the session-local flow contract](TELEGRAM_FLOW_VISUALIZATION.md)
+The user confirmed and authorized [the session-local flow contract](../../TELEGRAM_FLOW_VISUALIZATION.md)
 for the Alpha. UI U19–U21 and alpha AR20/AR21 are additional open package work,
 not a reinterpretation of completed source IDs or a silent scope waiver.
 Final readiness/artifact/review requires AR21's integrated flow acceptance;
@@ -17,10 +17,10 @@ theme/motion and explicit overload/loss handling must be actually verified.
 
 User-started offline alpha queue, 2026-10-01. Inspected source/maintained docs
 at `307a5970ad5147437dffce4a86047e85e3319186`; the dated input inventory
-[OFFENE_PUNKTE](archive/OFFENE_PUNKTE.md) is unchanged. This is dispatch/provenance
+[OFFENE_PUNKTE](../OFFENE_PUNKTE.md) is unchanged. This is dispatch/provenance
 reconciliation, not a fresh full implementation, security or compatibility audit.
-The execution owner is [alpha-release-goal](../alpha-release-goal.md); historical
-[goal](archive/goal.md) is not a second executor. UI/commissioning remain their owners.
+The execution owner is [alpha-release-goal](alpha-release-goal.md); historical
+[goal](../goal.md) is not a second executor. UI/commissioning remain their owners.
 
 ### Evidence adopted, not relabelled
 
@@ -29,7 +29,7 @@ The execution owner is [alpha-release-goal](../alpha-release-goal.md); historica
   independent GPT-6.1-Sol review: **changes required**, user-approved reviewer
   substitution; subsequent fixes and separate in-session review are not a
   second independent verdict. See `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`
-  and [implementation status](IMPLEMENTATION_STATUS.md).
+  and [implementation status](../../IMPLEMENTATION_STATUS.md).
 - Native WebKitGTK/real screen-reader/discovery multicast are still unverified.
   A `DONE` UI acceptance inventory row closes that dated U13/checkbox task,
   not those separate platform boundaries or optional owner follow-ups.
@@ -65,7 +65,7 @@ product-test executions**. AR00's own doc/ledger checks are recorded in
 The executable uses the selected runtime workspace, validates its identity,
 pins metadata to that manifest and refuses missing/empty scan scopes. All
 checked layering roots must be actual workspace members. The target and
-coverage are emitted; see [verification targets](VERIFICATION.md).
+coverage are emitted; see [verification targets](../../VERIFICATION.md).
 
 Executed: old removed-worktree zero-file success; new deleted-target refusal;
 75 unit and 12 CLI integration tests, strict xtask Clippy, fmt and all four
@@ -85,7 +85,7 @@ failed CSV/reconciliation batches apply nothing, and existing parameter edits
 remain possible. Tests assert unchanged project/counters, maximum-ID
 undo/redo/save/reopen, CLI exit 2 and HTTP refusal, not just a failure label.
 Mapper seeded-boundary tests abort detached construction and preserve input.
-See [model contract](DATA_MODEL.md) and
+See [model contract](../../DATA_MODEL.md) and
 `.ai/logs/2026-10-01_codex_alpha-id-exhaustion.md`.
 
 Final offline gates, 2026-10-01 UTC receipt: 141 Rust result blocks, 2,855 passed,
@@ -112,7 +112,7 @@ targets and scratch were removed. AR03's docs-only audit was published as
 
 ## AR04 storage command contract — DONE
 
-[Explicit full-save fallback](STORAGE_COMMAND_CONTRACT.md) replaces the exported
+[Explicit full-save fallback](../../contracts/STORAGE_COMMAND_CONTRACT.md) replaces the exported
 helper's successful no-op arms without changing current production save paths.
 The source audit routes all 50 command variants through one complete snapshot
 write; this is not a claim of 50 individually executed variant tests.
@@ -281,7 +281,7 @@ passed and no failed test. Ordinary ignored counts are 163/24, not private
 acceptance: matrix, real v18 upgrade and census separately execute one case each
 with no ignored/failure/skip markers. Complete aggregate shapes and 595 frozen
 sources match. Named regression/mutation evidence and in-session review are in
-[MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md) and
+[MANUFACTURER_REPORT_CONTRACT](../../contracts/MANUFACTURER_REPORT_CONTRACT.md) and
 `.ai/logs/2026-10-02_codex_alpha-manufacturer-report.md`.
 
 AR05's duplicate/provenance scope is an audit with verified reporting boundaries,
@@ -392,19 +392,19 @@ their named AR package. Owner rows have the shared fallback/unblock contract
 above and are not new tasks assigned to an already closed owner queue.
 
 The 180-row table and its status count moved to the
-[source-ID ledger](status/LEDGER.md#snapshot-ids) on 2026-10-04 (AR14D D2,
-[ADR-0076](adr/0076-one-ledger-is-the-status-of-record.md)); its evidence
+[source-ID ledger](../../status/LEDGER.md#snapshot-ids) on 2026-10-04 (AR14D D2,
+[ADR-0076](../../adr/0076-one-ledger-is-the-status-of-record.md)); its evidence
 column is the ledger's *Evidence* column.
 
 ## Post-snapshot findings (outside the 180-ID ledger)
 
 Added 2026-10-03 from the test-only product-install run over 853 public
-manufacturer downloads ([corpus run](PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03),
+manufacturer downloads ([corpus run](../../PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03),
 commit `2cceea4e`). They have their own identities. The 180-ID ledger, its
 mechanically counted statuses and the 110-heading recount above are a dated
 snapshot and stay unchanged. AR15 recounts them.
 
-Their rows and counts are in the [ledger](status/LEDGER.md#post-snapshot-ids).
+Their rows and counts are in the [ledger](../../status/LEDGER.md#post-snapshot-ids).
 
 **Unblock input for AR07 (status unchanged here):** the same corpus contains
 sample evidence that the ledger above reports as missing. Its status change is

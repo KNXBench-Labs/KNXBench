@@ -2,13 +2,13 @@
 
 Dated record of how the user manual (`docs/manual/`) was checked against the
 finished application for the Alpha. Source of the task: `RELEASE-03`,
-[alpha-release-goal AR16](../alpha-release-goal.md).
+[alpha-release-goal AR16](alpha-release-goal.md).
 
 ## Policy (user decision, 2026-10-06)
 
 - The manual stays in the repository and is read on GitHub. It is not bundled
   into the application; the in-app help stays the short F1 panel
-  ([ADR-0024](adr/0024-in-application-help.md)).
+  ([ADR-0024](../../adr/0024-in-application-help.md)).
 - The manual has screenshots. They show the finished application at its tested
   scope and use fictional data only.
 
@@ -26,7 +26,7 @@ run is `apps/knx-web/e2e/manual-screenshots.shots.ts` with
 (`892b9948`) the spec ran again on the merged tree (debug server, same
 frontend build steps): only the bus-monitor picture changed and was replaced.
 The regeneration recipe is in
-[Contributing](manual/development/01-contributing.md#screenshots-in-this-manual).
+[Contributing](../../manual/development/01-contributing.md#screenshots-in-this-manual).
 
 Not shown, by design: any live KNX bus, gateway or device (the bus-monitor
 picture shows the offline search result), the desktop shell's native dialogs,

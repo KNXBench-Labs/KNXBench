@@ -8,7 +8,7 @@
 
 > **Post-snapshot additions (2026-10-03):** `KL-149`–`KL-153` from the public
 > product-download test run are tracked outside this 180-entry snapshot, in
-> [ALPHA_READINESS](../ALPHA_READINESS.md#post-snapshot-findings-outside-the-180-id-ledger)
+> [ALPHA_READINESS](alpha-0.1/ALPHA_READINESS.md#post-snapshot-findings-outside-the-180-id-ledger)
 > and `alpha-release-goal.md` §8 (package AR06P).
 
 ## Context and scope

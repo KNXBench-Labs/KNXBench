@@ -20,7 +20,7 @@
 - Preserve every legacy exclusion string byte-for-byte until explicit removal. New entries must be unique dotted individual addresses.
 - Use existing `--knx-*` CSS tokens and typed English/German catalogues.
 - Give every new TypeScript file a purpose-sentence header.
-- Never hand-edit `docs/LIMITATION_TRIAGE.md`.
+- Never hand-edit `docs/archive/alpha-0.1/LIMITATION_TRIAGE.md`.
 
 ## Review Focus
 

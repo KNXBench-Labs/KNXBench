@@ -24,11 +24,11 @@ identities are checked too. An unresolved leaf symbolic-link destination is
 explicitly refused before history creation rather than followed or repaired.
 This closes shared download/restore/compare admission findings without changing
 product storage. It remains admission-time protection, not a hostile filesystem
-replacement/race guarantee. [Later focused parent/leaf receipt](evidence/cli-history-leaf-alias-offline-2026-10-05.json)
+replacement/race guarantee. [Later focused parent/leaf receipt](../evidence/cli-history-leaf-alias-offline-2026-10-05.json)
 contains6 unit/8 entrypoint/7 reader positives and7 restored source controls;
 the earlier counts below retain their original historical scope.
 
-[Focused offline receipt](evidence/cli-compare-history-offline-2026-10-05.json):
+[Focused offline receipt](../evidence/cli-compare-history-offline-2026-10-05.json):
 six compare unit tests, six CLI entrypoint tests (including six existing-alias
 variants), seven serial/service-control reader regressions, fmt and strict CLI
 Clippy pass. Five compiled source controls each register one exact test, fail at
@@ -45,7 +45,7 @@ No real KNX hardware, ETS, vendor or power-loss experiment was performed.
 
 ## Shared Caller candidate — 2026-10-04
 
-The local candidate for [ADR-0075](adr/0075-shared-commissioning-activity-lifecycle.md)
+The local candidate for [ADR-0075](../adr/0075-shared-commissioning-activity-lifecycle.md)
 extracts the format-2 lifecycle to `knx-app::commissioning_activity`; the server
 is an adapter, not a second journal engine. CLI download, restore and
 service-control confirmed writes require `--activity-history <path>`.
@@ -97,7 +97,7 @@ result blocks; Web1761/100 files, intercepted Chromium8, production build,
 strict Clippy/fmt and all four repository policy checks passed. All50 isolated
 guard controls compiled and failed at their named behavioral assertions;
 canonical source was never mutated. See the separate
-[delivery receipt](evidence/commission-history-web-delivery-offline-2026-10-04.json).
+[delivery receipt](../evidence/commission-history-web-delivery-offline-2026-10-04.json).
 The earlier receipt below remains evidence for its original source snapshot.
 
 The selected private regression sweep remains bound to `60d6a85f`:
@@ -115,7 +115,7 @@ IN_PROGRESS. External hardware/power-loss/vendor/ETS experiments remain outside
 the goal; this does not waive backup, authorization or fail-closed safety.
 
 
-[ADR-0064](adr/0064-durable-activity-history-is-not-recovery.md) separates durable
+[ADR-0064](../adr/0064-durable-activity-history-is-not-recovery.md) separates durable
 activity **metadata** from project data, product data, recovery images and bus
 success. This backend contract is additive; Web adoption belongs to its owner.
 
@@ -124,7 +124,7 @@ success. This backend contract is additive; Web adoption belongs to its owner.
 ## Web history adoption — 2026-10-04
 
 The bounded client is accepted on upstream-integrated code `9fe69116` (base
-`4bc90aab`), with the [permanent receipt](evidence/commission-history-web-offline-2026-10-04.json).
+`4bc90aab`), with the [permanent receipt](../evidence/commission-history-web-offline-2026-10-04.json).
 All nine stages passed on the same frozen1037 public inputs/279 Web inputs:
 ordinary workspace **3079 passed,0 failed,176 ignored** in160 result blocks,
 strict Clippy/fmt, all four intended-root policy checks, production Web build,
@@ -193,7 +193,7 @@ SAFE-03/AUDIT-01/Global Commissioning scope. No real KNX backend was contacted.
 The bounded implementation is published as `1c5dec07`, integrating candidate
 `a8c9342c` with upstream `75ad9650`. Both the fetched and live `main` ref matched
 that exact gated commit before this documentation-only closure. The permanent
-[acceptance receipt](evidence/commission-download-lifecycle-offline-2026-10-04.json)
+[acceptance receipt](../evidence/commission-download-lifecycle-offline-2026-10-04.json)
 records commands, exits, source/configuration digests and scope boundaries.
 
 Renewed integrated evidence: **125 distinct registered tests, 0 failed,
@@ -224,7 +224,7 @@ contracts remain implementation requirements. **User decision, 2026-10-04:**
 new real-hardware, power-loss, vendor and ETS validation is accepted out of the
 goal, not a completion blocker or a pending operator task. Those guarantees
 remain unproven and must be disclosed in
-[user notices](manual/known-issues.md#commissioning-validation-boundary).
+[user notices](../manual/known-issues.md#commissioning-validation-boundary).
 Hostile-race guarantees are not inferred from offline tests. Runtime backup,
 authorization and fail-closed recovery gates are unchanged.
 No locked Web source, generated binding or product data was manually changed.
@@ -302,7 +302,7 @@ positive joined-worker receipt, not intent-error/abort/crash/cleanup fault cases
 The latest scoped evidence above supersedes these earlier snapshots without
 retroactively broadening them. Full branch review/closure/integrated acceptance
 and publication remain pending. See proposed
-[ADR-0067](adr/0067-download-lifecycle-preserves-uncertainty.md).
+[ADR-0067](../adr/0067-download-lifecycle-preserves-uncertainty.md).
 
 ## CLI serial-lookup read caller candidate
 
@@ -470,4 +470,4 @@ hardware go. Test page refresh/pagination, malformed/unavailable responses,
 restart identity and cancellation rendering before claiming UI/native support.
 
 The full source-ID and dependency ledger is
-[COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md).
+[COMMISSIONING_ALPHA_LEDGER](../archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md).

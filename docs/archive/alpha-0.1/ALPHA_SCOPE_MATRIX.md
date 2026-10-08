@@ -3,7 +3,7 @@
 Status of record for **what the Alpha candidate does, how well that is proven,
 and what still stands between it and a release**. Built by AR15 on 2026-10-06
 from `origin/main` `717d07c0`. Per-ID status stays in the
-[ledger](status/LEDGER.md); this page groups it and names a release
+[ledger](../../status/LEDGER.md); this page groups it and names a release
 disposition for everything not yet accepted. It does not accept anything on
 the user's behalf.
 
@@ -22,33 +22,33 @@ Evidence levels used below:
 
 | Area | Level | What exactly | Evidence |
 | --- | --- | --- | --- |
-| `.knxproj` import, ETS schema 11 and 21 | Verified | Two real reference projects with measured counts; unknown data preserved and reported | [COMPATIBILITY §2](COMPATIBILITY.md#2-verified-today) |
-| `.knxproj` schema 23 | Verified, narrow | One ETS6 re-export of the reference project; module handling inferred from schema 21 | [COMPATIBILITY](COMPATIBILITY.md) |
+| `.knxproj` import, ETS schema 11 and 21 | Verified | Two real reference projects with measured counts; unknown data preserved and reported | [COMPATIBILITY §2](../../COMPATIBILITY.md#2-verified-today) |
+| `.knxproj` schema 23 | Verified, narrow | One ETS6 re-export of the reference project; module handling inferred from schema 21 | [COMPATIBILITY](../../COMPATIBILITY.md) |
 | ZipCrypto-protected `.knxproj` (ETS4/5) | Verified (synthetic) | Library, CLI, server and Web password dialog | `KL-13`, [ALPHA_READINESS AR08](ALPHA_READINESS.md#ar08-password-import-entry-paths-2026-10-04) |
-| AES-protected `.knxproj` (ETS6) | Externally blocked | Refused; no genuine sample | [KL §13](KNOWN_LIMITATIONS.md#13-password-protected-projects-zipcrypto-ets4ets5-is-decrypted-aes-ets6-is-still-refused) |
+| AES-protected `.knxproj` (ETS6) | Externally blocked | Refused; no genuine sample | [KL §13](../../KNOWN_LIMITATIONS.md#13-password-protected-projects-zipcrypto-ets4ets5-is-decrypted-aes-ets6-is-still-refused) |
 | Other ETS project schemas (12–14, 20, 22) | Externally blocked | Parser family exists, no real file tested | `KL-1`, `KL-11` |
-| Native `.knxdb` store | Verified | Save/open/save-as; schema 10; upgrade of older files atomic, in place | [STORAGE_COMMAND_CONTRACT](STORAGE_COMMAND_CONTRACT.md), [KL §157](KNOWN_LIMITATIONS.md#157-opening-an-older-project-upgrades-it-in-place) |
-| Editing topology, group addresses, building, devices, parameters | Verified | Undo/redo; parameter writes need recorded write authority (ADR-0080) | [IMPLEMENTATION_STATUS](IMPLEMENTATION_STATUS.md), [ADR-0080](adr/0080-parameter-write-authority.md) |
-| Product database from `.knxprod` | Verified | Schemes 10–14, 20, exact 21/23; 852 of 853 public downloads install (large ones via CLI opt-in) | [PRODUCT_DATABASE_CORPUS](PRODUCT_DATABASE_CORPUS.md), ADR-0082/0083 |
-| Parameter semantics | Verified for the evaluated subset | Unknown vendor logic is never executed; calculations not written | [PARAMETER_SEMANTICS_BOUNDARY](PARAMETER_SEMANTICS_BOUNDARY.md) |
-| Group-address CSV export/import | Verified | Destructive changes need a confirmation token | [KL §39–41](KNOWN_LIMITATIONS.md) |
-| HTML documentation export | Verified | Names need installed product data; translated texts follow the device-detail rule | [KL §46](KNOWN_LIMITATIONS.md#46-project-documentation-export-resolves-names-only-with-installed-product-data--partially-resolved-2026-09-23-t14) |
-| Project diff (CLI, Web) | Verified | KNXBench diff, not an ETS comparison; Git external-diff recipe | [manual 08](manual/user-guide/08-reports-and-diff.md) |
-| KNXnet/IP discovery, tunnelling monitor, group write | Verified on one gateway | 34-minute live session without drops | [manual implementation status](manual/implementation-status.md) |
-| Routing monitor/send, custom multicast group | Verified offline; live custom-group router traffic externally blocked | `KL-31` | [KL §31](KNOWN_LIMITATIONS.md) |
-| Telegram-flow view | Verified in Chromium | Motion Off for large maps; no WebKitGTK/Orca/real-bus evidence | [TELEGRAM_FLOW_VISUALIZATION §22](TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05) |
-| Device download (`070nh` memory path) | Verified on one device | CLI and Web; plan, per-device phrase, pre-write backup; others refused by name | [KL §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
-| Property-based downloader, master reset, RF configuration | Simulator-only | No hardware route | [KL §92](KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device), §141, §143–§144 |
+| Native `.knxdb` store | Verified | Save/open/save-as; schema 10; upgrade of older files atomic, in place | [STORAGE_COMMAND_CONTRACT](../../contracts/STORAGE_COMMAND_CONTRACT.md), [KL §157](../../KNOWN_LIMITATIONS.md#157-opening-an-older-project-upgrades-it-in-place) |
+| Editing topology, group addresses, building, devices, parameters | Verified | Undo/redo; parameter writes need recorded write authority (ADR-0080) | [IMPLEMENTATION_STATUS](../../IMPLEMENTATION_STATUS.md), [ADR-0080](../../adr/0080-parameter-write-authority.md) |
+| Product database from `.knxprod` | Verified | Schemes 10–14, 20, exact 21/23; 852 of 853 public downloads install (large ones via CLI opt-in) | [PRODUCT_DATABASE_CORPUS](../../PRODUCT_DATABASE_CORPUS.md), ADR-0082/0083 |
+| Parameter semantics | Verified for the evaluated subset | Unknown vendor logic is never executed; calculations not written | [PARAMETER_SEMANTICS_BOUNDARY](../../contracts/PARAMETER_SEMANTICS_BOUNDARY.md) |
+| Group-address CSV export/import | Verified | Destructive changes need a confirmation token | [KL §39–41](../../KNOWN_LIMITATIONS.md) |
+| HTML documentation export | Verified | Names need installed product data; translated texts follow the device-detail rule | [KL §46](../../KNOWN_LIMITATIONS.md#46-project-documentation-export-resolves-names-only-with-installed-product-data--partially-resolved-2026-09-23-t14) |
+| Project diff (CLI, Web) | Verified | KNXBench diff, not an ETS comparison; Git external-diff recipe | [manual 08](../../manual/user-guide/08-reports-and-diff.md) |
+| KNXnet/IP discovery, tunnelling monitor, group write | Verified on one gateway | 34-minute live session without drops | [manual implementation status](../../manual/implementation-status.md) |
+| Routing monitor/send, custom multicast group | Verified offline; live custom-group router traffic externally blocked | `KL-31` | [KL §31](../../KNOWN_LIMITATIONS.md) |
+| Telegram-flow view | Verified in Chromium | Motion Off for large maps; no WebKitGTK/Orca/real-bus evidence | [TELEGRAM_FLOW_VISUALIZATION §22](../../TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05) |
+| Device download (`070nh` memory path) | Verified on one device | CLI and Web; plan, per-device phrase, pre-write backup; others refused by name | [KL §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
+| Property-based downloader, master reset, RF configuration | Simulator-only | No hardware route | [KL §92](../../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device), §141, §143–§144 |
 | Individual-address programming, reset, serial writes | Refused (fail closed) | Commands exist; refused before a tunnel until durable recovery exists | ADR-0057/0058/0059 |
 | KNX Secure (Data/IP) | Accepted boundary | Not implemented; deferred 2026-09-11 | `KL-8` |
-| Linux AppImage candidate | Verified on one machine | `0.1.0-alpha.4`; the AR18 candidate is built from `4b9e913e` with build paths remapped (offline smoke, native Wayland); AR17 checked X11 and Wayland on `6b9b6818`; needs an X server unless started as documented **in the published alpha.4 asset**; the post-alpha [launcher change](APPIMAGE_LAUNCHER.md) is separately, locally verified | [ALPHA_FINAL_GATES](ALPHA_FINAL_GATES.md), [ALPHA_CANDIDATE](ALPHA_CANDIDATE.md), `KL-158` |
-| Multi-user server | Accepted boundary | One shared password, no roles/audit; TLS of its own only after alpha.5 ([ADR-0088](adr/0088-server-terminates-tls-itself.md)) | `KL-63`, [ALPHA_READINESS AR13](ALPHA_READINESS.md#deployment-and-privacy-checklist-for-ar15ar17-and-release-notes) |
+| Linux AppImage candidate | Verified on one machine | `0.1.0-alpha.4`; the AR18 candidate is built from `4b9e913e` with build paths remapped (offline smoke, native Wayland); AR17 checked X11 and Wayland on `6b9b6818`; needs an X server unless started as documented **in the published alpha.4 asset**; the post-alpha [launcher change](../../APPIMAGE_LAUNCHER.md) is separately, locally verified | [ALPHA_FINAL_GATES](ALPHA_FINAL_GATES.md), [ALPHA_CANDIDATE](ALPHA_CANDIDATE.md), `KL-158` |
+| Multi-user server | Accepted boundary | One shared password, no roles/audit; TLS of its own only after alpha.5 ([ADR-0088](../../adr/0088-server-terminates-tls-itself.md)) | `KL-63`, [ALPHA_READINESS AR13](ALPHA_READINESS.md#deployment-and-privacy-checklist-for-ar15ar17-and-release-notes) |
 
 ## 2. Deployment, import and hardware boundaries
 
 - **Deployment.** Linux desktop (Tauri 2 on GTK3/WebKitGTK, `KL-16`; the
   published alpha.4 AppImage needs an X server unless started natively as
-  documented, `KL-158`; the post-alpha [launcher contract](APPIMAGE_LAUNCHER.md)
+  documented, `KL-158`; the post-alpha [launcher contract](../../APPIMAGE_LAUNCHER.md)
   removes that requirement in newer source-built images)
   and a container/web server. The server binds loopback unless a password is set; a
   TLS proxy is required for networked use in alpha.5 (main after alpha.5 terminates
@@ -70,7 +70,7 @@ Evidence levels used below:
 These are the current working ledger totals, including post-alpha work, not a
 retrospective change to the released alpha.4 artifact. The launcher follow-up
 is locally verified; its source/artifact receipt is in
-[APPIMAGE_LAUNCHER](APPIMAGE_LAUNCHER.md), and it is not yet published.
+[APPIMAGE_LAUNCHER](../../APPIMAGE_LAUNCHER.md), and it is not yet published.
 
 | Status | Rows | Meaning for the release |
 | --- | --- | --- |

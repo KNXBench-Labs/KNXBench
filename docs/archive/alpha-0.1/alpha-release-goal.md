@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-01 20:50 CEST.
 **Planning baseline:** `origin/main` at `dfa0cc79ca50bc7da747058e97978c7e3a2de25c`, refreshed after the UI closure receipt published during planning.
-**Input inventory:** [OFFENE_PUNKTE.md](docs/archive/OFFENE_PUNKTE.md), all 180 main-table IDs; its original audit revision and date remain unchanged.
+**Input inventory:** [OFFENE_PUNKTE.md](../OFFENE_PUNKTE.md), all 180 main-table IDs; its original audit revision and date remain unchanged.
 
 Use **this file** as the instruction for the autonomous alpha-readiness session. Do not create or use a second `goals.md`. Creating this plan does **not** start implementation, authorize a hardware operation, approve a release tag or publish anything.
 
@@ -10,14 +10,14 @@ The outcome is an honestly scoped, tested Linux-first alpha candidate and an evi
 
 ## Telegram-flow Alpha addition — user decision 2026-10-04
 
-The user confirmed [the session-local nervous-system contract](docs/TELEGRAM_FLOW_VISUALIZATION.md)
+The user confirmed [the session-local nervous-system contract](../../TELEGRAM_FLOW_VISUALIZATION.md)
 and explicitly authorized the responsible Goal sessions to implement it.
 **It belongs in the Alpha**; omission needs a new explicit user scope decision.
 The new packages are AR20 (read-only data/server evidence contract) and AR21
 (integrated acceptance); UI U19–U21 stay exclusively in `goal-ui.md`.
 No commissioning package, spatial domain entity, persistent traffic store or new
 bus operation is added. The older flow-inspector-first recommendation is narrowly
-superseded by [ADR-0077](docs/adr/0077-session-local-telegram-flow-view.md), not by
+superseded by [ADR-0077](../../adr/0077-session-local-telegram-flow-view.md), not by
 reopening accepted floor-plan/spatial-editor exclusions.
 
 Schedule **U19 → AR20 → U20 → U21 → AR21** as prerequisites of the finished
@@ -34,8 +34,8 @@ This goal owns remaining **non-UI, non-commissioning** correctness, data-integri
 
 - [`goal-ui.md`](goal-ui.md) remains the sole execution owner of its issues, their existing server/domain halves, U13 review findings, UI acceptance and the Web lock. **No U-package is copied into this queue.**
 - [`goal-commission.md`](goal-commission.md) remains the sole execution owner of programming, download/recovery, commissioning research, their server/CLI/UI paths and hardware evidence. **No K-package is copied into this queue.**
-- [`goal.md`](docs/archive/goal.md) remains historical/contextual evidence for the other backlog, accepted exclusions and decisions. When this new goal is explicitly started, use its AR packages as the execution queue for the overlapping non-UI/non-commissioning scope; do **not** simultaneously run a second `goal.md` executor on those same tasks. This file does not change either other track's instructions or approvals.
-- [PROJECT_CONTEXT](docs/PROJECT_CONTEXT.md), current source/tests, ADRs and current maintained documentation win over the dated inventory, historical checkboxes and this planning snapshot. Never treat a branch name or old success count as current proof.
+- [`goal.md`](../goal.md) remains historical/contextual evidence for the other backlog, accepted exclusions and decisions. When this new goal is explicitly started, use its AR packages as the execution queue for the overlapping non-UI/non-commissioning scope; do **not** simultaneously run a second `goal.md` executor on those same tasks. This file does not change either other track's instructions or approvals.
+- [PROJECT_CONTEXT](../../PROJECT_CONTEXT.md), current source/tests, ADRs and current maintained documentation win over the dated inventory, historical checkboxes and this planning snapshot. Never treat a branch name or old success count as current proof.
 - Accepted DIN-26 exclusions, Secure/Functions/multi-user deferrals, unknown manufacturer semantics and withdrawn `.knxproj` export remain intact. This plan is not a blanket scope expansion.
 
 ### Current cross-track observation, not a permanent status
@@ -119,14 +119,14 @@ The existing statistics refresh requirement remains bookkeeping, not permission 
 **Execution started:** 2026-10-01, user request `arbeite alpha-release-goal.md ab`.
 AR00 is `DONE` on the isolated `alpha-queue` checkout at baseline
 `307a5970`; per-ID evidence, decision provenance, stable unnumbered aliases
-and safe fallbacks are in [ALPHA_READINESS](docs/ALPHA_READINESS.md).
+and safe fallbacks are in [ALPHA_READINESS](ALPHA_READINESS.md).
 No other `goal.md` executor was found in the startup process/worktree check;
 that file now explicitly points here rather than dispatching overlapping work.
 Evidence: `.ai/logs/2026-10-01_codex_alpha-queue.md`, verified 180-ID
 priority/route/owner ledger, 110-heading/105-residue recount, and fresh-target
 anchor gate. This is documentation/source inspection, not a new product test run.
 AR01 is `DONE`: runtime target/coverage guards, 87 xtask tests, five rejected
-behavioral mutants and emitted candidate scope; see [verification](docs/VERIFICATION.md)
+behavioral mutants and emitted candidate scope; see [verification](../../VERIFICATION.md)
 and `.ai/logs/2026-10-01_codex_alpha-gate-scope.md`. AR00 was published as
 `6f4cef24` with remote/artifact readback and its owned checkout removed.
 AR02 is `DONE`, published as `e691bc1318d0785289f8132378a0f26c9a829b27`:
@@ -139,7 +139,7 @@ typecheck, build and repository gates green. Receipt:
 `.ai/logs/2026-10-01_codex_alpha-id-exhaustion.md` (2026-10-01 UTC receipt).
 Its remote ref/artifact matched the gated tree; owned checkout, branch and
 AR02 targets/scratch are removed. AR03's bounded source audit and proposed
-scope are documented in [the enforcement audit](docs/ADR0039_ENFORCEMENT_AUDIT.md).
+scope are documented in [the enforcement audit](ADR0039_ENFORCEMENT_AUDIT.md).
 AR03 remains `WAITING_DECISION`; AR04 is published as
 `216c673e7c32a4bd82a308e06544a4fd239d7b3f` with exact remote/artifact readback.
 Next ready work is AR06 (AR05's scoped delivery is recorded below). The activation
@@ -197,7 +197,7 @@ closure does not automatically mean every source limitation was removed.
 
 **Exit evidence:** recorded activation or accepted continued deferral; if activated, per-phase tests/gates and the documented heuristic-versus-type-system boundary. No full-project sealing refactor or persisted undo history is smuggled in.
 
-**Audit receipt:** [ADR-0039 enforcement audit](docs/ADR0039_ENFORCEMENT_AUDIT.md)
+**Audit receipt:** [ADR-0039 enforcement audit](ADR0039_ENFORCEMENT_AUDIT.md)
 at published AR02 `e691bc13`: six direct live allocator calls, detached catalog
 allocation with a remaining single-create assignment, and post-command seed
 enrichment. Historical bypass counts are not current proof. Private `Project.ids`
@@ -212,7 +212,7 @@ from this docs-only audit. Continue independent AR04.
 **Sources:** `DATA-02`, `KL-42`. **Dependencies:** AR02; coordinate any AR03 surface changes.
 **Status:** `DONE`; implementation published as
 `216c673e7c32a4bd82a308e06544a4fd239d7b3f`, exact remote/artifact and author
-policy verified. Baseline `4f47059c`. [Storage contract](docs/STORAGE_COMMAND_CONTRACT.md).
+policy verified. Baseline `4f47059c`. [Storage contract](../../contracts/STORAGE_COMMAND_CONTRACT.md).
 
 - [x] Trace every relevant structural command through `command_sync`, whole-project save, undo/redo and reopen. Identify unsupported incremental cases explicitly.
 - [x] Choose the smallest safe behavior: verified incremental synchronization or an explicit whole-project-save fallback. Never make an unsupported command appear durably saved by an incremental success.
@@ -253,7 +253,7 @@ documentation published as `65b91777` and both owned checkouts/branch/scratch
 cleaned after exact verification. This scoped delivery
 does not close missing DPT source-winner provenance, remove numbered residuals,
 accept a release waiver or claim full manufacturer compatibility. Contract:
-[manufacturer report](docs/MANUFACTURER_REPORT_CONTRACT.md).
+[manufacturer report](../../contracts/MANUFACTURER_REPORT_CONTRACT.md).
 
 - [x] Add corpus-observed handling/reporting for master `Languages` attributes, preserving bytes and reporting unknowns instead of silently declaring them known.
 - [x] Audit duplicate normalized IDs and within-file DPT provenance; distinguish retained source, chosen normalized value and lost/uninterpreted semantics.
@@ -364,7 +364,7 @@ Both review findings closed; task-owned cleanup then AR07 offline research next.
 
 **Sources (post-snapshot, outside the 180-ID ledger):** `KL-149`, `KL-150`, `KL-151`, `KL-152`, `KL-153`.
 **Origin:** test-only run of the release `knx products ingest` against 853 public
-manufacturer downloads on 2026-10-03 (`2cceea4e`; [corpus run](docs/PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03)).
+manufacturer downloads on 2026-10-03 (`2cceea4e`; [corpus run](../../PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03)).
 644 installed. The refusals are real compatibility gaps for downloads a user
 actually gets from Siemens, ABB, Hager/Berker and MDT.
 **Dependencies:** AR06's import-boundary contract (`docs/IMPORT_BOUNDARY_CONTRACT.md`).
@@ -388,7 +388,7 @@ file, baseline `e6099fb7` vs. candidate, originals rehashed unchanged):
 Only transition baseline → candidate: 145 `unsupported namespace` →
 installed (the 146th scheme-10 file is the large bundle, counted under size
 limit). The first column is the original shared-database run
-([corpus run](docs/PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03));
+([corpus run](../../PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03));
 the three new columns use a fresh database per file.
 
 **Earlier status (history):** `IN_PROGRESS`. `KL-149` has a scoped candidate with independently
@@ -430,7 +430,7 @@ Ordered by value per effort:
 - [x] `KL-150` (P1): synthetic nested-definition RED, lexical identity/argument-position stack, atomic rollback/replay and three compiled mutants verified. Actual integrated cbe9952f public16/private pair accepted; code published as1b215d51 after preserving a foreign stats-only commit, live/fetched equal. Full853 Release CLI: installed687→688, one constraint refusal→installed, other outcomes unchanged; originals independently rehashed, no private raw/item records. Source706 unchanged;14 own build/snapshot/browser directories removed. Closing metadata/final checkout hygiene pending. AR07 receives the retained-source scope witness, not new R-MODULE-04 runtime semantics or a private committed fixture.
 - [x] `KL-151` (P2): measure peak RSS, ingest time and database growth for the eight over-limit bundles and five over-limit members, using a temporary raised limit in a scratch build only. Then decide on a documented bound (or streaming) with a hostile-ZIP regression test. Do not just remove the limit. Siemens' only current download (1,006 MiB expanded) is the reference case.
   - Research accepted at base5540dcac (2026-10-03 22:02 UTC): exact853 hashes,15 size-selected pairs including2 later dispatch admissions, scratch fixed member256MiB/expanded4GiB/compressed256MiB. Baseline15 atomic size refusals, raised14 installs/1 namespace refusal;16 hostile controls/six helper controls, source706/Release binaries exact. Max771.46MiB RSS/221.55s/7.038GiB DB, total638.04s/20.462GiB DB. Originals rehashed/private temporary data removed/no raw or item-vector output. Production caps unchanged; direct HTTP install/product mutex requires owner-aware latency/resource acceptance before a global raise. Research subpackage is not KL151 completion or a new UI task.
-  - **Closed 2026-10-05 (ADR-0082):** `PackageLimits::{STANDARD, LARGE}`; `knx products ingest --allow-large-package` opts into 256 MiB per member / 4 GiB total, default and HTTP unchanged. Release measurement on the 15 size-refused public packages: standard 15 typed refusals with hint, large 14 installed + verified, 1 scheme-10 namespace refusal; max 760.5 MiB RSS / 256 s / 7.18 GiB DB; Siemens 91 s / 402 MiB; control 20/20 identical; originals rehashed. 853 effect 690 → 704 (derived). [Measurement](docs/PRODUCT_ZIP_LARGE_PROFILE.md).
+  - **Closed 2026-10-05 (ADR-0082):** `PackageLimits::{STANDARD, LARGE}`; `knx products ingest --allow-large-package` opts into 256 MiB per member / 4 GiB total, default and HTTP unchanged. Release measurement on the 15 size-refused public packages: standard 15 typed refusals with hint, large 14 installed + verified, 1 scheme-10 namespace refusal; max 760.5 MiB RSS / 256 s / 7.18 GiB DB; Siemens 91 s / 402 MiB; control 20/20 identical; originals rehashed. 853 effect 690 → 704 (derived). [Measurement](../../contracts/PRODUCT_ZIP_LARGE_PROFILE.md).
   - 2026-10-04 AR06V existing-count contract checkpoint: public synthetic Scheme11 archives prove inclusive4096 ZIP entries/install/exact retained archive/replay and4097-entry SizeLimit refusal preserving every seeded database value. Native2/0/0 and two compiled semantic controls (cap4095 and4097) independently verified; canonical cap4096 never mutated. This is count-boundary evidence only, not byte-size/caller/resource-owner acceptance, a limit raise or KL151 completion. Branch public8 all exit0:ProductDB640/0/25, strict package Clippy/fmt/fresh-root doc-policy/whitespace,784 public inputs exact. Native2 is a subset of640;25 ignored tests not passes. Actual integrated4dbca7e5 public15 accepted:Rust3147/0/177 across170 blocks,Web1761,Chromium90 plus separate probe1,793 sources/CLI hash+version exact. Earlier optional-placeholder startup refusal and90 socket-path browser launch failures retained separately. New published Web-owner changes require latest integration/regating before publication; no new private corpus run.
 - [x] `KL-152` (P2): measure the actual evidence-item maxima of the two refused packages. Then either size the budget with a hostile-input test, or change evidence collection to a counted summary that stays explicit and loss-reporting.
   - Research at80a5500d accepted:4 size-admitted scheme14 packages/16 XML docs,2 selected; actual Release/Release scratch pair baseline2 atomic item refusals/observer2 installs. Max802433 items/155281510 estimated bytes, observer134552KiB RSS/max2.985s; archives/all853 originals independently exact/private temp0. Item-only raise insufficient because byte64MiB remains. Candidate1048576 items/256MiB retains depth1024/ZIP/namespace/grammar/all-or-nothing evidence,no truncation,master-language64MiB/262144 unchanged. Two named public REDs/six new hostile-boundary/late-preservation tests. Latest7f57abbb actual public18 GREEN:Rust3028/0/176/153 blocks,Web1739,Chromium82,source712/logs/Release binary exact. Fresh full853 Release/Release comparison independently reconciled after six owner Rust changes:688 unchanged table-count installs/163 unchanged normalized refusals/2 item-budget admissions→690 installs. Both binaries/all853 originals independently rehashed,retained archives exact,atomic refusals/private temp0. Earlier80a/ed03 receipts/binding17/eight controls and440-input equivalence retain historical identities. First latest rebuild-verifier rejection remains separate; corrected actual18 retry passes. Latest full CLI peak275128/275440KiB,max wall13.658/13.468s are cohort observations,not HTTP or resource-policy guarantees. Fresh binding17/eight controls and actual integrated doc5 GREEN; docs-only bb62ae57 preserved at20a3c4cd/source712 unchanged. Code and acceptance docs published as2b2a267f7873137ccbf3d0a5052a541a76573d59; normal main push/live/fetched/nine blobs exact. Four own runtime directories removed; closing metadata/final hygiene tracked separately. Not complete Alpha or ETS/runtime compatibility.
@@ -444,7 +444,7 @@ started after delivered exact23/hygiene c17b0f36. KNX format-family references a
 not namespace grammar proof; candidate mirror cover/body is unverified,
 full schema10 specification/XSD not recovered. Both package
 master admission and dedicated master-language evidence omit10. See
-[scheme10 research](docs/PRODUCT_SCHEME_10_RESEARCH.md). No production change,
+[scheme10 research](../../PRODUCT_SCHEME_10_RESEARCH.md). No production change,
 new private census/import result, namespace admission or compatibility claim.
 KL153/AR06P stay IN_PROGRESS; bounded structural probe/ownership evidence pending.
 
@@ -480,7 +480,7 @@ remain; KL150 is still unchecked and R-MODULE-04 runtime remains separate.
 
 **Status:** `DONE_SCOPED` 2026-10-05 (closing note after the checklist). History: `IN_PROGRESS`; fresh `alpha-parameter-semantics` from published
 AR06 receipt `0c3d6a8a`, 2026-10-02 17:14 CEST. Primary Condition_t constraint and actual
-controller-kind resolver traced in [parameter boundary](docs/PARAMETER_SEMANTICS_BOUNDARY.md).
+controller-kind resolver traced in [parameter boundary](../../contracts/PARAMETER_SEMANTICS_BOUNDARY.md).
 Baseline independently reconciled at 417/0/6 after correcting a source-string
 ignore-count error. Stored-controller RED/GREEN and ADR-0061 now bound comparison
 to Number/Restriction, preserve None policy and explicitly refuse other known
@@ -697,8 +697,8 @@ Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 
 **AR07 closed `DONE_SCOPED` 2026-10-05.** Census of 3,599 distinct programs
 and the ADR-0080 write-authority package
-([boundary](docs/PARAMETER_SEMANTICS_BOUNDARY.md#ar07-corpus-census-and-write-authority--2026-10-05),
-[ADR-0080](docs/adr/0080-parameter-write-authority.md)) complete the four
+([boundary](../../contracts/PARAMETER_SEMANTICS_BOUNDARY.md#ar07-corpus-census-and-write-authority--2026-10-05),
+[ADR-0080](../../adr/0080-parameter-write-authority.md)) complete the four
 items together with the earlier ADR-0061/0062/0063/0065/0066, Float-guard and
 `KL-150` receipts. Rows: `KL-3`, `KL-146`, `PDB-02`, `PDB-03`, `PDB-05`
 `ACCEPTED_BOUNDARY`; `PDB-01`, `R-DYNAMIC-01` `BLOCKED_EXTERNAL` (missing
@@ -708,7 +708,7 @@ with corrected missing input (rule, not sample). New `KL-156` (unreported
 adopt the three new diagnostic tokens.
 
 **AR07 follow-up `KL-156` delivered 2026-10-05**
-([ADR-0081](docs/adr/0081-parameter-attributes-are-reported.md)):
+([ADR-0081](../../adr/0081-parameter-attributes-are-reported.md)):
 `Parameter`/`ParameterRef` report every attribute they do not store; schema
 v21 backfills `ingest_unknown`, measured install reports and
 `package.unknown_count`. Fixture tests plus six mutants, workspace
@@ -727,7 +727,7 @@ independent recount predicts exactly. `KL-156` `DONE`.
 
 **Exit evidence:** supported entry-path tests and redaction checks, with genuine ETS/AES evidence gaps still visible. Secret transport must follow the repository's verified mechanism; if none exists for an intended surface, document/design it first.
 
-**State 2026-10-04:** library, application, CLI and server entry paths verified; Web dialog handed to the UI owner; evidence in [ALPHA_READINESS](docs/ALPHA_READINESS.md#ar08-password-import-entry-paths-2026-10-04). Status: ledger row `KL-13`.
+**State 2026-10-04:** library, application, CLI and server entry paths verified; Web dialog handed to the UI owner; evidence in [ALPHA_READINESS](ALPHA_READINESS.md#ar08-password-import-entry-paths-2026-10-04). Status: ledger row `KL-13`.
 
 ### AR09 — Verify DPT/model fidelity without changing wire rulings by guesswork
 
@@ -755,7 +755,7 @@ independent recount predicts exactly. `KL-156` `DONE`.
 **Exit evidence:** data/application/CLI localization regressions and clear boundary wording, not a “fully localized” claim. A missing frontend consumer keeps that portion waiting on its owner.
 
 **AR10 slice 1, 2026-10-05:** trace in
-[research/backend-localization-paths.md](docs/research/backend-localization-paths.md)
+[research/backend-localization-paths.md](../../research/backend-localization-paths.md)
 (first checkbox's evidence). `KL-14` `ACCEPTED_BOUNDARY`: no project
 language exists in the schema; `DeviceInstance/@InitialValueLanguage` is
 reported, never promoted; the placeholder is never consulted
@@ -795,7 +795,7 @@ for the catalogue (name, description), the device product block (product text,
 catalogue name, application name, each with its declared source language) and
 the communication-object DPT text (no source declared on that wire). Markers
 appear only with a product language selected. Ledger `KL-37`
-`ACCEPTED_BOUNDARY`; [KNOWN_LIMITATIONS §37](docs/KNOWN_LIMITATIONS.md#37-translations-reach-selected-surfaces-not-every-imported-text-or-ui-output)
+`ACCEPTED_BOUNDARY`; [KNOWN_LIMITATIONS §37](../../KNOWN_LIMITATIONS.md#37-translations-reach-selected-surfaces-not-every-imported-text-or-ui-output)
 "the markers are shown". Evidence: RED-first Vitest, 10/10 and 11/11 mutants,
 gates in `.ai/logs/2026-10-05_claude_ui-ar10-language-markers.md` and
 `…_ui-kl37-language-markers.md`. Owner self-report; no independent review of the
@@ -813,7 +813,7 @@ UI half was requested.
 
 **Exit evidence:** recorded decisions, approved slice tests and a UI handoff for any new display. DIN-26 CSV ranges, native PDF, prose catalog and diff application/correlation exclusions stay accepted, not reopened.
 
-**State 2026-10-04:** user decisions recorded: §40 accepted as is for the Alpha (no schema change), §60 handed to the UI owner (virtualisation plus search/filter before the Alpha). §38/§44/§47/§51 verified and accepted; no backend slice was approved, so none was built. Evidence: [ALPHA_READINESS](docs/ALPHA_READINESS.md#ar11-csvreport-decisions-2026-10-04); status in the ledger rows.
+**State 2026-10-04:** user decisions recorded: §40 accepted as is for the Alpha (no schema change), §60 handed to the UI owner (virtualisation plus search/filter before the Alpha). §38/§44/§47/§51 verified and accepted; no backend slice was approved, so none was built. Evidence: [ALPHA_READINESS](ALPHA_READINESS.md#ar11-csvreport-decisions-2026-10-04); status in the ledger rows.
 
 ### AR12 — Resolve package-version policy before implementing selection
 
@@ -838,7 +838,7 @@ UI half was requested.
 - [x] Make artifact version/provenance accurately describe its built revision; test any adopted dirty-build marker rather than claiming version output proves a clean source tree.
 
 **AR13 delivered, Claude session, 2026-10-04:** dossier and deployment/privacy
-checklist in [ALPHA_READINESS](docs/ALPHA_READINESS.md#ar13-privacy-and-deployment-security-dossier).
+checklist in [ALPHA_READINESS](ALPHA_READINESS.md#ar13-privacy-and-deployment-security-dossier).
 Debug report now names every kept class and the telegram file's values and
 timestamps; all 97 declared route/method pairs checked for the guard;
 `KNX_REQUIRE_CLEAN_TREE=1` release builds refuse a modified tree. 12 new
@@ -861,7 +861,7 @@ Web-lock holder.
 - [x] For an unreachable public error branch, document that reachability boundary and test only genuinely reachable behavior; do not fabricate a wire event to tick a coverage box.
 
 **AR14 delivered, Claude session, 2026-10-04:** offline dossier in
-[ALPHA_READINESS](docs/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
+[ALPHA_READINESS](ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
 Three defects fixed (CLI project style, multi-installation names in CLI and
 server monitor, Linux cross-group routing delivery), 17 new tests plus a
 three-level case in an existing round trip, 16/16 behavioural mutants caught. KL-29 `DONE`, KL-31 `BLOCKED_EXTERNAL` (real
@@ -901,19 +901,19 @@ check waits for the user's go.
 **Dependencies:** none for D1. D2–D5 need the *status-docs lock* below and run before AR15, so that AR15 reconciles one ledger instead of six.
 **Status:** `DONE` — D1–D5 delivered (D5's commissioning part 2026-10-06 by its owner). Status-docs lock released 2026-10-04.
 
-**Why.** The same per-ID status is kept in up to six places: the ledger in §7–§8 of this file, the per-ID ledger in [ALPHA_READINESS](docs/ALPHA_READINESS.md), [COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md) (42 rows), [UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md) (24 rows), [LIMITATION_TRIAGE](docs/LIMITATION_TRIAGE.md) (priorities) and the frozen [OFFENE_PUNKTE](docs/archive/OFFENE_PUNKTE.md) snapshot. They already drift apart: on 2026-10-04 `KL-149` was `TODO` in §8 while the AR06P text called it a scoped candidate. Three very large files also make the current state hard to find: `IMPLEMENTATION_STATUS` (15.2k lines), `KNOWN_LIMITATIONS` (7.6k) and `RESEARCH` (6.8k).
+**Why.** The same per-ID status is kept in up to six places: the ledger in §7–§8 of this file, the per-ID ledger in [ALPHA_READINESS](ALPHA_READINESS.md), [COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md) (42 rows), [UI_ALPHA_READINESS](UI_ALPHA_READINESS.md) (24 rows), [LIMITATION_TRIAGE](LIMITATION_TRIAGE.md) (priorities) and the frozen [OFFENE_PUNKTE](../OFFENE_PUNKTE.md) snapshot. They already drift apart: on 2026-10-04 `KL-149` was `TODO` in §8 while the AR06P text called it a scoped candidate. Three very large files also make the current state hard to find: `IMPLEMENTATION_STATUS` (15.2k lines), `KNOWN_LIMITATIONS` (7.6k) and `RESEARCH` (6.8k).
 
 **Status-docs lock.** D2–D5 rewrite rows that other sessions also update. A session takes the lock with a handover-only commit pushed to `main` at once, carrying the line `Status-docs lock: taken by <session> for AR14D-<n>`, and releases it with the same line saying `released` in its merge entry. While another session holds it, do not edit ledger rows. Write the status change in your own handover entry under the heading *Ledger updates for AR14D* instead; the holder applies it and says so. Prefer a quiet window: no other session in the middle of a ledger-touching delivery.
 
-*Frozen while the lock is held* (only the holder edits them): §7–§8 of this file, [ALPHA_READINESS](docs/ALPHA_READINESS.md), [COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md), [UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md), [LIMITATION_TRIAGE](docs/LIMITATION_TRIAGE.md), [KNOWN_LIMITATIONS](docs/KNOWN_LIMITATIONS.md) and [RESEARCH](docs/RESEARCH.md). *Not frozen:* source code and tests, the Web lock and its packages, the top of `IMPLEMENTATION_STATUS`, the handover, `.ai/logs/`, ADRs, and each session's own goal-file text outside status/ledger tables. A delivery during the freeze may merge as usual; whatever it would have written into a frozen file (a status change, a new or changed `KL` entry, a new research finding) goes complete and verbatim into its handover entry under *Ledger updates for AR14D*, and the holder carries it over before releasing the lock.
+*Frozen while the lock is held* (only the holder edits them): §7–§8 of this file, [ALPHA_READINESS](ALPHA_READINESS.md), [COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md), [UI_ALPHA_READINESS](UI_ALPHA_READINESS.md), [LIMITATION_TRIAGE](LIMITATION_TRIAGE.md), [KNOWN_LIMITATIONS](../../KNOWN_LIMITATIONS.md) and [RESEARCH](../../RESEARCH.md). *Not frozen:* source code and tests, the Web lock and its packages, the top of `IMPLEMENTATION_STATUS`, the handover, `.ai/logs/`, ADRs, and each session's own goal-file text outside status/ledger tables. A delivery during the freeze may merge as usual; whatever it would have written into a frozen file (a status change, a new or changed `KL` entry, a new research finding) goes complete and verbatim into its handover entry under *Ledger updates for AR14D*, and the holder carries it over before releasing the lock.
 
 **User decision 2026-10-04:** the lock is held for the whole D2–D5 rebuild, not one step at a time; other sessions keep the freeze until the holder writes `Status-docs lock: released`. Pausing code work is not required (decided as the less disruptive option).
 
-- [x] **D1 — Archive and slim the logs** (Claude session, 2026-10-04). `goal.md`, `OFFENE_PUNKTE.md` and `PROJECT_ANALYSIS_2026-09-15.md` moved verbatim to [docs/archive](docs/archive/README.md). The September tail of `IMPLEMENTATION_STATUS` (12.5k lines) moved verbatim to [docs/history](docs/history/IMPLEMENTATION_STATUS_2026-09.md). The handover `.ai/CURRENT_STATE.md` keeps its newest entries (77 at the cut); the 470 older ones moved verbatim to `.ai/archive/`. Only relative links changed; check-anchors 393 links / 262 files, none dead. `IDEA.md` and the empty `docs/Issues.md` stay: the latter is the user's inbox for observations.
-- [x] **D2 — One source-ID ledger.** ADR first: which file is the status of record, its columns (ID, priority, route/owner, status, evidence link, last change) and who may change which rows (owners keep authority over their rows; only the location changes). Then create it, e.g. `docs/status/ALPHA_LEDGER.md` as one Markdown table, and replace §7–§8 here, the per-ID tables in ALPHA_READINESS, COMMISSIONING_ALPHA_LEDGER and UI_ALPHA_READINESS by links. Their evidence prose stays where it is. Before moving, reconcile every row whose status differs between the sources, with evidence, and list each correction; never pick the more flattering one silently. **Delivered 2026-10-04:** [ADR-0076](docs/adr/0076-one-ledger-is-the-status-of-record.md) and [docs/status/LEDGER.md](docs/status/LEDGER.md), 180 + 5 rows. §7–§8 here, the two tables and the stale count line in ALPHA_READINESS, the priority/disposition columns of COMMISSIONING_ALPHA_LEDGER and the owner checkpoint tables were moved there; a script proved every moved cell is present. 24 rows differed between the goal and ALPHA_READINESS, six statuses were corrected on evidence (`DATA-02`, `KL-42`, `KL-149`, `KL-150`, `KL-152` → `DONE`, `KL-151` → `IN_PROGRESS`) and three stale routes fixed; every case is listed in the ledger's reconciliation record.
+- [x] **D1 — Archive and slim the logs** (Claude session, 2026-10-04). `goal.md`, `OFFENE_PUNKTE.md` and `PROJECT_ANALYSIS_2026-09-15.md` moved verbatim to [docs/archive](../README.md). The September tail of `IMPLEMENTATION_STATUS` (12.5k lines) moved verbatim to [docs/history](../../history/IMPLEMENTATION_STATUS_2026-09.md). The handover `.ai/CURRENT_STATE.md` keeps its newest entries (77 at the cut); the 470 older ones moved verbatim to `.ai/archive/`. Only relative links changed; check-anchors 393 links / 262 files, none dead. `IDEA.md` and the empty `docs/Issues.md` stay: the latter is the user's inbox for observations.
+- [x] **D2 — One source-ID ledger.** ADR first: which file is the status of record, its columns (ID, priority, route/owner, status, evidence link, last change) and who may change which rows (owners keep authority over their rows; only the location changes). Then create it, e.g. `docs/status/ALPHA_LEDGER.md` as one Markdown table, and replace §7–§8 here, the per-ID tables in ALPHA_READINESS, COMMISSIONING_ALPHA_LEDGER and UI_ALPHA_READINESS by links. Their evidence prose stays where it is. Before moving, reconcile every row whose status differs between the sources, with evidence, and list each correction; never pick the more flattering one silently. **Delivered 2026-10-04:** [ADR-0076](../../adr/0076-one-ledger-is-the-status-of-record.md) and [docs/status/LEDGER.md](../../status/LEDGER.md), 180 + 5 rows. §7–§8 here, the two tables and the stale count line in ALPHA_READINESS, the priority/disposition columns of COMMISSIONING_ALPHA_LEDGER and the owner checkpoint tables were moved there; a script proved every moved cell is present. 24 rows differed between the goal and ALPHA_READINESS, six statuses were corrected on evidence (`DATA-02`, `KL-42`, `KL-149`, `KL-150`, `KL-152` → `DONE`, `KL-151` → `IN_PROGRESS`) and three stale routes fixed; every case is listed in the ledger's reconciliation record.
 - [x] **D3 — A ledger check in `xtask`.** Unique IDs, only the §2.2 status words, 180 snapshot rows plus the post-snapshot rows, every `KL-n` exists as a heading in `KNOWN_LIMITATIONS`, no second per-ID status table anywhere in `docs/` or the goal files. Test with positive and negative fixtures and a mutation of each rule. Add it to the doc gates in §5. **Delivered 2026-10-04:** `cargo run -p xtask -- check-ledger` (`xtask/src/ledger.rs`), also in CI and the gate tables. Ten unit tests written RED first against a stub (9 failed, the exemption case passed trivially), then GREEN; 7/7 behavioural mutants caught; a real-repo negative control (one changed status plus a stray table row) failed with both problems named. Also checks the count lines, which are now part of the file.
-- [x] **D4 — Split `RESEARCH.md` by topic** into `docs/research/<topic>.md` (for example project import, product database, KNXnet/IP, DPT, device procedures). `RESEARCH.md` stays as the index; section numbers (§25 and so on) stay stable. Rewrite every inbound anchor link across `docs/`, the goal files, code comments and ADRs, keep `<a id>` aliases where a slug changes, and prove by script that the union of the new files contains every original line. **Delivered 2026-10-04:** five topic files under [docs/research](docs/RESEARCH.md#where-the-research-lives) (project format 297 lines, product data 933, KNXnet/IP 2,610, commissioning 1,893, features and UI 923); `RESEARCH.md` keeps the tag legend, a section table, §1 and §9–§12 and the sources (181 lines). 14 inbound anchor links rewritten; a script proved that every original line is in exactly one file (only link targets changed).
-- [x] **D5 — Separate resolved from open in `KNOWN_LIMITATIONS`.** Move the body of resolved or withdrawn entries to `docs/history/KNOWN_LIMITATIONS_resolved.md`. The heading stays in place as a one-line stub with the resolution and a link, so numbering and the 130+ inbound links keep working. Recount with the LIMITATION_TRIAGE command and record the counts before and after. Then replace the *Where things stand* sections of `goal-ui.md` and `goal-commission.md`, and their `goal.md` ownership rows, with links to the ledger; this needs each owner session's agreement in the handover, because those files are theirs. **Delivered 2026-10-04 except the commissioning goal file:** the five entries whose own status line says resolved (§18, §23, §24, §42, §130 gate) keep heading and status line as a stub; their historical bodies (163 lines) moved verbatim to [docs/history/KNOWN_LIMITATIONS_resolved.md](docs/history/KNOWN_LIMITATIONS_resolved.md). §90 and §95 stay: they are pointers, not resolved defects. Heading count unchanged (115). `goal-ui.md`: with the owner's agreement its status narrative moved verbatim to [UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md#owner-status-history) and the `goal.md` ownership row points to this file; all five IDs it named have ledger rows. **Commissioning part delivered 2026-10-06 by its owner:** the `goal-commission.md` status narrative (as of 2026-10-01) moved verbatim to [COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md#owner-status-history); the goal file now links the ledger. `goal.md` itself is archived ([docs/archive/goal.md](docs/archive/goal.md)), so it has no ownership row left to change.
+- [x] **D4 — Split `RESEARCH.md` by topic** into `docs/research/<topic>.md` (for example project import, product database, KNXnet/IP, DPT, device procedures). `RESEARCH.md` stays as the index; section numbers (§25 and so on) stay stable. Rewrite every inbound anchor link across `docs/`, the goal files, code comments and ADRs, keep `<a id>` aliases where a slug changes, and prove by script that the union of the new files contains every original line. **Delivered 2026-10-04:** five topic files under [docs/research](../../RESEARCH.md#where-the-research-lives) (project format 297 lines, product data 933, KNXnet/IP 2,610, commissioning 1,893, features and UI 923); `RESEARCH.md` keeps the tag legend, a section table, §1 and §9–§12 and the sources (181 lines). 14 inbound anchor links rewritten; a script proved that every original line is in exactly one file (only link targets changed).
+- [x] **D5 — Separate resolved from open in `KNOWN_LIMITATIONS`.** Move the body of resolved or withdrawn entries to `docs/history/KNOWN_LIMITATIONS_resolved.md`. The heading stays in place as a one-line stub with the resolution and a link, so numbering and the 130+ inbound links keep working. Recount with the LIMITATION_TRIAGE command and record the counts before and after. Then replace the *Where things stand* sections of `goal-ui.md` and `goal-commission.md`, and their `goal.md` ownership rows, with links to the ledger; this needs each owner session's agreement in the handover, because those files are theirs. **Delivered 2026-10-04 except the commissioning goal file:** the five entries whose own status line says resolved (§18, §23, §24, §42, §130 gate) keep heading and status line as a stub; their historical bodies (163 lines) moved verbatim to [docs/history/KNOWN_LIMITATIONS_resolved.md](../../history/KNOWN_LIMITATIONS_resolved.md). §90 and §95 stay: they are pointers, not resolved defects. Heading count unchanged (115). `goal-ui.md`: with the owner's agreement its status narrative moved verbatim to [UI_ALPHA_READINESS](UI_ALPHA_READINESS.md#owner-status-history) and the `goal.md` ownership row points to this file; all five IDs it named have ledger rows. **Commissioning part delivered 2026-10-06 by its owner:** the `goal-commission.md` status narrative (as of 2026-10-01) moved verbatim to [COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md#owner-status-history); the goal file now links the ledger. `goal.md` itself is archived ([docs/archive/goal.md](../goal.md)), so it has no ownership row left to change.
 
 **Exit evidence:** one ledger with a green `xtask` check, no duplicate per-ID status table, inbound links intact (check-anchors plus a plain-file link check), a line-preservation proof for every move, and counts recorded before and after. No status changes without evidence; this package moves and reconciles, it does not close items.
 
@@ -921,7 +921,7 @@ check waits for the user's go.
 
 **Sources:** `DOC-03`, `KL-9`, `KL-16`, `KL-46`, plus all earlier results and accepted/later routes.
 **Dependencies:** completed/explicitly blocked AR00–AR14, AR06P, AR14B and AR14D (one consolidated ledger); newest owner receipts.
-**Status:** `DONE` 2026-10-06 — dossier complete ([ALPHA_SCOPE_MATRIX](docs/ALPHA_SCOPE_MATRIX.md)); final acceptance stays with AR18/AR19. Slice 1 done: the four source IDs are
+**Status:** `DONE` 2026-10-06 — dossier complete ([ALPHA_SCOPE_MATRIX](ALPHA_SCOPE_MATRIX.md)); final acceptance stays with AR18/AR19. Slice 1 done: the four source IDs are
 disposed with fresh evidence — `KL-9`, `KL-16`, `KL-46` `ACCEPTED_BOUNDARY`
 (Git external-diff recipe run and documented; GTK3/advisories rechecked; report
 names rechecked against tests), `DOC-03` `DONE` (stale commissioning,
@@ -929,7 +929,7 @@ names rechecked against tests), `DOC-03` `DONE` (stale commissioning,
 manual; counts verified). A storage finding from the same check became
 `KL-157` (atomic upgrade, fixed `b247268a`).
 Slice 2 (2026-10-06): items 1–2 done as listed under each item. Slice 3
-(2026-10-06): items 3–4 in [ALPHA_SCOPE_MATRIX](docs/ALPHA_SCOPE_MATRIX.md)
+(2026-10-06): items 3–4 in [ALPHA_SCOPE_MATRIX](ALPHA_SCOPE_MATRIX.md)
 (capabilities by evidence level, deployment/import/hardware boundaries, ledger
 totals, a release disposition for every not-yet-accepted row, risks).
 
@@ -956,7 +956,7 @@ totals, a release disposition for every not-yet-accepted row, risks).
 ### AR16 — Accept the existing manual after UI closure
 
 **Source:** `RELEASE-03`. **Dependencies:** AR15 and integrated U13 closure receipt.
-**Status:** `DONE` 2026-10-06 — UI closure receipt `84bc32c3` verified, manual accepted at its tested scope ([MANUAL_ACCEPTANCE](docs/MANUAL_ACCEPTANCE.md)). Location/screenshot policy decided by the
+**Status:** `DONE` 2026-10-06 — UI closure receipt `84bc32c3` verified, manual accepted at its tested scope ([MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md)). Location/screenshot policy decided by the
 user on 2026-10-06: the manual stays on GitHub (`docs/manual/`, read in the
 repository, not bundled — consistent with ADR-0024) **with screenshots**.
 Screenshots must show the finished application at its tested scope and use
@@ -965,7 +965,7 @@ Slice 1 (2026-10-06): all 21 screenshots regenerated from the real
 application with a fictional project (`tools/manual_sample_project.py`,
 `apps/knx-web/e2e/manual-screenshots.shots.ts`); every screenshot passage
 re-read and corrected; stale "Discover gateways" wording fixed in 7 places.
-Dated checklist: [MANUAL_ACCEPTANCE](docs/MANUAL_ACCEPTANCE.md). Open: the
+Dated checklist: [MANUAL_ACCEPTANCE](MANUAL_ACCEPTANCE.md). Open: the
 UI owner's closure receipt (two residues reopened 2026-10-06: `UI-04`, `KL-61`
 wording), then acceptance. Slice 2 (2026-10-06): claim-by-claim pass done by
 script and live probes (CLI 95 invocations, labels, routes, versions, "not yet"
@@ -989,7 +989,7 @@ the UI owner.
 X11 (private Xvfb) and native Wayland; packaging clean. Findings: version
 drift (fixed in `6b9b6818`), `KL-158` (AppImage needs an X server), build
 paths in the binary (privacy checklist item 6). Record:
-[ALPHA_CANDIDATE](docs/ALPHA_CANDIDATE.md). A later code change needs a
+[ALPHA_CANDIDATE](ALPHA_CANDIDATE.md). A later code change needs a
 rebuild before AR18.
 
 - [x] Follow the repository's existing AppImage workflow/ADR-0021, using the recorded toolchain and current build commands rather than guessed installation steps.
@@ -1010,52 +1010,52 @@ from a written brief; the nine externally blocked or pending rows (`KL-1`,
 `R-MODULE-04`, `KL-158`) are accepted as disclosed Alpha boundaries; the
 `KL-61` declared-versus-linked DPT display is built before AR18 (then the
 candidate and gates rerun).
-**Status 2026-10-07: `DONE` — recorded `READY`** ([ALPHA_FINAL_GATES §12](docs/ALPHA_FINAL_GATES.md#12-ar18-outcome-ready)): re-check round 4 `READY` on `b8724d66` (product code `2254eed0`), AppImage `138444b4…c3fc`. History: `KL-61`
+**Status 2026-10-07: `DONE` — recorded `READY`** ([ALPHA_FINAL_GATES §12](ALPHA_FINAL_GATES.md#12-ar18-outcome-ready)): re-check round 4 `READY` on `b8724d66` (product code `2254eed0`), AppImage `138444b4…c3fc`. History: `KL-61`
 delivered in `4b9e913e`. The full §5 gate ran on that clean revision
-([ALPHA_FINAL_GATES](docs/ALPHA_FINAL_GATES.md)): Rust 3317/0/177, Vitest 2071,
+([ALPHA_FINAL_GATES](ALPHA_FINAL_GATES.md)): Rust 3317/0/177, Vitest 2071,
 Chromium 139, clippy/fmt/deny/xtask green, AppImage `check-appimage` ok with
 build paths remapped, offline start ok, private corpus 140/2 (the known stale
 `http_device_compare` harness, commissioning owner). The review brief is
-[docs/review/AR18_REVIEW_BRIEF.md](docs/review/AR18_REVIEW_BRIEF.md). By user
+[docs/review/AR18_REVIEW_BRIEF.md](review/AR18_REVIEW_BRIEF.md). By user
 decision the corpus pair was fixed in its test harness (142/142) and `UI-04`
 was accepted as a disclosed boundary. **Independent review 2026-10-06:**
 `READY_WITH_CONDITIONS`
-([verdict](docs/review/2026-10-06-alpha-independent-review.md)), four IMPORTANT
+([verdict](review/2026-10-06-alpha-independent-review.md)), four IMPORTANT
 findings F1–F4. All four were fixed by the release owner (`7e606e55`,
 `55badf3c`, `94bdd7bd`, `64badb99`). The full gate on `64badb99` is green:
 Rust 3331/0/177, Vitest 2076, Chromium 139, corpus 142/0, AppImage with the
 build paths remapped
-([ALPHA_FINAL_GATES §7](docs/ALPHA_FINAL_GATES.md#7-ar18-conditions-c1c5-fixed-and-re-gated)).
+([ALPHA_FINAL_GATES §7](ALPHA_FINAL_GATES.md#7-ar18-conditions-c1c5-fixed-and-re-gated)).
 The MINOR findings M1–M9 are fixed too (`7bb3e12a`, `9cb293d8`, `a86b7ddd`,
 `519633e0`, `faa3955f`). The full gate on `faa3955f` is green: Rust
 3350/0/178, Vitest 2076, Chromium 142, corpus 143/143 through
 `tools/run_corpus_tests.py`, `npm audit` 0, AppImage
-([ALPHA_FINAL_GATES §8](docs/ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
+([ALPHA_FINAL_GATES §8](ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
 **Independent re-check 2026-10-06:** `READY_WITH_CONDITIONS`
-([verdict](docs/review/2026-10-06-alpha-conditions-recheck.md)). It confirmed
+([verdict](review/2026-10-06-alpha-conditions-recheck.md)). It confirmed
 F1, F4 and M1–M9. Conditions R1–R3: N1 decoded-name collisions and N2 the
 nested payload's budget. Both are fixed, together with N3–N5 (`79bee3c6`,
 `30a5cfb4`, `9118c884`, `3ede4817`). N6 (web reload) is disclosed and handed
 to the UI owner. Full gate on `3ede4817`: Rust 3359/0/178, Vitest 2076,
 Chromium 142, corpus 143/143, AppImage
-([ALPHA_FINAL_GATES §9](docs/ALPHA_FINAL_GATES.md#9-ar18-re-check-conditions-r1r3-fixed-and-re-gated)).
+([ALPHA_FINAL_GATES §9](ALPHA_FINAL_GATES.md#9-ar18-re-check-conditions-r1r3-fixed-and-re-gated)).
 **Re-check round 2:** `READY_WITH_CONDITIONS`
-([verdict](docs/review/2026-10-06-alpha-recheck-round2.md)). Condition R4
+([verdict](review/2026-10-06-alpha-recheck-round2.md)). Condition R4
 (N7: directory records via Unicode Path) is fixed, together with N8–N10
 (`901933a1`, `a16141c6`, `754a66dd`). Full gate on `754a66dd`: Rust
 3367/0/178, Vitest 2076, Chromium 142, corpus 143/143, AppImage
-([ALPHA_FINAL_GATES §10](docs/ALPHA_FINAL_GATES.md#10-ar18-re-check-round-2-condition-r4-fixed-and-re-gated)).
+([ALPHA_FINAL_GATES §10](ALPHA_FINAL_GATES.md#10-ar18-re-check-round-2-condition-r4-fixed-and-re-gated)).
 **Re-check round 3:** `READY_WITH_CONDITIONS`
-([verdict](docs/review/2026-10-06-alpha-recheck-round3.md)). Condition R6
+([verdict](review/2026-10-06-alpha-recheck-round3.md)). Condition R6
 (N11: local/central record disagreement) is fixed, together with N12/N13
 (`296ba1bb`, `cba15ce4`, `2254eed0`). Full gate on `2254eed0`: Rust
 3402/0/178, corpus 143/143, AppImage `138444b4…c3fc`
-([ALPHA_FINAL_GATES §11](docs/ALPHA_FINAL_GATES.md#11-ar18-re-check-round-3-condition-r6-fixed-and-re-gated)).
+([ALPHA_FINAL_GATES §11](ALPHA_FINAL_GATES.md#11-ar18-re-check-round-3-condition-r6-fixed-and-re-gated)).
 **Re-check round 4 (2026-10-07): `READY`**
-([verdict](docs/review/2026-10-07-alpha-recheck-round4.md)). No blocking
+([verdict](review/2026-10-07-alpha-recheck-round4.md)). No blocking
 finding; N14 (an empty directory's payload is not checksummed) is MINOR and
 disclosed in KL §159. AR18 recorded `READY`
-([ALPHA_FINAL_GATES §12](docs/ALPHA_FINAL_GATES.md#12-ar18-outcome-ready)).
+([ALPHA_FINAL_GATES §12](ALPHA_FINAL_GATES.md#12-ar18-outcome-ready)).
 
 - [x] Freeze the complete integrated candidate and artifact provenance. All actionable alpha-owned items are delivered, or their release exceptions have explicit user acceptance. Merely logging a blocker is not permission to call the alpha ready.
 - [x] Run all explicit gates in §5 on that exact integrated revision, including private corpus cases that cover affected behavior; verify target, counts, changed-crate compilation and no silent skips.
@@ -1072,8 +1072,8 @@ disclosed in KL §159. AR18 recorded `READY`
 GitHub pre-release in the private repository. Annotated tag `v0.1.0-alpha.4`
 → `514c0c54`; [pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4) with the AppImage (SHA-256 `138444b4…c3fc`)
 and `SHA256SUMS`, downloaded back and verified byte-identical
-([ALPHA_FINAL_GATES §13](docs/ALPHA_FINAL_GATES.md#13-ar19-release-decision-and-publication)).
-**Later 2026-10-07:** the alpha.4 tag and pre-release were withdrawn with the identity rewrite and replaced by `v0.1.0-alpha.5` ([ALPHA_FINAL_GATES §14](docs/ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)).
+([ALPHA_FINAL_GATES §13](ALPHA_FINAL_GATES.md#13-ar19-release-decision-and-publication)).
+**Later 2026-10-07:** the alpha.4 tag and pre-release were withdrawn with the identity rewrite and replaced by `v0.1.0-alpha.5` ([ALPHA_FINAL_GATES §14](ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)).
 
 - [x] Present the exact candidate, tested scope, manual, remaining accepted limitations and independent review result. Request the user's explicit tag/version/publication decision once.
 - [x] If approved, follow the repository's version/tag/artifact procedure and verify the published target/artifact. If declined or deferred, record `READY_NOT_PUBLISHED` or `WAITING_DECISION`; do not invent approval.
@@ -1083,8 +1083,8 @@ and `SHA256SUMS`, downloaded back and verified byte-identical
 ### AR20 — Publish the read-only, session-bound telegram-flow contract
 
 **Backend delivered 2026-10-04 (Claude); vertical feature open until U20/U21/AR21.** Source: new
-approved Alpha feature, [flow research](docs/TELEGRAM_FLOW_VISUALIZATION.md),
-[ADR-0077](docs/adr/0077-session-local-telegram-flow-view.md).
+approved Alpha feature, [flow research](../../TELEGRAM_FLOW_VISUALIZATION.md),
+[ADR-0077](../../adr/0077-session-local-telegram-flow-view.md).
 **Dependencies:** U19's exact contract handoff and current monitor/project
 contracts. Ready independently of unrelated import/commissioning packages;
 required before U20 and final AR15–AR18 acceptance. No Web implementation here.
@@ -1118,38 +1118,38 @@ required before U20 and final AR15–AR18 acceptance. No Web implementation here
 **Exit evidence:** integrated, version-compatible, read-only semantic contract
 and named regressions, consumed next by U20. No hardware or recipient-state proof.
 
-**State 2026-10-04:** contract, wire names and named tests in [TELEGRAM_FLOW_VISUALIZATION §10](docs/TELEGRAM_FLOW_VISUALIZATION.md#10-ar20-delivered-contract-alpha-2026-10-04); handed to U20 in the handover. Status: ledger row `FLOW-01`.
+**State 2026-10-04:** contract, wire names and named tests in [TELEGRAM_FLOW_VISUALIZATION §10](../../TELEGRAM_FLOW_VISUALIZATION.md#10-ar20-delivered-contract-alpha-2026-10-04); handed to U20 in the handover. Status: ledger row `FLOW-01`.
 
 ### AR21 — Accept the integrated telegram-flow Alpha feature
 
 **Status:** `DONE` 2026-10-05 — accepted for the Alpha on a recorded envelope
 (motion for small/medium maps, Motion Off for several hundred nodes or the §7
 load; Chromium only), all seven findings closed
-([§22](docs/TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05)).
+([§22](../../TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05)).
 Receipt for AR18: §13–§22 and `.ai/logs/2026-10-05_claude_ar21-acceptance.md`.
 
 **Review 2026-10-05: returned to the UI owner with findings.** Receipt
 `9d432d17` + `deb6813a` + `fb40a99a` verified and gates rerun; two §9.3 binding
 requirements are neither met nor recorded as deviations, and the §7 starting
 load saturates the main thread with motion on
-([§13](docs/TELEGRAM_FLOW_VISUALIZATION.md#13-ar21-acceptance-review-alpha-2026-10-05)).
+([§13](../../TELEGRAM_FLOW_VISUALIZATION.md#13-ar21-acceptance-review-alpha-2026-10-05)).
 `FLOW-01` stays `IN_PROGRESS`.
 
 **Rerun 2026-10-05: findings 1–3 closed, returned again with finding 4**
 (the reduced-rendering note counts recipient paths as telegrams), own §7-load
 measurement recorded
-([§15](docs/TELEGRAM_FLOW_VISUALIZATION.md#15-ar21-acceptance-rerun-alpha-2026-10-05)).
+([§15](../../TELEGRAM_FLOW_VISUALIZATION.md#15-ar21-acceptance-rerun-alpha-2026-10-05)).
 
 **Rerun of finding 4, 2026-10-05:** fixed for telegrams with a line; returned
 with finding 5 (telegrams without a line at the node limit counted as drawn)
-([§17](docs/TELEGRAM_FLOW_VISUALIZATION.md#17-ar21-rerun-of-finding-4-alpha-2026-10-05)).
+([§17](../../TELEGRAM_FLOW_VISUALIZATION.md#17-ar21-rerun-of-finding-4-alpha-2026-10-05)).
 
 **Rerun of finding 5 and recheck, 2026-10-05:** finding 5 fixed; returned with
 finding 6 (partially refused or sender-refused telegrams missing from the note,
-[§19](docs/TELEGRAM_FLOW_VISUALIZATION.md#19-ar21-rerun-of-finding-5-alpha-2026-10-05))
+[§19](../../TELEGRAM_FLOW_VISUALIZATION.md#19-ar21-rerun-of-finding-5-alpha-2026-10-05))
 and, on the user's recheck request, finding 7 (event-ring overflow counted but
 never shown,
-[§20](docs/TELEGRAM_FLOW_VISUALIZATION.md#20-ar21-recheck-on-request-alpha-2026-10-05)).
+[§20](../../TELEGRAM_FLOW_VISUALIZATION.md#20-ar21-recheck-on-request-alpha-2026-10-05)).
 Gates rerun green on the recheck revision.
 
 Dependencies: integrated AR20 and U21's exact owner receipt, with U19/U20
@@ -1230,7 +1230,7 @@ Never run every ignored test indiscriminately: some are hardware-writing tests. 
 power-loss, vendor and ETS validation is accepted out of the commissioning
 goal, not a request waiting for the operator and not a commissioning completion
 blocker. Preserve the missing evidence as
-[KNXBench user notices](docs/manual/known-issues.md#commissioning-validation-boundary).
+[KNXBench user notices](../../manual/known-issues.md#commissioning-validation-boundary).
 This is not proof of compatibility or recovery and does not bypass runtime
 backup/authorization/refusal gates. Caller coverage, Web/client adoption,
 offline recovery contracts and owner admission remain required under
@@ -1248,7 +1248,7 @@ Do not use a completion percentage for unequal tasks. Report completed packages,
 ## 7. Complete source-ID routing ledger
 
 Status, owner and route of every source ID live in the
-[source-ID ledger](docs/status/LEDGER.md) ([ADR-0076](docs/adr/0076-one-ledger-is-the-status-of-record.md),
+[source-ID ledger](../../status/LEDGER.md) ([ADR-0076](../../adr/0076-one-ledger-is-the-status-of-record.md),
 AR14D D2). The routing table, the owner checkpoints and their counts that
 stood here moved there on 2026-10-04. Update the ledger row, not this file.
 
@@ -1287,7 +1287,7 @@ These entries were found after the inventory snapshot. They have their own
 identities and do not change the 180-entry count above. Priority follows the
 `OFFENE_PUNKTE.md` scale.
 
-Their rows are in the [ledger](docs/status/LEDGER.md#post-snapshot-ids).
+Their rows are in the [ledger](../../status/LEDGER.md#post-snapshot-ids).
 
 ## Checked outside-walk scoped delivery receipt — 2026-10-03 13:54 CEST
 

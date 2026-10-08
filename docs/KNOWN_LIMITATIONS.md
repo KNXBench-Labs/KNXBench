@@ -183,8 +183,8 @@ intent persistence still follows the PID 8/PID 14 recovery and precedes the
 first property write. This is metadata only, not a recovery image, complete
 download journal or a shipped global UI. Whole-candidate acceptance and
 publication remain pending. The exact consumer contract and residue are in
-[COMMISSIONING_ACTIVITY_HISTORY](COMMISSIONING_ACTIVITY_HISTORY.md) and
-[COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md).
+[COMMISSIONING_ACTIVITY_HISTORY](contracts/COMMISSIONING_ACTIVITY_HISTORY.md) and
+[COMMISSIONING_ALPHA_LEDGER](archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md).
 
 **Admission correction, 2026-10-03.** Late synthetic review reproduced SQLite
 hot-journal rollback before a foreign-format refusal. Corrected openers first
@@ -413,7 +413,7 @@ likewise (backup of `4400h`, K7 parameters written, restore to a
 byte-identical dump). The backup/restore path for a group-address partial plan, other devices
 and the refuse-before-write path on a failing backup remain simulator-only;
 none can be promised as a universal rollback. The existing manual read-only
-baseline required by `goal-commission.md` before live tests is separate and
+baseline required by `docs/archive/alpha-0.1/goal-commission.md` before live tests is separate and
 still required when live tests are authorised again.
 
 **Device-checks UI boundary (2026-09-30).** Readiness uses only the open
@@ -453,7 +453,7 @@ than dropped:
   design. All 1,199 corpus `NumericArg/@AllocatorRefId` bindings carry no
   `@Value`; the evaluator reports `ModuleArgumentNotBound` and leaves their
   `{{Name}}` placeholders verbatim. The allocation rule itself is still not
-  documented ([census](PARAMETER_SEMANTICS_BOUNDARY.md#ar07-corpus-census-and-write-authority--2026-10-05)).
+  documented ([census](contracts/PARAMETER_SEMANTICS_BOUNDARY.md#ar07-corpus-census-and-write-authority--2026-10-05)).
 - **Display-only type attributes.** `UIHint`, `Increment`, `DisplayFactor`,
   `DisplayFormat`, `Pattern`, `Encoding`, `AddressType`, `TypeTime/@Unit`,
   `TypeColor/@Space`, `TypePicture/@RefId`/`@HorizontalAlignment` and
@@ -501,7 +501,7 @@ matrix and real upgrade pass after independently reconciling the +230 isolated /
 Repair-path regressions also preserve unexamined status for identity-invalid
 bytes while clearing stale exact-owner markers after authentic recovery.
 Renewed integrated acceptance of that last correction and publication remain
-pending; see [the AR05 contract](MANUFACTURER_REPORT_CONTRACT.md). Persisted subtree
+pending; see [the AR05 contract](contracts/MANUFACTURER_REPORT_CONTRACT.md). Persisted subtree
 diagnostics are validated for shape, not re-derived from the blob. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only. See §134 for what it deliberately does not do.
 
 Each entry states the limitation, its cause, what it costs the user, and the
@@ -2050,7 +2050,7 @@ The joined text is for display only: a name containing ` | ` itself is not
 escaped. Tests: `apps/knx-cli/tests/cli_bus_address_style.rs`,
 `monitor_line_uses_the_project_style_and_all_names`,
 `names_shared_across_installations_are_all_shown`. See
-[ALPHA_READINESS](ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
+[ALPHA_READINESS](archive/alpha-0.1/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
 
 <a id="31-knxnetip-routing-has-no-custom-multicast-address-override--resolved-routing-half"></a>
 ## 31. Routing multicast override exists; discovery and real custom-group traffic unverified
@@ -4652,7 +4652,7 @@ records cannot establish a verified state. Backend/UI regressions and bounded
 mocked browser evidence and twelve complete candidate gates pass; integrated
 acceptance repeated and source `8ceacf49` published with exact remote/tree
 readback. Scoped comparison is delivered, not the remaining boundaries. See
-[owner evidence](UI_ALPHA_READINESS.md).
+[owner evidence](archive/alpha-0.1/UI_ALPHA_READINESS.md).
 
 **Remaining boundary.** This is a point-in-time interpretation comparison, not
 a complete project identity/version, collaboration/push channel or atomic
@@ -5008,7 +5008,7 @@ historical facts stable after reopen/retry. An orphan subtype is read/dropped
 but does not increment the legacy collision counter. These distinguish semantic
 loss from retained bytes; they do not invent winner provenance or lift this
 residue. Existing normalized product identity reporting is unchanged. Contract:
-[MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md).
+[MANUFACTURER_REPORT_CONTRACT](contracts/MANUFACTURER_REPORT_CONTRACT.md).
 
 **Measured against the real corpus.** Every `.knxprod` file under
 `OriginalData/ProductDatabases/` was copied to a scratch directory outside
@@ -6633,7 +6633,7 @@ new edits or reviving a stopped timer. Focused regressions, realistic negative
 controls and the complete offline gates pass. There is still no instantaneous
 push or general shared-project synchronization; native/AT workflows are not
 accepted by these tests. Publication remains pending. See
-[UI_ALPHA_READINESS](UI_ALPHA_READINESS.md). The historical title and inventory
+[UI_ALPHA_READINESS](archive/alpha-0.1/UI_ALPHA_READINESS.md). The historical title and inventory
 identity remain stable for incoming links and the separate alpha owner.
 
 **Historical description before this follow-up:**
@@ -6678,7 +6678,7 @@ actual unicast-loopback tests, raw-value UI regressions, realistic mutants and
 the complete offline gates pass; six additional intercepted-browser cases
 verify the disclosure itself. This does not accept native/live Search (§79),
 infer device identity/capabilities or grant a write. Publication is pending.
-See [UI_ALPHA_READINESS](UI_ALPHA_READINESS.md). The historical title/inventory
+See [UI_ALPHA_READINESS](archive/alpha-0.1/UI_ALPHA_READINESS.md). The historical title/inventory
 identity remains stable; the following cause is historical, not current code.
 
 **Historical description before this follow-up:**
@@ -6735,7 +6735,7 @@ passed explicitly; native synthetic reopen covers 24 combinations, with/without
 an empty product DB. Six compiled negative controls were caught and the mapper
 was restored byte-exactly. This adds regression evidence, not a second
 independent schema-23 sample or new mapper semantics. The raw-field/sample
-matrix in [IMPORT_BOUNDARY_CONTRACT.md](IMPORT_BOUNDARY_CONTRACT.md) distinguishes
+matrix in [IMPORT_BOUNDARY_CONTRACT.md](contracts/IMPORT_BOUNDARY_CONTRACT.md) distinguishes
 the two documented installations and records that invalid DefaultLine tokens
 are transient diagnostics, not newly durable native source fields. This
 limitation and its independent-sample lifting condition remain in force;
@@ -6995,7 +6995,7 @@ landed on 2026-09-27. A colliding id is refused, and no caller rewinds the
 counters any more. AR02 also refuses allocator exhaustion. Structural
 phases 3–5 remain `WAITING_DECISION`; an unanswered activation prompt is
 neither approval nor accepted continued deferral. See the pinned
-[AR03 audit](ADR0039_ENFORCEMENT_AUDIT.md) at `e691bc13`.
+[AR03 audit](archive/alpha-0.1/ADR0039_ENFORCEMENT_AUDIT.md) at `e691bc13`.
 
 **Historical limitation (before phases 1–2, at `7b64496`).**
 `Command::SetIdAllocators` replaces the id counters
@@ -7381,7 +7381,7 @@ UI ancestry integrated at 03f18c95 and independently accepted: 17/17, workspace
 2,924/0/164, Web 1,559, Chromium fixtures 61, selected private 6/0/0 and
 seventeen shadow bindings equal. Published/read back at 2d9aaeb8;
 full AR07, typed/localized token adoption and earlier corpus figures retain
-their distinct dated scope. See [parameter boundary](PARAMETER_SEMANTICS_BOUNDARY.md).
+their distinct dated scope. See [parameter boundary](contracts/PARAMETER_SEMANTICS_BOUNDARY.md).
 
 **Status (2026-09-29, ISSUE-08 P2, ADR-0050).**
 
@@ -7524,7 +7524,7 @@ the user approves a run.
 
 **User decision 2026-10-05.** The Web scope selector is handed to the UI
 owner; the backend contract is in the
-[commissioning handoff](COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05).
+[commissioning handoff](archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05).
 
 **Verified scope (2026-09-29/30; RESEARCH §19.15/§19.17).** On the MDT
 `1.1.67`, the `parameters`, `group-addresses` and `both` partial scopes
@@ -7884,7 +7884,7 @@ rolled back, so no partial rows are written, but nothing of it can be used.
   remains true for `OriginalData`, but real downloadable products do nest. A full scan of the 852 crawled ZIP
  packages found this one package as the *only* nested example, which makes
  it the sole real R-MODULE-04 sample so far.
- - Planned as alpha package AR06P (`alpha-release-goal.md`), P1.
+ - Planned as alpha package AR06P (`docs/archive/alpha-0.1/alpha-release-goal.md`), P1.
 - **Lifted when** nested `ModuleDef`s parse into correctly scoped
   `dynamic_node` rows, proven by a synthetic nested fixture plus this
   package.
@@ -7951,7 +7951,7 @@ default stays 64 MiB / 256 MiB. Measured with the release CLI on the 15
 size-refused public packages: 14 install and verify, one remains a scheme-10
 namespace refusal (§153); worst case 760.5 MiB peak RSS, 256 s, 7.18 GiB
 database; Siemens' bundle 91 s / 402 MiB / 2.5 GiB
-([measurement](PRODUCT_ZIP_LARGE_PROFILE.md)). **Residue, accepted:** the web
+([measurement](contracts/PRODUCT_ZIP_LARGE_PROFILE.md)). **Residue, accepted:** the web
 catalog install keeps the standard bounds, because it installs synchronously
 while holding the product database; a server opt-in would need progress and
 cancellation first.
@@ -8288,7 +8288,7 @@ tests `a_failed_import_creates_no_store_file`,
 `readers_leave_a_foreign_sqlite_file_untouched`, and the route test
 `opening_a_file_that_holds_no_knxbench_project_is_refused_untouched`.
 Each guard is backed by a killed mutant
-([ALPHA_FINAL_GATES §8](ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
+([ALPHA_FINAL_GATES §8](archive/alpha-0.1/ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
 
 ## 158. The AppImage starts only with an X server
 
@@ -8303,7 +8303,7 @@ answer — the AppImage stops at once with `Failed to initialize GTK`
 it.
 
 **Found 2026-10-06 (AR17)** on the candidate in
-[ALPHA_CANDIDATE](ALPHA_CANDIDATE.md): Hyprland's Xwayland was running but its
+[ALPHA_CANDIDATE](archive/alpha-0.1/ALPHA_CANDIDATE.md): Hyprland's Xwayland was running but its
 socket refused every connection (also for `xprop`). The unmodified AppImage
 started fine under a private Xvfb.
 

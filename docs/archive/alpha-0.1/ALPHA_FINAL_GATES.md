@@ -99,7 +99,7 @@ the full-gate figures above still describe `4b9e913e`.
   Markdown or `.env` files. No `OriginalData` string, private-key header or
   GitHub token prefix.
 - Offline start, using the native Wayland path of
-  [KNOWN_LIMITATIONS §158](KNOWN_LIMITATIONS.md#158-the-appimage-starts-only-with-an-x-server)
+  [KNOWN_LIMITATIONS §158](../../KNOWN_LIMITATIONS.md#158-the-appimage-starts-only-with-an-x-server)
   in a loopback-only namespace with private XDG directories. The window
   rendered the start page, version `v0.1.0-alpha.4`. The API steps gave:
 
@@ -190,7 +190,7 @@ styling, merged in `d7b4b4fd`).
 | M2 — Save in three transactions | `save_project_with_passthrough`: one transaction | `7bb3e12a` | `a_save_that_fails_in_its_last_table_changes_none_of_the_three` (a trigger aborts the last table) |
 | M3 — a second project part goes unmentioned | One report line per further `P-xxxx` part | `9cb293d8` | `second_project_part.rs` (2 tests) |
 | M6 — a tunnel that never opened is recorded as `unknown` | `record_never_connected`: `failed`, `written: no`; refused once a send was possible | `a86b7ddd` | Two unit tests, and the corpus route test `a_tunnel_that_never_opens_is_recorded_as_failed_with_nothing_written` |
-| M7 — corpus tests in no routine gate | `tools/run_corpus_tests.py`, when to run it in [VERIFICATION](VERIFICATION.md#private-corpus-test-run) | `519633e0` | 4 Python tests; used by this gate |
+| M7 — corpus tests in no routine gate | `tools/run_corpus_tests.py`, when to run it in [VERIFICATION](../../VERIFICATION.md#private-corpus-test-run) | `519633e0` | 4 Python tests; used by this gate |
 | M8 — tests read the developer's product database | `AppState::default` opens none; gates set `XDG_DATA_HOME` | `7bb3e12a` | `the_test_default_state_has_no_product_database` |
 | M9 — `npm audit`: 1 high | `source-map-js` 1.2.1 → 1.2.2 (build-time only) | `519633e0` | `npm audit`: 0 |
 
@@ -224,7 +224,7 @@ borrows, and this gate was rerun in full on it.
 
 **What stays:**
 - An older KNXBench file *with* a saved project is still upgraded in place
-  ([KNOWN_LIMITATIONS §157](KNOWN_LIMITATIONS.md#157-opening-an-older-project-upgrades-it-in-place)).
+  ([KNOWN_LIMITATIONS §157](../../KNOWN_LIMITATIONS.md#157-opening-an-older-project-upgrades-it-in-place)).
 - A non-ZIP import still answers `500`.
 - Whether ETS ever writes a multi-part archive is unknown.
 
@@ -248,7 +248,7 @@ code revision `3ede481741acbfcd5904f67c80e443077d1151c0`.
 | N3 — `device restore` records a never-opened tunnel as `unknown` | `record_never_connected`, as for download | `9118c884` | Read only; it needs a backup file and a gateway, like the reviewer's own check |
 | N4 — `AppState::new` creates the developer's product database | `new` opens none. Only the server and desktop binaries call `with_user_product_db` | `30a5cfb4` | `the_plain_constructor_touches_no_product_database_outside_its_dir` |
 | N5 — refused archives answer `500` | Import failures caused by the file itself answer `422 projectNotImportable`, which also covers the earlier disclosed non-ZIP `500` | `30a5cfb4` | Route test, and the AppImage smoke (`import broken: 422`) |
-| N6 — after a reload the web shows the welcome page while the server holds a project | **Not changed:** a UI-owner change. Disclosed in [KNOWN_LIMITATIONS §82](KNOWN_LIMITATIONS.md#82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else) and handed over | — | — |
+| N6 — after a reload the web shows the welcome page while the server holds a project | **Not changed:** a UI-owner change. Disclosed in [KNOWN_LIMITATIONS §82](../../KNOWN_LIMITATIONS.md#82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else) and handed over | — | — |
 
 **Mutation sweep:** 6 mutants, each killed by a named test (count check,
 decoded-name check, nested identity check, nested pre-count, `422` mapping,
@@ -467,16 +467,16 @@ repository, its history or its artifacts. The history was rewritten, the
 repository recreated under `KNXBench-Labs`, the `v0.1.0-alpha.4` tag and
 pre-release withdrawn, and a newly built AppImage is published as the
 `v0.1.0-alpha.5` pre-release. Commit hashes cited in §1–§13 are pre-rewrite
-hashes ([KNOWN_LIMITATIONS §162](KNOWN_LIMITATIONS.md#162-commit-hashes-cited-before-2026-10-07-refer-to-the-rewritten-history)).
+hashes ([KNOWN_LIMITATIONS §162](../../KNOWN_LIMITATIONS.md#162-commit-hashes-cited-before-2026-10-07-refer-to-the-rewritten-history)).
 
 **What alpha.5 contains beyond the reviewed alpha.4 product.** The withdrawn
 tag pointed at `5d8c36f7` (rewritten hash). Up to the alpha.5 candidate, 28
 commits changed 77 product files (+4,411/−218 lines; 48 of them in
 `apps/knx-web`): the post-alpha work recorded in
-[IMPLEMENTATION_STATUS](IMPLEMENTATION_STATUS.md) for 2026-10-07 (first-run
+[IMPLEMENTATION_STATUS](../../IMPLEMENTATION_STATUS.md) for 2026-10-07 (first-run
 guide, DPT inventory and boundaries, the KL-158 AppImage launcher), plus the
 desktop app identifier `com.knxbench.knxbench-labs`
-([ADR-0087](adr/0087-desktop-app-identifier.md)), the issue-tracker link and the
+([ADR-0087](../../adr/0087-desktop-app-identifier.md)), the issue-tracker link and the
 version `0.1.0-alpha.5`.
 
 **Review status.** The AR18 `READY` verdict (§12) covers the alpha.4 product

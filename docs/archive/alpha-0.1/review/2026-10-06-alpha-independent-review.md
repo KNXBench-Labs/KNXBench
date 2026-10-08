@@ -200,7 +200,7 @@ literally, F1 makes the verdict `NOT_READY` until fixed.
   dependency; nothing of it ships in the bundle as far as I can tell.
   `cargo deny check` is clean.
 - **Known, already disclosed:** a non-ZIP import answers HTTP 500
-  (`docs/ALPHA_CANDIDATE.md` §3). Reproduced through the AppImage.
+  (`docs/archive/alpha-0.1/ALPHA_CANDIDATE.md` §3). Reproduced through the AppImage.
 
 ### 2.3 Claims checked and found accurate
 

@@ -117,7 +117,7 @@ the fix. File-backed regressions verify nested structural batches, exact reopene
 models/high-water marks, undo/redo, middle-sibling order, unchanged opaque and
 manufacturer rows, and a late SQL failure retaining the prior durable state.
 Three compiled behavioral mutants were caught and all touched source hashes
-restored. See [the storage contract](../STORAGE_COMMAND_CONTRACT.md) and the AR04
+restored. See [the storage contract](../contracts/STORAGE_COMMAND_CONTRACT.md) and the AR04
 receipt in `.ai/logs/2026-10-01_codex_alpha-storage-contract.md` for final gates
 and publication; a planned gate is not a passing result.
 

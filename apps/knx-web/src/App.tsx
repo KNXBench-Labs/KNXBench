@@ -27,6 +27,7 @@ import Search from "./Search";
 import CommandPalette from "./CommandPalette";
 import type { CommandContext } from "./commandRegistry";
 import SettingsPanel from "./SettingsPanel";
+import { serverLegacyPassword } from "./LegacyPasswordSettings";
 import Dashboard from "./Dashboard";
 import LogPanel from "./LogPanel";
 import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
@@ -1399,6 +1400,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           autosaveIntervalMinutes={autosaveSettings.intervalMinutes}
           onSelectAutosaveIntervalMinutes={autosaveSettings.setIntervalMinutes}
           achievementTracker={achievements.tracker}
+          legacyPassword={serverLegacyPassword}
           onClose={() => setSettingsOpen(false)}
         />
       )}

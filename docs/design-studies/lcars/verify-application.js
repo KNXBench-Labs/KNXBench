@@ -49,6 +49,10 @@ async (page) => {
     await page.goto(origin);
     await page.getByRole('button', { name: 'New project…', exact: true }).click();
     await page.getByRole('dialog', { name: 'New project', exact: true }).getByRole('button', { name: 'Create project', exact: true }).click();
+    // ADR-0093 keeps the create fast path but adds an honest completion page.
+    const created = page.getByRole('dialog', { name: 'Project created', exact: true });
+    await created.getByRole('button', { name: 'Done', exact: true }).click();
+    await created.waitFor({ state: 'detached' });
     await page.locator('.project-explorer').waitFor();
   };
   const nav = () => page.getByRole('navigation', { name: 'Navigation', exact: true });
@@ -65,6 +69,14 @@ async (page) => {
     await page.locator('.settings-panel').waitFor({ state: 'detached' });
   };
   const animations = () => page.evaluate(() => document.getAnimations().filter(a => a.animationName === 'lcars-navigation-reveal').length);
+  const ambient = () => page.evaluate(() => document.getAnimations().filter(a => a.animationName?.startsWith('lcars-ambient-')).map(a => ({ name: a.animationName, duration: a.effect.getTiming().duration, time: a.currentTime, state: a.playState })));
+  const retainAmbient = () => page.evaluate(() => { window.__lcarsLiveAmbient = document.getAnimations().filter(a => a.animationName?.startsWith('lcars-ambient-')); return window.__lcarsLiveAmbient.length; });
+  const retainedAmbientCancelled = () => page.evaluate(() => window.__lcarsLiveAmbient.every(a => a.playState === 'idle'));
+  const chrome = () => page.evaluate(() => {
+    const brand = document.querySelector('.brand-mark'), band = document.querySelector('.workbench-toolbar');
+    const rect = brand.getBoundingClientRect();
+    return { colour: getComputedStyle(brand).backgroundColor, opacity: Number(getComputedStyle(band, '::before').opacity), width: rect.width, height: rect.height };
+  });
   const rows = () => page.locator('.address-table tbody > tr');
   try {
   await create();
@@ -80,6 +92,26 @@ async (page) => {
   await page.waitForTimeout(750);
   assert('navigation feedback finishes without an idle loop', await animations() === 0);
   assert('native table has 30 data rows', await rows().count() === 30);
+  const standardAmbient = await ambient(), idleChrome = await chrome();
+  assert('exactly two real decorative ambient effects run', standardAmbient.length === 2 && standardAmbient.every(a => a.state === 'running'));
+  assert('standard cycles are slow: 10s band and 16s emblem', standardAmbient.some(a => a.name === 'lcars-ambient-band' && a.duration === 10000) && standardAmbient.some(a => a.name === 'lcars-ambient-brand' && a.duration === 16000));
+  const rowHeightBeforeAmbient = await rows().first().evaluate(el => el.getBoundingClientRect().height);
+  const writesBeforeAmbient = requests.filter(r => /^(POST|PUT|PATCH|DELETE) /.test(r));
+  await page.waitForTimeout(1200);
+  const liveAmbient = await ambient(), liveChrome = await chrome();
+  assert('the real animation clock advances without interaction', liveAmbient.every(a => a.time > standardAmbient.find(before => before.name === a.name).time));
+  assert('idle colour and band opacity really change', liveChrome.colour !== idleChrome.colour && liveChrome.opacity !== idleChrome.opacity);
+  assert('idle animation does not change geometry or data rows', liveChrome.width === idleChrome.width && liveChrome.height === idleChrome.height && await rows().count() === 30 && await rows().first().evaluate(el => el.getBoundingClientRect().height) === rowHeightBeforeAmbient);
+  assert('idle animation never causes backend mutations', JSON.stringify(requests.filter(r => /^(POST|PUT|PATCH|DELETE) /.test(r))) === JSON.stringify(writesBeforeAmbient));
+  // Seek actual browser CSS animations to their endpoints, not fabricated paint.
+  for (const phase of [0, 0.5]) {
+    await page.evaluate(phase => document.getAnimations().filter(a => a.animationName?.startsWith('lcars-ambient-')).forEach(a => { a.pause(); a.currentTime = a.effect.getTiming().duration * phase; }), phase);
+    await settle();
+    await toolbar().screenshot({ path: `output/playwright/lcars-ambient-${phase === 0 ? 'warm' : 'lavender'}.png` });
+  }
+  const standardPeak = await chrome();
+  assert('standard band dims gently and never disappears', Math.abs(standardPeak.opacity - 0.84) < 0.001);
+  await page.evaluate(() => document.getAnimations().filter(a => a.animationName?.startsWith('lcars-ambient-')).forEach(a => a.play()));
   assert('checkbox and address activation remain separate native controls', await rows().first().getByRole('checkbox').count() === 1 && await rows().first().getByRole('button', { name: '1/0/1', exact: true }).count() === 1);
   await rows().first().getByRole('button', { name: '1/0/1', exact: true }).click();
   assert('row activation selects the actual inspector', await rows().first().getAttribute('aria-selected') === 'true' && await page.locator('.workbench-pane-right').getByRole('heading', { name: 'Lighting 1', exact: true }).count() === 1);
@@ -106,7 +138,12 @@ async (page) => {
   await nav().getByRole('button', { name: 'Topology', exact: true }).click();
   await page.evaluate(() => document.getAnimations().filter(a => a.animationName === 'lcars-navigation-reveal').forEach(a => a.pause()));
   assert('motion cancellation starts with a live effect', await animations() > 0);
+  assert('motion Off starts with two live ambient effects', await retainAmbient() === 2);
   await setPreference('Motion level', 'off'); await settle();
+  assert('motion Off cancels already running ambient effects', (await ambient()).length === 0 && await retainedAmbientCancelled());
+  const offChrome = await chrome();
+  await page.waitForTimeout(250);
+  assert('motion Off restores stable static colours and full band opacity', JSON.stringify(await chrome()) === JSON.stringify(offChrome) && offChrome.opacity === 1);
   assert('motion Off cancels an already running navigation effect', await animations() === 0);
   await nav().getByRole('button', { name: 'Group addresses', exact: true }).click();
   assert('motion Off prevents new feedback', await animations() === 0);
@@ -114,12 +151,21 @@ async (page) => {
   await nav().getByRole('button', { name: 'Topology', exact: true }).click();
   await page.evaluate(() => document.getAnimations().filter(a => a.animationName === 'lcars-navigation-reveal').forEach(a => a.pause()));
   assert('OS cancellation starts with a live effect', await animations() > 0);
+  assert('OS reduction starts with two live ambient effects', await retainAmbient() === 2);
   await page.emulateMedia({ reducedMotion: 'reduce' }); await settle();
+  assert('OS reduction cancels already running ambient effects', (await ambient()).length === 0 && await retainedAmbientCancelled());
   assert('OS reduction cancels the running effect', await animations() === 0);
   await nav().getByRole('button', { name: 'Group addresses', exact: true }).click();
   assert('OS reduction prevents new feedback', await animations() === 0);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await setPreference('Motion level', 'subtle');
+  const subtleAmbient = await ambient();
+  assert('Subtle slows cycles to 18s band and 24s emblem', subtleAmbient.length === 2 && subtleAmbient.some(a => a.name === 'lcars-ambient-band' && a.duration === 18000) && subtleAmbient.some(a => a.name === 'lcars-ambient-brand' && a.duration === 24000));
+  await page.evaluate(() => document.getAnimations().filter(a => a.animationName?.startsWith('lcars-ambient-')).forEach(a => { a.pause(); a.currentTime = a.effect.getTiming().duration / 2; }));
+  await settle();
+  const subtlePeak = await chrome();
+  assert('Subtle also reduces both visual amplitudes', Math.abs(subtlePeak.opacity - 0.94) < 0.001 && subtlePeak.colour !== standardPeak.colour && subtlePeak.colour !== offChrome.colour);
+  await page.evaluate(() => document.getAnimations().filter(a => a.animationName?.startsWith('lcars-ambient-')).forEach(a => a.play()));
   await nav().getByRole('button', { name: 'Topology', exact: true }).click();
   assert('subtle uses transitions without the standard reveal', await animations() === 0);
   await nav().getByRole('button', { name: 'Group addresses', exact: true }).click();
@@ -132,13 +178,26 @@ async (page) => {
   assert('save failure never causes a bus write', !requests.some(r => /\/api\/bus\/(send|write|connect)/.test(r)));
   await page.screenshot({ path: 'output/playwright/lcars-application-error.png' });
 
+  assert('theme removal starts with live ambient effects', await retainAmbient() === 2);
   await setPreference('Theme', 'graphite');
+  assert('switching to another theme cancels ambient effects', (await ambient()).length === 0 && await retainedAmbientCancelled());
   assert('switching away removes the presentation and restores the original shell', await page.locator('html').getAttribute('data-presentation') === null && await toolbar().evaluate(el => getComputedStyle(el).borderTopLeftRadius) === '0px');
   await setPreference('Theme', 'user-modern-retro-green-crt');
   assert('shipped imported-format palette cannot acquire LCARS geometry', await page.locator('html').getAttribute('data-presentation') === null);
+  assert('an imported-format palette never acquires LCARS ambient loops', (await ambient()).length === 0);
   await setPreference('Theme', 'lcars');
   await create(); await nav().getByRole('button', { name: 'Group addresses', exact: true }).click();
   assert('LCARS persists after cold reload', await page.locator('html').getAttribute('data-presentation') === 'lcars' && settings.foreign === 'preserved');
+  assert('saved Subtle ambient preference survives cold reload', (await ambient()).length === 2 && (await ambient()).some(a => a.name === 'lcars-ambient-brand' && a.duration === 24000));
+  await setPreference('Motion level', 'off'); await create();
+  assert('saved Off prevents ambient animation after cold startup', settings.motionLevel === 'off' && (await ambient()).length === 0);
+  await setPreference('Motion level', 'standard');
+  await page.emulateMedia({ reducedMotion: 'reduce' }); await create();
+  assert('OS reduction prevents ambient animation after cold startup', settings.motionLevel === 'standard' && (await ambient()).length === 0);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  assert('removing OS reduction restores the saved allowed level', (await ambient()).length === 2);
+  await setPreference('Motion level', 'subtle');
+  await nav().getByRole('button', { name: 'Group addresses', exact: true }).click();
   await page.keyboard.press('Control+='); await page.keyboard.press('Control+='); await page.keyboard.press('Control+='); await page.keyboard.press('Control+='); await page.keyboard.press('Control+=');
   await settle();
   assert('actual application UI scale reaches 1.5 without global horizontal overflow', await page.evaluate(() => getComputedStyle(document.documentElement).zoom === '1.5' && document.documentElement.scrollWidth <= innerWidth));

@@ -2,6 +2,20 @@
 
 Status: interactive offline study implemented and exercised in system Chromium on 2026-10-07; visually approved by the user. Product integration was subsequently authorized and implemented on 2026-10-08; see [LCARS guide](../../DESIGN_LCARS.md). This standalone study remains a separate memory-only demonstrator, not an importable v1 pack.
 
+The production presentation gained two user-requested ambient loops on
+2026-10-08 (header-band pulse and emblem colour shift). The standalone study
+below is unchanged and still has no idle loops. Its original receipts describe
+that historical study, not the later production animation amendment. The
+production verifier now also exercises ambient timing and live cancellation.
+Fresh combined wizard/ambient source and build evidence is in
+`ambient-integrated-verification.json` (2358 frontend / 140 files, 162 Chromium,
+54 production-workbench assertions). `ambient-verification.json` remains the
+historical 2332/158/54 local-only source receipt; neither receipt alone proves
+live deployment.
+Latest both-wizards/achievement/ambient candidate: `ambient-publication-verification.json`
+(2373 frontend / 142 files, 170 Chromium, 54 workbench, 27 targeted Rust checks).
+Its image/live result is recorded separately after actual activation.
+
 ## Design tokens and composition
 
 - Canvas `#0b0c10`, working surface `#14161c`, primary ink `#eeeaf3`.

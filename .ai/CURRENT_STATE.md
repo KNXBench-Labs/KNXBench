@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-08 10:20 CEST
+- **Completed:** Latest a642eaf9 both-wizards/achievement + LCARS ambient integration accepted: 2373 frontend / 142 files, 170 un-retried Chromium, 54 native production-workbench assertions, 27 targeted Rust (13 seed/5 HTTP seed/3 catalog/6 HTTP device-wizard), build/type/five repo gates on frozen source. Newer wizard/App/Toast/catalog/domain files preserved as exact main bytes. Two upstream guards aborted before commit/push; isolated own delta safely re-applied. Stable keyboard identity correction (selected 9.1.10 vs later first 9.1.1) retains Enter/value assertions; 20 repeats accepted. Self-review only; no bus operation.
+- **Pending/Next Steps:** User go authorizes separate focused test-fix and ambient main commits, matching canonical Docker client/server image, isolated HTTPS/auth/assets/PID1 probe, immediate read-only saved/no-programming safety check, preserve-config/data/TLS/container rollback activation. Latest receipt `docs/design-studies/lcars/ambient-publication-verification.json`; f5/e3 receipts historical. Private active evidence `/home/<user>/.hermes/profiles/knxbench/cache/scratch/la8`; final source gate proc_c926963f050d exited 0. No image/live acceptance yet.
+- **Notes for Codex oder Claude:** Shared root older/dirty; do not reset, stage or overwrite foreign work. Keep live original 451b38f2 and earlier knxbench-pre-lcars-20261008 rollback; copy env internally without publishing values. Native WebKitGTK/Orca/complete accessibility unverified, no tag. Both wizards' owner says their goal complete; unrelated follow-ups are not authorized here. Author/committer KNXBench <github@knxbench.com>.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-08 10:00
 - **Completed:** ADR-0093 package P2 — add-device wizard delivered on `main`

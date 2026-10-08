@@ -41,8 +41,20 @@ hidden theme preferences.
   reveal. Duration and easing come from the existing motion settings. The
   motion-free baseline removes animation names and transition properties;
   activation exists only under OS `no-preference` and admitted motion levels,
-  so Off or OS reduction also cancels already-running effects. No idle loops,
-  sound, artificial delay, success animation or protocol behavior is added.
+  so Off or OS reduction also cancels already-running effects. No sound,
+  artificial delay, success animation or protocol behavior is added.
+- **2026-10-08 user-requested ambient amendment:** permit exactly two calm,
+  decorative idle loops: opacity on the inert segmented header band and a
+  token-based background colour shift on the small brand emblem. Never blink
+  engineering text, tables, errors, save state or bus indicators. Standard
+  cycles take 10s/16s; Subtle takes 18s/24s and reduces the opacity/colour
+  amplitude. Durations multiply the existing motion-duration token; ambient
+  easing is always smooth, independently of the action-feedback style.
+  Activation remains behind both the admitted level and OS permission.
+  Off, OS reduction and theme removal cancel live effects to static paint,
+  including cold startup; there are no JavaScript timers or backend mutations.
+  This narrowly replaces the original no-idle-loop decision, not the theme-pack
+  boundary. Imported packs cannot acquire geometry or ambient behaviour.
 - Save/errors/import warnings and bus state retain their existing meaning.
   Framing never represents successful persistence or a connected bus.
 

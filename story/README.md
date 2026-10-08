@@ -101,6 +101,14 @@ record naming the exact `story_sha256` of one candidate
 `approved_by`, `approved_at`). `release-check` only verifies that match; no
 deployment step exists. Any change after approval needs a new approval.
 
+Approval records live in `approvals/<id>.json`, committed with their candidate;
+`tests/test_approvals.py` fails as soon as one no longer matches. When a later
+edition replaces an approved one, remove or renew the record with it.
+**Current state:** `2026-10-08.4` is approved for publication (record of
+8 October 2026, `approved_by: project owner`). The page that would be published
+still carries the private-preview banner and `noindex`; producing the public
+variant and hosting it belong to the publication step, which is not designed yet.
+
 ## Source archaeology, editions 2026-10-04 to 2026-10-08
 
 Pinned baseline since edition `2026-10-08.3`: published history `origin/main` at

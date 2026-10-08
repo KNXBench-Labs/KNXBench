@@ -2593,6 +2593,10 @@ See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
 - Follow-up 2026-10-08: after the partial history rewrite (KNOWN_LIMITATIONS
   §162), edition `2026-10-08.4` replaces `.3` with identical content except the
   remapped cutoff hash and two evidence hashes; only `.4` is kept.
+- 2026-10-08: the owner approved `2026-10-08.4` for publication
+  (`story/approvals/2026-10-08.4.json`, `release-check` eligible; new
+  `test_approvals.py` fails on a stale record). `publish` still refuses: the
+  public page variant and hosting are not designed.
 - Story motion update (user request, site only, no content change): scrolling
   back retracts later steps and refocuses the current chapter; looping signal
   pulses travel each visible connection (paused off screen); random headline

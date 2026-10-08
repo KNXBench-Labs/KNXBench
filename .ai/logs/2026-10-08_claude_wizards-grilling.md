@@ -78,3 +78,10 @@ User approved the synthesis without changes. Delivery split: P1 new-project wiza
 - Gate (frozen inputs): Vitest 2,355/140 files, Chromium 162 + repeat 21, Rust 3,564 passed/0 failed/178 ignored, fmt, five xtask gates, diff check. Clippy: first attempt exit 255 with empty log (unexplained, no OOM in kernel log); rerun twice on identical inputs exit 0, second run re-checked knx-app/knx-server/knx-desktop.
 - Self-review findings fixed before gate: Cancel vs Escape semantics (Cancel always asks when touched; Escape toggles the question); remove buttons styled subtle; per-kind add labels.
 - Manual screenshot retaken against release server via a temporary tolerant copy of the manual spec (original spec times out in `dismissToasts` before the new-project shot — pre-existing harness flake, not touched).
+
+## P2 delivered (10:00)
+
+- Feature commit `60e16158`: add-device wizard over `POST /api/devices` (+ `installationId`, `buildingPartId`, `expected`) and the new read-only `POST /api/devices/preview`; 409 `catalogPreviewStale` on a changed project; placement in the same `Batch`.
+- Web: `DeviceWizard.tsx`, `DeviceWizardProduct.tsx`, `deviceWizardPlacement.ts`, shared `CatalogInstallReport.tsx`; explorer rows (lines, every Unassigned, rooms), palette `add-device`, catalog **Add with wizard…**, project wizard's **Add devices now**.
+- Gate: Vitest 2,370/142, Chromium 170 + repeat 39, Rust 3,571/0/178 ignored, clippy, fmt, xtask (headers refused two long first lines → shortened, rerun ok), `inputs_frozen=1`.
+- Self-review fixes before gate: hover scale clipping product rows (CSS), stale/placement tests per installation, explorer counts asserted exactly.

@@ -581,7 +581,7 @@ describe("ParameterPanel", () => {
   it.each([
     ["parameterAccessReadOnly", "Einige Felder hat der Hersteller schreibgeschützt oder verborgen (Access); sie sind nicht beschreibbar."],
     ["manufacturerCalculation", "Einige Felder sind Ein- oder Ausgaben einer Herstellerberechnung, die KNXBench nicht ausführt; sie sind schreibgeschützt."],
-    ["writeAuthorityUnavailable", "Die Produktdatenbank hat für dieses Programm keine Schreibberechtigung erfasst; seine Felder sind schreibgeschützt. Installieren Sie das Produkt neu, um sie zu erfassen."],
+    ["writeAuthorityUnavailable", "Die Produktdatenbank hat für dieses Programm keine Schreibberechtigung erfasst; seine Felder sind schreibgeschützt. Installiere das Produkt neu, um sie zu erfassen."],
     ["unsupportedControlKind", "Der steuernde Parameter einer Auswahl hat einen nicht unterstützten Typ; ihre Zweige wurden nicht ausgewertet."],
     ["evaluationWorkBudgetExhausted", "Dieses Programm hat die Auswertungsgrenze überschritten; seine unvollständige Parameteransicht ist schreibgeschützt."],
   ])("translates the %s reason instead of showing the server's English", async (kind, german) => {

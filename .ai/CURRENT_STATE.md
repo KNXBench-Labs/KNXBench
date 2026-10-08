@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (cleanup round 3)
+- **Timestamp:** 2026-10-08 14:05 CEST
+- **Completed:** User decision: removed `docs/GAP_ANALYSIS_ETS.md`, `docs/Issues.md`, `.serena/`, `tools/cloud/` (+ SessionStart hook in `.claude/settings.json`), `tools/agent_memory_sync.py` + test. Links pinned to `62a54e70cbc4`; `docs/history/REMOVED_DOCS.md` second table. Memory index decommissioned: systemd user timer `knxbench-memory-sync` disabled/removed via `uninstall-timer`, marker blocks removed from root `MEMORY.md` and Hermes `SOUL.md` via `uninstall-agent-links`; installed copy, units, `.agent-memory/` and pre-change files in `KNXBench.backups/memory-sync-removal-2026-10-08`. Root `.serena/` moved to `KNXBench.backups/root-cleanup-2026-10-08/serena`.
+- **Pending/Next Steps:** Unchanged, see docs/OPEN_WORK.md.
+- **Notes for Codex oder Claude:** There is no `.agent-memory/` index any more; PROJECT_CONTEXT authority order updated. Source comments still cite `GAP_ANALYSIS_ETS.md` row IDs (B9, C2 …) as Git-history names.
+
+---
+
 - **Last Agent:** Claude (docs removal)
 - **Timestamp:** 2026-10-08 13:50 CEST
 - **Completed:** User decision: removed `docs/archive/`, `docs/design/`, `docs/design-studies/`, `docs/superpowers/` and root `IDEA.md` + `KNX ETS Alternative – Claude Code Development Strategy.md` (189 files). All readable at `6a1ba6ae5d54`; `docs/history/REMOVED_DOCS.md` maps them. 208 links pinned to GitHub URLs at that commit, goal paths in backticks reduced to names, code comments reworded, flow load study writes to `docs/evidence/telegram-flow-u21/`. Gates green.

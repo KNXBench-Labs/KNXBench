@@ -7,6 +7,24 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-08 — Post-rebase community links verified
+
+- Audited public main `608a204bf28aa9df83413aa5ccb65241c32478aa`; current app,
+  EN/DE guides, native issue form and contact config match exact remote bytes.
+  No runtime link adjustment required. Anonymous main/guide/form/website reads
+  succeed; signed-out issue handoff preserves native template/version through
+  login. Retired repo returns 404; no active hyperlink to it in scanned tracked
+  app/site/form/docs sources (historical name mentions retained).
+- Focused contribution UI/API tests: 10 passed, 0 failed/pending. Production
+  build, theme-fixture types and flow-study types passed. Real Chromium:
+  32 checks, 8 explicitly synthetic intercepted requests, no external requests
+  or browser exceptions; preview/consent/download precede the manual handoff,
+  and only template/version are URL-prefilled. Existing Vite chunk warning stays.
+- ADR-0091's current decision now names public main; earlier plan is explicitly
+  historical. Evidence: `docs/community-evidence/main-repository-link-verification.json`.
+- No deployment, logged-in GitHub submission, attachment upload, private corpus,
+  native runtime or hardware acceptance claimed; mailbox still unverified.
+
 ## 2026-10-08 — Known issues and implementation status: fewer fossils wearing “current” badges
 
 - Extended the documentation audit across all 40 original user-facing issue

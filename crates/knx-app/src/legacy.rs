@@ -3,10 +3,18 @@
 //! `knx-productdb` reads the container and the grammar but never decrypts,
 //! so no binary that links it without this crate links key material
 //! (ADR-0090, ADR-0094). Here the password meets `knx-secure`'s single
-//! ZipCrypto implementation, and only here. The password is never stored,
-//! reported or logged, and nothing is ever guessed.
+//! ZipCrypto implementation, and only here. The password is never reported
+//! or logged, and nothing is ever guessed. It is stored only when the user
+//! asks to remember it, as the one remembered password ([`remembered`]).
 
 use std::fmt;
+
+mod remembered;
+
+pub use remembered::{
+    default_remembered_password_path, open_with_password_policy, remembered_password_path_from,
+    LegacyOpenError, PasswordUsed, RememberError, RememberedPassword, REMEMBERED_PASSWORD_FILE,
+};
 
 use knx_productdb::legacy::{
     inspect_payload, publish_legacy, read_legacy_member, LegacyError, LegacyInspection,

@@ -1,6 +1,7 @@
 /** Settings overlay for theme, motion, UI/product language, and language-pack management. */
 import { emitAchievementEvent } from "./achievementEvents";
 import AchievementSettings from "./AchievementSettings";
+import LegacyPasswordSettings, { type LegacyPasswordAccess } from "./LegacyPasswordSettings";
 import type { AchievementTracker } from "./achievementTracker";
 import { ACCENTS, DENSITIES, type useAppearance } from "./appearance";
 import { useState } from "react";
@@ -240,6 +241,8 @@ export default function SettingsPanel(props: {
   onSelectAutosaveIntervalMinutes: (minutes: number) => void;
   /** ADR-0089: the window's tracker; without it the section is not shown. */
   achievementTracker?: AchievementTracker;
+  /** ADR-0094 (L3): the server's remembered legacy password; without it the section is not shown. */
+  legacyPassword?: LegacyPasswordAccess;
   onClose: () => void;
 }) {
   const {
@@ -620,6 +623,7 @@ export default function SettingsPanel(props: {
         )}
       </section>
       {props.achievementTracker && <AchievementSettings tracker={props.achievementTracker} />}
+      {props.legacyPassword && <LegacyPasswordSettings access={props.legacyPassword} />}
       <ServiceControlDebugSetting />
     </Overlay>
   );

@@ -44,6 +44,22 @@ package was new or already installed, which scheme it used, and how many members
 unknown entries and conflicts it contained. The catalog list refreshes immediately
 afterwards.
 
+### Old ETS3 product databases (`.vd3`, `.vd4`, `.vd5`)
+
+The same file picker also takes an old ETS3-era product database. Most of these
+files are encrypted: KNXBench then asks for the password. KNXBench ships no password
+and never guesses one. Tick **Remember this password** and the server keeps that one
+password, in a file only its own user can read (`~/.config/knx/legacy-vd-password`,
+mode 0600), so later imports need none. A second remembered password replaces the
+first. **Settings → Legacy product database password** shows whether one is
+remembered and forgets it.
+
+The report lists the application programs, the catalog entries, parameters,
+communication objects and translations, and every import note. Devices from such a
+file can be placed, parameterised and linked to group addresses. They cannot be
+downloaded yet, and their objects carry no data point type until you set one. See
+[ADR-0094](../../adr/0094-legacy-exim-product-files.md).
+
 > **Note**
 >
 > Two limits are worth knowing before you go looking for a file. Legacy `.vd2` product

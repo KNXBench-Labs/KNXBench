@@ -103,6 +103,15 @@ pub fn project_routes() -> Router<SharedState> {
             "/api/catalog/install",
             post(install_catalog_package).layer(DefaultBodyLimit::max(MAX_CATALOG_PACKAGE_BYTES)),
         )
+        .route(
+            "/api/catalog/install-legacy",
+            post(install_legacy_product_database)
+                .layer(DefaultBodyLimit::max(MAX_CATALOG_PACKAGE_BYTES)),
+        )
+        .route(
+            "/api/legacy-password",
+            get(legacy_password_status).delete(forget_legacy_password),
+        )
         .route("/api/devices", post(create_device))
         .route("/api/devices/preview", post(preview_devices))
         .route("/api/devices/{id}", delete(delete_device))
@@ -536,6 +545,19 @@ async fn install_catalog_package(
             .map(CatalogInstallReportDto::from)
             .map(Json)
             .map_err(|error| match error {
+                // A legacy product database has its own import route; the
+                // `kind` lets the client offer it (ADR-0094, L3).
+                domain::CatalogInstallError::BadRequest(
+                    error @ knx_productdb::PackageError::LegacyExIm {
+                        kind: knx_productdb::legacy::LegacyMemberKind::ProductDatabase,
+                        ..
+                    },
+                ) => ApiError::refused("legacyProductDatabase", error.to_string()),
+                domain::CatalogInstallError::BadRequest(
+                    error @ knx_productdb::PackageError::UnsupportedLegacyFormat { .. },
+                ) if is_legacy_product_extension(&error) => {
+                    ApiError::refused("legacyProductDatabase", error.to_string())
+                }
                 domain::CatalogInstallError::BadRequest(error) => {
                     ApiError::bad_request(error.to_string())
                 }
@@ -543,6 +565,172 @@ async fn install_catalog_package(
             });
     }
     Err(ApiError::bad_request("no file field in catalog install"))
+}
+
+/// `.vd3`/`.vd4`/`.vd5` are product databases; `.pr*` are project exports.
+fn is_legacy_product_extension(error: &knx_productdb::PackageError) -> bool {
+    matches!(
+        error,
+        knx_productdb::PackageError::UnsupportedLegacyFormat { extension }
+            if ["vd3", "vd4", "vd5"].iter().any(|e| extension.eq_ignore_ascii_case(e))
+    )
+}
+
+/// `POST /api/catalog/install-legacy`: multipart `file`, optional
+/// `password` and `remember` (`"true"`). The password is used to decrypt
+/// and, only when asked and only after the import succeeded, remembered;
+/// it is never echoed (ADR-0094, L3).
+async fn install_legacy_product_database(
+    State(state): State<SharedState>,
+    mut multipart: Multipart,
+) -> Result<Json<LegacyInstallReportDto>, ApiError> {
+    let mut file = None;
+    let mut password = None;
+    let mut remember = false;
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|error| ApiError::with_status(error.status(), error.body_text()))?
+    {
+        match field.name() {
+            Some("password") => {
+                let text = field
+                    .text()
+                    .await
+                    .map_err(|error| ApiError::with_status(error.status(), error.body_text()))?;
+                password = Some(knx_app::legacy::LegacyPassword::new(text));
+            }
+            Some("remember") => {
+                let text = field
+                    .text()
+                    .await
+                    .map_err(|error| ApiError::with_status(error.status(), error.body_text()))?;
+                remember = text == "true";
+            }
+            _ => {
+                let Some(filename) = field.file_name().map(str::to_owned) else {
+                    continue;
+                };
+                let bytes = field
+                    .bytes()
+                    .await
+                    .map_err(|error| ApiError::with_status(error.status(), error.body_text()))?;
+                file = Some((filename, bytes));
+            }
+        }
+    }
+    let (filename, bytes) =
+        file.ok_or_else(|| ApiError::bad_request("no file field in legacy install"))?;
+    domain::install_legacy_impl(&state, &filename, &bytes, password, remember)
+        .map(LegacyInstallReportDto::from)
+        .map(Json)
+        .map_err(|error| match error {
+            domain::LegacyInstallError::PasswordRequired(message) => {
+                ApiError::refused("legacyPasswordRequired", message)
+            }
+            domain::LegacyInstallError::WrongPassword(message) => {
+                ApiError::refused("legacyWrongPassword", message)
+            }
+            domain::LegacyInstallError::RememberedDoesNotFit(message) => {
+                ApiError::refused("legacyRememberedPasswordDoesNotFit", message)
+            }
+            domain::LegacyInstallError::RememberedUnusable(message) => {
+                ApiError::refused("legacyRememberedPasswordUnusable", message)
+            }
+            domain::LegacyInstallError::BadRequest(message) => ApiError::bad_request(message),
+            domain::LegacyInstallError::Internal(message) => ApiError::internal(message),
+        })
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LegacyInstallReportDto {
+    payload_sha256: String,
+    original_sha256: String,
+    namespace: String,
+    skipped: bool,
+    programs: Vec<String>,
+    catalog_items: usize,
+    parameters: usize,
+    parameter_refs: usize,
+    com_object_refs: usize,
+    translations: usize,
+    diagnostics: Vec<LegacyDiagnosticDto>,
+    /// `none`, `given` or `remembered`: which password opened the file.
+    password: &'static str,
+    remembered: bool,
+    remember_problem: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+struct LegacyDiagnosticDto {
+    kind: String,
+    detail: String,
+}
+
+impl From<domain::LegacyInstallOutcome> for LegacyInstallReportDto {
+    fn from(outcome: domain::LegacyInstallOutcome) -> Self {
+        let report = outcome.report;
+        Self {
+            payload_sha256: report.payload_sha256,
+            original_sha256: report.original_sha256,
+            namespace: report.namespace,
+            skipped: report.skipped,
+            programs: report.programs,
+            catalog_items: report.catalog_items,
+            parameters: report.parameters,
+            parameter_refs: report.parameter_refs,
+            com_object_refs: report.com_object_refs,
+            translations: report.translations,
+            diagnostics: report
+                .diagnostics
+                .into_iter()
+                .map(|(kind, detail)| LegacyDiagnosticDto { kind, detail })
+                .collect(),
+            password: match outcome.password {
+                knx_app::legacy::PasswordUsed::None => "none",
+                knx_app::legacy::PasswordUsed::Given => "given",
+                knx_app::legacy::PasswordUsed::Remembered => "remembered",
+            },
+            remembered: outcome.remembered,
+            remember_problem: outcome.remember_problem,
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LegacyPasswordStatusDto {
+    /// This server has a place to remember a password.
+    available: bool,
+    remembered: bool,
+    problem: Option<String>,
+    /// Only on `DELETE`: there was one to forget.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    forgot: Option<bool>,
+}
+
+async fn legacy_password_status(State(state): State<SharedState>) -> Json<LegacyPasswordStatusDto> {
+    let status = domain::legacy_password_status_impl(&state);
+    Json(LegacyPasswordStatusDto {
+        available: status.available,
+        remembered: status.remembered,
+        problem: status.problem,
+        forgot: None,
+    })
+}
+
+async fn forget_legacy_password(
+    State(state): State<SharedState>,
+) -> Result<Json<LegacyPasswordStatusDto>, ApiError> {
+    let forgot = domain::forget_legacy_password_impl(&state).map_err(ApiError::internal)?;
+    let status = domain::legacy_password_status_impl(&state);
+    Ok(Json(LegacyPasswordStatusDto {
+        available: status.available,
+        remembered: status.remembered,
+        problem: status.problem,
+        forgot: Some(forgot),
+    }))
 }
 
 /// `path` is either an absolute host path (desktop, from a native OS

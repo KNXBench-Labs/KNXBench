@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import * as api from "./api";
 import type {
-  CatalogInstallReport,
   CatalogItem,
   CatalogManufacturer,
   CreationDiagnostic,
@@ -15,7 +14,8 @@ import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useTranslate } from "./i18n";
 import { useActiveOptionScroll } from "./useActiveOptionScroll";
-import { CatalogInstallReportView, describeCreationDiagnostic, newRequestId } from "./CatalogInstallReport";
+import { describeCreationDiagnostic, newRequestId } from "./CatalogInstallReport";
+import ProductInstallControl from "./ProductInstallControl";
 
 // T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog workspace. Feeds T1's
 // `Command::CreateDevice` (backend-only since 2026-09-08). The search input is a combobox
@@ -52,10 +52,8 @@ export default function CatalogBrowser(props: {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [error, setError] = useState<string | null>(null);
-  const [installReport, setInstallReport] = useState<CatalogInstallReport | null>(null);
   const [diagnostics, setDiagnostics] = useState<CreationDiagnostic[]>([]);
   const [createdItems, setCreatedItems] = useState<CreatedCatalogDevice[]>([]);
-  const [installing, setInstalling] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createdWithDiagnostics, setCreatedWithDiagnostics] = useState(false);
   const [batchOutcomeUnconfirmed, setBatchOutcomeUnconfirmed] = useState(false);
@@ -147,13 +145,9 @@ export default function CatalogBrowser(props: {
     setSearch(value);
   }
 
-  async function install(file: File) {
-    setError(null);
-    setInstallReport(null);
-    setInstalling(true);
+  /** A package or legacy database was installed: reload with the latest filters. */
+  async function reloadAfterInstall() {
     try {
-      const report = await api.installProductPackage(file);
-      setInstallReport(report);
       const filters = filtersRef.current;
       const requestId = ++requestIdRef.current;
       const [manufacturers, items] = await Promise.all([
@@ -170,8 +164,6 @@ export default function CatalogBrowser(props: {
       setItemsLoaded(true);
     } catch (e) {
       setError(api.errorMessage(e));
-    } finally {
-      setInstalling(false);
     }
   }
 
@@ -261,20 +253,8 @@ export default function CatalogBrowser(props: {
         <h1>{t("catalog.title")}</h1>
         <button type="button" onClick={onClose}>{t("catalog.close")}</button>
       </header>
-      <label className="catalog-install">
-        {installing ? t("catalog.installing") : t("catalog.installLabel")}
-        <input
-          type="file"
-          accept=".knxprod,application/zip"
-          disabled={installing}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void install(file);
-            e.currentTarget.value = "";
-          }}
-        />
-      </label>
-      {installReport && <CatalogInstallReportView report={installReport} />}
+      <ProductInstallControl className="catalog-install" label={t("catalog.installLabel")}
+        onInstalled={reloadAfterInstall} />
       <select value={manufacturer} onChange={(e) => changeManufacturer(e.target.value)}>
         <option value="">{t("catalog.allManufacturers")}</option>
         {manufacturers.map((m) => (

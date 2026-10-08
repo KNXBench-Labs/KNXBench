@@ -738,6 +738,72 @@ export async function installProductPackage(file: File): Promise<CatalogInstallR
   return response.json() as Promise<CatalogInstallReport>;
 }
 
+/** ADR-0094 (L3): what importing a legacy ETS3 product database (`.vd3`–`.vd5`) did. */
+export interface LegacyInstallReport {
+  payloadSha256: string;
+  originalSha256: string;
+  /** `LX` plus eight hex digits: the id namespace of this database's content. */
+  namespace: string;
+  /** The same content was already imported; only the file name was recorded. */
+  skipped: boolean;
+  programs: string[];
+  catalogItems: number;
+  parameters: number;
+  parameterRefs: number;
+  comObjectRefs: number;
+  translations: number;
+  /** Server-composed English detail; `kind` is the stable token. */
+  diagnostics: { kind: string; detail: string }[];
+  /** Which password opened the file; the password itself never comes back. */
+  password: "none" | "given" | "remembered";
+  /** The given password is now the remembered one. */
+  remembered: boolean;
+  rememberProblem: string | null;
+}
+
+/**
+ * `POST /api/catalog/install-legacy`. Without `password` the server tries
+ * the one remembered password; `remember` keeps a given one, but only after
+ * it opened the file. The password travels only in this request.
+ */
+export async function installLegacyProductDatabase(
+  file: File,
+  password?: string,
+  remember = false,
+): Promise<LegacyInstallReport> {
+  const form = new FormData();
+  if (password) form.append("password", password);
+  if (remember) form.append("remember", "true");
+  form.append("file", file);
+  const path = "/api/catalog/install-legacy";
+  const response = await fetch(path, { method: "POST", body: form });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    noteRefusal(path, response.status);
+    throw requestError(response.status, body?.error ?? `${response.status} ${response.statusText}`, body);
+  }
+  return response.json() as Promise<LegacyInstallReport>;
+}
+
+/** `GET`/`DELETE /api/legacy-password`: the one remembered legacy password, never its value. */
+export interface LegacyPasswordStatus {
+  /** The server has a configuration directory to remember a password in. */
+  available: boolean;
+  remembered: boolean;
+  /** Why the remembered file cannot be used, for example too open permissions. */
+  problem: string | null;
+  /** Only after forgetting: there was one. */
+  forgot?: boolean;
+}
+
+export function legacyPasswordStatus(): Promise<LegacyPasswordStatus> {
+  return request("/api/legacy-password");
+}
+
+export function forgetLegacyPassword(): Promise<LegacyPasswordStatus> {
+  return request("/api/legacy-password", { method: "DELETE" });
+}
+
 /** MODEL-04: opt-in catalog batch options; all are part of the replay fingerprint. */
 export interface CatalogCreateOptions {
   allocateAddresses: boolean;

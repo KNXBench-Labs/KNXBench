@@ -239,8 +239,8 @@ knx products inspect-legacy EIBMARKT.VD3 --password-stdin
 Reads an old ETS3-era product database (`.vd3`, `.vd4`, `.vd5`) or project
 export (`.pr5`) and shows what is inside: the container, the table list and
 every product with its order number, application program and mask version.
-**It imports nothing** and creates no file. Importing these products is the
-next step and is not available yet.
+**It imports nothing** and creates no file; `knx products import-legacy`
+below does.
 
 These files are usually password-protected. Type the password on standard
 input with `--password-stdin`, or name a file whose first line holds it with
@@ -248,8 +248,30 @@ input with `--password-stdin`, or name a file whose first line holds it with
 because other users of the machine could read it from the process list.
 KNXBench ships no password for these files and never guesses one.
 
-If you need the product in KNXBench today, the official route still works:
-convert the file to `.knxprod` with ETS (`KnxCvNext.exe`) and install that.
+### `knx products import-legacy`
+
+```bash
+knx products import-legacy EIBMARKT.VD3 --password-stdin --remember
+```
+
+Imports every application program of a `.vd3`, `.vd4` or `.vd5` for offline
+use and prints what it published. The password options are the same as for
+`inspect-legacy`. Without one, the remembered password is tried.
+`--remember` keeps the given password, but only after it opened the file.
+
+### `knx products legacy-password`
+
+```bash
+knx products legacy-password set --password-stdin
+knx products legacy-password status
+knx products legacy-password forget
+```
+
+Manages the one remembered legacy password,
+`$XDG_CONFIG_HOME/knx/legacy-vd-password` (usually
+`~/.config/knx/legacy-vd-password`), a plain file with mode 0600. The
+password is never printed. A file that others may read is refused. The web
+app's server uses the same file.
 
 ### `knx products show`
 

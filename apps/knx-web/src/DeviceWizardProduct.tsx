@@ -1,8 +1,8 @@
-/** Add-device wizard step 1: find a catalogue product or install a package first. */
+/** Add-device wizard step 1: find a catalogue product or install a product file first. */
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
-import type { CatalogInstallReport, CatalogItem, CatalogManufacturer } from "./api";
-import { CatalogInstallReportView } from "./CatalogInstallReport";
+import type { CatalogItem, CatalogManufacturer } from "./api";
+import ProductInstallControl from "./ProductInstallControl";
 import type { Translate } from "./i18n";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useProductLanguage } from "./productLanguage";
@@ -24,8 +24,6 @@ export default function DeviceWizardProduct(props: {
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [installing, setInstalling] = useState(false);
-  const [report, setReport] = useState<CatalogInstallReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const requestRef = useRef(0);
   const [reload, setReload] = useState(0);
@@ -54,21 +52,6 @@ export default function DeviceWizardProduct(props: {
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [manufacturer, search, language, reload]);
-
-  async function install(file: File) {
-    setError(null);
-    setReport(null);
-    setInstalling(true);
-    try {
-      setReport(await api.installProductPackage(file));
-      onInstalled();
-      setReload((n) => n + 1);
-    } catch (e) {
-      setError(api.errorMessage(e));
-    } finally {
-      setInstalling(false);
-    }
-  }
 
   return (
     <div className="device-wizard-step">
@@ -101,16 +84,11 @@ export default function DeviceWizardProduct(props: {
           </li>
         ))}
       </ul>
-      <label className="catalog-install device-wizard-install">
-        {installing ? t("catalog.installing") : t("deviceWizard.product.install")}
-        <input type="file" accept=".knxprod,application/zip" disabled={installing}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void install(file);
-            e.currentTarget.value = "";
-          }} />
-      </label>
-      {report && <CatalogInstallReportView report={report} />}
+      <ProductInstallControl className="catalog-install device-wizard-install" label={t("deviceWizard.product.install")}
+        onInstalled={() => {
+          onInstalled();
+          setReload((n) => n + 1);
+        }} />
       {error && <p className="field-error" role="alert">{error}</p>}
     </div>
   );

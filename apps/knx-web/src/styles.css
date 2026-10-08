@@ -2956,7 +2956,8 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .project-wizard .project-wizard-remove:hover { border-color: var(--knx-error-color); color: var(--knx-error-color); }
 /* ADR-0093 §5: the add-device wizard reuses the project wizard's shell. */
 .device-wizard-step { display: grid; gap: 10px; }
-.device-wizard-step .settings-field select, .device-wizard-step .settings-field input { width: 100%; }
+/* Checkboxes keep their size: a nested dialog (legacy password) has a "Remember" row. */
+.device-wizard-step .settings-field select, .device-wizard-step .settings-field input:not([type="checkbox"]) { width: 100%; }
 .device-wizard-product { margin: 0 0 10px; color: var(--knx-muted); font-size: 12px; overflow-wrap: anywhere; }
 .device-wizard-results { display: grid; gap: 4px; max-height: 18rem; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
 .device-wizard .device-wizard-result { display: grid; width: 100%; gap: 2px; padding: 6px 10px; border: 1px solid var(--knx-border); border-radius: 8px; background: transparent; box-shadow: none; color: var(--knx-foreground); text-align: left; }

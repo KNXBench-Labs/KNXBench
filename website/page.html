@@ -6,8 +6,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; media-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="description" content="${description}">
   <meta name="theme-color" content="#13171d">
-  <meta name="robots" content="noindex, nofollow">
-  <meta property="og:type" content="website">
+${robots_meta}  <meta property="og:type" content="website">
   <meta property="og:title" content="${page_title}">
   <meta property="og:description" content="${description}">
   <meta property="og:image" content="https://knxbench.com/assets/graphite.webp">
@@ -23,8 +22,7 @@
 </head>
 <body>
   <a class="skip-link" href="#main">${skip}</a>
-  <div class="preview-note">${preview_note}</div>
-  <header class="site-header wrap">
+${preview_banner}  <header class="site-header wrap">
     <a class="brand" href="${base}${lang}/" aria-label="KNXBench ${home}"><img src="${base}assets/brand-symbol.webp" width="44" height="30" alt=""><span>KNX<span class="brand-light">Bench</span></span></a>
     <nav class="desktop-nav" aria-label="${navigation}">
       <a href="#features">${nav_features}</a><a href="#watch">${nav_watch}</a><a href="${base}story/">${nav_story}</a>
@@ -87,8 +85,7 @@
     </section>
     <section class="start-section" id="start" aria-labelledby="start-title"><div class="section wrap">
       <div class="section-heading"><h2 id="start-title">${start_title}</h2><p>${start_body}</p></div>
-      <p class="launch-note">${launch_note}</p>
-      <div class="install-paths">
+${launch_block}      <div class="install-paths">
         <article class="docker-path"><span class="path-label">Docker + Browser</span><h3>${docker_title}</h3><p>${docker_body}</p><ol><li>${docker_step_one}</li><li>${docker_step_two}</li><li>${docker_step_three}</li></ol><a class="button" href="https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/manual/user-guide/11-web-and-docker.md" target="_blank" rel="noopener">${docker_cta}<span aria-hidden="true"> ↗</span></a><p class="quiet-note">${docker_note}</p></article>
         <article class="native-path"><span class="path-label">Linux AppImage</span><h3>${native_title}</h3><p>${native_body}</p><a class="text-link" href="https://github.com/KNXBench-Labs/KNXBench/releases" target="_blank" rel="noopener">${native_cta}<span aria-hidden="true"> ↗</span></a><p class="quiet-note">${native_note}</p></article>
       </div>

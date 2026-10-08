@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic, offline marketing preview; public release remains fail-closed."""
+"""Deterministic, offline marketing site: private preview, or a release build behind the story approval."""
 from __future__ import annotations
 
 import argparse
@@ -17,6 +17,10 @@ import tempfile
 WEBSITE = Path(__file__).resolve().parent
 REPO = WEBSITE.parent
 SCHEMA = "knxbench-website-build/1"
+MODES = ("private-preview", "release")
+DOMAIN = "knxbench.com"
+CONTRIBUTION_GUIDE = "https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/contribution-intake/README.md"
+GITHUB_PRIVACY = "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
 
 
 class BuildError(ValueError):
@@ -62,8 +66,8 @@ def check_output(target: Path) -> None:
     if not manifest.is_file():
         raise BuildError("output contains foreign files; nothing was deleted")
     record = read_json(manifest)
-    if record.get("schema") != SCHEMA or record.get("mode") != "private-preview":
-        raise BuildError("output is not owned by this preview builder")
+    if record.get("schema") != SCHEMA or record.get("mode") not in MODES:
+        raise BuildError("output is not owned by this builder")
     if files != set(record.get("files", {})) | {"build-manifest.json"}:
         raise BuildError("output contains unlisted files; nothing was deleted")
     for name in record["files"]:
@@ -78,29 +82,36 @@ def check_output(target: Path) -> None:
         raise BuildError("output contains unlisted directories; nothing was deleted")
 
 
-def info_page(lang: str, kind: str, text: dict[str, str]) -> str:
+def info_page(lang: str, kind: str, text: dict[str, str], release: bool = False) -> str:
     e = lambda value: escape(value, quote=True)
-    title = text[kind + "_title"]
+    title = text["privacy_title_release"] if release and kind == "privacy" else text[kind + "_title"]
     contact_link = (f'<p><a href="mailto:{e(text["contact_email"])}">{e(text["contact_email"])}</a></p>'
                     if kind == "contact" else "")
     provider = (f'<p><strong>{e(text["contact_provider_label"])}</strong></p>'
                 f'<address class="provider-address">{e(text["contact_name"])}<br>'
                 f'{e(text["contact_street"])}<br>{e(text["contact_city"])}</address>'
                 if kind == "contact" else "")
-    pending = (f'<p class="launch-note">{e(text["privacy_pending"])}</p>'
-               if kind == "privacy" else "")
+    if kind != "privacy":
+        pending = ""
+    elif release:
+        pending = (f'<p>{e(text["privacy_hosting"])}</p>'
+                   f'<p><a href="{GITHUB_PRIVACY}" rel="noopener">{e(text["privacy_policy_label"])}</a></p>')
+    else:
+        pending = f'<p class="launch-note">{e(text["privacy_pending"])}</p>'
+    robots = "" if release else '<meta name="robots" content="noindex, nofollow">'
+    banner = "" if release else f'<div class="preview-note">{e(text["preview_note"])}</div>'
     return f'''<!doctype html>
 <html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
+{robots}<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
 <link rel="stylesheet" href="../../assets/site.css"><title>{e(title)} — KNXBench</title></head>
-<body><div class="preview-note">{e(text['preview_note'])}</div><main class="wrap info-page">
+<body>{banner}<main class="wrap info-page">
 <a class="text-link" href="../">{e(text['back_home'])}</a><h1>{e(title)}</h1>
 {provider}{contact_link}<p>{e(text[kind + '_body'])}</p>{pending}
-<a href="https://github.com/KNXBench-Labs/KNXBench-Contributions" rel="noopener">{e(text['contribute_cta'])}</a>
+<a href="{CONTRIBUTION_GUIDE}" rel="noopener">{e(text['contribute_cta'])}</a>
 </main></body></html>\n'''
 
 
-def build(target: Path) -> dict:
+def build(target: Path, release: bool = False, story_approval: Path | None = None) -> dict:
     check_output(target)
     media = read_json(WEBSITE / "media.json")
     if media.get("schema") != "knxbench-website-media/1" or not media.get("assets"):
@@ -130,7 +141,8 @@ def build(target: Path) -> dict:
     if manifest["story_sha256"] != story.get("storySha256"):
         raise BuildError("pinned story digest changed; review it explicitly")
     if story.get("publicationApproved") is not False:
-        raise BuildError("this builder is preview-only; cannot claim publication approval")
+        raise BuildError("website/story.json never claims approval; the story track's approval record decides")
+    approval = story_approval or (REPO / "story" / "approvals" / f"{edition}.json")
     content = {lang: read_json(WEBSITE / "content" / f"{lang}.json") for lang in ("de", "en")}
     if set(content["de"]) != set(content["en"]):
         raise BuildError("translation keys differ")
@@ -151,7 +163,10 @@ def build(target: Path) -> dict:
         for lang, base, path in (("de", "../", "de/index.html"), ("en", "../", "en/index.html"), ("en", "", "index.html")):
             values = {key: escape(value, quote=True) for key, value in content[lang].items()}
             values.update(lang=lang, base=base, de_current='aria-current="page"' if lang == "de" else "",
-                          en_current='aria-current="page"' if lang == "en" else "")
+                          en_current='aria-current="page"' if lang == "en" else "",
+                          robots_meta="" if release else '  <meta name="robots" content="noindex, nofollow">\n',
+                          preview_banner="" if release else f'  <div class="preview-note">{values["preview_note"]}</div>\n',
+                          launch_block="" if release else f'      <p class="launch-note">{values["launch_note"]}</p>\n')
             page = stage / path
             page.parent.mkdir(parents=True, exist_ok=True)
             page.write_text(template.substitute(values), encoding="utf-8")
@@ -159,18 +174,23 @@ def build(target: Path) -> dict:
             for kind in ("privacy", "contact"):
                 path = stage / lang / kind / "index.html"
                 path.parent.mkdir(parents=True)
-                path.write_text(info_page(lang, kind, content[lang]), encoding="utf-8")
+                path.write_text(info_page(lang, kind, content[lang], release), encoding="utf-8")
         (stage / ".nojekyll").write_text("", encoding="utf-8")
-        (stage / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
+        (stage / "robots.txt").write_text("User-agent: *\nAllow: /\n" if release else "User-agent: *\nDisallow: /\n",
+                                          encoding="utf-8")
+        if release:
+            (stage / "CNAME").write_text(DOMAIN + "\n", encoding="utf-8")
         (stage / "404.html").write_text('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Not found — KNXBench</title><h1>Page not found</h1><p><a href="/de/">Deutsch</a> · <a href="/en/">English</a></p></html>\n', encoding="utf-8")
-        story_result = subprocess.run([sys.executable, "-m", "storytool", "build", edition, "--out", str(stage / "story")],
-                                      cwd=REPO / "story", capture_output=True, text=True)
+        story_command = [sys.executable, "-m", "storytool", "build", edition, "--out", str(stage / "story")]
+        if release:
+            story_command += ["--approval", str(approval.resolve())]
+        story_result = subprocess.run(story_command, cwd=REPO / "story", capture_output=True, text=True)
         if story_result.returncode:
             raise BuildError("existing story builder refused: " + story_result.stderr.strip())
         if not (stage / "story" / "index.html").is_file():
             raise BuildError("story builder produced no page")
         files = {str(path.relative_to(stage)): digest(path) for path in sorted(stage.rglob("*")) if path.is_file()}
-        record = {"schema": SCHEMA, "mode": "private-preview", "storyEdition": edition,
+        record = {"schema": SCHEMA, "mode": "release" if release else "private-preview", "storyEdition": edition,
                   "storySha256": story["storySha256"], "sourceHashes": source_hashes, "files": files}
         (stage / "build-manifest.json").write_text(json.dumps(record, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         # Recheck immediately before replacing only this builder's owned directory.
@@ -191,17 +211,23 @@ def build(target: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=WEBSITE / "dist")
-    parser.add_argument("--release", action="store_true", help="refused: publication has a separate approval gate")
+    parser.add_argument("--release", action="store_true",
+                        help="public build for GitHub Pages; refused unless the story approval record matches")
+    parser.add_argument("--story-approval", type=Path,
+                        help="approval record to check (default: story/approvals/<edition>.json)")
     args = parser.parse_args()
-    if args.release:
-        print("refused: public publication is not approved; verify public installation links, exact story approval, contact/privacy and Pages/domain before designing release mode", file=sys.stderr)
-        return 3
+    if args.story_approval and not args.release:
+        print("refused: --story-approval only applies to --release", file=sys.stderr)
+        return 2
     try:
-        record = build(args.output.absolute())
+        record = build(args.output.absolute(), args.release, args.story_approval)
     except (BuildError, OSError, ValueError, KeyError) as error:
         print(f"refused: {error}", file=sys.stderr)
         return 1
-    print(f"private preview built: {len(record['files'])} inventoried files; story {record['storyEdition']}; no publication")
+    if args.release:
+        print(f"release built: {len(record['files'])} inventoried files; story {record['storyEdition']} (approved); deploy is the workflow's job")
+    else:
+        print(f"private preview built: {len(record['files'])} inventoried files; story {record['storyEdition']}; no publication")
     return 0
 
 

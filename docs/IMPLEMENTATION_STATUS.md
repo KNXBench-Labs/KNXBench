@@ -1,5 +1,25 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Website goes live on GitHub Pages (knxbench.com)
+
+- **Why:** owner go for publication; DNS at Host Europe was set up by the
+  owner (apex A/AAAA, `www` CNAME, verification TXT; checked at both
+  authoritative nameservers).
+- **What:** `website/build.py --release` builds the public variant (no
+  preview banner/launch note/`noindex`, open `robots.txt`, `CNAME`, privacy
+  pages naming GitHub Pages and its documented IP logging); the story's new
+  published variant (`storytool build --approval`) renders only when the
+  approval record matches the exact edition, otherwise the build refuses and
+  writes nothing. `.github/workflows/pages.yml` tests, builds and deploys only
+  the built directory. Preview builds are byte-identical except the
+  info pages' feedback link, which now points to the main repository's guide;
+  the contact text no longer names the interim contributions repository.
+- **Gate:** website 20 unit tests, story 67 (4 new; a gate-bypass mutant is
+  caught by name), Chromium offline: 154 preview checks unchanged plus 22
+  release checks, zero unexpected requests/errors; doc gates.
+- **Limits:** privacy text is drafted from GitHub's documentation for owner
+  review, not legally certified; no WebKit/screen-reader check.
+
 ## 2026-10-08 — Community evidence lands, intake moves into the public main repository (ADR-0091)
 
 - **Why:** Codex built the read-only community-evidence package and its

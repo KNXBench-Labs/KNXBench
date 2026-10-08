@@ -13,12 +13,19 @@ any real legacy file.
 | `marvin-encrypted.vd4` | `src-vd` zipped and ZipCrypto-encrypted, using the layout of the real files (flags `0x0001`, no data descriptor, CRC check byte) |
 | `marvin-plain.vd4` | `src-vd` zipped without encryption |
 | `marvin-project.pr5` | `src-pr` zipped and encrypted like `marvin-encrypted.vd4` |
+| `src-vd-program/MARVIN/ets.vd_` | Plaintext product database with one application program (ADR-0094 L2): program 300 "Improbability Drive" of manufacturer 4242 (`M-1092`), pages, grouped and union parameters, enumerations, conditional visibility, three communication objects, translations including group members, a functional-entity catalog |
+| `marvin-program-plain.vd4` | `src-vd-program` zipped without encryption |
+| `marvin-program.vd4` | `src-vd-program` zipped and encrypted like `marvin-encrypted.vd4`; its plaintext is byte-identical to `marvin-program-plain.vd4`'s |
 
 ## Rebuilding
 
 ```sh
-python3 build_fixtures.py
+python3 build_fixtures.py           # the L1 fixtures
+python3 build_fixtures.py program   # the program fixtures (L2)
 ```
+
+The two commands are separate so that rebuilding one set leaves the other
+set's random encryption headers, and so its committed digests, unchanged.
 
 The script writes both plaintexts with CRLF line ends and archives them with
 Info-ZIP `zip -X -D` (fixed mtime 2026-10-08 09:00 UTC). It then encrypts
@@ -38,6 +45,9 @@ c76b3e524cf38bddcc54364c2c0e9cfc4094376802b4ef0d3e46d08e4088c6c9  src-vd/MARVIN/
 b49a7f6cd205adaf6d866f6ce5650e85ef31879a171cf4098079dd6c365ce797  marvin-plain.vd4
 54f40f339ba9886584e6accd261f8a6f5e9c92ef29c5b203aec12e54e9a12aaf  marvin-encrypted.vd4
 bd73cd8382def079028e6c14cf9deff1ab05a078e24cff73c03eba8eb8ab9991  marvin-project.pr5
+966fac2a8a7c999cf3e83fa744b46192b48f9638d6b4ee12c9ee7f9eff6d6f76  src-vd-program/MARVIN/ets.vd_
+80e7ab1332cb07edd2d4e4adf68ecb602a31affadf39966734cad31ab8076fc5  marvin-program-plain.vd4
+b95f43e6c48343dc45a106a5c6229c178167c95803c9b089659b38479799fe4e  marvin-program.vd4
 ```
 
 `.gitattributes` turns off line-end conversion for every file here and
@@ -45,6 +55,7 @@ marks the archives and both plaintext payloads binary. The CRLF line ends
 and the trailing space of the `K ` header line are data, so Git must never
 rewrite them or report them as whitespace errors.
 
-These fixtures test the cipher, the container rules and the grammar. They
+These fixtures test the cipher, the container rules, the grammar and the
+mapping into the product database. They
 are not evidence about any vendor's export. That evidence comes from the
 ignored corpus test `tests/legacy_corpus.rs`.

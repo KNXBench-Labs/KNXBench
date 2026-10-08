@@ -552,6 +552,11 @@ but not interpreted in v1:
   `migrate_v20_to_v21` adds those rows from the stored blobs and re-derives
   measured install reports and `package.unknown_count`; a blob that cannot
   be re-read is named and downgrades its reports to `unavailable`.
+  **Schema v22 (2026-10-08, [ADR-0094](adr/0094-legacy-exim-product-files.md))**
+  is additive: `legacy_source`, `legacy_source_file`, `legacy_program` and
+  `legacy_diagnostic` record where a legacy EX-IM program came from. Its
+  rows live in the existing product tables under an `LX<sha8>` id
+  namespace, and its `source_sha256` names an EX-IM payload, not XML.
 - `Memory`, `AbsoluteSegment`, `LoadProcedures`, mask and resource data — held
   in the product database, not in the project.
 - `BusAccess`, `BCUKey`, `SplitType`, `BinaryData` and vendor baggage — held in

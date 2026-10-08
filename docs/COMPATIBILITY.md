@@ -121,6 +121,25 @@ limits and the container refusals. Tests:
 `apps/knx-cli/tests/cli_legacy_inspect.rs`. `.vd5` is accepted by content
 but has no measured sample.
 
+**Added 2026-10-08 (ADR-0094, L2):** *Importing* `.vd3`/`.vd4` application
+programs into the product database for offline engineering (catalog,
+parameters, communication objects, visibility, translations; no download,
+no DPTs). Evidence: N000520 from the real `.vd4` compared with ETS 6.3's
+conversion through KNXBench's evaluator covers 260 parameter refs, 28 object
+refs, 3,535 translations and 36 visibility cases, with three named
+deviations (`n000520_evaluates_like_the_ets_conversion`,
+`knx-app/tests/legacy_oracle.rs`, ignored). Both real files publish
+with pinned counts (`both_real_databases_publish_completely_and_evaluate`).
+Synthetic coverage: `knx-productdb/tests/legacy_mapping.rs`,
+`legacy_publish.rs`, `knx-app/tests/legacy_files.rs`,
+`apps/knx-cli/tests/cli_legacy_import.rs` and
+`apps/knx-server/tests/http_legacy_device.rs` (placement, parameter edit
+with visibility, group link). `.vd5` is untested: the one real sample is
+refused by size and has a different, multi-member layout (KNOWN_LIMITATIONS
+§128). The `.vd3` sample is BCU1;
+its programs import, but their behaviour beyond the evaluator is not
+compared with an oracle.
+
 ## 3. Expected but unverified
 
 | Item | Status | What would move it to verified |
@@ -144,7 +163,7 @@ is that we expect it to work and have not shown that it does.
 | --- | --- |
 | Devices whose configuration depends on a vendor plug-in DLL | The behaviour lives in the binary; it is preserved and reported, never executed (RESEARCH §7, risk R5) |
 | Commissioning and device download | **Update 2026-10-06 (AR15):** no longer absent. Download along the verified `070nh` memory path (`knx device download`, Web download tab; ADR-0048/0049) ran with read-back on one device; other devices, masks and procedures are refused by name, address programming/reset fail closed until durable recovery exists (ADR-0057/0058). The text that follows is the 2026-09-11 state: not implemented yet, and — per the user's 2026-09-11 ruling — not permanently excluded either: required, blocked. The generic load/unload/reset/memory-write procedures are documented in the KNX Standard (RESEARCH §8.4, R5 spike); a product-specific `Legacy*` compatibility-flag matrix and vendor DLLs remain undocumented outside ETS tooling and are why it hasn't started, alongside bricking risk on real hardware (RESEARCH §8.3/§8.4) ([KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)) |
-| Importing legacy ETS3 `.vd3`–`.vd5` product databases into the product database | Inspection works (§2, ADR-0094); publishing parameters, communication objects and visibility is L2 and is accepted only against ETS's own conversion ([KNOWN_LIMITATIONS §128](KNOWN_LIMITATIONS.md#128-legacy-vd3vd5-and-pr3pr5-files-are-refused-and-the-refusal-misnames-the-format)). `.pr*` project exports and `.vd2` stay out of scope |
+| Importing legacy ETS3 `.vd3`–`.vd5` product databases into the product database | **Update 2026-10-08:** the import (L2) is verified for one `.vd4` program against ETS's conversion and for both real files by pinned counts (§2). Still expected but unverified: `.vd5`, an oracle for a `.vd3`/BCU1 program, DPTs and download (L4). Earlier: inspection works (§2, ADR-0094); publishing parameters, communication objects and visibility is L2 and is accepted only against ETS's own conversion ([KNOWN_LIMITATIONS §128](KNOWN_LIMITATIONS.md#128-legacy-vd3vd5-and-pr3pr5-files-are-refused-and-the-refusal-misnames-the-format)). `.pr*` project exports and `.vd2` stay out of scope |
 | KNX Secure | No sample key material to verify against; the subsystem exists but stays empty (RESEARCH §9) |
 | Direct `.knxprod` import outside master schemes 10 (exact, ADR-0083), 11, 12, 13, 14, 20 and exact-namespace 21/23 (§2, standalone packages only) | Scheme21 retains its115-instance matrix evidence; exact23 has bounded import/storage/report/replay acceptance (PRODUCT_SCHEME_23_RESEARCH, ADR-0072). Typed21/23 members fail closed on foreign elements and qualified attributes. Scheme 10 is admitted since 2026-10-05 on corpus vocabulary evidence (ADR-0083); 15–19/22/24 unmeasured and refused; the original2026-10-03 refusal census is historical,not current exact23 behavior. Unknown manufacturer semantics,signature verification and runtime/commissioning remain unverified. `.vd2` remains a distinct permanently unsupported legacy container. |
 | Device parameter editing outside the evaluated subset | Editing exists for active fields with a single write target ([KNOWN_LIMITATIONS §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted)); the `Dynamic` structural grammar stays corpus-observed. Not supported, by design: writing a field whose effective `Access` is not `ReadWrite`, or either side of a `ParameterCalculation` — vendor scripts are never run ([ADR-0080](adr/0080-parameter-write-authority.md)). *Corrected 2026-10-05: this row said no parameter value is ever written, which has been false since T18 slice 3.* |

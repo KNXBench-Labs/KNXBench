@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-10-08 12:50 CEST",
+  "featureCommit": "a4a21d7dac878f7e4042778996671b843884b011",
+  "initialMergeCommit": "50a7f373855f22484de532da99ed0fdc456205f2",
+  "finalSourceMergeCommit": "2046e16a09e86989112779de21f3fcd67db0e94e",
+  "upstreamIncluded": "ca1ed483",
+  "scope": "Owner-authorized commit/merge/push of UI-only parameter display package; no deployment/hardware operation.",
+  "sourceSha256": {
+    "apps/knx-web/src/Inspector.tsx": "a30e32aaaa261b715dcd2d589cec85af30a9e6f278b9bcb751f9f650ce858b0f",
+    "apps/knx-web/src/ParameterPanel.tsx": "25a831b8218136a6b1681d3b064afb4352add922d544d4026da5c7f9e1158fb4",
+    "apps/knx-web/src/ParameterPanel.test.tsx": "d09a81b8b7a8411802a9e625f1ecefbed4e9ef69ff12fb8231644e46dacd850f",
+    "apps/knx-web/src/DeviceWorkspace.test.tsx": "fd33edf3c0dddab1337ecb5e49a99a18f49eadc301eb1e04c1b6f37e7300dcb8",
+    "apps/knx-web/src/messages/en.ts": "ed57db8fa00be3c18997ff4c2478cea16c56f77a05b8f63acdfc28319c6542f4",
+    "apps/knx-web/src/messages/de.ts": "1a19756c7c801f650bdf84614ab8ceb6d3a68e779d86f3d3c4d96d9bf3497188",
+    "apps/knx-web/src/styles.css": "3dd67803bda4e6e4737c2c270f1a47919359e1be66e99e5a5633fc8421c4ed71",
+    "apps/knx-web/src/parameterPresentation.ts": "fe43d04dc8afe8d2020cd3cda1a24c765d892c010d4a90e778467b9ec533f311",
+    "apps/knx-web/src/parameterPresentation.test.ts": "ff7d540e42408823930c9bfd959d1bdca962fefbe08f94033f52062c7bdd3a61"
+  },
+  "frontendSnapshot": {
+    "sha256": "76d006efdb44a5fb824dc45a35b37ad805cdd870854e9b10ef6690305f6cba13",
+    "trackedFileCount": 431,
+    "unchangedAfterConcurrentUpstreamMerge": true
+  },
+  "frontend": {
+    "testedCommit": "2046e16a09e86989112779de21f3fcd67db0e94e",
+    "testFiles": 144,
+    "tests": 2388,
+    "build": "passed",
+    "themeFixtureTypes": "passed",
+    "flowStudyTypes": "passed"
+  },
+  "chromiumSuite": {
+    "testedCommit": "50a7f373855f22484de532da99ed0fdc456205f2",
+    "tests": 170,
+    "status": "passed",
+    "sourceEquivalence": "All tracked apps/knx-web files/config/fixtures/lockfile identical before and after concurrent upstream merge; complete hashes verified."
+  },
+  "retainedVerifier": {
+    "testedCommit": "2046e16a09e86989112779de21f3fcd67db0e94e",
+    "checks": 278,
+    "syntheticRequests": 24,
+    "unexpectedRequests": [],
+    "errors": [],
+    "matrix": "EN/DE x 400/1440 px x Porcelain/Graphite/LCARS CSS"
+  },
+  "repositoryGates": {
+    "check-layering": {
+      "exit": 0,
+      "output": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/parameter-publish-20261008\nlayering scope: 478 resolved packages\nlayering ok: knx-core reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-etsproj reaches neither knx-store nor knx-productdb; knx-productdb reaches none of knx-etsproj, knx-store, knx-secure; knx-projection reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-secure reaches none of [\"knx-core\", \"serde\"]; knx-mcp reaches none of [\"knx-net\", \"knx-server\", \"knx-secure\", \"knx-etsproj\", \"axum\", \"hyper\", \"reqwest\"]\n"
+    },
+    "check-headers": {
+      "exit": 0,
+      "output": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/parameter-publish-20261008\nheaders ok: 689 files with a well-formed header, 155 without one (ceiling 155), 21 generated files skipped\n"
+    },
+    "check-anchors": {
+      "exit": 0,
+      "output": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/parameter-publish-20261008\nanchors ok: 694 links checked across 320 markdown files, none dead\n"
+    },
+    "check-ledger": {
+      "exit": 0,
+      "output": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/parameter-publish-20261008\nledger ok: 191 rows in docs/status/LEDGER.md\n"
+    },
+    "check-corpus-gates": {
+      "exit": 0,
+      "output": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/parameter-publish-20261008\ncorpus gates ok: 452 Rust files scanned, no silent early return on a missing corpus\n"
+    }
+  },
+  "review": "In-session source/scope/integrity review, not independent approval.",
+  "limitations": [
+    "No full Rust workspace test claim; own change is UI-only.",
+    "No deployment, hardware contact, production data writes or native accessibility acceptance.",
+    "The original verification.json remains historical evidence of the earlier root snapshot."
+  ],
+  "publication": {
+    "target": "origin/main",
+    "verification": "Executing agent must verify exact remote commit/ref after push; this file binds the tested source before delivery metadata commit."
+  }
+}

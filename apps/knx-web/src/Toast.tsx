@@ -3,7 +3,14 @@ import type { ToastEntry } from "./toast";
 import { useTranslate } from "./i18n";
 import AchievementBadge from "./AchievementBadge";
 
-export default function ToastStack(props: { toasts: ToastEntry[]; onDismiss: (id: number) => void }) {
+/** The exit animation's name in `styles.css`; only its end removes a toast. */
+const EXIT_ANIMATION = "knx-achievement-out";
+
+export default function ToastStack(props: {
+  toasts: ToastEntry[];
+  onDismiss: (id: number) => void;
+  onExited?: (id: number) => void;
+}) {
   const t = useTranslate();
   if (props.toasts.length === 0) return null;
   return (
@@ -12,7 +19,10 @@ export default function ToastStack(props: { toasts: ToastEntry[]; onDismiss: (id
         <div
           key={toast.id}
           role={toast.kind === "error" ? "alert" : "status"}
-          className={`toast toast--${toast.kind}`}
+          className={`toast toast--${toast.kind}${toast.leaving ? " toast--leaving" : ""}`}
+          onAnimationEnd={(event) => {
+            if (toast.leaving && event.animationName === EXIT_ANIMATION) props.onExited?.(toast.id);
+          }}
         >
           {toast.achievement && <AchievementBadge tier={toast.achievement.tier} glyph={toast.achievement.glyph} />}
           <div className="toast-body">

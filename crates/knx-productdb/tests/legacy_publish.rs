@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use knx_productdb::device_evaluation::evaluate_device;
 use knx_productdb::legacy::{
-    publish_legacy, read_legacy_member, LegacyPayload, LegacyPublishError,
+    publish_legacy, read_legacy_member, withhold_secret_values, LegacyPayload, LegacyPublishError,
 };
 use knx_productdb::{open_and_migrate, sha256_hex, Connection, CURRENT_PRODUCTDB_VERSION};
 
@@ -51,7 +51,11 @@ fn snapshot(conn: &Connection) -> Vec<(String, i64)> {
 }
 
 fn program_id(bytes: &[u8]) -> String {
-    let sha = sha256_hex(payload(bytes).bytes());
+    let sha = sha256_hex(
+        &withhold_secret_values(payload(bytes).bytes())
+            .unwrap()
+            .bytes,
+    );
     format!("M-1092_A-LX{}-300", sha[..8].to_ascii_uppercase())
 }
 
@@ -83,9 +87,12 @@ fn a_program_database_is_published_with_its_provenance() {
     let payload = payload(&bytes);
     let report = publish_legacy(&conn, "marvin.vd4", &bytes, &payload).unwrap();
     let id = program_id(&bytes);
+    // The stored payload is the decrypted one without its secret values.
+    let stored = withhold_secret_values(payload.bytes()).unwrap().bytes;
+    assert_ne!(stored, payload.bytes());
     assert!(!report.skipped);
     assert_eq!(report.programs, std::slice::from_ref(&id));
-    assert_eq!(report.payload_sha256, sha256_hex(payload.bytes()));
+    assert_eq!(report.payload_sha256, sha256_hex(&stored));
     assert_eq!(report.original_sha256, sha256_hex(&bytes));
     assert_eq!(
         (
@@ -101,7 +108,8 @@ fn a_program_database_is_published_with_its_provenance() {
         .iter()
         .any(|(kind, detail)| kind == "unmapped-table" && detail.contains("s19_block")));
 
-    // Rows point at the stored payload; both blobs are kept byte for byte.
+    // Rows point at the stored payload; the original is kept byte for byte,
+    // the payload byte for byte except its withheld secret values.
     let source: String = conn
         .query_row(
             "SELECT source_sha256 FROM application_program WHERE id = ?1",
@@ -111,7 +119,7 @@ fn a_program_database_is_published_with_its_provenance() {
         .unwrap();
     assert_eq!(source, report.payload_sha256);
     for (sha, expected) in [
-        (&report.payload_sha256, payload.bytes()),
+        (&report.payload_sha256, &stored[..]),
         (&report.original_sha256, &bytes[..]),
     ] {
         assert_eq!(
@@ -208,7 +216,11 @@ fn publishing_the_same_payload_again_only_records_the_name() {
 fn a_failure_part_way_leaves_nothing_behind() {
     let (_dir, conn) = database();
     let bytes = fixture("marvin-program-plain.vd4");
-    let sha = sha256_hex(payload(&bytes).bytes());
+    let sha = sha256_hex(
+        &withhold_secret_values(payload(&bytes).bytes())
+            .unwrap()
+            .bytes,
+    );
     // A row another source already owns under an id this file maps to:
     // the insert fails after the blobs and the provenance were written.
     conn.execute(
@@ -228,7 +240,11 @@ fn a_namespace_owned_by_another_payload_is_refused_by_name() {
     // to the same ids. Unlikely (1 in 2^32), but never merged: refused.
     let (_dir, conn) = database();
     let bytes = fixture("marvin-program-plain.vd4");
-    let sha = sha256_hex(payload(&bytes).bytes());
+    let sha = sha256_hex(
+        &withhold_secret_values(payload(&bytes).bytes())
+            .unwrap()
+            .bytes,
+    );
     let namespace = format!("LX{}", sha[..8].to_ascii_uppercase());
     conn.execute(
         "INSERT INTO legacy_source (payload_sha256, namespace, member_name, member_kind, charset)
@@ -271,4 +287,37 @@ fn the_download_path_refuses_a_legacy_program_by_name() {
         }
         other => panic!("expected CodeError::LegacyProgram, got {other:?}"),
     }
+}
+
+#[test]
+fn secret_values_are_withheld_from_the_stored_payload() {
+    let (_dir, conn) = database();
+    let bytes = fixture("marvin-program-plain.vd4");
+    let report = publish_legacy(&conn, "marvin.vd4", &bytes, &payload(&bytes)).unwrap();
+    let stored = knx_productdb::load_source_file(&conn, &report.payload_sha256)
+        .unwrap()
+        .expect("the stored payload is keyed by its own digest");
+    assert_eq!(sha256_hex(&stored), report.payload_sha256);
+    for secret in ["Zaphod42", "Beeblebrox"] {
+        assert!(
+            !stored.windows(secret.len()).any(|w| w == secret.as_bytes()),
+            "{secret} kept in the stored payload"
+        );
+    }
+    // Everything else stays: the stored copy differs only by the value.
+    let original = payload(&bytes);
+    assert_eq!(
+        original.bytes().len() - stored.len(),
+        "Zaphod42\r\n\\\\Beeblebrox".len()
+    );
+    let withheld: Vec<_> = report
+        .diagnostics
+        .iter()
+        .filter(|(kind, _)| kind == "secret-withheld")
+        .map(|(_, detail)| detail.as_str())
+        .collect();
+    assert_eq!(
+        withheld,
+        ["1 value of device.DEVICE_BCU_PASSWORD was withheld from the stored payload (secret-class column)"]
+    );
 }

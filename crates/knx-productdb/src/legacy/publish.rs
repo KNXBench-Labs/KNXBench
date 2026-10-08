@@ -11,7 +11,8 @@ use rusqlite::{params, Connection, OptionalExtension};
 use super::container::LegacyPayload;
 use super::exim::parse_exim;
 use super::inspect::PAYLOAD_CHARSET_ASSUMPTION;
-use super::mapping::{map_legacy_database, LegacyMapping, MappedProgram};
+use super::mapping::{map_legacy_database, LegacyMapping, MappedProgram, MappingDiagnostic};
+use super::secrets::withhold_secret_values;
 use super::LegacyError;
 use crate::{sha256_hex, store_source_file, ProductDbError, SourceFile};
 
@@ -84,9 +85,25 @@ pub fn publish_legacy(
         }
         .into());
     }
-    let document = parse_exim(payload.bytes())?;
-    let payload_sha256 = sha256_hex(payload.bytes());
-    let mapping = map_legacy_database(&document, &payload_sha256)?;
+    // Only the copy without secret-class values is stored, parsed and keyed
+    // (design decision B-3): its digest is the payload's identity.
+    let withheld = withhold_secret_values(payload.bytes())?;
+    let stored = withheld.bytes;
+    let document = parse_exim(&stored)?;
+    let payload_sha256 = sha256_hex(&stored);
+    let mut mapping = map_legacy_database(&document, &payload_sha256)?;
+    mapping
+        .diagnostics
+        .extend(
+            withheld
+                .columns
+                .into_iter()
+                .map(|c| MappingDiagnostic::SecretWithheld {
+                    table: c.table,
+                    column: c.column,
+                    rows: c.rows,
+                }),
+        );
 
     let tx = conn.unchecked_transaction()?;
     let known: Option<String> = tx
@@ -164,7 +181,7 @@ pub fn publish_legacy(
         &SourceFile {
             source_path: format!("{source_name}!{}", container.member_name),
             manufacturer_id: manufacturer,
-            bytes: payload.bytes().to_vec(),
+            bytes: stored,
         },
     )?;
     write_rows(&tx, &payload_sha256, &mapping)?;

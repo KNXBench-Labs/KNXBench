@@ -21,6 +21,7 @@ const apiMock = vi.hoisted(() => ({
   catalogManufacturers: vi.fn().mockResolvedValue([]),
   catalogItems: vi.fn().mockResolvedValue([]),
   installProductPackage: vi.fn<(file: File) => Promise<CatalogInstallReport>>(),
+  installLegacyProductDatabase: vi.fn(),
   createDevice: vi.fn(),
   currentProject: vi.fn(),
 }));
@@ -145,7 +146,7 @@ describe("CatalogBrowser", () => {
   it("offers only supported product packages in the file picker", async () => {
     const { root } = await renderBrowser();
     expect(host!.querySelector<HTMLInputElement>('input[type="file"]')!.accept)
-      .toBe(".knxprod,application/zip");
+      .toBe(".knxprod,.vd3,.vd4,.vd5,application/zip");
     root.unmount();
   });
 

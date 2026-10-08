@@ -125,6 +125,16 @@ the named source column:
   `mask*`, `symbol`, `help_file`, …) stay in the stored payload and are
   reported as not mapped.
 
+## Secret-class columns
+
+The design (2026-09-26, §6.4 and decision B-3) names every column with
+`PASSWORD` in its name secret-class. The observed ones are
+`PROJECT_PASSWORD`, `PROJECT_BCU_PASSWORD` and `DEVICE_BCU_PASSWORD`, all in
+`.pr*` project exports. Their non-empty values are blanked in the stored
+payload and reported by count (`secret-withheld`). Neither real `.vd3` nor
+`.vd4` has a non-empty one: the corpus test pins their diagnostics, and no
+`secret-withheld` appears there (measured 2026-10-08).
+
 ## Text values
 
 Measured in both real files: values escape `\'`, `\r`, `\n` and `\\`.

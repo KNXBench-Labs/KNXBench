@@ -123,7 +123,9 @@ Done for the implemented versioned product database and the evidenced
 `.knxprod` master-data schemas 11, 12, 13, 14, 20 and exact-namespace 21
 (since 2026-10-04/05 also exact 23 and exact 10, ADR-0072/ADR-0083).
 PDB-1–PDB-11 landed; source blobs and unknowns are retained/reported, not
-claimed to be fully interpreted. Legacy `.vd`/`.pr` uses a separate design;
+claimed to be fully interpreted. Legacy `.vd`/`.pr` uses a separate path
+(ADR-0094): read-only inspection of `.vd3`–`.vd5` landed 2026-10-08, import
+into the product database (L2) and the web upload (L3) are next;
 unknown vendor semantics and encrypted packages stay refused. Evidence:
 [PRODUCT_DATABASE_CORPUS](PRODUCT_DATABASE_CORPUS.md),
 [COMPATIBILITY](COMPATIBILITY.md), [KNOWN_LIMITATIONS](KNOWN_LIMITATIONS.md).

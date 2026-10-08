@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (legacy VD L1)
+- **Timestamp:** 2026-10-08 10:21 CEST
+- **Completed:** L1 of legacy ETS3 product databases (ADR-0094): `knx-productdb::legacy` (content detection, container via package ZIP validator, bounded inflate+CRC, strict EX-IM grammar, inspection; no decryption), `knx_app::legacy` (user-supplied password, ZipCrypto via knx-secure, redacting `LegacyPassword`), CLI `knx products inspect-legacy --password-stdin|--password-file` (read-only), `PackageError::LegacyExIm` for renamed containers, new check-layering rule `knx-productdb ↛ knx-secure`. Real VD3/VD4/PR5 read with 0 diagnostics. Mutation sweep 25/25. Full gate on pre-rebase head, re-gate on final tree (see IMPLEMENTATION_STATUS). Logs: `.ai/logs/2026-10-08_claude_legacy-vd-grilling.md` (interview, Q1–Q18) and `..._legacy-vd-l1-inspect.md`.
+- **Pending/Next Steps:** L2: publish `.vd*` application programs into the product DB atomically (direct table mapping per Q8; ids `M-xxxx_LX-<sha8>_A-<PROGRAM_ID>`, `_P-<PARAMETER_NUMBER>`, `_O-<n>_R-<unique>`; translations for 5 LCIDs; `dynamic_node` visibility from `PAR_PARAMETER_ID`/`PARENT_PARM_VALUE`; original + decrypted payload stored, never the password). Acceptance: semantic equivalence with ETS conversion of N000520_IRBM_20 (house project) via the KNXBench evaluator. Then L3 (server/web upload, password dialog, remembered password 0600) and L4 (download, separate).
+- **Notes for Codex oder Claude:** Real files and the password file live only in gitignored `OriginalData/ProductDatabases/` (`.vd-import-password`); never print or commit the password; corpus tests take it from `KNXBENCH_VD_PASSWORD_FILE`. GPL firewall: do not open knxReTk/sbtools. `COLUMN_ID` meaning in `text_attribute` and the legacy access levels are still assumptions [A] to verify against the oracle. The root checkout still holds an untracked copy of the grilling log (byte-identical to the committed one) and foreign uncommitted Codex handover entries; leave them to their owner.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-08 10:20
 - **Completed:** German UI catalogue switched to the informal du-form (user

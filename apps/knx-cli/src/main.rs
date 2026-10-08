@@ -15,6 +15,7 @@ mod device_readiness;
 mod device_reset_address;
 mod device_serial;
 mod device_service_control;
+mod legacy_inspect;
 mod scan;
 
 const USAGE: &str =
@@ -28,6 +29,10 @@ const USAGE: &str =
      \x20     knx diff [--exit-code] <a.knxdb|a.knxproj> <b.knxdb|b.knxproj>\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
      \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>] [--allow-large-package]\n\
+     \x20     knx products inspect-legacy <file.vd3|file.vd4|file.vd5|file.pr5>\n\
+     \x20                  [--password-stdin | --password-file <path>]\n\
+     \x20         (reads a legacy ETS3-era EX-IM file and summarises it; writes nothing.\n\
+     \x20         The password is never accepted on the command line, never stored)\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
      \x20     knx products verify [--product-db <path>]\n\
      \x20     knx products identity <table> <id> [--product-db <path>]\n\
@@ -1312,6 +1317,7 @@ fn run_products(args: &[String]) -> ExitCode {
         Some("family") => run_products_family(&args[1..]),
         Some("order-number") => run_products_order_number(&args[1..]),
         Some("coverage") => run_products_coverage(&args[1..]),
+        Some("inspect-legacy") => legacy_inspect::run(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE

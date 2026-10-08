@@ -46,6 +46,12 @@
   HEAD unchanged during the run). The first attempt died before any
     test ran (`ld` killed by signal 9). It is kept, and the step was rerun
     with `-j 2`.
+- **Re-gate after the second rebase** (onto `a642eaf9`, the add-device
+  wizard; it changed only `knx-server` and the web app, which build
+  against the changed crates): `3d8eef7f` passes fmt, clippy `-D warnings`
+  (whole workspace) and all five xtask gates. `knx-server`, `knx-app`,
+  `knx-productdb` and `knx-cli` tests: **1,786 passed, 0 failed, 113
+  ignored**.
 - **ADR number:** 0093 was taken upstream meanwhile (wizards), so this is
   ADR-0094.
 - **Not done:** product-database import (L2) and server/web upload (L3).

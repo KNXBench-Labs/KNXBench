@@ -4,7 +4,7 @@
 
 - User decision: removed `docs/GAP_ANALYSIS_ETS.md`, `docs/Issues.md`, `.serena/`,
   `tools/cloud/` (and its `SessionStart` hook in `.claude/settings.json`) and
-  `tools/agent_memory_sync.py` with its test. 40 links pinned to `62a54e70cbc4`;
+  `tools/agent_memory_sync.py` with its test. 40 links pinned to `aa0ff14ff536`;
   [REMOVED_DOCS](history/REMOVED_DOCS.md) has the second-round table.
 - The shared memory index is decommissioned, not just unversioned: the systemd
   user timer is disabled and removed, the marker blocks are uninstalled, and
@@ -15,7 +15,7 @@
 
 - User decision: removed `docs/archive/`, `docs/design/`, `docs/design-studies/`,
   `docs/superpowers/` (187 files) and the root `IDEA.md` and development-strategy
-  note. All stay in Git at `6a1ba6ae5d54`;
+  note. All stay in Git at `138403ed6084`;
   [REMOVED_DOCS](history/REMOVED_DOCS.md) lists them and how to read them back.
 - 208 Markdown links into them now point to pinned GitHub URLs at that commit;
   115 backticked goal paths became plain goal names. Source comments that cited
@@ -26,7 +26,7 @@
 
 ## 2026-10-08 — Goal audit and docs/root cleanup
 
-- Audit of every goal against `origin/main` `741968a8`: `alpha-release-goal.md`
+- Audit of every goal against `origin/main` `b34afcc8`: `alpha-release-goal.md`
   (93/100 boxes; the 7 open are user-deferred `KL-129`/`KL-135` or the optional
   AR14B live run), `goal-ui.md` (closed 2026-10-06) and `goal-commission.md`
   (K1–K19 delivered, hardware validation out of scope by decision) are finished.
@@ -35,7 +35,7 @@
   (community evidence, website, an ADR-0094 number collision), deferred
   decisions and the 23 `LATER` rows in plain words.
 - Moved with `git mv`, links rewritten by script: the three goals, nine alpha
-  dossiers and the AR18 review to [archive/alpha-0.1/](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/README.md);
+  dossiers and the AR18 review to [archive/alpha-0.1/](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/README.md);
   root `stats.md`/`compare.md` there as dated snapshots; ten behavioural
   contracts to [contracts/](contracts/README.md); `CLOUD_SESSIONS.md` and the
   delivered `PROJECT_EVOLUTION_GOAL.md` to `archive/`. Four code comments and
@@ -414,7 +414,7 @@
   hardware-operation claim.
 - The older dirty shared root was not reset, stashed or committed wholesale;
   concurrent community/evidence work is excluded and preserved. Durable
-  source/gate/runtime evidence: [deployment receipt](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/design-studies/lcars/deployment-verification.json).
+  source/gate/runtime evidence: [deployment receipt](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/design-studies/lcars/deployment-verification.json).
 
 ## 2026-10-08 — Approved LCARS theme integrated locally
 
@@ -472,7 +472,7 @@ historical, standalone study scope.
 - No application/core/server source or dependencies changed. No live project,
   bus, Docker, deployment or release touched. Native WebKitGTK/Orca and full
   accessibility acceptance remain unverified. Details and source fingerprints:
-  [study README](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/design-studies/lcars/README.md) and `verification.json`.
+  [study README](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/design-studies/lcars/README.md) and `verification.json`.
 
 ## 2026-10-08 — MCP: parameter visibility, paging and two real clients (ADR-0090 amendment)
 
@@ -784,7 +784,7 @@ historical, standalone study scope.
   the single existing installation was copied by hand and checked with `diff -r`.
 - **Versions:** CLI, desktop shell and web frontend `0.1.0-alpha.5`. The
   `v0.1.0-alpha.4` tag and pre-release were withdrawn; `v0.1.0-alpha.5`
-  replaces them ([ALPHA_FINAL_GATES §14](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)).
+  replaces them ([ALPHA_FINAL_GATES §14](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#14-alpha5-identity-rewrite-and-replacement-pre-release)).
 - **Gate on the tagged commit** `aca70fd7` (fresh build directory, offline):
   Rust 3,430 passed / 0 failed / 178 ignored, Vitest 2,162, Playwright 155,
   private corpus 143 in 31 targets, Clippy, fmt, `cargo deny`, `npm audit`,
@@ -1000,14 +1000,14 @@ historical, standalone study scope.
 - A [GitHub pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.4) in the private repository, with the AppImage
   (SHA-256 `138444b4…c3fc`) and `SHA256SUMS`.
 - Assets downloaded back and verified byte-identical
-  ([ALPHA_FINAL_GATES §13](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#13-ar19-release-decision-and-publication)).
+  ([ALPHA_FINAL_GATES §13](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#13-ar19-release-decision-and-publication)).
 - `RELEASE-04` is `DONE`. The installation chapter points to the
   pre-release.
 
 ## 2026-10-07 — AR18 recorded `READY`: the alpha candidate is release-ready, pending the user's decision
 
 - Re-check round 4 (a fresh Codex session) returned **`READY`**
-  ([verdict](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/review/2026-10-07-alpha-recheck-round4.md)). It tested 181
+  ([verdict](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/review/2026-10-07-alpha-recheck-round4.md)). It tested 181
   fictional archives across CLI and both servers, plus seven archives from
   real writers. No blocking finding remains.
 - Candidate `b8724d66`, product code `2254eed0`. AppImage
@@ -1015,7 +1015,7 @@ historical, standalone study scope.
 - Gates: Rust 3402/0/178, Vitest 2076, Chromium 142, corpus 143/143.
 - N14 (MINOR): an empty directory's payload is not checksummed. Disclosed
   in KL §159 and left for post-Alpha hardening.
-- Record: [ALPHA_FINAL_GATES §12](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#12-ar18-outcome-ready).
+- Record: [ALPHA_FINAL_GATES §12](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#12-ar18-outcome-ready).
   `RELEASE-01`/`RELEASE-02` are `DONE`.
 - Next: AR19, the user's release, tag and publication decision. Nothing is
   tagged automatically.
@@ -1023,14 +1023,14 @@ historical, standalone study scope.
 ## 2026-10-06 — Round 3's condition: every part of a record must agree
 
 - Re-check round 3: `READY_WITH_CONDITIONS`
-  ([verdict](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/review/2026-10-06-alpha-recheck-round3.md)).
+  ([verdict](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/review/2026-10-06-alpha-recheck-round3.md)).
 - N11: each local header must agree with its central record (flags, method,
   CRC, sizes, data descriptor, Unicode Path), and the records must tile the
   archive up to the central directory.
 - N12: an empty directory written deflated (Java, `jar`) imports.
 - N13: the last stale `500` in `ALPHA_CANDIDATE` corrected.
 - Gate on `2254eed0` green: Rust 3402/0/178, corpus 143/143
-  ([ALPHA_FINAL_GATES §11](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#11-ar18-re-check-round-3-condition-r6-fixed-and-re-gated)).
+  ([ALPHA_FINAL_GATES §11](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#11-ar18-re-check-round-3-condition-r6-fixed-and-re-gated)).
 - Next: re-check round 4.
 
 ## 2026-10-06 — A README that leads with the alpha and shows the bus thinking
@@ -1057,20 +1057,20 @@ historical, standalone study scope.
 ## 2026-10-06 — Round 2's condition: a record's parts must agree
 
 - Re-check round 2: `READY_WITH_CONDITIONS`
-  ([verdict](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/review/2026-10-06-alpha-recheck-round2.md)).
+  ([verdict](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/review/2026-10-06-alpha-recheck-round2.md)).
 - N7: directory records that carry data, or that are named like a file, are
   refused.
 - N9: local header names must match the central ones.
 - N8: a missing import file answers `422`.
 - N10: two stale statements corrected.
 - Gate on `754a66dd` green: Rust 3367/0/178, corpus 143/143
-  ([ALPHA_FINAL_GATES §10](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#10-ar18-re-check-round-2-condition-r4-fixed-and-re-gated)).
+  ([ALPHA_FINAL_GATES §10](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#10-ar18-re-check-round-2-condition-r4-fixed-and-re-gated)).
 - Next: re-check round 3.
 
 ## 2026-10-06 — The re-check's conditions: the reader's names and the payload's budget
 
 - Independent re-check: `READY_WITH_CONDITIONS`
-  ([verdict](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/review/2026-10-06-alpha-conditions-recheck.md)).
+  ([verdict](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/review/2026-10-06-alpha-conditions-recheck.md)).
 - N1: members are judged on the names the `zip` reader decodes, too (Unicode
   Path, CP437 against UTF-8).
 - N2: a protected payload is counted before it is unpacked.
@@ -1079,7 +1079,7 @@ historical, standalone study scope.
 - N5: a bad import file answers `422 projectNotImportable`, non-ZIP included.
 - N6 (web reload) is handed to the UI owner and disclosed in KL §82.
 - Gate on `3ede4817` green; Rust 3359/0/178, corpus 143/143
-  ([ALPHA_FINAL_GATES §9](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#9-ar18-re-check-conditions-r1r3-fixed-and-re-gated)).
+  ([ALPHA_FINAL_GATES §9](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#9-ar18-re-check-conditions-r1r3-fixed-and-re-gated)).
 - Next: re-check round 2.
 
 ## 2026-10-06 — The minor findings M1–M9 fixed as well
@@ -1097,9 +1097,9 @@ historical, standalone study scope.
 - M9: `source-map-js` 1.2.2.
 - 17 of 17 mutants killed. Gate on `faa3955f`: Rust 3350/0/178, Vitest 2076,
   Chromium 142, corpus 143/143, AppImage
-  ([ALPHA_FINAL_GATES §8](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
+  ([ALPHA_FINAL_GATES §8](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
 - The UI owner's follow-up `5d648560` is part of the candidate.
-- Next: the independent re-check ([brief](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/review/AR18_RECHECK_BRIEF.md)).
+- Next: the independent re-check ([brief](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/review/AR18_RECHECK_BRIEF.md)).
 
 ## 2026-10-06 — UI follow-ups from AR16 and KL-61: honest style hint, styled type outcome
 
@@ -1119,7 +1119,7 @@ historical, standalone study scope.
 
 - Independent AR18 review: `READY_WITH_CONDITIONS`, with no CRITICAL
   finding; four IMPORTANT ones
-  ([verdict](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/review/2026-10-06-alpha-independent-review.md)).
+  ([verdict](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/review/2026-10-06-alpha-independent-review.md)).
 - F1: Open and Import refuse to replace unsaved edits. The server answers
   `409` with kind `projectUnsavedChanges` and checks twice; the web asks
   *Cancel / Discard changes and open / Save and open*.
@@ -1133,9 +1133,9 @@ historical, standalone study scope.
   counts) are fixed.
 - 16 of 16 mutants were killed. Gate on `64badb99`: Rust 3331/0/177, Vitest
   2076, Chromium 139, corpus 142/0. AppImage rebuilt
-  ([ALPHA_FINAL_GATES §7](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#7-ar18-conditions-c1c5-fixed-and-re-gated)).
+  ([ALPHA_FINAL_GATES §7](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#7-ar18-conditions-c1c5-fixed-and-re-gated)).
 - Next: the independent re-check of the fixes
-  ([brief](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/review/AR18_RECHECK_BRIEF.md)).
+  ([brief](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/review/AR18_RECHECK_BRIEF.md)).
 
 ## 2026-10-06 — The last red corpus pair turns green, and UI-04 gets its signature
 
@@ -1153,14 +1153,14 @@ historical, standalone study scope.
 - Full §5 gate on the clean revision `4b9e913e`, one script, all leases,
   offline: Rust 3317 passed / 0 failed / 177 ignored, Vitest 2071, Chromium
   139, fmt, clippy, `cargo deny`, the five `xtask` checks and `check-appimage`
-  all green ([ALPHA_FINAL_GATES](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md)).
+  all green ([ALPHA_FINAL_GATES](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md)).
 - Private corpus: 142 `OriginalData` tests selected from the source by script;
   140 pass, the known `http_device_compare` pair fails (stale test harness
   without an activity-history store; the server fails closed). Commissioning
   owner.
 - AppImage built with `--remap-path-prefix`: no builder home path left in the
   binaries; offline Wayland start and API steps as in AR17.
-- The independent review brief is [review/AR18_REVIEW_BRIEF.md](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/review/AR18_REVIEW_BRIEF.md);
+- The independent review brief is [review/AR18_REVIEW_BRIEF.md](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/review/AR18_REVIEW_BRIEF.md);
   the review itself is a fresh Claude session the user starts.
 
 ## 2026-10-06 — KL-61: a group address finally says what it declares, not just what it ends up with
@@ -1192,7 +1192,7 @@ historical, standalone study scope.
 
 - Claim-by-claim pass by script and live probes: all 95 `knx` invocations,
   bold labels, env vars, routes, versions and every "not yet" sentence checked
-  against the running application ([MANUAL_ACCEPTANCE](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/MANUAL_ACCEPTANCE.md)).
+  against the running application ([MANUAL_ACCEPTANCE](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/MANUAL_ACCEPTANCE.md)).
 - Stale claims fixed: group-address style is changeable (Project node,
   undoable), autosave exists, drag and drop links group addresses, the export
   dialog has section choices, `knx diff --exit-code` exists, translations are
@@ -1236,14 +1236,14 @@ historical, standalone study scope.
 - Every screenshot passage re-read; stale claims fixed (the bus monitor's
   button is **Search**, start-up gateway search stated, welcome cards, help
   topics, catalog rows).
-- Checklist [MANUAL_ACCEPTANCE](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/MANUAL_ACCEPTANCE.md); the claim-by-claim pass
+- Checklist [MANUAL_ACCEPTANCE](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/MANUAL_ACCEPTANCE.md); the claim-by-claim pass
   over chapters without screenshots is still open.
 
 ## 2026-10-06 — AR17: a real AppImage, weighed and sniffed (offline)
 
 - Local candidate `KNXBench_0.1.0-alpha.4_amd64.AppImage` from `6b9b6818`
   (clean tree), SHA-256 `4c778104…80ef2`, `xtask check-appimage` ok. Record:
-  [ALPHA_CANDIDATE](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_CANDIDATE.md).
+  [ALPHA_CANDIDATE](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_CANDIDATE.md).
 - Offline smoke in a loopback-only namespace: launch, new/import/save/reopen,
   clear errors, no non-loopback socket — under X11 (private Xvfb, unmodified
   AppImage) and native Wayland.
@@ -1256,7 +1256,7 @@ historical, standalone study scope.
 
 ## 2026-10-06 — AR15 done: one page that says what the Alpha is, and what it is not yet
 
-- New [ALPHA_SCOPE_MATRIX](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_SCOPE_MATRIX.md): capabilities by evidence
+- New [ALPHA_SCOPE_MATRIX](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_SCOPE_MATRIX.md): capabilities by evidence
   level (verified / simulator-only / externally blocked / accepted / later),
   deployment, import and hardware boundaries, ledger totals (189 rows), and a
   release disposition for each of the 13 rows not yet accepted — nothing
@@ -1682,7 +1682,7 @@ where themes are stored, Neon Grid and Bitcoin DeFi are removed.
   selected offline private 68/0, stamped release build
   ([receipt](evidence/commission-integrated-gates-ae567d00-2026-10-05.json)).
 - User decisions: the Web partial-scope selector and history adoption go to the
-  UI owner ([handoff](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05));
+  UI owner ([handoff](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05));
   no reset route/UI (accepted boundary, KNOWN_LIMITATIONS §140).
 - The serial-lookup entry below described a local candidate; it is part of this
   published state. Metadata is not recovery; no power-loss guarantee.
@@ -1965,7 +1965,7 @@ where themes are stored, Neon Grid and Bitcoin DeFi are removed.
 - Fix found on the way: a wrong password that passed the check byte surfaced
   as "corrupt deflate stream"; it is now `WrongPassword`.
 - Open: Web password dialog (UI handoff), real ETS4/ETS5 sample, AES.
-  Details: [ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_READINESS.md#ar08-password-import-entry-paths-2026-10-04).
+  Details: [ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_READINESS.md#ar08-password-import-entry-paths-2026-10-04).
 
 ## 2026-10-04 — AR06V: existing product-ZIP count contracts verified
 
@@ -2131,7 +2131,7 @@ readiness; prior U/UA/AR/K delivery receipts and accepted boundaries stay intact
   heading count (115) and every fragment link are unchanged; a script proved
   no original line is missing.
 - `goal-ui.md` (owner agreed 18:30): its *Where things stand* narrative moved
-  verbatim to [UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md#owner-status-history)
+  verbatim to [UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md#owner-status-history)
   and the section now links to the ledger; the `goal.md` ownership row points
   to `alpha-release-goal.md` and the archived file. The five IDs it named all
   have ledger rows.
@@ -2195,7 +2195,7 @@ readiness; prior U/UA/AR/K delivery receipts and accepted boundaries stay intact
 
 ## 2026-10-04 — AR14D D1: status documents slimmed, consolidation planned before AR15
 
-- Retired and dated documents moved verbatim to [docs/archive](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/README.md):
+- Retired and dated documents moved verbatim to [docs/archive](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/README.md):
   `goal.md`, `OFFENE_PUNKTE.md`, `PROJECT_ANALYSIS_2026-09-15.md`. This log
   keeps everything since the last October entry; the 12.5k-line September tail
   moved verbatim to [docs/history](history/IMPLEMENTATION_STATUS_2026-09.md).
@@ -2206,7 +2206,7 @@ readiness; prior U/UA/AR/K delivery receipts and accepted boundaries stay intact
   no new dead link (17 pre-existing ones in old plans and `../CLA.md` are
   unchanged and not part of this package).
 - The harder steps are planned as package AR14D D2–D5 in
-  [alpha-release-goal.md](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/alpha-release-goal.md#ar14d--consolidate-status-tracking-before-ar15)
+  [alpha-release-goal.md](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/alpha-release-goal.md#ar14d--consolidate-status-tracking-before-ar15)
   before AR15: one source-ID ledger with an ADR and an `xtask` check, a topic
   split of `RESEARCH.md`, resolved `KNOWN_LIMITATIONS` bodies moved to history
   behind stable stubs. They run under a new status-docs lock.
@@ -3447,7 +3447,7 @@ frozen code/config inputs and 17 shadow bindings match; reviewed runtime diff
 is unchanged. Integrated Float-guard coexistence and publication remain
 PENDING. This does not close long-session, Web, hardware or release scope.
 
-The [42-ID ledger](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md) matches the readiness inventory
+The [42-ID ledger](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md) matches the readiness inventory
 without omissions, duplicates or extras; every row retains its fallback and
 unblock condition. [API contract](contracts/COMMISSIONING_ACTIVITY_HISTORY.md), ADR-0064
 and the direct Profile audit document the bounded support. Long-session intent,
@@ -4097,7 +4097,7 @@ See [parameter boundary](contracts/PARAMETER_SEMANTICS_BOUNDARY.md). AR07 broade
 
 - Audited all 24 `goal-ui.md` rows in the alpha-readiness inventory against
   current source and retained contracts; U0–U13 were already closed and were
-  not reimplemented. Per-ID evidence: [UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md).
+  not reimplemented. Per-ID evidence: [UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md).
 - Catalog picker now offers only KNX product/ZIP packages; the project inspector
   exposes the existing undoable group-address-style command and consumes its
   authoritative response, with unknown/refused/pending cases covered.
@@ -4221,7 +4221,7 @@ See [parameter boundary](contracts/PARAMETER_SEMANTICS_BOUNDARY.md). AR07 broade
   and artifact/tree matched the staged/gated candidate. Required author and
   committer verified, no co-author trailer. Owned checkout/branch, build
   targets and scratch removed; foreign root/reports left untouched.
-- Docs-only audit [ADR0039_ENFORCEMENT_AUDIT](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ADR0039_ENFORCEMENT_AUDIT.md)
+- Docs-only audit [ADR0039_ENFORCEMENT_AUDIT](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ADR0039_ENFORCEMENT_AUDIT.md)
   distinguishes completed phases 1–2 from the six remaining direct live
   allocator calls, single catalog-create assignment and post-command enrichment.
   The old nine-bypass narrative is historical, not current source evidence.

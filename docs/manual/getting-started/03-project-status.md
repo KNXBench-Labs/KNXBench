@@ -7,23 +7,27 @@ Read this chapter before you trust KNXBench with a project you care about.
 ## The version number
 
 Every part of KNXBench carries its own version
-([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). On 2026-10-07 the CLI,
-the desktop shell and the web frontend report `0.1.0-alpha.5`, the standalone server
-`0.1.0-alpha.1`. The current pre-release is `v0.1.0-alpha.5` in the private
-repository, built and checked locally; the earlier `v0.1.0-alpha.4` was
-withdrawn. See [Installation](04-installation.md).
+([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). In the source checked
+on **8 October 2026**, the CLI, desktop and web frontend are `0.1.0-alpha.5`;
+the standalone server is `0.1.0-alpha.2`. The public Linux pre-release is
+[`v0.1.0-alpha.5`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5).
+It was built and checked locally. See [Installation](04-installation.md).
+
+**Source documentation and a release asset are different snapshots.** Check the
+running application's version and build commit before expecting a recently added
+feature to appear in an older AppImage. A version label is not a time machine.
 
 ## What "alpha" means here
 
 **KNXBench is Alpha software.** Concretely:
 
-- As of 2026-10-06, `docs/KNOWN_LIMITATIONS.md` has 121 numbered headings,
-  including eleven resolved or signpost entries. Of the 110 residual
-  boundaries, five are K1 (critical); the
-  [detailed triage](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/LIMITATION_TRIAGE.md) is the authority, not a count of
-  headings interpreted as defects.
+- Compatibility varies by project schema, manufacturer data and operation.
+  [Known issues](../known-issues.md) explains the user-visible boundaries;
+  [the ledger](../../status/LEDGER.md) is the detailed status record. Counting
+  historical limitation headings is not a useful bug score.
 - The web/Docker server's protection is one shared password and one session
-  cookie. No user accounts, no roles, no audit trail, and no TLS of its own.
+  cookie. No user accounts, no roles and no per-user audit trail. With a password,
+  it provides HTTPS by default using a self-signed certificate.
   Without a password it refuses to leave loopback at all.
   [Installation](04-installation.md) has the recipe and the caveats.
 - Writing configuration to a real KNX device is limited to a device download

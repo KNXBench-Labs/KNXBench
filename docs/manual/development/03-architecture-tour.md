@@ -229,7 +229,7 @@ upload), `auth_routes.rs` (login, logout, status) and `debug_report_routes.rs`.
 
 ## Where the decisions are written down
 
-[`docs/adr/`](../../adr/README.md) holds the architecture decision records (83 on 2026-10-06). Each one
+[`docs/adr/`](../../adr/README.md) holds the architecture decision records. Each one
 states a decision that has already been taken, together with the evidence that forced it —
 a measurement, a license, a standard — so that a later reader who disagrees can go back and
 check whether the evidence still holds, instead of re-arguing from memory.
@@ -256,4 +256,4 @@ is the moment to write one.
 That is the end of the manual. If something in it turned out to be wrong, that is a bug
 like any other, and [Contributing](01-contributing.md) explains where to put it.
 
-[Manual index](../README.md)
+Next: [Return to the manual index](../README.md) →

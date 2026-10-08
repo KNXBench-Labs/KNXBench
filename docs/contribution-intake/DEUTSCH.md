@@ -130,11 +130,11 @@ ZIPs sind auf 24.000.000 Byte begrenzt – unter GitHubs dokumentierter Grenze v
    erwartet, dass das Produkt verfügbar ist. Den Grund kenne ich nicht.“
    Das ist eine **Beispielbeschreibung**, kein gemessenes KNXBench-Ergebnis.
 5. Ziehe die gespeicherte ZIP in **Report ZIP (optional)** oder nutze die
-   Anhangsauswahl. **Warte, bis der Anhangslink erscheint.** [1][3]
+   Anhangsauswahl. **Warte, bis der Anhangslink erscheint.** [1], [3]
 6. Lass andere optionale Felder leer, wenn du die Antwort nicht kennst. Der
    App-Link übergibt nach einer Analyse die Analyzer-Version an das Formular;
    GitHub unterstützt solche Feld-ID-Vorbelegungen. Prüfe den Wert, falls er
-   angezeigt wird. [2][3]
+   angezeigt wird. [2], [3]
 7. Bestätige die beiden Veröffentlichungshinweise und klicke auf **Create issue**. [2]
 
 > **Wichtig:** Bereits beim Anhängen beginnt der Upload, noch vor dem Absenden

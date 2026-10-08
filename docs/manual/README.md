@@ -1,3 +1,5 @@
+← Previous: [Repository overview](../../README.md)
+
 # KNXBench documentation
 
 Welcome to the KNXBench manual. KNXBench is a Linux-first KNX engineering application: you
@@ -9,6 +11,35 @@ document, and watch the bus while it happens. Import is one-way: KNXBench reads 
 This manual is written as a small book. If you are new here, start at chapter 1 and follow
 the **Next** links at the bottom of each page. If you already know what you are looking for,
 jump straight in — every chapter also links back here.
+
+## Choose your starting point
+
+| You want to… | Start here | What you will leave with |
+| --- | --- | --- |
+| Try the app without hardware | [Installation](getting-started/04-installation.md), then [your first project](getting-started/06-first-start.md#tutorial-create-save-and-reopen-your-first-project) | A saved `.knxdb` you can reopen |
+| Understand the KNX vocabulary | [KNX in a few minutes](knx-basics/01-knx-in-a-few-minutes.md) | Devices, addresses and DPTs explained without a sales seminar |
+| Bring an ETS project | [Projects](user-guide/02-projects.md) | An imported project and a report you can check |
+| Configure a small job | [Complete configuration workflow](user-guide/06-configuration-workflow.md) | A device, group link and saved working file; no hardware writes |
+| Diagnose bus traffic | [Bus and interfaces](user-guide/07-bus-and-interfaces.md) | A separate, safety-aware guide to actual KNXnet/IP operations |
+| Run a server | [Web and Docker](user-guide/11-web-and-docker.md) | Storage, authentication, HTTPS and networking configuration |
+| Fix a problem | [Troubleshooting](reference/03-troubleshooting.md) or [FAQ](reference/04-faq.md) | Checks to run before opening an issue |
+| Contribute code or docs | [Contributing](development/01-contributing.md) | Build instructions, quality gates and project conventions |
+
+**No hardware? No problem.** Creating, importing, editing, saving and reporting
+are file workflows. A bus connection is needed only for bus operations.
+
+**Which build does this describe?** The manual follows repository source. The
+public AppImage is a release snapshot and may not contain later source changes.
+[Project status](getting-started/03-project-status.md) explains how to compare them.
+
+## A visual map of the workbench
+
+![The real KNXBench workbench in the porcelain theme, showing the fictional Sample house, project explorer and group-address table](../assets/screenshots/porcelain-group-addresses.png)
+
+The left explorer answers **where**, the centre workspace answers **what**, and
+the inspector answers **which properties**. Screenshots use fictional data, not
+somebody's actual building. The [media inventory](../assets/README.md) records
+capture provenance and how to refresh them.
 
 > **Note**
 >
@@ -85,7 +116,7 @@ links into them wherever the detail matters.
 - [Compatibility](../COMPATIBILITY.md)
 - [Known limitations](../KNOWN_LIMITATIONS.md) and [open work](../OPEN_WORK.md)
 - [Implementation status](../IMPLEMENTATION_STATUS.md)
-- [Roadmap](../ROADMAP.md) and [compatibility](../COMPATIBILITY.md)
+- [Roadmap](../ROADMAP.md)
 - [Language packs](../LANGUAGE_PACKS.md)
 
 ## Where to ask

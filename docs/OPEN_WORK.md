@@ -1,20 +1,28 @@
 # Open work after the 0.1 alpha
 
-**Audit:** 2026-10-08, against `origin/main` `b34afcc8`. This page is the one
+**Audit:** 2026-10-08, against `origin/main` `608a204b`. This page is the one
 place that answers "what is not done?". It replaces the three finished alpha
 goals (removed 2026-10-08, see [REMOVED_DOCS](history/REMOVED_DOCS.md)). It does not change any
 status by itself: per-ID status stays in the [ledger](status/LEDGER.md),
 behaviour boundaries in [KNOWN_LIMITATIONS](KNOWN_LIMITATIONS.md).
 
+**Freshness note:** [all twelve original ideas and the roadmap](status/2026-10-08-ideas-roadmap-audit.md)
+were checked against actual source/callers. Read-only MCP, Flow, L3 legacy web
+upload, commissioning history UI, website/story publication and the original
+humour templates are delivered; their broader boundaries are not new tasks.
+The [known-issues/status follow-up](status/2026-10-08-known-issues-status-audit.md)
+also reconciles current source claims, historical limitations and evidence type;
+it changes documentation, not owner rows or device behavior.
+
 Short version: **every goal file is finished.** Nothing in the ledger is
 `TODO`, `IN_PROGRESS`, `BLOCKED_EXTERNAL` or `WAITING_*`. What remains is
-(1) work that is running or waiting right now, (2) unpublished local work in
-the root checkout, (3) deferred items with a recorded user decision, and
+(1) work that is running or waiting right now, (2) parked unpublished packages
+and publication follow-up, (3) deferred items with a recorded user decision, and
 (4) later scope that never was an alpha task.
 
 ## How this was checked
 
-- Goal checkboxes, counted from `origin/main`: `alpha-release-goal.md` 93
+- Historical goal checkboxes, counted before removal: `alpha-release-goal.md` 93
   checked / 7 open, `goal-ui.md` 37 / 0, `goal-commission.md` (no checklist,
   §4 completion condition). The 7 open boxes are all user-deferred or
   optional (section 3).
@@ -23,20 +31,33 @@ the root checkout, (3) deferred items with a recorded user decision, and
   ACCEPTED_BOUNDARY 2.
 - Handover `.ai/CURRENT_STATE.md` (newest entries per track), worktree list,
   and a path-by-path check of which root files exist on `origin/main`.
+- Current ledger mechanically recounted: 191 distinct IDs, 47 delivered,
+  121 accepted boundaries and 23 later-scope rows; no active/waiting rows.
+  These are unequal source IDs, not a product-completion percentage.
 
 ## 1. Running or waiting right now
 
 | Track | State | Next step | Where |
 | --- | --- | --- | --- |
-| Legacy ETS3 product databases (`.vd3`–`.vd5`) | L1 inspection, L2 import and secret withholding are on `main` | **L3:** server upload, password dialog, remembered password (one 0600 file under `$XDG_CONFIG_HOME/knx/`), visual web check. Then the `.vd5` package (Siemens sample: 173 MB payload exceeds the 64 MiB bounds; measure memory first). **L4** download later. | [ADR-0094](adr/0094-legacy-exim-product-files.md), [VD4 import](VD4_PRODUCT_DATABASE_IMPORT.md), KL §128; worktree `legacy-vd-l3-20261008` |
+| Legacy ETS3 product databases (`.vd3`–`.vd5`) | L1 inspection, L2 import/secret withholding and L3 web upload/password handling are on `main` | Untyped `TypeNone` spacer presentation still needs a separate fix (KL §128). The large `.vd5` package (Siemens sample: 173 MB payload) exceeds the 64 MiB bounds; measure before widening them. **L4** device download remains later scope. | [ADR-0094](adr/0094-legacy-exim-product-files.md), [VD4 import](VD4_PRODUCT_DATABASE_IMPORT.md), KL §128 |
 | Devices navigation ("Geräte" view, every device mention links to the editor) | Grill-me round 1 (Q1–Q5) asked, not answered | Answers, then synthesis and an explicit go | `.ai/logs/2026-10-08_claude_devices-view-grilling.md` |
-| Project-evolution story | Edition `2026-10-08.4` (cutoff 8 October) on `main`; [goal](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/PROJECT_EVOLUTION_GOAL.md) delivered; `2026-10-08.4` approved for publication on 8 October | Publication step: public page variant (no private-preview banner, no `noindex`), hosting on the owner's domain, optional WebKit check | [story/](../story/README.md), ADR-0068 |
-| Commissioning refusal buckets (ADR-0086) | House: 32 untested / 2 unsupported / 1 excluded; corpus 1 verified + 89 untested of 246 programs | Remaining buckets need better evidence: module instances (placement rule, §19.11), `placed by Property` (9 MDT programs), floats (contradicting data), `Priority=High`, parameter-value, non-memory masks (`07B0`, `2705`, `0912` …) | [research/commissioning.md](research/commissioning.md) §19.11–§19.18 |
+| Website / published Evolution Story | Edition `2026-10-08.4` is approved and deployed with the site; first publication is complete | HTTP→HTTPS redirect/IPv6 verification, Pages action-runtime maintenance and owner's privacy review; optional WebKit evidence remains separate | [story/](../story/README.md), [WEBSITE](WEBSITE.md), ADR-0068/0095 |
 
-## 2. Unpublished local work in the root checkout
+**Commissioning refusal buckets are an evidence backlog, not a running track.**
+The recorded house/corpus snapshot and module-placement, `placed by Property`,
+float, priority/value and non-memory-mask gaps remain in
+[commissioning research §19.11–19.18](research/commissioning.md). The user's
+hardware/vendor/ETS deferral in section 3 still applies; no new write or
+experiment is authorized by this documentation audit.
 
-None since 2026-10-08. The root checkout was synchronized after the public
-launch; its two finished local packages are delivered:
+## 2. Parked packages and publication follow-up
+
+The root's two formerly parked packages are delivered. The separate
+**documentation refresh and ideas/roadmap audit** remain local in
+`KNXBench.worktrees/docs-refresh-20261008`, now based on `608a204b`: revised
+README/manual, real media, documentation checker and this reconciliation.
+Their review/commit/publication remains a delivery step, not a missing app
+feature. No commit or push is performed by this audit.
 
 - **Community evidence** (File → Analyze support gaps…) is in the repository,
   and its intake lives here (ADR-0091). The interim
@@ -63,8 +84,11 @@ These stay open on purpose. Reopen only on a new decision.
 
 ## 4. Later scope (never alpha tasks)
 
-From the ledger's 23 `LATER` rows, `goal-commission.md` §3c and the root
-`ideas.md`. Each needs its own goal or ADR when the user asks for it.
+From the ledger's later-scope rows, historical `goal-commission.md` §3c and
+the [original-ideas audit](status/2026-10-08-ideas-roadmap-audit.md). Root
+`ideas.md` is ignored and is not present in a fresh clone. Each new feature
+needs its own scoped goal or ADR when requested; old future-row labels do
+not erase subsequently delivered functionality.
 
 - **Commissioning, new media and procedures:** Powerline (PL110/PL132), KNX IP
   device configuration (masks `5705h`/`57B0h`), coupler filter tables
@@ -81,11 +105,16 @@ From the ledger's 23 `LATER` rows, `goal-commission.md` §3c and the root
   (12/13/14/20/22) and an AES-protected ETS6 sample.
 - **History:** persistent undo history (`HISTORY-01`); versioned backups /
   project time travel beyond autosave (`HISTORY-02`).
+- **Comparison/report extensions:** applying/merging diffs, three-way
+  comparison and native PDF output remain absent; comparison and browser
+  print-to-PDF already exist. These are recorded boundaries, not active work.
 - **Features:** project notes (`FUTURE-03`, ADR-0031 accepted, not built),
   repetitive-task automation (`FUTURE-02`), a mutation-capable LLM/MCP surface
   (`FUTURE-01`; the read-only MCP server shipped, ADR-0090), dashboard
-  drill-down, mobile app, other operating systems, a bigger catalogue of
-  humorous messages (`FUTURE-08`).
+  drill-down, mobile app, native ports and manufacturer online-catalog
+  updates (`FUTURE-05`). More humour (`FUTURE-08`) means optional expansion:
+  the original thirty-entry lists already exist. Per-category motion controls
+  remain later scope; global motion controls already work.
 - **KNX Secure research:** where usable Data Secure runtime keys come from,
   project file or keyring (`R-SEC-01`, RESEARCH §9).
 - **Tooling/statistics** (`TOOLS-01` to `TOOLS-05`): where the AI statistics
@@ -103,13 +132,18 @@ Reported, not changed here (the owner edits its rows):
   (ADR-0085). The row could become DONE/ACCEPTED_BOUNDARY with that evidence.
 - `FUTURE-01` cites only research; the read-only MCP adapter (ADR-0090) is a
   delivered slice of it.
+- `FUTURE-08` must not be read as a missing humour mechanism: its residue is
+  optional additional copy. Owner rows are not changed by this audit.
 
 ## 5. Repository chores
 
 - **CI** is disabled (`gh workflow disable CI`, 2026-10-07) until the user
   re-enables it.
-- **Repository visibility:** `KNXBench-Labs/KNXBench` is private; going public
-  needs the launch consolidation of community forms/guides (ADR-0091 in the
-  root, section 2).
+- **Repository visibility:** `KNXBench-Labs/KNXBench` became public on
+  8 October 2026; the alpha.5 AppImage and checksum file are public too.
+  Community-evidence/forms consolidation shipped separately; the interim
+  intake repository is already retired. Private mailbox verification and the
+  owner's retention decision for the private pre-launch rollback repository
+  remain separate; this audit performs neither action.
 - **Stale worktree:** `$TMPDIR/devnav-ro` (read-only interview scratch) can go
   once the devices-navigation interview ends.

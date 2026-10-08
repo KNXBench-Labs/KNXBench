@@ -63,9 +63,12 @@ this writing:
   rather than producing a plausible-looking wrong answer.
 - Resolving *which* datapoint type applies to a given group address (as opposed to
   decoding bytes once you already know the type) is the inference described in the
-  previous chapter — it comes from the linked communication objects, never from guessing
-  based on the bytes themselves.
+  previous chapter — it uses an address's explicit declaration when applicable,
+  otherwise the linked communication objects, never a guess based on the bytes.
 
+Main-family coverage is not a guarantee of every subtype's semantics or functional
+block behavior. Structured types and some encodings have narrower documented
+boundaries in the [DPT audit](../../spec-audits/2026-10-07-dpt-document-audit.md).
 This is not full DPT coverage, and it isn't presented as such. The
 [Supported and unsupported KNX/ETS functionality](../reference/02-supported-and-unsupported.md)
 reference chapter is the place to check a specific type before you rely on it.

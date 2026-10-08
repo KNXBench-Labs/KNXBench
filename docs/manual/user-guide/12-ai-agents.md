@@ -2,6 +2,12 @@
 
 # AI agents over MCP
 
+**Goal:** ask an AI client read-only questions about saved project files.
+**Prerequisites:** a built `knx-mcp`, an MCP-capable client and authorised saved files.
+**Expected result:** answers from the saved snapshot, not the unsaved open editor.
+**Watch out:** the adapter is experimental, does not access the bus and does not
+apply changes. Read and preview any suggested CSV yourself before importing it.
+
 KNXBench can answer an AI agent's questions about your saved projects. The
 `knx-mcp` program speaks the [Model Context Protocol](https://modelcontextprotocol.io)
 over stdio, so an agent you already use (Claude Code, Hermes, Cursor and

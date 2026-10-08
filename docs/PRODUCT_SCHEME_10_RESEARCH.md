@@ -12,7 +12,7 @@ budget, UI contract, vendor execution or bus behavior has changed.
 
 **[I — indexed official reference]** KNX Association's *Import/Add products* describes `.knxprod` as XML
 product data beginning with ETS4. Its registration/certification file-format
-reference likewise associates that extension with ETS4, ETS5 and ETS6. [1][2]
+reference likewise associates that extension with ETS4, ETS5 and ETS6. [1], [2]
 Those statements establish a format-family boundary, not equivalence between
 individual XML namespaces or compatibility with an independent importer.
 

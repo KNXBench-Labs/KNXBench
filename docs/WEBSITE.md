@@ -1,7 +1,10 @@
-# KNXBench website: local marketing companion
+# KNXBench website: static marketing companion
 
-Status: user-approved implementation, in the repository since 2026-10-08. The
-site itself is not deployed yet; the main repository is public.
+Status: user-approved implementation and GitHub Pages deployment on 2026-10-08.
+knxbench.com serves the release build and approved Story; the main repository
+is public. Default local builds remain restricted previews. Redirect/IPv6
+verification, workflow runtime maintenance and owner privacy review are
+follow-ups, not a first-publication blocker.
 Decision: [ADR-0095](adr/0095-static-marketing-companion.md).
 
 ## Agreed brief

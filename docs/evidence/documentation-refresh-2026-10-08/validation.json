@@ -1,0 +1,92 @@
+{
+  "verified_at": "2026-10-08 17:00 CEST",
+  "application_source_commit": "4c84ab9f2d80b7a7118402e8cb0c901dc5e4c14d",
+  "delivery": "Local uncommitted documentation worktree docs-refresh-20261008. No commit, push, tag, deployment or application edits authored.",
+  "upstream_sync": "Fast-forwarded local task branch to delivered main 4c84ab9f; four documentation conflicts resolved, preserving website/community delivery and the published URL repair. Root checkout untouched.",
+  "screenshots": 32,
+  "workflow_gifs": [
+    {
+      "path": "workflows/add-device.gif",
+      "bytes": 296475,
+      "duration_seconds": 11.6,
+      "width": 960,
+      "height": 600
+    },
+    {
+      "path": "workflows/new-project.gif",
+      "bytes": 321760,
+      "duration_seconds": 10.1,
+      "width": 960,
+      "height": 600
+    },
+    {
+      "path": "workflows/search.gif",
+      "bytes": 213986,
+      "duration_seconds": 7.6,
+      "width": 960,
+      "height": 600
+    }
+  ],
+  "media_hashes_verified": 35,
+  "checks": {
+    "tools_unit_tests": 38,
+    "new_documentation_tests_included": 12,
+    "language_registry_tests": 19,
+    "capture_tests": 2,
+    "capture_results": [
+      "real server imported fictional sample",
+      "exactly one Practice actuator created via wizard",
+      "Practice house created, saved and reopened through actual UI",
+      "support-gap dialog captured before file selection, not analysis/export acceptance"
+    ],
+    "tls_smoke": {
+      "network": "isolated loopback namespace",
+      "deployment": "native source binary, not Docker",
+      "port_substitution": "8484 -> 4840 for isolated test",
+      "runs": [
+        {
+          "run": 1,
+          "documented_probe_body": "ok",
+          "certificate_verified_probe_body": "ok"
+        },
+        {
+          "run": 2,
+          "documented_probe_body": "ok",
+          "certificate_verified_probe_body": "ok"
+        }
+      ],
+      "certificate_survived_restart": true,
+      "both_stop_exit_codes": 0
+    },
+    "local_links": "Documentation: markdown_files=198, local_targets=1662, images=43, chapters=33\nPASS: 0 errors; external URLs are not checked.\nRun xtask check-anchors separately for heading anchors.",
+    "anchors": "gate target: <worktree>\nanchors ok: 461 links checked across 198 markdown files, none dead",
+    "repository_gates": {
+      "headers": "gate target: <worktree>\nheaders ok: 716 files with a well-formed header, 155 without one (ceiling 155), 21 generated files skipped",
+      "layering": "gate target: <worktree>\nlayering scope: 478 resolved packages\nlayering ok: knx-core reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-etsproj reaches neither knx-store nor knx-productdb; knx-productdb reaches none of knx-etsproj, knx-store, knx-secure; knx-projection reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-secure reaches none of [\"knx-core\", \"serde\"]; knx-mcp reaches none of [\"knx-net\", \"knx-server\", \"knx-secure\", \"knx-etsproj\", \"axum\", \"hyper\", \"reqwest\"]",
+      "ledger": "gate target: <worktree>\nledger ok: 191 rows in docs/status/LEDGER.md",
+      "corpus-gates": "gate target: <worktree>\ncorpus gates ok: 465 Rust files scanned, no silent early return on a missing corpus"
+    },
+    "frontend": "TypeScript + Vite production build on synced source passed",
+    "server": "cargo build --locked -p knx-server -p xtask on synced source passed; compiler log rebuilt knx-app and knx-server",
+    "whitespace": "git diff --check passed"
+  },
+  "github_markdown_review": "Official Markdown API HTML rendered in isolated browser with minimal preview CSS; light/dark/mobile screenshots, all image decode assertions and mobile overflow assertion passed. Not pixel-identical GitHub styling.",
+  "link_repair_provenance": "Exact URL map from already published 767c3770; upstream repair preserved after source sync, not a new independent repair of all 242 URLs.",
+  "ci_state_observed": "disabled_manually",
+  "not_claimed": [
+    "Full Rust workspace or full frontend test suite",
+    "New ETS, manufacturer or private-corpus compatibility evidence",
+    "Native Tauri/WebKitGTK/Orca validation",
+    "Real bus access or hardware writes",
+    "Rebuilt Docker image or execution of the full Docker update recipe",
+    "Exhaustive external URL checks",
+    "Public publication of this documentation package"
+  ],
+  "github_final_readme_render": "Final README re-rendered with GitHub API and inspected by isolated browser; all images decoded and no mobile overflow. Final light/dark/mobile files produced.",
+  "source_scope_checks": {
+    "application_edits": 0,
+    "ledger_edits": 0,
+    "staged_files": 0,
+    "shared_root_changes": 0
+  }
+}

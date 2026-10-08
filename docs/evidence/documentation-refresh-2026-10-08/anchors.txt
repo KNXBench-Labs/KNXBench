@@ -1,0 +1,2 @@
+gate target: <worktree>
+anchors ok: 461 links checked across 198 markdown files, none dead

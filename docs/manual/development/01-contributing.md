@@ -34,7 +34,26 @@ is better for everyone.
 > individual addresses, IP addresses of your gateways, room names, and customer names.
 > Once it is in a public issue, it stays there.
 
-### The debug report
+## Reporting support gaps
+
+For unsupported project/product data rather than a general bug, use
+**File → Analyze support gaps…** in a build that includes it. The
+[step-by-step contribution guide](../../contribution-intake/README.md) covers
+selection, analysis on your KNXBench instance, reduced-report preview, export
+permission and manual submission. Nothing is posted for you.
+
+![The real support-gap analysis dialog before a file is selected, showing the own-instance analysis explanation and the disabled upload action](../../assets/screenshots/porcelain-support-gap-analysis.png)
+
+**Goal:** prepare evidence a maintainer can investigate. **Prerequisites:** an
+authorised `.knxproj` or `.knxprod` of at most 32 MiB and a build with this menu.
+**Expected result:** a reviewed ZIP you can choose to attach yourself, or simply
+a useful written issue if analysis is unavailable. **Watch out:** your instance
+may be remote; reduced reports are not guaranteed anonymous, optional XML samples
+are unmodified, and original archives never belong in public issues. Private
+mailbox delivery remains unverified. A debug report and a support-gap report are
+different tools; the normal debug workflow follows below.
+
+## The debug report
 
 KNXBench can assemble most of that for you. Open the **File** menu and choose **Debug
 report**. The dialog asks for a short description, then lets you decide what goes in:
@@ -103,10 +122,10 @@ misconfiguration.
 
 ## The gates a change has to pass
 
-These run in CI on every push and pull request
-([`.github/workflows/ci.yml`](../../../.github/workflows/ci.yml)), and every one of them
-runs locally with the same command. A check that only exists on CI gets ignored, so there
-is deliberately nothing in CI you cannot reproduce on your own machine.
+These are the repository's local gates. Their definitions also live in
+[`.github/workflows/ci.yml`](../../../.github/workflows/ci.yml), but CI was disabled
+on 7 October 2026 pending a maintainer decision. Do not interpret an absent GitHub
+check as a passing check. Every command below can be run locally.
 
 Rust:
 
@@ -262,8 +281,8 @@ same change.
 
 ## What to expect
 
-One maintainer, evenings and weekends, a project in its `0.1.0-alpha` series with no release
-cut yet. Issues may sit for a while. Pull requests that arrive with a test and a
+One maintainer, evenings and weekends, a project in its `0.1.0-alpha` series with a public
+pre-release, not a support contract. Issues may sit for a while. Pull requests that arrive with a test and a
 documentation update are far more likely to be merged quickly than ones that need a
 conversation first.
 

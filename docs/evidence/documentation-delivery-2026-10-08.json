@@ -1,0 +1,45 @@
+{
+  "verified_at": "2026-10-08 19:34 CEST",
+  "source_base": "608a204bf28aa9df83413aa5ccb65241c32478aa",
+  "target": "origin/main",
+  "review": "In-session self-review; no independent subagent review.",
+  "package": "Combined documentation refresh, owner-approved README redesign, ideas/roadmap and Known Issues/status audits; real media and documentation/capture tooling.",
+  "publication": "Prepared for user-authorized commit/push. Earlier receipts retain their dated audit-time unpublished state; readback proof is appended separately.",
+  "delivery_checks": {
+    "tools_tests": 38,
+    "frontend_build": "npm run build --prefix apps/knx-web: exit 0",
+    "documentation": "Documentation: markdown_files=200, local_targets=1840, images=48, chapters=33\nPASS: 0 errors; external URLs are not checked.\nRun xtask check-anchors separately for heading anchors.",
+    "gates": {
+      "check-anchors": "gate target: <owned-worktree>\nanchors ok: 474 links checked across 200 markdown files, none dead",
+      "check-headers": "gate target: <owned-worktree>\nheaders ok: 716 files with a well-formed header, 155 without one (ceiling 155), 21 generated files skipped",
+      "check-layering": "gate target: <owned-worktree>\nlayering scope: 478 resolved packages\nlayering ok: knx-core reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-etsproj reaches neither knx-store nor knx-productdb; knx-productdb reaches none of knx-etsproj, knx-store, knx-secure; knx-projection reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-secure reaches none of [\"knx-core\", \"serde\"]; knx-mcp reaches none of [\"knx-net\", \"knx-server\", \"knx-secure\", \"knx-etsproj\", \"axum\", \"hyper\", \"reqwest\"]",
+      "check-ledger": "gate target: <owned-worktree>\nledger ok: 191 rows in docs/status/LEDGER.md",
+      "check-corpus-gates": "gate target: <owned-worktree>\ncorpus gates ok: 465 Rust files scanned, no silent early return on a missing corpus"
+    },
+    "xtask_build": "cargo build --locked -p xtask: exit 0; new task-specific target; audited the owned worktree.",
+    "staged_whitespace": "Passed after removing one surplus empty EOF line from language-test log; measured results unchanged.",
+    "staged_freeze_digest": "b76244ae14bd6425d3cf71f8813a586506716715d6b0b80d2864b21b7354e1b8",
+    "media_digests_verified": 35,
+    "application_source_changes": 0,
+    "owner_ledger_changes": 0,
+    "shared_root_bytes_head_index_preserved": true,
+    "inherited_handover": "All upstream lines preserved: diff contains additions only. A whole-blob substring check refused because an earlier task inserted its entry in the middle; no archive loss."
+  },
+  "review_adjustments": [
+    "Narrowed two README preservation statements to match documented source-byte/opaque-data/mapping limits.",
+    "Removed one surplus empty EOF line in language-test evidence."
+  ],
+  "visual_recheck": "Opened real Porcelain device-review and reopened-project PNGs: central content/actions readable and not clipped. Actual app footer and scrollable explorer retained; API save/reopen assertions, not image alone, prove persistence. Wizard screenshot wording is not a whole-project revision guarantee.",
+  "prior_evidence_not_rerun": [
+    "270 focused Web tests / 76 focused Rust tests in Known Issues/status audit",
+    "255 Web / 18 MCP / 10 HTTP tests in ideas audit (overlapping scopes; not added)",
+    "2 real-server captures and 32 PNGs/3 GIFs on source 4c84ab9f",
+    "README owner Docker/AppImage/checksum/GFM-render checks"
+  ],
+  "not_claimed": [
+    "Full Rust/frontend/browser suite rerun",
+    "New private-corpus, live-device, native accessibility or KNX compatibility acceptance",
+    "New media capture or website/AppImage deployment",
+    "Shared-root synchronization or publication of separate community-link audit"
+  ]
+}

@@ -2,6 +2,12 @@
 
 # Working with group addresses
 
+**Goal:** create a group address, link communication objects and check its type.
+**Prerequisites:** an open project and a device with communication objects for linking.
+**Expected result:** the table shows the address and its send/receive links.
+**Watch out:** a linked address cannot be deleted; resolve DPT conflicts before using
+it for a typed bus write. CSV moves and deletes need explicit preview confirmation.
+
 A **group address** is the address a KNX telegram is sent to. It is not a device. It is
 closer to a topic: a switch sends to `0/0/1`, a lamp actuator listens on `0/0/1`, and
 neither of them knows the other exists. Wiring a switch to a lamp in KNX means giving
@@ -80,9 +86,9 @@ ambiguous references are not used to guess a parent; an explicit repair can be
 undone without losing the imported original. A range that still contains
 addresses or child ranges cannot be deleted — the refusal says which.
 
-Ranges matter beyond tidiness for one reason: a group address that belongs to no range
-cannot be written to a `.knxproj` file. See
-[Projects](02-projects.md).
+Ranges organise the address table and the CSV's read-only group labels. An address
+without a range can still be saved in `.knxdb`. There is no `.knxproj` export.
+See [Projects](02-projects.md).
 
 ## Linking a communication object
 
@@ -122,8 +128,8 @@ The style is chosen when the project is created. To change it later, select the
 **Project** node in the Project Explorer and pick another **Group address style** in
 the properties pane. Every address keeps its value; only how it is written changes
 (`0/0/1` becomes `0/1` in two-level style). The change is one step on the undo stack,
-and a running bus monitor picks it up without reconnecting. The New project dialog's
-hint still says the style cannot be changed later; that text is out of date.
+and a running bus monitor picks it up without reconnecting. The project wizard
+also explains that the style can be changed later.
 
 ## Group addresses as CSV
 

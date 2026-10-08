@@ -2,6 +2,14 @@
 
 # Bus monitor and KNXnet/IP
 
+**Goal:** connect a monitor and interpret observed telegrams. Treat sending values
+and commissioning as separate operations, not tutorial housekeeping.
+**Prerequisites:** permission to access the installation, a supported KNXnet/IP
+gateway and network reachability from the server or desktop host.
+**Expected result:** a connected session and timestamped traffic when the bus sends it.
+**Watch out:** scans add bus traffic, and writes can operate real equipment.
+Project undo cannot reverse them. A flow edge is not proof a recipient acted.
+
 Everything so far happened inside a file. This chapter is the one where KNXBench
 talks to an actual installation — and, just as importantly, the chapter that says
 plainly what it will not do there.

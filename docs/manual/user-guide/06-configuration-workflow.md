@@ -12,6 +12,15 @@ The job: add a presence detector to an existing line, give it an address, put it
 room, and wire its switching object to a new group address — then get the result back
 out of KNXBench.
 
+**Prerequisites:** a running source build, a project with an existing line and room,
+and a suitable installed product. For the exact fictional data used here, generate
+`sample-house.knxproj` using `python3 tools/manual_sample_project.py <output-path>`
+from a repository checkout and import it. Use a disposable copy, not a customer project.
+The sample manufacturer and devices are invented. No bus connection is required.
+
+**Expected result:** one additional project device, a group address and an explicit
+communication-object link, saved as `.knxdb`. This changes the project file only.
+
 Each step links to the chapter that explains it properly. If something surprises you,
 follow the link rather than guessing.
 
@@ -53,24 +62,32 @@ See [Buildings and topology](03-buildings-and-topology.md).
 
 ## 4. Add the device
 
-Pick the line you want the device on — line 1.1 in this example — and click the `+`
-on that line in the Topology view, or **+ Add device** under it in the project
-explorer.
+Pick the line you want the device on — line 1.1 in this example — and choose
+**+ Add device** under it in the project explorer. Use this explorer action for
+the wizard; the `+` on a Topology card opens the catalog workspace instead.
 
-In the catalog, filter by manufacturer, search for the product, click the row, check
-the name and the quantity, and press **Create**.
+The **Add device** wizard opens. Search for the presence detector, select it,
+and choose **Next**. On **Placement**, check the installation and line and choose
+a room if wanted. On **Name and quantity**, use quantity `1` and enable
+**Assign free addresses on the line** if wanted. On **Review**, read the exact
+name and address computed by the server, then choose **Create device**.
+Choose **Open device** from the result page to continue.
 
 Read the creation diagnostics if any appear. At least one always does: the device is
 created with every communication object its application program declares, because
 parameter-driven activation is not evaluated at creation time. That is normal, and it
 means the object list you see is a superset of what a configured device would expose.
+If the computed names or addresses changed after the preview, creation is
+refused and a new preview appears. Check it again: the preview is neither a
+reservation nor a whole-project revision lock. Other invalid placements can
+still cause a normal refusal.
 
 See [Devices and products](05-devices-and-products.md).
 
 ## 5. Give it an individual address
 
 A new device has none, unless you ticked **Assign free addresses on the line** in the
-catalog. Select it, and in the properties pane type the **Device number**: the area and
+wizard. Select it, and in the properties pane type the **Device number**: the area and
 line part (`1.1.`) is fixed by the line the device sits on, so `30` gives `1.1.30`.
 
 KNXBench refuses a duplicate address and a device number outside 1–255.
@@ -123,8 +140,9 @@ If the DPT column says `conflicting`, two linked objects disagree about the type
 KNXBench will not pick a winner for you; fix it on the device side.
 
 If you have a lot of naming to do, export the table as CSV, edit it in a spreadsheet,
-and import it back. The import never deletes, never re-addresses, and refuses the whole
-file if any row is wrong.
+and import it back. Ordinary upsert rows do not delete omitted addresses or move
+them. Explicit `readdress` and `delete` actions require a separate confirmed preview;
+any invalid row prevents the whole import from being applied.
 
 See [Working with group addresses](04-group-addresses.md).
 
@@ -134,14 +152,15 @@ See [Working with group addresses](04-group-addresses.md).
 becomes a Save As; after that, autosave (on by default, every five minutes) keeps
 writing to the same file while you work.
 
-`.knxdb` is the format to keep. It is KNXBench's own working format, it holds
-everything, and nothing is lost on the way in or out.
+`.knxdb` is the supported working format. It stores the model and retained opaque
+source data. Preserve your original `.knxproj` and independent backups too; an
+import report can still identify unsupported semantics.
 
 See [Projects](02-projects.md).
 
 ## 11. Hand the work on
 
-Three exits, for three different purposes:
+Four exits, for four different purposes:
 
 | You want | Use |
 | --- | --- |
@@ -173,9 +192,21 @@ cannot plan are refused by name rather than guessed. Programming an individual a
 is currently blocked until durable recovery exists. The details, including what is
 refused, are in [Bus monitor and KNXnet/IP](07-bus-and-interfaces.md#downloading-to-a-device).
 
-So the honest end of this workflow is: configure here, save the `.knxdb`, download the
-devices KNXBench can plan, and commission everything else with a tool that can. There is
-no `.knxproj` export to hand the project over (section 11). That gap is the one the
-project is still working on.
+Stop this tutorial after saving and checking the file. A hardware download needs
+its own supported target, recovery plan and explicit confirmation. There is no
+`.knxproj` export to hand this edited project back to ETS; that is a deliberate
+format boundary, not the next step of this exercise.
+
+### Common mistakes and final checks
+
+- **Empty catalog:** install product data first, or import the generated sample.
+- **Wrong location:** a line is electrical placement; a room is building placement.
+  Both must belong to the same installation.
+- **DPT conflict:** compare the address's declaration and the linked objects before
+  changing a type. Matching payload lengths alone are not sufficient.
+- **No hardware change:** editing a device number in Properties does not program
+  that address into the physical device. A project edit and a bus write are different jobs.
+- **Proof of completion:** reopen the saved `.knxdb` and check the device, address
+  and link. If you need a browser-local copy, use **Export project…** as well.
 
 [Manual index](../README.md) · Next: [Bus monitor and KNXnet/IP](07-bus-and-interfaces.md) →

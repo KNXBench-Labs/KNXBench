@@ -112,10 +112,10 @@ below GitHub's documented 25 MB limit for other attachments. [1]
    Refused. I expected the product to be available. I do not know the reason.”
    This is an **example description**, not a measured KNXBench result.
 5. In **Report ZIP (optional)**, drag the saved ZIP into the text field, or use
-   the attachment chooser. **Wait until the attachment link appears.** [1][3]
+   the attachment chooser. **Wait until the attachment link appears.** [1], [3]
 6. Leave other optional fields empty if you do not know the answer. The app's
    link supplies the analyzer-version field when an analysis exists; GitHub
-   supports field-ID query prefills. Check it if present. [2][3]
+   supports field-ID query prefills. Check it if present. [2], [3]
 7. Confirm the two publication checkboxes and click **Create issue**. [2]
 
 > **Important:** attachment upload starts when you attach the file, before you

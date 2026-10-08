@@ -1,0 +1,3 @@
+   Compiling knx-app v0.1.0-alpha.3 (<worktree>/crates/knx-app)
+   Compiling knx-server v0.1.0-alpha.2 (<worktree>/apps/knx-server)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 15.51s

@@ -134,7 +134,9 @@ Synthetic coverage: `knx-productdb/tests/legacy_mapping.rs`,
 `legacy_publish.rs`, `knx-app/tests/legacy_files.rs`,
 `apps/knx-cli/tests/cli_legacy_import.rs` and
 `apps/knx-server/tests/http_legacy_device.rs` (placement, parameter edit
-with visibility, group link). `.vd5` is untested. The `.vd3` sample is BCU1;
+with visibility, group link). `.vd5` is untested: the one real sample is
+refused by size and has a different, multi-member layout (KNOWN_LIMITATIONS
+§128). The `.vd3` sample is BCU1;
 its programs import, but their behaviour beyond the evaluator is not
 compared with an oracle.
 

@@ -70,4 +70,7 @@ the repository cwd under `output/playwright/`. Exact-source evidence is in
 The offline study remains a separate memory-only demonstrator, not a production
 save implementation. Native WebKitGTK/Orca, Firefox, browser-chrome zoom and a
 complete WCAG audit are unverified. This is not an official Star Trek product.
-No Docker rebuild, application release or live hardware operation is included.
+The original local integration did not include deployment. On 2026-10-08 the
+user separately authorized publication and a Docker rollout, now verified on
+HTTPS port 8484; see [deployment receipt](design-studies/lcars/deployment-verification.json).
+No release tag or live hardware operation was performed.

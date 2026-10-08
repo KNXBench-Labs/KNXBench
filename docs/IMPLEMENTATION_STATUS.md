@@ -40,7 +40,8 @@
   in this repository (blank issues stay enabled), the EN/DE guides stay in
   `docs/contribution-intake/`, and the app, guides, form and the website's
   support link point here instead of the interim `KNXBench-Contributions`
-  (which had no issues; its retirement is the owner's call).
+  (which had no issues; deleted by the owner the same day after the move
+  was confirmed, Git bundle kept in the local backups).
 - **Left out on purpose:** the parked branch's LCARS and parameter-workspace
   files (already on `main` in newer form or archived), its older doc drafts
   and the per-step receipt files.

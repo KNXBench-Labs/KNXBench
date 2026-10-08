@@ -39,8 +39,8 @@ None since 2026-10-08. The root checkout was synchronized after the public
 launch; its two finished local packages are delivered:
 
 - **Community evidence** (File → Analyze support gaps…) is in the repository,
-  and its intake lives here (ADR-0091). Retiring the interim
-  `KNXBench-Contributions` repository is the owner's call.
+  and its intake lives here (ADR-0091). The interim
+  `KNXBench-Contributions` repository was deleted on 2026-10-08.
 - **Marketing website** is in the repository (`website/`, ADR-0095) and
   deployed to knxbench.com by `.github/workflows/pages.yml`
   ([WEBSITE.md](WEBSITE.md)).

@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (interim contributions repo retired)
+- **Timestamp:** 2026-10-08 16:41 CEST
+- **Completed:** Before deletion: all four files of `KNXBench-Contributions` confirmed in the main repo (only link lines and blank-issue config differ), 0 issues/PRs/releases/forks/stars, no app/website/form link left; verified Git bundle + metadata in `KNXBench.backups/2026-10-08-contributions-repo/`. My delete was refused (token lacks `delete_repo`); the owner deleted it manually; API and anonymous web both 404. Docs updated (COMMUNITY_EVIDENCE, ADR-0091, OPEN_WORK, research, status).
+- **Pending/Next Steps:** Private rollback repo `KNXBench-prepublic-20261008` (pre-purge history incl. vendor dump) still exists; owner decides. http→https redirect on knxbench.com and Node-20 action bump still open.
+- **Notes for Codex oder Claude:** The `KNXBench-Labs` gh token has no `delete_repo` scope; repo deletions go through the owner.
+
+---
+
 - **Last Agent:** Claude (knxbench.com live)
 - **Timestamp:** 2026-10-08 16:23 CEST
 - **Completed:** knxbench.com is live on GitHub Pages. `0f4963d1`: website `--release` mode, story published variant behind the exact approval record, privacy page naming GitHub Pages and its documented IP logging (draft for owner review), `.github/workflows/pages.yml`. Pages enabled (source: Actions), custom domain verified, certificate approved, HTTPS enforced. First deploy green; all 34 live files hash-equal to the local release build; live page checked in Chromium.

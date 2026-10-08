@@ -90,4 +90,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0088](0088-server-terminates-tls-itself.md) | `knx-server` terminates TLS itself, with a self-signed certificate by default | Accepted | 2026-10-07 |
 | [0089](0089-achievements.md) | Achievements are a frontend catalogue over a grow-only server record | Accepted | 2026-10-07 |
 | [0090](0090-read-only-mcp-adapter.md) | A read-only, stdio-only MCP adapter over saved project files | Accepted | 2026-10-07 |
-| [0093](0093-wizards-are-views-over-existing-commands.md) | Wizards are views over existing commands; a new project's structure is seeded atomically | Accepted (new-project wizard implemented; add-device wizard pending) | 2026-10-08 |
+| [0093](0093-wizards-are-views-over-existing-commands.md) | Wizards are views over existing commands; a new project's structure is seeded atomically | Accepted (both wizards implemented) | 2026-10-08 |

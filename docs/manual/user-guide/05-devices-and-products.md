@@ -14,9 +14,10 @@ device panel.
 
 ## The product catalog
 
-Open it from the navigation pane (**Product catalog**), from the `+ Add device` row
-under a line in the project explorer, or from the `+` button on a line in the Topology
-view. All three open the same centre workspace; only the target line differs.
+Open it from the navigation pane (**Product catalog**) or from the `+` button on a
+line in the Topology view. Both open the same centre workspace; only the target line
+differs. The `+ Add device` rows in the project explorer open the
+[add-device wizard](#the-add-device-wizard) instead.
 
 ![The Device catalog in the main workspace, opened from line 1.1 in the Topology
 view: an install file picker, the manufacturer filter and search, four fictional
@@ -58,6 +59,40 @@ knx products ingest project.knxproj --product-db products.db
 ```
 
 See [The command line](10-command-line.md).
+
+## The add-device wizard
+
+The wizard is a guided path to the same result as the catalog, in five steps:
+**Product**, **Placement**, **Name and quantity**, **Review** and **Result**.
+Open it from:
+
+- a `+ Add device` row in the project explorer: under a line (that line is
+  chosen), under **Unassigned** of any installation (that installation, no line),
+  or under a room (that room is chosen);
+- **Add device…** in the command palette (Ctrl+Shift+P), aimed at the selected line
+  or building part if there is one;
+- **Add devices now** at the end of the new-project wizard (the new line 1.1);
+- **Add with wizard…** in the catalog, which starts at **Placement** with the product
+  selected there.
+
+| Step | What you decide |
+| --- | --- |
+| Product | Search the installed catalog, or install a `.knxprod` package first. An installed package stays installed even if you cancel. |
+| Placement | Line and building part, each optional; the installation only when the project has more than one. Line and building part must belong to the same installation. |
+| Name and quantity | Name, 1 to 32 devices, **Assign free addresses on the line** (only with a line) and **Keep names unique**. |
+| Review | The server computes, on a copy of the project, exactly which names and addresses would be created, with the product diagnostics. Nothing changes yet. |
+| Result | What was created. **Open device** selects the first one; **Add more of this product** goes back to the naming step. |
+
+**Create** sends the previewed names and addresses along. If the project changed in
+between, for example because another window took one of those addresses, the server
+refuses with nothing created. The wizard then says so and shows a fresh preview to
+confirm. Creation and placement are **one undo step**. Parameters and group links are
+not part of the wizard; edit them in the device panel afterwards.
+
+**Cancel** or **Escape** asks before discarding a choice; a second **Escape** keeps
+you in the wizard. A lost response is treated like in the catalog: **Retry safely**
+resends the same request id while the same server is running and never creates a
+duplicate.
 
 ## Adding a device
 

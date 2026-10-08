@@ -43,6 +43,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openCompanion: () => {},
     openHelp: () => {},
     openCatalog: () => {},
+    addDevice: () => {},
     openIntroduction: () => {},
     openAchievements: () => {},
     ...overrides,
@@ -105,13 +106,24 @@ describe("command enablement", () => {
     expect(called).toBe(true);
   });
 
-  it("lists all sixteen commands in palette order, with an unconditionally enabled first entry", () => {
+  it("lists all seventeen commands in palette order, with an unconditionally enabled first entry", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
       "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "search",
       "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
-      "open-catalog", "show-introduction", "open-achievements", "open-help",
+      "open-catalog", "add-device", "show-introduction", "open-achievements", "open-help",
     ]);
     expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
+  });
+
+  // ADR-0093: the wizard creates into a project, so it needs one open.
+  it("enables Add device only with a project open and runs the wizard", () => {
+    let ran = 0;
+    const cmd = COMMANDS.find((c) => c.id === "add-device")!;
+    expect(cmd.isEnabled(noopCtx({ tree: null }))).toBe(false);
+    const ctx = noopCtx({ tree: {} as never, addDevice: () => (ran += 1) });
+    expect(cmd.isEnabled(ctx)).toBe(true);
+    cmd.run(ctx);
+    expect(ran).toBe(1);
   });
 
   // The whole point of the from-scratch launcher: it is the one File
@@ -155,6 +167,7 @@ describe("command enablement", () => {
     const ctx = noopCtx({
       tree: null,
       openCatalog: () => opened.push("catalog"),
+      addDevice: () => opened.push("add-device"),
       openIntroduction: () => opened.push("introduction"),
     });
     for (const id of ["open-catalog", "show-introduction"]) {

@@ -87,7 +87,7 @@ async function interceptApi(page: Page, settings: Record<string, unknown> = {}) 
 }
 
 for (const style of styles) {
-  test(`creates a ${style} project with the default topology and opens the catalog from the last page`, async ({ page }) => {
+  test(`creates a ${style} project with the default topology and adds devices from the last page`, async ({ page }) => {
     const projectName = `Browser ${style}`;
     const installationName = `Installation ${style}`;
     const state = await interceptApi(page);
@@ -133,7 +133,11 @@ for (const style of styles) {
 
     await done.getByRole("button", { name: "Add devices now" }).click();
     await expect(done).toBeHidden();
-    await expect(page.getByRole("region", { name: "Device catalog" })).toBeVisible();
+    // ADR-0093: the add-device wizard, aimed at the seeded line 1.1.
+    const wizard = page.getByRole("dialog", { name: "Add device" });
+    await expect(wizard).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(wizard).toBeHidden();
 
     await page.getByRole("button", { name: "Project", exact: true }).click();
     await expect(page.getByLabel("Group address style")).toHaveValue(style);

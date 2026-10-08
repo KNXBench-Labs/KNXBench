@@ -140,6 +140,19 @@ refused by size and has a different, multi-member layout (KNOWN_LIMITATIONS
 its programs import, but their behaviour beyond the evaluator is not
 compared with an oracle.
 
+**Added 2026-10-08 (ADR-0094, L3):** *Uploading* `.vd3`–`.vd5` through the
+server and the web app, with a password dialog and one remembered password.
+Evidence: `apps/knx-server/tests/http_legacy_install.rs`,
+`crates/knx-app/tests/legacy_remembered.rs`,
+`apps/knx-cli/tests/cli_legacy_import.rs`, the web component tests and
+`apps/knx-web/e2e/legacy-install.e2e.ts`, all synthetic. One documented run
+with real data: the real `.vd4` uploaded to a locally started `knx-server`
+asked for its password, then published 2 programs, 334 parameters, 520
+parameter refs, 56 object refs and 10,428 translations (the corpus pins). A
+second upload used the remembered password. N000520 was then placed in the
+web app with 28 objects; switching "Objekttyp für Ausgang - Licht" to
+"Dimmen absolut" swapped the on/off values for percentage fields.
+
 ## 3. Expected but unverified
 
 | Item | Status | What would move it to verified |

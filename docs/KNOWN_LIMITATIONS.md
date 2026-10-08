@@ -6889,6 +6889,31 @@ triage.
 
 ## 128. Legacy `.vd3`–`.vd5` and `.pr3`–`.pr5` files are refused, and the refusal misnames the format
 
+**Update 2026-10-08 (legacy VD package L3, ADR-0094 *Amendment: L3*).**
+The web catalog and the device wizard install `.vd3`–`.vd5` through
+`POST /api/catalog/install-legacy`, with a password dialog. One password may
+be remembered on explicit request (`$XDG_CONFIG_HOME/knx/legacy-vd-password`,
+mode 0600); Settings and `knx products legacy-password forget` remove it.
+**Still limited by L3:**
+- **The remembered password is plain text** in that 0600 file, not in a
+  keyring. Anyone who can read the server user's files can read it. A file
+  that group or others may read is refused, never used.
+- **One password only.** A second remembered password replaces the first;
+  there is no per-manufacturer list, by design (no candidate trying).
+- **Import notes are English.** The legacy report shows each diagnostic's
+  server-composed English detail next to its stable `kind`.
+- **Untyped spacer parameters look editable.** Legacy atomic type 0 maps
+  to kind `None` (ETS `TypeNone`), for example the real `.vd4`'s `d_space`
+  spacers with empty text. The parameter panel reports them as `editable`,
+  so the web app shows an empty text field with a `ReadWrite` badge; the
+  server refuses any write by name ("carries no writable value"), so no
+  value is stored. The same panel path serves ETS `TypeNone` parameters.
+  Found in the L3 check with real data; queued as its own fix.
+- **The `.knxprod` installer's own text** for a `.vd*` name still says
+  "legacy import is not implemented" (it is pinned in four crates). The web
+  client never shows it: it reads the refusal's `legacyProductDatabase`
+  kind and moves on to the legacy route.
+
 **Update 2026-10-08 (legacy VD package L2, ADR-0094 *Amendment: L2*).**
 `.vd3`–`.vd5` application programs can now be imported for offline use:
 `knx products import-legacy <file> [--product-db <path>] [--password-stdin |
@@ -6907,8 +6932,8 @@ group addresses (`apps/knx-server/tests/http_legacy_device.rs`).
 - **No DPTs.** `EIB_DATA_TYPE_CODE` is reported as an unmapped column,
   because its encoding is not measured. Objects carry size and flags but no
   DPT until the user sets one.
-- **Server and web upload (L3) are not there yet.** For now the import runs
-  through the CLI.
+- **Server and web upload landed with L3** (update below the list): the
+  catalog's and the device wizard's file picker accept `.vd3`–`.vd5`.
 - **Unmapped tables stay in the stored payload and are reported:**
   `s19_block`, `device_*`, `mask*`, `symbol`, `help_file`, and others.
   Text is decoded as Windows-1252, which is an assumption.
@@ -6919,8 +6944,9 @@ group addresses (`apps/knx-server/tests/http_legacy_device.rs`).
 - **Secrets in an unencrypted original.** Secret-class values
   (`*PASSWORD*` columns) are blanked in the stored payload. The original
   file is still kept verbatim (decision Q10). For the usual encrypted file
-  that is safe, because the password is never stored. An unencrypted legacy
-  file, however, keeps such values readable inside its stored original.
+  that is safe, because the password is never stored with it. An
+  unencrypted legacy file, however, keeps such values readable inside its
+  stored original.
 - **The one real `.vd5` is refused.** The Siemens `.vd5` (Nov 2016)
   exceeds the 64 MiB bounds (173 MB payload). It also has four members, an
   installer path tree with three mask images, where the rules expect one

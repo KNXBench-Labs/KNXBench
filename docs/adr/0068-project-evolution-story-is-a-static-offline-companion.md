@@ -79,7 +79,10 @@ preparation only. A real release step needs its own design and approval.
 ## Consequences
 
 - Each edition is reproducible from `content/edition.json`; earlier candidates
-  remain byte-identical evidence of what was reviewed.
+  remain byte-identical evidence of what was reviewed while they are kept.
+  Revisited 2026-10-08 at the user's request: superseded candidates and their
+  pages were removed from the tree after wording and content corrections, so
+  only the latest edition is kept; Git history retains the rest.
 - Committed previews duplicate content that is already in `candidates/` (about
   240 KB per edition). A change to `site/` regenerates every committed page, so
   older editions are always shown with the current page code; the candidate, not

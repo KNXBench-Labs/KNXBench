@@ -234,7 +234,7 @@ def render_body(payload: dict, story_sha: str) -> str:
         '<div class="atlas-toolbar">'
         '<div class="search"><label for="atlas-search">Search steps</label>'
         '<input id="atlas-search" type="search" autocomplete="off" spellcheck="false" '
-        'placeholder="e.g. licence, schema, quota"></div>'
+        'placeholder="e.g. licence, schema, Paperclip"></div>'
         '<div class="zoom" role="group" aria-label="Zoom"><button type="button" id="zoom-in" aria-label="Zoom in">+</button>'
         '<button type="button" id="zoom-out" aria-label="Zoom out">−</button>'
         '<button type="button" id="zoom-reset">Fit</button></div></div>'

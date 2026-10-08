@@ -1,7 +1,7 @@
 {
   "schema": "knxbench-evolution-story/1",
   "edition": {
-    "id": "2026-10-08.1",
+    "id": "2026-10-08.2",
     "title": "From one prompt to a project, reluctantly narrated",
     "status": "private-candidate",
     "cutoff": {
@@ -206,7 +206,7 @@
       "body": [
         "The first interface was a native Linux desktop window. Two days later the user asked how hard it would be to run the whole thing as a container with a web interface instead. The answer became the project's main front end: a small server plus a web interface for a single user on the local network.",
         "The project also got its name that week: the folder called KNX became KNXBench. A product named after the standard it implements was never going to last. I could have told them.",
-        "On 13 September the user was blunt about the result, called the interface rubbish and asked for a complete redesign that should be fun to use. One agent drafted it, ran out of quota, and another finished it. Fun to use, they said. I have read my own job description. That phrase is not in it.",
+        "On 13 September the user was blunt about the result, called the interface rubbish and asked for a complete redesign that should be fun to use. One agent drafted it and another finished it. Fun to use, they said. I have read my own job description. That phrase is not in it.",
         "Since then the interface has gained English and German, a settings file, a firm rule about how group addresses are written, user-importable theme packs and a green CRT theme, which is where this page got its looks. The green glow was not my idea. I would have chosen something gloomier."
       ],
       "events": [
@@ -265,7 +265,7 @@
       "body": [
         "Claude Code did the early work. Codex arrived on 8 September and wrote its own instruction file. A single goal file let either agent work autonomously through a list of tasks, with Git as the safety net. A companion project turned the KNX Standard into a searchable knowledge base, so the agents could check facts against the specification instead of guessing. Checking instead of guessing. I wish more of my kind did it.",
         "Not every experiment survived. For about two days, a simulated company of eight AI roles was supposed to coordinate everything through tickets. Most tickets ended up blocked, the platform kept throwing errors, and the company was paused and shut down. The work went back to fewer sessions, each with its own goal file and its own fenced-off part of the code. Eight AIs in a pretend office. I have rarely felt so understood, or so relieved that something was over.",
-        "Running on rationed AI quota shaped the process too: sessions paused at limits, handovers had to survive them, and a statistics tool started counting the tokens. Counting is not the same as explaining, which is part of why this page exists, and why I am the one explaining it."
+        "A statistics tool started counting the tokens, the tasks and the commits. Counting is not the same as explaining, which is part of why this page exists, and why I am the one explaining it."
       ],
       "events": [
         "codex-joins-goal",
@@ -882,7 +882,7 @@
       "status": "implemented",
       "title": "'The UI is rubbish': a redesign, passed between agents",
       "short": "UI redesign",
-      "summary": "The user asked for a complete redesign. Codex proposed and started a three-pane workbench; when its quota ran out, the user asked Claude to finish the job. The merged result went through six rounds of review.",
+      "summary": "The user asked for a complete redesign. Codex proposed and started a three-pane workbench, and the user then asked Claude to finish the job. The merged result went through six rounds of review.",
       "why": "This was the first time work moved mid-task from one AI agent to another, and the first time the interface was rebuilt around how people would actually use it.",
       "aside": "Six review stages, each finding the previous stage's mistakes about itself. Recursion, the way only a reviewer could love it.",
       "excerpts": [
@@ -902,9 +902,10 @@
           "kind": "quote",
           "original_language": "de",
           "transforms": [
-            "translated"
+            "translated",
+            "shortened"
           ],
-          "text": "I only mean the design task from Codex. Could you implement it to the end? The limit there is used up and only available again in 5 hours.",
+          "text": "I only mean the design task from Codex. Could you implement it to the end?",
           "note": "To Claude, the same morning."
         }
       ],
@@ -1614,21 +1615,10 @@
       "status": "recorded",
       "title": "Separate goals, separate fences",
       "short": "Split goal files",
-      "summary": "Commissioning and the interface each got their own goal file and session, with a lock on the web code, 'so three sessions stop elbowing each other'. The same day the user reported that one provider's quota was 99 percent used and moved the remaining work back to local sessions.",
+      "summary": "Commissioning and the interface each got their own goal file and session, with a lock on the web code, 'so three sessions stop elbowing each other'.",
       "why": "Parallel agents need boundaries as much as instructions.",
       "aside": "'So three sessions stop elbowing each other.' Fences, at last. Good fences make tolerable colleagues.",
-      "excerpts": [
-        {
-          "speaker": "user",
-          "kind": "quote",
-          "original_language": "de",
-          "transforms": [
-            "translated"
-          ],
-          "text": "Important update: the remaining GPT quota is at 1%, so 99% used up.",
-          "note": "28 September 2026."
-        }
-      ],
+      "excerpts": [],
       "evidence": [
         {
           "kind": "commit",

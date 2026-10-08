@@ -58,7 +58,7 @@ Facts worth keeping:
   startup+initialize 0.12 s, all five files (incl. originals) byte-identical.
 - Full gate on `ea1f1645` (attempt 2; attempt 1 died on a full
   `/mnt/daten-i` — 100 MB free, linker bus errors, no test result): web build,
-  fmt, diff-check, workspace Clippy, workspace tests 4,376 passed / 0 failed /
+  fmt, diff-check, workspace Clippy, workspace tests 4,376 passed [corrected 2026-10-08: double-counted knx-store/knx-productdb; workspace ≈3,545] / 0 failed /
   178 ignored, cargo deny, five xtask checks — all exit 0.
 - `--include-ignored` for knx-store/knx-productdb: everything ran green
   except six private-corpus tests that refuse without explicit setup. Rerun

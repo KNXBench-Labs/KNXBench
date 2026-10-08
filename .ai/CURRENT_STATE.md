@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (docs removal)
+- **Timestamp:** 2026-10-08 13:50 CEST
+- **Completed:** User decision: removed `docs/archive/`, `docs/design/`, `docs/design-studies/`, `docs/superpowers/` and root `IDEA.md` + `KNX ETS Alternative – Claude Code Development Strategy.md` (189 files). All readable at `6a1ba6ae5d54`; `docs/history/REMOVED_DOCS.md` maps them. 208 links pinned to GitHub URLs at that commit, goal paths in backticks reduced to names, code comments reworded, flow load study writes to `docs/evidence/telegram-flow-u21/`. Gates green.
+- **Pending/Next Steps:** Unchanged, see docs/OPEN_WORK.md.
+- **Notes for Codex oder Claude:** Do not recreate `docs/archive/` or the goal files; old goals/dossiers via `git show 6a1ba6ae5d54:docs/archive/...`. ~37 source/test comments still name `docs/superpowers/...` specs as design origin; read them as Git paths at that commit. Story editions keep those refs (frozen, `src-git`).
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-08 13:33
 - **Completed:** Story edition `2026-10-08.3` (story_sha256 `ac02cbb4…`): cutoff moved to `origin/main` `6a1ba6ae` (8 Oct 13:18, 2,295 commits, 93 ADRs). All 45 commit references remapped through `docs/history/COMMIT_MAP_2026-10-07.txt` (each unique and an ancestor of the cutoff; no old hash left). 13 new steps for 4–8 Oct (exact-or-refused, telegram-flow, alpha-review, first-alpha, one-name, server-https, evidence-of-record, fun-features, lcars-theme, mcp-adapter, wizards, legacy-vd, goals-closed), 17 relations, new chapter 9 "An alpha, twice"; statements the new cutoff made untrue were corrected (no release, user's identity on commits, unpublished brief/preview). Browser harness reads chapter count and bus steps from the edition; date labels yield to step labels in the date column. Only `2026-10-08.3` kept in the tree. Removed the account-name path from the earlier handover note. Gates: 62 unit tests, 46/46 Chromium and Firefox, anchors ok, diff check clean.

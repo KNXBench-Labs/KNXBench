@@ -194,3 +194,25 @@ fn a_wrong_password_writes_nothing() {
         assert_eq!(rows(&conn, table), 0, "{table}");
     }
 }
+
+#[test]
+fn secret_column_values_of_an_encrypted_file_are_stored_nowhere() {
+    let (dir, conn) = products();
+    import_legacy_file(
+        &conn,
+        "marvin.vd4",
+        &fixture("marvin-program.vd4"),
+        Some(&password()),
+    )
+    .unwrap();
+    drop(conn);
+    for entry in std::fs::read_dir(dir.path()).unwrap() {
+        let bytes = std::fs::read(entry.unwrap().path()).unwrap();
+        for needle in ["Zaphod42", "Beeblebrox"] {
+            assert!(
+                !bytes.windows(needle.len()).any(|w| w == needle.as_bytes()),
+                "{needle} found in the product database files"
+            );
+        }
+    }
+}

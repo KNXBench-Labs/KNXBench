@@ -150,6 +150,16 @@ Evidence (`[V]` measured on 2026-10-08 unless noted):
   `source_file`; the password never is. Publishing is idempotent over the
   payload digest: the same content again, renamed or re-encrypted, only adds
   a `legacy_source_file` row.
+- **Secret-class values are withheld (design decision B-3, Q10).** Added
+  right after L2, which had stored the payload unchanged. A column whose
+  name contains `PASSWORD` (any case) is secret-class.
+  `withhold_secret_values` blanks each non-empty value, continuation lines
+  included, in the copy that is stored, parsed and keyed. All other bytes
+  stay. Its digest is the payload identity, so two files that differ only in
+  a secret are one database. A `secret-withheld` diagnostic names table,
+  column and count, never a value. The original file is still stored
+  verbatim. That is safe for an encrypted original, since the password is
+  not kept, but not for an unencrypted one (KNOWN_LIMITATIONS §128).
 - **Write authority.** `write_authority_recorded` is set for legacy programs
   (ADR-0080): `parameter_ref.access` holds each member's own level, and the
   EX-IM format has no `ParameterCalculation`.

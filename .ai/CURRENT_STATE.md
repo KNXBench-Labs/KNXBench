@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-08 12:46
+- **Completed:** Story edition `2026-10-08.1`: wording change requested by the user for legal reasons. KNXBench is not a clone of ETS, so the translated ChatGPT prompt in `strategy-written` now reads "offers functionality comparable to KNX ETS" (was "mirrors KNX ETS functionality"), with a note that the translation is chosen for intent (independent application, not a copy); the step summary says "independent, Linux-first engineering software offering functionality comparable to ETS". Nothing else changed. Candidate sha `81692108…`, preview `story/previews/2026-10-08.1.html`. Gates: 62 unit tests OK, browser checks 46/46 in Chromium and Firefox.
+- **Pending/Next Steps:** Older candidates/previews (`2026-10-05.1`) still contain the old "mirrors" wording by design (immutable review records); removing them from the tree is a user decision. Do not publish any edition before `2026-10-08.1`.
+- **Notes for Codex oder Claude:** Wording rule: never describe KNXBench as mirroring, cloning, copying or replicating ETS; use "independent alternative" / "comparable functionality". `story/tests/browser/check_story.mjs` now defaults to `/home/knxbench/...` for Playwright (changed by another session); under another account pass `PLAYWRIGHT_DIR=/home/<user>/.local/share/mise/installs/npm-playwright/latest/node_modules`.
+
+---
+
 - **Last Agent:** Claude (legacy VD secrets)
 - **Timestamp:** 2026-10-08 12:43 CEST
 - **Completed:** Closed a gap L1/L2 left in the accepted design (2026-09-26 §6.4, B-3; grilling Q10): secret-class column values (`*PASSWORD*`, any case) are blanked in the stored legacy payload (`withhold_secret_values`, parser source ranges incl. continuations), which is also the copy that is parsed and keyed; `secret-withheld` reports table/column/count only. Real VD3/VD4 have none (corpus/oracle unchanged). Mutation sweep 8/8 named. Scoped gate green (see IMPLEMENTATION_STATUS).

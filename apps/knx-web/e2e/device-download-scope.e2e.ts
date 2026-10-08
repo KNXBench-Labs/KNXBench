@@ -55,6 +55,7 @@ async function open(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "New project…" }).click();
   await page.getByRole("dialog", { name: "New project" }).getByRole("button", { name: "Create project" }).click();
+  await page.getByRole("dialog", { name: "Project created" }).getByRole("button", { name: "Done" }).click();
   await page.getByRole("navigation", { name: "Bus monitor" }).getByRole("button", { name: "Bus monitor" }).first().click();
   await page.getByRole("button", { name: "Download to device", exact: true }).click();
   await page.getByRole("combobox").filter({ hasText: "1.1.67" }).selectOption("1.1.67");

@@ -1,5 +1,37 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — New-project wizard with an atomic starting structure (ADR-0093)
+
+- **New project…** is now a five-step wizard (project, topology, building,
+  group structure, review). Topology pre-fills area 1 / line 1.1. The building
+  step edits buildings, floors, rooms and distribution boards, with a quick
+  floor fill. The group step edits main and middle groups and offers two
+  data-file presets (`apps/knx-web/presets/group-structure/`, admitted
+  strictly). Free style skips the group step. **Create project** works from
+  every step and Enter on the first step keeps the old fast path. After
+  creation a "created, not yet saved" page offers **Add devices now** (opens
+  the catalog on the first line for now; the add-device wizard is the next
+  package).
+- `POST /api/project/new` accepts an optional `seed`; unknown fields are
+  refused. `knx_app::project_seed` applies it through the ordinary core create
+  commands to the not-yet-installed replacement, on a private copy and before
+  the unsaved-changes guard. A refused seed (`422`, kind `projectSeedInvalid`,
+  wire path in the message) replaces nothing. An accepted one arrives with the
+  project, without undo entries. Cap: 2,000 nodes. Limitation:
+  [§166](KNOWN_LIMITATIONS.md#166-the-new-project-wizard-seeds-one-installation-from-a-fixed-preset-vocabulary).
+- Verified on the frozen candidate (`inputs_frozen=1`): web build, `tsc`,
+  flow-study/theme-fixture type checks, **2,355 Vitest tests / 140 files**,
+  **162 intercepted Chromium tests** plus `new-project.e2e.ts` repeated ×3
+  (**21 passed**), `cargo fmt`, workspace Rust tests **3,564 passed, 0 failed,
+  178 ignored**, five xtask gates, `git diff --check`. The first Clippy step
+  exited 255 with an empty log. The same inputs then passed
+  `clippy --workspace --all-targets -D warnings` twice, the second time
+  re-checking `knx-app`, `knx-server` and `knx-desktop`. The manual screenshot
+  `porcelain-new-project.png` was retaken against a release server. The
+  existing manual spec times out earlier in `dismissToasts`, so the shot came
+  from a temporary copy with a tolerant dismiss; that copy was deleted.
+- Not verified: native WebKitGTK, screen-reader output.
+
 ## 2026-10-08 — LCARS published and server deployed
 
 - User explicitly requested commit, push and deployment after the local UI

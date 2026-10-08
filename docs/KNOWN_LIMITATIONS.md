@@ -8576,3 +8576,24 @@ clients are untested.
 KNXBench, which needs its own ADR. Access gating is lifted when the research
 question about `Access`/`Visible` is answered. Mutation needs its own ADR that
 closes RESEARCH §13.6 first.
+
+## 166. The new-project wizard seeds one installation from a fixed preset vocabulary
+
+**Limitation.** The wizard's starting structure ([ADR-0093](adr/0093-wizards-are-views-over-existing-commands.md))
+always goes into the new project's single installation. It offers four
+building-part kinds (building, floor, room, distribution board) and two
+group-structure presets built from five fixed functions (lighting, shading,
+heating, ventilation, central functions) and the building step's floors. The
+quick floor fill names floors `Floor 1`, `Floor 2`… (generic, no regional
+naming). A seed may describe at most 2,000 structure nodes; the bound is a
+request-size guard checked before any ID is allocated, not a KNX limit. Group
+addresses are never created by the wizard.
+
+**Why.** User decisions of 2026-10-08 (grill-me Q2, Q10, Q11, Q17): every step
+optional, nothing invented beyond what the user names, presets as data rather
+than code, and no guessed language-specific floor names.
+
+**Impact.** Further installations, other building-part kinds, individual
+group addresses and devices are added afterwards in the explorer, as before.
+A larger structure is built in several steps. The seed is not an undo step:
+it is part of the new project's starting point.

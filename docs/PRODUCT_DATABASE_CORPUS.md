@@ -251,6 +251,11 @@ Version metadata, implement vendor behavior or establish full ETS compatibility.
 | MDT | 101 | 100 | 1 encrypted `.pr5` | 11: 48, 13: 4, 14: 3, 20: 43, 21: 2 |
 | **Total** | **111** | **115** | **1** | **11: 48, 12: 1, 13: 4, 14: 3, 20: 56, 21: 3** |
 
+**Added 2026-10-08:** two legacy product databases also sit at the corpus
+root, outside the Gira/MDT inventory above: `EIBMARKT.VD3` (2006) and the
+Eibmarkt `.vd4` (2012). Together with the MDT `.pr5`, they are pinned by
+`knx-app/tests/legacy_corpus.rs` (ADR-0094).
+
 All 115 modern packages are readable ZIP files and contain a root
 `knx_master.xml`. No malformed ZIP/XML package was found by the inventory
 scanner. Gira predominantly ships download ZIPs containing one or more nested

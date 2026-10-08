@@ -19,6 +19,9 @@ crc32fast.workspace = true
 # Decodes `AbsoluteSegment/Data` and `/Mask` (xs:base64Binary) in `code`.
 # Already a workspace dependency via knx-secure.
 base64.workspace = true
+# Inflates a legacy EX-IM member (ADR-0093). Decryption is not done here:
+# knx-productdb must not link knx-secure (knx-mcp, ADR-0090).
+flate2.workspace = true
 
 [dev-dependencies]
 rustix.workspace = true

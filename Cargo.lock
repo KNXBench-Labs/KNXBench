@@ -1983,6 +1983,7 @@ dependencies = [
  "knx-productdb",
  "knx-projection",
  "knx-report",
+ "knx-secure",
  "knx-store",
  "knx-testsupport",
  "serde",
@@ -2110,6 +2111,7 @@ version = "0.1.0-alpha.1"
 dependencies = [
  "base64 0.22.1",
  "crc32fast",
+ "flate2",
  "knx-core",
  "knx-testsupport",
  "quick-xml 0.42.0",

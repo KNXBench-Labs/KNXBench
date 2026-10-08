@@ -59,15 +59,39 @@ const UNDECLARED_PAYLOAD_DETAIL: &str =
 
 #[derive(Debug)]
 pub enum PackageError {
-    LegacyVd2 { sha256: String, len: usize },
-    UnsupportedLegacyFormat { extension: String },
-    InvalidZip { cause: String },
-    Encrypted { path: String },
-    UnsafeMember { path: String },
-    DuplicateMember { path: String },
-    SizeLimit { path: String },
+    LegacyVd2 {
+        sha256: String,
+        len: usize,
+    },
+    UnsupportedLegacyFormat {
+        extension: String,
+    },
+    /// The bytes are a legacy ETS3-era EX-IM container (detected by
+    /// content, whatever the file is called), not a `.knxprod` package.
+    LegacyExIm {
+        kind: crate::legacy::LegacyMemberKind,
+        sha256: String,
+        len: usize,
+    },
+    InvalidZip {
+        cause: String,
+    },
+    Encrypted {
+        path: String,
+    },
+    UnsafeMember {
+        path: String,
+    },
+    DuplicateMember {
+        path: String,
+    },
+    SizeLimit {
+        path: String,
+    },
     MissingMaster,
-    UnsupportedNamespace { namespace: String },
+    UnsupportedNamespace {
+        namespace: String,
+    },
     ProjectArchive,
     MissingManufacturerData,
     Database(ProductDbError),
@@ -83,6 +107,12 @@ impl fmt::Display for PackageError {
             Self::UnsupportedLegacyFormat { extension } => write!(
                 f,
                 "legacy ETS filename extension .{extension} is unsupported; legacy import is not implemented"
+            ),
+            Self::LegacyExIm { kind, sha256, len } => write!(
+                f,
+                "legacy ETS3 {} (EX-IM) is not a .knxprod package; legacy import is not \
+                 implemented yet (sha256 {sha256}, {len} bytes)",
+                kind.label()
             ),
             Self::InvalidZip { cause } => write!(f, "invalid product ZIP: {cause}"),
             Self::Encrypted { path } => write!(f, "encrypted product ZIP member: {path}"),
@@ -721,6 +751,10 @@ struct CheckedZipEntry {
     crc32: u32,
     compressed_size: u64,
     uncompressed_size: u64,
+    /// First byte of the member's (possibly encrypted) data.
+    data_start: usize,
+    /// End of the member's local record, data descriptor included.
+    record_end: usize,
 }
 
 #[derive(Debug)]
@@ -1138,6 +1172,8 @@ fn validate_central_directory(
             crc32,
             compressed_size: u64::from(compressed_size),
             uncompressed_size: u64::from(uncompressed_size),
+            data_start: local_extra_end,
+            record_end: local_end,
         });
         offset = record_end;
     }
@@ -1203,6 +1239,63 @@ pub(crate) fn validated_zip_metadata(bytes: &[u8]) -> Result<Vec<ZipEntryMeta>, 
             })
         })
         .collect()
+}
+
+/// One member of a ZIP that passed [`validate_central_directory`], with the
+/// byte positions a single-member reader needs. Nothing is decompressed.
+pub(crate) struct RawZipMember {
+    pub name: Vec<u8>,
+    pub flags: u16,
+    pub method: u16,
+    pub crc32: u32,
+    pub compressed_size: u64,
+    pub uncompressed_size: u64,
+    /// MS-DOS last-modified time from the local header (the second
+    /// ZipCrypto check-byte convention uses its high byte).
+    pub dos_time: u16,
+    pub local_offset: usize,
+    pub data_start: usize,
+    pub record_end: usize,
+}
+
+/// The package validator's checked view of every member, plus the offset
+/// where the central directory starts.
+pub(crate) fn validated_zip_members(
+    bytes: &[u8],
+) -> Result<(Vec<RawZipMember>, usize), PackageError> {
+    let directory = preflight_zip(bytes)?;
+    let validated = validate_central_directory(bytes, directory)?;
+    let members = validated
+        .entries
+        .iter()
+        .map(|entry| {
+            let at = usize::try_from(entry.central_offset).map_err(zip_error)?;
+            let header = bytes
+                .get(at..at + 46)
+                .ok_or_else(|| zip_error("truncated central directory"))?;
+            let name_len = usize::from(u16::from_le_bytes([header[28], header[29]]));
+            let local_offset = usize::try_from(entry.local_offset).map_err(zip_error)?;
+            let local = bytes
+                .get(local_offset..local_offset + 30)
+                .ok_or_else(|| zip_error("truncated local file header"))?;
+            Ok(RawZipMember {
+                name: bytes
+                    .get(at + 46..at + 46 + name_len)
+                    .ok_or_else(|| zip_error("truncated central directory name"))?
+                    .to_vec(),
+                flags: u16::from_le_bytes([header[8], header[9]]),
+                method: u16::from_le_bytes([header[10], header[11]]),
+                crc32: entry.crc32,
+                compressed_size: entry.compressed_size,
+                uncompressed_size: entry.uncompressed_size,
+                dos_time: u16::from_le_bytes([local[10], local[11]]),
+                local_offset,
+                data_start: entry.data_start,
+                record_end: entry.record_end,
+            })
+        })
+        .collect::<Result<Vec<_>, PackageError>>()?;
+    Ok((members, directory.start))
 }
 
 fn master_scheme(bytes: &[u8]) -> Result<u32, PackageError> {
@@ -2198,6 +2291,16 @@ pub fn install_package_with_limits(
                 extension: extension.to_owned(),
             });
         }
+    }
+    // Content admission: a legacy EX-IM container under any other name
+    // (`renamed.knxprod`) is named, never decrypted and never handed to the
+    // XML package parser (ADR-0094). Metadata only.
+    if let Some(legacy) = crate::legacy::detect_legacy_container(bytes) {
+        return Err(PackageError::LegacyExIm {
+            kind: legacy.member_kind,
+            sha256: legacy.sha256,
+            len: legacy.len,
+        });
     }
     let sha256 = sha256_hex(bytes);
     let tx = conn.unchecked_transaction().map_err(ProductDbError::from)?;

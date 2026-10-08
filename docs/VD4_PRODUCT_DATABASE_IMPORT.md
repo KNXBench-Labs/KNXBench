@@ -227,6 +227,17 @@ authorization from the relevant rights holder or case-specific legal advice.
 
 ## Current KNXBench behavior
 
+**Update 2026-10-08 (ADR-0094).** KNXBench now reads legacy files itself, for
+inspection only:
+`knx products inspect-legacy <file> --password-stdin` (or
+`--password-file <path>`) decrypts the file with the password you supply,
+parses it and lists its tables and products. Nothing is written. This
+supplied `.vd4`, a `.vd3` from 2006 and the MDT `.pr5` all read with zero
+diagnostics. A legacy file renamed `.knxprod` is refused as
+`legacy ETS3 product database (EX-IM)`. Importing the products is the next
+step (L2). Until then the official conversion route below still applies.
+The text that follows describes the state before this update.
+
 The CLI recognizes only `.knxprod` and `.vd2` suffixes as standalone product
 packages. Passing the supplied `.vd4` reaches the project-import path and fails
 before publishing any data:

@@ -780,7 +780,9 @@ pub struct UnsavedChanges;
 /// file's path behind would let the next plain Save overwrite that file
 /// with this empty project.
 ///
-/// The seed is one [`knx_core::Installation`] and nothing else.
+/// The blank project is one [`knx_core::Installation`] and nothing else;
+/// [`new_seeded_project_impl`] adds the wizard's optional starting
+/// structure (ADR-0093), and only what that structure names.
 /// `Command::CreateDevice` (`knx-core/src/command.rs:892-895`) needs
 /// `installations.first_mut()` to exist, but takes `line: Option<LineId>`
 /// and parks a device with no line in `topology.unassigned`
@@ -821,24 +823,74 @@ pub fn new_project_impl(
 ) -> Result<ProjectTree, UnsavedChanges> {
     new_project_impl_with_pause(
         state,
-        name,
-        installation_name,
-        language,
-        group_address_style,
+        blank_project(name, installation_name, language, group_address_style),
+        "created a new project with one empty installation".to_string(),
         discard_changes,
         || {},
     )
 }
 
-fn new_project_impl_with_pause(
+/// Why [`new_seeded_project_impl`] refused. In both cases the open project
+/// is exactly as it was.
+#[derive(Debug, PartialEq, Eq)]
+pub enum NewProjectError {
+    UnsavedChanges,
+    /// The starting structure was refused before anything was replaced.
+    InvalidSeed(knx_app::project_seed::SeedError),
+}
+
+/// The fields of a new project the wizard sends (ADR-0093). Optional
+/// metadata behaves exactly as for [`new_project_impl`].
+#[derive(Debug, Default)]
+pub struct NewProjectSpec {
+    pub name: Option<String>,
+    pub installation_name: Option<String>,
+    pub language: Option<String>,
+    pub group_address_style: Option<knx_core::GroupAddressStyle>,
+    pub seed: knx_app::project_seed::ProjectSeed,
+}
+
+/// [`new_project_impl`] plus a starting structure (ADR-0093): the seed is
+/// applied to the replacement *before* the unsaved-changes guard and the
+/// state replacement, through the same core commands the explorer uses. A
+/// refused seed therefore replaces nothing, and an accepted one arrives
+/// together with the project in one step — no undo entries, because there
+/// is nothing older in this project to go back to.
+pub fn new_seeded_project_impl(
     state: &AppState,
+    spec: NewProjectSpec,
+    discard_changes: bool,
+) -> Result<ProjectTree, NewProjectError> {
+    let mut replacement = blank_project(
+        spec.name,
+        spec.installation_name,
+        spec.language,
+        spec.group_address_style,
+    );
+    let summary = knx_app::project_seed::apply_project_seed(
+        &mut replacement,
+        knx_core::InstallationId(0),
+        &spec.seed,
+    )
+    .map_err(NewProjectError::InvalidSeed)?;
+    let message = if summary.is_empty() {
+        "created a new project with one empty installation".to_string()
+    } else {
+        format!(
+            "created a new project with {} area(s), {} line(s), {} building part(s) and {} group range(s)",
+            summary.areas, summary.lines, summary.building_parts, summary.group_ranges
+        )
+    };
+    new_project_impl_with_pause(state, replacement, message, discard_changes, || {})
+        .map_err(|UnsavedChanges| NewProjectError::UnsavedChanges)
+}
+
+fn blank_project(
     name: Option<String>,
     installation_name: Option<String>,
     language: Option<String>,
     group_address_style: Option<knx_core::GroupAddressStyle>,
-    discard_changes: bool,
-    after_guard: impl FnOnce(),
-) -> Result<ProjectTree, UnsavedChanges> {
+) -> knx_core::Project {
     let language = language.unwrap_or_else(|| DEFAULT_NEW_PROJECT_LANGUAGE.to_string());
     let mut replacement = knx_core::Project::new(knx_core::Language(language));
     replacement.info.project_id = NEW_PROJECT_ID.to_string();
@@ -862,7 +914,16 @@ fn new_project_impl_with_pause(
         group_addresses: Vec::new(),
         parameters: Vec::new(),
     });
+    replacement
+}
 
+fn new_project_impl_with_pause(
+    state: &AppState,
+    replacement: knx_core::Project,
+    created_message: String,
+    discard_changes: bool,
+    after_guard: impl FnOnce(),
+) -> Result<ProjectTree, UnsavedChanges> {
     // The clean predicate and complete replacement share the same helper and
     // project lock. Any concurrent command waits there and is then applied to
     // the new project; no accepted edit can enter after the guard and vanish.
@@ -906,7 +967,7 @@ fn new_project_impl_with_pause(
         timestamp: session_log::now(),
         severity: Severity::Info,
         source: "new".to_string(),
-        message: "created a new project with one empty installation".to_string(),
+        message: created_message,
         location: None,
         diagnostic: None,
         detail: None,
@@ -5318,10 +5379,13 @@ mod tests {
         let replacement = std::thread::spawn(move || {
             new_project_impl_with_pause(
                 &replacement_state,
-                Some("New project".into()),
-                Some("New installation".into()),
-                None,
-                None,
+                blank_project(
+                    Some("New project".into()),
+                    Some("New installation".into()),
+                    None,
+                    None,
+                ),
+                "created".to_string(),
                 false,
                 || {
                     guarded_tx.send(()).unwrap();

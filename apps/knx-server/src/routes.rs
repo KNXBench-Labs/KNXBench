@@ -757,6 +757,132 @@ struct NewProjectBody {
     language: Option<String>,
     group_address_style: Option<String>,
     discard_changes: bool,
+    /// ADR-0093: the wizard's starting structure. Absent means none, which
+    /// is exactly the project an empty body has always created.
+    seed: Option<ProjectSeedDto>,
+}
+
+/// Wire shape of [`knx_app::project_seed::ProjectSeed`]. Unknown fields are
+/// refused here (unlike the metadata above): a misspelt list would
+/// otherwise create a project silently missing the structure the user
+/// asked for.
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ProjectSeedDto {
+    #[serde(default)]
+    areas: Vec<SeedAreaDto>,
+    #[serde(default)]
+    buildings: Vec<SeedBuildingPartDto>,
+    #[serde(default)]
+    group_ranges: Vec<SeedMainRangeDto>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SeedAreaDto {
+    name: String,
+    address: u8,
+    #[serde(default)]
+    lines: Vec<SeedLineDto>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SeedLineDto {
+    name: String,
+    address: u8,
+    medium_ref: String,
+}
+
+/// Only the four kinds the wizard offers; the explorer's full list stays
+/// with `POST /api/building-parts`.
+#[derive(Deserialize, Clone, Copy)]
+enum SeedBuildingKindDto {
+    Building,
+    Floor,
+    Room,
+    DistributionBoard,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SeedBuildingPartDto {
+    name: String,
+    kind: SeedBuildingKindDto,
+    #[serde(default)]
+    children: Vec<SeedBuildingPartDto>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SeedMainRangeDto {
+    name: String,
+    main: u8,
+    #[serde(default)]
+    middles: Vec<SeedMiddleRangeDto>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SeedMiddleRangeDto {
+    name: String,
+    middle: u8,
+}
+
+impl From<ProjectSeedDto> for knx_app::project_seed::ProjectSeed {
+    fn from(dto: ProjectSeedDto) -> Self {
+        use knx_app::project_seed as seed;
+        fn building(dto: SeedBuildingPartDto) -> seed::SeedBuildingPart {
+            seed::SeedBuildingPart {
+                name: dto.name,
+                kind: match dto.kind {
+                    SeedBuildingKindDto::Building => seed::SeedBuildingKind::Building,
+                    SeedBuildingKindDto::Floor => seed::SeedBuildingKind::Floor,
+                    SeedBuildingKindDto::Room => seed::SeedBuildingKind::Room,
+                    SeedBuildingKindDto::DistributionBoard => {
+                        seed::SeedBuildingKind::DistributionBoard
+                    }
+                },
+                children: dto.children.into_iter().map(building).collect(),
+            }
+        }
+        seed::ProjectSeed {
+            areas: dto
+                .areas
+                .into_iter()
+                .map(|area| seed::SeedArea {
+                    name: area.name,
+                    address: area.address,
+                    lines: area
+                        .lines
+                        .into_iter()
+                        .map(|line| seed::SeedLine {
+                            name: line.name,
+                            address: line.address,
+                            medium_ref: line.medium_ref,
+                        })
+                        .collect(),
+                })
+                .collect(),
+            buildings: dto.buildings.into_iter().map(building).collect(),
+            group_ranges: dto
+                .group_ranges
+                .into_iter()
+                .map(|range| seed::SeedMainRange {
+                    name: range.name,
+                    main: range.main,
+                    middles: range
+                        .middles
+                        .into_iter()
+                        .map(|middle| seed::SeedMiddleRange {
+                            name: middle.name,
+                            middle: middle.middle,
+                        })
+                        .collect(),
+                })
+                .collect(),
+        }
+    }
 }
 
 /// The wire spelling of [`knx_core::GroupAddressStyle`]: the same three
@@ -820,21 +946,27 @@ async fn new_project(
         .as_deref()
         .map(parse_group_address_style)
         .transpose()?;
-    domain::new_project_impl(
+    domain::new_seeded_project_impl(
         &state,
-        body.name,
-        body.installation_name,
-        body.language,
-        group_address_style,
+        domain::NewProjectSpec {
+            name: body.name,
+            installation_name: body.installation_name,
+            language: body.language,
+            group_address_style,
+            seed: body.seed.unwrap_or_default().into(),
+        },
         body.discard_changes,
     )
     .map(Json)
-    .map_err(|domain::UnsavedChanges| {
-        ApiError::with_status(
+    .map_err(|error| match error {
+        domain::NewProjectError::UnsavedChanges => ApiError::with_status(
             axum::http::StatusCode::CONFLICT,
             "the open project has unsaved changes; save it first or resend with \
              discardChanges: true",
-        )
+        ),
+        domain::NewProjectError::InvalidSeed(error) => {
+            ApiError::refused("projectSeedInvalid", error.to_string())
+        }
     })
 }
 

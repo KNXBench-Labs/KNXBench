@@ -35,6 +35,7 @@ async function openProject(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "New project…" }).click();
   await page.getByRole("dialog", { name: "New project" }).getByRole("button", { name: "Create project" }).click();
+  await page.getByRole("dialog", { name: "Project created" }).getByRole("button", { name: "Done" }).click();
   await expect(page.getByRole("separator", { name: "Height of the navigation block" })).toBeVisible();
   return unexpected;
 }

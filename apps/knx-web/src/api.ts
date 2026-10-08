@@ -6,6 +6,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { SettingsDiagnostic } from "./settingsStore";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { DocumentationOptions } from "./documentationOptions";
+import type { ProjectSeed } from "./projectSeed";
 import { notifySessionExpired } from "./session";
 import { admitHistoryPage, assertHistoryBounds, HistoryContractError, type HistoryPage } from "./activityHistory";
 import { admitActivitySnapshot, type ActivitySnapshot } from "./liveActivity";
@@ -202,6 +203,10 @@ export interface NewProjectOptions {
    * omission, and re-sending with this flag is the one way past it.
    */
   discardChanges?: boolean;
+  /** ADR-0093: the wizard's starting structure, applied together with the
+   * new project or refused (`422`, kind `projectSeedInvalid`) without
+   * replacing anything. Omitted means none. */
+  seed?: ProjectSeed;
 }
 
 /**
@@ -228,6 +233,7 @@ export function newProject(options: NewProjectOptions): Promise<ProjectTree> {
       // makes "did this request ask to discard anything?" answerable by
       // looking at the body alone.
       discardChanges: options.discardChanges === true,
+      ...(options.seed === undefined ? {} : { seed: options.seed }),
     }),
   });
 }

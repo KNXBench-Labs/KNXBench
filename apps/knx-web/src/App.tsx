@@ -731,7 +731,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     // scratch describes nothing on screen.
     setLoadSource(null);
     setLoadSnapshot(null);
-    setNewProjectOpen(false);
+    // The wizard stays open on its "created, not yet saved" page and closes
+    // itself (ADR-0093); the workbench behind it already shows the project.
     setView("overview");
     setLogOpen(false);
     setMonitorOpen(false);
@@ -1301,7 +1302,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       )}
 
       {newProjectOpen && (
-        <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} onSaveFirst={saveProject} />
+        <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} onSaveFirst={saveProject}
+          onAddDevices={openCatalog} />
       )}
       {passwordPrompt && (
         <ProjectPasswordDialog fileName={fileNameOf(passwordPrompt.path)} reason={passwordPrompt.reason}

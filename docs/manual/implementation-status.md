@@ -39,6 +39,7 @@ gives five, with the measured counts behind them.
 | Native `.knxdb` project file (SQLite, store schema version 10) | ✅ Implemented | Open, save, save as — [Projects](user-guide/02-projects.md) |
 | Schema migration of an older project file, with a refusal rather than a guess when the file is newer than the build | ✅ Implemented | Migration tests per version step — [`docs/DATA_MODEL.md`](../DATA_MODEL.md) |
 | Undo and redo across every project edit | ✅ Implemented | One shared undo stack per open project |
+| New-project wizard with an optional starting structure (areas/lines, building tree, main/middle group ranges, two presets) | ✅ Implemented | Applied with the new project in one step or refused without replacing anything — [Projects](user-guide/02-projects.md), [ADR-0093](../adr/0093-wizards-are-views-over-existing-commands.md) |
 | Provenance: every attribute knows which layer it came from, and an override is distinguishable from an inherited value | ✅ Implemented | [`docs/DATA_MODEL.md`](../DATA_MODEL.md), [ADR-0010](../adr/0010-per-attribute-override-representation.md) |
 | Exporting the open project through the browser | ✅ Implemented | File → Export project… streams a newly serialized `.knxdb`; Save As still writes to the server's directory — [Projects](user-guide/02-projects.md) |
 | Automatic backup or version history | ❌ Not implemented | Copy the `.knxdb` file yourself |
@@ -93,7 +94,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | --- | --- | --- |
 | Create, rename, delete, inline edit; duplicate and still-linked validation | ✅ Implemented | [Working with group addresses](user-guide/04-group-addresses.md) |
 | Choosing free, two-level or three-level style when the project is created | ✅ Implemented | The choice is made once |
-| Changing the style afterwards | ✅ Implemented | On the Project node in the properties pane, undoable; the New project dialog's hint still says otherwise — [Known issues](known-issues.md) |
+| Changing the style afterwards | ✅ Implemented | On the Project node in the properties pane, undoable |
 | CSV export and re-import in KNXBench's own format | ✅ Implemented | Every address in the reference project round-trips unchanged |
 | CSV interoperability with ETS or `.esf` | ❌ Not implemented | Never claimed, never tested — [§38](../KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability) |
 | Explicit, preview-confirmed re-addressing and unreferenced deletion through CSV | ✅ Implemented | Stable ids, directional-link preview, state-bound confirmation |

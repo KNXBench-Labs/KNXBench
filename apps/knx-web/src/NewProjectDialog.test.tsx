@@ -1,4 +1,4 @@
-/** Tests for the from-scratch project dialog: defaults, validation, and the 409 discard prompt. */
+/** Tests for the new-project wizard: defaults, steps, structure, validation and the 409 prompt. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -62,13 +62,16 @@ async function renderDialog(saveFirst: () => Promise<boolean> = () => Promise.re
   const onCreated = vi.fn();
   const onClose = vi.fn();
   const onSaveFirst = vi.fn(saveFirst);
+  const onAddDevices = vi.fn();
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<NewProjectDialog onCreated={onCreated} onClose={onClose} onSaveFirst={onSaveFirst} />);
+    root.render(
+      <NewProjectDialog onCreated={onCreated} onClose={onClose} onSaveFirst={onSaveFirst} onAddDevices={onAddDevices} />,
+    );
   });
-  return { root, onCreated, onClose, onSaveFirst };
+  return { root, onCreated, onClose, onSaveFirst, onAddDevices };
 }
 
 function field(label: string): HTMLInputElement {
@@ -106,6 +109,13 @@ async function submitForm() {
   });
 }
 
+/** Q2 of the wizard interview: area 1 with line 1.1 and nothing else. */
+const DEFAULT_SEED = {
+  areas: [{ name: "Area 1", address: 1, lines: [{ name: "Line 1.1", address: 1, mediumRef: "MT-0" }] }],
+  buildings: [],
+  groupRanges: [],
+};
+
 describe("NewProjectDialog", () => {
   it("opens inside the shared overlay shell with every field pre-filled and valid", async () => {
     const { root } = await renderDialog();
@@ -141,6 +151,7 @@ describe("NewProjectDialog", () => {
       language: "en",
       groupAddressStyle: "ThreeLevel",
       discardChanges: false,
+      seed: DEFAULT_SEED,
     });
     expect(onCreated).toHaveBeenCalledWith(tree());
 
@@ -166,6 +177,7 @@ describe("NewProjectDialog", () => {
       language: "de-DE",
       groupAddressStyle: "TwoLevel",
       discardChanges: false,
+      seed: DEFAULT_SEED,
     });
 
     root.unmount();
@@ -489,5 +501,214 @@ describe("NewProjectDialog", () => {
     expect(button("Create project").disabled).toBe(false);
 
     root.unmount();
+  });
+
+  describe("wizard steps (ADR-0093)", () => {
+    function click(target: HTMLElement) {
+      return act(async () => {
+        target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+    }
+
+    function stepButton(label: string): HTMLButtonElement {
+      const steps = host!.querySelector('ol[aria-label="Wizard steps"]')!;
+      return Array.from(steps.querySelectorAll("button")).find((b) => b.textContent?.includes(label))!;
+    }
+
+    function labelled(label: string): HTMLInputElement[] {
+      return Array.from(host!.querySelectorAll<HTMLInputElement>(`input[aria-label="${label}"]`));
+    }
+
+    function treeWithLine(lineId: number): ProjectTree {
+      return {
+        ...tree(),
+        installations: [{
+          id: 0, name: "Installation 1", buildings: [], unassigned: [], group_addresses: [], group_ranges: [],
+          topology: [{ id: 1, name: "Area 1", address: 1, lines: [{ id: lineId, name: "Line 1.1", address: 1, devices: [] }] }],
+        }],
+      };
+    }
+
+    it("walks the steps with Next and Back, starting from the pre-filled topology", async () => {
+      const { root } = await renderDialog();
+      expect(host!.querySelector("h3")!.textContent).toBe("Step 1 of 5: Project");
+      expect(stepButton("Project").getAttribute("aria-current")).toBe("step");
+
+      await click(button("Next"));
+      expect(host!.querySelector("h3")!.textContent).toBe("Step 2 of 5: Topology");
+      expect(labelled("Area number").map((i) => i.value)).toEqual(["1"]);
+      expect(labelled("Area name").map((i) => i.value)).toEqual(["Area 1"]);
+      expect(labelled("Line number").map((i) => i.value)).toEqual(["1"]);
+      expect(labelled("Line name").map((i) => i.value)).toEqual(["Line 1.1"]);
+      expect(labelled("Medium reference").map((i) => i.value)).toEqual(["MT-0"]);
+
+      await click(button("Back"));
+      expect(field("Project name").value).toBe("Untitled project");
+      expect(button("Back").disabled).toBe(true);
+      root.unmount();
+    });
+
+    it("builds a building with quick-filled floors and a floor-derived group preset, and sends it as the seed", async () => {
+      apiMock.newProject.mockResolvedValue(tree());
+      const { root } = await renderDialog();
+
+      await click(stepButton("Building"));
+      await click(button("Add building"));
+      expect(labelled("Building name").map((i) => i.value)).toEqual(["Building 1"]);
+      await act(async () => setInputValue(host!.querySelector<HTMLInputElement>(".project-wizard-quick input")!, "2"));
+      await click(button("Add floors"));
+      expect(labelled("Floor name").map((i) => i.value)).toEqual(["Floor 1", "Floor 2"]);
+      await act(async () => setInputValue(labelled("Floor name")[0], "Ground"));
+      await click(Array.from(host!.querySelectorAll("button")).filter((b) => b.textContent === "Add room")[0]);
+      expect(labelled("Room name").map((i) => i.value)).toEqual(["Room 1"]);
+
+      await click(stepButton("Group structure"));
+      // The first preset is "function, then floor": functions become main
+      // groups from 1, the building step's floors become middle groups from 0.
+      await click(button("Apply preset (replaces the list)"));
+      expect(labelled("Main group name").map((i) => i.value)).toEqual([
+        "Lighting", "Shading", "Heating", "Ventilation", "Central functions",
+      ]);
+      expect(labelled("Main group number").map((i) => i.value)).toEqual(["1", "2", "3", "4", "5"]);
+      expect(labelled("Middle group name").slice(0, 2).map((i) => i.value)).toEqual(["Ground", "Floor 2"]);
+
+      await click(button("Create project"));
+      const seed = apiMock.newProject.mock.calls[0][0].seed;
+      expect(seed.areas).toEqual(DEFAULT_SEED.areas);
+      expect(seed.buildings).toEqual([{
+        name: "Building 1", kind: "Building", children: [
+          { name: "Ground", kind: "Floor", children: [{ name: "Room 1", kind: "Room", children: [] }] },
+          { name: "Floor 2", kind: "Floor", children: [] },
+        ],
+      }]);
+      expect(seed.groupRanges).toHaveLength(5);
+      expect(seed.groupRanges[0]).toEqual({
+        name: "Lighting", main: 1, middles: [{ name: "Ground", middle: 0 }, { name: "Floor 2", middle: 1 }],
+      });
+      root.unmount();
+    });
+
+    it("refuses a floor-based preset without floors and says why, changing nothing", async () => {
+      const { root } = await renderDialog();
+      await click(stepButton("Group structure"));
+      await act(async () => setSelectValue(host!.querySelector<HTMLSelectElement>(".project-wizard-preset select")!, "floor-function"));
+      await click(button("Apply preset (replaces the list)"));
+      expect(host!.textContent).toContain("This preset uses the floors from the Building step.");
+      expect(labelled("Main group name")).toHaveLength(0);
+      root.unmount();
+    });
+
+    it("blocks Create on a structure problem, names it, and links Review back to its step", async () => {
+      const { root } = await renderDialog();
+      await click(stepButton("Topology"));
+      await click(button("Add line"));
+      expect(labelled("Line number").map((i) => i.value)).toEqual(["1", "2"]);
+      await act(async () => setInputValue(labelled("Line number")[1], "1"));
+
+      expect(host!.textContent).toContain("Number 1 is already used here.");
+      expect(labelled("Line number")[1].getAttribute("aria-invalid")).toBe("true");
+      expect(button("Create project").disabled).toBe(true);
+      expect(stepButton("Topology").textContent).toContain("1 to fix");
+      expect(host!.textContent).toContain("1 entry needs fixing before the project can be created.");
+
+      await click(stepButton("Review"));
+      await click(button("Go to Topology"));
+      expect(host!.querySelector("h3")!.textContent).toBe("Step 2 of 5: Topology");
+      await click(button("Create project"));
+      expect(apiMock.newProject).not.toHaveBeenCalled();
+      root.unmount();
+    });
+
+    it("skips the group step for free style and limits two-level style to main groups", async () => {
+      const { root } = await renderDialog();
+      const style = () => host!.querySelector<HTMLSelectElement>('select[aria-label="Group address style"]')!;
+      await act(async () => setSelectValue(style(), "Free"));
+      expect(host!.querySelector("h3")!.textContent).toBe("Step 1 of 4: Project");
+      expect(stepButton("Group structure")).toBeUndefined();
+
+      await act(async () => setSelectValue(style(), "TwoLevel"));
+      await click(stepButton("Group structure"));
+      expect(host!.textContent).toContain("Two-level style: main groups only.");
+      await click(button("Add main group"));
+      expect(labelled("Main group number").map((i) => i.value)).toEqual(["1"]);
+      expect(button("Add middle group")).toBeUndefined();
+      root.unmount();
+    });
+
+    it("never creates on Enter inside a structure editor", async () => {
+      apiMock.newProject.mockResolvedValue(tree());
+      const { root } = await renderDialog();
+      await click(stepButton("Topology"));
+      const input = labelled("Area name")[0];
+      const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      await act(async () => {
+        input.dispatchEvent(enter);
+      });
+      expect(enter.defaultPrevented).toBe(true);
+      await submitForm();
+      expect(apiMock.newProject).not.toHaveBeenCalled();
+      root.unmount();
+    });
+
+    it("asks before discarding entered data, and Escape on the question keeps editing", async () => {
+      const { root, onClose } = await renderDialog();
+      const escape = () => act(async () => {
+        host!.querySelector('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+      await escape();
+      expect(onClose).toHaveBeenCalledTimes(1);
+      onClose.mockClear();
+
+      await act(async () => setInputValue(field("Project name"), "Villa"));
+      await escape();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(host!.textContent).toContain("Discard your entries?");
+      await escape();
+      expect(host!.textContent).not.toContain("Discard your entries?");
+      expect(field("Project name").value).toBe("Villa");
+
+      await click(button("Cancel"));
+      await click(button("Discard"));
+      expect(onClose).toHaveBeenCalledTimes(1);
+      root.unmount();
+    });
+
+    it("ends on a created-not-saved page whose Add devices targets the first line", async () => {
+      apiMock.newProject.mockResolvedValue(treeWithLine(42));
+      const { root, onCreated, onClose, onAddDevices } = await renderDialog();
+      await submitForm();
+
+      expect(onCreated).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(host!.querySelector("h2")!.textContent).toBe("Project created");
+      expect(host!.textContent).toContain("Untitled project is open. It is not saved yet");
+      expect(document.activeElement?.textContent).toBe("Done");
+
+      await click(button("Add devices now"));
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onAddDevices).toHaveBeenCalledWith(42);
+      root.unmount();
+    });
+
+    it("shows a server refusal of the structure as an error and stays on the wizard", async () => {
+      apiMock.newProject.mockRejectedValueOnce(httpError(422, "areas[0].lines[1]: line address 1 already used"));
+      const { root, onCreated } = await renderDialog();
+      await submitForm();
+      expect(onCreated).not.toHaveBeenCalled();
+      expect(host!.textContent).toContain("areas[0].lines[1]: line address 1 already used");
+      expect(button("Create project").disabled).toBe(false);
+      root.unmount();
+    });
+
+    it("speaks German on every step it adds", async () => {
+      saveUiLanguage(settingsStorage, "de");
+      resetUiLanguageForTests();
+      const { root } = await renderDialog();
+      await click(button("Weiter"));
+      expect(host!.querySelector("h3")!.textContent).toBe("Schritt 2 von 5: Topologie");
+      expect(labelled("Bereichsname").map((i) => i.value)).toEqual(["Bereich 1"]);
+      expect(labelled("Linienname").map((i) => i.value)).toEqual(["Linie 1.1"]);
+      root.unmount();
+    });
   });
 });

@@ -78,3 +78,20 @@ are required before publishing; client/server ship together.
 ## Final latest-main source acceptance
 
 Origin advanced again to a642eaf98c09cc6ddc6a1820affff6d0fdd4c927 (device wizard/achievement changes). Publication guard aborted before staging/commit/push. Isolated branch fast-forwarded after exact own-delta backup; ambient deltas re-applied, status/handover preserved. Both wizards, App, Toast and server catalog/domain source are exact current-main bytes. Full gate proc_c926963f050d exited 0: 2373/142 frontend, 170 Chromium, 54 actual workbench, 27 targeted Rust tests, five repository/build/type gates and frozen source. Final phase captures visually inspected. Fresh publication receipt distinct from f5/e3 historical evidence. Commit/push/image/probe/live swap still pending at this source checkpoint.
+
+## Verified main publication and live activation
+
+Source merge 6711af9a published; feature c0237937/test fix8ccc6958, KNXBench.com
+identity/no co-author. Joined latest main (5d979361) passed 2375/143 frontend,
+170 Chromium, 54 native workbench, targeted seed/device/legacy synthetic and
+full repo/build/type gates on frozen complete app/crate source. No stale forced
+push. Committed-tree image ac5433a5 validated through isolated HTTPS/auth/all89
+assets/PID1 probe (stop0/0.27s, then removed). Immediate saved/no-programming
+check safe; live swap3b65051a exact runtime/env/bind/hostname/restart/log/TLS
+fingerprint/login/assets/version accepted. Only four explicit noncredential
+inventory files were checksummed; no whole native-database-sidecar claim.
+Native live LCARS clocks progress with preserved .25s token:12.5s/20s.
+Reference timing periods scale with the existing token; docs clarified without
+changing user preferences. Previous original and earlier rollback containers
+retained. No hardware action/tag/native-accessibility claim. Permanent receipt
+ambient-deployment-verification.json; metadata/owned cleanup close the package.

@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-08T11:04:09+02:00",
+  "sourceCommit": "6711af9ac00548038bc91e213e7f0a154b2fde2f",
+  "featureCommit": "c02379370613f505f8ff96d02f9fd8889b531981",
+  "keyboardFixCommit": "8ccc695827082bbeb6fcbcdb270e1dec4500137e",
+  "upstreamBase": "5d9793619940cadd86533417932e48c87328600e",
+  "review": "in-session self-review",
+  "sourceAcceptance": {
+    "accepted": true,
+    "inputsFrozen": true,
+    "sourceFingerprint": "4673a7a70cf71afc7d3d77df8a62d59eb1069786c7f62eb877cb8ac8d31c402d",
+    "upstream": "5d9793619940cadd86533417932e48c87328600e",
+    "localAmbientCommit": "c02379370613f505f8ff96d02f9fd8889b531981",
+    "frontendTests": 2375,
+    "frontendFiles": 143,
+    "chromiumTests": 170,
+    "stages": [
+      {
+        "stage": "joined-project-seed",
+        "exit": 0
+      },
+      {
+        "stage": "joined-vitest",
+        "exit": 0
+      },
+      {
+        "stage": "joined-build",
+        "exit": 0
+      },
+      {
+        "stage": "joined-theme-fixtures",
+        "exit": 0
+      },
+      {
+        "stage": "joined-flow-study",
+        "exit": 0
+      },
+      {
+        "stage": "joined-http-project-seed",
+        "exit": 0
+      },
+      {
+        "stage": "joined-catalog-requests",
+        "exit": 0
+      },
+      {
+        "stage": "joined-http-device-wizard",
+        "exit": 0
+      },
+      {
+        "stage": "joined-productdb-legacy",
+        "exit": 0
+      },
+      {
+        "stage": "joined-app-legacy",
+        "exit": 0
+      },
+      {
+        "stage": "joined-cli-legacy",
+        "exit": 0
+      },
+      {
+        "stage": "check-layering",
+        "exit": 0
+      },
+      {
+        "stage": "check-headers",
+        "exit": 0
+      },
+      {
+        "stage": "check-anchors",
+        "exit": 0
+      },
+      {
+        "stage": "check-ledger",
+        "exit": 0
+      },
+      {
+        "stage": "check-corpus-gates",
+        "exit": 0
+      },
+      {
+        "stage": "joined-chromium",
+        "exit": 0
+      }
+    ]
+  },
+  "sourceReceipt": "ambient-merged-verification.json",
+  "probe": {
+    "observedAt": "2026-10-08T10:53:13+02:00",
+    "imageId": "sha256:ac5433a5626b6f021d8f72c2e06772f4309ddec34091770b95c92c79c6002842",
+    "containerId": "ebe4b893783604ff05e0bdfb69b61bd5eaee87121896a070b1e3b2b0eff0d1c2",
+    "binaryVersion": "knx-server 0.1.0-alpha.2+g6711af9a",
+    "assets": 89,
+    "authenticated": true,
+    "stopExit": 0,
+    "stopSeconds": 0.27,
+    "SIGINT": true,
+    "SIGTERM": true,
+    "isolatedData": true
+  },
+  "deployment": {
+    "observedAt": "2026-10-08T10:54:24+02:00",
+    "containerId": "3b65051a4c780ae8422fb5cf102bab910b1b23b62d2c1969b76adf29a1df5a13",
+    "imageId": "sha256:ac5433a5626b6f021d8f72c2e06772f4309ddec34091770b95c92c79c6002842",
+    "rollbackContainer": "knxbench-pre-ambient-20261008",
+    "rollbackContainerId": "451b38f2056526e2efbe0ac202e0527e1bf33ac7a91ee79aea82de2ff7fa73b7",
+    "binaryVersion": "0.1.0-alpha.2+g6711af9a",
+    "assets": 89,
+    "unchangedProtectedDataFiles": 4,
+    "tlsFingerprintPreserved": true,
+    "authenticationPreserved": true,
+    "runtimeConfigurationPreserved": true,
+    "oldStopExit": 0,
+    "oldStopAndActivationSeconds": 1.635
+  },
+  "immediateRestartSafety": {
+    "observedAt": "2026-10-08T08:54:13.295Z",
+    "origin": "https://127.0.0.1:8484",
+    "authenticated": true,
+    "projectStatus": 200,
+    "isModified": false,
+    "downloadStatus": 404,
+    "addressStatus": 404,
+    "safe": true
+  },
+  "liveBrowser": {
+    "observedAt": "2026-10-08T08:56:13.810Z",
+    "authenticated": true,
+    "version": "0.1.0-alpha.2+g6711af9a",
+    "theme": "lcars",
+    "presentation": "lcars",
+    "motionLevel": "standard",
+    "osReducedMotion": false,
+    "ambient": [
+      {
+        "name": "lcars-ambient-band",
+        "playState": "running",
+        "duration": 12500
+      },
+      {
+        "name": "lcars-ambient-brand",
+        "playState": "running",
+        "duration": 20000
+      }
+    ]
+  },
+  "liveClock": {
+    "observedAt": "2026-10-08T08:58:30.890Z",
+    "transitionDuration": ".25s",
+    "before": [
+      {
+        "name": "lcars-ambient-band",
+        "currentTime": 181459.5030000228,
+        "playState": "running",
+        "duration": 12500
+      },
+      {
+        "name": "lcars-ambient-brand",
+        "currentTime": 181459.5030000228,
+        "playState": "running",
+        "duration": 20000
+      }
+    ],
+    "after": [
+      {
+        "name": "lcars-ambient-band",
+        "currentTime": 181626.16300002282,
+        "playState": "running",
+        "duration": 12500
+      },
+      {
+        "name": "lcars-ambient-brand",
+        "currentTime": 181626.16300002282,
+        "playState": "running",
+        "duration": 20000
+      }
+    ],
+    "progressing": true
+  },
+  "protectedDataScope": "Four explicitly inventoried noncredential project/settings-format files compared before/after; same entire /data bind retained. Not a checksum assertion for all files/native database sidecars. No TLS private key read.",
+  "timingScope": "Reference token 200ms Standard: 10s/16s. Subtle token 120ms: 18s/24s. Existing timing overrides preserved; live .25s gives 12.5s/20s, both clocks actually advancing. No user setting changed.",
+  "rollback": "Previous live container knxbench-pre-ambient-20261008 and older knxbench-pre-lcars-20261008 retained stopped.",
+  "exclusions": [
+    "release tag",
+    "live KNX request",
+    "full ETS/private-corpus/native accessibility certification"
+  ]
+}

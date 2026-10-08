@@ -9,8 +9,9 @@ Consolidated on 2026-10-08, the day the main repository went public: the
 issue form lives in `.github/ISSUE_TEMPLATE/analysis.yml` of
 `KNXBench-Labs/KNXBench`, the EN/DE guides in `docs/contribution-intake/`, and
 the app's guide and issue links point there. The interim
-`KNXBench-Contributions` repository had no reports; its retirement (archive or
-pointer) is a separate owner decision. All preview/permission, public-original
+`KNXBench-Contributions` repository had no reports and was deleted by the owner on 2026-10-08 after its four files were confirmed
+in this repository (0 issues, PRs, releases, forks); a verified Git bundle
+stays in the local backups, not published. All preview/permission, public-original
 refusal and private-contact limitations continue unchanged.
 
 ## Beginner instructions

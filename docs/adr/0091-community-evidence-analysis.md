@@ -33,8 +33,9 @@ The main repository went public on 2026-10-08. The same day the form moved to
 `.github/ISSUE_TEMPLATE/analysis.yml` (blank issues stay enabled, since this
 is the main repository), the guides stayed in `docs/contribution-intake/`, and
 the app, guides and form now link the main repository. The interim
-`KNXBench-Contributions` had no issues; archiving it or leaving a pointer is
-left to the owner.
+`KNXBench-Contributions` had no issues and was deleted by the owner on 2026-10-08 after its four files were confirmed
+in this repository (0 issues, PRs, releases, forks); a verified Git bundle
+stays in the local backups, not published.
 
 ## Decision
 

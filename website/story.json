@@ -2,5 +2,5 @@
   "edition": "2026-10-08.4",
   "storySha256": "347dfcfbff359f7387a9336412071dac34891dc70a30e6ac69519d0a55b1e0a2",
   "publicationApproved": false,
-  "note": "Preview of the current story candidate. The story track holds an approval record for this exact edition (story/approvals); this site build stays in preview mode until its own release mode exists."
+  "note": "The website never claims story approval itself (publicationApproved stays false). Release builds render the published story variant only when story/approvals/<edition>.json matches this exact edition."
 }

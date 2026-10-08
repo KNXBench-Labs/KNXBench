@@ -93,3 +93,53 @@ class ReleaseGateTests(TempDirTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PublishedVariantTests(TempDirTestCase):
+    """The published page variant exists only behind an exact approval record."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.content = write_json(self.tmp, "content.json", load_fixture())
+        self.first = prepare(self.content, self.tmp / "candidates")
+
+    approval = ReleaseGateTests.approval
+    run_cli = ReleaseGateTests.run_cli
+
+    def build_cli(self, approval: str) -> tuple[int, str]:
+        return self.run_cli("build", "fixture-1", "--candidates", str(self.tmp / "candidates"),
+                            "--out", str(self.tmp / "published"), "--approval", str(self.tmp / approval))
+
+    def test_matching_approval_renders_the_published_variant(self) -> None:
+        self.approval("ok.json")
+        code, err = self.build_cli("ok.json")
+        self.assertEqual(code, 0, err)
+        page = (self.tmp / "published" / "index.html").read_text(encoding="utf-8")
+        self.assertNotIn('class="preview-banner"', page)
+        self.assertNotIn("noindex", page)
+        self.assertNotIn("Not published", page)
+        self.assertIn("Published edition", page)
+        self.assertIn("approved for publication by the project owner", page)
+
+    def test_stale_or_missing_approval_writes_nothing(self) -> None:
+        self.approval("stale.json", story_sha256="0" * 64)
+        for name in ("stale.json", "missing.json"):
+            code, err = self.build_cli(name)
+            self.assertNotEqual(code, 0)
+            self.assertIn("refused", err)
+            self.assertFalse((self.tmp / "published").exists())
+
+    def test_approval_never_rewrites_a_committed_preview(self) -> None:
+        self.approval("ok.json")
+        code, err = self.run_cli("build", "fixture-1", "--candidates", str(self.tmp / "candidates"),
+                                 "--preview", "--approval", str(self.tmp / "ok.json"))
+        self.assertNotEqual(code, 0)
+        self.assertIn("never a committed preview", err)
+
+    def test_preview_without_approval_keeps_its_banner(self) -> None:
+        code, err = self.run_cli("build", "fixture-1", "--candidates", str(self.tmp / "candidates"),
+                                 "--out", str(self.tmp / "preview"))
+        self.assertEqual(code, 0, err)
+        page = (self.tmp / "preview" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('class="preview-banner"', page)
+        self.assertIn("noindex", page)

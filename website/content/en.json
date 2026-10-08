@@ -102,7 +102,7 @@
   "privacy_body": "This website uses no analytics scripts, marketing cookies, embedded video services or remotely hosted fonts. Media and fonts load from the same site host. GitHub links lead to an external service.",
   "privacy_pending": "Before public launch, information about the actual hosting, possible server logs and privacy enquiries will be added and reviewed. This local preview is not a final privacy notice for the future site.",
   "contact_title": "Legal notice",
-  "contact_body": "Public project feedback and support gaps can be reported in the KNXBench-Contributions repository. Share only information explicitly approved for public disclosure, not confidential projects or credentials.",
+  "contact_body": "Public project feedback and support gaps can be reported on GitHub in the KNXBench repository, using its support-gap form. Share only information explicitly approved for public disclosure, not confidential projects or credentials.",
   "contact_email": "contact@knxbench.com",
   "back_home": "Back to the workbench",
   "contact_provider_label": "Website provider",
@@ -110,5 +110,8 @@
   "contact_street": "Schusterstrasse 3",
   "contact_city": "48268 Greven",
   "motion_pause": "Pause animations",
-  "motion_resume": "Resume animations"
+  "motion_resume": "Resume animations",
+  "privacy_title_release": "Privacy",
+  "privacy_hosting": "This website is hosted on GitHub Pages, a service of GitHub, Inc. According to GitHub's documentation, the visitor's IP address is logged and stored for security purposes when a GitHub Pages site is visited. For privacy enquiries, use the contact on the legal notice page.",
+  "privacy_policy_label": "GitHub Privacy Statement"
 }

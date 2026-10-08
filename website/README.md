@@ -45,25 +45,22 @@ The setting is page-local and not persisted. No JS/missing APIs retain readable
 static text; legal/privacy pages never load the effect. Story sources unchanged.
 `tests/verify-headlines.js` is the actual-browser recipe.
 
-## Deployment is not part of this package
+## Release build and deployment
 
-`build.py --release` refuses before writing. There is no automatic Pages workflow,
-deployment command or invented operational contact.
+```sh
+python3 website/build.py --release --output /tmp/knxbench-site
+```
 
-Before enabling a public build/deployment:
-
-1. Obtain a separate publication go, and design the release mode/workflow.
-2. Done 2026-10-08: repository, manual, release assets and installation paths
-   answer without authentication.
-3. Approve the exact story candidate digest; use the existing story release gate.
-4. Review the owner-supplied publisher/contact details and finalize host-specific privacy information.
-5. Verify DNS/domain ownership, Pages configuration and HTTPS.
-6. Replace preview-only notices/noindex in an explicitly reviewed release build,
-   rerun browser/media/link checks, and deploy only the inventoried artifact.
+The release build drops the preview banner, launch note and `noindex`, opens
+`robots.txt`, writes `CNAME` (`knxbench.com`) and renders the story's
+published variant, but only when `story/approvals/<edition>.json` matches the
+pinned edition exactly; otherwise it refuses and writes nothing.
+`.github/workflows/pages.yml` builds and deploys it to GitHub Pages on pushes
+to `main` touching `website/` or `story/`. Contract: `docs/WEBSITE.md`.
 
 The contact pages are labelled Impressum / Legal notice and contain the owner-supplied
-name, postal address and contact email. The privacy pages still identify pending
-hosting information. This is **not** a legal-compliance certification; no legal
+name, postal address and contact email. In the release build the privacy pages name the host (GitHub Pages) and its
+documented IP logging; the preview keeps the pending note. This is **not** a legal-compliance certification; no legal
 identity, phone, tax number or retention policy was invented.
 Imprint acceptance recipe: `tests/verify-imprint.js`.
 

@@ -45,9 +45,21 @@ def _cmd_prepare(args: argparse.Namespace) -> int:
 
 def _cmd_build(args: argparse.Namespace) -> int:
     source = Path(args.candidates) / args.candidate
+    if args.approval and args.preview:
+        print("refused: --approval renders the published variant, never a committed preview", file=sys.stderr)
+        return EXIT_REFUSED
     if args.preview:
         target = render.build(source, DEFAULT_PREVIEWS, f"{args.candidate}.html")
         print(f"wrote versioned preview {target} (commit it together with its candidate)")
+        return EXIT_OK
+    if args.approval:
+        try:
+            target = render.build(source, Path(args.out) if args.out else DEFAULT_DIST / args.candidate,
+                                  approval=Path(args.approval))
+        except render.PublicationRefused as refusal:
+            print(f"refused: {refusal}", file=sys.stderr)
+            return EXIT_REFUSED
+        print(f"built published edition {target} (approval matched; deploying it is a separate step)")
         return EXIT_OK
     target = render.build(source, Path(args.out) if args.out else DEFAULT_DIST / args.candidate)
     print(f"built private preview {target}")
@@ -111,6 +123,8 @@ def build_parser() -> argparse.ArgumentParser:
     output.add_argument("--out", help="output directory (default: story/dist/<candidate>)")
     output.add_argument("--preview", action="store_true",
                         help="write the versioned preview story/previews/<candidate>.html")
+    p.add_argument("--approval", help="render the published variant; refused unless this "
+                   "approval record matches the exact candidate (not with --preview)")
     p.set_defaults(func=_cmd_build)
 
     p = sub.add_parser("serve", help="serve a built preview on a loopback address only")

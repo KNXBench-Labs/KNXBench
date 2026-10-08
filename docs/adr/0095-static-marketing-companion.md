@@ -68,6 +68,15 @@ Existing source evidence:
 - **Full duplicate documentation:** rejected; the maintained manual remains on
   GitHub, with only concise start/boundary information on the landing page.
 
+## Amendment: release and deployment (2026-10-08)
+
+Owner go for publication on 2026-10-08. Point 6/8's refusal is replaced by a
+release mode gated on the story track's exact approval record; preview builds
+stay byte-identical. Deployment is `.github/workflows/pages.yml` (tests,
+release build, upload of the built directory only, `deploy-pages`). The
+privacy page states the host and GitHub's documented IP logging, drafted from
+GitHub's documentation for owner review. See [website contract](../WEBSITE.md).
+
 ## Consequences
 
 Story pin: point 4 named edition `2026-10-05.1`; that candidate was replaced by

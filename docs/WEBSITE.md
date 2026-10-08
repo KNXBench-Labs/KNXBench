@@ -134,22 +134,35 @@ The legal notice's provider name and postal address are committed on purpose
 identity scan of the repository finds them in `website/content/*.json` and in
 two website tests; that is expected, not a leak.
 
-## Before deploying the site
+## Release and deployment (2026-10-08)
 
-1. Separate go for publication and a reviewed release-mode/deployment design.
-2. Done 2026-10-08: the main repository is public; repository, manual, Docker
-   guide, releases page, the alpha.5 AppImage and the contributions repository
-   answered signed out.
-3. Story: on delivery the pin moved from the removed candidate `2026-10-05.1`
-   to the current `2026-10-08.4` (digest `347dfcfb…e0a2`), for which the story
-   track holds an approval record. Release mode must check that record; its
-   commit links still cite pre-purge hashes (KL §162).
-4. Review owner-supplied publisher/contact information and finalize host-specific
-   privacy information. Do not invent server-log/retention policies or claim
-   legal compliance. Public hosting and privacy details remain unfinished.
-5. Verify domain ownership, DNS, Pages artifact boundary and HTTPS; remove
-   preview notices/noindex only in the authorized release build and rerun checks.
+Owner go on 2026-10-08. `python3 website/build.py --release --output <dir>`
+builds the public variant into an inventoried directory:
 
-`build.py --release` currently refuses without writing. There is no Pages
-workflow, visibility change, public deployment, Docker registry publication or
-application-release change in this package.
+- no preview banner, no launch note, no `noindex`; `robots.txt` allows
+  crawling; a `CNAME` file names `knxbench.com`;
+- privacy pages titled Datenschutz/Privacy state the host (GitHub Pages) and,
+  citing GitHub's own documentation, that GitHub logs and stores visitor IP
+  addresses for security purposes, with a link to the GitHub Privacy
+  Statement. Drafted from that source only; owner review, no legal
+  certification, no invented retention policy;
+- the story is rendered as the published variant only when
+  `story/approvals/<edition>.json` matches the pinned edition exactly
+  (`storytool build --approval`); otherwise the release build refuses and
+  writes nothing.
+
+`.github/workflows/pages.yml` runs on pushes to `main` that touch `website/`,
+`story/` or the workflow (and on manual dispatch): website and story tests,
+the release build, then `actions/upload-pages-artifact` and
+`actions/deploy-pages` with only the built directory. Pages source is
+"GitHub Actions"; the custom domain `knxbench.com` is set in the repository's
+Pages settings, `www.knxbench.com` redirects to it.
+
+DNS at the registrar (Host Europe, nameservers `domaincontrol.com`): apex A
+`185.199.108–111.153`, AAAA `2606:50c0:8000–8003::153`, `www` CNAME
+`knxbench-labs.github.io`, plus the account's
+`_github-pages-challenge-KNXBench-Labs` TXT verification record (values from
+GitHub's custom-domain documentation; checked at both authoritative servers).
+
+Preview builds are unchanged: banner, `noindex`, `Disallow: /`, no `CNAME`.
+Acceptance recipes: the four preview recipes plus `tests/verify-release.js`.

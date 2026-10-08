@@ -105,9 +105,12 @@ Approval records live in `approvals/<id>.json`, committed with their candidate;
 `tests/test_approvals.py` fails as soon as one no longer matches. When a later
 edition replaces an approved one, remove or renew the record with it.
 **Current state:** `2026-10-08.4` is approved for publication (record of
-8 October 2026, `approved_by: project owner`). The page that would be published
-still carries the private-preview banner and `noindex`; producing the public
-variant and hosting it belong to the publication step, which is not designed yet.
+8 October 2026, `approved_by: project owner`). `python3 -m storytool build
+<id> --out <dir> --approval approvals/<id>.json` renders the published
+variant (no preview banner, no `noindex`, "Published edition") and refuses,
+writing nothing, unless the record matches the exact candidate. Committed
+previews never take an approval. The website's release build uses this and
+is deployed to knxbench.com/story/ by `.github/workflows/pages.yml`.
 
 ## Source archaeology, editions 2026-10-04 to 2026-10-08
 

@@ -1,0 +1,55 @@
+# Builds the marketing website in release mode and deploys it to GitHub Pages (knxbench.com).
+#
+# The release build refuses unless story/approvals/<edition>.json matches the pinned story
+# edition exactly, so an unapproved story can never reach the public site. Only the built,
+# inventoried directory is uploaded; the repository itself is never served.
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
+      - "story/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; never cancel a production deployment that is already running.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Website and story tests
+        run: |
+          python3 -m unittest discover -s website/tests
+          cd story && python3 -m unittest discover -s tests
+      - name: Release build
+        run: python3 website/build.py --release --output "$RUNNER_TEMP/site"
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/site
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

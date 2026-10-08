@@ -166,9 +166,9 @@ fn report_json(report: InstallReport) -> Value {
 
 fn error_category(error: PackageError) -> &'static str {
     match error {
-        PackageError::LegacyVd2 { .. } | PackageError::UnsupportedLegacyFormat { .. } => {
-            "legacy_container"
-        }
+        PackageError::LegacyVd2 { .. }
+        | PackageError::UnsupportedLegacyFormat { .. }
+        | PackageError::LegacyExIm { .. } => "legacy_container",
         PackageError::InvalidZip { .. } => "invalid_zip",
         PackageError::Encrypted { .. } => "encrypted_member",
         PackageError::UnsafeMember { .. } => "unsafe_member",

@@ -467,6 +467,17 @@ export const messages: Record<MessageKey, string> = {
   "buildingPartKind.ground": "Grundstück",
   "buildingPartKind.segment": "Segment",
 
+  "parameters.diagnosticsTab": "Diagnose",
+  "parameters.restrictedTab": "Herstellerfelder",
+  "parameters.restrictedDescription": "Diese Felder hat der Hersteller schreibgeschützt oder verborgen. Du kannst sie hier nur prüfen, nicht bearbeiten.",
+  "parameters.accessNoneCaption": "Vom Hersteller verborgen (Access None); nur zur Einsicht.",
+  "parameters.accessReadCaption": "Vom Hersteller schreibgeschützt (Access Read); keine Bearbeitung freigegeben.",
+  "parameters.noDiagnostics": "Keine Warnungen oder Hinweise aus der Parameterauswertung.",
+  "parameters.noRestrictedFields": "Keine vom Hersteller gesperrten Felder in den ausgewerteten Abschnitten.",
+  "parameters.noUserFields": "Keine zugänglichen Felder in den ausgewerteten Abschnitten. Schau unter Herstellerfelder und Diagnose nach.",
+  "parameters.occurrences": "{count} Vorkommen",
+  "parameters.technicalDetails": "Technische Details",
+
   "parameters.deviceScope": "Gerät",
   "parameters.moduleNumber": "Modul #{number}",
   "untranslated.label": "Unübersetzt ({source})",
@@ -478,7 +489,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.untranslated.summary.other": "{count} Felder sind nicht vollständig in {language} übersetzt; sie zeigen den eigenen Text des Programms ({source}).",
   "parameters.untranslated.summaryUnknown.one": "{count} Feld ist nicht vollständig in {language} übersetzt; es zeigt den eigenen Text des Programms.",
   "parameters.untranslated.summaryUnknown.other": "{count} Felder sind nicht vollständig in {language} übersetzt; sie zeigen den eigenen Text des Programms.",
-  "parameters.readOnlyCaption": "Hier nicht bearbeitbar – siehe die Warnungen für den Grund.",
+  "parameters.readOnlyCaption": "Hier nicht bearbeitbar – den Grund findest du unter Diagnose.",
   "parameters.sharedReadOnlyCaption":
     "Wird von jeder Instanziierung dieses Moduls gemeinsam genutzt; hier nicht bearbeitbar – siehe die Diagnosen für den Grund.",
   "parameters.staleValuesHeading": "Veraltete Werte ({count})",
@@ -510,7 +521,7 @@ export const messages: Record<MessageKey, string> = {
     "Zwei oder mehr importierte Modulinstanzen teilen sich dieses Modul; seine Felder sind schreibgeschützt.",
   "parameters.diagnostic.malformedModuleInstanceId":
     "Die Kennung einer importierten Modulinstanz hat eine unerwartete Form; die Felder dieses Moduls sind schreibgeschützt.",
-  "parameters.diagnostic.noBranchMatched": "Eine Auswahl passte auf keine ihrer Optionen.",
+  "parameters.diagnostic.noBranchMatched": "Der aktuelle Steuerwert passt zu keiner Option; für diese Auswahl wurde kein Zweig gewählt.",
   "parameters.diagnostic.unparsableTest": "Die Bedingung einer Auswahl konnte nicht verstanden werden.",
   "parameters.diagnostic.unresolvedParamRef":
     "Der steuernde Parameter einer Auswahl konnte nicht gefunden werden.",

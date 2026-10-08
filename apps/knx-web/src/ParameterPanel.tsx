@@ -13,6 +13,7 @@ import type {
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge } from "./languageFallback";
+import { groupParameterDiagnostics, isManufacturerRestricted } from "./parameterPresentation";
 import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
 
 // T18 slice 3, task 4 (design docs/superpowers/specs/2026-09-11-parameter-editor-design.md).
@@ -80,7 +81,7 @@ function ParameterFieldRow(props: {
   // the server's contract makes the two conditions exact opposites of
   // each other, but the control checks both rather than trusting either
   // one alone.
-  const disabled = !field.editable || field.writeEtsId === null;
+  const disabled = isManufacturerRestricted(field) || !field.editable || field.writeEtsId === null;
 
   useEffect(() => {
     setValue(field.value ?? "");
@@ -88,7 +89,7 @@ function ParameterFieldRow(props: {
   }, [field.etsId, field.value]);
 
   async function apply() {
-    if (!field.editable || field.writeEtsId === null) return;
+    if (isManufacturerRestricted(field) || !field.editable || field.writeEtsId === null) return;
     const current = field.value ?? "";
     if (value === current) return;
     setError(null);
@@ -170,7 +171,9 @@ function ParameterFieldRow(props: {
       )}
       {disabled && (
         <span className="parameter-field-caption">
-          {t(moduleScoped ? "parameters.sharedReadOnlyCaption" : "parameters.readOnlyCaption")}
+          {t(field.access === "None" ? "parameters.accessNoneCaption"
+            : field.access === "Read" ? "parameters.accessReadCaption"
+            : moduleScoped ? "parameters.sharedReadOnlyCaption" : "parameters.readOnlyCaption")}
         </span>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -195,15 +198,6 @@ function UntranslatedSummary(props: { panel: ParameterPanelDto; language: string
         : t(`parameters.untranslated.summary.${plural}` as const, { count, language, source: panel.sourceLanguage })}
     </p>
   );
-}
-
-// `ParameterDiagnostic.scope` is built server-side from the very same
-// section's own scope (`module_scope_dto`), so comparing field by field
-// — rather than reference or `JSON.stringify` — is enough to find a
-// section's own diagnostics.
-function sameScope(a: ModuleScope | null, b: ModuleScope | null): boolean {
-  if (a === null || b === null) return a === b;
-  return a.moduleNode === b.moduleNode && a.moduleId === b.moduleId && a.moduleDefId === b.moduleDefId;
 }
 
 // KNOWN_LIMITATIONS.md §66: `ParameterDiagnostic.message` used to be
@@ -252,49 +246,22 @@ function describeParameterDiagnosticMessage(t: Translate, diagnostic: ParameterD
   return key ? t(key) : diagnostic.message;
 }
 
-// One collapsible group per `ParameterSectionDto` — the top-level
-// (`scope: null`) section and one per module instantiation (D23: "12
-// instantiations are 12 results," never collapsed back into one list).
-// Its own diagnostics (design D43) render inline, right below the
-// summary — the same `parameters.*` text `DiagnosticsBanner` already
-// shows panel-wide, surfaced again here so a section's read-only reason
-// doesn't require hunting through that collapsed, unfiltered list.
+// One collapsible group per device/module scope. Diagnostic prose belongs
+// only in the Diagnostics tab; field-level refusal captions remain local.
 function ParameterSectionView(props: {
   section: ParameterSection;
-  diagnostics: ParameterDiagnostic[];
   deviceId: number;
   language: string | null;
   sourceLanguage: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
   onValueApplied: (tree: ProjectTree) => void;
 }) {
-  const { section, diagnostics, deviceId, language, sourceLanguage, onUpdated, onValueApplied } = props;
+  const { section, deviceId, language, sourceLanguage, onUpdated, onValueApplied } = props;
   const t = useTranslate();
-  const ownDiagnostics = diagnostics.filter((d) => sameScope(d.scope, section.scope));
-  // ADR-0080, UI owner's presentation decision: `Access` is the user's right
-  // to view and modify a parameter (Project Schema23 §1.1.2.1), so a field
-  // whose effective access is `None` is folded away by default — counted,
-  // one click from view, never dropped. `Read` fields stay visible.
-  const [showHidden, setShowHidden] = useState(false);
-  const hiddenCount = section.fields.filter((field) => field.access === "None").length;
-  const fields = showHidden ? section.fields : section.fields.filter((field) => field.access !== "None");
+  const fields = section.fields;
   return (
     <details className="parameter-section" open>
       <summary>{sectionLabel(t, section.scope)}</summary>
-      {/* KNOWN_LIMITATIONS.md §66: the headline is translated via
-          `d.kind`; `d.detail` (not shown here at all) stays English by
-          design — see `ParameterDiagnostic.detail`'s doc comment. */}
-      {ownDiagnostics.map((d, i) => (
-        <p key={i} className="inspector-description">
-          {describeParameterDiagnosticMessage(t, d)}
-        </p>
-      ))}
-      {hiddenCount > 0 && (
-        <button type="button" className="parameter-hidden-toggle" aria-expanded={showHidden}
-          onClick={() => setShowHidden((shown) => !shown)}>
-          {t(`parameters.noAccess.${showHidden ? "hide" : "show"}.${hiddenCount === 1 ? "one" : "other"}` as const, { count: hiddenCount })}
-        </button>
-      )}
       <div className="parameter-fields">
         {fields.map((field) => (
           <ParameterFieldRow
@@ -313,8 +280,7 @@ function ParameterSectionView(props: {
   );
 }
 
-// D21's stored-but-unmatched values: shown separately from the normal
-// field list, never merged in and never hidden.
+// D21: stored-but-unmatched values remain inspectable in Diagnostics.
 function StaleParametersSection(props: { stale: StaleParameter[] }) {
   const { stale } = props;
   const t = useTranslate();
@@ -333,9 +299,9 @@ function StaleParametersSection(props: { stale: StaleParameter[] }) {
   );
 }
 
-// D26's collapsed, count-headed banner — never a debugger. `detail` sits
-// behind a "copy details" affordance, not printed inline. An unknown
-// severity falls back to warning, never to a silent informational label.
+// Count source occurrences, group repeated headlines without losing details.
+// Technical records stay behind an explicit disclosure; unknown severities
+// remain warnings, never silent informational labels.
 function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
   const { diagnostics } = props;
   const t = useTranslate();
@@ -351,14 +317,21 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
   }
 
   return (
-    <details className="parameter-diagnostics-banner" data-has-warnings={warnings > 0}>
+    <details className="parameter-diagnostics-banner" data-has-warnings={warnings > 0} open>
       <summary>{summary}</summary>
       <ul>
-        {diagnostics.map((d, i) => {
+        {groupParameterDiagnostics(diagnostics).map((group, i) => {
+          const d = group[0];
           const severity = d.severity === "info" ? "info" : "warning";
           return <li key={i} data-severity={severity}>
             <strong>{t(severity === "info" ? "parameters.severity.info" : "parameters.severity.warning")}</strong>: {describeParameterDiagnosticMessage(t, d)}
-            <button onClick={() => copyDetail(d.detail)}>{t("parameters.copyDetails")}</button>
+            <span className="parameter-diagnostic-scope">{sectionLabel(t, d.scope)}</span>
+            {group.length > 1 && <span className="provenance-badge">{t("parameters.occurrences", { count: group.length })}</span>}
+            <button type="button" onClick={() => copyDetail(group.map((item) => item.detail).join("\n"))}>{t("parameters.copyDetails")}</button>
+            <details className="parameter-diagnostic-details">
+              <summary>{t("parameters.technicalDetails")}</summary>
+              {group.map((item, index) => <pre key={index}>{item.detail}</pre>)}
+            </details>
           </li>;
         })}
       </ul>
@@ -366,7 +339,9 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
   );
 }
 
-export default function ParameterPanel(props: {
+export type ParameterView = "parameters" | "diagnostics" | "restricted";
+
+type ParameterPanelProps = {
   deviceId: number;
   /** Accepted authoritative project snapshot; commands/Undo/Redo invalidate
    * parameters even when the selected device and product language are unchanged. */
@@ -381,9 +356,11 @@ export default function ParameterPanel(props: {
   // reopen the publish hole this callback exists to close — `tsc` catches
   // that instead.
   onValueApplied: (tree: ProjectTree) => void;
-}) {
-  const { deviceId, onValueApplied, refreshKey } = props;
-  const t = useTranslate();
+  view?: ParameterView;
+};
+
+/** One read model shared by the editor and both inspection-only tabs. */
+export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) {
   const [language] = useProductLanguage();
   const [panel, setPanel] = useState<ParameterPanelDto | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -410,10 +387,22 @@ export default function ParameterPanel(props: {
       });
   }, [deviceId, language, refreshKey]);
 
+  return { panel, loadError, language, setPanel };
+}
+
+export function ParameterPanelContent(props: ParameterPanelProps & {
+  state: ReturnType<typeof useDeviceParameters>;
+}) {
+  const { deviceId, onValueApplied, view = "parameters", state } = props;
+  const { panel, loadError, language, setPanel } = state;
+  const t = useTranslate();
+  const title = view === "diagnostics" ? "parameters.diagnosticsTab"
+    : view === "restricted" ? "parameters.restrictedTab" : "parameters.title";
+
   if (loadError) {
     return (
       <div className="parameter-panel">
-        <h3>{t("parameters.title")}</h3>
+        <h3>{t(title)}</h3>
         <span className="field-error">{loadError}</span>
       </div>
     );
@@ -422,34 +411,51 @@ export default function ParameterPanel(props: {
   if (!panel) {
     return (
       <div className="parameter-panel parameter-panel-loading">
-        <h3>{t("parameters.title")}</h3>
+        <h3>{t(title)}</h3>
         <p className="inspector-description">{t("parameters.loading")}</p>
       </div>
     );
   }
 
+  if (view === "diagnostics") {
+    return <div className="parameter-panel parameter-diagnostics">
+      <h3>{t(title)}</h3>
+      {panel.diagnostics.length > 0 ? <DiagnosticsBanner diagnostics={panel.diagnostics} />
+        : <p className="inspector-description">{t("parameters.noDiagnostics")}</p>}
+      <UntranslatedSummary panel={panel} language={language} />
+      {panel.stale.length > 0 && <StaleParametersSection stale={panel.stale} />}
+    </div>;
+  }
+
+  const sections = panel.sections.map((section) => ({
+    ...section,
+    fields: section.fields.filter((field) => isManufacturerRestricted(field) === (view === "restricted")),
+  })).filter((section) => section.fields.length > 0);
+
   return (
     <div className="parameter-panel">
-      <h3>{t("parameters.title")}</h3>
-      {panel.diagnostics.length > 0 && <DiagnosticsBanner diagnostics={panel.diagnostics} />}
-      <UntranslatedSummary panel={panel} language={language} />
+      <h3>{t(title)}</h3>
+      {view === "restricted" && <p className="inspector-description">{t("parameters.restrictedDescription")}</p>}
       {panel.programId === null ? (
         <p className="inspector-description">{t("parameters.noProgram")}</p>
-      ) : (
-        panel.sections.map((section, i) => (
-          <ParameterSectionView
-            key={i}
-            section={section}
-            diagnostics={panel.diagnostics}
-            deviceId={deviceId}
-            language={language}
-            sourceLanguage={panel.sourceLanguage}
-            onUpdated={setPanel}
-            onValueApplied={onValueApplied}
-          />
-        ))
-      )}
-      {panel.stale.length > 0 && <StaleParametersSection stale={panel.stale} />}
+      ) : sections.length === 0 ? (
+        <p className="inspector-description">{t(view === "restricted" ? "parameters.noRestrictedFields" : "parameters.noUserFields")}</p>
+      ) : sections.map((section, i) => (
+        <ParameterSectionView
+          key={i}
+          section={section}
+          deviceId={deviceId}
+          language={language}
+          sourceLanguage={panel.sourceLanguage}
+          onUpdated={setPanel}
+          onValueApplied={onValueApplied}
+        />
+      ))}
     </div>
   );
+}
+
+export default function ParameterPanel(props: ParameterPanelProps) {
+  const state = useDeviceParameters(props.deviceId, props.refreshKey);
+  return <ParameterPanelContent {...props} state={state} />;
 }

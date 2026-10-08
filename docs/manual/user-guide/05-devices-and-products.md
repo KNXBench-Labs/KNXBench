@@ -291,14 +291,36 @@ The tab loads the device's parameters when you select the device. What you get:
 - **Fields.** A select for a choice parameter, a number field with the program's own
   minimum and maximum for a numeric one, a text field otherwise. Values commit on blur,
   and Enter is a shortcut for that. A rejected value snaps back with the reason.
-- **A diagnostics banner**, collapsed, counting informational notes separately
-  from warnings. An expected unmatched choice is an informational note; a
-  missing or unreadable value remains a warning. Open the banner to read
-  individual messages and copy details. Unknown severity is shown as a
-  warning, not silently treated as informational.
-- **Stale values**, when the project holds parameter values that no longer correspond
-  to any parameter in the current program. They are shown separately, never merged into
-  the field list and never quietly dropped.
+Evaluation notices are no longer printed above the editor or repeated inside
+sections. Manufacturer-declared Access Read/None fields are in their own tab.
+Actual rejected edits still show their reason next to the edited field.
+
+### Diagnostics
+
+Next to **Product data**, **Diagnostics** counts informational notes separately
+from warnings. Repeated messages with the same cause, severity and exact
+section scope become one entry with an occurrence count, such as **6 occurrences**.
+The explanation for an unmatched selection says the controlling value matched
+no option; it does not claim a broken manufacturer program. Unknown severity
+is still treated as a warning, and unknown diagnostic kinds keep their message.
+
+Open **Technical details** to inspect every original record, or **Copy details**
+to copy all records in that group. Product-language fallback summaries and
+**Stale values** (stored values with no matching parameter in the current
+program) also live here. Those values are preserved, never silently dropped.
+
+### Manufacturer fields
+
+**Manufacturer fields** lists evaluated fields that the manufacturer explicitly
+marked **Access Read** (read-only) or **Access None** (hidden from normal user
+access). Both remain inspection-only, with the access-specific reason next to
+the field. This replaces the old “Show fields without user access” fold in
+Parameters. Other refusal reasons do not automatically make a field a
+manufacturer-access restriction; those fields stay in Parameters with a
+read-only caption pointing to Diagnostics.
+
+Only already evaluated fields are shown, not every static field in the product
+database. Switching these tabs does not reload the device or write a parameter.
 
 Some fields are read-only, with a caption saying so. That is the honest answer to a
 hard case: a module-scoped parameter can only be written when exactly one module

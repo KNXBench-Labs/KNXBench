@@ -1,0 +1,88 @@
+{
+  "passed": 50,
+  "failed": 0,
+  "checks": [
+    "native table",
+    "all 22 fixture rows admitted",
+    "embedded fonts loaded",
+    "keyboard name activation opens matching inspector",
+    "checkbox marking is independent of active entity",
+    "mark count is factual",
+    "filter shows matching fixture rows",
+    "select-all only marks visible rows and retains earlier marks",
+    "empty filter feedback",
+    "draft survives selection changes",
+    "invalid address refuses mutation",
+    "duplicate address refuses mutation",
+    "valid edit is explicitly dirty",
+    "pending demo exposes native progress",
+    "success only acknowledges memory snapshot",
+    "simulated failure retains dirty data with alert",
+    "cancel retains dirty data without late success",
+    "older snapshot cannot acknowledge newer edit",
+    "repeated save shortcut creates one pending operation",
+    "native disclosure receives keyboard focus",
+    "native disclosure works with keyboard",
+    "project room scopes real fixture rows",
+    "workspace navigation changes real view",
+    "enabled motion has actual live action feedback",
+    "off cancels running animations and transitions",
+    "reenabled action feedback is live",
+    "OS reduced motion cancels running feedback",
+    "no idle animation loop",
+    "comfortable density increases actual row geometry",
+    "presentation switch preserves data and independent density",
+    "inspector close restores focus to trigger",
+    "search shortcut preserves visible keyboard focus",
+    "keyboard focus has rendered outline",
+    "reset confirmation initially focuses cancel",
+    "Escape cancels reset without data loss",
+    "explicit reset restores fixture state",
+    "offline explanation includes embedded font notices",
+    "large fixture list has real vertical table overflow",
+    "narrow: no global horizontal overflow",
+    "narrow: simulation controls stay reachable",
+    "narrow: table overflow stays local",
+    "zoom-layout: no global horizontal overflow",
+    "zoom-layout: simulation controls stay reachable",
+    "zoom-layout: table overflow stays local",
+    "small: no global horizontal overflow",
+    "small: simulation controls stay reachable",
+    "small: table overflow stays local",
+    "small: meaningful table rows remain visible",
+    "no external page requests",
+    "no final-source browser console or script errors"
+  ],
+  "viewports": [
+    [
+      1600,
+      1000
+    ],
+    [
+      1280,
+      900
+    ],
+    [
+      768,
+      1000
+    ],
+    [
+      720,
+      620
+    ],
+    [
+      480,
+      900
+    ]
+  ],
+  "zoomBoundary": "720px layout viewport represents 200% zoom on a 1440px-wide window; browser chrome zoom was not driven",
+  "networkRequests": [],
+  "consoleErrors": [],
+  "sha256": {
+    "index.html": "c1e8ef5bd1f1601af87f87f573376aba173fb4ba6e0e80998efdd1e736dc7ce2",
+    "verify-browser.js": "59d537ee503ca9bbcc70af7b3d483a575aac0385938163a66ea982b350cff0c5"
+  },
+  "scriptSyntaxExit": 0,
+  "embeddedFontFiles": 4,
+  "verifiedDate": "2026-10-07"
+}

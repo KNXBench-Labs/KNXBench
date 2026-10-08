@@ -8,6 +8,14 @@ This document defines a KNXBench-owned format, not an existing interoperability
 standard or a whole-application release/compatibility claim. Decision:
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md).
 
+## Built-in LCARS presentation (2026-10-08)
+
+LCARS is a built-in CSS palette with a trusted UI presentation, not a v1 pack.
+Selecting it stores only `theme: "lcars"`. Its framing cannot be exported as a
+lossless declarative pack, requested by imported metadata or enabled by imported
+CSS. The v1 envelope, token/value/contrast admission and imported `user-`
+identity boundary are unchanged. See [ADR-0092](adr/0092-lcars-built-in-presentation.md).
+
 ## Runtime implementation boundary
 
 `themePack.ts` admits original JSON text through byte, duplicate, depth and node

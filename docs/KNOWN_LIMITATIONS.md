@@ -8521,6 +8521,20 @@ documents are unaffected. The tag `v0.1.0-alpha.4` and its pre-release were
 withdrawn, and the archived release records describe a build that no longer
 exists for download.
 
+**Second, partial rewrite (2026-10-08).** Commits made on 2026-10-08 between
+10:28 and 13:35 CEST had reintroduced a personal e-mail address (four story
+commits) and a home-directory path (two LCARS commits and one handover
+version). On the user's decision the history from `c0237937` (old hash) on was
+rewritten again; 27 commits got new hashes, the final tree stayed
+byte-identical, and the tag `v0.1.0-alpha.5` and everything before 10:28 kept
+their hashes. Map: [`docs/history/COMMIT_MAP_2026-10-08.txt`](history/COMMIT_MAP_2026-10-08.txt).
+Hashes of those 27 commits cited in maintained documents and handovers were
+updated in place; links to removed documents now point at `138403ed6084`, the
+same tree as the old `6a1ba6ae5d54`. A branch created from `main` between
+10:28 and 13:35 must be moved onto the new history
+(`git rebase --onto <new base> <old base> <branch>`, bases from the map) and
+must never be merged back as it is.
+
 **Lifted when.** Not applicable; the mapping file is the permanent bridge.
 
 ## 163. Stopping the server does not wait for a device download or address programming

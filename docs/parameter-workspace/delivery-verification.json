@@ -1,9 +1,9 @@
 {
   "timestamp": "2026-10-08 12:50 CEST",
-  "featureCommit": "a4a21d7dac878f7e4042778996671b843884b011",
-  "initialMergeCommit": "50a7f373855f22484de532da99ed0fdc456205f2",
-  "finalSourceMergeCommit": "2046e16a09e86989112779de21f3fcd67db0e94e",
-  "upstreamIncluded": "ca1ed483",
+  "featureCommit": "8ef2d31b6238ed9db0890dbc86c8a00a8a14bf45",
+  "initialMergeCommit": "0294c38ad41d3e0186ff514b8339adc5a893f871",
+  "finalSourceMergeCommit": "08e52cb73c0b8d3e831b34dbb29bde6ae0ae6204",
+  "upstreamIncluded": "3fc111f9",
   "scope": "Owner-authorized commit/merge/push of UI-only parameter display package; no deployment/hardware operation.",
   "sourceSha256": {
     "apps/knx-web/src/Inspector.tsx": "a30e32aaaa261b715dcd2d589cec85af30a9e6f278b9bcb751f9f650ce858b0f",
@@ -22,7 +22,7 @@
     "unchangedAfterConcurrentUpstreamMerge": true
   },
   "frontend": {
-    "testedCommit": "2046e16a09e86989112779de21f3fcd67db0e94e",
+    "testedCommit": "08e52cb73c0b8d3e831b34dbb29bde6ae0ae6204",
     "testFiles": 144,
     "tests": 2388,
     "build": "passed",
@@ -30,13 +30,13 @@
     "flowStudyTypes": "passed"
   },
   "chromiumSuite": {
-    "testedCommit": "50a7f373855f22484de532da99ed0fdc456205f2",
+    "testedCommit": "0294c38ad41d3e0186ff514b8339adc5a893f871",
     "tests": 170,
     "status": "passed",
     "sourceEquivalence": "All tracked apps/knx-web files/config/fixtures/lockfile identical before and after concurrent upstream merge; complete hashes verified."
   },
   "retainedVerifier": {
-    "testedCommit": "2046e16a09e86989112779de21f3fcd67db0e94e",
+    "testedCommit": "08e52cb73c0b8d3e831b34dbb29bde6ae0ae6204",
     "checks": 278,
     "syntheticRequests": 24,
     "unexpectedRequests": [],
@@ -73,10 +73,10 @@
   ],
   "publication": {
     "target": "origin/main",
-    "verifiedCommit": "8b13787e7e7abcaf93eaf16bf0aab1a3ee98f30c",
+    "verifiedCommit": "38a48d39ea65dffc812684bdf21588dc3acab195",
     "verifiedAt": "2026-10-08 12:54 CEST",
     "remoteExactReadback": "passed",
-    "concurrentUpstreamIncluded": "c64e4a5a",
+    "concurrentUpstreamIncluded": "c194e153",
     "frontendSourceEquivalentToTestedMerge": true,
     "note": "Closure metadata follows this verified publication; it does not alter tested frontend sources."
   }

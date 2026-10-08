@@ -1,0 +1,127 @@
+{
+ "base_candidate": "2026-10-08.3",
+ "candidate_id": "2026-10-08.4",
+ "content_sha256": "3eccbbc7970ea368ebb911a67f4d17570c3d40166d010ab3237378ff1391f170",
+ "counts": {
+  "chapters": 9,
+  "editorial_relations": 11,
+  "events": 51,
+  "events_with_uncertainty": 27,
+  "excerpts": 42,
+  "gaps": 4,
+  "relations": 67
+ },
+ "cutoff": {
+  "conversations_through": "2026-10-08T13:18+02:00",
+  "git_commit": "138403ed60846d7cf2a964c3e0a360e52ae6155e",
+  "git_commit_time": "2026-10-08T13:18:48+02:00",
+  "git_ref": "origin/main",
+  "label": "Published Git history up to 8 October 2026, 13:18 CEST; local agent conversations up to the same time; plus personal chat exports (ChatGPT, claude.ai) that the user provided on 4 October 2026, searched locally for this project"
+ },
+ "diff": {
+  "base": "2026-10-08.3",
+  "chapters": {
+   "added": [],
+   "changed": {},
+   "removed": []
+  },
+  "cutoff_changed": true,
+  "events": {
+   "added": [],
+   "changed": {
+    "goals-closed": [
+     "evidence"
+    ],
+    "legacy-vd": [
+     "evidence"
+    ]
+   },
+   "moved_in_graph": [],
+   "removed": []
+  },
+  "gaps": {
+   "added": [],
+   "changed": {},
+   "removed": []
+  },
+  "initial": false,
+  "narrator_changed": false,
+  "relations": {
+   "added": [],
+   "changed": {},
+   "removed": []
+  },
+  "sources_changed": true,
+  "strands": {
+   "added": [],
+   "changed": {},
+   "removed": []
+  },
+  "target": "2026-10-08.4"
+ },
+ "privacy_warnings": [
+  {
+   "category": "possible KNX individual address or version number",
+   "excerpt": "…as written: version 0.1.0-alpha.1, no tag, no…",
+   "location": "events[alpha-backlog].aside",
+   "severity": "warning"
+  },
+  {
+   "category": "possible KNX individual address or version number",
+   "excerpt": "…s decision, version 0.1.0-alpha.4 was tagged …",
+   "location": "events[first-alpha].summary",
+   "severity": "warning"
+  }
+ ],
+ "provenance": {
+  "events_without_private_provenance": [],
+  "private_entries_without_public_event": 0,
+  "private_locators_found_in_payload": 0,
+  "status": "checked"
+ },
+ "publication": {
+  "approved": false,
+  "note": "Prepared for private review only. Publishing requires a separate explicit approval of this exact story_sha256."
+ },
+ "schema": "knxbench-evolution-manifest/1",
+ "source_coverage": [
+  {
+   "id": "src-git",
+   "status": "read"
+  },
+  {
+   "id": "src-docs",
+   "status": "read"
+  },
+  {
+   "id": "src-claude",
+   "status": "read"
+  },
+  {
+   "id": "src-codex",
+   "status": "read"
+  },
+  {
+   "id": "src-hermes",
+   "status": "read"
+  },
+  {
+   "id": "src-paperclip",
+   "status": "partial"
+  },
+  {
+   "id": "src-chat-exports",
+   "status": "partial"
+  },
+  {
+   "id": "src-local-story",
+   "status": "read"
+  },
+  {
+   "id": "src-cloud",
+   "status": "unavailable"
+  }
+ ],
+ "story_sha256": "347dfcfbff359f7387a9336412071dac34891dc70a30e6ac69519d0a55b1e0a2",
+ "tool_version": "0.1.0"
+}

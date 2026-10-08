@@ -1,13 +1,13 @@
 {
   "schema": "knxbench-evolution-story/1",
   "edition": {
-    "id": "2026-10-08.3",
+    "id": "2026-10-08.4",
     "title": "From one prompt to a project, reluctantly narrated",
     "status": "private-candidate",
     "cutoff": {
       "label": "Published Git history up to 8 October 2026, 13:18 CEST; local agent conversations up to the same time; plus personal chat exports (ChatGPT, claude.ai) that the user provided on 4 October 2026, searched locally for this project",
       "git_ref": "origin/main",
-      "git_commit": "6a1ba6ae5d54b8308326e55a28ee7beaa5e280a5",
+      "git_commit": "138403ed60846d7cf2a964c3e0a360e52ae6155e",
       "git_commit_time": "2026-10-08T13:18:48+02:00",
       "conversations_through": "2026-10-08T13:18+02:00"
     },
@@ -18,7 +18,7 @@
         "label": "Published Git history",
         "scope": "2,295 commits on the main branch, 2 September to 8 October 2026, including 93 architecture decision records",
         "status": "read",
-        "note": "The early history was rewritten twice for privacy on 20 September 2026, and once more on 7 October 2026, when every commit moved to a single project identity. Commit hashes cited here are the current ones."
+        "note": "The early history was rewritten twice for privacy on 20 September 2026, and again on 7 and 8 October 2026 to a single project identity. Commit hashes cited here are the current ones."
       },
       {
         "id": "src-docs",
@@ -2423,7 +2423,7 @@
         {
           "kind": "commit",
           "label": "Legacy programs imported for offline use",
-          "ref": "d110de30",
+          "ref": "12ba7c68",
           "source": "src-git"
         }
       ],
@@ -2460,7 +2460,7 @@
         {
           "kind": "commit",
           "label": "Goals archived, one open-work page",
-          "ref": "7d891a32",
+          "ref": "c00dc794",
           "source": "src-git"
         },
         {

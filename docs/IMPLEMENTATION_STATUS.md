@@ -70,7 +70,7 @@
   merge/commit/push separately; merged-source delivery evidence is recorded in
   `docs/parameter-workspace/delivery-verification.json`. No Docker activation
   or hardware contact is part of this delivery.
-- Delivery: main publication `8b13787e` verified by exact remote
+- Delivery: main publication `38a48d39` verified by exact remote
   readback. Final merged frontend **2388 tests / 144 files**, full Chromium suite
   **170 tests**, retained verifier **278 checks**, build/types and five gates pass.
   Subsequent closure metadata leaves every tracked frontend byte unchanged.
@@ -166,7 +166,7 @@
 - **Self-review** (in-session, not independent) found the CLI's DB-before-
   decrypt order (fixed test-first), the unnamed namespace collision (fixed
   test-first) and an untested catalog listing (test added, no code change).
-- **Gate:** on `d110de30` (rebased on `8e8aa6b6`), under both gate
+- **Gate:** on `12ba7c68` (rebased on `bcb23598`), under both gate
   locks, inputs frozen (empty diff at start and end):
   - Web build, fmt and clippy `-D warnings` (workspace) pass; all five xtask
     gates pass; `git diff --check` is clean.
@@ -187,8 +187,8 @@
 
 ## 2026-10-08 — Calm LCARS ambient source published and activated
 
-- Tested merge **6711af9a** is published on main and stamped into matching Docker
-  client/server image; feature **c0237937**, keyboard-test correction **8ccc6958**.
+- Tested merge **37e7f642** is published on main and stamped into matching Docker
+  client/server image; feature **490eed98**, keyboard-test correction **8ccc6958**.
   Parallel wizard/achievement/localization/legacy main source retained.
 - Frozen complete app/crate source: **2375 frontend / 143 files**, **170 Chromium**,
   **54 native production-workbench assertions**, targeted Rust/synthetic legacy,
@@ -2586,10 +2586,13 @@ See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
   functionality", not "mirrors") and `2026-10-08.2` (no remarks about AI usage
   limits). Only `2026-10-08.2` is kept in the tree.
 - Follow-up 2026-10-08: edition `2026-10-08.3` moves the cutoff to `origin/main`
-  `6a1ba6ae` (2,295 commits), remaps every commit reference through the
+  `138403ed` (2,295 commits), remaps every commit reference through the
   7 October commit map, and adds 13 steps (4–8 October) plus a ninth chapter.
   The browser check now reads the chapter count and the bus steps from the
   edition; date labels yield to step labels that reach into the date column.
+- Follow-up 2026-10-08: after the partial history rewrite (KNOWN_LIMITATIONS
+  §162), edition `2026-10-08.4` replaces `.3` with identical content except the
+  remapped cutoff hash and two evidence hashes; only `.4` is kept.
 - Story motion update (user request, site only, no content change): scrolling
   back retracts later steps and refocuses the current chapter; looping signal
   pulses travel each visible connection (paused off screen); random headline

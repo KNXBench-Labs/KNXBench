@@ -9,8 +9,10 @@
 use std::fmt;
 
 use knx_productdb::legacy::{
-    inspect_payload, read_legacy_member, LegacyError, LegacyInspection, LegacyPayload,
+    inspect_payload, publish_legacy, read_legacy_member, LegacyError, LegacyInspection,
+    LegacyPayload, LegacyPublishError, LegacyPublishReport,
 };
+use knx_productdb::Connection;
 use knx_secure::zipcrypto::{self, CheckBytes, ZipCryptoError};
 
 /// The password a user supplied for one legacy file.
@@ -71,4 +73,18 @@ pub fn inspect_legacy_file(
     password: Option<&LegacyPassword>,
 ) -> Result<LegacyInspection, LegacyError> {
     inspect_payload(&open_legacy_file(bytes, password)?)
+}
+
+/// Opens a legacy product database with the user's password and publishes
+/// every application program in it into the product database, in one
+/// transaction (ADR-0094). The password is used for decryption only: it is
+/// not stored, logged or returned.
+pub fn import_legacy_file(
+    products: &Connection,
+    source_name: &str,
+    bytes: &[u8],
+    password: Option<&LegacyPassword>,
+) -> Result<LegacyPublishReport, LegacyPublishError> {
+    let payload = open_legacy_file(bytes, password)?;
+    publish_legacy(products, source_name, bytes, &payload)
 }

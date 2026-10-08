@@ -1,6 +1,7 @@
 //! Legacy EX-IM files opened with the user's password: right, wrong, missing, empty, redacted.
 
-use knx_app::legacy::{inspect_legacy_file, open_legacy_file, LegacyPassword};
+use knx_app::legacy::{import_legacy_file, inspect_legacy_file, open_legacy_file, LegacyPassword};
+use knx_productdb::legacy::LegacyPublishError;
 use knx_productdb::legacy::{ExImContent, LegacyError, LegacyMemberKind};
 
 const PASSWORD: &str = "marvin-synthetic";
@@ -117,4 +118,79 @@ fn a_crc_mismatch_after_a_passed_check_byte_is_wrong_password_or_corrupt() {
         open_legacy_file(&bytes, Some(&password())),
         Err(LegacyError::WrongPasswordOrCorrupt)
     ));
+}
+
+fn products() -> (tempfile::TempDir, knx_productdb::Connection) {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    (dir, conn)
+}
+
+fn rows(conn: &knx_productdb::Connection, table: &str) -> i64 {
+    conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))
+        .unwrap()
+}
+
+#[test]
+fn the_encrypted_and_the_plain_file_share_one_publication() {
+    let (_dir, conn) = products();
+    let encrypted = fixture("marvin-program.vd4");
+    let first = import_legacy_file(&conn, "marvin.vd4", &encrypted, Some(&password())).unwrap();
+    assert!(!first.skipped);
+    assert_eq!(first.programs.len(), 1);
+    let plain = fixture("marvin-program-plain.vd4");
+    let second = import_legacy_file(&conn, "marvin-plain.vd4", &plain, None).unwrap();
+    assert!(second.skipped);
+    assert_eq!(second.payload_sha256, first.payload_sha256);
+    assert_ne!(second.original_sha256, first.original_sha256);
+    assert_eq!(rows(&conn, "application_program"), 1);
+    assert_eq!(rows(&conn, "legacy_source_file"), 2);
+}
+
+#[test]
+fn the_password_is_stored_nowhere() {
+    let (dir, conn) = products();
+    let secret = "canary-import-password";
+    // The fixture's password is public; plant a canary by importing the
+    // plain file with it as an (ignored) password, then the encrypted one.
+    import_legacy_file(
+        &conn,
+        "plain.vd4",
+        &fixture("marvin-program-plain.vd4"),
+        Some(&LegacyPassword::new(secret)),
+    )
+    .unwrap();
+    import_legacy_file(
+        &conn,
+        "marvin.vd4",
+        &fixture("marvin-program.vd4"),
+        Some(&password()),
+    )
+    .unwrap();
+    drop(conn);
+    for entry in std::fs::read_dir(dir.path()).unwrap() {
+        let bytes = std::fs::read(entry.unwrap().path()).unwrap();
+        for needle in [secret, PASSWORD] {
+            assert!(
+                !bytes.windows(needle.len()).any(|w| w == needle.as_bytes()),
+                "{needle} found in the product database files"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_wrong_password_writes_nothing() {
+    let (_dir, conn) = products();
+    let error = import_legacy_file(
+        &conn,
+        "marvin.vd4",
+        &fixture("marvin-program.vd4"),
+        Some(&LegacyPassword::new("wrong")),
+    )
+    .unwrap_err();
+    assert!(matches!(error, LegacyPublishError::Legacy(_)), "{error:?}");
+    for table in ["source_file", "legacy_source", "application_program"] {
+        assert_eq!(rows(&conn, table), 0, "{table}");
+    }
 }

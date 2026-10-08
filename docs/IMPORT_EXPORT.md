@@ -773,7 +773,7 @@ risking the export change ADR-0012 rules out; `.knxprod` direct ingest for
 master data scheme ≥ 12 (KNOWN_LIMITATIONS §11); schema 23 manufacturer
 data (same blocker as schema 23 project data).
 
-### 10.x Legacy EX-IM product files (`.vd3`–`.vd5`): inspection only (ADR-0094)
+### 10.x Legacy EX-IM product files (`.vd3`–`.vd5`): inspection and import (ADR-0094)
 
 ```text
 .vd*/.pr* bytes ──► package ZIP validator (one member, ets.vd_/ets2.vd_/ets.pr_)
@@ -802,8 +802,19 @@ data (same blocker as schema 23 project data).
 - **Renamed files:** `install_package` refuses a legacy container under any
   name as `PackageError::LegacyExIm` before any transaction. The modern XML
   parser and the `.knxproj` importer never see its bytes.
-- **Not yet:** import into the product database (L2) and the server/web
-  upload (L3).
+- **Import (L2, 2026-10-08):** `knx_app::legacy::import_legacy_file` →
+  `knx_productdb::legacy::{map_legacy_database, publish_legacy}` and the
+  CLI command `knx products import-legacy <file> [--product-db <path>]
+  [--password-stdin | --password-file <path>]`. Mapping and identifiers:
+  ADR-0094 *Amendment: L2* and
+  [legacy-vd-mapping.md](research/legacy-vd-mapping.md). One transaction,
+  idempotent per payload digest. The CLI decrypts before it opens the
+  product database, so a wrong or missing password writes nothing, not
+  even a new database file. The report lists the programs, counts and every
+  `unmapped-table`, `skipped-rows`, `orphan-translation` or other mapping
+  diagnostic; diagnostics are also stored (`legacy_diagnostic`).
+- **Not yet:** the server/web upload (L3) and download of legacy programs
+  (L4, refused as `CodeError::LegacyProgram`).
 
 ## 11. Group-address CSV exchange
 

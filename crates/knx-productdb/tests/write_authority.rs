@@ -7,6 +7,8 @@
 //! Synthetic fixture; attribute shapes follow the corpus census in the ADR,
 //! no manufacturer data is copied.
 
+mod v20_rewind;
+
 use knx_productdb::query::{parameter_views, write_authority, CalculationSide};
 use rusqlite::Connection;
 
@@ -144,6 +146,7 @@ fn an_unknown_program_has_no_recorded_authority() {
 
 /// A genuine v19 database: no column, no table, no flag.
 fn rewind_to_v19(conn: &Connection) {
+    v20_rewind::drop_v22_objects(conn);
     conn.execute_batch(
         "DROP TABLE parameter_calculation_ref;
          ALTER TABLE parameter_ref DROP COLUMN access;

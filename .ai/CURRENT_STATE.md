@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-08 13:56
+- **Completed:** The owner approved story edition `2026-10-08.4` (story_sha256 `347dfcfb…`) for publication; record `story/approvals/2026-10-08.4.json` (`approved_by: project owner`, no personal identity), `release-check` eligible. New `story/tests/test_approvals.py` fails when a committed approval no longer matches its candidate (negative control: altered digest → stale). README, brief, OPEN_WORK and IMPLEMENTATION_STATUS updated. 63 unit tests OK.
+- **Pending/Next Steps:** Publication step (separate design): build a public variant of the approved page without the private-preview banner and `noindex`, hosting on the owner's domain (the marketing website in the root checkout wants to link the story), optional WebKit check. `publish` keeps refusing until that exists.
+- **Notes for Codex oder Claude:** A future edition replaces `.4`; remove or renew the approval with it, otherwise `test_approvals.py` fails. The approval covers content only, never a changed page or a later edition.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-08 13:54
 - **Completed:** **History rewritten again (user decision, force-pushed).** Commits of 8 Oct from 10:28 had reintroduced a personal e-mail (four story commits by this agent) and a home-directory path (LCARS commits `c0237937`/`8e8aa6b6`, old hashes). `git filter-repo` in a fresh clone (email callback + literal text/message replacements; the `/home/andrea` test value deliberately untouched); 27 commits got new hashes, final tree byte-identical (`232cef61`), tag `v0.1.0-alpha.5` and everything before 10:28 unchanged; pushed with `--force-with-lease` from `62a54e70` to `aa0ff14f`. Map: `docs/history/COMMIT_MAP_2026-10-08.txt`; KNOWN_LIMITATIONS §162 extended. 257 old-hash citations in 35 maintained files updated in place (links to removed docs now use `138403ed6084`, same tree as old `6a1ba6ae5d54`). Story edition `2026-10-08.4` = `.3` with the three affected hashes remapped (story_sha256 `347dfcfb…`); only `.4` kept. Gates: 62 unit tests, browser checks Chromium/Firefox, anchors, diff check; no personal string in the tree.
 - **Pending/Next Steps:** Publication approval of exactly `2026-10-08.4` (user approved `.3`, whose content is identical apart from the remapped hashes; reconfirmation asked). Publication step itself not designed (page still shows the private-preview banner and `noindex`).

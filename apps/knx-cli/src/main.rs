@@ -17,6 +17,7 @@ mod device_serial;
 mod device_service_control;
 mod legacy_import;
 mod legacy_inspect;
+mod legacy_password;
 mod scan;
 
 const USAGE: &str =
@@ -35,9 +36,14 @@ const USAGE: &str =
      \x20         (reads a legacy ETS3-era EX-IM file and summarises it; writes nothing.\n\
      \x20         The password is never accepted on the command line, never stored)\n\
      \x20     knx products import-legacy <file.vd3|file.vd4|file.vd5> [--product-db <path>]\n\
-     \x20                  [--password-stdin | --password-file <path>]\n\
+     \x20                  [--password-stdin | --password-file <path>] [--remember]\n\
      \x20         (publishes every application program of a legacy ETS3 product database\n\
-     \x20         for offline use; the password is used to decrypt, never stored)\n\
+     \x20         for offline use; without a password the remembered one is tried;\n\
+     \x20         --remember keeps a given password once it opened the file)\n\
+     \x20     knx products legacy-password set [--password-stdin | --password-file <path>]\n\
+     \x20     knx products legacy-password forget | status\n\
+     \x20         (the one remembered legacy password: $XDG_CONFIG_HOME/knx/legacy-vd-password,\n\
+     \x20         mode 0600; it is never printed)\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
      \x20     knx products verify [--product-db <path>]\n\
      \x20     knx products identity <table> <id> [--product-db <path>]\n\
@@ -1324,6 +1330,7 @@ fn run_products(args: &[String]) -> ExitCode {
         Some("coverage") => run_products_coverage(&args[1..]),
         Some("inspect-legacy") => legacy_inspect::run(&args[1..]),
         Some("import-legacy") => legacy_import::run(&args[1..]),
+        Some("legacy-password") => legacy_password::run(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE

@@ -54,6 +54,7 @@ fn state() -> Arc<knx_server::AppState> {
         settings_lock: Default::default(),
         achievements_lock: Default::default(),
         catalog_requests: Default::default(),
+        legacy_password: None,
     })
 }
 

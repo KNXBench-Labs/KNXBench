@@ -1,3 +1,39 @@
+- **Last Agent:** Claude (legacy VD L3)
+- **Timestamp:** 2026-10-08 14:26 CEST
+- **Completed:**
+  - Legacy VD L3 (ADR-0094 *Amendment: L3*).
+  - `.vd3`–`.vd5` install from the web catalog and the add-device wizard
+    via `POST /api/catalog/install-legacy`, with a password dialog. A
+    renamed legacy file is named by `/api/catalog/install`
+    (`422 legacyProductDatabase`) and forwarded.
+  - One remembered password in `$XDG_CONFIG_HOME/knx/legacy-vd-password`
+    (0600; dir created 0700; atomic, per-call temp file). It is set via
+    "Remember" or `knx products legacy-password set`, and removed via
+    Settings or `legacy-password forget`. It is used only when no password
+    is given, and kept only after a successful import.
+  - The real `.vd4` was checked end to end through a local server and the
+    web app: corpus counts, remembered re-upload, umlauts, and parameter
+    visibility (on/off → percent).
+  - Mutation sweep 19/19 named. Review: three minors, fixed test-first.
+    Gate in IMPLEMENTATION_STATUS.
+- **Pending/Next Steps:**
+  - Small fix package: the parameter panel reports kind `None` (ETS
+    `TypeNone`, e.g. legacy `d_space` spacers) as `editable: true`. The web
+    app then shows empty writable text fields, and the server refuses
+    writes by name. Make them non-editable spacers (server panel plus web),
+    with ETS and legacy fixtures (KNOWN_LIMITATIONS §128).
+  - Then the `.vd5` package (Siemens sample: 4 members, 173 MB payload) and
+    L4 (download of legacy programs, `s19_block`).
+- **Notes for Codex oder Claude:**
+  - `AppState` gained `legacy_password`. Full struct literals in
+    `http_load_progress.rs` and `http_settings_conditional.rs` set it to
+    `None`. Only `with_user_product_db` (server binary, desktop) points it
+    at the user's config dir.
+  - Parameter selects commit on blur. A Playwright probe must focus,
+    select, then press Tab, or no POST is sent.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-08 13:56
 - **Completed:** The owner approved story edition `2026-10-08.4` (story_sha256 `347dfcfb…`) for publication; record `story/approvals/2026-10-08.4.json` (`approved_by: project owner`, no personal identity), `release-check` eligible. New `story/tests/test_approvals.py` fails when a committed approval no longer matches its candidate (negative control: altered digest → stale). README, brief, OPEN_WORK and IMPLEMENTATION_STATUS updated. 63 unit tests OK.

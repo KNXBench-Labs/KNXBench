@@ -197,6 +197,11 @@ pub struct AppState {
     /// the command stack whenever the open project is replaced. Lock order:
     /// after `project`.
     pub catalog_requests: Mutex<crate::catalog_requests::CatalogRequestLedger>,
+    /// The one remembered legacy password's file (ADR-0094, L3), or `None`
+    /// when this server has nowhere to keep one. Only
+    /// [`Self::with_user_product_db`] sets it (`$XDG_CONFIG_HOME/knx/…`),
+    /// so a test never reads or writes the developer's own.
+    pub legacy_password: Option<knx_app::legacy::RememberedPassword>,
 }
 
 impl AppState {
@@ -207,7 +212,10 @@ impl AppState {
         let product_db = knx_productdb::default_path()
             .and_then(|path| knx_productdb::open_and_migrate(&path).ok())
             .map(Mutex::new);
-        Self::with_product_db(data_dir, product_db)
+        let mut state = Self::with_product_db(data_dir, product_db);
+        state.legacy_password = knx_app::legacy::default_remembered_password_path()
+            .map(knx_app::legacy::RememberedPassword::at);
+        state
     }
 
     /// State rooted at `data_dir` with **no** product database: nothing
@@ -265,6 +273,7 @@ impl AppState {
             settings_lock: Mutex::new(()),
             achievements_lock: Mutex::new(()),
             catalog_requests: Mutex::new(Default::default()),
+            legacy_password: None,
         }
     }
 }
@@ -2975,6 +2984,139 @@ pub fn install_catalog_package_impl(
         ) => CatalogInstallError::Internal(error.to_string()),
         _ => CatalogInstallError::BadRequest(error),
     })
+}
+
+/// Why a legacy product database upload was not imported (ADR-0094, L3).
+/// No variant carries a password.
+#[derive(Debug)]
+pub enum LegacyInstallError {
+    /// Encrypted, and neither a password nor a remembered one was there.
+    PasswordRequired(String),
+    /// The given password does not open the file.
+    WrongPassword(String),
+    /// None was given, and the remembered one does not open the file.
+    RememberedDoesNotFit(String),
+    /// None was given, and the remembered one cannot be read.
+    RememberedUnusable(String),
+    BadRequest(String),
+    Internal(String),
+}
+
+/// A finished legacy import and what happened to the password.
+#[derive(Debug)]
+pub struct LegacyInstallOutcome {
+    pub report: knx_productdb::legacy::LegacyPublishReport,
+    pub password: knx_app::legacy::PasswordUsed,
+    /// The given password is now the remembered one.
+    pub remembered: bool,
+    /// Why remembering was asked for but did not happen.
+    pub remember_problem: Option<String>,
+}
+
+/// Imports a legacy product database: decrypts with the given password, or
+/// the remembered one when none was given, publishes it, and only then
+/// remembers the given password if asked to.
+pub fn install_legacy_impl(
+    state: &AppState,
+    source_name: &str,
+    bytes: &[u8],
+    password: Option<knx_app::legacy::LegacyPassword>,
+    remember: bool,
+) -> Result<LegacyInstallOutcome, LegacyInstallError> {
+    use knx_app::legacy::{open_with_password_policy, LegacyOpenError, PasswordUsed};
+    use knx_productdb::legacy::{LegacyError, LegacyPublishError};
+    let (payload, used) =
+        open_with_password_policy(bytes, password.as_ref(), state.legacy_password.as_ref())
+            .map_err(|error| {
+                let message = error.to_string();
+                match error {
+                    LegacyOpenError::Legacy(LegacyError::PasswordRequired) => {
+                        LegacyInstallError::PasswordRequired(message)
+                    }
+                    LegacyOpenError::Legacy(
+                        LegacyError::WrongPassword | LegacyError::WrongPasswordOrCorrupt,
+                    ) => LegacyInstallError::WrongPassword(message),
+                    LegacyOpenError::RememberedDoesNotFit => {
+                        LegacyInstallError::RememberedDoesNotFit(message)
+                    }
+                    LegacyOpenError::Remembered(_) => {
+                        LegacyInstallError::RememberedUnusable(message)
+                    }
+                    LegacyOpenError::Legacy(_) => LegacyInstallError::BadRequest(message),
+                }
+            })?;
+    let report = {
+        let products = state
+            .product_db
+            .as_ref()
+            .ok_or_else(|| LegacyInstallError::Internal("no product database configured".into()))?
+            .lock()
+            .expect("state mutex poisoned");
+        knx_productdb::legacy::publish_legacy(&products, source_name, bytes, &payload).map_err(
+            |error| match error {
+                LegacyPublishError::Legacy(e) => LegacyInstallError::BadRequest(e.to_string()),
+                LegacyPublishError::Store(e) => LegacyInstallError::Internal(e.to_string()),
+            },
+        )?
+    };
+    let (remembered, remember_problem) = match (remember, used) {
+        (true, PasswordUsed::Given) => match (password.as_ref(), state.legacy_password.as_ref()) {
+            (Some(password), Some(store)) => match store.store(password) {
+                Ok(()) => (true, None),
+                Err(e) => (false, Some(e.to_string())),
+            },
+            _ => (
+                false,
+                Some("this server has no configuration directory to remember a password in".into()),
+            ),
+        },
+        _ => (false, None),
+    };
+    Ok(LegacyInstallOutcome {
+        report,
+        password: used,
+        remembered,
+        remember_problem,
+    })
+}
+
+/// Whether this server can remember a legacy password and whether it does.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LegacyPasswordStatus {
+    pub available: bool,
+    pub remembered: bool,
+    /// Why the remembered file cannot be used (for example too open).
+    pub problem: Option<String>,
+}
+
+pub fn legacy_password_status_impl(state: &AppState) -> LegacyPasswordStatus {
+    match &state.legacy_password {
+        None => LegacyPasswordStatus {
+            available: false,
+            remembered: false,
+            problem: None,
+        },
+        Some(store) => match store.load() {
+            Ok(password) => LegacyPasswordStatus {
+                available: true,
+                remembered: password.is_some(),
+                problem: None,
+            },
+            Err(e) => LegacyPasswordStatus {
+                available: true,
+                remembered: store.is_set(),
+                problem: Some(e.to_string()),
+            },
+        },
+    }
+}
+
+/// Forgets the remembered legacy password; `true` when there was one.
+pub fn forget_legacy_password_impl(state: &AppState) -> Result<bool, String> {
+    match &state.legacy_password {
+        None => Ok(false),
+        Some(store) => store.forget().map_err(|e| e.to_string()),
+    }
 }
 
 /// A catalog-created device and every fact the caller needs to present before

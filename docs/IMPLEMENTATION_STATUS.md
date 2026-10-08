@@ -2537,6 +2537,9 @@ See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
 - Follow-up 2026-10-05: the browser check runs in Chromium and Firefox (46/46
   each); WebKit is blocked on this host by missing Ubuntu libraries. Privacy
   review locations now name records by id (`events[alpha-backlog].aside`).
+- Follow-up 2026-10-08: editions `2026-10-08.1` (ETS wording: "comparable
+  functionality", not "mirrors") and `2026-10-08.2` (no remarks about AI usage
+  limits). Only `2026-10-08.2` is kept in the tree.
 - Story motion update (user request, site only, no content change): scrolling
   back retracts later steps and refocuses the current chapter; looping signal
   pulses travel each visible connection (paused off screen); random headline

@@ -33,10 +33,10 @@ Run from this directory.
 ```bash
 python3 -m storytool validate
 python3 -m storytool prepare --private-provenance ../../KNXBench.story-private/provenance.json
-python3 -m storytool build 2026-10-04.2          # writes dist/2026-10-04.2/index.html
-python3 -m storytool build 2026-10-04.2 --preview  # writes previews/2026-10-04.2.html (commit it)
-python3 -m storytool serve 2026-10-04.2          # http://127.0.0.1:8765/, loopback only
-python3 -m storytool release-check 2026-10-04.2 --approval <approval.json>
+python3 -m storytool build 2026-10-08.2          # writes dist/2026-10-08.2/index.html
+python3 -m storytool build 2026-10-08.2 --preview  # writes previews/2026-10-08.2.html (commit it)
+python3 -m storytool serve 2026-10-08.2          # http://127.0.0.1:8765/, loopback only
+python3 -m storytool release-check 2026-10-08.2 --approval <approval.json>
 python3 -m storytool publish                     # always refuses, exit code 3
 ```
 
@@ -68,9 +68,15 @@ viewport without mobile emulation, which it does not support.
    label excerpts (`translated`, `edited_for_privacy`, `shortened`, or a
    `paraphrase`). Keep editorial interpretation in `aside` or in relations of
    type `editorial`.
+   Editorial rules from the user: never describe KNXBench as mirroring,
+   cloning or copying ETS (say "independent alternative" or "comparable
+   functionality"), and leave out remarks about AI session or weekly usage
+   limits.
 3. `prepare` refuses invalid content, hard privacy findings and leaked private
    locators. It writes a new candidate and diffs it against the latest earlier
-   one. Earlier candidates are never rewritten.
+   one. Earlier candidates are never rewritten. Superseded candidates may be
+   removed from the tree on request and stay in Git history; since 8 October
+   2026 only the latest edition is kept.
 4. Read `CHANGES.md` and `REVIEW.md`, then `build` and read the preview on a
    desktop and a phone. Run the tests and the browser check.
 5. Write the versioned page with `build <id> --preview` and commit it with the

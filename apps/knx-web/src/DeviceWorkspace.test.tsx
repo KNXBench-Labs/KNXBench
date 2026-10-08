@@ -56,11 +56,53 @@ async function render(product: DeviceProductNode, selectProductTab = true, comOb
 it("keeps communication editing and parameters reachable in the central device tabs", async () => {
   const { host, tabs, cleanup } = await render(NO_REFERENCE, false);
   expect(host.textContent).toContain("Example");
-  expect(tabs.map((b) => b.textContent)).toEqual(["Communication objects", "Parameters", "Product data"]);
+  expect(tabs.map((b) => b.textContent)).toEqual(["Communication objects", "Parameters", "Product data", "Diagnostics", "Manufacturer fields"]);
   await act(async () => tabs[1].click());
   expect(tabs[1].getAttribute("aria-selected")).toBe("true");
   expect(api.deviceParameters).toHaveBeenCalled();
   await act(async () => tabs[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
+  expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+  await cleanup();
+});
+
+it("separates grouped diagnostics and restricted fields without refetching on tab switches", async () => {
+  api.deviceParameters.mockClear();
+  const field = (etsId: string, access: string | null) => ({
+    etsId, name: etsId, text: null, nameLanguage: null, textLanguage: null,
+    kind: "Number", value: "5", valueSource: "Stored", editable: access === null,
+    writeEtsId: access === null ? etsId : null, access, min: null, max: null,
+    enumOptions: [], displayOrder: null,
+  });
+  api.deviceParameters.mockResolvedValueOnce({
+    programId: "EXAMPLE", sourceLanguage: null, tree: null,
+    sections: [{ scope: null, fields: [field("Editable", null), field("Hidden", "None"), field("Read-only", "Read")] }],
+    stale: [{ etsId: "Legacy", raw: "99" }],
+    diagnostics: Array.from({ length: 6 }, (_, i) => ({
+      scope: null, kind: "noBranchMatched", severity: "info",
+      message: "A choice did not match any of its options.", detail: `Branch ${i}`,
+    })),
+  });
+  const { host, tabs, cleanup } = await render(NO_REFERENCE, false);
+  await act(async () => tabs[1].click());
+  const visible = () => host.querySelector<HTMLElement>('[role="tabpanel"]:not([hidden])')!;
+  expect(visible().textContent).toContain("Editable");
+  expect(visible().textContent).not.toContain("A choice");
+  expect(visible().textContent).not.toContain("Hidden");
+  expect(visible().textContent).not.toContain("Legacy");
+  await act(async () => tabs[3].click());
+  expect(visible().querySelectorAll("li[data-severity]")).toHaveLength(1);
+  expect(visible().textContent).toContain("6 occurrences");
+  expect(visible().textContent).toContain("current controlling value");
+  expect(visible().textContent).toContain("Legacy");
+  await act(async () => tabs[4].click());
+  expect([...visible().querySelectorAll(".parameter-field")].map((el) => el.getAttribute("data-ets-id")))
+    .toEqual(["Hidden", "Read-only"]);
+  expect(visible().textContent).toContain("Access None");
+  expect(visible().textContent).toContain("Access Read");
+  expect([...visible().querySelectorAll<HTMLInputElement>("input")].every((input) => input.disabled)).toBe(true);
+  expect(api.deviceParameters).toHaveBeenCalledTimes(1);
+  expect(api.setParameterValue).not.toHaveBeenCalled();
+  await act(async () => tabs[4].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
   expect(tabs[0].getAttribute("aria-selected")).toBe("true");
   await cleanup();
 });
@@ -319,10 +361,10 @@ it("moves both ways with the arrow keys and reaches the last tab with End", asyn
   await press(1, "ArrowRight"); expect(selected()).toBe(2);
   await press(2, "ArrowLeft"); expect(selected()).toBe(1);
   await press(1, "ArrowLeft"); expect(selected()).toBe(0);
-  // Wrapping, in both directions, over three tabs rather than two.
-  await press(0, "ArrowLeft"); expect(selected()).toBe(2);
-  await press(2, "ArrowRight"); expect(selected()).toBe(0);
-  await press(0, "End"); expect(selected()).toBe(2);
+  // Wrapping and End include both inspection tabs.
+  await press(0, "ArrowLeft"); expect(selected()).toBe(4);
+  await press(4, "ArrowRight"); expect(selected()).toBe(0);
+  await press(0, "End"); expect(selected()).toBe(4);
   await press(2, "Home"); expect(selected()).toBe(0);
   await cleanup();
 });
@@ -331,7 +373,7 @@ it("puts the product identity in its own tab panel, alongside the other two", as
   const { host, tabs, cleanup } = await render({ product_ref: "M-00FA_H-EX42-1_P-1", program_ref: "M-00FA_H-EX42-1_HP-1", catalog: catalog(), resolution: "Resolved" }, false);
   const identity = host.querySelector<HTMLElement>(".device-identity")!;
   const panels = [...host.querySelectorAll<HTMLElement>('[role="tabpanel"]')];
-  expect(panels).toHaveLength(3);
+  expect(panels).toHaveLength(5);
   expect(panels[2].contains(identity)).toBe(true);
   expect(panels[2].hidden).toBe(true);
   expect(tabs[2].getAttribute("aria-controls")).toBe(panels[2].id);
@@ -484,12 +526,12 @@ it("gives every tab panel its own tab stop, so a panel with nothing focusable st
   // this component.
   const { host, tabs, cleanup } = await render(NO_REFERENCE);
   const panels = [...host.querySelectorAll<HTMLElement>('[role="tabpanel"]')];
-  expect(panels.map((p) => p.tabIndex)).toEqual([0, 0, 0]);
+  expect(panels.map((p) => p.tabIndex)).toEqual([0, 0, 0, 0, 0]);
   expect(panels[2].querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex]')).toHaveLength(0);
   panels[2].focus();
   expect(document.activeElement).toBe(panels[2]);
   // The tablist itself still has exactly one stop, the selected tab.
-  expect(tabs.map((b) => b.tabIndex)).toEqual([-1, -1, 0]);
+  expect(tabs.map((b) => b.tabIndex)).toEqual([-1, -1, 0, -1, -1]);
   await cleanup();
 });
 

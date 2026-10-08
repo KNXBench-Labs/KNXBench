@@ -3976,6 +3976,17 @@ names a commit, never a tree.
 <a id="66-server-composed-prose-and-documentation-are-only-partly-localized--partially-resolved-2026-09-23-t14"></a>
 ## 66. Server-composed prose is only partly localized
 
+**Parameter presentation follow-up (2026-10-08):** evaluation messages now live
+only in the device Diagnostics tab, grouped without dropping occurrences or
+scopes. Raw English `.detail` is explicitly inspectable under collapsed
+Technical details as well as copyable; the normal headline remains translated.
+Access Read/None fields have a separate inspection-only Manufacturer fields tab.
+Only evaluated DTO fields are available: this is not a complete static inventory,
+and exact controlling-value/condition facts are not reconstructed from Debug
+text. No evaluator/compatibility boundary is lifted. See
+[Parameter workspace](PARAMETER_WORKSPACE.md).
+
+
 **Included fun languages (2026-10-07):** `bar` (**Boarisch**) and `tlh`
 (**Klingonisch/Klingon**) intentionally translate only 335 interface keys each.
 They are playful overlays, not full or authoritative language translations.

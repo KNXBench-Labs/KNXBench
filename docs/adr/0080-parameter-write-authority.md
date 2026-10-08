@@ -99,7 +99,18 @@ when both are absent. The calculations' semantics are vendor scripts.
   stay unimplemented (KNOWN_LIMITATIONS PDB-9); this ADR adds no evaluator.
 - The UI owner adopts the three diagnostic tokens and may hide `None` fields.
 
-## UI presentation (UI owner, 2026-10-05)
+## UI presentation amendment (owner request, 2026-10-08)
+
+The earlier per-section fold below is historical and superseded by
+[the parameter workspace](../PARAMETER_WORKSPACE.md). Access None **and** Read
+fields now live in the dedicated inspection-only Manufacturer fields tab;
+Parameters no longer shows the fold or repeats diagnostic prose. Diagnostics
+keeps one headline per cause/severity/scope/fallback-message group, the original
+occurrence counts, all details and unmatched stored values. Access-specific
+field captions explain the manufacturer restriction. This changes presentation
+only; effective access, backend refusals and data retention above are unchanged.
+
+## Historical UI presentation (UI owner, 2026-10-05)
 
 - The three tokens are part of Web's manual `ParameterDiagnosticKind` union
   and translated in English and German like every other kind; so are

@@ -152,7 +152,7 @@ Official reference pages inspected for design principles:
 and experts, distinctive headline typography, and purposeful, subtly playful
 motion. This project does not reuse their proprietary assets.
 
-A [local, offline style study](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/design/project-evolution-phosphor-atlas.html)
+A [local, offline style study](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/design/project-evolution-phosphor-atlas.html)
 demonstrates the selected direction with explicitly synthetic content. It is a
 design artifact, not the verified historical story, full graph explorer, update
 pipeline, or a deployed website. The user selected the direction; approval of
@@ -160,7 +160,7 @@ the stronger rendered study and its finite growth animation has now been given
 explicitly. This is design approval, not approval of historical content or public
 publication.
 
-A [desktop capture](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/design/project-evolution-phosphor-atlas.png) records the
+A [desktop capture](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/design/project-evolution-phosphor-atlas.png) records the
 current local rendering; the HTML provides the actual interactive study.
 The revised study includes a finite CSS growth sequence: branches draw, their
 nodes appear, paths converge, and a supporting thread becomes visible. Native
@@ -168,7 +168,7 @@ stage controls replay it. A Motion off checkbox and OS reduced-motion preference
 both immediately stop active effects and show the complete selected-stage state.
 This is a motion design sample, not the full scroll-driven historical experience.
 
-The [first-private-version goal](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/PROJECT_EVOLUTION_GOAL.md) supplies the bounded
+The [first-private-version goal](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/PROJECT_EVOLUTION_GOAL.md) supplies the bounded
 implementation and verification handover for a new user-started `/goal` session.
 Preparing that goal document does not activate it or authorize publication.
 

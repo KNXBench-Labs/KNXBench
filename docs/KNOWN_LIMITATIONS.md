@@ -184,7 +184,7 @@ first property write. This is metadata only, not a recovery image, complete
 download journal or a shipped global UI. Whole-candidate acceptance and
 publication remain pending. The exact consumer contract and residue are in
 [COMMISSIONING_ACTIVITY_HISTORY](contracts/COMMISSIONING_ACTIVITY_HISTORY.md) and
-[COMMISSIONING_ALPHA_LEDGER](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md).
+[COMMISSIONING_ALPHA_LEDGER](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md).
 
 **Admission correction, 2026-10-03.** Late synthetic review reproduced SQLite
 hot-journal rollback before a foreign-format refusal. Corrected openers first
@@ -732,7 +732,7 @@ of what slice 2 shipped.)
 **T18 slice 3 (2026-09-11)** wires the evaluator into a real editor:
 `GET`/`POST /api/device/{id}/parameters` (`apps/knx-server`, DTOs and
 decisions D20-D26,
-[design](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-11-parameter-editor-design.md)) plus a
+[design](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/superpowers/specs/2026-09-11-parameter-editor-design.md)) plus a
 web panel (`apps/knx-web/src/ParameterPanel.tsx`). A write to a top-level
 field goes through `knx_core::Command::SetParameterValue` (undo/redo via
 `RestoreParameterValue`), is validated against the program's declared
@@ -758,7 +758,7 @@ module-scoped value now *reads and displays correctly* — it is not a
 storage gap that happens to be unaddressed; it never was one.
 
 **T18 slice 4, module-scoped editing (2026-09-12,
-[design](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md),
+[design](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md),
 D35-D43) closes the write side (a) and the `choose`-evaluation side (b)
 below name.** `knx-productdb`'s `ValueMap` gained a scope dimension
 (D35/D36): a value stored for one `Module` instantiation is visible to
@@ -800,7 +800,7 @@ that server-named id instead of the declared one (D43).
   case D38-D39 can authorize.
 - **Nested modules are now expanded, bounded, with cycle detection
   (goal.md T18, task 11, 2026-09-14, design D44-D46,
-  [design addendum](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-11-module-expansion-design.md#addendum-goalmd-t18-task-11-d15-superseded--bounded-recursive-expansion)).**
+  [design addendum](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/superpowers/specs/2026-09-11-module-expansion-design.md#addendum-goalmd-t18-task-11-d15-superseded--bounded-recursive-expansion)).**
   `Diagnostic::NestedModuleNotExpanded` (design D15, one-level policy) no
   longer exists. A `Module` found inside an already-expanded `ModuleDef`'s
   own tree is now walked recursively, up to
@@ -1152,7 +1152,7 @@ retrofitting secret handling into the model
 hardware/sample key material exist, the user answered "raus erstmal, aber
 als limitation dokumentieren" — deferred for now, but document it as a
 limitation. This entry already does; nothing here is rejected, only deferred
-behind the precondition above. See [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)'s
+behind the precondition above. See [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/aa0ff14ff536/docs/GAP_ANALYSIS_ETS.md)'s
 **T19** for the tracked task.
 
 ## 9. Project files are not diffable
@@ -2050,7 +2050,7 @@ The joined text is for display only: a name containing ` | ` itself is not
 escaped. Tests: `apps/knx-cli/tests/cli_bus_address_style.rs`,
 `monitor_line_uses_the_project_style_and_all_names`,
 `names_shared_across_installations_are_all_shown`. See
-[ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
+[ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
 
 <a id="31-knxnetip-routing-has-no-custom-multicast-address-override--resolved-routing-half"></a>
 ## 31. Routing multicast override exists; discovery and real custom-group traffic unverified
@@ -2343,7 +2343,7 @@ the *stored project* depend on a display setting, the same integrity
 line T26 was careful not to cross for parameter values, and T33 did not
 cross it either. The UI chrome itself, tracked separately as **T25**, is
 no longer hard-coded English — it shipped 2026-09-12, see the T25 entry
-in [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)'s Tier 6 — but this closes
+in [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/aa0ff14ff536/docs/GAP_ANALYSIS_ETS.md)'s Tier 6 — but this closes
 only the *chrome* half of D10; the data half's own residue below is
 unaffected. `knx_core::string_table`'s `StringTable`
 still has no resolver anywhere except `build_device_detail`'s own
@@ -2367,7 +2367,7 @@ default" and stays there until a user picks explicitly.
 **Lifted when.** Partially, 2026-09-12: first the parameter panel (T26's
 first slice), then communication-object text (T33, same day), then the
 UI chrome itself (T25, same day — see its own entry in
-[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md)'s Tier 6, closing more of gap
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/aa0ff14ff536/docs/GAP_ANALYSIS_ETS.md)'s Tier 6, closing more of gap
 **D10**). What remains is a later T26/T33 follow-up: the project's own
 `Language` field, and `StringTable`/`LocalizedString` resolution against
 a user-selected language — neither touched by any slice so far; every
@@ -3730,7 +3730,7 @@ that a change came from outside its own actions.
 
 **Lifted when.** **T22** (multi-user/concurrent-edit support for
 `knx-server`) is designed and implemented. Per its own backlog entry
-([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md#f-non-functional--operational-gaps)),
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/aa0ff14ff536/docs/GAP_ANALYSIS_ETS.md#f-non-functional--operational-gaps)),
 it "needs its own design (locking vs. merge vs. last-writer-wins, and
 what 'conflict' even means for a `Command`-based undo model)" — that
 design question is unresolved, and this limitation stands until it is
@@ -3917,7 +3917,7 @@ slice 1, branch `d10-master-translations`). `FunctionType`/
 `FunctionPoint`/`SpaceUsage`: lifted 2026-09-14 (T13, branch
 `d10-language-data`). This section's own residue (other `MasterData`
 sections, collision counting, frontend locale tags) stays open; see
-**D10** in [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/62a54e70cbc4/docs/GAP_ANALYSIS_ETS.md) and §37's own
+**D10** in [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/aa0ff14ff536/docs/GAP_ANALYSIS_ETS.md) and §37's own
 "still open" list. Not scheduled.
 
 **Update 2026-10-05 (AR10 slice 2b): accepted boundary.** Every reader of
@@ -4652,7 +4652,7 @@ records cannot establish a verified state. Backend/UI regressions and bounded
 mocked browser evidence and twelve complete candidate gates pass; integrated
 acceptance repeated and source `8ceacf49` published with exact remote/tree
 readback. Scoped comparison is delivered, not the remaining boundaries. See
-[owner evidence](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md).
+[owner evidence](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md).
 
 **Remaining boundary.** This is a point-in-time interpretation comparison, not
 a complete project identity/version, collaboration/push channel or atomic
@@ -5371,7 +5371,7 @@ procedures (complete, one-part and partial download, unload, recovery).
 Those have run only against the simulator.
 
 **Limitation.** The download protocol of
-[docs/superpowers/specs/2026-09-13-commissioning-download-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-13-commissioning-download-design.md)
+[docs/superpowers/specs/2026-09-13-commissioning-download-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/superpowers/specs/2026-09-13-commissioning-download-design.md)
 is implemented and tested — 247 tests across `knx-core::commissioning` and
 `knx-net::commissioning` (131 in `knx-core`, 116 in `knx-net`; **re-measured
 2026-09-20**, correcting the "153" this section previously stated — count
@@ -6633,7 +6633,7 @@ new edits or reviving a stopped timer. Focused regressions, realistic negative
 controls and the complete offline gates pass. There is still no instantaneous
 push or general shared-project synchronization; native/AT workflows are not
 accepted by these tests. Publication remains pending. See
-[UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md). The historical title and inventory
+[UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md). The historical title and inventory
 identity remain stable for incoming links and the separate alpha owner.
 
 **Historical description before this follow-up:**
@@ -6678,7 +6678,7 @@ actual unicast-loopback tests, raw-value UI regressions, realistic mutants and
 the complete offline gates pass; six additional intercepted-browser cases
 verify the disclosure itself. This does not accept native/live Search (§79),
 infer device identity/capabilities or grant a write. Publication is pending.
-See [UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md). The historical title/inventory
+See [UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md). The historical title/inventory
 identity remains stable; the following cause is historical, not current code.
 
 **Historical description before this follow-up:**
@@ -6978,7 +6978,7 @@ communication objects, visibility) into the product database. It must pass
 the semantic-equivalence check against ETS's own conversion in the house
 project (ADR-0094 decision 7). *Superseded condition, kept for history:*
 the design
-[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md)
+[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md)
 has an independent review verdict and Board approval of its decisions B-1 to
 B-6. After that, its slices are implemented one at a time: L1 is named
 detection and refusal without decryption. The user-supplied-password,
@@ -6995,7 +6995,7 @@ landed on 2026-09-27. A colliding id is refused, and no caller rewinds the
 counters any more. AR02 also refuses allocator exhaustion. Structural
 phases 3–5 remain `WAITING_DECISION`; an unanswered activation prompt is
 neither approval nor accepted continued deferral. See the pinned
-[AR03 audit](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ADR0039_ENFORCEMENT_AUDIT.md) at `e691bc13`.
+[AR03 audit](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ADR0039_ENFORCEMENT_AUDIT.md) at `e691bc13`.
 
 **Historical limitation (before phases 1–2, at `7b64496`).**
 `Command::SetIdAllocators` replaces the id counters
@@ -7524,7 +7524,7 @@ the user approves a run.
 
 **User decision 2026-10-05.** The Web scope selector is handed to the UI
 owner; the backend contract is in the
-[commissioning handoff](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05).
+[commissioning handoff](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05).
 
 **Verified scope (2026-09-29/30; RESEARCH §19.15/§19.17).** On the MDT
 `1.1.67`, the `parameters`, `group-addresses` and `both` partial scopes
@@ -8288,7 +8288,7 @@ tests `a_failed_import_creates_no_store_file`,
 `readers_leave_a_foreign_sqlite_file_untouched`, and the route test
 `opening_a_file_that_holds_no_knxbench_project_is_refused_untouched`.
 Each guard is backed by a killed mutant
-([ALPHA_FINAL_GATES §8](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
+([ALPHA_FINAL_GATES §8](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
 
 ## 158. The AppImage starts only with an X server
 
@@ -8303,7 +8303,7 @@ answer — the AppImage stops at once with `Failed to initialize GTK`
 it.
 
 **Found 2026-10-06 (AR17)** on the candidate in
-[ALPHA_CANDIDATE](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/ALPHA_CANDIDATE.md): Hyprland's Xwayland was running but its
+[ALPHA_CANDIDATE](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/ALPHA_CANDIDATE.md): Hyprland's Xwayland was running but its
 socket refused every connection (also for `xprop`). The unmodified AppImage
 started fine under a private Xvfb.
 

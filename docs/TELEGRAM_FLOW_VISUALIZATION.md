@@ -4,8 +4,8 @@ Date: 2026-10-04. **Approved design and alpha scope; not implemented.**
 The user confirmed the interview decisions and explicitly authorized the owning
 Goal sessions to implement them. This research/planning session neither starts
 those sessions nor authorizes new bus access, hardware operations, or release
-publication. Execution lives in [goal-ui](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/goal-ui.md) U19–U21 and
-[alpha-release-goal](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/alpha-release-goal.md) AR20/AR21.
+publication. Execution lives in [goal-ui](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/goal-ui.md) U19–U21 and
+[alpha-release-goal](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/alpha-release-goal.md) AR20/AR21.
 Architecture: [ADR-0077](adr/0077-session-local-telegram-flow-view.md).
 
 ## 1. Confirmed product decisions
@@ -305,7 +305,7 @@ handoff. It is not the productive view: nothing reads the monitor feed, and
 U20 owns the shipped reducer and integration. Study code lives under
 `apps/knx-web/e2e/flow-study/` (test-only, typed by
 `tsconfig.flow-study.json`); screenshots and measurements are in
-[design/2026-10-04-telegram-flow-u19](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/design/2026-10-04-telegram-flow-u19/README.md).
+[design/2026-10-04-telegram-flow-u19](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/design/2026-10-04-telegram-flow-u19/README.md).
 
 ### 9.1 Code reconciliation (source at `2231d87c`)
 

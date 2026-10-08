@@ -93,8 +93,8 @@ fail closed before any tunnel until action- and device-specific durable
 pre-write recovery exists (ADRs 0057–0059). This is **not** full ETS,
 manufacturer or KNX hardware coverage.
 Remaining v1 decisions and UI/manual/release work are tracked in
-[`goal.md`](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/goal.md), [`goal-ui.md`](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/goal-ui.md) and
-[`goal-commission.md`](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/goal-commission.md). Historical milestone detail
+[`goal.md`](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/goal.md), [`goal-ui.md`](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/goal-ui.md) and
+[`goal-commission.md`](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/goal-commission.md). Historical milestone detail
 remains in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 
 ## Session 0 — Technical research
@@ -145,7 +145,7 @@ U0–U12 UI work is delivered within its tested scope: read-only readiness
 and device comparison, Site/Property creation, and a default-off Debug
 property action with an offline-tested, property-only backup (ADR-0051).
 K6's Web tab shows fail-closed availability rather than a working write.
-[`goal-ui.md`](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/goal-ui.md) is complete through U13 (2026-10-01).
+[`goal-ui.md`](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/goal-ui.md) is complete through U13 (2026-10-01).
 The operator accepted the independent GPT-6.1-Sol review instead of unavailable
 Claude; all three P1 findings are fixed and mutation/regression-tested.
 ISSUE-12's two evidence boxes reconcile the host-firewall correction and actual
@@ -170,7 +170,7 @@ Rust2984/0/165,27 selected private offline cases plus the115-instance matrix,
 17 equal bindings and697 source/config inputs/420 private files unchanged.
 Publication/readback is recorded in the current handover. Eleven manager browser
 flows and31 actual parent/five root cases cover the management contract.
-U18 in [goal-ui](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/goal-ui.md) passes actual24-command extension acceptance
+U18 in [goal-ui](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/goal-ui.md) passes actual24-command extension acceptance
 on1660911b: Web1702, Chromium82, representative10/10, Rust2995/0/165,28
 offline cases including the115-instance matrix;703 source/config inputs and421
 private files unchanged. Closing self-review settles U18-R1 with real component
@@ -257,7 +257,7 @@ Other masks, device families and RF hardware remain refused or simulator-only.
 The application-download backup is not a universal rollback (ADR-0049).
 ADR-0064 adds a separate durable one-shot activity-metadata backend and bounded
 history API; complete long-session journalling and the global Web consumer
-remain open. See [COMMISSIONING_ALPHA_LEDGER](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md)
+remain open. See [COMMISSIONING_ALPHA_LEDGER](https://github.com/KNXBench-Labs/KNXBench/blob/138403ed6084/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md)
 for all 42 commissioning-routed source IDs, safe fallbacks and exact unblocks.
 The remaining v1 closeout is manual acceptance, the user's alpha-tag decision
 and the final review (`goal.md` §5/§10). No public release or blanket ETS

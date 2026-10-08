@@ -71,9 +71,13 @@ Pick **LCARS** in the same Theme menu. It is built in, not an imported file;
 other themes retain their own presentation when you switch back. The warm
 frame is decoration, not a bus connection or successful-save indicator.
 Compact/Comfortable and the motion controls remain independent. Standard
-adds a finite navigation underline reveal; Subtle uses brief transitions;
-Off or OS reduced motion cancels running LCARS effects. No sound or light
-variant. LCARS cannot be exported or removed through Theme files.
+adds a finite navigation underline reveal, a gentle 10-second segmented-header
+pulse and a 16-second apricot/lavender colour cycle on the small K emblem.
+Subtle uses brief transitions and slower, less pronounced ambient cycles
+(18/24 seconds). These decorations never indicate bus activity or saving.
+Set **Motion level → Off** to stop all of them immediately; OS reduced motion
+also cancels running LCARS effects. No sound or light variant. LCARS cannot be
+exported or removed through Theme files.
 
 ## Theme files
 

@@ -1,5 +1,37 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Calm LCARS ambient animation follow-up (integrated publication accepted)
+
+- **Latest publication candidate `a642eaf9` preserves both delivered wizards and achievement timing:** **2,373 frontend tests / 142 files**, **170 un-retried Chromium**, **54 actual production-workbench assertions**, **27 targeted Rust tests** (13 seed, 5 HTTP seed, 3 catalog requests, 6 HTTP device-wizard), build/types and five repository gates pass on frozen input. Source/build/phase evidence: `design-studies/lcars/ambient-publication-verification.json`. Earlier f5/e3 receipts are historical, not reused as current acceptance. Image/probe/live readback remains pending.
+
+
+- User explicitly requested a subtle, living idle presentation after approving
+  the deployed theme. Exactly two decorative CSS loops: segmented-header
+  opacity (10s) and small K-emblem apricot/lavender colour (16s). Subtle slows
+  them to 18s/24s and reduces amplitude. No blinking engineering content,
+  geometry changes, fake activity/success, JavaScript timer, API/core change
+  or new dependency/persisted setting.
+- Existing Motion level Off, OS reduction and theme removal cancel live effects
+  to static paint. Saved Off and OS reduction also prevent cold-start effects;
+  Subtle survives reload. Imported-format palettes cannot gain the loops.
+- RED: three new boundary assertions failed before CSS; GREEN: **2,332 frontend
+  tests / 138 files**, **158 Chromium tests**, build/type/flow/five repository
+  gates passed. Actual production-workbench CLI: **54 named assertions**, no
+  unexpected requests/browser errors; real clock progression, amplitude,
+  cancellation, independent density, Save As refusal and small layouts verified.
+- ADR-0092 amended for the explicit decorative exception. Original standalone
+  study and prior delivery/deployment receipts remain historical and unchanged.
+  New source/build/evidence binding: `design-studies/lcars/ambient-verification.json`.
+- Source self-review only; native accessibility/Firefox not certified. Local
+  follow-up complete; user subsequently authorized commit/push/redeployment with
+  "go". Saved/no-programming state verified via authenticated read-only status;
+  publication and container acceptance pending.
+
+- Fresh combined wizard + ambient gate on `e3e7641b`: **2,358 frontend tests / 140 files**, **162 Chromium tests**, **54 actual production-workbench assertions**, build/types and five repository gates; inputs frozen. Targeted seed regression: **13 app + 5 HTTP tests**.
+- First combined Chromium attempt caught an inherited dynamic-first-node test target: selected 9.1.10 but asserted newly arrived 9.1.1. Stable accessible identity and explicit focus retain real Enter/current-value checks; 20 repeated controls and complete un-retried suite pass. Separate focused test correction; no product-code workaround.
+- Current-source/build/phase receipts: `design-studies/lcars/ambient-integrated-verification.json`; original 2332/158/54 receipt stays historical. Image/probe/live acceptance is still pending; no bus operation.
+
+
 ## 2026-10-08 — Add-device wizard with server preview and placement (ADR-0093)
 
 - New modal **Add device** wizard (`DeviceWizard.tsx`): product (search the

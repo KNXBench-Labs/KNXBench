@@ -26,6 +26,9 @@ import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   importProject: vi.fn(),
+  // ADR-0094 (L3): Settings asks whether a legacy password is remembered.
+  legacyPasswordStatus: vi.fn().mockResolvedValue({ available: true, remembered: false, problem: null }),
+  forgetLegacyPassword: vi.fn(),
   // F14: `openNativeProject`'s own function, distinct from `importProject`
   // above — the "shows the banner" test below pins that the `.knxdb`
   // button reaches this one and not its ETS-import sibling.
@@ -722,6 +725,9 @@ describe("App — diagnostic panels survive a collapsed navigation pane", () => 
     const root = await renderApp();
     await collapseNavigationAndOpen("Settings");
     expect(host!.querySelector(".settings-panel")).not.toBeNull();
+    // ADR-0094 (L3): the real app wires the remembered legacy password in.
+    expect(host!.querySelector(".settings-section-legacy-password")).not.toBeNull();
+    expect(apiMock.legacyPasswordStatus).toHaveBeenCalled();
     root.unmount();
   });
 });

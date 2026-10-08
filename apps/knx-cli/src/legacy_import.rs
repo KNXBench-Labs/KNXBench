@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::process::ExitCode;
 
-use knx_app::legacy::open_legacy_file;
+use knx_app::legacy::{open_with_password_policy, LegacyOpenError, PasswordUsed};
 use knx_productdb::legacy::{publish_legacy, LegacyError, LegacyPublishReport};
 
 use crate::legacy_inspect::{parse, read_bounded, read_password};
@@ -16,6 +16,8 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    let remember = rest.iter().any(|a| a == "--remember");
+    let rest: Vec<String> = rest.into_iter().filter(|a| a != "--remember").collect();
     let args = match parse(&rest) {
         Ok(args) => args,
         Err(e) => {
@@ -37,13 +39,20 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    // The remembered password is tried only when none was given; without a
+    // place to keep one there simply is none.
+    let store = crate::legacy_password::store().ok();
     // Decrypt before the product database is even opened: a missing or
     // wrong password must not leave a database file behind.
-    let payload = match open_legacy_file(&bytes, password.as_ref()) {
-        Ok(payload) => payload,
+    let (payload, used) = match open_with_password_policy(&bytes, password.as_ref(), store.as_ref())
+    {
+        Ok(opened) => opened,
         Err(error) => {
             eprintln!("import-legacy refused {}: {error}", args.file);
-            if matches!(error, LegacyError::PasswordRequired) {
+            if matches!(
+                error,
+                LegacyOpenError::Legacy(LegacyError::PasswordRequired)
+            ) {
                 eprintln!(
                     "rerun with --password-stdin (and type the password) or --password-file <path>"
                 );
@@ -62,16 +71,35 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| args.file.clone());
-    match publish_legacy(&conn, &name, &bytes, &payload) {
-        Ok(report) => {
-            print!("{}", format_report(&args.file, &report));
-            ExitCode::SUCCESS
-        }
+    let report = match publish_legacy(&conn, &name, &bytes, &payload) {
+        Ok(report) => report,
         Err(error) => {
             eprintln!("import-legacy refused {}: {error}", args.file);
-            ExitCode::FAILURE
+            return ExitCode::FAILURE;
+        }
+    };
+    print!("{}", format_report(&args.file, &report));
+    println!(
+        "  password: {}",
+        match used {
+            PasswordUsed::None => "none needed (the file is not encrypted)",
+            PasswordUsed::Given => "the one given",
+            PasswordUsed::Remembered => "the remembered one",
+        }
+    );
+    if remember {
+        match (used, password.as_ref(), store.as_ref()) {
+            (PasswordUsed::Given, Some(password), Some(store)) => match store.store(password) {
+                Ok(()) => println!("  password: remembered for later imports"),
+                Err(e) => eprintln!("the import succeeded, but the password was not remembered: {e}"),
+            },
+            (PasswordUsed::Given, _, None) => eprintln!(
+                "the import succeeded, but neither XDG_CONFIG_HOME nor HOME is set to remember the password"
+            ),
+            _ => println!("  password: nothing new to remember"),
         }
     }
+    ExitCode::SUCCESS
 }
 
 fn format_report(file: &str, report: &LegacyPublishReport) -> String {

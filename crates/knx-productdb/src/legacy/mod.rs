@@ -22,6 +22,7 @@ mod inspect;
 mod mapping;
 mod mapping_program;
 mod publish;
+mod secrets;
 mod text;
 
 pub use container::{
@@ -44,3 +45,4 @@ pub use mapping::{
     MappedParameterType, MappedProduct, MappedProgram, MappedTranslation, MappingDiagnostic,
 };
 pub use publish::{publish_legacy, LegacyPublishError, LegacyPublishReport};
+pub use secrets::{is_secret_column, withhold_secret_values, SecretColumn, WithheldPayload};

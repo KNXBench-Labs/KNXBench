@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (legacy VD secrets)
+- **Timestamp:** 2026-10-08 12:43 CEST
+- **Completed:** Closed a gap L1/L2 left in the accepted design (2026-09-26 §6.4, B-3; grilling Q10): secret-class column values (`*PASSWORD*`, any case) are blanked in the stored legacy payload (`withhold_secret_values`, parser source ranges incl. continuations), which is also the copy that is parsed and keyed; `secret-withheld` reports table/column/count only. Real VD3/VD4 have none (corpus/oracle unchanged). Mutation sweep 8/8 named. Scoped gate green (see IMPLEMENTATION_STATUS).
+- **Pending/Next Steps:** L3 next: server upload + password dialog + remembered password (one 0600 file under `$XDG_CONFIG_HOME/knx/`, set/forget via CLI and web), visual web check of a legacy device. Minor: `inspect-legacy` could list declared secret-class columns (declared / non-empty count). Then the `.vd5` package (Siemens sample: 4 members, 173 MB payload) and L4 download.
+- **Notes for Codex oder Claude:** An unencrypted legacy original is stored verbatim (Q10), so its secret values stay inside that blob (KNOWN_LIMITATIONS §128). The legacy oracle test needs the ETS 6.3 house project; the default path works, and a glob on `*Zuhause*` picks the ETS4 project and fails with `FileNotFound`.
+
+---
+
 - **Last Agent:** Claude (legacy VD L2)
 - **Timestamp:** 2026-10-08 12:07 CEST
 - **Completed:** L2 of legacy ETS3 product databases (ADR-0094, Amendment: L2): `knx_productdb::legacy::{map_legacy_database, publish_legacy}` publish every application program of a `.vd3`/`.vd4`/`.vd5` into the product DB in one transaction (ids `M-<hex>_A-LX<sha8>-<PROGRAM_ID>`; catalog, grouped/union parameters, enums, overrides, visibility tree, objects, 5 languages), schema v22 provenance tables, download refused as `CodeError::LegacyProgram`, `knx_app::legacy::import_legacy_file`, CLI `knx products import-legacy` (decrypts before opening the DB). Oracle N000520 vs ETS 6.3: three named deviations only; both real files pinned. Mutation sweep 20/20 named. Full gate green (see IMPLEMENTATION_STATUS), product-matrix commitment re-pinned for the four empty v22 tables (v16 projection proved unchanged). Log: `.ai/logs/2026-10-08_claude_legacy-vd-l2-publish.md`.

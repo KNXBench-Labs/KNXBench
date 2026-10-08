@@ -1543,7 +1543,7 @@ semantics, which Slice 0 does not need), and hardware. See
 whether the product-data half needed a vendor DLL and concluded no. This pass
 did something different and narrower: it read the source PDFs clause by clause
 to produce an **implementable** specification —
-[`docs/superpowers/specs/2026-09-13-commissioning-download-design.md`](../superpowers/specs/2026-09-13-commissioning-download-design.md).
+[`docs/superpowers/specs/2026-09-13-commissioning-download-design.md`](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/superpowers/specs/2026-09-13-commissioning-download-design.md).
 No code was written and no bus was contacted. What follows is only what this
 pass *established or corrected*; the specification document carries the full
 citations.

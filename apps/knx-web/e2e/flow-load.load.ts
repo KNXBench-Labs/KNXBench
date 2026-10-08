@@ -1,12 +1,13 @@
 /** U21 measurements: dense burst and long session of the real flow view; study only. */
 // Run: npx playwright test -c playwright.load.config.ts (production build, see vite.study.config.ts)
 // Synthetic traffic through intercepted routes; headless Chromium on this
-// machine. Writes docs/design/2026-10-04-telegram-flow-u21/measurements.json.
+// machine. Writes docs/evidence/telegram-flow-u21/measurements.json (the 2026-10-04
+// figures were in docs/design/, removed 2026-10-08, see docs/history/REMOVED_DOCS.md).
 import { expect, test, type CDPSession, type Page, type Route } from "@playwright/test";
 import { cpus } from "node:os";
 import { mkdirSync, writeFileSync } from "node:fs";
 
-const OUT = new URL("../../../docs/design/2026-10-04-telegram-flow-u21/", import.meta.url);
+const OUT = new URL("../../../docs/evidence/telegram-flow-u21/", import.meta.url);
 const flags = { communication: true, read: null, write: true, transmit: null, update: null, readOnInit: null };
 
 interface Scenario {

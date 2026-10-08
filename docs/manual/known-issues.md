@@ -126,7 +126,7 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   can still be refused. A picker filter is guidance, not format validation.
 - **Workaround:** obtain the product as a `.knxprod` package.
 - **Details:** [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md),
-  [UI follow-up evidence](../archive/alpha-0.1/UI_ALPHA_READINESS.md)
+  [UI follow-up evidence](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md)
 
 ### Some newer `.knxprod` master-data schemes are not installable directly
 
@@ -243,7 +243,7 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   offline recovery/abort/restore contracts remain implementation requirements.
   This documentation notice is not a claim that an in-app warning is wired up.
 - **Details:** [Commissioning history contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md),
-  [commissioning goal](../archive/alpha-0.1/goal-commission.md).
+  [commissioning goal](https://github.com/KNXBench-Labs/KNXBench/blob/6a1ba6ae5d54/docs/archive/alpha-0.1/goal-commission.md).
 
 ### There is no address reset in the app
 
@@ -584,7 +584,7 @@ other. These are the ones found while writing this manual.
 - **Affected:** statements about authentication elsewhere in the repository.
 - **Limitation:** the manual was rewritten on 2026-09-20 for the password
   login and the browser login screen that arrived the same day. Older
-  engineering documents — `docs/archive/PROJECT_ANALYSIS_2026-09-15.md`, for one —
+  engineering documents — `PROJECT_ANALYSIS_2026-09-15.md`, for one —
   still describe a server with no authentication at all, because that was
   true when they were written. The internal triage list also still carries
   the Read-on-Init entry as open, although it was closed the same day.

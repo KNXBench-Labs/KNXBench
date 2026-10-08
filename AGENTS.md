@@ -46,8 +46,7 @@ docs/
 ├── status/LEDGER.md   (per-ID status of record)
 ├── contracts/   (focused behavioural contracts)
 ├── adr/
-├── history/   (older IMPLEMENTATION_STATUS entries, verbatim)
-└── archive/   (finished goals, alpha dossiers, dated snapshots; read-only)
+└── history/   (older IMPLEMENTATION_STATUS entries; REMOVED_DOCS.md says where deleted docs live in Git)
 ```
 
 Keep relevant documentation synchronized with implementation.

@@ -3,7 +3,7 @@
 You are running in a Claude Code **cloud session**: a fresh clone of the
 GitHub repository on an Anthropic VM with 4 vCPUs, 16 GB RAM and 30 GB disk.
 These rules add to `AGENTS.md`, which still applies in full. The task briefs
-are in `docs/archive/CLOUD_SESSIONS.md`.
+are in `CLOUD_SESSIONS.md`.
 
 1. **No private corpus.** `OriginalData/` is gitignored and absent. Corpus
    tests report as *ignored*, and that is correct. Never mark such a test

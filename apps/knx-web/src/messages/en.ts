@@ -2215,8 +2215,7 @@ export const messages = {
   // First-run guide (ADR-0084). It says what this build is before it says
   // what to click, so the stage paragraph comes first and the task list
   // third. Every claim here is coarse on purpose: counts and device names
-  // live in Help, where they are kept current (the alpha.5 scope is frozen in
-  // docs/archive/alpha-0.1/ALPHA_SCOPE_MATRIX.md), not in a dialog shown once.
+  // live in Help, where they are kept current, not in a dialog shown once.
   "onboarding.title": "Welcome to KNXBench",
   "onboarding.progress": "Step {current} of {total}",
   "onboarding.skip": "Skip introduction",

@@ -15,6 +15,9 @@ OriginalData
 node_modules/
 AGENTS.md.bak.*
 .claude/.headroom_wrap_settings.lock
+# Serena left the project, its local state did not: keep it out of the
+# now public repository (project.yml is private, mode 0600).
+.serena/
 .ai/
 DREAMS.md
 SOUL.md

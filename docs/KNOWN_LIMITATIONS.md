@@ -6916,6 +6916,11 @@ group addresses (`apps/knx-server/tests/http_legacy_device.rs`).
   `knx products family` lists it next to an ETS program with the same
   manufacturer and ApplicationNumber, but nothing is merged or replaced.
 - **Stays refused:** `.pr*` project exports and `.vd2`.
+- **Secrets in an unencrypted original.** Secret-class values
+  (`*PASSWORD*` columns) are blanked in the stored payload. The original
+  file is still kept verbatim (decision Q10). For the usual encrypted file
+  that is safe, because the password is never stored. An unencrypted legacy
+  file, however, keeps such values readable inside its stored original.
 - **The one real `.vd5` is refused.** The Siemens `.vd5` (Nov 2016)
   exceeds the 64 MiB bounds (173 MB payload). It also has four members, an
   installer path tree with three mask images, where the rules expect one

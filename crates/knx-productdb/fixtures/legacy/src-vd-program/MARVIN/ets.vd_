@@ -602,4 +602,18 @@ R 1 T 22 s19_block
 900
 300
 00FF
+-------------------------------------
+T 23 device
+C1 T23 1 4 N DEVICE_ID
+C2 T23 3 50 Y DEVICE_BCU_PASSWORD
+C3 T23 3 50 Y DEVICE_NAME
+R 1 T 23 device
+1
+Zaphod42
+\\Beeblebrox
+Kept
+R 2 T 23 device
+2
+
+Also kept
 XXX

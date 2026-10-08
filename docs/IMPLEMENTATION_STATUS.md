@@ -26,6 +26,42 @@
   `docs/parameter-workspace/delivery-verification.json`. No Docker activation
   or hardware contact is part of this delivery.
 
+## 2026-10-08 — Legacy VD files: secret-class values withheld from the stored payload (ADR-0094)
+
+- **Why:** L2 stored the decrypted payload byte for byte. The accepted
+  design (2026-09-26, §6.4 and decision B-3, confirmed as Q10 in the
+  grilling) requires that the non-empty values of secret-class columns
+  (`*PASSWORD*`, any case) are blanked in the stored copy and reported by
+  count only. L1/L2 had missed it; found while preparing L3.
+- **What:**
+  - The EX-IM parser now records each value's source range, continuation
+    lines included (`ExImTable::source_range`).
+  - `knx_productdb::legacy::withhold_secret_values` builds the stored copy.
+    Each non-empty secret value becomes an empty value line, and every other
+    byte stays. A payload the grammar refuses is refused here as well.
+  - `publish_legacy` stores, parses and keys that copy; its digest is the
+    payload identity and namespace. It reports `secret-withheld` with table,
+    column and count, never a value.
+- **Caveat** (KNOWN_LIMITATIONS §128): the original file is still stored
+  verbatim (Q10). That is safe when it is encrypted, since the password is
+  never kept, but an unencrypted original keeps such values readable.
+- **Real files:** neither `EIBMARKT.VD3` nor the Eibmarkt `.vd4` has a
+  non-empty secret value. Their corpus pins and the N000520 oracle are
+  unchanged (3/3, 1/1, the same three named deviations).
+- **Tests:** `legacy_secrets.rs` 5, publish +1, app +1. The program fixture
+  gains a `device` table with an invented `DEVICE_BCU_PASSWORD` over a
+  continuation line. Mutation sweep **8/8**, each killed by a named test.
+- **Gate:** `fmt`, clippy `-D warnings` for `knx-productdb`, `knx-app`,
+  `knx-cli`, `knx-server` and `knx-mcp`, all five xtask gates and
+  `git diff --check` pass, with inputs frozen. Tests: `knx-productdb`
+  **762 passed, 0 failed, 25 ignored**; before the last test-only addition,
+  the four crates together passed **1,830, 0 failed, 115 ignored**.
+  Corpus: legacy 3/3, oracle 1/1. The `.knxprod` path is untouched, so the
+  product matrix was not rerun.
+- **Still open:** `inspect-legacy` does not yet list declared secret-class
+  columns (the design's "declared / non-empty in n rows" line); it prints no
+  value of them either.
+
 ## 2026-10-08 — Legacy VD files: programs imported for offline use (L2, ADR-0094)
 
 - **What:** every application program of a legacy ETS3 `.vd3`/`.vd4`/`.vd5`

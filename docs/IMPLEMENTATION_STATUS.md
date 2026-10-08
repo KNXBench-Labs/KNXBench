@@ -1,5 +1,68 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — MCP: parameter visibility, paging and two real clients (ADR-0090 amendment)
+
+- **Shared evaluation:** the parameter panel's stored-value evaluation
+  (`evaluate_device`, `take_digits`, `decompose_module_qualified`,
+  `resolve_mi_authority`) moved verbatim from `apps/knx-server/src/domain.rs`
+  into `knx_productdb::device_evaluation`. Its two duplicate findings are now
+  data (`EvaluationFinding`); the server maps them back to its DTOs with the
+  unchanged wording. Server tests 699/0/45 unchanged.
+- **Classification:** `DeviceEvaluation::value_status` → `Active`,
+  `Inactive`, `Stale`, `Unknown`; `traversal_complete()` turns a missing
+  activation after a budget stop into `Unknown` (ADR-0062). New
+  `scoped_ids` maps a stored module-scoped id to its module and declared
+  ref. 3 tests in `crates/knx-productdb/tests/device_evaluation.rs`.
+- **`knx-mcp` visibility:** `get_device` values and `explain_parameter`
+  carry `visibility` + `visibilityReason`; a declared id without a stored
+  value reports `activeInModules` when only modules activate it;
+  module-scoped values show their module's declaration. `notEvaluated`
+  reasons: `noProductDatabase`, `programNotInstalled`,
+  `noApplicationProgram`, `noDynamicTree`. Access is not applied, and
+  `inactive` says nothing about download (`DownloadInvisibleParameters`).
+  `schemaVersion` 2.
+- **`knx-mcp` paging:** `get_device` pages communication objects and values
+  separately (default 50), narrows with `linkedOnly`/`parameterVisibility`,
+  omits `null` object members; totals and `visibilityCounts` cover
+  everything. Largest real response 202 KB → 25.6 KB (median 11.8 KB).
+- **`knx-mcp` fix:** `get_device` no longer leaks the projection's
+  `resolution: NoDatabase` placeholder; it resolves the product like the
+  server (`Resolved` + catalogue, `NotInDatabase`, `NoDatabase`).
+- **Tests:** 16 tool tests, 2 stdio, 6 unit (+ argument-schema case);
+  mutation sweep 11/11 killed after two added tests (repeated row, module
+  declaration).
+- **Gate (2026-10-08):** web build, fmt, diff-check, workspace Clippy,
+  workspace tests 3,546 passed / 0 failed / 178 ignored; corpus tests through
+  the moved evaluation: knx-server `com_object_activation_corpus`,
+  `open_reference_project`, `http_project_routes` 5/5 plus 2 lib tests,
+  knx-productdb `dynamic_tree` + `parameter_views_corpus` 7/7 (release,
+  product corpus); xtask layering, anchors, ledger, corpus-gates green,
+  headers green after a comment-only fix to the new test file's header.
+  (The 4,376 recorded for the 2026-10-07 package counted knx-store and
+  knx-productdb twice; the workspace figure then was about 3,545.)
+- **Live probe:** copies of `project123.knxdb`, `project_migrated.knxdb` and
+  the imported KV demo with a copy of the installed product database: all
+  devices evaluated, 1,262 `active` + 81 `inactive` of 1,343 values per real
+  project, KV 9/9 module-scoped `active`, product `Resolved` 36/36. All
+  copies byte-identical.
+- **Real clients (2026-10-08):** Claude Code 2.1.289 (`--mcp-config`,
+  `--strict-mcp-config`, only `mcp__knx__*` allowed) and Hermes (temporary
+  `HERMES_HOME`, `hermes mcp test`, `hermes chat -t knx`). Both answered a
+  visibility question correctly from the saved data and refused a parameter
+  write; Claude Code answered the 577-object device by paging
+  (verified against the database: 0 links, 0 values). Findings fixed on the
+  way: the unbounded `get_device` (Hermes spilled 49 KB to a file), the
+  `resolution` placeholder, and an unbacked "does not take effect" claim for
+  inactive values.
+- **Side effect noticed and reverted:** importing the KV demo with `knx
+  import` rewrote 14 manufacturer names in the installed product database
+  from the project's embedded master data (documented behaviour: the last
+  ingested `knx_master.xml` wins). The file was restored byte-exact from the
+  pre-import copy.
+- **Docs:** KL §165 retitled and rewritten, ADR-0090 amendment, manual
+  chapter 23 (visibility, paging, client notes), agent skill, ROADMAP,
+  ARCHITECTURE, manual status row.
+
 ## 2026-10-07 — Read-only MCP server and agent skill (ADR-0090)
 
 - **User decisions (grill-me):** power users bring their own agent; v1 is a

@@ -8,6 +8,7 @@
 pub mod baggage;
 pub mod blob;
 pub mod code;
+pub mod device_evaluation;
 pub mod download_plan;
 pub mod dynamic;
 pub mod enrich;

@@ -28,8 +28,9 @@ similar) can look things up in a project instead of guessing:
 | Summarise a project and list its aliases | Edit, save or import anything |
 | Search devices, group addresses, ranges, rooms, objects | Program, download or reset devices |
 | Show a device with objects, links, location, parameters | Read or write the bus |
-| Show who sends to and listens on a group address | See changes you have not saved yet |
-| List structural problems (duplicates, conflicts, gaps) | Tell whether a parameter is currently visible |
+| Tell which parameters the saved settings show or hide | See changes you have not saved yet |
+| Show who sends to and listens on a group address | Apply a parameter's access rules |
+| List structural problems (duplicates, conflicts, gaps) | Show a parameter's program default |
 | Compare two saved projects | Compare against ETS |
 | Check a proposed group-address CSV | Apply that CSV |
 
@@ -100,6 +101,21 @@ mcp_servers:
     args: ["--project", "home=/path/to/home.knxdb"]
 ```
 
+`hermes mcp test knxbench` checks the connection. To give a Hermes run only
+these tools, pass the server name as the toolset: `-t knxbench` (the toolset
+`mcp-knxbench` exists only after the server has connected).
+
+Both clients were tried on 2026-10-08 against copies of real projects:
+Claude Code 2.1.289 (`--mcp-config` with `--strict-mcp-config`) and Hermes
+(`hermes chat -t knxbench`). Each found all eight tools, answered visibility
+questions from the saved data and refused a request to change a parameter.
+
+Large devices come in pages: `get_device` returns 50 communication objects
+and 50 parameter values at a time, with totals over all of them. An agent can
+narrow it with `linkedOnly` or `parameterVisibility` (for example only the
+`inactive` values), so even a device with hundreds of objects fits within a
+client's limit for one tool answer.
+
 The repository also contains an agent skill,
 `integrations/agent-skill/knxbench/SKILL.md`. It teaches an agent how to use
 these tools and which CLI commands it must never run. Copy it into your
@@ -114,12 +130,21 @@ agent's skill directory if it supports skills.
 - **Imported text is data.** A device named "ignore all previous
   instructions" is reported as a device name. Every answer reminds the agent
   of that.
+- **Shown or hidden parameters.** For each stored value the agent gets a
+  `visibility`: `active` if the device's settings show that parameter,
+  `inactive` if they hide it (the value stays stored; whether a hidden value
+  still reaches the device on download depends on the device's program), or
+  `stale` if the program has no such parameter. KNXBench's parameter panel
+  decides this with the same code. When it cannot decide, for example
+  without a product database, the answer says `notEvaluated` and why. A
+  parameter's access setting is not applied, so an `active` parameter may
+  still be one the panel never displays.
 - **The agent may still be wrong.** It can pick the wrong device or
   misunderstand a request. Answers name addresses and ids, so you can check
   them in KNXBench.
 
 The design and its limits are recorded in
 [ADR-0090](../../adr/0090-read-only-mcp-adapter.md) and
-[known limitation §165](../../KNOWN_LIMITATIONS.md#165-the-mcp-adapter-reads-saved-files-only-and-does-not-evaluate-parameter-visibility).
+[known limitation §165](../../KNOWN_LIMITATIONS.md#165-the-mcp-adapter-reads-saved-files-only-and-its-visibility-ignores-access).
 
 [Manual index](../README.md) · Next: [Keyboard shortcuts](../reference/01-keyboard-shortcuts.md) →

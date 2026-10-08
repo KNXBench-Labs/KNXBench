@@ -8,7 +8,7 @@
 mod device;
 mod project;
 
-pub use device::{explain_parameter, get_device, get_group_address};
+pub use device::{explain_parameter, get_device, get_group_address, DeviceView, VISIBILITY_VALUES};
 pub use project::{
     diff_projects, find_issues, project_summary, search, validate_ga_csv, MAX_CSV_BYTES,
     MAX_QUERY_CHARS, SEARCH_KINDS,
@@ -18,7 +18,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 
 /// Raised on any breaking change to a tool's arguments or response shape.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// Repeated in every response: imported names are untrusted input.
 pub const DATA_NOTICE: &str = "Names, descriptions and other text fields are copied verbatim \

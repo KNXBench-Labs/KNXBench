@@ -137,10 +137,50 @@ agent's question must never change the user's file.
 - The tool names and JSON shapes are not a compatibility promise during the
   alpha. Breaking changes raise `schemaVersion`.
 - `explain_parameter` reports the program's declaration and the stored raw
-  value. It does **not** evaluate the `Dynamic` tree, so whether a parameter
-  is currently visible or active is reported as "not evaluated"
-  (KNOWN_LIMITATIONS §165).
+  value. As first accepted it did **not** evaluate the `Dynamic` tree; see
+  the 2026-10-08 amendment below (KNOWN_LIMITATIONS §165).
 - The product database is opened read-only for the server's whole lifetime.
   An older one is held in memory as a startup snapshot (about 100 MB for the
   maintainer's current database). Both read-only openers wait up to 5 s for a
   writer's lock instead of failing during a save or an install.
+
+## Amendment 2026-10-08: parameter visibility
+
+The stored-value evaluation behind the parameter panel (passes A/B, module
+authority, the D42 feedback evaluation) moved unchanged from
+`apps/knx-server` into `knx_productdb::device_evaluation`. It is pure
+product-data logic and reports its two duplicate findings as data; the
+server keeps its wording by mapping them to its DTOs. The adapter calls the
+same function, so the panel and the agent cannot drift apart, and the
+adapter still links no server, bus or key code.
+
+- `get_device` items and `explain_parameter` carry `visibility`: `active`
+  (the tree activates the parameter), `inactive` (declared, not activated
+  with the saved values), `stale` (no declared parameter accepts the value;
+  a repeated id's later rows), `unknown` (traversal stopped at its budget,
+  `visibilityReason: evaluationBudgetExhausted`) or `notEvaluated`
+  (`visibilityReason`: `noProductDatabase`, `programNotInstalled`,
+  `noApplicationProgram`, `noDynamicTree`). `get_device` adds a list summary
+  and `visibilityCounts` over every stored value, not only the listed ones.
+- A declared id without a stored value is `active` when the tree activates
+  it at program level, or lists `activeInModules` when only module instances
+  activate it.
+- A module-scoped stored id is shown with its module's declaration.
+- `Access`/`refAccess` is not applied: it is reported in the declaration,
+  and whether it gates display is an open research question. `inactive`
+  says nothing about download: whether a hidden value is written depends on
+  the program (`Options/@DownloadInvisibleParameters`, semantics not
+  documented; research `knxnet-ip-and-bus.md`).
+- `schemaVersion` rises to 2 because the meaning of `visibility` changed.
+- `get_device` pages its communication objects and parameter values
+  separately (default 50 each, `comObjectLimit`/`comObjectOffset`,
+  `parameterLimit`/`parameterOffset`), can narrow them (`linkedOnly`,
+  `parameterVisibility`) and omits `null` members of a communication object.
+  Measured before: up to 202 KB for one device (577 objects), above Hermes'
+  50,000-character MCP result limit; after: at most 25.6 KB on the same
+  project. Totals and `visibilityCounts` always cover every entry.
+- `get_device` replaces the projection's `resolution` placeholder with the
+  product database's answer (`Resolved` with the catalogue entry,
+  `NotInDatabase`, confirmed `NoDatabase`), as the server does. The first
+  release passed the placeholder `NoDatabase` through even when the product
+  database resolved the device; a client test surfaced it.

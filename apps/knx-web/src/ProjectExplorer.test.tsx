@@ -184,6 +184,8 @@ class TestDataTransfer {
 // selected). This harness is the smallest stand-in for that wiring, so
 // these tests keep asserting the tree's click behaviour and the toolbar it
 // drives rather than where either now happens to be declared.
+const addDeviceSpy = vi.fn();
+
 function ExplorerHarness(props: {
   tree: ProjectTree;
   onSelect: (sel: Selection) => void;
@@ -208,6 +210,7 @@ function ExplorerHarness(props: {
         selection={props.revealRequest?.selection ?? null}
         onSelect={props.onSelect}
         onTreeUpdate={props.onTreeUpdate}
+        onAddDevice={addDeviceSpy}
         multiSelection={multiSelection}
         onItemClick={onItemClick}
         onSummary={props.onSummary}
@@ -925,14 +928,27 @@ describe("ProjectExplorer — later installations", () => {
     await unmount(root);
   });
 
-  it("adds lines under a later area and devices on its lines, but unassigned devices only in the first", async () => {
+  // ADR-0093: the wizard names the installation of a line-less device, so
+  // every installation's Unassigned bucket offers the row now.
+  it("adds devices on a later installation's lines and into its own Unassigned bucket", async () => {
+    addDeviceSpy.mockClear();
     const { root } = await renderExplorer(laterTree());
     const second = within("Second installation");
     expect(second.querySelector('input[placeholder="New line"]')).not.toBeNull();
     const addButtons = Array.from(second.querySelectorAll("button")).filter((b) => b.textContent === "+ Add device");
-    expect(addButtons).toHaveLength(2);
+    // Two lines, the room "Other room" and the Unassigned bucket; the first
+    // installation has one line, "Room A" and Unassigned.
+    expect(addButtons).toHaveLength(4);
     expect(Array.from(within("Installation").querySelectorAll("button"))
-      .filter((b) => b.textContent === "+ Add device")).toHaveLength(2);
+      .filter((b) => b.textContent === "+ Add device")).toHaveLength(3);
+    await click(addButtons[0]);
+    await click(addButtons[2]);
+    await click(addButtons[3]);
+    expect(addDeviceSpy.mock.calls.map(([target]) => target)).toEqual([
+      { lineId: 22 },
+      { buildingPartId: 601 },
+      { lineId: null, installationId: 2 },
+    ]);
     await unmount(root);
   });
 

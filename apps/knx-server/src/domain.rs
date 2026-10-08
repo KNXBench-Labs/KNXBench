@@ -3166,6 +3166,7 @@ pub fn create_devices_impl(
             ..Default::default()
         },
     )
+    .map_err(|error| error.to_string())
 }
 
 /// One catalog creation request as the HTTP route receives it.
@@ -3181,6 +3182,71 @@ pub struct CatalogCreateRequest {
     pub allocate_addresses: bool,
     /// MODEL-04: skip generated names already used in the project.
     pub unique_names: bool,
+    /// ADR-0093: the installation a line-less device goes to. With a line or
+    /// building part it must agree with theirs; absent keeps the old rule.
+    pub installation_id: Option<u8>,
+    /// ADR-0093: the building part (e.g. room) every new device is placed
+    /// in, in the same undoable step.
+    pub building_part_id: Option<u32>,
+    /// ADR-0093: what the preview showed. When given, the request is refused
+    /// with [`CatalogCreateError::PreviewStale`] unless the names and
+    /// addresses about to be created are exactly these, in order.
+    pub expected: Option<Vec<ExpectedCatalogDevice>>,
+}
+
+/// One device as the add-device wizard's preview showed it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExpectedCatalogDevice {
+    pub name: String,
+    pub address: Option<knx_core::IndividualAddress>,
+}
+
+/// Why a catalog create or preview was refused. Nothing was changed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CatalogCreateError {
+    Refused(String),
+    /// The project changed since the preview: the request would now create
+    /// other names or addresses than the ones the user confirmed.
+    PreviewStale(String),
+}
+
+impl From<String> for CatalogCreateError {
+    fn from(reason: String) -> Self {
+        CatalogCreateError::Refused(reason)
+    }
+}
+
+impl From<&str> for CatalogCreateError {
+    fn from(reason: &str) -> Self {
+        CatalogCreateError::Refused(reason.to_string())
+    }
+}
+
+impl std::fmt::Display for CatalogCreateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CatalogCreateError::Refused(reason) | CatalogCreateError::PreviewStale(reason) => {
+                f.write_str(reason)
+            }
+        }
+    }
+}
+
+/// What `POST /api/devices/preview` answers: exactly what the create would
+/// do now, computed on a copy of the project. Nothing is reserved.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CatalogPreview {
+    pub items: Vec<CatalogPreviewItem>,
+    pub diagnostics: Vec<CreationDiagnostic>,
+    /// The installation the devices would land in.
+    pub installation_id: Option<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CatalogPreviewItem {
+    pub index: u32,
+    pub name: String,
+    pub address: Option<knx_core::IndividualAddress>,
 }
 
 /// [`create_devices_impl`] with the optional request features. A committed
@@ -3189,7 +3255,7 @@ pub struct CatalogCreateRequest {
 pub fn create_catalog_devices_impl(
     state: &AppState,
     request: CatalogCreateRequest,
-) -> Result<CreateDeviceResponse, String> {
+) -> Result<CreateDeviceResponse, CatalogCreateError> {
     let CatalogCreateRequest {
         line_id,
         catalog_item_id,
@@ -3198,6 +3264,9 @@ pub fn create_catalog_devices_impl(
         request_id,
         allocate_addresses,
         unique_names,
+        installation_id,
+        building_part_id,
+        expected,
     } = request;
     if allocate_addresses && line_id.is_none() {
         return Err("address allocation needs a target line".into());
@@ -3205,6 +3274,8 @@ pub fn create_catalog_devices_impl(
     let options = CatalogCreateOptions {
         allocate_addresses,
         unique_names,
+        installation_id,
+        building_part_id,
     };
     let request = match request_id {
         None => None,
@@ -3217,6 +3288,14 @@ pub fn create_catalog_devices_impl(
                 quantity,
                 allocate_addresses,
                 unique_names,
+                installation_id,
+                building_part_id,
+                expected: expected.as_ref().map(|items| {
+                    items
+                        .iter()
+                        .map(|item| (item.name.clone(), item.address))
+                        .collect()
+                }),
             };
             Some((id, fingerprint))
         }
@@ -3232,11 +3311,14 @@ pub fn create_catalog_devices_impl(
     }
     create_devices_recorded(
         state,
-        line_id,
-        catalog_item_id,
-        name,
-        quantity,
-        options,
+        CatalogBatchRequest {
+            line_id,
+            catalog_item_id,
+            name,
+            quantity,
+            options,
+        },
+        expected,
         request,
     )
 }
@@ -3245,6 +3327,72 @@ pub fn create_catalog_devices_impl(
 struct CatalogCreateOptions {
     allocate_addresses: bool,
     unique_names: bool,
+    installation_id: Option<u8>,
+    building_part_id: Option<u32>,
+}
+
+/// The parts of a catalog request that decide what is created, shared by
+/// the create and the preview.
+struct CatalogBatchRequest {
+    line_id: Option<u32>,
+    catalog_item_id: String,
+    name: String,
+    quantity: u32,
+    options: CatalogCreateOptions,
+}
+
+/// ADR-0093 `POST /api/devices/preview`: builds the very batch a create
+/// would apply now and runs it, plus the enrichment pass, on a copy of the
+/// project. The live project, its ID allocators, the undo stack, the replay
+/// ledger and the session log are untouched.
+pub fn preview_catalog_devices_impl(
+    state: &AppState,
+    request: CatalogCreateRequest,
+) -> Result<CatalogPreview, CatalogCreateError> {
+    if request.allocate_addresses && request.line_id.is_none() {
+        return Err("address allocation needs a target line".into());
+    }
+    let batch = CatalogBatchRequest {
+        line_id: request.line_id,
+        catalog_item_id: request.catalog_item_id,
+        name: request.name,
+        quantity: request.quantity,
+        options: CatalogCreateOptions {
+            allocate_addresses: request.allocate_addresses,
+            unique_names: request.unique_names,
+            installation_id: request.installation_id,
+            building_part_id: request.building_part_id,
+        },
+    };
+    let product = read_catalog_product(state, &batch)?;
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_ref().ok_or("no project open")?;
+    let installation = resolve_catalog_installation(project, batch.line_id, batch.options)?;
+    let plan = plan_catalog_batch(project, &batch, installation, &product)?;
+    let mut copy = project.clone();
+    plan.command
+        .apply(&mut copy)
+        .map_err(|error| catalog_creation_error(batch.quantity, plan.children_per_item, error))?;
+    let mut diagnostics = Vec::new();
+    let mut items = Vec::with_capacity(plan.created.len());
+    for planned in &plan.created {
+        let mut issues = Vec::new();
+        for (com_id, ref_id, view) in &planned.enrich_inputs {
+            knx_productdb::enrich::apply(&mut copy, *com_id, ref_id, view, &mut issues);
+        }
+        diagnostics.extend(product.base_diagnostics.iter().cloned());
+        diagnostics.extend(issues.into_iter().map(CreationDiagnostic::from_enrichment));
+        items.push(CatalogPreviewItem {
+            index: planned.index,
+            name: planned.name.clone(),
+            address: planned.address,
+        });
+    }
+    Ok(CatalogPreview {
+        items,
+        diagnostics,
+        installation_id: plan.installation.map(|i| i.0),
+    })
 }
 
 /// The recorded outcome for a committed request, with the current tree.
@@ -3281,96 +3429,144 @@ fn replay_catalog_request(
     }))
 }
 
-fn create_devices_recorded(
+/// Product facts a catalog create needs, read while only `product_db` is
+/// locked (design doc §3.1) and dropped before `project` is locked, so the
+/// two mutexes are never held at once.
+struct CatalogProduct {
+    product_ref: String,
+    program_ref: String,
+    seeds: Vec<(String, knx_productdb::query::ComObjectView)>,
+    base_diagnostics: Vec<CreationDiagnostic>,
+}
+
+fn read_catalog_product(
     state: &AppState,
-    line_id: Option<u32>,
-    catalog_item_id: String,
-    name: String,
-    quantity: u32,
-    options: CatalogCreateOptions,
-    request: Option<(String, crate::catalog_requests::CatalogRequestFingerprint)>,
-) -> Result<CreateDeviceResponse, String> {
+    request: &CatalogBatchRequest,
+) -> Result<CatalogProduct, CatalogCreateError> {
     const MAX_CATALOG_QUANTITY: u32 = 32;
-    if !(1..=MAX_CATALOG_QUANTITY).contains(&quantity) {
-        return Err(format!(
-            "catalog quantity must be between 1 and {MAX_CATALOG_QUANTITY}"
-        ));
+    if !(1..=MAX_CATALOG_QUANTITY).contains(&request.quantity) {
+        return Err(
+            format!("catalog quantity must be between 1 and {MAX_CATALOG_QUANTITY}").into(),
+        );
     }
-    let base_name = name.trim();
-    if base_name.is_empty() {
+    if request.name.trim().is_empty() {
         return Err("device name must not be blank".into());
     }
-    // Step 1 (design doc §3.1): everything the product database can tell
-    // us, gathered while only `product_db` is locked — dropped before
-    // `project` is locked below, so the two mutexes are never held at
-    // once.
-    let (product_ref, program_ref, seeds, base_diagnostics) = {
-        let products = state
-            .product_db
-            .as_ref()
-            .ok_or("no product database configured")?
-            .lock()
-            .expect("state mutex poisoned");
-        let item = knx_productdb::query::catalog_item(&products, &catalog_item_id)
-            .map_err(|e| e.to_string())?
-            .ok_or("catalog item not found")?;
-        let mut seeds: Vec<(String, knx_productdb::query::ComObjectView)> = Vec::new();
-        let mut diagnostics = Vec::new();
-        let (product_ref, program_ref) =
-            match knx_productdb::query::resolve_catalog_item_program(&products, &item)
-                .map_err(|error| error.to_string())?
-            {
-                knx_productdb::query::CatalogItemProgram::Program {
-                    product_ref_id,
-                    hardware2program_ref_id,
-                    program_id,
-                } => {
-                    for ref_id in knx_productdb::query::com_object_ref_ids(&products, &program_id)
-                        .map_err(|e| e.to_string())?
-                    {
-                        let view = knx_productdb::query::com_object_view(
-                            &products,
-                            &program_id,
-                            &ref_id,
-                            None,
-                        )
-                        .map_err(|e| e.to_string())?
-                        .ok_or_else(|| {
-                            format!("catalog communication-object reference is missing: {ref_id}")
-                        })?;
-                        seeds.push((ref_id, view));
-                    }
-                    diagnostics
-                        .push(CreationDiagnostic::DynamicOrModuleNotEvaluated { program_id });
-                    (product_ref_id, hardware2program_ref_id)
+    let products = state
+        .product_db
+        .as_ref()
+        .ok_or("no product database configured")?
+        .lock()
+        .expect("state mutex poisoned");
+    let item = knx_productdb::query::catalog_item(&products, &request.catalog_item_id)
+        .map_err(|e| e.to_string())?
+        .ok_or("catalog item not found")?;
+    let mut seeds: Vec<(String, knx_productdb::query::ComObjectView)> = Vec::new();
+    let mut diagnostics = Vec::new();
+    let (product_ref, program_ref) =
+        match knx_productdb::query::resolve_catalog_item_program(&products, &item)
+            .map_err(|error| error.to_string())?
+        {
+            knx_productdb::query::CatalogItemProgram::Program {
+                product_ref_id,
+                hardware2program_ref_id,
+                program_id,
+            } => {
+                for ref_id in knx_productdb::query::com_object_ref_ids(&products, &program_id)
+                    .map_err(|e| e.to_string())?
+                {
+                    let view = knx_productdb::query::com_object_view(
+                        &products,
+                        &program_id,
+                        &ref_id,
+                        None,
+                    )
+                    .map_err(|e| e.to_string())?
+                    .ok_or_else(|| {
+                        format!("catalog communication-object reference is missing: {ref_id}")
+                    })?;
+                    seeds.push((ref_id, view));
                 }
-                knx_productdb::query::CatalogItemProgram::Programless { product_ref_id } => {
-                    diagnostics.push(CreationDiagnostic::ProgramlessProduct {
-                        catalog_item_id: item.id,
-                    });
-                    (product_ref_id, String::new())
-                }
-            };
-        (product_ref, program_ref, seeds, diagnostics)
-    };
+                diagnostics.push(CreationDiagnostic::DynamicOrModuleNotEvaluated { program_id });
+                (product_ref_id, hardware2program_ref_id)
+            }
+            knx_productdb::query::CatalogItemProgram::Programless { product_ref_id } => {
+                diagnostics.push(CreationDiagnostic::ProgramlessProduct {
+                    catalog_item_id: item.id,
+                });
+                (product_ref_id, String::new())
+            }
+        };
+    Ok(CatalogProduct {
+        product_ref,
+        program_ref,
+        seeds,
+        base_diagnostics: diagnostics,
+    })
+}
 
-    // Step 2 (design doc §3.2): allocate ids and build the command,
-    // holding `project`'s own lock continuously through step 3 below —
-    // `product_db` is no longer held.
-    let mut project = state.project.lock().expect("state mutex poisoned");
-    let project = project.as_mut().ok_or("no project open")?;
-    // A concurrent identical request may have committed while the product
-    // database was read; this check under `project` is the authoritative one.
-    if let Some((id, fingerprint)) = &request {
-        if let Some(replay) = replay_catalog_request(state, project, id, fingerprint)? {
-            return Ok(replay);
-        }
+struct PlannedCatalogDevice {
+    index: u32,
+    device_id: knx_core::DeviceId,
+    name: String,
+    address: Option<knx_core::IndividualAddress>,
+    enrich_inputs: Vec<(
+        knx_core::ComObjectInstanceId,
+        String,
+        knx_productdb::query::ComObjectView,
+    )>,
+}
+
+/// The batch a catalog request would apply to `project` now. Pure: it reads
+/// the project and works on a copy of its ID allocators.
+struct CatalogPlan {
+    command: knx_core::Command,
+    /// The allocators after this batch; adopted only for an unbatched single
+    /// create, whose command does not carry `ReserveIds`.
+    ids: knx_core::IdAllocators,
+    created: Vec<PlannedCatalogDevice>,
+    batched: bool,
+    children_per_item: usize,
+    installation: Option<knx_core::InstallationId>,
+    allocated: bool,
+}
+
+/// The single installation that owns building part `id`, if exactly one does.
+fn building_part_installation(
+    project: &knx_core::Project,
+    id: u32,
+) -> Result<knx_core::InstallationId, String> {
+    let owners: Vec<_> = project
+        .installations
+        .iter()
+        .filter(|i| {
+            i.buildings
+                .iter()
+                .any(|part| part.id == knx_core::BuildingPartId(id))
+        })
+        .map(|i| i.id)
+        .collect();
+    match owners.as_slice() {
+        [owner] => Ok(*owner),
+        [] => Err(format!("building part {id} not found")),
+        _ => Err(format!(
+            "building part {id} is listed by several installations; repair it first"
+        )),
     }
+}
 
+/// Where a catalog request's devices go: the installation of the line, of
+/// the building part, or the one named explicitly, which must all agree.
+/// `None` keeps the core's rule (first installation, unassigned).
+fn resolve_catalog_installation(
+    project: &knx_core::Project,
+    line_id: Option<u32>,
+    options: CatalogCreateOptions,
+) -> Result<Option<knx_core::InstallationId>, String> {
     // Locate the owning installation first. A line in the second installation
-    // must not be forced into the first one, and an unknown line must not
-    // consume IDs or create any devices.
-    let installation = line_id
+    // must not be forced into the first one, and an unknown line, building
+    // part or installation must not consume IDs or create any devices.
+    let line_installation = line_id
         .map(|id| {
             project
                 .installations
@@ -3384,35 +3580,68 @@ fn create_devices_recorded(
                 .map(|i| i.id)
                 .ok_or_else(|| format!("item 1: target line {id} not found"))
         })
-        .transpose();
-    let installation = match installation {
-        Ok(installation) => installation,
-        Err(reason) => {
-            // This used to fail inside `CreateDevice::apply`, which logged the
-            // refusal. Keep that audit trail even though we now reject before
-            // reserving IDs and building the batch.
-            let source = if quantity == 1 {
-                "CreateDevice"
-            } else {
-                "Batch"
-            };
-            log_outcome(
-                state,
-                source,
-                source.into(),
-                None,
-                &Err::<(), _>(reason.clone()),
-            );
-            return Err(reason);
+        .transpose()?;
+    let part_installation = options
+        .building_part_id
+        .map(|id| building_part_installation(project, id))
+        .transpose()?;
+    let explicit = options
+        .installation_id
+        .map(|id| {
+            project
+                .installations
+                .iter()
+                .find(|i| i.id == knx_core::InstallationId(id))
+                .map(|i| i.id)
+                .ok_or_else(|| format!("installation {id} not found"))
+        })
+        .transpose()?;
+    if let (Some(line), Some(explicit)) = (line_installation, explicit) {
+        if line != explicit {
+            return Err(format!(
+                "the target line belongs to installation {}, not to the requested installation {}",
+                line.0, explicit.0
+            ));
         }
-    };
+    }
+    let installation = line_installation.or(explicit);
+    if let (Some(part), Some(chosen), Some(part_id)) =
+        (part_installation, installation, options.building_part_id)
+    {
+        if part != chosen {
+            return Err(format!(
+                "building part {part_id} belongs to installation {}, not installation {}",
+                part.0, chosen.0
+            ));
+        }
+    }
+    Ok(installation.or(part_installation))
+}
+
+fn plan_catalog_batch(
+    project: &knx_core::Project,
+    request: &CatalogBatchRequest,
+    installation: Option<knx_core::InstallationId>,
+    product: &CatalogProduct,
+) -> Result<CatalogPlan, String> {
+    let CatalogBatchRequest {
+        line_id,
+        name,
+        quantity,
+        options,
+        ..
+    } = request;
+    let (line_id, quantity, options) = (*line_id, *quantity, *options);
+    let base_name = name.trim();
+
     let mut ids = project.ids.clone();
     // The core allocator increments u32 counters. Check the complete batch
     // before touching any counter: an imported project may already be close
     // to exhaustion, and wrapping would risk duplicate IDs in a release build.
     let max_id = u128::from(u32::MAX);
     if u128::from(ids.peek_device()) + u128::from(quantity) > max_id
-        || u128::from(ids.peek_com_object_instance()) + (seeds.len() as u128) * u128::from(quantity)
+        || u128::from(ids.peek_com_object_instance())
+            + (product.seeds.len() as u128) * u128::from(quantity)
             > max_id
     {
         return Err("catalog ID range exhausted".into());
@@ -3430,17 +3659,18 @@ fn create_devices_recorded(
     // The original single-create API stores the caller's exact name. The web
     // UI trims its own input, but direct clients may have deliberate spacing
     // that a new batch feature must not erase.
-    let names = catalog_device_names(project, &name, base_name, quantity, options.unique_names);
-    let batched = quantity > 1 || addresses.is_some();
-    let children_per_item = if addresses.is_some() { 2 } else { 1 };
+    let names = catalog_device_names(project, name, base_name, quantity, options.unique_names);
+    let part = options.building_part_id.map(knx_core::BuildingPartId);
+    let batched = quantity > 1 || addresses.is_some() || part.is_some();
+    let children_per_item = 1 + usize::from(addresses.is_some()) + usize::from(part.is_some());
     let mut commands = Vec::with_capacity(quantity as usize * children_per_item);
     let mut created = Vec::with_capacity(quantity as usize);
     for (index, device_name) in (1..=quantity).zip(names) {
         let device_id = ids.next_device_id().map_err(|error| error.to_string())?;
         let address = addresses.as_ref().map(|all| all[index as usize - 1]);
-        let mut com_objects = Vec::with_capacity(seeds.len());
-        let mut enrich_inputs = Vec::with_capacity(seeds.len());
-        for (ref_id, view) in &seeds {
+        let mut com_objects = Vec::with_capacity(product.seeds.len());
+        let mut enrich_inputs = Vec::with_capacity(product.seeds.len());
+        for (ref_id, view) in &product.seeds {
             let com_id = ids
                 .next_com_object_instance_id()
                 .map_err(|error| error.to_string())?;
@@ -3473,8 +3703,8 @@ fn create_devices_recorded(
                 name: device_name.clone(),
                 description: None,
                 address: None,
-                product_ref: product_ref.clone(),
-                program_ref: program_ref.clone(),
+                product_ref: product.product_ref.clone(),
+                program_ref: product.program_ref.clone(),
                 commissioning: knx_core::CommissioningState::default(),
                 visibility_calculated: true,
                 com_objects: com_objects.iter().map(|c| c.id).collect(),
@@ -3491,9 +3721,21 @@ fn create_devices_recorded(
                 address: Some(address),
             });
         }
-        created.push((index, device_id, device_name, address, enrich_inputs));
+        if let Some(part) = part {
+            commands.push(knx_core::Command::MoveDeviceToBuildingPart {
+                device: device_id,
+                part: Some(part),
+            });
+        }
+        created.push(PlannedCatalogDevice {
+            index,
+            device_id,
+            name: device_name,
+            address,
+            enrich_inputs,
+        });
     }
-    let cmd = if !batched {
+    let command = if !batched {
         commands.pop().expect("exactly one device requested")
     } else {
         // Reserve and create as one undoable command. The core's Batch
@@ -3505,6 +3747,108 @@ fn create_devices_recorded(
         batch.extend(commands);
         knx_core::Command::Batch(batch)
     };
+    Ok(CatalogPlan {
+        command,
+        ids,
+        created,
+        batched,
+        children_per_item,
+        installation,
+        allocated: addresses.is_some(),
+    })
+}
+
+/// `Ok` when the plan creates exactly the previewed names and addresses.
+fn check_expected(
+    plan: &CatalogPlan,
+    expected: &[ExpectedCatalogDevice],
+) -> Result<(), CatalogCreateError> {
+    let planned: Vec<_> = plan
+        .created
+        .iter()
+        .map(|item| (item.name.as_str(), item.address))
+        .collect();
+    let previewed: Vec<_> = expected
+        .iter()
+        .map(|item| (item.name.as_str(), item.address))
+        .collect();
+    if planned == previewed {
+        return Ok(());
+    }
+    let describe = |items: &[(&str, Option<knx_core::IndividualAddress>)]| {
+        items
+            .iter()
+            .map(|(name, address)| match address {
+                Some(address) => format!("{name} @ {address}"),
+                None => (*name).to_string(),
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    Err(CatalogCreateError::PreviewStale(format!(
+        "the project changed since the preview: it would now create [{}] instead of [{}]; preview again",
+        describe(&planned),
+        describe(&previewed)
+    )))
+}
+
+fn create_devices_recorded(
+    state: &AppState,
+    request: CatalogBatchRequest,
+    expected: Option<Vec<ExpectedCatalogDevice>>,
+    replay: Option<(String, crate::catalog_requests::CatalogRequestFingerprint)>,
+) -> Result<CreateDeviceResponse, CatalogCreateError> {
+    // Step 1 (design doc §3.1): everything the product database can tell us.
+    let product = read_catalog_product(state, &request)?;
+    let quantity = request.quantity;
+
+    // Step 2 (design doc §3.2): allocate ids and build the command,
+    // holding `project`'s own lock continuously through step 3 below —
+    // `product_db` is no longer held.
+    let mut project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_mut().ok_or("no project open")?;
+    // A concurrent identical request may have committed while the product
+    // database was read; this check under `project` is the authoritative one.
+    if let Some((id, fingerprint)) = &replay {
+        if let Some(replay) = replay_catalog_request(state, project, id, fingerprint)? {
+            return Ok(replay);
+        }
+    }
+    let installation = match resolve_catalog_installation(project, request.line_id, request.options)
+    {
+        Ok(installation) => installation,
+        Err(reason) => {
+            // Placement refusals used to fail inside `CreateDevice::apply`,
+            // which logged them. Keep that audit trail even though they are
+            // now rejected before reserving IDs and building the batch.
+            let source = if quantity == 1 {
+                "CreateDevice"
+            } else {
+                "Batch"
+            };
+            log_outcome(
+                state,
+                source,
+                source.into(),
+                None,
+                &Err::<(), _>(reason.clone()),
+            );
+            return Err(reason.into());
+        }
+    };
+    let plan = plan_catalog_batch(project, &request, installation, &product)?;
+    if let Some(expected) = &expected {
+        check_expected(&plan, expected)?;
+    }
+    let CatalogPlan {
+        command: cmd,
+        ids,
+        created,
+        batched,
+        children_per_item,
+        allocated,
+        ..
+    } = plan;
     // Captured before `do_command` consumes `cmd` below — same convention
     // `apply()` uses, whose `log_outcome` helper this reuses so device
     // creation shows up in the session log too (it can't call `apply()`
@@ -3513,7 +3857,7 @@ fn create_devices_recorded(
     // under the same `project` lock before releasing it).
     let cmd_desc = if !batched {
         format!("{cmd:?}")
-    } else if addresses.is_some() {
+    } else if allocated {
         format!("Catalog batch create: {quantity} devices with allocated addresses")
     } else {
         format!("Catalog batch create: {quantity} devices")
@@ -3543,23 +3887,23 @@ fn create_devices_recorded(
     // are returned as creation diagnostics.
     let mut diagnostics = Vec::new();
     let mut items = Vec::with_capacity(created.len());
-    for (index, device_id, name, address, enrich_inputs) in created {
+    for planned in created {
         let mut issues = Vec::new();
-        for (com_id, ref_id, view) in &enrich_inputs {
+        for (com_id, ref_id, view) in &planned.enrich_inputs {
             knx_productdb::enrich::apply(project, *com_id, ref_id, view, &mut issues);
         }
-        let mut item_diagnostics = base_diagnostics.clone();
+        let mut item_diagnostics = product.base_diagnostics.clone();
         item_diagnostics.extend(issues.into_iter().map(CreationDiagnostic::from_enrichment));
         diagnostics.extend(item_diagnostics.iter().cloned());
         items.push(CreatedCatalogDevice {
-            index,
-            device_id,
-            name,
-            address,
+            index: planned.index,
+            device_id: planned.device_id,
+            name: planned.name,
+            address: planned.address,
             diagnostics: item_diagnostics,
         });
     }
-    if let Some((id, fingerprint)) = request {
+    if let Some((id, fingerprint)) = replay {
         state
             .catalog_requests
             .lock()
@@ -6174,6 +6518,94 @@ mod tests {
             ))),
         };
         assert!(!catalog_creation_error(3, 2, reservation).starts_with("item"));
+    }
+
+    /// ADR-0093: placement for a catalog request across two installations.
+    #[test]
+    fn catalog_placement_agrees_across_line_installation_and_building_part() {
+        let mut project = blank_project(None, None, None, None);
+        let seed = knx_app::project_seed::ProjectSeed {
+            buildings: vec![knx_app::project_seed::SeedBuildingPart {
+                name: "Room A".into(),
+                kind: knx_app::project_seed::SeedBuildingKind::Room,
+                children: vec![],
+            }],
+            ..Default::default()
+        };
+        knx_app::project_seed::apply_project_seed(&mut project, knx_core::InstallationId(0), &seed)
+            .unwrap();
+        let room_a = project.installations[0].buildings[0].id.0;
+        let mut second = project.installations[0].clone();
+        second.id = knx_core::InstallationId(1);
+        second.buildings = vec![knx_core::BuildingPart {
+            id: knx_core::BuildingPartId(60),
+            source: knx_core::SourceRef {
+                path: "b".into(),
+                ets_id: "b".into(),
+            },
+            name: "Room B".into(),
+            number: None,
+            kind: knx_core::BuildingPartType::Room,
+            default_line: None,
+            completion: knx_core::CompletionStatus::Editing,
+            children: vec![],
+            devices: vec![],
+            parent: None,
+        }];
+        second.topology.lines = vec![knx_core::Line {
+            id: knx_core::LineId(50),
+            source: knx_core::SourceRef {
+                path: "l".into(),
+                ets_id: "l".into(),
+            },
+            name: "Line B".into(),
+            address: 1,
+            medium_ref: "MT-0".into(),
+            domain_address: None,
+            domain_address_is_checked: None,
+            ip_routing_multicast_address: None,
+            multicast_ttl: None,
+            completion: knx_core::CompletionStatus::Editing,
+            devices: vec![],
+        }];
+        project.installations.push(second);
+
+        let resolve = |line: Option<u32>, installation: Option<u8>, part: Option<u32>| {
+            resolve_catalog_installation(
+                &project,
+                line,
+                CatalogCreateOptions {
+                    installation_id: installation,
+                    building_part_id: part,
+                    ..Default::default()
+                },
+            )
+        };
+        let second = Ok(Some(knx_core::InstallationId(1)));
+        assert_eq!(resolve(None, None, None), Ok(None));
+        assert_eq!(resolve(Some(50), None, None), second);
+        assert_eq!(resolve(None, Some(1), None), second);
+        assert_eq!(resolve(None, None, Some(60)), second);
+        assert_eq!(resolve(Some(50), Some(1), Some(60)), second);
+        assert_eq!(
+            resolve(Some(50), Some(0), None),
+            Err(
+                "the target line belongs to installation 1, not to the requested installation 0"
+                    .into()
+            )
+        );
+        assert_eq!(
+            resolve(Some(50), None, Some(room_a)),
+            Err(format!(
+                "building part {room_a} belongs to installation 0, not installation 1"
+            ))
+        );
+        assert_eq!(
+            resolve(None, Some(1), Some(room_a)),
+            Err(format!(
+                "building part {room_a} belongs to installation 0, not installation 1"
+            ))
+        );
     }
 
     #[test]

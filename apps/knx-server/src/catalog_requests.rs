@@ -31,6 +31,11 @@ pub struct CatalogRequestFingerprint {
     pub quantity: u32,
     pub allocate_addresses: bool,
     pub unique_names: bool,
+    /// ADR-0093 placement and the previewed outcome: a resend with another
+    /// target or another expectation is a different request.
+    pub installation_id: Option<u8>,
+    pub building_part_id: Option<u32>,
+    pub expected: Option<Vec<(String, Option<knx_core::IndividualAddress>)>>,
 }
 
 /// The recorded result of one committed catalog request.
@@ -115,6 +120,9 @@ mod tests {
             quantity: 2,
             allocate_addresses: false,
             unique_names: false,
+            installation_id: None,
+            building_part_id: None,
+            expected: None,
         }
     }
 

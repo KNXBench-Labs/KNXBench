@@ -1,5 +1,32 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-08 — Add-device wizard with server preview and placement (ADR-0093)
+
+- New modal **Add device** wizard (`DeviceWizard.tsx`): product (search the
+  catalog or install a `.knxprod`), placement (installation only when there
+  are several, line, building part), name/quantity/addresses, review, result.
+  Entry points: explorer `+ Add device` rows under every line, under every
+  installation's **Unassigned** bucket and under every room; **Add device…**
+  in the command palette (aimed at the selected line or building part);
+  **Add devices now** after a new project; **Add with wizard…** in the catalog
+  (starts at placement). Parameters and group links stay in the device panel.
+- `POST /api/devices` takes optional `installationId`, `buildingPartId` and
+  `expected`. Placement runs as `MoveDeviceToBuildingPart` inside the same
+  `Batch` (one undo step). Line, installation and building part must agree on
+  one installation (`domain::resolve_catalog_installation`); unknown or
+  disagreeing targets are a `400` before any ID is reserved. All three fields
+  are part of the ADR-0069 replay fingerprint.
+- New read-only `POST /api/devices/preview`: plans the very batch a create
+  would apply and runs it, plus enrichment, on a copy of the project; no IDs
+  reserved, no undo entry, no log. A create whose `expected` names/addresses
+  differ from what it would now produce is refused with `409`
+  `catalogPreviewStale`; the wizard refreshes the preview and asks again.
+- The catalog's install report and creation-diagnostic wording moved to
+  `CatalogInstallReport.tsx`, shared by catalog and wizard. KNOWN_LIMITATIONS
+  U12 updated (a line-less device can now name its installation), new §167
+  (what the stale check covers).
+- Verified: gate on the frozen candidate (`inputs_frozen=1`, base `e96bfb5d`): web build, `tsc`, flow-study/theme-fixture checks, **2,370 Vitest tests / 142 files**, **170 intercepted Chromium tests** plus `device-wizard.e2e.ts` and `new-project.e2e.ts` repeated ×3 (**39 passed**), `cargo fmt`, `clippy -D warnings`, workspace Rust tests **3,571 passed, 0 failed** (178 ignored), layering/anchors/ledger/corpus-gate checks and `git diff --check`. `check-headers` refused two new first-line headers over 100 columns; only those two comment lines were shortened afterwards and `check-headers`, `diff --check`, `tsc` and the wizard's Vitest file were rerun green.
+
 ## 2026-10-08 — Achievement popups linger longer and leave animated (ADR-0089)
 
 - At the user's request: an achievement popup now stays **9 s** (was 6 s)

@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (achievement popup timing and exit)
+- **Timestamp:** 2026-10-08 09:17 CEST
+- **Completed:** At the user's request achievement popups stay 9 s (was 6 s) and slide out (`knx-achievement-out`, twice the entry duration, motion settings respected); × uses the same exit. `useToasts` marks `leaving`, `ToastStack` removes on that animation's `animationend`, a 1 s fallback covers reduced/no motion. Error and fun toasts unchanged. Unit + Chromium tests (incl. reduced motion); a CSS mutation turns the browser test red. ADR-0089, manual and IMPLEMENTATION_STATUS updated.
+- **Pending/Next Steps:** None for this change. Optional: give error/fun toasts the same exit if wanted.
+- **Notes for Codex oder Claude:** The exit is removed by `animationend` only for the animation named `knx-achievement-out` (constant in `Toast.tsx`); renaming the keyframes requires changing both. Gate scripts need a short `TMPDIR` for Chromium's singleton socket.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-08 09:11 CEST
 - **Completed:** Wizards grill-me (Q1–Q18, Q14 corrected: client+server always ship together) approved ("passt"). P1 delivered: new-project wizard (project/topology/building/group structure/review, presets as data, created-not-saved page with Add devices now) plus atomic `seed` on `POST /api/project/new` via `knx_app::project_seed` (core create commands on a clone, 422 `projectSeedInvalid`, 2,000-node cap). ADR-0093, KNOWN_LIMITATIONS §166, manual 02-projects + implementation-status, screenshot retaken. Gate green on frozen inputs (Vitest 2,355/140, Chromium 162 + repeat 21, Rust 3,564/0/178 ignored, fmt, clippy rerun green after one empty-log exit 255, five xtask gates). Receipt `.ai/logs/2026-10-08_claude_wizards-grilling.md`.

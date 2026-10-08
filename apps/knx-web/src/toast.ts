@@ -29,7 +29,16 @@ export interface ToastEntry {
   serverText: boolean;
   /** Set on an achievement popup; absent on the "+N more" summary. */
   achievement?: AchievementPopup;
+  /** The toast is playing its exit animation; `finishExit` removes it. */
+  leaving?: boolean;
 }
+
+/** How long an achievement popup stays before it starts to leave (ADR-0089). */
+export const ACHIEVEMENT_TOAST_MS = 9000;
+
+/** Removes a leaving toast even when no exit animation reports its end
+ * (motion switched off or reduced). Longer than any exit animation. */
+export const TOAST_EXIT_FALLBACK_MS = 1000;
 
 /** How many achievement popups one batch shows before summarising the rest. */
 export const MAX_ACHIEVEMENT_POPUPS = 2;
@@ -105,7 +114,17 @@ export function useToasts() {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
   const nextId = useRef(0);
 
+  /** Removes a toast now; an achievement popup leaves animated first. */
   function dismiss(id: number) {
+    setToasts((ts) =>
+      ts.flatMap((t) => (t.id !== id ? [t] : t.kind === "achievement" ? [{ ...t, leaving: true }] : [])),
+    );
+    // Only matters for a leaving popup; for anything else the id is gone already.
+    setTimeout(() => finishExit(id), TOAST_EXIT_FALLBACK_MS);
+  }
+
+  /** The exit animation of `id` has ended (or the fallback fired). */
+  function finishExit(id: number) {
     setToasts((ts) => ts.filter((t) => t.id !== id));
   }
 
@@ -139,7 +158,11 @@ export function useToasts() {
   }
 
   /** Shows a batch of unlocks; each popup leaves by itself like a fun toast. */
-  function pushAchievements(popups: AchievementPopup[], summary: (count: number) => string, autoDismissMs = 6000) {
+  function pushAchievements(
+    popups: AchievementPopup[],
+    summary: (count: number) => string,
+    autoDismissMs = ACHIEVEMENT_TOAST_MS,
+  ) {
     for (const planned of planAchievementToasts(popups, summary)) {
       const id = nextId.current++;
       setToasts((ts) => [...ts, { id, kind: "achievement" as const, serverText: false, ...planned }]);
@@ -147,5 +170,5 @@ export function useToasts() {
     }
   }
 
-  return { toasts, pushError, clearErrors, pushFun, pushAchievements, dismiss };
+  return { toasts, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit };
 }

@@ -14,12 +14,16 @@ afterEach(() => {
   host = undefined;
 });
 
-async function renderStack(toasts: ToastEntry[], onDismiss: (id: number) => void = vi.fn()) {
+async function renderStack(
+  toasts: ToastEntry[],
+  onDismiss: (id: number) => void = vi.fn(),
+  onExited: (id: number) => void = vi.fn(),
+) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<ToastStack toasts={toasts} onDismiss={onDismiss} />);
+    root.render(<ToastStack toasts={toasts} onDismiss={onDismiss} onExited={onExited} />);
   });
   return root;
 }
@@ -89,6 +93,23 @@ describe("ToastStack", () => {
       button.click();
     });
     expect(onDismiss).toHaveBeenCalledWith(7);
+    root.unmount();
+  });
+
+  it("marks a leaving toast and reports the end of its exit animation, not of any other", async () => {
+    const onExited = vi.fn();
+    const leaving: ToastEntry = { id: 7, kind: "achievement", message: "Bus Master", serverText: false, leaving: true };
+    const root = await renderStack([leaving], vi.fn(), onExited);
+    const toast = host!.querySelector(".toast--achievement")!;
+    expect(toast.classList.contains("toast--leaving")).toBe(true);
+    await act(async () => {
+      toast.dispatchEvent(Object.assign(new Event("animationend", { bubbles: true }), { animationName: "knx-achievement-in" }));
+    });
+    expect(onExited).not.toHaveBeenCalled();
+    await act(async () => {
+      toast.dispatchEvent(Object.assign(new Event("animationend", { bubbles: true }), { animationName: "knx-achievement-out" }));
+    });
+    expect(onExited).toHaveBeenCalledExactlyOnceWith(7);
     root.unmount();
   });
 });

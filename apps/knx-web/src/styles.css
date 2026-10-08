@@ -401,14 +401,31 @@ main {
 .toast-title { font-weight: 600; }
 .toast-detail { font-size: 0.8rem; color: var(--knx-muted); }
 
+/* Leaving: invisible and inert at once. With motion allowed the exit
+   animation below runs on top of this and holds the visible frames until
+   it ends; `animationend` then removes the toast (Toast.tsx). Without
+   motion the toast simply vanishes and the fallback timer removes it. */
+.toast--achievement.toast--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .toast--achievement {
     animation: knx-achievement-in var(--knx-transition-duration) var(--knx-motion-easing);
+  }
+  /* Twice the entry: leaving should be seen, not just happen. */
+  .toast--achievement.toast--leaving {
+    animation: knx-achievement-out calc(var(--knx-transition-duration) * 2) var(--knx-motion-easing) forwards;
   }
 }
 @keyframes knx-achievement-in {
   from { transform: translateY(0.75rem); opacity: 0; }
   to { transform: none; opacity: 1; }
+}
+@keyframes knx-achievement-out {
+  from { transform: none; opacity: 1; }
+  to { transform: translateX(1.5rem); opacity: 0; }
 }
 
 /* Header and footer stay put; only the list scrolls, so the initial focus

@@ -24,9 +24,11 @@ routine engineering work some momentum. In a grill-me interview on
   it, and gamification has no place in the KNX domain model.
 - **Detection:** in the frontend, through typed events. The server stores
   unlocks and does not count anything itself. The CLI does not count.
-- **Presentation:** a Steam-style popup (new toast kind, about 6 s, follows
-  the motion settings, at most two at once plus a "+N more" summary) and an
-  overview dialog. No sound.
+- **Presentation:** a Steam-style popup (new toast kind, at most two at
+  once plus a "+N more" summary) and an overview dialog. No sound. The
+  popup stays 9 s (raised from 6 s on 2026-10-08 at the user's request),
+  then slides out; both animations follow the motion settings, and with
+  reduced or no motion it simply disappears.
 - **No telemetry:** no network contact and no global rarity percentages.
   A fixed tier (bronze, silver, gold, legendary) stands in for rarity.
 - **Mix:** roughly a quarter hidden, a fifth with a progress counter.

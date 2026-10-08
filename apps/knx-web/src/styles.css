@@ -3703,6 +3703,8 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   bottom: 0;
   height: 9px;
   pointer-events: none;
+  opacity: 1;
+  animation-name: none;
   background: linear-gradient(to right,
     var(--knx-accent) 0% 52%, var(--knx-bg) 52% 53%,
     color-mix(in srgb, var(--knx-accent) 65%, var(--knx-foreground)) 53% 72%,
@@ -3715,6 +3717,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 }
 :root[data-presentation="lcars"] .brand-mark {
   border-radius: 18px 5px 5px 18px;
+  animation-name: none;
 }
 :root[data-presentation="lcars"] .workbench-panel-controls {
   background: var(--knx-bg);
@@ -3799,7 +3802,27 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   transition-property: none;
   animation-name: none;
 }
+/* Deliberately decorative, never activity/success signals. At the existing
+   Standard 200ms / Subtle 120ms settings, cycles are 10s/16s and 18s/24s.
+   Subtle also lowers the amplitude; no element disappears or changes size.
+   Smooth ambient easing stays calm even with a stepped feedback style. */
 @media (prefers-reduced-motion: no-preference) {
+  :root[data-presentation="lcars"][data-motion-level="standard"] .workbench-toolbar::before {
+    --lcars-ambient-band-floor: 0.84;
+    animation: lcars-ambient-band calc(var(--knx-transition-duration) * 50) ease-in-out infinite;
+  }
+  :root[data-presentation="lcars"][data-motion-level="standard"] .brand-mark {
+    --lcars-ambient-brand-peak: var(--knx-accent-tertiary);
+    animation: lcars-ambient-brand calc(var(--knx-transition-duration) * 80) ease-in-out infinite;
+  }
+  :root[data-presentation="lcars"][data-motion-level="subtle"] .workbench-toolbar::before {
+    --lcars-ambient-band-floor: 0.94;
+    animation: lcars-ambient-band calc(var(--knx-transition-duration) * 150) ease-in-out infinite;
+  }
+  :root[data-presentation="lcars"][data-motion-level="subtle"] .brand-mark {
+    --lcars-ambient-brand-peak: color-mix(in srgb, var(--knx-accent) 80%, var(--knx-accent-tertiary));
+    animation: lcars-ambient-brand calc(var(--knx-transition-duration) * 200) ease-in-out infinite;
+  }
   :root[data-presentation="lcars"][data-motion-level="standard"] .workbench-navigation button[aria-current="page"]::after {
     animation: lcars-navigation-reveal calc(var(--knx-transition-duration) * 3) var(--knx-motion-easing) 1;
   }
@@ -3810,6 +3833,14 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
     transition: background-color var(--knx-transition-duration) var(--knx-motion-easing),
       border-color var(--knx-transition-duration) var(--knx-motion-easing);
   }
+}
+@keyframes lcars-ambient-band {
+  0%, 100% { opacity: 1; }
+  50% { opacity: var(--lcars-ambient-band-floor); }
+}
+@keyframes lcars-ambient-brand {
+  0%, 100% { background-color: var(--knx-accent); }
+  50% { background-color: var(--lcars-ambient-brand-peak); }
 }
 @keyframes lcars-navigation-reveal {
   from { transform: scaleX(0); }

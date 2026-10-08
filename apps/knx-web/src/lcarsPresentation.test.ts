@@ -45,6 +45,37 @@ describe("LCARS built-in presentation", () => {
     expect(presentation.some((rule) => rule.declarations.some((d) => d.value.includes("var(--knx-control-height)")))).toBe(true);
   });
 
+  it("keeps ambient loops on just the inert header band and brand emblem", () => {
+    const ambient = presentation.filter((rule) => rule.declarations.some((d) => d.property === "animation" && d.value.includes("infinite")));
+    expect(ambient).toHaveLength(4);
+    for (const rule of ambient) {
+      expect(rule.selector).toMatch(/\.(brand-mark|workbench-toolbar::before)$/);
+      expect(rule.selector).toMatch(/\[data-motion-level="(standard|subtle)"\]/);
+      expect(rule.ancestors).toContain("@media (prefers-reduced-motion: no-preference)");
+      const value = rule.declarations.find((d) => d.property === "animation")!.value;
+      expect(value).toContain("var(--knx-transition-duration)");
+      expect(value).toContain("ease-in-out");
+    }
+  });
+
+  it("cancels ambient animations to a static baseline instead of pausing them", () => {
+    for (const selector of [".brand-mark", ".workbench-toolbar::before"]) {
+      const baseline = presentation.filter((rule) => rule.ancestors.length === 0 && rule.selector.endsWith(selector));
+      expect(baseline.some((rule) => rule.declarations.some((d) => d.property === "animation-name" && d.value === "none"))).toBe(true);
+    }
+    expect(presentation.flatMap((rule) => rule.declarations).filter((d) => d.property === "animation-play-state")).toEqual([]);
+  });
+
+  it("uses only opacity and token-based background colour, never layout or business-state colours", () => {
+    const frames = parseRules(css).filter((rule) => rule.ancestors.some((a) => /^@keyframes lcars-ambient-/.test(a)));
+    expect(frames.length).toBeGreaterThan(0);
+    expect(new Set(frames.flatMap((rule) => rule.declarations.map((d) => d.property)))).toEqual(new Set(["opacity", "background-color"]));
+    for (const declaration of frames.flatMap((rule) => rule.declarations)) {
+      if (declaration.property === "background-color") expect(declaration.value).toMatch(/^var\(--(knx-accent|lcars-ambient-brand-peak)\)$/);
+      else expect(["1", "var(--lcars-ambient-band-floor)"]).toContain(declaration.value);
+    }
+  });
+
   it("disables effects by default and enables only finite setting-driven feedback under OS permission", () => {
     const selector = '.workbench-navigation button[aria-current="page"]::after';
     const rules = presentation.filter((rule) => rule.selector.endsWith(selector));

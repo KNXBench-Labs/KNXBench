@@ -1,13 +1,13 @@
 # Large product packages: measured profile (KL-151)
 
-Status: measurement of 2026-10-05 for [ADR-0082](adr/0082-large-product-packages-are-a-cli-opt-in.md).
+Status: measurement of 2026-10-05 for [ADR-0082](../adr/0082-large-product-packages-are-a-cli-opt-in.md).
 Built from `origin/main` `942d2680` plus the uncommitted ADR-0082 change, release
 profile (`cargo build --release -p knx-cli`), run in a network-less namespace.
 
 ## Input
 
 The 853 public manufacturer downloads of the crawler run (2026-10-03,
-[corpus run](PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03)),
+[corpus run](../PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03)),
 read in place, never copied or committed. A ZIP central-directory scan (no
 extraction) selects the 15 files whose declared sizes exceed the standard
 profile: 7 by member only, 5 by total only, 3 by both; one file is not a ZIP.

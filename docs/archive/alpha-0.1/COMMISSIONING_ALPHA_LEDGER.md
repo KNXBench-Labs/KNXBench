@@ -3,7 +3,7 @@
 Snapshot: 2026-10-03. Owner: `goal-commission.md` (codex / Hermes).
 
 The inventory is the **42 distinct source IDs** routed to commissioning in
-the [source-ID ledger](status/LEDGER.md) (formerly in
+the [source-ID ledger](../../status/LEDGER.md) (formerly in
 [ALPHA_READINESS](ALPHA_READINESS.md)), not the numbered limitation headings
 alone. This ledger does not change the controller's release decision, take the
 Web lock, reopen K1–K19, or authorize hardware contact. Original inventories and
@@ -95,19 +95,19 @@ records of the residual scope.
   refusal, malformed metadata, sticky failures and no property write when
   intent persistence fails. This is metadata, never a recovery image.
 - **E5 — documented protocol/scope evidence:** relevant numbered entries in
-  [KNOWN_LIMITATIONS](KNOWN_LIMITATIONS.md), [RESEARCH](RESEARCH.md) §8.6–8.7,
-  §19 and §22–24; the dated [partial-download audit](spec-audits/2026-09-19-cp-3_5_3-partial-download.md) and other audits linked
+  [KNOWN_LIMITATIONS](../../KNOWN_LIMITATIONS.md), [RESEARCH](../../RESEARCH.md) §8.6–8.7,
+  §19 and §22–24; the dated [partial-download audit](../../spec-audits/2026-09-19-cp-3_5_3-partial-download.md) and other audits linked
   from those documents. `[D]` is a directly documented fact, `[V]` a measured
   observation, `[A]` an application policy/inference. Preserve those distinctions.
 - **E6 — bounded direct Profile audit:**
-  [profile-order boundaries](spec-audits/2026-10-03-commissioning-profile-order-boundaries.md).
+  [profile-order boundaries](../../spec-audits/2026-10-03-commissioning-profile-order-boundaries.md).
   Four primary PDFs and their chapter bodies/printed pages were inspected;
   contradictions and exact mask restrictions are retained, not guessed away.
 
 ## Complete per-ID reconciliation
 
 Priority, status and owner disposition of these rows are in the
-[source-ID ledger](status/LEDGER.md) (*Owner disposition* column), since
+[source-ID ledger](../../status/LEDGER.md) (*Owner disposition* column), since
 2026-10-04 (AR14D D2). This table keeps the evidence.
 
 | Source ID | Evidence and exact established scope | Safe fallback / remaining boundary | Exact unblock / next action |
@@ -190,7 +190,7 @@ copied from `apps/knx-server/src/device_download_routes.rs`.
 **UI owner delivery, 2026-10-06.** `KL-142`: delivered in `2f2a6892` (ledger
 `DONE`). `UI-04`: the Web half is delivered — *Live activity* tab for
 `GET /api/bus/activity` and self-refreshing running rows in *Activity history*
-([KNOWN_LIMITATIONS](KNOWN_LIMITATIONS.md#partial-commissioning-bus-activity-snapshot-adr-0055),
+([KNOWN_LIMITATIONS](../../KNOWN_LIMITATIONS.md#partial-commissioning-bus-activity-snapshot-adr-0055),
 "Web adoption, 2026-10-06"). Closing `UI-04` stays with its owner; native
 acceptance is an accepted boundary by the user decision of 2026-10-04.
 
@@ -212,7 +212,7 @@ accepted boundary is a refusal or a bounded claim, not new support.
 
 Moved verbatim from `goal-commission.md` on 2026-10-06 (AR14D D5, agreed by
 the commissioning owner); only relative links changed. Every ID named here has
-its row in the [source-ID ledger](status/LEDGER.md), which is current.
+its row in the [source-ID ledger](../../status/LEDGER.md), which is current.
 
 ### Where things stood (goal-commission.md, 2026-10-01)
 
@@ -226,9 +226,9 @@ that device; K14 destructive Master Reset remains hardware-refused. K12 serial
 address write was ignored by this device even after a system-priority fix;
 read-only identification succeeded. RF K16/K17 is simulator-only and has no RF
 hardware or product-facing route. K19 decoded 71 private cEMI frames offline;
-no raw frames belong in Git. See [RESEARCH](RESEARCH.md),
-[limitations](KNOWN_LIMITATIONS.md) and
-[implementation status](IMPLEMENTATION_STATUS.md) for the per-operation
+no raw frames belong in Git. See [RESEARCH](../../RESEARCH.md),
+[limitations](../../KNOWN_LIMITATIONS.md) and
+[implementation status](../../IMPLEMENTATION_STATUS.md) for the per-operation
 evidence and refusal boundaries.
 
 **Current safety boundary:** the historical address runs do not provide

@@ -899,7 +899,7 @@ establish those platform behaviours.
 
 ## 25. UA1: coupler `.0` evidence and Site/Ground samples (2026-10-04)
 
-Research for the alpha rows MODEL-03 and KL-127 (`goal-ui.md` §3b).
+Research for the alpha rows MODEL-03 and KL-127 (`docs/archive/alpha-0.1/goal-ui.md` §3b).
 
 **Coupler discriminator — found.** **[D]** The KNX Association's offline
 project check (§U2 above) accepts a device octet 0 for a device whose

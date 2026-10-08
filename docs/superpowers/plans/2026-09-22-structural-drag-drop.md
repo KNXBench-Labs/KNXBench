@@ -40,7 +40,7 @@ happy-dom, typed English/German catalogues, existing Rust/Axum command stack.
 - Use native drag events and existing `--knx-*` CSS tokens; add no dependency,
   hard-coded colour, per-theme rule, or reduced-motion animation.
 - Every label and summary exists in typed English and German catalogues.
-- Do not edit `docs/LIMITATION_TRIAGE.md`.
+- Do not edit `docs/archive/alpha-0.1/LIMITATION_TRIAGE.md`.
 - Run no real KNX, multicast, discovery, tunnelling, LAN, gateway, or hardware
   operation. HTTP calls in tests are mocked.
 

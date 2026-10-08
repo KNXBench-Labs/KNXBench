@@ -4,8 +4,8 @@
 
 Offline source audit, 2026-10-01 UTC, at
 `e691bc1318d0785289f8132378a0f26c9a829b27` (published AR02).
-Owner: [alpha-release-goal](../alpha-release-goal.md), AR03 / `KL-129`.
-[ADR-0039](adr/0039-project-mutation-goes-through-commands.md) is the accepted
+Owner: [alpha-release-goal](alpha-release-goal.md), AR03 / `KL-129`.
+[ADR-0039](../../adr/0039-project-mutation-goes-through-commands.md) is the accepted
 design; its historically parked phases 3–5 still require explicit activation.
 This audit is not a new implementation, runtime race test or full mutation
 proof. Its source references are pinned to this revision, not permanent lines.
@@ -23,7 +23,7 @@ proof. Its source references are pinned to this revision, not permanent lines.
   workspace run executes it, not merely a source inspection.
 - AR02 adds typed exhaustion refusal to every allocator, including detached
   construction. It verifies final IDs, monotonic reservation, failed batch
-  atomicity and native reopen. See [model contract](DATA_MODEL.md) and
+  atomicity and native reopen. See [model contract](../../DATA_MODEL.md) and
   [alpha evidence](ALPHA_READINESS.md#ar02-general-id-exhaustion).
 
 The historical duplicate-ID loss described by ADR-0039 is not an outstanding

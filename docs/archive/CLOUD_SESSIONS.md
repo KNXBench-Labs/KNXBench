@@ -25,7 +25,7 @@ branch and open a pull request. This document covers:
 - the task briefs a session receives.
 
 Session rules for the agent itself are in
-[`tools/cloud/SESSION_RULES.md`](../tools/cloud/SESSION_RULES.md). The
+[`tools/cloud/SESSION_RULES.md`](../../tools/cloud/SESSION_RULES.md). The
 SessionStart hook prints them into every cloud session.
 
 Facts about the platform were taken from the Claude Code documentation
@@ -61,14 +61,14 @@ Consequences:
 
 ### 2.1 Repository side (versioned)
 
-- [`.claude/settings.json`](../.claude/settings.json) turns off every Claude
+- [`.claude/settings.json`](../../.claude/settings.json) turns off every Claude
   attribution: `attribution.commit` and `attribution.pr` are empty, and
   `attribution.sessionUrl` is `false`. Without this, cloud commits would carry
   `Co-Authored-By` and `Claude-Session` trailers, which `AGENTS.md` forbids.
   The empty-string form is used instead of `"attribution": false` because older
   Claude Code versions reject `false` and then skip the whole file.
 - The same file registers the SessionStart hook
-  [`tools/cloud/session-start.sh`](../tools/cloud/session-start.sh). Locally it
+  [`tools/cloud/session-start.sh`](../../tools/cloud/session-start.sh). Locally it
   exits at once: it only acts when `CLAUDE_CODE_REMOTE=true`. In the cloud it
   does four things:
   - sets the git identity `KNXBench <github@knxbench.com>`;
@@ -93,7 +93,7 @@ Create one cloud environment named **KNXBench**:
   These give workspace builds and tests enough time before the Bash tool moves
   them to the background.
 - **Setup script:** the full content of
-  [`tools/cloud/setup-env.sh`](../tools/cloud/setup-env.sh). It installs the
+  [`tools/cloud/setup-env.sh`](../../tools/cloud/setup-env.sh). It installs the
   Tauri/WebKit dev packages that CI also installs, plus the pinned Rust
   toolchain. The environment snapshot is cached only if setup finishes in about
   five minutes. The script therefore does not build anything.

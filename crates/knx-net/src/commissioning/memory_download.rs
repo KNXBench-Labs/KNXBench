@@ -38,7 +38,7 @@
 //! and heard nothing, after every machine reached `Loaded` and with nothing
 //! but the disconnect left to do, is reported as
 //! [`RestartOutcome::Unconfirmed`] inside an `Ok`. It is never retried here:
-//! a second restart is the operator's decision (`goal-commission.md` K2).
+//! a second restart is the operator's decision (`docs/archive/alpha-0.1/goal-commission.md` K2).
 //! `[V]` `1.1.67`, 2026-09-28, run 3 is that case.
 
 use std::fmt;

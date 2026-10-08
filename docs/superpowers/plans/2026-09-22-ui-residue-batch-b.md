@@ -32,7 +32,7 @@ properties, `ts-rs`.
 
 ## Global Constraints
 
-- `docs/LIMITATION_TRIAGE.md` must not change.
+- `docs/archive/alpha-0.1/LIMITATION_TRIAGE.md` must not change.
 - The §60 web-diff slice is excluded because
   `.superpowers/sdd/goal/task-15-report.md` does not exist.
 - No KNX, LAN, multicast, gateway, or hardware traffic may be generated.
@@ -456,7 +456,7 @@ only six space kinds are representable.
 - [ ] **Step 2: Audit forbidden scope and generated bindings**
 
 Run `git diff --name-only <merge-base>..HEAD` and prove no
-`docs/LIMITATION_TRIAGE.md`, protocol transport, or unrelated report-preview
+`docs/archive/alpha-0.1/LIMITATION_TRIAGE.md`, protocol transport, or unrelated report-preview
 implementation changed. Verify generated TypeScript bindings match Rust and scan
 new lines for forbidden literals.
 

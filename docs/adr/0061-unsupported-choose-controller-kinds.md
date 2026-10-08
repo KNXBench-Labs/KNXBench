@@ -7,7 +7,7 @@ Amends: Dynamic design D7/D9 and ADR-0041 structural-refusal coverage.
 
 ## Context
 
-[Parameter semantics boundary](../PARAMETER_SEMANTICS_BOUNDARY.md) records the
+[Parameter semantics boundary](../contracts/PARAMETER_SEMANTICS_BOUNDARY.md) records the
 fresh primary-source read and current parser/evaluator path. The local licensed
 Project Schema23 v01.00.00 PDF, printed/PDF page 30/64, section 1.1.3.18
 `Condition_t`, names `TypeNumber` and `TypeRestriction` as controllers. Its

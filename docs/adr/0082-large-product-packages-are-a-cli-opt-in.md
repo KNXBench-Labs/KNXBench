@@ -16,7 +16,7 @@ XML is 65–139 MiB. The raw file bound (256 MiB) refuses none of them.
 The bounds protect against decompression bombs and unbounded memory/time. They
 are not wrong; they are too small for real bundles. Measured on 2026-10-05 with
 a release build of this change, each package in a fresh database
-(`docs/PRODUCT_ZIP_LARGE_PROFILE.md`):
+(`docs/contracts/PRODUCT_ZIP_LARGE_PROFILE.md`):
 
 - standard profile: all 15 refused atomically with a typed size limit;
 - large profile (256 MiB per member, 4 GiB total): 14 installed and pass

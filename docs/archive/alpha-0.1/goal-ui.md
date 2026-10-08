@@ -9,7 +9,7 @@ There are now three goal files, and they do not overlap:
 
 | File | Session | Owns |
 |---|---|---|
-| [`alpha-release-goal.md`](alpha-release-goal.md) (took over from `goal.md`, now [archived](docs/archive/goal.md)) | alpha session | everything else: data integrity, product database, import, docs hygiene, manual, alpha, final review |
+| [`alpha-release-goal.md`](alpha-release-goal.md) (took over from `goal.md`, now [archived](../goal.md)) | alpha session | everything else: data integrity, product database, import, docs hygiene, manual, alpha, final review |
 | `goal-commission.md` | commissioning session (Claude) | T30 phase 3: device writes and their own programming UI |
 | **`goal-ui.md`** (this file) | **UI session (GPT/Codex)** | the user-reported UX/UI issues of `goal.md` §11, the routed alpha follow-up, user-importable theme packs (U14–U18), and session-local telegram flow (U19–U21) |
 
@@ -19,18 +19,18 @@ sessions.
 ## Where things stand
 
 Row status of the UI-owned source IDs lives in the
-[source-ID ledger](docs/status/LEDGER.md) (owner `ui`), per-row evidence in
-[UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md), deliveries in
-[IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md). The status narrative
+[source-ID ledger](../../status/LEDGER.md) (owner `ui`), per-row evidence in
+[UI_ALPHA_READINESS](UI_ALPHA_READINESS.md), deliveries in
+[IMPLEMENTATION_STATUS](../../IMPLEMENTATION_STATUS.md). The status narrative
 that stood here (as of 2026-10-02) moved verbatim to
-[UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md#owner-status-history) on
+[UI_ALPHA_READINESS](UI_ALPHA_READINESS.md#owner-status-history) on
 2026-10-04 (AR14D D5, agreed by the goal-ui owner). The current top of
 `.ai/CURRENT_STATE.md` owns the Web-lock/publication state.
 
 **Reconciliation 2026-10-05:** U0–U18 and the UA1–UA8 deliveries are
 recorded below; U19 and U20 are delivered. U21's implementation receipt
 `fb40a99a` was returned with three findings by AR21; see
-[the acceptance review](docs/TELEGRAM_FLOW_VISUALIZATION.md#13-ar21-acceptance-review-alpha-2026-10-05).
+[the acceptance review](../../TELEGRAM_FLOW_VISUALIZATION.md#13-ar21-acceptance-review-alpha-2026-10-05).
 The alpha session claimed those corrections under the Web lock on 2026-10-05.
 Do not duplicate its active package or treat checked implementation boxes as
 final acceptance. Closure still requires the findings to be fixed, the new
@@ -41,11 +41,11 @@ findings 4–7 (`0d5da787`, `104916d6`, `6fa10eb8`); Alpha reran each one
 independently, and AR21 accepted `FLOW-01` for the Alpha on its recorded
 envelope (motion for small/medium maps, Motion Off for several hundred nodes
 or the §7 load, Chromium only) in
-[TELEGRAM_FLOW_VISUALIZATION §22](docs/TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05).
+[TELEGRAM_FLOW_VISUALIZATION §22](../../TELEGRAM_FLOW_VISUALIZATION.md#22-ar21-rerun-of-findings-6-and-7-and-acceptance-alpha-2026-10-05).
 U19–U21 are closed. The Web lock is free.
 
 **Closure, 2026-10-06:** every §4 condition is met; the owner's receipt is
-[UI_ALPHA_READINESS — UI owner closure receipt](docs/UI_ALPHA_READINESS.md#ui-owner-closure-receipt--2026-10-06).
+[UI_ALPHA_READINESS — UI owner closure receipt](UI_ALPHA_READINESS.md#ui-owner-closure-receipt--2026-10-06).
 Its closing review found two Web halves still handed to this owner — `UI-04`'s
 live activity and `KL-61`'s binding wording — delivered in `892b9948` before
 the closing gate. Self-review, not an independent verdict: AR16 verifies the
@@ -68,14 +68,14 @@ Updating this goal does not start or resume a run.
 Baseline: five built-in palettes plus System in
 `apps/knx-web/src/theme.ts`, a selector in `SettingsPanel.tsx`, a versioned
 settings record via `settingsStore.ts`, and the token/contrast boundary in
-[ADR-0022](docs/adr/0022-theme-token-boundary.md). The built-in token guard is
+[ADR-0022](../../adr/0022-theme-token-boundary.md). The built-in token guard is
 not yet validation of user-supplied runtime packs. ADR-0022's original
 localStorage persistence sentence is historical: the server's settings file
 is authoritative and browser storage is only its cache.
 
 ## Telegram-flow Alpha addition — user decision 2026-10-04
 
-The user confirmed [the nervous-system contract](docs/TELEGRAM_FLOW_VISUALIZATION.md)
+The user confirmed [the nervous-system contract](../../TELEGRAM_FLOW_VISUALIZATION.md)
 and authorized the responsible Goal sessions to implement it. **This is required
 Alpha scope**, unlike the earlier optional theme extension. U19–U21 were added
 as open packages on 2026-10-04; their delivery evidence and the current AR21
@@ -105,8 +105,8 @@ tests; no wire capture or multicast-loopback proof is claimed. Native
 WebKitGTK and real screen-reader checks remain verification gaps, not
 permission for a KNX device write. Completed ISSUE-01–13 slices
 and the accepted ADR-0038 are evidenced in
-[the issue plan](docs/superpowers/plans/2026-09-21-user-reported-issues.md)
-and [IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md); they are not
+[the issue plan](../../superpowers/plans/2026-09-21-user-reported-issues.md)
+and [IMPLEMENTATION_STATUS](../../IMPLEMENTATION_STATUS.md); they are not
 implementation tasks here. Product/import data belongs to `goal.md`, live
 programming and its safety gate to `goal-commission.md`.
 
@@ -263,8 +263,8 @@ handover, cleanup. **[web]** means the package needs the web lock.
 U0–U9, U10's host/port UI, U11's catalog/device editor and the bounded U12
 surfaces are delivered;
 the acceptance tests are in the
-[issue plan](docs/superpowers/plans/2026-09-21-user-reported-issues.md) and
-[implementation log](docs/IMPLEMENTATION_STATUS.md). The gateway's reply
+[issue plan](../../superpowers/plans/2026-09-21-user-reported-issues.md) and
+[implementation log](../../IMPLEMENTATION_STATUS.md). The gateway's reply
 was initially blocked by the host firewall; after the user's rule change,
 CLI and HTTP discovery succeeded (RESEARCH §20.1). Native WebKitGTK Search
 remains unverified. Do not redispatch the completed packages.
@@ -325,8 +325,8 @@ native verification/global acceptance boundaries to their owners (§6).
 **Done, 2026-10-02 (contract only).** Inspected the published alpha-owner
 receipt and current theme/settings/language code, retrieved primary evidence
 and resolved the bounded v1 format, persistence/preview safety and negative
-fixture contracts. [THEME_PACKS](docs/THEME_PACKS.md),
-[ADR-0060](docs/adr/0060-versioned-declarative-theme-packs.md) and the U14 log
+fixture contracts. [THEME_PACKS](../../THEME_PACKS.md),
+[ADR-0060](../../adr/0060-versioned-declarative-theme-packs.md) and the U14 log
 record actual document/research evidence. U15–U18 remain implementation work.
 
 - [x] Inspect `theme.ts`, `themeTokens.ts`, the stylesheet/bootstrap,
@@ -579,9 +579,9 @@ DPT decoding, completed settings/themes or commissioning.
 ### U19 — Resolve the flow contract and evaluated visual slice
 
 **Done 2026-10-04 (goal-ui owner).** Evidence and the exact AR20 handoff:
-[TELEGRAM_FLOW_VISUALIZATION §9](docs/TELEGRAM_FLOW_VISUALIZATION.md#9-u19-resolution-goal-ui-owner-2026-10-04);
+[TELEGRAM_FLOW_VISUALIZATION §9](../../TELEGRAM_FLOW_VISUALIZATION.md#9-u19-resolution-goal-ui-owner-2026-10-04);
 study code under `apps/knx-web/e2e/flow-study/`. Originally: dependencies:
-latest owner/lock reconciliation and [ADR-0077](docs/adr/0077-session-local-telegram-flow-view.md).
+latest owner/lock reconciliation and [ADR-0077](../../adr/0077-session-local-telegram-flow-view.md).
 Use the Web lock if editing any Web sources, fixtures or generated bindings.
 
 - [x] Inspect current monitor/session/context/projection/Inspector and primary

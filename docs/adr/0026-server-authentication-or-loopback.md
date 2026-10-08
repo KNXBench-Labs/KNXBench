@@ -15,7 +15,7 @@ recorded that as a deliberate scope decision — the
 [2026-09-05 web/Docker design spec](../superpowers/specs/2026-09-05-web-docker-deployment-design.md)
 says "LAN-only, no auth", and the stated use case was a self-hosted
 container on a trusted network, not internet exposure.
-[LIMITATION_TRIAGE.md](../LIMITATION_TRIAGE.md) ranks it **K1**: the
+[LIMITATION_TRIAGE.md](../archive/alpha-0.1/LIMITATION_TRIAGE.md) ranks it **K1**: the
 highest-risk open item in the repository that is not about commissioning.
 
 **What was actually exposed.** Roughly forty routes, and they are not all

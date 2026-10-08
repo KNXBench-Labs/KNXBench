@@ -4,8 +4,8 @@ Date: 2026-10-04. **Approved design and alpha scope; not implemented.**
 The user confirmed the interview decisions and explicitly authorized the owning
 Goal sessions to implement them. This research/planning session neither starts
 those sessions nor authorizes new bus access, hardware operations, or release
-publication. Execution lives in [goal-ui](../goal-ui.md) U19–U21 and
-[alpha-release-goal](../alpha-release-goal.md) AR20/AR21.
+publication. Execution lives in [goal-ui](archive/alpha-0.1/goal-ui.md) U19–U21 and
+[alpha-release-goal](archive/alpha-0.1/alpha-release-goal.md) AR20/AR21.
 Architecture: [ADR-0077](adr/0077-session-local-telegram-flow-view.md).
 
 ## 1. Confirmed product decisions

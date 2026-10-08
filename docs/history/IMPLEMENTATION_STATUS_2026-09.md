@@ -1808,7 +1808,7 @@ PDB-10 pin); see PRODUCT_DATABASE_CORPUS for the identity aggregates.
 ## 2026-09-28 — Claude Code cloud sessions prepared (tooling, no product change)
 
 - **Files:**
-  - [`docs/CLOUD_SESSIONS.md`](../CLOUD_SESSIONS.md) states what a cloud session
+  - [`docs/CLOUD_SESSIONS.md`](../archive/CLOUD_SESSIONS.md) states what a cloud session
     can and cannot do. It has no corpus, no bus, and its results are
     integrated locally.
   - The same file holds the one-time environment configuration and five task
@@ -11164,7 +11164,7 @@ recorded here rather than made.
 
 The repository's top-ranked non-commissioning risk —
 [KNOWN_LIMITATIONS.md §22](../KNOWN_LIMITATIONS.md#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback),
-`K1` in [LIMITATION_TRIAGE.md](../LIMITATION_TRIAGE.md) — is closed in the only
+`K1` in [LIMITATION_TRIAGE.md](../archive/alpha-0.1/LIMITATION_TRIAGE.md) — is closed in the only
 shape that does not also close the Docker target: the server gains real
 password authentication, and refuses to bind anything but `127.0.0.1`
 without it. The reasoning, the costs and the seven things it deliberately

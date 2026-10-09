@@ -22,7 +22,8 @@ does not erase a broader platform/device limitation or imply a new release.
   UI, server, hardware, tag, release or deployment change. Shared root and
   parallel sessions remain untouched except the scoped handover update.
 - Receipt: `docs/evidence/download-coverage-publication-2026-10-09.json`;
-  exact remote verification follows publication and is recorded in the handover.
+  accepted main delivery `bf023312` read back with local/fetched/live refs equal,
+  feature ancestry and exact receipt bytes verified. Final closure is docs-only.
 
 ## 2026-10-09 — Full download coverage stops tripping over the big ZIP (KL §151)
 

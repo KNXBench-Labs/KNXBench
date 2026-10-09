@@ -1,5 +1,15 @@
 # Architecture
 
+## Communication-object table (local source, 2026-10-09)
+
+[ADR-0101](adr/0101-communication-object-table-view-state.md) and the
+[table contract](COMMUNICATION_OBJECT_TABLE.md) keep search/filter/sort in pure UI
+derivation and every keyed object editor under one stable table parent. A per-object
+mutation boundary guards duplicate starts and late publication; existing application
+commands remain authoritative. View state is transient, not a domain/project schema.
+No core/store/product/API/protocol/dependency change. Local delivery is not release
+or deployment.
+
 ## Native project history (2026-10-09)
 
 [ADR-0100](adr/0100-persistent-native-project-history.md) adds bounded native

@@ -28,8 +28,8 @@ historical corpus, protocol, hardware, native-platform or advisory investigation
 
 ## Devices navigation: local source, current-project links and bounded evidence (2026-10-08)
 
-[Device navigation](DEVICE_NAVIGATION.md) adds a local source package, not an
-updated release or installed runtime. Generic address links resolve exactly
+[Device navigation](DEVICE_NAVIGATION.md) is on `main` since 2026-10-09, not in a
+release or installed runtime. Generic address links resolve exactly
 one current-project device; they do not identify physical hardware or a
 historical installation. Unknown/ambiguous targets remain passive. The separate
 diagnostic companion remains non-editing. URL/browser history, persistent
@@ -57,8 +57,10 @@ The description-edit exercise replaces unsupported device renaming; the new
 practice group's DPT is inferred after linking, not editable on the address.
 Native edits can auto-save: retain an untouched extracted copy to reset.
 Chromium acceptance is not native WebKitGTK/Orca or an older-release guarantee.
-The local candidate is not published; website/repository publication needs a
-separate owner go. Existing numbered limitations and owner ledger are unchanged.
+Published on `main` on 2026-10-09 (no website link or release yet). The frozen
+1.0.0 package READMEs still call themselves a local review candidate: the
+packages are checksummed, so that sentence stays until a repacked version.
+Existing numbered limitations and owner ledger are unchanged.
 
 ## Community evidence is bounded, manually shared and not anonymous (2026-10-08)
 

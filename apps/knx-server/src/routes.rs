@@ -39,6 +39,14 @@ pub fn project_routes() -> Router<SharedState> {
         )
         .route("/api/individual-address", post(set_individual_address))
         .route("/api/device-description", post(set_device_description))
+        .route(
+            "/api/devices/{id}/name",
+            patch(crate::rename_routes::device),
+        )
+        .route(
+            "/api/group-addresses/{id}/name",
+            patch(crate::rename_routes::group_address),
+        )
         .route("/api/com-object-dpt", post(set_com_object_dpt))
         .route(
             "/api/com-object-description",

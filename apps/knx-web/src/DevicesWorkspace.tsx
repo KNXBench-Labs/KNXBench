@@ -85,7 +85,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
           <button type="button" onClick={() => setSort({ column, descending: sort.column === column && !sort.descending })}>
             {t(label)}{sort.column === column && <span aria-hidden="true">{sort.descending ? " ↓" : " ↑"}</span>}
           </button></th>)}
-      </tr></thead><tbody>{rows.map((row) => <tr key={row.id}
+      </tr></thead><tbody>{rows.map((row) => <tr key={row.id} data-rename-kind="device" data-rename-id={row.id} data-rename-value={row.name}
         onClick={(event) => {
           if (event.target instanceof Element && event.target.closest("button, input")) return;
           onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true);

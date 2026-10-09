@@ -107,6 +107,26 @@ pub enum Command {
         address: Option<IndividualAddress>,
         redo_coupler: Option<CouplerEvidence>,
     },
+    /// Changes only the project-local name; the inverse preserves imported exceptions.
+    RenameDevice {
+        device: DeviceId,
+        name: String,
+    },
+    /// Undo-only exact name restoration, not an external authoring operation.
+    RestoreDeviceName {
+        device: DeviceId,
+        name: String,
+    },
+    /// Changes only a GA name, without copying its flags from a client snapshot.
+    RenameGroupAddress {
+        id: GroupAddressId,
+        name: String,
+    },
+    /// Undo-only exact name restoration, including imported empty/long names.
+    RestoreGroupAddressName {
+        id: GroupAddressId,
+        name: String,
+    },
     /// Sets a device's description as a user edit. Unlike
     /// `ComObjectInstance::description`, `DeviceInstance::description` is a
     /// bare `Option<String>`, not an `Override<Text>` — no provenance layer
@@ -553,6 +573,7 @@ pub enum Command {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CommandError {
     Validation(ValidationError),
+    InvalidName(crate::names::NameError),
     DeviceNotFound(DeviceId),
     /// Coupler evidence names a different product than the device now has.
     CouplerEvidenceMismatch {
@@ -561,7 +582,7 @@ pub enum CommandError {
     },
     ComObjectNotFound(ComObjectInstanceId),
     GroupAddressNotFound(GroupAddressId),
-    /// A group address id occurs in several installations.
+    /// A group address id occurs more than once in the project.
     GroupAddressPlacementAmbiguous(GroupAddressId),
     /// Parameter rows for one device and `ets_id` exist in several
     /// installations; no single row can be edited safely.
@@ -742,6 +763,7 @@ impl fmt::Display for CommandError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CommandError::Validation(e) => write!(f, "{e}"),
+            CommandError::InvalidName(e) => write!(f, "{e}"),
             CommandError::DeviceNotFound(id) => write!(f, "device {id} not found"),
             CommandError::CouplerEvidenceMismatch {
                 device,
@@ -756,7 +778,7 @@ impl fmt::Display for CommandError {
             CommandError::GroupAddressNotFound(id) => write!(f, "group address {id} not found"),
             CommandError::GroupAddressPlacementAmbiguous(id) => write!(
                 f,
-                "group address {id} exists in several installations; repair the project before editing it"
+                "group address {id} has duplicate identities; repair the project before editing it"
             ),
             CommandError::ParameterPlacementAmbiguous(device) => write!(
                 f,
@@ -1919,6 +1941,48 @@ impl Command {
                         device: *device,
                         address: previous,
                     },
+                })
+            }
+            Command::RenameDevice { device, name }
+            | Command::RestoreDeviceName { device, name } => {
+                if matches!(self, Command::RenameDevice { .. }) {
+                    crate::names::validate_edited_name(name).map_err(CommandError::InvalidName)?;
+                }
+                let target = project
+                    .devices
+                    .get_mut(*device)
+                    .ok_or(CommandError::DeviceNotFound(*device))?;
+                let previous = std::mem::replace(&mut target.name, name.clone());
+                Ok(Command::RestoreDeviceName {
+                    device: *device,
+                    name: previous,
+                })
+            }
+            Command::RenameGroupAddress { id, name }
+            | Command::RestoreGroupAddressName { id, name } => {
+                if project
+                    .installations
+                    .iter()
+                    .flat_map(|i| &i.group_addresses)
+                    .filter(|e| e.id == *id)
+                    .count()
+                    > 1
+                {
+                    return Err(CommandError::GroupAddressPlacementAmbiguous(*id));
+                }
+                if matches!(self, Command::RenameGroupAddress { .. }) {
+                    crate::names::validate_edited_name(name).map_err(CommandError::InvalidName)?;
+                }
+                let index = require_unique_group_address(project, *id)?;
+                let entry = project.installations[index]
+                    .group_addresses
+                    .iter_mut()
+                    .find(|e| e.id == *id)
+                    .ok_or(CommandError::GroupAddressNotFound(*id))?;
+                let previous = std::mem::replace(&mut entry.name, name.clone());
+                Ok(Command::RestoreGroupAddressName {
+                    id: *id,
+                    name: previous,
                 })
             }
             Command::SetDeviceDescription {
@@ -3403,6 +3467,45 @@ impl Command {
     }
 }
 
+impl Command {
+    /// Current name of a rename target. Refuses ambiguous GA identities before mutation.
+    pub fn rename_target_name<'a>(
+        &self,
+        project: &'a Project,
+    ) -> Result<Option<&'a str>, CommandError> {
+        match self {
+            Self::RenameDevice { device, .. } => Ok(Some(
+                &project
+                    .devices
+                    .get(*device)
+                    .ok_or(CommandError::DeviceNotFound(*device))?
+                    .name,
+            )),
+            Self::RenameGroupAddress { id, .. } => {
+                let mut matches = project
+                    .installations
+                    .iter()
+                    .flat_map(|i| &i.group_addresses)
+                    .filter(|e| e.id == *id);
+                let first = matches
+                    .next()
+                    .ok_or(CommandError::GroupAddressNotFound(*id))?;
+                if matches.next().is_some() {
+                    return Err(CommandError::GroupAddressPlacementAmbiguous(*id));
+                }
+                Ok(Some(&first.name))
+            }
+            _ => Ok(None),
+        }
+    }
+    pub fn rename_value(&self) -> Option<&str> {
+        match self {
+            Self::RenameDevice { name, .. } | Self::RenameGroupAddress { name, .. } => Some(name),
+            _ => None,
+        }
+    }
+}
+
 /// The two independently replayable directions of an editor history.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HistorySide {
@@ -3447,6 +3550,11 @@ impl CommandStack {
     }
 
     pub fn do_command(&mut self, project: &mut Project, cmd: Command) -> Result<(), CommandError> {
+        if let Some(current) = cmd.rename_target_name(project)? {
+            if cmd.rename_value() == Some(current) {
+                return Ok(());
+            }
+        }
         let inverse = cmd.apply(project)?;
         self.undo.push(HistoryEntry::Inverse(Box::new(inverse)));
         self.redo.clear();
@@ -3695,6 +3803,45 @@ mod tests {
             "a refused undo must not consume its entry"
         );
         assert!(!stack.can_redo());
+    }
+
+    #[test]
+    fn device_name_restores_imported_exception_exactly_and_noop_keeps_redo() {
+        for original in [String::new(), "x".repeat(1025), "Imported\tname".into()] {
+            let mut project = test_project_with_one_device(None);
+            project.devices.get_mut(DeviceId(1)).unwrap().name = original.clone();
+            let before = project.clone();
+            let mut stack = CommandStack::new();
+            stack
+                .do_command(
+                    &mut project,
+                    Command::RenameDevice {
+                        device: DeviceId(1),
+                        name: "  New 🛠  ".into(),
+                    },
+                )
+                .unwrap();
+            let mut expected = before.clone();
+            expected.devices.get_mut(DeviceId(1)).unwrap().name = "  New 🛠  ".into();
+            assert_eq!(project, expected);
+            stack.undo(&mut project).unwrap();
+            assert_eq!(project, before);
+            stack
+                .do_command(
+                    &mut project,
+                    Command::RenameDevice {
+                        device: DeviceId(1),
+                        name: original,
+                    },
+                )
+                .unwrap();
+            assert!(!stack.can_undo());
+            assert!(stack.can_redo());
+            stack.redo(&mut project).unwrap();
+            assert_eq!(project, expected);
+            let (undo, _) = stack.snapshot_states(&project).unwrap();
+            assert_eq!(undo, vec![before]);
+        }
     }
 
     #[test]

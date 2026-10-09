@@ -80,6 +80,8 @@ function TreeNode(props: {
   onDrop?: React.DragEventHandler<HTMLButtonElement>;
   revealGeneration?: number;
   scrollOnReveal?: boolean;
+  renameKind?: "device" | "group_address";
+  renameId?: number;
 }) {
   const [open, setOpen] = useState(true);
   const labelRef = useRef<HTMLButtonElement>(null);
@@ -115,6 +117,8 @@ function TreeNode(props: {
           type="button"
           className={labelClasses.join(" ")}
           data-crt-surface="tree"
+          data-rename-kind={props.renameKind}
+          data-rename-id={props.renameId}
           data-crt-activate={labelClick ? "" : undefined}
           onClick={labelClick}
           aria-pressed={props.onSelect ? !!props.selected : undefined}
@@ -239,6 +243,7 @@ function DeviceItem(props: {
   return (
     <TreeNode
       label={label}
+      renameKind="device" renameId={device.id}
       selected={
         (selection?.kind === "device" && selection.id === device.id) ||
         (multiSelection?.kind === "device" && multiSelection.ids.has(device.id))
@@ -485,6 +490,7 @@ function GroupAddressItem(props: { ga: GroupAddressNode; revealRequest?: RevealR
   return (
     <TreeNode
       label={`${formatGa(ga.address)} ${ga.name}`}
+      renameKind="group_address" renameId={ga.id}
       selected={
         (selection?.kind === "group_address" && selection.id === ga.id) ||
         (multiSelection?.kind === "group_address" && multiSelection.ids.has(ga.id))

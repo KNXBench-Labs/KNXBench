@@ -219,8 +219,23 @@ Two things to decide before creating:
   choice the device remains unaddressed. This does not program physical hardware.
   You can also assign an address separately in Properties. See
   [Buildings and topology](03-buildings-and-topology.md).
-- **No name change afterwards.** Devices cannot be renamed in KNXBench yet, so the
-  name you type in this workspace is the one you keep.
+- **Names can be changed afterwards in current source.** Edit **Name** in the
+  device editor or Properties, or focus the device in Explorer/the Devices list
+  and press **F2** or choose **Rename** from its context menu. This names the
+  project instance, not its product/application, and never programs hardware.
+  The change is newer than alpha.6.
+
+### Renaming a device
+
+Enter or leaving the edited Name field applies once; Escape cancels. Names may
+repeat and keep intentional spaces/Unicode exactly. New names must not be blank,
+contain control characters/line breaks, or exceed 1,024 Unicode code points.
+A failed draft stays visible with its error. **Refresh state** reads the current
+project without writing; review the retained draft before **Apply name**. Stale
+project/revision/name contexts are refused, not silently overwritten. An unchanged
+name produces no undo step. Undo restores the exact original name, including
+imported exceptions; native save/reopen retains the name and existing history.
+See [the naming contract](../../contracts/project-name-editing.md).
 
 ### Creation diagnostics
 

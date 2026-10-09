@@ -88,6 +88,8 @@ pub struct AppState {
     /// `project` is held, whenever project-owned state or its clean/save
     /// metadata changes; never serialized into a project file.
     pub project_revision: AtomicU64,
+    /// Transient load generation; changes only after a successful project replacement.
+    pub project_incarnation: AtomicU64,
     /// The shared product database, opened once at startup from
     /// `knx_productdb::default_path()`. `None` if no path could be
     /// derived, the file doesn't exist yet, or it failed to open/migrate
@@ -248,6 +250,7 @@ impl AppState {
             import_counts: Mutex::new((0, 0)),
             server_incarnation: server_incarnation.clone(),
             project_revision: AtomicU64::new(0),
+            project_incarnation: AtomicU64::new(0),
             product_db,
             session_log: Mutex::new(SessionLog::default()),
             connector: Box::new(RealConnector::default()),
@@ -1955,7 +1958,7 @@ pub(crate) fn tree_with_state(
     stack: &knx_core::CommandStack,
     import_counts: (usize, usize),
     snapshot_revision: u64,
-    server_incarnation: &str,
+    state: &AppState,
     last_saved_at: Option<&str>,
 ) -> knx_projection::ProjectTree {
     let mut tree = knx_projection::build_project_tree(project);
@@ -1964,8 +1967,9 @@ pub(crate) fn tree_with_state(
     tree.can_undo = stack.can_undo();
     tree.can_redo = stack.can_redo();
     tree.is_modified = project_is_modified(project, clean_project);
-    tree.server_incarnation = Some(server_incarnation.to_owned());
+    tree.server_incarnation = Some(state.server_incarnation.clone());
     tree.snapshot_revision = Some(snapshot_revision);
+    tree.project_incarnation = Some(state.project_incarnation.load(Ordering::Relaxed));
     tree.last_saved_at = last_saved_at.map(str::to_owned);
     tree
 }
@@ -2124,6 +2128,7 @@ fn replace_project_state_transaction(
         ),
         None => (replacement.clone(), knx_core::CommandStack::new(), 0),
     };
+    state.project_incarnation.fetch_add(1, Ordering::Relaxed);
     *project = Some(replacement);
     *stack = recovered_stack;
     *state
@@ -2145,7 +2150,7 @@ fn replace_project_state_transaction(
         &stack,
         *import_counts,
         next_project_revision(state),
-        &state.server_incarnation,
+        state,
         last_saved_at.as_deref(),
     ))
 }
@@ -2178,7 +2183,7 @@ pub fn current_project_tree(state: &AppState) -> Result<CurrentProject, String> 
             &stack,
             import_counts,
             current_project_revision(state),
-            &state.server_incarnation,
+            state,
             last_saved_at.as_deref(),
         ),
         has_store_path,
@@ -2204,7 +2209,7 @@ pub(crate) fn current_project_tree_and_group_address_context(
         &stack,
         import_counts,
         current_project_revision(state),
-        &state.server_incarnation,
+        state,
         last_saved_at.as_deref(),
     );
     let context = crate::bus::GroupAddressContext::from_project(Some(project));
@@ -2224,7 +2229,7 @@ fn current_tree(state: &AppState) -> Result<knx_projection::ProjectTree, String>
         &stack,
         counts,
         current_project_revision(state),
-        &state.server_incarnation,
+        state,
         last_saved_at.as_deref(),
     ))
 }
@@ -2282,24 +2287,97 @@ fn apply_at_revision(
     apply_with_expected_revision(state, Some(expected_revision), cmd)
 }
 
+pub(crate) struct RenameExpectation {
+    pub server_incarnation: String,
+    pub snapshot_revision: u64,
+    pub expected_name: String,
+    pub project_incarnation: u64,
+}
+#[derive(Debug)]
+pub(crate) enum RenameError {
+    Conflict(String),
+    Invalid(String),
+    Failure(String),
+}
+impl fmt::Display for RenameError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Conflict(s) | Self::Invalid(s) | Self::Failure(s) => f.write_str(s),
+        }
+    }
+}
+pub(crate) fn rename_impl(
+    state: &AppState,
+    cmd: knx_core::Command,
+    expectation: RenameExpectation,
+) -> Result<ProjectTree, RenameError> {
+    apply_guarded(state, None, cmd, Some(expectation))
+}
+
 fn apply_with_expected_revision(
     state: &AppState,
     expected_revision: Option<u64>,
     cmd: knx_core::Command,
 ) -> Result<knx_projection::ProjectTree, String> {
+    apply_guarded(state, expected_revision, cmd, None).map_err(|e| e.to_string())
+}
+
+fn apply_guarded(
+    state: &AppState,
+    expected_revision: Option<u64>,
+    cmd: knx_core::Command,
+    rename: Option<RenameExpectation>,
+) -> Result<ProjectTree, RenameError> {
     // Captured before `do_command` consumes `cmd` below: `cmd_desc` is the
     // full `Debug` dump, kept for `detail`; `cmd_name` is the short variant
     // name, used for `source`/`message` (see `command_name`'s doc comment).
     let cmd_desc = format!("{cmd:?}");
     let cmd_name = command_name(&cmd);
     let mut project = state.project.lock().expect("state mutex poisoned");
-    let project = project.as_mut().ok_or("no project open")?;
+    let project = project
+        .as_mut()
+        .ok_or_else(|| RenameError::Conflict("no project open".into()))?;
+    if let Some(ref expected) = rename {
+        if expected.server_incarnation != state.server_incarnation
+            || expected.snapshot_revision != current_project_revision(state)
+            || expected.project_incarnation != state.project_incarnation.load(Ordering::Relaxed)
+        {
+            return Err(RenameError::Conflict(
+                "Project changed; refresh before renaming. Your draft has not been applied.".into(),
+            ));
+        }
+        let current = cmd
+            .rename_target_name(project)
+            .map_err(|e| RenameError::Invalid(e.to_string()))?
+            .ok_or_else(|| RenameError::Invalid("not a name-only command".into()))?;
+        if current != expected.expected_name {
+            return Err(RenameError::Conflict(
+                "Name changed; refresh before renaming.".into(),
+            ));
+        }
+        if cmd.rename_value() == Some(current) {
+            let stack = state.command_stack.lock().expect("state mutex poisoned");
+            let clean = state.clean_project.lock().expect("state mutex poisoned");
+            let saved = state.last_saved_at.lock().expect("state mutex poisoned");
+            return Ok(tree_with_state(
+                project,
+                clean.as_ref(),
+                &stack,
+                *state.import_counts.lock().expect("state mutex poisoned"),
+                current_project_revision(state),
+                state,
+                saved.as_deref(),
+            ));
+        }
+        knx_core::names::validate_edited_name(cmd.rename_value().unwrap())
+            .map_err(|e| RenameError::Invalid(e.to_string()))?;
+    }
     if let Some(expected) = expected_revision {
         let current = current_project_revision(state);
         if current != expected {
-            return Err(format!(
+            return Err(RenameError::Failure(format!(
                 "CSV import is stale: planned against project revision {expected}, current revision is {current}; import or preview again"
-            ));
+            )));
         }
     }
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
@@ -2320,13 +2398,13 @@ fn apply_with_expected_revision(
         &stack,
         import_counts,
         revision,
-        &state.server_incarnation,
+        state,
         last_saved_at.as_deref(),
     );
 
     log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
 
-    result.map(|()| tree)
+    result.map(|()| tree).map_err(RenameError::Failure)
 }
 
 pub fn set_individual_address_impl(
@@ -3695,7 +3773,7 @@ fn replay_catalog_request(
             &stack,
             import_counts,
             current_project_revision(state),
-            &state.server_incarnation,
+            state,
             last_saved_at.as_deref(),
         ),
         diagnostics: recorded.diagnostics,
@@ -4227,7 +4305,7 @@ fn create_devices_recorded(
             &stack,
             import_counts,
             next_project_revision(state),
-            &state.server_incarnation,
+            state,
             last_saved_at.as_deref(),
         ),
         diagnostics,
@@ -4293,7 +4371,7 @@ pub fn reconcile_scan_impl(
             stack,
             import_counts,
             current_project_revision(state),
-            &state.server_incarnation,
+            state,
             last_saved_at.as_deref(),
         ));
     }
@@ -4390,7 +4468,7 @@ pub fn reconcile_scan_impl(
         stack,
         import_counts,
         revision,
-        &state.server_incarnation,
+        state,
         last_saved_at.as_deref(),
     );
     log_outcome(
@@ -4518,7 +4596,7 @@ pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
         &stack,
         import_counts,
         revision,
-        &state.server_incarnation,
+        state,
         last_saved_at.as_deref(),
     );
     log_outcome(state, "undo", "undo".to_string(), None, &result);
@@ -4546,7 +4624,7 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
         &stack,
         import_counts,
         revision,
-        &state.server_incarnation,
+        state,
         last_saved_at.as_deref(),
     );
     log_outcome(state, "redo", "redo".to_string(), None, &result);

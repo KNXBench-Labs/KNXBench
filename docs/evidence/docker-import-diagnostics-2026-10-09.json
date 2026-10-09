@@ -312,10 +312,25 @@
     "No real bus action, release, deployment or full ETS compatibility claim",
     "Browser return does not close the separate original editor or transfer transient selection"
   ],
-  "delivery": "Verified source fixes ready for review; branch publication is verified separately. No main integration, release or deployment.",
+  "delivery": "Verified fixes published on the review branch in PR #3. Not merged or released; final documentation-only closure readback recorded locally.",
   "codeCommits": [
     "bff4820daa7a92820ec62b7bfdc3b707d1e0489f",
     "9bccc76c31b9aea7ad0a849ea09a7c6868e299c7"
   ],
-  "acceptedProcess": "proc_ab9ead4d5572"
+  "acceptedProcess": "proc_ab9ead4d5572",
+  "publication": {
+    "observedAt": "2026-10-09 22:22 CEST",
+    "pullRequest": 3,
+    "url": "https://github.com/KNXBench-Labs/KNXBench/pull/3",
+    "state": "OPEN",
+    "initialVerifiedHead": "bf726714a722987fbb86a4454dc1bf31a342daf4",
+    "branch": "fix/docker-import-diagnostics-20261009",
+    "base": "main",
+    "fileCount": 20,
+    "exactLocalTrackingLiveRefs": true,
+    "exactPathsVerified": true,
+    "ci": "no branch checks reported at observation; local gate acceptance only",
+    "merged": false,
+    "released": false
+  }
 }

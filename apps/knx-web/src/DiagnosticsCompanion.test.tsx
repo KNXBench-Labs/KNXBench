@@ -283,6 +283,13 @@ describe("one editing workspace", () => {
     expect([...flowWireGraph.keys()]).toEqual(["flowWire.ts"]);
     expect(apiCallsIn(flowWireGraph)).toEqual([]);
     expect(flowWireGraph.get("flowWire.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    // Native history adds only its pure wire/admission module through api.ts.
+    // The dialog and its mutation requests must never enter this companion.
+    const projectHistoryGraph = valueImportGraph("projectHistory.ts");
+    expect([...projectHistoryGraph.keys()]).toEqual(["projectHistory.ts"]);
+    expect(apiCallsIn(projectHistoryGraph)).toEqual([]);
+    expect(mutatingFetchesIn(projectHistoryGraph)).toEqual([]);
+    expect(projectHistoryGraph.get("projectHistory.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     const historyGraph = valueImportGraph("activityHistory.ts");
     expect([...historyGraph.keys()]).toEqual(["activityHistory.ts"]);
     expect(apiCallsIn(historyGraph)).toEqual([]);
@@ -360,6 +367,7 @@ describe("one editing workspace", () => {
       "messages/en.ts",
       "messages/tlh.ts",
       "modalIsolation.ts",
+      "projectHistory.ts",
       "session.ts",
       "sessionLogExport.ts",
       "settingsDiagnostic.ts",

@@ -13,7 +13,7 @@ the reconciliation; formal task dispositions remain in the engineering ledger.
 | Boundary | Practical meaning | Next check |
 | --- | --- | --- |
 | Import is one-way | Keep the original ETS archive; your edited working copy is `.knxdb`, not an ETS export | [Projects](user-guide/02-projects.md#there-is-no-knxproj-export) |
-| Autosave is not a backup history | Save once to choose a file, then keep independent copies | [Saving](user-guide/02-projects.md#saving) |
+| Native history is not an independent disaster backup | The local source package keeps versions inside the same file; alpha.6 still has no persistent history. Keep independent copies | [Project history](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions) |
 | Browser files live on the server | Save is not a download; Export project gives you a local copy | [Web and desktop differences](user-guide/11-web-and-docker.md#web-build-versus-desktop-build) |
 | Shared server, shared project | One password and one undo stack are not collaborative editing | [Deployment](user-guide/11-web-and-docker.md#authentication) |
 | Hardware support is narrow | A project edit is not commissioning, and undo does not reverse a bus write | [Bus boundaries](user-guide/07-bus-and-interfaces.md#what-knxbench-does-and-does-not-do-on-a-bus) |

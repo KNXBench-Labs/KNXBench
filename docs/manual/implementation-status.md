@@ -16,6 +16,17 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Local source package: native project history
+
+The user-authorized 2026-10-09 package implements restart-safe native undo/redo,
+named and automatic saved-state versions, and confirmed restore with a safety
+version. Unsaved native work remains marked unsaved while its recovery journal
+is durable. Before first Save As history is session-only. Versions are inside
+the same file, not independent disaster backups. Native schema v11 needs a new
+build; this local package is **not** in the published alpha.6 snapshot.
+[Contract](../PROJECT_HISTORY.md) · [verification](../status/2026-10-09-project-history-verification.md).
+Native/Orca, physical power-loss, hardware/ETS and release evidence remain separate.
+
 ## New on main: Devices navigation
 
 The owner-approved Devices list/editor package was implemented in the isolated
@@ -58,15 +69,15 @@ gives five, with the measured counts behind them.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Native `.knxdb` project file (SQLite, store schema version 10) | ✅ Implemented | Open, save, save as — [Projects](user-guide/02-projects.md) |
+| Native `.knxdb` project file (SQLite, store schema version 11 in the local history package; alpha.6 uses v10) | ✅ Implemented | Open, save, save as — [Projects](user-guide/02-projects.md) |
 | Schema migration of an older project file, with a refusal rather than a guess when the file is newer than the build | ✅ Implemented | Migration tests per version step — [`docs/DATA_MODEL.md`](../DATA_MODEL.md) |
-| Undo and redo across project edits | ✅ Implemented | One shared undo stack per open project; it is not saved as persistent history and cannot undo bus writes |
+| Undo and redo across project edits | ✅ Implemented | Native-backed reversible edits survive restart with undo/redo; before first Save As it is session-local. Cannot undo bus writes — [history contract](../PROJECT_HISTORY.md) (local package, not alpha.6) |
 | New-project wizard with an optional starting structure (areas/lines, building tree, main/middle group ranges, two presets) | ✅ Implemented | Applied with the new project in one step or refused without replacing anything — [Projects](user-guide/02-projects.md), [ADR-0093](../adr/0093-wizards-are-views-over-existing-commands.md) |
 | Add-device wizard: product, placement (installation, line, building part), server preview of names and addresses, confirmed create | ✅ Implemented | Creation/placement are one undo step. Changed computed names/addresses cause stale-preview refusal; this is not a whole-project revision lock — [Devices and products](user-guide/05-devices-and-products.md#the-add-device-wizard), [ADR-0093](../adr/0093-wizards-are-views-over-existing-commands.md) |
 | Provenance for modelled layered values | ✅ Implemented | `Override` distinguishes absent/empty/malformed/value, and `Resolved` carries the source layer. Not every ordinary project attribute is layered — [Data model](../DATA_MODEL.md), [ADR-0010](../adr/0010-per-attribute-override-representation.md) |
 | Exporting the open project through the browser | ✅ Implemented | File → Export project… streams a newly serialized `.knxdb`; Save As still writes to the server's directory — [Projects](user-guide/02-projects.md) |
 | Autosave for a project that already has a file | ✅ Implemented | Configurable interval, cancellation notice and reported failures — [Projects](user-guide/02-projects.md#saving) |
-| Versioned backups or persistent undo history | ❌ Not implemented | Autosave replaces the saved file; keep independent copies |
+| Native project versions and persistent undo history | ✅ Local source package | Named/save/pre-restore versions, revision-bound confirmed restore, bounded atomic journal — [Projects](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions). Not in alpha.6; keep independent copies against file/disk loss |
 
 ## ETS project import
 

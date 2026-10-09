@@ -131,6 +131,23 @@ pub fn project_routes() -> Router<SharedState> {
             "/api/devices/batch-move-building-part",
             post(batch_move_devices_to_building_part),
         )
+        .route("/api/project/history", get(crate::project_history::get))
+        .route(
+            "/api/project/history/versions",
+            post(crate::project_history::create),
+        )
+        .route(
+            "/api/project/history/versions/{id}/restore",
+            post(crate::project_history::restore),
+        )
+        .route(
+            "/api/project/history/versions/{id}/delete",
+            post(crate::project_history::delete),
+        )
+        .route(
+            "/api/project/history/clear-undo",
+            post(crate::project_history::clear_undo),
+        )
         .route("/api/undo", post(undo))
         .route("/api/redo", post(redo))
         .route("/api/log", get(log))

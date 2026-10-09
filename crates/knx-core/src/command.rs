@@ -3403,12 +3403,42 @@ impl Command {
     }
 }
 
-/// Undo/redo stacks of applied commands' inverses. A failed `do_command`
-/// leaves both stacks untouched.
-#[derive(Debug, Default)]
+/// The two independently replayable directions of an editor history.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HistorySide {
+    Undo,
+    Redo,
+}
+
+/// A live inverse or a validated normalized state recovered by the application.
+/// Storage codecs and version admission deliberately remain outside the core.
+#[derive(Debug, Clone)]
+enum HistoryEntry {
+    Inverse(Box<Command>),
+    Snapshot(Box<Project>),
+}
+
+impl HistoryEntry {
+    fn apply(self, project: &mut Project) -> Result<Self, CommandError> {
+        match self {
+            Self::Inverse(command) => command
+                .apply(project)
+                .map(|inverse| Self::Inverse(Box::new(inverse))),
+            Self::Snapshot(mut replacement) => {
+                replacement.ids.raise_to(&project.ids);
+                let previous = std::mem::replace(project, *replacement);
+                Ok(Self::Snapshot(Box::new(previous)))
+            }
+        }
+    }
+}
+
+/// Undo/redo stacks of applied inverses or recovered snapshots. A failed
+/// command, undo or redo leaves both stacks untouched.
+#[derive(Debug, Clone, Default)]
 pub struct CommandStack {
-    undo: Vec<Command>,
-    redo: Vec<Command>,
+    undo: Vec<HistoryEntry>,
+    redo: Vec<HistoryEntry>,
 }
 
 impl CommandStack {
@@ -3418,23 +3448,95 @@ impl CommandStack {
 
     pub fn do_command(&mut self, project: &mut Project, cmd: Command) -> Result<(), CommandError> {
         let inverse = cmd.apply(project)?;
-        self.undo.push(inverse);
+        self.undo.push(HistoryEntry::Inverse(Box::new(inverse)));
         self.redo.clear();
         Ok(())
     }
 
     pub fn undo(&mut self, project: &mut Project) -> Result<(), CommandError> {
-        let cmd = self.undo.pop().ok_or(CommandError::NothingToUndo)?;
-        let inverse = cmd.apply(project)?;
+        let entry = self
+            .undo
+            .last()
+            .cloned()
+            .ok_or(CommandError::NothingToUndo)?;
+        let inverse = entry.apply(project)?;
+        self.undo.pop();
         self.redo.push(inverse);
         Ok(())
     }
 
     pub fn redo(&mut self, project: &mut Project) -> Result<(), CommandError> {
-        let cmd = self.redo.pop().ok_or(CommandError::NothingToRedo)?;
-        let inverse = cmd.apply(project)?;
+        let entry = self
+            .redo
+            .last()
+            .cloned()
+            .ok_or(CommandError::NothingToRedo)?;
+        let inverse = entry.apply(project)?;
+        self.redo.pop();
         self.undo.push(inverse);
         Ok(())
+    }
+
+    /// Normalized states in bottom-to-top stack order. Replays only clones;
+    /// a stale inverse refuses export instead of losing an entry in storage.
+    pub fn snapshot_states(
+        &self,
+        project: &Project,
+    ) -> Result<(Vec<Project>, Vec<Project>), CommandError> {
+        let mut undo = Vec::new();
+        let mut redo = Vec::new();
+        self.visit_snapshot_states(project, |side, _, state| {
+            match side {
+                HistorySide::Undo => undo.push(state.clone()),
+                HistorySide::Redo => redo.push(state.clone()),
+            }
+            true
+        })?;
+        undo.reverse();
+        redo.reverse();
+        Ok((undo, redo))
+    }
+
+    /// Visits adjacent normalized states one at a time, in reverse stack order.
+    /// The visitor may stop admission by returning false, without cloning or
+    /// materializing every older state. The live project and stack never change.
+    pub fn visit_snapshot_states(
+        &self,
+        project: &Project,
+        mut visitor: impl FnMut(HistorySide, usize, &Project) -> bool,
+    ) -> Result<bool, CommandError> {
+        for (side, entries) in [
+            (HistorySide::Undo, &self.undo),
+            (HistorySide::Redo, &self.redo),
+        ] {
+            let mut current = project.clone();
+            for (position, entry) in entries.iter().enumerate().rev() {
+                entry.clone().apply(&mut current)?;
+                if !visitor(side, position, &current) {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
+    }
+
+    /// Builds a stack from application-admitted project snapshots. Admission
+    /// must check native representability, version, identity and integrity.
+    pub fn from_snapshot_states(undo: Vec<Project>, redo: Vec<Project>) -> Self {
+        Self {
+            undo: undo
+                .into_iter()
+                .map(|p| HistoryEntry::Snapshot(Box::new(p)))
+                .collect(),
+            redo: redo
+                .into_iter()
+                .map(|p| HistoryEntry::Snapshot(Box::new(p)))
+                .collect(),
+        }
+    }
+
+    pub fn history_lengths(&self) -> (usize, usize) {
+        (self.undo.len(), self.redo.len())
     }
 
     pub fn can_undo(&self) -> bool {
@@ -3500,6 +3602,99 @@ mod tests {
             binary_data: vec![],
         });
         p
+    }
+
+    #[test]
+    fn history_snapshot_visitor_stops_before_materializing_the_rest_of_the_stack() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        for octet in [1, 2] {
+            stack
+                .do_command(
+                    &mut project,
+                    Command::SetIndividualAddress {
+                        device: DeviceId(1),
+                        address: Some(IndividualAddress::new(1, 1, octet).unwrap()),
+                    },
+                )
+                .unwrap();
+        }
+        let original = project.clone();
+        let mut visits = Vec::new();
+        let complete = stack
+            .visit_snapshot_states(&project, |side, position, state| {
+                visits.push((side, position));
+                assert_eq!(
+                    state.devices.get(DeviceId(1)).unwrap().address,
+                    Some(IndividualAddress::new(1, 1, 1).unwrap())
+                );
+                false
+            })
+            .unwrap();
+        assert!(!complete);
+        assert_eq!(visits, vec![(HistorySide::Undo, 1)]);
+        assert_eq!(project, original);
+        assert_eq!(stack.history_lengths(), (2, 0));
+    }
+
+    #[test]
+    fn snapshot_stack_bridge_keeps_both_directions_and_allocator_high_water() {
+        let mut project = test_project_with_one_device(None);
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: Some(IndividualAddress::new(1, 1, 1).unwrap()),
+                },
+            )
+            .unwrap();
+        let after = project.clone();
+        let (undo, redo) = stack.snapshot_states(&project).unwrap();
+        assert_eq!(undo, vec![before.clone()]);
+        assert!(redo.is_empty());
+        let mut restored = CommandStack::from_snapshot_states(undo, redo);
+        restored.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+        let (undo, redo) = restored.snapshot_states(&project).unwrap();
+        assert!(undo.is_empty());
+        assert_eq!(redo, vec![after.clone()]);
+        let mut restored = CommandStack::from_snapshot_states(undo, redo);
+        project.ids.next_device_id().unwrap();
+        project.ids.next_device_id().unwrap();
+        restored.redo(&mut project).unwrap();
+        assert_eq!(project.devices, after.devices);
+        assert_eq!(
+            project.ids.peek_device(),
+            2,
+            "snapshot restore cannot reuse an issued ID"
+        );
+    }
+
+    #[test]
+    fn failed_undo_retains_its_history_entry() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: Some(IndividualAddress::new(1, 1, 1).unwrap()),
+                },
+            )
+            .unwrap();
+        project.devices.remove(DeviceId(1));
+        let before = project.clone();
+        assert!(stack.undo(&mut project).is_err());
+        assert_eq!(project, before);
+        assert!(
+            stack.can_undo(),
+            "a refused undo must not consume its entry"
+        );
+        assert!(!stack.can_redo());
     }
 
     #[test]

@@ -19,10 +19,10 @@
 use std::fmt;
 use std::path::Path;
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 10;
+pub const CURRENT_SCHEMA_VERSION: i64 = 11;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -548,7 +548,96 @@ fn lift_group_address_dpts(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// Native editor recovery and independent project versions (ADR-0100).
+fn migrate_v10_to_v11(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "CREATE TABLE project_history_context (
+             content_hash TEXT PRIMARY KEY CHECK (length(content_hash) = 64),
+             format_version INTEGER NOT NULL CHECK (format_version = 1),
+             image BLOB NOT NULL CHECK (length(image) > 0),
+             image_hash TEXT NOT NULL CHECK (length(image_hash) = 64)
+         ) STRICT;
+         CREATE TABLE project_history_state (
+             id INTEGER PRIMARY KEY CHECK (id = 0),
+             format_version INTEGER NOT NULL CHECK (format_version = 1),
+             generation INTEGER NOT NULL CHECK (generation > 0),
+             baseline_hash TEXT NOT NULL CHECK (length(baseline_hash) = 64),
+             working BLOB NOT NULL CHECK (length(working) > 0),
+             working_hash TEXT NOT NULL CHECK (length(working_hash) = 64),
+             context_hash TEXT NOT NULL REFERENCES project_history_context(content_hash)
+         ) STRICT;
+         CREATE TABLE project_history_stack (
+             side TEXT NOT NULL CHECK (side IN ('undo', 'redo')),
+             position INTEGER NOT NULL CHECK (position >= 0),
+             format_version INTEGER NOT NULL CHECK (format_version = 1),
+             image BLOB NOT NULL CHECK (length(image) > 0),
+             image_hash TEXT NOT NULL CHECK (length(image_hash) = 64),
+             context_hash TEXT NOT NULL REFERENCES project_history_context(content_hash),
+             PRIMARY KEY (side, position)
+         ) STRICT;
+         CREATE TABLE project_history_version (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             format_version INTEGER NOT NULL CHECK (format_version = 1),
+             created_at TEXT NOT NULL,
+             reason TEXT NOT NULL CHECK (reason IN ('save', 'named', 'pre_restore', 'replaced_workspace')),
+             label TEXT NOT NULL CHECK (length(label) BETWEEN 1 AND 120),
+             image BLOB NOT NULL CHECK (length(image) > 0),
+             image_hash TEXT NOT NULL CHECK (length(image_hash) = 64),
+             context_hash TEXT NOT NULL REFERENCES project_history_context(content_hash)
+         ) STRICT;
+         ALTER TABLE line ADD COLUMN model_position INTEGER NOT NULL DEFAULT 0;",
+    )?;
+    // Match the preceding native reader's area/line traversal exactly while
+    // introducing an independent model-vector order for new snapshots.
+    let lines = conn
+        .prepare("SELECT a.installation_id, l.id FROM line l JOIN area a ON l.area_id = a.id ORDER BY a.installation_id, a.position, l.position")?
+        .query_map([], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut installation = None;
+    let mut position = 0i64;
+    for (owner, id) in lines {
+        if installation != Some(owner) {
+            installation = Some(owner);
+            position = 0;
+        }
+        conn.execute(
+            "UPDATE line SET model_position = ?1 WHERE id = ?2",
+            params![position, id],
+        )?;
+        position += 1;
+    }
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
+
+/// History owns the surrounding transaction so a refused editor write also
+/// rolls back any native upgrade. The ordinary openers keep their own atomic
+/// upgrade boundary; this helper never begins or commits another transaction.
+pub(crate) fn migrate_in_transaction(tx: &Transaction<'_>) -> Result<(), MigrationError> {
+    let found: i64 = tx.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if found < 0 || !is_own_or_empty(tx, found)? {
+        return Err(MigrationError::ForeignDatabase);
+    }
+    if found > CURRENT_SCHEMA_VERSION {
+        return Err(MigrationError::FutureSchemaVersion {
+            found,
+            supported: CURRENT_SCHEMA_VERSION,
+        });
+    }
+    apply_pending_migrations(tx, found)
+}
+
+fn apply_pending_migrations(conn: &Connection, found: i64) -> Result<(), MigrationError> {
+    if found == CURRENT_SCHEMA_VERSION {
+        return Ok(());
+    }
+    for migration in &migrations()[found as usize..CURRENT_SCHEMA_VERSION as usize] {
+        migration(conn)?;
+    }
+    conn.pragma_update(None, "user_version", CURRENT_SCHEMA_VERSION)?;
+    Ok(())
+}
 
 /// Ordered chain; index `i` migrates `user_version` `i` to `i + 1`.
 fn migrations() -> Vec<Migration> {
@@ -563,6 +652,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v7_to_v8,
         migrate_v8_to_v9,
         migrate_v9_to_v10,
+        migrate_v10_to_v11,
     ]
 }
 
@@ -765,7 +855,7 @@ fn migrate(conn: &Connection) -> Result<(), MigrationError> {
         });
     }
 
-    if !is_own_or_empty(conn, found)? {
+    if found < 0 || !is_own_or_empty(conn, found)? {
         return Err(MigrationError::ForeignDatabase);
     }
 
@@ -777,13 +867,7 @@ fn migrate(conn: &Connection) -> Result<(), MigrationError> {
     // with none of the earlier steps applied, so the next open can retry.
     // The product database does the same (`knx_productdb::open_and_migrate`).
     conn.execute_batch("BEGIN IMMEDIATE")?;
-    let result = (|| {
-        for migration in &migrations()[found as usize..CURRENT_SCHEMA_VERSION as usize] {
-            migration(conn)?;
-        }
-        conn.pragma_update(None, "user_version", CURRENT_SCHEMA_VERSION)?;
-        Ok::<(), MigrationError>(())
-    })();
+    let result = apply_pending_migrations(conn, found);
     match result {
         Ok(()) => conn.execute_batch("COMMIT")?,
         Err(error) => {
@@ -1300,7 +1384,12 @@ mod tests {
             // dropping them and rewinding `user_version` leaves exactly the
             // file a v7 build would have written for this project.
             conn.execute_batch(
-                "DROP TABLE com_object_program_default;
+                "DROP TABLE project_history_state;
+                 DROP TABLE project_history_stack;
+                 DROP TABLE project_history_version;
+         DROP TABLE project_history_context;
+         ALTER TABLE line DROP COLUMN model_position;
+                 DROP TABLE com_object_program_default;
                  ALTER TABLE group_address DROP COLUMN dpt_state;
                  ALTER TABLE group_address DROP COLUMN dpt_value;
                  ALTER TABLE group_address DROP COLUMN dpt_layer;
@@ -1665,6 +1754,6 @@ mod tests {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 10);
+        assert_eq!(version, CURRENT_SCHEMA_VERSION);
     }
 }

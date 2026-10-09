@@ -7,6 +7,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { Selection } from "./selection";
 import ProjectExplorer from "./ProjectExplorer";
+import ProjectHistoryDialog from "./ProjectHistoryDialog";
 import { useCrtInteractions } from "./useCrtInteractions";
 import { requestCrtActivation } from "./crtInteractions";
 import BulkActionToolbar from "./BulkActionToolbar";
@@ -289,6 +290,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const [monitorMounted, setMonitorMounted] = useState(false);
   useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpTopicId, setHelpTopicId] = useState<HelpTopicId>(DEFAULT_HELP_TOPIC_ID);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -401,7 +403,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     function openTopic(event: Event) {
       const requested = (event as CustomEvent<{ topicId?: string }>).detail?.topicId;
       const topicId = HELP_TOPICS.find((topic) => topic.id === requested)?.id ?? DEFAULT_HELP_TOPIC_ID;
-      if (document.querySelector(".fs-picker")) return;
+      if (document.querySelector(".fs-picker, [data-project-history-busy]")) return;
+      setHistoryOpen(false);
       setSearchOpen(false);
       setPaletteOpen(false);
       setSettingsOpen(false);
@@ -417,6 +420,12 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      // A durable restore must finish publishing its returned project before
+      // global shortcuts can replace/unmount its dialog.
+      if (document.querySelector("[data-project-history-busy]")) {
+        if (e.ctrlKey || e.metaKey || e.key === "F1") e.preventDefault();
+        return;
+      }
       const zoomDirection = ["+", "=", "Add"].includes(e.key) ? 1
         : ["-", "_", "Subtract"].includes(e.key) ? -1 : e.key === "0" ? 0 : null;
       if ((e.ctrlKey || e.metaKey) && !e.altKey && zoomDirection !== null) {
@@ -451,6 +460,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "p") {
         e.preventDefault();
         setSearchOpen(false);
+        setHistoryOpen(false);
         setPaletteOpen(true);
         return;
       }
@@ -537,6 +547,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
 
   function resetTree(newTree: ProjectTree): boolean {
     if (!publishTree(newTree)) return false;
+    setHistoryOpen(false);
     const scope = createFlowScope(); flowScopeRef.current = scope; setFlowProjectScope(scope);
     setBuildingScope(null);
     setAddressScope(null);
@@ -1165,13 +1176,31 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // signal, only reads the one that already exists.
   const autosaveSettings = useAutosaveSettings();
   const autosave = useAutosave({
-    enabled: autosaveSettings.enabled,
+    enabled: autosaveSettings.enabled && !historyOpen,
     intervalMinutes: autosaveSettings.intervalMinutes,
     hasStorePath,
     isModified: tree?.is_modified ?? false,
     onSave: autosaveProject,
     onSaveFailed: () => pushError(t("autosave.failed"), { serverText: false }),
   });
+
+  function openProjectHistory() {
+    if (!tree || loading) return;
+    setPaletteOpen(false); setSearchOpen(false); setHistoryOpen(true);
+  }
+  function historyChanged(newTree: ProjectTree, restored: boolean) {
+    if (restored) {
+      const latest = treeRef.current;
+      // A Save already in flight can acknowledge a newer revision of the just
+      // restored project first. Reset scoped navigation against that newer tree,
+      // never overwrite it with an older restore response or another lifetime.
+      if (latest?.server_incarnation && latest.server_incarnation !== newTree.server_incarnation) return;
+      const restoredTree = latest && (latest.snapshot_revision ?? 0) > (newTree.snapshot_revision ?? 0) ? latest : newTree;
+      if (!resetTree(restoredTree)) return;
+      setCatalogTarget(null);
+      setView("overview");
+    } else { void handleTreeUpdate(newTree); }
+  }
 
   const ctx: CommandContext = {
     tree,
@@ -1189,6 +1218,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     openCompanion: () => void openCompanion(),
     openHelp: () => requestHelpTopic(DEFAULT_HELP_TOPIC_ID),
     openCatalog: () => openCatalog(null),
+    openProjectHistory,
     openDevices,
     addDevice: () => setDeviceWizard({ target: wizardTargetFor(selection) }),
     openIntroduction: guide.show,
@@ -1277,6 +1307,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         onError={reportError}
         onClearErrors={clearErrors}
       />
+      <button onClick={openProjectHistory} disabled={!tree || loading}>{t("projectHistory.title")}</button>
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
       <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
       <ContributionButton />
@@ -1418,6 +1449,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         <Search tree={tree} onSelect={selectSearchResult} onClose={() => setSearchOpen(false)} />
       )}
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
+      {tree && historyOpen && <ProjectHistoryDialog tree={tree} onTreeUpdate={historyChanged} onClose={() => setHistoryOpen(false)} />}
       {helpOpen && <HelpPanel key={helpTopicId} initialTopicId={helpTopicId} onClose={() => setHelpOpen(false)} />}
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
       {guide.open && <OnboardingGuide stage={guide.open.stage} ctx={ctx} onClose={guide.close} />}

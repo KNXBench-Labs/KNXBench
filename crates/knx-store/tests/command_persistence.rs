@@ -246,7 +246,7 @@ fn a_late_sql_failure_preserves_the_saved_state_but_not_the_already_applied_memo
     let applied = fixture.project.clone();
     let conn = open_and_migrate(&fixture.path).unwrap();
     conn.execute_batch(
-        "CREATE TRIGGER ar04_failure BEFORE INSERT ON parameter_instance
+        "CREATE TEMP TRIGGER ar04_failure BEFORE INSERT ON main.parameter_instance
          BEGIN SELECT RAISE(ABORT, 'ar04 injected failure'); END;",
     )
     .unwrap();
@@ -256,9 +256,8 @@ fn a_late_sql_failure_preserves_the_saved_state_but_not_the_already_applied_memo
     drop(conn);
     fixture.assert_reopened(&before);
     assert!(!fixture.project.same_user_content_as(&before));
-    let conn = open_and_migrate(&fixture.path).unwrap();
-    conn.execute_batch("DROP TRIGGER ar04_failure").unwrap();
-    drop(conn);
+    // The connection-local injected trigger disappeared with its connection;
+    // it is not a persistent native schema extension.
     fixture.apply(&inverse);
     assert!(fixture.project.same_user_content_as(&before));
 }
@@ -321,6 +320,41 @@ fn a_line_with_two_owners_is_refused_on_save() {
             if devices.is_empty() && lines == &[line]),
         "{error}"
     );
+    drop(conn);
+    fixture.assert_reopened(&fixture.project);
+}
+
+#[test]
+fn global_line_order_and_per_area_order_round_trip_independently() {
+    let mut fixture = Fixture::new();
+    let area = fixture.project.ids.next_area_id().unwrap();
+    let line = fixture.project.ids.next_line_id().unwrap();
+    let topology = &mut fixture.project.installations[0].topology;
+    topology.areas.push(Area {
+        id: area,
+        source: source(),
+        name: "Other area".into(),
+        address: 2,
+        completion: CompletionStatus::Undefined,
+        lines: vec![line],
+    });
+    topology.lines.push(Line {
+        id: line,
+        source: source(),
+        name: "Other line".into(),
+        address: 1,
+        medium_ref: "MT-0".into(),
+        domain_address: None,
+        domain_address_is_checked: None,
+        ip_routing_multicast_address: None,
+        multicast_ttl: None,
+        completion: CompletionStatus::Undefined,
+        devices: vec![],
+    });
+    // Independent model order can differ from area traversal after a reparent.
+    topology.lines.reverse();
+    let conn = open_and_migrate(&fixture.path).unwrap();
+    save_project(&conn, &fixture.project).unwrap();
     drop(conn);
     fixture.assert_reopened(&fixture.project);
 }

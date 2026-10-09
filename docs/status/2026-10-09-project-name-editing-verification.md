@@ -37,6 +37,20 @@ freeze is unchanged after acceptance; prose closure is separate.
 - Source/security **self-review**, no independent-review claim. Added-source
   scan found no secret/shell-eval/HTML-injection/unsafe-deserialization matches.
 
+## Integrated candidate gates
+
+No-ff merge `f309612b5129277f76ad5b92a2c74af4f9598b8e` has exactly the
+same Git tree as feature `28b6511becd7386120698af8591342509aebee44`.
+Fresh `cargo test --workspace`: 3,790 passed, zero failed,
+184 ignored across 229 result blocks; Clippy warnings denied passes.
+Fresh frontend 2,544/0/159 files, production build/types, docs/tools 42 and all
+five nonempty repository gates pass. The first Cargo header invocation timed
+out waiting on the build lock; the actual checkout-built verifier subsequently
+checked 758 headers (155 inherited missing, 42 generated) successfully.
+Browser/native counts above are the retained final feature executions, **not**
+new executions on the merge: exact whole-tree equivalence and source/runtime
+hashes bind their reuse in the receipt. No private corpus was introduced.
+
 ## Actual visual review
 
 Final built-app captures show a compact Name field, visible validation, focus

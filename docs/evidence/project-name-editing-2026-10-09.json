@@ -106,5 +106,91 @@
     "two drag fixtures initially out of viewport; pre-drag scroll fixes and preserves both viewport assertions",
     "compact-dialog RED assertion: 630px height exceeds 400px; final scoped flex alignment passes"
   ],
-  "publication": "Owner Go authorizes commit, main integration and normal push; not yet published at receipt creation"
+  "publication": "Owner Go authorizes commit, main integration and normal push; not yet published at receipt creation",
+  "merged_acceptance": {
+    "candidate": "f309612b5129277f76ad5b92a2c74af4f9598b8e",
+    "rust_workspace": {
+      "passed": 3790,
+      "failed": 0,
+      "ignored": 184,
+      "result_blocks": 229
+    },
+    "frontend": {
+      "passed": 2544,
+      "failed": 0,
+      "files": 159
+    },
+    "commands": {
+      "rust": "cargo test --workspace",
+      "clippy": "cargo clippy -p knx-core -p knx-projection -p knx-server --all-targets -- -D warnings",
+      "frontend": "npm test -- --reporter=json --outputFile=<owned-scratch>/merged-frontend.json; npm run build; npx tsc -p tsconfig.rename-fixtures.json; npm run check:theme-fixtures; npm run check:flow-study; npx tsc -p tsconfig.history-fixtures.json",
+      "repository": "xtask --root <owned-checkout> check-layering/check-headers/check-anchors/check-ledger/check-corpus-gates",
+      "tools": "python3 tools/check_documentation.py; python3 -m unittest discover -s tools -p test_*.py; cargo fmt --all -- --check"
+    },
+    "command_exits": {
+      "rust_and_clippy_chain": 0,
+      "frontend_chain": 0,
+      "documentation_tools_format": 0,
+      "five_repository_gates": 0
+    },
+    "raw_log_sha256": {
+      "merged-rust.log": "5c8169560a02a50b517cb6d07196bc2c9772ee1145ef024decbb6609d14ce98a",
+      "merged-clippy.log": "6cba46d0ebf984bd8841b7125259a0ec5020eaec6942316386a423f47cfdc45a",
+      "merged-frontend.log": "3929437c55ecb574d33b6e73d227b5a3ce0a78b66a3e70c7444850e816a7de0e",
+      "merged-doc-tools.log": "f62d3dd8bbbf730319dc1cc54fd45276c8b2f14352276fadd0820c19234e3bd2",
+      "merged-headers-accepted.log": "8dfa97cbf85e093a4a992f702b733da150431ded8f9d63594d6c6b8818e497d1"
+    },
+    "browser_evidence_reuse": {
+      "feature": "28b6511becd7386120698af8591342509aebee44",
+      "merged_candidate": "f309612b5129277f76ad5b92a2c74af4f9598b8e",
+      "exact_tree": "5c792230ab952e294d0615dfe37bc95b89bceb2f",
+      "all_tracked_inputs_equal": true,
+      "source_sha256": {
+        "apps/knx-server/src/domain.rs": "e1a592565bcef449482e5a0ef45eb4d739d096c131888d1a49e02d821408352c",
+        "apps/knx-server/src/lib.rs": "e06f1cda077d667683d5c2563461f594b5cfd33c66527a4a1533fcaec8b6cef0",
+        "apps/knx-server/src/project_history.rs": "dcf39df696112eb6ff12a4749272fede6474b7f0c17ee97bb5db034a3e7b85a4",
+        "apps/knx-server/src/rename_routes.rs": "5d85380f439ba3c03b128f9e10a31251eef1c3c8bc0053365975dd88b09abf7e",
+        "apps/knx-server/src/routes.rs": "dcde74c9b649cd417930df98e9b08bc5046941221186f04d49e7cfcdd85af19f",
+        "apps/knx-server/tests/http_load_progress.rs": "5a289fb26b6115654d370cf8b6ade35d0a0a8042c988b9a218cde1639e10db4a",
+        "apps/knx-server/tests/http_rename.rs": "21eccf1c7a748ab52edd935fc0eb9fcf7e5587ddee3ea8f0df87acf64750bb9b",
+        "apps/knx-server/tests/http_settings_conditional.rs": "85a21bd2b602f19906869a7f16986712a5901301bdabb08d1ed35f6b24fa9498",
+        "apps/knx-web/e2e/group-address-drag.e2e.ts": "aa77a4c9473475d1fac87ad5f5f34893d487826523c806b4bc498db0beac1383",
+        "apps/knx-web/e2e/rename.native.ts": "ce1534c8ffd982e2cf7cc7e7db9e021ada0d79e0e44a557eee8f0b9632845470",
+        "apps/knx-web/playwright.rename-native.config.ts": "26aa93979fea57c19ec6628dd330ec3bc8d074e68693f7063de0c8318085bb19",
+        "apps/knx-web/src/App.tsx": "f4de7bbf061e2ec0262b119f58ea03251c645a01d008e346cd58e19d48ef10f4",
+        "apps/knx-web/src/DevicesWorkspace.tsx": "16b85da4d52f5a98a41f2d83a3983fe62c35d78ce240138e37e81283b37fe24d",
+        "apps/knx-web/src/GroupAddressTable.tsx": "37dfee80d86c791e6741eee9618f39759e75941b2ea967bfa0f4977dc1286918",
+        "apps/knx-web/src/Inspector.tsx": "8f7b6a8a2abaf72054c5c69eeea88f9cca9a2388f9718333e7c9db3a60d261c4",
+        "apps/knx-web/src/ProjectExplorer.tsx": "89f566ae69cf6a70647d82758070d79c49b6debff49bd4d9e6169be438437c85",
+        "apps/knx-web/src/RenameNameField.tsx": "982d1cf3e58fe5798df6fa0a92f972336f6208993a3f5786534cac5c1bdd88cc",
+        "apps/knx-web/src/RenameWorkbench.tsx": "affe6e06d5227370a1465aaf2b66aecf81aa232c8d94e9d9a1595bd267261ab4",
+        "apps/knx-web/src/api.ts": "25f7a0b3985946410abb949764ffe15fd23061ff3af9950a57fe803d7085ac32",
+        "apps/knx-web/src/bindings/ProjectTree.ts": "c259e623a7a5dbd8ce35c4fe86de2a2d980c9fba6b83acaebf84bfdfed083e09",
+        "apps/knx-web/src/messages/de.ts": "89ec9894eca6e783b091071793d1196fa93c425ba5658aa5cc7be30a4040c005",
+        "apps/knx-web/src/messages/en.ts": "bb5cd1f4bd6f81d84f44ef996052d8ccfcc7d5f53cb569894f942183036e31f5",
+        "apps/knx-web/src/rename.entry.test.tsx": "ca2007585f6c69548706a2bfb897ffa418f203054e4e6c4ecef29340d0ac1a53",
+        "apps/knx-web/src/rename.field.test.tsx": "e74b8a23b741c6b15679acbb36f5dc4fca8fc12e27cb56e0ab72dd8c5670c29f",
+        "apps/knx-web/src/rename.fixture.ts": "871fa0bd33082c9cf56a8a99eeb6fa599cbaf44b6b300492f4955fe0286411f8",
+        "apps/knx-web/src/rename.inspector.test.tsx": "dd9acc631f983e38dbc3c28cc02d4152c7af8f7aca1b3140b8adf05d0ec864a3",
+        "apps/knx-web/src/rename.test.ts": "6eaa1e181985856f1cfd98e70c43324930be4e555a786b90631c3618cc9c9046",
+        "apps/knx-web/src/rename.ts": "357f9f26963b76a644343f17f36d35946f2468c15960075f543dc02f54acea95",
+        "apps/knx-web/src/styles.css": "e5482e98e01efada99ffe68cb40c5cbc7bf35d992112eb2ea933a498fa109d3d",
+        "apps/knx-web/tsconfig.rename-fixtures.json": "680be4a0df88fd80b789e5b7279bcef4ed01d1c348de966584f6dda22e6c9f7f",
+        "crates/knx-core/src/command.rs": "b338425bd60f3e455c5500b77c4c354d4a6a9689a279b4bc9fa2b70cb78a8ff1",
+        "crates/knx-core/src/lib.rs": "cf0aaa873ee08bc563ee10fc34ede32cb8dd9b61cf42f8486f5d34967b85b003",
+        "crates/knx-core/src/names.rs": "04fcc5186dc44a0744ffe2a01a0b49f05d6b52f878fbe51b96a52577421b9da9",
+        "crates/knx-projection/src/lib.rs": "b1356bebc92663c811a7fafc1d73c429a22aa2d620ed8dbe4119c6dba6e572b8",
+        "tools/verify_name_editing.py": "7044592a3208e091dcd757f2e2dbbd21e3456ecf9d815e0cbcf5c737032dad11"
+      },
+      "runtime_evidence_reused_with_original_binding": {
+        "native_cases": 4,
+        "browser_regressions": 208,
+        "tested_source": "feature-source freeze recorded in project-name-editing-2026-10-09.json",
+        "delivery_source": "f309612b5129277f76ad5b92a2c74af4f9598b8e",
+        "retained_binary_sha256": "1f399a3b7474a6c29d3b8c491a505f26715ebe2710916f06252bb31a5201d6c0"
+      },
+      "ignored_inputs": "Same owned node_modules, target/debug/knx-server and offline demo path; no private corpus; frontend production build regenerated and tested on merge; browser results are retained feature execution, not claimed rerun on merge"
+    },
+    "nonaccepted_header_attempt": "Cargo run waited on build-directory lock and timed out; actual checkout-built xtask retry exit 0, 758 headers/155 inherited missing/42 generated"
+  }
 }

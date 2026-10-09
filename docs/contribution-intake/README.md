@@ -64,6 +64,20 @@ or product database and does not connect to KNX hardware.
 You do not need to interpret the XML, finding IDs or technical counts.
 Offline planning does not prove that a physical device works.
 
+### Additional offline procedure observations
+
+Local source builds can show **Offline procedure sequences** for the first
+modern product family (`MV-07B0`, AP1). **Sequence expanded only** means its
+declared order was reconstructed, not that a download plan or a working device
+is available. Unknown steps and missing/conflicting references remain visible.
+Other masks/variants and complete device semantics are outside this slice.
+
+You can report these observations through the same preview/ZIP/issue route.
+Local sequence details include identities, source fingerprints and original
+values: do not copy them blindly into a public issue. The reduced ZIP omits
+those details while keeping value-free issue-code counts. Additional XML needs
+separate selection, review and permission. Nothing is automatically sent.
+
 ## 3. Keep the simple, reduced report
 
 Leave **Public GitHub issue** selected. Leave **all optional context samples

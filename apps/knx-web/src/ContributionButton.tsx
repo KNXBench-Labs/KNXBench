@@ -6,6 +6,7 @@ import { useTranslate, type MessageKey } from "./i18n";
 import { getActiveUiLanguage } from "./uiLanguage";
 import * as api from "./contributionApi";
 import "./contribution.css";
+import ProcedureResolutionView from "./ProcedureResolutionView";
 
 export const CONTRIBUTION_REPOSITORY = "https://github.com/KNXBench-Labs/KNXBench";
 export default function ContributionButton() {
@@ -68,7 +69,7 @@ function ContributionDialog({ onClose }: { onClose: () => void }) {
     finally { if (epoch.current === id) setBusy(false); }
   }
   function label(kind: "status" | "category", value: string) {
-    const allowed = kind === "status" ? ["measured", "complete", "partial", "refused", "unavailable", "not-examined"] : ["unknown", "unsupported", "inference", "retained", "conflict", "refused", "untested", "excluded", "no-address"];
+    const allowed = kind === "status" ? ["measured", "complete", "partial", "refused", "unavailable", "not-examined"] : ["unknown", "unsupported", "inference", "retained", "conflict", "refused", "untested", "excluded", "no-address", "observation"];
     return allowed.includes(value) ? t(`contribution.${kind}.${value}` as MessageKey) : value;
   }
   const actions = { analyze: t("contribution.analyze"), preview: t("contribution.preview"), download: t("contribution.export"), github: t("contribution.github") };
@@ -104,6 +105,7 @@ function ContributionDialog({ onClose }: { onClose: () => void }) {
       <p>{analysis.kind} · schema {analysis.scheme ?? "?"} · {label("status", analysis.status)} · {analysis.analyzerVersion}</p>
       <ul>{analysis.checks.map(check => <li key={check.name}><strong>{check.name}: {label("status", check.status)}</strong><p>{check.detail}</p></li>)}</ul>
       <details><summary>{t("contribution.checks")} — counts</summary><pre>{JSON.stringify(analysis.metrics, null, 2)}</pre></details>
+      <ProcedureResolutionView resolutions={analysis.procedureResolutions ?? []} />
       <h3>{t("contribution.findings")}</h3>
       {!analysis.findings.length && <p>{t("contribution.empty")}</p>}
       <ul>{analysis.findings.map(finding => <li key={finding.id}><strong>{label("category", finding.category)} · {finding.stage} · {finding.name ?? ""} × {finding.occurrences}</strong>

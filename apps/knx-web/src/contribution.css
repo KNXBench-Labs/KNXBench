@@ -13,4 +13,7 @@
 .contribution-sample span { min-width: 0; overflow-wrap: anywhere; }
 .contribution-sample small { display: block; opacity: 0.8; }
 .contribution-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.contribution-panel [data-procedure-resolutions] { min-width: 0; overflow-wrap: anywhere; }
+.contribution-panel [data-procedure-result] { margin-block: 12px; }
+.contribution-panel [data-procedure-step] > small { display: block; }
 .contribution-warning { border-inline-start: 3px solid var(--knx-accent); padding-inline-start: 12px; }

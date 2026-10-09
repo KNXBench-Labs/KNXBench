@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (stash and scratch worktree prune)
+- **Timestamp:** 2026-10-09 07:29 CEST
+- **Completed:** User request: all 5 stashes cleared and the scratch worktree `devnav-ro` (detached, old pre-purge `8e8aa6b6`, clean) removed. stash@{2..4} (commission WIP 2026-10-04) were already in `KNXBench.backups/2026-10-09-local-branch-prune/` as `archive/2026-10-07/stash-*`; stash@{0,1} (docs-refresh 2026-10-08, incl. index/untracked parents) and the devnav-ro commit are in the verified bundle `KNXBench.backups/2026-10-09-stash-worktree-prune/`. Repository now: one branch (`main`), one worktree (root), no stashes, clean.
+- **Pending/Next Steps:** None for housekeeping. Open project items as in OPEN_WORK.md.
+- **Notes for Codex oder Claude:** Backup bundles contain old pre-purge history with third-party data: never publish or push from them.
+
+---
+
 - **Last Agent:** Claude (root checkout synchronized)
 - **Timestamp:** 2026-10-09 07:24 CEST
 - **Completed:** User go: shared root checkout fast-forwarded from `608a204b` to `f3758eab` and is clean (no modified/untracked paths). The leftover files were Codex' community-link package, byte-identical to `16163ef7` on main (ADR-0091, verification JSON; IMPLEMENTATION_STATUS lines all on main), plus 16 handover entries that were never committed. Backup with SHA256SUMS in `KNXBench.backups/2026-10-09-root-sync/`; the 16 entries are archived verbatim in the root-local, gitignored `.ai/archive/2026-10-09_root-local-handover-entries.md`. Ignored local data (`OriginalData/`, `ideas.md`, `.venv`) untouched.

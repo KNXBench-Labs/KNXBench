@@ -549,7 +549,20 @@ mod tests {
         // the same procedure (RESEARCH §19.19). No partial scope ran.
         assert_eq!(detector.scopes, ["complete"], "{detector:?}");
         assert!(detector.reference.starts_with("docs/"), "{detector:?}");
-        assert_eq!(shipped.len(), 2, "{shipped:?}");
+    }
+
+    #[test]
+    fn the_shipped_evidence_names_the_bathroom_button_complete_only() {
+        let shipped = shipped_evidence().expect("the shipped file parses");
+        let button = shipped
+            .get("M-0083_A-0026-15-3591")
+            .expect("the bathroom button is verified");
+        // Complete download and restore on 1.1.14 (RESEARCH §19.21).
+        // Partial scopes have not run on this program.
+        assert_eq!(button.scopes, ["complete"], "{button:?}");
+        assert_eq!(button.date, "2026-10-09");
+        assert!(button.reference.starts_with("docs/"), "{button:?}");
+        assert_eq!(shipped.len(), 3, "{shipped:?}");
     }
 
     #[test]

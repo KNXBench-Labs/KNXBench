@@ -1188,8 +1188,11 @@ and an address reset with guarded recovery, were also exercised there.
 On 2026-10-09 a complete download, a functional check and a restore from
 the pre-write backup ran on the Eibmarkt presence detector `1.1.8` (`0701h`,
 `M-006A_A-0001-22-617E-O0079`, RESEARCH §19.19); partial scopes did not run
-there. A successful byte read-back does **not** confirm the closing Basic
-Restart: neither device acknowledges it; the result is explicitly
+there. Also on 2026-10-09, MDT fourfold button `1.1.14`
+(`M-0083_A-0026-15-3591`) completed a full download, light-function
+telegram check and restore (RESEARCH §19.21); its partial scopes remain
+untested. A successful byte read-back does **not** confirm the closing Basic
+Restart: none of these three devices acknowledged it; the result is explicitly
 `RestartOutcome::Unconfirmed`. Other programs, application versions and
 masks have not acquired this evidence. The property-based `Downloader`
 remains simulator-only. Full traces and the chronological corrections are
@@ -7430,7 +7433,7 @@ UI slice lets the user pick a winner per id.
 **Alpha decision (user, 2026-10-04).** No version/pinning policy for the Alpha: first-installed winner with every candidate disclosed is the accepted boundary.
 
 
-## §136 `0701h` download verified on two programs; restart remains unconfirmed
+## §136 `0701h` download verified on three programs; restart remains unconfirmed
 
 The earlier claim that mask `0701h` could not be downloaded is withdrawn.
 A memory download of `A-0027-15-0BAC` and a functional group-telegram check
@@ -7441,7 +7444,10 @@ remains unacknowledged: `RestartOutcome::Unconfirmed` must not be presented
 as a verified restart or a failed image read-back. **2026-10-09:** the
 Eibmarkt presence detector `1.1.8` (`M-006A_A-0001-22-617E-O0079`) behaved
 the same way: complete download read back, functional check, restore,
-restart unacknowledged (RESEARCH §19.19). Two programs from two manufacturers
+restart unacknowledged (RESEARCH §19.19). The MDT fourfold button `1.1.14`
+(`M-0083_A-0026-15-3591`) completed a download and restore the same day,
+with independent readback and light-function telegrams; neither closing
+restart was acknowledged (§19.21). Three programs from two manufacturers
 on one mask are not evidence for other masks or revisions.
 
 ## §138 A device's access key comes from the project or a key file, and nothing checks it live

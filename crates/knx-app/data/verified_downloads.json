@@ -14,6 +14,13 @@
       "device": "Eibmarkt presence detector 1.1.8, mask 0701h",
       "date": "2026-10-09",
       "reference": "docs/research/commissioning.md §19.19 (complete, 530 octets read back, functional check, restore round trip)"
+    },
+    {
+      "program_id": "M-0083_A-0026-15-3591",
+      "scopes": ["complete"],
+      "device": "MDT fourfold push button 1.1.14, mask 0701h",
+      "date": "2026-10-09",
+      "reference": "docs/research/commissioning.md §19.21 (complete, 1562 octets read back, function telegrams, restore verified across 1570 octets)"
     }
   ]
 }

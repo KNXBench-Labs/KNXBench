@@ -106,7 +106,15 @@
     "two drag fixtures initially out of viewport; pre-drag scroll fixes and preserves both viewport assertions",
     "compact-dialog RED assertion: 630px height exceeds 400px; final scoped flex alignment passes"
   ],
-  "publication": "Owner Go authorizes commit, main integration and normal push; not yet published at receipt creation",
+  "publication": {
+    "published_acceptance": "713a06be63c0e4e70926605f43b6d15c58e154c5",
+    "normal_push_exit": 0,
+    "live_and_fetched_main_verified": true,
+    "feature_ancestor_verified": true,
+    "root_checkout": "Deliberately not updated; parallel work preserved",
+    "release_deployment_hardware": "Not authorized or performed",
+    "final_metadata_tip": "Git HEAD containing the final publication handover; exact tip read back after normal push"
+  },
   "merged_acceptance": {
     "candidate": "f309612b5129277f76ad5b92a2c74af4f9598b8e",
     "rust_workspace": {

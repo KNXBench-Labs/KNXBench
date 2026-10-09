@@ -43,5 +43,22 @@
     "other individual devices",
     "complete device storage and volatile state"
   ],
-  "integrated_gate": "pending"
+  "integrated_gate": {
+    "revision": "44654e049d78a1fba98fc3b01cbf4ef8acfd2cf9",
+    "rust_passed": 839,
+    "rust_failed": 0,
+    "rust_ignored": 56,
+    "fmt_exit": 0,
+    "clippy_exit": 0,
+    "repository_checks": 5,
+    "documentation_exit": 0,
+    "full_105_corpus_test_passed": 1,
+    "house_corpus_test_passed": 1,
+    "private_inputs_unchanged": true,
+    "source_sha256": {
+      "crates/knx-app/data/verified_downloads.json": "78059a8e0ab485b273c45bde258bf28b3a68a4c612321fe0544ce4e9b6c2ed3e",
+      "crates/knx-app/src/download_support.rs": "9034b8af0a89688dd38cf6cf75b88923f7c644be5a63f75a9f5c122b82fd260f",
+      "crates/knx-app/tests/download_coverage_corpus.rs": "18f95b15416848758b22d4f2277ea5e09e45581350296b2086d8a7a0a97965b5"
+    }
+  }
 }

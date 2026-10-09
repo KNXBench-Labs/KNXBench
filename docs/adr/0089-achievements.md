@@ -117,6 +117,24 @@ level) owns one `createAchievementTracker` per window. The tracker:
 The on/off switch is the `achievementsEnabled` key in `settings.json`.
 Achievement data never enters `crates/`.
 
+## 2026-10-08 amendment: ordinary toasts share the achievement presentation
+
+At the maintainer's request, the existing toast view and queue now apply the
+achievement card framing and entry/exit animations to ordinary status and
+error messages too. All three kinds default to the same nine-second visible
+period. Dismissal first marks a card as leaving; animation completion removes
+it, with the existing one-second fallback when no completion event arrives.
+Motion Off keeps the existing zero-duration animation behavior; OS reduced
+motion disables animations entirely.
+
+Errors retain red text/left stripes, `role="alert"`, their verbatim server
+message and the conditional English-text disclosure. Achievement badges and
+unlock labels remain achievement-only. Error replacement/clearing still uses
+unique toast IDs, so an older timeout cannot shorten a replacement's lifetime.
+The shared card is viewport-bounded and wraps long unbroken messages without
+hiding its close control. No backend, KNX domain, project/product schema,
+achievement tracking, persistent notification history or dependency changes.
+
 ## Alternatives considered
 
 - **A key in `settings.json`.** Rejected by the maintainer. Unlocks are

@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-10-08 22:44 CEST",
+  "baseCommit": "115b19f65eeebf7df21598681b34e829d2055099",
+  "branch": "feature/toast-parity-20261008",
+  "delivery": "local, uncommitted, unpublished",
+  "scope": "Frontend toast presentation/lifecycle only; no domain, server, bus, storage, dependency or achievement-rule changes.",
+  "review": {
+    "kind": "in-session self-review",
+    "blockingFindings": [],
+    "staticAddedLineScan": {
+      "credential-literal": 0,
+      "unsafe-exec": 0
+    }
+  },
+  "tests": {
+    "vitest": {
+      "passed": 2422,
+      "failed": 0,
+      "pending": 0,
+      "files": 149
+    },
+    "chromium": {
+      "passed": 189,
+      "failed": 0,
+      "skipped": 0,
+      "network": "isolated loopback namespace, synthetic/intercepted API fixtures"
+    },
+    "focusedRepeat": {
+      "passed": 54,
+      "failed": 0,
+      "repeatEach": 3,
+      "specs": [
+        "e2e/toast.e2e.ts",
+        "e2e/achievements.e2e.ts"
+      ]
+    }
+  },
+  "gates": {
+    "build": 0,
+    "theme-fixtures": 0,
+    "flow-study": 0,
+    "toast-fixture-types": 0,
+    "vitest": 0,
+    "chromium": 0,
+    "toast-repeat": 0,
+    "check-layering": 0,
+    "check-headers": 0,
+    "check-anchors": 0,
+    "check-ledger": 0,
+    "check-corpus-gates": 0,
+    "whitespace": 0
+  },
+  "inputBinding": {
+    "trackedDiffFrozenDuringGate": true,
+    "sourceAndTestFiles": {
+      "apps/knx-web/src/Toast.tsx": "fdc10527d776574b9d91422c57a62c6de057c82afd9b97bbad107c0bbe41cf94",
+      "apps/knx-web/src/toast.ts": "fef167d873da5d80d6fefc9f495a2d34857d1f66401a28a1afb99a93de444686",
+      "apps/knx-web/src/styles.css": "78ce852ec834b074aa63ebbcda0bb29dd967f3f8481e1acd09b09f88537003a6",
+      "apps/knx-web/src/Toast.test.tsx": "ebba5ada2a4d5e6520886852a872eb9a1f32071e8c16ef9ce82cf63fc68a8b16",
+      "apps/knx-web/src/useToasts.test.tsx": "6815cb0a5df7e4968434ee9bba776cba671e3073973de73758e5db276d72b1e4",
+      "apps/knx-web/e2e/toast-fixture.html": "8f7c888d59a3ccf60a54cfa8f2ce26e59b7e0d6f6b558ee9effb2e9c2c7afb77",
+      "apps/knx-web/e2e/toast-fixture.tsx": "ce904ba45cbde98b41683da999963be7ae439507d5eabf798437a4d369715872",
+      "apps/knx-web/e2e/toast.e2e.ts": "4aac7d26b48585f82092cb70962d65c159f6c38be8762de37d4083a2b99ff993"
+    },
+    "allEightHashesRecheckedAfterGate": true
+  },
+  "negativeControls": {
+    "standardDuration": "Failed with old six-second expiry before production change.",
+    "errorDuration": "Failed because the old error never entered its timed exit.",
+    "messageTypography": "Failed because standard messages had no shared title class.",
+    "browserPresentation": "Computed framing/animation comparison failed against old CSS in all four built-in palettes, wide and narrow; long-message overflow and standard exits failed too."
+  },
+  "harnessCorrections": "Exact expiry checks now pause the installed clock before triggering timers. Motion Off uses zero-duration animation completion, unlike OS reduced motion/no animation; these are tested separately with stable kind locators.",
+  "productionVisualChecks": [
+    {
+      "theme": "graphite",
+      "language": "en",
+      "width": 1440,
+      "renderer": "Production Vite build in Chromium, strictly synthetic API, isolated loopback namespace",
+      "imageSha256": "bffffe04a67cc38d694283a564f2dfcf173c7dd0aa9650f66db165be87428dbc",
+      "assessment": "Matched neutral card borders, purple left stripes, surface, bold message and close controls; text and close buttons are legible and unclipped.",
+      "unexpectedRequests": 0,
+      "pageErrors": 0
+    },
+    {
+      "theme": "porcelain",
+      "language": "de",
+      "width": 400,
+      "renderer": "Production Vite build in Chromium, strictly synthetic API, isolated loopback namespace",
+      "imageSha256": "818cb35c2d5a8cb67c6b1cb848a28f313c3390c09b7a5b84e2e6cebd673f746c",
+      "assessment": "Both cards fit within the viewport; German status and achievement description wrap cleanly; neutral surfaces and purple stripes match; both close controls are visible. This assessment covers the toast stack, not unrelated workbench responsive layout.",
+      "unexpectedRequests": 0,
+      "pageErrors": 0
+    }
+  ],
+  "warnings": "Existing Vite config-loader/chunk-size warnings; no new build/type/test failures.",
+  "excludedEvidence": [
+    "Rust workspace or private corpus rerun",
+    "native AppImage/assistive-technology session",
+    "live KNX hardware",
+    "deployment or publication"
+  ],
+  "documentationFollowup": {
+    "timestamp": "2026-10-08 22:46 CEST",
+    "allFiveRepositoryChecksAfterDocumentationEdits": 0,
+    "whitespace": 0,
+    "sourceHashesStillMatch": true
+  }
+}

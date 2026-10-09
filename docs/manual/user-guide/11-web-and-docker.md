@@ -72,6 +72,38 @@ frontend, Rust builds the server, and a slim Debian image carries just those two
 artifacts. It sets `KNX_STATIC_DIR=/app/frontend`, `KNX_DATA_DIR=/data` and
 `KNX_PORT=8080`, exposes `8080`, and declares `/data` as a volume.
 
+### Ready-made image from Docker Hub
+
+Every release tag builds that same Dockerfile for `linux/amd64` and
+`linux/arm64` (a Raspberry Pi 4/5 with a 64-bit OS, for example), smoke-tests
+it and publishes it as
+[`knxbench/knxbench-server`](https://hub.docker.com/r/knxbench/knxbench-server)
+([ADR-0097](../../adr/0097-docker-hub-release-image.md)):
+
+```bash
+docker pull knxbench/knxbench-server:latest
+docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
+  -e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH" \
+  -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
+```
+
+- **Tags:** the release version without its `v` (`0.1.0-alpha.6` for the tag
+  `v0.1.0-alpha.6`) and `latest`. While KNXBench is in alpha, `latest` moves
+  with every pre-release; pin a version tag if an update should be your own
+  decision.
+- **Availability:** the workflow starts with the first release after
+  `v0.1.0-alpha.5`, which has no image. Until a tag has run, build the image
+  yourself as shown in the rest of this chapter.
+- **Release, not `main`:** source changes after the last tag are not in the
+  image. A local `docker build` gets you the newest state.
+- **Same image, same rules:** everything below — `/data`, the password,
+  HTTPS, host networking for bus work — applies unchanged. Where a command
+  says `knxbench-server`, use `knxbench/knxbench-server:<tag>` instead.
+- `knx-server --version` names the server crate version and the commit; the
+  crate version currently lags the release tag
+  ([§168](../../KNOWN_LIMITATIONS.md#168-the-docker-hub-image-follows-release-tags-only-and-latest-follows-alphas)).
+  The commit is the reliable part.
+
 ### Where your projects live
 
 Inside the container, **in `/data`**. Everything you save, every project you upload and
@@ -197,6 +229,11 @@ git pull --ff-only \
   or project data and **does not verify server identity**. Compare the certificate
   fingerprint before signing in; never copy this option into authenticated requests.
 - Old images pile up; `docker image prune` clears the untagged ones.
+- With the [Docker Hub image](#ready-made-image-from-docker-hub), replace
+  `git pull --ff-only` and the `docker build` step with
+  `docker pull knxbench/knxbench-server:latest` and run that image name instead
+  of `knxbench-server`. A failed pull leaves the running container untouched,
+  just like a failed build.
 
 ## Authentication
 

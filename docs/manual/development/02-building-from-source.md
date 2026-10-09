@@ -204,6 +204,16 @@ Docker build has no git history to ask.
 How to run it — including why a published port needs a password to work at all — is in
 [Web and Docker deployment](../user-guide/11-web-and-docker.md).
 
+Release tags (`v*`) build this image in `.github/workflows/docker-release.yml`: one
+native runner per platform (`linux/amd64`, `linux/arm64`), the smoke test below against
+each build, then a push by digest and one multi-arch manifest tagged `<version>` and
+`latest` on Docker Hub as `knxbench/knxbench-server`
+([ADR-0097](../../adr/0097-docker-hub-release-image.md)). A manual dispatch of that
+workflow is a dry run: both platforms are built and tested, nothing is pushed. Tag runs
+need the repository variable `DOCKERHUB_USERNAME` and the secret `DOCKERHUB_TOKEN` (a
+Docker Hub access token with read and write scope) and fail before building without
+them.
+
 ## Running the tests
 
 Rust, the whole workspace:
@@ -233,13 +243,15 @@ is slower and needs Playwright's browsers installed:
 npm run test:e2e --prefix apps/knx-web
 ```
 
-The Docker path has its own smoke test — build, boot, health check, and a native
-save-and-reopen cycle:
+The Docker path has its own smoke test — build, boot, HTTPS health check with a
+password set, the login guard, and a native save-and-reopen cycle:
 
 ```bash
 apps/knx-server/scripts/smoke-test.sh
 ```
 
+`KNXBENCH_IMAGE=<image>` tests an existing image instead of building one (the release
+workflow does this), and `KNXBENCH_SMOKE_PORT` moves the host port away from `18080`.
 It can also import a real ETS project through the running image, if you have one to point
 it at:
 

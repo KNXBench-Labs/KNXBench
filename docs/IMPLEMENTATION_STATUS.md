@@ -7,6 +7,33 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Offline AP1 evidence: order without a bus ticket
+
+- Local, unpublished first `MV-07B0` `Load/ap1` diagnostic slice, ADR-0098.
+  Package-bound retained sources, exact namespace/canonical master path,
+  ambiguity/hash refusals, ordered unknown steps and separate unplaced
+  declarations. No executable plan, new live eligibility or hardware Verified.
+- Existing support-gap UI/API/CLI and preview/consented ZIP/manual maintainer
+  handoff reused. Detailed local identities/values are removed from reduced
+  reports; fixed issue-code counts remain shareable. No automatic transmission.
+- Real corpus corrected an invented direct-mask synthetic wrapper: canonical
+  `HawkConfigurationData` fixtures now exercise the real path. Full-105 original
+  regression: 75 selected IDs/results, 69 partial / 6 source-limit unavailable,
+  **zero expanded real sequences or complete plans**. Original hashes and
+  467-program readiness (1 Verified / 98 Untested) unchanged; counts pinned.
+- Final Rust ProductDB/App/server/CLI 1945/0/118 ignored; fmt, warning-denied
+  focused all-target Clippy, builds, five nonempty repository gates and docs pass.
+  Both explicit ignored Release corpus regressions 1/0/0 each. Web 2494/0 in
+  154 files and production build pass, bound by unchanged web inputs.
+- Real built unmocked EN/DE, 1440/400px, dark/light loopback-only browser workflow
+  passed; eight downloaded reduced ZIPs byte/hash-checked, including unknown-step
+  metrics with no source values. Representative screenshots inspected. XML
+  declaration, namespace-amplification and attribute-boundary RED controls closed.
+- Self-review only; no full-workspace/native/accessibility/hardware acceptance,
+  commit, main integration, push, release or deployment. Source/configuration
+  frozen. [Contract](OFFLINE_PROCEDURE_RESOLUTION.md),
+  [receipt](evidence/offline-ap1-resolution-2026-10-09.json).
+
 ## 2026-10-09 — Native history remembers restarts, not hardware writes
 
 - Owner-authorized isolated HISTORY-01/HISTORY-02 package: native v11 durable
@@ -37,6 +64,7 @@ does not erase a broader platform/device limitation or imply a new release.
   9 green again. Upstream histories/catalogs preserved; fresh ProjectStats on
   clean merged source. Final publication in CURRENT_STATE, no release,
   deployment or hardware operation.
+
 
 ## 2026-10-09 — Bathroom button: loaded, checked, put back (RESEARCH §19.21)
 

@@ -22,6 +22,7 @@ pub mod master_evidence;
 pub mod migration;
 pub mod package;
 pub mod parse;
+pub mod procedure_resolution;
 pub mod query;
 pub mod report;
 pub mod xml;

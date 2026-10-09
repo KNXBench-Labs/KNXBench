@@ -82,6 +82,16 @@ describe("ToastStack", () => {
     root.unmount();
   });
 
+  it("uses the same message typography for standard and achievement toasts", async () => {
+    const root = await renderStack([
+      { id: 1, kind: "fun", message: "Saved.", serverText: false },
+      { id: 2, kind: "error", message: "Save refused.", serverText: true },
+    ]);
+    expect([...host!.querySelectorAll(".toast-title")].map((el) => el.textContent))
+      .toEqual(["Saved.", "Save refused."]);
+    root.unmount();
+  });
+
   it("calls onDismiss with the toast's id when its close button is clicked", async () => {
     const onDismiss = vi.fn();
     const root = await renderStack(

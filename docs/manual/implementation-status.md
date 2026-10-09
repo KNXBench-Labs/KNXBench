@@ -254,6 +254,7 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 | --- | --- | --- |
 | Themes, System selection and managed declarative packs | ✅ Implemented | Porcelain/Graphite/Cupertino/LCARS plus bundled/importable packs; no arbitrary CSS or code — [Settings](user-guide/09-settings-and-appearance.md) |
 | Achievements | ✅ Implemented at stated scope | Shipped catalogue and server record; does not authorize device operations — [ADR-0089](../adr/0089-achievements.md) |
+| Toast notifications | ✅ Implemented | Status, error and achievement cards share their frame, nine-second duration and motion-aware exit; errors retain alert semantics and server-text disclosure — [Settings](user-guide/09-settings-and-appearance.md#toast-notifications) |
 | Humour templates | ✅ Implemented | Thirty error wrappers and thirty late-night entries plus holiday pairs; extra copy is optional |
 | Dashboard | 🟡 Partial | Counts/diagnostics work; clickable count-to-detail drill-down does not |
 | Project notes | ❌ Not implemented | ADR-0031 defines the shape only; not F1 help or HTML report export |

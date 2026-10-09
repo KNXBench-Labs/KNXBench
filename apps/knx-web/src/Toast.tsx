@@ -27,7 +27,7 @@ export default function ToastStack(props: {
           {toast.achievement && <AchievementBadge tier={toast.achievement.tier} glyph={toast.achievement.glyph} />}
           <div className="toast-body">
             {toast.achievement && <span className="toast-label">{t("achievements.unlockedLabel")}</span>}
-            <span className={toast.achievement ? "toast-title" : undefined}>{toast.message}</span>
+            <span className="toast-title">{toast.message}</span>
             {toast.achievement && <span className="toast-detail">{toast.achievement.description}</span>}
             {/* §66/§67 disclosure (fix round 2, B4; corrected round 3, B1):
                 the joke wrapper above is translated, but when `serverText`

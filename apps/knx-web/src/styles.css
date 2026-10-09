@@ -314,11 +314,19 @@ main {
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
-  max-width: 24rem;
+  max-width: min(24rem, calc(100vw - 2rem));
+  min-width: min(18rem, calc(100vw - 2rem));
   box-shadow: 0 4px 24px var(--knx-overlay-shadow);
+  color: var(--knx-foreground);
+  border: 1px solid var(--knx-border);
+  border-left: 4px solid var(--knx-accent);
+  background: var(--knx-surface);
+  backdrop-filter: blur(12px);
 }
 
 .toast-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -330,6 +338,7 @@ main {
 }
 
 .toast button {
+  flex: none;
   background: none;
   border: none;
   cursor: pointer;
@@ -346,16 +355,7 @@ main {
 
 .toast--error {
   color: var(--knx-error-color);
-  border: 1px solid var(--knx-error-color);
-  background: var(--knx-surface);
-  backdrop-filter: blur(12px);
-}
-
-.toast--fun {
-  color: var(--knx-foreground);
-  border: 1px solid currentColor;
-  background: var(--knx-surface);
-  backdrop-filter: blur(12px);
+  border-left-color: var(--knx-error-color);
 }
 
 /* ADR-0089: achievements. Tier colours are mixed from the active theme's
@@ -384,14 +384,6 @@ main {
   box-shadow: inset 0 0 0 2px var(--knx-border);
 }
 
-.toast--achievement {
-  color: var(--knx-foreground);
-  border: 1px solid var(--knx-border);
-  border-left: 4px solid var(--knx-accent);
-  background: var(--knx-surface);
-  backdrop-filter: blur(12px);
-  min-width: 18rem;
-}
 .toast-label {
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -405,17 +397,17 @@ main {
    animation below runs on top of this and holds the visible frames until
    it ends; `animationend` then removes the toast (Toast.tsx). Without
    motion the toast simply vanishes and the fallback timer removes it. */
-.toast--achievement.toast--leaving {
+.toast.toast--leaving {
   opacity: 0;
   pointer-events: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .toast--achievement {
+  .toast {
     animation: knx-achievement-in var(--knx-transition-duration) var(--knx-motion-easing);
   }
   /* Twice the entry: leaving should be seen, not just happen. */
-  .toast--achievement.toast--leaving {
+  .toast.toast--leaving {
     animation: knx-achievement-out calc(var(--knx-transition-duration) * 2) var(--knx-motion-easing) forwards;
   }
 }

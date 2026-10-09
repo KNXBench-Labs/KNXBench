@@ -226,6 +226,21 @@ last save; it never opens a file dialog. A notice counts down the last five seco
 offers **Cancel**. If an autosave fails, a message says so and the project stays marked
 as unsaved, exactly as after a failed manual save.
 
+## Toast notifications
+
+Status messages, error messages and achievement popups share the same card
+frame, left accent stripe and entry/exit motion in the bottom-right corner.
+Each stays for **nine seconds** before leaving; × closes it earlier. Error
+messages retain their red text/stripe, alert announcement and, when quoting
+server text, the English-language disclosure. Only achievements have a badge
+and an “Achievement unlocked” label.
+
+Motion Off snaps the card out without a slide; the system's reduced-motion
+preference disables the animation, with a timer removing the invisible card.
+Long messages wrap to fit a narrow window. Toasts are temporary notifications,
+not a persistent message history. Their disappearance does not change the
+operation's result or clear an unsaved-project marker.
+
 ## Achievements
 
 KNXBench awards 38 achievements for milestones in your work: a first

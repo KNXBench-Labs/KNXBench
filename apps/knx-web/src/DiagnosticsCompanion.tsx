@@ -49,7 +49,7 @@ import { useEffect, useState } from "react";
 import BusMonitorPanel from "./BusMonitorPanel";
 import LogPanel from "./LogPanel";
 import { projectContextKnown, subscribeContextChanges } from "./busContext";
-import { canFocusMainWindow, focusMainWindow } from "./diagnosticsWindow";
+import { canReturnToMainWindow, returnToMainWindow } from "./diagnosticsWindow";
 import { useTranslate } from "./i18n";
 
 type CompanionTab = "monitor" | "log";
@@ -67,12 +67,12 @@ export default function DiagnosticsCompanion() {
   useEffect(() => subscribeContextChanges(() => setProjectOpen(projectContextKnown())), []);
 
   // Asked once, asynchronously, because the Tauri answer is a promise. A
-  // disabled button that explains itself beats a button that does nothing
-  // when the companion was reopened from a bookmark and has no opener.
+  // native return requires a main webview; browsers can always navigate
+  // this tab back to the editor, including a standalone bookmark.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const possible = await canFocusMainWindow();
+      const possible = await canReturnToMainWindow();
       if (!cancelled) setCanReturn(possible);
     })();
     return () => {
@@ -89,7 +89,7 @@ export default function DiagnosticsCompanion() {
         </div>
         <button
           className="companion-return"
-          onClick={() => void focusMainWindow()}
+          onClick={() => void returnToMainWindow()}
           disabled={!canReturn}
           title={canReturn ? undefined : t("companion.noMainWindow")}
         >

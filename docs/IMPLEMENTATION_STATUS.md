@@ -30,7 +30,13 @@ does not erase a broader platform/device limitation or imply a new release.
   [manual](manual/user-guide/02-projects.md). Source commit recorded in closure.
   Same-file versions are not independent backups; native accessibility, power
   loss, hardware/ETS recovery and packaged release are not established.
-  No main integration, push, release or deployment by this local package.
+  Original feature receipt is local; user subsequently authorized main integration.
+- Integrated candidate `b81c17cf`: Rust 3781/0/184 ignored, Vitest 2523/155 files,
+  Chromium 208, fmt/Clippy/four builds/bindings/five gates/docs/tools 42 green;
+  reference 3/3, selected native 5/5 and real production crash/reopen assertions
+  9 green again. Upstream histories/catalogs preserved; fresh ProjectStats on
+  clean merged source. Final publication in CURRENT_STATE, no release,
+  deployment or hardware operation.
 
 ## 2026-10-09 — Bathroom button: loaded, checked, put back (RESEARCH §19.21)
 

@@ -1783,7 +1783,7 @@ export const messages = {
   "legacyReport.rememberProblem": "The password was not remembered: {problem}",
   "legacyReport.diagnosticsHeading.one": "{count} import note",
   "legacyReport.diagnosticsHeading.other": "{count} import notes",
-  "legacyReport.offlineOnly": "Devices from a legacy database can be planned and linked offline. Downloading them to a device is not supported yet.",
+  "legacyReport.offlineOnly": "Devices from a legacy database can be planned, linked and downloaded. No such download has run on a real device yet, so readiness shows them as untested.",
   "settings.section.legacyPassword": "Legacy product database password",
   "settings.legacyPasswordHint": "When you tick “Remember” while importing an encrypted .vd3/.vd4/.vd5, the server keeps that one password so later imports need none.",
   "settings.legacyPasswordRemembered": "A password is remembered.",

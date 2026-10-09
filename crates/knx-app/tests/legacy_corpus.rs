@@ -244,10 +244,12 @@ const PUBLISHED: [Published; 3] = [
         name: "EIBMARKT.VD3",
         programs: 3,
         catalog_items: 3,
-        parameters: 302,
+        // 161 rows at address 0 are 150 more parameters since 2026-10-09
+        // (no memory, ADR-0094 L4), not merged memory cells.
+        parameters: 452,
         parameter_refs: 572,
         com_object_refs: 148,
-        translations: 1366,
+        translations: 1468,
         diagnostics: &[("orphan-translation", 5), ("skipped-rows", 2), ("unmapped-table", 18)],
         skipped: &[
             "3 product_to_program rows were not mapped (PROD2PROG_ID, PRODUCT_ID or PROGRAM_ID is empty); they stay in the payload",
@@ -276,15 +278,17 @@ const PUBLISHED: [Published; 3] = [
         name: "SIEMENS_KNX_PDB_Nov_2016_ETS3.vd5",
         programs: 88,
         catalog_items: 129,
-        parameters: 38453,
+        // 3,576 rows at address 0 stand alone since 2026-10-09 (no memory,
+        // ADR-0094 L4): 3,364 more parameters than when they were merged.
+        parameters: 41817,
         parameter_refs: 71467,
         com_object_refs: 55381,
-        translations: 288413,
+        translations: 291765,
         diagnostics: &[
             ("dangling-reference", 1607),
             ("no-page", 18),
             ("orphan-translation", 7),
-            ("overlapping-memory", 27),
+            ("overlapping-memory", 25),
             ("skipped-rows", 3),
             ("unknown-atomic-type", 56),
             ("unknown-text-column", 1),

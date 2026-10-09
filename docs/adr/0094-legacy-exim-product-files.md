@@ -166,6 +166,7 @@ Evidence (`[V]` measured on 2026-10-08 unless noted):
 - **Download is refused by name.** `application_program.source_sha256`
   points at the EX-IM payload, not XML, so `code::load_program_code` returns
   `CodeError::LegacyProgram` instead of misreading it. L4 owns download.
+  *Superseded by Amendment: L4 (2026-10-09).*
 - **Nothing is dropped silently.** Tables the mapping does not read
   (`s19_block`, `device_*`, `mask*`, …) are `unmapped-table` diagnostics;
   rows with an empty key or no mapped owner are `skipped-rows` (summed per
@@ -251,6 +252,47 @@ the 64 MiB bounds. Measured facts are in
   every one of its 88 programs evaluates under its defaults with no other
   evaluator finding than `NoBranchMatched`. Synthetic installer-tree
   fixture: `marvin-installer.vd5`.
+
+## Amendment: L4 (2026-10-09), download code from `s19_block`
+
+The L2 decision "Download is refused by name" is replaced:
+
+- **A legacy program's code is read from its stored payload.**
+  `code::load_program_code` no longer refuses a legacy program. It parses
+  the stored EX-IM payload and reads the program's `s19_block` rows
+  (`legacy::legacy_program_code`) into the same `ProgramCode` an XML
+  program yields: segments with base image and mask, one load procedure,
+  the three table placements. Identity (`ApplicationNumber`,
+  `ApplicationVersion`, `PeiType`, mask) and parameter placements come from
+  the database rows L2 wrote; the import's absolute addresses become an
+  offset into the segment that holds them, and a union's members share one
+  placement at its lowest address. The style is `ProductProcedure`. Image
+  builder, planner, readiness and executor are unchanged and do not know a
+  program is legacy.
+- **Every rule is measured against ETS's conversions** (research note,
+  *L4*): ten `070nh` programs (N000520 and nine Siemens programs) give
+  ETS's procedure, base images, masks, table placements and parameter
+  bits. For the house's nine presence detectors, the legacy plan equals
+  ETS's except two octets that L2 deviation 3 explains.
+- **Nothing undocumented is guessed.** A record that disagrees with its
+  row's columns, a mask octet other than `00h`/`01h`/`FFh`, data of the
+  wrong length or a second segment at one address is refused with its
+  `BLOCK_ID`. A merged-procedure row, an unknown control code or segment
+  type, and a Compare Property or TaskCtrl1 without a `Record` become a
+  named `LoadStep::Unmodelled`, which the planner refuses. `CodeError::
+  LegacyProgram` is replaced by `CodeError::Legacy { cause }`.
+- **The task segment's identity is the program's.** The record's
+  application identity is not used: devices ETS programmed report the
+  program row's identity, not the record's (research note).
+- **L2 correction: address 0 is no memory.** `PARAMETER_ADDRESS` 0 had
+  grouped unrelated `.vd5` parameters into one memory cell. It is now read
+  as "no memory", as ETS4's conversion does.
+- **Untested, never verified by itself.** No legacy download has run on a
+  device; readiness grades one `untested` (ADR-0048). Promoting it needs a
+  live run with the maintainer's go, like any program.
+- **Cost.** The payload is parsed on every code load, about two seconds and
+  500 MiB for the 173 MB `.vd5`. Caching the parsed rows waits for a
+  measured need.
 
 ## Alternatives considered
 

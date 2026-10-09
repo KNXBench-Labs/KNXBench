@@ -143,6 +143,8 @@ fn format_report(file: &str, report: &LegacyPublishReport) -> String {
             out.push_str(&format!("    {kind}: {detail}\n"));
         }
     }
-    out.push_str("  downloading these programs is not supported yet (ADR-0094)\n");
+    out.push_str(
+        "  downloads are planned from the programs' own load procedures; none has run on a real device yet (ADR-0094, L4)\n",
+    );
     out
 }

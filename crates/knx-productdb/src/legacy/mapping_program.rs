@@ -334,7 +334,11 @@ fn map_parameters(
             id,
             type_id,
             atomic: atomic.clone(),
-            address: r.int("PARAMETER_ADDRESS"),
+            // `[V]` Address 0 means "no memory": ETS4's conversion of the
+            // Siemens `.vd5` places none of its 3,576 such rows, and
+            // grouping them as one memory cell merged unrelated parameters
+            // (ADR-0094, L4).
+            address: r.int("PARAMETER_ADDRESS").filter(|address| *address != 0),
             bit: r.int("PARAMETER_BITOFFSET").unwrap_or(0),
             size: r.int("PARAMETER_SIZE").or(*type_size),
             access: mapped_access,

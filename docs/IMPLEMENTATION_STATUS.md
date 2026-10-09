@@ -7,6 +7,42 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Legacy programs learn to download, on paper (ADR-0094, L4)
+
+- `knx_productdb::legacy::legacy_program_code` reads a program's
+  `s19_block` rows into `ProgramCode` (segments with base image and mask,
+  one load procedure, address/association/group object table placements);
+  `code::load_program_code` uses it for legacy programs, with identity and
+  parameter placements from the database (absolute addresses into the
+  holding segment, unions on one shared placement). `CodeError::
+  LegacyProgram` is gone; `CodeError::Legacy { cause }` names the row.
+  Image builder, planner, readiness and executor are unchanged.
+- Rules measured against ETS's conversions (research note *L4*): control
+  code = record's first octet, `(LsmIdx << 4) | event`; records checked
+  against their columns (allocation records carry the end address); mask
+  `01h` reads `FFh`; TaskCtrl1 from the record; table limits from
+  `ADDRESS_TAB_SIZE`/`ASSOCTAB_SIZE`; task-segment identity from the program
+  row (the nine house devices report it, not the record's). Merged-procedure
+  rows, control code `05h`, unknown segment types and record-less Compare
+  Property/TaskCtrl1 stay named unmodelled steps.
+- L2 correction found by the oracle: `PARAMETER_ADDRESS` 0 is "no memory".
+  It had merged unrelated parameters into one cell; the `.vd5` now publishes
+  41,817 parameters (was 38,453), the `.vd3` 452 (was 302).
+- Acceptance (ignored, `knx-app/tests/legacy_download_oracle.rs`): N000520's
+  code equals ETS 6.3's conversion; the house's nine presence detectors plan
+  identically apart from `4196h`–`4197h` (L2 deviation 3, named); nine
+  Siemens `070nh` programs yield ETS4's code apart from four unmapped
+  `string` parameters. `legacy_corpus` and `legacy_oracle` green with the new
+  pins.
+- Fixture `src-vd-program` carries a 20-step procedure; MARVIN plans end to
+  end (`legacy_publish.rs`), a damaged record is refused by `BLOCK_ID`, and
+  the server's readiness grades the legacy device `untested` (or names the
+  negative signed value it will not write). Copy in CLI/web says untested
+  instead of "not supported". Mutation sweep 14/14 killed.
+- Not done: no live legacy download (needs a device go); payload re-parsed
+  per code load.
+- Gate: PENDING.
+
 ## 2026-10-09 — The 173 MB `.vd5` gets measured, then let in (ADR-0094, VD5)
 
 - Layout: a legacy file has exactly one EX-IM member and may carry others

@@ -15,6 +15,11 @@
 //!
 //! `AbsoluteSegment/Mask` is returned as bytes and not interpreted: no KNX
 //! PDF defines it (ADR-0044).
+//!
+//! A program imported from a legacy EX-IM database (ADR-0094) has no XML.
+//! Its code comes from the stored payload's `s19_block` rows
+//! ([`crate::legacy::legacy_program_code`]) and its parameter placements
+//! from the database, in the same types.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -247,12 +252,13 @@ pub enum CodeError {
         /// What is wrong, naming the element.
         cause: String,
     },
-    /// The program came from a legacy EX-IM product database (ADR-0094):
-    /// it has no XML `Static/Code`, and its memory image comes from
-    /// `s19_block` rows a later package reads. Refused, never guessed.
-    LegacyProgram {
+    /// The program came from a legacy EX-IM product database (ADR-0094)
+    /// and its stored payload does not yield its code.
+    Legacy {
         /// The program.
         program_id: String,
+        /// Why, naming the table and row.
+        cause: String,
     },
 }
 
@@ -267,9 +273,9 @@ impl fmt::Display for CodeError {
                 "{program_id}: its source file {sha256} is not in the product database"
             ),
             CodeError::Malformed { program_id, cause } => write!(f, "{program_id}: {cause}"),
-            CodeError::LegacyProgram { program_id } => write!(
+            CodeError::Legacy { program_id, cause } => write!(
                 f,
-                "{program_id}: imported from a legacy ETS3 product database; downloading it is not supported yet"
+                "{program_id}: imported from a legacy ETS3 product database, whose download data is unreadable: {cause}"
             ),
         }
     }
@@ -303,17 +309,21 @@ pub fn load_program_code(
     let Some(sha256) = sha256 else {
         return Ok(None);
     };
-    let legacy: Option<i64> = conn
+    let legacy: Option<(String, String)> = conn
         .query_row(
-            "SELECT 1 FROM legacy_program WHERE program_id = ?1",
+            "SELECT payload_sha256, exim_program_id FROM legacy_program WHERE program_id = ?1",
             [program_id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .optional()?;
-    if legacy.is_some() {
-        return Err(CodeError::LegacyProgram {
-            program_id: program_id.to_string(),
-        });
+    if let Some((payload_sha256, exim_program_id)) = legacy {
+        return crate::legacy::load_legacy_program_code(
+            conn,
+            program_id,
+            &payload_sha256,
+            &exim_program_id,
+        )
+        .map(Some);
     }
     let Some(bytes) = crate::load_source_file(conn, &sha256)? else {
         return Err(CodeError::MissingSource {

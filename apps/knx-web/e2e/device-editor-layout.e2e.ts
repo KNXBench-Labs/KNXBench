@@ -21,10 +21,10 @@ for (const language of ["en", "de"] as const) {
       });
       await page.goto(`/e2e/device-editor-fixture.html?lang=${language}`);
       await expect(page.locator(".individual-address-field input")).toHaveValue("12");
-      await expect(page.locator(".com-object-channel > summary")).toContainText(
+      await expect(page.locator(".com-object-channel-summary")).toContainText(
         language === "de" ? "Ohne ausgewerteten Kanal" : "Without evaluated channel",
       );
-      await page.locator(".com-object-channel > summary").click();
+      await page.locator(".com-object-channel-summary").click();
       await page.locator(".com-object-detail summary").click();
       await expect(page.locator(".com-object-flags .flag-name")).toHaveText([...translations[language]]);
       await expect(page.locator(".com-object-flags .flag-code")).toHaveText(["R", "W", "T", "U", "C", "I"]);
@@ -43,7 +43,7 @@ for (const language of ["en", "de"] as const) {
           offscreen: Array.from(document.querySelectorAll<HTMLElement>("body *"))
             .filter((element) => {
               const rect = element.getBoundingClientRect();
-              return rect.width > 0 && rect.right > innerWidth + 1;
+              return !element.closest(".com-table-scroll") && rect.width > 0 && rect.right > innerWidth + 1;
             })
             .slice(0, 12)
             .map((element) => ({ name: `${element.tagName}.${element.className}`, parent: element.parentElement?.className, text: element.textContent?.trim().slice(0, 45), right: Math.ceil(element.getBoundingClientRect().right) })),
@@ -73,20 +73,20 @@ for (const language of ["en", "de"] as const) {
       await page.goto(`/e2e/device-editor-fixture.html?lang=${language}&channels=1`);
       const groups = page.locator(".com-object-channel");
       await expect(groups).toHaveCount(3, { timeout: 2_000 });
-      await expect(groups.nth(0).locator(":scope > summary > strong")).toHaveText("Raw manufacturer name");
+      await expect(groups.nth(0).locator(".com-object-channel-summary > strong")).toHaveText("Raw manufacturer name");
       await expect(groups.nth(0).locator(".com-object-channel-number")).toHaveText(language === "de" ? "Nummer: A-5" : "Number: A-5");
-      await expect(groups.nth(1).locator(":scope > summary > strong")).toHaveText("Hall outputs");
+      await expect(groups.nth(1).locator(".com-object-channel-summary > strong")).toHaveText("Hall outputs");
       await expect(groups.nth(1).locator(".com-object-channel-name")).toHaveText("Name: Manufacturer output");
       await expect(groups.nth(1).locator(".com-object-channel-number")).toHaveText(language === "de" ? "Nummer: 19" : "Number: 19");
-      await expect(groups.nth(2).locator(":scope > summary")).toContainText(
+      await expect(groups.nth(2).locator(".com-object-channel-summary")).toContainText(
         language === "de" ? "Ohne ausgewerteten Kanal" : "Without evaluated channel",
       );
-      expect(await groups.evaluateAll((nodes) => nodes.every((node) => !(node as HTMLDetailsElement).open))).toBe(true);
+      expect(await groups.locator("button").evaluateAll(nodes => nodes.every(node => node.getAttribute("aria-expanded") === "false"))).toBe(true);
 
-      await groups.nth(0).locator(":scope > summary").focus();
+      await groups.nth(0).locator(".com-object-channel-summary").focus();
       await page.keyboard.press("Enter");
-      await expect(groups.nth(0)).toHaveAttribute("open", "");
-      const programObject = groups.nth(0).locator(".com-object-detail");
+      await expect(groups.nth(0).locator("button")).toHaveAttribute("aria-expanded", "true");
+      const programObject = page.locator('[data-object-id="8"]');
       await programObject.locator("summary").click();
       await expect(programObject.locator(".com-object-effective-dpt")).toContainText("DPST-9-1");
       await expect(programObject.locator(".com-object-dpt-origin")).toContainText(
@@ -102,13 +102,13 @@ for (const language of ["en", "de"] as const) {
       }));
       expect(dptLineCounts, "DPT code and description must stay readable without character-level wrapping").toEqual([1, 1]);
 
-      await groups.nth(1).locator(":scope > summary").click();
-      await expect(groups.nth(1).locator(".com-object-summary")).toContainText("Switching lights");
-      await expect(groups.nth(1).locator(".com-object-effective-dpt")).toContainText("DPST-1-1");
-      await groups.nth(2).locator(":scope > summary").click();
-      await expect(groups.nth(2).locator("li[data-activation='Inactive']")).toHaveCount(1);
-      await expect(groups.nth(2).locator("li[data-activation='Undetermined']")).toHaveCount(1);
-      await expect(groups.nth(2).locator("li[data-activation='NotEvaluated']")).toHaveCount(1);
+      await groups.nth(1).locator(".com-object-channel-summary").click();
+      await expect(page.locator('[data-object-id="7"]')).toContainText("Switching lights");
+      await expect(page.locator('[data-object-id="7"] .com-object-effective-dpt')).toContainText("DPST-1-1");
+      await groups.nth(2).locator(".com-object-channel-summary").click();
+      await expect(page.locator("tr[data-object-id][data-activation='Inactive']:visible")).toHaveCount(1);
+      await expect(page.locator("tr[data-object-id][data-activation='Undetermined']:visible")).toHaveCount(1);
+      await expect(page.locator("tr[data-object-id][data-activation='NotEvaluated']:visible")).toHaveCount(1);
       const widthState = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }));
       expect(widthState.document, JSON.stringify(widthState)).toBeLessThanOrEqual(widthState.viewport);
     });

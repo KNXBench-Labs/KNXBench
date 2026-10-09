@@ -1,0 +1,313 @@
+{
+  "status": "accepted local uncommitted candidate",
+  "date": "2026-10-09 17:23 CEST",
+  "sourceBase": "533d014f6ae524903f8c24a710deff3afb3bdbe8",
+  "sourceInputCommitment": "bbe29d2a33d88865966f302b9d105238ece0b148c9f3605881fda049d5c3cd44",
+  "sourceFiles": 990,
+  "sourceInputsFrozen": true,
+  "scope": "UI-only single-device CO editor; no new dependencies/core/store/API schema/protocol; no commit/merge/push/release/deployment/hardware",
+  "review": "in-session self-review; no independent review/subagents",
+  "frontend": {
+    "passed": 2537,
+    "failed": 0,
+    "files": 157
+  },
+  "browser": {
+    "productionChromium": 19,
+    "fullInterceptedChromium": 227,
+    "matrix": "DE/EN; 1440/400 px; Porcelain/Graphite/Cupertino/LCARS; keyboards/headings/fit/contrast/badge height"
+  },
+  "realRuntime": {
+    "scope": "Real newly built server + production frontend, fictional demo copy, no intercepted API, network contains only lo",
+    "checks": [
+      "real_server_health",
+      "fictional_catalogue_installed",
+      "native_copy_opened_via_real_picker",
+      "real_32_device_projection",
+      "real_flat_headings",
+      "real_search",
+      "real_sort",
+      "real_editor_expansion",
+      "zero_view_mutation_requests",
+      "unchanged_real_project_snapshot",
+      "no_browser_page_errors",
+      "original_demo_unchanged"
+    ],
+    "errors": [],
+    "originalDemoSha256": "610c831299f2cfff3860b0f500c0ad91e355f50fa7f51ec8917ecd2485050f3f",
+    "exit": 0
+  },
+  "performance": {
+    "scope": "Synthetic intercepted production app; one sample; browser-driver action-to-visible assertion wall time, not isolated JS duration",
+    "objects": 1000,
+    "renderMs": 2051.890647,
+    "flatMs": 2908.370808000007,
+    "filterMs": 458.1386460000067,
+    "sortMs": 376.98375000001397
+  },
+  "steps": [
+    {
+      "name": "final-vitest",
+      "command": [
+        "npx",
+        "vitest",
+        "run",
+        "--reporter=json",
+        "--outputFile=<task-scratch>/final-vitest.json"
+      ],
+      "exit": 0,
+      "seconds": 19.445,
+      "logSha256": "862072652780e9709074fa8625658abf2d61fb3e5481935abf646dd3dc0d9b72"
+    },
+    {
+      "name": "final-build",
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "exit": 0,
+      "seconds": 1.462,
+      "logSha256": "96fecd1d99dc913b2cc8f2fe61a80407d4197c29f55c12b321c99a047e524343"
+    },
+    {
+      "name": "final-tsconfig.json",
+      "command": [
+        "npx",
+        "tsc",
+        "-p",
+        "tsconfig.json"
+      ],
+      "exit": 0,
+      "seconds": 1.234,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "final-tsconfig.theme-fixtures.json",
+      "command": [
+        "npx",
+        "tsc",
+        "-p",
+        "tsconfig.theme-fixtures.json"
+      ],
+      "exit": 0,
+      "seconds": 1.311,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "final-tsconfig.flow-study.json",
+      "command": [
+        "npx",
+        "tsc",
+        "-p",
+        "tsconfig.flow-study.json"
+      ],
+      "exit": 0,
+      "seconds": 1.267,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "final-tsconfig.communication-fixtures.json",
+      "command": [
+        "npx",
+        "tsc",
+        "-p",
+        "tsconfig.communication-fixtures.json"
+      ],
+      "exit": 0,
+      "seconds": 1.257,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "final-server-xtask-build",
+      "command": [
+        "cargo",
+        "build",
+        "-j",
+        "4",
+        "-p",
+        "knx-server",
+        "-p",
+        "xtask"
+      ],
+      "exit": 0,
+      "seconds": 0.265,
+      "logSha256": "2bc683fb4e4f4f21ee9ee39e2b8ecce2efe20d3b1be57bda5316aa519ab3d30a"
+    },
+    {
+      "name": "final-check-layering",
+      "command": [
+        "<task-scratch>/cargo/debug/xtask",
+        "--root",
+        "<worktree>",
+        "check-layering"
+      ],
+      "exit": 0,
+      "seconds": 1.05,
+      "logSha256": "460fc60c4265582b21be6fbc1ae394956df75883a722078e606e14d3a5462d9a"
+    },
+    {
+      "name": "final-check-headers",
+      "command": [
+        "<task-scratch>/cargo/debug/xtask",
+        "--root",
+        "<worktree>",
+        "check-headers"
+      ],
+      "exit": 0,
+      "seconds": 0.067,
+      "logSha256": "b1d3d0fcaea57d3d27dcd804b285b1f1eb221e9e568d49f85207afa31a89a757"
+    },
+    {
+      "name": "final-check-anchors",
+      "command": [
+        "<task-scratch>/cargo/debug/xtask",
+        "--root",
+        "<worktree>",
+        "check-anchors"
+      ],
+      "exit": 0,
+      "seconds": 0.409,
+      "logSha256": "295552c02677da5bd10a15d6c67d813a802a526215dea6fd7a9c6a160afde8c9"
+    },
+    {
+      "name": "final-check-ledger",
+      "command": [
+        "<task-scratch>/cargo/debug/xtask",
+        "--root",
+        "<worktree>",
+        "check-ledger"
+      ],
+      "exit": 0,
+      "seconds": 0.069,
+      "logSha256": "c982dfb387f9aa691325039be082f93555221f692c00c49962c9e1fbac264c3c"
+    },
+    {
+      "name": "final-check-corpus-gates",
+      "command": [
+        "<task-scratch>/cargo/debug/xtask",
+        "--root",
+        "<worktree>",
+        "check-corpus-gates"
+      ],
+      "exit": 0,
+      "seconds": 0.218,
+      "logSha256": "eb6e2004544d794701cd4ae803b2f61a06053d178292e10e94fcbdcdf220ffa0"
+    },
+    {
+      "name": "final-docs",
+      "command": [
+        "python3",
+        "tools/check_documentation.py"
+      ],
+      "exit": 0,
+      "seconds": 0.509,
+      "logSha256": "a85d5de3ae6e41e4ddf7d3aa33277a37e3ee7e987eaac637abdc8f37f07125c2"
+    },
+    {
+      "name": "final-whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0,
+      "seconds": 0.022,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "final-production",
+      "command": [
+        "unshare",
+        "-rn",
+        "sh",
+        "-c",
+        "ip link set lo up; npx playwright test --config playwright.communication.config.ts"
+      ],
+      "exit": 0,
+      "seconds": 27.574,
+      "logSha256": "d075dd8a7451399983f9911d4e5ab2dae896bb963a4ed29466c3521629846a2d"
+    },
+    {
+      "name": "final-browser-full",
+      "command": [
+        "unshare",
+        "-rn",
+        "sh",
+        "-c",
+        "ip link set lo up; npx playwright test"
+      ],
+      "exit": 0,
+      "seconds": 322.373,
+      "logSha256": "91e6ca92bc8f8f24bfb81b946b4a26090e7fac3fbd5d12a1c653d0365bcaaa1b"
+    },
+    {
+      "name": "final-real-runtime",
+      "command": [
+        "unshare",
+        "-rn",
+        "sh",
+        "-c",
+        "ip link set lo up; node <task-scratch>/real-runtime.mjs"
+      ],
+      "exit": 0,
+      "seconds": 2.491,
+      "logSha256": "d24552ec1ddf4a827c351f01cfce562ffb9fdacd0fa7f7063705735d362c4fff"
+    }
+  ],
+  "visualArtifacts": {
+    "docs/evidence/communication-objects/co-table-en-1440.png": "3afe34910277238bfbcad32a142048a451c841ebefccf1775b903a39ac494186",
+    "docs/evidence/communication-objects/co-table-de-400.png": "2955320c6502b784a90dbc8a16a22430a1137ba5e7646903902d01bdb47be596",
+    "docs/evidence/communication-objects/real-demo-editor.png": "6f85d38deeadf599b92f44b0ddb01a099fc27a51af3701d670f42637d05478ee"
+  },
+  "runtimeHarnessSha256": "4440831dcbba60e2828f485858010994499f263397284e9a88d64c5597d0fe17",
+  "negativeControls": [
+    "derivation seven named RED failures",
+    "original UI five named feature RED failures",
+    "dirty draft refresh",
+    "removal announcement",
+    "filter reset/reapply",
+    "selected view gradient/contrast",
+    "provenance badge height 167px before scoped fix"
+  ],
+  "rejectedAttempts": {
+    "chromium": "profile SingletonSocket path too long; no product assertions started; corrected with short task scratch",
+    "themeMatrix": "four crt fixture ID failures; corrected to actual built-in Cupertino, resolved theme asserted",
+    "oldMarkup": "old eager/list assertions and missing foreground token rejected, behavioral assertions retained with actual expansion/table selectors",
+    "firstFinalChain": "all 16 frontend/build/type/server/repository/browser stages passed; real runtime refused, chain exit 1; superseded by final all-green source-frozen chain",
+    "runtimeHostExposure": "initial unmocked server inherited HOME/XDG although project data dir was scratch; it opened the existing local product catalogue, whose schema v22 lacks scanner column. HTTP500; transaction rolls back; fictional package absent; existing main-file mtime 2026-10-08 11:17:31, journal_mode delete. No pre-run byte digest, no whole-file identity claim, no repair. Final acceptance isolates HOME/XDG data/config/state and project directory.",
+    "runtimeHarness": "first-run onboarding, no-CO first IP interface and wrong count-column assumptions rejected; corrected via visible skip action and actual count-column header/device data",
+    "visualReview": "real demo screenshot caught stretching provenance badges; named production RED reproduced; final source re-gated including all themes"
+  },
+  "notEstablished": [
+    "native WebKitGTK/Orca/full accessibility certification",
+    "physical KNX hardware",
+    "full ETS compatibility",
+    "unbounded performance or 1000 expanded editing forms"
+  ],
+  "documentation": "contract/ADR0101/manual/architecture/limitations/status/handover; final metadata gates recorded separately",
+  "visualAssessment": {
+    "realDemo": "Program provenance badges are compact after the scoped fix; editor inputs/visible flag labels and left table headings align. Right columns/flags extend into the local horizontal scroller, not all visible in this frame.",
+    "enGraphite1440": "Search/filter toolbar and both view labels readable; left headings align with data; right columns require local scroll.",
+    "dePorcelain400": "Controls wrap within the page and labels remain readable; a toast overlaps the lower table edge in this frame. Complete row/column reachability is checked separately in browser DOM tests."
+  },
+  "latestFetchedMainAtClosure": "e8f53a85a49be11de55766c798389e3ebd48acfc",
+  "integrationStatus": "Uncommitted isolated candidate; latest upstream has no web-path delta from source base and no ADR0101 collision; not a merged-main acceptance.",
+  "metadataVerification": {
+    "status": "passed",
+    "fiveRepositoryGates": {
+      "check-layering": 0,
+      "check-headers": 0,
+      "check-anchors": 0,
+      "check-ledger": 0,
+      "check-corpus-gates": 0
+    },
+    "documentation": 0,
+    "whitespace": 0,
+    "logHashes": {
+      "closure-docs.log": "1d0563bba2d9ec2e22af157e17e2dcf50c5c8688c951fb5eb7c4cacc31d07b90",
+      "closure-final-docs.log": "1d0563bba2d9ec2e22af157e17e2dcf50c5c8688c951fb5eb7c4cacc31d07b90",
+      "closure-whitespace.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

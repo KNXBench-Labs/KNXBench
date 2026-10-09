@@ -1,6 +1,7 @@
 /** Root component wiring project state, panels, and toolbars into the KNX Web UI shell. */
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { version as packageVersion } from "../package.json";
+import brandMark from "./assets/knxbench-mark.png";
 import { isTauri, pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -1283,7 +1284,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     <DeviceNavigationProvider tree={tree} catalogue={navigationCatalogue} onOpen={(id) => void selectEntity({ kind: "device", id })} onList={openDevices}>
     <main ref={workbenchRef} className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
       <header className="workbench-toolbar">
-        <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><span className="brand-mark">K</span><strong>KNXBench</strong></a>
+        <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><img className="workbench-logo" src={brandMark} width="44" height="34" alt="" draggable={false} /><strong>KNXBench</strong></a>
         <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
           <summary>{t("workbench.file")} <span aria-hidden="true">⌄</span></summary>
           <div className="file-menu-content" onClick={handleFileMenuActivation}>

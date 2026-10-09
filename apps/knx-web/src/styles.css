@@ -729,6 +729,16 @@ main {
   font-style: italic;
 }
 
+/* KL §128: a TypeNone row is a heading/label or an empty spacer, no input. */
+.parameter-label-row {
+  margin: 0.75rem 0 0.25rem;
+  font-weight: 600;
+}
+
+.parameter-spacer {
+  height: 0.75rem;
+}
+
 .parameter-stale-section,
 .parameter-diagnostics-banner {
   margin-top: 0.75rem;

@@ -7027,8 +7027,9 @@ triage.
 **Current reading, 2026-10-08:** L1–L3 VD inspection/offline CLI/web import
 and password handling are delivered. The title records the original refusal;
 it is not a blanket current VD3/VD4 refusal. VD5 bounds/layout, `.pr*`/`.vd2`,
-legacy DPT/download semantics, plaintext remembered-password storage and the
-TypeNone spacer presentation remain the explicit limits below.
+legacy DPT/download semantics and plaintext remembered-password storage remain
+the explicit limits below. The TypeNone spacer presentation was fixed on
+2026-10-09.
 
 **Update 2026-10-08 (legacy VD package L3, ADR-0094 *Amendment: L3*).**
 The web catalog and the device wizard install `.vd3`–`.vd5` through

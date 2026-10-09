@@ -22,6 +22,10 @@ does not erase a broader platform/device limitation or imply a new release.
 - [Contract](contracts/project-name-editing.md), ADR-0101 and
   [verification](status/2026-10-09-project-name-editing-verification.md).
   Owner Go authorizes main integration/push after gates; no release/deployment.
+- Integrated candidate `f309612b`: full Rust workspace 3790/0/184 ignored,
+  frontend 2544/0/159 files/build/types, Clippy and all five repository gates,
+  docs/tools green. Exact merge-tree equivalence retains the final four native
+  and 208 browser executions without mislabelling them as fresh merge runs.
 
 ## 2026-10-09 — Native history remembers restarts, not hardware writes
 

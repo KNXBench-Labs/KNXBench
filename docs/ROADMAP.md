@@ -21,6 +21,16 @@ Read the sections below as a delivery record, not a fresh implementation queue.
 Per-ID dispositions remain only in the [ledger](status/LEDGER.md). An accepted
 alpha limitation is not functionality, and a later idea is not a promised date.
 
+## Offline procedure evidence (local source package, 2026-10-09)
+
+The owner-approved first `MV-07B0` `Load/ap1` slice reconstructs declarative
+order with local source provenance and explicit unresolved data, through the
+existing support-gap UI/API/CLI. Reduced evidence can be manually shared with
+the maintainer. [Contract](OFFLINE_PROCEDURE_RESOLUTION.md), ADR-0098.
+Main source publication is [verified](status/2026-10-09-offline-ap1-verification.md); packaged release remains separate. Complete plan materialization, conditional
+selection, AP2/other masks, legacy/coupler procedures, new media and new live
+execution remain unimplemented; this does not close commissioning ledger rows.
+
 ## Project-local names (2026-10-09 source package)
 
 Single device instances and individual group addresses can be renamed through
@@ -31,6 +41,7 @@ use native history; guarded requests and retained drafts preserve conflicts.
 Bulk templates, CLI/MCP authoring, `.knxproj` export and hardware effects remain
 outside this package. Publication is authorized separately from release/deployment.
 
+
 ## Native project history (local source package, 2026-10-09)
 
 Restart-safe native undo/redo, named/save/pre-restore versions and revision-bound
@@ -39,6 +50,7 @@ confirmed restore are implemented in the owned source package
 context is shared without losing opaque data. Before first Save As history is
 session-local; same-file versions are not independent disaster backups. Older
 builds refuse native v11. Publication, deployment and release remain separate.
+
 
 ## Devices navigation (local source package, 2026-10-08)
 

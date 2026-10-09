@@ -1,5 +1,23 @@
 # Architecture
 
+## Offline AP1 diagnostics stay outside the execution planner (2026-10-09)
+
+[ADR-0098](adr/0098-offline-ap1-procedure-resolution.md) and the
+[offline procedure contract](OFFLINE_PROCEDURE_RESOLUTION.md) place a bounded,
+read-only retained-source resolver in the product infrastructure adapter.
+The application contribution service selects package ownership and aggregates
+coverage/findings; UI and CLI consume the same diagnostics. The KNX domain,
+store schemas, production importer admission and download executor are unchanged.
+Only one explicit unqualified `MV-07B0` `Load/ap1` template at the observed
+`HawkConfigurationData/Procedures/Procedure` path is eligible for reconstruction.
+
+This type is never an executable plan. Source hashes/offsets and unresolved
+ordered declarations are local evidence; reduced public exports remove them
+and retain value-free fixed issue-code counts. Existing preview, consent and
+manual maintainer handoff own disclosure; there is no automatic transmission.
+Reuse the existing workspace serde dependency, not a new protocol/UI framework.
+Local implementation and publication remain separate.
+
 ## Guarded project-local names (2026-10-09)
 
 [ADR-0101](adr/0101-project-local-device-and-ga-names.md) and
@@ -10,6 +28,7 @@ application owns a transient successful-load generation alongside existing
 server/revision identity; no import or native-schema field changes. Native
 state history from ADR-0100 is reused, not a new serialized-command format.
 No CSV/MCP/protocol/CLI-authoring change or ETS/hardware compatibility claim.
+
 
 ## Native project history (2026-10-09)
 

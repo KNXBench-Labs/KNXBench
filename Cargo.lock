@@ -2119,6 +2119,7 @@ dependencies = [
  "quick-xml 0.42.0",
  "rusqlite",
  "rustix",
+ "serde",
  "serde_json",
  "sha2",
  "tempfile",

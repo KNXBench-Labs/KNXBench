@@ -69,6 +69,22 @@ The audit inspects the complete heading/anchor inventory and current manual
 claims, with targeted source/test verification. It does **not** re-run every
 historical corpus, protocol, hardware, native-platform or advisory investigation.
 
+## Offline AP1 sequence inspection is not new download support (2026-10-09)
+
+The local [offline procedure resolver](OFFLINE_PROCEDURE_RESOLUTION.md),
+[ADR-0098](adr/0098-offline-ap1-procedure-resolution.md), reconstructs only
+explicit `MV-07B0` `Load/ap1` declarations from uniquely associated local package
+sources. Unknown/conditional/nested steps and unplaced fragments remain retained
+and reported, not executed or guessed. Source/output budgets may leave a partial
+analysis; existing 64-program production analysis limits remain unchanged.
+
+No parameter/table/image materialization, AP2/complete/partial variant support,
+legacy procedure expansion, coupler-specific behavior, new media or hardware
+validation is added. Existing download eligibility and hardware evidence do not
+change. Source details are local; reduced reports omit them. Maintainer reports
+still need preview, permission, manual attachment and posting. No automatic
+submission or novelty/ETS compatibility claim. Main source delivery is [verified](status/2026-10-09-offline-ap1-verification.md); no packaged release is implied.
+
 ## Devices navigation: local source, current-project links and bounded evidence (2026-10-08)
 
 [Device navigation](DEVICE_NAVIGATION.md) is on `main` since 2026-10-09, not in a

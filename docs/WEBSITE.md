@@ -214,5 +214,22 @@ The first browser launch was refused for a too-long socket path; a subsequent
 mobile regression exposed an inherited grid rule squeezing the links, fixed
 with a scoped selector before the final full pass. These are retained failure
 facts, not counted as acceptance. Self-review only; no new app, ETS, native,
-assistive-technology or hardware test. Live deployment verification follows
-publication and is recorded separately in the evidence file.
+assistive-technology or hardware test. Live deployment verification is recorded separately in the evidence file.
+
+Published source `77ab6e97`; GitHub Pages run `37890928052` built and deployed
+successfully with the exact action commits verified above. All **34** live
+files (including `.nojekyll`) plus the build manifest are byte-identical to
+the accepted release build. Live Chromium adds **134** named demo-handoff
+checks, with no page/console error or automatic third-party request. A second
+IPv6 HTTPS GET measurement (`2GyiZtgGE1dNfEEeH00021Hct`, DE/NL/US/GB) after
+deployment returns 200/authorized TLS and observes the new Demos navigation
+in all four bodies. The probe service truncates bodies at 10,000 characters;
+this is not full-file verification over IPv6.
+
+The first push was refused after concurrent Docker delivery; the package
+was rebased with exact upstream handover/status preservation. All website
+and workflow source hashes remained unchanged, and the affected repository,
+documentation and website tests passed again. `actions/deploy-pages@v5` still
+emits its upstream DEP0040 `punycode` deprecation warning, but no Node-20
+runtime warning was observed; deployment succeeds. No workaround in project
+code. Privacy review and optional WebKit remain open, not part of this task.

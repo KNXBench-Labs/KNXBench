@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-09 13:12 CEST
+- **Completed:** Owner-authorized ProjectStats report publication prepared: report-only feature f38cd556a0cf2f4effbcaf0be89766d22c696b81 merged no-ff as 40d7f23cbbab0c9d64870fc088860b587fb67a2d onto fetched main 925ccc203e8a9839c07b8737fc7beaa02ff4ea99. Exact retained report digest 88e4df8d5011cabb5dc778c5c98aee2b4f7a3c7c8c32f5d42554a41807554710 verified; seven weekday rows, relative model weeks and six removed chapters. Fresh checkout-bound xtask anchors 493/205, documentation 205 files/33 chapters/0 errors and whitespace passed. Earlier collector suite remains 167 passed/1 optional skip; self-review only.
+- **Pending/Next Steps:** Push this reviewed documentation-only candidate to main and verify local/tracking/live refs plus exact report bytes. No release/deployment/hardware or fresh full-app gate requested. Collector remains local by explicit user clarification after its configured remote was inaccessible.
+- **Notes for Codex oder Claude:** Collector e639f206b92c46f95623c0f6891b0cea49e38401 retained on fix/readable-report-trends-20261009 in the separate ProjectStats checkout; do not publish or delete it. Report snapshot describes root a1fcc8f2, not current integrated-main statistics; timestamp/measurements preserved, no new collection. Shared root HEAD/index/research/settings and foreign handover/worktrees stay untouched. Log .ai/logs/2026-10-09_codex_projectstats-report-layout.md.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-09 12:12 CEST
 - **Completed:** Owner-authorized README/manual Docker Hub delivery merged no-ff: feature 96586ee78c316c47a493a85eb8d6aff1081dc5dc onto current main 199a7057 as 9394e42466cf36b15687ba4b30659629b89357ba. All four requested documentation blobs equal the reviewed feature; application sources and all upstream handover bytes preserved. Fresh merged checks: all five nonempty checkout-built xtask gates, 493 anchors, documentation 205 Markdown files/33 chapters/0 errors and whitespace pass. Earlier 9-check amd64 container acceptance remains dated local evidence, not a new runtime run.
 - **Pending/Next Steps:** Publication 4e990894170da16124d5543486f63642454e0f58 verified: local/fetched/live refs equal, feature ancestry and all four remote documentation blobs exact. No feature work pending; closure bookkeeping and task-owned cleanup only. No release, deployment, hardware or root synchronization.

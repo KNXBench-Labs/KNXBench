@@ -8,6 +8,7 @@ import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { Selection } from "./selection";
 import ProjectExplorer from "./ProjectExplorer";
 import ProjectHistoryDialog from "./ProjectHistoryDialog";
+import RenameWorkbench from "./RenameWorkbench";
 import { useCrtInteractions } from "./useCrtInteractions";
 import { requestCrtActivation } from "./crtInteractions";
 import BulkActionToolbar from "./BulkActionToolbar";
@@ -1278,6 +1279,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   );
 
   return (
+    <RenameWorkbench tree={tree} scope={loadKey} onApplied={handleTreeUpdate}>
     <DeviceNavigationProvider tree={tree} catalogue={navigationCatalogue} onOpen={(id) => void selectEntity({ kind: "device", id })} onList={openDevices}>
     <main ref={workbenchRef} className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
       <header className="workbench-toolbar">
@@ -1505,6 +1507,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       )}
     </main>
     </DeviceNavigationProvider>
+    </RenameWorkbench>
   );
 }
 

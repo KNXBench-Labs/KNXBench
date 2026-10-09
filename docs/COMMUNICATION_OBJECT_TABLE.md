@@ -4,7 +4,7 @@
 
 Owner-approved Q1–Q12 design, 2026-10-09. Local UI-only implementation in the
 single-device editor; no publication, release or deployment authorization.
-[ADR-0101](adr/0101-communication-object-table-view-state.md) records the UI
+[ADR-0102](adr/0102-communication-object-table-view-state.md) records the UI
 lifetime boundary. Final aggregate acceptance is recorded in the
 [receipt](evidence/communication-objects-2026-10-09.json).
 

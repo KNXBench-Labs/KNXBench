@@ -57,6 +57,10 @@ async function serve(page: Page, linkStatus: number) {
   for (const summary of await page.locator(".com-object-detail summary").all()) await summary.click();
   const row = page.locator(".group-link-list .tree-new-row");
   await expect(row).toBeVisible();
+  // Name editing adds an actual field above the objects. Scroll before drag,
+  // never while Chromium is holding the source's DataTransfer.
+  await row.scrollIntoViewIfNeeded();
+  await expect(page.locator("button.tree-label", { hasText: "1/2/3 Kitchen lights" })).toBeInViewport();
   await expect(row).toBeInViewport();
   return { links, unexpected, row };
 }

@@ -18,16 +18,16 @@ Docker Desktop networking is not a verified substitute for Linux host networking
 ## a) Linux AppImage
 
 The current public pre-release is
-[`v0.1.0-alpha.6`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.6) (9 October 2026).
-Download **both** `KNXBench_0.1.0-alpha.6_amd64.AppImage` and `SHA256SUMS` from
+[`v0.1.0-alpha.7`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.7) .
+Download **both** `KNXBench_0.1.0-alpha.7_amd64.AppImage` and `SHA256SUMS` from
 that release page into the same directory.
 
 From that directory:
 
 ```bash
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.6_amd64.AppImage
-./KNXBench_0.1.0-alpha.6_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.7_amd64.AppImage
+./KNXBench_0.1.0-alpha.7_amd64.AppImage
 ```
 
 `SHA256SUMS` also lists the `knx-mcp` binary; `--ignore-missing` checks only the
@@ -37,7 +37,7 @@ files you downloaded and still fails on any mismatch.
 welcome screen. Stop if the checksum differs; do not solve an integrity warning
 by becoming less interested in it.
 
-The package was built and checked locally, not by GitHub Actions. It prefers a
+The package is built by GitHub Actions with Xvfb/headless-Weston launch checks. It prefers a
 native Wayland window and can fall back to X11. [Linux setup](05-linux-setup.md)
 and [troubleshooting](../reference/03-troubleshooting.md) explain host requirements.
 The [launcher contract](../../APPIMAGE_LAUNCHER.md) records the tested boundary.
@@ -51,6 +51,11 @@ The [launcher contract](../../APPIMAGE_LAUNCHER.md) records the tested boundary.
 `~/.local/share/com.knxbench.knxbench-labs` and does not automatically read the
 older data directory. Keep the old files and open/copy them deliberately; see
 [known limitation §161](../../KNOWN_LIMITATIONS.md#161-alpha5-does-not-pick-up-the-alpha4-data-folder).
+
+**Alpha.7 native-store upgrade:** close the app and make an independent backup
+before opening an existing native project. Schema 10 migrates to schema 11;
+Alpha.6 refuses upgraded files. Downgrading requires the pre-upgrade backup.
+History versions inside the project are not disaster backups. Update `knx-mcp` too.
 
 **Update:** close KNXBench, download and verify the replacement AppImage, then
 start it. There is no auto-updater. **Remove:** delete the AppImage. Project data
@@ -80,7 +85,7 @@ compare the browser's certificate fingerprint with the one in
 
 **Choose your update policy:** `latest` follows published releases, including
 alpha pre-releases; it does not track `main`. Use
-`knxbench/knxbench-server:0.1.0-alpha.6` in both commands to pin that release.
+`knxbench/knxbench-server:0.1.0-alpha.7` in both commands to pin that release.
 Images start at `0.1.0-alpha.6` (9 October 2026); see
 [Ready-made image from Docker Hub](../user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)
 for the tag policy and platform limits.

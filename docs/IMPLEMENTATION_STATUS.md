@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## Alpha.7 release candidate — 2026-10-10
+
+All changes since Alpha.6 are packaged in version `0.1.0-alpha.7`: durable
+project history/schema11, communication-object table, rename support, bounded
+offline AP1 diagnostics, legacy improvements, TypeNone correctness, header badge
+and Docker upload/browser-return fixes. Back up native files before migration;
+Alpha.6 refuses the new store schema. Fresh accepted local18-stage gate:
+Rust3831/0/185 ignored, Web2583/0/162 files, Chromium236/0, real-server5/5.
+Separate private controls146/0; password-dependent legacy tests not freshly
+selected. Runtime/dependency inputs remain equal through CI-only corrections.
+AppImage dry run and both native Docker architecture build/smoke jobs passed;
+an additional anonymous local AMD64 container smoke passed. Five workflow
+regressions/full47 Python controls pass. No new hardware/whole-ETS claim.
+[Source-bound release evidence](evidence/release-alpha7-2026-10-10.json).
+Publication/assets/registry readback is the next explicit gate, not inferred
+from those dry runs. Both reported issues remain open.
+
 This is a **newest-first delivery history**, not the live feature inventory.
 Older dates, failures, counts and compatibility milestones remain historical.
 For current source capabilities use [manual implementation status](manual/implementation-status.md);

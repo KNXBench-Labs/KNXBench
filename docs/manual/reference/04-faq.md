@@ -81,9 +81,9 @@ exists," not certification by the KNX Association.
 **What does "alpha" mean for this project specifically?**
 
 Version `0.1.0-alpha` (each component counts its own `alpha.N`), with a public
-`v0.1.0-alpha.6` pre-release. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
+`v0.1.0-alpha.7` pre-release. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
 known limitations, several classified critical, and writing to a real device is verified
-on exactly one device so far. See
+only for narrowly recorded device/application cases. See
 [Project status](../getting-started/03-project-status.md) for the evidence boundaries and what
 it implies for trusting it with real work.
 

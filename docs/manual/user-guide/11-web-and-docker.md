@@ -94,8 +94,8 @@ warning. The quick-start plaintext password is visible in the container environm
 and may enter shell history; use [Setting a password](#setting-a-password) for a
 hashed credential in a lasting setup.
 
-- **Tags:** the release version without its `v` (`0.1.0-alpha.6` for the tag
-  `v0.1.0-alpha.6`) and `latest`. While KNXBench is in alpha, `latest` moves
+- **Tags:** the release version without its `v` (`0.1.0-alpha.7` for the tag
+  `v0.1.0-alpha.7`) and `latest`. While KNXBench is in alpha, `latest` moves
   with every pre-release; pin a version tag if an update should be your own
   decision.
 - **Availability:** from `v0.1.0-alpha.6` (9 October 2026) on; `v0.1.0-alpha.5`
@@ -151,7 +151,7 @@ files up to **256 MiB**, with a separate 16 KiB multipart-envelope allowance.
 The server streams into a temporary file and publishes only complete uploads;
 a duplicate name is refused rather than overwritten. Oversized requests receive
 HTTP 413 with an explicit limit. **The published alpha.6 image still has the
-100 MiB request ceiling** until a newer release is built.
+100 MiB request ceiling**. Alpha.7 includes the 256 MiB streamed-upload fix.
 
 For larger files, place the archive in the mounted data directory and choose it
 with the server file picker. A reverse proxy may impose its own smaller limit.

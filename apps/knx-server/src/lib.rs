@@ -72,6 +72,7 @@ pub use load_progress::*;
 mod one_shot_activity;
 mod paths;
 mod project_history;
+mod rename_routes;
 mod routes;
 mod session_log;
 mod settings;

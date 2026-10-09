@@ -164,6 +164,15 @@ export function isUnsavedProjectConflict(e: unknown): boolean {
   return status === 409 && body?.kind === "projectUnsavedChanges";
 }
 
+export function renameEntity(kind: "device" | "group_address", id: number, name: string,
+  tree: ProjectTree, expectedName: string): Promise<ProjectTree> {
+  return request(`/api/${kind === "device" ? "devices" : "group-addresses"}/${id}/name`, {
+    method: "PATCH", body: JSON.stringify({ name, expectedName,
+      serverIncarnation: tree.server_incarnation, snapshotRevision: tree.snapshot_revision,
+      projectIncarnation: tree.project_incarnation }),
+  });
+}
+
 export function currentProject(): Promise<ProjectTree & { has_store_path: boolean }> {
   return request("/api/project");
 }

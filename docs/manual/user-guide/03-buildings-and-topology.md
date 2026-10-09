@@ -108,9 +108,14 @@ the device number 1.1.1, Line "Line 1: Ground floor", Building part "Sample hous
 Ground floor / Distribution board" and the Description "Fictional sample
 device"](../../assets/screenshots/porcelain-device-inspector.png)
 
-Areas, lines and building parts can be renamed. Device renaming is still not
-available. Text fields commit when they lose focus, and Enter is a shortcut
-for that. A rejected value snaps back and shows the reason.
+Areas, lines and building parts can be renamed. Current source also renames
+project-local devices and individual group addresses (newer than alpha.6): use
+Name in the editor/Properties or F2/context-menu Rename on the object in Explorer
+or its central list. Enter or leaving an edited Name field applies once; Escape
+cancels. New naming fields retain rejected drafts with visible errors and require
+review after a stale-state refresh. Other existing structure text fields retain
+their earlier commit/rejection behavior. Renaming never changes an address or
+programs a device. [Name-editing contract](../../contracts/project-name-editing.md).
 
 ### Individual addresses
 

@@ -2984,6 +2984,14 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .device-wizard .device-wizard-result.selected { border-color: var(--knx-accent); background: color-mix(in srgb, var(--knx-accent) 14%, var(--knx-surface)); }
 /* The global button hover scales by 1.05, which the scrolling list would clip. */
 .device-wizard .device-wizard-result:hover:not(:disabled) { transform: none; box-shadow: none; border-color: var(--knx-accent); }
+.rename-workbench { display: contents; }
+.rename-name-field { min-width: 0; max-width: 100%; margin: 8px 0; }
+.rename-name-field input { min-width: 0; width: 100%; box-sizing: border-box; }
+.rename-name-field .field-error { overflow-wrap: anywhere; }
+.rename-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.rename-dialog { align-self: flex-start; width: min(480px, calc(100vw - 32px)); }
+.rename-context-menu { position: fixed; z-index: 1200; padding: 6px; border: 1px solid var(--knx-border); border-radius: 8px; background: var(--knx-surface); max-width: calc(100vw - 16px); }
+.rename-context-menu button { display: flex; gap: 32px; align-items: center; width: 100%; transform: none; box-shadow: none; }
 .device-wizard-result-name { font-size: 13px; overflow-wrap: anywhere; }
 .device-wizard-result-meta { color: var(--knx-muted); font-size: 12px; overflow-wrap: anywhere; }
 .device-wizard-install { margin: 0; }

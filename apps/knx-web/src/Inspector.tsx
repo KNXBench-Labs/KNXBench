@@ -22,6 +22,7 @@ import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
 import { ParameterPanelContent, useDeviceParameters } from "./ParameterPanel";
 import HelpTip from "./HelpTip";
+import RenameNameField from "./RenameNameField";
 import DeviceLink from "./DeviceLink";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { useProductLanguage } from "./productLanguage";
@@ -873,6 +874,7 @@ export function DeviceWorkspace(props: {
     t("parameters.diagnosticsTab"), t("parameters.restrictedTab")];
   return <section className="device-workspace">
     <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div></header>
+    <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
     <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
       e.preventDefault();
@@ -1055,6 +1057,7 @@ function DeviceInspector(props: {
   return (
     <div className="inspector">
       <h2>{detail.name}</h2>
+      <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
       {canDelete ? (
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
@@ -1075,6 +1078,8 @@ function DeviceInspector(props: {
 
 function GroupAddressInspector(props: {
   ga: GroupAddressNode;
+  tree: ProjectTree;
+  onApplied: (tree: ProjectTree) => void;
   // `Command::apply`'s `DeleteGroupAddress` arm only ever searches
   // `installations[0]` (command.rs) — the same reason
   // `ProjectExplorer.tsx`'s inline create row only renders under the
@@ -1104,6 +1109,7 @@ function GroupAddressInspector(props: {
   return (
     <div className="inspector">
       <h2>{ga.name}</h2>
+      <RenameNameField tree={props.tree} target={{ kind: "group_address", id: ga.id, name: ga.name }} onApplied={props.onApplied} />
       <p className="inspector-address ga-address">{formatGa(ga.address)}</p>
       <dl className="inspector-facts">
         <dt>{t("addressTable.dpt")}</dt>
@@ -1746,7 +1752,7 @@ export default function Inspector(props: {
     const ga = findGroupAddress(tree, selection.id);
     if (!ga) return null;
     const canDelete = owningInstallation(tree, "group_address", ga.id) !== undefined;
-    return <GroupAddressInspector ga={ga} canDelete={canDelete} onDeleted={onDeleted} />;
+    return <GroupAddressInspector ga={ga} tree={tree} onApplied={onApplied} canDelete={canDelete} onDeleted={onDeleted} />;
   }
 
   const matchingStructureIds = tree.installations.reduce((count, installation) => {

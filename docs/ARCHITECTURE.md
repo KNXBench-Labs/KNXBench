@@ -2,13 +2,24 @@
 
 ## Communication-object table (local source, 2026-10-09)
 
-[ADR-0101](adr/0101-communication-object-table-view-state.md) and the
+[ADR-0102](adr/0102-communication-object-table-view-state.md) and the
 [table contract](COMMUNICATION_OBJECT_TABLE.md) keep search/filter/sort in pure UI
 derivation and every keyed object editor under one stable table parent. A per-object
 mutation boundary guards duplicate starts and late publication; existing application
 commands remain authoritative. View state is transient, not a domain/project schema.
 No core/store/product/API/protocol/dependency change. Local delivery is not release
 or deployment.
+
+## Guarded project-local names (2026-10-09)
+
+[ADR-0101](adr/0101-project-local-device-and-ga-names.md) and
+[the naming contract](contracts/project-name-editing.md) add name-only domain
+commands, exact restoration, authoritative core admission and guarded dedicated
+HTTP routes. One UI workflow serves editor/inspector/explorer/tables. The
+application owns a transient successful-load generation alongside existing
+server/revision identity; no import or native-schema field changes. Native
+state history from ADR-0100 is reused, not a new serialized-command format.
+No CSV/MCP/protocol/CLI-authoring change or ETS/hardware compatibility claim.
 
 ## Native project history (2026-10-09)
 

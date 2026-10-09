@@ -1,4 +1,4 @@
-# ADR 0101: Object editors keep one parent while the table changes its mind
+# ADR 0102: Object editors keep one parent while the table changes its mind
 
 Date: 2026-10-09
 Status: Accepted for local implementation; publication separate

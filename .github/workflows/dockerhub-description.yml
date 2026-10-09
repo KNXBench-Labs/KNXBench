@@ -1,0 +1,71 @@
+name: Docker Hub description
+
+# Repository metadata only: never builds/pushes an image or changes release tags.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - apps/knx-server/DOCKERHUB.md
+      - .github/workflows/dockerhub-description.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dockerhub-description
+  cancel-in-progress: false
+
+env:
+  DOCKERHUB_REPOSITORY: knxbench/knxbench-server
+  SHORT_DESCRIPTION: "KNX engineering in your browser: import projects, edit with undo, monitor bus. Less VM. More KNX."
+
+jobs:
+  description:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check publication inputs
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN || secrets.DOCKERHUB_TOKEN }}
+        run: |
+          test -n "$DOCKERHUB_USERNAME"
+          test -n "$DOCKERHUB_TOKEN"
+          test -s apps/knx-server/DOCKERHUB.md
+          test "$(printf '%s' "$SHORT_DESCRIPTION" | wc -c)" -le 100
+          test "$(wc -c < apps/knx-server/DOCKERHUB.md)" -le 25000
+
+      - name: Publish short description and overview
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0, Node 24
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN || secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.DOCKERHUB_REPOSITORY }}
+          short-description: ${{ env.SHORT_DESCRIPTION }}
+          readme-filepath: apps/knx-server/DOCKERHUB.md
+
+      - name: Verify public description matches the committed source
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.request
+          from pathlib import Path
+
+          expected = Path("apps/knx-server/DOCKERHUB.md").read_text()
+          url = "https://hub.docker.com/v2/repositories/" + os.environ["DOCKERHUB_REPOSITORY"] + "/"
+          for attempt in range(5):
+              with urllib.request.urlopen(url, timeout=20) as response:
+                  actual = json.load(response)
+              if (actual.get("description") == os.environ["SHORT_DESCRIPTION"]
+                      and actual.get("full_description") == expected):
+                  print("Public short description and overview match the committed source.")
+                  break
+              if attempt == 4:
+                  raise SystemExit("Docker Hub description does not match the committed source")
+              time.sleep(3)
+          PY

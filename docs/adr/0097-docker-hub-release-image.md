@@ -106,5 +106,21 @@ The image itself is unchanged: same Dockerfile, same runtime contract
   each. The first tag run ([run 37893327218](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37893327218), `v0.1.0-alpha.6`)
   pushed, merged and verified both platforms; an anonymous pull of the
   published amd64 image passed the smoke test.
-- Not done: image signing (cosign), a Docker Hub description sync, scheduled
-  rebuilds for base-image security updates. Each would be its own decision.
+- Docker Hub description sync is separate from image releases (owner request,
+  2026-10-09): `apps/knx-server/DOCKERHUB.md` is the maintained overview;
+  `.github/workflows/dockerhub-description.yml` publishes it plus the short
+  description on scoped pushes to `main` or manual dispatch, then verifies
+  anonymous API readback against the exact source. It never builds images,
+  moves tags or replaces containers. Root README relative assets and
+  source-build instructions are deliberately not copied verbatim.
+- The description action is pinned to `peter-evans/dockerhub-description`
+  v5.0.0 (`1b9a80c056b620d92cedb9d9b5a223409c68ddfa`, Node 24).
+  Its [documented contract](https://github.com/peter-evans/dockerhub-description/blob/1b9a80c056b620d92cedb9d9b5a223409c68ddfa/README.md)
+  requires repository administration and a personal access token with
+  read/write/delete scope. An image-push-only token may be insufficient;
+  optional secret `DOCKERHUB_DESCRIPTION_TOKEN` overrides `DOCKERHUB_TOKEN`
+  for this job only. Credentials are never written into the description.
+  The limits are 100 bytes for the short description and 25,000 bytes for
+  the overview; publication preflight refuses oversized input.
+- Not done: image signing (cosign), scheduled rebuilds for base-image
+  security updates. Each would be its own decision.

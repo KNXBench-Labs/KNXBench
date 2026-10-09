@@ -1,7 +1,7 @@
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-09 12:12 CEST
 - **Completed:** Owner-authorized README/manual Docker Hub delivery merged no-ff: feature 96586ee78c316c47a493a85eb8d6aff1081dc5dc onto current main 199a7057 as 9394e42466cf36b15687ba4b30659629b89357ba. All four requested documentation blobs equal the reviewed feature; application sources and all upstream handover bytes preserved. Fresh merged checks: all five nonempty checkout-built xtask gates, 493 anchors, documentation 205 Markdown files/33 chapters/0 errors and whitespace pass. Earlier 9-check amd64 container acceptance remains dated local evidence, not a new runtime run.
-- **Pending/Next Steps:** Normal push to refs/heads/main and exact fetched/live ref plus document readback, then owned-worktree/branch/scratch cleanup. No release, deployment, hardware or root synchronization.
+- **Pending/Next Steps:** Publication 4e990894170da16124d5543486f63642454e0f58 verified: local/fetched/live refs equal, feature ancestry and all four remote documentation blobs exact. No feature work pending; closure bookkeeping and task-owned cleanup only. No release, deployment, hardware or root synchronization.
 - **Notes for Codex oder Claude:** Only Markdown changed; no full application suite needed or claimed. Shared root HEAD/index and history worktree remain untouched. Root-local log .ai/logs/2026-10-09_codex_readme-dockerhub.md retains acceptance. This entry supersedes the feature's local-only publication boundary.
 
 ---

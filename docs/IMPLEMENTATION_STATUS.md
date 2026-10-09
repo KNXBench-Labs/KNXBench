@@ -28,7 +28,9 @@ does not erase a broader platform/device limitation or imply a new release.
   collection timestamp. Original local receipt/images remain unchanged; final
   [publication receipt](evidence/communication-objects-publication-2026-10-09.json)
   binds this exact source. Normal main push/readback remains a separate runtime
-  completion check; no force push, release, deployment or bus operation.
+  completion check. Candidate `2e759b77` was normally pushed and verified
+  against fetched/live main at 2026-10-09 19:37 CEST; this docs-only closure retains
+  the exact accepted source. No force push, release, deployment or bus operation.
 
 ## 2026-10-09 — Communication-object table meets the rename desk (main delivery)
 

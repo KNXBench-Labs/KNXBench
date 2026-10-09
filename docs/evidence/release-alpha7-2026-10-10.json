@@ -88,5 +88,72 @@
   "issuesRemainOpen": [
     1,
     2
-  ]
+  ],
+  "publication": {
+    "verifiedAt": "2026-10-10 00:26 CEST",
+    "tag": "v0.1.0-alpha.7",
+    "tagObject": "4811dccf0dae2b3599ee1a03a037358bb536a9e0",
+    "commit": "839d5afd90559f1435d77a05ece3bbce2de3f2cf",
+    "url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.7",
+    "prerelease": true,
+    "handwrittenNotesExact": true,
+    "assets": [
+      {
+        "name": "knx-mcp-x86_64-linux",
+        "size": 10361984,
+        "sha256": "77415b5ae2160cf9cb82991b883feedf3aee9f83db5a3c42103948d25c5fb5e5",
+        "githubDigestMatched": true
+      },
+      {
+        "name": "KNXBench_0.1.0-alpha.7_amd64.AppImage",
+        "size": 88062456,
+        "sha256": "eaa5d9ef0ad1dcb6b7ce008c2be7e7860b2b1c7e3f572f2a26d926c6f54b4e2a",
+        "githubDigestMatched": true
+      },
+      {
+        "name": "SHA256SUMS",
+        "size": 193,
+        "sha256": "51b44e2746676c02b698f381719321d0fe2b603d37c8b18a24ce2aff644b0a52",
+        "githubDigestMatched": true
+      }
+    ],
+    "checksumFileVerified": true,
+    "mcpExecuted": "knx-mcp 0.1.0-alpha.7+g839d5af",
+    "appimageExtractionExit": 0,
+    "appimageGuiSmoke": false,
+    "docker": {
+      "image": "knxbench/knxbench-server@sha256:30870b0b2328e334629bc25cbca9e574f4659aaf100eca8ca7e650f5cda74e87",
+      "digest": "sha256:30870b0b2328e334629bc25cbca9e574f4659aaf100eca8ca7e650f5cda74e87",
+      "versionAndLatestMatch": true,
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "anonymousPullExit": 0,
+      "pulledArchitecture": "amd64",
+      "versionLabel": "v0.1.0-alpha.7",
+      "revision": "839d5afd90559f1435d77a05ece3bbce2de3f2cf",
+      "smokePending": false,
+      "actualHttpsAuthenticationSaveReopenExit": 0
+    },
+    "tagWorkflows": [
+      {
+        "id": 37997813077,
+        "head": "839d5afd90559f1435d77a05ece3bbce2de3f2cf",
+        "conclusion": "success",
+        "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/37997813077"
+      },
+      {
+        "id": 37997813219,
+        "head": "839d5afd90559f1435d77a05ece3bbce2de3f2cf",
+        "conclusion": "success",
+        "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/37997813219"
+      }
+    ],
+    "issuesRemainOpen": [
+      1,
+      2
+    ],
+    "compatibilityAndBusClaimsExpanded": false
+  }
 }

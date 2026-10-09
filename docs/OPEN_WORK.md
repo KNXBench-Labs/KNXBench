@@ -147,9 +147,11 @@ to owner `later`. Routes naming removed goal files are kept as history.
 ## 5. Repository chores
 
 - **Docker Hub release image** (ADR-0097, KL §168): live since
-  `v0.1.0-alpha.6`. Open by choice: image signing, Docker Hub description
-  sync, scheduled base-image rebuilds, and the `latest` rule at the first
-  stable release.
+  `v0.1.0-alpha.6`; Alpha.7 version/latest and both architecture manifests
+  externally verified on 2026-10-10, including anonymous HTTPS/save/reopen
+  smoke. [Publication evidence](evidence/release-alpha7-2026-10-10.json).
+  Open by choice: image signing, Docker Hub description sync, scheduled
+  base-image rebuilds, and the `latest` rule at the first stable release.
 - **CI** is disabled (`gh workflow disable CI`, 2026-10-07) until the user
   re-enables it.
 - **Repository visibility:** `KNXBench-Labs/KNXBench` became public on

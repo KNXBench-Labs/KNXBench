@@ -1,5 +1,17 @@
 # Compatibility
 
+## Offline AP1 reconstruction is not executable compatibility (2026-10-09)
+
+The local [AP1 resolver](OFFLINE_PROCEDURE_RESOLUTION.md) combines uniquely
+associated package sources only for explicit `MV-07B0` `Load/ap1` declarations.
+`expanded` describes declaration order, not validated control values, parameter
+or image materialization, ETS equivalence or physical-device behavior.
+Unresolved/conditional/nested information stays visible and non-executable.
+No importer namespace admission, native/product schema version, download
+executor, eligibility or hardware evidence changes. Existing contribution
+preview/permission/manual handoff provides the reporting path; publication
+of this extension is separate.
+
 ## Native schema v11 history boundary (2026-10-09)
 
 Persistent undo/redo and project versions use native schema v11 and snapshot

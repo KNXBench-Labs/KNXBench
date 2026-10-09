@@ -20,8 +20,11 @@ Acceptance requires a clean catalogue, real UI exercises, duplicate/invalid addr
 
 ## Observed scope adjustments
 
-The real UI has a device Description edit but no device-name rename command.
-Exercise 2 therefore edits the description rather than adding a new app feature.
+At the original 2026-10-08 acceptance the real UI had a device Description edit
+but no device-name command. Exercise 2 therefore edits the description; the
+frozen 1.0.0 packages remain unchanged. Current-source name editing is a separate,
+newer-than-alpha.6 capability ([naming contract](contracts/project-name-editing.md)),
+not a retroactive change to that demo acceptance.
 The group-creation form has no declared-DPT input; exercise 4 creates an address
 and then verifies the DPT 1.001 inferred from its receiver link. The baseline
 addresses keep explicit declarations and matching sender/receiver DPTs.

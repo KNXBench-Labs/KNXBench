@@ -56,6 +56,21 @@ Selecting a row shows a **Links** panel underneath the table: one line per linke
 communication object, with its device, the object's name and number, the direction,
 and an Unlink button.
 
+## Renaming an individual group address
+
+Current source (newer than alpha.6) offers Name in Properties, plus F2 and the
+Rename context menu on a group address in Explorer/the address table. This works
+in every installation and on linked addresses; it changes no numeric address,
+DPT, flag, range or connection. Duplicate display names are allowed.
+
+Enter or leaving the edited field applies once; Escape cancels. A new name may
+have at most 1,024 Unicode code points and must not be blank or contain control
+characters/line breaks. No valid text is trimmed or normalized. Failed drafts
+remain visible. Refresh reads current state, and reapplying the draft requires
+an explicit action; another project's context is refused. Undo/redo is exact;
+saved/native recovered names survive reopening. No .knxproj export or bus write.
+See [the naming contract](../../contracts/project-name-editing.md).
+
 ## Creating and deleting addresses
 
 Group addresses are created in the project explorer, under the **Group Addresses**

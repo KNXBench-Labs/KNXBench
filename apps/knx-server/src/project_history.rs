@@ -114,7 +114,7 @@ fn view_from_parts(
         &stack,
         *state.import_counts.lock().expect("state mutex poisoned"),
         revision,
-        &state.server_incarnation,
+        state,
         last_saved.as_deref(),
     );
     let (undo_steps, redo_steps) = stack.history_lengths();

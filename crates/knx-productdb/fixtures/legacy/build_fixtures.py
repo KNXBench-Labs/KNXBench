@@ -101,6 +101,24 @@ def parameter(pid, ptype, number, name, low, high, parent_value, size, order, ad
             str(size), str(order), address, bit, description, parent, default]
 
 
+S19_COLUMNS = [(I, 4, "N", "BLOCK_ID"), (S, 2, "Y", "BLOCK_NUMBER"), (I, 4, "Y", "PROGRAM_ID"),
+               (V, 50, "Y", "BLOCK_NAME"), (S, 2, "Y", "BLOCK_TYPE"), (S, 2, "Y", "CONTROL_CODE"),
+               (S, 2, "Y", "SEGMENT_TYPE"), (S, 2, "Y", "SEGMENT_ID"),
+               (I, 4, "Y", "SEGMENT_ADDRESS"), (I, 4, "Y", "SEGMENT_LENGTH"),
+               (S, 2, "Y", "ACCESS_ATTRIBUTES"), (S, 2, "Y", "MEMORY_TYPE"),
+               (S, 2, "Y", "MEMORY_ATTRIBUTES"), (B, 32767, "Y", "BLOCK_DATA"),
+               (B, 32767, "Y", "BLOCK_MASK"), (B, 16, "Y", "Record"), (I, 4, "Y", "MERGE_ID"),
+               (I, 4, "Y", "PROC_MASK")]
+
+
+def s19(number, code, segment_type="", address=0, length=0, access="", memory_type="",
+        attributes="", data="", mask="", record=""):
+    segment_id = "" if segment_type == "" else "0"
+    return [str(900 + number), str(number), "300", f"Paragraph ${16 * (number - 1):04X}", "0",
+            str(code), str(segment_type), segment_id, str(address), str(length), str(access),
+            str(memory_type), str(attributes), data, mask, record, "", "0"]
+
+
 PROGRAM_DATABASE = document("ets.vd_", "virtual_device", [
     table(3, "manufacturer", [(I, 4, "N", "MANUFACTURER_ID"), (V, 50, "Y", "MANUFACTURER_NAME")],
           [["4242", "Marvin Test"]]),
@@ -125,8 +143,11 @@ PROGRAM_DATABASE = document("ets.vd_", "virtual_device", [
                                       (I, 4, "Y", "MANUFACTURER_ID"), (S, 2, "Y", "LINKABLE"),
                                       (S, 2, "Y", "PEI_TYPE"), (I, 4, "Y", "PROGRAM_TYPE"),
                                       (I, 4, "Y", "ORIGINAL_MANUFACTURER_ID"),
-                                      (S, 2, "Y", "DEVICE_TYPE")],
-          [["300", "900", "Improbability Drive", "22", "4242", "0", "0", "1", "4242", "7"]]),
+                                      (S, 2, "Y", "DEVICE_TYPE"), (S, 2, "Y", "ADDRESS_TAB_SIZE"),
+                                      (I, 4, "Y", "ASSOCTAB_ADDRESS"), (S, 2, "Y", "ASSOCTAB_SIZE"),
+                                      (I, 4, "Y", "COMMSTAB_ADDRESS"), (S, 2, "Y", "COMMSTAB_SIZE")],
+          [["300", "900", "Improbability Drive", "22", "4242", "0", "0", "1", "4242", "7", "9",
+            "16393", "5", "16648", "11"]]),
     table(12, "product_to_program", [(I, 4, "N", "PROD2PROG_ID"), (I, 4, "Y", "PRODUCT_ID"),
                                      (I, 4, "Y", "PROGRAM_ID"), (V, 20, "Y", "REGISTRATION_NUMBER")],
           [["400", "100", "300", "42/2026"]]),
@@ -180,6 +201,10 @@ PROGRAM_DATABASE = document("ets.vd_", "virtual_device", [
         parameter(1010, 13, "1010", "p_hidden", 0, 0, "", 1, 2000, "", "", "Hidden", "", "1"),
         parameter(1011, 11, "1011", "p_governed", 2, 2, "1", 8, 60, "16643", "0", "Governed",
                   "1010", "5"),
+        # Address 0 is "no memory" (L4): two switches of one type and size
+        # there stay two parameters, not one cell.
+        parameter(1012, 13, "1012", "p_flag_a", 2, 2, "", 1, 70, "0", "0", "Flag A", "1000", "0"),
+        parameter(1013, 13, "1013", "p_flag_b", 2, 2, "", 1, 80, "0", "0", "Flag B", "1000", "1"),
         parameter(2000, 10, "2000", "p_expert", 2, 2, "", 0, 100, "", "", "Expert", "", ""),
         parameter(2001, 12, "2001", "p_trim", 2, 2, "", 8, 110, "16644", "0", "Trim", "2000", "0"),
     ]),
@@ -221,10 +246,42 @@ PROGRAM_DATABASE = document("ets.vd_", "virtual_device", [
            ["808", "1033", "20", "702", "Level (en)"],
            ["809", "1033", "22", "702", "Receive (en)"],
            ["805", "1033", "99", "1001", "Unknown column"]]),
-    # A table the mapping does not model: kept in the payload, reported.
-    table(22, "s19_block", [(I, 4, "N", "BLOCK_ID"), (I, 4, "Y", "PROGRAM_ID"),
-                            (B, 32767, "Y", "BLOCK_DATA")],
-          [["900", "300", "00FF"]]),
+    # The program's load procedure (ADR-0094, L4), with the columns of the
+    # real files. The import does not map it (an unmapped table, kept in the
+    # payload); the download reads it. Address table 4000h (9 octets: three
+    # group addresses), association table 4009h (two entries), parameters
+    # and the group object table (two objects at 4108h) in 4100h. The
+    # address table's mask uses the legacy 01h for "written", the others
+    # FFh. The task segment's record carries no application identity: the
+    # planner takes it from the program row.
+    table(22, "s19_block", S19_COLUMNS, [
+        s19(1, 14, record="0e000000000000000000000000000000"),
+        s19(2, 7, record="07004e00010100000000000700000000"),
+        s19(3, 20, record="14000000000000000000000000000000"),
+        s19(4, 36, record="24000000000000000000000000000000"),
+        s19(5, 52, record="34000000000000000000000000000000"),
+        s19(6, 17, record="11000000000000000000000000000000"),
+        s19(7, 19, 0, 16384, 9, 255, 3, 128, "00" * 9, "010000010101010101",
+            "13000040004008ff0380000000000000"),
+        s19(8, 19, 2, 16384, record="13020040000000000000000000000000"),
+        s19(9, 18, record="12000000000000000000000000000000"),
+        s19(10, 33, record="21000000000000000000000000000000"),
+        s19(11, 35, 0, 16393, 5, 255, 3, 128, "00" * 5, "FF" * 5,
+            "2300004009400dff0380000000000000"),
+        s19(12, 35, 2, 16393, record="23020040090000000000000000000000"),
+        s19(13, 34, record="22000000000000000000000000000000"),
+        s19(14, 49, record="31000000000000000000000000000000"),
+        s19(15, 51, 0, 16640, 32, 255, 3, 128,
+            "00" * 8 + "024130" + "4140df00" + "4141df07" + "00" * 13, "",
+            "3300004100411fff0380000000000000"),
+        s19(16, 51, 2, 16640, record="33020041000000000000000000000000"),
+        # Machine 5's task segment: MT information only (Cookbook Load
+        # Controls §2.3), never sent.
+        s19(17, 83, 2, 16648, record="53020041080000000000000000000000"),
+        s19(18, 50, record="32000000000000000000000000000000"),
+        s19(19, 12, record="0c000000000000000000000000000000"),
+        s19(20, 15, record="0f000000000000000000000000000000"),
+    ]),
     # A secret-class column (ADR-0094, design decision B-3): the non-empty
     # value, wrapped over a continuation line, is withheld from the stored
     # copy; the empty one has nothing to withhold.

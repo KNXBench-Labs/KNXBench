@@ -175,4 +175,35 @@ async fn a_legacy_device_is_placed_parameterised_and_linked() {
     assert_eq!(status, StatusCode::OK, "{tree}");
     let (_, detail) = call(&app, "GET", &format!("/api/device/{id}"), None).await;
     assert!(detail.to_string().contains("1/1/1"), "{detail}");
+
+    // L4: with an address, its download plans from the program's own
+    // `s19_block` procedure. Never run on hardware, so untested.
+    let (status, tree) = call(
+        &app,
+        "POST",
+        "/api/individual-address",
+        Some(json!({ "deviceId": id, "address": "1.1.42" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{tree}");
+    // Mode 0 activates the union's signed member at -3, which no download
+    // writes (RESEARCH §19.9): refused by that rule, as for an XML program.
+    let (status, readiness) = call(&app, "GET", "/api/device-readiness", None).await;
+    assert_eq!(status, StatusCode::OK, "{readiness}");
+    let row = &readiness["devices"][0];
+    assert_eq!(row["address"], "1.1.42", "{readiness}");
+    assert_eq!(row["readiness"], "unsupported", "{readiness}");
+    assert_eq!(row["category"], "parameter-value", "{readiness}");
+    let (status, panel) = call(
+        &app,
+        "POST",
+        &format!("/api/device/{id}/parameters"),
+        Some(json!({ "etsId": mode, "raw": "1" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{panel}");
+    let (_, readiness) = call(&app, "GET", "/api/device-readiness", None).await;
+    let row = &readiness["devices"][0];
+    assert_eq!(row["readiness"], "untested", "{readiness}");
+    assert_eq!(row["steps"], 23, "{readiness}");
 }

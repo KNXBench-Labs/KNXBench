@@ -6,8 +6,9 @@ Investigation date: **2026-09-16**.
 > not the current install guide. Direct legacy VD3/VD4 offline import is now
 > implemented in CLI and web, with a password dialog and one optional remembered
 > password (L1–L3); the large installer-tree VD5 is admitted since 2026-10-09.
-> `string`/`long enum` parameters, DPT mapping and legacy device download
-> remain separate. See [ADR-0094](adr/0094-legacy-exim-product-files.md) and
+> Legacy download plans (L4, untested) followed the same day.
+> `string`/`long enum` parameters, DPT mapping and a first live legacy
+> download remain separate. See [ADR-0094](adr/0094-legacy-exim-product-files.md) and
 > [the user guide](manual/user-guide/05-devices-and-products.md#old-ets3-product-databases-vd3-vd4-vd5).
 > The historical converter/research sections below do not reopen closed work.
 

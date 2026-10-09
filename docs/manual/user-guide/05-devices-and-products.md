@@ -108,8 +108,12 @@ remembered and forgets it.
 
 The report lists the application programs, the catalog entries, parameters,
 communication objects and translations, and every import note. Devices from such a
-file can be placed, parameterised and linked to group addresses. They cannot be
-downloaded yet, and their objects carry no data point type until you set one. A large
+file can be placed, parameterised, linked to group addresses and, since October
+2026, downloaded: KNXBench builds the download from the file's own load procedure,
+checked against ETS's conversions of the same programs. No such download has run on
+a real device yet, so the readiness check shows these devices as *untested* and a
+download asks you to accept that. Their objects carry no data point type until you
+set one. A large
 `.vd5` (the measured Siemens database is 67 MB with 88 programs) takes 20–40 seconds
 and over 1 GiB of server memory to import; its import notes are grouped by kind, so
 the report stays readable with close to 1,800 of them. See

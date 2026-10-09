@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (root checkout synchronized)
+- **Timestamp:** 2026-10-09 07:24 CEST
+- **Completed:** User go: shared root checkout fast-forwarded from `608a204b` to `f3758eab` and is clean (no modified/untracked paths). The leftover files were Codex' community-link package, byte-identical to `16163ef7` on main (ADR-0091, verification JSON; IMPLEMENTATION_STATUS lines all on main), plus 16 handover entries that were never committed. Backup with SHA256SUMS in `KNXBench.backups/2026-10-09-root-sync/`; the 16 entries are archived verbatim in the root-local, gitignored `.ai/archive/2026-10-09_root-local-handover-entries.md`. Ignored local data (`OriginalData/`, `ideas.md`, `.venv`) untouched.
+- **Pending/Next Steps:** Leftovers only on request: scratch worktree `devnav-ro`, 5 stashes. Open project items as in OPEN_WORK.md.
+- **Notes for Codex oder Claude:** The root is now current; still prefer isolated worktrees for packages and never leave uncommitted work in the root.
+
+---
+
 - **Last Agent:** Claude (integration of three local packages)
 - **Timestamp:** 2026-10-09 07:05 CEST
 - **Completed:** Owner go "In main integrieren". Toast parity (`f8dbde0a`, `7832b42d`) fast-forwarded; Devices navigation and community demos 1.0.0 committed in their worktrees (KNXBench identity, no co-author) and cherry-picked onto it; doc conflicts kept both sides. Account-name scratch path scrubbed from `docs/evidence/community-demos/delivery-verification.json` before commit. Integrated gate on `e46e5ce1`: Vitest 2480/152, build/tsc/fixtures, Chromium 202, Devices production 13, toast x3 42, fmt, Clippy, Rust 3726/0/182, tools 42, five xtask checks, diff check, inputs frozen. Docs-only status bookkeeping (IMPLEMENTATION_STATUS, OPEN_WORK, KL, ARCHITECTURE, manual status, demos index) followed with doc gates.

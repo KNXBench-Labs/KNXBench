@@ -1,9 +1,24 @@
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-09 11:39 CEST
 - **Completed:** 1.1.14 complete download, operator light on/off telegram check, and authorized restore completed. Independent final dump equals the pre-dump at all 1570 selected octets (0 differences), including physical address and six load-state bytes. Both writes: 1562 read-back-verified octets, three Loaded parts, restart unconfirmed. Monitor stopped; extra user-operated blind telegrams noted, physical movement not claimed. Complete-only evidence entry/test and research §19.21/manual scope updates implemented locally; named RED then GREEN verified. New readiness 11 verified/21 untested/2 unsupported/1 excluded.
-- **Pending/Next Steps:** Scoped app/CLI/network offline gate proc_ec2f4c32df42 and Release house/pinned-103 coverage proc_ad6b7754bc19 pending; coverage may need only this package's verified/untested pin adjustment. Review, gate receipt and focused commit remain; no new device writes authorized. Partial/UI scopes and 1.1.15 remain untested live.
+- **Pending/Next Steps:** Scoped app/CLI/network offline gate (839/0/56 ignored) and Release house/historical-103 corpus checks green. Feature dba73d8c committed; integration with published full-105 corpus owner is in progress. Fresh integrated acceptance and publication remain; no new device writes authorized. Partial/UI scopes and 1.1.15 remain untested live.
 - **Notes for Codex oder Claude:** Private evidence OriginalData/DeviceBackups/2026-10-09_button-114-live/result.json plus dumps, both backups and monitor. Task worktree live-114-20261009, scratch live114-20261009; no raw device content committed. Temporary probe removed after verification. Restore scope is selected configuration/load-state bytes, not all device storage/RAM. Preserve parallel corpus owner's branch and root handovers; §19.20 reserved for that owner's finding.
 
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-09 11:41 CEST
+- **Completed:** Owner-authorized download-coverage fix bd778821 merged no-ff as d12bce07138beef026708c8b014bb5e4d2ac0b6a; accepted delivery bf02331220f9017b4e5702b428169cfb714de085 pushed to refs/heads/main. Local/fetched/live refs equal and feature ancestry plus exact publication receipt bytes verified. Fresh merged gate proc_0936d31525ea exit 0: full Release corpus 1/0/0, all 105 originals unchanged, 467 programs (1 verified/98 untested); application 159/0/27 ignored, ZIP boundaries 13/0, fmt/focused Clippy/docs/all five fresh nonempty repository checks/whitespace pass. Test source/production unchanged through metadata; self-review, no subagents.
+- **Pending/Next Steps:** None for the feature/main delivery. This closure is documentation-only, with its final push/readback checked separately. No release, deployment or hardware actions authorized/performed. Keep parallel live114/history worktrees and root dirty handover intact.
+- **Notes for Codex oder Claude:** Receipt docs/evidence/download-coverage-publication-2026-10-09.json; log .ai/logs/2026-10-09_codex_download-coverage-publication.md. Original implementation receipt remains historical/byte-exact. Root main/index intentionally unsynchronized to preserve the active session; only our handover entry is updated. Owned integration/build/scratch and integrated feature branch may be removed after final metadata remote readback; no full workspace/frontend/ETS/hardware compatibility claim.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-09 11:06 CEST
+- **Completed:** Fixed download_coverage_corpus with existing bounded LARGE admission, no package exclusions or production changes. Final explicit full Release corpus proc_4c09edce53be: 1 passed/0 failed/0 ignored; all 105 inputs unchanged, 467 programs (1 verified/98 untested, exact refusal categories pinned). STANDARD baseline reproduces SizeLimit; old-pin LARGE measurement retained as diagnostic RED. Removed private per-program output; research §19.20/index, KL §151, implementation status and compact receipt updated. Application 159/0/27 ignored, ZIP boundaries 13/0, fmt/focused Clippy/docs/five nonempty fresh-checkout repository gates pass; self-review.
+- **Pending/Next Steps:** No implementation or test work remains for this fix. Local-only focused commit on fix/download-coverage-large-20261009; merge/push/release need a separate request. Shared root/source/index and foreign history worktree stay unchanged; root handover and owned ignored log synchronized.
+- **Notes for Codex oder Claude:** Receipt docs/evidence/download-coverage-large-2026-10-09.json; log .ai/logs/2026-10-09_codex_download-coverage-large.md. Run with explicit KNXBENCH_PRODUCT_CORPUS and cargo test --release -p knx-app --test download_coverage_corpus -- --ignored. Offline product-default plans only, no new hardware/ETS compatibility. Interrupted attempts have no verdict; final accepted source SHA-256 bound in receipt. No subagents, server/UI/protocol/schema/default-limit changes. Owned build/runtime scratch cleaned after local commit; branch retained for separately approved integration.
 
 ---
 

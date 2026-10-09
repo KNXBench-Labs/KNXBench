@@ -1,0 +1,263 @@
+{
+  "date": "2026-10-09",
+  "feature_revision": "bd77882170d16f5f39f1b823019a1c9ff54c2ec2",
+  "gated_merge_revision": "d12bce07138beef026708c8b014bb5e4d2ac0b6a",
+  "gate_process": "proc_0936d31525ea",
+  "gate_exit": 0,
+  "source_inputs_sha256": "6facb778053811cd2bbd12aba7e6953e7ce12c79fd0aa079bde76b5e5dd18bff",
+  "test_source_sha256": "18f95b15416848758b22d4f2277ea5e09e45581350296b2086d8a7a0a97965b5",
+  "full_corpus": {
+    "command": "KNXBENCH_PRODUCT_CORPUS=<private-root> cargo test --release -p knx-app --test download_coverage_corpus -- --ignored --nocapture",
+    "exit": 0,
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0,
+    "selected_packages": 105,
+    "original_inputs_unchanged": true,
+    "coverage": {
+      "programs": 467,
+      "verified": 1,
+      "untested": 98,
+      "unsupported": {
+        "not-memory-mapped": 273,
+        "parameter-evaluation": 51,
+        "parameter-value": 9,
+        "image-structure": 33,
+        "procedure-contents": 1,
+        "product-data": 1
+      }
+    }
+  },
+  "public_checks": [
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit": 0,
+      "test_results": [],
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "scope": []
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-q",
+        "-p",
+        "knx-app"
+      ],
+      "exit": 0,
+      "test_results": [
+        "test result: ok. 82 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.38s",
+        "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s",
+        "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s",
+        "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 4 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 3.11s",
+        "test result: ok. 0 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s",
+        "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s",
+        "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 1 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.15s",
+        "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "passed": 159,
+      "failed": 0,
+      "ignored": 27,
+      "scope": []
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-q",
+        "-p",
+        "knx-productdb",
+        "--test",
+        "zip_cap_boundaries"
+      ],
+      "exit": 0,
+      "test_results": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.37s"
+      ],
+      "passed": 13,
+      "failed": 0,
+      "ignored": 0,
+      "scope": []
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "-q",
+        "-p",
+        "knx-app",
+        "--test",
+        "download_coverage_corpus",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit": 0,
+      "test_results": [],
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "scope": []
+    },
+    {
+      "command": [
+        "python3",
+        "tools/check_documentation.py"
+      ],
+      "exit": 0,
+      "test_results": [],
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "scope": []
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "-q",
+        "-p",
+        "xtask",
+        "--",
+        "check-headers"
+      ],
+      "exit": 0,
+      "test_results": [],
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "scope": [
+        "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/download-coverage-publish-20261009",
+        "headers ok: 732 files with a well-formed header, 155 without one (ceiling 155), 21 generated files skipped"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "-q",
+        "-p",
+        "xtask",
+        "--",
+        "check-layering"
+      ],
+      "exit": 0,
+      "test_results": [],
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "scope": [
+        "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/download-coverage-publish-20261009",
+        "layering scope: 478 resolved packages"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "-q",
+        "-p",
+        "xtask",
+        "--",
+        "check-ledger"
+      ],
+      "exit": 0,
+      "test_results": [],
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "scope": [
+        "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/download-coverage-publish-20261009",
+        "ledger ok: 191 rows in docs/status/LEDGER.md"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "-q",
+        "-p",
+        "xtask",
+        "--",
+        "check-anchors"
+      ],
+      "exit": 0,
+      "test_results": [],
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "scope": [
+        "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/download-coverage-publish-20261009",
+        "anchors ok: 486 links checked across 205 markdown files, none dead"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "-q",
+        "-p",
+        "xtask",
+        "--",
+        "check-corpus-gates"
+      ],
+      "exit": 0,
+      "test_results": [],
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "scope": [
+        "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/download-coverage-publish-20261009",
+        "corpus gates ok: 470 Rust files scanned, no silent early return on a missing corpus"
+      ]
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0,
+      "test_results": [],
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "scope": []
+    }
+  ],
+  "review": "self-review; no subagents; added private filename/path and secret-literal scans clean",
+  "publication_scope": "Owner-authorized no-ff merge and normal push to refs/heads/main; no tag, release, deployment, root synchronization or hardware action. Exact remote readback recorded after push in handover/log.",
+  "limitations": [
+    "Offline product-default planning, not project-specific or live-device compatibility.",
+    "Default and web catalogue STANDARD limits remain unchanged (KL \u00a7151).",
+    "No full Rust workspace, frontend or hardware run in this package."
+  ]
+}

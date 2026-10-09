@@ -34,6 +34,43 @@ does not erase a broader platform/device limitation or imply a new release.
 - Integrated acceptance with the parallel full-corpus package: PENDING.
   No frontend/browser/full-workspace or partial-download claim.
 
+## 2026-10-09 — Download coverage main integration: the whole suitcase, again
+
+- Owner follow-up authorizes merge, commit and push. Feature `bd778821` merged
+  without conflicts into fetched main `b3ee55a0` as `d12bce07` (no-ff); complete
+  merged tree equals the accepted feature. The original local-only receipt
+  remains unchanged; delivery evidence is separate.
+- Fresh gate on the actual merge: full Release `download_coverage_corpus`
+  1 passed / 0 failed / 0 ignored, all 105 original packages unchanged,
+  467 programs (1 verified / 98 untested). knx-app 159/0/27 ignored,
+  ZIP boundaries 13/0, fmt, focused Clippy, documentation, all five fresh
+  nonempty checkout-built xtask gates and whitespace pass.
+- Self-review, no subagents. Test/docs only; no default-limit, production,
+  UI, server, hardware, tag, release or deployment change. Shared root and
+  parallel sessions remain untouched except the scoped handover update.
+- Receipt: `docs/evidence/download-coverage-publication-2026-10-09.json`;
+  exact remote verification follows publication and is recorded in the handover.
+
+## 2026-10-09 — Full download coverage stops tripping over the big ZIP (KL §151)
+
+- The explicitly invoked ignored `download_coverage_corpus` test now uses the
+  existing bounded `PackageLimits::LARGE` (ADR-0082). Every one of the current
+  105 product ZIPs installs; no vendor exception or catch-and-continue. Standard
+  production/web bounds remain unchanged. The original full Release baseline
+  reproduces the typed size refusal; the large-profile measurement exposes the
+  expected stale coverage pins before they are deliberately updated.
+- Full final Release corpus test: 1 passed / 0 failed / 0 ignored. 467 programs:
+  1 verified, 98 untested; refusal counts are pinned in RESEARCH §19.20.
+  All original inputs rehashed unchanged. Per-program private diagnostics removed;
+  only aggregate coverage is printed. Offline/default-value planning is not new
+  hardware evidence, ETS equivalence or project-specific compatibility.
+- Gate: knx-app 159/0/27 ignored, ZIP boundaries 13/0; fmt, focused Clippy,
+  all five nonempty checkout-built xtask gates, documentation and whitespace pass.
+  No full workspace, frontend, server or bus run. Self-review, no subagents.
+- Receipt: `docs/evidence/download-coverage-large-2026-10-09.json`;
+  research index/topic, KL §151 and `.ai/` handover updated. Local focused delivery;
+  merge, push and release are not part of this test-fix request.
+
 ## 2026-10-09 — The attic presence detector goes live and comes back unchanged (RESEARCH §19.19)
 
 - First live download of a second program: the house project's

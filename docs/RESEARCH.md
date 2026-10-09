@@ -21,6 +21,7 @@ stay at the end of this file.
 | Section | Where |
 | --- | --- |
 | [2026-10-09 — Bathroom fourfold button: complete download and restore](research/commissioning.md#2026-10-09--bathroom-fourfold-button-complete-download-and-restore) | Commissioning and device download |
+| [2026-10-09 — Full product-corpus coverage with bounded large admission](research/commissioning.md#1920-full-product-corpus-coverage-with-bounded-large-admission-2026-10-09) | Commissioning and device download |
 | [2026-10-09 — A second program verified live: the presence detector 1.1.8](research/commissioning.md#2026-10-09--a-second-program-verified-live-the-presence-detector-118) | Commissioning and device download |
 | [2026-10-08 — Public intake, disclosure and manual delivery boundaries](research/community-intake.md) | Community evidence |
 | [2026-10-07 — DPT source inventory and generic runtime admission](research/knxnet-ip-and-bus.md#2026-10-07--dpt-source-inventory-and-generic-runtime-admission) | KNXnet/IP and bus access |

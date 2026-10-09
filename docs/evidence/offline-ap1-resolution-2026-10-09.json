@@ -1,0 +1,339 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-10-09T16:14:45+02:00",
+  "delivery": "local-uncommitted-feature-worktree; no main integration, push, release, deployment or hardware",
+  "baseCommit": "925ccc203e8a9839c07b8737fc7beaa02ff4ea99",
+  "branch": "feature/offline-procedures-20261009",
+  "sourceBinding": {
+    "frozenFiles": 1047,
+    "manifestSha256": "886b3f2067431b81a6ff5d750c69ada9347346e8f3f853596cd9879f16a64eb9",
+    "unchanged": true
+  },
+  "review": {
+    "kind": "self-review",
+    "blockingFindings": 0,
+    "closedFindings": [
+      "source identity/unknown attributes/unplaced declaration retention",
+      "bounded finding projection",
+      "strict XML declarations",
+      "canonical real-source HawkConfigurationData ancestor; corrected synthetic fixtures",
+      "namespace-string amplification and per-element attribute bound"
+    ],
+    "notAnIndependentReview": true
+  },
+  "scopedGate": {
+    "process": "proc_d8dbcb792489",
+    "exit": 0,
+    "phases": {
+      "fmt_exit": 0,
+      "rust_exit": 0,
+      "clippy_exit": 0,
+      "build_exit": 0,
+      "check-layering_exit": 0,
+      "check-headers_exit": 0,
+      "check-anchors_exit": 0,
+      "check-ledger_exit": 0,
+      "check-corpus-gates_exit": 0,
+      "docs_exit": 0,
+      "whitespace_exit": 0,
+      "corpus_exit": 0,
+      "existing-coverage_exit": 0,
+      "inputs_frozen": 1,
+      "full_scoped_gate": 0
+    },
+    "rust": {
+      "passed": 1945,
+      "failed": 0,
+      "ignored": 118,
+      "resultBlocks": 163,
+      "explicitSkipMessages": 0,
+      "xmlTests": [
+        "explicit_utf8_xml_10_and_namespace_prefixes_remain_supported",
+        "late_xml_declarations_are_not_tolerated",
+        "malformed_declaration_attributes_are_not_first_wins",
+        "non_utf8_declared_encoding_is_not_silently_interpreted_as_utf8",
+        "wide_attribute_lists_have_a_positive_boundary_and_named_refusal",
+        "xml_11_is_not_processed_using_xml_10_attribute_rules",
+        "repeated_long_namespaces_are_bounded_before_tree_amplification"
+      ]
+    },
+    "scope": [
+      "knx-productdb",
+      "knx-app",
+      "knx-server",
+      "knx-cli"
+    ],
+    "fullWorkspace": false
+  },
+  "web": {
+    "process": "proc_3dbec0b1152b",
+    "testsExit": 0,
+    "buildExit": 0,
+    "passedTests": 2494,
+    "failedTests": 0,
+    "files": 154,
+    "unchangedWebInputFilesCompared": 461,
+    "evidenceCarriedForwardByExactWebInputEquality": true
+  },
+  "corpus": {
+    "archives": 105,
+    "profile": "explicit ignored Release regressions; PackageLimits::LARGE only in test",
+    "newResolverTest": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "existingCoverageTest": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "existingPrograms": 467,
+    "existingUntested": 98,
+    "existingVerified": 1,
+    "issues": {
+      "empty-fragment": 1,
+      "missing-mandatory-merge": 50,
+      "nested-or-unresolved-merge": 51,
+      "source-byte-limit": 6,
+      "uninterpreted-step": 295,
+      "unused-fragment": 1
+    },
+    "originalsUnchanged": true,
+    "programs": 75,
+    "sourceBoundResults": 75,
+    "statuses": {
+      "partial": 69,
+      "unavailable": 6
+    },
+    "expandedRealSequences": 0,
+    "newCompletePlans": 0,
+    "newLiveCapabilities": 0
+  },
+  "runtime": {
+    "realBuiltServerAndFrontend": true,
+    "network": "isolated loopback-only namespace verified by ip -j link ifname fields",
+    "interceptedApi": false,
+    "cases": [
+      {
+        "case": "en-1440-graphite",
+        "checks": [
+          "actual-theme",
+          "real-menu-entry",
+          "real-expanded-response-not-executable",
+          "source-order",
+          "no-execution-button",
+          "dialog-fit",
+          "reduced-preview-no-provenance",
+          "actual-consented-download",
+          "manual-handoff-no-source-prefill",
+          "unknown-step-retained",
+          "new-input-invalidates-consent",
+          "discovery-count-shared-without-source-values",
+          "project-unchanged",
+          "no-external-requests"
+        ],
+        "externalRequests": 0,
+        "actualReducedDownloads": [
+          {
+            "kind": "expanded",
+            "sha256": "4443c41daed415afb720e6392dff47835b84160f5a3412c75bea4dd6223a1b14"
+          },
+          {
+            "kind": "partial",
+            "sha256": "6fa21f2c248f84496514cae566417fb4d3cf10974e3a5398b751095a0ab9d544"
+          }
+        ]
+      },
+      {
+        "case": "en-400-porcelain",
+        "checks": [
+          "actual-theme",
+          "real-menu-entry",
+          "real-expanded-response-not-executable",
+          "source-order",
+          "no-execution-button",
+          "dialog-fit",
+          "reduced-preview-no-provenance",
+          "actual-consented-download",
+          "manual-handoff-no-source-prefill",
+          "unknown-step-retained",
+          "new-input-invalidates-consent",
+          "discovery-count-shared-without-source-values",
+          "project-unchanged",
+          "no-external-requests"
+        ],
+        "externalRequests": 0,
+        "actualReducedDownloads": [
+          {
+            "kind": "expanded",
+            "sha256": "4443c41daed415afb720e6392dff47835b84160f5a3412c75bea4dd6223a1b14"
+          },
+          {
+            "kind": "partial",
+            "sha256": "6fa21f2c248f84496514cae566417fb4d3cf10974e3a5398b751095a0ab9d544"
+          }
+        ]
+      },
+      {
+        "case": "de-1440-porcelain",
+        "checks": [
+          "actual-theme",
+          "real-menu-entry",
+          "real-expanded-response-not-executable",
+          "source-order",
+          "no-execution-button",
+          "dialog-fit",
+          "reduced-preview-no-provenance",
+          "actual-consented-download",
+          "manual-handoff-no-source-prefill",
+          "unknown-step-retained",
+          "new-input-invalidates-consent",
+          "discovery-count-shared-without-source-values",
+          "project-unchanged",
+          "no-external-requests"
+        ],
+        "externalRequests": 0,
+        "actualReducedDownloads": [
+          {
+            "kind": "expanded",
+            "sha256": "4443c41daed415afb720e6392dff47835b84160f5a3412c75bea4dd6223a1b14"
+          },
+          {
+            "kind": "partial",
+            "sha256": "6fa21f2c248f84496514cae566417fb4d3cf10974e3a5398b751095a0ab9d544"
+          }
+        ]
+      },
+      {
+        "case": "de-400-graphite",
+        "checks": [
+          "actual-theme",
+          "real-menu-entry",
+          "real-expanded-response-not-executable",
+          "source-order",
+          "no-execution-button",
+          "dialog-fit",
+          "reduced-preview-no-provenance",
+          "actual-consented-download",
+          "manual-handoff-no-source-prefill",
+          "unknown-step-retained",
+          "new-input-invalidates-consent",
+          "discovery-count-shared-without-source-values",
+          "project-unchanged",
+          "no-external-requests"
+        ],
+        "externalRequests": 0,
+        "actualReducedDownloads": [
+          {
+            "kind": "expanded",
+            "sha256": "4443c41daed415afb720e6392dff47835b84160f5a3412c75bea4dd6223a1b14"
+          },
+          {
+            "kind": "partial",
+            "sha256": "6fa21f2c248f84496514cae566417fb4d3cf10974e3a5398b751095a0ab9d544"
+          }
+        ]
+      }
+    ],
+    "serverExecutableSha256": "631da6546059f9b287aac2af1b4ccb109fe81cc010a11dc349656deb7158dd4b",
+    "probeSha256": "0b221e3e3c70be802f323603efcf7b83e8b5bd92a5ee514e870e75b041ab2905",
+    "fixtureSha256": "00984a1fa32f0953f5db7e09a364b2e9d6c160577b32df8345ad5ec1a855b013",
+    "publicIssueActuallySubmitted": false,
+    "nativeWebKitOrAccessibilityVerified": false,
+    "visualInspection": {
+      "capturedImagesInspected": 8,
+      "assessment": "Both languages, light/dark and wide/narrow: readable contrast, ordered source labels and retained unknown third step; explicit incomplete label; no horizontal dialog overflow. Narrow views require vertical scrolling; sticky header clips earlier content in scrolled captures, so no all-scroll-position warning visibility claim. No execution button in sequence section."
+    },
+    "imageDigests": {
+      "en-1440-graphite-sequence.png": "16baf0b86586a24ac307b4edf711945c86636e4b1952ca009cce17e1ae47fdeb",
+      "en-1440-graphite-partial.png": "114cb0afb6cd3520e22a9b1d41ce8f63b9063eff6f2799d6126b642c4523f242",
+      "en-400-porcelain-sequence.png": "476a9aa657b36df92214f5e284c2b6b5fa29a025013da3a41f40656eb83c1019",
+      "en-400-porcelain-partial.png": "56a63a5d6bb917b6700bde5c556f728142cfe9c6a58d129e002c56a6a1fc71e9",
+      "de-1440-porcelain-sequence.png": "b657b4ce3e61d595cee2796a98e990b6e20086e81216089955b4117f98ba559b",
+      "de-1440-porcelain-partial.png": "09ae130a1de82c842bc458ce3f6f33a0236a90edef46b75532e9b784e96f6ab5",
+      "de-400-graphite-sequence.png": "76eb26e6a253f3e69965807b74148acf38306fbc684e365e6580de1a25cf40e0",
+      "de-400-graphite-partial.png": "3a6879343a8094bd2b80cb07e8914d7cbcd931baf8c9544e1e2ddeaea7ce7eaf"
+    }
+  },
+  "resourceSizingEstimate": {
+    "method": "independent bounded XML shape estimate; ET normalizes line endings and omits namespace declarations; not authoritative parser charge or measured RSS",
+    "distinctSourceDocuments": 85,
+    "overInputLimitDocumentsExcluded": 6,
+    "maximumEstimatedRetainedTreeCharge": 40883658,
+    "maximumRetainedAttributesPerElement": 24,
+    "treeBudgetBytes": 67108864,
+    "attributeBudgetIncludingNamespaceDeclarations": 256
+  },
+  "attempts": [
+    {
+      "process": "proc_40e28803dea7",
+      "classification": "superseded complete scoped pass before later review fixes"
+    },
+    {
+      "process": "proc_afc8312dcaba",
+      "classification": "format refusal; downstream unstarted"
+    },
+    {
+      "process": "proc_68cf5ee34957",
+      "classification": "superseded complete pass; real corpus all75 unavailable exposed wrong synthetic ancestor"
+    },
+    {
+      "process": "proc_9067fab757ad",
+      "classification": "superseded complete canonical-path pass;69 partial/6 unavailable before resource hardening"
+    },
+    {
+      "process": "proc_9c16567633f1",
+      "classification": "owned queued gate canceled before admission; no source manifest or phases"
+    },
+    {
+      "process": "proc_225f7ce12e38",
+      "classification": "named expected RED for namespace tree amplification;1 behavioral failure after successful compile"
+    },
+    {
+      "process": "proc_d8dbcb792489",
+      "classification": "accepted final hardened source and pinned corpus gate"
+    }
+  ],
+  "negativeControls": [
+    {
+      "test": "merged_ap1_is_expanded_in_source_order_without_new_live_support",
+      "cause": "real-ancestor corrected fixture returned unavailable on old resolver",
+      "exit": 101
+    },
+    {
+      "test": "issue_projection_is_aggregated_without_repeating_source_identifiers",
+      "cause": "100 issue findings rather than one grouped finding",
+      "exit": 101
+    },
+    {
+      "test": "empty_optional_fragment_is_not_misreported_as_a_missing_mandatory_merge",
+      "cause": "missing-mandatory diagnostic instead of empty-fragment",
+      "exit": 101
+    },
+    {
+      "test": "malformed_declaration_attributes_are_not_first_wins",
+      "cause": "invalid declaration accepted",
+      "exit": 101
+    },
+    {
+      "test": "repeated_long_namespaces_are_bounded_before_tree_amplification",
+      "cause": "unbounded owned retained-tree amplification",
+      "exit": 101
+    },
+    {
+      "test": "wide_attribute_lists_have_a_positive_boundary_and_named_refusal",
+      "cause": "attribute +1 boundary was accepted after valid control",
+      "exit": 101
+    }
+  ],
+  "closureDocumentation": {
+    "exit": 0,
+    "allFiveNonemptyRepositoryChecks": true,
+    "linksChecked": 494,
+    "markdownFiles": 207,
+    "manualChapters": 33,
+    "whitespaceExit": 0,
+    "sourceChangesAfterFinalGate": false
+  }
+}

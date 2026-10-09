@@ -100,6 +100,13 @@ See the [contribution guide](../contribution-intake/README.md) and
 [evidence contract](../COMMUNITY_EVIDENCE.md). Analysis completion is not
 verified ETS/device support, and submission remains manual.
 
+**Local source extension (2026-10-09):** the same analysis displays ordered
+`MV-07B0` `Load/ap1` procedure declarations with local provenance and unresolved
+steps. It is not a materialized download plan and enables no additional bus
+execution. The reduced evidence ZIP retains value-free findings/counts, not the
+local source details. [Scope and evidence](../OFFLINE_PROCEDURE_RESOLUTION.md).
+This package is local, not a published release.
+
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Product data ingested from inside a `.knxproj` | ✅ Implemented | The reference project's 4 manufacturers and 12 application programs ingest completely |

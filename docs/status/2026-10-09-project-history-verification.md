@@ -87,3 +87,31 @@ not the global product database, credentials, bus actions or hardware state.
 Extra host indexes are constraints, not versioned project payload. Native
 WebKitGTK/Orca, physical power loss, packaged AppImage, real KNX/ETS recovery,
 container rebuild and broad compatibility remain unverified here.
+
+## Authorized main integration
+
+Feature `62464763804d10307e19cfaa5dd9a482c0142439` no-ff merged with main
+`a3b9d493757532589660fe79d9270fdd694adf78` as `b81c17cf4e208c4ea955561a20ffcc245055842f`. Only two doc conflicts;
+complete upstream handover/status history and message values preserved. Only
+the two owned ledger rows changed; other owners/IDs/priorities untouched.
+
+Actual merged-source run: Rust **3781 / 0 / 184 ignored** in 228 blocks,
+1009 source/config files frozen and integration checkout genuinely compiled;
+fmt, all-target Clippy and four builds pass. Vitest **2523 / 155 files**,
+production build/three fixture typechecks, full Chromium **208**, tools **42**,
+five checkout-bound gates, exact-restored semantic bindings and docs pass.
+Reference **3/3**, selected native **5/5**, integrated real server/workbench
+**nine assertions / two SIGKILL-reopens / zero page errors**, no interception,
+only lo. Native accessibility/power-loss/hardware/ETS boundaries unchanged.
+
+Initial browser run failed with external-font 403 from a cross-worktree
+node_modules symlink. Local lockfile-identical dependencies, Vite caches
+excluded, correct the harness without production config/error-filter changes.
+Initial standalone probe build refused the copied workspace lock under --locked;
+private runs not admitted. Offline standalone lock generation then locked build
+and reference/corpus executions pass. Both failures retained in the receipt.
+
+Fresh ProjectStats measures a clean detached `b81c17cf4e208c4ea955561a20ffcc245055842f` checkout named KNXBench,
+unchanged canonical preferences, no transplanted private baseline, EOF-only
+format correction. [Provenance](../evidence/history-projectstats-2026-10-09.json).
+Publication verification in CURRENT_STATE; no release/deployment/hardware claim.

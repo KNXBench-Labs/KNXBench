@@ -7,6 +7,30 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Pages catches the Node-24 bus; offline demos get a signpost
+
+- Owner approved commit/push/public website verification. Pages actions:
+  checkout v7, configure-pages v6, upload-pages-artifact v5; deploy-pages v5
+  already uses Node 24. Official resolved action metadata plus the upload's
+  pinned Node-24 subaction checked. Hidden-file inclusion retains `.nojekyll`.
+- Root/DE/EN Demos navigation and home/residential/office downloads, combined
+  ZIP, English guide and checksum links. Frozen 1.0.0 ZIPs remain byte-exact;
+  fictional/offline scope, catalogue setup, reset copies/auto-save and retained
+  candidate labels disclosed. Anonymous downloads: four ZIPs plus checksum
+  file, all 200 and exact repository bytes; guide 200.
+- IPv6 HTTPS GET via four Globalping probes (DE/NL/US/GB): 200 with authorized
+  TLS, two distinct Pages IPv6 addresses. Direct local IPv6 is unavailable
+  (no public route), not a site defect. IPv4 HTTP→HTTPS remains 301.
+- Local gate: website 22 / story 67 unittest, preview/release builds,
+  Chromium 444 named checks across seven recipes (134 demo handoffs per mode),
+  all five fresh-target repository checks and whitespace. EN desktop / DE
+  mobile choices visually inspected. Browser socket startup refusal and
+  mobile CSS grid regression were corrected before the final full pass.
+- [Evidence](evidence/pages-demos-2026-10-09.json), [website contract](WEBSITE.md)
+  and demo index updated. In-session self-review, no application/core/package
+  modification or new native/ETS/hardware acceptance. Publication/deployment
+  verification remains pending until the authorized push has completed.
+
 ## 2026-10-09 — Release tags publish the server image to Docker Hub
 
 - Owner request: releases publish the container automatically. New

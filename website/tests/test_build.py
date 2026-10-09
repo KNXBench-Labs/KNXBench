@@ -67,6 +67,35 @@ class BuildTests(unittest.TestCase):
             explicit = Document((self.out / lang / "index.html").read_text())
             self.assertIn(("html", {"lang": lang}), explicit.elements)
 
+    def test_demo_downloads_link_existing_frozen_packages_in_every_language(self):
+        self.require_build()
+        repo = WEBSITE.parent
+        downloads = "https://github.com/KNXBench-Labs/KNXBench/raw/refs/heads/main/demos/1.0.0/"
+        packages = ("knxbench-community-demos-1.0.0.zip", "single-family-home-1.0.0.zip",
+                    "multi-unit-residential-1.0.0.zip", "office-building-1.0.0.zip", "SHA256SUMS")
+        for path in ("index.html", "de/index.html", "en/index.html"):
+            page = (self.out / path).read_text()
+            doc = Document(page)
+            self.assertTrue(any(attrs.get("id") == "demos" for _, attrs in doc.elements), path)
+            self.assertTrue(any(tag == "a" and attrs.get("href") == "#demos"
+                                for tag, attrs in doc.elements), path)
+            for name in packages:
+                self.assertTrue((repo / "demos/1.0.0" / name).is_file(), name)
+                self.assertEqual(sum(tag == "a" and attrs.get("href") == downloads + name
+                                     for tag, attrs in doc.elements), 1, (path, name))
+            guide = "https://github.com/KNXBench-Labs/KNXBench/blob/main/demos/README.md"
+            self.assertTrue(any(tag == "a" and attrs.get("href") == guide for tag, attrs in doc.elements))
+            text = json.loads((WEBSITE / "content" / ("de.json" if path.startswith("de/") else "en.json")).read_text())
+            for key in ("demos_setup", "demos_safety", "demos_version_note"):
+                self.assertIn(text[key], page)
+
+    def test_pages_workflow_uses_node24_actions_and_keeps_hidden_site_files(self):
+        workflow = (WEBSITE.parent / ".github/workflows/pages.yml").read_text()
+        for action in ("checkout@v7", "configure-pages@v6", "upload-pages-artifact@v5", "deploy-pages@v5"):
+            self.assertIn("uses: actions/" + action, workflow)
+        self.assertIn("include-hidden-files: true", workflow)
+        self.assertNotIn("FORCE_JAVASCRIPT_ACTIONS_TO_NODE24", workflow)
+
     def test_build_is_byte_deterministic_and_can_replace_its_own_output(self):
         self.require_build()
         before = {str(p.relative_to(self.out)): hashlib.sha256(p.read_bytes()).hexdigest()

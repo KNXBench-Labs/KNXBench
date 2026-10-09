@@ -54,6 +54,10 @@ pub struct ProjectTree {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub server_incarnation: Option<String>,
+    /// Transient successful-load generation; never a native project identifier.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional, type = "number")]
+    pub project_incarnation: Option<u64>,
     /// Application-owned response ordering. Pure/offline projections omit it;
     /// the server stamps every UI-facing snapshot while holding its project
     /// lock. This is transient metadata and is never persisted in a KNX or
@@ -301,6 +305,7 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
         can_redo: false,
         is_modified: false,
         server_incarnation: None,
+        project_incarnation: None,
         snapshot_revision: None,
         group_address_context_session_id: None,
         group_address_style: group_address_style_str(project.info.group_address_style).to_string(),

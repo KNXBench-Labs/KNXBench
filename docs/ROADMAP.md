@@ -26,10 +26,20 @@ alpha limitation is not functionality, and a later idea is not a promised date.
 The owner-approved single-device table adds labeled columns, channel/flat views,
 search, evaluated-status/link/effective-DPT filters and stable sorting. Open editors
 keep drafts/refusals/pending state across presentation changes; no domain/storage/
-API/protocol changes. [Contract](COMMUNICATION_OBJECT_TABLE.md), ADR-0101 and its
+API/protocol changes. [Contract](COMMUNICATION_OBJECT_TABLE.md), ADR-0102 and its
 receipt define the scoped acceptance. Main integration, publication, release and
 deployment remain separate; this is not in alpha.6. Project-wide CO lists, bulk
 editing and persistent view preferences remain outside this package.
+
+## Project-local names (2026-10-09 source package)
+
+Single device instances and individual group addresses can be renamed through
+Name fields, F2 and context menus in every installation. Exact reversible names
+use native history; guarded requests and retained drafts preserve conflicts.
+[Contract](contracts/project-name-editing.md) and
+[verification](status/2026-10-09-project-name-editing-verification.md).
+Bulk templates, CLI/MCP authoring, `.knxproj` export and hardware effects remain
+outside this package. Publication is authorized separately from release/deployment.
 
 ## Native project history (local source package, 2026-10-09)
 

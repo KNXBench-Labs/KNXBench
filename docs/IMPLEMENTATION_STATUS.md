@@ -7,6 +7,25 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — TypeNone rows stop pretending to be input fields (KL §128)
+
+- Kind `None` (ETS `TypeNone`, legacy atomic type 0) has no value. The
+  parameter panel (`apps/knx-server/src/domain.rs`, `carries_value`) now
+  reports such a field as `editable: false` with no `writeEtsId` and adds no
+  warning, because a row without a value is not a refusal. Writes stay
+  refused by name, unchanged.
+- Web: `ParameterPanel.tsx` draws a kind-`None` row as a heading (its `text`
+  only, never the internal name) or, with empty text, as blank space
+  (`aria-hidden`). The check is by kind, so even a server that still claims
+  the row is editable gets no input. An empty spacer never counts as
+  untranslated.
+- Real data: the Eibmarkt `.vd4` (N000520) through a local server and the
+  built web app, offline: 71 fields, 11 kind `None`, 0 editable; the page
+  shows 2 headings (`###`, `2`), 9 spacers and 60 inputs (71 − 11).
+- Tests: new `http_parameter_type_none.rs` (ETS `TypeNone`, 2 tests), the
+  legacy heading in `http_legacy_device.rs`, three Vitest cases. Realistic
+  reverts of the server rule and of the web branch each turn named tests red.
+- Gate: PENDING.
 ## 2026-10-09 — Pages catches the Node-24 bus; offline demos get a signpost
 
 - Owner approved commit/push/public website verification. Pages actions:

@@ -102,6 +102,20 @@ async fn a_legacy_device_is_placed_parameterised_and_linked() {
     assert_eq!(shown["value"], "1");
     assert!(field(&panel, &format!("{program}_P-1002_R-1002")).is_some());
     assert!(field(&panel, &format!("{program}_P-1002_R-1003")).is_none());
+    // A legacy atomic-type-0 heading is shown, but only as a label (KL §128).
+    let heading = format!("{program}_P-1006_R-1006");
+    let shown = field(&panel, &heading).unwrap_or_else(|| panic!("{panel}"));
+    assert_eq!(shown["kind"], "None", "{shown}");
+    assert_eq!(shown["editable"], false, "{shown}");
+    assert!(shown["writeEtsId"].is_null(), "{shown}");
+    let (status, refused) = call(
+        &app,
+        "POST",
+        &format!("/api/device/{id}/parameters"),
+        Some(json!({ "etsId": heading, "raw": "" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{refused}");
     let (status, panel) = call(
         &app,
         "POST",

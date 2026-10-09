@@ -754,4 +754,50 @@ describe("ParameterPanel", () => {
       "2 Felder sind nicht vollständig in de übersetzt; sie zeigen den eigenen Text des Programms (en-US).");
     root.unmount();
   });
+
+  // KL §128: kind None (ETS TypeNone, legacy atomic type 0) has no value.
+  const displayOnly = (etsId: string, text: string | null, editable = false) => ({
+    ...field(etsId, null, editable), kind: "None", value: null, name: "d_space", text,
+  });
+
+  it("renders a TypeNone heading as a label and a TypeNone spacer as empty space, with no inputs", async () => {
+    apiMock.deviceParameters.mockResolvedValue(authorityPanel(
+      [displayOnly("H", "Timing"), displayOnly("S", ""), displayOnly("N", null), field("A", "ReadWrite")], []));
+    const root = await renderPanel();
+    const row = (id: string) => host!.querySelector(`.parameter-field[data-ets-id="${id}"]`)!;
+    expect(row("H").classList.contains("parameter-label-row")).toBe(true);
+    expect(row("H").textContent).toBe("Timing");
+    for (const id of ["S", "N"]) {
+      expect(row(id).classList.contains("parameter-spacer")).toBe(true);
+      expect(row(id).textContent).toBe("");
+      expect(row(id).getAttribute("aria-hidden")).toBe("true");
+    }
+    for (const id of ["H", "S", "N"]) {
+      expect(row(id).querySelector("input, select")).toBeNull();
+      expect(row(id).textContent).not.toContain("d_space");
+    }
+    expect(host!.querySelectorAll("input")).toHaveLength(1);
+    expect(host!.textContent).not.toContain("Not editable here");
+    root.unmount();
+  });
+
+  it("never offers a TypeNone row as an input, even if the response falsely claims it is editable", async () => {
+    apiMock.deviceParameters.mockResolvedValue(authorityPanel([displayOnly("H", "Timing", true), displayOnly("S", "", true)], []));
+    const root = await renderPanel();
+    expect(host!.querySelectorAll("input, select")).toHaveLength(0);
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  it("counts an untranslated TypeNone heading but never an empty spacer", async () => {
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    apiMock.deviceParameters.mockResolvedValue(languagePanel("en-US", [displayOnly("H", "Timing"), displayOnly("S", "")]));
+    const root = await renderPanel();
+    expect(badgeOf("H")!.textContent).toBe("Untranslated (en-US)");
+    expect(badgeOf("S")).toBeNull();
+    await act(async () => root.render(<ParameterPanel deviceId={1} view="diagnostics" onValueApplied={() => {}} />));
+    expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
+      "1 field is not fully translated into de; it shows the program's own text (en-US).");
+    root.unmount();
+  });
 });

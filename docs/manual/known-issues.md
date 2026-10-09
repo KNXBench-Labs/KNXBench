@@ -17,7 +17,6 @@ the reconciliation; formal task dispositions remain in the engineering ledger.
 | Browser files live on the server | Save is not a download; Export project gives you a local copy | [Web and desktop differences](user-guide/11-web-and-docker.md#web-build-versus-desktop-build) |
 | Shared server, shared project | One password and one undo stack are not collaborative editing | [Deployment](user-guide/11-web-and-docker.md#authentication) |
 | Hardware support is narrow | A project edit is not commissioning, and undo does not reverse a bus write | [Bus boundaries](user-guide/07-bus-and-interfaces.md#what-knxbench-does-and-does-not-do-on-a-bus) |
-| Some legacy spacer fields look editable | An untyped `TypeNone` spacer can appear as an empty text field; the server refuses edits | [Known limitations, §128](../KNOWN_LIMITATIONS.md) |
 
 This chapter collects the limitations most likely to be noticed by someone
 who actually uses KNXBench, grouped by the part of the application they show
@@ -198,8 +197,8 @@ is the remaining copy defect.
   catalog placement, supported parameters, visibility and object links.
 - **Remaining:** no legacy download or mapped legacy DPT codes. The measured
   VD5 has an oversized payload and a multi-member layout outside current
-  admission. Untyped spacers can look editable even though the server refuses
-  their value writes.
+  admission. (Untyped `TypeNone` spacers are drawn as headings or blank
+  space since 2026-10-09, not as fields.)
 - **Privacy:** the optional remembered password is one plaintext file with
   restrictive permissions on the **server**, not a keyring. Unencrypted
   originals may still contain source secrets; never post them publicly.

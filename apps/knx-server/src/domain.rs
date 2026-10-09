@@ -4951,7 +4951,7 @@ fn assemble_parameter_panel(
             // now has no string standing in for it anywhere, not even an
             // unreachable one; the `(Some(_), None)` arm returns `None`
             // directly.
-            let write_ets_id = if resource_limited || refusal.is_some() {
+            let write_ets_id = if resource_limited || refusal.is_some() || !carries_value(view) {
                 None
             } else {
                 match (&section.scope, mi_digits.as_deref()) {
@@ -5044,6 +5044,14 @@ enum WriteRefusal {
 /// inference; it only decides which fields keep write authority.
 fn effective_access(view: &knx_productdb::query::ParameterView) -> Option<&str> {
     view.ref_access.as_deref().or(view.access.as_deref())
+}
+
+/// Whether a field has a value at all. Kind `None` (ETS `TypeNone`, legacy
+/// atomic type 0) declares a heading, label or empty spacer: it is listed
+/// for display, never offered as an input and never written (KL §128).
+/// It is not a refusal, so it adds no warning either.
+fn carries_value(view: &knx_productdb::query::ParameterView) -> bool {
+    view.kind != "None"
 }
 
 /// The first ADR-0080 reason that refuses a write to `view`, if any. An

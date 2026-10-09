@@ -55,10 +55,40 @@ function sectionLabel(t: Translate, scope: ModuleScope | null): string {
  * translation could change.
  */
 export function untranslatedPart(field: ParameterField): "label" | "options" | null {
+  // A display-only row (kind None) shows its text alone; an empty spacer
+  // shows nothing, so nothing in it can be untranslated.
+  if (field.kind === "None") return displayOnlyText(field) !== "" && field.textLanguage === null ? "label" : null;
   const shownLanguage = field.text !== null ? field.textLanguage : field.name !== null ? field.nameLanguage : undefined;
   if (shownLanguage === null) return "label";
   if (field.enumOptions.some((option) => option.text !== null && option.language === null)) return "options";
   return null;
+}
+
+/**
+ * KL §128: kind `None` (ETS `TypeNone`, legacy atomic type 0) carries no
+ * value. It is a heading, a label or an empty spacer, so only its `text`
+ * is shown: `name` and the id are internal identifiers, not captions.
+ */
+function displayOnlyText(field: ParameterField): string {
+  return (field.text ?? "").trim();
+}
+
+/** A heading/label row, or an empty spacer, with no input at all (KL §128). */
+function ParameterLabelRow(props: { field: ParameterField; language: string | null; sourceLanguage: string | null }) {
+  const { field, language, sourceLanguage } = props;
+  const text = displayOnlyText(field);
+  if (text === "") {
+    return <div className="parameter-field parameter-spacer" data-ets-id={field.etsId} aria-hidden="true" />;
+  }
+  const untranslated = language === null ? null : untranslatedPart(field);
+  return (
+    <div className="parameter-field parameter-label-row" data-ets-id={field.etsId}>
+      <span className="parameter-label-text">{text}</span>
+      {untranslated && language !== null && (
+        <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} />
+      )}
+    </div>
+  );
 }
 
 function ParameterFieldRow(props: {
@@ -122,6 +152,12 @@ function ParameterFieldRow(props: {
   // No product language selected means the package's own text is exactly
   // what was asked for, so nothing fell back.
   const untranslated = language === null ? null : untranslatedPart(field);
+
+  // Display-only: checked by kind, not by `editable`, so a server that still
+  // marks such a row editable never gets an input from this client.
+  if (field.kind === "None") {
+    return <ParameterLabelRow field={field} language={language} sourceLanguage={sourceLanguage} />;
+  }
 
   return (
     <label className="inspector-field parameter-field" data-ets-id={field.etsId}>

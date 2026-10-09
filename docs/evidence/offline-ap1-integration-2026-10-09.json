@@ -1,0 +1,344 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-10-09T18:34:34+02:00",
+  "status": "published to main and verified by live ref/artifact readback",
+  "featureCommit": "38d8eb4584c6e0e36db48f1aed882eeb90e8469c",
+  "initialMergeCommit": "e9cebedbd2dc08569f58f33953c3c0caec9c4f29",
+  "gatedIntegrationCommit": "d639c5f8a3c069afd21f507daa456fb3d51e10b9",
+  "fetchedMainParent": "a03705dea032ff1e7443a6641f80ada198a52224",
+  "review": {
+    "feature": "38d8eb4584c6e0e36db48f1aed882eeb90e8469c",
+    "integration": "d639c5f8a3c069afd21f507daa456fb3d51e10b9",
+    "fetchedMain": "a03705dea032ff1e7443a6641f80ada198a52224",
+    "kind": "self-review",
+    "blockingFindings": 0,
+    "ownedCodeByteExact": [
+      "apps/knx-cli/tests/contribution.rs",
+      "apps/knx-server/tests/http_contributions.rs",
+      "apps/knx-web/src/ContributionButton.test.tsx",
+      "apps/knx-web/src/ContributionButton.tsx",
+      "apps/knx-web/src/ProcedureResolutionView.tsx",
+      "apps/knx-web/src/contribution.css",
+      "apps/knx-web/src/contributionApi.procedures.test.ts",
+      "apps/knx-web/src/contributionApi.ts",
+      "apps/knx-web/src/procedureResolution.ts",
+      "crates/knx-app/src/contribution.rs",
+      "crates/knx-app/src/contribution_bundle.rs",
+      "crates/knx-app/tests/contribution_procedures.rs",
+      "crates/knx-app/tests/procedure_resolution_corpus.rs",
+      "crates/knx-productdb/Cargo.toml",
+      "crates/knx-productdb/src/lib.rs",
+      "crates/knx-productdb/src/procedure_resolution.rs",
+      "crates/knx-productdb/src/procedure_resolution/xml.rs",
+      "crates/knx-productdb/tests/procedure_resolution.rs"
+    ],
+    "upstreamRenameCodeByteExact": [
+      "apps/knx-server/src/domain.rs",
+      "apps/knx-server/src/lib.rs",
+      "apps/knx-server/src/project_history.rs",
+      "apps/knx-server/src/rename_routes.rs",
+      "apps/knx-server/src/routes.rs",
+      "apps/knx-server/tests/http_load_progress.rs",
+      "apps/knx-server/tests/http_rename.rs",
+      "apps/knx-server/tests/http_settings_conditional.rs",
+      "apps/knx-web/e2e/group-address-drag.e2e.ts",
+      "apps/knx-web/e2e/rename.native.ts",
+      "apps/knx-web/playwright.rename-native.config.ts",
+      "apps/knx-web/src/App.tsx",
+      "apps/knx-web/src/DevicesWorkspace.tsx",
+      "apps/knx-web/src/GroupAddressTable.tsx",
+      "apps/knx-web/src/Inspector.tsx",
+      "apps/knx-web/src/ProjectExplorer.tsx",
+      "apps/knx-web/src/RenameNameField.tsx",
+      "apps/knx-web/src/RenameWorkbench.tsx",
+      "apps/knx-web/src/api.ts",
+      "apps/knx-web/src/bindings/ProjectTree.ts",
+      "apps/knx-web/src/rename.entry.test.tsx",
+      "apps/knx-web/src/rename.field.test.tsx",
+      "apps/knx-web/src/rename.fixture.ts",
+      "apps/knx-web/src/rename.inspector.test.tsx",
+      "apps/knx-web/src/rename.test.ts",
+      "apps/knx-web/src/rename.ts",
+      "apps/knx-web/src/styles.css",
+      "apps/knx-web/tsconfig.rename-fixtures.json",
+      "crates/knx-core/src/command.rs",
+      "crates/knx-core/src/lib.rs",
+      "crates/knx-core/src/names.rs",
+      "crates/knx-projection/src/lib.rs",
+      "tools/verify_name_editing.py"
+    ],
+    "allUpstreamHandoverBytesPreserved": true,
+    "executionEligibilityUnchanged": true,
+    "requiredGitIdentities": true,
+    "stagingAdvisory": "initial git add advisory about ignored .ai parent; staged scope was inspected and clean, no private force-add"
+  },
+  "sourceBinding": {
+    "files": 1144,
+    "frozenManifestSha256": "03c374c000cd47eb9693be1a517f5c56efc916db696daec7f13cf23953756d76",
+    "unchanged": true,
+    "freshCompilation": true,
+    "sameCheckoutCompilerPrerequisitesReused": true
+  },
+  "rust": {
+    "passed": 3827,
+    "failed": 0,
+    "ignored": 185,
+    "resultBlocks": 232,
+    "explicitMissingCorpusSkipSignals": 0
+  },
+  "gate": {
+    "process": "proc_bf390f556bcf",
+    "exit": 0,
+    "phases": {
+      "fmt_exit": 0,
+      "clippy_exit": 0,
+      "compile_exit": 0,
+      "rust_exit": 0,
+      "build_exit": 0,
+      "bindings_exit": 0,
+      "binding-identity_exit": 0,
+      "check-layering_exit": 0,
+      "check-headers_exit": 0,
+      "check-anchors_exit": 0,
+      "check-ledger_exit": 0,
+      "check-corpus-gates_exit": 0,
+      "docs_exit": 0,
+      "whitespace_exit": 0,
+      "corpus_exit": 0,
+      "existing-coverage_exit": 0,
+      "inputs_frozen": 1,
+      "integrated_gate_exit": 0
+    },
+    "workspace": "complete ordinary workspace suite, all-target warning-denied Clippy, four application builds",
+    "ignoredScope": "other ignored tests not run; only named corpus tests selected separately",
+    "hardwareEnvironmentUnset": true,
+    "loopbackInterfaces": "lo",
+    "sourceLinks": "explicit canonical private fixtures linked only for gates; originals read-only; links removed"
+  },
+  "web": {
+    "process": "proc_b1e398c76635",
+    "exit": 0,
+    "passed": 2553,
+    "failed": 0,
+    "files": 160,
+    "productionBuildExit": 0,
+    "typechecks": [
+      "theme-fixtures",
+      "flow-study",
+      "history-fixtures",
+      "rename-fixtures"
+    ]
+  },
+  "chromium": {
+    "process": "proc_7dbb41efda28",
+    "exit": 0,
+    "stats": {
+      "startTime": "2026-10-09T16:11:58.764Z",
+      "duration": 335072.402,
+      "expected": 208,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "fixtureApi": "intercepted browser suite; not hardware/native evidence"
+  },
+  "corpus": {
+    "archives": 105,
+    "tests": {
+      "corpus": {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "exit": 0
+      },
+      "existing-coverage": {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "exit": 0
+      }
+    },
+    "existingPrograms": 467,
+    "existingUntested": 98,
+    "existingVerified": 1,
+    "issues": {
+      "empty-fragment": 1,
+      "missing-mandatory-merge": 50,
+      "nested-or-unresolved-merge": 51,
+      "source-byte-limit": 6,
+      "uninterpreted-step": 295,
+      "unused-fragment": 1
+    },
+    "originalsUnchanged": true,
+    "programs": 75,
+    "sourceBoundResults": 75,
+    "statuses": {
+      "partial": 69,
+      "unavailable": 6
+    },
+    "expandedRealSequences": 0,
+    "newExecutablePlans": 0,
+    "newLiveSupport": 0
+  },
+  "realBuiltRuntime": {
+    "network": "isolated loopback-only namespace",
+    "apiIntercepted": false,
+    "cases": [
+      {
+        "case": "en-1440-graphite",
+        "checks": [
+          "expanded: ordered local sources; non-executable; dialog fit; consent; real reduced preview/download; value-free issues; manual-only handoff",
+          "partial: ordered local sources; non-executable; dialog fit; consent; real reduced preview/download; value-free issues; manual-only handoff"
+        ],
+        "externalRequests": 0,
+        "projectUnchanged": true,
+        "realApi": true,
+        "downloads": [
+          {
+            "kind": "expanded",
+            "sha256": "1ad1971608f70f3133d873e9dc88a27cefa8dbd14cfaec8520392adf5ccf13b7",
+            "manifestBytesAndHashesVerified": true
+          },
+          {
+            "kind": "partial",
+            "sha256": "9f2f503784b9c8f00db7afe9c41f2f068249b73e7534fd11016ef29a7b48c75c",
+            "manifestBytesAndHashesVerified": true
+          }
+        ],
+        "representativeVisualAssessment": "Readable ordered source labels and explicit partial/unknown third-step status; wide warning visible; narrow views wrap within dialog and require scrolling, with sticky-header clipping of earlier content. No sequence execution control. No native accessibility claim."
+      },
+      {
+        "case": "en-400-porcelain",
+        "checks": [
+          "expanded: ordered local sources; non-executable; dialog fit; consent; real reduced preview/download; value-free issues; manual-only handoff",
+          "partial: ordered local sources; non-executable; dialog fit; consent; real reduced preview/download; value-free issues; manual-only handoff"
+        ],
+        "externalRequests": 0,
+        "projectUnchanged": true,
+        "realApi": true,
+        "downloads": [
+          {
+            "kind": "expanded",
+            "sha256": "1ad1971608f70f3133d873e9dc88a27cefa8dbd14cfaec8520392adf5ccf13b7",
+            "manifestBytesAndHashesVerified": true
+          },
+          {
+            "kind": "partial",
+            "sha256": "9f2f503784b9c8f00db7afe9c41f2f068249b73e7534fd11016ef29a7b48c75c",
+            "manifestBytesAndHashesVerified": true
+          }
+        ],
+        "representativeVisualAssessment": "Readable ordered source labels and explicit partial/unknown third-step status; wide warning visible; narrow views wrap within dialog and require scrolling, with sticky-header clipping of earlier content. No sequence execution control. No native accessibility claim."
+      },
+      {
+        "case": "de-1440-porcelain",
+        "checks": [
+          "expanded: ordered local sources; non-executable; dialog fit; consent; real reduced preview/download; value-free issues; manual-only handoff",
+          "partial: ordered local sources; non-executable; dialog fit; consent; real reduced preview/download; value-free issues; manual-only handoff"
+        ],
+        "externalRequests": 0,
+        "projectUnchanged": true,
+        "realApi": true,
+        "downloads": [
+          {
+            "kind": "expanded",
+            "sha256": "1ad1971608f70f3133d873e9dc88a27cefa8dbd14cfaec8520392adf5ccf13b7",
+            "manifestBytesAndHashesVerified": true
+          },
+          {
+            "kind": "partial",
+            "sha256": "9f2f503784b9c8f00db7afe9c41f2f068249b73e7534fd11016ef29a7b48c75c",
+            "manifestBytesAndHashesVerified": true
+          }
+        ],
+        "representativeVisualAssessment": "Readable ordered source labels and explicit partial/unknown third-step status; wide warning visible; narrow views wrap within dialog and require scrolling, with sticky-header clipping of earlier content. No sequence execution control. No native accessibility claim."
+      },
+      {
+        "case": "de-400-graphite",
+        "checks": [
+          "expanded: ordered local sources; non-executable; dialog fit; consent; real reduced preview/download; value-free issues; manual-only handoff",
+          "partial: ordered local sources; non-executable; dialog fit; consent; real reduced preview/download; value-free issues; manual-only handoff"
+        ],
+        "externalRequests": 0,
+        "projectUnchanged": true,
+        "realApi": true,
+        "downloads": [
+          {
+            "kind": "expanded",
+            "sha256": "1ad1971608f70f3133d873e9dc88a27cefa8dbd14cfaec8520392adf5ccf13b7",
+            "manifestBytesAndHashesVerified": true
+          },
+          {
+            "kind": "partial",
+            "sha256": "9f2f503784b9c8f00db7afe9c41f2f068249b73e7534fd11016ef29a7b48c75c",
+            "manifestBytesAndHashesVerified": true
+          }
+        ],
+        "representativeVisualAssessment": "Readable ordered source labels and explicit partial/unknown third-step status; wide warning visible; narrow views wrap within dialog and require scrolling, with sticky-header clipping of earlier content. No sequence execution control. No native accessibility claim."
+      }
+    ],
+    "scriptSha256": "9da094bb86046df1b992398621089167a5428d88eb1c9146b313cb0e28359b52",
+    "backendSha256": "50f7c279a18b9b2bf93951e67794dba6d3821911a843f341dec4974917352a72",
+    "representativeImagesInspected": 4,
+    "nativeAccessibilityOrHardwareVerified": false,
+    "publicIssueSubmitted": false
+  },
+  "statistics": {
+    "source": "d639c5f8a3c069afd21f507daa456fb3d51e10b9",
+    "collectorExit": 0,
+    "rawReportSha256": "32d1dace2a424488ef365261b76f42d5be5f17913194b086c85f1308c27fc863",
+    "publicReportSha256": "fded89dad24d4670e5296e88a6f294f6e8734bcc309153da634ffb7057ee11c0",
+    "timestamp": "**Last update:** 2026-10-09 18:12:38 CEST (UTC+02:00)",
+    "measurementValuesChanged": false,
+    "presentationOnlyEdits": [
+      "canonical project label",
+      "privacy-neutral local-proxy description",
+      "source revision note",
+      "EOF whitespace"
+    ],
+    "priorSnapshot": "same isolated project root; own prior run"
+  },
+  "supersededAttempt": {
+    "process": "proc_1f78f83c58a9",
+    "exit": 0,
+    "integration": "e9cebedbd2dc08569f58f33953c3c0caec9c4f29",
+    "rust": {
+      "passed": 3818,
+      "failed": 0,
+      "ignored": 185,
+      "resultBlocks": 231,
+      "scope": "cargo test --workspace --no-fail-fast; ordinary tests only; root private fixtures linked; loopback-only namespace",
+      "explicitSkipSignals": 0
+    },
+    "reason": "upstream name-editing source changed; remerged and reran whole consumed-input gate"
+  },
+  "scopeBoundary": {
+    "mainPublicationAuthorized": true,
+    "release": false,
+    "deployment": false,
+    "hardware": false,
+    "sharedRootSync": false,
+    "foreignRootAndWorktreesPreserved": true,
+    "automaticMaintainerUpload": false
+  },
+  "publication": {
+    "publishedAt": "2026-10-09T18:36:46+02:00",
+    "head": "f8725639ee60cc17b9be0ec44e33bb2300e2b714",
+    "tracking": "f8725639ee60cc17b9be0ec44e33bb2300e2b714",
+    "live": "f8725639ee60cc17b9be0ec44e33bb2300e2b714",
+    "featureAncestor": "38d8eb4584c6e0e36db48f1aed882eeb90e8469c",
+    "gatedAncestor": "d639c5f8a3c069afd21f507daa456fb3d51e10b9",
+    "postGateChangesMetadataOnly": [
+      ".ai/CURRENT_STATE.md",
+      "docs/IMPLEMENTATION_STATUS.md",
+      "docs/OFFLINE_PROCEDURE_RESOLUTION.md",
+      "docs/OPEN_WORK.md",
+      "docs/ProjectStats.md",
+      "docs/evidence/offline-ap1-integration-2026-10-09.json",
+      "docs/status/2026-10-09-offline-ap1-verification.md"
+    ],
+    "reportSha256": "fded89dad24d4670e5296e88a6f294f6e8734bcc309153da634ffb7057ee11c0",
+    "receiptSha256": "pre-readback-note receipt; historical digest 1e84818595777b8e6bdeaa7369ba4a1dd24e9a88d6f0520f720d6da3b52b76fd",
+    "normalPush": true
+  }
+}

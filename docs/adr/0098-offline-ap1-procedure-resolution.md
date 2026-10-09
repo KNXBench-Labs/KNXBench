@@ -1,7 +1,7 @@
 # ADR-0098: Offline AP1 sequence resolution is not download capability
 
 - Date: 2026-10-09
-- Status: accepted; implemented and locally verified, unpublished
+- Status: accepted; implemented, integrated and published on main ([verification](../status/2026-10-09-offline-ap1-verification.md))
 - Scope: explicit `MV-07B0` `Load/ap1` declarative sequence inspection and maintainer evidence
 
 ## Context

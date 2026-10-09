@@ -1,6 +1,6 @@
 # Offline System-B AP1 procedure resolution
 
-Status: implemented, committed and reverified on fresh-main integration. Owner authorized normal main publication; [integration verification](status/2026-10-09-offline-ap1-verification.md) records actual delivery. Release/deployment/hardware remain separate.
+Status: implemented, integrated and published on main with live-ref readback; [integration verification](status/2026-10-09-offline-ap1-verification.md) records actual delivery. Release/deployment/hardware remain separate.
 Date: 2026-10-09. Owner go follows the Q1–Q11 interview.
 
 ## Evidence and first family

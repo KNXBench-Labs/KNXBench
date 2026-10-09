@@ -53,7 +53,7 @@ experiment is authorized by this documentation audit.
 ## 2. Parked packages and publication follow-up
 
 **Offline AP1 diagnostics (2026-10-09):** local implementation and fresh-main
-integration acceptance are complete; owner authorized normal main publication.
+integration acceptance are complete; normal main publication is verified.
 [Delivery/readback](status/2026-10-09-offline-ap1-verification.md). Not a release.
 [Contract](OFFLINE_PROCEDURE_RESOLUTION.md), ADR-0098: 69 partial source-bound
 reconstructions / 6 source-limit unavailable from 75 selected real candidates;

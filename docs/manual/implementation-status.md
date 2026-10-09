@@ -16,6 +16,17 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Docker upload and browser return fixes (2026-10-09 source)
+
+The source fixes for GitHub #1/#2 raise the streamed upload file ceiling to
+**256 MiB**, with a separate 16 KiB multipart-envelope allowance, without
+changing ZIP expansion/import limits. Diagnostics and Flow's explicit browser
+return navigate this tab to the editor and resume the current server project
+with a read-only request; native return still focuses the existing main window.
+A separate browser editor is not closed and transient selection is not copied.
+These fixes are **not in the published alpha.6 artifacts**. See the
+[behavioral contract](../contracts/DOCKER_UPLOAD_AND_RETURN.md).
+
 ## Communication-object table: accepted main-delivery source
 
 The 2026-10-09 owner-approved local UI package adds explicit column headings,

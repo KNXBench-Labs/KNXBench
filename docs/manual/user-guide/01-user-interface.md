@@ -242,7 +242,14 @@ achievements you have unlocked and the ones still ahead. See
 The **Diagnostics window** button opens a separate browser window (or a second desktop
 window) carrying two tabs and nothing else: **Bus monitor** and **Log**. It is
 read-only by design. It has no undo, no project editing, no help panel of its own, and
-a "Back to main window" button to get you home.
+a "Back to main window" button to get you home. In current browser source, that
+button navigates the current tab to the editor, even when Diagnostics was opened
+directly or its opener has closed; a separate editor tab is not closed. The
+currently open server project is displayed again without reopening or
+reimporting it; the bus session remains open. Transient editor selection is
+not transferred. In the native desktop build, the button still focuses the
+existing main window. The same browser return applies to the separate Flow
+window. This source fix is not in the published alpha.6 artifacts.
 
 It shares the one bus session with the main window rather than opening a second one,
 and it announces as much at the top of the window. Both windows watching one session

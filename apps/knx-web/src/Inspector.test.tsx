@@ -135,6 +135,11 @@ async function renderInspector(
       />,
     );
   });
+  // Exercise the actual expander before inspecting lazily mounted controls.
+  if (deviceDetail?.com_objects.length) await act(async () => {
+    for (const button of host!.querySelectorAll<HTMLButtonElement>(".com-object-channel-summary")) button.click();
+    for (const summary of host!.querySelectorAll<HTMLElement>(".com-object-detail summary")) summary.click();
+  });
   return onApplied;
 }
 

@@ -279,6 +279,41 @@ edit the project; they do not connect to, program or download a KNX device.
 
 ### Communication objects
 
+**Local source update (2026-10-09, not yet on main or in alpha.6):** the object
+panel now has aligned **No., Name, Function, DPT, Group addresses, Status** headings,
+a **By channel / All objects** switch (flat view adds Channel), search and filters.
+Click a heading to sort ascending/descending, within channels or globally in flat
+view. **Original order** resets sorting; **Reset filters** leaves view/sort alone.
+
+Search covers object number/name/function/description, channel labels, effective
+DPT ID/text and every linked GA name/address; slash or dotted GA input works.
+Description-only matches show a hint. Status, linked/unlinked and DPT family/exact/
+missing filters combine. All states are initially included; unresolved-target
+links count as linked. Matching channels open initially, zero-result groups hide,
+and counts show matches/total regardless of collapse. Reset restores your original
+channel expansion; reapplying a filter reveals matches again.
+
+The open editor stays visible if its object leaves the result, marked **Editing —
+outside filter**, without inflating counts. Inputs/refusal/pending state survive
+sort/filter/view/channel changes; only committed data drives results. Removing an
+edited object announces and closes that editor. Tabs/refresh retain view settings;
+device/project change or leaving the editor resets them. No view state is stored
+in the project. Editing still saves DPT/description on blur/Enter and flags/links
+immediately: clicking a filter from a dirty field can trigger that existing blur
+save, but filtering adds no write of its own. Pending edits prevent duplicate
+starts; a delayed result cannot republish into a removed editor/another device.
+
+The table scrolls locally, keeping all columns reachable on narrow displays.
+[Full contract and evidence](../../COMMUNICATION_OBJECT_TABLE.md). The following
+screenshot is historical; it does not show the new table headings or toolbar.
+
+![Local source communication table served by the newly built real server with a
+copy of the fictional home demo. The flat view shows object 0, its function,
+DPST-1-1 and 6/0/1; the open editor retains small Program badges, DPT/description
+inputs, flag controls and a directional link. Right-hand columns are reachable
+through the local table scroller, not all visible at once.](../../evidence/communication-objects/real-demo-editor.png)
+
+
 ![The device panel for 1.1.1 with the Communication objects tab selected. The channel
 group "Channel A" (Name: Channel1, Number: 1, 2 objects) is open and object 0
 "Channel A: Switch" is expanded: DPT `DPST-1-1` with a Program badge, a Description
@@ -337,11 +372,9 @@ order, and Undo restores a removed link to its previous position. The
 screenshot above predates the expanded flag labels and the paired-link
 control; the current controls include both.
 
-Five of them are written back on export. **Read on init (`I`) is not.** No ETS project
-file this project has measured states that flag per communication object, so the
-exporter leaves it out rather than invent a place for it — and tells you, with an export
-warning counting the objects that had it switched on. The value stays in your `.knxdb`;
-it just does not survive a trip through `.knxproj`.
+These six flags are retained in native `.knxdb` project data. There is no
+`.knxproj` writer; editing a flag does not program hardware or establish that a
+manufacturer's application permits that combination.
 
 This is the only place in the interface where a link between a communication object and
 a group address is created. [Working with group addresses](04-group-addresses.md)

@@ -1239,7 +1239,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
             <button type="button" onClick={openDevices}>{t("devices.all")}</button>
           </nav>
           {selection?.kind === "device" && deviceDetail?.id === selection.id
-            ? <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />
+            ? <DeviceWorkspace key={`${loadKey}:${deviceDetail.id}`} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />
             : <div><p role="status">{t(deviceDetailLoading ? "devices.loadingEditor" : "devices.editorUnavailable")}</p>
               {!deviceDetailLoading && selection?.kind === "device" && <button type="button" onClick={() => void selectEntity(selection)}>{t("devices.retry")}</button>}</div>}
         </section> : view === "devices" ? null : view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}

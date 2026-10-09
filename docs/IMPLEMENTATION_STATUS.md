@@ -7,6 +7,39 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Communication objects get headings, not a guessing game (local)
+
+- Owner-approved Q1–Q12 / local implementation go: explicit device CO table,
+  channel/flat views, separate Name/Function/DPT/GA/Status columns, search and
+  AND-combined evaluated-status/link/effective-DPT family/exact/missing filters.
+- Stable original/numeric/natural sorts, match counts, channel reveal/reset and
+  UI-only state lifetime. Open editors preserve dirty drafts/errors/pending through
+  view/channel/refresh changes; nonmatching editors remain marked exceptions. One
+  in-flight admission and delayed-result invalidation reuse existing core/API edits.
+- Final source-frozen gate: frontend **2537 passed / 0 failed, 157 files**;
+  build/four type configurations; production Chromium **19** and full intercepted
+  Chromium **227**, all green. Fresh owned server/xtask build, all five nonempty
+  explicit-root repository gates, docs/manual navigation and whitespace pass.
+  Separate real production server/demo-copy proof **12/12**, only lo/no API
+  interception, unchanged project snapshot and original demo digest.
+- Named RED controls covered absent UI/derivation, dirty refresh, removal notice,
+  filter reapplication, selected-view contrast and 167px stretched provenance
+  badges. Final screenshot review: badges now compact; toolbar/headings readable;
+  narrow controls wrap and table columns remain available through local scroll.
+- Synthetic 1,000-object production action-to-visible sample: render 2052ms,
+  flat view 2908ms, filter 458ms, sort 377ms; includes driver/layout overhead,
+  one sample on this host, not a guarantee or 1,000 expanded editors.
+- Initial real runtime mistakenly inherited XDG and opened the existing local
+  v22 catalogue; missing scanner column refused installation. Package remains
+  absent and main-file mtime predates run; no pre-run byte hash/repair claim.
+  Corrected final runtime fully isolates HOME/XDG/project data. Rejected harness
+  attempts and original chain exit1 remain disclosed, not relabelled as acceptance.
+- [Contract](COMMUNICATION_OBJECT_TABLE.md), ADR-0101,
+  [aggregate receipt](evidence/communication-objects-2026-10-09.json), architecture,
+  manual, roadmap and limitations synchronized. Self-review only; no subagents.
+  **Uncommitted/local only**, not main/alpha.6/deployed; core/storage/API/protocol
+  and dependencies unchanged. No real-bus/native/Orca/full-ETS acceptance.
+
 ## 2026-10-09 — Native history remembers restarts, not hardware writes
 
 - Owner-authorized isolated HISTORY-01/HISTORY-02 package: native v11 durable

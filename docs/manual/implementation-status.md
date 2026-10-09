@@ -140,13 +140,15 @@ This package is local, not a published release.
 | Buildings, floors, rooms and building parts: read and edit | ✅ Implemented | 22 building parts in the reference project |
 | Creating a project from scratch in the interface | ✅ Implemented | Browser-verified — [§83](../KNOWN_LIMITATIONS.md#83-the-from-scratch-launcher-is-browser-verified--resolved-2026-09-16-goal-task-17) |
 | Five additional documented space types kept distinct on import | ✅ Implemented | `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` survive import and native save/load; synthetic coverage, with the Schema23 vocabulary inconsistency documented in [§89](../KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import) |
+| Device-instance name editing in editor/Properties and F2/context menu | ✅ Current source, newer than alpha.6 | Names only; no product/address/program change — [naming contract](../contracts/project-name-editing.md) |
 | Moving a device by drag and drop | 🟡 Partial or experimental | Single device → line/building part within its own installation; a group address dropped on a link row links it; other structural gestures remain unavailable — [Buildings and topology](user-guide/03-buildings-and-topology.md) |
 
 ## Group addresses
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Create, rename, delete, inline edit; duplicate and still-linked validation | ✅ Implemented | [Working with group addresses](user-guide/04-group-addresses.md) |
+| Create/delete and address/reference validation | ✅ Implemented | Numeric duplicate/still-linked rules; display names may repeat — [Working with group addresses](user-guide/04-group-addresses.md) |
+| Individual group-address name editing through Properties, F2/context menu | ✅ Current source, newer than alpha.6 | Name-only, all installations, guarded revision and exact undo/native history; [naming contract](../contracts/project-name-editing.md) |
 | Choosing free, two-level or three-level style when the project is created | ✅ Implemented | Initial display/address structure; the next row describes changing it later |
 | Changing the style afterwards | ✅ Implemented | On the Project node in the properties pane, undoable |
 | CSV export and re-import in KNXBench's own format | ✅ Implemented | Every address in the reference project round-trips unchanged |

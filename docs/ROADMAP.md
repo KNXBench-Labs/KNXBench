@@ -31,6 +31,17 @@ Publication remains separate. Complete plan materialization, conditional
 selection, AP2/other masks, legacy/coupler procedures, new media and new live
 execution remain unimplemented; this does not close commissioning ledger rows.
 
+## Project-local names (2026-10-09 source package)
+
+Single device instances and individual group addresses can be renamed through
+Name fields, F2 and context menus in every installation. Exact reversible names
+use native history; guarded requests and retained drafts preserve conflicts.
+[Contract](contracts/project-name-editing.md) and
+[verification](status/2026-10-09-project-name-editing-verification.md).
+Bulk templates, CLI/MCP authoring, `.knxproj` export and hardware effects remain
+outside this package. Publication is authorized separately from release/deployment.
+
+
 ## Native project history (local source package, 2026-10-09)
 
 Restart-safe native undo/redo, named/save/pre-restore versions and revision-bound

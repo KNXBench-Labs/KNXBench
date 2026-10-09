@@ -81,4 +81,8 @@ export. This does not establish private-corpus, native-shell/Orca, power-loss,
 hardware or ETS compatibility. Same-file native history is not an independent
 backup; before first Save As it is session-only. Alpha.6 does not bundle this
 newer source feature. Owner Go separately authorizes commit/integration/push,
-not release/deployment. The final published revision is recorded in handover.
+not release/deployment. Feature `28b6511b` and merge `f309612b` were normally pushed in acceptance
+`713a06be63c0e4e70926605f43b6d15c58e154c5`; actual live/fetched main and owned
+HEAD matched. The final metadata tip is Git HEAD containing the publication
+handover. Shared root remains intentionally untouched; the clean integrated
+checkout is retained as the deliverable alongside the parallel worktrees.

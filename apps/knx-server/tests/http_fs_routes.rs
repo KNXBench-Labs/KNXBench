@@ -136,6 +136,128 @@ async fn uploading_a_file_round_trips_into_the_uploads_dir() {
     assert_eq!(written, content);
 }
 
+/// Generates a real multipart stream without allocating a whole large request.
+struct LargeUploadBody {
+    prefix: Option<axum::body::Bytes>,
+    remaining: usize,
+    chunk: axum::body::Bytes,
+    suffix: Option<axum::body::Bytes>,
+}
+
+impl http_body::Body for LargeUploadBody {
+    type Data = axum::body::Bytes;
+    type Error = std::convert::Infallible;
+
+    fn poll_frame(
+        mut self: std::pin::Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
+        let data = if let Some(prefix) = self.prefix.take() {
+            Some(prefix)
+        } else if self.remaining > 0 {
+            let len = self.remaining.min(self.chunk.len());
+            self.remaining -= len;
+            Some(self.chunk.slice(..len))
+        } else {
+            self.suffix.take()
+        };
+        std::task::Poll::Ready(data.map(|bytes| Ok(http_body::Frame::data(bytes))))
+    }
+}
+
+fn large_upload_request(size: usize) -> Request<Body> {
+    let empty = multipart_file_body("file", "large.knxproj", b"");
+    let split = empty.windows(4).position(|w| w == b"\r\n\r\n").unwrap() + 4;
+    Request::builder()
+        .method("POST")
+        .uri("/api/fs/upload")
+        .header(
+            "content-type",
+            format!("multipart/form-data; boundary={BOUNDARY}"),
+        )
+        .body(Body::new(LargeUploadBody {
+            prefix: Some(empty[..split].to_vec().into()),
+            remaining: size,
+            chunk: vec![0x5a; 1024 * 1024].into(),
+            suffix: Some(empty[split..].to_vec().into()),
+        }))
+        .unwrap()
+}
+
+async fn assert_large_upload_preserved(size: usize) {
+    use std::io::Read;
+
+    let (state, dir) = state_with_data_dir();
+    let response = knx_server::app(Arc::new(state), None)
+        .oneshot(large_upload_request(size))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(body_json(response).await["path"], "uploads/large.knxproj");
+    let mut file = std::fs::File::open(dir.path().join("uploads/large.knxproj")).unwrap();
+    assert_eq!(file.metadata().unwrap().len(), size as u64);
+    let mut buffer = [0; 64 * 1024];
+    loop {
+        let count = file.read(&mut buffer).unwrap();
+        if count == 0 {
+            break;
+        }
+        assert!(buffer[..count].iter().all(|&byte| byte == 0x5a));
+    }
+}
+
+#[tokio::test]
+async fn uploading_a_115_mib_file_preserves_every_byte() {
+    // GitHub #1: the HTTP upload must not reject a 115 MB project before import.
+    // This is an upload fixture, not a claim that these bytes are a valid project.
+    assert_large_upload_preserved(115 * 1024 * 1024).await;
+}
+
+#[tokio::test]
+async fn uploading_exactly_256_mib_allows_multipart_overhead() {
+    assert_large_upload_preserved(256 * 1024 * 1024).await;
+}
+
+#[tokio::test]
+async fn oversized_upload_is_413_and_leaves_no_partial_file() {
+    let (state, dir) = state_with_data_dir();
+    let state = Arc::new(state);
+    let response = knx_server::app(state.clone(), None)
+        .oneshot(large_upload_request(256 * 1024 * 1024 + 1))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    assert!(body_json(response).await["error"]
+        .as_str()
+        .unwrap()
+        .contains("256 MiB"));
+    assert_eq!(
+        std::fs::read_dir(dir.path().join("uploads"))
+            .unwrap()
+            .count(),
+        0
+    );
+    assert!(state.project.lock().unwrap().is_none());
+}
+
+#[tokio::test]
+async fn malformed_upload_leaves_no_partial_file() {
+    let (state, dir) = state_with_data_dir();
+    let mut body = multipart_file_body("file", "broken.knxproj", b"incomplete");
+    body.truncate(body.len() - format!("\r\n--{BOUNDARY}--\r\n").len());
+    let response = knx_server::app(Arc::new(state), None)
+        .oneshot(multipart_request("/api/fs/upload", body))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        std::fs::read_dir(dir.path().join("uploads"))
+            .unwrap()
+            .count(),
+        0
+    );
+}
+
 #[tokio::test]
 async fn uploading_with_a_path_traversal_filename_lands_safely_in_uploads() {
     let (state, dir) = state_with_data_dir();

@@ -1,5 +1,16 @@
 # Architecture
 
+## Guarded project-local names (2026-10-09)
+
+[ADR-0101](adr/0101-project-local-device-and-ga-names.md) and
+[the naming contract](contracts/project-name-editing.md) add name-only domain
+commands, exact restoration, authoritative core admission and guarded dedicated
+HTTP routes. One UI workflow serves editor/inspector/explorer/tables. The
+application owns a transient successful-load generation alongside existing
+server/revision identity; no import or native-schema field changes. Native
+state history from ADR-0100 is reused, not a new serialized-command format.
+No CSV/MCP/protocol/CLI-authoring change or ETS/hardware compatibility claim.
+
 ## Native project history (2026-10-09)
 
 [ADR-0100](adr/0100-persistent-native-project-history.md) adds bounded native

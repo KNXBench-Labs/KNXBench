@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["src", "e2e/rename.native.ts", "playwright.rename-native.config.ts"]
+}

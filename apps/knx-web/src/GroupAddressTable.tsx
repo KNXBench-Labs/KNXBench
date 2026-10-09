@@ -178,6 +178,7 @@ export default function GroupAddressTable(props: {
               return (
                 <tr
                   key={ga.id}
+                  data-rename-kind="group_address" data-rename-id={ga.id}
                   data-crt-surface="row"
                   aria-selected={selection?.kind === "group_address" && selection.id === ga.id}
                   className={checked(ga) ? "row-multi-selected" : undefined}

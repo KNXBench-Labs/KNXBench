@@ -52,6 +52,82 @@ fn upload(uri: &str, bytes: &[u8], options: Option<&str>) -> Request<Body> {
         .unwrap()
 }
 
+fn ap1_package() -> Vec<u8> {
+    knx_testsupport::zip_with_entries(&[
+        ("knx_master.xml", br#"<KNX xmlns="http://knx.org/xml/project/20"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Synthetic"/></Manufacturers><MaskVersions><MaskVersion Id="MV-07B0"><HawkConfigurationData><Procedures><Procedure ProcedureType="Load" ProcedureSubType="ap1"><LdCtrlConnect/><LdCtrlMerge MergeId="2"/><LdCtrlMerge MergeId="4"/><LdCtrlRestart/></Procedure></Procedures></HawkConfigurationData></MaskVersion></MaskVersions></MasterData></KNX>"#),
+        ("M-0001/A.xml", br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms><ApplicationProgram Id="M-0001_A-1" MaskVersion="MV-07B0" LoadProcedureStyle="MergedProcedure"><Static><LoadProcedures><LoadProcedure MergeId="2"><LdCtrlRelSegment LsmIdx="4" Size="16"/></LoadProcedure><LoadProcedure MergeId="4"><LdCtrlWriteRelMem ObjIdx="4" Size="16"/></LoadProcedure></LoadProcedures></Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#),
+    ])
+}
+
+#[tokio::test]
+async fn ap1_local_resolution_and_reduced_preview_keep_user_state_unchanged() {
+    let dir = tempfile::tempdir().unwrap();
+    let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    knx_productdb::install_package(&products, "seed.knxprod", &package()).unwrap();
+    let before = products.total_changes();
+    let seed =
+        knx_etsproj::import_knxproj_bytes(knx_testsupport::minimal_knxproj_bytes(), "seed.knxproj")
+            .unwrap()
+            .project;
+    assert!(!seed.installations.is_empty());
+    let state = Arc::new(knx_server::AppState {
+        project: std::sync::Mutex::new(Some(seed.clone())),
+        product_db: Some(std::sync::Mutex::new(products)),
+        ..Default::default()
+    });
+    let app = knx_server::app(state.clone(), None);
+    let response = app
+        .clone()
+        .oneshot(upload("/api/contributions/analyze", &ap1_package(), None))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let raw = axum::body::to_bytes(response.into_body(), 8 * 1024 * 1024)
+        .await
+        .unwrap();
+    let local: Value = serde_json::from_slice(&raw).unwrap();
+    assert_eq!(local["procedureResolutions"][0]["status"], "expanded");
+    assert_eq!(local["procedureResolutions"][0]["executable"], false);
+    let sha = local["procedureResolutions"][0]["sources"][0]["sha256"]
+        .as_str()
+        .unwrap();
+    let response = app
+        .oneshot(upload(
+            "/api/contributions/preview",
+            &ap1_package(),
+            Some(r#"{"audience":"public","sampleIds":[],"consent":false}"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let raw = axum::body::to_bytes(response.into_body(), 8 * 1024 * 1024)
+        .await
+        .unwrap();
+    let preview: Value = serde_json::from_slice(&raw).unwrap();
+    let text = preview["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["path"] == "findings.json")
+        .unwrap()["text"]
+        .as_str()
+        .unwrap();
+    assert!(!text.contains("procedureResolutions"));
+    assert!(!text.contains(sha));
+    assert!(text.contains("offline-procedure-resolution"));
+    assert_eq!(
+        state
+            .product_db
+            .as_ref()
+            .unwrap()
+            .lock()
+            .unwrap()
+            .total_changes(),
+        before
+    );
+    assert_eq!(*state.project.lock().unwrap(), Some(seed));
+}
+
 #[tokio::test]
 async fn analysis_exposes_real_parser_gap_without_installing_the_package() {
     let dir = tempfile::tempdir().unwrap();

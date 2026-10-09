@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-09 11:39 CEST
+- **Completed:** Owner-authorized download-coverage feature bd778821 merged no-ff onto fetched main b3ee55a0 as d12bce07138beef026708c8b014bb5e4d2ac0b6a. Fresh merged gate proc_0936d31525ea exit 0: full Release corpus 1/0/0, 105 originals unchanged, 467 programs (1 verified/98 untested); application 159/0/27 ignored, ZIP boundaries 13/0, fmt/focused Clippy/docs/all five fresh nonempty repository checks and whitespace pass. Exact source binding and feature-tree equality verified; self-review, no subagents. Delivery receipt/status prepared separately; original receipt retained unchanged.
+- **Pending/Next Steps:** Commit metadata, normal push to refs/heads/main, exact live/fetched remote readback, publication closure and own cleanup. Feature implementation/tests are accepted; no hardware/release/deployment actions.
+- **Notes for Codex oder Claude:** Receipt docs/evidence/download-coverage-publication-2026-10-09.json; log .ai/logs/2026-10-09_codex_download-coverage-publication.md. Owned integrate/download-coverage-20261009 worktree/scratch; root main/index and live114/history worktrees stay untouched. Raw private corpus diagnostics discarded. Fresh scoped gates, not a full workspace/frontend/hardware claim.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-09 11:06 CEST
 - **Completed:** Fixed download_coverage_corpus with existing bounded LARGE admission, no package exclusions or production changes. Final explicit full Release corpus proc_4c09edce53be: 1 passed/0 failed/0 ignored; all 105 inputs unchanged, 467 programs (1 verified/98 untested, exact refusal categories pinned). STANDARD baseline reproduces SizeLimit; old-pin LARGE measurement retained as diagnostic RED. Removed private per-program output; research §19.20/index, KL §151, implementation status and compact receipt updated. Application 159/0/27 ignored, ZIP boundaries 13/0, fmt/focused Clippy/docs/five nonempty fresh-checkout repository gates pass; self-review.
 - **Pending/Next Steps:** No implementation or test work remains for this fix. Local-only focused commit on fix/download-coverage-large-20261009; merge/push/release need a separate request. Shared root/source/index and foreign history worktree stay unchanged; root handover and owned ignored log synchronized.

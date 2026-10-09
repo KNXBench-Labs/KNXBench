@@ -30,8 +30,9 @@ design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
 This is the source-level `0.1.0-alpha` series, checked on **8 October 2026**.
-A [public alpha.5 AppImage](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5)
-exists, but may precede newer changes described here. The version number is not a
+The [public alpha.6 pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.6)
+(AppImage, `knx-mcp`, Docker Hub image) may precede newer changes described here;
+the `TypeNone` spacer fix, for example, landed on `main` after the tag. The version number is not a
 promise that anything is finished.
 
 > A long list of known issues is what happens when a project writes its
@@ -517,10 +518,9 @@ must not be described as either universally guessed or universally explicit.
 ### The Docker Hub image is the last release, and `latest` follows alphas
 
 - **Affected:** `knxbench/knxbench-server` from Docker Hub.
-- **Limitation:** images are published for release tags only, from the first
-  tag after `v0.1.0-alpha.5`; `latest` moves with every pre-release. Inside
-  the image, `knx-server --version` names the server crate version, which
-  currently lags the release tag; its commit is accurate.
+- **Limitation:** images are published for release tags only, starting with
+  `v0.1.0-alpha.6`; `latest` moves with every pre-release. Commits after the
+  last tag are not in any image.
 - **Workaround:** pin a version tag for deliberate updates; build locally for
   source newer than the last release.
 - **Details:** [§168](../KNOWN_LIMITATIONS.md#168-the-docker-hub-image-follows-release-tags-only-and-latest-follows-alphas),

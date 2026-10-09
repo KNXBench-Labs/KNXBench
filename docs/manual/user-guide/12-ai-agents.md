@@ -61,8 +61,8 @@ unparsed archive members a project keeps for completeness.
 ## Getting `knx-mcp`
 
 Releases attach a `knx-mcp-x86_64-linux` binary beside the AppImage, with a
-`SHA256SUMS` file covering both. Release `v0.1.0-alpha.5` and earlier do not
-include it. Otherwise build it from source:
+`SHA256SUMS` file covering both, starting with `v0.1.0-alpha.6`. Release
+`v0.1.0-alpha.5` and earlier do not include it. Otherwise build it from source:
 
 ```bash
 cargo build --release -p knx-mcp

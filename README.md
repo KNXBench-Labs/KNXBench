@@ -94,8 +94,9 @@ Retained bytes are not a promise of complete ETS semantics.
   command line for the scriptable bits.
 
 > [!NOTE]
-> The wizards, LCARS, the achievements, the Boarisch/Klingon packs and `knx-mcp` are
-> newer than the alpha.5 AppImage. Use Docker or a source build to get them.
+> The wizards, LCARS, the achievements, the Boarisch/Klingon packs, the Devices view and
+> `knx-mcp` are all in the alpha.6 release. Changes after it need Docker built from source
+> or a source build.
 
 ## See it in action
 
@@ -161,8 +162,8 @@ docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
 Open <https://127.0.0.1:8484>, sign in with that password, and choose **New project…** or
 import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
-No time for coffee? From the first release after alpha.5, every release tag is also
-published as a ready-made image for x86-64 and 64-bit Arm:
+No time for coffee? Since alpha.6, every release tag is also published as a ready-made
+image for x86-64 and 64-bit Arm:
 `docker pull knxbench/knxbench-server:latest`, then the same `docker run` with
 `knxbench/knxbench-server:latest` as the image. It is the last release, not the newest
 source ([details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
@@ -177,16 +178,17 @@ the [update-in-one-go](docs/manual/user-guide/11-web-and-docker.md#updating-in-o
 ### Linux desktop, via AppImage
 
 ```bash
-REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.5
-curl -LO "$REL/KNXBench_0.1.0-alpha.5_amd64.AppImage"
+REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.6
+curl -LO "$REL/KNXBench_0.1.0-alpha.6_amd64.AppImage"
 curl -LO "$REL/SHA256SUMS"
-sha256sum -c SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.5_amd64.AppImage
-./KNXBench_0.1.0-alpha.5_amd64.AppImage
+sha256sum -c --ignore-missing SHA256SUMS
+chmod +x KNXBench_0.1.0-alpha.6_amd64.AppImage
+./KNXBench_0.1.0-alpha.6_amd64.AppImage
 ```
 
-This is the `v0.1.0-alpha.5` pre-release from 7 October 2026, x86-64 only. It is a
-snapshot: newer features need Docker or a
+This is the `v0.1.0-alpha.6` pre-release from 9 October 2026, x86-64 only, the first
+one built by the release workflow. `--ignore-missing` skips the `knx-mcp` binary listed in
+the same checksum file. It is a snapshot: newer features need Docker or a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The
 [Linux setup](docs/manual/getting-started/05-linux-setup.md) chapter lists the host
 packages it needs and what has been tested.
@@ -195,8 +197,8 @@ packages it needs and what has been tested.
 
 | Platform | Status |
 | --- | --- |
-| Linux, Docker + browser | Tested; the bus needs host networking |
-| Linux x86-64, AppImage | Built and launched on one host |
+| Linux, Docker + browser | Tested; images for amd64 and arm64 on Docker Hub; the bus needs host networking |
+| Linux x86-64, AppImage | Built by CI with launch checks (Xvfb, headless Weston); hand-tested on one host |
 | Linux, from source | Rust 1.98 and Node.js 22.12+ ([building from source](docs/manual/development/02-building-from-source.md)) |
 | Windows, macOS | No native build. Docker Desktop is plausible, but untested |
 
@@ -207,7 +209,7 @@ All the details: [Installation](docs/manual/getting-started/04-installation.md).
 ## Project status
 
 **Alpha — and we mean it.** The current pre-release is
-[`v0.1.0-alpha.5`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5).
+[`v0.1.0-alpha.6`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.6).
 The test suite is large, the documentation is honest, and things still move.
 
 - **Solid:** importing real ETS projects with a full report, editing with undo, the

@@ -17,18 +17,21 @@ Docker Desktop networking is not a verified substitute for Linux host networking
 
 ## a) Linux AppImage
 
-The public pre-release checked on **8 October 2026** is
-[`v0.1.0-alpha.5`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5).
-Download **both** `KNXBench_0.1.0-alpha.5_amd64.AppImage` and `SHA256SUMS` from
+The current public pre-release is
+[`v0.1.0-alpha.6`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.6) (9 October 2026).
+Download **both** `KNXBench_0.1.0-alpha.6_amd64.AppImage` and `SHA256SUMS` from
 that release page into the same directory.
 
 From that directory:
 
 ```bash
-sha256sum -c SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.5_amd64.AppImage
-./KNXBench_0.1.0-alpha.5_amd64.AppImage
+sha256sum -c --ignore-missing SHA256SUMS
+chmod +x KNXBench_0.1.0-alpha.6_amd64.AppImage
+./KNXBench_0.1.0-alpha.6_amd64.AppImage
 ```
+
+`SHA256SUMS` also lists the `knx-mcp` binary; `--ignore-missing` checks only the
+files you downloaded and still fails on any mismatch.
 
 **Expected result:** the checksum reports `OK`, then the application opens a
 welcome screen. Stop if the checksum differs; do not solve an integrity warning
@@ -72,7 +75,7 @@ A password enables HTTPS by default. The generated certificate is self-signed:
 compare the browser's certificate fingerprint with the one in
 `docker logs knxbench` before accepting it. Then sign in using your chosen password.
 
-**Skipping the build:** release tags after `v0.1.0-alpha.5` are also published
+**Skipping the build:** since `v0.1.0-alpha.6`, every release is also published
 as a ready-made image for x86-64 and 64-bit Arm. Without a checkout, replace
 the `git clone`, `cd` and `docker build` lines with
 `docker pull knxbench/knxbench-server:latest` and use

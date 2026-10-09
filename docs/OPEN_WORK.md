@@ -134,10 +134,10 @@ to owner `later`. Routes naming removed goal files are kept as history.
 
 ## 5. Repository chores
 
-- **Docker Hub release image** (ADR-0097, KL §168): the workflow is on
-  `main`; before the next tag the owner sets the repository variable
-  `DOCKERHUB_USERNAME` and the secret `DOCKERHUB_TOKEN`. The first tag run is
-  also the first arm64 build and the first publish.
+- **Docker Hub release image** (ADR-0097, KL §168): live since
+  `v0.1.0-alpha.6`. Open by choice: image signing, Docker Hub description
+  sync, scheduled base-image rebuilds, and the `latest` rule at the first
+  stable release.
 - **CI** is disabled (`gh workflow disable CI`, 2026-10-07) until the user
   re-enables it.
 - **Repository visibility:** `KNXBench-Labs/KNXBench` became public on

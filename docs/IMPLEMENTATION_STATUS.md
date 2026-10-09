@@ -7,6 +7,39 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — `v0.1.0-alpha.6`: first release built by CI, first one on Docker Hub
+
+- Owner go for the release. Preparation: `fe7e0e26` makes the tag
+  release job create pre-releases (`--prerelease`, matching title) for tags
+  with a pre-release part; `042509c6` bumps desktop, web (package + lock), CLI,
+  server (from `alpha.2`) and `knx-mcp` (from `alpha.1`) to `0.1.0-alpha.6`.
+- Gate on `042509c6` (root worktree): fmt, workspace Clippy `-D warnings`,
+  Rust 3726 passed / 0 failed / 182 ignored, Vitest 2480/152 files,
+  `tsc` + Vite build, all five xtask checks, tools unittests,
+  `check_documentation.py`, diff check. Dry runs on the same commit:
+  [AppImage 37891579110](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37891579110)
+  (first CI run of that workflow: build, version check, Xvfb and headless
+  Weston start, `knx-mcp`) and
+  [Docker 37891581261](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37891581261)
+  (amd64 + arm64 smoke tests, `knx-server 0.1.0-alpha.6+g042509c`).
+- Tag `v0.1.0-alpha.6` on `042509c6`, annotated, KNXBench tagger. `main` had
+  meanwhile received the `TypeNone` spacer fix (`7f1efbb2`); it was not gated
+  with the release and is **not** in alpha.6.
+- [Release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.6)
+  (pre-release, hand-written notes): `KNXBench_0.1.0-alpha.6_amd64.AppImage`,
+  `knx-mcp-x86_64-linux`, `SHA256SUMS`; downloaded again, `sha256sum -c`
+  OK, `knx-mcp --version` = `0.1.0-alpha.6+g042509c`
+  ([run 37893327233](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37893327233)).
+- Docker Hub ([run 37893327218](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37893327218)):
+  public `knxbench/knxbench-server:0.1.0-alpha.6` and `:latest`, one index
+  `sha256:dfacb646…6703` with amd64 + arm64 (plus attestations). An anonymous
+  pull of the amd64 image passed `smoke-test.sh`.
+- Docs moved from "alpha.5 is current" to alpha.6 (README, installation,
+  project status, manual status, known issues, Docker/AI/Devices chapters,
+  FAQ); AppImage recipes use `sha256sum -c --ignore-missing`, because
+  `SHA256SUMS` now also lists `knx-mcp`. Not tested: the alpha.6 AppImage on
+  a real desktop session and the arm64 image on a Raspberry Pi.
+
 ## 2026-10-09 — TypeNone rows stop pretending to be input fields (KL §128)
 
 - Kind `None` (ETS `TypeNone`, legacy atomic type 0) has no value. The

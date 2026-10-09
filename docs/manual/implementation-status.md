@@ -5,9 +5,9 @@
 This chapter is the honest inventory: what exists, what half exists, and what
 does not exist at all, area by area across the whole application.
 
-This chapter describes source checked on **8 October 2026**: CLI, desktop and web
-`0.1.0-alpha.5`, server `0.1.0-alpha.2`. The public
-[`v0.1.0-alpha.5` pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.5)
+This chapter describes source checked on **8 October 2026**; the application
+components were bumped to `0.1.0-alpha.6` on 9 October. The public
+[`v0.1.0-alpha.6` pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.6)
 is a separate build snapshot, not a promise that every newer source feature is bundled.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
@@ -19,13 +19,13 @@ alpha boundary is not implemented functionality or an active work package.
 ## New on main: Devices navigation
 
 The owner-approved Devices list/editor package was implemented in the isolated
-`devices-navigation-20261008` package and is on `main` since 2026-10-09
-(not yet in a release or a deployed container). It adds
+`devices-navigation-20261008` package and is on `main` since 2026-10-09; it is
+part of the `v0.1.0-alpha.6` release and its Docker Hub image. It adds
 the navigation/palette entry, a filterable/sortable canonical device table,
 central editor with app-local Back, preserved list state and scoped device links.
 Product-only metadata uses a read-only snapshot-bound batch; unavailable data
 is named, not inferred. [Contract and verification](../DEVICE_NAVIGATION.md).
-The released alpha.5 AppImage is unchanged. Native/Orca/hardware acceptance,
+The older alpha.5 AppImage does not contain it. Native/Orca/hardware acceptance,
 URL/browser history, persistent state, grouping and project-diff/log-prose links
 are not part of this package.
 

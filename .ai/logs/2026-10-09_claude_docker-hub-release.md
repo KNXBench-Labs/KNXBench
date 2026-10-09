@@ -42,3 +42,21 @@ tag incl. pre-releases, Docker Hub only (no GHCR).
 - First tag run = first publish; `v0.1.0-alpha.5` has no image.
 - Crate version drift (`knx-server` 0.1.0-alpha.2 vs tag alpha.5) disclosed,
   not fixed.
+
+## Follow-up: release v0.1.0-alpha.6 (same day)
+
+- Owner set `DOCKERHUB_TOKEN` (secret) and `DOCKERHUB_USERNAME=knxbench`
+  (variable), then chose "release alpha.6 now".
+- Found: `linux-appimage.yml` had never run on CI (alpha.5 built locally) and
+  its release job would have created a full ("Latest") release. Fixed with
+  `--prerelease` for tags containing `-` (`fe7e0e26`).
+- Version bump `042509c6` incl. server (alpha.2) and knx-mcp (alpha.1) to end
+  the version drift. Local full gate + both dry runs green on that commit.
+- Tagged `042509c6` explicitly because main moved twice (Codex docs + the
+  TypeNone fix) while gating; that fix is not in alpha.6.
+- Release created by hand with notes right after the tag push; the workflow
+  only uploaded assets. Docker publish verified from Docker Hub
+  (index sha256:dfacb646…6703, amd64 + arm64, public), anonymous pull smoke
+  test passed. Assets re-downloaded and checksummed.
+- Pitfall for docs: SHA256SUMS lists knx-mcp too, so single-file download
+  recipes need `sha256sum -c --ignore-missing`.

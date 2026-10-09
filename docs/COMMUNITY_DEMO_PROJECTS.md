@@ -1,6 +1,6 @@
 # English community demo projects
 
-Status: locally built and verified review candidate; owner approved the scope and local implementation on 2026-10-08. No publication approval. These are original fictional offline exploration projects, not ETS-compatible output or executable building plans.
+Status: original local acceptance below remains dated 2026-10-08; repository publication followed on 2026-10-09. The owner approved website linking on 2026-10-09; its separate handoff verification is in [WEBSITE](WEBSITE.md). These are original fictional offline exploration projects, not ETS-compatible output or executable building plans.
 
 ## Contract
 

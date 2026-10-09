@@ -25,12 +25,12 @@ ${robots_meta}  <meta property="og:type" content="website">
 ${preview_banner}  <header class="site-header wrap">
     <a class="brand" href="${base}${lang}/" aria-label="KNXBench ${home}"><img src="${base}assets/brand-symbol.webp" width="44" height="30" alt=""><span>KNX<span class="brand-light">Bench</span></span></a>
     <nav class="desktop-nav" aria-label="${navigation}">
-      <a href="#features">${nav_features}</a><a href="#watch">${nav_watch}</a><a href="${base}story/">${nav_story}</a>
+      <a href="#features">${nav_features}</a><a href="#watch">${nav_watch}</a><a href="#demos">${nav_demos}</a><a href="${base}story/">${nav_story}</a>
     </nav>
     <div class="header-actions">
       <nav class="language-nav" aria-label="${language}"><a href="${base}de/" lang="de" hreflang="de" ${de_current}>DE</a><a href="${base}en/" lang="en" hreflang="en" ${en_current}>EN</a></nav>
       <a class="button button-small header-try" href="#start">${try}</a>
-      <details class="mobile-menu"><summary>${menu}</summary><nav aria-label="${navigation}"><a href="#features">${nav_features}</a><a href="#watch">${nav_watch}</a><a href="${base}story/">${nav_story}</a><a href="#start">${try}</a></nav></details>
+      <details class="mobile-menu"><summary>${menu}</summary><nav aria-label="${navigation}"><a href="#features">${nav_features}</a><a href="#watch">${nav_watch}</a><a href="#demos">${nav_demos}</a><a href="${base}story/">${nav_story}</a><a href="#start">${try}</a></nav></details>
     </div>
   </header>
   <main id="main" tabindex="-1">
@@ -82,6 +82,16 @@ ${preview_banner}  <header class="site-header wrap">
     <section class="section wrap status-section" id="status" aria-labelledby="status-title">
       <div><span class="alpha-tag"><span></span>Alpha</span><h2 id="status-title">${status_title}</h2><p>${status_body}</p></div>
       <div class="status-details"><p class="status-summary">${status_summary}</p><details><summary>${scope_title}</summary><ul><li>${scope_import}</li><li>${scope_export}</li><li>${scope_hardware}</li><li>${scope_secure}</li></ul></details><p class="quiet-note">${backup_note}</p></div>
+    </section>
+    <section class="section wrap" id="demos" aria-labelledby="demos-title">
+      <div class="section-heading"><h2 id="demos-title">${demos_title}</h2><p>${demos_intro}</p></div>
+      <div class="feature-list demo-downloads">
+        <article><h3>${demos_home}</h3><p>${demos_home_summary}</p><a class="text-link" href="https://github.com/KNXBench-Labs/KNXBench/raw/refs/heads/main/demos/1.0.0/single-family-home-1.0.0.zip" rel="noopener">${demos_download}</a></article>
+        <article><h3>${demos_residential}</h3><p>${demos_residential_summary}</p><a class="text-link" href="https://github.com/KNXBench-Labs/KNXBench/raw/refs/heads/main/demos/1.0.0/multi-unit-residential-1.0.0.zip" rel="noopener">${demos_download}</a></article>
+        <article><h3>${demos_office}</h3><p>${demos_office_summary}</p><a class="text-link" href="https://github.com/KNXBench-Labs/KNXBench/raw/refs/heads/main/demos/1.0.0/office-building-1.0.0.zip" rel="noopener">${demos_download}</a></article>
+      </div>
+      <div class="support-links"><a href="https://github.com/KNXBench-Labs/KNXBench/raw/refs/heads/main/demos/1.0.0/knxbench-community-demos-1.0.0.zip" rel="noopener">${demos_all}</a><a href="https://github.com/KNXBench-Labs/KNXBench/blob/main/demos/README.md" rel="noopener">${demos_guide}</a><a href="https://github.com/KNXBench-Labs/KNXBench/raw/refs/heads/main/demos/1.0.0/SHA256SUMS" rel="noopener">${demos_checksums}</a></div>
+      <p class="quiet-note">${demos_setup}</p><p class="quiet-note">${demos_safety}</p><p class="quiet-note">${demos_version_note}</p>
     </section>
     <section class="start-section" id="start" aria-labelledby="start-title"><div class="section wrap">
       <div class="section-heading"><h2 id="start-title">${start_title}</h2><p>${start_body}</p></div>

@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Website and story tests
         run: |
           python3 -m unittest discover -s website/tests
@@ -37,11 +37,13 @@ jobs:
       - name: Release build
         run: python3 website/build.py --release --output "$RUNNER_TEMP/site"
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ${{ runner.temp }}/site
+          # v5 excludes dotfiles by default; the inventoried site needs .nojekyll.
+          include-hidden-files: true
 
   deploy:
     needs: build

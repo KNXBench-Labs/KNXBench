@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-09 06:12 CEST",
+  "repository": "KNXBench-Labs/KNXBench",
+  "targetRef": "refs/heads/feature/toast-parity-20261008",
+  "featureCommit": "f8dbde0ad1b5ba3383731f0899426201e1a1509e",
+  "baseCommit": "115b19f65eeebf7df21598681b34e829d2055099",
+  "scope": "User-requested commit/push of the owned toast feature only; no main merge, shared-root sync, PR, release, deployment or hardware operation.",
+  "featurePublicationVerification": {
+    "headTrackingLiveRefEqual": true,
+    "GitHubCommitIdentityVerified": true,
+    "author": "KNXBench <github@knxbench.com>",
+    "committer": "KNXBench <github@knxbench.com>",
+    "coAuthorTrailer": false,
+    "ownedPathsPublishedAndByteVerified": [
+      ".ai/CURRENT_STATE.md",
+      ".ai/logs/2026-10-08_codex_toast-parity.md",
+      "apps/knx-web/e2e/toast-fixture.html",
+      "apps/knx-web/e2e/toast-fixture.tsx",
+      "apps/knx-web/e2e/toast.e2e.ts",
+      "apps/knx-web/src/Toast.test.tsx",
+      "apps/knx-web/src/Toast.tsx",
+      "apps/knx-web/src/styles.css",
+      "apps/knx-web/src/toast.ts",
+      "apps/knx-web/src/useToasts.test.tsx",
+      "docs/IMPLEMENTATION_STATUS.md",
+      "docs/adr/0089-achievements.md",
+      "docs/evidence/toast-parity-2026-10-08.json",
+      "docs/manual/implementation-status.md",
+      "docs/manual/user-guide/09-settings-and-appearance.md"
+    ]
+  },
+  "freshChecks": {
+    "focusedVitest": {
+      "passed": 45,
+      "failed": 0,
+      "pending": 0,
+      "files": 3
+    },
+    "commandExits": {
+      "focused-tests": 0,
+      "production-build": 0,
+      "check-layering": 0,
+      "check-headers": 0,
+      "check-anchors": 0,
+      "check-ledger": 0,
+      "check-corpus-gates": 0,
+      "whitespace": 0
+    },
+    "allEightAcceptedSourceTestHashesMatch": true,
+    "repositoryGatesBuiltInFreshOwnedTarget": true
+  },
+  "retainedAcceptance": {
+    "receipt": "toast-parity-2026-10-08.json",
+    "date": "2026-10-08",
+    "receiptSha256": "96f4c43f64a1c0372e2a93b21b798ed1d89488973a17e029ea0398572524c8bc",
+    "fullVitestPassed": 2422,
+    "offlineChromiumPassed": 189,
+    "focusedRepeatPassed": 54,
+    "notFreshFullRerun": true
+  },
+  "limitations": [
+    "Published feature branch is not integrated into main.",
+    "Only source-identical retained full acceptance and fresh focused tests/build/repository checks are claimed.",
+    "No native accessibility, private corpus, bus hardware or deployed-runtime acceptance."
+  ],
+  "metadataReceipt": "This publication-only follow-up carries no application source changes; its commit and exact feature ref are verified after push."
+}

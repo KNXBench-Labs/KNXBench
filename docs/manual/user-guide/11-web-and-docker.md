@@ -102,6 +102,22 @@ docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
   `knx-server 0.1.0-alpha.6+g042509c`
   ([§168](../../KNOWN_LIMITATIONS.md#168-the-docker-hub-image-follows-release-tags-only-and-latest-follows-alphas)).
 
+### The Docker Hub overview
+
+The container's front door is maintained in
+[`apps/knx-server/DOCKERHUB.md`](../../../apps/knx-server/DOCKERHUB.md).
+Changes to that file on `main` update Docker Hub's short description and
+Overview through the metadata-only **Docker Hub description** workflow;
+a manual dispatch can retry the sync. The job reads the public description
+back and compares it with the committed source. No image rebuild or new
+release is needed. The container keeps its contents; it just gets a name badge.
+
+Maintainers: the description API needs repository-admin access and a token
+with read/write/delete scope. Set `DOCKERHUB_DESCRIPTION_TOKEN` if the
+existing image-push `DOCKERHUB_TOKEN` is insufficient; the release workflow
+keeps using its original credential. Never paste a token into this manual,
+the overview or an issue.
+
 ### Where your projects live
 
 Inside the container, **in `/data`**. Everything you save, every project you upload and

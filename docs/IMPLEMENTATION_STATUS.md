@@ -44,6 +44,29 @@ does not erase a broader platform/device limitation or imply a new release.
   / 0 failed / 182 ignored; all five xtask checks; `git diff --check`. The
   ignored corpus tests ran green beforehand (`legacy_corpus`, release).
   Rebased onto `a1fcc8f2` (docs only). In-session self-review only.
+## 2026-10-09 — Docker Hub gets its name badge
+
+- Owner request: populate the empty description of
+  `knxbench/knxbench-server` with README/manual-style engineering humour.
+  Dedicated English overview in `apps/knx-server/DOCKERHUB.md`: features,
+  real-app GIF, pull/run quick start, persistence, tags/platforms, HTTPS,
+  network scope, safe updates and honest alpha/ETS compatibility limits.
+- Separate metadata-only workflow publishes short description and overview
+  on scoped `main` pushes or manual dispatch; pinned Node-24 action,
+  explicit byte-limit checks and anonymous exact-source readback.
+  Optional description-only token preserves the release credential's scope.
+- Local verification: actionlint syntax, fresh-target `xtask check-anchors`,
+  documentation/33-chapter navigation and staged whitespace pass; all 10
+  overview links/media targets return HTTP 200. An isolated probe of the
+  published alpha.6 image served HTTPS health/frontend, used a persistent
+  named volume and loopback-only port, logged its certificate fingerprint
+  and stopped with exit 0. Probe container/volume removed. Self-review only;
+  no full application suite or real-bus test for this metadata-only package.
+- No app, image, release tag, running user container, project or bus changes.
+  [ADR-0097](adr/0097-docker-hub-release-image.md) and the
+  [Docker manual](manual/user-guide/11-web-and-docker.md#the-docker-hub-overview)
+  document the maintained source and credential boundary.
+
 ## 2026-10-09 — `v0.1.0-alpha.6`: first release built by CI, first one on Docker Hub
 
 - Owner go for the release. Preparation: `fe7e0e26` makes the tag

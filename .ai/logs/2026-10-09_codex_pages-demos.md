@@ -20,4 +20,8 @@ Self-review after rereading complete source diff: CRITICAL 0 / IMPORTANT 0 / out
 
 ## Publication
 
-Pending authorized commit/push and real GitHub Pages/live-file verification; results appended only after execution.
+Verified at 2026-10-09 08:01 CEST: first push was refused because concurrent Docker delivery advanced main to `8dc28a5f`. Local feature `f1d1061c` rebased to published `77ab6e97818ebd079292048dd9ffc1570089dd33`; both documentation conflicts preserve the exact upstream handover/status tail. Website/workflow source bytes unchanged; five repository gates, documentation checker and website 22 rerun green. Author/committer KNXBench <github@knxbench.com>, no co-author; exact local/tracking/live main readback succeeded.
+
+Pages run `37890928052` build/deploy success. CI executed website 22/story 67 and the same resolved action commits. `.nojekyll` is in the uploaded archive. All 34 live files plus manifest exact; live Chromium 134 named checks, no errors/automatic external requests. Post-deploy IPv6 measurement `2GyiZtgGE1dNfEEeH00021Hct` has four 200/authorized-TLS results and the new Demos navigation; bodies are truncated by the service, not admitted as full-file equality. The official deploy action emits upstream DEP0040 punycode; no Node-20 warning observed. A nonessential check-suite lookup used an invalid run endpoint (404), corrected to commit/check-runs (build/deploy both success); it is not an accepted gate result.
+
+Closure metadata changes only maintained documentation, evidence and handover; no deployed source change. Owned temporary browser/preview processes closed. Final metadata publication/readback and owned scratch/worktree cleanup follow this factual receipt; no foreign cleanup or root synchronization inferred.

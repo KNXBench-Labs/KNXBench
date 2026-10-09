@@ -28,8 +28,12 @@ does not erase a broader platform/device limitation or imply a new release.
   mobile CSS grid regression were corrected before the final full pass.
 - [Evidence](evidence/pages-demos-2026-10-09.json), [website contract](WEBSITE.md)
   and demo index updated. In-session self-review, no application/core/package
-  modification or new native/ETS/hardware acceptance. Publication/deployment
-  verification remains pending until the authorized push has completed.
+  modification or new native/ETS/hardware acceptance. Published source
+  `77ab6e97`; Pages run `37890928052` build/deploy successful. All 34 live
+  files plus manifest exact; live Chromium 134 checks pass. Four additional
+  post-deployment IPv6 probes return 200/valid TLS and the new Demos navigation.
+  Concurrent Docker changes preserved by rebase; only docs conflicts, source
+  invariant verified and affected gates rerun. Closure metadata is docs-only.
 
 ## 2026-10-09 — Release tags publish the server image to Docker Hub
 

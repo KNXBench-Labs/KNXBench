@@ -1,7 +1,7 @@
 {
   "schema": "knxbench-pages-demos-verification/1",
   "verifiedAt": "2026-10-09 07:51 CEST",
-  "state": "locally-verified-publication-pending",
+  "state": "published-and-live-verified",
   "baseCommit": "0553f43c58c4d136d1eb81b4d82ea9eae9f25509",
   "unitTests": {
     "website": 22,
@@ -156,5 +156,222 @@
   "visualInspection": {
     "en1440": "Three aligned choices, readable links and setup/safety/version notes.",
     "de390": "Stacked readable choices, focus ring and wrapped bundle link; heading/lower safety outside the captured frame."
+  },
+  "publishedCommit": "77ab6e97818ebd079292048dd9ffc1570089dd33",
+  "liveVerifiedAt": "2026-10-09 08:01 CEST",
+  "live": {
+    "run": {
+      "conclusion": "success",
+      "databaseId": 37890928052,
+      "headSha": "77ab6e97818ebd079292048dd9ffc1570089dd33",
+      "status": "completed",
+      "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/37890928052"
+    },
+    "jobs": [
+      {
+        "name": "build",
+        "conclusion": "success"
+      },
+      {
+        "name": "deploy",
+        "conclusion": "success"
+      }
+    ],
+    "url": "https://knxbench.com/",
+    "filesVerified": 34,
+    "files": [
+      {
+        "path": ".nojekyll",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "404.html",
+        "sha256": "3a813ee8c147f53800cb07d3656173048bd21abe744797c9f4f0407a0c5ae989"
+      },
+      {
+        "path": "CNAME",
+        "sha256": "01a203a40b1d7d52a6e785b56642cbac604232561930312698fc03c79f0e4ac0"
+      },
+      {
+        "path": "assets/FONT-LICENSES.txt",
+        "sha256": "f805bd44ab9f82058b69bb524ea50439cb4d3f8b92dfbd3785e84d0faee8f927"
+      },
+      {
+        "path": "assets/KNXBench-LICENSE.txt",
+        "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+      },
+      {
+        "path": "assets/brand-symbol.webp",
+        "sha256": "1be242df8548a1edb6de6b6e15dcd251deb2e035bad2cdb2679459b9bb6eb37e"
+      },
+      {
+        "path": "assets/bus-flow-de.vtt",
+        "sha256": "2634bc7a07a30222cd9305967e7c37754b123d7461b6aff3c598f926b199bc52"
+      },
+      {
+        "path": "assets/bus-flow-en.vtt",
+        "sha256": "82423f13d33a73494bf57f8802da3dc4681fa8fb8a62199303aacec386625070"
+      },
+      {
+        "path": "assets/bus-flow.mp4",
+        "sha256": "ba0a9de836af863fd0ad9dbc32e1168cfb3058bcb8bac0558024ba8424a2c533"
+      },
+      {
+        "path": "assets/bus-flow.webp",
+        "sha256": "fb7baecef3e4c6c9964d3214280981ff9368bf77cb219def0edc4477527bd4c9"
+      },
+      {
+        "path": "assets/crt.webp",
+        "sha256": "4ea305d097e59843015a9ac102c1dfed3008499e294b5609cb3564b6c1a6bf93"
+      },
+      {
+        "path": "assets/graphite.webp",
+        "sha256": "92dcf42cbf76cb47f72006f564be5ad23a3ed4ee08cd41bd6a05e594123313ce"
+      },
+      {
+        "path": "assets/group-details-de.vtt",
+        "sha256": "2005ef1a7ab7cae7414565fd9651aeccd188f6dad29ed07669f190d1fd67b227"
+      },
+      {
+        "path": "assets/group-details-en.vtt",
+        "sha256": "649c285e463bacf21964f2af49947c341e9cddec195bd5cc7a931b4e7564e9ba"
+      },
+      {
+        "path": "assets/group-details.mp4",
+        "sha256": "d6f9bf4201efc4883c24216de6377d6de33863bdfdcec53cb00528157de074b0"
+      },
+      {
+        "path": "assets/headlines.js",
+        "sha256": "6915318a7e64ae7b5fc580d399359eaec779786426e9bfa49b6f4e05d2f2dd49"
+      },
+      {
+        "path": "assets/inter.woff2",
+        "sha256": "8909904ab6c872eb994093482a88a28eca2cd95912d7b6fecd72103b0dc07edc"
+      },
+      {
+        "path": "assets/lcars.webp",
+        "sha256": "686cb0547874c5aa2442980c49538399ca36dce80ff77658da58c8a6cfa18db6"
+      },
+      {
+        "path": "assets/project-work-de.vtt",
+        "sha256": "7d85bd6ee6693e6504d91bb508fe7823168c1dae719bda83302c4c1a545f33fb"
+      },
+      {
+        "path": "assets/project-work-en.vtt",
+        "sha256": "9932c018afc213a455853125b4c8633e7036f0b4cef9ce05450dbe22f5fcb2ca"
+      },
+      {
+        "path": "assets/project-work.mp4",
+        "sha256": "dcb7b65a54caee46bbad13cfce90019dd8dbc52f54c107d9444585a18efa2145"
+      },
+      {
+        "path": "assets/project-work.webp",
+        "sha256": "06b30dc85a0b6afb95a6476587de65db04ea56afae1da949c4581dc34d43bd2c"
+      },
+      {
+        "path": "assets/site.css",
+        "sha256": "ea42013980001a0e86b65158eea5222b9ff39fbf10799194e0e8f305f14c6d84"
+      },
+      {
+        "path": "assets/site.js",
+        "sha256": "4cf9ff104c2e83c1f5c076fcff236a7a8b37c67c771faf760242c7b9ceaa62b7"
+      },
+      {
+        "path": "assets/space-grotesk.woff2",
+        "sha256": "685bbbf69fa616df1ef81847c85fc76be097ddfb3468ff2257be54511ab3130f"
+      },
+      {
+        "path": "de/contact/index.html",
+        "sha256": "808c9de72f70745d077e53ce853d922145724cade3870e9e03a716906a79447f"
+      },
+      {
+        "path": "de/index.html",
+        "sha256": "6fdf9531e1456fe9bde2ac1815058e12a3c7c8ae5afb826b6471182ba725fd99"
+      },
+      {
+        "path": "de/privacy/index.html",
+        "sha256": "0e3fd0aaeacb6ec8fc746643fecf3983bebc915bd263b71360f99c49b7be897c"
+      },
+      {
+        "path": "en/contact/index.html",
+        "sha256": "3e0d37a0071320f6af0ea1cea3ffe8a7a1f61ce4ddc3213d6dd1c11fc0985f60"
+      },
+      {
+        "path": "en/index.html",
+        "sha256": "99c2bc92ce515bd215bf4636d26b9416e5b09af804d053f9f5d264be672da017"
+      },
+      {
+        "path": "en/privacy/index.html",
+        "sha256": "620ff39bfeaba638ce086c126d98d9d29ab773df6137c7d3e6684f921f2ffd11"
+      },
+      {
+        "path": "index.html",
+        "sha256": "98de5a48b313ee7444058ee98b49d4fa49b93d24599d602847886cca3083acd5"
+      },
+      {
+        "path": "robots.txt",
+        "sha256": "16ceb5ee3e0dc13aa9adf31a3ebbe45a1d965b8c2b9f72eaf84e5911e140ed95"
+      },
+      {
+        "path": "story/index.html",
+        "sha256": "4fe58c2923607c2e4b4778503f14e2819a4c11319ddcfa5c55ce6a3334f4656b"
+      }
+    ],
+    "manifestSha256": "03320e3a2001f9958363d1b262d2d5a7080737cba6a2e93e73eb3e788a53a996",
+    "browserChecks": 134,
+    "browserErrors": [],
+    "automaticExternalRequests": [],
+    "ipv6": {
+      "measurementId": "2GyiZtgGE1dNfEEeH00021Hct",
+      "protocol": "HTTPS",
+      "ipVersion": 6,
+      "probes": [
+        {
+          "country": "DE",
+          "city": "Falkenstein",
+          "resolvedAddress": "2606:50c0:8001::153",
+          "status": 200,
+          "tlsAuthorized": true,
+          "newDemosNavigationObserved": true,
+          "bodyTruncated": true
+        },
+        {
+          "country": "NL",
+          "city": "Amsterdam",
+          "resolvedAddress": "2606:50c0:8000::153",
+          "status": 200,
+          "tlsAuthorized": true,
+          "newDemosNavigationObserved": true,
+          "bodyTruncated": true
+        },
+        {
+          "country": "US",
+          "city": "Houston",
+          "resolvedAddress": "2606:50c0:8000::153",
+          "status": 200,
+          "tlsAuthorized": true,
+          "newDemosNavigationObserved": true,
+          "bodyTruncated": true
+        },
+        {
+          "country": "GB",
+          "city": "London",
+          "resolvedAddress": "2606:50c0:8000::153",
+          "status": 200,
+          "tlsAuthorized": true,
+          "newDemosNavigationObserved": true,
+          "bodyTruncated": true
+        }
+      ],
+      "scope": "Four post-deployment HTTPS IPv6 probes, valid TLS, new Demos navigation observed. Service truncates bodies at 10,000 characters; not full-file or all-address verification."
+    },
+    "upstreamWarnings": [
+      "actions/deploy-pages@v5 emits DEP0040 (deprecated punycode); deploy succeeds. No Node-20 runtime warning observed."
+    ]
+  },
+  "integration": {
+    "rebasedOnto": "8dc28a5f",
+    "supersededLocalCommit": "f1d1061c",
+    "sourceInvariant": "All website/workflow source files unchanged across rebase; concurrent Docker source/workflow retained. Rebased website 22, documentation check and all five repository gates passed."
   }
 }

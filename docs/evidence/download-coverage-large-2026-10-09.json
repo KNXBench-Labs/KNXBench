@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-09",
+  "base_revision": "b3ee55a0cf3ad7ad5314da49498158d6c0e6f0ca",
+  "test_path": "crates/knx-app/tests/download_coverage_corpus.rs",
+  "test_source_sha256": "18f95b15416848758b22d4f2277ea5e09e45581350296b2086d8a7a0a97965b5",
+  "scope": "Explicit ignored offline product-default download coverage; bounded LARGE profile; production unchanged; no exclusions; self-review; local commit only.",
+  "command": "KNXBENCH_PRODUCT_CORPUS=<private-root> cargo test --release -p knx-app --test download_coverage_corpus -- --ignored --nocapture",
+  "final": {
+    "process": "proc_4c09edce53be",
+    "exit": 0,
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0,
+    "packages": 105,
+    "original_inputs_unchanged": true,
+    "coverage": {
+      "programs": 467,
+      "verified": 1,
+      "untested": 98,
+      "unsupported": {
+        "not-memory-mapped": 273,
+        "parameter-evaluation": 51,
+        "parameter-value": 9,
+        "image-structure": 33,
+        "procedure-contents": 1,
+        "product-data": 1
+      }
+    }
+  },
+  "negative_controls": [
+    {
+      "process": "proc_300888c51a76",
+      "exit": 101,
+      "classification": "STANDARD size-limit refusal; original source; inputs unchanged"
+    },
+    {
+      "process": "proc_8dad6ea1fb83",
+      "exit": 101,
+      "classification": "LARGE measurement with old coverage pins, diagnostic only"
+    }
+  ],
+  "interrupted_attempts": [
+    {
+      "process": "proc_bfd4ca3b2376",
+      "exit": -15,
+      "classification": "interrupted; no test verdict"
+    },
+    {
+      "phase": "initial foreground debug",
+      "classification": "tool timeout; no test verdict"
+    },
+    {
+      "phase": "foreground directory-selector probe",
+      "exit": -15,
+      "classification": "interrupted; no test verdict"
+    }
+  ],
+  "public_gates": {
+    "knx_app": {
+      "passed": 159,
+      "failed": 0,
+      "ignored": 27
+    },
+    "zip_cap_boundaries": {
+      "passed": 13,
+      "failed": 0
+    },
+    "fmt": 0,
+    "focused_clippy": 0,
+    "documentation": 0,
+    "headers": 0,
+    "layering": 0,
+    "ledger": 0,
+    "anchors": 0,
+    "corpus_gate_policy": 0
+  },
+  "limitations": [
+    "Offline product-default planning, not project-specific or live-device compatibility.",
+    "Default and web catalogue STANDARD limits remain unchanged (KL \u00a7151).",
+    "No full Rust workspace, frontend or hardware run in this package."
+  ]
+}

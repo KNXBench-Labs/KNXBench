@@ -159,8 +159,8 @@ is the remaining copy defect.
   24 are not supported. Encrypted packages are refused
   permanently, by decision rather than by omission.
 - **Consequence:** unsupported namespaces and encrypted modern packages are
-  refused. Legacy VD3/VD4 offline import uses a separate supported path; an
-  oversized or differently structured VD5 can still be refused. Successful
+  refused. Legacy VD3/VD4/VD5 offline import uses a separate supported path; a
+  legacy file over 128 MiB (payload over 256 MiB) is still refused. Successful
   import does not guarantee full device semantics.
 - **Workaround:** product data that arrives inside a `.knxproj` is imported
   with the project, which covers the common case of working on an existing
@@ -196,9 +196,10 @@ is the remaining copy defect.
 - **Affected:** `.vd3`–`.vd5` product databases.
 - **Available:** web/CLI import, password dialog, optional remembered password,
   catalog placement, supported parameters, visibility and object links.
-- **Remaining:** no legacy download or mapped legacy DPT codes. The measured
-  VD5 has an oversized payload and a multi-member layout outside current
-  admission. (Untyped `TypeNone` spacers are drawn as headings or blank
+- **Remaining:** no legacy download or mapped legacy DPT codes. Parameters
+  of the legacy `string` and `long enum` types (1,515 in the measured VD5)
+  are reported, not shown. A large VD5 takes 20–40 s and over 1 GiB of
+  memory to import. (Untyped `TypeNone` spacers are drawn as headings or blank
   space since 2026-10-09, not as fields.)
 - **Privacy:** the optional remembered password is one plaintext file with
   restrictive permissions on the **server**, not a keyring. Unencrypted

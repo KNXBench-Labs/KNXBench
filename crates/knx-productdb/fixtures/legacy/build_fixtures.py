@@ -17,6 +17,7 @@ import os
 import pty
 import subprocess
 import sys
+import tempfile
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -249,13 +250,18 @@ def write(path, data):
 
 
 def zip_member(source_dir, member, archive):
+    return zip_members(source_dir, [member], archive)
+
+
+def zip_members(source_dir, members, archive):
     out = os.path.join(HERE, archive)
     if os.path.exists(out):
         os.remove(out)
     env = dict(os.environ, TZ="UTC")
-    subprocess.run(["touch", "-t", "202610080900", os.path.join(source_dir, member)],
-                   check=True, env=env)
-    subprocess.run(["zip", "-q", "-X", "-D", out, member], cwd=source_dir, check=True, env=env)
+    for member in members:
+        subprocess.run(["touch", "-t", "202610080900", os.path.join(source_dir, member)],
+                       check=True, env=env)
+    subprocess.run(["zip", "-q", "-X", "-D", out, *members], cwd=source_dir, check=True, env=env)
     return out
 
 
@@ -294,11 +300,34 @@ def build_program():
     zipcloak(plain, "marvin-program.vd4", PASSWORD)
 
 
+# The installer-tree layout of the measured Siemens `.vd5` (ADR-0094,
+# amendment: VD5): an invented mask image beside the payload, in a path tree.
+# The payload is the L2 publication fixture byte for byte.
+INSTALLER_MASK = "Program Files (x86)/Common Files/MARVIN sc/MASK/mask4242.bin"
+INSTALLER_PAYLOAD = "Program Files (x86)/Marvin/Database/@PDB/ets.vd_"
+
+
+def build_installer():
+    """Builds only the VD5 installer-tree fixture; the other archives keep their digests."""
+    # The tree is only staged: its payload is `src-vd-program`'s, and the
+    # mask bytes are written here, so nothing else needs committing.
+    with tempfile.TemporaryDirectory() as src:
+        write(os.path.join(src, INSTALLER_MASK), b"MARVIN-MASK\x00\x42\x42")
+        write(os.path.join(src, INSTALLER_PAYLOAD), PROGRAM_DATABASE)
+        plain = zip_members(src, [INSTALLER_MASK, INSTALLER_PAYLOAD],
+                            "marvin-installer-plain.tmp.zip")
+    zipcloak(plain, "marvin-installer.vd5", PASSWORD)
+    os.remove(plain)
+
+
 def main():
     # `zipcloak` draws a random encryption header, so rebuilding an encrypted
     # archive changes its digest. Build only what is asked for.
     if sys.argv[1:] == ["program"]:
         build_program()
+        return 0
+    if sys.argv[1:] == ["installer"]:
+        build_installer()
         return 0
     vd_dir = os.path.join(HERE, "src-vd")
     pr_dir = os.path.join(HERE, "src-pr")

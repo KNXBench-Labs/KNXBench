@@ -358,6 +358,30 @@ fn continuation_limits_are_enforced() {
     ));
 }
 
+/// The measured `.vd5` holds one value of 18,653,184 bytes over 233,164
+/// continuation lines (table `Baggage`) and about 8.19 million values. The
+/// default limits admit values of that shape; this one is 4 MB over 50,000
+/// 80-byte lines, past the earlier 1 MiB / 16,384-line defaults.
+#[test]
+fn the_default_limits_admit_the_measured_vd5_shapes() {
+    let defaults = ExImLimits::default();
+    assert!(defaults.max_value_len >= 18_653_184 * 2, "{defaults:?}");
+    assert!(
+        defaults.max_continuations_per_value >= 233_164 * 2,
+        "{defaults:?}"
+    );
+    assert!(defaults.max_values >= 8_186_041 * 2, "{defaults:?}");
+    assert!(defaults.max_rows >= 872_166 * 2, "{defaults:?}");
+    let chunk = "\\\\".to_string() + &"0123456789ABCDEF".repeat(5);
+    let long = format!("Marvin\n{}", vec![chunk.as_str(); 50_000].join("\n"));
+    let text = MINIMAL.replace("Marvin Test", &long);
+    let doc = parse_exim(&payload(&text)).unwrap();
+    assert_eq!(
+        doc.table("manufacturer").unwrap().text(0, 1).len(),
+        6 + 50_000 * 80
+    );
+}
+
 #[test]
 fn a_continuation_line_where_a_record_is_expected_is_refused() {
     // After a value, a `\\` line continues that value; after a table line it

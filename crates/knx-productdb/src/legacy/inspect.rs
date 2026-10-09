@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use super::container::{LegacyMemberKind, LegacyPayload};
+use super::container::{LegacyMemberKind, LegacyOtherMember, LegacyPayload};
 use super::error::LegacyError;
 use super::exim::{parse_exim, ExImContent, ExImDiagnostic, ExImDocument, ExImTable};
 use crate::blob::sha256_hex;
@@ -43,6 +43,9 @@ pub struct LegacyInspection {
     pub member_name: String,
     pub member_kind: LegacyMemberKind,
     pub encrypted: bool,
+    /// Members next to the EX-IM member; not read (see
+    /// [`super::container::LegacyContainer::other_members`]).
+    pub other_members: Vec<LegacyOtherMember>,
     pub payload_sha256: String,
     pub payload_len: usize,
     pub content: ExImContent,
@@ -71,6 +74,7 @@ pub fn inspect_payload(payload: &LegacyPayload) -> Result<LegacyInspection, Lega
         member_name: container.member_name.clone(),
         member_kind: container.member_kind,
         encrypted: container.encrypted,
+        other_members: container.other_members.clone(),
         payload_sha256: sha256_hex(payload.bytes()),
         payload_len: payload.bytes().len(),
         content: document.content(),

@@ -181,6 +181,45 @@ async fn an_encrypted_file_asks_for_a_password_then_imports_with_it() {
     assert_eq!(items.as_array().unwrap().len(), 1, "{items}");
 }
 
+/// The installer-tree layout of the measured `.vd5` (four members there,
+/// two here) is named by the package installer and imported by the legacy
+/// route, which reports the member it did not read (ADR-0094, VD5).
+#[tokio::test]
+async fn an_installer_tree_vd5_is_named_then_imported_with_its_unread_member_reported() {
+    let (_dir, app) = app(true);
+    let bytes = fixture("marvin-installer.vd5");
+    let (status, body, text) = send(
+        &app,
+        upload("/api/catalog/install", "renamed.knxprod", &bytes, &[]),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{text}");
+    assert_eq!(body["kind"], "legacyProductDatabase", "{text}");
+
+    let (status, body, text) = send(
+        &app,
+        upload(
+            "/api/catalog/install-legacy",
+            "SIEMENS-like.vd5",
+            &bytes,
+            &[("password", PASSWORD)],
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{text}");
+    assert_eq!(body["skipped"], false);
+    assert_eq!(body["programs"].as_array().unwrap().len(), 1);
+    let unread: Vec<&str> = body["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["kind"] == "unread-member")
+        .map(|d| d["detail"].as_str().unwrap())
+        .collect();
+    assert_eq!(unread.len(), 1, "{text}");
+    assert!(unread[0].contains("MASK/mask4242.bin"), "{text}");
+}
+
 #[tokio::test]
 async fn remembering_keeps_the_password_privately_and_later_uploads_need_none() {
     let (dir, app) = app(true);

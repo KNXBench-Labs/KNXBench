@@ -147,6 +147,83 @@ fn the_encrypted_and_the_plain_file_share_one_publication() {
     assert_eq!(rows(&conn, "legacy_source_file"), 2);
 }
 
+/// The installer-tree layout of the measured `.vd5`: an encrypted mask
+/// image beside the encrypted payload. The payload decrypts to the very
+/// bytes of `marvin-program.vd4`'s, so both are one publication; the mask
+/// is not read, stays in the stored original and is reported every time.
+#[test]
+fn an_installer_tree_vd5_imports_its_payload_and_reports_the_other_member() {
+    let bytes = fixture("marvin-installer.vd5");
+    let payload = open_legacy_file(&bytes, Some(&password())).unwrap();
+    assert_eq!(
+        payload.bytes(),
+        fixture("src-vd-program/MARVIN/ets.vd_").as_slice()
+    );
+    let others = &payload.container().other_members;
+    assert_eq!(others.len(), 1, "{others:?}");
+    assert_eq!(
+        others[0].name,
+        "Program Files (x86)/Common Files/MARVIN sc/MASK/mask4242.bin"
+    );
+    assert!(others[0].encrypted);
+    let inspection = inspect_legacy_file(&bytes, Some(&password())).unwrap();
+    assert_eq!(&inspection.other_members, others);
+
+    let unread = |report: &knx_productdb::legacy::LegacyPublishReport| {
+        report
+            .diagnostics
+            .iter()
+            .filter(|(kind, _)| kind == "unread-member")
+            .map(|(_, detail)| detail.clone())
+            .collect::<Vec<_>>()
+    };
+    let (_dir, conn) = products();
+    let first = import_legacy_file(&conn, "marvin.vd5", &bytes, Some(&password())).unwrap();
+    assert!(!first.skipped);
+    assert_eq!(first.programs.len(), 1);
+    let details = unread(&first);
+    assert_eq!(details.len(), 1, "{details:?}");
+    assert!(
+        details[0].contains("mask4242.bin (14 bytes, encrypted)"),
+        "{details:?}"
+    );
+    // The file, not the payload, has the member: no stored diagnostic row.
+    let stored: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM legacy_diagnostic WHERE kind = 'unread-member'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(stored, 0);
+    // The original, mask included, is stored byte for byte.
+    let original: Vec<u8> = conn
+        .query_row(
+            "SELECT bytes FROM source_file WHERE sha256 = ?1",
+            [&first.original_sha256],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(original, bytes);
+
+    // The single-member file with the same payload is the same publication
+    // and reports no other member; the installer file again reports it.
+    let single = import_legacy_file(
+        &conn,
+        "marvin.vd4",
+        &fixture("marvin-program.vd4"),
+        Some(&password()),
+    )
+    .unwrap();
+    assert!(single.skipped);
+    assert_eq!(single.payload_sha256, first.payload_sha256);
+    assert!(unread(&single).is_empty());
+    let again = import_legacy_file(&conn, "again.vd5", &bytes, Some(&password())).unwrap();
+    assert!(again.skipped);
+    assert_eq!(unread(&again), details);
+    assert_eq!(rows(&conn, "application_program"), 1);
+}
+
 #[test]
 fn the_password_is_stored_nowhere() {
     let (dir, conn) = products();

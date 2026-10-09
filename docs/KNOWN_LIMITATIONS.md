@@ -83,7 +83,7 @@ legacy procedure expansion, coupler-specific behavior, new media or hardware
 validation is added. Existing download eligibility and hardware evidence do not
 change. Source details are local; reduced reports omit them. Maintainer reports
 still need preview, permission, manual attachment and posting. No automatic
-submission or novelty/ETS compatibility claim. This package is unpublished.
+submission or novelty/ETS compatibility claim. Main source delivery is [verified](status/2026-10-09-offline-ap1-verification.md); no packaged release is implied.
 
 ## Devices navigation: local source, current-project links and bounded evidence (2026-10-08)
 

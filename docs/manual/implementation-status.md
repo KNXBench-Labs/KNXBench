@@ -116,7 +116,7 @@ verified ETS/device support, and submission remains manual.
 steps. It is not a materialized download plan and enables no additional bus
 execution. The reduced evidence ZIP retains value-free findings/counts, not the
 local source details. [Scope and evidence](../OFFLINE_PROCEDURE_RESOLUTION.md).
-This package is local, not a published release.
+Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification.md); this is not a packaged release.
 
 | Capability | Status | Notes |
 | --- | --- | --- |

@@ -64,6 +64,26 @@ does not erase a broader platform/device limitation or imply a new release.
   **Uncommitted/local only**, not main/alpha.6/deployed; core/storage/API/protocol
   and dependencies unchanged. No real-bus/native/Orca/full-ETS acceptance.
 
+## 2026-10-09 — Header logo: the K gets a proper badge
+
+- Replaced the workbench header's letter K with the cropped, transparent
+  symbol from the owner-supplied PNG. Local bundled asset, original gradient
+  and aspect ratio; adjacent KNXBench name and overview navigation retained.
+- Login screen, project/domain data, protocols and dependencies unchanged.
+  [Asset derivation](assets/README.md#application-header-mark).
+- Named component regression reproduced RED before implementation. Final
+  frontend suite: 2545 passed in 159 files; TypeScript/production build pass.
+  Built Chromium: six Graphite/Porcelain/LCARS cases at 1440/400 px, resolved
+  themes, loaded image, contained aspect ratio and zero document overflow.
+  API calls intercepted, including discovery; no server or hardware operations.
+- Feature `3858b394` integrated no-ff as `d58cf56f`, then reconciled with
+  current main in `a17c08d3` without changing the original logo implementation.
+  Actual integrated gate: frontend 2554/0 in 160 files, production build,
+  theme/flow types, intercepted Chromium 208/0, six built logo cases,
+  five nonempty repository gates, documentation and whitespace pass.
+  [Publication evidence](evidence/header-logo-publication-2026-10-09.json).
+  No release or deployment.
+
 ## 2026-10-09 — Offline AP1 integration keeps its bus pass offline
 
 Feature38d8eb45 integrated with current native-history/name-editing main;

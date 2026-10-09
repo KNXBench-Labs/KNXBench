@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-09",
+  "scope": "WorkBench header logo only; no login/backend/domain/protocol/dependency/release/deployment changes",
+  "featureCommit": "3858b3942629dd1a43f7de5aaabab4f439a124f1",
+  "initialMerge": "d58cf56fbe948d6a18e7c1988410a8dd164c7a8e",
+  "acceptedMerge": "a17c08d334fb6900802ecb79e90e2b5b7d6d3c35",
+  "upstreamMain": "4913622887d2f30ce07aa982c010917ced0a06d6",
+  "frontendTree": "56fd3e64849e3ef12b6aef7217dab2962b5bc199",
+  "verification": {
+    "review": "self-review",
+    "frontend": {
+      "command": "npm test -- --maxWorkers=2 --reporter=json",
+      "exitCode": 0,
+      "passed": 2554,
+      "failed": 0,
+      "files": 160
+    },
+    "browser": {
+      "command": "npx playwright test in loopback-only namespace",
+      "exitCode": 0,
+      "passed": 208
+    },
+    "productionLogo": {
+      "exitCode": 0,
+      "cases": 6,
+      "themes": [
+        "graphite",
+        "porcelain",
+        "lcars"
+      ],
+      "viewportWidths": [
+        1440,
+        400
+      ],
+      "unexpectedApiRequests": 0,
+      "loadedImage": true,
+      "zeroDocumentOverflow": true,
+      "api": "intercepted, including discovery"
+    },
+    "gates": {
+      "vitest": "0",
+      "build": "0",
+      "theme": "0",
+      "flow": "0",
+      "browser": "0",
+      "check-layering": "0",
+      "check-headers": "0",
+      "check-anchors": "0",
+      "check-ledger": "0",
+      "check-corpus-gates": "0",
+      "documentation": "0",
+      "whitespace": "0",
+      "inputs_frozen": "1",
+      "gate_exit": "0"
+    }
+  },
+  "sources": {
+    "apps/knx-web/src/App.tsx": "fd6e3e8af7bb95a67402d04de52b69b68f43984688c9b9a3a3f498d8268949d2",
+    "apps/knx-web/src/App.test.tsx": "fde811d2aa2f5ab77d20cc57e4096f3b7d14635cc613381c2ae68030e77b89c1",
+    "apps/knx-web/src/styles.css": "5e1a20f6d2ae1a6facd7a78fe464fbd6798a177d97ab6630ed380455bd23e426",
+    "apps/knx-web/src/assets/knxbench-mark.png": "30a7da1a40c8c59bf67c6c163706ed06915ae14441ecf9f045ce96928928990b"
+  },
+  "screenshots": [
+    {
+      "name": "header-logo-graphite-1440.png",
+      "sha256": "8842f4cf9c7617335584c7d010e1419c664707c77d9bd6329580bafc10206f98"
+    },
+    {
+      "name": "header-logo-graphite-400.png",
+      "sha256": "8ce2f0cf6f3737d5e2e6796692621dcbd161967129a234155f4f3935fd8a7fd5"
+    },
+    {
+      "name": "header-logo-lcars-1440.png",
+      "sha256": "db9fb792af92f01bffd4b583345aa278eeba661402c163e2634903320948cd46"
+    },
+    {
+      "name": "header-logo-lcars-400.png",
+      "sha256": "4fa804c19897168cf9644e1d6169f28537730725b18ca5bfc8e617f749aa5b30"
+    },
+    {
+      "name": "header-logo-porcelain-1440.png",
+      "sha256": "c156c9414a20e72ca5c282bf91064652c03a3baad187c409723ce8e1b653ddf1"
+    },
+    {
+      "name": "header-logo-porcelain-400.png",
+      "sha256": "fc60938781c02783ff2151505c8dc09180207602a9ba37912a13d4bb404d7f9d"
+    }
+  ],
+  "setupExceptions": [
+    "First queued run stopped before any stage after OS lock evidence showed reversed shared-lock order; only own waiting group stopped.",
+    "Initial latest-source production CLI probe timed out before producing a verdict; separate npm-offline retry passed."
+  ],
+  "limitations": [
+    "No fresh Rust workspace or private-corpus test claim for this UI-only change.",
+    "No native-shell or assistive-technology validation.",
+    "No release, deployment, real server mutations or hardware actions."
+  ],
+  "verifiedSourcePublication": {
+    "target": "refs/heads/main",
+    "commit": "79861c79461b01ef69c35c04ac1ea8dba90cee04",
+    "timestamp": "2026-10-09 18:56 CEST",
+    "liveFetchedLocalRefsEqual": true,
+    "featureAndMergeAncestryVerified": true,
+    "ownedBlobsVerified": 8
+  }
+}

@@ -1,5 +1,16 @@
 # Data model
 
+## Current-source name editing (2026-10-09)
+
+DeviceInstance.name and GroupAddressEntry.name remain plain exact strings.
+RenameDevice/RenameGroupAddress change only those fields and keep stable IDs,
+source refs and associations. New-input admission is separate from imported
+source/native history restoration; imported exceptions are never normalized.
+ProjectTree.project_incarnation is optional transient application context, not
+a domain ID, provenance layer, persisted project attribute or schema migration.
+[ADR-0101](adr/0101-project-local-device-and-ga-names.md) and
+[contract](contracts/project-name-editing.md).
+
 ## Native history schema v11 (2026-10-09)
 
 Native `line.model_position` preserves the independent `Topology.lines` vector

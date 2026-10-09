@@ -21,7 +21,7 @@ jump straight in — every chapter also links back here.
 | Bring an ETS project | [Projects](user-guide/02-projects.md) | An imported project and a report you can check |
 | Configure a small job | [Complete configuration workflow](user-guide/06-configuration-workflow.md) | A device, group link and saved working file; no hardware writes |
 | Diagnose bus traffic | [Bus and interfaces](user-guide/07-bus-and-interfaces.md) | A separate, safety-aware guide to actual KNXnet/IP operations |
-| Run a server | [Web and Docker](user-guide/11-web-and-docker.md) | Storage, authentication, HTTPS and networking configuration |
+| Run a server | [Docker Hub image](user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub), then [Web and Docker](user-guide/11-web-and-docker.md) | A ready-made download, storage, authentication, HTTPS and networking configuration |
 | Fix a problem | [Troubleshooting](reference/03-troubleshooting.md) or [FAQ](reference/04-faq.md) | Checks to run before opening an issue |
 | Contribute code or docs | [Contributing](development/01-contributing.md) | Build instructions, quality gates and project conventions |
 
@@ -29,7 +29,8 @@ jump straight in — every chapter also links back here.
 are file workflows. A bus connection is needed only for bus operations.
 
 **Which build does this describe?** The manual follows repository source. The
-public AppImage is a release snapshot and may not contain later source changes.
+public AppImage and Docker Hub images are release snapshots and may not contain
+later source changes.
 [Project status](getting-started/03-project-status.md) explains how to compare them.
 
 ## A visual map of the workbench

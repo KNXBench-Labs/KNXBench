@@ -8,7 +8,7 @@ not an achievement.
 
 | Route | Best for | You need |
 | --- | --- | --- |
-| [Docker / browser](#b-docker--web) | Trying the workbench, or a Linux server on your LAN | Git, Docker and a browser |
+| [Docker / browser](#b-docker--web) | Trying the workbench, or a Linux server on your LAN | Docker and a browser; no checkout required |
 | [Linux AppImage](#a-linux-appimage) | A native Linux window without a source build | An x86-64 Linux host; see [Linux setup](05-linux-setup.md) |
 | [From source](#c-from-source) | Development or source changes newer than the pre-release | Rust, Node.js; native host libraries for the desktop shell |
 
@@ -58,30 +58,32 @@ lives separately and is not removed with it. Keep independent project backups.
 
 ## b) Docker / web
 
-Run these commands in a terminal. If you already have a checkout, skip `git clone`
-and `cd` and work from its root. Choose your own password instead of the example.
+The ready-made image is downloadable from
+[Docker Hub](https://hub.docker.com/r/knxbench/knxbench-server) for **x86-64
+(`linux/amd64`) and 64-bit Arm (`linux/arm64`)**. Docker selects your host's
+architecture. You do not need Git, Rust or a source checkout.
+
+Run these commands in a terminal, from the directory where you want your `data/`
+folder. Choose your own password instead of the example:
 
 ```bash
-git clone https://github.com/KNXBench-Labs/KNXBench.git
-cd KNXBench
-docker build -t knxbench-server -f apps/knx-server/Dockerfile .
+docker pull knxbench/knxbench-server:latest
 docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
   -e KNX_AUTH_PASSWORD='pick something long and boring' \
-  -v "$(pwd)/data:/data" knxbench-server
+  -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
 
-The first build can take several minutes. Open **https://127.0.0.1:8484**.
+Open **https://127.0.0.1:8484**.
 A password enables HTTPS by default. The generated certificate is self-signed:
 compare the browser's certificate fingerprint with the one in
 `docker logs knxbench` before accepting it. Then sign in using your chosen password.
 
-**Skipping the build:** since `v0.1.0-alpha.6`, every release is also published
-as a ready-made image for x86-64 and 64-bit Arm. Without a checkout, replace
-the `git clone`, `cd` and `docker build` lines with
-`docker pull knxbench/knxbench-server:latest` and use
-`knxbench/knxbench-server:latest` as the last word of `docker run`. It holds the
-last release, not newer source; details in
-[Ready-made image from Docker Hub](../user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub).
+**Choose your update policy:** `latest` follows published releases, including
+alpha pre-releases; it does not track `main`. Use
+`knxbench/knxbench-server:0.1.0-alpha.6` in both commands to pin that release.
+Images start at `0.1.0-alpha.6` (9 October 2026); see
+[Ready-made image from Docker Hub](../user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)
+for the tag policy and platform limits.
 
 **Expected result:** the introduction or welcome screen appears. Saved projects
 live in the host's `data/` directory and survive container replacement.
@@ -110,12 +112,32 @@ configuration variables and troubleshooting, use the canonical
 
 Do not run a second container with `--name knxbench` to change networking.
 Stop and replace the existing one deliberately, preserving its data mount.
-The [update-in-one-go procedure](../user-guide/11-web-and-docker.md#updating-in-one-go)
-builds before replacing the running container.
+The [Docker Hub update procedure](../user-guide/11-web-and-docker.md#updating-a-docker-hub-installation)
+pulls the replacement image before stopping the running container.
 
 **Remove:** `docker stop knxbench && docker rm knxbench` removes the container,
-not the bind-mounted project directory. `docker rmi knxbench-server` removes the
-image if you no longer need it. Delete project files only after backing them up.
+not the bind-mounted project directory. `docker rmi knxbench/knxbench-server:latest`
+removes the downloaded image if you no longer need it. Delete project files only
+after backing them up.
+
+### Build the container from source
+
+Use this alternative when you need source changes newer than the published image.
+It needs Git and Docker, and the first build can take several minutes — coffee is
+still supported:
+
+```bash
+git clone https://github.com/KNXBench-Labs/KNXBench.git
+cd KNXBench
+docker build -t knxbench-server -f apps/knx-server/Dockerfile . \
+  --build-arg KNX_BUILD_SHA="$(git rev-parse --short HEAD)"
+```
+
+Then use the same `docker run` command above, but change the final image name to
+`knxbench-server`. Run it from the same data directory if you are replacing an
+existing installation; do not start a second container with the same name.
+The [source-update recipe](../user-guide/11-web-and-docker.md#updating-in-one-go)
+keeps this separate from Docker Hub downloads.
 
 ## c) From source
 

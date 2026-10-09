@@ -21,14 +21,14 @@ Read the sections below as a delivery record, not a fresh implementation queue.
 Per-ID dispositions remain only in the [ledger](status/LEDGER.md). An accepted
 alpha limitation is not functionality, and a later idea is not a promised date.
 
-## Communication-object table (local candidate, 2026-10-09)
+## Communication-object table (2026-10-09 source package)
 
 The owner-approved single-device table adds labeled columns, channel/flat views,
 search, evaluated-status/link/effective-DPT filters and stable sorting. Open editors
 keep drafts/refusals/pending state across presentation changes; no domain/storage/
 API/protocol changes. [Contract](COMMUNICATION_OBJECT_TABLE.md), ADR-0102 and its
-receipt define the scoped acceptance. Main integration, publication, release and
-deployment remain separate; this is not in alpha.6. Project-wide CO lists, bulk
+receipt define the scoped acceptance. Main integration/publication was subsequently
+authorized; release/deployment remain separate. This is not in alpha.6. Project-wide CO lists, bulk
 editing and persistent view preferences remain outside this package.
 
 ## Project-local names (2026-10-09 source package)

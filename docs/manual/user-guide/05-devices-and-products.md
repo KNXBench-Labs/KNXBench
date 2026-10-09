@@ -294,7 +294,7 @@ edit the project; they do not connect to, program or download a KNX device.
 
 ### Communication objects
 
-**Local source update (2026-10-09, not yet on main or in alpha.6):** the object
+**Source update (2026-10-09, newer than alpha.6):** the object
 panel now has aligned **No., Name, Function, DPT, Group addresses, Status** headings,
 a **By channel / All objects** switch (flat view adds Channel), search and filters.
 Click a heading to sort ascending/descending, within channels or globally in flat

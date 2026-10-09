@@ -1,6 +1,6 @@
 # Architecture
 
-## Communication-object table (local source, 2026-10-09)
+## Communication-object table (2026-10-09 source)
 
 [ADR-0102](adr/0102-communication-object-table-view-state.md) and the
 [table contract](COMMUNICATION_OBJECT_TABLE.md) keep search/filter/sort in pure UI

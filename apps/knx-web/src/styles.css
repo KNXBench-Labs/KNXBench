@@ -2567,6 +2567,7 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 .workbench { padding: 0; height: calc(100dvh / var(--app-ui-scale, 1)); display: flex; flex-direction: column; overflow: hidden; }
 .workbench-toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--knx-border); background: var(--knx-surface); flex-wrap: wrap; z-index: 5; }
 .workbench-brand { display: flex; align-items: center; gap: 10px; font-size: 19px; color: var(--knx-foreground); text-decoration: none; margin-right: 16px; }
+.workbench-logo { display: block; width: 44px; height: 34px; object-fit: contain; flex-shrink: 0; }
 .brand-mark { display: grid; place-items: center; background: var(--knx-accent); color: var(--knx-on-accent); width: 34px; height: 34px; border-radius: 7px; font-weight: 700; }
 .workbench-toolbar button, .workbench-navigation button, .workbench-panel-controls button, .diagram-heading, .diagram-device, .table-select, .diagram-line-heading > button {
   background: transparent; color: var(--knx-foreground) !important; box-shadow: none; border: 1px solid transparent; text-align: left; padding: 6px 10px;

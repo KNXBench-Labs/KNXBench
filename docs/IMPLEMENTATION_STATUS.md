@@ -30,7 +30,12 @@ does not erase a broader platform/device limitation or imply a new release.
   (`Siemens_HVAC_…ETS5_ETS6.knxprod` refused by the ZIP size limit, KL
   §151). With the 103 pinned packages it passes
   unchanged (1 verified there: the detector program is not in that corpus).
-- Gate: PENDING.
+- Gate (`RUST=1` web-package gate on `59f4df15`, inputs frozen): build,
+  tsc, flow study, theme fixtures, Vitest 2485/153 files, Chromium 202,
+  fmt, Clippy, Rust 3746 passed / 0 failed / 184 ignored, five xtask checks,
+  `diff --check`: all exit 0. Ignored corpus tests run separately:
+  `house_readiness` green; `download_coverage_corpus` green on the 103
+  pinned packages, red on the full corpus as described above.
 
 ## 2026-10-09 — Legacy programs learn to download, on paper (ADR-0094, L4)
 

@@ -7,6 +7,20 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Header logo: the K gets a proper badge
+
+- Replaced the workbench header's letter K with the cropped, transparent
+  symbol from the owner-supplied PNG. Local bundled asset, original gradient
+  and aspect ratio; adjacent KNXBench name and overview navigation retained.
+- Login screen, project/domain data, protocols and dependencies unchanged.
+  [Asset derivation](assets/README.md#application-header-mark).
+- Named component regression reproduced RED before implementation. Final
+  frontend suite: 2545 passed in 159 files; TypeScript/production build pass.
+  Built Chromium: six Graphite/Porcelain/LCARS cases at 1440/400 px, resolved
+  themes, loaded image, contained aspect ratio and zero document overflow.
+  API calls intercepted, including discovery; no server or hardware operations.
+- Local feature branch only; no main integration, release or deployment.
+
 ## 2026-10-09 — Names can change; identities keep their day job
 
 - Project-local device and individual GA names: editor/Properties, F2 and

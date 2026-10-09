@@ -41,7 +41,10 @@ latest-main integration `d639c5f8a3c069afd21f507daa456fb3d51e10b9`. Name-editing
 
 ## Delivery boundary
 
-Normal main push and live-ref readback are pending until recorded below.
+Normal main publication **verified at 2026-10-09T18:36:46+02:00**:
+local/fetched/live refs equal `f8725639ee60cc17b9be0ec44e33bb2300e2b714`; feature/source integration ancestry,
+exact report and implementation artifacts verified. Post-gate changes are only
+metadata. This readback note is a later metadata-only commit, not another test run.
 No release, deployment, physical bus action, automatic maintainer submission or
 shared-root synchronization. Foreign root bytes/index/HEAD and worktrees retained.
 Existing local acceptance receipt remains immutable historical evidence.

@@ -27,7 +27,7 @@ The owner-approved first `MV-07B0` `Load/ap1` slice reconstructs declarative
 order with local source provenance and explicit unresolved data, through the
 existing support-gap UI/API/CLI. Reduced evidence can be manually shared with
 the maintainer. [Contract](OFFLINE_PROCEDURE_RESOLUTION.md), ADR-0098.
-Publication remains separate. Complete plan materialization, conditional
+Main source publication is [verified](status/2026-10-09-offline-ap1-verification.md); packaged release remains separate. Complete plan materialization, conditional
 selection, AP2/other masks, legacy/coupler procedures, new media and new live
 execution remain unimplemented; this does not close commissioning ledger rows.
 

@@ -35,3 +35,13 @@ external-font 403 from a dependency symlink, fixed with local exact dependencies
 without weakening Vite/error assertions. Failed attempt retained.
 Fresh ProjectStats measures a clean detached b81c17cf checkout, not stale root.
 Final combined counts/publication are in canonical receipt and CURRENT_STATE.
+
+## Publication readback
+
+Main source/docs publication 533d014f6ae524903f8c24a710deff3afb3bdbe8 verified by live
+ls-remote, fresh origin/main, owned HEAD, feature ancestry and exact report.
+Full combined gates: Rust 3781/0/184 ignored, Vitest 2523/155, Chromium 208,
+reference 3/3, native 5/5, runtime 9; repository/tools/build/lint all green.
+Feature/statistics worktrees retired cleanly, current integration kept,
+foreign/shared root preserved. Only final metadata push/readback and owned
+scratch retirement remain as delivery bookkeeping; no new runtime change.

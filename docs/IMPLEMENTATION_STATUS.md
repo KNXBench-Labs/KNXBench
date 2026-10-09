@@ -7,6 +7,26 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Full download coverage stops tripping over the big ZIP (KL §151)
+
+- The explicitly invoked ignored `download_coverage_corpus` test now uses the
+  existing bounded `PackageLimits::LARGE` (ADR-0082). Every one of the current
+  105 product ZIPs installs; no vendor exception or catch-and-continue. Standard
+  production/web bounds remain unchanged. The original full Release baseline
+  reproduces the typed size refusal; the large-profile measurement exposes the
+  expected stale coverage pins before they are deliberately updated.
+- Full final Release corpus test: 1 passed / 0 failed / 0 ignored. 467 programs:
+  1 verified, 98 untested; refusal counts are pinned in RESEARCH §19.20.
+  All original inputs rehashed unchanged. Per-program private diagnostics removed;
+  only aggregate coverage is printed. Offline/default-value planning is not new
+  hardware evidence, ETS equivalence or project-specific compatibility.
+- Gate: knx-app 159/0/27 ignored, ZIP boundaries 13/0; fmt, focused Clippy,
+  all five nonempty checkout-built xtask gates, documentation and whitespace pass.
+  No full workspace, frontend, server or bus run. Self-review, no subagents.
+- Receipt: `docs/evidence/download-coverage-large-2026-10-09.json`;
+  research index/topic, KL §151 and `.ai/` handover updated. Local focused delivery;
+  merge, push and release are not part of this test-fix request.
+
 ## 2026-10-09 — The attic presence detector goes live and comes back unchanged (RESEARCH §19.19)
 
 - First live download of a second program: the house project's

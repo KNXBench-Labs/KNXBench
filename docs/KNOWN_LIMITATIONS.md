@@ -8931,5 +8931,6 @@ predates this workflow and is a separate cleanup.
 update must be a deliberate step. Newer source than the last tag still needs
 a local `docker build`. To identify a running image, use its tag or digest,
 or the commit in `--version`, not the version number in `--version`.
-Until the first tag run, only the amd64 smoke test has run locally (2026-10-09);
-the arm64 build and the multi-arch publish job have not run yet.
+The dry-run dispatch of 2026-10-09 ([run 37890172997](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37890172997), `cc5b1b9c`)
+built and smoke-tested both platforms on native runners; login, push and the
+multi-arch publish job run for the first time with the first tag.

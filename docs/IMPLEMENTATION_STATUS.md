@@ -25,9 +25,12 @@ does not erase a broader platform/device limitation or imply a new release.
   back before cleanup.
 - Evidence: actionlint (with shellcheck) clean for the new workflow,
   shellcheck clean for the script, smoke test passed against a local amd64
-  build of `0553f43c` (`knx-server 0.1.0-alpha.2+g0553f43c`). The arm64 build
-  and the publish job have not run yet; nothing was pushed to Docker Hub.
-  Boundaries in KNOWN_LIMITATIONS §168.
+  build of `0553f43c` (`knx-server 0.1.0-alpha.2+g0553f43c`). Dry-run
+  dispatch on `cc5b1b9c` ([run 37890172997](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37890172997)): both platform jobs
+  built natively and passed the smoke test (arm64 on `aarch64`); the push and
+  publish steps were skipped as designed. Nothing was pushed to Docker Hub;
+  the tag path's tag/annotation argument assembly was checked locally with
+  sample metadata. Boundaries in KNOWN_LIMITATIONS §168.
 
 ## 2026-10-09 — Three local packages move into main (toast parity, Devices navigation, community demos)
 

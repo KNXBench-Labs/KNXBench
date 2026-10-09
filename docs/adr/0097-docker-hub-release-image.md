@@ -99,8 +99,11 @@ The image itself is unchanged: same Dockerfile, same runtime contract
   from the release tag (`0.1.0-alpha.2` against `v0.1.0-alpha.5`). The image
   tag and its OCI version label follow the git tag; the binary does not. This
   drift is disclosed, not fixed here (KNOWN_LIMITATIONS §168).
-- Tested so far: workflow syntax (actionlint with shellcheck) and the smoke
-  test against a local amd64 build. The arm64 build and the publish job have
-  not run until a dispatch or tag exercises them.
+- Tested so far: workflow syntax (actionlint with shellcheck), the smoke test
+  against a local amd64 build, and a dry-run dispatch
+  ([run 37890172997](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37890172997), `cc5b1b9c`) that built and smoke-tested
+  `linux/amd64` and `linux/arm64` (`aarch64` runner) in under four minutes
+  each. Login, push by digest and the publish job have not run: they need the
+  credentials and a tag.
 - Not done: image signing (cosign), a Docker Hub description sync, scheduled
   rebuilds for base-image security updates. Each would be its own decision.

@@ -332,5 +332,68 @@
     "ci": "no branch checks reported at observation; local gate acceptance only",
     "merged": false,
     "released": false
+  },
+  "integrationAcceptance": {
+    "testedHead": "9e0f6948724017cc125792c00f4d4d30b64c9591",
+    "sourceSha256": "ffeaca82213167ac26edf7121c31924d5b7ddee015db47b502479dbb80377191",
+    "completed": "2026-10-09T22:51:54.696129+02:00",
+    "allStagesZero": true,
+    "counts": {
+      "rustPassed": 3831,
+      "rustFailed": 0,
+      "rustIgnored": 185,
+      "frontendPassed": 2583,
+      "frontendFailed": 0,
+      "frontendFiles": 162,
+      "chromiumPassed": 236,
+      "actualServerChecks": 5
+    },
+    "extraTypeChecks": [
+      {
+        "configuration": "tsconfig.communication-fixtures.json",
+        "exit": 0
+      },
+      {
+        "configuration": "tsconfig.history-fixtures.json",
+        "exit": 0
+      }
+    ],
+    "actualServerChecks": 5,
+    "noApiInterception": true,
+    "nativeFocusCoverage": "mocked adapter only",
+    "ignoredCorpusSweep": "separate release follow-up",
+    "issueClosingDirectivesRemoved": true,
+    "commitMessageRewording": {
+      "oldHead": "a0c99daad3c71e792967c2fc039dc38136a8a50a",
+      "newHead": "af1055e9659724ee3672b2cd09d33f4412f677ff",
+      "base": "b042048b318801acc67927fd55b3dbf61cfa62fd",
+      "commits": [
+        {
+          "original": "bff4820daa7a92820ec62b7bfdc3b707d1e0489f",
+          "reworded": "afd2223cd58de892bf229f04ab44c06ef1a02cda",
+          "tree": "a86019426a03d8e2c72a9b48a8eab7ad805c9dd7",
+          "messageChanged": true
+        },
+        {
+          "original": "9bccc76c31b9aea7ad0a849ea09a7c6868e299c7",
+          "reworded": "a4a0ad5375f171f670605d8d45cd0c1f6ee245cc",
+          "tree": "5115e5f144ec3244b13d3b129ea4977b286ea280",
+          "messageChanged": true
+        },
+        {
+          "original": "bf726714a722987fbb86a4454dc1bf31a342daf4",
+          "reworded": "4284573661324894364aa880ffffc6b69314022f",
+          "tree": "7a594b084903f29a023909fa96e6f8876cf99740",
+          "messageChanged": false
+        },
+        {
+          "original": "a0c99daad3c71e792967c2fc039dc38136a8a50a",
+          "reworded": "af1055e9659724ee3672b2cd09d33f4412f677ff",
+          "tree": "add2b9a1baa12118b32fe999241a0be31004bd77",
+          "messageChanged": false
+        }
+      ],
+      "treesIdentical": true
+    }
   }
 }

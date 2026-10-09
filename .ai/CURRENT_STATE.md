@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-09 11:50 CEST
+- **Completed:** README and manual now lead with the downloadable Docker Hub image, complete pull/run commands, amd64/arm64 and release-vs-main tag policy. Source build remains an alternative; separate Hub update and downloaded-image password-hash examples added. Anonymous registry tags latest/0.1.0-alpha.6 checked; actual pull and local amd64 HTTPS/login/save/recreate/reopen probe passed (9 checks), hash command passed, all five fresh-target repository gates/docs/33-chapter navigation/5 changed shell blocks/whitespace passed. Self-review only; no application code or live bus action.
+- **Pending/Next Steps:** Local documentation delivery on branch docs/readme-hub-20261009 only; main integration and push require a separate request. Existing server, root main/index, private corpus and other worktrees unchanged.
+- **Notes for Codex oder Claude:** Preserve parallel history/live114/download-coverage work and all inherited handover entries. Root README/manual remain at the older checkout; updated files are on the named local branch. Log: .ai/logs/2026-10-09_codex_readme-dockerhub.md. No full app suite, arm64 runtime or hardware acceptance claim.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-09 11:39 CEST
 - **Completed:** Owner-authorized download-coverage feature bd778821 merged no-ff onto fetched main b3ee55a0 as d12bce07138beef026708c8b014bb5e4d2ac0b6a. Fresh merged gate proc_0936d31525ea exit 0: full Release corpus 1/0/0, 105 originals unchanged, 467 programs (1 verified/98 untested); application 159/0/27 ignored, ZIP boundaries 13/0, fmt/focused Clippy/docs/all five fresh nonempty repository checks and whitespace pass. Exact source binding and feature-tree equality verified; self-review, no subagents. Delivery receipt/status prepared separately; original receipt retained unchanged.
 - **Pending/Next Steps:** Commit metadata, normal push to refs/heads/main, exact live/fetched remote readback, publication closure and own cleanup. Feature implementation/tests are accepted; no hardware/release/deployment actions.

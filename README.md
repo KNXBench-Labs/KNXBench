@@ -20,6 +20,7 @@
 <p align="center">
   <a href="https://www.knxbench.com">Website</a> ·
   <a href="#getting-started">Get started</a> ·
+  <a href="https://hub.docker.com/r/knxbench/knxbench-server">Docker Hub</a> ·
   <a href="docs/manual/README.md">Manual</a> ·
   <a href="docs/ProjectStats.md">Project statistics</a> ·
   <a href="https://www.knxbench.com/story/">How this happened</a>
@@ -147,33 +148,37 @@ no actual building was switched on and off for this clip.</sub></p>
 
 ### Browser, via Docker
 
-You need Git and Docker. The first build compiles everything and takes a few minutes —
-a good moment for coffee.
+You need Docker and a browser — no Git checkout or build required. Download the
+ready-made image from [Docker Hub](https://hub.docker.com/r/knxbench/knxbench-server),
+choose your own password, and run it from the directory where you want to keep your data:
 
 ```bash
-git clone https://github.com/KNXBench-Labs/KNXBench.git
-cd KNXBench
-docker build -t knxbench-server -f apps/knx-server/Dockerfile .
+docker pull knxbench/knxbench-server:latest
 docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
   -e KNX_AUTH_PASSWORD='pick something long and boring' \
-  -v "$(pwd)/data:/data" knxbench-server
+  -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
 
 Open <https://127.0.0.1:8484>, sign in with that password, and choose **New project…** or
 import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
-No time for coffee? Since alpha.6, every release tag is also published as a ready-made
-image for x86-64 and 64-bit Arm:
-`docker pull knxbench/knxbench-server:latest`, then the same `docker run` with
-`knxbench/knxbench-server:latest` as the image. It is the last release, not the newest
-source ([details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
+Images are available for **x86-64 (`amd64`) and 64-bit Arm (`arm64`)**. `latest`
+follows published releases, including alphas, not the newest source. To stay on a
+specific release, use `knxbench/knxbench-server:0.1.0-alpha.6` in both commands
+([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
+
+Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
+The compilation coffee break is now optional.
 
 With a password set, the server speaks HTTPS with a self-signed certificate, so the
 browser warns once: compare the fingerprint in `docker logs knxbench` before you accept
 it. It is one shared password, made for a LAN or VPN, not for the open internet. Talking
 to a real bus from the container needs host networking — see
 [Web and Docker deployment](docs/manual/user-guide/11-web-and-docker.md), which also has
-the [update-in-one-go](docs/manual/user-guide/11-web-and-docker.md#updating-in-one-go) recipe.
+the [Docker Hub update](docs/manual/user-guide/11-web-and-docker.md#updating-a-docker-hub-installation)
+recipe. For a lasting setup, prefer a [password hash](docs/manual/user-guide/11-web-and-docker.md#setting-a-password)
+over the quick-start plaintext password, which is visible in the container environment
+and may enter shell history.
 
 ### Linux desktop, via AppImage
 
@@ -188,7 +193,7 @@ chmod +x KNXBench_0.1.0-alpha.6_amd64.AppImage
 
 This is the `v0.1.0-alpha.6` pre-release from 9 October 2026, x86-64 only, the first
 one built by the release workflow. `--ignore-missing` skips the `knx-mcp` binary listed in
-the same checksum file. It is a snapshot: newer features need Docker or a
+the same checksum file. It is a snapshot: newer features need Docker built from source or a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The
 [Linux setup](docs/manual/getting-started/05-linux-setup.md) chapter lists the host
 packages it needs and what has been tested.

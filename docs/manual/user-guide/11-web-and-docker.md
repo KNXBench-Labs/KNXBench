@@ -3,8 +3,8 @@
 # Web and Docker deployment
 
 **Goal:** run a persistent, authenticated browser workbench with the right network scope.
-**Prerequisites:** a checkout, Docker for the container path, and a chosen persistent
-data directory. Start with the loopback-only example in [Installation](../getting-started/04-installation.md#b-docker--web).
+**Prerequisites:** Docker and a chosen persistent data directory for the container
+path; a checkout only if you build from source. Start with the loopback-only example in [Installation](../getting-started/04-installation.md#b-docker--web).
 **Expected result:** a reachable welcome/login page and saved projects that survive restart.
 **Watch out:** match HTTP/HTTPS to startup output; preserve data and stop hardware
 writes before an update. One shared password is not multi-user access control.
@@ -14,8 +14,8 @@ browser. This chapter covers what that process actually serves, how to configure
 how the browser build differs from the desktop one, and — at length, because it is the
 part that matters — what its security model is and is not.
 
-[Installation](../getting-started/04-installation.md) has the short version of building
-and running the container. This chapter is the long version.
+[Installation](../getting-started/04-installation.md) has the short version of downloading
+and running the container, plus an optional source build. This chapter is the long version.
 
 ## What `knx-server` serves
 
@@ -83,9 +83,16 @@ it and publishes it as
 ```bash
 docker pull knxbench/knxbench-server:latest
 docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
-  -e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH" \
+  -e KNX_AUTH_PASSWORD='pick something long and boring' \
   -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
+
+No checkout or compilation is needed. Run this from your chosen data directory,
+replace the example password, then open **https://127.0.0.1:8484**. Compare the
+certificate fingerprint in `docker logs knxbench` before accepting the browser
+warning. The quick-start plaintext password is visible in the container environment
+and may enter shell history; use [Setting a password](#setting-a-password) for a
+hashed credential in a lasting setup.
 
 - **Tags:** the release version without its `v` (`0.1.0-alpha.6` for the tag
   `v0.1.0-alpha.6`) and `latest`. While KNXBench is in alpha, `latest` moves
@@ -130,7 +137,7 @@ accident. Mount a directory you chose yourself:
 ```bash
 docker run -d --name knxbench -p 8484:8080 \
   -e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH" \
-  -v "$(pwd)/data:/data" knxbench-server
+  -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
 
 Now `./data` on your host is `/data` in the container. Removing the container with
@@ -243,11 +250,38 @@ git pull --ff-only \
   or project data and **does not verify server identity**. Compare the certificate
   fingerprint before signing in; never copy this option into authenticated requests.
 - Old images pile up; `docker image prune` clears the untagged ones.
-- With the [Docker Hub image](#ready-made-image-from-docker-hub), replace
-  `git pull --ff-only` and the `docker build` step with
-  `docker pull knxbench/knxbench-server:latest` and run that image name instead
-  of `knxbench-server`. A failed pull leaves the running container untouched,
-  just like a failed build.
+- For a downloaded image rather than a source build, use the separate
+  [Docker Hub update recipe](#updating-a-docker-hub-installation).
+
+### Updating a Docker Hub installation
+
+For the loopback-only quick start above, run this from the **same data directory**.
+Save the project, back up `data/`, and make sure no device write is running first.
+Use the same password as before; if you changed ports, mounts, restart policy,
+host name, TLS or other settings, preserve those options too. A pull does not
+update a running container by itself.
+
+```bash
+docker pull knxbench/knxbench-server:latest \
+  && docker stop knxbench \
+  && docker rm knxbench \
+  && docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
+       -e KNX_AUTH_PASSWORD='pick something long and boring' \
+       -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
+```
+
+A failed pull leaves the running container untouched. Normal stop lets requests
+finish; removal leaves the bind-mounted data directory in place. Check
+`docker logs knxbench`, compare the certificate fingerprint, open
+**https://127.0.0.1:8484**, sign in, and reopen your saved project. If a step after
+stopping fails, the service remains stopped until you correct it; this is not an
+automatic rollback.
+
+To choose a fixed release, replace `latest` in **both** image references with a
+published version such as `0.1.0-alpha.6`. For an existing Linux host-network setup,
+keep `--network host` and `-e KNX_PORT=8484` (or your chosen port) instead of `-p`,
+as explained in [Networking](#networking). Do not change network scope during an
+image update by accidentally copying a different example.
 
 ## Authentication
 
@@ -303,10 +337,10 @@ It prints a single line beginning `$pbkdf2-sha256$i=600000$`. Put that in
 `KNX_AUTH_PASSWORD_HASH`. With the container:
 
 ```bash
-KNX_AUTH_PASSWORD_HASH="$(docker run --rm -i knxbench-server --hash-password <<<'your password')"
+KNX_AUTH_PASSWORD_HASH="$(docker run --rm -i knxbench/knxbench-server:latest --hash-password <<<'your password')"
 docker run -d --name knxbench -p 8484:8080 \
   -e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH" \
-  -v "$(pwd)/data:/data" knxbench-server
+  -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
 
 `KNX_AUTH_PASSWORD` accepts a plaintext password instead and hashes it at startup. It

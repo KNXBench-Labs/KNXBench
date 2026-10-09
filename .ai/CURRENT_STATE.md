@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (ledger owner cleanup)
+- **Timestamp:** 2026-10-09 07:26 CEST
+- **Completed:** User go: no finished session owns open ledger work any more. `FUTURE-05`, `KL-110`, `GAP-T30-04`, `KL-43` (all LATER) moved to owner `later` with route "Later / separate scope"; `FUTURE-04` LATER → DONE (telegram flow `FLOW-01`, ADR-0077/0085, flow e2e tests, revision `6e48f750`); `FUTURE-01` notes the delivered read-only MCP slice (ADR-0090, `f4adccc2`); `FUTURE-08` notes that only optional copy remains. Counts recounted by script (snapshot DONE 39 / AB 119 / LATER 22; owner alpha 93, commission 39, later 23, ui 25), "How to update" records the owner rule, OPEN_WORK counts and lag section updated. check-ledger/anchors/headers green.
+- **Pending/Next Steps:** None for the ledger. Open items: see OPEN_WORK.md (legacy TypeNone/.vd5, Pages action bump, release/deployment decision, privacy review, rollback repo).
+- **Notes for Codex oder Claude:** `alpha`/`ui`/`commission` in the Owner column now only mark finished rows (history); new open rows get owner `later` or a new owner defined by a new goal.
+
+---
+
 - **Last Agent:** Claude (stash and scratch worktree prune)
 - **Timestamp:** 2026-10-09 07:29 CEST
 - **Completed:** User request: all 5 stashes cleared and the scratch worktree `devnav-ro` (detached, old pre-purge `8e8aa6b6`, clean) removed. stash@{2..4} (commission WIP 2026-10-04) were already in `KNXBench.backups/2026-10-09-local-branch-prune/` as `archive/2026-10-07/stash-*`; stash@{0,1} (docs-refresh 2026-10-08, incl. index/untracked parents) and the devnav-ro commit are in the verified bundle `KNXBench.backups/2026-10-09-stash-worktree-prune/`. Repository now: one branch (`main`), one worktree (root), no stashes, clean.

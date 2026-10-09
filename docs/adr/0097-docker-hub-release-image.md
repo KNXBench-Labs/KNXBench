@@ -60,7 +60,21 @@ Before the build starts, a tag run fails at once if the tag is not
 `vMAJOR.MINOR.PATCH[-PRERELEASE]` or if the repository variable
 `DOCKERHUB_USERNAME` or the secret `DOCKERHUB_TOKEN` is missing. A manual
 dispatch is a dry run: both platforms are built and smoke-tested, nothing is
-logged in to or pushed.
+pushed. When both existing repository credentials are configured, login
+precedes the first build so base-image pulls can authenticate too. With no
+credentials, dispatch still uses anonymous pulls; tag runs still fail closed
+when credentials are absent.
+
+The alpha.7 dry run encountered HTTP429 on the Rust base-image manifest
+pull twice, before any compilation. Login originally followed the smoke
+build; it now precedes it when credentials exist. This separates pull
+authentication from the unchanged tag-only publication gate; it does not
+guarantee that all registry throttling disappears. Four named workflow
+regressions cover ordering, optional credential presence, environment
+privacy and dry-run publication refusal. Docker documents authentication
+for pulls and distinguishes pull limits from generic abuse-rate HTTP429
+responses: https://docs.docker.com/docker-hub/usage/pulls/ and
+https://docs.docker.com/docker-hub/troubleshoot/.
 
 The image itself is unchanged: same Dockerfile, same runtime contract
 (`/data`, `KNX_PORT=8080`, HTTPS when a password is set).

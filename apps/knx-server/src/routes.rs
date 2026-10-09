@@ -112,7 +112,10 @@ pub fn project_routes() -> Router<SharedState> {
             "/api/legacy-password",
             get(legacy_password_status).delete(forget_legacy_password),
         )
-        .route("/api/devices", post(create_device))
+        .route(
+            "/api/devices",
+            get(crate::device_catalog::get).post(create_device),
+        )
         .route("/api/devices/preview", post(preview_devices))
         .route("/api/devices/{id}", delete(delete_device))
         .route("/api/devices/batch-delete", post(batch_delete_devices))

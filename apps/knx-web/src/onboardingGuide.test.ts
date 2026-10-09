@@ -122,6 +122,7 @@ describe("ONBOARDING_TASKS", () => {
       openCompanion: record("openCompanion"),
       openHelp: record("openHelp"),
       openCatalog: record("openCatalog"),
+      openDevices: () => {},
       addDevice: record("addDevice"),
       openIntroduction: record("openIntroduction"),
       openAchievements: record("openAchievements"),

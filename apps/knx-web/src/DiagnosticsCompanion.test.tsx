@@ -301,11 +301,22 @@ describe("one editing workspace", () => {
     // dropped. No request, no project state.
     expect(apiCallsIn(liveGraph)).toEqual([]);
     expect(liveGraph.get("liveActivity.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    // Devices adds a context-scoped navigation link plus pure list/tree helpers.
+    // No provider is mounted in the companion, so source addresses remain passive.
+    // The exact API and project-mutation inventories below stay unchanged.
+    const deviceListGraph = valueImportGraph("deviceList.ts");
+    expect([...deviceListGraph.keys()].sort()).toEqual(["deviceList.ts", "treeUtils.ts"]);
+    expect(apiCallsIn(deviceListGraph)).toEqual([]);
+    expect(mutatingFetchesIn(deviceListGraph)).toEqual([]);
+    for (const module of ["DeviceLink.tsx", "deviceList.ts", "treeUtils.ts"]) {
+      expect(graph.get(module)).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    }
     // Shipped fun-language catalogues add only static copy and their registry.
     // The API-call and mutation inventories below remain unchanged.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
+      "DeviceLink.tsx",
       "DiagnosticsCompanion.tsx",
       "FsPicker.tsx",
       "HelpTip.tsx",
@@ -321,6 +332,7 @@ describe("one editing workspace", () => {
       "busMonitorCapture.ts",
       "busMonitorStatistics.ts",
       "canonicalJson.ts",
+      "deviceList.ts",
       "diagnosticsWindow.ts",
       "filePicker.ts",
       "flowAnimator.ts",
@@ -352,6 +364,7 @@ describe("one editing workspace", () => {
       "sessionLogExport.ts",
       "settingsDiagnostic.ts",
       "settingsStore.ts",
+      "treeUtils.ts",
       "uiLanguage.ts",
     ]);
 

@@ -60,6 +60,7 @@ export type ItemClickHandler = (
   // see, never silently selecting rows hidden by the filter. Omitted by
   // the tree, which always renders every id.
   visibleOrder?: number[],
+  preserveMultiSelection?: boolean,
 ) => void;
 
 export interface MultiSelectionState {
@@ -92,6 +93,17 @@ export function useMultiSelection(
   const deviceOrder = useMemo(() => (tree ? deviceRenderOrder(tree) : []), [tree]);
   const gaOrder = useMemo(() => (tree ? groupAddressRenderOrder(tree) : []), [tree]);
 
+  // New authoritative snapshots invalidate deleted targets, but view changes
+  // do not: the device list and editor share one preserved selection.
+  useEffect(() => {
+    setMultiSelection((previous) => {
+      if (!previous) return previous;
+      const present = new Set(previous.kind === "device" ? deviceOrder : gaOrder);
+      const ids = new Set([...previous.ids].filter((id) => present.has(id)));
+      return ids.size === previous.ids.size ? previous : ids.size ? { kind: previous.kind, ids } : null;
+    });
+  }, [tree, deviceOrder, gaOrder]);
+
   useEffect(() => {
     if (!multiSelection) return;
     function handleKeyDown(e: KeyboardEvent) {
@@ -101,7 +113,7 @@ export function useMultiSelection(
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [multiSelection]);
 
-  const onItemClick: ItemClickHandler = (e, kind, id, sel, visibleOrder) => {
+  const onItemClick: ItemClickHandler = (e, kind, id, sel, visibleOrder, preserveMultiSelection = false) => {
     const order = visibleOrder ?? (kind === "device" ? deviceOrder : gaOrder);
     if (e.shiftKey) {
       e.preventDefault();
@@ -131,7 +143,7 @@ export function useMultiSelection(
     }
     // Plain click — untouched contract: clears any multi-selection, sets
     // the single `Selection` exactly as before this feature existed.
-    setMultiSelection(null);
+    if (!preserveMultiSelection) setMultiSelection(null);
     setLastClicked({ kind, id });
     onSelect(sel);
   };

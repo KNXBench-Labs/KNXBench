@@ -547,7 +547,8 @@ fn build_topology(topology: &Topology, devices: &Devices) -> Vec<AreaNode> {
         .collect()
 }
 
-fn build_device_node(device: &knx_core::DeviceInstance) -> DeviceNode {
+/// The canonical lightweight device projection, also used by the all-devices catalogue.
+pub fn build_device_node(device: &knx_core::DeviceInstance) -> DeviceNode {
     DeviceNode {
         id: device.id.0,
         name: device.name.clone(),

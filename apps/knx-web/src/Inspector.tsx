@@ -22,6 +22,7 @@ import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
 import { ParameterPanelContent, useDeviceParameters } from "./ParameterPanel";
 import HelpTip from "./HelpTip";
+import DeviceLink from "./DeviceLink";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
@@ -1223,6 +1224,12 @@ function GroupAddressInspector(props: {
           {t(DPT_OUTCOME_KEYS[ga.dpt_detail.outcome])}
         </p>
       )}
+      {ga.links.length > 0 && <ul className="ga-linked-devices" aria-label={t("workbench.devices")}>
+        {[...new Map(ga.links.map((link) => [link.device_id, link])).values()].map((link) => <li key={link.device_id}>
+          <DeviceLink deviceId={link.device_id}>{link.device_name ?? t("addressTable.unknownDevice", { id: link.device_id })}</DeviceLink>
+          {link.device_address && <small className="mono"> {link.device_address}</small>}
+        </li>)}
+      </ul>}
       {canDelete ? (
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (

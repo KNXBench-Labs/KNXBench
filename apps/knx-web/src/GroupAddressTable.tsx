@@ -18,6 +18,7 @@ import {
 import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
 import { useTranslate } from "./i18n";
 import HelpTip from "./HelpTip";
+import DeviceLink from "./DeviceLink";
 
 // The real address table the workbench's group-address view was missing:
 // the tree branch already carried ranges, DPTs and link directions, while
@@ -73,7 +74,7 @@ function LinkRow(props: {
   return (
     <tr>
       <td>
-        {link.device_name ?? t("addressTable.unknownDevice", { id: link.device_id })}
+        <DeviceLink deviceId={link.device_id}>{link.device_name ?? t("addressTable.unknownDevice", { id: link.device_id })}</DeviceLink>
         {link.device_address && <small className="mono"> {link.device_address}</small>}
       </td>
       <td>

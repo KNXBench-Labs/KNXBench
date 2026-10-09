@@ -2,6 +2,7 @@
 // apps/knx-web/src/BusMonitorPanel.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
+import DeviceLink from "./DeviceLink";
 import { emitAchievementEvent } from "./achievementEvents";
 import type { BusMonitorStopResponse, BusTelegramRow } from "./api";
 import { CAPTURE_CAPACITY, appendCapturedRows, saveBusCapture } from "./busMonitorCapture";
@@ -1117,7 +1118,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
                   >
                     <td>{row.seq}</td>
                     <td>{row.timestamp}</td>
-                    <td>{row.source}</td>
+                    <td><DeviceLink address={row.source}>{row.source}</DeviceLink></td>
                     <td className="ga-address">
                       {formatGa(row.destination)}
                       {row.destinationName && (

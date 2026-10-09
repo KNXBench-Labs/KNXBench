@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
+import DeviceLink from "./DeviceLink";
 import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { useTranslate } from "./i18n";
@@ -241,6 +242,7 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
         </label>
       </form>
 
+      {address && <p><DeviceLink address={address.trim()}>{t("devices.openEditor")}</DeviceLink></p>}
       {!running && (
         <section className="address-programming-plan" aria-label={t("addressProgramming.planTitle")}>
           <h3>{t("addressProgramming.planTitle")}</h3>

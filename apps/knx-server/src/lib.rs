@@ -45,6 +45,7 @@ mod com_object_activation;
 mod contribution_routes;
 mod data_file;
 mod debug_report;
+mod device_catalog;
 mod device_compare_routes;
 mod device_download;
 pub use device_download::{DeviceDownloadSession, DownloadStatus, ProgressEvent, Restart, Written};

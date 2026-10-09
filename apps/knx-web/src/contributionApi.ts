@@ -1,4 +1,5 @@
 /** Read-only, own-instance evidence boundary; never a GitHub uploader. */
+import { isProcedureResolutionList, type ProcedureResolution } from "./procedureResolution";
 export interface ContributionFinding {
   id: string; stage: string; category: string; sourcePath: string | null;
   xpath: string | null; name: string | null; occurrences: number; detail: string; sample: string | null;
@@ -7,6 +8,7 @@ export interface ContributionAnalysis {
   formatVersion: number; analyzerVersion: string; kind: string; scheme: number | null;
   status: string; sourceSize: number; originalAllowed: boolean;
   findings: ContributionFinding[];
+  procedureResolutions?: ProcedureResolution[];
   metrics: { stage: string; entity: string; disposition: string; count: number }[];
   checks: { name: string; status: string; detail: string }[];
   members: { id: string; path: string; size: number; sampleAllowed: boolean; reason: string }[];
@@ -37,7 +39,8 @@ async function post(file: File, operation: "analyze" | "preview" | "export", opt
 export async function analyzeContribution(file: File, signal?: AbortSignal): Promise<ContributionAnalysis> {
   const response = await (await post(file, "analyze", undefined, signal)).json();
   if (response.formatVersion !== 1 || !["project", "product"].includes(response.kind) || !["complete", "partial", "refused"].includes(response.status) ||
-    !["findings", "checks", "members", "structure", "metrics"].every(key => Array.isArray(response[key]))) {
+    !["findings", "checks", "members", "structure", "metrics"].every(key => Array.isArray(response[key])) ||
+    (response.procedureResolutions !== undefined && !isProcedureResolutionList(response.procedureResolutions))) {
     throw new Error("unsupported analysis response");
   }
   return response;

@@ -75,6 +75,22 @@ Produktdatenbank und stellt keine Verbindung zur KNX-Hardware her.
 Du musst weder XML noch Befund-IDs oder technische Zähler verstehen.
 Offline-Planung beweist nicht, dass ein echtes Gerät funktioniert.
 
+### Zusätzliche Offline-Verfahrensbeobachtungen
+
+Lokale Source-Builds können **Offline-Verfahrensfolgen** für die erste moderne
+Produktfamilie anzeigen (`MV-07B0`, AP1). **Nur Schrittfolge aufgelöst** bedeutet,
+dass die deklarierte Reihenfolge rekonstruiert wurde — kein vollständiger
+Download-Plan und kein Nachweis für ein funktionierendes Gerät. Unbekannte
+Schritte und fehlende oder widersprüchliche Referenzen bleiben sichtbar.
+Andere Masken/Varianten und vollständige Gerätesemantik gehören nicht dazu.
+
+Du kannst solche Beobachtungen über dieselbe Vorschau, ZIP und das Issue melden.
+Die lokalen Details enthalten Kennungen, Quellprüfsummen und Originalwerte:
+Kopiere sie nicht ungeprüft in ein öffentliches Issue. Die reduzierte ZIP lässt
+diese Details weg; wertfreie Befundcode-Zähler bleiben enthalten. Zusätzliche
+XML erfordert bewusste Auswahl, Prüfung und Erlaubnis. Nichts wird automatisch
+versendet.
+
 ## 3. Mit dem reduzierten Bericht beginnen
 
 Lass **Öffentliches GitHub-Issue** ausgewählt. Lass **alle optionalen

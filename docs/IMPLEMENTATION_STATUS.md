@@ -41,7 +41,17 @@ does not erase a broader platform/device limitation or imply a new release.
   instead of "not supported". Mutation sweep 14/14 killed.
 - Not done: no live legacy download (needs a device go); payload re-parsed
   per code load.
-- Gate: PENDING.
+- Gate (on `5dd021bf`, fresh target, offline, inputs frozen): Vitest 2485
+  tests in 153 files, build, tsc, flow-study and theme fixtures; cargo fmt,
+  Clippy `-D warnings`; Rust workspace 3745 passed / 0 failed / 184
+  ignored; all five xtask checks; `git diff --check`. Intercepted Chromium:
+  201/202 in the gate, the miss a 30 s timeout in
+  `diff-virtual.e2e.ts` (2,000-step scroll; no web code it touches
+  changed); rerun offline right after: that spec ×3 12/12 and the full
+  suite 202/202. The ignored corpus tests (`legacy_download_oracle`,
+  `legacy_corpus`, `legacy_oracle`, release) ran green before the gate.
+  Rebased onto `45546575` (docs and workflow only). In-session self-review
+  only.
 
 ## 2026-10-09 — The 173 MB `.vd5` gets measured, then let in (ADR-0094, VD5)
 

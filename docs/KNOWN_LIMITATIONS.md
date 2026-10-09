@@ -7026,9 +7026,10 @@ triage.
 
 **Current reading, 2026-10-08:** L1–L3 VD inspection/offline CLI/web import
 and password handling are delivered. The title records the original refusal;
-it is not a blanket current VD3/VD4 refusal. VD5 bounds/layout, `.pr*`/`.vd2`,
-legacy DPT/download semantics and plaintext remembered-password storage remain
-the explicit limits below. The TypeNone spacer presentation was fixed on
+it is not a blanket current VD3/VD4 refusal. `.pr*`/`.vd2`, legacy
+DPT/download semantics, unmapped `string`/`long enum` parameters and
+plaintext remembered-password storage remain the explicit limits below. The
+TypeNone spacer presentation and the VD5 bounds/layout were fixed on
 2026-10-09.
 
 **Update 2026-10-08 (legacy VD package L3, ADR-0094 *Amendment: L3*).**
@@ -7089,11 +7090,17 @@ group addresses (`apps/knx-server/tests/http_legacy_device.rs`).
   that is safe, because the password is never stored with it. An
   unencrypted legacy file, however, keeps such values readable inside its
   stored original.
-- **The one real `.vd5` is refused.** The Siemens `.vd5` (Nov 2016)
-  exceeds the 64 MiB bounds (173 MB payload). It also has four members, an
-  installer path tree with three mask images, where the rules expect one
-  `ets.vd_`. Lifting this needs measured bounds and the multi-member layout
-  ([legacy-vd-mapping.md](research/legacy-vd-mapping.md#the-first-real-vd5-structure-only-not-imported)).
+- ~~**The one real `.vd5` is refused.**~~ **Imported since 2026-10-09**
+  (ADR-0094, *Amendment: VD5*): the installer-tree layout (one EX-IM member
+  plus other members, which are listed as `unread-member`, not read, and
+  kept in the stored original) and measured bounds (file 128 MiB, payload
+  256 MiB). **Still limited:** importing the 173 MB payload peaks at about
+  1.4 GiB of memory (about 2.2 GiB extrapolated at the payload bound) and
+  takes 20–40 s, during which the server holds the product database; it
+  adds about 425 MB to the product database file. Atomic types 3 (`string`)
+  and 5 (`long enum`) are not mapped: 1,515 of the file's 72,982 parameter
+  rows (22 of 88 programs) are reported, not shown
+  ([legacy-vd-mapping.md](research/legacy-vd-mapping.md#the-first-real-vd5-measured-and-imported)).
 
 **Update 2026-10-08 (legacy VD package L1, ADR-0094).** The design's
 decisions are taken: the maintainer approved the 2026-09-26 design on

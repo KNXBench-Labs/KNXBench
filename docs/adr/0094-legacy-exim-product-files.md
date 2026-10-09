@@ -211,6 +211,47 @@ Evidence (`[V]` measured on 2026-10-08 unless noted):
   `LegacyPasswordDialog` (with "Remember"). Settings show whether one is
   remembered and forget it.
 
+## Amendment: VD5 (2026-10-09), installer-tree layout and measured bounds
+
+The one real `.vd5` (Siemens, November 2016, 67,538,254 bytes) was refused
+by L1–L3 for two reasons: four members instead of one, and sizes beyond
+the 64 MiB bounds. Measured facts are in
+[legacy-vd-mapping.md](../research/legacy-vd-mapping.md#the-first-real-vd5-measured-and-imported).
+
+- **Layout (revises decisions 2 and 3).** A legacy file has exactly one
+  EX-IM member (`ets.vd_`, `ets2.vd_`, `ets.pr_` by base name) and may have
+  other members. Two EX-IM members are refused as ambiguous. The other
+  members (the `.vd5`'s three mask images) are listed in
+  `LegacyContainer::other_members`, never decrypted or read, and stay in
+  the stored original file. Every publication report, including a repeated
+  one, lists them as `unread-member` diagnostics. Those describe the file,
+  not the payload, so they are not `legacy_diagnostic` rows. The observed
+  layout rule is generalised from one member to several: sorted by offset,
+  the member records start at 0 and run without a gap to the central
+  directory.
+- **Bounds (revises decision 3), set on measured memory.** File 128 MiB
+  (1.99 × the largest measured), declared payload 256 MiB (1.55 ×). EX-IM
+  parser defaults: value 64 MiB, 2,097,152 continuation lines per value,
+  4,000,000 rows, 24,000,000 values (the `.vd5` has one 18.6 MB value over
+  233,164 lines and about 8.19 million values). A release build on the
+  development host inspects the `.vd5` in 2.1 s with a peak RSS of
+  492 MiB and imports it in 22–38 s with a peak of 1,426 MiB (the parsed
+  document is now dropped before the transaction; 1,580 MiB before). At the
+  payload bound the import peak extrapolates to about 2.2 GiB.
+- **Storage.** Original and withheld payload are stored as blobs, as
+  before: 240.8 MB for the `.vd5`, and the product database file grew by
+  425 MB in total.
+- **Not mapped yet.** Atomic types 3 (`string`) and 5 (`long enum`): 56
+  types, 1,515 parameters in 22 programs, reported as
+  `unknown-atomic-type` and the resulting `dangling-reference`s. The tables
+  `Baggage`, `ApplicationProgramBaggage`, `program_plugin` and others are
+  `unmapped-table`s. Everything stays in the stored payload.
+- **Acceptance.** `knx-app/tests/legacy_corpus.rs` (ignored, private
+  corpus) pins the `.vd5`'s identity, layout, counts and diagnostics, and
+  every one of its 88 programs evaluates under its defaults with no other
+  evaluator finding than `NoBranchMatched`. Synthetic installer-tree
+  fixture: `marvin-installer.vd5`.
+
 ## Alternatives considered
 
 - **Built-in or "known" password.** Rejected. VD4_PRODUCT_DATABASE_IMPORT.md
@@ -220,6 +261,12 @@ Evidence (`[V]` measured on 2026-10-08 unless noted):
   Rejected for L2. It would invent manufacturer-looking XML and imply
   equivalence that has not been shown. Nothing that needs offline parameters
   reads that XML.
+- **Decrypting and storing the mask images separately.** Rejected for
+  VD5. Nothing reads them, the original file keeps them byte for byte, and
+  their format is unmeasured.
+- **Streaming the parser to cut peak memory.** Deferred. The measured peak
+  (1.4 GiB for the largest real file) is acceptable for a one-off import;
+  a streaming design would touch grammar, secrets and mapping at once.
 - **A second ZIP reader for the legacy container.** Rejected. It would
   duplicate the hardened validator and its identity checks.
 - **Loosening the validator to accept Info-ZIP's streamed encryption

@@ -7,6 +7,38 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — The 173 MB `.vd5` gets measured, then let in (ADR-0094, VD5)
+
+- Layout: a legacy file has exactly one EX-IM member and may carry others
+  (the real Siemens `.vd5` is an installer tree with three mask images).
+  Others are listed in `LegacyContainer::other_members` /
+  `LegacyInspection::other_members`, never read, kept in the stored
+  original, and reported as `unread-member` on every publication (also on a
+  repeated one; not stored as `legacy_diagnostic`). Two EX-IM members are
+  refused. The layout rule now requires all member records to tile the file
+  from offset 0 to the central directory.
+- Bounds from measurement: file 128 MiB, payload 256 MiB; EX-IM defaults
+  value 64 MiB, 2,097,152 continuations, 4 M rows, 24 M values. The parsed
+  document is dropped before the publish transaction (peak 1,580 → 1,426
+  MiB for the real file); the inflate reservation is capped by deflate's
+  maximum ratio.
+- Real `.vd5` (release build): inspect 2.1 s / 492 MiB; import 22–38 s /
+  1,426 MiB; through the built web app and a release server 22.1 s, server
+  peak 1.46 GB. 88 programs, 129 catalog items, 71,467 parameter refs,
+  55,381 object refs, 288,413 translations; all 88 programs evaluate with
+  only `NoBranchMatched`. Not mapped yet: 1,515 parameters of atomic types
+  3 (`string`) and 5 (`long enum`), reported. First charset evidence: ten
+  0x80–0x9F bytes read as text only in Windows-1252.
+- Web: the legacy import report folds its notes by kind (`<details>` with
+  counts), so 1,775 notes stay readable; none is dropped. CLI says "import
+  notes" and lists other members in `inspect-legacy`.
+- Tests: installer-tree fixture `marvin-installer.vd5` (built by
+  `build_fixtures.py installer`), container layout/bounds/limits tests,
+  knx-app and server installer-tree imports, `LegacyInstallReport.test.tsx`,
+  the ignored corpus pins for the `.vd5` (inspect and publish). Mutation
+  sweep 10/10 named (layout, single-member, unread report on both paths,
+  both bounds, three parser limits, inspection).
+- Gate: PENDING.
 ## 2026-10-09 — `v0.1.0-alpha.6`: first release built by CI, first one on Docker Hub
 
 - Owner go for the release. Preparation: `fe7e0e26` makes the tag

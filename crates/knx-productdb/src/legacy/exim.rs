@@ -34,10 +34,14 @@ const KNOWN_TYPE_CODES: [u32; 7] = [1, 2, 3, 4, 5, 6, 8];
 /// Header keys seen in the measured files.
 const KNOWN_HEADER_KEYS: [&str; 5] = ["N", "K", "D", "V", "H"];
 
-/// Resource bounds for one payload. The defaults sit 10–60 times above the
-/// largest measured file (82-byte lines, 2,508-byte values, 37 tables,
-/// 34 columns, 14,734 rows); they bound memory and time and say nothing
-/// about the format.
+/// Resource bounds for one payload; they bound memory and time and say
+/// nothing about the format. The largest measured file is the Siemens
+/// `.vd5` of November 2016 (`docs/research/legacy-vd-mapping.md`): 82-byte
+/// lines, a single 18,653,184-byte value over 233,164 continuation lines
+/// (table `Baggage`), 42 tables, 872,166 rows and about 8.19 million
+/// values. The defaults sit about 2.5–4 times above it and above the
+/// payload bound's share: each value costs 16 bytes of spans besides its
+/// own bytes, so 24 million values add at most 384 MiB.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ExImLimits {
     pub max_line_len: usize,
@@ -54,12 +58,12 @@ impl Default for ExImLimits {
     fn default() -> Self {
         Self {
             max_line_len: 4096,
-            max_value_len: 1024 * 1024,
-            max_continuations_per_value: 16_384,
+            max_value_len: 64 * 1024 * 1024,
+            max_continuations_per_value: 2_097_152,
             max_tables: 512,
             max_columns: 512,
-            max_rows: 2_000_000,
-            max_values: 8_000_000,
+            max_rows: 4_000_000,
+            max_values: 24_000_000,
             max_header_lines: 64,
         }
     }

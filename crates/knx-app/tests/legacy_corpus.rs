@@ -59,9 +59,13 @@ struct Expected {
     rows: usize,
     products: usize,
     masks: &'static [&'static str],
+    /// Grammar diagnostics (the `.vd5` has one: ten bytes in 0x80-0x9F).
+    diagnostics: usize,
+    /// Members next to the EX-IM member (the `.vd5`'s three mask images).
+    other_members: usize,
 }
 
-const EXPECTED: [Expected; 3] = [
+const EXPECTED: [Expected; 4] = [
     Expected {
         name: "EIBMARKT.VD3",
         kind: LegacyMemberKind::ProductDatabase,
@@ -73,6 +77,8 @@ const EXPECTED: [Expected; 3] = [
         rows: 4214,
         products: 3,
         masks: &["MV-0020", "MV-0021"],
+        diagnostics: 0,
+        other_members: 0,
     },
     Expected {
         name: "Eibmarkt Motion Sensor N520_IRBM_N530_IRBM.vd4",
@@ -85,6 +91,8 @@ const EXPECTED: [Expected; 3] = [
         rows: 14734,
         products: 2,
         masks: &["MV-0701"],
+        diagnostics: 0,
+        other_members: 0,
     },
     Expected {
         name: "MDT_VD_VisuControl.pr5",
@@ -97,6 +105,27 @@ const EXPECTED: [Expected; 3] = [
         rows: 12,
         products: 0,
         masks: &[],
+        diagnostics: 0,
+        other_members: 0,
+    },
+    // ADR-0094, amendment VD5: an installer tree of four members, 67.5 MB
+    // file, 173 MB payload (docs/research/legacy-vd-mapping.md).
+    Expected {
+        name: "SIEMENS_KNX_PDB_Nov_2016_ETS3.vd5",
+        kind: LegacyMemberKind::ProductDatabase,
+        content: ExImContent::ProductDatabase,
+        source_sha256: "6459190d3157edcaac0125fa53c46aac6afebddccc806b51eee2ac83187df2b3",
+        payload_sha256: "54d2c721dfdf12bf3c702650f84bfaaa0d09cd82624884c920b34289c01c9d34",
+        version: "6.3",
+        tables: 42,
+        rows: 872166,
+        products: 129,
+        masks: &[
+            "MV-0011", "MV-0012", "MV-0020", "MV-0021", "MV-0025", "MV-0300", "MV-0701", "MV-0705",
+            "MV-07B0", "MV-0912", "MV-091A",
+        ],
+        diagnostics: 1,
+        other_members: 3,
     },
 ];
 
@@ -134,10 +163,20 @@ fn the_real_legacy_files_inspect_with_their_pinned_identity_and_counts() {
         masks.sort_unstable();
         masks.dedup();
         assert_eq!(masks, expected.masks, "{label}");
-        assert!(
-            inspection.diagnostics.is_empty(),
+        assert_eq!(
+            inspection.diagnostics.len(),
+            expected.diagnostics,
             "{label}: {:?}",
             inspection.diagnostics
+        );
+        assert_eq!(
+            inspection.other_members.len(),
+            expected.other_members,
+            "{label}"
+        );
+        assert!(
+            inspection.other_members.iter().all(|m| m.encrypted),
+            "{label}"
         );
         println!(
             "{label}: {} tables, {} rows, {} continuation lines, {} products",
@@ -200,7 +239,7 @@ struct Published {
     skipped: &'static [&'static str],
 }
 
-const PUBLISHED: [Published; 2] = [
+const PUBLISHED: [Published; 3] = [
     Published {
         name: "EIBMARKT.VD3",
         programs: 3,
@@ -229,11 +268,41 @@ const PUBLISHED: [Published; 2] = [
             "1 text_attribute rows were not mapped (LANGUAGE_ID, COLUMN_ID, ENTITY_ID or the text is empty); they stay in the payload",
         ],
     },
+    // Measured 2026-10-09 (ADR-0094, amendment VD5). Atomic types 3
+    // (`string`) and 5 (`long enum`) are not mapped yet: 56 types, whose
+    // 1,515 parameters are the `parameter.PARAMETER_TYPE_ID` dangling
+    // references; nothing is dropped from the stored payload.
+    Published {
+        name: "SIEMENS_KNX_PDB_Nov_2016_ETS3.vd5",
+        programs: 88,
+        catalog_items: 129,
+        parameters: 38453,
+        parameter_refs: 71467,
+        com_object_refs: 55381,
+        translations: 288413,
+        diagnostics: &[
+            ("dangling-reference", 1607),
+            ("no-page", 18),
+            ("orphan-translation", 7),
+            ("overlapping-memory", 27),
+            ("skipped-rows", 3),
+            ("unknown-atomic-type", 56),
+            ("unknown-text-column", 1),
+            ("unmapped-column", 30),
+            ("unmapped-table", 23),
+            ("unread-member", 3),
+        ],
+        skipped: &[
+            "117 parameter_list_of_values rows were not mapped (PARAMETER_TYPE_ID names no mapped enumeration type); they stay in the payload",
+            "12 product_to_program rows were not mapped (PROD2PROG_ID, PRODUCT_ID or PROGRAM_ID is empty); they stay in the payload",
+            "197272 text_attribute rows were not mapped (LANGUAGE_ID, COLUMN_ID, ENTITY_ID or the text is empty); they stay in the payload",
+        ],
+    },
 ];
 
 #[test]
 #[ignore = "private corpus: needs KNXBENCH_PRODUCT_CORPUS and KNXBENCH_VD_PASSWORD_FILE"]
-fn both_real_databases_publish_completely_and_evaluate() {
+fn the_real_databases_publish_completely_and_evaluate() {
     let root = corpus_root();
     let dir = tempfile::tempdir().unwrap();
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
@@ -303,7 +372,18 @@ fn both_real_databases_publish_completely_and_evaluate() {
                 kinds.keys().all(|k| k == "NoBranchMatched"),
                 "{program}: unexpected evaluator diagnostics {kinds:?}"
             );
-            assert!(active > 0, "{program} shows nothing");
+            // Two `.vd5` programs place no parameter at all: 24796 declares none,
+            // 24847 only two pages ("Keine Parameter"). Any program whose
+            // tree places parameters must show some.
+            let placed: i64 = conn
+                .query_row(
+                    "SELECT count(*) FROM dynamic_node
+                     WHERE program_id = ?1 AND kind = 'ParameterRefRef'",
+                    [program],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(active > 0, placed > 0, "{program}: {placed} placed");
         }
     }
 }

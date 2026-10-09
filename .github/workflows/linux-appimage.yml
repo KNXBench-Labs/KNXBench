@@ -150,10 +150,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+        # A tag with a pre-release part (v0.1.0-alpha.6) must never become the
+        # repository's "Latest" full release. A release written by hand before
+        # this job finishes keeps its notes; only the assets are attached.
         run: |
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" ./*.AppImage knx-mcp-x86_64-linux SHA256SUMS --clobber
           else
+            title="KNXBench $GITHUB_REF_NAME"
+            kind=()
+            if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+              title="$title (pre-release)"
+              kind=(--prerelease)
+            fi
             gh release create "$GITHUB_REF_NAME" ./*.AppImage knx-mcp-x86_64-linux SHA256SUMS \
-              --verify-tag --generate-notes
+              --verify-tag --generate-notes --title "$title" "${kind[@]}"
           fi

@@ -1,0 +1,92 @@
+{
+  "status": "gated release candidate; publication verified separately",
+  "version": "v0.1.0-alpha.7",
+  "recordedAt": "2026-10-10 00:08 CEST",
+  "applicationGate": {
+    "testedHead": "9e0f6948724017cc125792c00f4d4d30b64c9591",
+    "sourceSha256": "ffeaca82213167ac26edf7121c31924d5b7ddee015db47b502479dbb80377191",
+    "sourceUnchanged": true,
+    "stageCount": 18,
+    "counts": {
+      "rustPassed": 3831,
+      "rustFailed": 0,
+      "rustIgnored": 185,
+      "frontendPassed": 2583,
+      "frontendFailed": 0,
+      "frontendFiles": 162,
+      "chromiumPassed": 236,
+      "actualServerChecks": 5
+    },
+    "allExitsZero": true,
+    "completed": "2026-10-09T22:51:54.696129+02:00"
+  },
+  "runtimeInputEquivalence": {
+    "fullGateCommit": "9e0f6948724017cc125792c00f4d4d30b64c9591",
+    "currentCandidate": "ff4e88a2357173735db3a1fa5ba8f1034b9c44c4",
+    "checkedInputPaths": [
+      "apps",
+      "crates",
+      "Cargo.toml",
+      "Cargo.lock",
+      "xtask",
+      ".cargo",
+      "rust-toolchain.toml",
+      "tools/appimage"
+    ],
+    "delta": [],
+    "gitBuildIdentityMayDiffer": true
+  },
+  "corpus": {
+    "passed": 146,
+    "failed": 0,
+    "stages": [
+      {
+        "name": "OriginalData-selection",
+        "passed": 143,
+        "accepted": true
+      },
+      {
+        "name": "procedure_resolution_corpus",
+        "passed": 1,
+        "accepted": true
+      },
+      {
+        "name": "download_coverage_corpus",
+        "passed": 1,
+        "accepted": true
+      },
+      {
+        "name": "corpus_compatibility_matrix",
+        "passed": 1,
+        "accepted": true
+      }
+    ],
+    "legacyPasswordDependentFreshSelection": false,
+    "networkInterfaces": [
+      "lo"
+    ],
+    "rawPrivateOutputPublished": false
+  },
+  "packaging": {
+    "appimageDryRun": 37990908358,
+    "appimageDryRunHead": "27f1eee5b95f7851113d5695ad1768ad3f712e7d",
+    "dockerDryRun": 37995603946,
+    "dockerAttempt": 3,
+    "dockerDryRunHead": "ff4e88a2357173735db3a1fa5ba8f1034b9c44c4",
+    "bothNativeArchitectureSmokeTestsPassed": true,
+    "localAnonymousAMD64SmokePassed": true
+  },
+  "ciRegressionTests": 5,
+  "pythonToolTests": 47,
+  "review": "self-review; no independent review or fresh real-bus certification",
+  "statistics": {
+    "analyzedCommit": "ff4e88a2357173735db3a1fa5ba8f1034b9c44c4",
+    "privacyProseEditOnly": true,
+    "inventoryComplete": false,
+    "unavailableFiles": 1
+  },
+  "issuesRemainOpen": [
+    1,
+    2
+  ]
+}

@@ -30,9 +30,10 @@ design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
 This is the source-level `0.1.0-alpha` series, checked on **8 October 2026**.
-The [public alpha.6 pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.6)
-(AppImage, `knx-mcp`, Docker Hub image) may precede newer changes described here;
-the `TypeNone` spacer fix, for example, landed on `main` after the tag. The version number is not a
+The [public Alpha.7 pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.7)
+(AppImage, `knx-mcp`, Docker Hub image) includes the `TypeNone` spacer fix,
+persistent history and the upload/return corrections missing from Alpha.6.
+Back up native projects before upgrading; schema11 cannot be reopened by Alpha.6. The version number is not a
 promise that anything is finished.
 
 > A long list of known issues is what happens when a project writes its

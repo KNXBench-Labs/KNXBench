@@ -61,7 +61,8 @@ grouping, free-text log parsing or project-diff links. The separate diagnostic
 companion does not become another editing window. See the
 [contract and evidence](../../DEVICE_NAVIGATION.md).
 
-The Devices view ships with `v0.1.0-alpha.6` (AppImage and Docker Hub image);
+The Devices view shipped with Alpha.6 and remains in `v0.1.0-alpha.7`
+(AppImage and Docker Hub image);
 the older alpha.5 AppImage does not include it.
 
 ## The product catalog

@@ -1,11 +1,11 @@
-Last updated: 2026-10-09 19:40 CEST
+Last updated: 2026-10-10 00:01 CEST
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `main` · `2e759b77631a` |
-| Released baseline | `v0.1.0-alpha.6` |
+| Source snapshot | `v0.1.0-alpha.7` |
+| Released baseline | `v0.1.0-alpha.7` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
@@ -16,6 +16,8 @@ Last updated: 2026-10-09 19:40 CEST
 | Runtime | Platform | Availability |
 | --- | --- | --- |
 | Browser workbench | HTTPS server | alpha.6 |
+| Browser uploads | 256 MiB; bounded expansion | alpha.7 |
+| Companion return | Current project; explicit navigation | alpha.7 |
 | Docker server | Linux amd64/arm64 | alpha.6 |
 | Linux desktop | x86-64 AppImage; bounded verification | alpha.6 |
 | Desktop display | Wayland/X11; host-dependent | alpha.6 |

@@ -7,6 +7,31 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Native history remembers restarts, not hardware writes
+
+- Owner-authorized isolated HISTORY-01/HISTORY-02 package: native v11 durable
+  working snapshot and undo/redo, separately saved baseline, named/save/safety
+  versions, explicit revision/incarnation/generation-bound restore/delete/clear.
+  Opaque bytes/manufacturer references retained; shared context counted once.
+- Core stays independent of UI/SQLite. Immediate transactions and read-only
+  admission preserve source/visible state on refusal; foreign schema objects,
+  corrupt/future envelopes and limits refuse instead of silently trimming.
+  Global line order now persists independently of area sibling order.
+- DE/EN File/command-palette history panel with persistence disclosure, version
+  search, explicit confirmation, safe cancellation and stale-response guards.
+- Self-reviewed local candidate: Rust 3762/0/182 ignored; Vitest 2521/154 files;
+  Chromium 208; fmt/Clippy/build/bindings/five repository gates/docs and tools 42
+  pass. Private reference 3/3 and selected native corpus 5/5; actual built server
+  and production workbench pass two SIGKILL/reopens and nine assertions offline.
+  Two final footer wording fixes were re-gated; all Rust/configuration unchanged,
+  desktop rebuilt and real smoke repeated. No independent-review claim.
+- [Requirement matrix and boundaries](status/2026-10-09-project-history-verification.md),
+  [aggregate receipt](evidence/project-history-2026-10-09.json), ADR-0100 and
+  [manual](manual/user-guide/02-projects.md). Source commit recorded in closure.
+  Same-file versions are not independent backups; native accessibility, power
+  loss, hardware/ETS recovery and packaged release are not established.
+  No main integration, push, release or deployment by this local package.
+
 ## 2026-10-09 — Bathroom button: loaded, checked, put back (RESEARCH §19.21)
 
 - Maintainer go for `1.1.14`, MDT fourfold button

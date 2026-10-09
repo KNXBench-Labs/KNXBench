@@ -1,5 +1,21 @@
 # Import and export
 
+## Native working-state recovery and versions (2026-10-09)
+
+Native schema v11 carries the clean saved root separately from the most recent
+acknowledged working state and its undo/redo stacks. Application native opens and
+project-aware readers recover that working state; a raw `load_project` call remains
+a saved-root reader. Ordinary native writers preserve a differing recovered
+workspace as a version before invalidating history. Named/save/pre-restore versions
+preserve modelled data, opaque bytes and manufacturer references using bounded,
+nonrecursive native snapshots. Browser export still serializes the current project;
+it is not an export of the complete source file's version history. New Save As
+copies the current undo/redo state, not another file's version list. See
+[PROJECT_HISTORY](PROJECT_HISTORY.md) and [ADR-0100](adr/0100-persistent-native-project-history.md).
+No ETS restore-point parser, `.knxproj` writer or manufacturer catalogue backup is
+introduced. Copy closed `.knxdb` files independently for disaster recovery.
+
+
 ## Community evidence export, not project export (2026-10-08)
 
 [COMMUNITY_EVIDENCE.md](COMMUNITY_EVIDENCE.md) defines read-only own-instance

@@ -25,7 +25,12 @@ does not erase a broader platform/device limitation or imply a new release.
 - Tests: new `http_parameter_type_none.rs` (ETS `TypeNone`, 2 tests), the
   legacy heading in `http_legacy_device.rs`, three Vitest cases. Realistic
   reverts of the server rule and of the web branch each turn named tests red.
-- Gate: PENDING.
+- Gate on `579d5071` (fresh target, offline browser namespace, inputs
+  frozen): Vitest 2483/152 files, build, tsc, flow-study and theme fixtures;
+  intercepted Chromium 202; cargo fmt, workspace Clippy `-D warnings`; Rust
+  workspace 3728 passed / 0 failed / 182 ignored; all five xtask checks;
+  `git diff --check`. In-session self-review only.
+
 ## 2026-10-09 — Pages catches the Node-24 bus; offline demos get a signpost
 
 - Owner approved commit/push/public website verification. Pages actions:

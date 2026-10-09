@@ -9,6 +9,21 @@ All device names, rooms and products come from the generated **Sample house**
 or the first-project **Practice house** exercise. No customer project or live
 bus capture belongs in this directory.
 
+## Application header mark
+
+The workbench header uses the text-free symbol in
+`apps/knx-web/src/assets/knxbench-mark.png`, derived from the owner-supplied
+`KNXBench-logo-small.png` here (source SHA-256
+`9534e3835923c53a2bcef13826927cc18edd0e5f6765a0414df752c79ffce027`).
+Both supplied logo variants include a wordmark; the PNG symbol was cropped to
+`(72, 37, 424, 271)` (right/bottom exclusive), producing a 352 × 234 image.
+Its near-black matte was removed for light/dark header use; the original
+files remain unchanged. Edge alpha is `clamp((max(R,G,B) - 10) / 50, 0, 1)`;
+RGB is unmatted against `(10, 10, 10)` and clamped to byte range.
+The app bundles the derived image locally, fits it into 44 × 34 CSS pixels
+without stretching, and keeps the adjacent KNXBench label and overview link.
+The login screen and historical manual captures are unchanged.
+
 ## Current manual media
 
 | Asset | What it teaches | Capture |

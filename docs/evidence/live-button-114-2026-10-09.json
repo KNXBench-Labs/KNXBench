@@ -1,0 +1,47 @@
+{
+  "format": 1,
+  "date": "2026-10-09",
+  "source_revision": "b3ee55a0cf3ad7ad5314da49498158d6c0e6f0ca",
+  "program_id": "M-0083_A-0026-15-3591",
+  "target": "1.1.14",
+  "scope": "complete",
+  "download": {
+    "exit": 0,
+    "steps": 25,
+    "octets_verified": 1562,
+    "restart": "unconfirmed"
+  },
+  "restore": {
+    "exit": 0,
+    "octets_verified": 1562,
+    "restart": "unconfirmed",
+    "independent_octets_compared": 1570,
+    "differences": 0
+  },
+  "functional_check": {
+    "user_reply": "Erledigt",
+    "main_light_on_off": true,
+    "mirror_light_on_off": true,
+    "extra_blind_telegrams": 3,
+    "physical_blind_movement_verified": false
+  },
+  "initial_offline_gate": {
+    "rust_passed": 839,
+    "rust_failed": 0,
+    "rust_ignored": 56,
+    "fmt": 0,
+    "clippy": 0,
+    "repository_checks": 5,
+    "house_corpus_passed": 1,
+    "historical_103_corpus_passed": 1
+  },
+  "scope_negative_control": "partial-parameters entry rejected by the exact complete-only assertion",
+  "review": "in-session self-review",
+  "unverified": [
+    "partial-download scopes",
+    "UI path",
+    "other individual devices",
+    "complete device storage and volatile state"
+  ],
+  "integrated_gate": "pending"
+}

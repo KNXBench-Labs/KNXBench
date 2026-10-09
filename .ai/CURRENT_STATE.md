@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (integration of three local packages)
+- **Timestamp:** 2026-10-09 07:05 CEST
+- **Completed:** Owner go "In main integrieren". Toast parity (`f8dbde0a`, `7832b42d`) fast-forwarded; Devices navigation and community demos 1.0.0 committed in their worktrees (KNXBench identity, no co-author) and cherry-picked onto it; doc conflicts kept both sides. Account-name scratch path scrubbed from `docs/evidence/community-demos/delivery-verification.json` before commit. Integrated gate on `e46e5ce1`: Vitest 2480/152, build/tsc/fixtures, Chromium 202, Devices production 13, toast x3 42, fmt, Clippy, Rust 3726/0/182, tools 42, five xtask checks, diff check, inputs frozen. Docs-only status bookkeeping (IMPLEMENTATION_STATUS, OPEN_WORK, KL, ARCHITECTURE, manual status, demos index) followed with doc gates.
+- **Pending/Next Steps:** None for these packages. Not in a release or the Docker container. Demo 1.0.0 package READMEs still say "local review candidate" (frozen, checksummed); a repack would be a 1.0.1. Website does not link the demos yet. Earlier open items unchanged (TypeNone spacer KL §128, `.vd5`, Pages Node-20 bump, privacy review, rollback-repo retention).
+- **Notes for Codex oder Claude:** Feature worktrees/branches (local + remote toast branch) removed after publication. Old local pre-purge branches are in the bundle at `KNXBench.backups/2026-10-09-local-branch-prune/`.
+
+---
+
 - **Last Agent:** codex (toast publication)
 - **Timestamp:** 2026-10-09 06:13 CEST
 - **Completed:** Owner-authorized toast-parity package committed as `f8dbde0ad1b5ba3383731f0899426201e1a1509e` (15 owned paths) and pushed only to `refs/heads/feature/toast-parity-20261008`. Local/tracking/live feature ref equality, GitHub commit identity/file list and exact published file bytes verified. Author/committer KNXBench <github@knxbench.com>, no co-author. Fresh publication checks: focused toast tests 45/0, production build, all five fresh-target repository gates and whitespace pass; all eight accepted source/test hashes unchanged. Prior full-suite/visual acceptance remains dated 2026-10-08 (2422 Vitest, 189 Chromium, 54 focused repeats), not a new full run.

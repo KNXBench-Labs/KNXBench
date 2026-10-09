@@ -1,5 +1,21 @@
 # IMPLEMENTATION_STATUS.md
 
+## Alpha.7 published and externally verified — 2026-10-10
+
+`v0.1.0-alpha.7` is a public GitHub prerelease at frozen commit
+`839d5afd90559f1435d77a05ece3bbce2de3f2cf`; the annotated tag will not move.
+Both tag-triggered packaging workflows passed. Exactly three downloaded assets
+(AppImage, standalone MCP and SHA256SUMS) match GitHub SHA-256 digests/sizes;
+the checksum file passes and MCP executes with the expected build identity.
+AppImage runtime extraction passes; no fresh packaged GUI/Orca acceptance.
+Docker Hub version `0.1.0-alpha.7` and `latest` resolve to the same multiarch
+index, with real amd64/arm64 manifests. Anonymous digest pull verifies exact
+version/revision labels; the published image passes actual HTTPS/authentication/
+project-save/reopen smoke. Both #1/#2 remain OPEN. Earlier failed registry
+attempts and the pre-tag candidate verdict below remain dated history.
+[Verified asset/registry publication receipt](evidence/release-alpha7-2026-10-10.json).
+Native schema11 upgrade backups and all import/device/proxy limits still apply.
+
 ## Alpha.7 release candidate — 2026-10-10
 
 All changes since Alpha.6 are packaged in version `0.1.0-alpha.7`: durable

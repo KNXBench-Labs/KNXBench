@@ -9077,6 +9077,9 @@ The [contract](contracts/DOCKER_UPLOAD_AND_RETURN.md) records primary references
 and preserves bounded admission, no-clobber publication and source-bound Flow
 selection independently of explicit return.
 
-**Impact.** These source fixes are not in the published alpha.6 image/AppImage;
-a new release is required. No archive compatibility or hardware support is
-implied by upload/navigation acceptance.
+**Impact.** These source fixes are not in the published alpha.6 image/AppImage.
+They are included in Alpha.7, published and externally verified on 2026-10-10
+(AppImage/MCP checksums and anonymous multiarch Docker/HTTPS smoke; see
+[release evidence](evidence/release-alpha7-2026-10-10.json)). The admission,
+proxy, transient-selection and native-focus limits above remain. No archive
+compatibility or hardware support is implied by upload/navigation acceptance.

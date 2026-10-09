@@ -38,6 +38,10 @@ class DockerReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("HAVE_DOCKERHUB_LOGIN:", job_environment)
         self.assertNotIn("DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}", job_environment)
 
+    def test_transient_failure_does_not_cancel_the_other_architecture(self):
+        self.assertIn("fail-fast: false", self.build)
+        self.assertIn("needs: build", self.publish)
+
     def test_dry_runs_still_cannot_publish(self):
         self.assertIn("PUBLISH: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}", self.build)
         for name in ("Push by digest", "Record digest", "Upload digest"):

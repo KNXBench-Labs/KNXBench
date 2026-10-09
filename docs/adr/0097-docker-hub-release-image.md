@@ -69,9 +69,11 @@ The alpha.7 dry run encountered HTTP429 on the Rust base-image manifest
 pull twice, before any compilation. Login originally followed the smoke
 build; it now precedes it when credentials exist. This separates pull
 authentication from the unchanged tag-only publication gate; it does not
-guarantee that all registry throttling disappears. Four named workflow
+guarantee that all registry throttling disappears. Five named workflow
 regressions cover ordering, optional credential presence, environment
-privacy and dry-run publication refusal. Docker documents authentication
+privacy, independent matrix progress and dry-run publication refusal.
+The native architecture matrix no longer cancels its sibling on a transient
+registry failure; the publish job still requires both build jobs to pass. Docker documents authentication
 for pulls and distinguishes pull limits from generic abuse-rate HTTP429
 responses: https://docs.docker.com/docker-hub/usage/pulls/ and
 https://docs.docker.com/docker-hub/troubleshoot/.

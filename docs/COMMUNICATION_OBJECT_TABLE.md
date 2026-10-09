@@ -97,7 +97,8 @@ device-bound delayed results. Existing editor/flag/paired-link/drag-drop and
 keyboard tests retain their behavioral assertions with table-based selectors.
 
 Production-app intercepted Chromium scenarios cover all four built-in themes,
-DE/EN, 1440/400 px, headings/alignment, contrast, keyboard expansion/sort, combined
+DE/EN, 1440/400 px, headings/alignment, settled-button contrast (waiting for the
+actual CSS animation to finish), keyboard expansion/sort, combined
 filters, exactly zero view-only mutation requests and unchanged project snapshots,
 refused and successful edits under filtering. A synthetic 1,000-object device
 records one render/flat/filter/sort sample as browser-driver action-to-visible

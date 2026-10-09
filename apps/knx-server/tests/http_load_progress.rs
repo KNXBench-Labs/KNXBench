@@ -33,6 +33,7 @@ fn state() -> Arc<knx_server::AppState> {
         import_counts: Default::default(),
         server_incarnation: "synthetic-progress-test".into(),
         project_revision: Default::default(),
+        project_incarnation: Default::default(),
         product_db: None,
         session_log: Default::default(),
         connector: Box::new(knx_server::fake::FakeConnector::discovering(Vec::new())),

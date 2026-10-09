@@ -7,6 +7,22 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Names can change; identities keep their day job
+
+- Project-local device and individual GA names: editor/Properties, F2 and
+  context menu, every installation, exact Unicode and duplicate display names.
+- Dedicated name-only core/API path leaves IDs, addresses, flags/DPTs, links,
+  placement and refs alone. Context/revision guards, failed drafts, pending
+  ownership and read-only lost-response reconciliation prevent blind overwrites.
+- Exact native undo/redo and reopen use existing history, no schema migration.
+- Local candidate: Rust 1950/0/75 ignored; frontend 2544/0/159 files;
+  intercepted Chromium 208 and real built server/UI four DE/EN wide/narrow
+  cases pass. Clippy/server build/desktop compile/types/tools 42/five gates/docs
+  pass. Self-review only; not native/Orca/private-corpus/hardware acceptance.
+- [Contract](contracts/project-name-editing.md), ADR-0101 and
+  [verification](status/2026-10-09-project-name-editing-verification.md).
+  Owner Go authorizes main integration/push after gates; no release/deployment.
+
 ## 2026-10-09 — Native history remembers restarts, not hardware writes
 
 - Owner-authorized isolated HISTORY-01/HISTORY-02 package: native v11 durable

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-09 11:50 CEST
+- **Completed:** README and manual now lead with the downloadable Docker Hub image, complete pull/run commands, amd64/arm64 and release-vs-main tag policy. Source build remains an alternative; separate Hub update and downloaded-image password-hash examples added. Anonymous registry tags latest/0.1.0-alpha.6 checked; actual pull and local amd64 HTTPS/login/save/recreate/reopen probe passed (9 checks), hash command passed, all five fresh-target repository gates/docs/33-chapter navigation/5 changed shell blocks/whitespace passed. Self-review only; no application code or live bus action.
+- **Pending/Next Steps:** Local documentation delivery on branch docs/readme-hub-20261009 only; main integration and push require a separate request. Existing server, root main/index, private corpus and other worktrees unchanged.
+- **Notes for Codex oder Claude:** Preserve parallel history/live114/download-coverage work and all inherited handover entries. Root README/manual remain at the older checkout; updated files are on the named local branch. Log: .ai/logs/2026-10-09_codex_readme-dockerhub.md. No full app suite, arm64 runtime or hardware acceptance claim.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-09 11:55 CEST
 - **Completed:** Device 1.1.14 tested and restored: 1562 written octets read back on both operations, three Loaded parts, restarts unconfirmed. User main/mirror-light on/off telegrams verified; independent final dump equals all 1570 selected pre-dump octets. Complete-only evidence/test, research §19.21, manual/limitations and receipt published on main: feature dba73d8c, integration 44654e04, acceptance 114c1d55 and closure merge f0cd426d; local/tracking/live refs matched on publication. Integrated scoped gate 839/0/56 ignored, fmt/focused Clippy/docs/five nonempty repository checks pass; Release full-105 coverage and house tests each 1/0/0, all originals/source hashes unchanged. No frontend/full-workspace claim.
 - **Pending/Next Steps:** None for this device test. Further tests, including 1.1.17, require a fresh device-specific go. Partial/UI downloads and physical operation of 1.1.15 were not tested; that device only inherits this program's evidence grade.

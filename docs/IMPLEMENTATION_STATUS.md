@@ -38,7 +38,12 @@ does not erase a broader platform/device limitation or imply a new release.
   the ignored corpus pins for the `.vd5` (inspect and publish). Mutation
   sweep 10/10 named (layout, single-member, unread report on both paths,
   both bounds, three parser limits, inspection).
-- Gate: PENDING.
+- Gate (on `9305b0e4`, fresh target, offline, inputs frozen): Vitest 2485
+  tests in 153 files, build, tsc, flow-study and theme fixtures; intercepted
+  Chromium 202; cargo fmt, Clippy `-D warnings`; Rust workspace 3734 passed
+  / 0 failed / 182 ignored; all five xtask checks; `git diff --check`. The
+  ignored corpus tests ran green beforehand (`legacy_corpus`, release).
+  Rebased onto `a1fcc8f2` (docs only). In-session self-review only.
 ## 2026-10-09 — `v0.1.0-alpha.6`: first release built by CI, first one on Docker Hub
 
 - Owner go for the release. Preparation: `fe7e0e26` makes the tag

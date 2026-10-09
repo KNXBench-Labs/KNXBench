@@ -960,7 +960,14 @@ async fn opening_or_importing_refuses_to_discard_unsaved_edits_unless_told_to() 
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{opened}");
-    assert_eq!(opened["is_modified"], false);
+    // Explicit replacement permits reopening, not erasing the acknowledged
+    // native journal. Save remains the separate clean-baseline operation.
+    assert_eq!(opened["is_modified"], true);
+    assert_eq!(opened["can_undo"], true);
+    assert_eq!(
+        opened["installations"][0]["topology"][0]["name"],
+        "Unsaved area"
+    );
 }
 
 #[tokio::test]

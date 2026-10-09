@@ -1,5 +1,18 @@
 # Architecture
 
+## Native project history (2026-10-09)
+
+[ADR-0100](adr/0100-persistent-native-project-history.md) adds bounded native
+working-state/undo/redo persistence and explicit project versions. Core remains
+storage/UI independent: active inverse commands and restored normalized snapshot
+swaps share the CommandStack, preserving allocator high water. `knx-store` owns
+versioned SQLite images, retained-context sharing, strict admission and atomic
+baseline/generation binding; `knx-app` coordinates durable save/edit operations;
+HTTP/UI add revision-bound consent and lifetime-aware publication. The saved root
+is the clean baseline, not necessarily the most recent working state. See
+[the contract](PROJECT_HISTORY.md); protocol actions are never replayed.
+
+
 ## Device navigation and canonical catalogue reads (2026-10-08)
 
 [ADR-0096](adr/0096-devices-navigation-and-catalogue-batch.md) and the

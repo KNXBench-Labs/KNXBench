@@ -240,6 +240,35 @@ with `discardChanges: true`).
 > Closing the browser tab of the web build does not warn you about unsaved edits. Save
 > before you close it.
 
+## Project history: restart-safe undo and versions
+
+The local source package adds **File → Project history…**, also available through
+the command palette. This is not yet part of the alpha.6 release. Before first
+**Save As**, the panel explicitly says history is session-only. For a native-backed
+project, acknowledged reversible edits, Undo and Redo persist immediately. Opening
+that file after a server/app restart restores the working project and both stacks.
+Changes can therefore recover while still marked unsaved: Save/autosave controls
+the clean baseline. Closing without saving does not erase the recovery journal.
+
+The panel shows undo/redo counts, image-payload usage and admission limits. Create
+a **named version** before a redesign, independently of autosave; search the list
+and select a version to restore. Save/autosave also keeps the preceding distinct
+saved state. Restore asks explicitly, preserves the complete current working state
+as a **Before restore** version and then atomically replaces the project. It clears
+the edit stack; to go back, restore the preserved version. Cancel is initially
+focused and does not send a mutation. Changed revisions or server lifetimes
+invalidate old confirmations; reopen/refresh rather than forcing stale consent.
+
+Deleting a version or clearing undo/redo requires confirmation. Nothing is
+silently trimmed when a limit is reached; a failure is reported and the project
+stays unchanged. Until the limit is resolved, a native-backed edit can be refused.
+Versions are stored **inside the same `.knxdb`**. They protect against an unwanted
+edit, not file/disk loss: keep independent copies of closed files. They preserve
+project data, opaque source bytes and manufacturer references, not the global
+catalogue, passwords or device/bus state. Older builds cannot open native v11.
+Browser **Export project…** remains a fresh current-project serialization, not a
+copy of the source file's complete history. See [the detailed contract](../../PROJECT_HISTORY.md).
+
 ## There is no `.knxproj` export
 
 Until 2026-09-20 there was an **Export to .knxproj…** item in the File menu. It is

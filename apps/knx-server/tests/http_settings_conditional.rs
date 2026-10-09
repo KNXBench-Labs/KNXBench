@@ -19,6 +19,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         opaque: Default::default(),
         manufacturer_refs: Default::default(),
         command_stack: Default::default(),
+        history_generation: Default::default(),
         import_counts: Default::default(),
         server_incarnation: "synthetic-settings-test".into(),
         project_revision: Default::default(),

@@ -212,7 +212,7 @@ pub fn load_topology(
                 l.domain_address, l.domain_address_is_checked, l.ip_routing_multicast_address,
                 l.multicast_ttl, l.completion
          FROM line l JOIN area a ON l.area_id = a.id
-         WHERE a.installation_id = ?1 ORDER BY a.position, l.position",
+         WHERE a.installation_id = ?1 ORDER BY l.model_position, l.id",
     )?;
     let lines = line_stmt
         .query_map(params![installation_id.0], |row| {

@@ -26,6 +26,8 @@ import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   importProject: vi.fn(),
+  projectHistory: vi.fn(),
+  restoreProjectVersion: vi.fn(),
   // ADR-0094 (L3): Settings asks whether a legacy password is remembered.
   legacyPasswordStatus: vi.fn().mockResolvedValue({ available: true, remembered: false, problem: null }),
   forgetLegacyPassword: vi.fn(),
@@ -1290,6 +1292,7 @@ describe("App — the File menu by keyboard alone", () => {
       "Export group addresses (CSV)…",
       "Import group addresses (CSV)…",
       "Export documentation…",
+      "Project history",
       "Compare with…",
       "Debug report…",
       "Analyze support gaps…",
@@ -3768,5 +3771,51 @@ describe("App — Devices navigation", () => {
     expect(host!.querySelector(".workbench-center .structure-workspace h1")?.textContent).toBe("Topology");
     expect(host!.querySelector(".workbench-center .device-workspace")).toBeNull();
     await act(async () => root.unmount());
+  });
+});
+
+
+describe("App project-history restore publication", () => {
+  it("resets scoped device navigation after restore even when an in-flight Save acknowledges a newer revision first", async () => {
+    const initial = treeFromProcess(treeWithDevice(), "history-parent", 5);
+    initial.can_undo = true; initial.is_modified = true;
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxdb");
+    apiMock.openProject.mockResolvedValue(initial);
+    apiMock.deviceDetail.mockResolvedValue(deviceDetailFixture());
+    const history = {
+      formatVersion: 1, persistence: "native", serverIncarnation: "history-parent", snapshotRevision: 5,
+      generation: 3, undoSteps: 1, redoSteps: 0, totalBytes: 300000,
+      limits: { maxImageBytes: 67108864, maxHistoryBytes: 536870912, maxStackStates: 256, maxVersions: 256 },
+      versions: [{ id: 2, createdAt: "2026-10-09T07:00:00.000Z", reason: "named", label: "Before changes", bytes: 100000, imageHash: "a".repeat(64) }],
+      project: initial,
+    };
+    apiMock.projectHistory.mockResolvedValue(history);
+    let saveDone!: (tree: ProjectTree) => void;
+    let restoreDone!: (response: typeof history) => void;
+    apiMock.saveProject.mockReturnValueOnce(new Promise<ProjectTree>((done) => { saveDone = done; }));
+    apiMock.restoreProjectVersion.mockReturnValueOnce(new Promise<typeof history>((done) => { restoreDone = done; }));
+    const root = await renderApp();
+    try {
+      await act(async () => host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!.click());
+      await act(async () => findButton("Device D").click());
+      expect(host!.querySelector(".device-workspace")).not.toBeNull();
+      await act(async () => findButton("Save").click());
+      await act(async () => findButton(enMessages["projectHistory.title"]).click());
+      const historyButton = (name: string) => [...document.querySelectorAll<HTMLButtonElement>(".project-history-panel button")].find((button) => button.textContent === name)!;
+      await act(async () => historyButton(enMessages["projectHistory.restore"]).click());
+      await act(async () => historyButton(enMessages["projectHistory.confirmRestore"]).click());
+      expect(document.querySelector("[data-project-history-busy]")).not.toBeNull();
+      const latest = treeFromProcess(baseTree(), "history-parent", 7);
+      latest.warnings = 9;
+      apiMock.currentProject.mockResolvedValueOnce(latest);
+      await act(async () => saveDone(latest));
+      const restored = treeFromProcess(treeWithDevice(), "history-parent", 6);
+      await act(async () => restoreDone({ ...history, snapshotRevision: 6, generation: 4, undoSteps: 0, project: restored }));
+      expect(document.querySelector(".project-history-panel")).toBeNull();
+      expect(host!.querySelector(".device-workspace")).toBeNull();
+      expect(host!.querySelector(".dashboard")).not.toBeNull();
+      expect(host!.querySelector(".devices-count-link")?.textContent).toBe("0");
+      expect(apiMock.restoreProjectVersion).toHaveBeenCalledTimes(1);
+    } finally { await act(async () => root.unmount()); }
   });
 });

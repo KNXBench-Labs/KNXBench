@@ -21,6 +21,16 @@ Read the sections below as a delivery record, not a fresh implementation queue.
 Per-ID dispositions remain only in the [ledger](status/LEDGER.md). An accepted
 alpha limitation is not functionality, and a later idea is not a promised date.
 
+## Offline procedure evidence (local source package, 2026-10-09)
+
+The owner-approved first `MV-07B0` `Load/ap1` slice reconstructs declarative
+order with local source provenance and explicit unresolved data, through the
+existing support-gap UI/API/CLI. Reduced evidence can be manually shared with
+the maintainer. [Contract](OFFLINE_PROCEDURE_RESOLUTION.md), ADR-0098.
+Publication remains separate. Complete plan materialization, conditional
+selection, AP2/other masks, legacy/coupler procedures, new media and new live
+execution remain unimplemented; this does not close commissioning ledger rows.
+
 ## Devices navigation (local source package, 2026-10-08)
 
 The owner-approved project-wide device list, central editor/Back and scoped

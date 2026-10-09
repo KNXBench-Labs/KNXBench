@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-09 11:06 CEST
+- **Completed:** Fixed download_coverage_corpus with existing bounded LARGE admission, no package exclusions or production changes. Final explicit full Release corpus proc_4c09edce53be: 1 passed/0 failed/0 ignored; all 105 inputs unchanged, 467 programs (1 verified/98 untested, exact refusal categories pinned). STANDARD baseline reproduces SizeLimit; old-pin LARGE measurement retained as diagnostic RED. Removed private per-program output; research §19.20/index, KL §151, implementation status and compact receipt updated. Application 159/0/27 ignored, ZIP boundaries 13/0, fmt/focused Clippy/docs/five nonempty fresh-checkout repository gates pass; self-review.
+- **Pending/Next Steps:** No implementation or test work remains for this fix. Local-only focused commit on fix/download-coverage-large-20261009; merge/push/release need a separate request. Shared root/source/index and foreign history worktree stay unchanged; root handover and owned ignored log synchronized.
+- **Notes for Codex oder Claude:** Receipt docs/evidence/download-coverage-large-2026-10-09.json; log .ai/logs/2026-10-09_codex_download-coverage-large.md. Run with explicit KNXBENCH_PRODUCT_CORPUS and cargo test --release -p knx-app --test download_coverage_corpus -- --ignored. Offline product-default plans only, no new hardware/ETS compatibility. Interrupted attempts have no verdict; final accepted source SHA-256 bound in receipt. No subagents, server/UI/protocol/schema/default-limit changes. Owned build/runtime scratch cleaned after local commit; branch retained for separately approved integration.
+
+---
+
 - **Last Agent:** Claude (live download presence detector 1.1.8)
 - **Timestamp:** 2026-10-09 10:18 CEST
 - **Completed:** Maintainer go "teste mit 1.1.8". Complete download of the house project's configuration to Eibmarkt presence detector 1.1.8 (`M-006A_A-0001-22-617E-O0079`, `0701h`): compare before (23/530 differ), pre-write backup, 530 octets read back, three parts Loaded, restart unconfirmed; compare after clean; functional check on the bus (2/0/35 on/off); restore from backup, compare after restore identical to before. Program added to `verified_downloads.json` (scope `complete`); RESEARCH §19.19, KL §7/§136, manual updated. House readiness now 9 verified.

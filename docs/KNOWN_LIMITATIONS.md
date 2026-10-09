@@ -1,5 +1,29 @@
 # Known limitations
 
+## Persistent native history is bounded, not an independent backup (ADR-0100)
+
+Local source implements native schema v11 working-state/undo/redo persistence and
+named/save/pre-restore versions. Until first Save As, undo remains session-local.
+Once native-backed, acknowledged reversible edits are journaled immediately even
+while marked unsaved: Save/autosave establishes the clean baseline, not the first
+recoverable copy. Closing without saving does not erase this recovery journal.
+A restored version becomes the saved baseline and resets undo/redo; the preceding
+working state is preserved as a version. These are project edits, never bus writes.
+
+Admission refuses rather than silently trims: at most 256 combined undo/redo
+states, 256 versions, 64 MiB per individual model/context image and 512 MiB of
+stored history image payloads. Logical version sizes include shared context;
+physical payload usage counts each context once and excludes SQLite page overhead.
+Large projects may hit a limit and require explicit history/version deletion.
+Snapshots retain opaque project data and references, not the global catalogue,
+credentials or device memory. Unknown native tables, views, persistent triggers and columns (including generated
+columns) are refused rather than partly versioned.
+Hashes are integrity checks, not signatures. History travels in the same file;
+independent copies are still needed against file/disk loss. Older builds cannot
+open v11. Native WebKitGTK/Orca, physical power-loss and hardware/ETS recovery are
+not established by offline HTTP/Chromium tests. Publication/release is separate.
+
+
 ## Current reading guide — 8 October 2026
 
 Reconciled against source `608a204b`, the current owner ledger and the

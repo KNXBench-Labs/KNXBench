@@ -43,6 +43,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openCompanion: () => {},
     openHelp: () => {},
     openCatalog: () => {},
+    openProjectHistory: () => {},
     openDevices: () => {},
     addDevice: () => {},
     openIntroduction: () => {},
@@ -68,6 +69,16 @@ describe("filterCommands", () => {
 });
 
 describe("command enablement", () => {
+  it("offers project history with an open project and invokes its dialog callback", () => {
+    const command = COMMANDS.find((entry) => entry.id === "project-history");
+    expect(command, "history must be reachable when navigation is collapsed").toBeDefined();
+    expect(command!.isEnabled(noopCtx())).toBe(false);
+    let opened = false;
+    const ctx = { ...noopCtx({ tree: fakeTree(false, false) }), openProjectHistory: () => { opened = true; } };
+    expect(command!.isEnabled(ctx)).toBe(true);
+    command!.run(ctx);
+    expect(opened).toBe(true);
+  });
   it("offers the Devices view only with an open project and invokes its navigation callback", () => {
     const command = COMMANDS.find((entry) => entry.id === "open-devices");
     expect(command, "Devices must remain reachable with the navigation collapsed").toBeDefined();
@@ -118,9 +129,9 @@ describe("command enablement", () => {
     expect(called).toBe(true);
   });
 
-  it("lists all seventeen commands in palette order, with an unconditionally enabled first entry", () => {
+  it("lists every command in palette order, with an unconditionally enabled first entry", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
-      "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "search",
+      "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "project-history", "search",
       "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
       "open-catalog", "open-devices", "add-device", "show-introduction", "open-achievements", "open-help",
     ]);
@@ -179,6 +190,7 @@ describe("command enablement", () => {
     const ctx = noopCtx({
       tree: null,
       openCatalog: () => opened.push("catalog"),
+      openProjectHistory: () => {},
       openDevices: () => {},
       addDevice: () => opened.push("add-device"),
       openIntroduction: () => opened.push("introduction"),

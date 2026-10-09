@@ -42,14 +42,17 @@ fn a_save_that_fails_in_its_last_table_changes_none_of_the_three() {
     let conn = open_and_migrate(&path).unwrap();
     save_project_with_passthrough(&conn, &project("Old"), &opaque("old"), &refs("old")).unwrap();
     conn.execute_batch(
-        "CREATE TRIGGER refuse BEFORE INSERT ON manufacturer_ref
+        "CREATE TEMP TRIGGER refuse BEFORE INSERT ON main.manufacturer_ref
          BEGIN SELECT RAISE(ABORT, 'disk full, say'); END;",
     )
     .unwrap();
 
     let failed =
         save_project_with_passthrough(&conn, &project("New"), &opaque("new"), &refs("new"));
-    assert!(failed.is_err());
+    assert!(
+        failed.unwrap_err().to_string().contains("disk full, say"),
+        "the injected last-table failure must actually run"
+    );
     assert_eq!(load_project(&conn).unwrap().info.name, "Old");
     assert_eq!(load_opaque(&conn).unwrap(), opaque("old"));
     assert_eq!(load_manufacturer_refs(&conn).unwrap(), refs("old"));

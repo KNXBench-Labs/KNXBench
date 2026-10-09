@@ -7,6 +7,33 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Bathroom button: loaded, checked, put back (RESEARCH §19.21)
+
+- Maintainer go for `1.1.14`, MDT fourfold button
+  `M-0083_A-0026-15-3591`, mask `0701h`. Complete project-program
+  download: 25 steps, 1562 octets read back, three Loaded parts,
+  restart unconfirmed. Separate read-only baseline and post-dump cover
+  1570 octets including physical address and six load-state bytes.
+- User-operated light check: main and mirror-light on/off telegrams on
+  configured groups, plus extra blind telegrams (physical movement not
+  inferred). Own monitor stopped; restore from the pre-write backup,
+  1562 octets read back, independent final dump identical to pre-dump
+  at all 1570 selected octets. No full-device/RAM rollback claimed.
+- Third shipped evidence program, `complete` only; scoped unit test RED
+  before entry, GREEN afterwards; a `partial-parameters` evidence mutant
+  is rejected by the named scope assertion and restored. House readiness
+  11 verified / 21 untested / 2 unsupported / 1 excluded; only `1.1.14`
+  was tested, `1.1.15` inherits the program grade, not live verification.
+- Self-review: evidence/tests/docs only, no protocol, schema, UI or executor
+  changes. Raw configuration/backups stay gitignored. RESEARCH §19.21,
+  §7/§136 limitations, manual scope synchronized.
+- Initial scoped gate: app/CLI/network Rust 839 passed / 0 failed / 56
+  ignored, fmt, focused all-target Clippy, all five nonempty fresh-target
+  xtask checks, whitespace exit 0. Release `house_readiness` and historical
+  pinned-103 `download_coverage_corpus`: each 1 passed / 0 failed.
+- Integrated acceptance with the parallel full-corpus package: PENDING.
+  No frontend/browser/full-workspace or partial-download claim.
+
 ## 2026-10-09 — The attic presence detector goes live and comes back unchanged (RESEARCH §19.19)
 
 - First live download of a second program: the house project's

@@ -318,12 +318,12 @@ is the remaining copy defect.
 - **Details:** [§140](../KNOWN_LIMITATIONS.md#140-the-individual-address-reset-needs-the-pressed-devices-named-and-its-restart-is-unconfirmed),
   [ADR-0058](../adr/0058-individual-address-reset-requires-durable-recovery.md).
 
-### Device download is verified on one device only
+### Device download has bounded evidence on three device programs
 
 - **Affected:** writing a configuration into devices ("download").
 - **Limitation:** `knx device download` and the **Download to device** tab
-  work, but only two devices (an MDT push button and an Eibmarkt presence
-  detector, both mask `0701h`) have been downloaded and read back so far. Other devices, application versions and
+  work, but only three devices (two different MDT push-button programs and an
+  Eibmarkt presence detector, all mask `0701h`) have been downloaded and read back so far. Other devices, application versions and
   masks are unverified; procedures KNXBench cannot plan are refused by name.
   Programming an individual address is currently refused until durable
   recovery exists. Unloading and secure devices are not supported. A successful

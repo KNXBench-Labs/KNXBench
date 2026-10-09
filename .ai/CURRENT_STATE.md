@@ -1,3 +1,12 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-09 11:39 CEST
+- **Completed:** 1.1.14 complete download, operator light on/off telegram check, and authorized restore completed. Independent final dump equals the pre-dump at all 1570 selected octets (0 differences), including physical address and six load-state bytes. Both writes: 1562 read-back-verified octets, three Loaded parts, restart unconfirmed. Monitor stopped; extra user-operated blind telegrams noted, physical movement not claimed. Complete-only evidence entry/test and research §19.21/manual scope updates implemented locally; named RED then GREEN verified. New readiness 11 verified/21 untested/2 unsupported/1 excluded.
+- **Pending/Next Steps:** Scoped app/CLI/network offline gate proc_ec2f4c32df42 and Release house/pinned-103 coverage proc_ad6b7754bc19 pending; coverage may need only this package's verified/untested pin adjustment. Review, gate receipt and focused commit remain; no new device writes authorized. Partial/UI scopes and 1.1.15 remain untested live.
+- **Notes for Codex oder Claude:** Private evidence OriginalData/DeviceBackups/2026-10-09_button-114-live/result.json plus dumps, both backups and monitor. Task worktree live-114-20261009, scratch live114-20261009; no raw device content committed. Temporary probe removed after verification. Restore scope is selected configuration/load-state bytes, not all device storage/RAM. Preserve parallel corpus owner's branch and root handovers; §19.20 reserved for that owner's finding.
+
+
+---
+
 - **Last Agent:** Claude (live download presence detector 1.1.8)
 - **Timestamp:** 2026-10-09 10:18 CEST
 - **Completed:** Maintainer go "teste mit 1.1.8". Complete download of the house project's configuration to Eibmarkt presence detector 1.1.8 (`M-006A_A-0001-22-617E-O0079`, `0701h`): compare before (23/530 differ), pre-write backup, 530 octets read back, three parts Loaded, restart unconfirmed; compare after clean; functional check on the bus (2/0/35 on/off); restore from backup, compare after restore identical to before. Program added to `verified_downloads.json` (scope `complete`); RESEARCH §19.19, KL §7/§136, manual updated. House readiness now 9 verified.

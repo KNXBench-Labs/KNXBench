@@ -540,6 +540,19 @@ mod tests {
     }
 
     #[test]
+    fn the_shipped_evidence_names_the_presence_detector_complete_only() {
+        let shipped = shipped_evidence().expect("the shipped file parses");
+        let detector = shipped
+            .get("M-006A_A-0001-22-617E-O0079")
+            .expect("the presence detector is verified");
+        // One complete download ran live on 1.1.8, then a restore through
+        // the same procedure (RESEARCH §19.19). No partial scope ran.
+        assert_eq!(detector.scopes, ["complete"], "{detector:?}");
+        assert!(detector.reference.starts_with("docs/"), "{detector:?}");
+        assert_eq!(shipped.len(), 2, "{shipped:?}");
+    }
+
+    #[test]
     fn a_plan_with_evidence_is_verified_and_without_is_untested() {
         let plan = plan();
         let verified = SupportLevel::from_outcome(Ok(&plan), Some(&evidence("P")), &[]);

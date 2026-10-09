@@ -326,6 +326,21 @@ async function renderApp(manifestVersion?: string, session?: SessionControls) {
   return root;
 }
 
+describe("App brand", () => {
+  it("uses the text-free local logo while keeping one accessible brand label", async () => {
+    const root = await renderApp();
+    const brand = host!.querySelector<HTMLAnchorElement>(".workbench-brand")!;
+    const logo = brand.querySelector<HTMLImageElement>("img");
+    expect(logo).not.toBeNull();
+    expect(logo!.getAttribute("src")).toContain("knxbench-mark.png");
+    expect(logo!.getAttribute("alt")).toBe("");
+    expect(logo!.getAttribute("width")).toBe("44");
+    expect(logo!.getAttribute("height")).toBe("34");
+    expect(brand.textContent).toBe("KNXBench");
+    await act(async () => root.unmount());
+  });
+});
+
 describe("App manifest version", () => {
   it("uses package.json for the footer and document title by default", async () => {
     const root = await renderApp();

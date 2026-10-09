@@ -16,13 +16,15 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
-## Local candidate: communication-object table
+## Communication-object table: accepted main-delivery source
 
 The 2026-10-09 owner-approved local UI package adds explicit column headings,
 channel/flat views, search, status/link/effective-DPT filters and stable numeric/
 text sorting in a single-device editor. Draft/refusal/pending state survives view
 changes; counts exclude open editing exceptions. Core/storage/API/protocol are
-unchanged. This is **not yet on main, released or deployed**. The
+unchanged. The owner authorized main publication after fresh combined-source
+acceptance; the [delivery receipt](../evidence/communication-objects-publication-2026-10-09.json)
+records the publication boundary. This is **not in alpha.6 or deployed**. The
 [contract and acceptance receipt](../COMMUNICATION_OBJECT_TABLE.md) distinguish
 synthetic/built-browser checks from native/Orca, real-bus and ETS compatibility.
 

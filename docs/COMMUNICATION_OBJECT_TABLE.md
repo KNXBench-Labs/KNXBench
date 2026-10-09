@@ -2,8 +2,10 @@
 
 ## Scope and status
 
-Owner-approved Q1–Q12 design, 2026-10-09. Local UI-only implementation in the
-single-device editor; no publication, release or deployment authorization.
+Owner-approved Q1–Q12 design, 2026-10-09. UI-only implementation in the single-device
+editor. The owner subsequently authorized commit/main integration/push; release
+and deployment remain separate. The [main-delivery receipt](evidence/communication-objects-publication-2026-10-09.json)
+records the actual reconciled source, acceptance and publication boundary.
 [ADR-0102](adr/0102-communication-object-table-view-state.md) records the UI
 lifetime boundary. Final aggregate acceptance is recorded in the
 [receipt](evidence/communication-objects-2026-10-09.json).

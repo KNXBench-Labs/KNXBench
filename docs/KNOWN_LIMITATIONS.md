@@ -1,6 +1,6 @@
 # Known limitations
 
-## Local communication-object table scope (2026-10-09)
+## Communication-object table scope (2026-10-09)
 
 The local UI table keeps all object summaries mounted for stable editor identity;
 editing forms mount lazily when first opened. The synthetic 1,000-object measurement
@@ -12,7 +12,7 @@ there is no project-wide CO list, bulk editing, export, persistent view cache or
 resizable/reorderable columns. A UI mutation guard cannot cancel an already admitted
 server edit or replace server concurrency rules. Native WebKitGTK/Orca, real hardware
 and complete ETS compatibility remain untested by this offline UI package. Local
-source is not in alpha.6 and requires separate commit/integration/deployment approval.
+source is not in alpha.6; authorized main publication is separate from release/deployment.
 [Behavior and acceptance](COMMUNICATION_OBJECT_TABLE.md).
 
 A diagnostic real-server attempt found one existing local schema-v22 product

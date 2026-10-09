@@ -25,7 +25,12 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     await expect(panel.locator("thead th")).toHaveCount(7);
     await expect(panel.locator("tr[data-object-id]:visible")).toHaveCount(8);
     const selectedView = panel.locator('.com-table-views [aria-pressed="true"]');
-    const colors = await selectedView.evaluate(node => { const css = getComputedStyle(node); return { color: css.color, background: css.backgroundColor, image: css.backgroundImage }; });
+    // The shared button background transitions for 120ms; inspect the settled style.
+    const colors = await selectedView.evaluate(async node => {
+      await Promise.all(node.getAnimations().map(animation => animation.finished));
+      const css = getComputedStyle(node);
+      return { color: css.color, background: css.backgroundColor, image: css.backgroundImage };
+    });
     expect(colors.image).toBe("none"); expect(colors.color).not.toBe(colors.background);
     if (process.env.KNX_CO_CAPTURE_DIR && theme === (width === 1440 ? "graphite" : "porcelain"))
       await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-table-${language}-${width}.png`) });

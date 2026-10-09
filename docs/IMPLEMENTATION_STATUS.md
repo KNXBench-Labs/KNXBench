@@ -7,6 +7,27 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-08 — Toasts now keep the same nine-second appointment
+
+- Standard status and error toasts now reuse achievement card framing,
+  message typography and entry/exit animations. All default to nine seconds;
+  manual dismissal uses the same exit lifecycle. Errors keep red text/stripes,
+  alert semantics and conditional English-server-text disclosure. No fake
+  achievement badges or unlock labels on ordinary messages.
+- Shared cards wrap long unbroken text and stay inside narrow viewports.
+  Motion Off snaps out through zero-duration animation completion; OS reduced
+  motion disables animation, with the existing invisible-card cleanup timer.
+  Error replacement/clearing remains ID-bound and does not affect other kinds.
+- Local isolated worktree `toast-parity-20261008`, base `115b19f6`:
+  2,422 Vitest tests across 149 files, 189 offline Chromium cases and 54 focused
+  repeat cases pass. Production build, three type checks, all five fresh-target
+  repository gates and whitespace pass. Actual production workbench toast
+  stacks inspected in Graphite/English at 1440px and Porcelain/German at 400px.
+- [Acceptance receipt](evidence/toast-parity-2026-10-08.json), ADR-0089 amendment,
+  manual guide and inventory synchronized. In-session self-review, not an
+  independent review. Local/uncommitted/unpublished; no root sync, deployment,
+  Rust/private-corpus rerun, native accessibility or hardware acceptance.
+
 ## 2026-10-08 — Post-rebase community links verified
 
 - Audited public main `608a204bf28aa9df83413aa5ccb65241c32478aa`; current app,

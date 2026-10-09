@@ -33,8 +33,9 @@ export interface ToastEntry {
   leaving?: boolean;
 }
 
-/** How long an achievement popup stays before it starts to leave (ADR-0089). */
-export const ACHIEVEMENT_TOAST_MS = 9000;
+/** Shared visible duration before any toast starts its exit (ADR-0089). */
+export const TOAST_MS = 9000;
+export const ACHIEVEMENT_TOAST_MS = TOAST_MS;
 
 /** Removes a leaving toast even when no exit animation reports its end
  * (motion switched off or reduced). Longer than any exit animation. */
@@ -114,12 +115,9 @@ export function useToasts() {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
   const nextId = useRef(0);
 
-  /** Removes a toast now; an achievement popup leaves animated first. */
+  /** Every toast follows the same animated exit before removal. */
   function dismiss(id: number) {
-    setToasts((ts) =>
-      ts.flatMap((t) => (t.id !== id ? [t] : t.kind === "achievement" ? [{ ...t, leaving: true }] : [])),
-    );
-    // Only matters for a leaving popup; for anything else the id is gone already.
+    setToasts((ts) => ts.map((t) => t.id === id ? { ...t, leaving: true } : t));
     setTimeout(() => finishExit(id), TOAST_EXIT_FALLBACK_MS);
   }
 
@@ -145,13 +143,14 @@ export function useToasts() {
     ]);
     // Outside the state updater, which StrictMode may run twice.
     emitAchievementEvent({ type: "errorToastShown" });
+    setTimeout(() => dismiss(id), TOAST_MS);
   }
 
   function clearErrors() {
     setToasts((ts) => ts.filter((t) => t.kind !== "error"));
   }
 
-  function pushFun(message: string, autoDismissMs = 6000) {
+  function pushFun(message: string, autoDismissMs = TOAST_MS) {
     const id = nextId.current++;
     setToasts((ts) => [...ts, { id, kind: "fun" as const, message, serverText: false }]);
     setTimeout(() => dismiss(id), autoDismissMs);

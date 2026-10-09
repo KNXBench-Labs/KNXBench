@@ -7,6 +7,29 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Communication-object table: final names/AP1/logo candidate
+
+- Final integrated source `58e2852f` retains published device/project
+  names, offline AP1 analysis and header logo. The earlier rename-only19-stage
+  candidate below is historical and superseded, not borrowed as acceptance.
+- All **21 fresh stages pass** with source inputs frozen: frontend **2568/0 in162
+  files**, production build/four type checks; owning core/projection/server/app/
+  productdb/CLI Rust **2737/0/118 ignored**, warnings-denied Clippy; five explicit-
+  root repository gates, documentation and whitespace. This is not full-workspace
+  or native/WebKitGTK/ETS/hardware certification.
+- Both explicit full105 Release private-corpus regressions pass; only aggregate
+  counters leave private evidence. Production CO Chromium **19/19**, complete
+  intercepted Chromium **227/227**, isolated real-server/demo-copy **12/12** pass.
+- A prior source stopped on two immediate Porcelain contrast reads during the
+  shared120ms button background transition. A diagnostic confirmed interpolation;
+  final tests wait actual animation completion, preserving the same contrast
+  assertions without sleeps/retries or a product-code workaround.
+- Fresh ProjectStats records the clean `58e2852f` source and its real
+  collection timestamp. Original local receipt/images remain unchanged; final
+  [publication receipt](evidence/communication-objects-publication-2026-10-09.json)
+  binds this exact source. Normal main push/readback remains a separate runtime
+  completion check; no force push, release, deployment or bus operation.
+
 ## 2026-10-09 — Communication-object table meets the rename desk (main delivery)
 
 - Owner authorized commit/main integration/push. Feature `ddd4d2cc`, initial

@@ -1,26 +1,29 @@
 {
-  "status": "main integration accepted; publication readback pending",
-  "date": "2026-10-09 18:21 CEST",
+  "status": "final integrated source accepted; normal main publication verification pending",
+  "date": "2026-10-09 19:29 CEST",
   "featureCommit": "ddd4d2cc3b81aba899f53fb63f090a25996c0d75",
-  "integrationCommit": "92ec5407dda4f71fcccef591154946d2af8f6c58",
+  "integrationCommit": "58e2852f731d7f9fc2ff3db8a9502e5fe71d395e",
   "originalIntegrationParent": "e8f53a85a49be11de55766c798389e3ebd48acfc",
-  "reconciledMainParent": "a03705dea032ff1e7443a6641f80ada198a52224",
+  "renameMainParent": "a03705dea032ff1e7443a6641f80ada198a52224",
+  "offlineMainParent": "f8725639ee60cc17b9be0ec44e33bb2300e2b714",
+  "reconciledMainParent": "aaf8e6fe8fc517f677c6505f8c5fcdacab1f5d0b",
+  "renameCombinedSource": "92ec5407dda4f71fcccef591154946d2af8f6c58",
   "initialIntegrationCommit": "cd28d7045555d892a53ea682cbb48c761bb2459e",
   "adrReconciliation": "0101 kept for upstream names; table ADR renumbered0102",
   "originalLocalAcceptanceSha256": "ee46364ef130e4f4cf5198b841fd627135bde62b5a95e63b549d2c86ad555522",
-  "sourceInputCommitment": "5c5e72b6270b459ea68f5e42346734201f88722ef6a0ab1448f405d1de7ea4db",
-  "sourceFiles": 1004,
+  "sourceInputCommitment": "5b2ac42f65d27aafaf18822af66d210435fe35748d8be2b45b822a87ca8aa5b6",
+  "sourceFiles": 1012,
   "sourceInputsFrozen": true,
   "owningRust": {
-    "passed": 1527,
+    "passed": 2737,
     "failed": 0,
-    "ignored": 45,
-    "scope": "knx-core/projection/server, ordinary tests, isolated network lo; no fresh private corpus/full workspace claim"
+    "ignored": 118,
+    "scope": "core/projection/server/app/productdb/CLI ordinary tests, isolated lo; ignored tests not passes; no full workspace claim"
   },
   "frontend": {
-    "passed": 2558,
+    "passed": 2568,
     "failed": 0,
-    "files": 161
+    "files": 162
   },
   "browser": {
     "productionPassed": 19,
@@ -49,10 +52,10 @@
   "syntheticPerformance": {
     "scope": "Synthetic intercepted production app; one sample; browser-driver action-to-visible assertion wall time, not isolated JS duration",
     "objects": 1000,
-    "renderMs": 1302.764599999995,
-    "flatMs": 2007.1668079999945,
-    "filterMs": 625.2925229999964,
-    "sortMs": 1310.890778999994
+    "renderMs": 1814.5834000000032,
+    "flatMs": 1757.6451649999944,
+    "filterMs": 511.14240099999006,
+    "sortMs": 684.4954629999993
   },
   "steps": [
     {
@@ -66,8 +69,8 @@
         "--outputFile=<gate-scratch>/final-vitest.json"
       ],
       "exit": 0,
-      "seconds": 39.183,
-      "logSha256": "d30ae07768776cbd1d6fd5e1278b206cdfd1ea4384851dbb6e0e5648e02bcfe1"
+      "seconds": 36.729,
+      "logSha256": "3ff18783ab62ad011b17e1ec93dfd2f23932d2e6653f9dc2243c044dfd8c4a38"
     },
     {
       "name": "final-build",
@@ -77,8 +80,8 @@
         "build"
       ],
       "exit": 0,
-      "seconds": 1.22,
-      "logSha256": "461832dd0cb0f157aad577c2ea143787e0a3e48d477f29b15146c16c1ccd09f0"
+      "seconds": 1.126,
+      "logSha256": "c8031479ce189b5794d826fbd8e656f3b9423c997f9604697276c5f86a00f8b5"
     },
     {
       "name": "final-tsconfig.json",
@@ -89,7 +92,7 @@
         "tsconfig.json"
       ],
       "exit": 0,
-      "seconds": 0.788,
+      "seconds": 0.819,
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -101,7 +104,7 @@
         "tsconfig.theme-fixtures.json"
       ],
       "exit": 0,
-      "seconds": 0.785,
+      "seconds": 0.791,
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -113,7 +116,7 @@
         "tsconfig.flow-study.json"
       ],
       "exit": 0,
-      "seconds": 0.795,
+      "seconds": 0.803,
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -125,7 +128,7 @@
         "tsconfig.communication-fixtures.json"
       ],
       "exit": 0,
-      "seconds": 0.779,
+      "seconds": 0.796,
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -141,8 +144,8 @@
         "xtask"
       ],
       "exit": 0,
-      "seconds": 51.468,
-      "logSha256": "dc5f829b229af66ee75df57ae517a53b10163165a881c1585bc8a1776347f056"
+      "seconds": 3.047,
+      "logSha256": "d4b77f5b6c18960c0e3395d8133b3c13450286f0b51099d0cf9df95107b91cd1"
     },
     {
       "name": "combined-owning-rust",
@@ -151,11 +154,11 @@
         "-rn",
         "sh",
         "-c",
-        "ip link set lo up; cargo test -j 4 -p knx-core -p knx-projection -p knx-server --no-fail-fast"
+        "ip link set lo up; cargo test -j 4 -p knx-core -p knx-projection -p knx-server -p knx-app -p knx-productdb -p knx-cli --no-fail-fast"
       ],
       "exit": 0,
-      "seconds": 128.052,
-      "logSha256": "3dfc628c3297a27ebe4e91a6b79e57528682af9db8f379e5f56e8c648edd969d"
+      "seconds": 220.272,
+      "logSha256": "f6f4368905acaeb029f1cb64647b0271cc260c15dd226a2dc3979a496f97638a"
     },
     {
       "name": "combined-owning-clippy",
@@ -170,74 +173,106 @@
         "knx-projection",
         "-p",
         "knx-server",
+        "-p",
+        "knx-app",
+        "-p",
+        "knx-productdb",
+        "-p",
+        "knx-cli",
         "--all-targets",
         "--",
         "-D",
         "warnings"
       ],
       "exit": 0,
-      "seconds": 24.955,
-      "logSha256": "b1005f6f4131dce33bbf4477c27e24d22ad31864ec9a4e830f87d550eedc0f8f"
+      "seconds": 3.629,
+      "logSha256": "ee68ff7cbc6bf98b42715352caceb96cf56a51ca3d69e508240dc44acf6fa6c9"
     },
     {
       "name": "final-check-layering",
       "command": [
-        "<gate-scratch>/cargo/debug/xtask",
+        "<task-scratch>/attempt-offline-main/cargo/debug/xtask",
         "--root",
         "<integration-worktree>",
         "check-layering"
       ],
       "exit": 0,
-      "seconds": 0.837,
+      "seconds": 0.83,
       "logSha256": "46de10b52318a254d8ff0f5ef5560aea9268664a6ab16b9bc9f86d01766e2b45"
     },
     {
       "name": "final-check-headers",
       "command": [
-        "<gate-scratch>/cargo/debug/xtask",
+        "<task-scratch>/attempt-offline-main/cargo/debug/xtask",
         "--root",
         "<integration-worktree>",
         "check-headers"
       ],
       "exit": 0,
-      "seconds": 0.06,
-      "logSha256": "55dbab05278943d293d56b92d20de61823d6e4e536514ea80ab1a528fea6ce5b"
+      "seconds": 0.045,
+      "logSha256": "fcad1f3a642b004e4ce91005660e9eb1b8e5084fcd16b90fd7466122235dc80c"
     },
     {
       "name": "final-check-anchors",
       "command": [
-        "<gate-scratch>/cargo/debug/xtask",
+        "<task-scratch>/attempt-offline-main/cargo/debug/xtask",
         "--root",
         "<integration-worktree>",
         "check-anchors"
       ],
       "exit": 0,
-      "seconds": 0.32,
-      "logSha256": "be6b7043f42c1f018012ffa6ee5530e4da2a2443d811149c42590f92a7d99e8d"
+      "seconds": 0.253,
+      "logSha256": "4197898559269b6b3e8504bb8438bb936958db4f90ccb6c3cb511975112c1972"
     },
     {
       "name": "final-check-ledger",
       "command": [
-        "<gate-scratch>/cargo/debug/xtask",
+        "<task-scratch>/attempt-offline-main/cargo/debug/xtask",
         "--root",
         "<integration-worktree>",
         "check-ledger"
       ],
       "exit": 0,
-      "seconds": 0.058,
+      "seconds": 0.048,
       "logSha256": "8162a177be7ae8bcdfc424b7546a2f1c394c5054199294d5cdfc8f7200c7e04f"
     },
     {
       "name": "final-check-corpus-gates",
       "command": [
-        "<gate-scratch>/cargo/debug/xtask",
+        "<task-scratch>/attempt-offline-main/cargo/debug/xtask",
         "--root",
         "<integration-worktree>",
         "check-corpus-gates"
       ],
       "exit": 0,
-      "seconds": 0.176,
-      "logSha256": "ac0f5200c088885253f024b15c1954566b0ebba6dd245f0e91f29dbd17588100"
+      "seconds": 0.148,
+      "logSha256": "72ac04417f0ed46aa6e3be01c9bbabe19b6bd6bf5b74c6e7188e7c535112fde5"
+    },
+    {
+      "name": "final-ap1-corpus",
+      "command": [
+        "unshare",
+        "-rn",
+        "sh",
+        "-c",
+        "ip link set lo up; cargo test --release -j 4 -p knx-app --test procedure_resolution_corpus -- --ignored"
+      ],
+      "exit": 0,
+      "seconds": 168.067,
+      "logSha256": "378b788675ffb0555fc6f9f3554aabbdc002326c3ff5f1fcc7c33bdedd27137d"
+    },
+    {
+      "name": "final-download-corpus",
+      "command": [
+        "unshare",
+        "-rn",
+        "sh",
+        "-c",
+        "ip link set lo up; cargo test --release -j 4 -p knx-app --test download_coverage_corpus -- --ignored"
+      ],
+      "exit": 0,
+      "seconds": 168.841,
+      "logSha256": "b284fb373baf92205c30cc5d2297c43044d38f66d7f1eb5fea06f74c06a0be61"
     },
     {
       "name": "final-docs",
@@ -246,8 +281,8 @@
         "tools/check_documentation.py"
       ],
       "exit": 0,
-      "seconds": 0.376,
-      "logSha256": "2a6897b961f02384873b47e81cac9b3d5b923fb6acb2855abaa76796214f901c"
+      "seconds": 0.354,
+      "logSha256": "98ebcdc09efe27e859ffbda1e4726fbeab515377d54a18bc042472ca0c2cba1b"
     },
     {
       "name": "final-whitespace",
@@ -270,8 +305,8 @@
         "ip link set lo up; npx playwright test --config playwright.communication.config.ts"
       ],
       "exit": 0,
-      "seconds": 39.2,
-      "logSha256": "e5c90a407629e4ab031fca646ee43a9573422e162d5e6334e5d1fe929e985f99"
+      "seconds": 27.237,
+      "logSha256": "9ef53991134ff33f0973e86f06c54a1cbfde3bc266279c6d5fef65f8e8887a00"
     },
     {
       "name": "final-browser-full",
@@ -283,8 +318,8 @@
         "ip link set lo up; npx playwright test"
       ],
       "exit": 0,
-      "seconds": 359.197,
-      "logSha256": "b76a6b9dec2fd8fba2b84fc4568301b614cf0a6cf6a5ef90745f8ef630cdb616"
+      "seconds": 301.079,
+      "logSha256": "aeda6f837124d184fbbe4337cec75fd66a93ec1c3fbdb3a967c6e21c2fc5083f"
     },
     {
       "name": "final-real-runtime",
@@ -296,20 +331,55 @@
         "ip link set lo up; node <gate-scratch>/real-runtime.mjs"
       ],
       "exit": 0,
-      "seconds": 2.155,
+      "seconds": 2.143,
       "logSha256": "d24552ec1ddf4a827c351f01cfce562ffb9fdacd0fa7f7063705735d362c4fff"
     }
   ],
   "stats": {
-    "sourceCommit": "92ec5407dda4f71fcccef591154946d2af8f6c58",
-    "reportSha256": "0c167c0b3d374312b171dda20e5160f797db4b7e0b9de006e91e15866605ed93",
+    "sourceCommit": "58e2852f731d7f9fc2ff3db8a9502e5fe71d395e",
+    "reportSha256": "423fc138fdc125ba6fbdb383b95731e0902ace015702728f52c4e7be8d08cd69",
     "status": "ok",
     "freshCollection": true,
     "isolatedPriorSnapshotUnavailable": true,
-    "settingsCopiedUnchanged": true,
-    "normalization": "EOF blank-line normalization only; measurements/timestamp/source unchanged"
+    "settingsCopiedUnchanged": true
+  },
+  "privateCorpus": {
+    "AP1": {
+      "existingPrograms": 467,
+      "existingUntested": 98,
+      "existingVerified": 1,
+      "issues": {
+        "empty-fragment": 1,
+        "missing-mandatory-merge": 50,
+        "nested-or-unresolved-merge": 51,
+        "source-byte-limit": 6,
+        "uninterpreted-step": 295,
+        "unused-fragment": 1
+      },
+      "originalsUnchanged": true,
+      "programs": 75,
+      "sourceBoundResults": 75,
+      "statuses": {
+        "partial": 69,
+        "unavailable": 6
+      }
+    },
+    "tests": [
+      "procedure_resolution_corpus",
+      "download_coverage_corpus"
+    ],
+    "explicitReleaseRuns": true,
+    "outputScope": "corpus-wide totals only, no identities/items/raw sources"
   },
   "review": "in-session self-review; no independent-review claim",
+  "paintDiagnostic": {
+    "historicalOfflineSource": "73a777150fe6be0e1e7085eee6ff12189a2270bf",
+    "productionPassed": 17,
+    "productionFailed": 2,
+    "cause": "immediate Porcelain background read during shared120ms button transition",
+    "correction": "test waits actual animation.finished; unchanged contrast assertions; no retry/sleep"
+  },
+  "cargoTargetReuse": "same owned integration checkout; all21 commands rerun; explicit xtask root; no borrowed tests",
   "rejectedIntegrationAttempt": {
     "process": "proc_b0b65a851c34",
     "exit": 1,
@@ -324,14 +394,20 @@
     "completeRetry": "maxWorkers=2; original test timeout unchanged; first queued retry terminated before source manifest when new upstream names arrived; fresh reconciled-source19-stage chain green, not a borrowed-stage pass"
   },
   "scope": "Owner-authorized commit/main integration/push only; no release/deployment/KNX hardware or full native/ETS compatibility",
-  "publicFileInvariant": "Original local receipt/images and new CO modules unchanged; upstream guarded-name workflow retained; combined application re-gated rather than borrowing old-source acceptance",
-  "mergedRuntimeScreenshot": {
-    "path": "docs/evidence/communication-objects/publication-real-demo.png",
-    "sha256": "1ca9975594343c9ed39d26d9a89a10fd5fee650691b3319e8938202eb89ce57e",
-    "visualAssessment": "Directly inspected: upstream Name fields in center/Properties coexist with the table; left headings/filter controls and compact Program badges are readable. Right columns/flag controls extend into the local table scroller; overlay toasts cover part of the right pane in this frame. DOM tests separately verify fit/column reachability."
+  "publicFileInvariant": "Original local receipt/images and new CO modules unchanged; published guarded names and offline AP1 retained; final21-stage combined source is re-gated, not borrowed from the earlier19-stage tree",
+  "normalPushRace": {
+    "earlierAcceptedSource": "92ec5407dda4f71fcccef591154946d2af8f6c58",
+    "result": "non-fast-forward refused; no force push; new upstream merged and fully re-gated"
+  },
+  "publicationCandidateStageCount": 21,
+  "visualEvidence": {
+    "artifact": "communication-objects/publication-real-demo.png",
+    "inspected": true,
+    "assessment": "Actual production frontend with isolated real server and fictional demo. Header logo, device Name controls, readable CO toolbar and left headings visible. Right status/channel/flag content remains inside the local horizontal scroller; achievement/load toasts overlay the lower-right properties area. Screenshot does not establish all columns visible at once or full accessibility."
   },
   "publicationVerification": {
-    "status": "pending normal main push/readback"
+    "status": "pending normal main push/readback",
+    "method": "HEAD/fetched origin/main/live refs/heads/main exact equality plus feature ancestry; runtime proof retained after execution"
   },
   "metadataVerification": {
     "exit": 0,
@@ -366,15 +442,16 @@
         "exit": 0
       }
     ],
-    "logHashes": {
+    "process": "proc_0128c71a3a8f",
+    "scope": "five explicit-root repository gates, documentation, whitespace; final-source invariant",
+    "logs": {
       "check-layering": "46de10b52318a254d8ff0f5ef5560aea9268664a6ab16b9bc9f86d01766e2b45",
-      "check-headers": "55dbab05278943d293d56b92d20de61823d6e4e536514ea80ab1a528fea6ce5b",
-      "check-anchors": "be6b7043f42c1f018012ffa6ee5530e4da2a2443d811149c42590f92a7d99e8d",
+      "check-headers": "fcad1f3a642b004e4ce91005660e9eb1b8e5084fcd16b90fd7466122235dc80c",
+      "check-anchors": "4197898559269b6b3e8504bb8438bb936958db4f90ccb6c3cb511975112c1972",
       "check-ledger": "8162a177be7ae8bcdfc424b7546a2f1c394c5054199294d5cdfc8f7200c7e04f",
-      "check-corpus-gates": "ac0f5200c088885253f024b15c1954566b0ebba6dd245f0e91f29dbd17588100",
-      "docs": "efc3b5435260321f1083e4fb926d61ce75aa30c963dcb50e9166ab39f198de1d",
+      "check-corpus-gates": "72ac04417f0ed46aa6e3be01c9bbabe19b6bd6bf5b74c6e7188e7c535112fde5",
+      "docs": "575c11806bec476b611543cc7a4131723fb91e4e04631f43c531345624fde2bb",
       "whitespace": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    },
-    "initialLeaseWait": "120s expired before first check; no actual check ran in that refused attempt; subsequent cooperative queued metadata run all7 steps green"
+    }
   }
 }

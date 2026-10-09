@@ -16,6 +16,15 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Alpha.7 release boundary
+
+`v0.1.0-alpha.7` bundles the verified changes since Alpha.6: persistent native
+history/schema11, object-table UX, rename support, offline AP1 diagnostics,
+legacy improvements, the header badge and browser upload/return fixes.
+The detailed entries below retain their original source acceptance boundaries;
+Alpha.6 still does not contain those later additions. Back up native projects
+before upgrading: old builds refuse schema11. No new whole-ETS/hardware claim.
+
 ## Docker upload and browser return fixes (2026-10-09 source)
 
 The source fixes for GitHub #1/#2 raise the streamed upload file ceiling to
@@ -35,7 +44,7 @@ text sorting in a single-device editor. Draft/refusal/pending state survives vie
 changes; counts exclude open editing exceptions. Core/storage/API/protocol are
 unchanged. The owner authorized main publication after fresh combined-source
 acceptance; the [delivery receipt](../evidence/communication-objects-publication-2026-10-09.json)
-records the publication boundary. This is **not in alpha.6 or deployed**. The
+records the publication boundary. This is **not in alpha.6**; it is bundled in Alpha.7. The
 [contract and acceptance receipt](../COMMUNICATION_OBJECT_TABLE.md) distinguish
 synthetic/built-browser checks from native/Orca, real-bus and ETS compatibility.
 
@@ -48,7 +57,8 @@ is durable. Before first Save As history is session-only. Versions are inside
 the same file, not independent disaster backups. Native schema v11 needs a new
 build; this source feature is **not** in the published alpha.6 snapshot.
 [Contract](../PROJECT_HISTORY.md) · [verification](../status/2026-10-09-project-history-verification.md).
-Native/Orca, physical power-loss, hardware/ETS and release evidence remain separate.
+Native/Orca, physical power-loss and hardware/ETS evidence remain separate;
+Alpha.7 is the first release containing this history feature.
 
 ## New on main: Devices navigation
 

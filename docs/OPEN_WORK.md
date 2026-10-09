@@ -26,13 +26,14 @@ and publication follow-up, (3) deferred items with a recorded user decision, and
   checked / 7 open, `goal-ui.md` 37 / 0, `goal-commission.md` (no checklist,
   §4 completion condition). The 7 open boxes are all user-deferred or
   optional (section 3).
-- Ledger counts (its own *Counts* line, `check-ledger` green): snapshot 180 rows
-  — DONE 38, ACCEPTED_BOUNDARY 119, LATER 23; post-snapshot 11 rows — DONE 9,
-  ACCEPTED_BOUNDARY 2.
+- Ledger counts (its own *Counts* line, `check-ledger` green, after the
+  2026-10-09 owner cleanup): snapshot 180 rows — DONE 39, ACCEPTED_BOUNDARY 119,
+  LATER 22; post-snapshot 11 rows — DONE 9, ACCEPTED_BOUNDARY 2.
 - Handover `.ai/CURRENT_STATE.md` (newest entries per track), worktree list,
   and a path-by-path check of which root files exist on `origin/main`.
-- Current ledger mechanically recounted: 191 distinct IDs, 47 delivered,
-  121 accepted boundaries and 23 later-scope rows; no active/waiting rows.
+- Current ledger mechanically recounted: 191 distinct IDs, 48 delivered,
+  121 accepted boundaries and 22 later-scope rows; no active/waiting rows.
+  Every later-scope row is owned by `later`; no finished session owns open work.
   These are unequal source IDs, not a product-completion percentage.
 
 ## 1. Running or waiting right now
@@ -122,17 +123,14 @@ not erase subsequently delivered functionality.
 - **Platform validation:** native WebKitGTK, Orca/screen readers and complete
   accessibility, Firefox for the app; these are disclosed in every UI receipt.
 
-### Ledger rows whose text lags the code
+### Ledger owner cleanup (2026-10-09)
 
-Reported, not changed here (the owner edits its rows):
-
-- `FUTURE-04` (animated "who talks to whom" view) is `LATER`, but the
-  session-local telegram flow shipped as `FLOW-01` (DONE) and its follow-up
-  (ADR-0085). The row could become DONE/ACCEPTED_BOUNDARY with that evidence.
-- `FUTURE-01` cites only research; the read-only MCP adapter (ADR-0090) is a
-  delivered slice of it.
-- `FUTURE-08` must not be read as a missing humour mechanism: its residue is
-  optional additional copy. Owner rows are not changed by this audit.
+On the user's go the ledger rows that lagged the code were reconciled:
+`FUTURE-04` now cites the delivered telegram flow (`FLOW-01`, ADR-0077/0085),
+`FUTURE-01` names the delivered read-only MCP slice (ADR-0090), `FUTURE-08`
+states that only optional copy remains, and the four later-scope rows still
+owned by finished sessions (`FUTURE-05`, `KL-110`, `GAP-T30-04`, `KL-43`) moved
+to owner `later`. Routes naming removed goal files are kept as history.
 
 ## 5. Repository chores
 

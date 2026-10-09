@@ -8081,6 +8081,13 @@ rolled back, so no partial rows are written, but nothing of it can be used.
 
 ## §151 Real manufacturer packages exceed the product-ZIP size limits
 
+**2026-10-09 offline regression scope.** The explicitly invoked ignored
+`download_coverage_corpus` test uses the existing bounded `PackageLimits::LARGE`
+profile (ADR-0082) to include complete manufacturer bundles, rather than
+excluding packages or raising production defaults. Every install error still
+fails the test; there is no size-refusal skip. This does not lift the web
+catalogue limit or verify device downloads on hardware.
+
 **2026-10-04 AR06V count-boundary evidence, not a limit decision.** Public
 synthetic Scheme11 ZIPs assert actual reader counts:4096 entries install,
 retain the exact original archive and replay without changing any database

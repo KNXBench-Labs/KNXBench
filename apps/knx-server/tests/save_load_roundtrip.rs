@@ -11,6 +11,107 @@ use axum::http::{Request, StatusCode};
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
+async fn history_request(app: axum::Router, path: &str, payload: Value) -> Value {
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(path)
+                .header("content-type", "application/json")
+                .body(Body::from(payload.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        response.status(),
+        StatusCode::OK,
+        "request to {path} refused"
+    );
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    if bytes.is_empty() {
+        Value::Null
+    } else {
+        serde_json::from_slice(&bytes).unwrap()
+    }
+}
+
+async fn native_history_fixture() -> (tempfile::TempDir, PathBuf, axum::Router) {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("history.knxdb");
+    let app = knx_server::app(Arc::new(knx_server::AppState::default()), None);
+    history_request(
+        app.clone(),
+        "/api/project/new",
+        json!({"name": "History test"}),
+    )
+    .await;
+    history_request(app.clone(), "/api/project/save-as", json!({"path": path})).await;
+    (dir, path, app)
+}
+
+#[tokio::test]
+async fn native_saved_undo_and_redo_survive_a_new_server_state() {
+    let (_dir, path, app) = native_history_fixture().await;
+    history_request(
+        app.clone(),
+        "/api/project/group-address-style",
+        json!({"groupAddressStyle": "Free"}),
+    )
+    .await;
+    history_request(app.clone(), "/api/project/save", json!({})).await;
+    drop(app);
+    let reopened = knx_server::app(Arc::new(knx_server::AppState::default()), None);
+    let tree = history_request(reopened.clone(), "/api/project/open", json!({"path": path})).await;
+    assert_eq!(
+        tree["can_undo"], true,
+        "saved undo history was lost on restart"
+    );
+    let undo = history_request(reopened.clone(), "/api/undo", json!({})).await;
+    assert_eq!(undo["group_address_style"], "ThreeLevel");
+    drop(reopened);
+    let restarted = knx_server::app(Arc::new(knx_server::AppState::default()), None);
+    let tree = history_request(
+        restarted.clone(),
+        "/api/project/open",
+        json!({"path": path}),
+    )
+    .await;
+    assert_eq!(
+        tree["can_redo"], true,
+        "unsaved redo cursor was lost on restart"
+    );
+    let redo = history_request(restarted, "/api/redo", json!({})).await;
+    assert_eq!(redo["group_address_style"], "Free");
+}
+
+#[tokio::test]
+async fn native_unsaved_command_recovers_after_restart_without_claiming_saved() {
+    let (_dir, path, app) = native_history_fixture().await;
+    history_request(
+        app.clone(),
+        "/api/project/group-address-style",
+        json!({"groupAddressStyle": "Free"}),
+    )
+    .await;
+    drop(app);
+    let reopened = knx_server::app(Arc::new(knx_server::AppState::default()), None);
+    let tree = history_request(reopened.clone(), "/api/project/open", json!({"path": path})).await;
+    assert_eq!(
+        tree["group_address_style"], "Free",
+        "acknowledged native edit was lost"
+    );
+    assert_eq!(
+        tree["is_modified"], true,
+        "recovery must not turn an unsaved edit into a save"
+    );
+    let undo = history_request(reopened, "/api/undo", json!({})).await;
+    assert_eq!(undo["group_address_style"], "ThreeLevel");
+    assert_eq!(undo["is_modified"], false);
+}
+
 fn reference_ets4_path() -> PathBuf {
     knx_testsupport::reference_ets4_path()
 }

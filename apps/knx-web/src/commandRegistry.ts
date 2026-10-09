@@ -18,6 +18,7 @@ export interface CommandContext {
   openCompanion: () => void;
   openHelp: () => void;
   openCatalog: () => void;
+  openProjectHistory: () => void;
   openDevices: () => void;
   /** ADR-0093: the add-device wizard, aimed at the selected line or building part. */
   addDevice: () => void;
@@ -107,6 +108,12 @@ export const COMMANDS: PaletteCommand[] = [
     shortcutHint: "Ctrl+Shift+Z",
     isEnabled: (ctx) => ctx.tree?.can_redo === true,
     run: (ctx) => ctx.redo(),
+  },
+  {
+    id: "project-history",
+    labelKey: "projectHistory.title",
+    isEnabled: (ctx) => ctx.tree !== null,
+    run: (ctx) => ctx.openProjectHistory(),
   },
   {
     id: "search",

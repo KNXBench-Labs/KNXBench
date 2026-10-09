@@ -1,5 +1,17 @@
 # Compatibility
 
+## Native schema v11 history boundary (2026-10-09)
+
+Persistent undo/redo and project versions use native schema v11 and snapshot
+envelope v1 ([ADR-0100](adr/0100-persistent-native-project-history.md)). Older native
+stores migrate forward without inventing earlier edits or versions. Older builds
+refuse the newer schema; no downgrade is supplied. Unknown native extension tables
+that cannot be faithfully preserved by the snapshot format are refused before a
+history edit/save rather than silently discarded. SHA-256 detects image corruption,
+not malicious forgery or authentic signatures. This native history does not expand
+ETS import, commissioning, manufacturer semantics or hardware recovery support.
+
+
 ## Contribution evidence is not compatibility admission (2026-10-08)
 
 The [community analyzer](COMMUNITY_EVIDENCE.md) can inventory an unfamiliar XML

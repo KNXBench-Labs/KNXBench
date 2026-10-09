@@ -16,14 +16,14 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
-## Local source package: native project history
+## New on main: native project history
 
 The user-authorized 2026-10-09 package implements restart-safe native undo/redo,
 named and automatic saved-state versions, and confirmed restore with a safety
 version. Unsaved native work remains marked unsaved while its recovery journal
 is durable. Before first Save As history is session-only. Versions are inside
 the same file, not independent disaster backups. Native schema v11 needs a new
-build; this local package is **not** in the published alpha.6 snapshot.
+build; this source feature is **not** in the published alpha.6 snapshot.
 [Contract](../PROJECT_HISTORY.md) · [verification](../status/2026-10-09-project-history-verification.md).
 Native/Orca, physical power-loss, hardware/ETS and release evidence remain separate.
 

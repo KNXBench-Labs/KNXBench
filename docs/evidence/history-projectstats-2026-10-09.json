@@ -1,0 +1,10 @@
+{
+  "source_revision": "b81c17cf4e208c4ea955561a20ffcc245055842f",
+  "collector_exit": 0,
+  "collector_status": "ok",
+  "collection_scope": "clean detached checkout of merged candidate, unchanged canonical preferences; isolated previous-run baseline unavailable",
+  "report": "docs/ProjectStats.md",
+  "report_sha256": "8bafd4b13e2f3348bfc04a2dc8e036e955cc54563179721e6f033a229b060c96",
+  "format_change": "EOF-only blank normalization",
+  "publication": "pending full integrated gates"
+}

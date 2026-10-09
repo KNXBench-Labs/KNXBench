@@ -2,7 +2,7 @@
   "schema_version": 1,
   "scope": "local HISTORY-01/HISTORY-02 native project-history package",
   "base_revision": "a1fcc8f2af37581a1dca79223c665187c15dec5e",
-  "source_revision": "recorded-in-closure",
+  "source_revision": "62464763804d10307e19cfaa5dd9a482c0142439",
   "source_manifest_sha256": "1a426977225f07e3a0c77144a114961c9b7e53fb06f12ec76194450718c1bf97",
   "frozen_source_configuration_files": 1004,
   "rust": {
@@ -261,7 +261,150 @@
   ],
   "self_review": true,
   "independent_review": false,
-  "publication": "local-only; no main merge/push/release/deployment",
+  "publication": "Original feature verification was local; subsequent authorized main integration/publication recorded separately.",
   "hardware_claim": false,
-  "timestamp": "2026-10-09 15:03 CEST"
+  "timestamp": "2026-10-09 15:03 CEST",
+  "integration": {
+    "merge_revision": "b81c17cf4e208c4ea955561a20ffcc245055842f",
+    "feature_revision": "62464763804d10307e19cfaa5dd9a482c0142439",
+    "upstream_parent": "a3b9d493757532589660fe79d9270fdd694adf78",
+    "execution": {
+      "rust_passed": 3781,
+      "rust_failed": 0,
+      "rust_ignored": 184,
+      "rust_runner_blocks": 228,
+      "frozen_files": 1009,
+      "source_manifest_sha256": "7436072e1ffda3d80246ab73a2a3bd8945535632096e1e6adb2c18bf10bdb741",
+      "web_passed": 2523,
+      "web_files": 155,
+      "compiled_correct_checkout": true
+    },
+    "rust_stages": {
+      "fmt": 0,
+      "workspace": 0,
+      "clippy": 0,
+      "binaries": 0
+    },
+    "frontend": {
+      "unit_exit": 0,
+      "build_exit": 0,
+      "three_fixture_typechecks_exit": 0,
+      "chromium_passed": 208,
+      "chromium_exit": 0,
+      "chromium_process": "proc_f3e5c90e7059"
+    },
+    "tools_passed": 42,
+    "repository_gates_exit": 0,
+    "bindings_semantic_equal_original_bytes_restored": true,
+    "private_reference": {
+      "cases_expected": 3,
+      "cases_completed": 3,
+      "exit": 0,
+      "passed": true,
+      "input_unchanged": true,
+      "failure_stage": null,
+      "scope": "three existing reference projects; native model/passthrough restart/undo/redo/named versions/safety restore",
+      "raw_runtime_output_retained": false,
+      "confinement": "trusted local fixture resolver; canonical scope and before/after input identity, not an adversarial pathname-race proof"
+    },
+    "private_native": {
+      "accepted": true,
+      "stages": [
+        {
+          "scope": "native-store",
+          "registered": 3,
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0,
+          "exit": 0,
+          "accepted": true
+        },
+        {
+          "scope": "native-http-roundtrip",
+          "registered": 1,
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "exit": 0,
+          "accepted": true
+        },
+        {
+          "scope": "imported-instance-state",
+          "registered": 1,
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "exit": 0,
+          "accepted": true
+        }
+      ],
+      "network": "new loopback-only namespace",
+      "raw_private_runner_output_retained": false
+    },
+    "runtime": {
+      "accepted": true,
+      "runtime": "built server and production Chromium workbench",
+      "apiInterception": false,
+      "network": "verified interfaces exactly lo",
+      "assertions": [
+        "visible wizard and Save As produce a native file",
+        "visible Undo leaves both durable stack directions and dirty working state",
+        "visible named version captures the dirty working state",
+        "SIGKILL and native reopen recover stacks, dirty state, named version and new server incarnation",
+        "visible Undo and Redo work after the real server restart",
+        "visible Cancel is focused and sends no restore request",
+        "confirmed visible Restore preserves a safety version and clears both edit stacks",
+        "second crash/reopen retains restored baseline and safety version",
+        "built workbench completed without JavaScript page errors"
+      ],
+      "historyPostRequests": 2,
+      "pageErrors": 0,
+      "nativeFile": "task-owned synthetic project",
+      "hardwareClaim": false
+    },
+    "attempts": [
+      {
+        "exit": 1,
+        "classification": "integration harness dependency symlink; Vite deny-list 403 for resolved external font paths",
+        "named_failures": [
+          "e2e/theme-manager.e2e.ts:82:1 \u203a the Theme dropdown is the only theme list: shipped CRT included, no preview cards, storage location shown ",
+          "e2e/theme-manager.e2e.ts:94:1 \u203a choosing the shipped CRT theme stores only its id, paints its tokens and survives a cold reload ",
+          "e2e/theme-manager.e2e.ts:111:1 \u203a actual Appearance rejects hostile file values without DOM effects or requests to the asset ",
+          "e2e/theme-manager.e2e.ts:126:1 \u203a importing installs and selects in one write; switching back to System keeps the pack and follows the OS ",
+          "e2e/theme-manager.e2e.ts:145:1 \u203a an uncertain HTTP500 import keeps the last confirmed palette and never replays the write ",
+          "e2e/theme-manager.e2e.ts:161:1 \u203a replacement Escape cancels and returns focus to the persistent import control ",
+          "e2e/theme-manager.e2e.ts:176:1 \u203a replacement confirmation traps keyboard focus and Enter on Cancel never writes ",
+          "e2e/theme-manager.e2e.ts:194:1 \u203a an imported theme persists across cold reload and the actual download reimports exactly ",
+          "e2e/theme-manager.e2e.ts:216:1 \u203a confirmed removal of the selected pack falls back to System and retains unrelated settings ",
+          "e2e/theme-manager.e2e.ts:235:1 \u203a a conflicting import rolls back, then the existing peer refresh takes over without a second write ",
+          "e2e/theme-manager.e2e.ts:248:1 \u203a the theme file actions use the existing engineering tokens with wrapped actions ",
+          "e2e/theme-manager.e2e.ts:258:1 \u203a narrow Appearance remains scrollable and closing Settings restores its external opener ",
+          "e2e/theme-state.e2e.ts:72:1 \u203a graphite exposes representative actual editor, table, inspector and diagnostic state ",
+          "e2e/theme-state.e2e.ts:78:33 \u203a porcelain light: real state roles, keyboard focus, selection, validation, disabled dialog and accent ",
+          "e2e/theme-state.e2e.ts:78:33 \u203a graphite dark: real state roles, keyboard focus, selection, validation, disabled dialog and accent ",
+          "e2e/theme-state.e2e.ts:78:33 \u203a cupertino light: real state roles, keyboard focus, selection, validation, disabled dialog and accent ",
+          "e2e/theme-state.e2e.ts:78:33 \u203a lcars dark: real state roles, keyboard focus, selection, validation, disabled dialog and accent ",
+          "e2e/theme-state.e2e.ts:78:33 \u203a system light: real state roles, keyboard focus, selection, validation, disabled dialog and accent ",
+          "e2e/theme-state.e2e.ts:78:33 \u203a system dark: real state roles, keyboard focus, selection, validation, disabled dialog and accent ",
+          "e2e/theme-state.e2e.ts:78:33 \u203a user-orchid light: real state roles, keyboard focus, selection, validation, disabled dialog and accent ",
+          "e2e/theme-state.e2e.ts:78:33 \u203a user-midnight dark: real state roles, keyboard focus, selection, validation, disabled dialog and accent "
+        ],
+        "source_changed": false,
+        "correction": "local exact dependency copy, Vite caches excluded; no app configuration or error filtering changed"
+      },
+      {
+        "exit": 101,
+        "phase": "standalone reference-probe build",
+        "classification": "infrastructure: copied workspace lock lacks standalone probe package; --locked refused update",
+        "reference_execution": "not started",
+        "native_corpus_execution": "not started",
+        "successor": "integration-private-final"
+      }
+    ],
+    "publication": "all combined gates accepted; prepared for normal fast-forward main push",
+    "upstream_handover_preserved": true,
+    "upstream_catalog_values_preserved": true,
+    "independent_review": false,
+    "hardware_claim": false
+  }
 }

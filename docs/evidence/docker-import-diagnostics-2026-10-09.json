@@ -1,0 +1,336 @@
+{
+  "date": "2026-10-09",
+  "base": "b042048b318801acc67927fd55b3dbf61cfa62fd",
+  "sourceSha256": "54dc3cfba759e98e08c1371fbee9e94b4141ef988633c67b587a0fc3f9dea96f",
+  "sourceUnchanged": true,
+  "gateStarted": "2026-10-09T21:53:46.576013+02:00",
+  "gateCompleted": "2026-10-09T22:03:16.860431+02:00",
+  "gates": [
+    {
+      "name": "web-build",
+      "exit": 0,
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ]
+    },
+    {
+      "name": "fmt",
+      "exit": 0,
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--check"
+      ]
+    },
+    {
+      "name": "rust",
+      "exit": 0,
+      "command": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--locked",
+        "--",
+        "--test-threads=4"
+      ]
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "command": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ]
+    },
+    {
+      "name": "server-build",
+      "exit": 0,
+      "command": [
+        "cargo",
+        "build",
+        "-p",
+        "knx-server",
+        "--locked"
+      ]
+    },
+    {
+      "name": "vitest",
+      "exit": 0,
+      "command": [
+        "npm",
+        "test",
+        "--",
+        "--maxWorkers=2",
+        "--reporter=json",
+        "--outputFile=<task-scratch>/vitest.json"
+      ]
+    },
+    {
+      "name": "e2e-types",
+      "exit": 0,
+      "command": [
+        "npx",
+        "tsc",
+        "-p",
+        "<task-scratch>/tsconfig.e2e.json"
+      ]
+    },
+    {
+      "name": "flow-types",
+      "exit": 0,
+      "command": [
+        "npm",
+        "run",
+        "check:flow-study"
+      ]
+    },
+    {
+      "name": "theme-types",
+      "exit": 0,
+      "command": [
+        "npm",
+        "run",
+        "check:theme-fixtures"
+      ]
+    },
+    {
+      "name": "browser",
+      "exit": 0,
+      "command": [
+        "unshare",
+        "-rn",
+        "--",
+        "sh",
+        "-c",
+        "ip link set lo up && TMPDIR=<browser-scratch> npx playwright test"
+      ]
+    },
+    {
+      "name": "check-layering",
+      "exit": 0,
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "<worktree>",
+        "check-layering"
+      ]
+    },
+    {
+      "name": "check-headers",
+      "exit": 0,
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "<worktree>",
+        "check-headers"
+      ]
+    },
+    {
+      "name": "check-anchors",
+      "exit": 0,
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "<worktree>",
+        "check-anchors"
+      ]
+    },
+    {
+      "name": "check-ledger",
+      "exit": 0,
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "<worktree>",
+        "check-ledger"
+      ]
+    },
+    {
+      "name": "check-corpus-gates",
+      "exit": 0,
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "<worktree>",
+        "check-corpus-gates"
+      ]
+    },
+    {
+      "name": "docs",
+      "exit": 0,
+      "command": [
+        "python3",
+        "tools/check_documentation.py"
+      ]
+    },
+    {
+      "name": "tool-tests",
+      "exit": 0,
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/tests"
+      ]
+    },
+    {
+      "name": "whitespace",
+      "exit": 0,
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ]
+    }
+  ],
+  "counts": {
+    "rustPassed": 3831,
+    "rustFailed": 0,
+    "rustIgnored": 185,
+    "rustResultBlocks": 232,
+    "vitestPassed": 2583,
+    "vitestFailed": 0,
+    "vitestFiles": 162,
+    "vitestSuccess": true,
+    "browserPassed": 236,
+    "stages": 18
+  },
+  "production": {
+    "checks": [
+      "loopback-only real server ready",
+      "isolated HOME/XDG/project paths; dedicated empty catalogue created",
+      "115 MiB HTTP multipart upload: status 200, SHA-256 exact, project unchanged",
+      "en 1440px: real built Diagnostics returns to editor; open project unchanged",
+      "de 400px: real built Diagnostics returns to editor; open project unchanged"
+    ],
+    "source": "local source-built server and production Vite bundle",
+    "noApiInterception": true,
+    "networkInterfaces": [
+      "lo"
+    ],
+    "uploadFixtureIsValidProject": false
+  },
+  "review": {
+    "kind": "self-review",
+    "blockingProductFindings": [],
+    "closedHarnessFinding": "Initial runtime inherited default HOME/XDG catalogue opener. Final runtime separately isolates all constructor paths and creates an empty dedicated catalogue. No pre-run hash exists for the earlier host catalogue; its integrity is not claimed.",
+    "checks": [
+      "bounded streamed file admission",
+      "checked byte arithmetic",
+      "partial-file cleanup",
+      "existing destination no-clobber",
+      "filename path reduction",
+      "native return preserved",
+      "source-bound Flow selection preserved",
+      "authenticated read-only resume",
+      "ordinary startup unchanged",
+      "cancellation and intervening tree guards",
+      "saved-file authority"
+    ],
+    "visualInspection": [
+      "EN1440 built Diagnostics: active readable return button inside viewport",
+      "DE400 built editor: visible fictional installation and readable unclipped important controls"
+    ],
+    "securityScan": {
+      "scanAddedLinesAndUntrackedSources": true,
+      "findings": {
+        "personal_path": 0,
+        "secret_literal": 0,
+        "dangerous_eval": 0,
+        "unsafe_deserialization": 0
+      },
+      "reviewType": "self-review"
+    }
+  },
+  "negativeControls": [
+    "Original 115 MiB upload: one executed test refused HTTP413 instead of200",
+    "Standalone Diagnostics component: disabled return button",
+    "Historical focus-only browser mutation: live-opener URL assertion failed",
+    "Read-only App resume: Device D absent on pre-resume implementation"
+  ],
+  "attempts": [
+    {
+      "gateAttempt": 1,
+      "classification": "setup failure: missing embedded web/dist; downstream not accepted"
+    },
+    {
+      "gateAttempt": 2,
+      "classification": "deliberately canceled for discovered resume gap; not accepted"
+    },
+    {
+      "gateAttempt": 3,
+      "classification": "accepted18-stage unchanged-source gate"
+    },
+    {
+      "productionAttempts": "1/2",
+      "classification": "harness response-shape correction / real resume gap; not accepted"
+    },
+    {
+      "productionAttempt": 3,
+      "classification": "functional pass but inherited HOME/XDG; excluded from final isolated acceptance"
+    },
+    {
+      "productionAttempt": 4,
+      "classification": "accepted5-check sealed runtime"
+    }
+  ],
+  "limits": [
+    "185 ordinary Rust tests ignored; no explicit private-corpus sweep",
+    "Synthetic upload is not a valid KNX archive or reporter import proof",
+    "Native focus is mocked-adapter evidence, not real desktop acceptance",
+    "No real bus action, release, deployment or full ETS compatibility claim",
+    "Browser return does not close the separate original editor or transfer transient selection"
+  ],
+  "delivery": "Verified fixes published on the review branch in PR #3. Not merged or released; final documentation-only closure readback recorded locally.",
+  "codeCommits": [
+    "bff4820daa7a92820ec62b7bfdc3b707d1e0489f",
+    "9bccc76c31b9aea7ad0a849ea09a7c6868e299c7"
+  ],
+  "acceptedProcess": "proc_ab9ead4d5572",
+  "publication": {
+    "observedAt": "2026-10-09 22:22 CEST",
+    "pullRequest": 3,
+    "url": "https://github.com/KNXBench-Labs/KNXBench/pull/3",
+    "state": "OPEN",
+    "initialVerifiedHead": "bf726714a722987fbb86a4454dc1bf31a342daf4",
+    "branch": "fix/docker-import-diagnostics-20261009",
+    "base": "main",
+    "fileCount": 20,
+    "exactLocalTrackingLiveRefs": true,
+    "exactPathsVerified": true,
+    "ci": "no branch checks reported at observation; local gate acceptance only",
+    "merged": false,
+    "released": false
+  }
+}

@@ -5,6 +5,7 @@
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { SettingsDiagnostic } from "./settingsStore";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
+import { admitDeviceCatalog, type DeviceCatalog } from "./deviceList";
 import type { DocumentationOptions } from "./documentationOptions";
 import type { ProjectSeed } from "./projectSeed";
 import { notifySessionExpired } from "./session";
@@ -57,6 +58,11 @@ export function noteRefusal(path: string, status: number): void {
   if (status === 401 && !path.startsWith(AUTH_PATH_PREFIX)) {
     notifySessionExpired();
   }
+}
+
+/** One read-only catalogue batch for the complete open project. */
+export async function deviceCatalog(language?: string | null): Promise<DeviceCatalog> {
+  return admitDeviceCatalog(await request(`/api/devices${language ? `?language=${encodeURIComponent(language)}` : ""}`));
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

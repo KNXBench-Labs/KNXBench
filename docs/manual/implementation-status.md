@@ -16,6 +16,18 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## New local source package: Devices navigation
+
+The owner-approved Devices list/editor package is implemented in the isolated
+`devices-navigation-20261008` worktree, not yet published or deployed. It adds
+the navigation/palette entry, a filterable/sortable canonical device table,
+central editor with app-local Back, preserved list state and scoped device links.
+Product-only metadata uses a read-only snapshot-bound batch; unavailable data
+is named, not inferred. [Contract and verification](../DEVICE_NAVIGATION.md).
+The released alpha.5 AppImage is unchanged. Native/Orca/hardware acceptance,
+URL/browser history, persistent state, grouping and project-diff/log-prose links
+are not part of this package.
+
 ## How to read the tables
 
 | Marker | Meaning |

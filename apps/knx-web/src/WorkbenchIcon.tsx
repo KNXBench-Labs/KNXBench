@@ -1,6 +1,6 @@
 /** A consistent small outline icon vocabulary, rendered without an icon dependency. */
 export type WorkbenchIconName =
-  | "overview" | "buildings" | "topology" | "addresses" | "catalog" | "log" | "monitor" | "panel"
+  | "overview" | "devices" | "buildings" | "topology" | "addresses" | "catalog" | "log" | "monitor" | "panel"
   // Achievement glyphs (ADR-0089), drawn in the same 24-unit outline style.
   | "trophy" | "star" | "command" | "palette" | "language" | "save" | "undo" | "moon" | "gift" | "gamepad"
   | "lock" | "search" | "check" | "plug" | "download" | "bug";
@@ -9,6 +9,7 @@ const paths: Record<WorkbenchIconName, string> = {
   buildings: "M3 10l9-7 9 7 M5 9v12h14V9 M9 21v-8h6v8",
   topology: "M9 2h6v5H9z M2 17h6v5H2z M16 17h6v5h-6z M12 7v5 M5 17v-5h14v5",
   addresses: "M8 5h13 M8 12h13 M8 19h13 M3 5h.01 M3 12h.01 M3 19h.01",
+  devices: "M5 5h14v14H5z M8 2v3 M12 2v3 M16 2v3 M8 19v3 M12 19v3 M16 19v3 M2 8h3 M2 12h3 M2 16h3 M19 8h3 M19 12h3 M19 16h3",
   catalog: "M3 7l9-4 9 4v13H3z M3 7h18 M9 7v13 M15 7v13",
   log: "M5 2h10l4 4v16H5z M14 2v5h5 M8 12h8 M8 16h8",
   monitor: "M2 12h4l3-8 5 16 3-8h5",

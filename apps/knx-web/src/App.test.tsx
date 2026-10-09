@@ -42,6 +42,7 @@ const apiMock = vi.hoisted(() => ({
   getSessionLog: vi.fn().mockResolvedValue([]),
   productLanguages: vi.fn().mockResolvedValue([]),
   deviceDetail: vi.fn(),
+  deviceCatalog: vi.fn().mockResolvedValue({ schemaVersion: 1, serverIncarnation: null, snapshotRevision: null, devices: [] }),
   // Only the "edit-triggered refetch races a language reply" regression
   // test below drives this — it needs `handleTreeUpdate`'s own fetch to
   // fire from a real command, and `undo` is the cheapest one on the
@@ -3672,6 +3673,100 @@ describe("App — achievement events from loading a project", () => {
     const { seen, root } = await load("/tmp/house.knxdb", "Open (.knxdb)…");
     expect(seen.some((event) => event.type === "projectOpened")).toBe(true);
     expect(seen.some((event) => event.type === "etsImported")).toBe(false);
+    await act(async () => root.unmount());
+  });
+});
+
+
+describe("App — Devices navigation", () => {
+  it("removes stale editable details when a snapshot refresh cannot find the selected device", async () => {
+    apiMock.deviceDetail.mockResolvedValue({ ...deviceDetailFixture(), id: 1, name: "Device A" });
+    const original = treeWithDragTargets(); original.can_undo = true;
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxdb"); apiMock.openProject.mockResolvedValue(original);
+    const root = await renderApp();
+    await act(async () => host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!.click());
+    await act(async () => findButton("Topology").click());
+    await act(async () => host!.querySelector<HTMLButtonElement>(".diagram-device")!.click());
+    const removed = treeWithDragTargets(); removed.installations[0].topology[0].lines[0].devices = [];
+    apiMock.undo.mockResolvedValueOnce(removed); apiMock.deviceDetail.mockRejectedValueOnce(new Error("device not found"));
+    await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Undo"]')!.click());
+    expect(host!.querySelector(".device-workspace"), "a missing selected device cannot retain editable fields").toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("does not offer a device list with no project open", async () => {
+    const root = await renderApp();
+    expect(findButton("Devices").disabled).toBe(true);
+    await act(async () => root.unmount());
+  });
+
+  it("drops deleted ids from a preserved device multi-selection on a new snapshot", async () => {
+    const original = treeWithDragTargets(); original.can_undo = true;
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxdb");
+    apiMock.openProject.mockResolvedValue(original);
+    const root = await renderApp();
+    await act(async () => host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!.click());
+    await act(async () => findButton("Devices").click());
+    await act(async () => host!.querySelector<HTMLInputElement>(".devices-table tbody input")!.click());
+    expect(host!.querySelector(".bulk-action-toolbar")).not.toBeNull();
+    const removed = treeWithDragTargets(); removed.installations[0].topology[0].lines[0].devices = [];
+    apiMock.undo.mockResolvedValueOnce(removed);
+    await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Undo"]')!.click());
+    expect(host!.querySelector(".bulk-action-toolbar"), "deleted ids cannot remain bulk-action targets").toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("opens a device from a group-address link and returns to that address", async () => {
+    const project = treeWithDragTargets();
+    project.installations[0].group_addresses = [{ id: 500, name: "Kitchen light", address: "1/1/1",
+      range: null, dpts: [], links: [{ device_id: 1, device_name: "Device A", device_address: null,
+        com_object_id: 20, com_object_number: 1, com_object_name: "Switch", direction: "Receive" }] }];
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxdb");
+    apiMock.openProject.mockResolvedValue(project);
+    apiMock.deviceDetail.mockResolvedValue({ ...deviceDetailFixture(), id: 1, name: "Device A" });
+    const root = await renderApp();
+    await act(async () => host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!.click());
+    await act(async () => findButton("Group addresses").click());
+    await act(async () => host!.querySelector<HTMLButtonElement>(".address-table .table-select")!.click());
+    const link = host!.querySelector<HTMLButtonElement>(".address-links-panel .device-link");
+    expect(link, "the linked project device must be a navigation button").not.toBeNull();
+    await act(async () => link!.click());
+    expect(host!.querySelector(".device-workspace h2")?.textContent).toBe("Device A");
+    await act(async () => findButton("← Back").click());
+    expect(host!.querySelector(".address-links-panel")?.textContent).toContain("1/1/1");
+    await act(async () => root.unmount());
+  });
+
+  it("opens the device list from the dashboard device count", async () => {
+    const root = await openDragProject();
+    const count = host!.querySelector<HTMLButtonElement>(".dashboard .devices-count-link");
+    expect(count, "dashboard count must link to all project devices").not.toBeNull();
+    await act(async () => count!.click());
+    expect(host!.querySelector(".devices-workspace")?.closest("[hidden]")).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("opens the project-wide device list from the left navigation", async () => {
+    const root = await openDragProject();
+    await act(async () => findButton("Devices").click());
+    expect(host!.querySelector(".devices-workspace h1")?.textContent).toBe("Devices");
+    expect(host!.querySelectorAll(".devices-table tbody tr")).toHaveLength(1);
+    expect(host!.querySelector(".devices-table")?.textContent).toContain("Device A");
+    expect(host!.querySelector('.workbench-navigation button[aria-current="page"]')?.textContent).toBe("Devices");
+    await act(async () => root.unmount());
+  });
+
+  it("replaces topology with the device editor and returns to the original view", async () => {
+    apiMock.deviceDetail.mockResolvedValue({ ...deviceDetailFixture(), id: 1, name: "Device A" });
+    const root = await openDragProject();
+    await act(async () => findButton("Topology").click());
+    await act(async () => host!.querySelector<HTMLButtonElement>(".diagram-device")!.click());
+    expect(host!.querySelector(".workbench-center .device-workspace h2")?.textContent).toBe("Device A");
+    expect(host!.querySelector(".workbench-center .structure-workspace")).toBeNull();
+    expect(host!.querySelector('.workbench-navigation button[aria-current="page"]')?.textContent).toBe("Devices");
+    await act(async () => findButton("← Back").click());
+    expect(host!.querySelector(".workbench-center .structure-workspace h1")?.textContent).toBe("Topology");
+    expect(host!.querySelector(".workbench-center .device-workspace")).toBeNull();
     await act(async () => root.unmount());
   });
 });

@@ -26,6 +26,25 @@ The audit inspects the complete heading/anchor inventory and current manual
 claims, with targeted source/test verification. It does **not** re-run every
 historical corpus, protocol, hardware, native-platform or advisory investigation.
 
+## Devices navigation: local source, current-project links and bounded evidence (2026-10-08)
+
+[Device navigation](DEVICE_NAVIGATION.md) adds a local source package, not an
+updated release or installed runtime. Generic address links resolve exactly
+one current-project device; they do not identify physical hardware or a
+historical installation. Unknown/ambiguous targets remain passive. The separate
+diagnostic companion remains non-editing. URL/browser history, persistent
+view state, grouping, free-text log parsing and project-diff links remain out.
+
+Catalogue metadata is server/revision-bound and product-only, not a new
+application-version or compatibility policy. Product-query failures retain
+canonical device identities and report unavailable metadata. Transport/malformed
+batch failures leave current tree rows visible with an explicit error; unplaced
+registry devices require a successful identity batch. The large-project browser
+case is synthetic and bounded to 5000 devices: the production fixture measured
+9742 ms to render the full non-virtualized table and 1264 ms to filter it. This
+is not unlimited performance or a real-installation benchmark.
+Native WebKitGTK/Orca and real hardware are not newly verified.
+
 ## Community evidence is bounded, manually shared and not anonymous (2026-10-08)
 
 [The contribution contract](COMMUNITY_EVIDENCE.md) records the archive, XML,

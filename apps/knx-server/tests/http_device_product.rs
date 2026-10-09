@@ -240,3 +240,161 @@ async fn device_product_resolves_without_a_language_query_parameter() {
     let body = body_json(response).await;
     assert_eq!(body["product"]["resolution"], "Resolved");
 }
+
+#[tokio::test]
+async fn device_catalog_is_a_read_only_snapshot_bound_batch() {
+    let (_dir, products) = temp_product_db();
+    let state = Arc::new(state_with_device(Some(products), "M-1_P-1", "H-1_HP-1"));
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(state.clone(), None);
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/devices")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        response.status(),
+        StatusCode::OK,
+        "device catalogue batch GET must exist"
+    );
+    let body = body_json(response).await;
+    assert_eq!(body["schemaVersion"], 1);
+    assert_eq!(body["serverIncarnation"], state.server_incarnation);
+    assert_eq!(body["snapshotRevision"], 0);
+    assert_eq!(body["devices"].as_array().unwrap().len(), 1);
+    let row = &body["devices"][0];
+    assert_eq!(row["id"], 1);
+    assert_eq!(
+        row["device"]["name"], "Device 1",
+        "unplaced devices still have their canonical identity"
+    );
+    assert_eq!(row["resolution"], "Resolved");
+    assert_eq!(row["productText"], "Switch Actuator");
+    assert_eq!(row["orderNumber"], "ORD-1");
+    assert_eq!(*state.project.lock().unwrap(), before);
+}
+
+#[tokio::test]
+async fn device_catalog_keeps_canonical_devices_when_product_lookup_fails() {
+    let (_dir, products) = temp_product_db();
+    products.execute_batch("DROP TABLE product").unwrap();
+    let state = Arc::new(state_with_device(Some(products), "M-1_P-1", "H-1_HP-1"));
+    let before = state.project.lock().unwrap().clone();
+    let response = knx_server::app(state.clone(), None)
+        .oneshot(
+            Request::builder()
+                .uri("/api/devices")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        response.status(),
+        StatusCode::OK,
+        "canonical device identity survives product lookup failure"
+    );
+    let body = body_json(response).await;
+    assert_eq!(body["problem"], "lookupFailed");
+    assert_eq!(body["devices"][0]["device"]["name"], "Device 1");
+    assert_eq!(body["devices"][0]["resolution"], "Unavailable");
+    assert!(body["devices"][0]["productText"].is_null());
+    assert_eq!(*state.project.lock().unwrap(), before);
+}
+
+#[tokio::test]
+async fn device_catalog_distinguishes_missing_reference_database_and_product() {
+    for (products, product_ref, expected) in [
+        (None, "", "NoReference"),
+        (None, "missing", "NoDatabase"),
+        (Some(temp_product_db().1), "missing", "NotInDatabase"),
+    ] {
+        let state = Arc::new(state_with_device(products, product_ref, ""));
+        let response = knx_server::app(state.clone(), None)
+            .oneshot(
+                Request::builder()
+                    .uri("/api/devices?language=de")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_json(response).await;
+        assert_eq!(body["devices"][0]["resolution"], expected);
+        assert!(body["devices"][0]["productText"].is_null());
+        assert!(body["problem"].is_null());
+    }
+}
+
+#[tokio::test]
+async fn device_catalog_reuses_shared_product_metadata_and_keeps_every_device() {
+    let (_dir, products) = temp_product_db();
+    let state = Arc::new(state_with_device(Some(products), "M-1_P-1", "H-1_HP-1"));
+    {
+        let mut guard = state.project.lock().unwrap();
+        let project = guard.as_mut().unwrap();
+        let original = project.devices.get(DeviceId(1)).unwrap().clone();
+        for id in [9, 2, 7] {
+            let mut device = original.clone();
+            device.id = DeviceId(id);
+            device.name = format!("Device {id}");
+            project.devices.insert(device);
+        }
+    }
+    state
+        .project_revision
+        .store(7, std::sync::atomic::Ordering::Relaxed);
+    let before = state.project.lock().unwrap().clone();
+    let response = knx_server::app(state.clone(), None)
+        .oneshot(
+            Request::builder()
+                .uri("/api/devices?language=de")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(body["snapshotRevision"], 7);
+    let rows = body["devices"].as_array().unwrap();
+    assert_eq!(
+        rows.iter()
+            .map(|row| row["id"].as_u64().unwrap())
+            .collect::<Vec<_>>(),
+        vec![1, 2, 7, 9]
+    );
+    assert!(
+        rows.iter()
+            .all(|row| row["productText"] == "Switch Actuator"
+                && row["productTextLanguage"].is_null())
+    );
+    assert_eq!(*state.project.lock().unwrap(), before);
+}
+
+#[tokio::test]
+async fn device_catalog_refuses_no_project_without_changing_server_state() {
+    let state = Arc::new(knx_server::AppState::default());
+    let response = knx_server::app(state.clone(), None)
+        .oneshot(
+            Request::builder()
+                .uri("/api/devices")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert!(state.project.lock().unwrap().is_none());
+    assert_eq!(
+        state
+            .project_revision
+            .load(std::sync::atomic::Ordering::Relaxed),
+        0
+    );
+}

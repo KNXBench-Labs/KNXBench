@@ -40,7 +40,7 @@ and publication follow-up, (3) deferred items with a recorded user decision, and
 | Track | State | Next step | Where |
 | --- | --- | --- | --- |
 | Legacy ETS3 product databases (`.vd3`–`.vd5`) | L1 inspection, L2 import/secret withholding and L3 web upload/password handling are on `main` | Untyped `TypeNone` spacer presentation still needs a separate fix (KL §128). The large `.vd5` package (Siemens sample: 173 MB payload) exceeds the 64 MiB bounds; measure before widening them. **L4** device download remains later scope. | [ADR-0094](adr/0094-legacy-exim-product-files.md), [VD4 import](VD4_PRODUCT_DATABASE_IMPORT.md), KL §128 |
-| Devices navigation ("Geräte" view, every device mention links to the editor) | Grill-me round 1 (Q1–Q5) asked, not answered | Answers, then synthesis and an explicit go | `.ai/logs/2026-10-08_claude_devices-view-grilling.md` |
+| Devices navigation ("Geräte" view and scoped device links) | Owner approved Q1–Q12; local implementation and scoped tests/build/browser self-review complete in `devices-navigation-20261008` | Owner inspection; commit/push/main integration/deployment require a separate go | [Contract](DEVICE_NAVIGATION.md), [receipt](evidence/devices-navigation-2026-10-08.json), ADR-0096 |
 | Website / published Evolution Story | Edition `2026-10-08.4` is approved and deployed with the site; first publication is complete | HTTP→HTTPS redirect/IPv6 verification, Pages action-runtime maintenance and owner's privacy review; optional WebKit evidence remains separate | [story/](../story/README.md), [WEBSITE](WEBSITE.md), ADR-0068/0095 |
 
 **Commissioning refusal buckets are an evidence backlog, not a running track.**

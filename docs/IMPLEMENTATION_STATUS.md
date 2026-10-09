@@ -42,6 +42,35 @@ does not erase a broader platform/device limitation or imply a new release.
   independent review. Local/uncommitted/unpublished; no root sync, deployment,
   Rust/private-corpus rerun, native accessibility or hardware acceptance.
 
+## 2026-10-08 — Devices gets a seat in the navigation (local source package)
+
+- Owner-approved Q1–Q12 implemented locally on `115b19f6`, in the isolated
+  `feature/devices-navigation-20261008` worktree. No commit/push, main/root
+  synchronization, release or deployment. The released alpha.5 AppImage is unchanged.
+- Devices/palette/Overview navigation opens a project-wide filterable/sortable
+  canonical list, including unplaced devices; central editor with app-local Back
+  reuses existing tabs/inspector and preserves list filter/sort/scroll/selection.
+  Scoped links require explicit current IDs or unique individual-address matches.
+- Read-only snapshot-bound GET `/api/devices` resolves each product reference
+  once. Product lookup failures preserve canonical identities with explicit
+  unavailable metadata; product identity does not establish application compatibility.
+  Monitor links do not stop polling/reconnect or trigger hardware-operation forms.
+- Final tests: frontend 2473 passed / 0 failed (152 files); server/projection
+  781 passed / 0 failed / 45 ignored. Clippy, fmt, server/frontend builds,
+  theme/Flow/new Devices fixture type checks pass. Production-preview Chromium
+  13/13 and full intercepted Chromium suite 188/188 pass; the latter includes
+  those feature scenarios and is not an additional disjoint feature count.
+- Isolated actual-server HTTP + production-browser sample smoke confirms eight
+  fictional canonical devices, resolved products, unchanged read-only snapshot,
+  central editor/Back and no page exceptions. Screenshots visibly inspected;
+  long building paths use the existing bounded select and the wide table scrolls
+  locally. Initial browser failures and smoke-harness selector/onboarding mistakes
+  remain recorded, not relabelled as successful attempts.
+- [Contract](DEVICE_NAVIGATION.md), [ADR-0096](adr/0096-devices-navigation-and-catalogue-batch.md)
+  and [receipt](evidence/devices-navigation-2026-10-08.json) record scope and evidence.
+  In-session self-review, not independent-agent review. No hardware/private-corpus/
+  full workspace/native WebKitGTK/Orca or complete accessibility acceptance.
+
 ## 2026-10-08 — Post-rebase community links verified
 
 - Audited public main `608a204bf28aa9df83413aa5ccb65241c32478aa`; current app,

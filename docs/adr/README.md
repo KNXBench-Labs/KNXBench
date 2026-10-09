@@ -94,3 +94,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0093](0093-wizards-are-views-over-existing-commands.md) | Wizards are views over existing commands; a new project's structure is seeded atomically | Accepted (both wizards implemented) | 2026-10-08 |
 | [0094](0094-legacy-exim-product-files.md) | Legacy EX-IM product files get a separate, content-detected path with a user-supplied password | Accepted | 2026-10-08 |
 | [0095](0095-static-marketing-companion.md) | Marketing is a static companion, not a hosted engineering application | Accepted (site deployment gated) | 2026-10-08 |
+| [0096](0096-devices-navigation-and-catalogue-batch.md) | Devices navigation and a snapshot-bound catalogue batch | Accepted implementation decision; local delivery/publication separate | 2026-10-08 |

@@ -1,6 +1,7 @@
 /** Offline project readiness and opt-in, read-only comparison of one device. */
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
+import DeviceLink from "./DeviceLink";
 import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { splitGatewayEndpoint, validateGatewayFields } from "./gatewayEndpoint";
@@ -176,7 +177,7 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
                 <th>{t("deviceChecks.planSize")}</th>
               </tr></thead>
               <tbody>{readiness.devices.map((device, index) => <tr key={index}>
-                <td>{device.name}<small><code>{device.programRef || "—"}</code></small></td>
+                <td><DeviceLink address={device.address}>{device.name}</DeviceLink><small><code>{device.programRef || "—"}</code></small></td>
                 <td><code>{device.address ?? "—"}</code></td>
                 <td>{gradeLabel(t, device.readiness)}</td>
                 <td>{device.category && <code>{device.category}: </code>}{device.detail ?? t("deviceChecks.noEvidence")}</td>
@@ -209,6 +210,7 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
             {t("deviceChecks.review")}
           </button>
         </div>
+        {address && <p><DeviceLink address={address}>{t("devices.openEditor")}</DeviceLink></p>}
         {review && <div className="device-checks-confirm" role="group" aria-label={t("deviceChecks.review")}>
           <p>{t("deviceChecks.confirmHint", review)}</p>
           <button type="button" onClick={() => void compare()}>{t("deviceChecks.confirm")}</button>

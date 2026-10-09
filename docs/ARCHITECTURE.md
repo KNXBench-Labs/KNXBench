@@ -1,5 +1,19 @@
 # Architecture
 
+## Device navigation and canonical catalogue reads (2026-10-08)
+
+[ADR-0096](adr/0096-devices-navigation-and-catalogue-batch.md) and the
+[device navigation contract](DEVICE_NAVIGATION.md) keep the new central
+Devices list/editor in UI and lightweight, version-1 catalogue reads in the
+server adapter. The existing canonical device projection is reused for every
+device, including those absent from placement branches; product identities
+are resolved once per reference, separately from application compatibility.
+Server/revision binding and explicit unavailable states prevent stale or
+failed product reads from becoming guessed metadata. Scoped UI links reuse
+selection, not protocol actions; the existing monitor remains mounted.
+No core/store/product schema, format, protocol or dependency changes.
+Local implementation/publication and scoped acceptance are separate.
+
 ## Read-only community evidence boundary (2026-10-08)
 
 [ADR-0091](adr/0091-community-evidence-analysis.md) and

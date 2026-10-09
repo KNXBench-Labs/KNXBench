@@ -3,10 +3,12 @@
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { computeStats } from "./dashboardStats";
 import { useTranslate } from "./i18n";
+import { useDeviceNavigation } from "./DeviceLink";
 
 export default function Dashboard(props: { tree: ProjectTree }) {
   const t = useTranslate();
   const stats = computeStats(props.tree);
+  const navigation = useDeviceNavigation();
   return (
     <div className="dashboard">
       <h2>{t("dashboard.title")}</h2>
@@ -21,7 +23,7 @@ export default function Dashboard(props: { tree: ProjectTree }) {
         <dd>{stats.lines}</dd>
         <dt>{t("dashboard.devices")}</dt>
         <dd>
-          {stats.devicesAssigned + stats.devicesUnassigned}
+          {navigation ? <button type="button" className="devices-count-link table-select" onClick={navigation.openList}>{stats.devicesAssigned + stats.devicesUnassigned}</button> : stats.devicesAssigned + stats.devicesUnassigned}
           {stats.devicesUnassigned > 0 &&
             t("dashboard.devicesUnassigned", { count: stats.devicesUnassigned })}
         </dd>

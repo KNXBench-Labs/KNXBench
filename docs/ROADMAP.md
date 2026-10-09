@@ -21,6 +21,14 @@ Read the sections below as a delivery record, not a fresh implementation queue.
 Per-ID dispositions remain only in the [ledger](status/LEDGER.md). An accepted
 alpha limitation is not functionality, and a later idea is not a promised date.
 
+## Devices navigation (local source package, 2026-10-08)
+
+The owner-approved project-wide device list, central editor/Back and scoped
+links are implemented locally; [contract](DEVICE_NAVIGATION.md), ADR-0096.
+Publication and deployment are separate. URL deep links/browser history,
+persistent view state, grouping, free-text log parsing and project-diff links
+remain later scope. No new commissioning/ETS/hardware support follows.
+
 ## Community evidence (2026-10-08)
 
 Own-instance read-only analysis, exact disclosure previews and versioned ZIP

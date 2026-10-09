@@ -19,6 +19,51 @@ manufacturer publishes, not something KNXBench invents. See
 This chapter covers the catalog, adding a device, and the device panel's objects,
 parameters, product data, diagnostics and inspection-only manufacturer fields.
 
+## The Devices view
+
+Open **Devices** in the left navigation, run **Devices** from the command
+palette (Ctrl+Shift+P), or click the device count in Overview. The flat table
+shows every canonical device once, including unassigned/unplaced devices.
+It separates installation/KNX-line placement from complete building/room paths;
+a device listed in both branches is not counted twice.
+
+Filter by name, individual address, description, manufacturer, product, order
+number or placement. Click a column heading to sort it; click again to reverse
+it. Individual addresses sort numerically. The wide table scrolls locally on
+small screens rather than widening the whole page.
+
+Click a row/name/address to open the existing device editor **as the central
+view**, with Properties still on the right. **Back** returns to the view you
+came from; **All devices** opens the table. Filter, sort, scroll and checkbox
+selection are kept during an editor visit, but are not stored in the project.
+Checkboxes and Ctrl/Meta/Shift clicks use the existing bulk actions. Shift-click
+uses only the filtered/sorted table order. Removed targets are pruned when the
+project snapshot changes.
+
+Manufacturer/product/order data is resolved by one read-only batch, not by
+opening every device's parameter editor. Missing references, a missing product
+database, an uninstalled product and a failed lookup are named distinctly.
+**Refresh product data** repeats the read. Untranslated product text carries the
+existing language-fallback badge. A failed product query still returns canonical
+device identities; an unreachable/malformed batch leaves the current tree rows
+visible with an error. Unplaced devices require a successful identity-batch read.
+Resolution is not application or download compatibility.
+
+Device links also appear at group-address participants and in their inspector,
+monitor source addresses, line-scan results, readiness rows and explicit **Open in
+device editor** actions in the download/address/inspection panels. Address-only
+links need exactly one current-project match; missing or ambiguous matches remain
+plain text with a hint. They do not start a scan, tunnel, download or bus write.
+The monitor keeps collecting/polling while its editor visit hides it.
+
+This package does not add URL deep links, browser Back/Forward, switchable table
+grouping, free-text log parsing or project-diff links. The separate diagnostic
+companion does not become another editing window. See the
+[contract and evidence](../../DEVICE_NAVIGATION.md).
+
+The released alpha.5 AppImage does not include this local source package;
+merge/build/deployment remain separate from its implementation.
+
 ## The product catalog
 
 Open it from the navigation pane (**Product catalog**) or from the `+` button on a

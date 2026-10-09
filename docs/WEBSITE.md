@@ -2,9 +2,9 @@
 
 Status: user-approved implementation and GitHub Pages deployment on 2026-10-08.
 knxbench.com serves the release build and approved Story; the main repository
-is public. Default local builds remain restricted previews. Redirect/IPv6
-verification, workflow runtime maintenance and owner privacy review are
-follow-ups, not a first-publication blocker.
+is public. Default local builds remain restricted previews. HTTP→HTTPS and
+remote IPv6 HTTPS were verified on 2026-10-09; Pages actions now use Node 24.
+Owner privacy review and optional WebKit evidence remain separate follow-ups.
 Decision: [ADR-0095](adr/0095-static-marketing-companion.md).
 
 ## Agreed brief
@@ -169,3 +169,50 @@ GitHub's custom-domain documentation; checked at both authoritative servers).
 
 Preview builds are unchanged: banner, `noindex`, `Disallow: /`, no `CNAME`.
 Acceptance recipes: the four preview recipes plus `tests/verify-release.js`.
+
+## Node-24 Pages actions, IPv6 and community demo links (2026-10-09)
+
+Owner approved implementation and commit/push/live verification on 2026-10-09.
+The workflow uses `actions/checkout@v7`, `actions/configure-pages@v6`,
+`actions/upload-pages-artifact@v5` and the existing `actions/deploy-pages@v5`.
+Official `action.yml` metadata was read at each resolved commit: checkout,
+configure and deploy declare `node24`; the composite Pages upload pins
+`actions/upload-artifact` v7, which declares `node24`. No force-runtime switch
+is used. Upload v5 excludes dotfiles by default; `include-hidden-files: true`
+keeps the inventoried `.nojekyll`, without uploading the source checkout.
+[Runtime commits and handoff evidence](evidence/pages-demos-2026-10-09.json).
+
+The root, `/de/` and `/en/` now include a Demos navigation entry and three
+project choices: home (32 devices / 105 group addresses), residential
+(101 / 339), office (157 / 507). Direct GitHub links download the frozen
+individual or combined 1.0.0 ZIPs; setup/exercises and SHA-256 checksums are
+linked alongside them. All five anonymous download responses were 200 and
+byte-identical to the repository files. No package contents or checksums were
+changed, and no application-release/older-AppImage compatibility is claimed.
+The pages explain English guides, catalogue installation, untouched reset
+copies and auto-save, the retained candidate labels and the prohibition on
+loading fictional applications into real devices. No automatically loaded
+third-party media or new application/backend functionality.
+
+Local host: no public IPv6 default route, so direct `curl -6` cannot connect;
+this is not a site failure. DNS resolves all four GitHub Pages AAAA addresses.
+A bounded, unauthenticated Globalping HTTPS GET measurement explicitly set
+`ipVersion: 6`: Falkenstein (DE), Amsterdam (NL), Spokane (US) and London (GB)
+all returned **200**, with authorized TLS, on two distinct resolved Pages IPv6
+addresses. Measurement `2iJor2k3SmrFCDtiN00021HcZ`; this is four geographic
+observations, not a test of every advertised address or every client network.
+Direct IPv4 HTTP still returns **301** to `https://knxbench.com/`.
+
+Local acceptance: website unittest **22**, story unittest **67**; deterministic
+preview/release builds; all five fresh-target repository gates and whitespace.
+Chromium preview recipes: landing **62**, imprint **26**, headlines **48**,
+default-language **18**, demo handoff **134**; release recipes: public variant
+**22**, demo handoff **134**. Download links, 320–1440px layouts, DE/EN/root,
+keyboard/mobile/no-JS navigation, static safety/setup text and no automatic
+third-party requests checked. EN/1440 and DE/390 demo choices visually inspected.
+The first browser launch was refused for a too-long socket path; a subsequent
+mobile regression exposed an inherited grid rule squeezing the links, fixed
+with a scoped selector before the final full pass. These are retained failure
+facts, not counted as acceptance. Self-review only; no new app, ETS, native,
+assistive-technology or hardware test. Live deployment verification follows
+publication and is recorded separately in the evidence file.

@@ -1,6 +1,6 @@
 # English offline community demos
 
-**Published on `main` (2026-10-09); not a release, not linked from the website yet.** The 1.0.0 package READMEs still say "local review candidate": the packages are frozen and checksummed, so their text was not changed.
+**Published on `main` (2026-10-09); not an application release. Website linking approved on 2026-10-09.** The 1.0.0 package READMEs still say "local review candidate": the packages are frozen and checksummed, so their text was not changed.
 
 | Project | Devices | Group addresses | Building-space nodes | Lines (including main) |
 | --- | ---: | ---: | ---: | ---: |
@@ -35,4 +35,4 @@ Real production frontend + real isolated server in Chromium; clean product catal
 
 No ETS admission/XSD validation, native WebKitGTK/Orca, real-device download, simulation, Secure or electrical/filter-table/isolation proof. Never connect these fictitious applications to a real device download. Existing startup discovery failed in the loopback-only namespace (expected HTTP 502); it could not reach hardware.
 
-[Engineering contract and reproducible verification](../docs/COMMUNITY_DEMO_PROJECTS.md). Public repository/knxbench.com linking awaits the owner's separate publication go.
+[Engineering contract and reproducible verification](../docs/COMMUNITY_DEMO_PROJECTS.md). The owner approved DE/EN knxbench.com download links on 2026-10-09. The website explains the fictional/offline scope, English guides, untouched reset copies and frozen 1.0.0 candidate labels; the ZIP bytes remain unchanged.

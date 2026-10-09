@@ -56,7 +56,14 @@ The release build drops the preview banner, launch note and `noindex`, opens
 published variant, but only when `story/approvals/<edition>.json` matches the
 pinned edition exactly; otherwise it refuses and writes nothing.
 `.github/workflows/pages.yml` builds and deploys it to GitHub Pages on pushes
-to `main` touching `website/` or `story/`. Contract: `docs/WEBSITE.md`.
+to `main` touching `website/` or `story/`. Contract: `docs/WEBSITE.md`. Node-24 actions: checkout v7, configure-pages v6,
+upload-pages-artifact v5 (with hidden files included for `.nojekyll`) and
+deploy-pages v5. Only the inventoried site is uploaded.
+
+The DE/EN landing pages link the unchanged `demos/1.0.0` ZIPs and checksums
+through GitHub, plus the setup guide. These are fictional offline projects,
+not a hosted application, ETS export or hardware download. Browser handoff
+recipe: `tests/verify-demos.js` (start it from the desired preview/release URL).
 
 The contact pages are labelled Impressum / Legal notice and contain the owner-supplied
 name, postal address and contact email. In the release build the privacy pages name the host (GitHub Pages) and its

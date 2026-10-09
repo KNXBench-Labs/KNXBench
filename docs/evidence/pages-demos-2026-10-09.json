@@ -1,0 +1,160 @@
+{
+  "schema": "knxbench-pages-demos-verification/1",
+  "verifiedAt": "2026-10-09 07:51 CEST",
+  "state": "locally-verified-publication-pending",
+  "baseCommit": "0553f43c58c4d136d1eb81b4d82ea9eae9f25509",
+  "unitTests": {
+    "website": 22,
+    "story": 67
+  },
+  "browserChecks": {
+    "browser-preview-browser": 62,
+    "browser-preview-imprint": 26,
+    "browser-preview-headlines": 48,
+    "browser-preview-default-language": 18,
+    "browser-preview-demos": 134,
+    "browser-release-release": 22,
+    "browser-release-demos": 134
+  },
+  "browserCheckTotal": 444,
+  "repositoryGates": [
+    "check-layering",
+    "check-headers",
+    "check-anchors",
+    "check-ledger",
+    "check-corpus-gates"
+  ],
+  "review": "in-session self-review; no subagents",
+  "failureHistory": [
+    "Browser startup attempt 1: Chromium SingletonSocket path too long; corrected using a short owned scratch path.",
+    "Mobile demo handoff attempts 2/3: inherited responsive grid reduced links to 38px; scoped block selector corrected before final full run."
+  ],
+  "limits": [
+    "No application release, ZIP modification, KNX/ETS compatibility expansion or hardware operation.",
+    "IPv6 checked remotely; local host has no public IPv6 default route.",
+    "No native, assistive-technology or all-browser acceptance."
+  ],
+  "actions": [
+    {
+      "action": "actions/checkout",
+      "ref": "v7",
+      "commit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "runtime": "node24",
+      "metadataSha256": "fc3f945029a3905c34bb8d52a6d2faf4a2bdde2ce7baa57ae648154b0b6f05b5"
+    },
+    {
+      "action": "actions/configure-pages",
+      "ref": "v6",
+      "commit": "45bfe0192ca1faeb007ade9deae92b16b8254a0d",
+      "runtime": "node24",
+      "metadataSha256": "55f1486ae3901c69be182cea1c1e3313954c78be626751a85b19ddaf14ae8da6"
+    },
+    {
+      "action": "actions/upload-pages-artifact",
+      "ref": "v5",
+      "commit": "fc324d3547104276b827a68afc52ff2a11cc49c9",
+      "runtime": "composite",
+      "metadataSha256": "f84e759011e0c497e696f5bce4ebb5fbe9bbdc5aea309b73795283fa139c1558",
+      "uploadArtifact": {
+        "commit": "bbbca2ddaa5d8feaa63e36b76fdaad77386f024f",
+        "runtime": "node24"
+      }
+    },
+    {
+      "action": "actions/deploy-pages",
+      "ref": "v5",
+      "commit": "368f82528645a54fb793d4d04e342629a3f51346",
+      "runtime": "node24",
+      "metadataSha256": "64c44539fba53559a157b5de16c01d3ab91dbc999c1b98b5c0b2fc3528d5d059"
+    }
+  ],
+  "downloads": [
+    {
+      "file": "knxbench-community-demos-1.0.0.zip",
+      "status": 200,
+      "sha256": "bc478a1c0017ba97aacdb47069ced9bea8cb3b5cc4a229903f3d719a52a7f6be",
+      "bytes": 725144,
+      "redirect": "https://raw.githubusercontent.com/KNXBench-Labs/KNXBench/refs/heads/main/demos/1.0.0/knxbench-community-demos-1.0.0.zip"
+    },
+    {
+      "file": "single-family-home-1.0.0.zip",
+      "status": 200,
+      "sha256": "00f3e7277c570c9d51f52f0c91b3e447ab4e8ddc9f13b5e99e928f7ada999a1b",
+      "bytes": 162403,
+      "redirect": "https://raw.githubusercontent.com/KNXBench-Labs/KNXBench/refs/heads/main/demos/1.0.0/single-family-home-1.0.0.zip"
+    },
+    {
+      "file": "multi-unit-residential-1.0.0.zip",
+      "status": 200,
+      "sha256": "8220a2bc65ad1f9c3e95ae449ada218f4e3f587215ebd3622d41268adfa47cb4",
+      "bytes": 324494,
+      "redirect": "https://raw.githubusercontent.com/KNXBench-Labs/KNXBench/refs/heads/main/demos/1.0.0/multi-unit-residential-1.0.0.zip"
+    },
+    {
+      "file": "office-building-1.0.0.zip",
+      "status": 200,
+      "sha256": "864f02f4ba7c029d5f3933d54c21e41991e922c3be24deab17b62a7f7b51617c",
+      "bytes": 389721,
+      "redirect": "https://raw.githubusercontent.com/KNXBench-Labs/KNXBench/refs/heads/main/demos/1.0.0/office-building-1.0.0.zip"
+    },
+    {
+      "file": "SHA256SUMS",
+      "status": 200,
+      "sha256": "c1c6f3ab966b8c12ef04aa1a6b7dbac66de7f59c08c5cf41288db05e5b1e662f",
+      "bytes": 1348,
+      "redirect": "https://raw.githubusercontent.com/KNXBench-Labs/KNXBench/refs/heads/main/demos/1.0.0/SHA256SUMS"
+    }
+  ],
+  "guideStatus": 200,
+  "ipv6": {
+    "provider": "Globalping",
+    "measurementId": "2iJor2k3SmrFCDtiN00021HcZ",
+    "type": "http",
+    "protocol": "HTTPS",
+    "ipVersion": 6,
+    "probes": [
+      {
+        "country": "DE",
+        "city": "Falkenstein",
+        "resolvedAddress": "2606:50c0:8003::153",
+        "status": 200,
+        "tlsAuthorized": true
+      },
+      {
+        "country": "NL",
+        "city": "Amsterdam",
+        "resolvedAddress": "2606:50c0:8000::153",
+        "status": 200,
+        "tlsAuthorized": true
+      },
+      {
+        "country": "US",
+        "city": "Spokane",
+        "resolvedAddress": "2606:50c0:8000::153",
+        "status": 200,
+        "tlsAuthorized": true
+      },
+      {
+        "country": "GB",
+        "city": "London",
+        "resolvedAddress": "2606:50c0:8000::153",
+        "status": 200,
+        "tlsAuthorized": true
+      }
+    ],
+    "scope": "Four remote probes, two distinct resolved GitHub Pages addresses; not every advertised endpoint tested."
+  },
+  "sourceHashes": {
+    ".github/workflows/pages.yml": "07144a57519f70a9b0d19a961a7abf1514b3e9a3602675c6e0911393db15c22f",
+    "website/page.html": "e9640112c620c8fd8c676becb4b8ae3f6a8a7f1797db600dc0462ea74a639405",
+    "website/content/de.json": "15b6012722e6c3ac5f9db6efde3e52fd722e3726a136d1849226852ce2b4763b",
+    "website/content/en.json": "c39e35e9d14b6862e21da4082db7cb133b6c9ca2327ff620f3fc40c27b113627",
+    "website/site.css": "ea42013980001a0e86b65158eea5222b9ff39fbf10799194e0e8f305f14c6d84",
+    "website/tests/test_build.py": "f97c12bd93f8bb839015f0dcc61b9c192ef57244b947c6b4aba722244ee9a0d9",
+    "website/tests/verify-demos.js": "c78fa4df6bc7f0cc1fb9a28278e6d5438132a876bca6a432be85c36dcb7cc3e9"
+  },
+  "visualInspection": {
+    "en1440": "Three aligned choices, readable links and setup/safety/version notes.",
+    "de390": "Stacked readable choices, focus ring and wrapped bundle link; heading/lower safety outside the captured frame."
+  }
+}

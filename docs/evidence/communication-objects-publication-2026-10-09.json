@@ -1,5 +1,5 @@
 {
-  "status": "final integrated source accepted; normal main publication verification pending",
+  "status": "published main candidate verified; application acceptance bound to final source",
   "date": "2026-10-09 19:29 CEST",
   "featureCommit": "ddd4d2cc3b81aba899f53fb63f090a25996c0d75",
   "integrationCommit": "58e2852f731d7f9fc2ff3db8a9502e5fe71d395e",
@@ -406,8 +406,15 @@
     "assessment": "Actual production frontend with isolated real server and fictional demo. Header logo, device Name controls, readable CO toolbar and left headings visible. Right status/channel/flag content remains inside the local horizontal scroller; achievement/load toasts overlay the lower-right properties area. Screenshot does not establish all columns visible at once or full accessibility."
   },
   "publicationVerification": {
-    "status": "pending normal main push/readback",
-    "method": "HEAD/fetched origin/main/live refs/heads/main exact equality plus feature ancestry; runtime proof retained after execution"
+    "status": "verified",
+    "timestamp": "2026-10-09 19:37 CEST",
+    "publishedCandidate": "2e759b77631a943d5291717173356dd5340a52a9",
+    "fetchedTracking": "2e759b77631a943d5291717173356dd5340a52a9",
+    "liveMain": "2e759b77631a943d5291717173356dd5340a52a9",
+    "exactEquality": true,
+    "featureIsAncestor": true,
+    "finalAcceptedSourceIsAncestor": true,
+    "scope": "normal main push, no force; later docs-only closure retains identical accepted application source"
   },
   "metadataVerification": {
     "exit": 0,

@@ -7,6 +7,23 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Download coverage main integration: the whole suitcase, again
+
+- Owner follow-up authorizes merge, commit and push. Feature `bd778821` merged
+  without conflicts into fetched main `b3ee55a0` as `d12bce07` (no-ff); complete
+  merged tree equals the accepted feature. The original local-only receipt
+  remains unchanged; delivery evidence is separate.
+- Fresh gate on the actual merge: full Release `download_coverage_corpus`
+  1 passed / 0 failed / 0 ignored, all 105 original packages unchanged,
+  467 programs (1 verified / 98 untested). knx-app 159/0/27 ignored,
+  ZIP boundaries 13/0, fmt, focused Clippy, documentation, all five fresh
+  nonempty checkout-built xtask gates and whitespace pass.
+- Self-review, no subagents. Test/docs only; no default-limit, production,
+  UI, server, hardware, tag, release or deployment change. Shared root and
+  parallel sessions remain untouched except the scoped handover update.
+- Receipt: `docs/evidence/download-coverage-publication-2026-10-09.json`;
+  exact remote verification follows publication and is recorded in the handover.
+
 ## 2026-10-09 — Full download coverage stops tripping over the big ZIP (KL §151)
 
 - The explicitly invoked ignored `download_coverage_corpus` test now uses the

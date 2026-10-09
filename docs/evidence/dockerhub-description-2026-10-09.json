@@ -1,0 +1,44 @@
+{
+  "verified_at": "2026-10-09T09:04:35+02:00",
+  "repository": "knxbench/knxbench-server",
+  "source_commit": "a9459b95b5bf777e4d0fa884f969b718c6eda0ce",
+  "workflow_run": 37896835083,
+  "short_description": "KNX engineering in your browser: import projects, edit with undo, monitor bus. Less VM. More KNX.",
+  "short_description_bytes": 97,
+  "overview_bytes": 7352,
+  "overview_sha256": "652dc4c60685e7a7df95f83ad7c99f54bb4a101b21caaf6a1794c206c68d46cc",
+  "public_exact_readback": true,
+  "image_tag_digests_unchanged": true,
+  "overview_links_200": 10,
+  "self_review": true,
+  "application_suite_run": false,
+  "quickstart": {
+    "image": "knxbench/knxbench-server:0.1.0-alpha.6",
+    "https_health": "ok",
+    "frontend": "HTML served",
+    "loopback_only": true,
+    "named_volume": true,
+    "restart_policy": "unless-stopped",
+    "certificate_fingerprint_logged": true,
+    "stop_exit": 0,
+    "harness_correction": "Combined stdout/stderr from docker logs; initial assertion missed stderr.",
+    "no_user_runtime_changed": true
+  },
+  "public_browser": {
+    "browser": "isolated Chromium, anonymous",
+    "viewport": [
+      1440,
+      1100
+    ],
+    "required_content_checks": 7,
+    "real_app_gif_loaded": true,
+    "visual_review": "Public introduction, alpha warning, app GIF, feature list and quick-start code are readable and correctly formatted; no clipping observed in the two inspected frames.",
+    "console_exclusions": "Docker Hub third-party telemetry/cookie/survey resources refused, and anonymous /auth/profile returned 401; overview and GIF rendered."
+  },
+  "local_gates": {
+    "actionlint": "passed, shellcheck not installed; shellcheck integration not run",
+    "fresh_target_anchors": "484 links across 205 Markdown files; passed",
+    "documentation": "205 Markdown files, 1888 local targets, 48 images, 33 chapters; passed",
+    "staged_whitespace": "passed"
+  }
+}

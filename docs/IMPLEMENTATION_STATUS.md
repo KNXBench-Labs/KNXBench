@@ -62,6 +62,14 @@ does not erase a broader platform/device limitation or imply a new release.
   named volume and loopback-only port, logged its certificate fingerprint
   and stopped with exit 0. Probe container/volume removed. Self-review only;
   no full application suite or real-bus test for this metadata-only package.
+- Published on `main` as `a9459b95`; automatic
+  [sync run 37896835083](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37896835083)
+  passed with the existing credential. Anonymous API readback equals both
+  committed texts exactly; `latest` and `0.1.0-alpha.6` digests unchanged.
+  Public Chromium rendering: seven content checks, GIF loaded, introduction
+  and quick-start screenshots visually inspected. Docker Hub's third-party
+  telemetry and anonymous profile errors are excluded, not product failures.
+  [Acceptance receipt](evidence/dockerhub-description-2026-10-09.json).
 - No app, image, release tag, running user container, project or bus changes.
   [ADR-0097](adr/0097-docker-hub-release-image.md) and the
   [Docker manual](manual/user-guide/11-web-and-docker.md#the-docker-hub-overview)

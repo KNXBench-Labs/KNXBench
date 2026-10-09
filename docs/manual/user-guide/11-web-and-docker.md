@@ -146,7 +146,18 @@ Now `./data` on your host is `/data` in the container. Removing the container wi
 ### Uploads and the data directory
 
 In the browser build, opening a project that is not already inside `/data` means
-uploading it. Uploads land in `<data dir>/uploads` and are capped at 100 MiB per file.
+uploading it. In current source, uploads land in `<data dir>/uploads` and accept
+files up to **256 MiB**, with a separate 16 KiB multipart-envelope allowance.
+The server streams into a temporary file and publishes only complete uploads;
+a duplicate name is refused rather than overwritten. Oversized requests receive
+HTTP 413 with an explicit limit. **The published alpha.6 image still has the
+100 MiB request ceiling** until a newer release is built.
+
+For larger files, place the archive in the mounted data directory and choose it
+with the server file picker. A reverse proxy may impose its own smaller limit.
+Upload acceptance does not guarantee import acceptance: the importer still
+limits each expanded ZIP member to 64 MiB and the expanded archive to 512 MiB.
+See the [upload and return contract](../../contracts/DOCKER_UPLOAD_AND_RETURN.md).
 The uploaded name is reduced to a plain file name, so nothing a client sends can climb
 out of that directory.
 

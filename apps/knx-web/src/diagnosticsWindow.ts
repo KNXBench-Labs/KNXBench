@@ -162,6 +162,38 @@ export async function focusMainWindow(): Promise<boolean> {
   }
 }
 
+/// Editor URL for an explicit browser return. Retain deployment paths and
+/// unrelated query/hash state. `view=editor` requests a read-only resume of
+/// the current server project; the entrypoint consumes this marker.
+export function isEditorReturn(search: string): boolean {
+  return new URLSearchParams(search).get(VIEW_PARAM) === "editor";
+}
+
+export function mainWindowUrl(href: string): string {
+  const url = new URL(href);
+  url.searchParams.set(VIEW_PARAM, "editor");
+  url.searchParams.delete("source");
+  return url.toString();
+}
+
+/// Browser return is navigation, not a best-effort `opener.focus()` request.
+/// Native desktop return still requires the existing main webview.
+export async function canReturnToMainWindow(): Promise<boolean> {
+  return !isTauri() || await canFocusMainWindow();
+}
+
+/// Explicit return controls navigate this browser tab. Keep source-bound
+/// Flow selection using `focusMainWindow` instead, so it does not reload.
+export async function returnToMainWindow(): Promise<boolean> {
+  if (isTauri()) return await focusMainWindow();
+  try {
+    window.location.assign(mainWindowUrl(window.location.href));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /// Test seam only: resets the module-level reference described above.
 export function resetCompanionWindowRef(): void {
   browserCompanion = null;

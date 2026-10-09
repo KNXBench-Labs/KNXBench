@@ -5,8 +5,8 @@ import * as api from "./api";
 import { emitAchievementEvent } from "./achievementEvents";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
-import type { ComObjectActivation } from "./bindings/ComObjectActivation";
-import type { ComObjectChannel } from "./bindings/ComObjectChannel";
+import ComObjectTable from "./ComObjectTable";
+import { useComMutation } from "./ComMutationBoundary";
 import type { DeviceProductNode } from "./bindings/DeviceProductNode";
 import type { DeviceProductCatalog } from "./bindings/DeviceProductCatalog";
 import type { ProductResolution } from "./bindings/ProductResolution";
@@ -251,12 +251,16 @@ function ComObjectDescriptionField(props: {
 }) {
   const { com, onApplied } = props;
   const t = useTranslate();
+  const mutate = useComMutation();
   const [value, setValue] = useState(com.description ?? "");
   const [error, setError] = useState<string | null>(null);
 
+  const sourceValue = useRef(com.description ?? "");
   useEffect(() => {
-    setValue(com.description ?? "");
-    setError(null);
+    const previous = sourceValue.current;
+    sourceValue.current = com.description ?? "";
+    // Refresh committed values only in clean inputs, never over a draft.
+    setValue(draft => draft === previous ? com.description ?? "" : draft);
   }, [com.description]);
 
   async function apply() {
@@ -264,8 +268,8 @@ function ComObjectDescriptionField(props: {
     if (value === current) return;
     setError(null);
     try {
-      const tree = await api.setComObjectDescription(com.id, value === "" ? null : value);
-      onApplied(tree);
+      const tree = await mutate(() => api.setComObjectDescription(com.id, value === "" ? null : value));
+      if (tree) onApplied(tree);
     } catch (e) {
       setError(api.errorMessage(e));
       setValue(current);
@@ -291,12 +295,16 @@ function ComObjectDescriptionField(props: {
 function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) => void }) {
   const { com, onApplied } = props;
   const t = useTranslate();
+  const mutate = useComMutation();
   const [value, setValue] = useState(com.dpt ?? "");
   const [error, setError] = useState<string | null>(null);
 
+  const sourceValue = useRef(com.dpt ?? "");
   useEffect(() => {
-    setValue(com.dpt ?? "");
-    setError(null);
+    const previous = sourceValue.current;
+    sourceValue.current = com.dpt ?? "";
+    // Refresh committed values only in clean inputs, never over a draft.
+    setValue(draft => draft === previous ? com.dpt ?? "" : draft);
   }, [com.dpt]);
 
   async function apply() {
@@ -304,8 +312,8 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
     if (value === current) return;
     setError(null);
     try {
-      const tree = await api.setComObjectDpt(com.id, value === "" ? null : value);
-      onApplied(tree);
+      const tree = await mutate(() => api.setComObjectDpt(com.id, value === "" ? null : value));
+      if (tree) onApplied(tree);
     } catch (e) {
       setError(api.errorMessage(e));
       setValue(current);
@@ -337,13 +345,14 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
 function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) => void }) {
   const { com, onApplied } = props;
   const t = useTranslate();
+  const mutate = useComMutation();
   const [error, setError] = useState<string | null>(null);
 
   async function toggle(flag: api.ComFlagName, value: boolean) {
     setError(null);
     try {
-      const tree = await api.setComObjectFlag(com.id, flag, value);
-      onApplied(tree);
+      const tree = await mutate(() => api.setComObjectFlag(com.id, flag, value));
+      if (tree) onApplied(tree);
     } catch (e) {
       setError(api.errorMessage(e));
     }
@@ -405,14 +414,15 @@ function GroupLinkRow(props: {
 }) {
   const { com, link, onApplied } = props;
   const t = useTranslate();
+  const mutate = useComMutation();
   const formatGa = useGroupAddressFormat();
   const [error, setError] = useState<string | null>(null);
 
   async function remove(direction: string) {
     setError(null);
     try {
-      const tree = await api.unlinkComObject(com.id, link.ga_id, direction);
-      onApplied(tree);
+      const tree = await mutate(() => api.unlinkComObject(com.id, link.ga_id, direction));
+      if (tree) onApplied(tree);
     } catch (e) {
       setError(api.errorMessage(e));
     }
@@ -446,6 +456,7 @@ function NewGroupLinkRow(props: {
 }) {
   const { com, groupAddresses, onApplied } = props;
   const t = useTranslate();
+  const mutate = useComMutation();
   const formatGa = useGroupAddressFormat();
   const [gaId, setGaId] = useState("");
   const [direction, setDirection] = useState<"Send" | "Receive" | "Both">("Send");
@@ -456,7 +467,8 @@ function NewGroupLinkRow(props: {
   async function linkTo(id: number, viaDrop = false) {
     setError(null);
     try {
-      const tree = await api.linkComObject(com.id, id, direction);
+      const tree = await mutate(() => api.linkComObject(com.id, id, direction));
+      if (!tree) return;
       onApplied(tree);
       if (viaDrop) emitAchievementEvent({ type: "dragDropApplied" });
       setGaId("");
@@ -818,90 +830,19 @@ function DeviceIdentity(props: { product: DeviceProductNode }) {
   </section>;
 }
 
-type ComObjectGroup = {
-  key: string;
-  channel: ComObjectChannel | null;
-  objects: ComObjectNode[];
-  order: number;
-  firstIndex: number;
-};
-
-// Channel keys are opaque per ADR-0052. Do not derive identity from text,
-// object names or a parsed channel number; data-half `channel.order` is the
-// evaluated document order, including non-contiguous positions.
-function groupComObjects(objects: ComObjectNode[]): ComObjectGroup[] {
-  const groups = new Map<string, ComObjectGroup>();
-  objects.forEach((com, index) => {
-    // A missing owner in an older/malformed response is not a channel key.
-    const channel = com.activation === "Active" ? com.channel ?? null : null;
-    const key = channel === null ? "unassigned" : `channel:${channel.key}`;
-    const existing = groups.get(key);
-    if (existing) {
-      existing.objects.push(com);
-    } else {
-      groups.set(key, {
-        key, channel, objects: [com],
-        order: channel?.order ?? Number.MAX_SAFE_INTEGER, firstIndex: index,
-      });
-    }
-  });
-  return [...groups.values()].sort((a, b) => a.order - b.order || a.firstIndex - b.firstIndex);
-}
-
-const ACTIVATION_KEYS: Record<ComObjectActivation, MessageKey> = {
-  Active: "inspector.activation.active",
-  Inactive: "inspector.activation.inactive",
-  Undetermined: "inspector.activation.undetermined",
-  NotEvaluated: "inspector.activation.notEvaluated",
-};
-
-function ComObjectRow(props: {
-  com: ComObjectNode;
-  groupAddresses: GroupAddressNode[];
-  onApplied: (tree: ProjectTree) => void;
-}) {
+function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddressNode[]; onApplied: (tree: ProjectTree) => void }) {
   const { com, groupAddresses, onApplied } = props;
-  const t = useTranslate();
-  const [productLanguage] = useProductLanguage();
-  const formatGa = useGroupAddressFormat();
-  const dpt = com.dpt ?? com.program_dpt;
-  const usesProgramDefault = com.dpt === null && com.program_dpt !== null;
-  // A newer server's unknown state must be visible, never treated as inactive.
-  const statusKey = ACTIVATION_KEYS[com.activation] ?? "inspector.activation.unknown";
-  return <li data-activation={com.activation}>
-    <details className="com-object-detail">
-      <summary className="com-object-summary">
-        <span className="mono">{com.number}</span>
-        <span className="com-object-name">
-          <strong>{com.name ?? t("inspector.unnamed")}</strong>
-          {com.function_text && <small>{com.function_text}</small>}
-          <span className="com-object-status" data-activation={com.activation}>{t(statusKey)}</span>
-          {com.activation === "Active" && !com.is_active && <small className="com-object-stored-status">{t("inspector.storedInactive")}</small>}
-          {com.activation === "Inactive" && com.is_active && <small className="com-object-stored-status">{t("inspector.storedActive")}</small>}
-        </span>
-        <span className="com-object-effective-dpt">
-          {usesProgramDefault && <small className="com-object-dpt-origin">{t("inspector.programDefault")}</small>}
-          <span className="mono">{dpt ?? "—"}</span>
-          {com.dpt_text && <small>{com.dpt_text}</small>}
-          {productLanguage !== null && fellBack(com.dpt_text, com.dpt_text_language) && (
-            <LanguageFallbackBadge selected={productLanguage} source={null} />
-          )}
-        </span>
-        <span className="mono ga-address">{com.links.map((link) => (link.address === null ? "—" : formatGa(link.address))).join(", ") || "—"}</span>
-      </summary>
-      <div className="com-object-edit-fields">
-        <DptField com={com} onApplied={onApplied} />
-        {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
-        <ComObjectDescriptionField com={com} onApplied={onApplied} />
-        {com.description_layer && <span className="provenance-badge">{com.description_layer}</span>}
-        <ComObjectFlagsRow com={com} onApplied={onApplied} />
-        <ul className="group-link-list">
-          {com.links.map((link) => <GroupLinkRow key={`${link.ga_id}-${link.direction}`} com={com} link={link} onApplied={onApplied} />)}
-          <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />
-        </ul>
-      </div>
-    </details>
-  </li>;
+  return <div className="com-object-edit-fields">
+    <DptField com={com} onApplied={onApplied} />
+    {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
+    <ComObjectDescriptionField com={com} onApplied={onApplied} />
+    {com.description_layer && <span className="provenance-badge">{com.description_layer}</span>}
+    <ComObjectFlagsRow com={com} onApplied={onApplied} />
+    <ul className="group-link-list">
+      {com.links.map(link => <GroupLinkRow key={`${link.ga_id}-${link.direction}`} com={com} link={link} onApplied={onApplied} />)}
+      <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />
+    </ul>
+  </div>;
 }
 
 // MODEL-01 / ADR-0070, mirroring `Command::LinkComObject`: a device placed
@@ -924,10 +865,6 @@ export function DeviceWorkspace(props: {
   const parameterState = useDeviceParameters(detail.id, tree);
   const t = useTranslate();
   const [tab, setTab] = useState(0);
-  const [expandedGroups, setExpandedGroups] = useState<{ deviceId: number; keys: Set<string> }>({
-    deviceId: detail.id, keys: new Set(),
-  });
-  const groups = groupComObjects(detail.com_objects);
   // One array and index arithmetic derived from its length:
   // the previous `1 - tab` toggle silently encoded "there are exactly two
   // tabs" three times over (it also hardcoded `End` and treated both arrow
@@ -959,36 +896,8 @@ export function DeviceWorkspace(props: {
         is ever in the tab order. */}
     <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0} tabIndex={0}>
       <h3>{t("inspector.communicationObjects")}</h3>
-      <div className="com-object-groups">
-        {groups.map((group) => {
-          const label = group.channel === null
-            ? t("inspector.noEvaluatedChannel")
-            : group.channel.kind === "ChannelIndependentBlock"
-              ? t("inspector.channelIndependent")
-              : group.channel.text || group.channel.name || t("inspector.untitledChannel");
-          const open = expandedGroups.deviceId === detail.id && expandedGroups.keys.has(group.key);
-          return <details className="com-object-channel" key={group.key} open={open} onToggle={(e) => {
-            const nextOpen = e.currentTarget.open;
-            setExpandedGroups((previous) => {
-              const keys = new Set(previous.deviceId === detail.id ? previous.keys : []);
-              if (nextOpen) keys.add(group.key); else keys.delete(group.key);
-              return { deviceId: detail.id, keys };
-            });
-          }}>
-            <summary className="com-object-channel-summary">
-              <strong>{label}</strong>
-              {group.channel?.kind === "Channel" && group.channel.text && group.channel.name &&
-                <span className="com-object-channel-name">{t("inspector.channelName", { value: group.channel.name })}</span>}
-              {group.channel?.kind === "Channel" && group.channel.number &&
-                <span className="com-object-channel-number">{t("inspector.channelNumber", { value: group.channel.number })}</span>}
-              <span className="com-object-channel-count">{t(group.objects.length === 1 ? "inspector.objectCount.one" : "inspector.objectCount.other", { count: group.objects.length })}</span>
-            </summary>
-            <ul className="com-object-list">
-              {group.objects.map((com) => <ComObjectRow key={com.id} com={com} groupAddresses={groupAddresses} onApplied={onApplied} />)}
-            </ul>
-          </details>;
-        })}
-      </div>
+      <ComObjectTable key={detail.id} objects={detail.com_objects} editor={com =>
+        <ComObjectEditor com={com} groupAddresses={groupAddresses} onApplied={onApplied} />} />
 
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-1`} aria-labelledby={`device-tab-${detail.id}-1`} hidden={tab !== 1} tabIndex={0}>

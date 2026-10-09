@@ -14,12 +14,21 @@ Read the sections below as a delivery record, not a fresh implementation queue.
 | Already usable at its documented scope | Still absent or separately bounded |
 | --- | --- |
 | Read-only MCP, Flow and secondary window, dashboard, theme packs/LCARS, motion and humour | Agent mutation, macros, project notes, dashboard drill-down, mobile/native Windows/macOS apps |
-| Project/device wizards, autosave, browser project export, parameter tabs, achievements and language packs | Persistent undo, versioned backups, specialized parameter widgets, version pinning/selection |
+| Project/device wizards, autosave, browser project export, parameter tabs, achievements and language packs; persistent native undo/project versions in the local 2026-10-09 package | Independent disaster-backup copies, specialized parameter widgets, version pinning/selection |
 | Legacy VD web/CLI offline import with password handling; commissioning activity/history UI | Oversized VD5 coverage, legacy download, complete long-session journalling and device-specific recovery |
 | Public alpha.5, repository and website/story publication | A new release is a separate decision; native/accessibility/real-hardware coverage does not expand with publication |
 
 Per-ID dispositions remain only in the [ledger](status/LEDGER.md). An accepted
 alpha limitation is not functionality, and a later idea is not a promised date.
+
+## Native project history (local source package, 2026-10-09)
+
+Restart-safe native undo/redo, named/save/pre-restore versions and revision-bound
+confirmed restore are implemented in the owned source package
+([contract](PROJECT_HISTORY.md), ADR-0100). Admission is bounded and atomic; retained
+context is shared without losing opaque data. Before first Save As history is
+session-local; same-file versions are not independent disaster backups. Older
+builds refuse native v11. Publication, deployment and release remain separate.
 
 ## Devices navigation (local source package, 2026-10-08)
 

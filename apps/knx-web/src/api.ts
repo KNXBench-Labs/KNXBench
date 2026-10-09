@@ -3,6 +3,7 @@
 //! function names and argument shapes the components already called, so
 //! swapping the import at each call site is the only change there.
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { admitProjectHistory, historyBinding, type ProjectHistory } from "./projectHistory";
 import type { SettingsDiagnostic } from "./settingsStore";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import { admitDeviceCatalog, type DeviceCatalog } from "./deviceList";
@@ -63,6 +64,30 @@ export function noteRefusal(path: string, status: number): void {
 /** One read-only catalogue batch for the complete open project. */
 export async function deviceCatalog(language?: string | null): Promise<DeviceCatalog> {
   return admitDeviceCatalog(await request(`/api/devices${language ? `?language=${encodeURIComponent(language)}` : ""}`));
+}
+
+/** Read complete native history metadata, never silently admit a partial page. */
+export async function projectHistory(): Promise<ProjectHistory> {
+  return admitProjectHistory(await request<unknown>("/api/project/history"));
+}
+async function historyAction(path: string, view: ProjectHistory, confirmed: boolean, label?: string): Promise<ProjectHistory> {
+  return admitProjectHistory(await request<unknown>(path, { method: "POST",
+    body: JSON.stringify({ ...historyBinding(view, confirmed), ...(label === undefined ? {} : { label }) }) }));
+}
+export function createProjectVersion(view: ProjectHistory, label: string): Promise<ProjectHistory> {
+  return historyAction("/api/project/history/versions", view, false, label);
+}
+export function restoreProjectVersion(view: ProjectHistory, id: number, confirmed: boolean): Promise<ProjectHistory> {
+  if (!confirmed) return Promise.reject(new Error("Explicit restore confirmation is required."));
+  return historyAction(`/api/project/history/versions/${id}/restore`, view, true);
+}
+export function deleteProjectVersion(view: ProjectHistory, id: number, confirmed: boolean): Promise<ProjectHistory> {
+  if (!confirmed) return Promise.reject(new Error("Explicit version deletion confirmation is required."));
+  return historyAction(`/api/project/history/versions/${id}/delete`, view, true);
+}
+export function clearProjectUndo(view: ProjectHistory, confirmed: boolean): Promise<ProjectHistory> {
+  if (!confirmed) return Promise.reject(new Error("Explicit undo/redo clearing confirmation is required."));
+  return historyAction("/api/project/history/clear-undo", view, true);
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

@@ -70,10 +70,12 @@ pub struct AppState {
     /// (ADR-0006), which the import report and diagnostics read back.
     pub opaque: Mutex<Vec<knx_store::StoredOpaqueEntry>>,
     pub manufacturer_refs: Mutex<Vec<knx_store::ManufacturerRef>>,
-    /// Every applied command's inverse, for undo/redo. Reset to empty on
-    /// `open_project`/`open_native_project` — undo history never survives
-    /// loading a different project, and is never persisted to `.knxdb`.
+    /// Live inverses or admitted native snapshot entries for undo/redo.
+    /// Native open recovers the persisted stack; new/import starts a fresh one.
     pub command_stack: Mutex<knx_core::CommandStack>,
+    /// Compare-and-write generation of the native recovery journal. Zero means
+    /// a legacy/new project without a persisted editor workspace.
+    pub history_generation: Mutex<i64>,
     /// (errors, warnings) from the initial import's `ImportReport`,
     /// reapplied to every tree rebuilt after a command/undo/redo — edits
     /// don't change what import lost. `(0, 0)` for a `.knxdb` native load.
@@ -242,6 +244,7 @@ impl AppState {
             opaque: Mutex::new(Vec::new()),
             manufacturer_refs: Mutex::new(Vec::new()),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
+            history_generation: Mutex::new(0),
             import_counts: Mutex::new((0, 0)),
             server_incarnation: server_incarnation.clone(),
             project_revision: AtomicU64::new(0),
@@ -633,11 +636,11 @@ pub fn save_project_as_impl(
 /// just after an ETS import.
 fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, LoadFailure> {
     // The five phases a native open really has (ADR-0023): the store open
-    // (which also runs any pending migration), the normalized read, the
+    // (legacy migration happens only in a temporary copy), the normalized read, the
     // two passthrough reads, and the projection. Each is announced before
     // its own work, so the label names what is running.
     progress.phase(LoadPhase::OpenStore);
-    let conn = knx_store::open_existing_and_migrate(path).map_err(|e| {
+    let admitted = knx_store::open_existing_read_only(path).map_err(|e| {
         // A file that is not a KNXBench project, or holds none, is the
         // caller's to fix — refused (422) untouched, not a server fault
         // (AR18 review M1b/M1c).
@@ -654,17 +657,39 @@ fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, LoadFai
             kind,
         }
     })?;
+    let conn = admitted.conn;
+    let read = conn
+        .unchecked_transaction()
+        .map_err(|e| LoadFailure::from(e.to_string()))?;
     progress.phase(LoadPhase::LoadStoredProject);
     let (project, allocator_repair) =
-        knx_store::load_project_reporting(&conn).map_err(|e| LoadFailure::from(e.to_string()))?;
+        knx_store::load_project_reporting(&read).map_err(|e| LoadFailure::from(e.to_string()))?;
     progress.phase(LoadPhase::LoadOpaque);
-    let opaque = knx_store::load_opaque(&conn).map_err(|e| LoadFailure::from(e.to_string()))?;
+    let opaque = knx_store::load_opaque(&read).map_err(|e| LoadFailure::from(e.to_string()))?;
     progress.phase(LoadPhase::LoadManufacturerRefs);
     let manufacturer_refs =
-        knx_store::load_manufacturer_refs(&conn).map_err(|e| LoadFailure::from(e.to_string()))?;
+        knx_store::load_manufacturer_refs(&read).map_err(|e| LoadFailure::from(e.to_string()))?;
     progress.phase(LoadPhase::BuildProjectTree);
+    let recovered = knx_store::project_history::load_editor(&read)
+        .map_err(|e| LoadFailure::from(e.to_string()))?;
+    let (project, opaque, manufacturer_refs) = match &recovered {
+        Some(history) => (
+            history.working.project.clone(),
+            history.working.opaque.clone(),
+            history.working.manufacturer_refs.clone(),
+        ),
+        None => (project, opaque, manufacturer_refs),
+    };
+    read.commit()
+        .map_err(|e| LoadFailure::from(e.to_string()))?;
     let tree = knx_projection::build_project_tree(&project);
-    Ok((tree, project, (opaque, manufacturer_refs), allocator_repair))
+    Ok((
+        tree,
+        project,
+        (opaque, manufacturer_refs),
+        allocator_repair,
+        recovered,
+    ))
 }
 
 /// What `load_native` read: the projection, the project, its passthrough
@@ -674,6 +699,7 @@ type NativeLoad = (
     knx_core::Project,
     ImportedOpaqueData,
     Option<knx_store::AllocatorRepair>,
+    Option<knx_store::project_history::EditorHistory>,
 );
 
 /// The session-log line for an allocator repair: a warning, because the
@@ -725,7 +751,7 @@ pub fn open_native_project(
         return Err(unsaved_changes_refusal(state, "open"));
     }
     let loaded = load_native(path, progress);
-    let (_tree, project, (opaque, manufacturer_refs), allocator_repair) = match loaded {
+    let (_tree, project, (opaque, manufacturer_refs), allocator_repair, recovered) = match loaded {
         Ok(v) => v,
         Err(failure) => {
             state
@@ -744,7 +770,7 @@ pub fn open_native_project(
             return Err(failure);
         }
     };
-    let tree = replace_unless_unsaved(
+    let tree = replace_unless_unsaved_with_history(
         state,
         project,
         (0, 0),
@@ -752,6 +778,7 @@ pub fn open_native_project(
         opaque,
         manufacturer_refs,
         discard_changes,
+        recovered,
     )
     .map_err(|UnsavedChanges| unsaved_changes_refusal(state, "open"))?;
 
@@ -943,6 +970,7 @@ fn new_project_impl_with_pause(
         None,
         Vec::new(),
         Vec::new(),
+        None,
         |project, clean_project| {
             discard_changes
                 || !project.is_some_and(|project| project_is_modified(project, clean_project))
@@ -1049,24 +1077,7 @@ fn command_name(cmd: &knx_core::Command) -> String {
 }
 
 pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
-    let result = (|| {
-        let project = state.project.lock().expect("state mutex poisoned");
-        let project = project.as_ref().ok_or("no project open")?;
-        let mut store_path = state.store_path.lock().expect("state mutex poisoned");
-        let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
-        let mut last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
-        let opaque = state.opaque.lock().expect("state mutex poisoned");
-        let manufacturer_refs = state
-            .manufacturer_refs
-            .lock()
-            .expect("state mutex poisoned");
-        save_project_as_impl(path, project, &opaque, &manufacturer_refs)?;
-        *store_path = Some(path.to_path_buf());
-        *clean_project = Some(project.clone());
-        *last_saved_at = Some(session_log::now());
-        next_project_revision(state);
-        Ok(())
-    })();
+    let result = save_editor_state(state, Some(path));
     log_outcome(
         state,
         "save",
@@ -1077,6 +1088,48 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
     result
 }
 
+fn save_editor_state(state: &AppState, destination: Option<&Path>) -> Result<(), String> {
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_ref().ok_or("no project open")?;
+    let stack = state.command_stack.lock().expect("state mutex poisoned");
+    let mut store_path = state.store_path.lock().expect("state mutex poisoned");
+    let mut generation = state
+        .history_generation
+        .lock()
+        .expect("state mutex poisoned");
+    let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let mut last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
+    let snapshot = knx_store::project_history::NativeSnapshot {
+        project: project.clone(),
+        opaque: state.opaque.lock().expect("state mutex poisoned").clone(),
+        manufacturer_refs: state
+            .manufacturer_refs
+            .lock()
+            .expect("state mutex poisoned")
+            .clone(),
+    };
+    let new_generation = match destination {
+        Some(path) => knx_app::project_history::save_as(path, &snapshot, &stack)?,
+        None => knx_app::project_history::save(
+            store_path
+                .as_deref()
+                .ok_or("no save location yet — use Save As")?,
+            &snapshot,
+            &stack,
+            *generation,
+        )?,
+    };
+    if let Some(path) = destination {
+        *store_path = Some(path.to_path_buf());
+    }
+    *generation = new_generation;
+    *clean_project = Some(project.clone());
+    *last_saved_at = Some(session_log::now());
+    next_project_revision(state);
+    Ok(())
+}
+
+#[cfg(test)]
 fn save_project_with(
     state: &AppState,
     write: impl FnOnce(
@@ -1113,7 +1166,7 @@ fn save_project_with(
 }
 
 pub fn save_project(state: &AppState) -> Result<(), String> {
-    let result = save_project_with(state, save_project_as_impl);
+    let result = save_editor_state(state, None);
     log_outcome(state, "save", "saved".to_string(), None, &result);
     result
 }
@@ -1896,7 +1949,7 @@ pub fn device_detail(
 
 /// Rebuilds `tree` from `project` and overlays the counts/undo-redo state
 /// that `build_project_tree` alone cannot know about.
-fn tree_with_state(
+pub(crate) fn tree_with_state(
     project: &knx_core::Project,
     clean_project: Option<&knx_core::Project>,
     stack: &knx_core::CommandStack,
@@ -1917,13 +1970,13 @@ fn tree_with_state(
     tree
 }
 
-fn current_project_revision(state: &AppState) -> u64 {
+pub(crate) fn current_project_revision(state: &AppState) -> u64 {
     state.project_revision.load(Ordering::Relaxed)
 }
 
 /// Called only while `state.project` is held, so the number is ordered with
 /// the project mutation/baseline publication it identifies.
-fn next_project_revision(state: &AppState) -> u64 {
+pub(crate) fn next_project_revision(state: &AppState) -> u64 {
     state.project_revision.fetch_add(1, Ordering::Relaxed) + 1
 }
 
@@ -1961,6 +2014,29 @@ fn replace_unless_unsaved(
     replacement_manufacturer_refs: Vec<knx_store::ManufacturerRef>,
     discard_changes: bool,
 ) -> Result<ProjectTree, UnsavedChanges> {
+    replace_unless_unsaved_with_history(
+        state,
+        replacement,
+        replacement_import_counts,
+        replacement_store_path,
+        replacement_opaque,
+        replacement_manufacturer_refs,
+        discard_changes,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn replace_unless_unsaved_with_history(
+    state: &AppState,
+    replacement: knx_core::Project,
+    replacement_import_counts: (usize, usize),
+    replacement_store_path: Option<PathBuf>,
+    replacement_opaque: Vec<knx_store::StoredOpaqueEntry>,
+    replacement_manufacturer_refs: Vec<knx_store::ManufacturerRef>,
+    discard_changes: bool,
+    recovered: Option<knx_store::project_history::EditorHistory>,
+) -> Result<ProjectTree, UnsavedChanges> {
     replace_project_state_transaction(
         state,
         replacement,
@@ -1968,6 +2044,7 @@ fn replace_unless_unsaved(
         replacement_store_path,
         replacement_opaque,
         replacement_manufacturer_refs,
+        recovered,
         |project, clean_project| {
             discard_changes
                 || !project.is_some_and(|project| project_is_modified(project, clean_project))
@@ -1996,6 +2073,7 @@ fn replace_project_state_with_pause(
         replacement_store_path,
         replacement_opaque,
         replacement_manufacturer_refs,
+        None,
         |_, _| true,
         while_locked_before_publication,
     )
@@ -2010,6 +2088,7 @@ fn replace_project_state_transaction(
     replacement_store_path: Option<PathBuf>,
     replacement_opaque: Vec<knx_store::StoredOpaqueEntry>,
     replacement_manufacturer_refs: Vec<knx_store::ManufacturerRef>,
+    recovered: Option<knx_store::project_history::EditorHistory>,
     can_replace: impl FnOnce(Option<&knx_core::Project>, Option<&knx_core::Project>) -> bool,
     after_guard: impl FnOnce(),
 ) -> Result<ProjectTree, UnsavedChanges> {
@@ -2037,9 +2116,20 @@ fn replace_project_state_transaction(
     // A recorded request belongs to the project it was committed into.
     catalog_requests.clear();
 
-    let clean_replacement = replacement.clone();
+    let (clean_replacement, recovered_stack, generation) = match recovered {
+        Some(history) => (
+            history.baseline.project,
+            knx_core::CommandStack::from_snapshot_states(history.undo, history.redo),
+            history.generation,
+        ),
+        None => (replacement.clone(), knx_core::CommandStack::new(), 0),
+    };
     *project = Some(replacement);
-    *stack = knx_core::CommandStack::new();
+    *stack = recovered_stack;
+    *state
+        .history_generation
+        .lock()
+        .expect("state mutex poisoned") = generation;
     *import_counts = replacement_import_counts;
     *store_path = replacement_store_path;
     *clean_project = Some(clean_replacement);
@@ -2139,6 +2229,47 @@ fn current_tree(state: &AppState) -> Result<knx_projection::ProjectTree, String>
     ))
 }
 
+fn persist_native_working(
+    state: &AppState,
+    project: &knx_core::Project,
+    stack: &knx_core::CommandStack,
+) -> Result<(), String> {
+    let path = state.store_path.lock().expect("state mutex poisoned");
+    let Some(path) = path.as_deref() else {
+        return Ok(());
+    };
+    let mut generation = state
+        .history_generation
+        .lock()
+        .expect("state mutex poisoned");
+    let snapshot = knx_store::project_history::NativeSnapshot {
+        project: project.clone(),
+        opaque: state.opaque.lock().expect("state mutex poisoned").clone(),
+        manufacturer_refs: state
+            .manufacturer_refs
+            .lock()
+            .expect("state mutex poisoned")
+            .clone(),
+    };
+    *generation = knx_app::project_history::persist_working(path, &snapshot, stack, *generation)?;
+    Ok(())
+}
+
+fn durable_mutation<T>(
+    state: &AppState,
+    project: &mut knx_core::Project,
+    stack: &mut knx_core::CommandStack,
+    mutation: impl FnOnce(&mut knx_core::Project, &mut knx_core::CommandStack) -> Result<T, String>,
+) -> Result<T, String> {
+    let mut candidate = project.clone();
+    let mut candidate_stack = stack.clone();
+    let result = mutation(&mut candidate, &mut candidate_stack)?;
+    persist_native_working(state, &candidate, &candidate_stack)?;
+    *project = candidate;
+    *stack = candidate_stack;
+    Ok(result)
+}
+
 fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
     apply_with_expected_revision(state, None, cmd)
 }
@@ -2172,7 +2303,9 @@ fn apply_with_expected_revision(
         }
     }
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let result = stack.do_command(project, cmd).map_err(|e| e.to_string());
+    let result = durable_mutation(state, project, &mut stack, |p, s| {
+        s.do_command(p, cmd).map_err(|e| e.to_string())
+    });
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
@@ -4005,13 +4138,26 @@ fn create_devices_recorded(
         format!("Catalog batch create: {quantity} devices")
     };
     let cmd_name = command_name(&cmd);
-    let result = {
-        let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-        stack
-            .do_command(project, cmd)
-            .map_err(|error| catalog_creation_error(quantity, children_per_item, error))
-    };
-    log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
+    let original_project = project;
+    let mut candidate = original_project.clone();
+    let project = &mut candidate;
+    let mut candidate_stack = state
+        .command_stack
+        .lock()
+        .expect("state mutex poisoned")
+        .clone();
+    let result = candidate_stack
+        .do_command(project, cmd)
+        .map_err(|error| catalog_creation_error(quantity, children_per_item, error));
+    if result.is_err() {
+        log_outcome(
+            state,
+            &cmd_name,
+            cmd_name.clone(),
+            Some(cmd_desc.clone()),
+            &result,
+        );
+    }
     result?;
     if !batched {
         // Retain the legacy single-command undo/log shape, without leaking
@@ -4045,6 +4191,17 @@ fn create_devices_recorded(
             diagnostics: item_diagnostics,
         });
     }
+    let persistence = persist_native_working(state, project, &candidate_stack);
+    log_outcome(
+        state,
+        &cmd_name,
+        cmd_name.clone(),
+        Some(cmd_desc),
+        &persistence,
+    );
+    persistence.map_err(CatalogCreateError::from)?;
+    *original_project = project.clone();
+    *state.command_stack.lock().expect("state mutex poisoned") = candidate_stack;
     if let Some((id, fingerprint)) = replay {
         state
             .catalog_requests
@@ -4216,9 +4373,9 @@ pub fn reconcile_scan_impl(
 
     let command = knx_core::Command::Batch(commands);
     let command_detail = format!("{command:?}");
-    let result = stack
-        .do_command(project, command)
-        .map_err(|error| error.to_string());
+    let result = durable_mutation(state, project, stack, |p, s| {
+        s.do_command(p, command).map_err(|e| e.to_string())
+    });
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
@@ -4344,7 +4501,9 @@ pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let result = stack.undo(project).map_err(|e| e.to_string());
+    let result = durable_mutation(state, project, &mut stack, |p, s| {
+        s.undo(p).map_err(|e| e.to_string())
+    });
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
@@ -4370,7 +4529,9 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let result = stack.redo(project).map_err(|e| e.to_string());
+    let result = durable_mutation(state, project, &mut stack, |p, s| {
+        s.redo(p).map_err(|e| e.to_string())
+    });
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
@@ -5754,8 +5915,8 @@ mod tests {
         let state = Arc::new(AppState::default());
         new_project_impl(&state, None, None, None, None, true).unwrap();
         let dir = tempfile::tempdir().unwrap();
-        let mut path = state.store_path.lock().unwrap();
-        *path = Some(dir.path().join("project.knxdb"));
+        save_project_as(&state, &dir.path().join("project.knxdb")).unwrap();
+        let path = state.store_path.lock().unwrap();
 
         // Hold the second lock, then observe the leading lock through the
         // real Save entry point. The old path-first implementation cannot

@@ -72,7 +72,7 @@ are finished at their recorded scope, not proof that every feature exists.
 
 | Item | Where it stands | Waiting on |
 | --- | --- | --- |
-| Persistent project undo and versioned backups | Neither exists. Autosave replaces the saved file; it is not a version history. Commissioning metadata is a different history. | Separate history/storage work. Keep independent copies meanwhile. |
+| Persistent project undo and native versions | Implemented in the local 2026-10-09 source package: native-backed undo/redo, named/save/pre-restore versions and guarded restore. Not in alpha.6; commissioning metadata remains a different history. | [Project history](../PROJECT_HISTORY.md). Independent disaster-backup copies remain necessary. |
 | Legacy device download and oversized `.vd5` coverage | Web/CLI offline import, password dialog and one remembered password already exist for the evidenced legacy scope. | Resource measurement before raising legacy limits; separate L4 mapping and recovery evidence. |
 | Selective import, diff apply/merge and three-way comparison | Whole-file import and two-file comparison already work; these extensions do not. | Separate scoped design, data-integrity contracts and tests. |
 | Specialized parameter widgets and online manufacturer updates | Generic supported parameter editing and manual product-file installation exist. | Supported type/UIHint evidence and separate catalog/update design. |

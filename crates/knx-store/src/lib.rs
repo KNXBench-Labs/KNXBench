@@ -13,6 +13,7 @@ pub mod module_instance;
 pub mod opaque;
 pub mod parameter;
 pub mod project;
+pub mod project_history;
 pub mod representable;
 pub mod strings;
 pub mod topology;
@@ -38,6 +39,7 @@ pub use rusqlite::{Connection, Error as SqlError};
 /// getting the schema to `CURRENT_SCHEMA_VERSION`.
 #[derive(Debug)]
 pub enum StoreError {
+    History(Box<project_history::HistoryError>),
     Sqlite(rusqlite::Error),
     /// `load_project` was called against a database with no `project_info`
     /// row — it was migrated but never saved. Distinct from an empty
@@ -85,9 +87,16 @@ pub enum StoreError {
 
 impl std::error::Error for StoreError {}
 
+impl From<project_history::HistoryError> for StoreError {
+    fn from(error: project_history::HistoryError) -> Self {
+        Self::History(Box::new(error))
+    }
+}
+
 impl fmt::Display for StoreError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            StoreError::History(e) => write!(f, "{e}"),
             StoreError::Sqlite(e) => write!(f, "{e}"),
             StoreError::UnknownBuildingPartType(kind) => write!(
                 f,

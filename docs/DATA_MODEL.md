@@ -1,5 +1,25 @@
 # Data model
 
+## Native history schema v11 (2026-10-09)
+
+Native `line.model_position` preserves the independent `Topology.lines` vector
+order; the existing `line.position` still preserves siblings in `Area.lines`.
+The v10 migration derives the initial model order from its preceding reader's
+area/line traversal. Reparenting no longer makes exact native history admission
+fail because of a serialization-only reorder.
+
+The normalized core model version is unchanged. Native project storage advances
+from v10 to v11 with working-state, undo/redo, immutable version and shared
+retained-context tables ([ADR-0100](adr/0100-persistent-native-project-history.md)).
+Snapshots preserve typed model/provenance, ordered rows, opaque entries and
+manufacturer references; a version does not contain the global product catalogue.
+Envelope v1 and exact image hashes are checked before decoding; semantic baseline
+identity is independent of SQLite page layout. History tables are empty inside
+embedded images, preventing recursive snapshots. Generations bind writes to the
+saved baseline; ID allocator high water never rewinds. Migration starts legacy
+stores with empty history; unknown/future/corrupt history is refused, not reset.
+
+
 ## 1. Scope
 
 This describes the target domain model of `knx-core`. It is the reference

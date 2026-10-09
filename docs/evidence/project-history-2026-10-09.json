@@ -1,0 +1,267 @@
+{
+  "schema_version": 1,
+  "scope": "local HISTORY-01/HISTORY-02 native project-history package",
+  "base_revision": "a1fcc8f2af37581a1dca79223c665187c15dec5e",
+  "source_revision": "recorded-in-closure",
+  "source_manifest_sha256": "1a426977225f07e3a0c77144a114961c9b7e53fb06f12ec76194450718c1bf97",
+  "frozen_source_configuration_files": 1004,
+  "rust": {
+    "passed": 3762,
+    "failed": 0,
+    "ignored": 182,
+    "runner_blocks": 227,
+    "frozen_input_count": 1004,
+    "run_inputs_frozen": true,
+    "copy_only_delta": [
+      "apps/knx-web/src/messages/de.ts",
+      "apps/knx-web/src/messages/en.ts"
+    ],
+    "rust_source_config_unchanged": true,
+    "stages": [
+      "fmt=0",
+      "workspace=0",
+      "clippy=0",
+      "binaries=0"
+    ]
+  },
+  "frontend": {
+    "exit": 0,
+    "passed": 2521,
+    "failed": 0,
+    "files": 154,
+    "build_exit": 0,
+    "fixture_typechecks_exit": 0,
+    "chromium_passed": 208,
+    "chromium_exit": 0
+  },
+  "tools": {
+    "exit": 0,
+    "passed": 42
+  },
+  "repository_gates": {
+    "layering": 0,
+    "headers": 0,
+    "anchors": 0,
+    "ledger": 0,
+    "corpus_gates": 0,
+    "bindings_semantic_compare": 0,
+    "documentation": 0,
+    "diff": 0
+  },
+  "private_reference": {
+    "cases_expected": 3,
+    "cases_completed": 3,
+    "exit": 0,
+    "passed": true,
+    "input_unchanged": true,
+    "failure_stage": null,
+    "scope": "three existing reference projects; native model/passthrough restart/undo/redo/named versions/safety restore",
+    "raw_runtime_output_retained": false,
+    "confinement": "trusted local fixture resolver; canonical scope and before/after input identity, not an adversarial pathname-race proof"
+  },
+  "private_native": {
+    "accepted": true,
+    "stages": [
+      {
+        "scope": "native-store",
+        "registered": 3,
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "exit": 0,
+        "accepted": true
+      },
+      {
+        "scope": "native-http-roundtrip",
+        "registered": 1,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "exit": 0,
+        "accepted": true
+      },
+      {
+        "scope": "imported-instance-state",
+        "registered": 1,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "exit": 0,
+        "accepted": true
+      }
+    ],
+    "network": "new loopback-only namespace",
+    "raw_private_runner_output_retained": false
+  },
+  "runtime": {
+    "accepted": true,
+    "runtime": "built server and production Chromium workbench",
+    "apiInterception": false,
+    "network": "verified interfaces exactly lo",
+    "assertions": [
+      "visible wizard and Save As produce a native file",
+      "visible Undo leaves both durable stack directions and dirty working state",
+      "visible named version captures the dirty working state",
+      "SIGKILL and native reopen recover stacks, dirty state, named version and new server incarnation",
+      "visible Undo and Redo work after the real server restart",
+      "visible Cancel is focused and sends no restore request",
+      "confirmed visible Restore preserves a safety version and clears both edit stacks",
+      "second crash/reopen retains restored baseline and safety version",
+      "built workbench completed without JavaScript page errors"
+    ],
+    "historyPostRequests": 2,
+    "pageErrors": 0,
+    "nativeFile": "task-owned synthetic project",
+    "hardwareClaim": false
+  },
+  "visual": {
+    "built_chromium_en_1440": "inspected final stored-image wording; controls/limits readable, no horizontal clipping",
+    "synthetic_chromium_de_400": "inspected wrapped confirmation and visible contrasting Cancel/Restore controls; no horizontal clipping",
+    "native_accessibility_claim": false
+  },
+  "negative_controls": [
+    {
+      "control": "restore-context",
+      "exit": 101,
+      "namedAssertionDetected": true
+    },
+    {
+      "control": "pending-restore",
+      "exit": 1,
+      "namedAssertionDetected": true
+    },
+    {
+      "control": "retired-restore",
+      "exit": 1,
+      "namedAssertionDetected": true
+    },
+    {
+      "control": "parent-late-save",
+      "exit": 1,
+      "namedAssertionDetected": true
+    }
+  ],
+  "rust_attempts": [
+    {
+      "phase": "full",
+      "stages": [
+        "fmt=0",
+        "workspace=101"
+      ],
+      "classification": "superseded",
+      "unstarted": [
+        "clippy",
+        "binaries"
+      ]
+    },
+    {
+      "phase": "final",
+      "stages": [
+        "fmt=0",
+        "workspace=101"
+      ],
+      "classification": "superseded",
+      "unstarted": [
+        "clippy",
+        "binaries"
+      ]
+    },
+    {
+      "phase": "verified",
+      "stages": [
+        "fmt=0",
+        "workspace=101"
+      ],
+      "classification": "superseded",
+      "unstarted": [
+        "clippy",
+        "binaries"
+      ]
+    },
+    {
+      "phase": "accepted",
+      "stages": [
+        "fmt=0",
+        "workspace=0",
+        "clippy=101"
+      ],
+      "classification": "superseded",
+      "unstarted": [
+        "binaries"
+      ]
+    },
+    {
+      "phase": "shipping",
+      "stages": [
+        "fmt=0",
+        "workspace=101"
+      ],
+      "classification": "superseded",
+      "unstarted": [
+        "clippy",
+        "binaries"
+      ]
+    },
+    {
+      "phase": "serial",
+      "stages": [
+        "fmt=0",
+        "workspace=0",
+        "clippy=0",
+        "binaries=0"
+      ],
+      "classification": "superseded",
+      "unstarted": []
+    },
+    {
+      "phase": "closure",
+      "stages": [
+        "fmt=0",
+        "workspace=101"
+      ],
+      "classification": "superseded",
+      "unstarted": [
+        "clippy",
+        "binaries"
+      ]
+    },
+    {
+      "phase": "delivery",
+      "stages": [
+        "fmt=0",
+        "workspace=0",
+        "clippy=0",
+        "binaries=0"
+      ],
+      "classification": "accepted-final-rust",
+      "unstarted": []
+    }
+  ],
+  "additional_attempts": [
+    {
+      "attempt": "native-schema-corrected-empty-log",
+      "exit": 124,
+      "classification": "lease-wait-infrastructure; no tests admitted"
+    },
+    {
+      "attempt": "literal-schema-prefix",
+      "exit": 101,
+      "classification": "expected RED: named load_editor refusal assertion"
+    },
+    {
+      "attempt": "late-last-table-witness",
+      "exit": 101,
+      "classification": "expected RED: injected last-table failure must actually run"
+    },
+    {
+      "attempt": "real-smoke-initial-tour-setup",
+      "exit": 1,
+      "classification": "superseded harness setup, not acceptance"
+    }
+  ],
+  "self_review": true,
+  "independent_review": false,
+  "publication": "local-only; no main merge/push/release/deployment",
+  "hardware_claim": false,
+  "timestamp": "2026-10-09 15:03 CEST"
+}

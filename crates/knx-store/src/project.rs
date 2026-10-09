@@ -92,7 +92,7 @@ const DELETE_ALL_TABLES: &[&str] = &[
 ];
 
 pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreError> {
-    let tx = conn.unchecked_transaction()?;
+    let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
     save_project_transaction(tx, project)
 }
 
@@ -107,7 +107,15 @@ pub fn save_project_with_passthrough(
     opaque: &[crate::StoredOpaqueEntry],
     manufacturer_refs: &[crate::ManufacturerRef],
 ) -> Result<(), StoreError> {
-    let tx = conn.unchecked_transaction()?;
+    let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
+    crate::project_history::before_plain_save(
+        &tx,
+        &crate::project_history::NativeSnapshot {
+            project: project.clone(),
+            opaque: opaque.to_vec(),
+            manufacturer_refs: manufacturer_refs.to_vec(),
+        },
+    )?;
     write_project(&tx, project)?;
     crate::opaque::write_opaque(&tx, opaque)?;
     crate::manifest::write_manufacturer_refs(&tx, manufacturer_refs)?;
@@ -137,13 +145,21 @@ pub fn save_project_if_unchanged(
 }
 
 fn save_project_transaction(tx: Transaction<'_>, project: &Project) -> Result<(), StoreError> {
+    crate::project_history::before_plain_save(
+        &tx,
+        &crate::project_history::NativeSnapshot {
+            project: project.clone(),
+            opaque: crate::load_opaque(&tx)?,
+            manufacturer_refs: crate::load_manufacturer_refs(&tx)?,
+        },
+    )?;
     write_project(&tx, project)?;
     tx.commit()?;
     Ok(())
 }
 
 /// Writes `project` inside a transaction the caller owns and commits.
-fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(), StoreError> {
+pub(crate) fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(), StoreError> {
     crate::representable::check_representable(project)?;
     // Defer every foreign-key check to `COMMIT`, for two reasons that both
     // come from `building_part`/`group_range` self-referencing via
@@ -229,6 +245,15 @@ fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(), StoreErr
                     .expect("Area::lines only ever names lines that exist in this Topology");
                 upsert_line(tx, area.id, j as i64, line)?;
             }
+        }
+
+        // Area sibling order and the normalized flat line-vector order are
+        // independent; reparenting must preserve both through native history.
+        for (position, line) in installation.topology.lines.iter().enumerate() {
+            tx.execute(
+                "UPDATE line SET model_position = ?1 WHERE id = ?2",
+                params![position as i64, line.id.0],
+            )?;
         }
 
         // One pass per device placement — line-assigned devices, then

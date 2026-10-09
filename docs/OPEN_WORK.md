@@ -27,12 +27,12 @@ and publication follow-up, (3) deferred items with a recorded user decision, and
   §4 completion condition). The 7 open boxes are all user-deferred or
   optional (section 3).
 - Ledger counts (its own *Counts* line, `check-ledger` green, after the
-  2026-10-09 owner cleanup): snapshot 180 rows — DONE 39, ACCEPTED_BOUNDARY 119,
-  LATER 22; post-snapshot 11 rows — DONE 9, ACCEPTED_BOUNDARY 2.
+  2026-10-09 owner cleanup): snapshot 180 rows — DONE 41, ACCEPTED_BOUNDARY 119,
+  LATER 20; post-snapshot 11 rows — DONE 9, ACCEPTED_BOUNDARY 2.
 - Handover `.ai/CURRENT_STATE.md` (newest entries per track), worktree list,
   and a path-by-path check of which root files exist on `origin/main`.
-- Current ledger mechanically recounted: 191 distinct IDs, 48 delivered,
-  121 accepted boundaries and 22 later-scope rows; no active/waiting rows.
+- Current ledger mechanically recounted: 191 distinct IDs, 50 delivered,
+  121 accepted boundaries and 20 later-scope rows; no active/waiting rows.
   Every later-scope row is owned by `later`; no finished session owns open work.
   These are unequal source IDs, not a product-completion percentage.
 
@@ -84,6 +84,12 @@ These stay open on purpose. Reopen only on a new decision.
 
 ## 4. Later scope (never alpha tasks)
 
+Native restart-safe undo and project versions have been delivered in the
+user-authorized history package (code `62464763`, [contract](PROJECT_HISTORY.md),
+[verification](status/2026-10-09-project-history-verification.md)). They are no
+longer future work. Same-file versions still need independent backups; native
+accessibility, physical power-loss and hardware/ETS recovery remain separate.
+
 From the ledger's later-scope rows, historical `goal-commission.md` §3c and
 the [original-ideas audit](status/2026-10-08-ideas-roadmap-audit.md). Root
 `ideas.md` is ignored and is not present in a fresh clone. Each new feature
@@ -103,8 +109,6 @@ not erase subsequently delivered functionality.
   time/colour/picture/slider parameter editors from Type attributes and UIHints
   (`PDB-04`); independent `.knxproj` samples for untested schemas
   (12/13/14/20/22) and an AES-protected ETS6 sample.
-- **History:** persistent undo history (`HISTORY-01`); versioned backups /
-  project time travel beyond autosave (`HISTORY-02`).
 - **Comparison/report extensions:** applying/merging diffs, three-way
   comparison and native PDF output remain absent; comparison and browser
   print-to-PDF already exist. These are recorded boundaries, not active work.

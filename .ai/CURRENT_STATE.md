@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-09 15:24 CEST
+- **Completed:** User authorized commit/merge/push of HISTORY-01/HISTORY-02. Reviewed feature 62464763804d10307e19cfaa5dd9a482c0142439 committed as KNXBench. Separate integration worktree combines it with fetched main a3b9d493757532589660fe79d9270fdd694adf78; only CURRENT_STATE and IMPLEMENTATION_STATUS textual conflicts, both histories preserved. Prior owned-package execution remains as recorded; no combined-main acceptance yet.
+- **Pending/Next Steps:** Run full integrated Rust/web/browser/build/repository/native/runtime gates, merge commit, required statistics/closure, fast-forward push to main and verify live refs; clean only task-owned scratch. No release/container/hardware operation authorized.
+- **Notes for Codex oder Claude:** Separate integration/history-20261009 worktree; shared root and parallel worktrees untouched. Preserve complete upstream handover below. Local/source receipts are historical, not proof of integrated source. Same-file history is not an independent backup; native accessibility/power-loss/ETS/hardware exclusions remain. Self-review only, no subagents or quota checks.
+
+---
+
+- **Last Agent:** codex (HISTORY-01 / HISTORY-02 owned worktree)
+- **Timestamp:** 2026-10-09 15:05 CEST
+- **Completed:** Final local implementation accepted by in-session self-review: Rust 3762/0/182 ignored, fmt/Clippy/four binaries; web 2521/154 files, build/three typechecks, Chromium 208; tools 42, all five repository gates, exact-restored bindings and docs pass. Three private reference cases/five native corpus tests pass. Real production server/workbench passes two SIGKILL/reopens and nine assertions without interception or physical interfaces; final EN/DE footer precision re-gated, desktop rebuilt, final smoke/visual check passed. Permanent dossier/aggregate receipt installed, no private payloads. Unknown-schema and genuine late-rollback contracts verified.
+- **Pending/Next Steps:** Commit reviewed feature as KNXBench, then code-SHA-only ledger/closure bookkeeping, recheck final docs/gates, commit closure and remove task scratch. No remaining feature implementation or acceptance gap at documented native/offline scope.
+- **Notes for Codex oder Claude:** Own feature/history-20261009 only; local delivery, no push/main integration/release/deployment/hardware. Fetched main a3b9d493 has separate legacy/download/docs/stats work; integration must preserve both handovers and reconcile messages/docs before combined gates. Same-file versions need independent backups; before Save As undo is session-only; v11 old-build refusal and native/Orca/power-loss/hardware boundaries retained. .ai/logs/2026-10-09_codex_native-project-history.md and docs/status/2026-10-09-project-history-verification.md carry evidence. Preserve inherited handover suffix; no subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-09 13:14 CEST
 - **Completed:** Owner-authorized KNXBench ProjectStats report merged and published: feature f38cd556a0cf2f4effbcaf0be89766d22c696b81, no-ff integration 40d7f23cbbab0c9d64870fc088860b587fb67a2d, publication 7cf821d0e0dd6e55de11aa6fcf953248a8b9b273. Local/tracking/live main refs equal and feature ancestry plus exact report blob verified. Fresh isolated xtask anchors 493 links/205 files, docs 205 files/33 chapters/0 errors and staged whitespace pass. Report digest 88e4df8d5011cabb5dc778c5c98aee2b4f7a3c7c8c32f5d42554a41807554710; timestamp and measurements retained. No application/runtime/hardware changes; self-review only.
 - **Pending/Next Steps:** No implementation or report-publication work remains. This closure is documentation-only; verify its final push and retire only the owned worktree/branches/build/scratch. Generator intentionally remains local per user clarification; do not retry its inaccessible remote or infer authorization to create/relocate a repository.

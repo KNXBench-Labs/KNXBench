@@ -53,6 +53,9 @@ pub struct Analysis {
     pub structure: Vec<super::contribution_structure::Shape>,
     pub original_allowed: bool,
     pub metrics: Vec<Metric>,
+    /// Local source-bearing sequence inspection; cleared in reduced exports.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub procedure_resolutions: Vec<knx_productdb::procedure_resolution::Resolution>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -109,6 +112,7 @@ pub fn analyze(bytes: &[u8], filename: &str) -> Result<Analysis, AnalysisError> 
         structure: vec![],
         original_allowed: false,
         metrics: vec![],
+        procedure_resolutions: vec![],
     };
     let complete = super::contribution_structure::inspect(bytes, &mut analysis)?;
     if !complete {
@@ -198,6 +202,10 @@ pub fn analyze(bytes: &[u8], filename: &str) -> Result<Analysis, AnalysisError> 
                 match knx_productdb::query::programs(&db, None) {
                     Ok(programs) => {
                         let total = programs.len();
+                        let mut resolution_bytes = 0usize;
+                        let mut resolution_examined = 0usize;
+                        let mut resolution_limited = false;
+                        let mut resolution_incomplete = false;
                         for program in programs.into_iter().take(64) {
                             record_level(
                                 &mut analysis,
@@ -209,7 +217,60 @@ pub fn analyze(bytes: &[u8], filename: &str) -> Result<Analysis, AnalysisError> 
                                     &std::collections::BTreeMap::new(),
                                 ),
                             );
+                            if !resolution_limited {
+                                resolution_examined += 1;
+                                match knx_productdb::procedure_resolution::resolve_package_ap1(
+                                    &db,
+                                    &report.sha256,
+                                    &program.id,
+                                ) {
+                                    Ok(Some(resolution)) => {
+                                        let size = serde_json::to_vec(&resolution)
+                                            .map_err(|_| {
+                                                AnalysisError::Internal(
+                                                    "procedure serialization failed",
+                                                )
+                                            })?
+                                            .len();
+                                        if resolution_bytes
+                                            .checked_add(size)
+                                            .is_none_or(|n| n > 4 * 1024 * 1024)
+                                        {
+                                            resolution_limited = true;
+                                            resolution_examined -= 1;
+                                        } else {
+                                            resolution_incomplete |= resolution.omitted_issue_count
+                                                > 0
+                                                || resolution.issues.iter().any(|i| {
+                                                    matches!(
+                                                        i.code.as_str(),
+                                                        "source-byte-limit"
+                                                            | "xml-work-limit"
+                                                            | "xml-event-limit"
+                                                            | "resolution-output-limit"
+                                                    )
+                                                });
+                                            resolution_bytes += size;
+                                            record_resolution(&mut analysis, resolution);
+                                        }
+                                    }
+                                    Ok(None) => {}
+                                    Err(_) => {
+                                        return Err(AnalysisError::Internal(
+                                            "procedure source database unavailable",
+                                        ))
+                                    }
+                                }
+                            }
                         }
+                        let resolution_status =
+                            if total > 64 || resolution_limited || resolution_incomplete {
+                                analysis.status = "partial".into();
+                                "partial"
+                            } else {
+                                "measured"
+                            };
+                        analysis.checks.push(Check {name:"offline-procedure-resolution".into(),status:resolution_status.into(),detail:format!("Explicit MV-07B0 Load/ap1 only; examined {resolution_examined} of {total} program records, {} local sequence results; not materialized into plans, no execution or hardware verification",analysis.procedure_resolutions.len())});
                         let status = if total > 64 {
                             analysis.status = "partial".into();
                             "partial"
@@ -257,6 +318,9 @@ pub fn analyze(bytes: &[u8], filename: &str) -> Result<Analysis, AnalysisError> 
         .members
         .iter()
         .any(|m| m.reason.starts_with("Known credential"));
+    if sensitive {
+        analysis.procedure_resolutions.clear();
+    }
     for (i, finding) in analysis.findings.iter_mut().enumerate() {
         finding.id = format!("finding-{}", i + 1);
         if sensitive {
@@ -265,6 +329,63 @@ pub fn analyze(bytes: &[u8], filename: &str) -> Result<Analysis, AnalysisError> 
         }
     }
     Ok(analysis)
+}
+
+fn record_resolution(
+    analysis: &mut Analysis,
+    resolution: knx_productdb::procedure_resolution::Resolution,
+) {
+    analysis.findings.push(Finding { id:String::new(),stage:"offline-procedure-resolution".into(),category:"observation".into(),source_path:None,xpath:None,name:Some(resolution.program_id.clone()),occurrences:1,detail:format!("AP1 declarative sequence: {} ({} retained steps); not a complete download plan or a novelty/compatibility claim",resolution.status,resolution.steps.len()),sample:None });
+    // Full per-step context is already retained in the local diagnostic.
+    // Group fixed codes instead of multiplying source IDs into every finding.
+    let mut counts = std::collections::BTreeMap::<&str, u64>::new();
+    for issue in &resolution.issues {
+        *counts.entry(&issue.code).or_default() += 1;
+    }
+    for (code, count) in counts {
+        let category = if code.contains("duplicate")
+            || code.contains("conflict")
+            || code.contains("ambiguous")
+        {
+            "conflict"
+        } else if code.contains("uninterpreted") || code.contains("nested") {
+            "unknown"
+        } else {
+            "unsupported"
+        };
+        analysis.findings.push(Finding {
+            id: String::new(),
+            stage: "offline-procedure-resolution".into(),
+            category: category.into(),
+            source_path: None,
+            xpath: None,
+            name: None,
+            occurrences: count,
+            detail: code.into(),
+            sample: None,
+        });
+        analysis.metrics.push(Metric {
+            stage: "offline-procedure-resolution".into(),
+            entity: code.into(),
+            disposition: "issue".into(),
+            count,
+        });
+    }
+    if resolution.omitted_issue_count > 0 {
+        analysis.metrics.push(Metric {
+            stage: "offline-procedure-resolution".into(),
+            entity: "omitted-issues".into(),
+            disposition: "not-displayed".into(),
+            count: resolution.omitted_issue_count as u64,
+        });
+    }
+    analysis.metrics.push(Metric {
+        stage: "offline-procedure-resolution".into(),
+        entity: "program".into(),
+        disposition: resolution.status.clone(),
+        count: 1,
+    });
+    analysis.procedure_resolutions.push(resolution);
 }
 
 fn analyze_project(bytes: &[u8], db: &knx_productdb::Connection, analysis: &mut Analysis) {

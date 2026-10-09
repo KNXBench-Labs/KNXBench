@@ -218,6 +218,7 @@ fn manifest_digest(manifest: &Manifest) -> Result<String, AnalysisError> {
 
 fn reduce(report: &mut Analysis) {
     report.members.clear();
+    report.procedure_resolutions.clear();
     for finding in &mut report.findings {
         finding.source_path = None;
         finding.sample = None;
@@ -238,6 +239,9 @@ fn reduce(report: &mut Analysis) {
             }
             "inference" => {
                 "Offline support relies on an inference; request context for the named rule"
+            }
+            "observation" => {
+                "Declarative procedure observation; not global novelty or hardware support"
             }
             "retained" => "Preserved source data not interpreted by the domain model",
             "conflict" => "Validation or mapping conflict; request context",

@@ -27,6 +27,28 @@ async function choose(name = "sample.knxprod") {
   Object.defineProperty(input, "files", { configurable: true, value: [new File(["source"], name)] });
   await act(() => input.dispatchEvent(new Event("change", { bubbles: true })));
 }
+it("shows local ordered procedure provenance without offering bus execution", async () => {
+  const node = (name: string) => ({ namespace: "http://knx.org/xml/project/20", name, attributes: {}, children: [], text: "", byteStart: 10, byteEnd: 20 });
+  const source = { source: "program", sha256: "a".repeat(64), namespace: "http://knx.org/xml/project/20" };
+  api.analyzeContribution.mockResolvedValue({ ...report, status: "complete", procedureResolutions: [{
+    formatVersion: 1, programId: "Synthetic-AP1", mask: "MV-07B0", style: "MergedProcedure", variant: "ap1",
+    status: "partial", executable: false, sources: [source], templateAttributes: {},
+    steps: [{ node: node("LdCtrlConnect"), origin: { ...source, location: "master/template/step-1" } },
+      { node: node("UnknownControl"), origin: { ...source, location: "program/merge-2/step-1" } }],
+    merges: [], issues: [{ code: "uninterpreted-step", location: "program/merge-2/step-1" }],
+  }] });
+  await render(); await choose(); await click("Upload & analyze on this instance");
+  expect(document.body.textContent).toContain("Offline procedure sequences");
+  expect(document.body.textContent).toContain("Not a download plan");
+  const section = document.querySelector('[data-procedure-resolutions]')!;
+  expect(section).not.toBeNull();
+  expect([...section.querySelectorAll('[data-procedure-step] code')].map(e => e.textContent)).toEqual(["LdCtrlConnect", "UnknownControl"]);
+  expect(section.textContent).toContain("master/template/step-1");
+  expect(section.textContent).toContain("uninterpreted-step");
+  expect(section.querySelector("button")).toBeNull();
+  expect(api.exportContribution).not.toHaveBeenCalled();
+});
+
 it("never uploads on file selection and requires preview and explicit consent before export", async () => {
   api.analyzeContribution.mockResolvedValue(report); api.previewContribution.mockResolvedValue(preview);
   await render(); await choose();

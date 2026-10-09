@@ -64,6 +64,45 @@ does not erase a broader platform/device limitation or imply a new release.
   **Uncommitted/local only**, not main/alpha.6/deployed; core/storage/API/protocol
   and dependencies unchanged. No real-bus/native/Orca/full-ETS acceptance.
 
+## 2026-10-09 — Offline AP1 integration keeps its bus pass offline
+
+Feature38d8eb45 integrated with current native-history/name-editing main;
+actual merge `d639c5f8` fully re-gated: Rust3827/0/185
+ignored, web2553/0/160 files/build/four typechecks, Chromium208/0, both explicit
+full105 Release regressions1/0/0, four real built runtime cases/eight verified
+reduced ZIPs. Source freeze1144, original/readiness invariants, Clippy/four builds/
+bindings/five repository gates/docs pass. Fresh integrated ProjectStats included.
+Main push explicitly authorized; see [delivery/readback](status/2026-10-09-offline-ap1-verification.md).
+No new executable plan, live support, release/deployment/hardware or root sync.
+Earlier local-only receipt below stays dated evidence; review remains self-review.
+
+## 2026-10-09 — Offline AP1 evidence: order without a bus ticket
+
+- Local, unpublished first `MV-07B0` `Load/ap1` diagnostic slice, ADR-0098.
+  Package-bound retained sources, exact namespace/canonical master path,
+  ambiguity/hash refusals, ordered unknown steps and separate unplaced
+  declarations. No executable plan, new live eligibility or hardware Verified.
+- Existing support-gap UI/API/CLI and preview/consented ZIP/manual maintainer
+  handoff reused. Detailed local identities/values are removed from reduced
+  reports; fixed issue-code counts remain shareable. No automatic transmission.
+- Real corpus corrected an invented direct-mask synthetic wrapper: canonical
+  `HawkConfigurationData` fixtures now exercise the real path. Full-105 original
+  regression: 75 selected IDs/results, 69 partial / 6 source-limit unavailable,
+  **zero expanded real sequences or complete plans**. Original hashes and
+  467-program readiness (1 Verified / 98 Untested) unchanged; counts pinned.
+- Final Rust ProductDB/App/server/CLI 1945/0/118 ignored; fmt, warning-denied
+  focused all-target Clippy, builds, five nonempty repository gates and docs pass.
+  Both explicit ignored Release corpus regressions 1/0/0 each. Web 2494/0 in
+  154 files and production build pass, bound by unchanged web inputs.
+- Real built unmocked EN/DE, 1440/400px, dark/light loopback-only browser workflow
+  passed; eight downloaded reduced ZIPs byte/hash-checked, including unknown-step
+  metrics with no source values. Representative screenshots inspected. XML
+  declaration, namespace-amplification and attribute-boundary RED controls closed.
+- Self-review only; no full-workspace/native/accessibility/hardware acceptance,
+  commit, main integration, push, release or deployment. Source/configuration
+  frozen. [Contract](OFFLINE_PROCEDURE_RESOLUTION.md),
+  [receipt](evidence/offline-ap1-resolution-2026-10-09.json).
+
 ## 2026-10-09 — Names can change; identities keep their day job
 
 - Project-local device and individual GA names: editor/Properties, F2 and
@@ -83,6 +122,7 @@ does not erase a broader platform/device limitation or imply a new release.
   frontend 2544/0/159 files/build/types, Clippy and all five repository gates,
   docs/tools green. Exact merge-tree equivalence retains the final four native
   and 208 browser executions without mislabelling them as fresh merge runs.
+
 
 ## 2026-10-09 — Native history remembers restarts, not hardware writes
 
@@ -114,6 +154,7 @@ does not erase a broader platform/device limitation or imply a new release.
   9 green again. Upstream histories/catalogs preserved; fresh ProjectStats on
   clean merged source. Final publication in CURRENT_STATE, no release,
   deployment or hardware operation.
+
 
 ## 2026-10-09 — Bathroom button: loaded, checked, put back (RESEARCH §19.21)
 

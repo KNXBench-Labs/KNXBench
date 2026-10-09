@@ -1,6 +1,7 @@
 * -text
 *.vd4 binary
 *.pr5 binary
+*.vd5 binary
 # Byte-exact payloads: CRLF line ends and the trailing space of `K ` are data.
 ets.vd_ binary
 ets.pr_ binary

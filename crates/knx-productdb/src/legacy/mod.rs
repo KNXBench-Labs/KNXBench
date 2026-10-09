@@ -1,9 +1,10 @@
 //! Legacy ETS3-era EX-IM files (`.vd3`–`.vd5`, `.pr3`–`.pr5`): detection, decryption, grammar.
 //!
 //! These files are not `.knxprod` packages. They are a ZIP archive with one
-//! member (`ets.vd_`, `ets2.vd_` or `ets.pr_`), normally ZipCrypto-encrypted,
-//! that holds a CRLF-separated text table dump called `EX-IM` here after its
-//! first line. *The KNX Standard* names `vd3`–`vd5` as the ETS3 end-user
+//! EX-IM member (`ets.vd_`, `ets2.vd_` or `ets.pr_`), normally
+//! ZipCrypto-encrypted, that holds a CRLF-separated text table dump called
+//! `EX-IM` here after its first line. The measured `.vd5` is an installer
+//! tree with mask images beside that member; they are listed, not read. *The KNX Standard* names `vd3`–`vd5` as the ETS3 end-user
 //! product database format but does not describe its bytes, so every rule in
 //! this module is an observation of real files
 //! (docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md,
@@ -27,7 +28,7 @@ mod text;
 
 pub use container::{
     detect_legacy_container, read_legacy_member, LegacyCheckBytes, LegacyContainer, LegacyMember,
-    LegacyMemberKind, LegacyPayload, MAX_LEGACY_FILE, MAX_LEGACY_PAYLOAD,
+    LegacyMemberKind, LegacyOtherMember, LegacyPayload, MAX_LEGACY_FILE, MAX_LEGACY_PAYLOAD,
 };
 pub use error::LegacyError;
 pub use exim::{

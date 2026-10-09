@@ -171,31 +171,76 @@ except three named deviations:
    legacy tree. It is not editable there either, because its access is
    `None`.
 
-## The first real `.vd5` (structure only, not imported)
+## The first real `.vd5`: measured and imported
 
 `SIEMENS_KNX_PDB_Nov_2016_ETS3.vd5` (67,538,254 bytes, sha256
-`6459190d…87df2b3`) appeared in the corpus on 2026-10-08. Its ZIP central
-directory, read without decryption, differs from every `.vd3`/`.vd4`/`.pr5`
-at hand:
+`6459190d…87df2b3`) appeared in the corpus on 2026-10-08. Measured on
+2026-10-09 with the user's password; no content is reproduced here.
 
-- **Four members, not one.** Three mask images
-  (`…/eteC/MASK/mask0011.bin`, `mask0012.bin` stored, `MASK0705.BIN`
-  deflated) and the payload at
-  `Program Files (x86)/Ets/Database/@PDB/@PDB_Ges/_Novmber_2016/ets.vd_`.
-  All four are ZipCrypto-encrypted (flags `0x1`).
-- **Size.** The file exceeds the 64 MiB input bound, and the payload
-  inflates to 173,230,269 bytes, also beyond the 64 MiB payload bound.
+**Container `[V]`.** Four members, all ZipCrypto-encrypted with the same
+password, each with a 69-byte extra field:
 
-KNXBench therefore refuses it by name (`SizeLimit`, before any decryption).
-Supporting it needs its own package: the multi-member layout (an installer
-tree, mask images preserved), bounds raised on measured memory use, and the
-parser's footprint at that size. Its format version is unknown until it is
-decrypted.
+| member | method | size |
+|---|---|---|
+| `Program Files (x86)/Common Files/EIBA sc/eteC/MASK/mask0011.bin` | stored | 9 |
+| `…/MASK/mask0012.bin` | stored | 19 |
+| `…/MASK/MASK0705.BIN` | deflated | 1,598 |
+| `Program Files (x86)/Ets/Database/@PDB/@PDB_Ges/_Novmber_2016/ets.vd_` | deflated | 173,230,269 |
+
+The payload's local header sits at offset 678, after the three masks; the
+four records run without a gap from offset 0 to the central directory. That
+is the single-member layout rule of L1, generalised. The mask files' numbers
+match mask versions the programs use (`MV-0011`, `MV-0012`, `MV-0705` among
+eleven); KNXBench does not read them (ADR-0094, *Amendment: VD5*).
+
+**Payload `[V]`.** sha256 `54d2c721…`, `V 6.3`, `K ETS3`, exported
+2016-11-17. 42 tables, 872,166 rows, 1,181,652 continuation lines, about
+8.19 million values, longest line 82 bytes. The longest value is
+18,653,184 bytes over 233,164 continuation lines, in table `Baggage`
+(71 rows, with `ApplicationProgramBaggage` and `program_plugin`; plugin
+data, not mapped). 88 application programs, 129 virtual devices.
+
+**Charset `[V]`, first evidence.** Ten bytes lie in 0x80–0x9F: 0x96 six
+times (`a – d`, an en dash), 0x92 twice (`s’affiche`, French apostrophe),
+0x85 twice (`[0…255]`, an ellipsis). Each reads as text only in
+Windows-1252; in ISO-8859-1 they are C1 control codes. This supports the
+Windows-1252 reading the importer already uses. No specification states
+it, so the stored label stays `windows-1252 (assumed)`.
+
+**Atomic types `[V]`.** This file's `parameter_atomic_type` table names six
+types, two more than the earlier files: 3 `string` (display attribute
+`$`) and 5 `long enum` (`Z`). 56 parameter types use them, carrying 1,515
+parameters (1,377 string, 138 long enum) in 22 programs. L2 maps only 0, 1,
+2 and 4, so these parameters are reported (`unknown-atomic-type`, and
+`dangling-reference` for every row that names them) and stay in the stored
+payload. Mapping them needs evidence of ETS's conversion; the corpus holds
+`SIEMENS_KNX_PDB_Nov_2016_ETS4.knxprod`, a candidate oracle not yet
+compared.
+
+**Import `[V]`.** 88 programs, 129 catalog items, 38,453 parameters, 71,467
+parameter refs (72,982 rows minus the 1,515 above), 55,381 object refs,
+288,413 translations; 1,772 mapping diagnostics plus 3 `unread-member`
+(1,775 import notes in the report).
+`text_attribute` `COLUMN_ID 21` (27,939 rows) has no measured meaning yet.
+Every program evaluates under its defaults; the only evaluator finding is
+`NoBranchMatched`. Two programs place no parameter: 24796 declares none,
+24847 only two pages.
+
+**Resources `[V]`** (release build, development host, another build running
+at the same time, so times are upper bounds): decrypt and inflate 1.7 s;
+`inspect-legacy` 2.1 s, peak RSS 492 MiB; first `import-legacy` 22–38 s,
+peak 1,426 MiB (1,580 MiB before the parsed document was released ahead of
+the transaction); repeat import 14 s, 1,262 MiB. The product database file
+grew by 425 MB, of which 240.8 MB are the stored original and payload.
+Through the built web app and a release `knx-server` (offline namespace,
+remembered password) the upload took 22.1 s and the server's peak RSS was
+1,458,520 kB; the report folds the 1,775 notes into ten kinds. The bounds
+are set from these numbers (ADR-0094, *Amendment: VD5*).
 
 ## Both real files (ignored corpus test)
 
-`knx-app/tests/legacy_corpus.rs` publishes both files into one database
-and pins:
+`knx-app/tests/legacy_corpus.rs` publishes both files (and, since
+2026-10-09, the `.vd5` above) into one database and pins:
 
 | file | programs | parameters | refs | object refs | translations | diagnostics |
 |---|---|---|---|---|---|---|

@@ -133,10 +133,10 @@ fn format_report(file: &str, report: &LegacyPublishReport) -> String {
     ));
     out.push_str(&format!("  payload sha256 {}\n", report.payload_sha256));
     if report.diagnostics.is_empty() {
-        out.push_str("  no mapping diagnostics\n");
+        out.push_str("  no import notes\n");
     } else {
         out.push_str(&format!(
-            "  {} mapping diagnostics:\n",
+            "  {} import notes (mapping diagnostics and unread file members):\n",
             report.diagnostics.len()
         ));
         for (kind, detail) in &report.diagnostics {

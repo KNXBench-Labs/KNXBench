@@ -6,7 +6,7 @@
 
 use knx_productdb::legacy::{
     detect_legacy_container, inspect_payload, read_legacy_member, ExImContent, LegacyError,
-    LegacyMemberKind, LegacyPayload,
+    LegacyMemberKind, LegacyOtherMember, LegacyPayload, MAX_LEGACY_FILE, MAX_LEGACY_PAYLOAD,
 };
 use knx_productdb::{install_package, open_and_migrate, PackageError};
 
@@ -70,9 +70,18 @@ fn stored_zip(members: &[(&str, &[u8])]) -> Vec<u8> {
 /// [`stored_zip`] behind `prefix`, with every offset pointing at the real
 /// position (the way a self-extractor stub would be laid out).
 fn stored_zip_after(prefix: &[u8], members: &[(&str, &[u8])]) -> Vec<u8> {
+    stored_zip_spaced(prefix, b"", members)
+}
+
+/// [`stored_zip_after`] with `between` written after every member record
+/// except the last: bytes no directory entry accounts for.
+fn stored_zip_spaced(prefix: &[u8], between: &[u8], members: &[(&str, &[u8])]) -> Vec<u8> {
     let mut out = prefix.to_vec();
     let mut central = Vec::new();
-    for (name, data) in members {
+    for (index, (name, data)) in members.iter().enumerate() {
+        if index > 0 {
+            out.extend_from_slice(between);
+        }
         let offset = out.len() as u32;
         let crc = crc32fast::hash(data);
         let mut local = Vec::new();
@@ -160,13 +169,73 @@ fn ordinary_and_broken_inputs_are_not_detected_as_legacy() {
     assert!(detect_legacy_container(b"not a zip at all").is_none());
     assert!(detect_legacy_container(&stored_zip(&[("knx_master.xml", b"<KNX/>")])).is_none());
     assert!(detect_legacy_container(&stored_zip(&[("ets.vd_.txt", b"x")])).is_none());
-    // A second member makes it something else; it is not opened either.
-    let two = stored_zip(&[("ets.vd_", b"EX-IM"), ("readme.txt", b"hi")]);
+    // Two EX-IM members are ambiguous; neither is chosen.
+    let two = stored_zip(&[("a/ets.vd_", b"EX-IM"), ("b/ETS.VD_", b"EX-IM")]);
     assert!(detect_legacy_container(&two).is_none());
-    assert!(matches!(
-        open(&two),
-        Err(LegacyError::NotLegacyContainer { .. })
-    ));
+    match open(&two) {
+        Err(LegacyError::NotLegacyContainer { reason }) => {
+            assert!(reason.contains("2 members are named"), "{reason}")
+        }
+        other => panic!("expected NotLegacyContainer, got {other:?}"),
+    }
+}
+
+/// The measured `.vd5` is an installer tree: mask images next to `ets.vd_`.
+/// The EX-IM member opens; the others are listed, not read, not dropped.
+#[test]
+fn an_installer_tree_opens_its_exim_member_and_lists_the_others() {
+    let payload = fixture("src-vd/MARVIN/ets.vd_");
+    let zip = stored_zip(&[
+        ("Program Files/EIBA sc/MASK/mask0042.bin", b"\x01\x02\x03"),
+        ("Program Files/Ets/Database/ets.vd_", &payload),
+        ("Program Files/EIBA sc/MASK/MASK0705.BIN", b"0705"),
+    ]);
+    let container = detect_legacy_container(&zip).expect("legacy container");
+    assert_eq!(container.member_name, "Program Files/Ets/Database/ets.vd_");
+    assert_eq!(
+        container.other_members,
+        vec![
+            LegacyOtherMember {
+                name: "Program Files/EIBA sc/MASK/mask0042.bin".into(),
+                encrypted: false,
+                method: 0,
+                compressed_size: 3,
+                uncompressed_size: 3,
+            },
+            LegacyOtherMember {
+                name: "Program Files/EIBA sc/MASK/MASK0705.BIN".into(),
+                encrypted: false,
+                method: 0,
+                compressed_size: 4,
+                uncompressed_size: 4,
+            },
+        ]
+    );
+    let opened = open(&zip).unwrap();
+    assert_eq!(opened.bytes(), payload.as_slice());
+    let inspection = inspect_payload(&opened).unwrap();
+    assert_eq!(inspection.other_members, container.other_members);
+
+    // A single-member file has none.
+    let single = detect_legacy_container(&fixture("marvin-plain.vd4")).unwrap();
+    assert!(single.other_members.is_empty());
+}
+
+#[test]
+fn bytes_between_member_records_are_refused() {
+    let payload = fixture("src-vd/MARVIN/ets.vd_");
+    let zip = stored_zip_spaced(
+        b"",
+        b"hidden",
+        &[("MASK/mask0042.bin", b"m"), ("ets.vd_", &payload)],
+    );
+    assert!(detect_legacy_container(&zip).is_some());
+    match open(&zip) {
+        Err(LegacyError::InvalidContainer { reason }) => {
+            assert!(reason.contains("without a gap"), "{reason}")
+        }
+        other => panic!("expected InvalidContainer, got {other:?}"),
+    }
 }
 
 #[test]
@@ -220,12 +289,26 @@ fn a_stored_member_opens_too() {
 
 #[test]
 fn an_oversized_declared_payload_is_refused_before_allocation() {
-    let huge = with_field(
-        "marvin-plain.vd4",
-        UNCOMPRESSED,
-        &(64 * 1024 * 1024 + 1u32).to_le_bytes(),
-    );
+    let limit = u32::try_from(MAX_LEGACY_PAYLOAD).unwrap();
+    let huge = with_field("marvin-plain.vd4", UNCOMPRESSED, &(limit + 1).to_le_bytes());
     assert!(matches!(open(&huge), Err(LegacyError::SizeLimit { .. })));
+    // At the limit it is not a size refusal: the member is read and found
+    // to be smaller than declared.
+    let at = with_field("marvin-plain.vd4", UNCOMPRESSED, &limit.to_le_bytes());
+    assert!(matches!(open(&at), Err(LegacyError::Corrupt { .. })));
+}
+
+/// The bounds cover the largest measured file, the Siemens `.vd5` of
+/// November 2016 (67,538,254 bytes; payload 173,230,269 bytes), with room.
+#[test]
+fn the_bounds_admit_the_measured_vd5_with_headroom() {
+    const { assert!(MAX_LEGACY_FILE >= 67_538_254 * 3 / 2) };
+    const { assert!(MAX_LEGACY_PAYLOAD >= 173_230_269 * 3 / 2) };
+    let oversized = vec![0u8; MAX_LEGACY_FILE + 1];
+    assert!(matches!(
+        open(&oversized),
+        Err(LegacyError::SizeLimit { .. })
+    ));
 }
 
 #[test]

@@ -31,8 +31,26 @@ pub struct LegacyPublishReport {
     pub parameter_refs: usize,
     pub com_object_refs: usize,
     pub translations: usize,
-    /// `(kind, detail)` of every mapping diagnostic, in order.
+    /// `(kind, detail)` of every mapping diagnostic, in order, followed by
+    /// one `unread-member` entry per other member of this original file.
+    /// Those describe the file, not the payload, so they are not stored as
+    /// `legacy_diagnostic` rows: the stored original still holds them.
     pub diagnostics: Vec<(String, String)>,
+}
+
+/// The `unread-member` diagnostics of one original file.
+fn unread_members(payload: &LegacyPayload) -> impl Iterator<Item = (String, String)> + '_ {
+    payload.container().other_members.iter().map(|m| {
+        (
+            "unread-member".to_string(),
+            format!(
+                "file member {} ({} bytes{}) is not read; it stays in the stored original file",
+                m.name,
+                m.uncompressed_size,
+                if m.encrypted { ", encrypted" } else { "" }
+            ),
+        )
+    })
 }
 
 #[derive(Debug)]
@@ -92,6 +110,13 @@ pub fn publish_legacy(
     let document = parse_exim(&stored)?;
     let payload_sha256 = sha256_hex(&stored);
     let mut mapping = map_legacy_database(&document, &payload_sha256)?;
+    // The mapping owns everything it needs; the parsed document (spans and
+    // a copy of every value, about 300 MB for the measured `.vd5`) is
+    // released before the transaction, keeping only three header facts.
+    let format_version = document.format_version().map(str::to_string);
+    let exported_at = document.exported_at().map(str::to_string);
+    let producer = document.producer().map(str::to_string);
+    drop(document);
     mapping
         .diagnostics
         .extend(
@@ -153,9 +178,9 @@ pub fn publish_legacy(
                 mapping.namespace,
                 container.member_name,
                 format!("{:?}", container.member_kind),
-                document.format_version(),
-                document.exported_at(),
-                document.producer(),
+                format_version,
+                exported_at,
+                producer,
                 PAYLOAD_CHARSET_ASSUMPTION,
             ],
         )?;
@@ -171,7 +196,8 @@ pub fn publish_legacy(
         ],
     )?;
     if known.is_some() {
-        let report = stored_report(&tx, &payload_sha256, &original_sha256, &mapping, true)?;
+        let mut report = stored_report(&tx, &payload_sha256, &original_sha256, &mapping, true)?;
+        report.diagnostics.extend(unread_members(payload));
         tx.commit()?;
         return Ok(report);
     }
@@ -192,7 +218,8 @@ pub fn publish_legacy(
             params![payload_sha256, ordinal as i64, d.kind(), d.to_string()],
         )?;
     }
-    let report = stored_report(&tx, &payload_sha256, &original_sha256, &mapping, false)?;
+    let mut report = stored_report(&tx, &payload_sha256, &original_sha256, &mapping, false)?;
+    report.diagnostics.extend(unread_members(payload));
     tx.commit()?;
     Ok(report)
 }

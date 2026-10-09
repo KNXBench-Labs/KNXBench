@@ -216,6 +216,19 @@ fn format_inspection(file: &str, inspection: &LegacyInspection) -> String {
         inspection.source_len,
         inspection.source_sha256
     );
+    for member in &inspection.other_members {
+        let _ = writeln!(
+            out,
+            "  other member (not read, kept in the file): {}, {}, {} bytes",
+            member.name,
+            if member.encrypted {
+                "ZipCrypto-encrypted"
+            } else {
+                "not encrypted"
+            },
+            member.uncompressed_size
+        );
+    }
     let unknown = || "unknown".to_string();
     let _ = writeln!(
         out,

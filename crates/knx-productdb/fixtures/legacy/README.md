@@ -16,16 +16,18 @@ any real legacy file.
 | `src-vd-program/MARVIN/ets.vd_` | Plaintext product database with one application program (ADR-0094 L2): program 300 "Improbability Drive" of manufacturer 4242 (`M-1092`), pages, grouped and union parameters, enumerations, conditional visibility, three communication objects, translations including group members, a functional-entity catalog, and a `device` table whose secret-class `DEVICE_BCU_PASSWORD` value (invented, over a continuation line) must be withheld |
 | `marvin-program-plain.vd4` | `src-vd-program` zipped without encryption |
 | `marvin-program.vd4` | `src-vd-program` zipped and encrypted like `marvin-encrypted.vd4`; its plaintext is byte-identical to `marvin-program-plain.vd4`'s |
+| `marvin-installer.vd5` | The installer-tree layout of the real Siemens `.vd5` (ADR-0094, VD5): an invented 14-byte mask image `Program Files (x86)/Common Files/MARVIN sc/MASK/mask4242.bin`, then `src-vd-program`'s payload as `Program Files (x86)/Marvin/Database/@PDB/ets.vd_`, both encrypted like `marvin-encrypted.vd4`. The tree is staged in a temporary directory, not committed |
 
 ## Rebuilding
 
 ```sh
 python3 build_fixtures.py           # the L1 fixtures
 python3 build_fixtures.py program   # the program fixtures (L2)
+python3 build_fixtures.py installer # the installer-tree .vd5 (VD5)
 ```
 
-The two commands are separate so that rebuilding one set leaves the other
-set's random encryption headers, and so its committed digests, unchanged.
+The commands are separate so that rebuilding one set leaves the other
+sets' random encryption headers, and so its committed digests, unchanged.
 
 The script writes both plaintexts with CRLF line ends and archives them with
 Info-ZIP `zip -X -D` (fixed mtime 2026-10-08 09:00 UTC). It then encrypts
@@ -48,6 +50,7 @@ bd73cd8382def079028e6c14cf9deff1ab05a078e24cff73c03eba8eb8ab9991  marvin-project
 2ee90cdf316d92a58af96163a723f2836acf6547e22ccd64a44905c86d500c6d  src-vd-program/MARVIN/ets.vd_
 879e920693e2cd9e3dfca73cfca419e123ae6d1ed9f456901734a6f4d6424e27  marvin-program-plain.vd4
 cfbcefae00f9f60baa3bbdad21f8479a28f59d6e8db32799e39ea95b2ba4b428  marvin-program.vd4
+f042cfd7b081cd5ee3fc2cf596d1adcec3781ffe43e281d3789749150dde32a3  marvin-installer.vd5
 ```
 
 `.gitattributes` turns off line-end conversion for every file here and

@@ -1185,9 +1185,12 @@ device-specific confirmation phrase and exclusive gateway access. Complete
 and all three partial download scopes were exercised on one MDT `1.1.67`
 (`0701h`, `A-0027-15-0BAC`) with read-back; an address change and return,
 and an address reset with guarded recovery, were also exercised there.
-A successful byte read-back does **not** confirm the closing Basic Restart:
-that device does not acknowledge it; the result is explicitly
-`RestartOutcome::Unconfirmed`. Other devices, application versions and
+On 2026-10-09 a complete download, a functional check and a restore from
+the pre-write backup ran on the Eibmarkt presence detector `1.1.8` (`0701h`,
+`M-006A_A-0001-22-617E-O0079`, RESEARCH §19.19); partial scopes did not run
+there. A successful byte read-back does **not** confirm the closing Basic
+Restart: neither device acknowledges it; the result is explicitly
+`RestartOutcome::Unconfirmed`. Other programs, application versions and
 masks have not acquired this evidence. The property-based `Downloader`
 remains simulator-only. Full traces and the chronological corrections are
 in [RESEARCH §19](RESEARCH.md) and the
@@ -7427,7 +7430,7 @@ UI slice lets the user pick a winner per id.
 **Alpha decision (user, 2026-10-04).** No version/pinning policy for the Alpha: first-installed winner with every candidate disclosed is the accepted boundary.
 
 
-## §136 `0701h` download verified once; restart remains unconfirmed
+## §136 `0701h` download verified on two programs; restart remains unconfirmed
 
 The earlier claim that mask `0701h` could not be downloaded is withdrawn.
 A memory download of `A-0027-15-0BAC` and a functional group-telegram check
@@ -7435,8 +7438,11 @@ on MDT `1.1.67` succeeded with a device-specific go (RESEARCH §19.4).
 CLI/Web commands now expose this memory path, and partial scopes have their
 own bounded evidence (§7/§142). The closing Basic Restart on this device
 remains unacknowledged: `RestartOutcome::Unconfirmed` must not be presented
-as a verified restart or a failed image read-back. This single product/device
-is not evidence for other masks or revisions.
+as a verified restart or a failed image read-back. **2026-10-09:** the
+Eibmarkt presence detector `1.1.8` (`M-006A_A-0001-22-617E-O0079`) behaved
+the same way: complete download read back, functional check, restore,
+restart unacknowledged (RESEARCH §19.19). Two programs from two manufacturers
+on one mask are not evidence for other masks or revisions.
 
 ## §138 A device's access key comes from the project or a key file, and nothing checks it live
 

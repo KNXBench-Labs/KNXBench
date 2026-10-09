@@ -7,6 +7,31 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — The attic presence detector goes live and comes back unchanged (RESEARCH §19.19)
+
+- First live download of a second program: the house project's
+  configuration to Eibmarkt presence detector `1.1.8`
+  (`M-006A_A-0001-22-617E-O0079`, mask `0701h`) with the maintainer's go.
+  Compare before (23 of 530 octets differ: 21 flag octets, §19.13, and the
+  brightness threshold at `4194h`), pre-write backup, 25 steps / 530 octets
+  read back, three parts `Loaded`, restart unconfirmed as on `1.1.67`;
+  independent compare after 40 s clean; bus monitor saw `1.1.8 -> 2/0/35`
+  switch on and off with the maintainer in the attic; restore from the
+  backup, after which the compare lists the same 22 runs as before.
+- `crates/knx-app/data/verified_downloads.json` gains the program with scope
+  `complete` (unit test `the_shipped_evidence_names_the_presence_detector_complete_only`,
+  red before the entry). Readiness of the house: 9 verified (`1.1.1`–`1.1.9`),
+  23 untested, 2 unsupported, 1 excluded (was 32 untested). The legacy
+  `.vd4` program (L4) was not downloaded and stays untested.
+- Docs: RESEARCH §19.19, KNOWN_LIMITATIONS §7/§136, manual status,
+  supported/unsupported and known issues.
+- Found on the way, not fixed (corpus owner): `download_coverage_corpus`
+  fails on the full private corpus since the 2026-10-08 Siemens files
+  (`Siemens_HVAC_…ETS5_ETS6.knxprod` refused by the ZIP size limit, KL
+  §151). With the 103 pinned packages it passes
+  unchanged (1 verified there: the detector program is not in that corpus).
+- Gate: PENDING.
+
 ## 2026-10-09 — Legacy programs learn to download, on paper (ADR-0094, L4)
 
 - `knx_productdb::legacy::legacy_program_code` reads a program's

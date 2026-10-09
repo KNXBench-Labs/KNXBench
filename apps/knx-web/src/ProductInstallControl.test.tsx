@@ -111,7 +111,7 @@ describe("ProductInstallControl", () => {
     expect(text).toContain("Legacy product database imported: 1 application program.");
     expect(text).toContain("It is now remembered.");
     expect(text).toContain("secret-withheld");
-    expect(text).toContain("Downloading them to a device is not supported yet.");
+    expect(text).toContain("No such download has run on a real device yet, so readiness shows them as untested.");
     expect(document.body.innerHTML).not.toContain("canary-typed");
     root.unmount();
   });

@@ -133,8 +133,13 @@ its one measured sample is covered since 2026-10-09 (below).
 
 **Added 2026-10-08 (ADR-0094, L2):** *Importing* `.vd3`/`.vd4` application
 programs into the product database for offline engineering (catalog,
-parameters, communication objects, visibility, translations; no download,
-no DPTs). Evidence: N000520 from the real `.vd4` compared with ETS 6.3's
+parameters, communication objects, visibility, translations; no DPTs).
+**Update 2026-10-09 (L4):** download plans from the programs' `s19_block`
+rows. Evidence: the house's nine N000520 presence detectors plan as with
+ETS 6.3's conversion except one named two-octet deviation, and nine Siemens
+`070nh` programs yield ETS4's code
+(`knx-app/tests/legacy_download_oracle.rs`, ignored). No legacy download has
+run on a device (untested). Evidence: N000520 from the real `.vd4` compared with ETS 6.3's
 conversion through KNXBench's evaluator covers 260 parameter refs, 28 object
 refs, 3,535 translations and 36 visibility cases, with three named
 deviations (`n000520_evaluates_like_the_ets_conversion`,

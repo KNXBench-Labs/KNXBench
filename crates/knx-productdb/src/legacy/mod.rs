@@ -4,7 +4,9 @@
 //! EX-IM member (`ets.vd_`, `ets2.vd_` or `ets.pr_`), normally
 //! ZipCrypto-encrypted, that holds a CRLF-separated text table dump called
 //! `EX-IM` here after its first line. The measured `.vd5` is an installer
-//! tree with mask images beside that member; they are listed, not read. *The KNX Standard* names `vd3`–`vd5` as the ETS3 end-user
+//! tree with mask images beside that member; they are listed, not read. A
+//! program's `s19_block` rows become its download code (`code`, L4).
+//! *The KNX Standard* names `vd3`–`vd5` as the ETS3 end-user
 //! product database format but does not describe its bytes, so every rule in
 //! this module is an observation of real files
 //! (docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md,
@@ -16,6 +18,7 @@
 //! application layer (`knx_app::legacy`) decrypts with a password the user
 //! supplied, through `knx-secure`, and never guesses one.
 
+mod code;
 mod container;
 mod error;
 mod exim;
@@ -26,6 +29,7 @@ mod publish;
 mod secrets;
 mod text;
 
+pub use code::{legacy_program_code, load_legacy_program_code, LegacyCodeError, LegacyProgramCode};
 pub use container::{
     detect_legacy_container, read_legacy_member, LegacyCheckBytes, LegacyContainer, LegacyMember,
     LegacyMemberKind, LegacyOtherMember, LegacyPayload, MAX_LEGACY_FILE, MAX_LEGACY_PAYLOAD,

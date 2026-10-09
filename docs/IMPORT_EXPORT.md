@@ -835,8 +835,10 @@ data (same blocker as schema 23 project data).
   web file pickers, with a password dialog and one remembered password
   (ADR-0094 *Amendment: L3*). The CLI gained `knx products legacy-password
   set|forget|status` and `import-legacy --remember`.
-- **Not yet:** download of legacy programs (L4, refused as
-  `CodeError::LegacyProgram`).
+- **Download (L4, 2026-10-09):** `load_program_code` reads a legacy
+  program's code from its stored payload's `s19_block` rows (ADR-0094
+  *Amendment: L4*); the image builder and planner treat it like an XML
+  program. Graded untested until a live run.
 
 ## 11. Group-address CSV exchange
 

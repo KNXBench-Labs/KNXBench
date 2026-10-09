@@ -217,10 +217,12 @@ payload. Mapping them needs evidence of ETS's conversion; the corpus holds
 `SIEMENS_KNX_PDB_Nov_2016_ETS4.knxprod`, a candidate oracle not yet
 compared.
 
-**Import `[V]`.** 88 programs, 129 catalog items, 38,453 parameters, 71,467
+**Import `[V]`.** 88 programs, 129 catalog items, 41,817 parameters, 71,467
 parameter refs (72,982 rows minus the 1,515 above), 55,381 object refs,
-288,413 translations; 1,772 mapping diagnostics plus 3 `unread-member`
-(1,775 import notes in the report).
+291,765 translations; 1,770 mapping diagnostics plus 3 `unread-member`
+(1,773 import notes in the report). Until the L4 correction below (address
+0 is no memory) the same file gave 38,453 parameters, 288,413 translations
+and 27 instead of 25 `overlapping-memory` diagnostics.
 `text_attribute` `COLUMN_ID 21` (27,939 rows) has no measured meaning yet.
 Every program evaluates under its defaults; the only evaluator finding is
 `NoBranchMatched`. Two programs place no parameter: 24796 declares none,
@@ -237,6 +239,100 @@ remembered password) the upload took 22.1 s and the server's peak RSS was
 1,458,520 kB; the report folds the 1,775 notes into ten kinds. The bounds
 are set from these numbers (ADR-0094, *Amendment: VD5*).
 
+## L4: download code from `s19_block` (2026-10-09)
+
+Measured over the three real files and compared with ETS's own conversions:
+N000520 (`.vd4`) against ETS 6.3's conversion in the house project, and the
+nine `070nh` programs of the Siemens `.vd5` whose manufacturer, application
+number and version also appear in `SIEMENS_KNX_PDB_Nov_2016_ETS4.knxprod`.
+Rows and records are compared structurally; no content is reproduced.
+
+**One row per step `[V]`.** `s19_block` holds each program's load procedure,
+one row per step in `BLOCK_NUMBER` order (`.vd4` 44 rows / 2 programs, `.vd3`
+78 / 3, `.vd5` 1,060 / 64 of 88). `CONTROL_CODE` is the first octet of the
+step: `(LsmIdx << 4) | event` for load state machine events (1 Start
+Loading, 2 Load Completed, 3 additional load control, 4 Unload), `0Eh`
+Connect, `0Fh` Disconnect, `0Ch` Restart, `07h` Compare Property. Read this
+way, all ten programs give ETS's `LdCtrl*` sequence step for step.
+
+**`Record` `[V]`.** The `.vd4` and `.vd5` carry a 16-octet `Record` per row
+(the `.vd3` has no such column); its first octet equals `CONTROL_CODE` in
+all 1,104 rows. Its layout:
+
+| step | record | ETS |
+|---|---|---|
+| allocate data/stack segment | `L3 TT 00 SSSS EEEE AA MT MA 00` | `LdCtrlAbsSegment`, `Size = EEEE − SSSS + 1` |
+| task segment | `L3 02 00 SSSS PP MMMM TTTT VV` | `LdCtrlTaskSegment` (address only) |
+| TaskCtrl1 | `L3 04 00 AAAA NN` | `LdCtrlTaskCtrl1` |
+| Compare Property | `07 OI PI …` and ten data octets at 6–15 | `LdCtrlCompareProp` |
+
+The allocation record holds the segment's **end** address, the Cookbook
+*Load Controls* storage format (`docs/research/commissioning.md`, *The
+allocation record's second field is a length*), where MP §3.31.2's
+memory-mapped record holds the length. The importer checks every record
+against the row's `SEGMENT_*`, `ACCESS_ATTRIBUTES` and `MEMORY_*` columns
+(they agree in every real row) and builds the plan as for an XML program,
+so the frame KNXBench sends is unchanged.
+
+**The task segment's identity is not the record's `[V]`.** N000520's record
+names `PP 01, MMMM 0079h, TTTT 0001h, VV 01h`. The nine presence detectors
+ETS programmed with this program report `PID_PROGRAM_VERSION`
+`00 6A 00 01 22` (house read-back, `commissioning.md` §19.13): manufacturer
+`006Ah` (the program's, not the original manufacturer `0079h`), application
+`DEVICE_TYPE` 1, version `PROGRAM_VERSION` 34. That is what the planner
+already derives from the program's attributes, so the record's identity is
+not used.
+
+**Base images and masks `[V]`.** `BLOCK_DATA` and `BLOCK_MASK` equal ETS's
+`Data` and `Mask` in all ten programs, with one encoding difference: four
+Siemens programs write `01h` where ETS writes `FFh` (six write `FFh`
+themselves). Mask octets are `00h`, `01h` or `FFh` in all three files;
+`01h` reads as `FFh`, anything else is refused.
+
+**Tables `[V]`.** The address table is load state machine 1's first data
+segment (MP §3.31.1), the association and group object tables start at
+`ASSOCTAB_ADDRESS` and `COMMSTAB_ADDRESS`. `MaxEntries` is
+`(ADDRESS_TAB_SIZE − 1) / 2 − 1` and `(ASSOCTAB_SIZE − 1) / 2`. All ten
+programs' placements and limits equal ETS's.
+
+**Not readable, kept as named unmodelled steps.** Rows with a non-empty
+`MERGE_ID` or non-zero `PROC_MASK` (the `.vd5`'s `07B0h` programs, merged
+procedures; no source says how one merges), control code `05h` (ETS writes
+`LdCtrlWriteProp` there, on masks `0020h`/`0021h`), segment types other than
+0, 1, 2 and 4, and a Compare Property or TaskCtrl1 without a `Record`. The
+planner refuses a procedure that contains one, by its name. None of them
+occurs in a `070nh` program of the three files.
+
+**Address 0 is no memory `[V]`, an L2 correction.** 3,576 `.vd5` parameter
+rows have `PARAMETER_ADDRESS` 0 (19,349 have none, 50,057 a real address);
+the `.vd3` has 161 (53 none, 358 real), the `.vd4` none. ETS4's conversion
+places none of the `.vd5`'s. The L2 import had treated 0 as an address and
+grouped every such parameter of one type and size into one memory cell,
+merging unrelated parameters into one, with one shared value. Since
+2026-10-09 address 0 is read as "no memory": the `.vd5` publishes 3,364 and
+the `.vd3` 150 more parameters (pins in `legacy_corpus.rs`), and N000520's
+acceptance is unchanged. No ETS conversion of a `.vd3` program exists in
+the corpus; the `.vd3` follows the `.vd5`'s evidence. A database that
+published the `.vd5` before keeps the old rows until the payload is
+published into a fresh database (re-publishing the same payload is skipped).
+
+**Acceptance (ignored corpus tests, `knx-app/tests/legacy_download_oracle.rs`).**
+
+- N000520's code (segments, data, masks, 25-step procedure, tables,
+  identity, every placed parameter bit) equals ETS 6.3's conversion. For
+  each of the nine presence detectors 1.1.1–1.1.9, with the project's own
+  values, links and flags, the legacy program's download plan equals the
+  ETS conversion's in every step but one: the 288-octet write at `40F4h`
+  differs in `4196h`–`4197h`, `00 00` against `03 E8`. That is L2 deviation
+  3 below: the file hangs P-5008 (`brightnessThresholdPIR_1`, default 0) on
+  the first page, so the legacy tree activates and writes it; ETS's tree
+  leaves it inactive, and all nine devices hold the base `03E8h`.
+- The nine Siemens `070nh` pairs: equal code, apart from four placed
+  `string` parameters (atomic type 3) the import does not map.
+
+Nothing here has run on a device. A legacy program's download is graded
+*untested* like any program without a verified run.
+
 ## Both real files (ignored corpus test)
 
 `knx-app/tests/legacy_corpus.rs` publishes both files (and, since
@@ -244,7 +340,7 @@ are set from these numbers (ADR-0094, *Amendment: VD5*).
 
 | file | programs | parameters | refs | object refs | translations | diagnostics |
 |---|---|---|---|---|---|---|
-| `EIBMARKT.VD3` (BCU1) | 3 | 302 | 572 | 148 | 1,366 | 5 orphan translations, 18 unmapped tables, 3 + 385 skipped rows |
+| `EIBMARKT.VD3` (BCU1) | 3 | 452 | 572 | 148 | 1,468 | 5 orphan translations, 18 unmapped tables, 3 + 385 skipped rows |
 | Eibmarkt `.vd4` | 2 | 334 | 520 | 56 | 10,428 | 5 orphan translations, 18 unmapped tables, 2 + 1 skipped rows |
 
 Skipped rows are `product_to_program` rows without a program and

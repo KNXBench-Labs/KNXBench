@@ -7027,10 +7027,10 @@ triage.
 **Current reading, 2026-10-08:** L1–L3 VD inspection/offline CLI/web import
 and password handling are delivered. The title records the original refusal;
 it is not a blanket current VD3/VD4 refusal. `.pr*`/`.vd2`, legacy
-DPT/download semantics, unmapped `string`/`long enum` parameters and
-plaintext remembered-password storage remain the explicit limits below. The
-TypeNone spacer presentation and the VD5 bounds/layout were fixed on
-2026-10-09.
+DPTs, an untested (never run live) legacy download, unmapped
+`string`/`long enum` parameters and plaintext remembered-password storage
+remain the explicit limits below. The TypeNone spacer presentation, the VD5
+bounds/layout and L4 download planning landed on 2026-10-09.
 
 **Update 2026-10-08 (legacy VD package L3, ADR-0094 *Amendment: L3*).**
 The web catalog and the device wizard install `.vd3`–`.vd5` through
@@ -7069,9 +7069,18 @@ own conversion apart from three named deviations
 A device from such a file can be placed, parameterised and linked to
 group addresses (`apps/knx-server/tests/http_legacy_device.rs`).
 **Still limited:**
-- **No download.** `load_program_code` refuses a legacy program as
-  `CodeError::LegacyProgram`. The memory image (`s19_block`) is not read
-  yet; that is L4.
+- ~~**No download.**~~ **Planned since 2026-10-09** (ADR-0094, *Amendment:
+  L4*): `load_program_code` reads the program's `s19_block` rows from the
+  stored payload. **Still limited:** no legacy download has run on a device,
+  so readiness grades it untested. N000520's legacy tree writes P-5008's
+  default 0 at `4196h` where ETS's conversion keeps the base `03E8h` (L2
+  deviation 3). Merged procedures (`07B0h`, `MERGE_ID`/`PROC_MASK`), control
+  code `05h` and procedures of a file without `Record` column (the `.vd3`'s
+  Compare Property) stay refused by name. Every code load parses the stored
+  payload again (about two seconds and 500 MiB for the 173 MB `.vd5`).
+  Address 0 now means "no memory"; a database that published a `.vd3` or
+  `.vd5` before keeps the merged rows until the file is published into a
+  fresh database.
 - **No DPTs.** `EIB_DATA_TYPE_CODE` is reported as an unmapped column,
   because its encoding is not measured. Objects carry size and flags but no
   DPT until the user sets one.

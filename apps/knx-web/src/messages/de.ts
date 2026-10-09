@@ -1639,7 +1639,7 @@ export const messages: Record<MessageKey, string> = {
   "legacyReport.rememberProblem": "Das Passwort wurde nicht gemerkt: {problem}",
   "legacyReport.diagnosticsHeading.one": "{count} Importhinweis",
   "legacyReport.diagnosticsHeading.other": "{count} Importhinweise",
-  "legacyReport.offlineOnly": "Geräte aus einer alten Datenbank kannst du offline planen und verknüpfen. Das Herunterladen auf ein Gerät wird noch nicht unterstützt.",
+  "legacyReport.offlineOnly": "Geräte aus einer alten Datenbank kannst du planen, verknüpfen und herunterladen. Ein solcher Download lief noch auf keinem echten Gerät, deshalb zeigt die Bereitschaft sie als ungetestet.",
   "settings.section.legacyPassword": "Passwort für alte Produktdatenbanken",
   "settings.legacyPasswordHint": "Setzt du beim Import einer verschlüsselten .vd3/.vd4/.vd5 den Haken „Merken“, behält der Server dieses eine Passwort, und spätere Importe brauchen keines.",
   "settings.legacyPasswordRemembered": "Ein Passwort ist gemerkt.",

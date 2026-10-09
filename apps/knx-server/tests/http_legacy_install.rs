@@ -168,7 +168,7 @@ async fn an_encrypted_file_asks_for_a_password_then_imports_with_it() {
     assert_eq!(body["remembered"], false);
     assert!(body["namespace"].as_str().unwrap().starts_with("LX"));
     assert_eq!(body["programs"].as_array().unwrap().len(), 1);
-    assert_eq!(body["parameters"], 10);
+    assert_eq!(body["parameters"], 12);
     assert!(body["diagnostics"]
         .as_array()
         .unwrap()

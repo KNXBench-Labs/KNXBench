@@ -365,6 +365,9 @@ fn visibility_becomes_a_dynamic_tree_with_the_measured_shape() {
         "          ParameterRefRef P-1002_R-1002",
         "          ParameterRefRef UP-1004_R-1004",
         "          ComObjectRefRef O-1_R-10001",
+        // Address 0 is no memory: two parameters, not one shared cell.
+        "      ParameterRefRef P-1012_R-1012",
+        "      ParameterRefRef P-1013_R-1013",
         // A root that is not a page joins the first page, as in ETS.
         "      ParameterRefRef P-1010_R-1010",
         "      choose P-1010_R-1010",
@@ -374,6 +377,18 @@ fn visibility_becomes_a_dynamic_tree_with_the_measured_shape() {
         "      ParameterRefRef P-2001_R-2001",
     ];
     assert_eq!(tree, expected, "\n{}", tree.join("\n"));
+    for number in ["1012", "1013"] {
+        let parameter = program
+            .parameters
+            .iter()
+            .find(|p| p.id == format!("{id}_P-{number}"))
+            .unwrap_or_else(|| panic!("P-{number}"));
+        assert_eq!(
+            (parameter.code_segment.as_deref(), parameter.offset),
+            (None, None),
+            "P-{number} lives nowhere in memory"
+        );
+    }
     let block = program
         .dynamic
         .iter()
@@ -542,7 +557,7 @@ fn unmodelled_tables_are_reported_with_their_row_counts() {
     let (mapping, _) = mapping();
     assert!(mapping.diagnostics.iter().any(|d| matches!(
         d,
-        MappingDiagnostic::UnmappedTable { name, rows } if name == "s19_block" && *rows == 1
+        MappingDiagnostic::UnmappedTable { name, rows } if name == "s19_block" && *rows == 20
     )));
 }
 

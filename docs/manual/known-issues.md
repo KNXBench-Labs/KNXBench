@@ -191,12 +191,20 @@ is the remaining copy defect.
   product name.
 - **Details:** [§12 manufacturer data resolution](../KNOWN_LIMITATIONS.md#12-manufacturer-data-resolution--one-of-three-gaps-closed-2026-09-20)
 
-### Legacy import is offline use, not legacy device download
+<a id="legacy-import-is-offline-use-not-legacy-device-download"></a>
+
+### Legacy devices download untested: planned, never run on a device
 
 - **Affected:** `.vd3`–`.vd5` product databases.
 - **Available:** web/CLI import, password dialog, optional remembered password,
-  catalog placement, supported parameters, visibility and object links.
-- **Remaining:** no legacy download or mapped legacy DPT codes. Parameters
+  catalog placement, supported parameters, visibility and object links, and
+  since 2026-10-09 download plans built from the file's own load procedure.
+- **Remaining:** no legacy download has run on a real device yet, so
+  readiness shows these devices as untested. For the Eibmarkt presence
+  detector N000520 the legacy program writes one hidden threshold
+  (`4196h`) as `0` where ETS writes nothing and the device keeps `1000`.
+  Siemens `07B0h` programs (merged procedures) stay refused. No mapped
+  legacy DPT codes. Parameters
   of the legacy `string` and `long enum` types (1,515 in the measured VD5)
   are reported, not shown. A large VD5 takes 20–40 s and over 1 GiB of
   memory to import. (Untyped `TypeNone` spacers are drawn as headings or blank

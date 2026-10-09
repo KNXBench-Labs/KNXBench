@@ -31,7 +31,13 @@ does not erase a broader platform/device limitation or imply a new release.
   ignored, fmt, focused all-target Clippy, all five nonempty fresh-target
   xtask checks, whitespace exit 0. Release `house_readiness` and historical
   pinned-103 `download_coverage_corpus`: each 1 passed / 0 failed.
-- Integrated acceptance with the parallel full-corpus package: PENDING.
+- Integrated acceptance on `44654e04`, with the parallel full-corpus
+  package: app/CLI/network Rust 839 passed / 0 failed / 56 ignored,
+  fmt, focused all-target Clippy, all five nonempty fresh-target xtask
+  checks, documentation and whitespace pass. Release full-105
+  `download_coverage_corpus` and `house_readiness`: each 1 passed / 0 failed;
+  all 105 originals and integrated source hashes unchanged. Receipt:
+  `docs/evidence/live-button-114-2026-10-09.json`.
   No frontend/browser/full-workspace or partial-download claim.
 
 ## 2026-10-09 — Download coverage main integration: the whole suitcase, again

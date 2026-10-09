@@ -52,6 +52,14 @@ experiment is authorized by this documentation audit.
 
 ## 2. Parked packages and publication follow-up
 
+**Offline AP1 diagnostics (2026-10-09):** local implementation/acceptance is
+complete in `feature/offline-procedures-20261009`, not main or a release.
+[Contract](OFFLINE_PROCEDURE_RESOLUTION.md), ADR-0098: 69 partial source-bound
+reconstructions / 6 source-limit unavailable from 75 selected real candidates;
+no expanded real sequence, complete plan or new live support. Commit/integration/
+push remain a separate owner decision; later semantic materialization is not
+implicitly authorized. Existing commissioning ledger dispositions are unchanged.
+
 The root's two formerly parked packages are delivered. The separate
 **documentation refresh and ideas/roadmap audit** remain local in
 `KNXBench.worktrees/docs-refresh-20261008`, now based on `608a204b`: revised

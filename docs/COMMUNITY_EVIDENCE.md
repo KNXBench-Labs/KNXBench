@@ -58,6 +58,24 @@ constructs, unknowns, named inferences and offline refusals remain distinct.
 Product offline planning uses defaults; project preparation uses the project's
 configuration and links. Neither establishes hardware `Verified`.
 
+## Local offline AP1 sequences (2026-10-09)
+
+The local implementation extends the same product analysis with source-bound
+`MV-07B0` `Load/ap1` diagnostics. UI, API and CLI share one resolver; there is
+no new download wizard, online fallback or bus execution. The ordered sequence
+retains unknown steps, source hashes/offsets and separate unplaced declarations.
+`expanded` is structural reconstruction only; `partial` and `unavailable` do
+not become complete plans. Work/output limits produce explicit partial coverage.
+
+Reduced previews/ZIPs clear all detailed sequence objects, program identities
+and source hashes. Fixed resolver issue-code metrics and occurrence counts remain
+shareable; detailed issues remain local. Known secret-bearing input withholds
+sequence details locally too. Extra context still requires selection, inspection
+and permission. An observation means new to this resolver, not globally novel.
+Use the existing manual GitHub handoff to report it; nothing is sent automatically.
+See [offline procedure contract](OFFLINE_PROCEDURE_RESOLUTION.md) and
+[ADR-0098](adr/0098-offline-ap1-procedure-resolution.md).
+
 ## Disclosure tiers
 
 1. **Reduced report (default):** `manifest.json`, `findings.json`, `README.md`.

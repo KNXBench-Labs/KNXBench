@@ -95,5 +95,13 @@
     "No fresh Rust workspace or private-corpus test claim for this UI-only change.",
     "No native-shell or assistive-technology validation.",
     "No release, deployment, real server mutations or hardware actions."
-  ]
+  ],
+  "verifiedSourcePublication": {
+    "target": "refs/heads/main",
+    "commit": "79861c79461b01ef69c35c04ac1ea8dba90cee04",
+    "timestamp": "2026-10-09 18:56 CEST",
+    "liveFetchedLocalRefsEqual": true,
+    "featureAndMergeAncestryVerified": true,
+    "ownedBlobsVerified": 8
+  }
 }

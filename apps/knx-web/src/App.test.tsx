@@ -316,15 +316,74 @@ function entry(overrides: Partial<LogEntry>): LogEntry {
   };
 }
 
-async function renderApp(manifestVersion?: string, session?: SessionControls) {
+async function renderApp(manifestVersion?: string, session?: SessionControls, resumeCurrentProject = false) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<App manifestVersion={manifestVersion} session={session} />);
+    root.render(<App manifestVersion={manifestVersion} session={session} resumeCurrentProject={resumeCurrentProject} />);
   });
   return root;
 }
+
+describe("explicit browser return resumes the server project", () => {
+  it("keeps an ordinary fresh editor mount on the welcome screen", async () => {
+    const root = await renderApp();
+    expect(apiMock.currentProject).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("resumes the current tree and its saved-file authority without reopening or importing", async () => {
+    apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), is_modified: true, has_store_path: true });
+    const root = await renderApp(undefined, undefined, true);
+    expect(host!.textContent).toContain("Device D");
+    await act(async () => { host!.querySelector<HTMLButtonElement>('button[data-crt-surface="save"]')!.click(); });
+    expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
+    expect(filePickerMock.pickSavePath).not.toHaveBeenCalled();
+    expect(apiMock.openProject).not.toHaveBeenCalled();
+    expect(apiMock.importProject).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("does not invent a save destination for an unsaved server project", async () => {
+    apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), is_modified: true, has_store_path: false });
+    filePickerMock.pickSavePath.mockResolvedValue(null);
+    const root = await renderApp(undefined, undefined, true);
+    await act(async () => { host!.querySelector<HTMLButtonElement>('button[data-crt-surface="save"]')!.click(); });
+    expect(filePickerMock.pickSavePath).toHaveBeenCalledTimes(1);
+    expect(apiMock.saveProject).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("leaves the welcome screen usable when no server project is open", async () => {
+    apiMock.currentProject.mockRejectedValue(Object.assign(new Error("no project open"), { status: 400 }));
+    apiMock.errorStatus.mockReturnValueOnce(400);
+    const root = await renderApp(undefined, undefined, true);
+    expect(host!.querySelector(".welcome-workspace")).not.toBeNull();
+    expect(host!.querySelector(".toast-error")).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("ignores a pending resume after that request is canceled", async () => {
+    let finish!: (tree: ProjectTree & { has_store_path: boolean }) => void;
+    apiMock.currentProject.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    const root = await renderApp(undefined, undefined, true);
+    await act(async () => root.render(<App resumeCurrentProject={false} />));
+    await act(async () => finish({ ...treeWithDevice(), has_store_path: true }));
+    expect(host!.textContent).not.toContain("Device D");
+    expect(host!.querySelector(".welcome-workspace")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("reports a failed resume instead of claiming a project is open", async () => {
+    apiMock.currentProject.mockRejectedValue(new Error("resume refused"));
+    apiMock.errorStatus.mockReturnValueOnce(500);
+    const root = await renderApp(undefined, undefined, true);
+    expect(host!.textContent).toContain("resume refused");
+    expect(host!.querySelector(".welcome-workspace")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+});
 
 describe("App brand", () => {
   it("uses the text-free local logo while keeping one accessible brand label", async () => {

@@ -6,7 +6,7 @@ import AuthGate from "./AuthGate";
 import DiagnosticsCompanion from "./DiagnosticsCompanion";
 import FlowWindow from "./FlowWindow";
 import { isFlowWindow } from "./flowWindow";
-import { isCompanionView } from "./diagnosticsWindow";
+import { isCompanionView, isEditorReturn } from "./diagnosticsWindow";
 import { startSettingsRefresh } from "./settingsStore";
 import "@fontsource/space-grotesk/400.css";
 import "@fontsource/space-grotesk/500.css";
@@ -25,6 +25,13 @@ import "./styles.css";
 // keeps the editor's whole module graph — and therefore every project
 // mutation and the undo shortcuts — out of the companion entirely.
 const companion = isCompanionView(window.location.search);
+const resumeCurrentProject = isEditorReturn(window.location.search);
+if (resumeCurrentProject) {
+  // Consume the explicit return marker, but retain unrelated URL state.
+  const url = new URL(window.location.href);
+  url.searchParams.delete("view");
+  window.history.replaceState(window.history.state, "", url);
+}
 
 // `AuthGate` (ADR-0026) wraps both roles: the companion window is a second
 // window on the same origin and so shares the session cookie, and a
@@ -52,7 +59,7 @@ createRoot(document.getElementById("root")!).render(
     <AuthGate>
       {(session) => (
         <SettingsBootstrap>
-          {isFlowWindow(window.location.search) ? <FlowWindow /> : companion ? <DiagnosticsCompanion /> : <App session={session} />}
+          {isFlowWindow(window.location.search) ? <FlowWindow /> : companion ? <DiagnosticsCompanion /> : <App session={session} resumeCurrentProject={resumeCurrentProject} />}
         </SettingsBootstrap>
       )}
     </AuthGate>

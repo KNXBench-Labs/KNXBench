@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-09 18:35 CEST
+- **Completed:** Offline AP1 feature38d8eb45 merged with native-history and latest name-editing main, final full integrated gate proc_bf390f556bcf exits0: Rust3827/0/185 ignored, frontend2553/0/160 files/build/four typechecks, Chromium208/0, Clippy/four builds/bindings/five nonempty repo gates/docs/frozen1144 sources. Both explicit full105 Release corpus regressions1/0/0;75 selected results69 partial/6 unavailable/0 expanded real sequences, original/readiness invariants unchanged. Final real built four-case unmocked workflow/eight reduced ZIPs and representative screenshots checked. Fresh ProjectStats from actual integrated revision; canonical config untouched. Source self-review only, preserved all upstream source/handover and foreign root bytes.
+- **Pending/Next Steps:** Owner-authorized normal main publication after final metadata/doc/privacy gates; exact live/fetched/local refs must match before claiming pushed. Then record readback and clean only owned completed worktrees/build/scratch after preserving ignored logs. No feature implementation work remains.
+- **Notes for Codex oder Claude:** Canonical docs/status/2026-10-09-offline-ap1-verification.md and docs/evidence/offline-ap1-integration-2026-10-09.json. No complete plan/new live eligibility, release/deployment/hardware/automatic maintainer delivery/root sync. Source-fixed whole gate includes linked canonical fixtures and isolated loopback runtime. Earlier first integrated3818/0 gate is superseded only for moving-main source; original local receipt immutable. Other ignored/private/native/accessibility scopes are not claimed.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-09 17:43 CEST
 - **Completed:** Owner explicitly selected commit + fresh-main integration + re-gate + main push for offline AP1. Accepted1047-file source manifest and local receipt hash revalidated; source self-review renewed (exact canonical path/ownership, non-executable status, unknown retention, work/output bounds, secret and public reduction). No remaining blocking finding; self-review only. Foreign root HEAD/index/ProjectStats/research and other worktrees protected.
 - **Pending/Next Steps:** Commit only this reviewed offline slice, merge into an isolated freshly fetched main checkout, preserve all upstream history/docs, run actual integrated Rust/Web/build/repository/corpus gates and built offline workflow, publish main only when green and verify live ref. Release/deployment/hardware not authorized.

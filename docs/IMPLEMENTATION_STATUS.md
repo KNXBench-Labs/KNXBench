@@ -7,6 +7,18 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Offline AP1 integration keeps its bus pass offline
+
+Feature38d8eb45 integrated with current native-history/name-editing main;
+actual merge `d639c5f8` fully re-gated: Rust3827/0/185
+ignored, web2553/0/160 files/build/four typechecks, Chromium208/0, both explicit
+full105 Release regressions1/0/0, four real built runtime cases/eight verified
+reduced ZIPs. Source freeze1144, original/readiness invariants, Clippy/four builds/
+bindings/five repository gates/docs pass. Fresh integrated ProjectStats included.
+Main push explicitly authorized; see [delivery/readback](status/2026-10-09-offline-ap1-verification.md).
+No new executable plan, live support, release/deployment/hardware or root sync.
+Earlier local-only receipt below stays dated evidence; review remains self-review.
+
 ## 2026-10-09 — Offline AP1 evidence: order without a bus ticket
 
 - Local, unpublished first `MV-07B0` `Load/ap1` diagnostic slice, ADR-0098.

@@ -45,6 +45,21 @@ case is synthetic and bounded to 5000 devices: the production fixture measured
 is not unlimited performance or a real-installation benchmark.
 Native WebKitGTK/Orca and real hardware are not newly verified.
 
+## Community demos are fictional offline learning data, not building designs (2026-10-08)
+
+[The three demo projects](COMMUNITY_DEMO_PROJECTS.md) require the separately
+included fictional product catalogue for programme/parameter views. Their
+synthetic package is verified through KNXBench, not ETS or authoritative XSD
+validation. No firmware, signatures, simulation, KNX Secure, electrical design,
+filter-table verification or apartment security isolation is supplied. All
+load flags are false; never download the fictional programmes to hardware.
+The description-edit exercise replaces unsupported device renaming; the new
+practice group's DPT is inferred after linking, not editable on the address.
+Native edits can auto-save: retain an untouched extracted copy to reset.
+Chromium acceptance is not native WebKitGTK/Orca or an older-release guarantee.
+The local candidate is not published; website/repository publication needs a
+separate owner go. Existing numbered limitations and owner ledger are unchanged.
+
 ## Community evidence is bounded, manually shared and not anonymous (2026-10-08)
 
 [The contribution contract](COMMUNITY_EVIDENCE.md) records the archive, XML,

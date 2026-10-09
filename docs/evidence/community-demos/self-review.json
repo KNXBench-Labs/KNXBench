@@ -1,0 +1,26 @@
+{
+  "scope": "local self-review; no independent reviewer/subagents",
+  "source_base": "33db32e94b7281787331c7bb0ebf3c8a1c4043ab",
+  "findings": {
+    "hardcoded_secret": [],
+    "shell_injection": [],
+    "unsafe_pickle": [],
+    "dynamic_sql": []
+  },
+  "source_sha256": {
+    "tools/community_demos.py": "14f966ace4f5505b2e98cfa8082c71359019ed0ca48251e1f4b85591aae59172",
+    "tools/community_demo_layouts.py": "f0809da72f4b4e45085d8c5b7d7868bae44b3a1fe0d23f967a233c6bbe4050ac",
+    "tools/verify_community_demos.js": "6a4038aeb8d7d1f1db5dbe2cce37b756e80693760af57a44596baf28eb6590c6",
+    "tools/tests/test_community_demos.py": "541509ce6257b169c37a81546d5d08b9838a3882e87a8a3a32ce4595887e2dfd",
+    "crates/knx-app/examples/community_demos.rs": "f95f4b294da9d62a37922b5acdb4028173b8639a56a73ecb52bc4fb056452c38"
+  },
+  "notes": [
+    "No production API/UI/core/store/product schema or dependency changes.",
+    "Exclusive output paths and exact allowed descriptor keys prevent overwriting/traversal.",
+    "No real vendor data, firmware, authentication material or bus commands.",
+    "Guide corrected to supported description edit, inferred practice DPT and actual native file-picker label; exact whole-model practice oracle added.",
+    "UI harness corrected for native option visibility, asynchronous onboarding, scalar conflict count and void save response; initial attempts were harness diagnostics, not green acceptance.",
+    "Final header-only adjustment and regenerated archives preserve exact UI-verified native/catalogue bytes; five final example tests and 42 terminal tooling tests pass."
+  ],
+  "observed_at": "2026-10-08 23:12 CEST"
+}

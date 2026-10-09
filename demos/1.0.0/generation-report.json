@@ -1,0 +1,10 @@
+{
+  "catalogue_conflicts": 0,
+  "catalogue_unknown_occurrences": 0,
+  "hardware_or_ets_verification": false,
+  "native_model_roundtrips": 3,
+  "native_schema": 10,
+  "product_input_scheme": 11,
+  "product_schema": 22,
+  "programs_evaluated": 9
+}

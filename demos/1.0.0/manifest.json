@@ -1,0 +1,45 @@
+{
+  "generation": {
+    "catalogue_conflicts": 0,
+    "catalogue_unknown_occurrences": 0,
+    "hardware_or_ets_verification": false,
+    "native_model_roundtrips": 3,
+    "native_schema": 10,
+    "product_input_scheme": 11,
+    "product_schema": 22,
+    "programs_evaluated": 9
+  },
+  "generator_sha256": {
+    "crates/knx-app/examples/community_demos.rs": "f95f4b294da9d62a37922b5acdb4028173b8639a56a73ecb52bc4fb056452c38",
+    "tools/community_demo_layouts.py": "f0809da72f4b4e45085d8c5b7d7868bae44b3a1fe0d23f967a233c6bbe4050ac",
+    "tools/community_demos.py": "14f966ace4f5505b2e98cfa8082c71359019ed0ca48251e1f4b85591aae59172"
+  },
+  "projects": [
+    {
+      "building_parts": 22,
+      "devices": 32,
+      "group_addresses": 105,
+      "key": "single-family-home",
+      "lines": 2,
+      "name": "Single-Family Home (fictional demo)"
+    },
+    {
+      "building_parts": 60,
+      "devices": 101,
+      "group_addresses": 339,
+      "key": "multi-unit-residential",
+      "lines": 8,
+      "name": "Multi-Unit Residential Building (fictional demo)"
+    },
+    {
+      "building_parts": 62,
+      "devices": 157,
+      "group_addresses": 507,
+      "key": "office-building",
+      "lines": 4,
+      "name": "Office Building (fictional demo)"
+    }
+  ],
+  "source_base": "33db32e94b7281787331c7bb0ebf3c8a1c4043ab",
+  "version": "1.0.0"
+}

@@ -1,0 +1,194 @@
+{
+  "status": "verified local owner-review candidate",
+  "publication": "not authorized; local owner-review candidate only",
+  "source_base": "33db32e94b7281787331c7bb0ebf3c8a1c4043ab",
+  "ui_receipt": "ui-verification.json",
+  "self_review": "self-review.json",
+  "final_packages_match_ui_verified_native_and_catalogue_bytes": true,
+  "full_practice_model_comparison": "passed for all three",
+  "affected_rust_tests": {
+    "passed": 162,
+    "failed": 0,
+    "ignored": 25,
+    "result_blocks": 27
+  },
+  "tooling_tests": {
+    "passed": 42,
+    "failed": 0
+  },
+  "clippy_example": "passed",
+  "workspace_format_check": "passed",
+  "fresh_target_server_build": "passed",
+  "production_frontend_build": "passed",
+  "not_verified": [
+    "private corpus ignored tests",
+    "full Rust workspace",
+    "native WebKitGTK/Orca",
+    "ETS/XSD admission",
+    "hardware",
+    "deployment"
+  ],
+  "observed_at": "2026-10-08 23:12 CEST",
+  "archive_validation": {
+    "archives": [
+      {
+        "file": "knxbench-community-demos-1.0.0.zip",
+        "bytes": 725144,
+        "sha256": "bc478a1c0017ba97aacdb47069ced9bea8cb3b5cc4a229903f3d719a52a7f6be",
+        "members": 18
+      },
+      {
+        "file": "multi-unit-residential-1.0.0.zip",
+        "bytes": 324494,
+        "sha256": "8220a2bc65ad1f9c3e95ae449ada218f4e3f587215ebd3622d41268adfa47cb4",
+        "members": 13
+      },
+      {
+        "file": "office-building-1.0.0.zip",
+        "bytes": 389721,
+        "sha256": "864f02f4ba7c029d5f3933d54c21e41991e922c3be24deab17b62a7f7b51617c",
+        "members": 13
+      },
+      {
+        "file": "single-family-home-1.0.0.zip",
+        "bytes": 162403,
+        "sha256": "00f3e7277c570c9d51f52f0c91b3e447ab4e8ddc9f13b5e99e928f7ada999a1b",
+        "members": 13
+      }
+    ],
+    "all_checksums_valid": true,
+    "all_packaged_sources_current": true,
+    "native_and_catalogue_match_ui_verified_bytes": true,
+    "tooling_terminal_tests": 42
+  },
+  "repository_gates": [
+    {
+      "command": [
+        "python3",
+        "tools/check_documentation.py"
+      ],
+      "exit": 0,
+      "output": "Documentation: markdown_files=202, local_targets=1853, images=48, chapters=33\nPASS: 0 errors; external URLs are not checked.\nRun xtask check-anchors separately for heading anchors.\n"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "/mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008",
+        "check-layering"
+      ],
+      "exit": 0,
+      "output": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008\nlayering scope: 478 resolved packages\nlayering ok: knx-core reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-etsproj reaches neither knx-store nor knx-productdb; knx-productdb reaches none of knx-etsproj, knx-store, knx-secure; knx-projection reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-secure reaches none of [\"knx-core\", \"serde\"]; knx-mcp reaches none of [\"knx-net\", \"knx-server\", \"knx-secure\", \"knx-etsproj\", \"axum\", \"hyper\", \"reqwest\"]\n   Compiling camino v1.2.5\n   Compiling serde_json v1.0.151\n   Compiling thiserror v1.0.69\n   Compiling bitflags v2.13.1\n   Compiling memchr v2.8.3\n   Compiling arraydeque v0.5.1\n   Compiling syn v3.0.4\n   Compiling syn v2.0.119\n   Compiling semver v1.0.28\n   Compiling rusqlite v0.40.2\n   Compiling yaml-rust2 v0.13.0\n   Compiling knx-store v0.1.0-alpha.1 (/mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008/crates/knx-store)\n   Compiling thiserror-impl v1.0.69\n   Compiling serde_derive v1.0.229\n   Compiling serde v1.0.229\n   Compiling cargo-platform v0.1.9\n   Compiling cargo_metadata v0.18.1\n   Compiling xtask v0.1.0-alpha.1 (/mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008/xtask)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.05s\n     Running `<hermes-scratch>/community-demo-target/debug/xtask --root /mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008 check-layering`\n"
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "/mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008",
+        "check-headers"
+      ],
+      "exit": 0,
+      "output": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008\nheaders ok: 717 files with a well-formed header, 155 without one (ceiling 155), 21 generated files skipped\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s\n     Running `<hermes-scratch>/community-demo-target/debug/xtask --root /mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008 check-headers`\n"
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "/mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008",
+        "check-anchors"
+      ],
+      "exit": 0,
+      "output": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008\nanchors ok: 474 links checked across 202 markdown files, none dead\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s\n     Running `<hermes-scratch>/community-demo-target/debug/xtask --root /mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008 check-anchors`\n"
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "/mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008",
+        "check-ledger"
+      ],
+      "exit": 0,
+      "output": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008\nledger ok: 191 rows in docs/status/LEDGER.md\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s\n     Running `<hermes-scratch>/community-demo-target/debug/xtask --root /mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008 check-ledger`\n"
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "/mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008",
+        "check-corpus-gates"
+      ],
+      "exit": 0,
+      "output": "gate target: /mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008\ncorpus gates ok: 466 Rust files scanned, no silent early return on a missing corpus\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s\n     Running `<hermes-scratch>/community-demo-target/debug/xtask --root /mnt/daten-i/Sourcecode/KNXBench.worktrees/community-demos-20261008 check-corpus-gates`\n"
+    }
+  ],
+  "post_header_checks": {
+    "rust_example_tests": 5,
+    "tooling_tests": 42,
+    "clippy": "passed",
+    "fmt": "passed",
+    "native_and_catalogue_bytes": "identical to UI-verified input"
+  },
+  "cleanup": {
+    "browser_close": "exit 0",
+    "task_server_pids": "182188 and 182284 absent",
+    "host_listener_4826": "absent",
+    "scratch": "completed; only task-owned demo-prefixed scratch and task-generated browser/frontend/cache artifacts removed",
+    "removed_top_level_entries": 62,
+    "running_task_executables": 0,
+    "observed_at": "2026-10-08 23:13 CEST"
+  },
+  "diagnostics": [
+    "Header gate initially counted the new Rust example as an absent header because its first two documentation lines formed one paragraph; inserted the required blank doc line, without raising the ceiling. Final 717 compliant/155 absent/21 generated.",
+    "A subprocess launched from the Hermes execution kernel imported its own tools namespace instead of the repository tools namespace; this optional tooling invocation failed import, while actual demo tests passed. The repository terminal executed the complete 42-test suite successfully.",
+    "A closure verifier initially required OK to be the last log line, rejecting an already successful tooling run with the existing launcher diagnostic printed after OK. Corrected against the retained 42-test/OK result; no suite rerun credited."
+  ],
+  "final_documentation_validation": {
+    "command": "python3 tools/check_documentation.py",
+    "exit": 0,
+    "markdown_files": 202,
+    "local_targets": 1854,
+    "images": 48,
+    "manual_chapters": 33,
+    "errors": 0,
+    "external_urls_checked": false
+  },
+  "final_whitespace_check": {
+    "command": "git diff --check",
+    "exit": 0
+  },
+  "final_delivery_inputs_checked": {
+    "archives": 4,
+    "screenshots": 9,
+    "named_ui_checks": 966,
+    "projects": 3
+  }
+}

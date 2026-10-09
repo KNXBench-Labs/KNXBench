@@ -14,6 +14,18 @@ selection, not protocol actions; the existing monitor remains mounted.
 No core/store/product schema, format, protocol or dependency changes.
 Local implementation/publication and scoped acceptance are separate.
 
+## Offline community demo authoring (2026-10-08, local review candidate)
+
+[The demo contract](COMMUNITY_DEMO_PROJECTS.md) keeps original fictional
+product declarations and building layouts in authoring tooling, not app code.
+A Rust example in `knx-app` constructs the normalized typed domain model and
+uses the existing native store; a separate synthetic `.knxprod` uses the
+existing catalogue adapter. Product data remain independent (ADR-0005), and
+no `.knxproj` exporter is reintroduced (ADR-0028). Core/API/UI, persistence
+schemas, parser admission and dependencies are unchanged. Browser evidence
+uses a real production app in a loopback-only namespace, not bus simulation.
+Publication is separately owner-gated.
+
 ## Read-only community evidence boundary (2026-10-08)
 
 [ADR-0091](adr/0091-community-evidence-analysis.md) and

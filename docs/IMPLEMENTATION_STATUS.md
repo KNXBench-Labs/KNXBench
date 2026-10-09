@@ -89,6 +89,38 @@ does not erase a broader platform/device limitation or imply a new release.
 - No deployment, logged-in GitHub submission, attachment upload, private corpus,
   native runtime or hardware acceptance claimed; mailbox still unverified.
 
+## 2026-10-08 — Three English community demos: the buildings are fictional, the checks are not
+
+- Local owner-review candidate: Single-Family Home 32 devices/105 GAs,
+  six-flat Multi-Unit Residential Building 101/339, three-floor Office Building
+  157/507. Native `.knxdb`, shared original fictional `.knxprod`, English
+  tours/five exercises, source/licence, versioned individual/combined ZIPs and
+  SHA256SUMS. [Download index](../demos/README.md), [contract](COMMUNITY_DEMO_PROJECTS.md).
+- Tooling-only typed core/store writer and separate catalogue declarations;
+  no production core/API/UI/schema/dependency change or ETS output. Clean
+  catalogue install reports 0 unknown/conflicts; repeated import deduplicates.
+- Real server/production frontend/Chromium in a loopback-only namespace:
+  966 named checks, all 290 device programme/parameter views, 15 UI exercises;
+  acknowledged description/parameter/group/link edits and save-as/reopen.
+  Whole baseline save/load equality and whole practice-state equality against
+  the four intended core commands are separately verified; only the legitimate
+  save timestamp is normalized. Nine actual baseline screenshots retained.
+- Gates: affected `knx-app --all-targets` 162 passed/25 ignored; tooling 42,
+  example Clippy and workspace fmt passed; fresh-target server and production
+  frontend build passed. Repository/documentation/final-package checks and
+  exact byte identities are in [the receipt](evidence/community-demos/delivery-verification.json).
+  Local self-review only; no private-corpus ignored, full-workspace, native,
+  ETS/XSD, hardware or deployment acceptance.
+- UI realities are explicit: description editing replaces unavailable device
+  renaming; practice DPT is inferred after linking, not edited on the address;
+  retain untouched originals because native edits can auto-save. Topology and
+  device programmes are illustrative, have no firmware and must never be
+  downloaded to real hardware. No isolation/filter/electrical-design claim.
+- No commit, push, release or website change: the owner reserved a separate
+  publication go after inspecting the local artifacts. Tested app base remains
+  `33db32e9`; subsequent main commits through `115b19f6` are documentation-only,
+  and the other Devices-navigation worktree is preserved, not incorporated.
+
 ## 2026-10-08 — Known issues and implementation status: fewer fossils wearing “current” badges
 
 - Extended the documentation audit across all 40 original user-facing issue

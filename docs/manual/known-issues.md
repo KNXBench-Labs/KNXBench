@@ -515,6 +515,18 @@ must not be described as either universally guessed or universally explicit.
   in-memory project. Save separately if you want the server-side file updated.
 - **Details:** [Projects](user-guide/02-projects.md)
 
+### The Docker Hub image is the last release, and `latest` follows alphas
+
+- **Affected:** `knxbench/knxbench-server` from Docker Hub.
+- **Limitation:** images are published for release tags only, from the first
+  tag after `v0.1.0-alpha.5`; `latest` moves with every pre-release. Inside
+  the image, `knx-server --version` names the server crate version, which
+  currently lags the release tag; its commit is accurate.
+- **Workaround:** pin a version tag for deliberate updates; build locally for
+  source newer than the last release.
+- **Details:** [§168](../KNOWN_LIMITATIONS.md#168-the-docker-hub-image-follows-release-tags-only-and-latest-follows-alphas),
+  [Ready-made image](user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)
+
 ## Desktop
 
 ### One host, one architecture, one build

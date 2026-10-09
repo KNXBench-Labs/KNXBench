@@ -72,6 +72,14 @@ A password enables HTTPS by default. The generated certificate is self-signed:
 compare the browser's certificate fingerprint with the one in
 `docker logs knxbench` before accepting it. Then sign in using your chosen password.
 
+**Skipping the build:** release tags after `v0.1.0-alpha.5` are also published
+as a ready-made image for x86-64 and 64-bit Arm. Without a checkout, replace
+the `git clone`, `cd` and `docker build` lines with
+`docker pull knxbench/knxbench-server:latest` and use
+`knxbench/knxbench-server:latest` as the last word of `docker run`. It holds the
+last release, not newer source; details in
+[Ready-made image from Docker Hub](../user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub).
+
 **Expected result:** the introduction or welcome screen appears. Saved projects
 live in the host's `data/` directory and survive container replacement.
 **New project…** works without an ETS file. Continue to [First start](06-first-start.md).

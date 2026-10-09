@@ -7,6 +7,30 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Communication-object table meets the rename desk (main delivery)
+
+- Owner authorized commit/main integration/push. Feature `ddd4d2cc`, initial
+  integration `cd28d704`, upstream name-workflow reconciliation `92ec5407`.
+  Four documentation conflicts retained both packages; table ADR renumbered to
+  **0102**, upstream name ADR-0101 preserved. Existing Name fields/F2/context menus
+  coexist with the device object table. Original local receipt/images stay exact.
+- Fresh combined19-stage gate: **2558 frontend passed / 0 failed in161 files**,
+  production build/four type checks; **1527 owning Rust passed / 0 failed /45 ignored**
+  (core/projection/server ordinary tests, not a full-workspace/private-corpus run),
+  warnings-denied owning Clippy/server build. Production Chromium **19/19**,
+  full intercepted Chromium **227/227**, actual isolated real-server/demo-copy
+  **12/12**, only lo/no interception/unchanged snapshot/original demo.
+- All five fresh checkout-bound repository gates/docs/whitespace pass; source
+  manifest1004 frozen throughout. First integration attempt refused two unchanged
+  monitor-test5000ms timeouts; diagnostic71/0 and a complete maxWorkers2 run retain
+  original timeouts. A queued old-source retry was stopped before execution when
+  upstream changed; it is not counted as acceptance.
+- Fresh ProjectStats describes the clean combined `92ec5407` merge,
+  not the stale shared root; canonical preferences/report are preserved. Source
+  self-review only. [Publication receipt](evidence/communication-objects-publication-2026-10-09.json)
+  and [contract](COMMUNICATION_OBJECT_TABLE.md) record exact commits, measured
+  scope and remote readback. No release, deployment, real bus or native/ETS claim.
+
 ## 2026-10-09 — Communication objects get headings, not a guessing game (local)
 
 - Owner-approved Q1–Q12 / local implementation go: explicit device CO table,

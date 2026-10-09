@@ -134,29 +134,29 @@ it("groups by opaque channel key in program order, collapsed by default and stab
     object(3, { activation: "Active", channel: another }),
   ];
   const { host, rerender, cleanup } = await render(NO_REFERENCE, false, objects);
-  const groups = [...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")];
+  const groups = [...host.querySelectorAll<HTMLTableRowElement>("tr.com-object-channel")];
   expect(groups).toHaveLength(4);
-  expect(groups.map((g) => g.querySelector("summary")?.textContent)).toEqual([
+  expect(groups.map((g) => g.querySelector("button")?.textContent)).toEqual([
     expect.stringContaining("Inputs"), expect.stringContaining("Inputs"),
     expect.stringContaining("Outputs"), expect.stringContaining("Without evaluated channel"),
   ]);
-  expect(groups.map((g) => g.querySelectorAll(".com-object-detail").length)).toEqual([1, 1, 2, 1]);
-  expect(groups.every((g) => !g.open)).toBe(true);
+  expect(groups.map(g => host.querySelectorAll(`tr[data-object-id][data-channel-key="${g.dataset.channelKey}"]`).length)).toEqual([1, 1, 2, 1]);
+  expect(groups.every((g) => g.querySelector("button")!.getAttribute("aria-expanded") === "false")).toBe(true);
   expect(groups[0].querySelector(".com-object-channel-name")?.textContent).toContain("Raw A");
   expect(groups[0].querySelector(".com-object-channel-number")?.textContent).toContain("07");
-  await act(async () => { groups[0].querySelector("summary")!.click(); });
-  expect(groups[0].open).toBe(true);
+  await act(async () => { groups[0].querySelector("button")!.click(); });
+  expect(groups[0].querySelector("button")!.getAttribute("aria-expanded")).toBe("true");
   await rerender(detail(NO_REFERENCE, [...objects], 9));
-  expect(host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")[0].open).toBe(true);
+  expect(host.querySelectorAll<HTMLTableRowElement>("tr.com-object-channel")[0].querySelector("button")!.getAttribute("aria-expanded")).toBe("true");
   await rerender(detail(NO_REFERENCE, objects, 10));
-  expect([...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")].every((g) => !g.open)).toBe(true);
+  expect([...host.querySelectorAll<HTMLTableRowElement>("tr.com-object-channel")].every((g) => g.querySelector("button")!.getAttribute("aria-expanded") === "false")).toBe(true);
   await cleanup();
 });
 
 it("shows source channel name and opaque textual number beside translated text", async () => {
   const channel = { key: "opaque-owned", kind: "Channel" as const, text: "Lighting", name: "Raw manufacturer name", number: "A/05", order: 0 };
   const { host, cleanup } = await render(NO_REFERENCE, false, [object(1, { activation: "Active", channel })]);
-  const summary = host.querySelector(".com-object-channel > summary")!;
+  const summary = host.querySelector(".com-object-channel-summary")!;
   expect(summary.querySelector("strong")?.textContent).toBe("Lighting");
   expect(summary.querySelector(".com-object-channel-name")?.textContent).toContain("Raw manufacturer name");
   expect(summary.querySelector(".com-object-channel-number")?.textContent).toContain("A/05");
@@ -176,7 +176,7 @@ it("uses the verbatim channel name without Text, and keeps numbers visible even 
     object(4, { activation: "Active", channel: independent }),
     object(5, { activation: "NotEvaluated" }),
   ]);
-  const groups = [...host.querySelectorAll(".com-object-channel > summary")];
+  const groups = [...host.querySelectorAll(".com-object-channel-summary")];
   expect(groups[0].querySelector("strong")?.textContent).toBe("  Unchanged name  ");
   expect(groups[0].querySelector(".com-object-channel-number")?.textContent).toContain("07");
   expect(groups[1].querySelector("strong")?.textContent).toBe("Untitled channel");
@@ -203,13 +203,13 @@ it("keeps channel-independent blocks distinct from objects with no evaluated own
     object(5, { activation: "Active", channel: undefined as unknown as null }),
   ];
   const { host, cleanup } = await render(NO_REFERENCE, false, objects);
-  const groups = [...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")];
+  const groups = [...host.querySelectorAll<HTMLTableRowElement>("tr.com-object-channel")];
   expect(groups).toHaveLength(2);
-  expect(groups[0].querySelector("summary")?.textContent).toContain("Channel-independent objects");
-  expect(groups[1].querySelector("summary")?.textContent).toContain("Without evaluated channel");
-  expect(groups.map((g) => g.querySelectorAll("li[data-activation]").length)).toEqual([1, 4]);
-  expect(groups[1].querySelector('li[data-activation="Active"]')).not.toBeNull();
-  expect(groups[1].querySelector('li[data-activation="Inactive"]')).not.toBeNull();
+  expect(groups[0].querySelector("button")?.textContent).toContain("Channel-independent objects");
+  expect(groups[1].querySelector("button")?.textContent).toContain("Without evaluated channel");
+  expect(groups.map(g => host.querySelectorAll(`tr[data-object-id][data-channel-key="${g.dataset.channelKey}"]`).length)).toEqual([1, 4]);
+  expect(host.querySelector('tr[data-activation="Active"][data-channel-key="unassigned"]')).not.toBeNull();
+  expect(host.querySelector('tr[data-activation="Inactive"][data-channel-key="unassigned"]')).not.toBeNull();
   await cleanup();
 });
 
@@ -222,10 +222,10 @@ it("keeps inactive, undetermined and unevaluated objects inspectable but visibly
     object(4, { activation: "NotEvaluated" }),
   ];
   const { host, cleanup } = await render(NO_REFERENCE, false, objects);
-  const groups = [...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")];
-  expect(groups[0].querySelector("summary > strong")?.textContent).toBe("Raw name");
+  const groups = [...host.querySelectorAll<HTMLTableRowElement>("tr.com-object-channel")];
+  expect(groups[0].querySelector("button > strong")?.textContent).toBe("Raw name");
   expect(groups[0].querySelector(".com-object-channel-number")?.textContent).toContain("4");
-  await act(async () => { for (const group of groups) group.querySelector("summary")!.click(); });
+  await act(async () => { for (const group of groups) group.querySelector("button")!.click(); });
   expect(host.querySelector('[data-activation="Inactive"]')?.textContent).toContain("Inactive");
   expect(host.querySelector('[data-activation="Undetermined"]')?.textContent).toContain("Undetermined");
   expect(host.querySelector('[data-activation="NotEvaluated"]')?.textContent).toContain("Not evaluated");
@@ -238,10 +238,10 @@ it("does not discard an activation state added by a newer server", async () => {
   const { host, cleanup } = await render(NO_REFERENCE, false, [
     object(6, { activation: "FutureActivation" as "NotEvaluated", channel: null }),
   ]);
-  const group = host.querySelector<HTMLDetailsElement>("details.com-object-channel")!;
-  expect(group.querySelector("summary")?.textContent).toContain("Without evaluated channel");
-  await act(async () => group.querySelector("summary")!.click());
-  const row = group.querySelector('li[data-activation="FutureActivation"]');
+  const group = host.querySelector<HTMLTableRowElement>("tr.com-object-channel")!;
+  expect(group.querySelector("button")?.textContent).toContain("Without evaluated channel");
+  await act(async () => group.querySelector("button")!.click());
+  const row = host.querySelector('tr[data-activation="FutureActivation"]');
   expect(row?.textContent).toContain("Unknown activation state");
   await cleanup();
 });
@@ -255,18 +255,18 @@ it("shows DPT provenance, canonical ids and function text without editing the pr
     object(4, { activation: "Active", channel }),
   ];
   const { host, cleanup } = await render(NO_REFERENCE, false, objects);
-  await act(async () => { host.querySelector<HTMLDetailsElement>("details.com-object-channel summary")!.click(); });
-  const rows = [...host.querySelectorAll<HTMLDetailsElement>(".com-object-detail")];
-  expect(rows[0].querySelector("summary")?.textContent).toContain("Toggle relay");
-  expect(rows[0].querySelector("summary")?.textContent).toContain("DPST-1-1");
-  expect(rows[0].querySelector("summary")?.textContent).toContain("Switch state");
-  expect(rows[1].querySelector("summary")?.textContent).toContain("Program default");
-  expect(rows[1].querySelector("summary")?.textContent).toContain("DPST-9-1");
-  expect(rows[1].querySelector("summary")?.textContent).toContain("Temperature");
-  expect(rows[2].querySelector("summary")?.textContent).toContain("DPST-999-999");
-  expect(rows[3].querySelector("summary")?.textContent).toContain("—");
+  await act(async () => { host.querySelector<HTMLButtonElement>(".com-object-channel-summary")!.click(); });
+  const rows = [...host.querySelectorAll<HTMLTableRowElement>("tr[data-object-id]")];
+  expect(rows[0].textContent).toContain("Toggle relay");
+  expect(rows[0].textContent).toContain("DPST-1-1");
+  expect(rows[0].textContent).toContain("Switch state");
+  expect(rows[1].textContent).toContain("Program default");
+  expect(rows[1].textContent).toContain("DPST-9-1");
+  expect(rows[1].textContent).toContain("Temperature");
+  expect(rows[2].textContent).toContain("DPST-999-999");
+  expect(rows[3].textContent).toContain("—");
   await act(async () => { rows[1].querySelector("summary")!.click(); });
-  expect(rows[1].querySelector<HTMLInputElement>('input[placeholder="DPST-9-1"]')?.value).toBe("");
+  expect(host.querySelector<HTMLTableRowElement>('[data-editor-id="2"]')!.querySelector<HTMLInputElement>('input[placeholder="DPST-9-1"]')?.value).toBe("");
   const typed: DeviceDetail["com_objects"][number] = objects[0];
   expect(typed.activation).toBe("Active"); // TS must see the generated contract, not only this fixture.
   expect(typed.program_dpt).toBeNull();
@@ -579,7 +579,8 @@ it("offers a later-installation device only that installation's group addresses 
   const root = createRoot(host);
   await act(async () => root.render(<DeviceWorkspace detail={detail(NO_REFERENCE, [com])} tree={twoInstallations}
     onApplied={() => {}} />));
-  const values = Array.from(host.querySelectorAll<HTMLOptionElement>("select option"), (option) => option.value);
+  await act(async () => host.querySelector<HTMLElement>(".com-object-detail summary")!.click());
+  const values = Array.from(host.querySelectorAll<HTMLOptionElement>(".group-link-list select option"), (option) => option.value);
   expect(values).toContain("80");
   expect(values).not.toContain("70");
   await act(async () => root.unmount()); host.remove();

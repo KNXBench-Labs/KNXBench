@@ -52,8 +52,9 @@ async function serve(page: Page, linkStatus: number) {
   await page.locator("button.tree-label", { hasText: "Kitchen actuator" }).click();
   // The device detail loads asynchronously; `.all()` would otherwise snapshot
   // zero summaries and leave the group closed.
-  await expect(page.locator(".com-object-groups summary").first()).toBeVisible();
-  for (const summary of await page.locator(".com-object-groups summary").all()) await summary.click();
+  await expect(page.locator(".com-object-channel-summary").first()).toBeVisible();
+  for (const button of await page.locator(".com-object-channel-summary").all()) await button.click();
+  for (const summary of await page.locator(".com-object-detail summary").all()) await summary.click();
   const row = page.locator(".group-link-list .tree-new-row");
   await expect(row).toBeVisible();
   await expect(row).toBeInViewport();

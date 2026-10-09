@@ -1,5 +1,32 @@
 # Known limitations
 
+## Local communication-object table scope (2026-10-09)
+
+The local UI table keeps all object summaries mounted for stable editor identity;
+editing forms mount lazily when first opened. The synthetic 1,000-object measurement
+is one production-browser action-to-visible sample, not a universal latency bound
+or proof with all editing forms expanded. Large devices may still take noticeable
+time to switch to the flat view. No virtualization is introduced without evidence.
+View state is intentionally lost when leaving the editor/changing device/project;
+there is no project-wide CO list, bulk editing, export, persistent view cache or
+resizable/reorderable columns. A UI mutation guard cannot cancel an already admitted
+server edit or replace server concurrency rules. Native WebKitGTK/Orca, real hardware
+and complete ETS compatibility remain untested by this offline UI package. Local
+source is not in alpha.6 and requires separate commit/integration/deployment approval.
+[Behavior and acceptance](COMMUNICATION_OBJECT_TABLE.md).
+
+A diagnostic real-server attempt found one existing local schema-v22 product
+catalogue without `source_identity_scan.scanner`; package installation refused
+with HTTP 500. The fresh isolated catalogue used by acceptance has the expected
+column and installs the fictional package. No catalogue repair/migration change
+is included in this UI package. The initial harness had isolated `KNX_DATA_DIR`
+but not XDG, so it opened the existing catalogue before refusal. Its main-file
+mtime still predates the run and the test package is absent; this is not a
+before/after whole-file byte audit. The corrected accepted harness isolates HOME,
+XDG data/config/state and the project directory; the source demo remains unchanged.
+
+
+
 ## Persistent native history is bounded, not an independent backup (ADR-0100)
 
 Local source implements native schema v11 working-state/undo/redo persistence and

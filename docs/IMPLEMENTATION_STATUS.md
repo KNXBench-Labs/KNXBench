@@ -7,6 +7,20 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Toast parity published on its own branch
+
+- Owner-requested commit/push published feature `f8dbde0a` to
+  `feature/toast-parity-20261008` only. All 15 owned file blobs, GitHub commit
+  identity and local/tracking/live feature refs verified; KNXBench author and
+  committer, no co-author. Main/root integration is not part of this request.
+- Fresh focused toast tests: 45 passed; production frontend build, all five
+  fresh-target repository checks and whitespace pass. Accepted source/test
+  hashes unchanged. The 2,422/189/54 full and repeated test counts below remain
+  dated 2026-10-08 evidence, not a newly executed full acceptance run.
+- [Publication receipt](evidence/toast-parity-publication-2026-10-09.json).
+  Published but unmerged; retained worktree/build for separately approved
+  integration. No release, deployment, native/AT/private-corpus or hardware run.
+
 ## 2026-10-08 — Toasts now keep the same nine-second appointment
 
 - Standard status and error toasts now reuse achievement card framing,

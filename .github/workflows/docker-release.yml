@@ -8,7 +8,7 @@ name: Docker release
 # token do not start other workflows.
 #
 # workflow_dispatch is a dry run: both architectures are built and
-# smoke-tested, nothing is logged in to and nothing is pushed.
+# smoke-tested, nothing is pushed. Configured credentials authenticate base pulls.
 #
 # Needs, before the first tag: repository variable DOCKERHUB_USERNAME and
 # repository secret DOCKERHUB_TOKEN (a Docker Hub access token with read and
@@ -48,6 +48,7 @@ jobs:
             arch: arm64
     env:
       PUBLISH: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+      HAVE_DOCKERHUB_LOGIN: ${{ vars.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
     steps:
       # Fail before a long build, not after it.
       - name: Check release tag and Docker Hub credentials
@@ -84,6 +85,14 @@ jobs:
 
       - uses: docker/setup-buildx-action@v4
 
+      # Authenticate base-image pulls too; publication remains tag-only.
+      - name: Log in to Docker Hub
+        if: env.PUBLISH == 'true' || env.HAVE_DOCKERHUB_LOGIN == 'true'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build for the smoke test
         uses: docker/build-push-action@v7
         with:
@@ -101,13 +110,6 @@ jobs:
         env:
           KNXBENCH_IMAGE: knxbench-server:ci
         run: apps/knx-server/scripts/smoke-test.sh
-
-      - name: Log in to Docker Hub
-        if: env.PUBLISH == 'true'
-        uses: docker/login-action@v4
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # Same inputs as the tested build, so every layer comes from the
       # builder's cache: what is pushed is what was smoke-tested.

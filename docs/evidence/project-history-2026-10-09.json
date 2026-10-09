@@ -401,10 +401,31 @@
         "successor": "integration-private-final"
       }
     ],
-    "publication": "all combined gates accepted; prepared for normal fast-forward main push",
+    "publication": {
+      "published_revision": "533d014f6ae524903f8c24a710deff3afb3bdbe8",
+      "live_and_fetched_main_equal": true,
+      "feature_and_merge_ancestors": true,
+      "report_exact": true,
+      "normal_push": true,
+      "scope": "source and documentation publication; no release/deployment/hardware"
+    },
     "upstream_handover_preserved": true,
     "upstream_catalog_values_preserved": true,
     "independent_review": false,
-    "hardware_claim": false
+    "hardware_claim": false,
+    "cleanup": {
+      "retired_worktrees": [
+        "history-20261009",
+        "history-stats-20261009/KNXBench"
+      ],
+      "retained_delivery_worktree": "history-integration-20261009",
+      "feature_branch_retained": true,
+      "physical_hardware_touched": false,
+      "active_owned_processes": 0,
+      "private_input_links_removed": true,
+      "scratch_cleanup": "retained through final verification, then task-owned scratch retired"
+    },
+    "final_metadata_gates_exit": 0,
+    "production_inputs_unchanged_after_execution": true
   }
 }

@@ -2574,7 +2574,9 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .file-menu summary { cursor: pointer; padding: 7px 10px; list-style: none; }
 .file-menu-content { position: absolute; top: calc(100% + 8px); left: 0; min-width: 260px; max-height: 70dvh; overflow: auto; background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; box-shadow: 0 12px 32px var(--knx-overlay-shadow); padding: 8px; }
 .file-menu-content > button, .file-menu-content > div { display: block; width: 100%; margin: 3px 0; }
-.workbench-panel-controls { display: flex; align-items: center; justify-content: space-between; min-height: 35px; border-bottom: 1px solid var(--knx-border); }
+.workbench-panel-controls { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; justify-content: space-between; min-height: 35px; border-bottom: 1px solid var(--knx-border); }
+.workbench-panel-controls .bulk-action-toolbar { flex: 1 1 260px; min-width: 0; max-width: 100%; margin: 4px 0; }
+.workbench-panel-controls .bulk-action-toolbar select { min-width: 0; max-width: 100%; }
 .workbench-panel-controls button { display: flex; align-items: center; gap: 8px; font-size: 11px; }
 .workbench-panel-controls .import-notice { color: var(--knx-warning-color) !important; }
 .workbench-body { flex: 1; min-height: 0; margin: 0; gap: 0; align-items: stretch; }
@@ -2682,6 +2684,22 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .diagram-device[aria-pressed="true"], .diagram-heading[aria-pressed="true"], .workspace-table tr[aria-selected="true"] { background: color-mix(in srgb, var(--knx-accent) 14%, var(--knx-surface)); }
 .building-diagram { display: grid; gap: 20px; }
 .building-diagram-children { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 16px; background: var(--knx-bg); }
+/* Devices is a dedicated central workspace; its wide table scrolls locally. */
+.devices-workspace, .device-editor-view { min-width: 0; max-width: 100%; }
+.device-editor-view .device-workspace { margin-top: 16px; }
+.device-editor-navigation, .devices-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
+.devices-toolbar input { flex: 1 1 220px; min-width: 0; max-width: 100%; }
+.devices-table-scroll { max-height: 65vh; overscroll-behavior: contain; }
+.devices-table { min-width: 1100px; margin: 0; }
+.devices-table th { position: sticky; top: 0; background: var(--knx-surface); z-index: 1; }
+.devices-table th button { background: transparent; color: var(--knx-foreground); box-shadow: none; border: 0; text-align: left; }
+.devices-table td { max-width: 28ch; overflow-wrap: anywhere; }
+.devices-table td:first-child { width: 36px; }
+.devices-table .table-select, .devices-table th button, .workbench .device-link, .devices-count-link { transform: none; box-shadow: none; }
+.workbench .device-link { display: inline; padding: 2px 4px; min-width: 0; max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
+.device-link-unresolved { cursor: help; }
+.ga-linked-devices { padding-left: 18px; }
+
 .workspace-table-wrap { border: 1px solid var(--knx-border); border-radius: 8px; background: var(--knx-surface); overflow: auto; }
 .workspace-table { width: 100%; text-align: left; }
 .workspace-table td, .workspace-table th { border-bottom: 1px solid var(--knx-border); }

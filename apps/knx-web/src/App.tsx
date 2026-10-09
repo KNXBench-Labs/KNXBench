@@ -29,6 +29,9 @@ import type { CommandContext } from "./commandRegistry";
 import SettingsPanel from "./SettingsPanel";
 import { serverLegacyPassword } from "./LegacyPasswordSettings";
 import Dashboard from "./Dashboard";
+import DevicesWorkspace from "./DevicesWorkspace";
+import type { DeviceCatalog } from "./deviceList";
+import { DeviceNavigationProvider } from "./DeviceLink";
 import LogPanel from "./LogPanel";
 import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
 import { publishProjectContext, rebasePublishedSessionContext } from "./busContext";
@@ -277,6 +280,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   } | null>(null);
   const revealGenerationRef = useRef(0);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
+  const [deviceDetailLoading, setDeviceDetailLoading] = useState(false);
+  const [navigationCatalogue, setNavigationCatalogue] = useState<DeviceCatalog | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -313,7 +318,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const [diagnosticsHeight, setDiagnosticsHeight] = useState<number | null>(null);
   const navBlockRef = useRef<HTMLElement | null>(null);
   const diagnosticsBlockRef = useRef<HTMLElement | null>(null);
-  const [view, setView] = useState<"overview" | "catalog" | StructureView>("overview");
+  type WorkspaceView = "overview" | "catalog" | "devices" | "device" | StructureView;
+  const [view, setView] = useState<WorkspaceView>("overview");
+  const deviceOriginRef = useRef<{ view: WorkspaceView; log: boolean; monitor: boolean; selection: Selection | null } | null>(null);
   const [buildingScope, setBuildingScope] = useState<number | null>(null);
   // The group-address view's counterpart of `buildingScope`: which range
   // the address table is scoped to. Owned here, not inside the table, for
@@ -533,6 +540,12 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     const scope = createFlowScope(); flowScopeRef.current = scope; setFlowProjectScope(scope);
     setBuildingScope(null);
     setAddressScope(null);
+    deviceOriginRef.current = null;
+    setNavigationCatalogue(null);
+    ++deviceDetailRequestIdRef.current;
+    setDeviceDetailLoading(false);
+    setLoadKey((value) => value + 1);
+    setView((current) => current === "device" ? "devices" : current);
     // Ids from the previous project mean nothing in this one, and a stale
     // bulk selection would offer to delete whatever happens to share those
     // ids now.
@@ -544,6 +557,14 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   }
 
   async function selectEntity(sel: Selection) {
+    if (sel.kind === "device") {
+      if (view !== "device" || logOpen || monitorOpen) {
+        deviceOriginRef.current = { view, log: logOpen, monitor: monitorOpen, selection: selectionRef.current };
+      }
+      setView("device");
+      if (window.innerWidth <= 650) setNavigationOpen(false);
+    }
+    setDeviceDetailLoading(sel.kind === "device");
     selectionRef.current = sel;
     setSelection(sel);
     // Never leave the previous device's editable fields under a new selection
@@ -577,6 +598,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         selectionRef.current.id === sel.id
       ) {
         setDeviceDetail(detail);
+        setDeviceDetailLoading(false);
       }
     } catch (e) {
       if (
@@ -584,10 +606,29 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         selectionRef.current?.kind === "device" &&
         selectionRef.current.id === sel.id
       ) {
+        setDeviceDetailLoading(false);
         reportError(e);
         setDeviceDetail(null);
       }
     }
+  }
+
+  function openDevices() {
+    setView("devices"); setLogOpen(false); setMonitorOpen(false);
+    if (window.innerWidth <= 650) setNavigationOpen(false);
+  }
+
+  function backFromDevice() {
+    const origin = deviceOriginRef.current;
+    if (!origin) { openDevices(); return; }
+    deviceOriginRef.current = null;
+    ++deviceDetailRequestIdRef.current;
+    setDeviceDetailLoading(false);
+    selectionRef.current = origin.selection;
+    setSelection(origin.selection);
+    if (origin.selection?.kind !== "device" || origin.selection.id !== deviceDetail?.id) setDeviceDetail(null);
+    setView(origin.view === "device" ? "devices" : origin.view);
+    setLogOpen(origin.log); setMonitorOpen(origin.monitor);
   }
 
   function openCatalog(lineId: number | null) {
@@ -657,6 +698,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         selectionRef.current.id === sel.id
       ) {
         setDeviceDetail(detail);
+        setDeviceDetailLoading(false);
       }
     } catch (e) {
       if (
@@ -665,6 +707,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         selectionRef.current.id === sel.id
       ) {
         reportError(e);
+        setDeviceDetail(null);
+        setDeviceDetailLoading(false);
       }
     }
   }
@@ -702,6 +746,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           selectionRef.current.id === sel.id
         ) {
           setDeviceDetail(detail);
+          setDeviceDetailLoading(false);
         }
       } catch (e) {
         if (
@@ -710,6 +755,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           selectionRef.current.id === sel.id
         ) {
           reportError(e);
+          setDeviceDetail(null);
+          setDeviceDetailLoading(false);
         }
       }
     })();
@@ -1142,6 +1189,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     openCompanion: () => void openCompanion(),
     openHelp: () => requestHelpTopic(DEFAULT_HELP_TOPIC_ID),
     openCatalog: () => openCatalog(null),
+    openDevices,
     addDevice: () => setDeviceWizard({ target: wizardTargetFor(selection) }),
     openIntroduction: guide.show,
     openAchievements: () => setAchievementsOpen(true),
@@ -1155,7 +1203,16 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     <div className="workbench-center">
       {(monitorMounted || monitorOpen) && <div hidden={!monitorOpen}><BusDiagnosticsPanel active={monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} /></div>}
       {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
-        view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
+        view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>
+          <nav className="device-editor-navigation" aria-label={t("workbench.devices")}>
+            <button type="button" onClick={backFromDevice}>← {t("devices.back")}</button>
+            <button type="button" onClick={openDevices}>{t("devices.all")}</button>
+          </nav>
+          {selection?.kind === "device" && deviceDetail?.id === selection.id
+            ? <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />
+            : <div><p role="status">{t(deviceDetailLoading ? "devices.loadingEditor" : "devices.editorUnavailable")}</p>
+              {!deviceDetailLoading && selection?.kind === "device" && <button type="button" onClick={() => void selectEntity(selection)}>{t("devices.retry")}</button>}</div>}
+        </section> : view === "devices" ? null : view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
           rangeScope={addressScope} onRangeScope={setAddressScope}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate} onDeleted={resetTree}
           addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
@@ -1183,11 +1240,15 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} active={!logOpen && !monitorOpen && view === "catalog"}
         serverIncarnation={tree?.server_incarnation} onCreated={handleTreeUpdate} onClose={() => { setCatalogTarget(null); setView("overview"); }}
         onWizard={tree ? (item) => setDeviceWizard({ target: { lineId: catalogTarget.lineId }, product: item }) : undefined} />}
-      {tree && selection?.kind === "device" && deviceDetail?.id === selection.id && !logOpen && !monitorOpen && view !== "catalog" && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
+      {tree && <div hidden={logOpen || monitorOpen || view !== "devices"}>
+        <DevicesWorkspace key={loadKey} tree={tree} active={!logOpen && !monitorOpen && view === "devices"}
+          selection={selection} multiSelection={multiSelection} onItemClick={onItemClick} onCatalogue={setNavigationCatalogue} />
+      </div>}
     </div>
   );
 
   return (
+    <DeviceNavigationProvider tree={tree} catalogue={navigationCatalogue} onOpen={(id) => void selectEntity({ kind: "device", id })} onList={openDevices}>
     <main ref={workbenchRef} className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
       <header className="workbench-toolbar">
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><span className="brand-mark">K</span><strong>KNXBench</strong></a>
@@ -1266,7 +1327,11 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         {welcomeVisible && centerWorkspace}
         {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={navigationWidth} min={NAVIGATION_PANE.min} max={NAVIGATION_PANE.max} onWidthCommit={(width) => setSetting("navigationPaneWidth", width)}>
           <nav ref={navBlockRef} className="workbench-navigation" aria-label={t("workbench.navigation")} style={{ height: navHeight ?? undefined }}>
-            {(["overview", "buildings", "topology", "addresses"] as const).map((item) => <button key={item} aria-current={!logOpen && !monitorOpen && view === item ? "page" : undefined} onClick={() => { setView(item); setLogOpen(false); setMonitorOpen(false); }}><WorkbenchIcon name={item} />{t(`workbench.${item}`)}</button>)}
+            {(["overview", "buildings", "topology", "devices", "addresses"] as const).map((item) => <button key={item}
+              disabled={item === "devices" && !tree}
+              aria-current={!logOpen && !monitorOpen && (view === item || item === "devices" && view === "device") ? "page" : undefined}
+              onClick={() => { if (item === "devices") openDevices(); else { setView(item); setLogOpen(false); setMonitorOpen(false); } }}>
+              <WorkbenchIcon name={item} />{t(`workbench.${item}`)}</button>)}
             <button aria-current={!logOpen && !monitorOpen && view === "catalog" ? "page" : undefined}
               onClick={() => openCatalog(selection?.kind === "line" ? selection.id : null)}><WorkbenchIcon name="catalog" />{t("workbench.catalog")}</button>
           </nav>
@@ -1407,6 +1472,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         />
       )}
     </main>
+    </DeviceNavigationProvider>
   );
 }
 

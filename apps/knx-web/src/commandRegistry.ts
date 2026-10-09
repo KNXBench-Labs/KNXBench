@@ -18,6 +18,7 @@ export interface CommandContext {
   openCompanion: () => void;
   openHelp: () => void;
   openCatalog: () => void;
+  openDevices: () => void;
   /** ADR-0093: the add-device wizard, aimed at the selected line or building part. */
   addDevice: () => void;
   openIntroduction: () => void;
@@ -156,6 +157,12 @@ export const COMMANDS: PaletteCommand[] = [
     labelKey: "workbench.catalog",
     isEnabled: () => true,
     run: (ctx) => ctx.openCatalog(),
+  },
+  {
+    id: "open-devices",
+    labelKey: "workbench.devices",
+    isEnabled: (ctx) => ctx.tree !== null,
+    run: (ctx) => ctx.openDevices(),
   },
   {
     id: "add-device",

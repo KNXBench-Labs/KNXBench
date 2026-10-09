@@ -18,6 +18,21 @@ function mockFetchOnce(body: unknown, ok = true, status = 200) {
 }
 
 describe("api", () => {
+  it("refuses malformed device catalogue batches before they reach rendering", async () => {
+    mockFetchOnce({ schemaVersion: 1, serverIncarnation: "server", snapshotRevision: 1, devices: {} });
+    await expect(api.deviceCatalog()).rejects.toThrow("device catalogue");
+  });
+
+  it("fetches the device catalogue with an encoded language and no mutation method", async () => {
+    const batch = { schemaVersion: 1, serverIncarnation: "server", snapshotRevision: 1, devices: [] };
+    mockFetchOnce(batch);
+    expect(await api.deviceCatalog("de-DE")).toEqual(batch);
+    const [path, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(path).toBe("/api/devices?language=de-DE");
+    expect(options.method).toBeUndefined();
+    expect(options.body).toBeUndefined();
+  });
+
   // T01b: `request()` publishes "the server wants a session" through
   // `session.ts` rather than importing anything that renders. Subscribing
   // here is how these tests see it happen.

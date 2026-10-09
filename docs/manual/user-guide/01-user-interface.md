@@ -71,6 +71,7 @@ The left pane has three stacked blocks.
 | Overview | Project status: counts of everything, plus import errors and warnings |
 | Buildings | The building structure as cards, with the devices placed in each part |
 | Topology | Areas, lines and the devices in them |
+| Devices | The project-wide, filterable/sortable device table; a device click opens its central editor |
 | Group addresses | The group-address table |
 | Product catalog | Opens the catalog overlay, not a view — see [Devices and products](05-devices-and-products.md) |
 
@@ -94,10 +95,17 @@ The tree on the left shows the same project, opened at its first line.
 
 ## The workspace
 
-The center is whatever the selected view shows. When you select a device anywhere —
-tree, topology diagram or search — a device panel with tabs appears underneath
-the current view. That panel is the subject of
-[Devices and products](05-devices-and-products.md).
+The center is whatever the selected view shows. Selecting a device from the tree,
+topology/building diagram, search or a device link switches the center to its
+editor, rather than appending it below the previous view. **Devices** stays marked
+in the navigation. **Back** returns to the originating app view; **All devices**
+opens the project-wide device table. Filter, sort, table scroll and checkbox
+selection survive the editor visit. The existing Properties inspector remains
+on the right. See [Devices and products](05-devices-and-products.md#the-devices-view).
+
+The Devices package is a newer, locally implemented source feature, not a
+replacement of the released alpha.5 AppImage. Publication/deployment state is
+tracked in [Open work](../../OPEN_WORK.md).
 
 The Bus monitor and the Log replace the workspace entirely while they are open, and
 the properties pane hides itself while they are, because neither of them has a

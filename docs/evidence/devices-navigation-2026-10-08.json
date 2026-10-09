@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-08T23:50:51+02:00",
+  "source": {
+    "baseCommit": "115b19f65eeebf7df21598681b34e829d2055099",
+    "branch": "feature/devices-navigation-20261008",
+    "state": "local uncommitted feature worktree; not merged/published/deployed",
+    "codeFileSha256": {
+      "apps/knx-server/src/device_catalog.rs": "723dc8bc436656ed1104701bce7e1f4343b909be88a581c5c390b5f7aedf2044",
+      "apps/knx-server/src/lib.rs": "59b75aca6763693229e89920ee02bbae426a992d8ede19b873eadbc0672b0241",
+      "apps/knx-server/src/routes.rs": "c92099c82bd3c2fa88bdfcaf8306f0861f59c9270dc8df9edfec4a1ea23a138d",
+      "apps/knx-server/tests/http_device_product.rs": "ebd65ad9a34d0c559137bbf2b7b5f9cbd04b8aa6b8d85e8f1a6ebd0f90bfd604",
+      "apps/knx-web/e2e/devices-navigation.e2e.ts": "36e7075693bffbd0fac62627b1f39b384b2986f3a7a3421e9f994a8147a4a564",
+      "apps/knx-web/playwright.devices.config.ts": "d80465287dedccaa689c77def2e8004ef4380187169770d25c18d59211af77ce",
+      "apps/knx-web/src/AddressProgrammingPanel.tsx": "7cfd9d3cc81a6c1c75e56ae0fea45b7e6aa9992eadf34b4f0308e37792010027",
+      "apps/knx-web/src/App.test.tsx": "e793da03c817d6bc6d5f22b1fdd4389baa40952dd8930223744bbd3ef8b4d95a",
+      "apps/knx-web/src/App.tsx": "81c21fd517cddec612073cbccde10933d6f945bccb6240f65f5d1be9bc7804b6",
+      "apps/knx-web/src/BusMonitorPanel.tsx": "8705658f46d039089f424e33ac440481e1f23f11baea75de2a8cd971391c9970",
+      "apps/knx-web/src/CommandPalette.test.tsx": "470e030d196dbe14fdddef594bbc07780e9abf02add5e59a8c5a26f1103dfcd3",
+      "apps/knx-web/src/Dashboard.tsx": "13afcf77a97cd6f2758c2f286083f64c660d8d8173a10528957722a13fc84c7b",
+      "apps/knx-web/src/DeviceDownloadPanel.tsx": "2369cf499fda4640c50662a844ffc54ea66871860a5981ec6205b49579c12323",
+      "apps/knx-web/src/DeviceInspectionPanel.tsx": "3d68c30d027d0f4e071d689d43ea22abac0dd37cd4d15d2b4499a827b3707178",
+      "apps/knx-web/src/DeviceLink.test.tsx": "a4ce5bb820cfe78b034da19df0a43ee803c2cb5f282374d1cf8c9701b14c0d08",
+      "apps/knx-web/src/DeviceLink.tsx": "c9e243188d32c16c030d0f94c51ee99820d64fc3de64e49c7ff552c0d7ceb0f8",
+      "apps/knx-web/src/DevicesWorkspace.test.tsx": "f615741cf240e70d33d9f31ef404257bc9c10e6303e479e8c66bff31eeb5a223",
+      "apps/knx-web/src/DevicesWorkspace.tsx": "1f9e69fa6fdbbbf55128f41b7f0a3c3fa7ef97517ecff06b3e261e71e883b423",
+      "apps/knx-web/src/DiagnosticsCompanion.test.tsx": "b62560488dc0038644246e93a4d0a8bb9e8a479077422904323b335356dbe54a",
+      "apps/knx-web/src/GroupAddressTable.tsx": "e6be9f0448e23602b4e00e3a17326c8e6cc59eedc8f7d327dcc896c7202501ab",
+      "apps/knx-web/src/Inspector.tsx": "5046cdcb7655256bfd815f6a6aeaf1511aa46d24f7e4e7769e609125ad66dcfd",
+      "apps/knx-web/src/LineScanPanel.tsx": "7ebf86538324f9afa4235fb699e9c480dc30c2af29be00aadc735b66eab645f9",
+      "apps/knx-web/src/OnboardingGuide.test.tsx": "6009e70ac3395c1db146df25f875b5a20a0e7418b3a21d0847c15712d315781b",
+      "apps/knx-web/src/WorkbenchIcon.tsx": "67869a331d9ba5b1d744fcb9920c9327f57ff5c15cddfd2db0ae047dd8269a2e",
+      "apps/knx-web/src/api.test.ts": "8a75ae141c1ddef716b1dd1e295fb015927d924208af6dc4d14c94bafe14ae03",
+      "apps/knx-web/src/api.ts": "2226018fb59e056d8e368ceb06595e889b632a18b615c288189f1eaeaaa5c90c",
+      "apps/knx-web/src/commandRegistry.test.ts": "ed04941fecb37c21d496370f68e1cd014673d26c3583819f2bd5ec3a8f7c190d",
+      "apps/knx-web/src/commandRegistry.ts": "f8b518b4a6f78fadcf9a2693f676917fc5cfc7c0cd66f0469f21476ef51f2742",
+      "apps/knx-web/src/deviceList.test.ts": "beab74c8261e246d2f2e6e7f8570c3a4a4973442aadb14d5bd86f71029edec16",
+      "apps/knx-web/src/deviceList.ts": "0480d264acb72ab079c7de1657fe4bf2e06c5b481f71d8ec34c7fe81be9cd4f5",
+      "apps/knx-web/src/messages/de.ts": "a8c2fc85bf5babec700744fff80a53d345ec331e5bec6bffeb40ff71fc7d0cf4",
+      "apps/knx-web/src/messages/en.ts": "71273dd1d1f1beec7432cbeefa34b39d73aca43d63c438af442a55fc58619feb",
+      "apps/knx-web/src/multiSelection.ts": "61ae94dff0a9a7dcfa5ca5c12aa907d646fa62e7a8199d746c201de7fef53f7f",
+      "apps/knx-web/src/onboardingGuide.test.ts": "5bd284c0ebbaa7bb365db197c5db32ea6ea5a9dc030528b23fcae6e4b71ea6b4",
+      "apps/knx-web/src/styles.css": "7e7d3a816c5b65228f8788f77e0c884a028ca117dd8fff89118bcfd2a1823e77",
+      "crates/knx-projection/src/lib.rs": "7d856e63a7d300c275509469196608b63ace56cb4cb2f14daba6330e9ae5680f"
+    },
+    "postExecutionAdjustments": [
+      "deviceList.ts trailing blank line removed only",
+      "new-file headers shortened only"
+    ]
+  },
+  "verification": {
+    "web": {
+      "passed": 2473,
+      "failed": 0,
+      "files": 152
+    },
+    "rustServerProjection": {
+      "passed": 781,
+      "failed": 0,
+      "ignored": 45
+    },
+    "browsers": {
+      "production": {
+        "startTime": "2026-10-08T21:22:02.003Z",
+        "duration": 30896.872,
+        "expected": 13,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0,
+        "syntheticPerformance": [
+          {
+            "devices": 5000,
+            "renderMs": 9742,
+            "filterMs": 1264
+          }
+        ]
+      },
+      "fullInterceptedSuite": {
+        "startTime": "2026-10-08T21:22:33.706Z",
+        "duration": 326317.481,
+        "expected": 188,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0,
+        "syntheticPerformance": [
+          {
+            "devices": 5000,
+            "renderMs": 18121,
+            "filterMs": 1307
+          }
+        ]
+      }
+    },
+    "browserCountsOverlap": true,
+    "runtimeSmoke": {
+      "networkInterfaces": [
+        "lo"
+      ],
+      "version": {
+        "version": "0.1.0-alpha.2+g115b19f6"
+      },
+      "fictionalImport": true,
+      "canonicalDeviceCount": 8,
+      "resolutions": [
+        "Resolved"
+      ],
+      "projectSnapshotUnchanged": true,
+      "detailIdMatches": true,
+      "frontendServed": true,
+      "busOperations": 0
+    },
+    "realServerBrowser": {
+      "interceptedApi": false,
+      "syntheticProject": true,
+      "deviceCount": 8,
+      "editorDeviceName": "Switch actuator ground floor",
+      "backRestoredList": true,
+      "pageErrors": []
+    },
+    "buildsAndChecks": [
+      "server build",
+      "frontend production build",
+      "Clippy -D warnings for server/projection",
+      "cargo fmt check",
+      "theme fixture types",
+      "Flow study types",
+      "Devices e2e fixture/config types",
+      "explicit-root layering",
+      "headers",
+      "ledger",
+      "corpus-gate inventory"
+    ],
+    "staticAddedLineSecurityScan": {
+      "findings": [],
+      "notAFullSecurityAudit": true
+    },
+    "review": {
+      "kind": "in-session source self-review",
+      "independentReviewer": false,
+      "surfaces": [
+        "project/product lock separation and canonical projection",
+        "wire admission/snapshot binding",
+        "central selection/detail request identity",
+        "preserved list state/shared bulk selection",
+        "scoped links and form/event boundaries",
+        "companion exact capability inventory",
+        "translations and layout"
+      ],
+      "visualAssessment": [
+        "Real-server Devices nav highlighted, count 8/8, product/order columns readable; remaining wide columns require local scrolling.",
+        "Real-server central editor replaces the list; Back/All devices, tabs and right inspector readable. Existing long building path is truncated inside its native select.",
+        "Narrow German intercepted table uses local scrolling; bulk controls wrap. Existing toast stack overlaps lower content temporarily."
+      ]
+    },
+    "historicalNonPasses": [
+      "Initial production browser: 9 passed / 4 failed; layout and missing fixture handlers corrected.",
+      "Next production browser dark-theme fixture used the wrong settings key; corrected themeId to theme.",
+      "Additional actual-server browser harness initially omitted project-open/onboarding flow and targeted a hidden toolbar action; corrected after inspecting startup labels/screenshot. These attempts are not accepted passes."
+    ],
+    "executionRecords": [
+      {
+        "process": "proc_f88f674e853d",
+        "exitCode": 0,
+        "command": "cargo fmt --all && cargo test -p knx-server -p knx-projection --tests && cargo clippy -p knx-server -p knx-projection --all-targets -- -D warnings && cargo build -p knx-server"
+      },
+      {
+        "process": "proc_18597c190303",
+        "exitCode": 0,
+        "command": "npm test -- --reporter=json --outputFile=<scratch>/web-delivery.json && npm run build && npm run check:theme-fixtures && npm run check:flow-study"
+      },
+      {
+        "process": "proc_55a325fec311",
+        "exitCode": 0,
+        "command": "npm run build && loopback-only production Playwright (playwright.devices.config.ts) && loopback-only full Playwright (playwright.config.ts)"
+      },
+      {
+        "process": "proc_dfcbf6c390ec",
+        "exitCode": 0,
+        "command": "cargo fmt --all --check && explicit-root xtask check-layering && check-headers && check-ledger && check-corpus-gates"
+      },
+      {
+        "exitCode": 0,
+        "command": "npx tsc -p <scratch>/tsconfig.devices.json (extends actual application config; explicitly includes Devices e2e and Playwright config)"
+      },
+      {
+        "exitCode": 0,
+        "command": "unshare -rn: loopback only; runtime-smoke.py invokes actual knx-server and real-ui.mjs"
+      },
+      {
+        "exitCode": 0,
+        "command": "explicit-root xtask check-anchors"
+      },
+      {
+        "exitCode": 0,
+        "command": "PYTHONDONTWRITEBYTECODE=1 python3 tools/check_documentation.py --root <owned-worktree>"
+      },
+      {
+        "exitCode": 0,
+        "command": "git diff --check"
+      }
+    ],
+    "syntheticPerformanceNote": "5000-device full table is non-virtualized; 9742 ms render / 1264 ms filter in production-browser synthetic fixture. Bounded evidence, not a performance guarantee."
+  },
+  "artefactSha256": {
+    "web-delivery.json": "8e9ffb9f23b27c952183f8a15607f36dbe295e33eba2b5964ca7ab0874fed1be",
+    "web-delivery.log": "ab6617c25e49d7cc855557ba615d004eee992993901ae293533246e244aff827",
+    "rust-final.log": "261d88ebbeee67b0fc519eaabe960fc331dd454010a5c3b0aec8a182d2aa4fc6",
+    "clippy-final.log": "4ada840a9f35d4b3ba43524f24fbd32e8c85c811a7e42d2b0fc808be9a6f6aa5",
+    "server-build.log": "c0342e017daf99284ae7ab3d985e0093ee4be2278f799f6a02965d0bcc343237",
+    "build-accepted.log": "73de49090e1a5694d35a07a6c61f04a916d5dedb602b6713d13e0a65da982da7",
+    "types-theme-delivery.log": "60273ead4d97e4e2949c9ceb6353356921c1b02820b8773878f0b3905af67675",
+    "types-flow-delivery.log": "eb94fe836f55025951cf5d817e7add0ae8c4c2ccfdeae766bd6bf5fa9b9e1159",
+    "types-devices.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "fmt-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "layering.log": "f37d9a5cbbfdad517dc7dfa0fc2a444b3f422b72b379712c8127aad2fff8c1f0",
+    "headers.log": "ed8e66547292e1e33b3a9e6515c0d2a59e2260f07b053d38c54e93b638001c70",
+    "ledger.log": "325919867abe619af723b40867d31656646ed536c14e409f17e0f6d41f23f2e8",
+    "corpus-gates.log": "34ec19ee80bcca26adcd4eaa3f2d9d4557c15ecf0a8aaec2dbfe8711dc0fd731",
+    "browser-production-accepted.json": "02a6dba170c38d67ec12031838f67a96d21285dd5c2ad5621985ab194176712d",
+    "browser-suite-accepted.json": "012e1392eaa4354baa7d027aa16d4a8549c33e9a26c8e9d3da243e775b2151bc",
+    "runtime-smoke.json": "e4b98e44d7e055026429b005b37d1da1d30e5eb11d88c1e43b8c92519e0f555e",
+    "real-ui.json": "304aac7e895fe26ea05517190024f465a8b590422482e615ca14a41fdade963d",
+    "real-ui-acceptance.log": "c1d211261610feef4a2d5a2987d66f57b58937e552e53637665d3dae46729f5f",
+    "runtime-smoke.py": "3bab545abf1655b475fb4af944f3bfc121807319199e6f9e39d973195cad5f32",
+    "real-ui.mjs": "d1021b206863a83757825cb87440014986324a96b506ec6e58c1493061763e62"
+  },
+  "screenshots": {
+    "devices-real-server.png": "a405b0229b757033cf218aa995a24fd783ea3b05c76c0b7c473ad2b4c5925cad",
+    "editor-real-server.png": "06cbcdc50838cf9747ea5ad6bd57fa2754af050e2d2bbe2a561395612adfcd09",
+    "devices-selected-en-1440.png": "4a44cc972c2e43277b3c70d951197b64f7ccf80fe719ff1762f50aaf441f04ac",
+    "devices-selected-de-400.png": "c8e013ee2ddc40d9c325e22b710d982b770f8b6a535e163ef37532a89a31cc08"
+  },
+  "excluded": [
+    "commit/push/main/root synchronization/deployment/release",
+    "hardware or bus write acceptance",
+    "private corpus and full Rust workspace tests",
+    "native WebKitGTK/Orca and complete accessibility certification",
+    "URL deep links/browser history/persistent view state/grouping/free-text log parsing/project-diff links",
+    "new ETS or application/commissioning compatibility guarantee"
+  ],
+  "closure": {
+    "documentationGate": {
+      "anchors": "anchors ok: 475 links checked across 202 markdown files, none dead",
+      "manual": [
+        "Documentation: markdown_files=202, local_targets=1857, images=48, chapters=33",
+        "PASS: 0 errors; external URLs are not checked."
+      ],
+      "externalUrlsChecked": false
+    },
+    "cleanup": "Verified: no active processes with owned worktree/scratch cwd; owned scratch removed and absence checked. Permanent receipt/two screenshot digests verified; source worktree, debug server and production frontend retained. Initial cleanup correctly refused while transient Node processes remained; deletion occurred only after the repeated liveness check was empty.",
+    "finalDocumentationResults": {
+      "anchors": "anchors ok: 475 links checked across 202 markdown files, none dead",
+      "manual": [
+        "Documentation: markdown_files=202, local_targets=1857, images=48, chapters=33",
+        "PASS: 0 errors; external URLs are not checked."
+      ],
+      "whitespaceExit": 0,
+      "frozenCodeHashesMatch": true
+    },
+    "originalRawEvidenceDisposition": "Temporary raw reports/harnesses/build target/captures removed at local-artifact boundary after retaining this compact receipt and two real-server screenshots. Original digests remain provenance only, not downloadable raw results."
+  },
+  "retainedScreenshots": [
+    "docs/evidence/devices-navigation/devices-real-server.png",
+    "docs/evidence/devices-navigation/editor-real-server.png"
+  ]
+}

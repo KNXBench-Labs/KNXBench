@@ -103,9 +103,8 @@ opens the project-wide device table. Filter, sort, table scroll and checkbox
 selection survive the editor visit. The existing Properties inspector remains
 on the right. See [Devices and products](05-devices-and-products.md#the-devices-view).
 
-The Devices package is a newer, locally implemented source feature, not a
-replacement of the released alpha.5 AppImage. Publication/deployment state is
-tracked in [Open work](../../OPEN_WORK.md).
+The Devices view is part of `v0.1.0-alpha.6`; the older alpha.5 AppImage does
+not have it.
 
 The Bus monitor and the Log replace the workspace entirely while they are open, and
 the properties pane hides itself while they are, because neither of them has a

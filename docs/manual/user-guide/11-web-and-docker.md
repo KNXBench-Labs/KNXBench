@@ -91,18 +91,16 @@ docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
   `v0.1.0-alpha.6`) and `latest`. While KNXBench is in alpha, `latest` moves
   with every pre-release; pin a version tag if an update should be your own
   decision.
-- **Availability:** the workflow starts with the first release after
-  `v0.1.0-alpha.5`, which has no image. Until a tag has run, build the image
-  yourself as shown in the rest of this chapter.
+- **Availability:** from `v0.1.0-alpha.6` (9 October 2026) on; `v0.1.0-alpha.5`
+  and earlier have no image.
 - **Release, not `main`:** source changes after the last tag are not in the
   image. A local `docker build` gets you the newest state.
 - **Same image, same rules:** everything below — `/data`, the password,
   HTTPS, host networking for bus work — applies unchanged. Where a command
   says `knxbench-server`, use `knxbench/knxbench-server:<tag>` instead.
-- `knx-server --version` names the server crate version and the commit; the
-  crate version currently lags the release tag
+- `knx-server --version` names the release version and the commit, e.g.
+  `knx-server 0.1.0-alpha.6+g042509c`
   ([§168](../../KNOWN_LIMITATIONS.md#168-the-docker-hub-image-follows-release-tags-only-and-latest-follows-alphas)).
-  The commit is the reliable part.
 
 ### Where your projects live
 

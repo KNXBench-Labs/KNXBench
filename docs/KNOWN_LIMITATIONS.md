@@ -8919,19 +8919,19 @@ is pushed. Nothing is published for commits between tags, and
 `v0.1.0-alpha.5` predates the workflow, so it has no image. `latest` moves with
 every release tag, pre-releases included. The image is not signed; it carries
 BuildKit SBOM and provenance attestations only. Base-image security updates
-arrive only with the next tag, not through scheduled rebuilds.
-`knx-server --version` inside the image reports the server crate version
-(`0.1.0-alpha.2` at the time of writing), not the release tag the image is
-named after.
+arrive only with the next tag, not through scheduled rebuilds. The OCI
+`org.opencontainers.image.version` label carries the git tag with its `v`
+(`v0.1.0-alpha.6`), while the image tag drops it (`0.1.0-alpha.6`).
 
 **Why.** Owner decisions of 2026-10-09: Docker Hub only, both architectures,
-`latest` for every release while only alphas exist. The crate-version drift
-predates this workflow and is a separate cleanup.
+`latest` for every release while only alphas exist. The earlier drift between
+the server crate version and the release tag ended with the alpha.6 bump
+(`042509c6`): server, CLI, desktop, web and `knx-mcp` all report the tag.
 
 **Impact.** Pin a version tag (`knxbench/knxbench-server:0.1.0-alpha.6`) if an
 update must be a deliberate step. Newer source than the last tag still needs
-a local `docker build`. To identify a running image, use its tag or digest,
-or the commit in `--version`, not the version number in `--version`.
-The dry-run dispatch of 2026-10-09 ([run 37890172997](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37890172997), `cc5b1b9c`)
-built and smoke-tested both platforms on native runners; login, push and the
-multi-arch publish job run for the first time with the first tag.
+a local `docker build`. `v0.1.0-alpha.6` was the first publication
+([run 37893327218](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37893327218), 2026-10-09): both tags resolve to one index
+with `linux/amd64` and `linux/arm64`, the repository is public, and an
+anonymous pull of the amd64 image passed the smoke test. The arm64 image was
+smoke-tested on its build runner only, not on a Raspberry Pi.

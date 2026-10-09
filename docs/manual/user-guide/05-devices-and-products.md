@@ -61,8 +61,8 @@ grouping, free-text log parsing or project-diff links. The separate diagnostic
 companion does not become another editing window. See the
 [contract and evidence](../../DEVICE_NAVIGATION.md).
 
-The released alpha.5 AppImage does not include this local source package;
-merge/build/deployment remain separate from its implementation.
+The Devices view ships with `v0.1.0-alpha.6` (AppImage and Docker Hub image);
+the older alpha.5 AppImage does not include it.
 
 ## The product catalog
 

@@ -1,8 +1,7 @@
 # ADR 0097: Release tags publish a multi-arch server image to Docker Hub
 
 Date: 2026-10-09
-Status: Accepted (workflow on `main`; first publication waits for the
-Docker Hub credentials and the next release tag)
+Status: Accepted (first publication: `v0.1.0-alpha.6`, 2026-10-09)
 
 ## Context
 
@@ -85,9 +84,8 @@ The image itself is unchanged: same Dockerfile, same runtime contract
 
 ## Consequences
 
-- Users can `docker pull knxbench/knxbench-server` instead of building, once
-  the first tag after this ADR has run. `v0.1.0-alpha.5` predates the workflow
-  and has no image.
+- Users can `docker pull knxbench/knxbench-server` instead of building, from
+  `v0.1.0-alpha.6` on. `v0.1.0-alpha.5` predates the workflow and has no image.
 - `latest` moves with every alpha. Users who want to stay put pin a version
   tag. When the first stable release comes, this rule needs a deliberate
   decision, not a silent change.
@@ -95,15 +93,18 @@ The image itself is unchanged: same Dockerfile, same runtime contract
   `knxbench/knxbench-server`) and store it as the repository secret
   `DOCKERHUB_TOKEN`, plus the variable `DOCKERHUB_USERNAME`. Without them the
   tag run fails before building; the AppImage release is unaffected.
-- `knx-server --version` reports the server crate version, which has drifted
-  from the release tag (`0.1.0-alpha.2` against `v0.1.0-alpha.5`). The image
-  tag and its OCI version label follow the git tag; the binary does not. This
-  drift is disclosed, not fixed here (KNOWN_LIMITATIONS §168).
+- `knx-server --version` reports the server crate version. It had drifted
+  from the release tag (`0.1.0-alpha.2` against `v0.1.0-alpha.5`); the alpha.6
+  release bumped the server, CLI, desktop, web and `knx-mcp` together, so the
+  first published image reports `knx-server 0.1.0-alpha.6+g042509c`. Keeping
+  them aligned is part of release preparation (`xtask check-appimage` only
+  checks desktop against web).
 - Tested so far: workflow syntax (actionlint with shellcheck), the smoke test
   against a local amd64 build, and a dry-run dispatch
   ([run 37890172997](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37890172997), `cc5b1b9c`) that built and smoke-tested
   `linux/amd64` and `linux/arm64` (`aarch64` runner) in under four minutes
-  each. Login, push by digest and the publish job have not run: they need the
-  credentials and a tag.
+  each. The first tag run ([run 37893327218](https://github.com/KNXBench-Labs/KNXBench/actions/runs/37893327218), `v0.1.0-alpha.6`)
+  pushed, merged and verified both platforms; an anonymous pull of the
+  published amd64 image passed the smoke test.
 - Not done: image signing (cosign), a Docker Hub description sync, scheduled
   rebuilds for base-image security updates. Each would be its own decision.

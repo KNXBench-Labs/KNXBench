@@ -7,6 +7,24 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Three local packages move into main (toast parity, Devices navigation, community demos)
+
+- Owner go: integrate the remaining local packages into `main`. Toast parity
+  (`f8dbde0a`, `7832b42d`) fast-forwarded; Devices navigation and community
+  demos 1.0.0 committed in their worktrees and cherry-picked onto it. Doc
+  conflicts (ARCHITECTURE, IMPLEMENTATION_STATUS, KNOWN_LIMITATIONS) resolved
+  by keeping both sides. A scratch path containing the account name was
+  replaced by `<hermes-scratch>` in the demo delivery receipt before commit.
+- Integrated gate on the merged tree `e46e5ce1` (fresh target, offline browser
+  namespace, inputs frozen): Vitest 2480/152 files, build, tsc, flow-study and
+  theme fixtures; intercepted Chromium 202; production Devices config 13;
+  toast spec x3 42; cargo fmt, workspace Clippy `-D warnings`; Rust workspace
+  3726 passed / 0 failed / 182 ignored; tools unittest 42; all five xtask
+  checks; `git diff --check`. Docs-only status edits followed (this entry,
+  OPEN_WORK, KL, ARCHITECTURE, manual status, demos index). The demo UI walk
+  and real-server Devices checks are the packages' retained evidence, not
+  rerun here. No release, deployment, private corpus or hardware activity.
+
 ## 2026-10-09 — Toast parity published on its own branch
 
 - Owner-requested commit/push published feature `f8dbde0a` to

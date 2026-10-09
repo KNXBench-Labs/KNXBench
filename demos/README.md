@@ -1,6 +1,6 @@
 # English offline community demos
 
-**Local review candidate — not published.** No commit, push, release or website deployment is authorized by this local delivery.
+**Published on `main` (2026-10-09); not a release, not linked from the website yet.** The 1.0.0 package READMEs still say "local review candidate": the packages are frozen and checksummed, so their text was not changed.
 
 | Project | Devices | Group addresses | Building-space nodes | Lines (including main) |
 | --- | ---: | ---: | ---: | ---: |

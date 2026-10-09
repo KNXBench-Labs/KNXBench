@@ -322,12 +322,12 @@ is the remaining copy defect.
 
 - **Affected:** writing a configuration into devices ("download").
 - **Limitation:** `knx device download` and the **Download to device** tab
-  work, but only one device (an MDT device with mask `0701h`) has been
-  downloaded and read back so far. Other devices, application versions and
+  work, but only two devices (an MDT push button and an Eibmarkt presence
+  detector, both mask `0701h`) have been downloaded and read back so far. Other devices, application versions and
   masks are unverified; procedures KNXBench cannot plan are refused by name.
   Programming an individual address is currently refused until durable
   recovery exists. Unloading and secure devices are not supported. A successful
-  byte read-back does not confirm the final restart; the verified device's
+  byte read-back does not confirm the final restart; the verified devices'
   restart outcome is explicitly unconfirmed.
 - **Consequence:** for most installations, plan for another commissioning
   tool for now.

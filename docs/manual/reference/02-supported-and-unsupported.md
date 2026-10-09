@@ -147,13 +147,13 @@ secured installation cannot currently be fully represented or monitored by KNXBe
 
 | Item | Status | Evidence |
 | --- | --- | --- |
-| Downloading a device: application tables and parameters | 🟡 Partial or experimental | `knx device download` and the **Download to device** tab, plan first and confirmed per device; verified on one device (MDT, mask `0701h`) with read-back, others unverified — [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device), [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
+| Downloading a device: application tables and parameters | 🟡 Partial or experimental | `knx device download` and the **Download to device** tab, plan first and confirmed per device; verified on two devices (an MDT push button and an Eibmarkt presence detector, both mask `0701h`) with read-back, others unverified — [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device), [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
 | Programming an individual address | 🟡 Refused safety boundary | Confirmed starts fail before connection until device-specific durable recovery exists; not a working write or an active task — [ADR-0058](../../adr/0058-individual-address-reset-requires-durable-recovery.md) |
-| The generic load/unload/reset/memory-write commissioning procedures | 🟡 Bounded implementation | One real memory-download device; property procedures remain simulator-verified. No generic real-device coverage — [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [§92](../../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
+| The generic load/unload/reset/memory-write commissioning procedures | 🟡 Bounded implementation | Two real memory-download devices (mask `0701h`); property procedures remain simulator-verified. No generic real-device coverage — [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [§92](../../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
 
 > **Warning**
 >
-> KNXBench can download one verified device so far and cannot program individual
+> KNXBench has verified downloads for two device programs so far and cannot program individual
 > addresses at the moment. For any other device you still need a commissioning tool
 > that covers it.
 

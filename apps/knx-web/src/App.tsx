@@ -123,6 +123,8 @@ function formatLastSaved(iso: string, language: string): string {
 
 type AppProps = {
   manifestVersion?: string;
+  /** Explicit browser return may read the currently open server project. */
+  resumeCurrentProject?: boolean;
   /**
    * What `AuthGate` knows about the session this shell is running inside
    * (ADR-0026). Absent in the tests that render `App` directly, and
@@ -168,7 +170,7 @@ function acceptedSnapshotLifetime(
   return { initialized: true, serverIncarnation, revision, retiredServerIncarnations };
 }
 
-function App({ manifestVersion = packageVersion, session }: AppProps) {
+function App({ manifestVersion = packageVersion, session, resumeCurrentProject = false }: AppProps) {
   // Called unconditionally on every render (not just from `SettingsPanel`,
   // which only mounts once Settings is opened) so `useUiLanguage()`'s own
   // effect — setting `document.documentElement.lang` — runs for the whole
@@ -520,6 +522,20 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   useEffect(() => {
     ensureBusDiscovery();
   }, []);
+
+  // Only an explicit secondary-window return resumes the existing server
+  // project. This is a read, never an open/import/replacement operation.
+  useEffect(() => {
+    if (!resumeCurrentProject) return;
+    let cancelled = false;
+    void api.currentProject().then(current => {
+      if (cancelled || treeRef.current !== null || loadingRef.current) return;
+      if (resetTree(current)) setHasStorePath(current.has_store_path);
+    }).catch(error => {
+      if (!cancelled && treeRef.current === null && !loadingRef.current && api.errorStatus(error) !== 400) reportError(error);
+    });
+    return () => { cancelled = true; };
+  }, [resumeCurrentProject]);
 
   // Opens (or focuses) the read-only diagnostic companion. Every outcome is
   // reported: a blocked popup and a refused webview are ordinary results on

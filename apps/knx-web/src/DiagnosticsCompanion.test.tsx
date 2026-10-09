@@ -156,6 +156,16 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+describe("browser return navigation", () => {
+  it("offers a working return control even when Diagnostics has no opener", async () => {
+    Object.defineProperty(window, "opener", { value: null, configurable: true, writable: true });
+    const root = await renderCompanion();
+    const button = host!.querySelector<HTMLButtonElement>(".companion-return")!;
+    expect(button.disabled).toBe(false);
+    await act(async () => root.unmount());
+  });
+});
+
 describe("one editing workspace", () => {
   // This file's import list is a tripwire, not a guarantee — the
   // distinction the previous version of this comment got wrong. A depth-1

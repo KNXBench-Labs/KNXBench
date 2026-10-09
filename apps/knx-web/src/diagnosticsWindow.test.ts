@@ -22,9 +22,13 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 
 import {
   canFocusMainWindow,
+  canReturnToMainWindow,
   companionUrl,
+  mainWindowUrl,
+  returnToMainWindow,
   focusMainWindow,
   isCompanionView,
+  isEditorReturn,
   openCompanionWindow,
   resetCompanionWindowRef,
 } from "./diagnosticsWindow";
@@ -155,6 +159,54 @@ describe("openCompanionWindow under Tauri", () => {
     });
 
     expect(await openCompanionWindow("http://127.0.0.1:4711/")).toBe("failed");
+  });
+});
+
+describe("explicit return to the editor", () => {
+  it("recognizes only the explicit editor-resume marker", () => {
+    expect(isEditorReturn("?view=editor")).toBe(true);
+    expect(isEditorReturn("")).toBe(false);
+    expect(isEditorReturn("?view=diagnostics")).toBe(false);
+    expect(isEditorReturn("?view=flow")).toBe(false);
+  });
+  it("removes companion parameters while preserving the origin, path and unrelated URL state", () => {
+    expect(mainWindowUrl("https://127.0.0.1:8080/workspace/?view=diagnostics&source=owner&keep=1#section")).toBe(
+      "https://127.0.0.1:8080/workspace/?view=editor&keep=1#section",
+    );
+    expect(mainWindowUrl("https://127.0.0.1:8080/?view=flow&source=owner")).toBe("https://127.0.0.1:8080/?view=editor");
+  });
+
+  for (const opener of [null, { closed: true, focus: vi.fn() }, { closed: false, focus: vi.fn() }]) {
+    it(`navigates this browser tab even with ${opener === null ? "no" : opener.closed ? "a closed" : "a live"} opener`, async () => {
+      Object.defineProperty(window, "opener", { value: opener, configurable: true, writable: true });
+      const assign = vi.spyOn(window.location, "assign").mockImplementation(() => {});
+      expect(await canReturnToMainWindow()).toBe(true);
+      expect(await returnToMainWindow()).toBe(true);
+      expect(assign).toHaveBeenCalledWith(mainWindowUrl(window.location.href));
+      if (opener) expect(opener.focus).not.toHaveBeenCalled();
+    });
+  }
+
+  it("keeps native return as focus, without reloading either webview", async () => {
+    setTauri(true);
+    tauriMock.getByLabel.mockResolvedValue({ setFocus: tauriMock.setFocus });
+    const assign = vi.spyOn(window.location, "assign");
+    expect(await canReturnToMainWindow()).toBe(true);
+    expect(await returnToMainWindow()).toBe(true);
+    expect(tauriMock.setFocus).toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("reports a missing native main window instead of navigating", async () => {
+    setTauri(true);
+    tauriMock.getByLabel.mockResolvedValue(null);
+    expect(await canReturnToMainWindow()).toBe(false);
+    expect(await returnToMainWindow()).toBe(false);
+  });
+
+  it("reports refused browser navigation", async () => {
+    vi.spyOn(window.location, "assign").mockImplementation(() => { throw new Error("sandboxed"); });
+    expect(await returnToMainWindow()).toBe(false);
   });
 });
 

@@ -7,6 +7,34 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Docker uploads and companion return: source fixes
+
+- GitHub #1: file uploads now stream through a **256 MiB** per-file ceiling
+  plus 16 KiB multipart allowance. Full-field staging/no-clobber and explicit 413
+  preserve existing uploads; exact-limit/oversize/malformed regressions pass.
+  Importer ZIP expansion budgets remain unchanged; no reporter archive supplied.
+- GitHub #2: Diagnostics/Flow explicit browser return navigates this tab and
+  read-only resumes the currently open server project/saved-file authority.
+  Ordinary startup, native main-webview focus and source-bound Flow selection
+  remain unchanged. A separate browser editor/its transient selection is not moved.
+- Final **18-stage frozen-source** gate: ordinary Rust **3831 passed / 0 failed /
+  185 ignored**; frontend **2583 passed / 0 failed in 162 files**; intercepted
+  Chromium **236/236**; builds/three extra type configurations/Clippy;
+  five nonempty explicit-root repository gates, documentation/tools/whitespace.
+  No explicitly selected private-corpus sweep or new native/hardware acceptance.
+- Sealed production server/frontend proof **5/5**: only lo; own HOME/XDG,
+  catalogue and project paths; actual 115 MiB upload/SHA-256 equality and
+  EN 1440 / DE 400 return/visible installation/unchanged projection. Screenshots
+  inspected. Original negative controls catch admission, disabled return,
+  focus-only URL failure and missing project resume. Self-review only.
+- Initial smoke attempts inherited the normal catalogue opener; no pre-run
+  hash exists and host-catalogue integrity is not claimed. Final isolated runtime
+  acceptance is separate. Failed/canceled/superseded attempts remain recorded.
+- [Contract](contracts/DOCKER_UPLOAD_AND_RETURN.md) and
+  [receipt](evidence/docker-import-diagnostics-2026-10-09.json) bind scope/limits.
+  Source fixes ready for review; **not in alpha.6 artifacts**.
+  No new release, deployment, actual bus operation or full ETS compatibility.
+
 ## 2026-10-09 — Communication-object table: final names/AP1/logo candidate
 
 - Final integrated source `58e2852f` retains published device/project

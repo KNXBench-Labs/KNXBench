@@ -41,7 +41,7 @@ and publication follow-up, (3) deferred items with a recorded user decision, and
 | Track | State | Next step | Where |
 | --- | --- | --- | --- |
 | Legacy ETS3 product databases (`.vd3`–`.vd5`) | L1 inspection, L2 import/secret withholding and L3 web upload/password handling are on `main` | Untyped `TypeNone` spacer presentation still needs a separate fix (KL §128). The large `.vd5` package (Siemens sample: 173 MB payload) exceeds the 64 MiB bounds; measure before widening them. **L4** device download remains later scope. | [ADR-0094](adr/0094-legacy-exim-product-files.md), [VD4 import](VD4_PRODUCT_DATABASE_IMPORT.md), KL §128 |
-| Website / published Evolution Story | Edition `2026-10-08.4` is approved and deployed with the site; first publication is complete | HTTP→HTTPS (301) and remote IPv6 HTTPS (four probes, 200/TLS valid) verified on 2026-10-09; Pages Node-24 maintenance and demo links implemented/tested; owner's privacy review and optional WebKit evidence remain separate | [story/](../story/README.md), [WEBSITE](WEBSITE.md), ADR-0068/0095 |
+| Website / published Evolution Story | Edition `2026-10-08.4` is approved and deployed with the site; first publication is complete | HTTP→HTTPS (301) and remote IPv6 HTTPS (four probes, 200/TLS valid) verified on 2026-10-09; Pages Node-24 actions and demo links deployed/verified; owner's privacy review and optional WebKit evidence remain separate | [story/](../story/README.md), [WEBSITE](WEBSITE.md), ADR-0068/0095 |
 
 **Commissioning refusal buckets are an evidence backlog, not a running track.**
 The recorded house/corpus snapshot and module-placement, `placed by Property`,

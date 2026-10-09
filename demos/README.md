@@ -1,6 +1,6 @@
 # English offline community demos
 
-**Published on `main` (2026-10-09); not an application release. Website linking approved on 2026-10-09.** The 1.0.0 package READMEs still say "local review candidate": the packages are frozen and checksummed, so their text was not changed.
+**Published on `main` (2026-10-09); not an application release. Linked from the DE/EN website on 2026-10-09 (live downloads verified).** The 1.0.0 package READMEs still say "local review candidate": the packages are frozen and checksummed, so their text was not changed.
 
 | Project | Devices | Group addresses | Building-space nodes | Lines (including main) |
 | --- | ---: | ---: | ---: | ---: |

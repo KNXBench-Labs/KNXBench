@@ -255,6 +255,15 @@
   ],
   "review": "self-review; no subagents; added private filename/path and secret-literal scans clean",
   "publication_scope": "Owner-authorized no-ff merge and normal push to refs/heads/main; no tag, release, deployment, root synchronization or hardware action. Exact remote readback recorded after push in handover/log.",
+  "verified_initial_main_publication": {
+    "published_head": "bf02331220f9017b4e5702b428169cfb714de085",
+    "fetched_main": "bf02331220f9017b4e5702b428169cfb714de085",
+    "live_main": "bf02331220f9017b4e5702b428169cfb714de085",
+    "refs_equal": true,
+    "feature_contained": true,
+    "publication_receipt_readback_equal": true,
+    "merge": "d12bce07138beef026708c8b014bb5e4d2ac0b6a"
+  },
   "limitations": [
     "Offline product-default planning, not project-specific or live-device compatibility.",
     "Default and web catalogue STANDARD limits remain unchanged (KL \u00a7151).",

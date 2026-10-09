@@ -36,7 +36,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     strategy:
-      fail-fast: true
+      # Keep the other native build running through transient registry failures.
+      fail-fast: false
       matrix:
         include:
           - platform: linux/amd64

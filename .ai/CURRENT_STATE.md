@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-09 12:12 CEST
+- **Completed:** Owner-authorized README/manual Docker Hub delivery merged no-ff: feature 96586ee78c316c47a493a85eb8d6aff1081dc5dc onto current main 199a7057 as 9394e42466cf36b15687ba4b30659629b89357ba. All four requested documentation blobs equal the reviewed feature; application sources and all upstream handover bytes preserved. Fresh merged checks: all five nonempty checkout-built xtask gates, 493 anchors, documentation 205 Markdown files/33 chapters/0 errors and whitespace pass. Earlier 9-check amd64 container acceptance remains dated local evidence, not a new runtime run.
+- **Pending/Next Steps:** Normal push to refs/heads/main and exact fetched/live ref plus document readback, then owned-worktree/branch/scratch cleanup. No release, deployment, hardware or root synchronization.
+- **Notes for Codex oder Claude:** Only Markdown changed; no full application suite needed or claimed. Shared root HEAD/index and history worktree remain untouched. Root-local log .ai/logs/2026-10-09_codex_readme-dockerhub.md retains acceptance. This entry supersedes the feature's local-only publication boundary.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-09 11:50 CEST
 - **Completed:** README and manual now lead with the downloadable Docker Hub image, complete pull/run commands, amd64/arm64 and release-vs-main tag policy. Source build remains an alternative; separate Hub update and downloaded-image password-hash examples added. Anonymous registry tags latest/0.1.0-alpha.6 checked; actual pull and local amd64 HTTPS/login/save/recreate/reopen probe passed (9 checks), hash command passed, all five fresh-target repository gates/docs/33-chapter navigation/5 changed shell blocks/whitespace passed. Self-review only; no application code or live bus action.
 - **Pending/Next Steps:** Local documentation delivery on branch docs/readme-hub-20261009 only; main integration and push require a separate request. Existing server, root main/index, private corpus and other worktrees unchanged.

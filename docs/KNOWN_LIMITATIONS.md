@@ -9054,3 +9054,29 @@ a local `docker build`. `v0.1.0-alpha.6` was the first publication
 with `linux/amd64` and `linux/arm64`, the repository is public, and an
 anonymous pull of the amd64 image passed the smoke test. The arm64 image was
 smoke-tested on its build runner only, not on a Raspberry Pi.
+
+## 169. Browser uploads remain bounded and return navigation reloads the editor
+
+**Limitation.** The source fix for GitHub #1/#2 accepts files up to 256 MiB
+with a separate 16 KiB multipart-envelope allowance and streams into a staging
+file. Larger HTTP uploads receive 413; a reverse proxy may impose a smaller
+limit. Server-mounted files bypass HTTP admission, not the unchanged importer
+limits (64 MiB per expanded member; 512 MiB expanded archive). The reporter
+has not supplied the 115 MB archive, so its import compatibility is unverified.
+
+The explicit Diagnostics/Flow browser return navigates the current tab to the
+editor, including without an opener, and resumes the current server project
+with a read-only request. Server project state and the bus session remain open,
+but transient editor selection is not transferred, and a separate
+editor window is not closed. Native return remains a focus request to an existing
+main webview; no new real-desktop focus acceptance is claimed.
+
+**Why.** The old 100 MiB request ceiling rejected legitimate larger uploads.
+Browser `Window.focus()` offers no guaranteed foregrounding or acknowledgment.
+The [contract](contracts/DOCKER_UPLOAD_AND_RETURN.md) records primary references
+and preserves bounded admission, no-clobber publication and source-bound Flow
+selection independently of explicit return.
+
+**Impact.** These source fixes are not in the published alpha.6 image/AppImage;
+a new release is required. No archive compatibility or hardware support is
+implied by upload/navigation acceptance.

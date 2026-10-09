@@ -1,5 +1,15 @@
 # Architecture
 
+## Docker upload and explicit browser return (2026-10-09)
+
+The [upload and return contract](contracts/DOCKER_UPLOAD_AND_RETURN.md)
+keeps HTTP size admission and streamed temporary-file publication in the server
+file adapter. Explicit browser return navigates the current document; native
+focus and source-bound Flow selection keep their existing adapter behavior.
+A consumed `view=editor` marker requests read-only project resume through the
+existing authenticated `/api/project` projection, not open/import or a mutation.
+No KNX model, parser budget, storage schema, protocol or dependency changes.
+
 ## Communication-object table (2026-10-09 source)
 
 [ADR-0102](adr/0102-communication-object-table-view-state.md) and the

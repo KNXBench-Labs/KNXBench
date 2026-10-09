@@ -8908,3 +8908,28 @@ meaning (`snapshot_revision` only orders responses) does not fit.
 **Impact.** A create can still be refused after a successful preview; the
 wizard says why and nothing is created. Parameters and links are edited in
 the device panel afterwards, as for catalog devices.
+
+## 168. The Docker Hub image follows release tags only, and `latest` follows alphas
+
+**Limitation.** `.github/workflows/docker-release.yml`
+([ADR-0097](adr/0097-docker-hub-release-image.md)) publishes
+`knxbench/knxbench-server` for `linux/amd64` and `linux/arm64` when a `v*` tag
+is pushed. Nothing is published for commits between tags, and
+`v0.1.0-alpha.5` predates the workflow, so it has no image. `latest` moves with
+every release tag, pre-releases included. The image is not signed; it carries
+BuildKit SBOM and provenance attestations only. Base-image security updates
+arrive only with the next tag, not through scheduled rebuilds.
+`knx-server --version` inside the image reports the server crate version
+(`0.1.0-alpha.2` at the time of writing), not the release tag the image is
+named after.
+
+**Why.** Owner decisions of 2026-10-09: Docker Hub only, both architectures,
+`latest` for every release while only alphas exist. The crate-version drift
+predates this workflow and is a separate cleanup.
+
+**Impact.** Pin a version tag (`knxbench/knxbench-server:0.1.0-alpha.6`) if an
+update must be a deliberate step. Newer source than the last tag still needs
+a local `docker build`. To identify a running image, use its tag or digest,
+or the commit in `--version`, not the version number in `--version`.
+Until the first tag run, only the amd64 smoke test has run locally (2026-10-09);
+the arm64 build and the multi-arch publish job have not run yet.

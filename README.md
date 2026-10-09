@@ -161,6 +161,12 @@ docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
 Open <https://127.0.0.1:8484>, sign in with that password, and choose **New project…** or
 import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
+No time for coffee? From the first release after alpha.5, every release tag is also
+published as a ready-made image for x86-64 and 64-bit Arm:
+`docker pull knxbench/knxbench-server:latest`, then the same `docker run` with
+`knxbench/knxbench-server:latest` as the image. It is the last release, not the newest
+source ([details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
+
 With a password set, the server speaks HTTPS with a self-signed certificate, so the
 browser warns once: compare the fingerprint in `docker logs knxbench` before you accept
 it. It is one shared password, made for a LAN or VPN, not for the open internet. Talking

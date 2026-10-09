@@ -7,6 +7,28 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-09 — Release tags publish the server image to Docker Hub
+
+- Owner request: releases publish the container automatically. New
+  `.github/workflows/docker-release.yml` ([ADR-0097](adr/0097-docker-hub-release-image.md)):
+  on a `v*` tag, native `ubuntu-24.04` / `ubuntu-24.04-arm` runners build
+  `apps/knx-server/Dockerfile`, run the smoke test against each image, push by
+  digest (SBOM + provenance) and merge one manifest list
+  `knxbench/knxbench-server:<version>` + `latest`, verified to contain exactly
+  `linux/amd64` and `linux/arm64`. Manual dispatch is a build-and-test dry run.
+  Tag runs need `DOCKERHUB_USERNAME` (variable) and `DOCKERHUB_TOKEN` (secret)
+  and stop before building without them.
+- `apps/knx-server/scripts/smoke-test.sh` repaired: since ADR-0088 a password
+  means HTTPS, and the script still spoke HTTP (`307`, failing at the first
+  401 check). It now uses HTTPS with `-k`, accepts `KNXBENCH_IMAGE` and
+  `KNXBENCH_SMOKE_PORT`, checks `--version`, and hands the root-owned `/data`
+  back before cleanup.
+- Evidence: actionlint (with shellcheck) clean for the new workflow,
+  shellcheck clean for the script, smoke test passed against a local amd64
+  build of `0553f43c` (`knx-server 0.1.0-alpha.2+g0553f43c`). The arm64 build
+  and the publish job have not run yet; nothing was pushed to Docker Hub.
+  Boundaries in KNOWN_LIMITATIONS §168.
+
 ## 2026-10-09 — Three local packages move into main (toast parity, Devices navigation, community demos)
 
 - Owner go: integrate the remaining local packages into `main`. Toast parity

@@ -87,7 +87,14 @@
     "historicalAttempt": "Basis8901affa parser refused before comparison; superseded after import-integrity integration",
     "notClaimed": "Repeat activation, full ETS, Secure or hardware compatibility"
   },
-  "publication": "GREEN CANDIDATE: final corrected source and corpus/private gates passed; main merge/push/ref verification pending",
+  "publication": {
+    "status": "DELIVERED",
+    "merge": "2e264f6cc6ece52cb463ed77b4fdf68cfa96706b",
+    "noFastForward": true,
+    "pushedTo": "origin/main",
+    "HEADTrackingLiveEqual": true,
+    "postMergeChecks": "five nonempty repo gates, documentation/diff and mechanical private-source-value scan passed; source tree unchanged from f4af614e admission"
+  },
   "importIntegrityIntegrated": "9a5b55fe84d6",
   "postIntegrationChecks": {
     "revision": "f4af614eac3049f18fc0a5534414a3ac8796ba87",

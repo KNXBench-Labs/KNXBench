@@ -7,8 +7,7 @@ binding passed. Browser4/4 independently passed on unchanged UI source.
 Four inherited tests were corrected only after full fresh-main RED baseline and
 narrow owner authorization (`e74be53a`); no runtime or private golden values added.
 Read-only own raw values remain separate from Dynamic inputs, defaults and
-siblings; Repeat/activation/write boundaries remain. Publication/ref receipt
-pending. [Evidence](evidence/kl68-instance-values-2026-10-10.json).
+siblings; Repeat/activation/write boundaries remain. Published no-ff merge `2e264f6cc6ec`, HEAD/tracking/live equal. [Evidence](evidence/kl68-instance-values-2026-10-10.json).
 
 # IMPLEMENTATION_STATUS.md
 

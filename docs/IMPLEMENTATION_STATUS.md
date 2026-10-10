@@ -7,7 +7,9 @@ remain explicitly documented in [the source review](research/schema23-offline-bo
 Project Schema23 identifies loaded-image fields; RFC3629 defines UTF-8, not KNX
 field policy. No little-endian layout, KNX text-capacity or decoded-image contract
 was admitted. Implementation boundaries unchanged; no private decode or bus use.
-Publication gates and receipt are separate from this content checkpoint.
+Actual no-ff candidate `a3f88cac2b72` passes 97 xtask tests, strict Clippy/fmt,
+all five repository gates and documentation/whitespace checks.
+[Receipt](evidence/schema23-public-research-2026-10-10.json).
 
 ## 2026-10-10 — Import-integrity merged candidate accepted
 

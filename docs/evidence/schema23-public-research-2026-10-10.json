@@ -18,7 +18,22 @@
   "checks": {
     "citationEvidence": "passed",
     "mechanicalPrivateValueScan": "clear before content commit",
-    "documentationGate": "pending"
+    "documentationGate": {
+      "testedRevision": "a3f88cac2b72967f5778a174f646c64dd42e7433",
+      "xtaskUnitTests": 97,
+      "failed": 0,
+      "fmt": "passed",
+      "clippy": "all-targets -D warnings passed",
+      "repository": [
+        "check-layering",
+        "check-headers",
+        "check-anchors",
+        "check-ledger",
+        "check-corpus-gates"
+      ],
+      "documentation": "check_documentation.py passed",
+      "inputBinding": "start/end equal"
+    }
   },
-  "publication": "pending; research pass closure is not implementation support"
+  "publication": "Actual merged documentation scope gated; closure docs/privacy check and normal push/readback pending"
 }

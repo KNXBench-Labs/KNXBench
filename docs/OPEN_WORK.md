@@ -51,6 +51,23 @@ baselines, future-model closure before model changes, and primary cvexc semantic
 before enabling any runtime rule. Synthetic browser/CLI checks are not real
 ETS/hardware/native accessibility evidence. No release/deployment or bus action.
 
+## Private schema-23 follow-ups (10 October 2026)
+
+KL-106 output audit and KL-8 secure-capable/not-activated witness are published.
+KL-68/PDB-01 own stored instance values are implemented read-only (`d050c7e78b02`,
+[ADR-0108](adr/0108-read-only-module-instance-values.md)); no Dynamic consumption,
+sibling/default fallback or additional write authority. Repeat mapping and
+activation remain an accepted, research-bound limitation. The explicit private
+own-value comparison and RefId gate now pass after import-integrity integration
+(`734064823e19`); the earlier parser refusal remains historical evidence.
+KL-1 owner decision: retained-uninterpreted, byte-exact and explicitly reported
+data may count as reconciled, without lifting its semantic limits.
+
+Next: re-fetch the import-integrity integration; rerun the private gates; handle
+KL-1/F01–F04 (including owner reconciliation decision), KL-173/F06, KL-174/F08,
+KL-175/F09 and KL-146 only after their prerequisites. KL-170–172 remain public
+research-only tasks. Do not reuse old-base green results for a changed main.
+
 ## Import-integrity merged-source acceptance (10 October 2026)
 
 [Integration proof](status/2026-10-10-import-integrity-integration.md) covers

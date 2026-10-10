@@ -2120,6 +2120,8 @@ export interface ParameterPanel {
   sourceLanguage: string | null;
   sections: ParameterSection[];
   stale: StaleParameter[];
+  /** Stored module-instance evidence; activation not evaluated, never writable. */
+  instanceValues?: StaleParameter[];
   diagnostics: ParameterDiagnostic[];
   // The server's own freshly rebuilt tree (T3 fix round 1, item 6) — `null`
   // from the plain `GET`, which runs no command and has nothing fresher to

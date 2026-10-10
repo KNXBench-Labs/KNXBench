@@ -2091,6 +2091,7 @@ dependencies = [
  "knx-productdb",
  "knx-projection",
  "knx-store",
+ "knx-testsupport",
  "rmcp",
  "serde",
  "serde_json",

@@ -9482,7 +9482,10 @@ Code checkpoint `68922cc4` includes source feature and main integration. Named
 synthetic unit/service/native/HTTP/UI focuses, original boolean raw-preview/native
 comparison and missing-env refusal pass. Real Chromium en/de at400/1440 passes,
 with inspected screenshots; two omission mutations assertion-killed/restored.
-Broad frozen-source/quality/corpus/privacy/publication admission remains pending.
+Frozen source `d8cde545` admitted 2026-10-11: Rust2403/0/182, Web2612/0,
+production build, strict/repository/documentation gates, nonempty all-pass corpus
+and explicit original reconciliation/RefId/raw-preview gates pass; original bytes
+unchanged. Publication and task-owned cleanup pending; bounded semantics unchanged.
 
 **Remaining boundary.** Modeled strings, whole retained XML/elements, file bodies,
 leading whitespace/BOM/alternative headers and older logs are not reclassified.

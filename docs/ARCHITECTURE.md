@@ -649,3 +649,12 @@ then asserted against itself.
 | [0010](adr/0010-per-attribute-override-representation.md) | Overrides are represented per attribute with an explicit empty state |
 | [0011](adr/0011-product-database-storage.md) | Product database storage — blobs and parsed tables, content hash as identity |
 | [0012](adr/0012-enrichment-into-absent-slots.md) | Enrichment fills only `Override::Absent` slots |
+
+
+## Opaque payload report evidence (2026-10-10)
+
+The private app module `import_payload_evidence` annotates already-retained whole
+members using the existing product adapter byte sniffer. Descriptive role hints
+never change source ownership, exact resolution, normalized core or storage
+destinations. Independent diagnostics survive. No new schema or archive reader;
+[ADR-0109](adr/0109-opaque-payload-content-and-candidate-roles.md).

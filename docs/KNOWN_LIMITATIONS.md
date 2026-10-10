@@ -1,5 +1,17 @@
 # Known limitations
 
+## Alpha.8 release snapshot (2026-10-10)
+
+[Alpha.8 notes](releases/alpha8.md) and the
+[verified release receipt](evidence/release-alpha8-2026-10-10.json) package
+selective import, integrity repairs, read-only instance values, bounded payload
+evidence and the 1024 MiB project archive budget. Native/model12 requires backups;
+older builds refuse upgraded files. Retained-uninterpreted source is not complete
+ETS semantics, original-format export/signing or broader hardware eligibility.
+Dated pre-repair/local-only paragraphs below remain historical; the per-ID ledger
+and later source receipts remain distinct from this immutable release snapshot.
+No new numbered limitation or owner disposition is created by release bookkeeping.
+
 ## Local integrity repairs and remaining boundaries (2026-10-10)
 
 [IMPORT_INTEGRITY](IMPORT_INTEGRITY.md) records the repairs and schema12 vocabulary barrier. The separate sample review below records the pre-repair state; merged-source verification is distinct from that historical audit. Historical opaque attributes are not guessed into typed values. Retained channel/address/IP extensions and offline loading limitations remain separately bounded. Import reports/session diagnostics are not persistently restored as a new report format; retained original XML preserves independently reconstructable source observations. Session-log caps remain explicit. No ETS/native-accessibility/hardware acceptance is claimed.
@@ -1408,6 +1420,14 @@ No general ETS commissioning parity, every-vendor download claim, automatic
 rollback or RF hardware support is established by one device.
 
 ## 8. KNX Secure is not implemented
+
+**Key provenance research, 10 October 2026:** [the primary-source review](research/secure-key-provenance.md)
+distinguishes project XML, complete keyring backups, interface exports, factory
+credentials, Data/IP keys and project/keyring protection. This does not add a
+keyring decoder, AES-project import, credential vault or Secure runtime.
+Retained original/uninterpreted source can still contain sensitive material;
+a native/source backup is not automatically encrypted or sanitized. Existing
+Secure and container refusals stay unchanged.
 
 **Update 2026-10-10 (secure-capable programs in a plain project).** A
 privately supplied project contains secure-capable programs

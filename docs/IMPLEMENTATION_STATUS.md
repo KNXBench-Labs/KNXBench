@@ -1,3 +1,50 @@
+## 2026-10-10 — Secure key provenance, not Secure runtime
+
+- Owner-approved Session2 research reads seven primary KNX articles and public
+  Project Schema23. [Findings](research/secure-key-provenance.md) separate
+  project XML, complete/interface keyring exports, access conditions, Data/IP
+  keys, factory credentials and project/signature protection. Contradictory
+  certificate/visibility claims and the deprecated IP article stay disclosed.
+- No real keys, keyrings, protected projects, device certificates or bus opened.
+  Current source inspected; no Secure implementation or new application/corpus/
+  ETS/hardware test. Bounded offline-keyring follow-up is a proposal only.
+- Accepted documentation source `8fdf716713006f94fa7a52d163afc3e3106f98ad`:
+  eight-source quote/evidence verifier,12 documentation checker tests, five
+  nonempty fresh-root repository gates,525 anchors/234 Markdown files and
+  whitespace. First adjacent-citation syntax refusal remains historical,
+  downstream stages then unstarted. In-session self-review only.
+- [Source-bound receipt](evidence/secure-key-provenance-2026-10-10.json);
+  local acceptance, coordinated integration/publication remains separate.
+
+## 2026-10-10 — Alpha.8 released and independently verified
+
+- Immutable annotated `v0.1.0-alpha.8` points to `fdddad8ffe0bd9b4a33f2f992a15eac9b1a3c86d`.
+  The snapshot includes published source through `fd6b1cff`, not later parallel
+  work. Application versions align at `0.1.0-alpha.8`; external dependencies
+  are unchanged. Handwritten prerelease notes/tag/source-main readbacks match.
+- Final combined-source acceptance:26 primary and6 supplementary stages;
+  Rust3912/0/190 ignored, Web2611/0 in164 files, Chromium244/0/0 skipped,
+  conventional corpus143/143 across31 targets plus3 download/AP1/matrix tests.
+  Explicit original/native/instance/RefId/source-reconciliation/reference checks,
+  builds/types/strict Clippy/fmt/five nonempty repo gates/docs/54 Python tests pass.
+  Source inputs remain frozen; private inputs/evidence were not published.
+- Dryruns38083917277/38083919715 and tag runs38087104639/38087104641 pass.
+  All three release assets were downloaded back; sizes/GitHub digests and every
+  SHA256SUMS entry match. MCP executes `0.1.0-alpha.8+gfdddad8`; AppImage extraction
+  passes. CI checks X11/headless-Wayland startup, not interactive desktop/Orca.
+- Anonymous Docker pull and real published amd64 HTTPS/authentication/save/reopen
+  smoke pass. Version/latest share one index for amd64+arm64; exact full OCI
+  revision/version labels match the tag. Isolated PID1 orderly stop exits0.
+  Existing user container identity/image/start time stays unchanged and running.
+- Native/model12 requires independent backups; older builds refuse upgraded
+  files. No new complete-ETS/export/signing/hardware/Pi/large-project-memory claim.
+  Initial7b6389f5 acceptance remains historical after upstream reconciliation;
+  the matrix output-filesystem refusal occurred before observation and its
+  unchanged separate-filesystem retry passed. No guard or pin was weakened.
+- [Measured public receipt](evidence/release-alpha8-2026-10-10.json) ·
+  [release notes](releases/alpha8.md). Self-review only. Documentation/cleanup
+  closure is recorded separately; the release tag must not move.
+
 ## 2026-10-10 — KL174 bounded payload content/role evidence
 
 - Candidate code `41b3d6267731` reuses existing product `sniff_media` at app/report boundary; project UserFiles/AddinData and manufacturer payloads carry separate content and explicitly unverified roles. No F reimplementation, source/model/storage changes or new dependency.

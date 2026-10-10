@@ -1,5 +1,6 @@
 /** The banner saying what a running project load is doing, or was doing when it failed. */
-// Renders exactly what the server reported and nothing more (ADR-0023).
+// Progress facts come only from the server (ADR-0023). Known archive-size
+// refusals get localized wording; unknown error messages stay verbatim.
 // The bar is determinate only while a real completed/total pair is on the
 // wire — two phases of seventeen — and indeterminate the rest of the time,
 // which is deliberately *not* the same as "zero percent": an empty bar
@@ -8,6 +9,7 @@
 import { useEffect, useState } from "react";
 import type { LoadProgressSnapshot } from "./api";
 import { useTranslate } from "./i18n";
+import { readableArchiveSizeError } from "./archiveSizeError";
 import { FLAVOUR_INTERVAL_MS, flavourRotates, shuffleFlavourKeys } from "./loadFlavour";
 import { loadFraction, phaseMessageKey } from "./loadProgress";
 
@@ -111,7 +113,9 @@ export default function LoadProgressBanner({ source, snapshot, random = Math.ran
           {t(flavour)}
         </p>
       )}
-      {failed && snapshot?.error && <p className="load-progress-error">{snapshot.error}</p>}
+      {failed && snapshot?.error && <p className="load-progress-error">
+        {readableArchiveSizeError(snapshot.error) ?? snapshot.error}
+      </p>}
     </section>
   );
 }

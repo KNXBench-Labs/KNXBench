@@ -156,7 +156,13 @@ HTTP 413 with an explicit limit. **The published alpha.6 image still has the
 For larger files, place the archive in the mounted data directory and choose it
 with the server file picker. A reverse proxy may impose its own smaller limit.
 Upload acceptance does not guarantee import acceptance: the importer still
-limits each expanded ZIP member to 64 MiB and the expanded archive to 512 MiB.
+limits each expanded ZIP member to 64 MiB and the expanded archive to 1024 MiB.
+An archive-size refusal names the expanded size and limit in your UI language,
+for example: “Die Datei ist entpackt mit 1280 MiB zu groß. Das Limit liegt bei
+1024 MiB.” The popup and persistent load-failure banner use the same wording.
+MiB means 1,048,576 bytes; this is not the compressed upload size. The message
+uses the actual server limit, so an older server can still report 512 MiB.
+This local source change does not replace existing release/container artifacts.
 See the [upload and return contract](../../contracts/DOCKER_UPLOAD_AND_RETURN.md).
 The uploaded name is reduced to a plain file name, so nothing a client sends can climb
 out of that directory.

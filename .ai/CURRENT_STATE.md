@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-10 10:25 CEST
+- **Completed:** Schema-23 follow-up package 2 (KL-8, G13): synthetic witness `crates/knx-app/tests/secure_capable_not_activated.rs` (`59a0c162`) imports one plain schema-21 project with the same MV-0701 ProductProcedure program as `IsSecureEnabled` true (+ security table sizes) and false. Import model, readiness (`untested`) and the 8-step memory plan are identical; flag only rides along as a verbatim program attribute; exhaustive match shows no plan step writes a key. Planner-refuses-secure mutant killed. §8 update, ledger KL-8 (ACCEPTED_BOUNDARY, test+revision), OPEN_WORK, IMPLEMENTATION_STATUS, receipt. Gate: knx-app 186/0/29 ign, clippy, five xtask, doc check.
+- **Pending/Next Steps:** Package 3 (KL-68/PDB-01 ADR + per-instance values) in progress; package 9 research; 4–8 waiting on import-integrity.
+- **Notes for Codex oder Claude:** Real-device behaviour of secure-capable programs without Secure stays unverified (no documented source). `A_Key_Write` remains reachable only via a declared knx-net plan (§112).
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-10 10:17 CEST
 - **Completed:** Schema-23 follow-up package 1 (KL-106 audit, G09): MAC/EUI addresses are a fifth debug-report redaction class (`37664bad`); synthetic planted witness `knx_testsupport::retained_privacy_knxproj_bytes` proves retained BusAccess/IPConfig/AdditionalAddresses/ProjectTraces stay retained but never reach the debug bundle, MCP responses or reduced contribution bundles; report.md, dialog (en/de), contribution README and selective-import note name the kept classes. Docs `7dd8d597` (§106, ledger KL-106 ACCEPTED_BOUNDARY with tests+revision, OPEN_WORK, IMPLEMENTATION_STATUS, receipt). Gate: Rust 976/0/74 ign, clippy -D warnings, five xtask, Vitest 2594/0/163, tsc, doc check, diff --check; four mutants killed; privacy scan clean.
 - **Pending/Next Steps:** Packages 2 (KL-8 synthetic secure-capable witness), 3 (KL-68/PDB-01 ADR + ValueMap instance dimension), 9 (KL-170–172 research). Packages 4–8 wait on the import-integrity worktree (F01–F10 uncommitted there as of this entry).

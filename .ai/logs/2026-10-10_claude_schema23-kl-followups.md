@@ -20,3 +20,13 @@ import-integrity worktree; overlapping packages wait for its integration.
   the private file into a Hermes terminal cache log; that cache file was
   deleted immediately and the census redone with an XML parser printing
   attribute names only. Nothing reached the repository.
+
+## Package 2 — KL-8 secure-capable, not activated (G13)
+
+- Witness: same project, same program, `IsSecureEnabled` true/false, each
+  in its own product database; MV-0701 ProductProcedure so the witness
+  reaches a real 8-step plan (first draft stopped at "segment never
+  allocated"; adding `LdCtrlAbsSegment` fixed the fixture, not the code).
+- Finding: the flag reaches `ProgramCode.program_attributes` verbatim; no
+  planning rule reads it. Readiness `untested` for both.
+- Not claimed: what a real secure-capable device needs when Secure is off.

@@ -5,16 +5,28 @@
 This chapter is the honest inventory: what exists, what half exists, and what
 does not exist at all, area by area across the whole application.
 
-This chapter describes source checked on **8 October 2026**; the application
-components were bumped to `0.1.0-alpha.6` on 9 October. The public
-[`v0.1.0-alpha.6` pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.6)
-is a separate build snapshot, not a promise that every newer source feature is bundled.
+The detailed inventory retains its **8 October 2026** source audit and dated
+follow-ups. The current public snapshot is
+[`v0.1.0-alpha.8`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.8),
+not a promise that every later source feature is bundled.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
 
 The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
+
+## Alpha.8 release boundary
+
+Alpha.8 packages selected-line/device import, schema-23 source/ZIP integrity
+repairs, bounded payload content/unverified-role evidence, own stored module-instance
+values in read-only views and the **1024 MiB**
+expanded project budget with localized refusals. It requires native/model
+**schema12**; back up before upgrading, because Alpha.7 and earlier refuse the
+new files. [Release notes](../releases/alpha8.md) and the source-bound publication
+[receipt](../evidence/release-alpha8-2026-10-10.json) separate downloaded artifacts from later `main`, synthetic/private
+evidence from full ETS semantics, and packaging from hardware certification.
+Unmerged Functions/Sites and remaining research work are not included.
 
 ## Alpha.7 release boundary
 
@@ -39,7 +51,8 @@ The displayed limit comes from the server, including an older server's 512 MiB
 limit. MiB accurately names the binary unit used by the importer, rather than
 compressed file size. Unknown technical messages still pass through unchanged.
 The verified source change is published on `main`, separately from any new
-release/deployment; Alpha.7 artifacts retain their existing limits.
+release/deployment; Alpha.7 artifacts retain their existing limits. Alpha.8
+packages the new budget.
 [Verification](../IMPLEMENTATION_STATUS.md#2026-10-10--archive-budgetreadable-refusals-main-integration-accepted)
 · [Import limits](../IMPORT_EXPORT.md).
 
@@ -62,7 +75,8 @@ required dependencies, refuses conflicts/stale confirmations and creates one
 native undo step. Target settings/identity remain owned by the open project.
 Retained complete source evidence can include unselected private data and
 survives Undo; explicit consent is required. [Source integration acceptance](../status/2026-10-10-import-expansion-integration.md)
-is separate from a release; the existing alpha.7 artifacts are not changed. [Workflow](../SELECTIVE_IMPORT.md) ·
+records the source separately; Alpha.8 packages the feature without changing the
+existing Alpha.7 artifacts. [Workflow](../SELECTIVE_IMPORT.md) ·
 [local verification](../status/2026-10-10-import-expansion-verification.md).
 The authorized historical-export harness lacks its real export set; cvexc
 analysis does not activate device comparison/download rules. Native/Orca and
@@ -134,7 +148,7 @@ gives five, with the measured counts behind them.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Native `.knxdb` project file (SQLite, store schema version 11 in the local history package; alpha.6 uses v10) | ✅ Implemented | Open, save, save as — [Projects](user-guide/02-projects.md) |
+| Native `.knxdb` project file (SQLite, store schema12 in Alpha.8; Alpha.7 uses v11 and Alpha.6 uses v10) | ✅ Implemented | Open, save, save as — [Projects](user-guide/02-projects.md) |
 | Schema migration of an older project file, with a refusal rather than a guess when the file is newer than the build | ✅ Implemented | Migration tests per version step — [`docs/DATA_MODEL.md`](../DATA_MODEL.md) |
 | Undo and redo across project edits | ✅ Implemented | Native-backed reversible edits survive restart with undo/redo; before first Save As it is session-local. Cannot undo bus writes — [history contract](../PROJECT_HISTORY.md) (local package, not alpha.6) |
 | New-project wizard with an optional starting structure (areas/lines, building tree, main/middle group ranges, two presets) | ✅ Implemented | Applied with the new project in one step or refused without replacing anything — [Projects](user-guide/02-projects.md), [ADR-0093](../adr/0093-wizards-are-views-over-existing-commands.md) |
@@ -149,7 +163,7 @@ gives five, with the measured counts behind them.
 | Capability | Status | Notes |
 | --- | --- | --- |
 | `.knxproj` at schema 11 (ETS4) and schema 21 | ✅ Implemented | Measured counts on real files — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
-| `.knxproj` at schema 23 | 🟡 Bounded evidence | Real reference import and native `.knxdb` roundtrip exist; module handling is inferred from schema 21 without an independent module-using schema-23 sample. No ETS roundtrip — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
+| `.knxproj` at schema 23 | 🟡 Bounded evidence | Reference/private-original import and native `.knxdb` roundtrip/source reconciliation are evidenced; retained-uninterpreted information is not full module semantics. No ETS export roundtrip — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
 | `.knxproj` at schemas 12–14, 20, 22 | 🟡 Unverified sample coverage | Parser-family admission is not verification against real project files at those schemas — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
 | Import report with errors, warnings, unsupported constructs and conflicts | ✅ Implemented | Also available as JSON from the command line |
 | Preserving opaque source data and reporting unsupported constructs | ✅ Implemented | See the import report and [data-integrity contract](../IMPORT_EXPORT.md); retained bytes do not imply editable semantics |

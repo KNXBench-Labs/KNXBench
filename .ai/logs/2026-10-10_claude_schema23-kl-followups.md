@@ -1,5 +1,32 @@
 # 2026-10-10 Claude — schema-23 KL follow-up packages
 
+## Package 3 checkpoint — codex continuation (13:33 CEST)
+
+- Code committed as `d050c7e78b02`; ADR-0107 and separate read-only instance
+  dimension. HTTP/Web/MCP expose own stored evidence, never default/sibling
+  fallback or a new writable field. Repeat activation remains unsupported.
+- Self-review IMPORTANT (`device_evaluation.rs:266-278`): conflicting declarations
+  could authorize evidence; uniqueness guard and RED/GREEN witness fixed it.
+- Self-review IMPORTANT (same range): initial namespace guard regressed legacy
+  alias/lone-instance writes. Additional guard now applies only to the new map;
+  dedicated alias RED/GREEN and all unchanged HTTP parameter tests passed.
+- MINOR (`private_module_instance_values.rs:1`): header ceiling fixed without
+  relaxing it. No unresolved CRITICAL/IMPORTANT finding in this code review.
+- Admitted source gate: Rust1793/0/100ignored, Web2596/0/163files, Clippy,
+  TypeScript, fmt, five xtask, docs and diff checks; input start/end equal.
+  Corpus runner exit0 with actual positive selected total matched; temporary
+  links removed. Corpus output remains private/local, never copied here.
+- Two named mutants failed as expected and originals were restored. Final
+  Inspector browser4/4; four synthetic frames visually inspected: clear
+  read-only/not-evaluated/default distinction, wrapped narrow IDs, no clipping,
+  raw HTML-looking value displayed literally. Not packaged/native app evidence.
+- Mechanical outgoing code scan clear; the dotted public schema section was
+  reviewed as a document reference, not an endpoint. No private data published.
+- Genuine own-value comparison still parser-refused on `8901affa`; owner approved
+  narrow delivery and a later replay, not a private pass. Other session is
+  merging; fetch/reconcile before publication. Documentation/integrated gates,
+  merge/push, packages4–9 and final main acceptance remain pending.
+
 Work plan from the owner: packages 1–9 over the private schema-23 review
 (KL-1, 8, 68, 106, 146, 170–175, PDB-01). F01–F11 belong to the
 import-integrity worktree; overlapping packages wait for its integration.
@@ -30,3 +57,30 @@ import-integrity worktree; overlapping packages wait for its integration.
 - Finding: the flag reaches `ProgramCode.program_attributes` verbatim; no
   planning rule reads it. Readiness `untested` for both.
 - Not claimed: what a real secure-capable device needs when Secure is off.
+
+
+## Integrated replay blocker — corpus, not a green publication
+
+Actual source candidate a8ca10767750 passes2876 Rust tests (160 explicitly
+ignored) and2597 Web tests, strict clippy/fmt/tsc, five nonempty repository checks
+and docs/diff. Full integrated corpus replay failed four inherited tests in
+unchanged source files: etsproj lib.rs548/report.rs463, server
+http_project_routes.rs47/open_reference_project.rs28. The assertions concern
+whole-file accounting, prior baggage consequence text and prior warnings.
+No assertion values or original aggregate dataset statistics are copied here.
+Fresh origin/main d9da8e61 baseline is running in a separate owned worktree and
+fresh Cargo target; do not attribute baseline failures before execution.
+Original F-owner code remains untouched. Browser replay queued separately.
+Receipt and handover now explicitly state NOT DELIVERED/corpus red. Prior corpus
+success is historical pre-integration, not a current source admission.
+Package9 was pushed with actual equality and cleanup; package4 has preliminary
+boolean source/native/RefId success and repaired synthetic controls. Final
+hardened positive replay and all publications after this blocker remain pending.
+
+
+## Final package3 source and corpus admission
+
+- f4af614eac30: Rust2876/0/160, Web2597/0/163, full corpus143/143 in31 targets; private own-value1/0, RefId3/0, runner exited0 and source link removed.
+- e74be53a: four owner-approved test-only inherited corpus contract corrections, each baseline RED then isolated GREEN, full corpus now green; no F-runtime edits/private golden values.
+- Final docs/privacy/no-ff main publication still pending. Repeat/activation/writable repeated-instance boundary unchanged.
+- Self-review: codex in-session only, no independent reviewer claimed.

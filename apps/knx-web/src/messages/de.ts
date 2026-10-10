@@ -721,6 +721,8 @@ export const messages: Record<MessageKey, string> = {
   "parameters.sharedReadOnlyCaption":
     "Wird von jeder Instanziierung dieses Moduls gemeinsam genutzt; hier nicht bearbeitbar – siehe die Diagnosen für den Grund.",
   "parameters.staleValuesHeading": "Veraltete Werte ({count})",
+  "parameters.instanceValuesHeading": "Gespeicherte Modulinstanzwerte",
+  "parameters.instanceValuesDescription": "Schreibgeschützte gespeicherte Evidenz: Die Aktivierung ist nicht ausgewertet. Das sind die eigenen Werte jeder Instanz, keine Programmdefaults.",
   "parameters.staleDescription":
     "Diese gespeicherten Werte entsprechen keinem Parameter des aktuellen Anwendungsprogramms mehr.",
   "parameters.diagnosticsCount.one":

@@ -24,7 +24,28 @@ async fn importing_the_reference_project_returns_the_golden_counts() {
         reference_ets4_path().exists(),
         "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
     );
-    let state = Arc::new(knx_server::AppState::default());
+    // This is a project/report projection contract, not a catalogue test.
+    let state = Arc::new(knx_server::AppState {
+        product_db: None,
+        ..Default::default()
+    });
+    let conn = knx_store::open_and_migrate_in_memory().unwrap();
+    let imported = knx_app::import_ets_project(&reference_ets4_path(), &conn)
+        .unwrap_or_else(|_| panic!("reference application import refused"));
+    let report = &imported.report;
+    let expected_warnings = report
+        .errors
+        .iter()
+        .filter(|item| item.severity == knx_etsproj::report::Severity::Warning)
+        .count()
+        + report.unknown.len()
+        + report.conflicts.len()
+        + report.unsupported.len();
+    assert!(report.error_count() == 0 && !report.has_losses());
+    assert!(
+        expected_warnings > 0,
+        "no capability/report boundary exercised"
+    );
     let app = knx_server::app(state, None);
 
     let response = app
@@ -44,7 +65,7 @@ async fn importing_the_reference_project_returns_the_golden_counts() {
     assert_eq!(response.status(), StatusCode::OK);
     let tree = body_json(response).await;
     assert_eq!(tree["errors"], 0);
-    assert_eq!(tree["warnings"], 2);
+    assert!(tree["warnings"].as_u64() == Some(expected_warnings as u64));
     assert_eq!(
         tree["installations"][0]["topology"][0]["lines"]
             .as_array()

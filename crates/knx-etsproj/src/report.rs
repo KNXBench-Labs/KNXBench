@@ -455,12 +455,23 @@ mod tests {
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
         let r = reference_report();
-        let u = r
-            .unsupported
+        let baggage: Vec<_> = r
+            .opaque
             .iter()
-            .find(|u| u.what.contains("econEts3.dll"))
-            .unwrap();
-        assert!(u.consequence.contains("not executed"));
+            .filter(|entry| entry.kind == "Baggage")
+            .collect();
+        assert!(!baggage.is_empty(), "no baggage boundary exercised");
+        for entry in baggage {
+            let unsupported = r
+                .unsupported
+                .iter()
+                .find(|item| item.what == entry.source_path)
+                .unwrap_or_else(|| panic!("retained baggage is not explicitly reported"));
+            assert!(unsupported
+                .consequence
+                .contains("preserved, not interpreted or executed"));
+        }
+        assert!(!r.has_losses());
     }
 
     #[test]

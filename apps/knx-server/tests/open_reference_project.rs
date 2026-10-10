@@ -18,14 +18,27 @@ fn opening_the_reference_project_yields_the_measured_counts() {
     );
     let tree = knx_server::open_project_impl(&reference_ets4_path()).unwrap();
 
-    // The reference project's golden import has no real errors: `warnings`
-    // is non-zero only because of the two documented vendor-baggage
-    // capability gaps (see knx-etsproj's own
-    // `vendor_baggage_is_reported_as_unsupported` test) — a genuine
-    // capability gap, not a data loss (`ImportReport::has_losses()`
-    // deliberately excludes it), so it must never surface as `errors`.
+    // Derive the complete report policy from an independent application
+    // import: retained metadata may add warnings without losing source bytes.
+    let conn = knx_store::open_and_migrate_in_memory().unwrap();
+    let imported = knx_app::import_ets_project(&reference_ets4_path(), &conn)
+        .unwrap_or_else(|_| panic!("reference application import refused"));
+    let report = &imported.report;
+    let expected_warnings = report
+        .errors
+        .iter()
+        .filter(|item| item.severity == knx_etsproj::report::Severity::Warning)
+        .count()
+        + report.unknown.len()
+        + report.conflicts.len()
+        + report.unsupported.len();
+    assert!(report.error_count() == 0 && !report.has_losses());
+    assert!(
+        expected_warnings > 0,
+        "no capability/report boundary exercised"
+    );
     assert_eq!(tree.errors, 0);
-    assert_eq!(tree.warnings, 2);
+    assert!(tree.warnings == expected_warnings);
 
     assert_eq!(tree.installations.len(), 1);
     let inst = &tree.installations[0];

@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-10 — KL-8: secure-capable programs without Secure, pinned
+
+A synthetic witness (`crates/knx-app/tests/secure_capable_not_activated.rs`,
+`59a0c162`) imports one plain project with the same memory-mapped program as
+`IsSecureEnabled="true"` and `"false"`. Import model, readiness (`untested`)
+and the 8-step memory download plan are identical; the flag only rides along
+as a verbatim program attribute, and no plan step can write an access key.
+No Secure semantics were added; whether a real secure-capable device needs
+more than a plain download stays unverified (KNOWN_LIMITATIONS §8).
+[Receipt](evidence/kl8-secure-capable-witness-2026-10-10.json).
+
 ## 2026-10-10 — KL-106 audit: retained ETS source data stays out of shared outputs
 
 Every output that can carry retained source evidence was audited with a

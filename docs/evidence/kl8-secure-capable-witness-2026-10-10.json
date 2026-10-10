@@ -1,0 +1,19 @@
+{
+  "schema": "knxbench-evidence/1",
+  "title": "KL-8 witness: secure-capable program in a project without Secure",
+  "date": "2026-10-10",
+  "agent": "Claude (self-review only)",
+  "base_revision": "53b84c9f",
+  "code_commit": "59a0c162",
+  "test": "crates/knx-app/tests/secure_capable_not_activated.rs (2 tests)",
+  "witness": "synthetic manufacturer M-FFF7 (checked absent from the private sample), one MV-0701 ProductProcedure program installed from a plain schema-21 project once with IsSecureEnabled=true plus security table sizes and once with IsSecureEnabled=false; device without Security element, no secure group addresses",
+  "pinned_behaviour": {
+    "import": "flag and table sizes stored as catalogue text and as verbatim program attributes; nothing about Secure reported or retained; project model identical",
+    "readiness": "identical rows, code 'untested' without recorded evidence",
+    "planner": "identical 8-step memory download plan; program code identical apart from the verbatim secure attributes",
+    "access_keys": "exhaustive match: no memory-download step kind writes a key; A_Key_Write only via a declared knx-net plan, refused (KNOWN_LIMITATIONS §112)"
+  },
+  "mutant": "planner refuses IsSecureEnabled=true programs: killed (readiness_and_the_planner_treat_both_programs_identically)",
+  "not_claimed": "No Secure semantics, no statement about what a real secure-capable device needs when Secure is not activated; no documented source was found",
+  "gate": "see docs/IMPLEMENTATION_STATUS.md 2026-10-10 KL-8 entry"
+}

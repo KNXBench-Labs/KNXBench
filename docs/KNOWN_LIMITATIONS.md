@@ -1421,15 +1421,31 @@ rollback or RF hardware support is established by one device.
 
 ## 8. KNX Secure is not implemented
 
-**Update 2026-10-10 (secure-capable programs in a plain project).** The
-program attribute `IsSecureEnabled` is stored as catalogue text (PDB-7) and is
-not consulted by readiness, planning or download. A privately supplied project
-contains secure-capable programs but no device `Security` element and no
-secure group addresses. Whether such devices need anything beyond a plain
-download while Secure is not activated is unverified. The `A_Key_Write`
-refusal (§112) only applies to plans that declare access keys. Needed before
-any such device counts as verified: a synthetic "secure-capable, not
-activated" case and a documented source.
+**Update 2026-10-10 (secure-capable programs in a plain project).** A
+privately supplied project contains secure-capable programs
+(`IsSecureEnabled`) but no device `Security` element and no secure group
+addresses. Today's behaviour for that case is now pinned by a synthetic
+witness, `crates/knx-app/tests/secure_capable_not_activated.rs`, which
+imports the same plain project with the same program once as
+`IsSecureEnabled="true"` and once as `"false"`:
+
+- **Import.** The flag is stored as catalogue text (PDB-7) and as one
+  verbatim entry of the program's generic attribute map; nothing about
+  Secure is reported, retained or modelled, and the imported project model
+  is identical for both variants.
+- **Readiness and planner.** Both variants grade the same (`untested`
+  without recorded evidence) and plan the same memory download, step for
+  step. Planning reads program attributes by name and never this one.
+- **Access keys.** No memory-download step can write a key (the test matches
+  every step kind exhaustively). `A_Key_Write` is reachable only through a
+  `knx-net` plan that declares keys, which no application code builds, and
+  such a plan is refused (§112).
+
+What stays unverified: whether a real secure-capable device that is not
+switched to Secure needs anything beyond a plain download (for example a
+property ETS writes in that state). No documented source was found, so
+KNXBench neither adds such a step nor claims the device works; a download
+to one is "untested" like any other device without evidence.
 
 **Limitation.** No Data Secure, no IP Secure, no keyring handling (RESEARCH
 §9).

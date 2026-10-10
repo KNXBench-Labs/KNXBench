@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:22
+- **Completed:** Corrected package4 private runner proc_854b5ffe9a46 exits0 for actual reconciliation/native/RefId targets; no skipped/missing-input pass. Main65e1c809 integrated as 2530ad8edc4e, both handover/log histories retained. New test 6f8ac4332c79 independently verifies complete original XML/project+product ownership and bytes, native reopen/resave and unchanged input. §1, COMPATIBILITY, ledger/open-work/status and pending receipt drafted. Unknowns/has_losses deliberately remain visible; preservation-only owner decision recorded, no runtime or F-owner change.
+- **Pending/Next Steps:** Review complete candidate, run merged-source crate/clippy/fmt/five xtask/docs/diff plus full corpus and explicit private checks; then privacy scan/no-ff push/ref equality/cleanup. Package4 NOT delivered yet. Packages5–8 actual remaining scope open; packages1,2,3,9 delivered.
+- **Notes for Codex oder Claude:** Private proof has actual pass counts but no original values/counts in public receipt. No hardware/executables/release/deployment/subagents/quota checks. Source preservation does not suppress semantic warnings. Root/foreign worktrees untouched; shared source histories preserved. Candidate gate is next, not already green.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 17:05
 - **Completed:** Package3 no-ff2e264f6c + publication65e1c809 delivered/pushed/live-ref verified and cleaned; private evidence retained here. Package4 conservative semantic-report boundary corrected in own test only: unknowns keep has_losses=true, preservation-only reconciliation proved separately. Synthetic bounds and missing/corrupt/wrong-owner controls2/0/1 green. Prior exact private RED and independent native/RefId positives preserved in has-loss-contract-red/. Corrected hardened private runner proc_854b5ffe9a46 now started with loopback-only network and ignored private TMP/XDG stores. Corpus baseline/output-safety lessons recorded in private-corpus-regression-testing reference.
 - **Pending/Next Steps:** Await current private full-original XML/project/product/unknown-source/native/RefId results; then fresh65e1c809 integration, precise §1/COMPATIBILITY/ledger/status/docs evidence/gates/self-review/privacy and package4 no-ff push. Packages5–8 unresolved remainder; packages1,2,3,9 delivered. Overall goal remains IN PROGRESS, no need for user input at this checkpoint.

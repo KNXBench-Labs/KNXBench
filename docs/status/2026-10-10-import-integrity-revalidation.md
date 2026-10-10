@@ -2,15 +2,19 @@
 
 ## Main integration verification — 2026-10-10
 
+Reviewed merge `9d3c8f0c` was pushed normally to `main`; exact local/tracking/live
+refs and feature ancestry were verified. The additive documentation checkpoint
+records that publication. No release, deployment or hardware action.
+
 Owner subsequently authorized source publication and main integration. Feature
 `eff4df95` is integrated with the current archive/UI and stored-instance packages.
-Fresh combined source `7503f10f` passed all20 gates: Rust3906/0 and Web2611/0,
+Fresh combined source `7503f10f` passed all 20 gates: Rust 3906/0 and Web 2611/0,
 workspace/frontend builds, strict Clippy, types and repository/docs checks. Explicit
 private original/native, instance-value and RefId targets actually ran. A fresh
 production CLI import, product verification, complete-model offline analysis and
 independent bounded source/native/product comparison passed; two store-omission
 controls were caught and original bytes stayed unchanged. Later upstream edits
-were documentation-only: every1207 non-documentation tracked input matched.
+were documentation-only: every 1207 non-documentation tracked input matched.
 Final publication/readback is recorded separately from these source-bound results.
 No original identities, payloads or project measurement vectors are published.
 Self-review only; no new runtime behavior, F10/F11 support, full ETS/signature

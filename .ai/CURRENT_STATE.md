@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 18:38 CEST
+- **Completed:** Owner-authorized import regression merge published to main9d3c8f0c; local/tracking/live refs identical and eff4df95 ancestry verified. Actual frozen runtime source7503f10f passed20 gates (Rust3906/0, Web2611/0), explicit private original/native/instance/RefId and fresh production CLI/product/offline/source-native-product comparisons with two omission controls. Later docs-only integration retained all1207 runtime inputs byte-exact; seven final metadata gates and outgoing privacy scan passed. This additive checkpoint records verified publication, not new runtime behavior.
+- **Pending/Next Steps:** None for the authorized merge work package. Preserve source/evidence for owner review; no additional feature, release, deployment or hardware work authorized here.
+- **Notes for Codex oder Claude:** Shared root intentionally remains stale/dirty; foreign changes/worktrees/leases preserved. Own source checkout stays available; only owned finished build/temp caches are cleaned. Private source/report/store/hash evidence stays ignored/restricted/untracked locally. F10/F11 remain researched/reassessed follow-ups, no new ETS/signature/hardware or loader/encoder claim. Self-review only, no subagents or force-push.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 18:35 CEST
 - **Completed:** Final integrated regression source7503f10f passed20 full gates (Rust3906/0, Web2611/0), explicit original/native/instance/RefId tests, fresh real production CLI import/product/offline checks, independent bounded source/native/product comparison and two omission controls. Original/source bytes unchanged, self-review and privacy green. Later upstream changes are documentation-only with all1207 non-documentation tracked inputs equal; full upstream handover preserved.
 - **Pending/Next Steps:** Final additive documentation/privacy checks, normal main push and exact local/tracking/live readback. No new implementation, release, deployment or hardware action.

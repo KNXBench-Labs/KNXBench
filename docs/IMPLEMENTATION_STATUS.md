@@ -25,8 +25,8 @@
 ## 2026-10-10 — Import regression main-integration acceptance
 
 [Combined-source verification](status/2026-10-10-import-integrity-revalidation.md)
-records all20 fresh gates, actual original/native/instance/RefId and production
-CLI/source/native/product checks on7503f10f, followed by input-equivalent additive
+records all 20 fresh gates, actual original/native/instance/RefId and production
+CLI/source/native/product checks on `7503f10f`, followed by input-equivalent additive
 documentation integration. The earlier local-only revalidation section is historical;
 owner subsequently authorized commit/push and main integration. Private evidence
 remains local; F10/F11 are follow-ups, not newly implemented support. Self-review only.

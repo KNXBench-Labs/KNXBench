@@ -1,5 +1,9 @@
 # Known limitations
 
+## Local integrity repairs and remaining boundaries (2026-10-10)
+
+[IMPORT_INTEGRITY](IMPORT_INTEGRITY.md) records the repairs and schema12 vocabulary barrier. The separate sample review below records the pre-repair state; merged-source verification is distinct from that historical audit. Historical opaque attributes are not guessed into typed values. Retained channel/address/IP extensions and offline loading limitations remain separately bounded. Import reports/session diagnostics are not persistently restored as a new report format; retained original XML preserves independently reconstructable source observations. Session-log caps remain explicit. No ETS/native-accessibility/hardware acceptance is claimed.
+
 ## Private schema-23 sample review (2026-10-10)
 
 The owner asked for a read-only review of a privately supplied, independently
@@ -24,7 +28,8 @@ The [selective importer](SELECTIVE_IMPORT.md) merges devices or complete
 lines into one explicit target installation. No building-only selector, automatic
 address reassignment, conflict overwrite or manufacturer-catalogue installation.
 Existing area/line names may be retained with an explicit preview note; incompatible
-configuration/range/address metadata refuse. Only normalized model v11 is admitted;
+configuration/range/address metadata refuse. Only normalized model v12 is admitted
+(the v11→v12 change is completion vocabulary only, not new entities/references);
 future-model fields require a fresh reference-closure audit. This does not restrict
 ETS input schemas beyond the existing complete importer.
 

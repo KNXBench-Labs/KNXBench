@@ -1,11 +1,16 @@
 # Compatibility
 
+## Local bounded import-integrity changes (2026-10-10)
+
+[IMPORT_INTEGRITY](IMPORT_INTEGRITY.md) distinguishes byte retention, lexical observation, typed mapping and hardware support. Object-tree and unassigned-device repairs do not certify complete manufacturer/runtime semantics. Native12 prevents old decoders from erasing the expanded completion vocabulary; back up before upgrading and do not expect downgrade. New local sources are not changes to published alpha.7 artifacts.
+
 ## Selective import does not widen ETS admission (2026-10-10 source integration)
 
 [Separate integration verification](status/2026-10-10-import-expansion-integration.md) supersedes the local-only delivery status, not its historical test results. This is source integration, not a new release or deployment.
 
 The [selective importer](SELECTIVE_IMPORT.md) reuses the existing complete
-ETS reader, then remaps a frozen normalized-model-v11 dependency closure.
+ETS reader, then remaps a frozen normalized-model-v12 dependency closure.
+The v11→v12 vocabulary-only change adds no reference/entity fields.
 It refuses source mapping errors, incompatible destination configurations,
 ambiguous identities and future model versions rather than inventing mappings.
 Existing native snapshot/history size and representability limits still apply.

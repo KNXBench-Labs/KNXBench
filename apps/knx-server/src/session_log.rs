@@ -189,9 +189,27 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
             },
             source: format!("import:{}", error.stage),
             message: error.detail.clone(),
-            location: Some(error.xpath.clone()),
+            location: error
+                .source_path
+                .clone()
+                .or_else(|| (!error.xpath.is_empty()).then(|| error.xpath.clone())),
             diagnostic: None,
             detail: None,
+        });
+    }
+
+    if let Some(observations) = &report.source_observations {
+        entries.push(LogEntry {
+            timestamp: now(),
+            severity: Severity::Info,
+            source: "import:source-observations".into(),
+            message: "XML element observations include retained subtrees; not semantic acceptance"
+                .into(),
+            location: None,
+            diagnostic: None,
+            detail: Some(
+                serde_json::to_string(observations).expect("closed numeric observation contract"),
+            ),
         });
     }
 
@@ -314,6 +332,24 @@ pub fn from_csv_import_report(report: &knx_csv::CsvImportReport) -> Vec<LogEntry
 mod tests {
     use super::*;
 
+    #[test]
+    fn lexical_observations_are_projected_without_a_semantic_completeness_claim() {
+        let mut report = report_with(vec![], vec![], vec![], vec![], vec![]);
+        report.source_observations = Some(knx_etsproj::report::SourceObservations {
+            meaning: "xml-element-occurrences-not-semantic-acceptance",
+            topology: [("DeviceInstance".into(), 3)].into(),
+            metadata: Default::default(),
+        });
+        let rows = from_import_report(&report);
+        let row = rows
+            .iter()
+            .find(|r| r.source == "import:source-observations")
+            .expect("source observations reach the diagnostics UI");
+        assert_eq!(row.severity, Severity::Info);
+        assert!(row.message.contains("not semantic acceptance"));
+        assert!(row.detail.as_deref().unwrap().contains("DeviceInstance"));
+    }
+
     fn report_with(
         errors: Vec<knx_etsproj::report::ImportError>,
         unknown: Vec<knx_etsproj::parse::UnknownConstruct>,
@@ -322,6 +358,7 @@ mod tests {
         unsupported: Vec<knx_etsproj::report::UnsupportedFeature>,
     ) -> knx_etsproj::ImportReport {
         knx_etsproj::ImportReport {
+            source_observations: None,
             source: knx_etsproj::report::SourceInfo {
                 file_name: "t.knxproj".into(),
                 file_size: 0,
@@ -346,12 +383,14 @@ mod tests {
         let report = report_with(
             vec![
                 knx_etsproj::report::ImportError {
+                    source_path: None,
                     stage: "validate",
                     severity: knx_etsproj::report::Severity::Error,
                     xpath: "/a".into(),
                     detail: "bad thing".into(),
                 },
                 knx_etsproj::report::ImportError {
+                    source_path: None,
                     stage: "map",
                     severity: knx_etsproj::report::Severity::Warning,
                     xpath: "/b".into(),

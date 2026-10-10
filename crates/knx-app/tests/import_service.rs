@@ -135,7 +135,14 @@ fn unsupported_master_metadata_is_reported_and_its_bytes_survive_native_reopen()
             },
         )
         .unwrap();
-        assert_eq!(imported.report.unsupported, vec![expected.clone()]);
+        let mut expected_features = vec![expected.clone()];
+        if !use_products {
+            expected_features.push(knx_etsproj::report::UnsupportedFeature {
+                what: "manufacturer semantic diagnostics".into(),
+                consequence: "unavailable without a product database; source files are retained, not semantically installed".into(),
+            });
+        }
+        assert_eq!(imported.report.unsupported, expected_features);
         assert!(!imported
             .report
             .to_json()

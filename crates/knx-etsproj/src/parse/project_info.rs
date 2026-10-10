@@ -7,8 +7,8 @@
 //! unmodelled attributes are handled exactly as in the installation parser:
 //! the former reported, the latter kept in `other` for export.
 
+use super::observed_reader::ObservedReader as Reader;
 use quick_xml::events::{BytesStart, Event};
-use quick_xml::Reader;
 
 use crate::known::KnownSchema;
 use crate::source::{RetainedAttribute, RetainedElement, SourceProjectInfo};
@@ -96,6 +96,7 @@ pub fn parse_project_info(
         });
     }
 
+    info.xml_observations = reader.counts;
     Ok((info, aggregator.into_sorted_vec(source_path)))
 }
 
@@ -127,7 +128,7 @@ fn open_element<'a>(
     // verbatim retention, mirroring `installation.rs`'s `BusAccess` special
     // case exactly: whole subtree captured raw, not walked, never reported
     // as unknown.
-    if local == "ProjectTraces" {
+    if local == "ProjectTraces" && reader.is_project_element(start.name(), schema.version) {
         let raw = if is_empty {
             bytes[pos_before as usize..reader.buffer_position() as usize].to_vec()
         } else {
@@ -145,20 +146,21 @@ fn open_element<'a>(
     let known_names = schema
         .elements
         .iter()
-        .find(|e| e.path == xpath)
+        .find(|e| e.path == xpath && reader.is_project_element(start.name(), schema.version))
         .map(|e| e.attributes);
 
     let Some(known_names) = known_names else {
         aggregator.record(&xpath, UnknownKind::Element, &local, None);
-        if !is_empty {
-            reader
-                .read_to_end(start.to_end().name())
-                .map_err(|e| ParseError::Xml {
-                    source_path: source_path.to_string(),
-                    position: reader.buffer_position(),
-                    cause: e.to_string(),
-                })?;
-        }
+        let raw = if is_empty {
+            bytes[pos_before as usize..reader.buffer_position() as usize].to_vec()
+        } else {
+            skip_and_capture(reader, bytes, start, pos_before, source_path)?
+        };
+        info.retained_elements.push(RetainedElement {
+            xpath,
+            name: local,
+            raw,
+        });
         path_stack.pop();
         return Ok(());
     };

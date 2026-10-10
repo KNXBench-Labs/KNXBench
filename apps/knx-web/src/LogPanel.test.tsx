@@ -80,6 +80,19 @@ describe("LogPanel", () => {
     root.unmount();
   });
 
+  it("keeps source-observation meaning and manufacturer errors visible", async () => {
+    apiMock.getSessionLog.mockResolvedValue([
+      entry({ source: "import:source-observations", message: "XML element observations include retained subtrees; not semantic acceptance", detail: '{"topology":{"DeviceInstance":3}}' }),
+      entry({ source: "import:manufacturer", severity: "error", message: "IdConflict: hardware/synthetic (2 occurrences); original source retained", location: "M-0001/Hardware.xml" }),
+    ]);
+    const root = await renderPanel({ ...baseTree(), schema_version: 12 });
+    expect(host!.textContent).toContain("not semantic acceptance");
+    expect(host!.textContent).toContain("IdConflict: hardware/synthetic");
+    expect(host!.textContent).toContain("M-0001/Hardware.xml");
+    expect(host!.textContent).toContain("DeviceInstance");
+    root.unmount();
+  });
+
   it("shows the empty state when there are no entries", async () => {
     const root = await renderPanel(baseTree());
     expect(host!.textContent).toContain("No log entries yet.");

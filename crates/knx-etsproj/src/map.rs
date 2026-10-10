@@ -70,6 +70,8 @@ pub struct MapOutput {
     /// Known-but-not-modelled attributes, for export. See the module doc
     /// comment for why `BusAccess` is not among them.
     pub retained: Vec<RetainedAttribute>,
+    /// Attributes owned by the project-information document, not topology.
+    pub project_info_retained: Vec<RetainedAttribute>,
     pub problems: Vec<MapProblem>,
     pub counts: EntityCounts,
 }
@@ -83,6 +85,12 @@ pub struct MapProblem {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MapProblemDetail {
     Value(ValueError),
+    UnmappedObjectOverride {
+        ref_id: String,
+    },
+    AmbiguousObjectOverride {
+        ref_id: String,
+    },
     UnresolvedReference {
         kind: &'static str,
         target: String,
@@ -173,7 +181,8 @@ fn map_with_ids(
     let mut problems = Vec::new();
     let mut counts = EntityCounts::default();
 
-    project.info = map_project_info(document, &mut retained, &mut problems);
+    let mut project_info_retained = Vec::new();
+    project.info = map_project_info(document, &mut project_info_retained, &mut problems);
 
     for installation in &document.installations {
         let (mapped, installation_retained) = map_installation(
@@ -194,6 +203,7 @@ fn map_with_ids(
     Ok(MapOutput {
         project,
         retained,
+        project_info_retained,
         problems,
         counts,
     })
@@ -217,7 +227,8 @@ fn map_v21(
     let mut problems = Vec::new();
     let mut counts = EntityCounts::default();
 
-    project.info = map_project_info_v21(document, &mut retained, &mut problems);
+    let mut project_info_retained = Vec::new();
+    project.info = map_project_info_v21(document, &mut project_info_retained, &mut problems);
 
     for installation in &document.installations {
         // Schema ≥21's `ComObjectInstanceRef/@Links` names a group address by
@@ -247,6 +258,7 @@ fn map_v21(
     Ok(MapOutput {
         project,
         retained,
+        project_info_retained,
         problems,
         counts,
     })
@@ -356,6 +368,15 @@ fn map_project_info(
 ) -> ProjectInfo {
     let info = &document.info;
     retained.extend(info.other.iter().cloned());
+    if let Some(raw) = &info.completion_status {
+        if parse_completion_status(raw).is_err() {
+            retained.push(RetainedAttribute {
+                xpath: "/KNX/Project/ProjectInformation".into(),
+                name: "CompletionStatus".into(),
+                value: raw.clone(),
+            });
+        }
+    }
     let xpath = "/KNX/Project/ProjectInformation";
 
     let group_address_style = match info.group_address_style.as_deref() {
@@ -1117,11 +1138,31 @@ fn map_device_v21(
     }
 
     // ComObjectInstanceRef overrides, keyed by RefId, for the lookup below.
-    let overrides: BTreeMap<&str, &SourceComObjectInstance> = device
-        .com_objects
-        .iter()
-        .map(|c| (c.ref_id.as_str(), c))
-        .collect();
+    let mut overrides: BTreeMap<&str, Vec<&SourceComObjectInstance>> = BTreeMap::new();
+    for object in &device.com_objects {
+        overrides.entry(&object.ref_id).or_default().push(object);
+    }
+    for (ref_id, declarations) in &overrides {
+        if declarations.len() > 1 {
+            problems.push(MapProblem {
+                xpath: xpath.clone(),
+                detail: MapProblemDetail::AmbiguousObjectOverride {
+                    ref_id: (*ref_id).into(),
+                },
+            });
+        }
+    }
+
+    for object in &device.com_objects {
+        if !device.group_object_tree.contains(&object.ref_id) {
+            problems.push(MapProblem {
+                xpath: xpath.clone(),
+                detail: MapProblemDetail::UnmappedObjectOverride {
+                    ref_id: object.ref_id.clone(),
+                },
+            });
+        }
+    }
 
     // ADR-0014: GroupObjectTree is the authoritative id list. An id with no
     // override still produces a ComObjectInstance, Override::Absent.
@@ -1130,7 +1171,12 @@ fn map_device_v21(
         let com_id = ids.next_com_object_instance_id()?;
         let (mapped, com_retained) = map_com_object_v21(
             ref_id,
-            overrides.get(ref_id.as_str()).copied(),
+            overrides
+                .get(ref_id.as_str())
+                .and_then(|values| match values.as_slice() {
+                    [single] => Some(*single),
+                    _ => None,
+                }),
             com_id,
             device_id,
             source_path,

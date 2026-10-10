@@ -42,7 +42,7 @@
       "check-corpus-gates"
     ],
     "documentation": "check_documentation.py and diff --check; passed on code inputs",
-    "corpus": "Historical pre-import-integrity corpus passed; post-integration replay failed and supersedes any current all-corpus green claim",
+    "corpus": "Historical pre-integration pass and inherited post-integration failures are superseded by the admitted corrected integrated corpus below",
     "browser": "Final instance-values.e2e.ts: four en/de narrow/wide Inspector fixture cases passed, literal raw HTML-looking text, no edit controls or non-GET requests",
     "visualInspection": "All four final synthetic evidence-region frames inspected: labels clear, values readable, narrow identifiers wrapped, no visible clipping; not packaged/native application evidence",
     "mutations": [
@@ -80,17 +80,17 @@
   ],
   "rejectedAttempts": "First broad gate had two legacy HTTP failures and a header failure, all fixed before admitted gate; runner permission refusal executed no tests",
   "privateComparison": {
-    "status": "passed on integrated source 734064823e19",
+    "status": "passed again on final integrated source f4af614eac3049f18fc0a5534414a3ac8796ba87",
     "test": "private_instances_read_their_own_stored_values",
     "refIdGate": "a_second_schema_23_project_resolves_every_object_id_through_the_production_rules; passed explicitly",
     "privacy": "Boolean assertions; output retained only in ignored local evidence",
     "historicalAttempt": "Basis8901affa parser refused before comparison; superseded after import-integrity integration",
     "notClaimed": "Repeat activation, full ETS, Secure or hardware compatibility"
   },
-  "publication": "NOT DELIVERED: inherited corpus blocker reproduced by target/result totals on fresh main; requesting owner scope permission before minimal test-only corrections",
+  "publication": "GREEN CANDIDATE: final corrected source and corpus/private gates passed; main merge/push/ref verification pending",
   "importIntegrityIntegrated": "9a5b55fe84d6",
   "postIntegrationChecks": {
-    "revision": "a8ca10767750ff5a0641791f0f0e5f87983078ba",
+    "revision": "f4af614eac3049f18fc0a5534414a3ac8796ba87",
     "rust": {
       "passed": 2876,
       "failed": 0,
@@ -112,8 +112,30 @@
       "files": 163
     },
     "quality": "fmt, all-targets strict clippy, tsc, five nonempty repository gates and docs/diff passed",
-    "corpus": "FAILED: fresh origin/main d9da8e61 also fails the same three corpus targets with four failed tests and identical per-target result totals. Baseline code root verified; full per-case replay still needed because runner clipped early assertion blocks. No F-owner file modified.",
+    "corpus": {
+      "passed": 143,
+      "total": 143,
+      "targets": 31,
+      "exit": 0,
+      "linkRemoved": true
+    },
     "browser": "Integrated browser replay passed all four en/de narrow/wide cases independently after corpus failure; original chained runner did not execute it",
-    "gateBinding": "Recorded HEAD plus equal clean tracked diffs; this is not a full source-byte manifest"
+    "gateBinding": "HEAD unchanged through final source+full corpus+private runner; clean tracked diffs frozen through broad gate; not a full source-byte manifest",
+    "ownValuePrivate": {
+      "passed": 1,
+      "failed": 0
+    },
+    "refIdPrivate": {
+      "passed": 3,
+      "failed": 0
+    }
+  },
+  "historicalCorpusBlocker": "FAILED: fresh origin/main d9da8e61 also fails the same three corpus targets with four failed tests and identical per-target result totals. Baseline code root verified; full per-case replay still needed because runner clipped early assertion blocks. No F-owner file modified.",
+  "corpusCorrection": {
+    "ownerAuthorization": "Exactly four existing test functions; no runtime change or private golden values",
+    "codeRevision": "e74be53a",
+    "RED": "Four exact failures independently reproduced on fresh main d9da8e61 with full private logs",
+    "GREEN": "Four exact functions passed individually before all31-target corpus replay",
+    "contract": "Independent whole-member inventory with duplicate/missing/exact-byte refusal; explicit preserved/uninterpreted/no-execution baggage boundary; exact independently derived server diagnostics"
   }
 }

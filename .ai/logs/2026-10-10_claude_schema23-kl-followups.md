@@ -76,3 +76,11 @@ success is historical pre-integration, not a current source admission.
 Package9 was pushed with actual equality and cleanup; package4 has preliminary
 boolean source/native/RefId success and repaired synthetic controls. Final
 hardened positive replay and all publications after this blocker remain pending.
+
+
+## Final package3 source and corpus admission
+
+- f4af614eac30: Rust2876/0/160, Web2597/0/163, full corpus143/143 in31 targets; private own-value1/0, RefId3/0, runner exited0 and source link removed.
+- e74be53a: four owner-approved test-only inherited corpus contract corrections, each baseline RED then isolated GREEN, full corpus now green; no F-runtime edits/private golden values.
+- Final docs/privacy/no-ff main publication still pending. Repeat/activation/writable repeated-instance boundary unchanged.
+- Self-review: codex in-session only, no independent reviewer claimed.

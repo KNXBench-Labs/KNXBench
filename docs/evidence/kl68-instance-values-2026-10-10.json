@@ -14,32 +14,79 @@
     "notImplemented": "Repeat expansion, counter-to-MI mapping, activation, writable repeated instances, wire or hardware semantics"
   },
   "acceptedChecks": {
-    "rust": {"passed": 1793, "failed": 0, "ignored": 100, "packages": ["knx-productdb", "knx-testsupport", "knx-app", "knx-server", "knx-mcp"]},
-    "web": {"passed": 2596, "failed": 0, "files": 163},
+    "rust": {
+      "passed": 1793,
+      "failed": 0,
+      "ignored": 100,
+      "packages": [
+        "knx-productdb",
+        "knx-testsupport",
+        "knx-app",
+        "knx-server",
+        "knx-mcp"
+      ]
+    },
+    "web": {
+      "passed": 2596,
+      "failed": 0,
+      "files": 163
+    },
     "fmt": "passed",
     "clippy": "all-targets, -D warnings; passed",
     "typescript": "tsc --noEmit; passed",
-    "xtask": ["check-layering", "check-headers", "check-anchors", "check-ledger", "check-corpus-gates"],
+    "xtask": [
+      "check-layering",
+      "check-headers",
+      "check-anchors",
+      "check-ledger",
+      "check-corpus-gates"
+    ],
     "documentation": "check_documentation.py and diff --check; passed on code inputs",
     "corpus": "tools/run_corpus_tests.py exit0; actual selected positive test total matched; root corpus linked temporarily, link removed; private output retained locally",
     "browser": "Final instance-values.e2e.ts: four en/de narrow/wide Inspector fixture cases passed, literal raw HTML-looking text, no edit controls or non-GET requests",
     "visualInspection": "All four final synthetic evidence-region frames inspected: labels clear, values readable, narrow identifiers wrapped, no visible clipping; not packaged/native application evidence",
-    "mutations": ["Sibling fallback: named productdb witness failed", "HTTP evidence omitted: named HTTP witness failed"],
+    "mutations": [
+      "Sibling fallback: named productdb witness failed",
+      "HTTP evidence omitted: named HTTP witness failed"
+    ],
     "inputBinding": "Successful package gate reported equal start/end inputs; code committed afterward without source changes",
     "network": "Broad, corpus and browser gates loopback-only; corpus runner clears KNX_* environment"
   },
   "reviewFindings": [
-    {"severity": "IMPORTANT", "location": "apps/knx-mcp/Cargo.toml:26 and Cargo.lock:2094", "finding": "Initial code commit omitted the already-tested synthetic witness dev dependency", "resolution": "Manifest and lockfile committed before publication; codeRevision names the complete snapshot"},
-    {"severity": "IMPORTANT", "location": "crates/knx-productdb/src/device_evaluation.rs:266-278", "finding": "Definition namespace condition regressed legacy lone-instance write authority", "resolution": "Condition restricted to the new map; alias RED/GREEN and unchanged 39 HTTP parameter tests passed"},
-    {"severity": "IMPORTANT", "location": "crates/knx-productdb/src/device_evaluation.rs:266-278", "finding": "Conflicting module declarations could authorize stored evidence", "resolution": "Unique declaration required; named negative witness passed"},
-    {"severity": "MINOR", "location": "crates/knx-app/tests/private_module_instance_values.rs:1", "finding": "Multiline first paragraph raised the no-header ceiling", "resolution": "Header separated; original ceiling retained"}
+    {
+      "severity": "IMPORTANT",
+      "location": "apps/knx-mcp/Cargo.toml:26 and Cargo.lock:2094",
+      "finding": "Initial code commit omitted the already-tested synthetic witness dev dependency",
+      "resolution": "Manifest and lockfile committed before publication; codeRevision names the complete snapshot"
+    },
+    {
+      "severity": "IMPORTANT",
+      "location": "crates/knx-productdb/src/device_evaluation.rs:266-278",
+      "finding": "Definition namespace condition regressed legacy lone-instance write authority",
+      "resolution": "Condition restricted to the new map; alias RED/GREEN and unchanged 39 HTTP parameter tests passed"
+    },
+    {
+      "severity": "IMPORTANT",
+      "location": "crates/knx-productdb/src/device_evaluation.rs:266-278",
+      "finding": "Conflicting module declarations could authorize stored evidence",
+      "resolution": "Unique declaration required; named negative witness passed"
+    },
+    {
+      "severity": "MINOR",
+      "location": "crates/knx-app/tests/private_module_instance_values.rs:1",
+      "finding": "Multiline first paragraph raised the no-header ceiling",
+      "resolution": "Header separated; original ceiling retained"
+    }
   ],
   "rejectedAttempts": "First broad gate had two legacy HTTP failures and a header failure, all fixed before admitted gate; runner permission refusal executed no tests",
   "privateComparison": {
-    "status": "waiting on import-integrity",
-    "category": "project parser refused before own-value comparison on the recorded basis",
-    "ownerDecision": "Deliver narrow read-only function; document private comparison blocked and rerun after integration",
-    "notClaimed": "Private pass, full original reconciliation, ETS compatibility, Secure or hardware compatibility"
+    "status": "passed on integrated source 734064823e19",
+    "test": "private_instances_read_their_own_stored_values",
+    "refIdGate": "a_second_schema_23_project_resolves_every_object_id_through_the_production_rules; passed explicitly",
+    "privacy": "Boolean assertions; output retained only in ignored local evidence",
+    "historicalAttempt": "Basis8901affa parser refused before comparison; superseded after import-integrity integration",
+    "notClaimed": "Repeat activation, full ETS, Secure or hardware compatibility"
   },
-  "publication": "Complete code/dependencies committed; additive test-catalogue main merge integrated with both status entries preserved; integrated-tree gates and no-ff push acceptance pending"
+  "publication": "Integrated private tests passed; relevant integrated-source gates and publication pending",
+  "importIntegrityIntegrated": "9a5b55fe84d6"
 }

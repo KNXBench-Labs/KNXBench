@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-10",
+  "item": "KL-174 package6",
+  "base": "7d39628fce2b",
+  "code": "41b3d6267731",
+  "scope": "application report enrichment reuses product sniff; no storage/model/parser admission/schema/dependency change",
+  "owner": "unverified role candidates separated from content; unknown retained",
+  "tests": [
+    "project_and_manufacturer_payloads_report_content_without_certifying_roles",
+    "independent_capability_diagnostics_are_not_replaced_by_content_evidence",
+    "payload_evidence_reaches_the_http_session_log_without_certifying_an_app"
+  ],
+  "focused": "synthetic app/native/product/unit/HTTP pass; single matrix test runs both product modes",
+  "mutations": [
+    {
+      "name": "omit-evidence",
+      "killedByAssertion": true
+    },
+    {
+      "name": "fabricate-app-validity",
+      "killedByAssertion": true
+    }
+  ],
+  "review": "codex, in-session self-review only; no independent review. Important independent-diagnostic replacement finding fixed RED/GREEN; Critical0/unresolvedImportant0. Added lines have no secrets/shell/eval/SQL/file extraction; sniffer only.",
+  "boundaries": [
+    "No nested unpacking/rendering/execution",
+    "No App authenticity/manifest/licensing validation or Add-in state semantics",
+    "Existing source kind/owner/path/bytes/hash/storage destination unchanged",
+    "Historical and parser-only generic reports not silently rewritten",
+    "Standalone baggage inventory behavior unchanged"
+  ],
+  "finalGates": {
+    "revision": "566afbddfd2cee7d4e667e5d8b91bf9209150992",
+    "rust": {
+      "passed": 2400,
+      "failed": 0,
+      "ignored": 181
+    },
+    "quality": "strict eight-crate all-targets Clippy, fmt, five nonempty repo checks, docs/diff passed",
+    "corpus": "complete nonempty selected corpus passes; details remain private",
+    "private": {
+      "originalSourceReconciliation": true,
+      "refIds": true,
+      "originalHashStableDuringExplicitPrivateRuns": true
+    },
+    "binding": "tracked inputs/HEAD frozen, actual no-ff result tested, temporary corpus links removed; no complete external corpus manifest claimed"
+  },
+  "publication": {
+    "mergeRevision": "566afbddfd2cee7d4e667e5d8b91bf9209150992",
+    "readbackRevision": "68147ba3b8bb7b1c1f3aed1231b056906e4a1f3c",
+    "localTrackingLiveEqual": true,
+    "runtimeUnchangedThroughMetadata": true
+  },
+  "research": {
+    "verified": "official Install ETS6 Apps indexed excerpt supports .etsapp extension",
+    "unverified": "full page retrieval, update dates, validation reference contents, authenticity/manifest algorithm and full Add-in semantics",
+    "correction": "previous candidate direct-page retrieval/update-date claims withdrawn; no source/profile lock disturbed"
+  },
+  "status": "DELIVERED"
+}

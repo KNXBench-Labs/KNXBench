@@ -27,6 +27,11 @@ fewer imaginary defaults — the bus remains blissfully uninvolved in this relea
   banner explain expanded size and the actual server limit in English or German.
   The compressed upload ceiling remains separate; large-project peak memory is
   not newly certified. [Limits](../IMPORT_EXPORT.md).
+- **Bounded payload evidence, not App certification.** Project UserFiles,
+  AddinData and manufacturer payloads expose sniffed content separately from
+  unverified name/location roles. Unknown and misleading bytes remain retained;
+  nothing is unpacked, rendered or executed. Independent same-member diagnostics
+  remain visible. [Design](../adr/0109-opaque-payload-content-and-candidate-roles.md).
 - **Honest preservation and regression evidence.** Additional synthetic and
   opt-in private tests cover source provenance, native Save/Reopen/Re-Save,
   schema-23 references, manufacturer retry reporting and outside-tree overrides

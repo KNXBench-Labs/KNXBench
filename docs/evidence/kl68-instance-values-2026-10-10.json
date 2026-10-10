@@ -42,7 +42,7 @@
       "check-corpus-gates"
     ],
     "documentation": "check_documentation.py and diff --check; passed on code inputs",
-    "corpus": "tools/run_corpus_tests.py exit0; actual selected positive test total matched; root corpus linked temporarily, link removed; private output retained locally",
+    "corpus": "Historical pre-import-integrity corpus passed; post-integration replay failed and supersedes any current all-corpus green claim",
     "browser": "Final instance-values.e2e.ts: four en/de narrow/wide Inspector fixture cases passed, literal raw HTML-looking text, no edit controls or non-GET requests",
     "visualInspection": "All four final synthetic evidence-region frames inspected: labels clear, values readable, narrow identifiers wrapped, no visible clipping; not packaged/native application evidence",
     "mutations": [
@@ -87,6 +87,33 @@
     "historicalAttempt": "Basis8901affa parser refused before comparison; superseded after import-integrity integration",
     "notClaimed": "Repeat activation, full ETS, Secure or hardware compatibility"
   },
-  "publication": "Integrated private tests passed; relevant integrated-source gates and publication pending",
-  "importIntegrityIntegrated": "9a5b55fe84d6"
+  "publication": "NOT DELIVERED: inherited corpus blocker reproduced by target/result totals on fresh main; requesting owner scope permission before minimal test-only corrections",
+  "importIntegrityIntegrated": "9a5b55fe84d6",
+  "postIntegrationChecks": {
+    "revision": "a8ca10767750ff5a0641791f0f0e5f87983078ba",
+    "rust": {
+      "passed": 2876,
+      "failed": 0,
+      "ignored": 160,
+      "packages": [
+        "knx-core",
+        "knx-store",
+        "knx-etsproj",
+        "knx-productdb",
+        "knx-testsupport",
+        "knx-app",
+        "knx-server",
+        "knx-mcp"
+      ]
+    },
+    "web": {
+      "passed": 2597,
+      "failed": 0,
+      "files": 163
+    },
+    "quality": "fmt, all-targets strict clippy, tsc, five nonempty repository gates and docs/diff passed",
+    "corpus": "FAILED: fresh origin/main d9da8e61 also fails the same three corpus targets with four failed tests and identical per-target result totals. Baseline code root verified; full per-case replay still needed because runner clipped early assertion blocks. No F-owner file modified.",
+    "browser": "Integrated browser replay passed all four en/de narrow/wide cases independently after corpus failure; original chained runner did not execute it",
+    "gateBinding": "Recorded HEAD plus equal clean tracked diffs; this is not a full source-byte manifest"
+  }
 }

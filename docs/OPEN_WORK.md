@@ -62,7 +62,9 @@ first), overrides outside the object tree (§173, import-integrity package),
 content-based classification of project user files/add-in data and the
 stored-image reference (research only). The redaction audit of retained network
 endpoints is done (§106, 2026-10-10: MAC addresses redacted, every other output
-withholds the data or names it). The import repairs that let that project import end to end belong to the
+withholds the data or names it). The secure-capable-but-not-activated case is
+pinned by a synthetic witness (§8): treated exactly like a plain program, no
+Secure semantics added. The import repairs that let that project import end to end belong to the
 separate import-integrity package.
 
 ## 1. Running or waiting right now

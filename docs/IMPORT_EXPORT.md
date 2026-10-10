@@ -1139,3 +1139,13 @@ parameter kinds; and interpretation of the unsupported module semantics named
 above.
 
 Design record: `docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`.
+
+
+## Bounded opaque payload descriptions (2026-10-10)
+
+Fresh application project imports separately describe retained project UserFiles/
+AddinData and manufacturer baggage by byte-sniffed content and explicitly
+unverified name/location candidate roles. Unknown bytes, original paths/owners
+and existing native/product destinations stay exact; no nested unpack/render/
+execution or App/manifest validity. Parser-only reports and historical persisted
+reports are not silently rewritten. See [ADR-0109](adr/0109-opaque-payload-content-and-candidate-roles.md).

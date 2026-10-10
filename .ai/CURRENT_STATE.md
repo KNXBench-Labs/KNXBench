@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 21:26 CEST
+- **Completed:** Owner requested Alpha 8 including Docker. Own release/alpha8-20261010 worktree from freshly fetched 7d39628f main; application manifests/web lock/workspace lock aligned to 0.1.0-alpha.8, dependency versions/checksums unchanged. Handwritten notes docs/releases/alpha8.md distinguish published import/instance/archive features from unmerged work and schema12 backup/downgrade boundaries. Self-reviewed version delta; root HEAD/index/foreign edits and running containers preserved.
+- **Pending/Next Steps:** Frozen whole-workspace/frontend/browser/repository/private gates, dry-run AppImage/native amd64+arm64 Docker workflows, explicit immutable tag/prerelease publication, independent downloaded-asset checks and anonymous Docker smoke, final docs/receipt/owned cleanup. No gate or publication acceptance yet.
+- **Notes for Codex oder Claude:** Candidate pinned to inspected published source; later parallel packages are not silently included. No subagents/quota checks, bus actions or live container replacement. Private evidence stays ignored/restricted at canonical .ai/logs/2026-10-10_codex_alpha8/. Preserve all inherited handovers.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 20:30
 - **Completed:** Package5 KL173 DELIVERED no-ff4c38af5b, main publication/readback4c484227 with local/tracking/live equality. Actual scoped crates547/0/91, complete nonempty corpus31 targets, strict Clippy/fmt/five repo/docs/diff and outgoing original-value privacy scan green. Focus01e6be99 pins outside override source/report/native persistence for empty/nonempty active trees, no sibling contamination or inferred activation. No F/runtime code modified. Packages1–5 and9 delivered.
 - **Pending/Next Steps:** Push this docs-only delivered receipt after docs/privacy, clean own tree/branch/scratch retaining compact private evidence, then fresh-main KL174 bounded classification. Owner approved content classes separated from unverified App/Add-in candidate roles, unknown retained, no nested extraction/execution. KL175 raw RTF and KL146 private activation comparison afterward; overall goal incomplete.

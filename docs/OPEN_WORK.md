@@ -71,10 +71,18 @@ own-value comparison and RefId gate now pass after import-integrity integration
 KL-1 owner decision: retained-uninterpreted, byte-exact and explicitly reported
 data may count as reconciled, without lifting its semantic limits.
 
-Next: re-fetch the import-integrity integration; rerun the private gates; handle
-KL-1/F01–F04 (including owner reconciliation decision), KL-173/F06, KL-174/F08,
-KL-175/F09 and KL-146 only after their prerequisites. KL-170–172 remain public
-research-only tasks. Do not reuse old-base green results for a changed main.
+Final KL-68/PDB-01 candidate `f4af614eac30` now passes the full143/143 corpus
+across31 targets, eight-crate Rust and Web gates, explicit own-value/RefId gates
+and independent four-case browser replay. Four inherited corpus contracts were
+corrected test-only (`e74be53a`) after exact fresh-main RED baselines and owner
+permission. Main publication/ref verification is pending this receipt.
+
+Import-integrity is integrated, not a current waiting dependency. Next rest scopes:
+KL-1/F01–F04 original project/product source reconciliation; KL-173/F06 out-of-tree
+save/reopen evidence; KL-174/F08 content classification; KL-175/F09 raw RTF labels;
+KL-146 evaluator-vs-saved-state comparison. KL-170–172 public research package9 is
+published; implementation limits remain research-bound. Do not reuse old-base
+results for a changed main.
 
 ## Import-integrity merged-source acceptance (10 October 2026)
 

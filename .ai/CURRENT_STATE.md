@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:51
+- **Completed:** Final integrated package3 source f4af614eac30 passed Rust2876/0/160, Web2597/0/163, strict clippy/fmt/tsc/five nonempty repo gates/docs/diff; full corpus143/143 across31 targets, explicit private own-value1/0 and independent RefId3/0. Corpus source link removed. Four inherited test-only corrections e74be53a green after exact fresh-main RED and narrow owner approval; no runtime/private golden values. Final receipt/statuses updated, obsolete parser/corpus waiting claims superseded; accepted Repeat boundary unchanged. Completed baseline tree/branch/build target removed after private evidence copy.
+- **Pending/Next Steps:** Docs-only final gates/privacy, candidate no-ff main merge/push/live equality/cleanup for package3. Package4 bounded-source controls2/0/1 green, hardened private reconciliation+native+RefId queued under own runner proc_7aaf1b7c7987; precise §1/COMPATIBILITY/evidence delivery follows. Packages5–8 actual remaining scope still open; package9 published.
+- **Notes for Codex oder Claude:** Final runner proc_db7f6024c44e exited0 with unchanged HEAD through source/corpus/private gates. Four-case browser independently green on unchanged UI code; no new native/package claim. Own code source f4af614e; code correction e74be53a; import-owner F runtime untouched. All original-source data stays ignored/private, no hardware/executable runs/release/subagents/quota checks. Do not declare delivered before verified pushed merge.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 16:15
 - **Completed:** Owner-authorized four inherited test-only corrections pass individually (exact1/0 per function) after exact unabridged RED baselines on fresh d9da8e61; no runtime or private golden values added. Research package9 main d9da8e61 now integrated, both independent histories retained and sorted above byte-unchanged shared base. Independent instance browser4/4 and prior own-value/RefId positives documented. Corrective commit and full merged gates pending final admission.
 - **Pending/Next Steps:** Full corpus replay and eight-crate/Web/clippy/fmt/five xtask/docs/diff on final merged source, self-review/privacy, no-ff main merge/push/ref equality/cleanup for package3. Package4 hardened original and reconciliation replay pending. Packages5–8 still need exact rest scopes; all-goal completion not claimed.

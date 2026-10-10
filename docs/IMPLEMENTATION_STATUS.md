@@ -1,3 +1,15 @@
+## 2026-10-10 — KL-68/PDB-01 final integrated source admission
+
+Final corrected source `f4af614eac30`: eight Rust crates2876/0/160,
+Web2597/0/163, corpus143/143 across31 nonempty targets; own-value1/0 and RefId3/0.
+Fmt, strict clippy, tsc, five repo checks, documentation/diff and fixed-input
+binding passed. Browser4/4 independently passed on unchanged UI source.
+Four inherited tests were corrected only after full fresh-main RED baseline and
+narrow owner authorization (`e74be53a`); no runtime or private golden values added.
+Read-only own raw values remain separate from Dynamic inputs, defaults and
+siblings; Repeat/activation/write boundaries remain. Publication/ref receipt
+pending. [Evidence](evidence/kl68-instance-values-2026-10-10.json).
+
 # IMPLEMENTATION_STATUS.md
 
 ## 2026-10-10 — KL-68/PDB-01: own stored module-instance values, read-only

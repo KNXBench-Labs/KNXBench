@@ -9313,6 +9313,13 @@ compatibility or hardware support is implied by upload/navigation acceptance.
 
 ## 170. Little-endian parameter byte order is refused for download images
 
+**Public-source research completed 2026-10-10; boundary unchanged.**
+[Inspected sources and missing contract](research/schema23-offline-boundaries.md)
+record the public evidence for KL-170. No sufficient manufacturer encoding or
+loaded-payload contract was found in the inspected sources; no runtime change,
+private payload decoding, byte swap or hardware action follows. The negative
+finding is scoped to this search, not a claim that a specification cannot exist.
+
 **Limitation.** `knx_productdb::image::build_download_image` refuses every
 program whose `Options/@ParameterByteOrder` is anything but `BigEndian`
 (`ParameterByteOrder "LittleEndian": numbers are written high octet first`). An
@@ -9343,6 +9350,13 @@ Swapping octets on suspicion is not a fix. Ledger `KL-170`.
 
 ## 171. UTF-8 text-parameter encoding is refused for download images
 
+**Public-source research completed 2026-10-10; boundary unchanged.**
+[Inspected sources and missing contract](research/schema23-offline-boundaries.md)
+record the public evidence for KL-171. No sufficient manufacturer encoding or
+loaded-payload contract was found in the inspected sources; no runtime change,
+private payload decoding, byte swap or hardware action follows. The negative
+finding is scoped to this search, not a claim that a specification cannot exist.
+
 **Limitation.** `TypeText` parameters are encoded only for
 `TextParameterEncoding` `iso-8859-1` and `iso-8859-15`, or as ASCII when the
 program declares none. Any other declaration, `utf-8` included, refuses the
@@ -9365,6 +9379,13 @@ parameter. Display and editing are unaffected.
 cover multi-octet characters at the field boundary. Ledger `KL-171`.
 
 ## 172. A device's stored loaded image is kept, not decoded
+
+**Public-source research completed 2026-10-10; boundary unchanged.**
+[Inspected sources and missing contract](research/schema23-offline-boundaries.md)
+record the public evidence for KL-172. No sufficient manufacturer encoding or
+loaded-payload contract was found in the inspected sources; no runtime change,
+private payload decoding, byte swap or hardware action follows. The negative
+finding is scoped to this search, not a claim that a specification cannot exist.
 
 **Limitation.** ETS6 can write `DeviceInstance/@LoadedImage`/`@CheckSums` and
 `Hardware2Program/@LoadedImage`/`@CheckSums`. KNXBench keeps them as known

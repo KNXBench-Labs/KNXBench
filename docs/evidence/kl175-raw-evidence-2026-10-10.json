@@ -1,7 +1,7 @@
 {
   "id": "KL-175",
   "date": "2026-10-10",
-  "status": "IMPLEMENTED_FOCUSES_PASSED_FINAL_ADMISSION_PENDING",
+  "status": "ADMITTED_PENDING_PUBLICATION",
   "codeAndMainCheckpoint": "68922cc4d6e9437e85f7bfcfd2fc6a2eb10a304c",
   "scope": "Already retained UTF-8 attribute common-header candidates only; unchanged full source/native evidence, literal512-scalar preview with explicit truncation, additive raw log rows and localized literal en/de UI. No field/format validation, RTF parsing/rendering, plain extraction or editing compatibility.",
   "tests": [
@@ -12,13 +12,49 @@
     "LogPanel.test.tsx literal preview",
     "raw-log.e2e.ts en/de400/1440: four cases pass"
   ],
-  "privacy": "Original attributes, identities, values, counts, digests and native artifacts remain private. Public fixtures independently synthetic. Outgoing full diff scan and frozen final gates pending.",
+  "privacy": "Original attributes, identities, values, counts, digests and native artifacts remain private. Public fixtures independently synthetic. Full staged-source scan passed on frozen integration; final outgoing metadata scan required.",
   "mutations": [
-    {"id": "omit-raw-preview", "assertionKilled": true, "restored": true},
-    {"id": "omit-log-preview", "assertionKilled": true, "restored": true}
+    {
+      "id": "omit-raw-preview",
+      "assertionKilled": true,
+      "restored": true
+    },
+    {
+      "id": "omit-log-preview",
+      "assertionKilled": true,
+      "restored": true
+    }
   ],
-  "browser": {"casesPassed": 4, "screenshotsInspected": true, "initialSocketPathFailure": "not an acceptance; corrected own short scratch then real probe and rerun"},
+  "browser": {
+    "casesPassed": 4,
+    "screenshotsInspected": true,
+    "inspection": "Localized raw labels readable, tags literal and Unicode previews wrapped at both widths. Real LogPanel fixture only; not packaged desktop acceptance.",
+    "relevantRuntimeUnchanged": true,
+    "initialSocketPathFailure": "not an acceptance; corrected own short scratch then real probe and rerun"
+  },
   "review": "codex, in-session self-review only; no independent review",
-  "finalGates": null,
-  "publication": "pending"
+  "finalGates": {
+    "rust": {
+      "passed": 2403,
+      "failed": 0,
+      "ignored": 182,
+      "crates": 8
+    },
+    "web": {
+      "passed": 2612,
+      "failed": 0,
+      "files": 164
+    },
+    "productionWebBuild": true,
+    "strictQualityAndRepository": true,
+    "corpusNonemptyAllPass": true,
+    "explicitOriginalReconciliation": true,
+    "explicitOriginalRefIds": true,
+    "explicitOriginalRawPreview": true,
+    "originalUnchanged": true
+  },
+  "publication": "pending",
+  "admissionDate": "2026-10-11",
+  "admittedSource": "d8cde545d065fd51b68bcde00e91dbb29694a6d4",
+  "upstreamMetadataDelta": "cdff5b5608137c8743d59cb15567228fe271cfc9: handover/log only"
 }

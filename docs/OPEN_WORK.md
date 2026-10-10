@@ -106,7 +106,7 @@ results for a changed main.
 
 [Integration proof](status/2026-10-10-import-integrity-integration.md) covers
 actual original-input production/native checks and independent source/persistence
-comparison. The current ledger has 197 source IDs: 54 delivered, 120 accepted
+comparison. At that integration's recorded snapshot, the ledger had 197 source IDs: 54 delivered, 120 accepted
 boundaries, 22 later-scope rows and one external prerequisite; these are not a
 product-completion percentage. The dated earlier inventories remain historical.
 No release or hardware action follows from successful source integration.
@@ -224,8 +224,10 @@ not erase subsequently delivered functionality.
   updates (`FUTURE-05`). More humour (`FUTURE-08`) means optional expansion:
   the original thirty-entry lists already exist. Per-category motion controls
   remain later scope; global motion controls already work.
-- **KNX Secure research:** where usable Data Secure runtime keys come from,
-  project file or keyring (`R-SEC-01`, RESEARCH §9).
+- **KNX Secure follow-up:** [key provenance research](research/secure-key-provenance.md)
+  answers the documented project/keyring routes (`R-SEC-01`). Offline keyring
+  admission, a separate credential store, actual protected-project extraction
+  and Secure interoperability remain new scope, not runtime support.
 - **Tooling/statistics** (`TOOLS-01` to `TOOLS-05`): where the AI statistics
   generator lives, and the measurement gaps it discloses (network traffic, end
   times, unattributed sessions, CSS/shell metrics).

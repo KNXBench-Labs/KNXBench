@@ -166,7 +166,10 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
                 {formatSettingsDiagnostic(t, entry.diagnostic, entry.message)}
               </span>
               {entry.location && <span className="log-entry-location">{entry.location}</span>}
-              {entry.detail && <span className="log-entry-detail">{entry.detail}</span>}
+              {entry.source === "import:opaque:raw-text" && <span className="log-entry-raw-label">{t("logPanel.rawRtfLike")}</span>}
+              {entry.detail && (entry.source === "import:opaque:raw-text"
+                ? <pre className="log-entry-detail log-entry-raw-text">{entry.detail}</pre>
+                : <span className="log-entry-detail">{entry.detail}</span>)}
             </li>
           ))}
         </ul>

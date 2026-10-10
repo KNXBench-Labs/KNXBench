@@ -468,3 +468,14 @@ error or contradict another clause of the same Standard, and where the actual
 behaviour was chosen instead.
 [KNOWN_LIMITATIONS.md §95](KNOWN_LIMITATIONS.md#95-six-places-where-the-knx-standards-printed-text-must-not-be-followed-literally)
 points here.
+
+
+### Rich-looking raw attributes (KL175, ADR-0110)
+
+Retained UTF-8 attribute values with the project-defined common header hint may
+receive a literal bounded report/log preview. Full source/native evidence stays
+unchanged; this is not field/RTF validation, plain extraction, rendering or ETS
+editing compatibility. Modeled/whole-XML/file values and alternative headers are
+not reclassified. Absence of a marker is not a plain-text result. Raw previews may
+contain user text, identities/network values; existing pattern-redaction remains
+bounded, not general content anonymization (KL106).

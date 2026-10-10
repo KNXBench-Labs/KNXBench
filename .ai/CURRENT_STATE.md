@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 19:57
+- **Completed:** Package4 DELIVERED no-ff992032c32327, normal main push, local/tracking/live equality verified. Actual382ab577 final chain1360 Rust/0, Web2610/0/164, full nonempty corpus, explicit original reconciliation/native/RefId positives, archive-browser4/4; upstream test-only delta dd4b8165 passes app/parser/HTTP tests, full Web2611/0/164, tsc/strict Clippy. Delivered source equal dd4b8165, five nonempty repo gates/docs/diff and outgoing original-value scan green. Preservation-only owner decision implemented in tests/docs, unknowns/has_losses remain true. Receipt/§1/COMPATIBILITY/ledger/status/open-work synchronized; self-review only.
+- **Pending/Next Steps:** Push docs-only publication record after repo/docs/privacy gates, preserve compact private evidence and clean own package4 worktree/branch/scratch. Then KL173 fresh main own worktree with prepared synthetic persistence witness; packages5–8 remain. Packages1–4 and9 delivered; goal not complete.
+- **Notes for Codex oder Claude:** No runtime F edits/private golden values/ETS semantic or hardware claims. Private source/project counts/digests remain ignored/local. Root/foreign branches/index/files untouched. No hardware/vendor binary execution/release/subagents/quota checks. Actual runtime baseline382ab577 not retagged as latest tests; exact newer test followup dd4b8165 separately recorded.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 19:55
 - **Completed:** Package4 final runner proc_45f724e1aaf2 exit0 at actual382ab577: five-crate1360/0/116, Web2610/0/164, full nonempty corpus, explicit original reconciliation/native/RefId, archive-browser4/4; quality/repo/docs gates green. Fresh upstreamfc81326b adds four test files/docs only; integrateddd4b8165 passes app/parser/HTTP cases, full Web2611/0/164, tsc and strict server/app/parser Clippy. Complete upstream path delta checked; no runtime/dependency/browser-source changes or retagged old outputs. Receipt/§1/COMPATIBILITY/ledger/status/open-work synchronized. Self-review only, earlier bounded-source and semantic-loss findings fixed.
 - **Pending/Next Steps:** Final docs/privacy check, no-ff main publication and local/tracking/live equality, docs-only publication receipt and cleanup; then fresh-main KL173 persistence focus. Packages1,2,3,9 delivered,4 candidate ready,5–8 still open. Overall goal not complete.

@@ -6,7 +6,7 @@ passed. Final upstream `fc81326b` changed only four test files and docs;
 `dd4b8165` passes those crate/HTTP cases, full Web2611/0/164, tsc and strict
 server/app/parser Clippy. Runtime/dependencies/archive-browser inputs unchanged.
 Unknowns/has_losses stay visible and retained-uninterpreted reconciliation means
-source preservation only. Main publication/readback pending; [receipt](evidence/kl1-source-reconciliation-2026-10-10.json).
+source preservation only. Delivered no-ff `992032c32327` with local/tracking/live equality; [receipt](evidence/kl1-source-reconciliation-2026-10-10.json).
 
 ## 2026-10-10 — KL-1 preservation-only reconciliation candidate
 

@@ -160,7 +160,7 @@ pub fn load_buildings(
                     number,
                     kind: kind_from_str(&kind)?,
                     default_line: default_line_id.map(LineId),
-                    completion: completion_from_str(&completion),
+                    completion: completion_from_str(&completion)?,
                     children,
                     devices,
                     parent: parent_id.map(BuildingPartId),

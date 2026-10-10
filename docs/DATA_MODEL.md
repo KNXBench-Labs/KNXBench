@@ -1,5 +1,9 @@
 # Data model
 
+## Local completion vocabulary, model/native12 (2026-10-10)
+
+[ADR-0107](adr/0107-import-source-integrity.md): CompletionStatus additionally represents FinishedCommissioning, Tested and Locked, as stated in Project Schema23 §1.1.2.6. Native/model12 is a vocabulary-only compatibility barrier; v11→v12 changes no rows or tables. Older readers must not rewrite these values to Undefined. Unknown native values are refused. Source intent is not measured device state. Local/unpublished; parallel unmerged schema work must be reconciled before integration.
+
 ## Current-source name editing (2026-10-09)
 
 DeviceInstance.name and GroupAddressEntry.name remain plain exact strings.

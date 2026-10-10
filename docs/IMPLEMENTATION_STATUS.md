@@ -1,5 +1,12 @@
 # IMPLEMENTATION_STATUS.md
 
+## Import integrity implementation — local acceptance (2026-10-10)
+
+The following records verification before branch publication. Commit/push of
+the reviewed feature branch does not authorize main integration or a release.
+
+The late metadata-namespace repair has runtime RED/GREEN, two guard-removal controls, full owning-parser and repeated whole-source/original acceptance. Owned uncommitted source implements [ADR-0107](adr/0107-import-source-integrity.md) and [IMPORT_INTEGRITY](IMPORT_INTEGRITY.md). Independent synthetic RED/GREEN and hostile-archive controls, full Rust/frontend tests and builds, warning-denied Clippy, repository/documentation gates, actual service/HTTP/component diagnostics, native roundtrips and explicit unchanged-original verification passed locally. Native/model12 is a scalar-vocabulary barrier, additionally exercised with an authentic prior reader and synthetic native11 input. Source/model/retention and post-model offline findings remain privately recorded, not public measurements. Self-review only; no commit, integration, publication, release or hardware action. Retained extensions and unsupported offline execution remain bounded follow-up work, not implemented capabilities.
+
 ## 2026-10-10 — Import expansion: combined-source integration accepted
 
 Owner-authorized commit/merge/push follows the completed local package.

@@ -33,7 +33,8 @@ pub mod serial_number;
 pub mod service_control_backup;
 
 pub use import::{
-    import_ets_project, import_ets_project_observed, import_ets_project_with,
-    import_ets_project_with_password, AppError, ImportOptions, ImportedProject,
+    import_ets_project, import_ets_project_bytes, import_ets_project_observed,
+    import_ets_project_with, import_ets_project_with_password, AppError, ImportOptions,
+    ImportedProject,
 };
 pub use progress::{LoadObserver, LoadStage};

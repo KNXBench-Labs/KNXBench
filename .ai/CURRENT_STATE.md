@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 22:53 CEST
+- **Completed:** Session2 nine-package goal activated in own feature/data-tooling-20261010 from fd6b1cff37b2713361e256282cc2aef46e2cbcb9. Startup/latest-doc/source/Session1 ownership inspection complete; exact pre-change surfaces in docs/contracts/data-tooling-ownership.md. AP1 primary-source Secure key provenance drafted from seven KNX articles and public Schema23; isolated source/code boundaries and contradictions disclosed. No runtime Secure/keyring or real-secret access.
+- **Pending/Next Steps:** AP1 source/citation/doc gates and coordinated publication; then AP2 bounded RTF preservation/editing, AP3 typed editors, AP4 notes/help, AP5 offline automation, AP6 opt-in MCP mutations, AP7 catalogue updates, AP8 actual collector measurement gaps; AP9 separate hardware prerequisites/test plans only. Goal incomplete.
+- **Notes for Codex oder Claude:** Preserve Session1 shared shell/global styles/catalogues/manifests/notification/motion/Flow/Dashboard/achievement surfaces; isolated components and exact handoff only. Root/release/Functions/Sites/import workers untouched. Own logs .ai/logs/2026-10-10_codex_data-tooling.md; task scratch data-tooling-20261010. No subagents/quota/release/deployment/bus. Raw imported source may contain secrets even though uninterpreted; no complete secure-vault/sanitization claim. Preserve inherited entries below.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 22:15
 - **Completed:** Package6 KL174 DELIVERED no-ff566afbdd, actual publication/readback68147ba3 with local/tracking/live equality. Rust2400/0/181, strict quality/repo/docs, complete nonempty corpus and explicit private original reconciliation/RefIds green. Original stable during explicit private runs; tracked source/HEAD frozen. Indexed Install excerpt only, direct/update-date overclaims withdrawn. No ETS-App/Add-in validity, manifest, executable or nested parser support.
 - **Pending/Next Steps:** Publish closure after docs/privacy, preserve compact private proofs and remove own tree/branch/scratch. Independent package7 worktree kl175-raw-evidence-20261010 has uncommitted report raw-header preview, additive session log and literal en/de UI plus synthetic RED/GREEN/native/UTF8/clip/HTTP/React/tsc; fresh-main integration, private/browser/mutations/broad admission/docs/self-review remain. Package8 KL146 comparison then final exact per-KL handover. Packages1–6 and9 delivered;7–8 open.

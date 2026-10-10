@@ -96,6 +96,16 @@ Session 7 (2026-09-06) added a second, genuinely independent sample for schema 2
 
 ## 9. KNX Secure
 
+**10 October 2026 evidence update:** [key provenance research](research/secure-key-provenance.md)
+confirms distinct documented project-XML and keyring sources, complete backup
+versus interface-specific export scope, and separate project/keyring protection.
+The early summary below is historical, not an implemented Secure feature.
+Its universal key-visibility/certificate-length and password-recovery claims
+must not become parser or hardware assumptions: current primary articles have
+inconsistencies, disclosed in the new research. Schema23 expressly declares
+runtime group/device/IP key fields; actual protected-project extraction and
+Secure interoperability remain untested. No runtime implementation follows.
+
 Not present in our sample installation (`data_secure=false` on all 514 group addresses, no keyring) — everything here is **[D]**.
 
 * **Data Secure**: each secured group address has a 128-bit runtime key. Each secure device has a tool key. ETS stores them in the `.knxproj` in protected form and can export them to a password-protected `.knxkeys` **keyring** file, which is the supported route for non-ETS clients.

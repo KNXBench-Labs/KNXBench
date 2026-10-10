@@ -435,6 +435,29 @@ function entryItems(): HTMLLIElement[] {
 }
 
 describe("ProjectDiffPanel entity details", () => {
+  it("renders modern completion values without replacing them with a default", async () => {
+    const report: ProjectDiffReport = {
+      ...emptyReport,
+      infoChanges: [{ field: "completion", left: "FinishedCommissioning", right: "Locked" }],
+      installations: [{
+        ...emptyReport.installations[0],
+        fieldChanges: [{ field: "completion", left: "Tested", right: "Locked" }],
+      }],
+    };
+    const { root } = await openReport(report);
+    await click(toggle("Project info (1)"));
+    await click(toggle("Installation info (1)"));
+    const rows = Array.from(host!.querySelectorAll(".project-diff-fields tbody tr")).map((row) =>
+      Array.from(row.children).map((cell) => cell.textContent),
+    );
+    expect(rows).toEqual([
+      ["completion", "FinishedCommissioning", "Locked"],
+      ["completion", "Tested", "Locked"],
+    ]);
+    expect(host!.textContent).not.toContain("Undefined");
+    root.unmount();
+  });
+
   it("keeps every table collapsed until asked, then lists entities by natural key", async () => {
     const { root } = await openReport(changesReport);
     expect(toggle("Devices (1)").getAttribute("aria-expanded")).toBe("false");

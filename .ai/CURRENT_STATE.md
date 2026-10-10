@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:34 CEST
+- **Completed:** Actual final main-integration source7520fa38 accepted after reconciling published65e1c809. Twenty-four stages exit0 with frozen inputs: parser197/0/56 ignored, consumers1799/0/101 ignored, frontend2610/0/164 files, full Chromium244/0, built-browser4/0/four frames inspected; explicit reference-container3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo gates/docs/whitespace pass. Source-bound public receipt/manual/status updated after the run; self-review only. Feature1be6f9bd included. No push yet.
+- **Pending/Next Steps:** Final documentation gates and metadata commit; fetch/inspect upstream, normal main push and exact ref/blob/ancestry readback; then owned worktree/branches/build/scratch cleanup and publication closure. No release/deployment/hardware action.
+- **Notes for Codex oder Claude:** Earlier interrupted and pre-upstream superseded attempts are distinct, not final acceptance. Runtime/test evidence is bound to7520fa38; subsequent changes are docs-only. Preserve all upstream history and foreign root/index/documents. Tester archive and new large-project peak memory remain unverified. Own integration/project-archive-1024mib-20261010 and publication scratch archive1024-publish-20261010 only.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 16:33 CEST
 - **Completed:** Owner authorized commit and push of the accepted1024 MiB archive-budget/readable-refusal package. Fresh origin/main still d9da8e61, source hashes equal accepted local receipt, exact18-path owned scope and self-review confirmed. Shared root HEAD/index/foreign documents captured for preservation. No publication yet.
 - **Pending/Next Steps:** Focused feature commit with KNXBench identity, no-ff main integration in this owned checkout, fresh integrated parser/frontend/browser/build/lint/repository/documentation gates, normal main push with exact remote readback, then owned cleanup. No release/deployment/hardware scope.

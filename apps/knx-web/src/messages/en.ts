@@ -737,6 +737,8 @@ export const messages = {
   "parameters.sharedReadOnlyCaption":
     "Shared across every instantiation of this module; not editable here — see the diagnostics for why.",
   "parameters.staleValuesHeading": "Stale values ({count})",
+  "parameters.instanceValuesHeading": "Stored module-instance values",
+  "parameters.instanceValuesDescription": "Read-only stored evidence: activation is not evaluated. These are each instance’s own values, not program defaults.",
   "parameters.staleDescription":
     "These stored values no longer correspond to any parameter in the current application program.",
   "parameters.diagnosticsCount.one": "{count} issue found while evaluating this device's parameters",

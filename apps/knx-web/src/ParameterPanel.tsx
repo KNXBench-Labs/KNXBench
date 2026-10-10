@@ -459,6 +459,13 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
       {panel.diagnostics.length > 0 ? <DiagnosticsBanner diagnostics={panel.diagnostics} />
         : <p className="inspector-description">{t("parameters.noDiagnostics")}</p>}
       <UntranslatedSummary panel={panel} language={language} />
+      {(panel.instanceValues?.length ?? 0) > 0 && <details className="parameter-stale-section parameter-instance-values" open>
+        <summary>{t("parameters.instanceValuesHeading")}</summary>
+        <p className="inspector-description">{t("parameters.instanceValuesDescription")}</p>
+        <ul>{panel.instanceValues!.map((s) => <li key={s.etsId} className="parameter-stale-entry">
+          <span className="parameter-stale-ets-id">{s.etsId}</span>: {s.raw}
+        </li>)}</ul>
+      </details>}
       {panel.stale.length > 0 && <StaleParametersSection stale={panel.stale} />}
     </div>;
   }

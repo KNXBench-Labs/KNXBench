@@ -1,5 +1,9 @@
 # Known limitations
 
+## Local integrity repairs and remaining boundaries (2026-10-10)
+
+[IMPORT_INTEGRITY](IMPORT_INTEGRITY.md) records the repairs and schema12 vocabulary barrier. The separate sample review below records the pre-repair state; merged-source verification is distinct from that historical audit. Historical opaque attributes are not guessed into typed values. Retained channel/address/IP extensions and offline loading limitations remain separately bounded. Import reports/session diagnostics are not persistently restored as a new report format; retained original XML preserves independently reconstructable source observations. Session-log caps remain explicit. No ETS/native-accessibility/hardware acceptance is claimed.
+
 ## Private schema-23 sample review (2026-10-10)
 
 The owner asked for a read-only review of a privately supplied, independently
@@ -24,7 +28,8 @@ The [selective importer](SELECTIVE_IMPORT.md) merges devices or complete
 lines into one explicit target installation. No building-only selector, automatic
 address reassignment, conflict overwrite or manufacturer-catalogue installation.
 Existing area/line names may be retained with an explicit preview note; incompatible
-configuration/range/address metadata refuse. Only normalized model v11 is admitted;
+configuration/range/address metadata refuse. Only normalized model v12 is admitted
+(the v11→v12 change is completion vocabulary only, not new entities/references);
 future-model fields require a fresh reference-closure audit. This does not restrict
 ETS input schemas beyond the existing complete importer.
 
@@ -4498,7 +4503,7 @@ added by AR10 is prose: the new language markers are identifiers.
 ## 68. Repeat activation stays unsupported; own instance values are readable
 
 **Update 2026-10-10 — read-only instance dimension delivered in code.**
-[ADR-0107](adr/0107-read-only-module-instance-values.md) separates stored
+[ADR-0107](adr/0108-read-only-module-instance-values.md) separates stored
 instance evidence from Dynamic evaluation. `ValueMap` now has a separate
 `(module_id, instance_id, ref_id)` map. The device evaluator validates the
 imported owner and a unique declaration, then records each recognized instance's
@@ -9352,26 +9357,31 @@ comparison on the owner's own device (read-back against the stored image of the
 owner's own project, under the existing hardware rules) establishes it. Only
 aggregate agreement enters the repository. Ledger `KL-172`.
 
-## 173. Instance overrides for objects outside the object tree are neither modelled nor reported
+## 173. Instance overrides outside the active object tree: retained and reported
 
-**Limitation.** At schema ≥21 the mapper builds communication objects from the
-`GroupObjectTree` id list (ADR-0014) and looks up `ComObjectInstanceRef`
-overrides only for those ids (`map_device_v21`). An override whose `RefId` is
-not in the tree is not modelled, not reported and not in the native store; the
-installation XML is not retained whole. In a privately supplied schema-23
-project such overrides carry flags, DPT or text, but never `Links`, so no group link is lost. They presumably belong to objects that the
-current parameter values hide (unverified).
+**Repair 2026-10-10.** The import-integrity package (`d8346579`, integrated
+acceptance `367405f1`) reports instance overrides not consumed by the declared
+active object tree and preserves both original project XMLs byte-exact through
+native Save/Reopen/Re-Save. It does not invent active communication objects or
+apply those overrides to program defaults. Conflicting duplicate overrides are
+reported as errors rather than resolved by a last-writer guess.
 
-**Impact.** If such an object becomes active again, KNXBench shows program
-defaults instead of the project's flag/DPT/text. Read/Mapped counts do not
-show the omission.
+**Evidence.** Synthetic `orphan_object_overrides_are_reported_not_silently_lost`
+and `conflicting_object_overrides_are_not_resolved_by_last_winner`, the explicit
+private-source production/native test and independent source-to-persisted-content
+checks meet the diagnostic/preservation condition. See
+[merged-source acceptance](status/2026-10-10-import-integrity-integration.md).
+Project-specific identifiers, values and measurements remain private.
 
-**Status.** Describes `main` at `2764b3b7`. A separate import-integrity package
-is adding a diagnostic and retention.
+**Remaining boundary.** Applying an override after reactivation needs documented
+activation semantics. Retention and warning-level diagnostics are not typed
+inactive-object modelling or new download authority. Read/Mapped counters remain
+mapper-visit counts, not proof of complete raw-source interpretation. The original
+omission described the pre-repair mapper at `2764b3b7`.
 
-**Lifted when.** Every such override survives save/reopen and is reported.
-Applying it to a re-activated object needs documented semantics. Ledger
-`KL-173`.
+**Lifted condition met.** Every otherwise unconsumed override survives native
+persistence as original source and is explicitly reported; automatic reactivation
+semantics are outside this condition. Status of record: ledger `KL-173`.
 
 ## 174. Project user files and add-in data are filed as plain container entries
 

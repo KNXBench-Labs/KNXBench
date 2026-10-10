@@ -1,7 +1,7 @@
 //! Opt-in, read-only comparison of each imported instance's own stored values.
 //!
 //! No private identifiers, totals, or source values are printed. This does not
-//! prove Repeat activation or whole-project import reconciliation (ADR-0107).
+//! prove Repeat activation or whole-project import reconciliation (ADR-0108).
 
 use std::path::PathBuf;
 

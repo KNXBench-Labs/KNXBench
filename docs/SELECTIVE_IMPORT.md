@@ -1,6 +1,7 @@
 # Selective project import
 
-Source implementation against normalized model v11. The original local package
+Source implementation against normalized model v12 (completion vocabulary only;
+no added entities or references). The original local package
 was based on `b042048b`; [integration verification](status/2026-10-10-import-expansion-integration.md)
 records the separate combined-source acceptance. This is not a release claim. Architecture: [ADR-0106](adr/0106-selective-project-import.md).
 Formal source-ID status belongs to [the ledger](status/LEDGER.md).
@@ -85,9 +86,10 @@ recomputes the plan. Existing full-project replacement import is unchanged.
 ## Deliberate bounds
 
 - 64 MiB source input, plus the existing container/parser resource ceilings.
-- Native model v11 only. A model bump must audit new entity/reference fields
-  before widening this explicit guard; do not merge Functions/Sites model
-  changes without that audit.
+- Native model v12 only. The v11→v12 change extends completion vocabulary,
+  not entity/reference fields; the dependency closure is unchanged. A further
+  model bump must audit new entity/reference fields before widening this explicit
+  guard; do not merge Functions/Sites changes without that audit.
 - Complete-source mapping/validation errors refuse selective import, even if
   the error is outside the selected subset.
 - Native snapshot admission is mandatory; unsupported preservation shapes or

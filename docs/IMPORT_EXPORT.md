@@ -1,5 +1,9 @@
 # Import and export
 
+## Local source preservation and reporting (2026-10-10)
+
+[IMPORT_INTEGRITY](IMPORT_INTEGRITY.md) adds physical ZIP member lookup, recursive object-node lists, modern unassigned devices, original XML/metadata retention and exact member provenance. Lexical observations include retained subtrees and are not semantic acceptance. Manufacturer diagnostics replay from persisted source evidence; opaque media descriptions are not plugin claims. New completion vocabulary uses native/model12. No ETS exporter or signature/hardware claim; no private measurements in shared docs.
+
 ## Selective import into the open project (2026-10-10 source integration)
 
 [Separate integration verification](status/2026-10-10-import-expansion-integration.md) supersedes the local-only delivery status, not its historical test results. This is source integration, not a new release or deployment.

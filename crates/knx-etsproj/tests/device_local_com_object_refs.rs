@@ -145,6 +145,7 @@ fn the_schema21_empty_default_line_is_one_exact_mapping_diagnostic() {
     assert_eq!(
         imported.report.errors,
         vec![ImportError {
+            source_path: None,
             stage: "map",
             severity: Severity::Error,
             xpath: "/KNX/Project/Installations/Installation".to_string(),
@@ -196,13 +197,13 @@ fn the_ets6_project_reports_no_malformed_com_object_ref_ids() {
     let out = import_knxproj(&support::reference_ets6_path()).unwrap();
     assert_eq!(out.report.source.schema_version, 23);
 
-    // The RefId loss is gone, but nine unrelated, explicitly reported
-    // attributes remain unsupported. Pin both the loss signal and the
+    // Documented Name/CompletionStatus slots are now known. Three unrelated,
+    // explicitly reported attributes remain unsupported. Pin the loss signal and the
     // constructs behind it so a future unknown cannot hide in the same
     // headline count. Every occurrence must also have reached the opaque
     // store summary; reporting without preservation would not be enough.
     assert!(out.report.has_losses());
-    assert_eq!(out.report.unknown.len(), 9);
+    assert_eq!(out.report.unknown.len(), 3);
     let unknown_names = out
         .report
         .unknown
@@ -212,9 +213,7 @@ fn the_ets6_project_reports_no_malformed_com_object_ref_ids() {
     assert_eq!(
         unknown_names,
         std::collections::BTreeSet::from([
-            "CompletionStatus",
             "Hide16BitGroupsFromLegacyPlugins",
-            "Name",
             "ProjectId",
             "ProjectTracingLevel",
         ])
@@ -249,6 +248,31 @@ fn the_ets6_project_reports_no_malformed_com_object_ref_ids() {
             "{name}: reported {reported}, preserved {:?}",
             preserved_by_name.get(name)
         );
+    }
+
+    // Known attributes must not replace source preservation: compare the two
+    // original XML payloads with independently indexed ZIP reads.
+    let file = std::fs::File::open(support::reference_ets6_path()).unwrap();
+    let mut archive = zip::ZipArchive::new(file).unwrap();
+    for suffix in ["/0.xml", "/project.xml"] {
+        let mut compared = false;
+        for index in 0..archive.len() {
+            let mut entry = archive.by_index(index).unwrap();
+            if !entry.name().to_ascii_lowercase().ends_with(suffix) {
+                continue;
+            }
+            let path = entry.name().to_string();
+            let mut bytes = Vec::new();
+            std::io::Read::read_to_end(&mut entry, &mut bytes).unwrap();
+            assert!(
+                out.opaque.iter().any(|opaque| {
+                    opaque.source_path == path && opaque.xpath.is_empty() && opaque.bytes == bytes
+                }),
+                "original project XML must survive known-attribute classification"
+            );
+            compared = true;
+        }
+        assert!(compared, "expected reference XML member was not examined");
     }
 
     // Counted, not compared element-wise: the pre-fix failure printed all

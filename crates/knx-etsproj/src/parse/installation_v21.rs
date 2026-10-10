@@ -30,8 +30,8 @@
 //! path is still what gets reported in `UnknownConstruct`/`RetainedAttribute`
 //! xpaths.
 
+use super::observed_reader::ObservedReader as Reader;
 use quick_xml::events::{BytesStart, Event};
-use quick_xml::Reader;
 
 use crate::known::KnownSchema;
 use crate::source::{
@@ -169,7 +169,28 @@ fn collapsed(stack: &[String]) -> String {
         }
         out.push(seg);
     }
-    format!("/{}", out.join("/"))
+    let path = format!("/{}", out.join("/"));
+    // Both placements use DeviceInstance_t (Schema23 §1.2.4.6).
+    let path = path.replace(
+        "/Topology/UnassignedDevices/DeviceInstance",
+        "/Topology/Area/Line/Segment/DeviceInstance",
+    );
+    // Node_t recursively contains Nodes (§1.2.5.21–23). Match only that
+    // exact structural vocabulary; the reported/captured path stays uncollapsed.
+    if let Some((prefix, suffix)) = path.split_once("/GroupObjectTree/") {
+        let parts: Vec<_> = suffix.split('/').collect();
+        if parts.iter().all(|p| matches!(*p, "Node" | "Nodes")) {
+            return format!(
+                "{prefix}/GroupObjectTree/Nodes{}",
+                if parts.last() == Some(&"Node") {
+                    "/Node"
+                } else {
+                    ""
+                }
+            );
+        }
+    }
+    path
 }
 
 fn real_path(stack: &[String]) -> String {
@@ -303,6 +324,7 @@ pub fn parse_installation_v21(
         });
     }
 
+    document.xml_observations = reader.counts;
     Ok(ParseOutput {
         document,
         unknown: aggregator.into_sorted_vec(source_path),
@@ -341,7 +363,10 @@ fn open_element<'a>(
     path_stack.pop();
 
     let known = known_attributes(schema, &matching_path);
-    let is_known_path = schema.elements.iter().any(|e| e.path == matching_path);
+    let is_known_path = reader.is_project_element(start.name(), schema.version)
+        && (schema.elements.iter().any(|e| e.path == matching_path)
+            || matching_path
+                == "/KNX/Project/Installations/Installation/Topology/UnassignedDevices");
 
     // `KNX` and `Project` carry document-level identity, not a `Frame`.
     if local == "KNX" {
@@ -468,13 +493,8 @@ fn open_element<'a>(
             }
         }
         if !is_empty {
-            reader
-                .read_to_end(start.to_end().name())
-                .map_err(|e| ParseError::Xml {
-                    source_path: source_path.to_string(),
-                    position: reader.buffer_position(),
-                    cause: e.to_string(),
-                })?;
+            path_stack.push(local);
+            kind_stack.push(Kind::Wrapper);
         }
         return Ok(());
     }
@@ -553,7 +573,11 @@ fn open_element<'a>(
         if let Some(ids) = bag.take("GroupObjectInstances") {
             // schema 23's flat shape only
             if let Some(Frame::Device(d)) = frames.last_mut() {
-                d.group_object_tree = ids.split_whitespace().map(str::to_string).collect();
+                for id in ids.split_whitespace() {
+                    if !d.group_object_tree.iter().any(|existing| existing == id) {
+                        d.group_object_tree.push(id.to_string());
+                    }
+                }
             }
         }
         if is_empty {

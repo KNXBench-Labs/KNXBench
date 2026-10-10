@@ -2090,7 +2090,7 @@ export const messages: Record<MessageKey, string> = {
   "debugReport.contents.projectSummary": "project-summary.json — Anzahlen zum geöffneten Projekt.",
   "debugReport.contents.busTelegrams": "bus-telegrams.json — der Puffer des Busmonitors.",
   "debugReport.privacyRedacted":
-    "IP-Adressen, dein Home-Verzeichnis und der Name dieses Rechners werden in report.md, environment.json und log.json durch Platzhalter ersetzt. KNX-Adressen und Namen aus deinem Projekt werden nirgends ersetzt.",
+    "IP-Adressen, MAC-Adressen, dein Home-Verzeichnis und der Name dieses Rechners werden in report.md, environment.json und log.json durch Platzhalter ersetzt. KNX-Adressen, Benutzernamen und Namen aus deinem Projekt werden nirgends ersetzt. Aufbewahrte ETS-Quelldaten eines importierten Projekts (Schnittstelleneinstellungen, IP-Konfiguration, Projektprotokoll) sind nie enthalten.",
   "debugReport.privacyTelegrams":
     "bus-telegrams.json wird nicht geschwärzt. Die Datei behält die physikalischen Adressen und die Gruppenadressen deiner Anlage, die Namen der Gruppenadressen, soweit das geöffnete Projekt sie kennt — „Küche Deckenlicht“ —, sowie jeden Telegrammwert (auch Textwerte) mit seinem Zeitstempel. Zusammen können diese Angaben zeigen, wann die Anlage benutzt wurde. Ohne sie sagt ein Telegrammmitschnitt nichts aus, deshalb bleiben sie stehen. Nimm die Datei nur auf, wenn du all das weitergeben willst.",
   "debugReport.save": "Zip speichern…",

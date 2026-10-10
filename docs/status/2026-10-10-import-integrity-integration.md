@@ -59,6 +59,21 @@ ZIP reads. Removing those retained XML payloads causes that named assertion to
 fail at runtime. The original failed attempt is not counted as success; the
 entire integration gate was repeated afterward.
 
+## Publication verified — 2026-10-10 14:08 CEST
+
+Main source publication `ab77a0e7` was read back with exact local/tracking/live
+ref equality. All owned feature, merge and corpus-correction commits are reachable
+from that main tip. Required KNXBench author/committer identity and absence of
+co-author trailers were checked on every outgoing commit. Final generic prose,
+ledger and repository checks passed; source-bearing evidence remains private,
+ignored and untracked. Both owned branches/worktrees and their build/probe caches
+were retired. The stale dirty root and all foreign edits remain untouched.
+
+F01–F09 are implemented and verified. F10/F11 are research-assessed follow-up
+packages, not implemented device modelling or parameter/download support.
+The authorized delivery contract is complete; those remaining capabilities need
+separate decisions and implementation scope. No release or hardware action.
+
 ## Native/model boundary and remaining work
 
 Native/model12 is a scalar completion-vocabulary barrier on the current v11

@@ -61,6 +61,23 @@
   [release notes](releases/alpha8.md). Self-review only. Documentation/cleanup
   closure is recorded separately; the release tag must not move.
 
+## 2026-10-11 — KL175 bounded raw-header evidence delivered
+
+Frozen source `d8cde545` passes eight-crate Rust2403/0/182, Web2612/0 in164
+files, production Web build, strict quality/five repository/docs gates, full
+nonempty all-pass corpus and explicit private source reconciliation/RefId/raw-preview
+checks. Original bytes unchanged. Four en/de400/1440 real LogPanel fixture cases
+pass; relevant runtime remains equal, four screenshots re-inspected: literal tags,
+readable localized labels and wrapped previews, not packaged-desktop acceptance.
+Earlier socket-path infrastructure refusal and two restored assertion-killed
+omission mutants remain distinct evidence. ADR-0110 keeps full source authoritative;
+no field/format validation, RTF rendering, plain extraction, domain/storage change
+or compatibility claim. In-session codex self-review only. Intervening handover
+and Secure-research changes were metadata-only; all owner contributions retained.
+Published/read back `6ef0b2d8` with local/tracking/live main equality and
+fresh metadata/privacy gates; source/runtime remains `d8cde545`. Packages1–7/9
+delivered;8 KL146 differential and overall closure remain open.
+
 ## 2026-10-10 — KL174 bounded payload content/role evidence
 
 - Candidate code `41b3d6267731` reuses existing product `sniff_media` at app/report boundary; project UserFiles/AddinData and manufacturer payloads carry separate content and explicitly unverified roles. No F reimplementation, source/model/storage changes or new dependency.

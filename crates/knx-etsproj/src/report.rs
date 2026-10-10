@@ -72,7 +72,8 @@ pub struct EntityCount {
     pub mapped: u32,
 }
 
-/// Bytes are not repeated in the report; the store holds them. `xpath` and
+/// Full bytes stay in the store; a bounded raw attribute preview may be included.
+/// `xpath` and
 /// `name` are, though (C14): a `RetainedAttribute`/`RetainedElement` entry
 /// with an empty `reason` of "known or unknown attribute the model does not
 /// carry" is unreadable without them — a preserved `LoadedImage` that the
@@ -88,6 +89,38 @@ pub struct OpaqueSummary {
     pub size: u64,
     pub sha256: String,
     pub reason: String,
+    /// Header-like evidence only, not a field/RTF validity or interpretation claim.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub raw_text_preview: Option<RawTextPreview>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct RawTextPreview {
+    pub format: &'static str,
+    pub value: String,
+    pub truncated: bool,
+}
+
+fn raw_text_preview(entry: &OpaqueEntry) -> Option<RawTextPreview> {
+    if entry.kind != crate::opaque::OpaqueKind::RetainedAttribute {
+        return None;
+    }
+    let value = std::str::from_utf8(&entry.bytes).ok()?;
+    let suffix = value.strip_prefix(r"{\rtf")?;
+    if !suffix.as_bytes().first().is_some_and(u8::is_ascii_digit) {
+        return None;
+    }
+    // A preview is not extraction: control words/escapes remain literal; full
+    // decoded value and original XML stay in retained sources without clipping.
+    let end = value
+        .char_indices()
+        .nth(512)
+        .map_or(value.len(), |(i, _)| i);
+    Some(RawTextPreview {
+        format: "rtf-like",
+        value: value[..end].to_owned(),
+        truncated: end < value.len(),
+    })
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -332,6 +365,7 @@ fn opaque_summary(e: &OpaqueEntry) -> OpaqueSummary {
         size: e.bytes.len() as u64,
         sha256: e.sha256.clone(),
         reason: opaque_kind_reason(e.kind).to_string(),
+        raw_text_preview: raw_text_preview(e),
     }
 }
 
@@ -344,6 +378,7 @@ fn manufacturer_summary(m: &ManufacturerFile) -> OpaqueSummary {
         size: m.bytes.len() as u64,
         sha256: m.sha256.clone(),
         reason: opaque_kind_reason(m.kind).to_string(),
+        raw_text_preview: None,
     }
 }
 
@@ -552,5 +587,60 @@ mod tests {
             detail: "t".into(),
         });
         assert!(report.has_losses(), "a real error is a loss");
+    }
+}
+
+#[cfg(test)]
+mod raw_text_tests {
+    use super::*;
+    use crate::opaque::{OpaqueEntry, OpaqueKind};
+
+    fn summary(bytes: &[u8], kind: OpaqueKind) -> serde_json::Value {
+        let entry = OpaqueEntry {
+            source_path: "P-TEST/0.xml".into(),
+            xpath: "/synthetic".into(),
+            kind,
+            name: "SyntheticRawField".into(),
+            bytes: bytes.to_vec(),
+            sha256: crate::opaque::sha256_hex(bytes),
+        };
+        serde_json::to_value(opaque_summary(&entry)).unwrap()
+    }
+
+    #[test]
+    fn raw_candidate_preview_is_bounded_utf8_safe_and_does_not_parse_or_certify_rtf() {
+        let value = format!("{{\\rtf9{}", "界".repeat(2000));
+        let row = summary(value.as_bytes(), OpaqueKind::RetainedAttribute);
+        let preview = &row["raw_text_preview"];
+        assert_eq!(preview["format"], "rtf-like");
+        assert_eq!(
+            preview["value"].as_str().unwrap(),
+            value.chars().take(512).collect::<String>()
+        );
+        assert_eq!(preview["truncated"], true);
+        assert_eq!(row["size"], value.len());
+        assert_eq!(row["sha256"], crate::opaque::sha256_hex(value.as_bytes()));
+        // Deliberately malformed/incomplete body is still only a header candidate.
+        assert_eq!(
+            summary(br"{\rtf1 no closing brace", OpaqueKind::RetainedAttribute)["raw_text_preview"]
+                ["value"],
+            r"{\rtf1 no closing brace"
+        );
+        for bytes in [
+            b"".as_slice(),
+            br"ordinary plain text",
+            br"{\rtfake}",
+            b"{\\rtf1\xff",
+        ] {
+            assert!(summary(bytes, OpaqueKind::RetainedAttribute)
+                .get("raw_text_preview")
+                .is_none());
+        }
+        assert!(summary(br"{\rtf1 data}", OpaqueKind::ContainerEntry)
+            .get("raw_text_preview")
+            .is_none());
+        assert!(summary(br"{\rtf1 data}", OpaqueKind::RetainedElement)
+            .get("raw_text_preview")
+            .is_none());
     }
 }

@@ -23,6 +23,46 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 00:35
+- **Completed:** Package7 published/read back 6ef0b2d8854bb498c68ba0def63caf91f0a09969, local/tracking/live main equal. Complete frozen d8cde545 public/private acceptance and production build; later changes metadata-only with five nonempty repo/docs/whitespace/full outgoing privacy gates. Fresh Secure research owner contributions preserved. Bounded raw-label scope DONE; parsing/rendering/editing stays separate tooling scope. Packages1–7/9 delivered.
+- **Pending/Next Steps:** Publication closure metadata gates/readback, preserve compact private proofs and retire owned package7 tree/branch/scratch. Then fresh-main package8 KL146 original evaluated-activation comparison and exact per-KL/origin-main final closure. Overall goal not complete.
+- **Notes for Codex oder Claude:** codex, in-session self-review only; no independent review. Exact runtime admitted d8cde545, publication6ef0b2d8; no release/tag/deployment/bus action. Own proof/scanner archive private only. Never touch root/foreign/F/tooling worktrees or implement the other owner's RTF parser/editing; private differential must not turn stored activation or program defaults into invented evaluation semantics.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 00:24
+- **Completed:** Package7 complete frozen admission on d8cde545d065fd51b68bcde00e91dbb29694a6d4: eight-crate Rust2403/0/182, Web2612/0 in164 files, strict/repo/docs gates, production Web build, full nonempty corpus and explicit private reconciliation/RefIds/raw-preview gates passed. Original bytes unchanged; fixture four cases and relevant runtime equality verified, four screenshots re-inspected. Fresh upstream f6c3f64d4ece02fb6c6ea2b7a26d6735a0e47f6a adds Secure research/ownership metadata only, integrated with both journals preserved. No release/tag/deployment action.
+- **Pending/Next Steps:** Finish metadata gates/full staged outgoing privacy scan, commit/push exact candidate and verify local/tracking/live main equality, publication receipt and owned cleanup. Package8 KL146 original activation differential and exact per-KL final closure remain. Packages1–6/9 delivered;7 admitted pending publication;8 open.
+- **Notes for Codex oder Claude:** codex, in-session self-review only; no independent review. Source-bound acceptance remains d8cde545; later metadata delta must keep every runtime/test/config byte equal. Raw candidates do not establish RTF validity, plain-text extraction or ETS semantics. Original-valued evidence stays ignored/private; no root/foreign/F worktree changes, hardware actions or releases.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 23:33
+- **Completed:** Package7 source/docs/browser checkpoint 0be49e8bc3d7c0ca14163f512e57155c4db1381c committed after five fresh-root repository gates, documentation, diff and outgoing private-value scan. Header-preflight missing blank paragraph and later EOF whitespace refusals preserved separately; fixed locally and admitted. Fresh main e7fc8defa9f44e0759b3815065743b2dc86c53a4 integrated only in owned integration tree; remote app-version/dependency-lock/handovers/docs reviewed, no release/tag/deployment action. Both full handover contributions retained below.
+- **Pending/Next Steps:** Commit clean no-ff frozen integration candidate, run prepared eight-crate/Web/build/strict/repository/docs/full corpus and explicit private reconciliation/RefId/raw-preview acceptance. No broad/final package7 acceptance or push claimed. Then final docs/privacy/main readback and own cleanup; package8 KL146 private activation comparison and exact per-KL/origin-main closure remain. Packages1–6/9 delivered,7–8 open.
+- **Notes for Codex oder Claude:** codex, in-session self-review only; no independent review. Four real LogPanel fixture Chromium cases and original boolean focused evidence are historical source-bound focuses, not whole-source acceptance. Full source/native unchanged and no raw-text validity/plain extraction/ETS semantics inferred. Never modify root/foreign/F worktrees or release tags. Original-valued outputs/artefacts private ignored only; source must stay frozen during admission. Prior queued preflight/integration attempts rejected, not successes.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 23:02
+- **Completed:** Package7 focused synthetic/native/HTTP/React/tsc tests, original boolean raw-preview/native gate, missing-env refusal and two assertion-killed/restored omission mutants passed. Real Chromium en/de400/1440 four cases passed after verified own short-socket launch recovery; all four synthetic screenshots inspected, explicit fixture/spec tsc passed. Relevant docs/ADR0110/receipt/log synchronized with IN_PROGRESS ledger and unchanged full source/native/read-only owner boundary. Packages1–6/9 delivered,7–8 open.
+- **Pending/Next Steps:** Owned proc_18d2ae8ca7b3 queued under shared workspace/alpha leases, no preflight phase logs yet; foreign alpha8 holder untouched. Admit five fresh-root xtask/docs/privacy, commit only owned public package. Prepared scratch session-tools/run-kl175-final.sh adds broad eight-crate/Web/build/strict gates, full corpus, private reconciliation/RefId/RTF tests; source path graph and final no-ff candidate must be verified before dispatch. Then metadata gates/privacy/no-ff push/readback/cleanup; package8 KL146 comparison and overall exact per-KL/origin-main final admission remain.
+- **Notes for Codex oder Claude:** codex, in-session self-review only; no independent review. Failed first browser launch not acceptance, replacement four-case log source unchanged. Preview is common-header candidate only, max512 Unicode scalars, no field/format validation/plain extraction; full source authoritative and raw text may contain sensitive identities/network values. No foreign/root/F mutations/hardware/releases/subagents/quota checks. Dedicated fresh xtask target avoids baked-root cache hazard. §146 heading uses section symbol, not numbered-period prefix; next scope read-only only. Existing code/main checkpoint68922cc4; current later docs/browser changes not yet committed/published.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 22:23
+- **Completed:** Package6 delivered/readback68147ba3, closurefd6b1cff equal local/tracking/live, own old tree/branch/scratch cleaned, compact private proofs in package6-delivery. Package7 code checkpoint/main integration 68922cc4d6e9: retained-attribute header candidates only, literal bounded512-scalar preview with explicit truncation/full source preserved; additive log row leaves old hash row unchanged; literal en/de UI. Valid synthetic RED/GREEN, full native reopen, UTF8/clip/malformed/content-kind, HTTP GET project unchanged, React/tsc and existing session-log focused tests green. ADR0110 records owner no-validation/no-extraction scope; no domain/storage/dependency change.
+- **Pending/Next Steps:** Package7 proc_fd988b2317b8 private missing-env refusal/original boolean preview/native plus isolated en/de400/1440 Chromium now running. Read actual logs/results, inspect screenshots, two mutations, original/source gates, broad eight-crate/Web/strict/repo/docs/corpus acceptance on frozen candidate, privacy scan, docs/evidence, review, no-ff merge/push/readback, own cleanup. Then package8 KL146 private activation comparison; final exact KL1/8/68/106/146/170–175/PDB01 and origin-main acceptance. Packages1–6/9 delivered;7–8 open.
+- **Notes for Codex oder Claude:** Only already retained attributes marked; modeled strings/whole XML/file bodies not inspected. Prefix rule is product detection, no RTF spec/full field catalogue/validity; malformed body remains candidate. Header lookalikes/UTF8/preview do not dictate core model. Original values only private ignored evidence, tests #[ignore] plus absolute env/refusals and boolean asserts. Whole source storage stays authoritative; clipped preview never used for export. Reused runtime target moved to kl175-evidence/target; fresh dedicated xtask target required to avoid old baked-in root. In-session self-review only, no foreign/root/F work/hardware/releases/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 23:56 CEST
 - **Completed:** AP1 Secure provenance locally accepted on8fdf716713006f94fa7a52d163afc3e3106f98ad: eight admitted public sources/quote verifier,12 documentation tests,five nonempty fresh-root repository gates,525 anchors/234 Markdown/197 ledger rows,whitespace; frozen inputs. Public research receipt, R-SEC-01 canonical row/counts, status/limits/open-work synchronized as metadata. No runtime Secure support or actual secrets. AP2 independent real bounded adapter now passes16/0 after genuine baseline1/15 RED and one retained compile-only refusal. Separate collector CSS slice11/0 focused after three additional genuine guard REDs; full acceptance pending.
 - **Pending/Next Steps:** AP1 coordinated fresh-main docs integration/gates/push/readback, then handoff. AP2 edge/native preservation/full adapter gates and isolated editing/persistence/UI remain; AP3–AP7 implementation, AP8 full collector/report, AP9 hardware prerequisites/test plans remain. Goal incomplete.

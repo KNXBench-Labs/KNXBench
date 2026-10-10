@@ -217,6 +217,11 @@ them.
 
 ## Running the tests
 
+The [test catalogue](../../TEST_CATALOGUE.md) maps existing suites by category,
+with short descriptions, source links and private/hardware prerequisites.
+It also explains how private project inputs stay separate from public fixtures.
+An inventory is not proof that every listed test ran.
+
 Rust, the whole workspace:
 
 ```bash

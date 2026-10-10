@@ -28,7 +28,23 @@ The combined candidate includes it; the complete authoritative upstream journal
 and the initial owned checkpoint are preserved. Initial acceptance remains
 historical, not relabelled as acceptance of changed application inputs.
 
-Pending: combined-source acceptance and exact-source packaging dry runs, explicit
-immutable tag/prerelease, independent downloaded-asset/anonymous Docker checks,
-final documentation and owned cleanup. Later parallel work is outside this
-frozen release snapshot. No bus action, subagent or quota checks.
+At reconciliation, combined-source acceptance, exact-source packaging dry runs,
+immutable tag/prerelease, external checks and documentation/cleanup were pending.
+That paragraph describes the historical checkpoint, not current release state.
+
+## Verified publication — 2026-10-10 23:28 CEST
+
+Final sourcefdddad8f passed26 main+6 supplementary stages: Rust3912/0/190,
+Web2611/0/164 files, Chromium244/0/0 skipped, corpus146/0 and explicit
+original/native/instance/RefId/source/reference checks. Both dryruns and both tag
+workflows passed. Immutable annotatedv0.1.0-alpha.8, exact source-main/body/tag
+readbacks and all three downloaded asset sizes/digests/checksums are verified.
+MCP executes matching build; AppImage extracts; anonymous multiarch Docker
+version/latest and full OCI labels match. Published HTTPS/auth/save/reopen and
+isolated orderly-stop0 pass; existing user container remains unchanged/running.
+Public receipt: docs/evidence/release-alpha8-2026-10-10.json.
+
+Documentation-only gates/main publication and owned cleanup remain. No new
+interactive desktop/Orca/Pi/ETS/bus or memory certification; no live deployment.
+Native/model12 backups are mandatory. Self-review only; private proof stays
+restricted/ignored. No subagent/quota checks. The tag must not move.

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 23:28 CEST
+- **Completed:** Alpha8 annotated immutable tag7e796b17 points tofdddad8f; source-main/prerelease/body/tag readbacks match. Final combined26 primary+6 supplementary stages pass: Rust3912/0/190 ignored, Web2611/0/164, Chromium244/0/0 skipped, corpus146/0 plus explicit original/native/instance/RefId/source-reconciliation/reference positives. Both exact dryruns and tag workflows pass. Three downloaded assets match sizes/GitHub digests/SHA256SUMS; MCP executes matching version, AppImage extracts. Anonymous multiarch version/latest index and full OCI labels verified; published HTTPS/auth/save/reopen and isolated orderly-stop0 pass. Existing user container remains same identity/image/start time/running. Public receipt and upgrade/docs prepared; self-review only.
+- **Pending/Next Steps:** Final docs-only five nonempty repository/link/privacy/whitespace gates and main publication/readback; retire only owned source/docs worktrees/branches/build/download/scratch after archiving compact evidence. No functional release acceptance remains pending; cleanup/documentation closure not yet complete.
+- **Notes for Codex oder Claude:** Tag must not move. Native/model12 requires independent backups; no downgrade conversion or new ETS/export/signing/hardware/Orca/Pi/memory claim. Source cutoff fd6b1cff; later unmerged work excluded. Initial7b acceptance/matrix confinement refusal/retry retained separately, not final-source counts. Root/foreign files/index/user data untouched; no subagents/quota checks/bus/deployment. Preserve all inherited handovers below.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 22:26 CEST
 - **Completed:** First Alpha8 candidate7b6389f5 passed26 whole-source gates, full corpus, corrected matrix retry and both packaging dry runs. Final preflight refused before any main/tag/release write because main advanced tofd6b1cff with bounded payload-report classification. Combined candidate incorporates that published source and preserves both complete handover contributions; no tag/release exists.
 - **Pending/Next Steps:** Freeze and reaccept this combined runtime and its exact-source packaging dry runs, publish immutable Alpha8 tag/prerelease, verify downloaded artifacts/anonymous Docker, finish docs/receipt/owned cleanup. Source cutoff is fd6b1cff; later parallel work stays outside this snapshot.

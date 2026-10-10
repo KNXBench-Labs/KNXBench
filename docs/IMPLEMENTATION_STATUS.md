@@ -37,6 +37,18 @@ Actual no-ff candidate `a3f88cac2b72` passes 97 xtask tests, strict Clippy/fmt,
 all five repository gates and documentation/whitespace checks.
 [Receipt](evidence/schema23-public-research-2026-10-10.json).
 
+## 2026-10-10 — Independent local revalidation, no publication
+
+[Fresh local acceptance](status/2026-10-10-import-integrity-revalidation.md)
+reuses the existing F01–F09 repairs on a newly pinned detached candidate and adds
+four independent synthetic regression enhancements. All 19 candidate gates,
+nine compiled runtime RED/restored GREEN controls, fresh production CLI import,
+product validation, complete-model offline readiness and independent bounded
+source/native/product comparison passed. Source- and object-omission controls
+were caught. Private values remain local/restricted; F10/F11 are researched and
+offline-reassessed follow-ups, not new execution support. Self-review only.
+No commit, integration, publication, release, deployment or hardware action.
+
 ## 2026-10-10 — Import-integrity merged candidate accepted
 
 [Separate integration acceptance](status/2026-10-10-import-integrity-integration.md)

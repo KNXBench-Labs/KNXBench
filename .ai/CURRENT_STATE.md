@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 19:55
+- **Completed:** Package4 final runner proc_45f724e1aaf2 exit0 at actual382ab577: five-crate1360/0/116, Web2610/0/164, full nonempty corpus, explicit original reconciliation/native/RefId, archive-browser4/4; quality/repo/docs gates green. Fresh upstreamfc81326b adds four test files/docs only; integrateddd4b8165 passes app/parser/HTTP cases, full Web2611/0/164, tsc and strict server/app/parser Clippy. Complete upstream path delta checked; no runtime/dependency/browser-source changes or retagged old outputs. Receipt/§1/COMPATIBILITY/ledger/status/open-work synchronized. Self-review only, earlier bounded-source and semantic-loss findings fixed.
+- **Pending/Next Steps:** Final docs/privacy check, no-ff main publication and local/tracking/live equality, docs-only publication receipt and cleanup; then fresh-main KL173 persistence focus. Packages1,2,3,9 delivered,4 candidate ready,5–8 still open. Overall goal not complete.
+- **Notes for Codex oder Claude:** Unknown has_losses remains true and no source counts/identities printed; private original bytes/digests remain ignored. Own runner complete so metadata writes do not interrupt tests. Root/foreign F code/worktrees untouched; no hardware/vendor execution/release/subagents/quota checks. Do not stop after status report: publish green candidate before next package.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 18:38 CEST
 - **Completed:** Owner-authorized import regression merge published to main9d3c8f0c; local/tracking/live refs identical and eff4df95 ancestry verified. Actual frozen runtime source7503f10f passed20 gates (Rust3906/0, Web2611/0), explicit private original/native/instance/RefId and fresh production CLI/product/offline/source-native-product comparisons with two omission controls. Later docs-only integration retained all1207 runtime inputs byte-exact; seven final metadata gates and outgoing privacy scan passed. This additive checkpoint records verified publication, not new runtime behavior.
 - **Pending/Next Steps:** None for the authorized merge work package. Preserve source/evidence for owner review; no additional feature, release, deployment or hardware work authorized here.
@@ -15,10 +23,58 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 18:31
+- **Completed:** Package4 current-source test/docs candidate a04f77ec includes fresh c50b90c4 container/Web source, offline npm installed. Earlier f3e69eb5 gate1357/0/116 and scoped checks remain historical only; unfinished corpus was stopped on relevant upstream change. Refreshed proc_09515059b5f1 waited behind active foreign import-main verification; lease became available just as it was stopped for metadata checkpoint. It actually completed fmt0, then was interrupted before any test result; no zero-stage or suite-pass claim. Full attempt logs preserved in metadata-interrupted-p4/gate, no source fix or foreign process action. User interim status answered.
+- **Pending/Next Steps:** Restart frozen 5-crate+Web/tsc+full corpus+explicit original reconciliation/native/RefId+archive-browser4 chain. Validate actual nonempty results, input binding and unchanged source; docs/privacy, fresh-main check, no-ff push/live equality/cleanup. Then resume prepared independent KL173 service/native witness, still untested. Packages1,2,3,9 delivered;4–8 not delivered; no overall completion or user semantic input requirement.
+- **Notes for Codex oder Claude:** Exact next process handle stored under ignored final-p4/runner.private.json after dispatch. Do not change tracked candidate during tests or acknowledge successful new completion only—finish publication. Historical original positives are not retagged to current container. Unknowns/has_losses remain conservative and source reconciliation preservation-only. Root/foreign worktrees untouched; no private original values/counts/digests published, no hardware/vendor execution/release/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 18:05
+- **Completed:** Fresh upstream c50b90c460b1 archive-cap/container/Web changes integrated into own package4 source 6be234b78128; additive implementation status and both complete newest-first histories retained above byte-unchanged shared archive. Earlier f3e69eb5 source gate1357/0/116 remains historical; its full corpus was stopped due relevant upstream change, no final corpus pass claimed. Own KL173 queued focus stopped before execution, synthetic witness remains untested in own separate worktree. No foreign workers/files touched.
+- **Pending/Next Steps:** Refreshed final chain includes affected Crates and changed Web suites, full corpus, explicit original reconciliation/native/RefId, and inherited archive UI fixture cases; final privacy/no-ff publication/ref equality/cleanup. Package4 NOT delivered; packages5–8 remain, no overall goal completion.
+- **Notes for Codex oder Claude:** Keep source frozen throughout refreshed chain. Public receipts contain only coarse source-preservation outcomes, never original counts/values/digests. Unknown/has_losses boundary unchanged and owner approved preservation-only reconciliation. User interim status answered; no pause requested. Native/ETS export byte equality scopes clarified in roundtrip skill, not production code. No hardware/vendor execution/release/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 18:02
+- **Completed:** Old actual candidate f3e69eb5 source gate1357/0/116 plus fmt/clippy/five real nonempty repo checks/docs/diff passed. During full corpus, fetched main advanced to c50b90c4 with container archive-cap and related Web source/test changes. Stopped only own proc_18e43f2a1910 and queued own KL173 proc_b82f4a4fee6c; interrupted corpus has no final pass claim. Source/gate/raw evidence preserved in pre-archive-limit-integration and pre-archive-limit-gate; own corpus/oracle links removed, no own compiler remains. Package4 not delivered.
+- **Pending/Next Steps:** Integrate fresh main c50b90c4, preserve both newest-first histories, run actual merged candidate with affected Crates AND changed Web suite + full corpus/private gates; then outgoing privacy/no-ff push/live equality/cleanup. KL173 synthetic witness prepared in separate own worktree, not yet tested; resume only after package4. All-goal not complete.
+- **Notes for Codex oder Claude:** Do not reuse older source success for new container. Earlier corrected private positives remain historical; conservative unknown/has_losses boundary stays true. Root/foreign worktrees/processes untouched. No private source values/counts in public receipt, no hardware/vendor execution/release/subagents/quota checks. Only own workers killed to avoid finishing an obsolete delivery candidate.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:38 CEST
+- **Completed:** Owner-authorized archive-budget/readable-refusal source published on main atf08b9776ea6c. Exact local/fetched/live main equality, feature1be6f9bd ancestry and owned source/receipt/handover blob identity verified. Actual final merged source7520fa38 passes24 frozen stages: parser197/0/56 ignored; consumers1799/0/101 ignored; frontend2610/0/164 files; Chromium244/0 and built-browser4/0/four inspected frames; explicit reference3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo checks/docs/whitespace pass; self-review only. Public receipt/manual/status record source publication and release separation.
+- **Pending/Next Steps:** No feature work remains. This closure changes docs only; verify its normal push/readback, archive compact evidence and retire only owned checkout/branches/build/scratch. No release/deployment/hardware scope.
+- **Notes for Codex oder Claude:** Shared root stays intentionally stale/dirty; HEAD/index/foreign documents preserved. Runtime evidence is bound to7520fa38; publication/closure app inputs are equal. Tester archive and new large-project memory behavior remain unverified. Earlier lease/interrupted/pre-upstream receipts are not final acceptance. Canonical public receipt docs/evidence/project-archive-budget-2026-10-10.json; private gate evidence stays ignored under own .ai/logs archive. No subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 17:38 CEST
 - **Completed:** Owner-authorized regression integration reconciled with current upstream archive/UI package. Prior source55362f52 gate intentionally superseded after runtime inputs changed; partial evidence retained, not credited as final acceptance. Only additive handover conflict; full upstream history and own entries preserved.
 - **Pending/Next Steps:** Fresh complete merged-source gates and private original/native/product/census/instance/RefId checks on final source; final privacy/doc checks, normal main push and exact live readback. No release/deployment/hardware action.
 - **Notes for Codex oder Claude:** Own isolated integration/import-revalidation-c0e72cdb5ee5 checkout. No subagents, copied originals, private source in public files, foreign root/leases/worktrees modified. Prior feature/local receipts stay historical. Wait cooperatively on shared repository leases; no force-push or silent dropped warnings.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:34 CEST
+- **Completed:** Actual final main-integration source7520fa38 accepted after reconciling published65e1c809. Twenty-four stages exit0 with frozen inputs: parser197/0/56 ignored, consumers1799/0/101 ignored, frontend2610/0/164 files, full Chromium244/0, built-browser4/0/four frames inspected; explicit reference-container3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo gates/docs/whitespace pass. Source-bound public receipt/manual/status updated after the run; self-review only. Feature1be6f9bd included. No push yet.
+- **Pending/Next Steps:** Final documentation gates and metadata commit; fetch/inspect upstream, normal main push and exact ref/blob/ancestry readback; then owned worktree/branches/build/scratch cleanup and publication closure. No release/deployment/hardware action.
+- **Notes for Codex oder Claude:** Earlier interrupted and pre-upstream superseded attempts are distinct, not final acceptance. Runtime/test evidence is bound to7520fa38; subsequent changes are docs-only. Preserve all upstream history and foreign root/index/documents. Tester archive and new large-project peak memory remain unverified. Own integration/project-archive-1024mib-20261010 and publication scratch archive1024-publish-20261010 only.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:22
+- **Completed:** Corrected package4 private runner proc_854b5ffe9a46 exits0 for actual reconciliation/native/RefId targets; no skipped/missing-input pass. Main65e1c809 integrated as 2530ad8edc4e, both handover/log histories retained. New test 6f8ac4332c79 independently verifies complete original XML/project+product ownership and bytes, native reopen/resave and unchanged input. §1, COMPATIBILITY, ledger/open-work/status and pending receipt drafted. Unknowns/has_losses deliberately remain visible; preservation-only owner decision recorded, no runtime or F-owner change.
+- **Pending/Next Steps:** Review complete candidate, run merged-source crate/clippy/fmt/five xtask/docs/diff plus full corpus and explicit private checks; then privacy scan/no-ff push/ref equality/cleanup. Package4 NOT delivered yet. Packages5–8 actual remaining scope open; packages1,2,3,9 delivered.
+- **Notes for Codex oder Claude:** Private proof has actual pass counts but no original values/counts in public receipt. No hardware/executables/release/deployment/subagents/quota checks. Source preservation does not suppress semantic warnings. Root/foreign worktrees untouched; shared source histories preserved. Candidate gate is next, not already green.
 
 ---
 
@@ -31,25 +87,58 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:05
+- **Completed:** Package3 no-ff2e264f6c + publication65e1c809 delivered/pushed/live-ref verified and cleaned; private evidence retained here. Package4 conservative semantic-report boundary corrected in own test only: unknowns keep has_losses=true, preservation-only reconciliation proved separately. Synthetic bounds and missing/corrupt/wrong-owner controls2/0/1 green. Prior exact private RED and independent native/RefId positives preserved in has-loss-contract-red/. Corrected hardened private runner proc_854b5ffe9a46 now started with loopback-only network and ignored private TMP/XDG stores. Corpus baseline/output-safety lessons recorded in private-corpus-regression-testing reference.
+- **Pending/Next Steps:** Await current private full-original XML/project/product/unknown-source/native/RefId results; then fresh65e1c809 integration, precise §1/COMPATIBILITY/ledger/status/docs evidence/gates/self-review/privacy and package4 no-ff push. Packages5–8 unresolved remainder; packages1,2,3,9 delivered. Overall goal remains IN PROGRESS, no need for user input at this checkpoint.
+- **Notes for Codex oder Claude:** Current runner proc_854b5ffe9a46/PID8227, previous proc_7aaf1b7c7987 exited1 solely because !has_losses assertion was inappropriate; report implementation untouched. Do not weaken actual whole-source byte/owner coverage or suppress semantic-loss signal. Preserve all private original-derived values only in ignored area. No foreign F edits, hardware/vendor execution/release/deployment/subagents/quota checks. Continue from actual result, do not replay source3 delivery.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:03
+- **Completed:** Package3 fully delivered/pushed/cleaned (2e264f6c, publication65e1c809). Package4 hardened RED exposed important test-contract error: asserting !has_losses conflated byte-preservation reconciliation with import report's deliberately conservative unknown/semantic-loss signal. Production report unchanged: unknown constructs must keep has_losses=true while owner-approved source-byte reconciliation is proved independently. Synthetic future-attribute control now pins both preserved/reconciled bytes and has_losses=true. Original independent native and RefId gate exits0; hardened reconciliation prior attempt2/1, no admission claimed.
+- **Pending/Next Steps:** Rerun synthetic and corrected hardened private full-XML/project/product/persistence comparisons; integrate fresh65e1c809 main, then exact §1/COMPATIBILITY/ledger/status/receipt and package4 gates/delivery. Packages5–8 actual rest scopes remain. All-goal completion not claimed.
+- **Notes for Codex oder Claude:** Owner defined retained-uninterpreted as reconciled ONLY for byte-exact reported source; never change or suppress has_losses/unknown entries to make that green. Private report source observations/unknowns remain nonempty, errors/conflicts zero; whole original XML and correct owners must match native/product bytes. F runtime untouched. Private logs/temp/XDG under ignored area; no hardware/vendor executions/release/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:58
+- **Completed:** Package3 delivered no-ff merge2e264f6cc6ec, publication receipt65e1c809d4bd, both pushed with local/tracking/live equality. Final source gates Rust2876/0/160 Web2597/0/163, corpus143/143 across31 targets, explicit own-value1/0 RefId3/0, browser4/4; docs/repo/ledger/privacy scans green. Essential private full baseline/replay/gate evidence copied into ignored package3-delivery/ in this active worktree; completed own package3/baseline worktrees, branches and package-specific build scratch removed. Root/foreign worktrees untouched. Packages1,2,3,9 delivered.
+- **Pending/Next Steps:** Hardened package4 private runner proc_7aaf1b7c7987 currently active: full original XML/project/product evidence, unknown report reconciliation, native save/reopen/resave and RefId independent checks. Final original replay/receipt/private errors review, fresh-main65e1c809 integration, §1/COMPATIBILITY/ledger/open-work/status/docs gates and no-ff push. Packages5–8 still need remainder delivery/valid owner-bound decisions; all-goal completion not claimed.
+- **Notes for Codex oder Claude:** Package4 synthetic bounded-source and report controls2/0/1 green; whole original XML inventory must be present byte-exact, no duplicate overwrite or report losses. Original opt-in/read-only; raw bytes feed real byte importer with real productDB, generic private-source name. All native temp/XDG stores and source-derived outputs confined to ignored private area. Existing four test corrections authorized only, F runtime untouched. No hardware, vendor binary runs, release/deployment, subagents or quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:56
+- **Completed:** Package3 DELIVERED: no-ff merge 2e264f6cc6ece52cb463ed77b4fdf68cfa96706b, pushed origin/main, HEAD/tracking/live equal. Final source f4af614eac30: Rust2876/0/160, Web2597/0/163, corpus143/143 in31 targets, private own-value1/0 and RefId3/0; independent browser4/4. Fmt/clippy/tsc, five nonempty repo checks, docs/diff, fixed tracked-input binding and outgoing original-value/privacy scan green. Narrow authorized test-only correction e74be53a; no runtime/private golden values. Receipt/ledger/open-work/status published boundary scope, not Repeat/activation/writes/ETS hardware support.
+- **Pending/Next Steps:** Push this docs-only publication checkpoint after docs/privacy and live equality; copy essential private evidence to active package4 and remove own package3 worktree/branch/build scratch. Package4 hardened full-original XML/report/native/product comparison runner proc_7aaf1b7c7987 active; then remaining packages5–8 from fresh main. Packages1,2,3,9 delivered; all-goal completion NOT claimed.
+- **Notes for Codex oder Claude:** Code and UI source unchanged through merge; conservative Repeat/MI semantics stay ADR-0108 accepted read-only boundary. Owner-approved correction scope exactly existing four corpus test functions; foreign F runtime untouched. All source-derived logs/census/data remain ignored/private. Root/foreign trees untouched; no hardware/vendor code/release/deployment/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 16:52 CEST
 - **Completed:** Local F01–F09 revalidation accepted on pinned source with four synthetic regression enhancements; 19 baseline/19 candidate/9 final metadata gates, Rust3894/0, Web2596/0, nine compiled RED/restored GREEN controls and actual private CLI/source/native/product/offline checks passed. Two store-omission controls caught; original and runtime-source bytes unchanged. F10/F11 separately researched/reassessed, not newly implemented. Scoped privacy check passed; self-review only.
 - **Pending/Next Steps:** No further implementation in this scope. Owner subsequently authorized commit/push of the reviewed package on test/import-integrity-revalidation-20261010. Remote publication is verified against exact tracking/live refs separately from frozen local acceptance; no main integration, release or deployment requested.
 - **Notes for Codex oder Claude:** Private source/evidence remains ignored/restricted/untracked and must never be staged or uploaded. Preserve shared root HEAD/index/application, parallel documentation and foreign worktrees. Canonical CLI/accepted stores and compact evidence stay local. Historical no-publication statements describe the earlier verification scope, superseded only by this explicit source-branch commit/push authorization. No full ETS/signature/hardware claim.
----
-
-- **Last Agent:** codex
-- **Timestamp:** 2026-10-10 17:38 CEST
-- **Completed:** Owner-authorized archive-budget/readable-refusal source published on main atf08b9776ea6c. Exact local/fetched/live main equality, feature1be6f9bd ancestry and owned source/receipt/handover blob identity verified. Actual final merged source7520fa38 passes24 frozen stages: parser197/0/56 ignored; consumers1799/0/101 ignored; frontend2610/0/164 files; Chromium244/0 and built-browser4/0/four inspected frames; explicit reference3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo checks/docs/whitespace pass; self-review only. Public receipt/manual/status record source publication and release separation.
-- **Pending/Next Steps:** No feature work remains. This closure changes docs only; verify its normal push/readback, archive compact evidence and retire only owned checkout/branches/build/scratch. No release/deployment/hardware scope.
-- **Notes for Codex oder Claude:** Shared root stays intentionally stale/dirty; HEAD/index/foreign documents preserved. Runtime evidence is bound to7520fa38; publication/closure app inputs are equal. Tester archive and new large-project memory behavior remain unverified. Earlier lease/interrupted/pre-upstream receipts are not final acceptance. Canonical public receipt docs/evidence/project-archive-budget-2026-10-10.json; private gate evidence stays ignored under own .ai/logs archive. No subagents/quota checks.
 
 ---
 
 - **Last Agent:** codex
-- **Timestamp:** 2026-10-10 17:34 CEST
-- **Completed:** Actual final main-integration source7520fa38 accepted after reconciling published65e1c809. Twenty-four stages exit0 with frozen inputs: parser197/0/56 ignored, consumers1799/0/101 ignored, frontend2610/0/164 files, full Chromium244/0, built-browser4/0/four frames inspected; explicit reference-container3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo gates/docs/whitespace pass. Source-bound public receipt/manual/status updated after the run; self-review only. Feature1be6f9bd included. No push yet.
-- **Pending/Next Steps:** Final documentation gates and metadata commit; fetch/inspect upstream, normal main push and exact ref/blob/ancestry readback; then owned worktree/branches/build/scratch cleanup and publication closure. No release/deployment/hardware action.
-- **Notes for Codex oder Claude:** Earlier interrupted and pre-upstream superseded attempts are distinct, not final acceptance. Runtime/test evidence is bound to7520fa38; subsequent changes are docs-only. Preserve all upstream history and foreign root/index/documents. Tester archive and new large-project peak memory remain unverified. Own integration/project-archive-1024mib-20261010 and publication scratch archive1024-publish-20261010 only.
+- **Timestamp:** 2026-10-10 16:51
+- **Completed:** Final integrated package3 source f4af614eac30 passed Rust2876/0/160, Web2597/0/163, strict clippy/fmt/tsc/five nonempty repo gates/docs/diff; full corpus143/143 across31 targets, explicit private own-value1/0 and independent RefId3/0. Corpus source link removed. Four inherited test-only corrections e74be53a green after exact fresh-main RED and narrow owner approval; no runtime/private golden values. Final receipt/statuses updated, obsolete parser/corpus waiting claims superseded; accepted Repeat boundary unchanged. Completed baseline tree/branch/build target removed after private evidence copy.
+- **Pending/Next Steps:** Docs-only final gates/privacy, candidate no-ff main merge/push/live equality/cleanup for package3. Package4 bounded-source controls2/0/1 green, hardened private reconciliation+native+RefId queued under own runner proc_7aaf1b7c7987; precise §1/COMPATIBILITY/evidence delivery follows. Packages5–8 actual remaining scope still open; package9 published.
+- **Notes for Codex oder Claude:** Final runner proc_db7f6024c44e exited0 with unchanged HEAD through source/corpus/private gates. Four-case browser independently green on unchanged UI code; no new native/package claim. Own code source f4af614e; code correction e74be53a; import-owner F runtime untouched. All original-source data stays ignored/private, no hardware/executable runs/release/subagents/quota checks. Do not declare delivered before verified pushed merge.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:40
+- **Completed:** Package4 self-review tightened private reconciliation source reading: one opened regular-file handle, bounded declared/actual sizes, identical captured bytes passed to the genuine byte-import service with real product database. Duplicate retained XML identities now refuse instead of silently overwrite, and report has_losses must be false. Synthetic bounded-reader RED independently confirmed E0425; GREEN2/0/1 includes exact-bound, oversized, missing and non-regular inputs plus missing/corrupt/wrong-owner report controls. No production runtime changes.
+- **Pending/Next Steps:** Hardened private source+product+save/reopen/resave+unchanged-source run and independent native/RefId replay; source-byte-bound review/evidence, precise §1/COMPATIBILITY/ledger status and delivery. Package3 final source gates green on f4af614e; full corpus still running before admission/push. No goal completion claimed.
+- **Notes for Codex oder Claude:** Owner accepted retained-uninterpreted only when byte-exact and explicitly reported, never semantic/ETS compatibility. User source path opt-in remains required; missing source refuses. All source-derived errors/assertions static boolean; captured archive passed as generic private-source.knxproj name, data and native temp stores confined to ignored private area. No foreign runtime/worktree edits, hardware or executable unpacking/runs.
 
 ---
 
@@ -66,22 +155,6 @@
 - **Completed:** Owner-requested local archive budget and readable refusal delivery accepted in fix/project-archive-1024mib-20261010 (base d9da8e61). Cumulative expanded project budget is 1024 MiB/1073741824 bytes; 64 MiB/member, bounded reads and outer/nested identity/layout/accounting guards unchanged. Shared EN/DE presenter makes both error toast and persistent load-failure banner name the expanded size and actual server limit, without a joke or incorrect English disclosure. Unknown/unsafe text and underlying error/progress/log data remain unchanged. Named parser/toast/banner/private-use locale RED controls verified. Final parser 197/0/56 ignored; frontend 2608/0 in164 files, production build and explicit E2E type check; built offline Chromium4/4 EN/DE1440/400 with all four frames inspected; Clippy/fmt/server build/version/five nonempty repository gates/docs/whitespace pass. Self-review only. Docs and handover synchronized; owned workers/caches/probes removed, reviewed source and built frontend retained.
 - **Pending/Next Steps:** None for the requested local implementation. Changes remain uncommitted/unpublished in KNXBench.worktrees/project-archive-1024mib-20261010; integration/publication/deployment are separate scope. Tester archive was not supplied/imported; no large-project peak-memory or private-corpus acceptance.
 - **Notes for Codex oder Claude:** Evidence retained ignored at .ai/logs/2026-10-10_codex_project-archive-1024mib/final-receipt.json with actual logs/manifests/final frames. First browser fixture missed achievements bootstrap and remains a refused attempt; toast-only earlier success is not final post-banner acceptance. Existing API exposes size only in the exact verified English text; the presenter narrowly recognizes that text and otherwise preserves it. Rust inputs remain byte-identical to their accepted gate; later changes are UI/docs only. Root HEAD/index/application and foreign work were not synchronized/staged. No API/schema/protocol/dependency, release/container/hardware action. Preserve every inherited handover below.
-
----
-
-- **Last Agent:** codex
-- **Timestamp:** 2026-10-10 16:56
-- **Completed:** Package3 DELIVERED: no-ff merge 2e264f6cc6ece52cb463ed77b4fdf68cfa96706b, pushed origin/main, HEAD/tracking/live equal. Final source f4af614eac30: Rust2876/0/160, Web2597/0/163, corpus143/143 in31 targets, private own-value1/0 and RefId3/0; independent browser4/4. Fmt/clippy/tsc, five nonempty repo checks, docs/diff, fixed tracked-input binding and outgoing original-value/privacy scan green. Narrow authorized test-only correction e74be53a; no runtime/private golden values. Receipt/ledger/open-work/status published boundary scope, not Repeat/activation/writes/ETS hardware support.
-- **Pending/Next Steps:** Push this docs-only publication checkpoint after docs/privacy and live equality; copy essential private evidence to active package4 and remove own package3 worktree/branch/build scratch. Package4 hardened full-original XML/report/native/product comparison runner proc_7aaf1b7c7987 active; then remaining packages5–8 from fresh main. Packages1,2,3,9 delivered; all-goal completion NOT claimed.
-- **Notes for Codex oder Claude:** Code and UI source unchanged through merge; conservative Repeat/MI semantics stay ADR-0108 accepted read-only boundary. Owner-approved correction scope exactly existing four corpus test functions; foreign F runtime untouched. All source-derived logs/census/data remain ignored/private. Root/foreign trees untouched; no hardware/vendor code/release/deployment/subagents/quota checks.
-
----
-
-- **Last Agent:** codex
-- **Timestamp:** 2026-10-10 16:51
-- **Completed:** Final integrated package3 source f4af614eac30 passed Rust2876/0/160, Web2597/0/163, strict clippy/fmt/tsc/five nonempty repo gates/docs/diff; full corpus143/143 across31 targets, explicit private own-value1/0 and independent RefId3/0. Corpus source link removed. Four inherited test-only corrections e74be53a green after exact fresh-main RED and narrow owner approval; no runtime/private golden values. Final receipt/statuses updated, obsolete parser/corpus waiting claims superseded; accepted Repeat boundary unchanged. Completed baseline tree/branch/build target removed after private evidence copy.
-- **Pending/Next Steps:** Docs-only final gates/privacy, candidate no-ff main merge/push/live equality/cleanup for package3. Package4 bounded-source controls2/0/1 green, hardened private reconciliation+native+RefId queued under own runner proc_7aaf1b7c7987; precise §1/COMPATIBILITY/evidence delivery follows. Packages5–8 actual remaining scope still open; package9 published.
-- **Notes for Codex oder Claude:** Final runner proc_db7f6024c44e exited0 with unchanged HEAD through source/corpus/private gates. Four-case browser independently green on unchanged UI code; no new native/package claim. Own code source f4af614e; code correction e74be53a; import-owner F runtime untouched. All original-source data stays ignored/private, no hardware/executable runs/release/subagents/quota checks. Do not declare delivered before verified pushed merge.
 
 ---
 
@@ -111,6 +184,14 @@
 
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-10 15:28
+- **Completed:** Package9 delivered at no-ff3a303787 and publication receipt d9da8e61; own/tracking/live equality verified, research worktree/branch/dedicated scratch cleaned; compact evidence retained here privately. Package4 preliminary original unknown/report/source reconciliation passed, original/native roundtrip and mandatory RefId checks passed explicitly. Synthetic positive/missing/corrupt/wrong-owner controls pass after including both original XML members; absent env and missing file intentionally refuse with exit101. Private errors redacted and actual cumulative byte budget hardened.
+- **Pending/Next Steps:** Package4 final hardened positive replay, focused/public gates, review, KL-1/COMPATIBILITY/Ledger/OPEN_WORK docs and publication pending. Package3 is NOT delivered: integrated corpus replay found four inherited unchanged assertion failures, fresh-main baseline running before owner-bound edits. Other residual packages still open; no whole-goal completion.
+- **Notes for Codex oder Claude:** No foreign file/worktree, root code or shared Git configuration modified. No hardware, vendor code, release/deployment, subagents or quota checks. Four failures are test-contract candidates, not yet attributed to baseline by execution. Private result payloads remain ignored/local, no original counts or strings in shared evidence. Preserve this active gate/evidence state until owner resolution; do not relabel old successful gates as current-main success.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 15:28
 - **Completed:** Package3 actual integrated broad source gate passed2876 Rust/2597 Web; fmt/clippy/tsc, five nonempty repository checks and docs/diff pass. Full integrated corpus replay subsequently failed in four inherited assertions in unchanged files (etsproj lib.rs548, report.rs463; server http_project_routes.rs47, open_reference_project.rs28). Corpus failure is recorded in receipt, not suppressed. Package9 delivered to main d9da8e61 with own/tracking/live readback and cleanup.
 - **Pending/Next Steps:** Fresh-main baseline d9da8e61 runs in own schema23-corpus-baseline worktree with a fresh Cargo target; no baseline failure claimed before its result. Need genuine owner permission before changing import-integrity-owned files if stale contracts confirmed. Browser replay, repair/full corpus, final gates/privacy/no-ff/push for package3 still pending. Package4 preliminary original/native/RefId positives and repaired public controls passed, but hardened final private replay and delivery pending.
 - **Notes for Codex oder Claude:** No foreign file/worktree, root code or shared Git configuration modified. No hardware, vendor code, release/deployment, subagents or quota checks. Four failures are test-contract candidates, not yet attributed to baseline by execution. Private result payloads remain ignored/local, no original counts or strings in shared evidence. Preserve this active gate/evidence state until owner resolution; do not relabel old successful gates as current-main success.
@@ -130,6 +211,14 @@
 - **Completed:** Package9 public-only research complete in4fd23f6ac4fe; actual no-ff candidate a3f88cac2b72 passes97 xtask unit tests, strict clippy/fmt, five repository gates and docs/diff. Citation evidence validation passes. Only docs and handover differ from main; no runtime encoding support added. KL-170–172 remain LATER with explicit per-type/field/payload specification gaps.
 - **Pending/Next Steps:** Closure-doc checks, outgoing source-value privacy scan, normal main push/ref readback, task-owned cleanup. Package3 integrated broad gate passed2876 Rust/2597 Web; its actual integrated corpus/browser replay is separately queued. Package4 new source-report reconciliation controls/genuine original tests are running, no pass claimed yet. KL-173 residual audit, KL-174/175 and146 still open.
 - **Notes for Codex oder Claude:** Source-bearing results remain ignored/local. Research outcome is bounded lack of sufficient evidence, not a universal absence claim. No full ETS, hardware, private decode, executable, release or deployment support. Preserve all owners' handovers on later merges; shared root deliberately stale.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 14:54
+- **Completed:** Package4 from fresh origin/main9a5b55fe; reread required private/upstream sources. Owner accepted byte-exact retained-uninterpreted data as reconciled when explicitly reported, without semantic/ETS claims. New explicit opt-in source-report reconciliation test written, with synthetic missing/corrupt/wrong-owner negative controls. It binds unknown findings to independent indexed XML source bytes and native/product retained bytes, checks save/reopen/resave and unchanged source. No F01–F09 production changes duplicated.
+- **Pending/Next Steps:** Execute public controls and configured original/project/product and RefId gates; no pass claimed before actual results. Then reconcile KL-1/COMPATIBILITY/status docs, self-review, full relevant gates/corpus, privacy scan/no-ff/push/equality/cleanup. Package3 broad and package9 docs gates remain queued on shared locks in their own worktrees.
+- **Notes for Codex oder Claude:** New private test is ignored/env-gated and uses bool assertions; source-bearing output only under ignored private analysis. Unknown presence is still a report fact, not suppressed. Native/model12 unchanged. Foreign/root worktrees, gate owners and processes untouched; no hardware or nested app payload extraction.
 
 ---
 

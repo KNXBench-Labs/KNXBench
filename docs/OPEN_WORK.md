@@ -22,6 +22,16 @@ counts below remain historical. What remains is
 and publication follow-up, (3) deferred items with a recorded user decision, and
 (4) later scope that never was an alpha task.
 
+## Alpha.8 publication boundary
+
+Alpha.8 packages the published selective-import, import-integrity, read-only
+instance-value and archive-budget source changes. It does not complete the
+remaining KL-175/146 follow-ups, externally blocked revision-export proof or
+unmerged Functions/Sites work. Native/model schema12 requires independent
+backups; a release is not a new ETS/hardware claim.
+[Release notes](releases/alpha8.md). Dated source-package no-release statements
+below remain historical, not a claim that Alpha.8 was never published.
+
 ## Public-source research follow-up (10 October 2026)
 
 Package 9's bounded research pass for KL-170, KL-171 and KL-172 is complete in

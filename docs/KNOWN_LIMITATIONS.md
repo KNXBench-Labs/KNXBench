@@ -4503,7 +4503,7 @@ added by AR10 is prose: the new language markers are identifiers.
 ## 68. Repeat activation stays unsupported; own instance values are readable
 
 **Update 2026-10-10 — read-only instance dimension delivered in code.**
-[ADR-0107](adr/0108-read-only-module-instance-values.md) separates stored
+[ADR-0108](adr/0108-read-only-module-instance-values.md) separates stored
 instance evidence from Dynamic evaluation. `ValueMap` now has a separate
 `(module_id, instance_id, ref_id)` map. The device evaluator validates the
 imported owner and a unique declaration, then records each recognized instance's
@@ -4537,12 +4537,12 @@ independence and legacy aliases); `http_repeated_instance_values`; unchanged
 and browser witnesses. Code `d050c7e78b02`.
 [Receipt](evidence/kl68-instance-values-2026-10-10.json).
 
-**Private verification is not passed on this basis.** The ignored opt-in
-`private_instances_read_their_own_stored_values` refuses without its configured
-input and uses boolean assertions. On basis `8901affa` the genuine project
-parser refuses before comparison. Owner authorized this narrowly tested
-read-only delivery with that comparison explicitly waiting on import-integrity;
-rerun after integration. Whole-project reconciliation is a separate KL-1 gate.
+**Private verification passed after import integration (2026-10-10).** The
+ignored opt-in `private_instances_read_their_own_stored_values` ran explicitly
+on `734064823e19` and passed with boolean assertions; the independent private
+RefId gate passed too. Missing input still refuses, never passes. The earlier
+parser refusal on `8901affa` is historical, not the current result.
+Whole-project reconciliation remains a separate KL-1 gate.
 Full Repeat support remains an accepted boundary (PDB-01).
 
 ## 69. A `Module` with no `@Id` cannot be matched to a project instance

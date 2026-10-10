@@ -54,7 +54,8 @@ map is derived per device, preventing cross-device source-id collisions.
 Synthetic fixtures use nested Channel/ParameterBlock/choose/when/Repeat
 wrappers, not a root-only Module shortcut. An optional private comparison
 must refuse missing input and assert booleans only; complete original import
-acceptance waits for the independent import-integrity package.
+acceptance is separate; the explicit own-value comparison passed after
+integrating the independent import-integrity package.
 
 KL-68's value association can improve without lifting PDB-01's Repeat
 expansion boundary. A future expansion needs documented iteration matching,

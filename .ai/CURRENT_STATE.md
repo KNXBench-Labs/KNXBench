@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 14:38
+- **Completed:** Import-integrity origin/main9a5b55fe integrated in own package3 worktree; additive conflicts retain both owners. Own instance ADR renumbered0108; imported ADR0107 unchanged. Explicit private own-value1/0 and RefId3/0 gates passed on734064823e19 with boolean assertions, source-bearing logs only in ignored private evidence. Owner chose byte-exact, explicitly reported retained-uninterpreted data as reconciled for KL-1, not semantically supported. Old8901affa parser refusal is superseded.
+- **Pending/Next Steps:** Full affected-crate/Web/corpus gates on actual no-ff package3 candidate, self-review/privacy scan, push and exact ref equality, owned cleanup. Then KL-1 original/report gate with chosen reconciliation, KL-173 rest audit, KL-174 classification, KL-175 marked raw, KL-146 differential gate and KL-170–172 public research. No package3 published claim yet.
+- **Notes for Codex oder Claude:** F01–F09 are upstream; never reimplement them. Model12 native barrier introduces no new instance storage requirement. Private own-value acceptance does not settle RepeatIndex or ETS activation. Root remains stale/untouched; no bus, binaries, deployment, release or subagents.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 14:09 CEST
 - **Completed:** User-requested remote recheck confirms import-integrity is now on fetched origin/main `ab77a0e7efdd`. Tested import revision `367405f1` is an ancestor; source changes include parser/container/report, application import, product diagnostics, native store/model12, server/log handling and web log tests. Published integration status is `docs/status/2026-10-10-import-integrity-integration.md`; its acceptance is the other session's self-review evidence, not a newly executed local private pass. The earlier `6ac34e61` was only catalogue documentation. Own package3 complete dependency snapshot `8b7a9dc61516`, catalogue integration `8f3290c4eb86`; last relevant integrated package gate exited0 before import-integrity landed.
 - **Pending/Next Steps:** Own worktree has NOT integrated `ab77a0e7` yet. Preserve both handovers/status entries, reconcile the two distinct ADR-0107 documents, rerun private own-instance and schema23 gates plus merged-source gates. Prior old-basis parser refusal does not prove the new import source remains blocked. Then package3 merge/push acceptance and dependent packages4–8; research/owner decisions remain separate prerequisites. Receipt provenance amendment is currently uncommitted.

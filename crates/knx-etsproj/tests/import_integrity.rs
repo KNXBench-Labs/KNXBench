@@ -326,17 +326,44 @@ fn modern_completion_status_is_not_replaced_by_a_default() {
 
 #[test]
 fn metadata_attributes_have_their_actual_source_file() {
+    let dev = device(r#"<GroupObjectTree GroupObjectInstances="O-7_R-1"/>"#).replace(
+        "<DeviceInstance ",
+        "<DeviceInstance Comment=\"synthetic-topology-comment\" Extra=\"synthetic-topology-extra\" ",
+    );
     let result = import_knxproj_bytes(
         fixture(
             23,
-            "<Topology/>",
+            &topology(&dev),
             r#"<ProjectInformation Comment="synthetic-comment" Extra="synthetic-extra"/>"#,
         ),
         "synthetic.knxproj",
     )
     .unwrap();
-    for name in ["Comment", "Extra"] {
-        let e = result.opaque.iter().find(|e| e.name == name).unwrap();
-        assert_eq!(e.source_path, "P-0001/project.xml");
+    assert_eq!(result.report.error_count(), 0);
+    for (name, metadata, topology) in [
+        ("Comment", "synthetic-comment", "synthetic-topology-comment"),
+        ("Extra", "synthetic-extra", "synthetic-topology-extra"),
+    ] {
+        let entries: Vec<_> = result.opaque.iter().filter(|e| e.name == name).collect();
+        assert_eq!(entries.len(), 2);
+        assert!(entries
+            .iter()
+            .any(|e| e.source_path == "P-0001/project.xml" && e.bytes == metadata.as_bytes()));
+        assert!(entries
+            .iter()
+            .any(|e| e.source_path == "P-0001/0.xml" && e.bytes == topology.as_bytes()));
+        let report_entries: Vec<_> = result
+            .report
+            .opaque
+            .iter()
+            .filter(|e| e.name == name)
+            .collect();
+        assert_eq!(report_entries.len(), 2);
+        assert!(report_entries
+            .iter()
+            .any(|e| e.source_path == "P-0001/0.xml"));
+        assert!(report_entries
+            .iter()
+            .any(|e| e.source_path == "P-0001/project.xml"));
     }
 }

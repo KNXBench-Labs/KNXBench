@@ -1,5 +1,26 @@
 # Compatibility
 
+## Independent schema-23 source reconciliation (2026-10-10)
+
+The opt-in `private_original_unknown_report_is_backed_by_exact_retained_sources`
+(`6f8ac4332c79`) exercises the unchanged source through the real project and
+embedded-product import. Independent original XML inventory matches retained
+native/product source bytes and source ownership; native reopen/resave and the
+separate production RefId gate pass. The owner accepts explicitly reported
+retained-uninterpreted bytes as **preservation-only reconciliation** for KL-1.
+Unknown entries remain visible and `ImportReport.has_losses()` remains true;
+that conservative semantic-loss signal is not a failed byte-preservation proof.
+This narrows the independent module-using schema-23 evidence gap only. It does
+not certify all schema-23 semantics, Repeat evaluation, manufacturer programs,
+ETS export, Secure or hardware behavior. Schemas 12/13/14/20/22 remain outside
+this evidence. [Receipt](evidence/kl1-source-reconciliation-2026-10-10.json).
+
+
+Final source acceptance `382ab577` includes full corpus, private production
+reconciliation/native/RefId and synthetic browser gates; additional upstream
+regression tests pass on `dd4b8165`. This is source-preservation evidence, not
+ETS semantic or hardware certification.
+
 ## Local bounded import-integrity changes (2026-10-10)
 
 [IMPORT_INTEGRITY](IMPORT_INTEGRITY.md) distinguishes byte retention, lexical observation, typed mapping and hardware support. Object-tree and unassigned-device repairs do not certify complete manufacturer/runtime semantics. Native12 prevents old decoders from erasing the expanded completion vocabulary; back up before upgrading and do not expect downgrade. New local sources are not changes to published alpha.7 artifacts.

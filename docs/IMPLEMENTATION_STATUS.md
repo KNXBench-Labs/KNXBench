@@ -1,4 +1,41 @@
+## 2026-10-10 — KL-68/PDB-01 final integrated source admission
+
+Final corrected source `f4af614eac30`: eight Rust crates2876/0/160,
+Web2597/0/163, corpus143/143 across31 nonempty targets; own-value1/0 and RefId3/0.
+Fmt, strict clippy, tsc, five repo checks, documentation/diff and fixed-input
+binding passed. Browser4/4 independently passed on unchanged UI source.
+Four inherited tests were corrected only after full fresh-main RED baseline and
+narrow owner authorization (`e74be53a`); no runtime or private golden values added.
+Read-only own raw values remain separate from Dynamic inputs, defaults and
+siblings; Repeat/activation/write boundaries remain. Published no-ff merge `2e264f6cc6ec`, HEAD/tracking/live equal. [Evidence](evidence/kl68-instance-values-2026-10-10.json).
+
 # IMPLEMENTATION_STATUS.md
+
+## 2026-10-10 — KL-68/PDB-01: own stored module-instance values, read-only
+
+Code `d050c7e78b02` adds a separate instance dimension, independent of defaults,
+siblings and Dynamic evaluation. Validated stored evidence is exposed through
+HTTP `instanceValues`, the Inspector and both MCP readers (`notEvaluated`).
+Legacy single-instance write authority remains unchanged; conflicting declarations
+and identities cannot authorize the new map. Repeat activation/mapping stays
+unsupported (ADR-0108). Rust1793/0, Web2596/0, Clippy, TypeScript, five xtask
+checks, documentation checks, corpus runner and four en/de browser cases passed;
+two focused mutants were caught. In-session self-review only. After integrating
+import-integrity, the explicit own-value and independent RefId gates pass on
+`734064823e19`; the earlier parser refusal on `8901affa` is superseded.
+Merged-source broad acceptance and publication are recorded separately.
+[Receipt](evidence/kl68-instance-values-2026-10-10.json).
+
+## 2026-10-10 — KL-170–172 public-source research (no runtime change)
+
+The requested public-only research pass is complete; insufficient contracts
+remain explicitly documented in [the source review](research/schema23-offline-boundaries.md).
+Project Schema23 identifies loaded-image fields; RFC3629 defines UTF-8, not KNX
+field policy. No little-endian layout, KNX text-capacity or decoded-image contract
+was admitted. Implementation boundaries unchanged; no private decode or bus use.
+Actual no-ff candidate `a3f88cac2b72` passes 97 xtask tests, strict Clippy/fmt,
+all five repository gates and documentation/whitespace checks.
+[Receipt](evidence/schema23-public-research-2026-10-10.json).
 
 ## 2026-10-10 — Import-integrity merged candidate accepted
 

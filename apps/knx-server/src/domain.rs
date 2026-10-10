@@ -4817,6 +4817,7 @@ fn empty_assembly(stale: Vec<(String, String)>) -> PanelAssembly {
             program_id: None,
             source_language: None,
             sections: vec![],
+            instance_values: vec![],
             stale: stale
                 .into_iter()
                 .map(|(ets_id, raw)| crate::routes::StaleParameterDto { ets_id, raw })
@@ -4839,6 +4840,7 @@ struct DeviceEvaluation {
     supplied: HashMap<String, String>,
     validated_scoped: HashMap<(String, String), String>,
     stale: Vec<crate::routes::StaleParameterDto>,
+    instance_values: Vec<crate::routes::StaleParameterDto>,
     /// Pass A/B diagnostics, in the order the panel has always listed them.
     diagnostics: Vec<crate::routes::ParameterDiagnosticDto>,
     values: knx_productdb::dynamic::ValueMap,
@@ -4858,7 +4860,23 @@ fn evaluate_device(
         module_instances,
     )
     .map_err(|e| e.to_string())?;
+    let mut instance_values: Vec<_> = evaluation
+        .instance_scoped_ids
+        .iter()
+        .filter(|(ets_id, _)| !evaluation.scoped_ids.contains_key(*ets_id))
+        .filter_map(|(ets_id, (module, instance, declared))| {
+            evaluation
+                .values
+                .get_instance(module, instance, declared)
+                .map(|raw| crate::routes::StaleParameterDto {
+                    ets_id: ets_id.clone(),
+                    raw: raw.into(),
+                })
+        })
+        .collect();
+    instance_values.sort_by(|a, b| a.ets_id.cmp(&b.ets_id));
     Ok(DeviceEvaluation {
+        instance_values,
         ref_ids: evaluation.ref_ids,
         supplied: evaluation.supplied,
         validated_scoped: evaluation.validated_scoped,
@@ -4959,6 +4977,7 @@ fn assemble_parameter_panel(
         supplied,
         validated_scoped,
         stale,
+        instance_values,
         diagnostics: evaluation_diagnostics,
         values,
         activation,
@@ -5259,6 +5278,7 @@ fn assemble_parameter_panel(
             source_language,
             sections,
             stale,
+            instance_values,
             diagnostics,
             tree: None,
         },

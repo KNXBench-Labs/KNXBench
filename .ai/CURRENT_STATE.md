@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 00:36
+- **Completed:** AP1/R-SEC-01 docs-only main publication f6c3f64d4ece02fb6c6ea2b7a26d6735a0e47f6a read back HEAD=tracking=live; nine exact owned documentation paths, no runtime Secure implementation. AP2 foundation main-integrated source303c47bd013feea5e1244b939c0bdc224fa30722 accepted:219 ordinary owning-crate tests,56 ignored/unadmitted, three existing native-roundtrip tests (one covers five original-preservation cases),22 adapter controls, Clippy/format/docs/whitespace, frozen inputs. Public compact foundation receipt added; metadata gates/publication next.
+- **Pending/Next Steps:** Publish only bounded AP2 foundation after metadata/fresh-root gates; full AP2 original-bound editor/service/history/edited-value Save-Reopen/browser remains. AP8 separate source181/0/full real report accepted pending ID audit/collector commit/report delivery; AP3–AP7/AP9 still open. Continue goal, no permission/quota stop.
+- **Notes for Codex oder Claude:** Research publication supersedes historical pending AP1 lines below, not their original acceptance. Foundation is not a whole editor or ETS/hardware claim; skipped tests are not counted as passed. Native import caller explicitly saves model; source inspection never mutates original. Preserve inherited handovers/shared root/index, immutable Alpha8 release, foreign shell/styles/catalogues and private data. No live operations, subagents, quota/release/deployment.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 00:29
 - **Completed:** AP2 bounded pure RTF adapter/writer on admitted InstallationHints scope. Initial real baseline1/15 RED, retained compile refusal, corrected16/0; expanded22/0. Existing native target now1/0 for five synthetic original-preservation inputs, repeated saves/close/reopen and full model/opaque equality. First native attempt failed NotSaved due omitted explicit caller model-save; corrected test only, no importer/store change. Final expanded source hashes frozen.
 - **Pending/Next Steps:** Integrate published AP1/current main into this owned branch, review/owning-crate build/clippy/docs/ordinary regressions and publish only the bounded foundation. Full AP2 editor/service mutation/history/edited-value native/browser acceptance remain. AP3–AP7 and AP9 pending; AP8 separate181/0 suite and real pinned-main CSS report passed but full ID/review/publication pending. Goal incomplete.

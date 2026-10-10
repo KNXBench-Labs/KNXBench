@@ -1,5 +1,21 @@
 # Known limitations
 
+## Private schema-23 sample review (2026-10-10)
+
+The owner asked for a read-only review of a privately supplied, independently
+produced ETS6 schema-23 project against this file. The project is not in the
+repository; only generic findings appear here and its evidence stays local.
+It meets §125's lifting condition (lifted below) and adds evidence to §1,
+§11, §52, §68 and §146 without lifting them. New limitations found on the way:
+§170–§175. Updates also went into §6 and §134 (ETS app packages, add-in data),
+§8 (secure-capable programs), §106 (endpoints in retained source attributes)
+and the PDB-9 boundary (grid layout, value forms).
+
+The current importer does not yet import that project end to end. Archive
+name lookup, `Node`-style object trees and unassigned devices are being
+repaired in a separate import-integrity package; nothing here claims that
+work. Private opt-in gate: `a_second_schema_23_project_resolves_every_object_id_through_the_production_rules` (`crates/knx-etsproj/tests/private_schema23_refids.rs`, `KNXBENCH_PRIVATE_SCHEMA23_PROJECT`). [Receipt](evidence/private-schema23-kl-review-2026-10-10.json).
+
 ## Selective import and evidence boundaries (2026-10-10 source integration)
 
 [Separate integration verification](status/2026-10-10-import-expansion-integration.md) supersedes the local-only delivery status, not its historical test results. This is source integration, not a new release or deployment.
@@ -644,6 +660,17 @@ live test of this view.
 
 ## PDB-9 parameter and Dynamic coverage boundary
 
+**Update 2026-10-10 (two observations, no change).** From programs embedded in
+a privately supplied project. **Grid layout:** some `ParameterBlock`s use
+`Layout` with `Rows`/`Columns` and `Cell` positions. The evaluator treats
+`Rows`/`Columns` as recognized-inert and reports `Cell` as an unknown
+attribute, so such fields render as a list, not a grid. **Value forms:**
+project values of `TypeColor` parameters occur in more than one lexical form
+(plain digits and hex-like strings without prefix), `TypeFloat` values as
+integer and decimal, `TypeTime` values as integer. `PDB-05`'s
+non-empty/XML-safe floor stays. No encoding is inferred from these occurrences
+and raw values are never normalized.
+
 Since schema v15 ([ADR-0041](adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md))
 every `ParameterType` kind observed in the corpus is stored as its own kind,
 and a reference below a Dynamic node refused for a structural reason is named
@@ -776,6 +803,24 @@ are **not** open issues. The numbers are intentionally not reused.
 <a id="10-project-licence--resolved-2026-09-16"></a> <a id="10-the-project-licence-is-not-decided"></a> <a id="103-unsaved-is-inferred-from-the-undo-stack-not-a-real-dirty-flag"></a> <a id="103-unsaved-is-inferred-from-the-undo-stack-not-a-real-dirty-flag--resolved"></a> <a id="11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly"></a> <a id="117-read_on_init_flag-is-parsed-and-stored-then-discarded-before-it-reaches-knx-core"></a> <a id="118-a-succeeded-project-load-announces-nothing-to-a-screen-reader"></a> <a id="118-a-succeeded-project-load-announces-nothing-to-a-screen-reader--resolved"></a> <a id="119-on-this-machines-ntfs3-mount-cargo-has-rebuilt-from-a-stale-fingerprint--a-green-gate-is-not-evidence-by-itself"></a> <a id="120-nothing-checks-that-a-theme-is-legible"></a> <a id="120-nothing-checks-that-a-theme-is-legible--resolved-by-the-role-pair-contrast-gate"></a> <a id="122-resolved-settings-file-diagnostics-follow-the-ui-language"></a> <a id="122-settings-file-notices-reach-the-user-in-english-only"></a> <a id="123-resolved-group-addresses-no-longer-use-dotted-display-notation"></a> <a id="131-seventy-two-corpus-gates-repo-wide-still-pass-when-the-corpus-is-absent"></a> <a id="132-the-window-managers-close-button-quits-the-desktop-app-without-the-unsaved-changes-prompt"></a> <a id="147-a-received-telegrams-priority-repeat-flag-and-hop-count-are-not-kept--lifted-2026-09-30"></a> <a id="148-the-contributor-license-agreement-is-not-reviewed-by-a-lawyer-and-nothing-enforces-it--withdrawn-2026-09-30"></a> <a id="17-deleting-a-group-address-can-leave-a-dangling-grouplink--resolved"></a> <a id="19-a-search-result-inside-a-collapsed-tree-branch-is-not-revealed"></a> <a id="19-a-search-result-inside-a-collapsed-tree-branch-is-not-revealed--resolved-2026-09-22-t12"></a> <a id="21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved"></a> <a id="21-resolved-export-refuses-a-group-address-without-a-range"></a> <a id="22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback"></a> <a id="22-the-webdocker-deployment-target-has-no-authentication"></a> <a id="25-resolved-the-web-package-and-docker-frontend-stage-use-node-22"></a> <a id="27-tunnelclient-heartbeat-retry-has-a-narrow-race-condition--resolved"></a> <a id="28-tunnelclient-subscribers-receive-no-signal-when-the-tunnel-closes--resolved"></a> <a id="30-apiprojectdownload-has-no-frontend-caller"></a> <a id="30-apiprojectdownload-has-no-frontend-caller--resolved-2026-09-22"></a> <a id="32-routing_busy-is-logged-not-honored-by-routingclient--resolved"></a> <a id="33-routingclients-round-trip-test-transmitted-on-the-physical-lan-not-on-loopback--resolved-2026-09-20"></a> <a id="34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes--resolved-2026-09-20"></a> <a id="35-device-creation-enrichmentissues-are-silently-dropped--resolved-2026-09-10"></a> <a id="4-round-trips-are-semantic-not-byte-exact"></a> <a id="4-round-trips-are-semantic-not-byte-exact--closed-2026-09-20-export-withdrawn"></a> <a id="49-project-documentation-export-has-an-in-application-preview-and-print-action"></a> <a id="49-project-documentation-export-has-no-in-application-print-preview"></a> <a id="5-exports-are-unsigned-and-ets-acceptance-is-untested"></a> <a id="5-exports-are-unsigned-and-ets-acceptance-is-untested--closed-2026-09-20-export-withdrawn"></a> <a id="50-project-documentation-export-has-no-section-selection"></a> <a id="50-project-documentation-export-has-section-selection-in-the-web-ui"></a> <a id="57-project-diff-cannot-compare-against-a-raw-knxproj"></a> <a id="57-raw-knxproj-comparison-is-available-on-the-cli-and-in-the-web-ui"></a> <a id="58-project-diff-has-an-opt-in-ci-exit-code-contract"></a> <a id="58-project-diff-has-no-ci-friendly-exit-nonzero-on-any-difference-flag"></a> <a id="59-project-diff-exposes-beforeafter-values-but-the-web-panel-does-not-render-them-yet"></a> <a id="59-project-diff-shows-beforeafter-values-in-cli-api-and-web-panel"></a> <a id="59-project-diffs-text-and-web-renderers-show-which-fields-changed-not-their-beforeafter-values-for-most-entity-types"></a> <a id="60-project-diffs-web-panel-shows-grouped-counts-only"></a> <a id="67-a-rejected-language-packs-own-reason-was-shown-untranslated-inside-a-translated-sentence--resolved-2026-09-14-t14"></a> <a id="80-a-project-can-be-created-from-scratch-in-the-ui--resolved-2026-09-16-goal-task-17"></a> <a id="81-new_project_impl-refuses-on-can-undo-not-on-is-dirty"></a> <a id="81-new_project_impl-refuses-on-can-undo-not-on-is-dirty--resolved"></a> <a id="83-the-from-scratch-launcher-is-browser-verified--resolved-2026-09-16-goal-task-17"></a> <a id="84-a-projects-group-address-style-can-be-chosen-and-afterwards-never-seen--resolved-2026-09-14-t4"></a> <a id="89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import"></a> <a id="89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import--resolved-2026-09-22"></a> <a id="91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started"></a> <a id="91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started--resolved"></a> <a id="92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device"></a> <a id="96-a-browser-that-loses-the-import-response-cannot-get-the-project-back-without-reloading"></a>
 
 ## 1. Single-sample bias
+
+**Update 2026-10-10 (private schema-23 sample; evidence, not lifted).** A
+privately supplied, independently produced, module-using schema-23 project
+now exists locally. Counted outside the importer with the production rules,
+every module object id (`MD-…_M-…_MI-…_O-<a>-<b>_R-…`) resolves through
+`module_com_object_ref` to its program's `ModuleDef` `ComObjectRef`, and the
+referenced `ComObject/@Number` equals `<b>` every time (§125's private gate).
+A read-only census also resolved every `ModuleInstance`, module argument and
+module-scoped `ParameterInstanceRef` against the embedded programs. So the
+schema-21 module rule holds on independent schema-23 data. The same sample
+shows that the `SCHEMA_23` element table's inference was incomplete. It lacks
+the `GroupObjectTree/Nodes/Node` shape and the `Topology/UnassignedDevices`
+device grammar, so the current importer skips those subtrees. Lifting still
+needs that project imported with its unknown-construct report reconciled to
+empty. The project also carries uninterpreted device extensions
+(`ChannelInstances`, `AdditionalAddresses`, `IPConfig`) and project metadata.
+Whether retained-but-uninterpreted data counts as "reconciled" needs an owner
+decision. Schemas 12/13/14/20/22 are unaffected.
 
 **Limitation.** Everything verified about the `.knxproj` format comes from two
 installations: the "Unser Zuhause" project (schema 11, ETS 4.1.8, and schema
@@ -1267,6 +1312,11 @@ by this slice.
 
 ## 6. Devices behind vendor plug-in DLLs
 
+**Update 2026-10-10.** Vendor code also reaches a project outside
+manufacturer baggage: ETS app packages under `P-…/UserFiles/` and add-in data
+under `P-…/AddinData/`. Neither is executed or unpacked, but the import report
+does not say what they are. See §174.
+
 **Limitation.** Devices whose configuration depends on a vendor plug-in DLL
 cannot be configured by this application (risk R5).
 
@@ -1371,6 +1421,16 @@ rollback or RF hardware support is established by one device.
 
 ## 8. KNX Secure is not implemented
 
+**Update 2026-10-10 (secure-capable programs in a plain project).** The
+program attribute `IsSecureEnabled` is stored as catalogue text (PDB-7) and is
+not consulted by readiness, planning or download. A privately supplied project
+contains secure-capable programs but no device `Security` element and no
+secure group addresses. Whether such devices need anything beyond a plain
+download while Secure is not activated is unverified. The `A_Key_Write`
+refusal (§112) only applies to plans that declare access keys. Needed before
+any such device counts as verified: a synthetic "secure-capable, not
+activated" case and a documented source.
+
 **Limitation.** No Data Secure, no IP Secure, no keyring handling (RESEARCH
 §9).
 
@@ -1421,6 +1481,16 @@ upgrades an older-schema working file in place (§157). Recipe in the manual:
 [Reviewing project versions in Git](manual/user-guide/08-reports-and-diff.md#reviewing-project-versions-in-git).
 
 ## 11. `.knxprod` support is evidenced for schemes 11, 12, 13, 14, 20, and exact-namespace 21
+
+**Update 2026-10-10 (evidence only).** A privately supplied ETS6 project embeds
+every application program in exact namespace 23. These include programs ETS
+converted from pre-ETS4 sources (`PreEts4Style`, `Legacy*` options) and use
+`Script`, `ParameterCalculation`, `ParameterValidation`, `Allocator`, `Repeat`,
+`Union`, `Rename`, `Assign`, `Message`, `BinaryData` and image-property load
+procedures, but no nested `ModuleDef`s and no duplicate ids within one program
+file. This widens the evidence for the exact-23 path (§153) beyond standalone
+`.knxprod` files. No status change; it does not replace the application-program
+XSD (`IMPORT-06`).
 
 **Current reading, 2026-10-08:** accepted namespaces are 10/11/12/13/14/20
 and exact 21/23. Unsupported namespaces, encrypted modern packages and `.vd2`
@@ -3099,6 +3169,13 @@ output is a separate decision to make once evidence exists.
 
 ## 52. Project diff cannot correlate a device with no individual address and no matching `ets_id`
 
+**Update 2026-10-10 (case observed).** The zero corpus count no longer holds.
+The privately supplied schema-23 project has a device in
+`Topology/UnassignedDevices` with no individual address and no serial number,
+so only its ETS id can correlate it. Whether `Puid` or another attribute stays
+stable across re-exports is unverified (§54), so no fallback key is
+introduced. The ranking argument below is withdrawn; behaviour is unchanged.
+
 **Limitation.** A device's natural key
 (`docs/superpowers/specs/2026-09-10-project-diff-design.md` §3.4) is its
 individual `address`, and only when `Some`. A device with no individual
@@ -4401,6 +4478,24 @@ the report's detailed labels are §48's accepted boundary. No server string
 added by AR10 is prose: the new language markers are identifiers.
 
 ## 68. Repeated module instantiation is refused, not supported
+
+**Update 2026-10-10 (now observed; still refused).** The privately supplied
+schema-23 project exercises exactly this case. Some devices instantiate one
+module more than once (`MI-` above 1). Their `RepeatIndex` comes in a one-pair
+(`<XmlOrder>x<counter>`) and a two-pair form, with counters above 1, and the
+program-side `Module`s sit under `Repeat` elements controlled by
+`@ParameterRefId` (no `@Count`). In a read-only census, the observed counters
+of every repeat stay within `1..N`, where N is the controlling parameter's
+project value or program default. Sometimes they cover the whole range,
+sometimes a subset; they never exceed N. Module-scoped parameter and object ids
+carry the `MI-` segment, so the source does tell the instances apart. The "0/32
+… nothing observed regresses" statement below no longer holds: once that
+project imports, its repeated modules fall back to read-only fields evaluated
+with program defaults in every copy. The sample is the "authorized multi-repeat
+fixture" that `PDB-01` names as missing input. Lifting still needs the
+`RepeatIndex`/`MI-` semantics (including why some counters are absent) in an
+ADR, a `ValueMap` instance dimension, and synthetic fixtures that copy the real
+wrapper shape.
 
 **Limitation.** When two or more `ModuleInstance` elements in a project
 share one `RefId` — a genuinely repeated module, i.e. its `MI-` component
@@ -6138,6 +6233,17 @@ The residual is *wire-level evidence*, not the old low-priority encoder bug.
 
 ## 106. The debug report redacts four pattern classes, and nothing else
 
+**Update 2026-10-10 (retained source attributes).** Imported projects keep
+source attributes and subtrees verbatim. These can carry a tunnelling target
+and connection parameters (`BusAccess/@Parameter`), IP and MAC configuration
+(`IPConfig`), additional device addresses and user names (`ProjectTraces`). The
+four classes below catch IPv4/IPv6 literals and host/home names in the
+bundle's text. MAC addresses and user names are not redacted, and
+unknown-attribute samples reach `log.json` verbatim. Other outputs that carry
+retained source evidence have not been audited for these fields: selective
+import source retention, the MCP read path and contribution bundles. Lifted
+when each such output withholds them or tells the user it does not.
+
 **Limitation.** The debug-report bundle (T29,
 `apps/knx-server/src/debug_report.rs`) replaces exactly four things in
 `report.md`, `environment.json` and `log.json`: any IPv4 dotted quad, any
@@ -6974,6 +7080,30 @@ possible result. The UI says so in its own words rather than presenting an
 empty list as a verdict about the installation.
 ## 125. ETS 6's device-local communication-object ids are read from a single project's evidence
 
+**Lifted 2026-10-10 (private schema-23 sample, `e89ff842`).** The lifting
+condition below is met. A second, independently produced schema-23 project
+(privately supplied, not in the repository) was counted the same way by the
+private opt-in test `a_second_schema_23_project_resolves_every_object_id_through_the_production_rules` (`crates/knx-etsproj/tests/private_schema23_refids.rs`, `KNXBENCH_PRIVATE_SCHEMA23_PROJECT`). The test reads the archive by index and takes every
+id from root- and `Node`-style `GroupObjectTree` lists and from
+`ComObjectInstanceRef/@RefId`. Each id goes through
+`device_local_com_object_number` or `module_com_object_ref` and is prefixed
+with the device's own resolved program. Every id matched one of the two rules,
+each named an existing `ComObjectRef` whose `ComObject/@Number` equals the
+rule's number, and every `Links` token named a group address of the
+installation. A synthetic negative control and a private mutant (object number
++1) both fail. Assertions are boolean only.
+
+Two further observations from the same file. `ParameterInstanceRef/@RefId` is
+fully program-qualified while object ids are device-local, so the two id
+families need their own readers. `ModuleInstance/@Id` is device-local as well
+and repeats across devices. An audit of every `module_instances()` consumer
+(diff, comparison, report, documentation, selective merge, delete guard) found
+each one scoped by device, and the store has no global key on that column.
+Instance-level flags at schema ≥21 (ADR-0014's disproved claim) occur there
+too. **Not covered:** whole-project import of that sample (separate
+import-integrity work), other ETS 6 builds, and the residue bullets below,
+which describe the reference project.
+
 **AR06 scoped delivery, 2026-10-02 16:59 CEST.** Published 95e6bcb0 after integrated
 24-step receipt and documentation-only upstream reconciliation; 2,916 Rust,
 1,357 Web and 52 intercepted-browser passes, eighteen selected private/six raw
@@ -7454,6 +7584,11 @@ signal that separates a hung page from a busy one, which WebKitGTK's
 
 ## §134 Baggage is inventoried, not interpreted
 
+**Update 2026-10-10.** The import report's wording is coarser than this
+inventory: every manufacturer `Baggages/` member, images included, is reported
+as "vendor plugin binary", while project-side ETS app packages and add-in data
+are plain container entries. See §174.
+
 **Limitation.** Since PDB-10 (schema v16, ADR-0042) every baggage
 declaration is typed and resolved and every payload is classified, but
 nothing acts on it: `InstallOnImport`, `TargetPath` destinations and
@@ -7656,6 +7791,16 @@ recovery, durable history or hardware-support residues (ADR-0051 amendment).
 
 <a id="146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined"></a>
 ## §146 Channel labels are shown; undetermined activation and missing DPT remain
+
+**Update 2026-10-10 (comparison source; no change).** ETS writes its own
+activation result into the project: `ChannelInstance/@IsActive`,
+`ComObjectInstanceRef/@ChannelId` and the object set listed in
+`GroupObjectTree` (`Node` types `Channel`/`Folder`). The privately supplied
+schema-23 project carries all three. Once that project imports completely they
+can serve as a read-only differential reference for KNXBench's evaluated
+activation. A difference is a finding to explain, not a reason to adopt ETS's
+answer without a documented rule. Every channel instance in that sample is
+active, so it says little about channel activation itself.
 
 **Bounded text-refusal policy accepted (2026-10-03 13:32 CEST, ADR-0066).**
 Scoped FunctionText substitution and channel-text rendering/cached copies share
@@ -9111,3 +9256,133 @@ They are included in Alpha.7, published and externally verified on 2026-10-10
 [release evidence](evidence/release-alpha7-2026-10-10.json)). The admission,
 proxy, transient-selection and native-focus limits above remain. No archive
 compatibility or hardware support is implied by upload/navigation acceptance.
+
+
+## 170. Little-endian parameter byte order is refused for download images
+
+**Limitation.** `knx_productdb::image::build_download_image` refuses every
+program whose `Options/@ParameterByteOrder` is anything but `BigEndian`
+(`ParameterByteOrder "LittleEndian": numbers are written high octet first`). An
+undeclared byte order is treated as big-endian. Offline readiness marks such
+devices `unsupported` (`image-structure`). Until this entry the boundary lived
+only in the module comment of `crates/knx-productdb/src/image.rs`.
+
+**Prevalence.** Local product corpus (`OriginalData/ProductDatabases`, 114
+archives, 525 unique application-program files by content hash, measured
+2026-10-10): `LittleEndian` 3, `BigEndian` 90, undeclared 432. In a privately
+supplied schema-23 project it causes most of the offline-readiness refusals,
+so a real installation can be hit far more often than the product corpus
+suggests.
+
+**Cause.** The image encoder writes multi-octet numbers high octet first
+(`knx_core::commissioning::parameter_image`). No source available here defines
+little-endian placement per parameter type (integers, floats, bit-offset
+unions, fields that cross octet boundaries); the application-program XSD is
+not available (`IMPORT-06`).
+
+**Impact.** No offline image, compare plan or download for such programs.
+Import, display and parameter editing are unaffected.
+
+**Lifted when.** A documented source defines the placement per type, exact
+signed/unsigned/float/multi-octet/boundary tests pin it, and preferably a
+read-back of one real device (under the existing hardware rules) confirms it.
+Swapping octets on suspicion is not a fix. Ledger `KL-170`.
+
+## 171. UTF-8 text-parameter encoding is refused for download images
+
+**Limitation.** `TypeText` parameters are encoded only for
+`TextParameterEncoding` `iso-8859-1` and `iso-8859-15`, or as ASCII when the
+program declares none. Any other declaration, `utf-8` included, refuses the
+whole image once a text field is encoded (`TextParameterEncoding "…" is not
+one this crate writes`).
+
+**Prevalence.** Same local product corpus: `utf-8` 21, `iso-8859-1` 17,
+`iso-8859-15` 12, undeclared 475 program files. A privately supplied project
+contains `utf-8` programs too; its offline readiness does not show this
+refusal, presumably because §170 fires first (inferred from refusal order, not
+measured).
+
+**Cause.** No available source says whether a UTF-8 field's size counts octets
+or characters, or how a multi-octet sequence that does not fit is cut.
+
+**Impact.** Such programs get no offline image when the image contains a text
+parameter. Display and editing are unaffected.
+
+**Lifted when.** A documented source settles length and truncation, and tests
+cover multi-octet characters at the field boundary. Ledger `KL-171`.
+
+## 172. A device's stored loaded image is kept, not decoded
+
+**Limitation.** ETS6 can write `DeviceInstance/@LoadedImage`/`@CheckSums` and
+`Hardware2Program/@LoadedImage`/`@CheckSums`. KNXBench keeps them as known
+attributes the model does not carry (`known.rs`) and never decodes or compares
+them. In a privately supplied project they occur on a few devices with
+merged-procedure programs and on some `Hardware2Program` entries. The value is
+Base64 of a raw-deflate stream whose inflated content is binary, in a format no
+source available here documents.
+
+**Why it matters.** With a documented format it could serve as an offline
+differential reference for KNXBench's image builder on those masks (ADR-0098,
+§142), without bus access.
+
+**Boundary.** The content is device configuration and therefore private. It is
+never download input and never an authority.
+
+**Lifted when.** A public source documents the format, or a controlled
+comparison on the owner's own device (read-back against the stored image of the
+owner's own project, under the existing hardware rules) establishes it. Only
+aggregate agreement enters the repository. Ledger `KL-172`.
+
+## 173. Instance overrides for objects outside the object tree are neither modelled nor reported
+
+**Limitation.** At schema ≥21 the mapper builds communication objects from the
+`GroupObjectTree` id list (ADR-0014) and looks up `ComObjectInstanceRef`
+overrides only for those ids (`map_device_v21`). An override whose `RefId` is
+not in the tree is not modelled, not reported and not in the native store; the
+installation XML is not retained whole. In a privately supplied schema-23
+project such overrides carry flags, DPT or text, but never `Links`, so no group link is lost. They presumably belong to objects that the
+current parameter values hide (unverified).
+
+**Impact.** If such an object becomes active again, KNXBench shows program
+defaults instead of the project's flag/DPT/text. Read/Mapped counts do not
+show the omission.
+
+**Status.** Describes `main` at `2764b3b7`. A separate import-integrity package
+is adding a diagnostic and retention.
+
+**Lifted when.** Every such override survives save/reopen and is reported.
+Applying it to a re-activated object needs documented semantics. Ledger
+`KL-173`.
+
+## 174. Project user files and add-in data are filed as plain container entries
+
+**Limitation.** An ETS6 project can carry ETS app packages (`.etsapp`, ZIP)
+under `P-…/UserFiles/`. Such a package bundles DLLs, firmware hex files, help
+files and a `Knxapp` manifest naming the application programs it serves. A
+project can also carry add-in data under `P-…/AddinData/` (binary and XML),
+declared in `Project.xml`'s `AddinData`. `opaque::classify` files both as
+`ContainerEntry` ("container entry not regenerated by this build"), so the
+report does not say that they hold executable code or add-in state. The
+opposite happens for manufacturer data: every `M-…/Baggages/` member, PNG/JPEG/
+BMP images included, is reported as "vendor plugin binary". Nothing is executed
+or unpacked either way (§6, §134).
+
+**Impact.** The report under-describes vendor code that travels with a
+project and over-describes harmless media. The bytes are retained unchanged.
+
+**Lifted when.** Content-based classification separates ETS app packages,
+add-in data, executables and media for project and manufacturer members, and
+the report wording follows it. Optionally, a device whose program an app
+package declares is flagged, without implying any function. Ledger `KL-174`.
+
+## 175. Rich-text attribute values are kept verbatim, not rendered
+
+**Limitation.** Some ETS text attributes can hold RTF; a privately supplied
+project has one in `DeviceInstance/@InstallationHints`. The importer keeps
+such values verbatim. `InstallationHints` is currently an unknown, retained
+attribute, so its sample text, RTF control words included, reaches the import
+report and the session log (§106). No surface renders RTF.
+
+**Lifted when.** The fields that can carry RTF are identified from a
+documented source, kept verbatim, and shown either as marked raw text or through
+a bounded, tested plain-text extraction. Ledger `KL-175`.

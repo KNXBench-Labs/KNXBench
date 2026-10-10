@@ -547,3 +547,15 @@ fn selected_group_range_flat_and_child_order_preserves_source_positions() {
         .collect();
     assert_eq!(children, vec!["High range", "Low range"]);
 }
+
+/// KL-106: the retention note names the sensitive classes it keeps.
+#[test]
+fn retention_note_names_network_endpoints_and_user_names() {
+    let (source, target, selection) = fixture();
+    let plan = import::plan(&target, &source, selection).unwrap();
+    let note = &plan.preview.notes[0];
+    for named in ["network endpoints", "MAC addresses", "user names"] {
+        assert!(note.contains(named), "{named} missing from {note:?}");
+    }
+    assert!(plan.preview.retained_source_may_contain_unselected_data);
+}

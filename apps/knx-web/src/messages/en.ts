@@ -2254,7 +2254,7 @@ export const messages = {
   "debugReport.contents.projectSummary": "project-summary.json — counts describing the open project.",
   "debugReport.contents.busTelegrams": "bus-telegrams.json — the bus monitor buffer.",
   "debugReport.privacyRedacted":
-    "IP addresses, your home directory and this computer's name are replaced by placeholders in report.md, environment.json and log.json. KNX addresses and names taken from your project are not replaced anywhere.",
+    "IP addresses, MAC addresses, your home directory and this computer's name are replaced by placeholders in report.md, environment.json and log.json. KNX addresses, user names and names taken from your project are not replaced anywhere. Retained ETS source data of an imported project (interface settings, IP configuration, project traces) is never included.",
   "debugReport.privacyTelegrams":
     "bus-telegrams.json is not redacted. It keeps the individual and group addresses of your installation, the names of the group addresses where the open project knows them — \u201cKitchen ceiling light\u201d — and every telegram's value (text values included) with its timestamp. Together these can show when the installation was in use. Without them a telegram dump says nothing, which is why they stay. Include the file only if you are willing to share all of that.",
   "debugReport.save": "Save zip…",

@@ -316,6 +316,40 @@ Measured by walking both `0.xml`/`project.xml` trees and diffing element paths +
 
 **Session 7 (2026-09-06) amendment, brainstorming pass following cycle 1:** the domain-model decision this section called for is now made — [ADR-0013](../adr/0013-module-instance-representation.md) (`ModuleInstance` as a first-class entity) and [ADR-0014](../adr/0014-group-object-tree-authoritative-source.md) (`GroupObjectTree` as the authoritative object-list rule, schema-version-generic). Design: [`docs/superpowers/specs/2026-09-06-schema-21-23-import-support-design.md`](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-06-schema-21-23-import-support-design.md). Building `known_schema(21)`/`(23)` and wiring the mapper is the implementation that design hands off to — tracked in [ROADMAP.md](../ROADMAP.md) and [KNOWN_LIMITATIONS.md](../KNOWN_LIMITATIONS.md) §1.
 
+### 3.5 A second independent schema-23 sample (privately supplied, 2026-10-10) [V]
+
+The owner supplied a private ETS6 schema-23 project for review. It is not in
+the repository and none of its content is recorded here; the facts below are
+schema vocabulary and id shapes only, measured read-only.
+
+* **`Node`-style object trees exist at schema 23.** §3.3's flat
+  `GroupObjectTree/@GroupObjectInstances` is one style, not the schema-23
+  style. In this sample some devices use the flat root attribute, most use
+  `GroupObjectTree/Nodes/Node` (types `Channel` and `Folder`, nested `Nodes`
+  possible) and a few carry both.
+* **ETS6 does write `Topology/UnassignedDevices`,** with full device content
+  (parameters, module instances, object tree). §3.1's observation that one
+  ETS6 re-export dropped an unassigned stub describes that export, not ETS6
+  in general.
+* **Id families differ within one file.** `ParameterInstanceRef/@RefId` is
+  fully program-qualified; object ids (`O-<n>_R-<m>`, module form
+  `MD-<n>_M-<m>_MI-<k>_O-<a>-<b>_R-<c>`) and `ModuleInstance/@Id` are
+  device-local. The module object rule of §3.4 holds here (KNOWN_LIMITATIONS
+  §125).
+* **`RepeatIndex`** comes in a one-pair and a two-pair `<XmlOrder>x<counter>`
+  form; counters above 1 and repeated `ModuleInstance/@RefId`s within one
+  device occur (KNOWN_LIMITATIONS §68).
+* **Device extensions:** `ChannelInstances/ChannelInstance` (`Id`, `RefId`,
+  `Name`, `IsActive`), `AdditionalAddresses/Address` (`Address`, `Name`),
+  `IPConfig` (`MACAddress`); `DeviceInstance` adds `InstallationHints` (RTF
+  possible), `LoadedImage` and `CheckSums` (Base64 of raw deflate,
+  KNOWN_LIMITATIONS §172).
+* **`Project.xml`:** `ProjectInformation/ToDoItems/ToDoItem` (`Description`,
+  `Status`), `UserFiles/UserFile` (`Filename`, `Comment`; ETS app packages,
+  KNOWN_LIMITATIONS §174), `AddinData/AddinData` (`AddinId`, `Name`) and
+  `ProjectTraces`; `ProjectInformation` carries `ArchivedVersion` and `CodePage`.
+* `Space/@Usage` and `GroupAddress/@Description` appear.
+
 ---
 
 ## 5. `knx_master.xml`

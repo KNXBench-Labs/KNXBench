@@ -1,0 +1,50 @@
+{
+  "schema": "knxbench-evidence/1",
+  "title": "Private schema-23 sample review against the Known Limitations",
+  "date": "2026-10-10",
+  "agent": "Claude (self-review only)",
+  "base_revision": "2764b3b780faf36eb428bd7ffdca438a5b206241",
+  "test_commit": "e89ff8425062b42edb11e29c786f9b38b3c87d53",
+  "input": {
+    "kind": "privately supplied, independently produced ETS6 .knxproj (project namespace 23)",
+    "in_repository": false,
+    "selected_by": "environment variable KNXBENCH_PRIVATE_SCHEMA23_PROJECT",
+    "privacy": "No name, id, address, count, digest or vendor identity of the input is recorded in the repository; private census output stays in an ignored local directory."
+  },
+  "private_gate": {
+    "test": "a_second_schema_23_project_resolves_every_object_id_through_the_production_rules",
+    "file": "crates/knx-etsproj/tests/private_schema23_refids.rs",
+    "command": "KNXBENCH_PRIVATE_SCHEMA23_PROJECT=<private path> cargo test -p knx-etsproj --test private_schema23_refids -- --include-ignored",
+    "result_with_variable": "3 passed, 0 failed, 0 ignored",
+    "result_without_variable": "exit 101, panics with 'SKIP is not a pass' (refusal, not a pass)",
+    "private_mutant": "object number + 1 in the device-local branch: exit 101 at the device-local assertion; file restored byte-identical",
+    "assertions": "boolean only: every device program resolves uniquely; every object id matches one production rule; every device-local and every module object id names a ComObjectRef with the same ComObject/@Number; every Links token names a group address; presence of Node-style and root-style trees, an address-less device, a repeated module RefId and a RepeatIndex counter above one",
+    "selected_by_tools_run_corpus_tests": false
+  },
+  "public_checks": {
+    "knx_etsproj_private_schema23_refids_default": "2 passed, 0 failed, 1 ignored",
+    "clippy": "cargo clippy -p knx-etsproj --test private_schema23_refids -- -D warnings: exit 0",
+    "rustfmt_check": "pass",
+    "xtask": ["check-ledger", "check-anchors", "check-headers", "check-layering", "check-corpus-gates"],
+    "documentation": "tools/check_documentation.py and git diff --check"
+  },
+  "product_corpus_measurement": {
+    "scope": "OriginalData/ProductDatabases (local, not redistributable), 114 archives, 525 unique application-program files by content hash",
+    "ParameterByteOrder": {"LittleEndian": 3, "BigEndian": 90, "undeclared": 432},
+    "TextParameterEncoding": {"utf-8": 21, "iso-8859-1": 17, "iso-8859-15": 12, "undeclared": 475}
+  },
+  "known_limitations": {
+    "lifted": ["KL-125"],
+    "evidence_added_not_lifted": ["KL-1", "KL-11", "KL-52", "KL-68", "PDB-01", "KL-146"],
+    "updated_boundaries": ["KL-6", "KL-8", "KL-106", "KL-134", "PDB-05 / PDB-9"],
+    "new": ["KL-170", "KL-171", "KL-172", "KL-173", "KL-174", "KL-175"]
+  },
+  "not_claimed": [
+    "whole-project import of the private sample (separate import-integrity work)",
+    "ETS round trip, signature verification or ETS parity",
+    "KNX Secure, hardware or download support for any device",
+    "semantics of RepeatIndex counters, stored loaded images, little-endian or UTF-8 parameter encoding"
+  ],
+  "no_production_code_changed": true,
+  "no_bus_or_hardware_action": true
+}

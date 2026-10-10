@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "package": "R-SEC-01",
+  "kind": "primary-source research, not runtime acceptance",
+  "research_date": "2026-10-10",
+  "initial_code_inspection_revision": "fd6b1cff37b2713361e256282cc2aef46e2cbcb9",
+  "accepted_document_revision": "8fdf716713006f94fa7a52d163afc3e3106f98ad",
+  "sources": [
+    {
+      "id": 1,
+      "url": "https://support.knx.org/hc/en-us/articles/360012689639-KNX-Data-Secure"
+    },
+    {
+      "id": 2,
+      "url": "https://support.knx.org/hc/en-us/articles/360018505379-Security"
+    },
+    {
+      "id": 3,
+      "url": "https://support.knx.org/hc/en-us/articles/360001582259-Use-keyring-outside-ETS-Falcon-SDK"
+    },
+    {
+      "id": 4,
+      "url": "https://support.knx.org/hc/en-us/articles/18968368409874-Keyring-File-Format"
+    },
+    {
+      "id": 5,
+      "url": "https://support.knx.org/hc/en-us/articles/360022048859-Devices-panel-Detailed"
+    },
+    {
+      "id": 6,
+      "url": "https://support.knx.org/hc/en-us/articles/360000216419-KNX-Secure-Devices"
+    },
+    {
+      "id": 7,
+      "url": "https://support.knx.org/hc/en-us/articles/360012666599-KNX-IP-Secure"
+    },
+    {
+      "id": 8,
+      "url": "https://support.knx.org/hc/nl/article_attachments/17389755651474"
+    }
+  ],
+  "public_schema23": {
+    "version": "01.00.00",
+    "document_date": "2024-03-01",
+    "sha256": "8fe9193e701350643be5527644955d23b6933c1c4cc66264a3bb234301c21144",
+    "inspected_clauses": [
+      "1.2",
+      "1.2.3.6",
+      "1.2.3.13",
+      "1.2.5.3",
+      "1.2.7.3",
+      "4.2.4"
+    ]
+  },
+  "source_evidence_verifier_passed": true,
+  "review": "in-session self-review",
+  "fresh_documentation_acceptance": {
+    "stages": [
+      {
+        "name": "documentation",
+        "exit": 0,
+        "nonempty": true
+      },
+      {
+        "name": "documentation-tests",
+        "exit": 0,
+        "nonempty": true
+      },
+      {
+        "name": "check-layering",
+        "exit": 0,
+        "nonempty": true
+      },
+      {
+        "name": "check-headers",
+        "exit": 0,
+        "nonempty": true
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0,
+        "nonempty": true
+      },
+      {
+        "name": "check-ledger",
+        "exit": 0,
+        "nonempty": true
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0,
+        "nonempty": true
+      },
+      {
+        "name": "whitespace",
+        "exit": 0,
+        "nonempty": true
+      }
+    ],
+    "inputs_frozen": true,
+    "fresh_xtask_target": true,
+    "documentation_checker_tests": 12,
+    "anchors_checked": 525,
+    "markdown_files": 234,
+    "ledger_rows_audited": 197
+  },
+  "prior_attempts": [
+    {
+      "stage": "documentation",
+      "exit": 1,
+      "classification": "adjacent citation syntax refusal; successor accepted",
+      "later_stages": "unstarted"
+    }
+  ],
+  "coverage_exclusions": [
+    "no real keyring/protected project/certificate access",
+    "no secret collection or decryption",
+    "no Secure runtime/keyring implementation",
+    "no new application/corpus/hardware/ETS tests",
+    "no release/deployment"
+  ],
+  "publication": "local acceptance; coordinated main integration pending"
+}

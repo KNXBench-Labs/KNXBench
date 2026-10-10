@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 23:56 CEST
+- **Completed:** AP1 Secure provenance locally accepted on8fdf716713006f94fa7a52d163afc3e3106f98ad: eight admitted public sources/quote verifier,12 documentation tests,five nonempty fresh-root repository gates,525 anchors/234 Markdown/197 ledger rows,whitespace; frozen inputs. Public research receipt, R-SEC-01 canonical row/counts, status/limits/open-work synchronized as metadata. No runtime Secure support or actual secrets. AP2 independent real bounded adapter now passes16/0 after genuine baseline1/15 RED and one retained compile-only refusal. Separate collector CSS slice11/0 focused after three additional genuine guard REDs; full acceptance pending.
+- **Pending/Next Steps:** AP1 coordinated fresh-main docs integration/gates/push/readback, then handoff. AP2 edge/native preservation/full adapter gates and isolated editing/persistence/UI remain; AP3–AP7 implementation, AP8 full collector/report, AP9 hardware prerequisites/test plans remain. Goal incomplete.
+- **Notes for Codex oder Claude:** Source8fdf runtime/doc acceptance kept distinct from metadata. Initial citation failure had only documentation stage, later stages unstarted. Own RTF parser is external adapter, no domain/schema/UI change yet and no whole RTF feature claim. Collector canonical checkout/report/settings untouched. Root/foreign source, Source1 UI shell/styles/catalogues, immutable Alpha8 release, hardware and private source untouched. No subagents/quota/deployment/release/bus. Preserve inherited entries.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 23:25 CEST
 - **Completed:** AP1 citation evidence passed. First source-bound doc gate proc_d0df0e3873da refused adjacent numbered citations as Markdown reference links at documentation stage; all later stages unstarted. Corrected citation separators only; full documentation/evidence/whitespace now pass in focused checks. Own AP2 literal baseline genuinely executed16 tests:1 pass15 named expected failures, frozen inputs, proc_9846dd0e377c wrapper0/actualCargo101. Independent local ProjectStats CSS AST slice has actual named RED and seven GREEN controls, not final acceptance.
 - **Pending/Next Steps:** Fresh AP1 full doc/repository admission on corrected commit and coordinated publication; replace AP2 RED baseline with real bounded adapter then persistence/editor acceptance. Review/strengthen/full-suite/real-report CSS acceptance. Remaining AP3–AP7 implementation and AP9 offline prerequisites remain; goal incomplete.

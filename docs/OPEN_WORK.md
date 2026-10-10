@@ -249,3 +249,13 @@ to owner `later`. Routes naming removed goal files are kept as history.
   remain separate; this audit performs neither action.
 - **Stale worktree:** `$TMPDIR/devnav-ro` (read-only interview scratch) can go
   once the devices-navigation interview ends.
+
+
+### Schema23 package7 raw candidates — final admission pending
+
+KL175 owner permits retained header-like raw previews only; no field/format
+validation/plain extraction (ADR-0110, code/main checkpoint `68922cc4`). Focused
+synthetic/native/HTTP/UI, private boolean original/native/refusal, two mutants and
+four real Chromium cases pass. Full frozen-source gates/privacy/publication and
+cleanup remain; packet8 KL146 original activation comparison follows. No global
+RTF renderer/catalogue or compatibility claim. Full source remains authoritative.

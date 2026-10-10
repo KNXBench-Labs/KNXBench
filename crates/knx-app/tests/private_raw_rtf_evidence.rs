@@ -1,4 +1,5 @@
 //! Opt-in private gate: boolean-only raw candidate/native evidence comparisons.
+//!
 //! Original input, native output and logs stay in ignored private evidence.
 use std::path::PathBuf;
 

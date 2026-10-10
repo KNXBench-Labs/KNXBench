@@ -9386,26 +9386,31 @@ comparison on the owner's own device (read-back against the stored image of the
 owner's own project, under the existing hardware rules) establishes it. Only
 aggregate agreement enters the repository. Ledger `KL-172`.
 
-## 173. Instance overrides for objects outside the object tree are neither modelled nor reported
+## 173. Instance overrides outside the active object tree: retained and reported
 
-**Limitation.** At schema ≥21 the mapper builds communication objects from the
-`GroupObjectTree` id list (ADR-0014) and looks up `ComObjectInstanceRef`
-overrides only for those ids (`map_device_v21`). An override whose `RefId` is
-not in the tree is not modelled, not reported and not in the native store; the
-installation XML is not retained whole. In a privately supplied schema-23
-project such overrides carry flags, DPT or text, but never `Links`, so no group link is lost. They presumably belong to objects that the
-current parameter values hide (unverified).
+**Repair 2026-10-10.** The import-integrity package (`d8346579`, integrated
+acceptance `367405f1`) reports instance overrides not consumed by the declared
+active object tree and preserves both original project XMLs byte-exact through
+native Save/Reopen/Re-Save. It does not invent active communication objects or
+apply those overrides to program defaults. Conflicting duplicate overrides are
+reported as errors rather than resolved by a last-writer guess.
 
-**Impact.** If such an object becomes active again, KNXBench shows program
-defaults instead of the project's flag/DPT/text. Read/Mapped counts do not
-show the omission.
+**Evidence.** Synthetic `orphan_object_overrides_are_reported_not_silently_lost`
+and `conflicting_object_overrides_are_not_resolved_by_last_winner`, the explicit
+private-source production/native test and independent source-to-persisted-content
+checks meet the diagnostic/preservation condition. See
+[merged-source acceptance](status/2026-10-10-import-integrity-integration.md).
+Project-specific identifiers, values and measurements remain private.
 
-**Status.** Describes `main` at `2764b3b7`. A separate import-integrity package
-is adding a diagnostic and retention.
+**Remaining boundary.** Applying an override after reactivation needs documented
+activation semantics. Retention and warning-level diagnostics are not typed
+inactive-object modelling or new download authority. Read/Mapped counters remain
+mapper-visit counts, not proof of complete raw-source interpretation. The original
+omission described the pre-repair mapper at `2764b3b7`.
 
-**Lifted when.** Every such override survives save/reopen and is reported.
-Applying it to a re-activated object needs documented semantics. Ledger
-`KL-173`.
+**Lifted condition met.** Every otherwise unconsumed override survives native
+persistence as original source and is explicitly reported; automatic reactivation
+semantics are outside this condition. Status of record: ledger `KL-173`.
 
 ## 174. Project user files and add-in data are filed as plain container entries
 

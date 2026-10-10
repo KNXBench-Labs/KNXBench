@@ -39,7 +39,7 @@ open is summarized in [OPEN_WORK](../OPEN_WORK.md); removed files are listed in
 ## Counts
 
 - **Snapshot IDs** (180 rows) — status: DONE=44, BLOCKED_EXTERNAL=1, ACCEPTED_BOUNDARY=118, LATER=17; owner: alpha=93, commission=39, later=23, ui=25; priority: P0=4, P1=29, P2=87, P3=60.
-- **Post-snapshot IDs** (17 rows) — status: TODO=1, DONE=9, ACCEPTED_BOUNDARY=2, LATER=5; owner: alpha=10, later=6, ui=1; priority: P1=4, P2=8, P3=5.
+- **Post-snapshot IDs** (17 rows) — status: DONE=10, ACCEPTED_BOUNDARY=2, LATER=5; owner: alpha=10, later=6, ui=1; priority: P1=4, P2=8, P3=5.
 
 ## Snapshot IDs
 
@@ -270,7 +270,7 @@ for real installations; the rest are P3.
 | `KL-170` | P2 | later | Later / separate scope — not an alpha task | LATER | — | docs/KNOWN_LIMITATIONS.md §170; `ParameterByteOrder` other than `BigEndian` refuses the download image; local product corpus 3/525 program files, most offline refusals of the private sample. Needs a documented per-type placement and exact boundary tests; no octet swapping on suspicion. |
 | `KL-171` | P3 | later | Later / separate scope — not an alpha task | LATER | — | docs/KNOWN_LIMITATIONS.md §171; `TextParameterEncoding` other than ISO-8859-1/-15 (e.g. `utf-8`, 21/525 program files) refuses the image once a text field is encoded. Needs documented length/truncation rules. |
 | `KL-172` | P3 | later | Later / separate scope — not an alpha task | LATER | — | docs/KNOWN_LIMITATIONS.md §172; stored `LoadedImage`/`CheckSums` kept, not decoded (Base64 raw deflate, undocumented payload). Research only; never download input or authority. |
-| `KL-173` | P1 | later | Later / separate scope — not an alpha task | TODO | — | docs/KNOWN_LIMITATIONS.md §173; schema ≥21 `ComObjectInstanceRef` overrides whose object is not in `GroupObjectTree` are neither modelled nor reported (main `2764b3b7`). A separate local import-integrity package adds diagnostics/retention; not yet published. |
+| `KL-173` | P1 | later | Later / separate scope — not an alpha task | DONE | — | docs/KNOWN_LIMITATIONS.md §173; diagnostics and byte-exact source persistence repaired by `d8346579`, merged-source acceptance `367405f1`. Named synthetic `orphan_object_overrides_are_reported_not_silently_lost` and `conflicting_object_overrides_are_not_resolved_by_last_winner`; configured private production/native test and independent source/persistence checks passed. docs/status/2026-10-10-import-integrity-integration.md. Automatic override application after reactivation remains separately unverified, not new runtime support. |
 | `KL-174` | P3 | later | Later / separate scope — not an alpha task | LATER | — | docs/KNOWN_LIMITATIONS.md §174; ETS app packages (`UserFiles`) and add-in data are `ContainerEntry`, manufacturer media reported as plugin binary. Needs content-based classification and matching report wording; nothing executed. |
 | `KL-175` | P3 | later | Later / separate scope — not an alpha task | LATER | — | docs/KNOWN_LIMITATIONS.md §175; RTF attribute values kept verbatim, shown raw in report/log. Needs documented RTF-bearing fields and marked raw or bounded plain-text display. |
 

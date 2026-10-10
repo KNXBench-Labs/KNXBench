@@ -14,8 +14,10 @@ The [known-issues/status follow-up](status/2026-10-08-known-issues-status-audit.
 also reconciles current source claims, historical limitations and evidence type;
 it changes documentation, not owner rows or device behavior.
 
-Short version: **every goal file is finished.** Nothing in the ledger is
-`TODO`, `IN_PROGRESS`, `BLOCKED_EXTERNAL` or `WAITING_*`. What remains is
+Short version: **the original alpha goal files are finished at their recorded
+scope, not every later feature.** The current ledger includes the owner-approved
+local import expansion and its missing authorized-export evidence. Dated audit
+counts below remain historical. What remains is
 (1) work that is running or waiting right now, (2) parked unpublished packages
 and publication follow-up, (3) deferred items with a recorded user decision, and
 (4) later scope that never was an alpha task.
@@ -35,6 +37,18 @@ and publication follow-up, (3) deferred items with a recorded user decision, and
   121 accepted boundaries and 20 later-scope rows; no active/waiting rows.
   Every later-scope row is owned by `later`; no finished session owns open work.
   These are unequal source IDs, not a product-completion percentage.
+
+## Local import expansion (10 October 2026)
+
+The owned `import-expansion-20261009` worktree contains selected-device/line
+merge into the open project, an authorized revision-export harness and read-only
+cvexc declaration analysis. [Acceptance](status/2026-10-10-import-expansion-verification.md)
+keeps implementation, local verification and release/integration separate.
+Commit/publication and bus actions were excluded from authorization. Remaining:
+real authorized ETS revision exports with independently reviewed baselines,
+final local verification, future-model closure before model changes, and primary
+cvexc semantics before enabling any runtime rule. Synthetic browser/CLI checks
+are not real ETS/hardware/native accessibility evidence.
 
 ## 1. Running or waiting right now
 
@@ -110,10 +124,12 @@ not erase subsequently delivered functionality.
   Secure (`DM_SecureSync_*`), Easy Modes, USB interface configuration
   (`KL-110`, `GAP-T30-04`). RF stays simulator-only.
 - **Model/import:** KNX `Functions` (`MODEL-07`, needs an ADR and samples);
-  several installations under one Site (`MODEL-05`, needs an ADR); selective
-  import of single lines/devices (`IMPORT-01`); ETS restore-point revisions as
-  extra private regressions (`IMPORT-02`, needs authorized ETS export);
-  semantic evaluation of the `knx_cvexc` XML files (`IMPORT-04`); dedicated
+  several installations under one Site (`MODEL-05`, needs an ADR); ETS
+  restore-point revisions as extra private regressions (`IMPORT-02`, requires
+  authorized ETS exports and reviewed baselines). Selective lines/devices and
+  bounded `knx_cvexc` content analysis have a verified, unpublished local
+  implementation ([receipt](evidence/import-expansion-local-2026-10-10.json));
+  integration/publication requires separate authorization. Dedicated
   time/colour/picture/slider parameter editors from Type attributes and UIHints
   (`PDB-04`); independent `.knxproj` samples for untested schemas
   (12/13/14/20/22) and an AES-protected ETS6 sample.

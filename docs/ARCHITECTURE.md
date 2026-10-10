@@ -1,5 +1,20 @@
 # Architecture
 
+## Selective import shares one application planner (2026-10-10 local source)
+
+[ADR-0106](adr/0106-selective-project-import.md) puts bounded source reading,
+explicit installation selection, reference-closure remapping and conflict checks
+in `knx-app::selective_import`. HTTP and CLI consume the same admitted plan; UI
+only selects, previews and confirms. Native snapshot history provides one undo
+step; durable admission precedes publication. CLI compare-and-save checks both
+history generation and the reviewed working-snapshot hash under one write lock.
+Complete retained sources are scoped by archive identity; selected source
+attributes remain evidence, not destination defaults. No KNX Core/UI dependency,
+new schema, manufacturer installation or protocol capability is introduced.
+This package is local/unpublished, with [acceptance](status/2026-10-10-import-expansion-verification.md)
+separate from integration and release. Future model versions require a new
+reference-closure audit rather than automatic acceptance.
+
 ## Communication-object table (2026-10-09 source)
 
 [ADR-0102](adr/0102-communication-object-table-view-state.md) and the

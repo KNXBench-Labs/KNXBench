@@ -1,5 +1,16 @@
 # Roadmap
 
+## Import expansion is a local package, not a release (2026-10-10)
+
+Selected devices/lines, a private authorized-export regression harness and a
+read-only cvexc analyzer now have a dedicated local implementation and
+[verification record](status/2026-10-10-import-expansion-verification.md).
+Publication/integration was excluded from authorization. Remaining evidence:
+authorized historical ETS exports with reviewed baselines; future-model closure
+when the normalized model changes; primary cvexc semantics before any runtime
+policy. This does not reopen commissioning or authorize real-bus actions.
+Formal per-ID dispositions remain only in [LEDGER](status/LEDGER.md).
+
 **Open work:** everything not yet done, deferred or later scope is listed in
 [OPEN_WORK](OPEN_WORK.md) (audit 2026-10-08). The three alpha goals are
 finished; they were removed from the tree on 2026-10-08

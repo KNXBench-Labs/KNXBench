@@ -1,0 +1,265 @@
+{
+  "version": 1,
+  "date": "2026-10-10",
+  "delivery": "uncommitted-unpublished-local-worktree",
+  "branch": "feature/import-expansion-20261009",
+  "base": "b042048b318801acc67927fd55b3dbf61cfa62fd",
+  "applicationInputs": {
+    "files": 1169,
+    "sha256Commitment": "37035b087199e360b4cff4726c2d236681a4093feb5c6a2e217a744d3e48193a",
+    "algorithm": "SHA-256 of sorted compact JSON path-to-SHA256 mapping"
+  },
+  "review": "self-review, not independent",
+  "acceptedSelectedStages": {
+    "process": "proc_2458ce3be074",
+    "exit": 0,
+    "exits": [
+      "fmt_exit=0",
+      "clippy_exit=0",
+      "rust_exit=0",
+      "python_exit=0",
+      "web_exit=0",
+      "build_exit=0",
+      "corpus_exit=0",
+      "binaries_exit=0",
+      "completed=1"
+    ],
+    "rust": {
+      "passed": 1331,
+      "failed": 0,
+      "ignored": 97,
+      "resultBlocks": 136
+    },
+    "web": {
+      "passed": 2577,
+      "failed": 0,
+      "files": 163
+    },
+    "cvexcPython": {
+      "passed": 7,
+      "failed": 0
+    }
+  },
+  "productionBrowser": {
+    "cases": 4,
+    "languages": [
+      "en",
+      "de"
+    ],
+    "viewports": [
+      1440,
+      400
+    ],
+    "freshContexts": true,
+    "loopbackOnly": true,
+    "apiIntercepted": false,
+    "publicSyntheticDataOnly": true,
+    "previewReadOnly": true,
+    "explicitConsent": true,
+    "applyAndExactUndo": true,
+    "inspectedFrames": 8,
+    "localHorizontalOverflow": 0,
+    "rawBackendNotesRemainEnglish": true
+  },
+  "corpus": {
+    "passed": 143,
+    "total": 143,
+    "targets": 31,
+    "authorizedHistoricalExportsIncluded": false
+  },
+  "repositoryGates": {
+    "process": "proc_d06ccbe56221",
+    "freshXtaskTarget": true,
+    "explicitWorktreeRoot": true,
+    "exits": [
+      "check-layering_exit=0",
+      "check-headers_exit=0",
+      "check-anchors_exit=0",
+      "check-ledger_exit=0",
+      "check-corpus-gates_exit=0",
+      "documentation_exit=0",
+      "whitespace_exit=0",
+      "completed=1"
+    ],
+    "scope": {
+      "resolvedPackages": 478,
+      "headedFiles": 786,
+      "missingHeadersWithinExistingCeiling": 155,
+      "generatedFilesSkipped": 21,
+      "anchorLinks": 496,
+      "markdownFiles": 222,
+      "ledgerRows": 191,
+      "corpusGuardRustFiles": 495,
+      "localDocumentationTargets": 2039,
+      "manualChapters": 33
+    }
+  },
+  "exclusions": [
+    "No authorized historical ETS restore-export set supplied or executed",
+    "No runtime converter-exception rules or signature validation",
+    "No release, integration, publication or bus action",
+    "No native WebKitGTK/Orca or full ETS compatibility claim",
+    "Not a full-workspace Rust or full-intercepted-browser-suite run"
+  ],
+  "cvexcObservations": {
+    "status": "observed",
+    "files": 3,
+    "distinctContents": 2,
+    "originalsUnchanged": true,
+    "technicalCategories": [
+      {
+        "namespace": "http://knx.org/xml/cvexc/11",
+        "tableVersion": "5",
+        "programDeclarations": 33,
+        "exclusionDeclarations": 202,
+        "unknownObservations": 0,
+        "findings": 0,
+        "comparableTrue": 30,
+        "reconstructableTrue": 2,
+        "noOptionFlags": 3
+      },
+      {
+        "namespace": "http://knx.org/xml/cvexc/14",
+        "tableVersion": "201",
+        "programDeclarations": 33,
+        "exclusionDeclarations": 203,
+        "unknownObservations": 0,
+        "findings": 0,
+        "comparableTrue": 30,
+        "reconstructableTrue": 2,
+        "noOptionFlags": 3
+      }
+    ],
+    "crossVersionComparison": {
+      "matchedIdentityTuples": 33,
+      "oldOnly": 0,
+      "newOnly": 0,
+      "changedAttributes": 0,
+      "changedExclusions": 1,
+      "changedOptions": 0
+    }
+  },
+  "securityPatternScan": {
+    "files": 28,
+    "flaggedPatterns": 0,
+    "scope": "review flags only, not a security certification"
+  },
+  "reviewedBoundaries": [
+    "native model v11 explicit guard; no future-schema remapping claim",
+    "destination identity/settings preserved; scoped retained attributes are not defaults",
+    "preview binding includes exact source/selection/target snapshot; CLI compare-and-save inside lock",
+    "durable history admission precedes HTTP publication",
+    "source archive may retain unselected confidential data after Undo",
+    "display fallback preserves source names and numeric IDs"
+  ],
+  "previousEvidence": {
+    "initialSourceRuntime": [
+      "whole-line closure and native Save/Open verified",
+      "CLI source inspect, byte-read-only preview, confirmed apply and byte-preserving repeated-address refusal"
+    ],
+    "sourceBoundary": "predates recovered-journal CLI fix; historical runtime evidence, not counted as fresh closure cases"
+  },
+  "attempts": [
+    {
+      "process": "proc_bc2f5768be71",
+      "classification": "expected initial HTTP RED",
+      "exit": 101,
+      "assertion": "source_inventory_is_read_only_and_exposes_selectable_device_ids:404 versus200"
+    },
+    {
+      "process": "proc_6eb56a27e98a",
+      "classification": "failed formatting, downstream unstarted",
+      "exit": 1
+    },
+    {
+      "process": "proc_b72a83795193",
+      "classification": "failed earlier File-menu keyboard frontend test; build unstarted",
+      "exit": 1
+    },
+    {
+      "process": "proc_24337237f97c",
+      "classification": "historical runtime preparation passed; not current-source acceptance",
+      "exit": 0
+    },
+    {
+      "process": "proc_b0fc4864db29",
+      "classification": "historical six-stage pass; superseded by later code",
+      "exit": 0
+    },
+    {
+      "process": "proc_1dab987bf470",
+      "classification": "historical corpus137/143 failed; private oracle view missing",
+      "exit": 1
+    },
+    {
+      "process": "proc_49069d222c91",
+      "classification": "fixture Migration(NotFound), invalid functional RED",
+      "exit": 101
+    },
+    {
+      "process": "proc_1e499fbe05cd",
+      "classification": "interrupted invalid namespace lo down, downstream unstarted",
+      "exit": -15
+    },
+    {
+      "process": "proc_dbdbb29a7c1a",
+      "classification": "eight-stage pass before unnamed-label change, superseded for final acceptance",
+      "exit": 0
+    },
+    {
+      "attempt": "unnamed-label-red",
+      "classification": "two functional display assertions failed before fix",
+      "exit": 1
+    },
+    {
+      "attempt": "unnamed-label-green",
+      "classification": "seven focused component tests passed after fix",
+      "exit": 0
+    },
+    {
+      "attempt": "closure-browser1",
+      "classification": "observer raced first-run guide, before apply",
+      "exit": 1
+    },
+    {
+      "attempt": "closure-browser2",
+      "classification": "observer unsuitable label/option selector, before apply",
+      "exit": 1
+    },
+    {
+      "attempt": "closure-browser3",
+      "classification": "accepted four real production cases",
+      "exit": 0
+    }
+  ],
+  "logCommitments": {
+    "owning/fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "owning/exits.txt": "55eeb78b4c0604f775468b7cc0bfd6e5a5fa05ad047a34135bbf558310d4294a",
+    "owning/clippy.log": "0b53209db424367e80c52cd8cde8b75e37af110438a0efde777104a1463956de",
+    "owning/rust.log": "3d76d60aa98b037a10b630f6ae4d1e8a078932f95abb5e078a8ecfc3f2ad8ae0",
+    "owning/python.log": "3b6b5e599f8148f43cd3271704431f80d489cbddd14e0ee1abb5e19175a52ca5",
+    "owning/web.log": "869042a4646858e64a0254bfcec97fdb2f53f6fec9b969e19c81a5dd6c881870",
+    "owning/vitest.json": "4d8ecce52d7aa6c16a1dc3e7fd89ee37d5345ae1182766a94ab997a6a4d2a17d",
+    "owning/build.log": "b344df66c8a5b3b92f171eef959119c8108d72797e43ffd7fd9330a27d316251",
+    "owning/corpus.log": "d961725e27da52ac1157d16bcb0ad6ceb16dba6ddb3237fd44b7541d9853f8c5",
+    "owning/binaries.log": "4cf86278c1e6d659943a46a3d7e3da429ac15be90f0f17742e24ef85228e7d3e",
+    "repository/check-layering.log": "e5213cc8cc539bd45515672140a4836b4e4edd15ed4b12df71e1feabe81fe193",
+    "repository/exits.txt": "477be94201bffc1cfa01a28200e6f3a6fd4f628175da894cfac1fea8c9108c7f",
+    "repository/check-headers.log": "967194aacaf38104e8239c4ce7f32700262be6fc970e6ed8722416ba69ca47db",
+    "repository/check-anchors.log": "54eeae59a35f281de0ca12c5f31eb8c3c941fd8d4cfe8f247f1c14a676241474",
+    "repository/check-ledger.log": "94ed0ca6fc21dc0c48613eb3f6f11975a33e12d939569e5303f27aae034d270f",
+    "repository/check-corpus-gates.log": "e606157016cce4c7860a5e01cb76b8465ce03287e79412bd2017c5349326325b",
+    "repository/documentation.log": "ee166e0d395704d3326b23ffb221b51fe78ea872a8a5ee6bde70c995008b132b",
+    "repository/whitespace.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "browserArtifactCommitments": {
+    "en-1440-top.png": "3373cb2672d366dbe0ff992d8fd814db7a79f0e5d61f889669137c93106e246e",
+    "en-1440-bottom.png": "c1dabbf35d2a548dc9d599240c06d47dc295f94f3160882e87cfb040aeabc0d5",
+    "en-400-top.png": "c1cf5600dd7830043dfa38f2e17a509f52aaadb52f0e0ee60b7b861c3fca311d",
+    "en-400-bottom.png": "39eaad7ca50b98046391511c53e7e873acc697dce7a5ab0a4210790658adddd3",
+    "de-1440-top.png": "921548b42ef72a83ec4b19378ee28eb1ada2cda7fdea07bf6991ee944c521259",
+    "de-1440-bottom.png": "252f9da01c9ad00f61999ba2b13f431a5e440b35eb040dd2f3317a6da05ad18f",
+    "de-400-top.png": "738effd07c7a0ec7f973cb4b53991de1c101667613c82c3810f4d6c7895a181d",
+    "de-400-bottom.png": "ebf8ddaafbdb7c7c70f361e8fd4f5a764928ebd3d2830ce31ac2825fba112ed1"
+  }
+}

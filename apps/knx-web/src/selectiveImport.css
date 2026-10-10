@@ -1,0 +1,26 @@
+/** Bounded, theme-token-based layout for the selective project import dialog. */
+.selective-import-panel {
+  width: 840px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  min-width: 0;
+  overflow: auto;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.selective-import-panel > * { flex-shrink: 0; }
+.selective-import-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.selective-import-heading h2 { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.selective-import-panel p { margin: 0; overflow-wrap: anywhere; }
+.selective-import-panel fieldset { min-width: 0; max-height: 220px; overflow: auto; border: 1px solid var(--knx-border); border-radius: 8px; }
+.selective-import-choice { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; overflow-wrap: anywhere; }
+.selective-import-choice input[type="checkbox"] { flex: 0 0 auto; margin-top: 3px; }
+.selective-import-panel input[type="password"], .selective-import-panel input[type="search"], .selective-import-panel select { min-width: 0; max-width: 100%; }
+.selective-import-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; }
+.selective-import-warning { border-left: 3px solid var(--knx-accent); padding: 8px 12px; background: var(--knx-surface); }
+.selective-import-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.selective-import-panel button:hover { transform: none; }
+.selective-import-panel [role="alert"] { color: var(--knx-accent); }
+.selective-import-panel [data-import-preview] { display: grid; gap: 12px; }

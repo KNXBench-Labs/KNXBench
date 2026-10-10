@@ -95,9 +95,10 @@ Retained bytes are not a promise of complete ETS semantics.
   command line for the scriptable bits.
 
 > [!NOTE]
-> Alpha.7 includes the earlier wizards, LCARS, achievements, language packs,
-> Devices view and `knx-mcp`, plus persistent project history, the communication-object
-> table, renaming, offline AP1 diagnostics, legacy improvements and the upload/return fixes.
+> Alpha.8 retains the earlier wizards, themes, Devices view, native history and MCP,
+> and adds selected-line/device import, schema-23 integrity fixes, read-only stored
+> module-instance values, bounded payload evidence and the 1024 MiB expanded archive budget.
+> [Release notes](docs/releases/alpha8.md) explain the scope and schema12 upgrade.
 
 ## See it in action
 
@@ -164,7 +165,7 @@ import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
 Images are available for **x86-64 (`amd64`) and 64-bit Arm (`arm64`)**. `latest`
 follows published releases, including alphas, not the newest source. To stay on a
-specific release, use `knxbench/knxbench-server:0.1.0-alpha.7` in both commands
+specific release, use `knxbench/knxbench-server:0.1.0-alpha.8` in both commands
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
 
 Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
@@ -183,15 +184,15 @@ and may enter shell history.
 ### Linux desktop, via AppImage
 
 ```bash
-REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.7
-curl -LO "$REL/KNXBench_0.1.0-alpha.7_amd64.AppImage"
+REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.8
+curl -LO "$REL/KNXBench_0.1.0-alpha.8_amd64.AppImage"
 curl -LO "$REL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.7_amd64.AppImage
-./KNXBench_0.1.0-alpha.7_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.8_amd64.AppImage
+./KNXBench_0.1.0-alpha.8_amd64.AppImage
 ```
 
-This is the `v0.1.0-alpha.7` pre-release, x86-64 only, built by the release workflow.
+This is the `v0.1.0-alpha.8` pre-release, x86-64 only, built by the release workflow.
 `--ignore-missing` skips the `knx-mcp` binary listed in the same checksum file.
 Source changes after this tag still need a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The
@@ -199,8 +200,8 @@ Source changes after this tag still need a
 packages it needs and what has been tested.
 
 > [!IMPORTANT]
-> Before upgrading, close KNXBench and back up native project files. Alpha.7
-> migrates them to schema 11; Alpha.6 cannot reopen upgraded files. Use a
+> Before upgrading, close KNXBench and back up native project files. Alpha.8
+> requires schema 12; Alpha.7 and earlier cannot reopen upgraded files. Use a
 > pre-upgrade backup to go back. Internal project versions are not external backups.
 
 ### Where it runs
@@ -219,7 +220,7 @@ All the details: [Installation](docs/manual/getting-started/04-installation.md).
 ## Project status
 
 **Alpha — and we mean it.** The current pre-release is
-[`v0.1.0-alpha.7`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.7).
+[`v0.1.0-alpha.8`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.8).
 The test suite is large, the documentation is honest, and things still move.
 
 - **Solid:** importing real ETS projects with a full report, editing with undo, the

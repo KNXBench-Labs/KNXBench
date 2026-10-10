@@ -30,11 +30,12 @@ design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
 This is the source-level `0.1.0-alpha` series, checked on **8 October 2026**.
-The [public Alpha.7 pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.7)
-(AppImage, `knx-mcp`, Docker Hub image) includes the `TypeNone` spacer fix,
-persistent history and the upload/return corrections missing from Alpha.6.
-Back up native projects before upgrading; schema11 cannot be reopened by Alpha.6. The version number is not a
-promise that anything is finished.
+The [public Alpha.8 pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.8)
+(AppImage, `knx-mcp`, Docker Hub image) packages selective import, schema-23
+integrity fixes, stored instance-value inspection and the 1024 MiB archive budget,
+on top of Alpha.7. [Release notes](../releases/alpha8.md) preserve the limits.
+Back up native projects before upgrading; schema12 cannot be reopened by Alpha.7
+or earlier. The version number is not a promise that anything is finished.
 
 > A long list of known issues is what happens when a project writes its
 > problems down, not proof that it has more of them than software that

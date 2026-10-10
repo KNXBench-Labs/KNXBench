@@ -22,6 +22,14 @@ counts below remain historical. What remains is
 and publication follow-up, (3) deferred items with a recorded user decision, and
 (4) later scope that never was an alpha task.
 
+## Public-source research follow-up (10 October 2026)
+
+Package 9's bounded research pass for KL-170, KL-171 and KL-172 is complete in
+[the source review](research/schema23-offline-boundaries.md). Implementation
+rows stay LATER: per-type endian placement, KNX UTF-8 capacity/termination and
+the loaded-image binary format still lack an admitted contract. Existing
+refusals/source retention remain unchanged; no hardware follow-up authorized.
+
 ## How this was checked
 
 - Historical goal checkboxes, counted before removal: `alpha-release-goal.md` 93
@@ -50,6 +58,31 @@ Remaining: real authorized ETS revision exports with independently reviewed
 baselines, future-model closure before model changes, and primary cvexc semantics
 before enabling any runtime rule. Synthetic browser/CLI checks are not real
 ETS/hardware/native accessibility evidence. No release/deployment or bus action.
+
+## Private schema-23 follow-ups (10 October 2026)
+
+KL-106 output audit and KL-8 secure-capable/not-activated witness are published.
+KL-68/PDB-01 own stored instance values are implemented read-only (`d050c7e78b02`,
+[ADR-0108](adr/0108-read-only-module-instance-values.md)); no Dynamic consumption,
+sibling/default fallback or additional write authority. Repeat mapping and
+activation remain an accepted, research-bound limitation. The explicit private
+own-value comparison and RefId gate now pass after import-integrity integration
+(`734064823e19`); the earlier parser refusal remains historical evidence.
+KL-1 owner decision: retained-uninterpreted, byte-exact and explicitly reported
+data may count as reconciled, without lifting its semantic limits.
+
+Final KL-68/PDB-01 candidate `f4af614eac30` now passes the full143/143 corpus
+across31 targets, eight-crate Rust and Web gates, explicit own-value/RefId gates
+and independent four-case browser replay. Four inherited corpus contracts were
+corrected test-only (`e74be53a`) after exact fresh-main RED baselines and owner
+permission. Published no-ff merge `2e264f6cc6ec`; local/tracking/live equality verified.
+
+Import-integrity is integrated, not a current waiting dependency. Next rest scopes:
+KL-1/F01–F04 original project/product source reconciliation; KL-173/F06 out-of-tree
+save/reopen evidence; KL-174/F08 content classification; KL-175/F09 raw RTF labels;
+KL-146 evaluator-vs-saved-state comparison. KL-170–172 public research package9 is
+published; implementation limits remain research-bound. Do not reuse old-base
+results for a changed main.
 
 ## Import-integrity merged-source acceptance (10 October 2026)
 

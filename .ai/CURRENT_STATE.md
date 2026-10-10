@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 13:33 CEST
+- **Completed:** Package 3 code `d050c7e78b02`: ADR-0107, separate stored-instance map, explicit read-only HTTP/Web/MCP evidence, identity/declaration/duplicate guards. Legacy single-instance alias write path preserved after a caught regression. Code gate Rust1793/0/100ignored, Web2596/0/163files, clippy, tsc, five xtask and doc checks; corpus runner completed successfully with actual positive selected total, temporary links removed; final Inspector browser4/4 and all synthetic frames inspected; two named mutants caught. Mechanical outgoing code privacy scan clear. Status documents and receipt drafted, not yet published.
+- **Pending/Next Steps:** Finish documentation/integrated-tree gates and no-ff merge/push for package3. Re-fetch import-integrity integration before private own-value and schema23 gates; old basis still refuses before own-value comparison (owner authorized narrow delivery, not a private pass). Then packages4–8 if prerequisites landed; public research package9 and final main gates still open.
+- **Notes for Codex oder Claude:** At latest readback main is `8901affa`; user reports the other session is merging, so re-fetch before integration and do not transfer old-base green evidence to changed source. Code/private original never copied into public fixtures; original/diagnostics remain local. No hardware, binaries, release or deployment. This is an in-session self-review, not independent acceptance.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-10 10:25 CEST
 - **Completed:** Schema-23 follow-up package 2 (KL-8, G13): synthetic witness `crates/knx-app/tests/secure_capable_not_activated.rs` (`59a0c162`) imports one plain schema-21 project with the same MV-0701 ProductProcedure program as `IsSecureEnabled` true (+ security table sizes) and false. Import model, readiness (`untested`) and the 8-step memory plan are identical; flag only rides along as a verbatim program attribute; exhaustive match shows no plan step writes a key. Planner-refuses-secure mutant killed. §8 update, ledger KL-8 (ACCEPTED_BOUNDARY, test+revision), OPEN_WORK, IMPLEMENTATION_STATUS, receipt. Gate: knx-app 186/0/29 ign, clippy, five xtask, doc check.

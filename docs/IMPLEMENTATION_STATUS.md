@@ -1,3 +1,12 @@
+## 2026-10-10 — KL-173 independent service/native evidence
+
+`01e6be99` adds `outside_tree_overrides_are_reported_and_preserved_without_activation`:
+empty/nonempty tree, exact original source/owner/hash, warning-level diagnostic,
+no override/links/text leakage into active neighbour, actual native Save/Reopen/
+Re-Save equality. Focus passed1/0 (two fixture variants, one registered test).
+No F06 runtime change; reactivation/inactive typed-model boundary unchanged.
+Final gates/publication pending. [Receipt](evidence/kl173-native-evidence-2026-10-10.json).
+
 ## 2026-10-10 — KL-1 final source-preservation acceptance
 
 Candidate `382ab577`: five Rust crates1360/0/116 and Web2610/0/164, full

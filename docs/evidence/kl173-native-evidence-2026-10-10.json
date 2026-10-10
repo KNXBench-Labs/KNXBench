@@ -1,0 +1,18 @@
+{
+  "schema": "knxbench-evidence/1",
+  "date": "2026-10-10",
+  "package": "KL-173 native retained override evidence",
+  "basis": "98e3dbb16038eb491e13ac16973d29f005d3469c",
+  "codeRevision": "01e6be992828f1c4de47d01e7631c37c930c4415",
+  "test": "outside_tree_overrides_are_reported_and_preserved_without_activation",
+  "focus": {
+    "passed": 1,
+    "failed": 0,
+    "fixtureVariants": 2
+  },
+  "scope": "exact retained original XML/owner/hash and warning; actual import Save/Reopen/Re-Save; no artificial active object or neighbour override contamination",
+  "unchanged": "F06 runtime, activation semantics, typed inactive modelling, hardware/download authority",
+  "review": "codex, in-session self-review only",
+  "finalGates": "pending",
+  "publication": "pending"
+}

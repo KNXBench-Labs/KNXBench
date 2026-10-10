@@ -117,3 +117,11 @@ hardened positive replay and all publications after this blocker remain pending.
 - New upstreamfc81326b delta only four regression test files/docs; dd4b8165 runs them including HTTP plus full Web2611/0/164, types and strict Clippy. Historical results are not retagged.
 - Self-review IMPORTANT private_schema23_reconciliation.rs:11 opened-input binding and :187 semantic-loss conflation fixed with test controls; CRITICAL0/unresolvedIMPORTANT0/MINOR0. Original-source output remains ignored/private; no F runtime edits, semantic/ETS/hardware claim.
 - Final docs/privacy and no-ff remote readback pending, overall goal remains open.
+
+
+## Package5 KL173 independent native evidence
+
+- Code01e6be99, single synthetic matrix registered test passed1/0: empty and nonempty active trees, original warning/ref/source/owner/hash, actual native Save/Reopen/Re-Save, no active-neighbour links/text contamination. F06/runtime untouched.
+- Self-review IMPORTANT out_of_tree_override_persistence.rs:29: empty tree alone would miss wrong active-object substitution; corrected with nonempty tree, exact typed neighbour ID and absent text/link assertions. CRITICAL0/unresolvedIMPORTANT0.
+- Compile refusal from guessed enum module corrected from documented re-export; not semantic RED evidence. This is a regression witness for existing behavior, no production implementation claimed.
+- Final source/corpus/repo gates, privacy and remote publication pending; self-review only.

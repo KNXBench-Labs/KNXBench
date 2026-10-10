@@ -1,4 +1,36 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 22:15
+- **Completed:** Package6 KL174 DELIVERED no-ff566afbdd, actual publication/readback68147ba3 with local/tracking/live equality. Rust2400/0/181, strict quality/repo/docs, complete nonempty corpus and explicit private original reconciliation/RefIds green. Original stable during explicit private runs; tracked source/HEAD frozen. Indexed Install excerpt only, direct/update-date overclaims withdrawn. No ETS-App/Add-in validity, manifest, executable or nested parser support.
+- **Pending/Next Steps:** Publish closure after docs/privacy, preserve compact private proofs and remove own tree/branch/scratch. Independent package7 worktree kl175-raw-evidence-20261010 has uncommitted report raw-header preview, additive session log and literal en/de UI plus synthetic RED/GREEN/native/UTF8/clip/HTTP/React/tsc; fresh-main integration, private/browser/mutations/broad admission/docs/self-review remain. Package8 KL146 comparison then final exact per-KL handover. Packages1–6 and9 delivered;7–8 open.
+- **Notes for Codex oder Claude:** Background proc_a3fe7606b230 exited0 after foreign alpha8 locks; foreign workers never stopped. Foreground timeout did not leave own surviving publication process (no PID inferred as ours); no duplicate push. Raw-header candidate is not field/format validation, no RTF parse/plain extraction. Schema23 synthetic device fixture requires existing Segment context; earlier invalid test fixture not production defect. Dedicated fresh xtask target required on package7, old cached manifest root must not audit removed tree. Self-review only; no root/F mutations, hardware/release/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 21:30
+- **Completed:** KL174 frozen no-ff566afbdd broad eight-crate Rust2400/0/181, strict Clippy/fmt/five nonempty repo/docs/diff and full nonempty corpus green. Explicit private original reconciliation/RefIds pass, original hash stable during those explicit runs, source/HEAD clean/frozen, corpus links removed. Only indexed official Install excerpt verified; earlier direct-page/update-date claims corrected in ADR/receipt, browser/extractor blocked and foreign profile lock untouched. Owner also approves KL175 raw-header candidates only, no field/format validation or plain-text extraction.
+- **Pending/Next Steps:** Metadata/privacy admission, publish/read back KL174 and closure receipt, remove own tree/branch/scratch while preserving compact private proofs. Then fresh-main KL175 bounded raw previews/labels with exact full source/native retention, HTTP/UI and bounded-preview safety tests. KL146 private activation comparison remains afterward; packages1–5 and9 delivered,6 fully green awaiting publication,7–8 open.
+- **Notes for Codex oder Claude:** Source6code41b3d626 unchanged through metadata corrections; actual complete runner proc_d7fca5df8e5a exited0, never treat source research notes as conformance. Canonical source field InstallationHints remains recognized vocabulary but unmodeled retained attr: opaque.rs185 stores full decoded logical value bytes, original XML separately retained; no RTF parse. Candidate preview can be bounded while full source stays exact. Self-review only; no hardware/releases/subagents/quota checks, root/F worktree untouched.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 20:56
+- **Completed:** KL174 candidate41b3d6267731 focused app/unit/HTTP witnesses green. Reuses existing sniff_media, project/manufacturer content separate from owner-approved unverified name/location roles. Independent same-member diagnostics preserved after genuine regression RED; tests mixed-case combined hints/unknown/misleading extensions, exact source storage and native reopen. Two assertion-killed mutants, restored source green. Correction: only official Install indexed excerpt verified; no direct full-page/update-date or App validation algorithm proof. ADR0109/doc scope prepared.
+- **Pending/Next Steps:** Frozen no-ff candidate broad scoped Rust/quality, full private corpus and explicit original reconciliation/RefId, docs/privacy/no-ff publication/readback/cleanup. Then KL175 raw RTF display/report/log, KL146 private activation comparison. Packages1–5 and9 delivered,6 candidate,7–8 open.
+- **Notes for Codex oder Claude:** No nested reading/unpack/execution or new DB/core schema/format behavior. Generic manufacturer notice replaced only by exact known wording; independent diagnostics remain. Source tests synthetic; private outputs stay ignored. In-session self-review only, no independent review. Never touch root/foreign F worktree; no hardware/releases/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 20:32
+- **Completed:** KL173 package5 delivered no-ff4c38af5b/main4c484227 plus pushed closure, freshly fetched/live same; own completed tree/branch/build target removed with compact private proof retained here. Packages1–5 and9 delivered. Fresh KL174 tree from latest main, mandatory private review/F progress/public contracts re-read. User accepts unverified role candidates separated from existing content sniff classes, unknown retained; no nested unpacking or execution. F08 already classifies manufacturer baggage at app boundary; reuse, do not duplicate.
+- **Pending/Next Steps:** Test-first project UserFiles/AddinData and manufacturer payload report cases, reuse productDB sniff_media in small app report-enrichment module; original storage/kind destinations unchanged, no new schema/dependency or authentic-app claim. Real import/native evidence and report consistency checks, scoped quality/corpus gates, docs/review/privacy/no-ff delivery. KL175 and KL146 remain afterward.
+- **Notes for Codex oder Claude:** Current own tree kl174-content-evidence-20261010; manufacturer baseline enrichment in import.rs:169 already exists, extend only missing project/context evidence. Owner scope stored in preceding package5 evidence. Primary official App docs retrieval failed; don't invent manifest/schema/format semantics or describe ZIP magic as authenticated ETS app. Root/foreign original F worktree untouched; no hardware/binaries/releases/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 20:30
 - **Completed:** Package5 KL173 DELIVERED no-ff4c38af5b, main publication/readback4c484227 with local/tracking/live equality. Actual scoped crates547/0/91, complete nonempty corpus31 targets, strict Clippy/fmt/five repo/docs/diff and outgoing original-value privacy scan green. Focus01e6be99 pins outside override source/report/native persistence for empty/nonempty active trees, no sibling contamination or inferred activation. No F/runtime code modified. Packages1–5 and9 delivered.
 - **Pending/Next Steps:** Push this docs-only delivered receipt after docs/privacy, clean own tree/branch/scratch retaining compact private evidence, then fresh-main KL174 bounded classification. Owner approved content classes separated from unverified App/Add-in candidate roles, unknown retained, no nested extraction/execution. KL175 raw RTF and KL146 private activation comparison afterward; overall goal incomplete.

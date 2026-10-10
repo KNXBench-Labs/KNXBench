@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 14:58
+- **Completed:** Package9 public-only research complete in4fd23f6ac4fe; actual no-ff candidate a3f88cac2b72 passes97 xtask unit tests, strict clippy/fmt, five repository gates and docs/diff. Citation evidence validation passes. Only docs and handover differ from main; no runtime encoding support added. KL-170–172 remain LATER with explicit per-type/field/payload specification gaps.
+- **Pending/Next Steps:** Closure-doc checks, outgoing source-value privacy scan, normal main push/ref readback, task-owned cleanup. Package3 integrated broad gate passed2876 Rust/2597 Web; its actual integrated corpus/browser replay is separately queued. Package4 new source-report reconciliation controls/genuine original tests are running, no pass claimed yet. KL-173 residual audit, KL-174/175 and146 still open.
+- **Notes for Codex oder Claude:** Source-bearing results remain ignored/local. Research outcome is bounded lack of sufficient evidence, not a universal absence claim. No full ETS, hardware, private decode, executable, release or deployment support. Preserve all owners' handovers on later merges; shared root deliberately stale.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 14:47
 - **Completed:** Package9 independent public-source research drafted from fresh origin/main9a5b55fe. Inspected retained official Project Schema23 and directly retrieved RFC3629; citation ledger evidence checked. Manufacturer per-type endian, KNX UTF-8 field policy and decoded LoadedImage format remain insufficiently documented; KL-170–172 implementation boundaries unchanged. No private payload decode or runtime changes. Own package3 private comparison and RefId checks separately passed; its broad gate queued under shared locks.
 - **Pending/Next Steps:** Research self-review, scoped documentation/xtask/fmt/clippy gates, privacy scan, no-ff merge/push/ref equality and cleanup. Package3 own worktree remains separately active; do not interfere with its inputs. Dependent package4–8 still need their rest checks/decisions on integrated source; all-goal completion not claimed.

@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-10 — Private schema-23 sample: KL-125 lifted, six limitations recorded
+
+A privately supplied, independently produced ETS6 project was reviewed
+read-only against the Known Limitations. New private opt-in test
+`private_schema23_refids` (`e89ff842`) counts every object id through the
+production RefId rules: green with its variable, refused without it, a
+private mutant caught. KL-125 is lifted. Evidence updates went into §1, §11,
+§52, §68 and §146 (none lifted), and §170–§175 are new (little-endian and
+UTF-8 image refusals, stored loaded images, overrides outside the object
+tree, project user files/add-in data, RTF values). No production code changed;
+the project itself and its evidence stay local.
+[Receipt](evidence/private-schema23-kl-review-2026-10-10.json).
+
 ## 2026-10-10 — Import expansion: combined-source integration accepted
 
 Owner-authorized commit/merge/push follows the completed local package.

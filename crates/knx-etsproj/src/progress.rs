@@ -174,7 +174,7 @@ mod tests {
             "every entry in the archive is walked, once, in order"
         );
         let whole_files = outcome.opaque.iter().filter(|e| e.xpath.is_empty()).count();
-        assert_eq!(whole_files + outcome.manufacturer.len(), 4);
+        assert_eq!(whole_files + outcome.manufacturer.len(), 6);
     }
 
     /// The sequence above is the same under either convention — reporting

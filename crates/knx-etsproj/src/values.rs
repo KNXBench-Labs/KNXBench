@@ -90,6 +90,9 @@ pub fn parse_completion_status(s: &str) -> Result<CompletionStatus, ValueError> 
         "Undefined" => Ok(CompletionStatus::Undefined),
         "Editing" => Ok(CompletionStatus::Editing),
         "FinishedDesign" => Ok(CompletionStatus::FinishedDesign),
+        "FinishedCommissioning" => Ok(CompletionStatus::FinishedCommissioning),
+        "Tested" => Ok(CompletionStatus::Tested),
+        "Locked" => Ok(CompletionStatus::Locked),
         "Accepted" => Ok(CompletionStatus::Accepted),
         _ => Err(ValueError::UnknownEnumValue {
             kind: "CompletionStatus",

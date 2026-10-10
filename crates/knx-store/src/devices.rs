@@ -206,7 +206,7 @@ pub fn load_device(conn: &Connection, id: DeviceId) -> Result<DeviceInstance, St
         product_ref,
         program_ref,
         commissioning: CommissioningState {
-            completion: completion_from_str(&completion),
+            completion: completion_from_str(&completion)?,
             individual_address_loaded,
             application_program_loaded,
             parameters_loaded,

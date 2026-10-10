@@ -133,6 +133,7 @@ fn assert_default_line_boundaries(version: u32) {
         ] {
             if let Some(target) = value.filter(|value| Some(*value) != present) {
                 expected.push(ImportError {
+                    source_path: None,
                     stage: "map",
                     severity: Severity::Error,
                     xpath: xpath.to_string(),

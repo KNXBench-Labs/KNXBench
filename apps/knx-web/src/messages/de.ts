@@ -408,6 +408,7 @@ export const messages: Record<MessageKey, string> = {
   "documentationExport.close": "Schließen",
 
   "toast.dismiss": "Schließen",
+  "toast.error.archiveTooLarge": "Die Datei ist entpackt mit {size} MiB zu groß. Das Limit liegt bei {limit} MiB.",
   "toast.error.messageIsEnglish": "Diese Meldung ist der unveränderte Text des Servers, auf Englisch.",
 
   "toast.error.notAsPlanned": "Nun, das lief nicht wie geplant: {msg}",

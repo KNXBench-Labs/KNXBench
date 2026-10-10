@@ -256,12 +256,24 @@ handler, not a recoverable `Result::Err`) rather than fail cleanly.
 F2/F3):** the declared-size guard alone covered only members that declare
 their size honestly. Every member is now read with at most its declared size
 (one byte more only to detect a lie, then refused by name); the members
-together may declare at most 512 MiB (`MAX_ARCHIVE_UNCOMPRESSED`,
+together may declare at most 1024 MiB (`MAX_ARCHIVE_UNCOMPRESSED`,
 `ContainerError::TooLarge`); and two file members whose names are equal, or
 equal ignoring ASCII case, are refused (`ContainerError::DuplicateEntry`)
 instead of one being collapsed into or read in place of the other. Checked on
 the raw central directory, because the `zip` reader keys members by name.
-See KNOWN_LIMITATIONS §159.
+See KNOWN_LIMITATIONS §159. The total was raised from 512 MiB to 1024 MiB
+on 2026-10-10 at the owner's request; all other archive guards are unchanged.
+This is an expanded-payload budget, not a guarantee of peak memory use or
+successful import of every archive below the limit.
+
+**Size-refusal presentation (2026-10-10 local source):** error toasts and the
+persistent load-failure banner share a narrowly scoped EN/DE presenter for the
+exact verified `ContainerError::TooLarge` message. It uses the server's actual
+expanded-byte total and limit, so older 512 MiB servers remain intelligible.
+The size is rounded up to two decimal MiB places to keep a one-byte excess
+visible; the underlying rejection, Error/body, progress snapshot and session
+log are unchanged. Unrecognized or unsafe numeric messages remain verbatim.
+No new structured API fields, compressed-upload policy or CLI localization.
 
 ## 3. Schema detection
 

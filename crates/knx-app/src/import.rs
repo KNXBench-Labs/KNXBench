@@ -166,26 +166,11 @@ fn persist_outcome(
     options: ImportOptions<'_>,
     observer: &dyn LoadObserver,
 ) -> Result<ImportedProject, AppError> {
-    // Classify preserved payloads using the existing product adapter. A picture
-    // or document is not plugin code; this does not decode or execute anything.
-    for file in &outcome.manufacturer {
-        if file.kind == knx_etsproj::opaque::OpaqueKind::Baggage {
-            let class = knx_productdb::sniff_media(&file.bytes).as_str();
-            let description = format!(
-                "manufacturer payload ({class}); retained byte-exact, not rendered or executed"
-            );
-            for feature in &mut outcome.report.unsupported {
-                if feature.what == file.source_path {
-                    feature.consequence = description.clone();
-                }
-            }
-            for summary in &mut outcome.report.opaque {
-                if summary.source_path == file.source_path && summary.kind == "Baggage" {
-                    summary.reason = description.clone();
-                }
-            }
-        }
-    }
+    crate::import_payload_evidence::annotate(
+        &mut outcome.report,
+        &outcome.opaque,
+        &outcome.manufacturer,
+    );
     // The manifest is written whichever way the manufacturer files are
     // stored: it describes what the project was imported with, not where
     // the bytes ended up.

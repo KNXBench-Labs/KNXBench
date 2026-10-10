@@ -13,7 +13,7 @@ Documentation evidence is not interoperability or hardware acceptance.
 Data Secure article says ETS generates a separate runtime key for each secured
 group address and installs it during commissioning; device commissioning keys
 are also stored in the project export.[1] An FDSK bootstraps initial device
-commissioning, not general group-address runtime access.[1][6]
+commissioning, not general group-address runtime access.[1], [6]
 
 Project Schema23 v01.00.00 (1 March 2024) explicitly declares these locations:[8]
 
@@ -63,8 +63,8 @@ keyring grammar or known-answer corpus.[4]
 
 | Layer | Material and purpose | Boundary |
 | --- | --- | --- |
-| Data Secure | Runtime group key; device tool key for secured device management | Application/group security, not an IP tunnel password.[1][6] |
-| IP Secure | Routing backbone key; tunneling/interface and management credentials | IP transport security is not a substitute for Data Secure.[7][3] |
+| Data Secure | Runtime group key; device tool key for secured device management | Application/group security, not an IP tunnel password.[1], [6] |
+| IP Secure | Routing backbone key; tunneling/interface and management credentials | IP transport security is not a substitute for Data Secure.[7], [3] |
 | Factory device authentication | Manufacturer certificate binds FDSK to device serial | Bootstraps commissioning; reset/recovery is manufacturer-specific, not authorized by this research.[6] |
 | Project password protection | Password-derived protection of exported project container | Schema23 §4.2.4 p.64 describes AES-256 nested ZIP protection; not a runtime group key.[8] |
 | Project source signature | ETS/trusted-manufacturer origin policy | Schema23 §1.2 p.4: separate trusted-origin import restriction; knowing a password/key does not authorize edited-project signing.[8] |
@@ -74,7 +74,7 @@ keyring grammar or known-answer corpus.[4]
 **Documentation inconsistencies remain visible.** The general device article
 and Data Secure article disagree on whether the tool/device key is visible to
 an ETS user; the Security/device articles also give inconsistent certificate
-character-count descriptions.[6][1][2] This research does not derive a parser,
+character-count descriptions.[6], [1], [2] This research does not derive a parser,
 certificate validator or universal UI-visibility rule from those statements.
 Field provenance and export scope are stronger evidence than those counts.
 The retrieved IP Secure article labels itself deprecated; use it for historical

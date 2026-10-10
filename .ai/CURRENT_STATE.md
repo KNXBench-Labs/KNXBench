@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 23:25 CEST
+- **Completed:** AP1 citation evidence passed. First source-bound doc gate proc_d0df0e3873da refused adjacent numbered citations as Markdown reference links at documentation stage; all later stages unstarted. Corrected citation separators only; full documentation/evidence/whitespace now pass in focused checks. Own AP2 literal baseline genuinely executed16 tests:1 pass15 named expected failures, frozen inputs, proc_9846dd0e377c wrapper0/actualCargo101. Independent local ProjectStats CSS AST slice has actual named RED and seven GREEN controls, not final acceptance.
+- **Pending/Next Steps:** Fresh AP1 full doc/repository admission on corrected commit and coordinated publication; replace AP2 RED baseline with real bounded adapter then persistence/editor acceptance. Review/strengthen/full-suite/real-report CSS acceptance. Remaining AP3–AP7 implementation and AP9 offline prerequisites remain; goal incomplete.
+- **Notes for Codex oder Claude:** Three own worktrees: data-tooling, data-tooling-rtf and separate ProjectStats measurement-coverage. AP1 frozen source changes are only citations/this handover; failed receipt retained, never relabelled green. Core has no RTF dependency, parser belongs external adapter. No root/foreign, UI-shell, secrets, bus, release/deployment, subagent or quota action. Preserve inherited entries.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 22:53 CEST
 - **Completed:** Session2 nine-package goal activated in own feature/data-tooling-20261010 from fd6b1cff37b2713361e256282cc2aef46e2cbcb9. Startup/latest-doc/source/Session1 ownership inspection complete; exact pre-change surfaces in docs/contracts/data-tooling-ownership.md. AP1 primary-source Secure key provenance drafted from seven KNX articles and public Schema23; isolated source/code boundaries and contradictions disclosed. No runtime Secure/keyring or real-secret access.
 - **Pending/Next Steps:** AP1 source/citation/doc gates and coordinated publication; then AP2 bounded RTF preservation/editing, AP3 typed editors, AP4 notes/help, AP5 offline automation, AP6 opt-in MCP mutations, AP7 catalogue updates, AP8 actual collector measurement gaps; AP9 separate hardware prerequisites/test plans only. Goal incomplete.

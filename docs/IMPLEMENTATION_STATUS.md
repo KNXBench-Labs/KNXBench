@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-10 — KL-68/PDB-01: own stored module-instance values, read-only
+
+Code `d050c7e78b02` adds a separate instance dimension, independent of defaults,
+siblings and Dynamic evaluation. Validated stored evidence is exposed through
+HTTP `instanceValues`, the Inspector and both MCP readers (`notEvaluated`).
+Legacy single-instance write authority remains unchanged; conflicting declarations
+and identities cannot authorize the new map. Repeat activation/mapping stays
+unsupported (ADR-0107). Rust1793/0, Web2596/0, Clippy, TypeScript, five xtask
+checks, documentation checks, corpus runner and four en/de browser cases passed;
+two focused mutants were caught. In-session self-review only. The real private
+comparison still refuses in the project parser on basis `8901affa`; owner
+approved narrow delivery with verification waiting on import-integrity.
+[Receipt](evidence/kl68-instance-values-2026-10-10.json).
+
 ## 2026-10-10 — KL-8: secure-capable programs without Secure, pinned
 
 A synthetic witness (`crates/knx-app/tests/secure_capable_not_activated.rs`,

@@ -51,21 +51,21 @@ baselines, future-model closure before model changes, and primary cvexc semantic
 before enabling any runtime rule. Synthetic browser/CLI checks are not real
 ETS/hardware/native accessibility evidence. No release/deployment or bus action.
 
-## Private schema-23 sample review (10 October 2026)
+## Private schema-23 follow-ups (10 October 2026)
 
-A read-only review of a privately supplied ETS6 project lifted KNOWN_LIMITATIONS
-§125 and recorded six new limitations (§170–§175) plus evidence updates for §1,
-§6, §8, §11, §52, §68, §106, §134, §146 and PDB-9. Open follow-ups, none
-authorized yet: little-endian and UTF-8 image encoding (needs a documented
-source), repeated-module semantics with a `ValueMap` instance dimension (ADR
-first), overrides outside the object tree (§173, import-integrity package),
-content-based classification of project user files/add-in data and the
-stored-image reference (research only). The redaction audit of retained network
-endpoints is done (§106, 2026-10-10: MAC addresses redacted, every other output
-withholds the data or names it). The secure-capable-but-not-activated case is
-pinned by a synthetic witness (§8): treated exactly like a plain program, no
-Secure semantics added. The import repairs that let that project import end to end belong to the
-separate import-integrity package.
+KL-106 output audit and KL-8 secure-capable/not-activated witness are published.
+KL-68/PDB-01 own stored instance values are implemented read-only (`d050c7e78b02`,
+[ADR-0107](adr/0107-read-only-module-instance-values.md)); no Dynamic consumption,
+sibling/default fallback or additional write authority. Repeat mapping and
+activation remain an accepted, research-bound limitation. The private own-value
+comparison is **waiting on import-integrity**: on `8901affa` the genuine parser
+refuses before comparison. Owner explicitly authorized narrow read-only delivery,
+not a private-verification claim.
+
+Next: re-fetch the import-integrity integration; rerun the private gates; handle
+KL-1/F01–F04 (including owner reconciliation decision), KL-173/F06, KL-174/F08,
+KL-175/F09 and KL-146 only after their prerequisites. KL-170–172 remain public
+research-only tasks. Do not reuse old-base green results for a changed main.
 
 ## 1. Running or waiting right now
 

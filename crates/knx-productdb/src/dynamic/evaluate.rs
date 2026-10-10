@@ -663,9 +663,31 @@ fn resolve_control_kind(
 pub struct ValueMap {
     unscoped: HashMap<String, String>,
     scoped: HashMap<(String, String), String>,
+    /// Validated stored instance evidence, deliberately separate from the
+    /// maps consumed by Dynamic evaluation (ADR-0107). Never seeded by defaults.
+    instances: HashMap<(String, String, String), String>,
 }
 
 impl ValueMap {
+    /// Exact stored value of one imported instance. Never returns a default
+    /// or another sibling's value; not consumed by Dynamic evaluation.
+    pub fn get_instance(&self, module_id: &str, instance_id: &str, ref_id: &str) -> Option<&str> {
+        self.instances
+            .get(&(module_id.into(), instance_id.into(), ref_id.into()))
+            .map(String::as_str)
+    }
+
+    /// Insert a validated stored instance value (ADR-0107).
+    pub fn insert_instance(
+        &mut self,
+        module_id: String,
+        instance_id: String,
+        ref_id: String,
+        raw: String,
+    ) {
+        self.instances.insert((module_id, instance_id, ref_id), raw);
+    }
+
     /// The value for `ref_id` within `scope`: the scope's own stored value
     /// if it has one, otherwise the program-level value (design D36).
     /// `scope: None` reads the program-level value only. Never falls back
@@ -710,6 +732,7 @@ impl From<HashMap<String, String>> for ValueMap {
         ValueMap {
             unscoped,
             scoped: HashMap::new(),
+            instances: HashMap::new(),
         }
     }
 }

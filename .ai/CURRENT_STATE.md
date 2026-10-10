@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:33 CEST
+- **Completed:** Owner authorized commit and push of the accepted1024 MiB archive-budget/readable-refusal package. Fresh origin/main still d9da8e61, source hashes equal accepted local receipt, exact18-path owned scope and self-review confirmed. Shared root HEAD/index/foreign documents captured for preservation. No publication yet.
+- **Pending/Next Steps:** Focused feature commit with KNXBench identity, no-ff main integration in this owned checkout, fresh integrated parser/frontend/browser/build/lint/repository/documentation gates, normal main push with exact remote readback, then owned cleanup. No release/deployment/hardware scope.
+- **Notes for Codex oder Claude:** Work in fix/project-archive-1024mib-20261010; do not stage or sync shared root. Earlier local receipts remain historical, not new merged acceptance. Publication logs/manifest under own archive1024-publish-20261010 scratch until final archival.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:26 CEST
+- **Completed:** Owner-requested local archive budget and readable refusal delivery accepted in fix/project-archive-1024mib-20261010 (base d9da8e61). Cumulative expanded project budget is 1024 MiB/1073741824 bytes; 64 MiB/member, bounded reads and outer/nested identity/layout/accounting guards unchanged. Shared EN/DE presenter makes both error toast and persistent load-failure banner name the expanded size and actual server limit, without a joke or incorrect English disclosure. Unknown/unsafe text and underlying error/progress/log data remain unchanged. Named parser/toast/banner/private-use locale RED controls verified. Final parser 197/0/56 ignored; frontend 2608/0 in164 files, production build and explicit E2E type check; built offline Chromium4/4 EN/DE1440/400 with all four frames inspected; Clippy/fmt/server build/version/five nonempty repository gates/docs/whitespace pass. Self-review only. Docs and handover synchronized; owned workers/caches/probes removed, reviewed source and built frontend retained.
+- **Pending/Next Steps:** None for the requested local implementation. Changes remain uncommitted/unpublished in KNXBench.worktrees/project-archive-1024mib-20261010; integration/publication/deployment are separate scope. Tester archive was not supplied/imported; no large-project peak-memory or private-corpus acceptance.
+- **Notes for Codex oder Claude:** Evidence retained ignored at .ai/logs/2026-10-10_codex_project-archive-1024mib/final-receipt.json with actual logs/manifests/final frames. First browser fixture missed achievements bootstrap and remains a refused attempt; toast-only earlier success is not final post-banner acceptance. Existing API exposes size only in the exact verified English text; the presenter narrowly recognizes that text and otherwise preserves it. Rust inputs remain byte-identical to their accepted gate; later changes are UI/docs only. Root HEAD/index/application and foreign work were not synchronized/staged. No API/schema/protocol/dependency, release/container/hardware action. Preserve every inherited handover below.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 15:00
 - **Completed:** Package9 delivered: no-ff3a3037871b62 pushed to main, own HEAD/tracking/live identical. Public KL-170–172 research4fd23f6ac4fe;97 xtask tests and strict clippy/fmt, all five nonempty repository checks, docs/diff and final mechanical private-value scan pass. Closure changes docs only. Implementation limits remain LATER; insufficient endian/UTF8-field/loaded-image contracts documented, no runtime changes. Receipt docs/evidence/schema23-public-research-2026-10-10.json. In-session self-review only.
 - **Pending/Next Steps:** Own package9 worktree/branch/scratch cleanup after this additive publication receipt. Package3 integrated broad2876 Rust/2597 Web green, integrated corpus/browser replay running in its own worktree. Package4 original/report/native controls running separately. Continue KL-173 rest,174/175 and146; final origin/main gates and full per-KL handover still required.

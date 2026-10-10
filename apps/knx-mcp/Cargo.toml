@@ -23,6 +23,7 @@ tokio = { workspace = true, features = ["rt", "macros", "io-std"] }
 
 [dev-dependencies]
 tempfile.workspace = true
+knx-testsupport.workspace = true
 
 [build-dependencies]
 knx-build-stamp.workspace = true

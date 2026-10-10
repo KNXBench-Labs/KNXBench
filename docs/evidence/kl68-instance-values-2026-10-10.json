@@ -1,0 +1,148 @@
+{
+  "schema": "knxbench-evidence/1",
+  "date": "2026-10-10",
+  "package": "KL-68 / PDB-01 read-only stored instance values",
+  "basis": "8901affa9629384a23e0a4b5461af5aeb1b6b8b0",
+  "codeRevision": "8b7a9dc61516",
+  "implementationCommit": "d050c7e78b02",
+  "dependencyCommit": "8b7a9dc61516",
+  "documentationMainIntegrated": "6ac34e6152b7",
+  "review": "codex, in-session self-review only; no independent review",
+  "scope": {
+    "implemented": "Separate stored (module, instance, ref) dimension, HTTP/Web/MCP read-only evidence; no sibling/default fallback",
+    "unchanged": "Legacy single-instance and definition-alias read/write contracts",
+    "notImplemented": "Repeat expansion, counter-to-MI mapping, activation, writable repeated instances, wire or hardware semantics"
+  },
+  "acceptedChecks": {
+    "rust": {
+      "passed": 1793,
+      "failed": 0,
+      "ignored": 100,
+      "packages": [
+        "knx-productdb",
+        "knx-testsupport",
+        "knx-app",
+        "knx-server",
+        "knx-mcp"
+      ]
+    },
+    "web": {
+      "passed": 2596,
+      "failed": 0,
+      "files": 163
+    },
+    "fmt": "passed",
+    "clippy": "all-targets, -D warnings; passed",
+    "typescript": "tsc --noEmit; passed",
+    "xtask": [
+      "check-layering",
+      "check-headers",
+      "check-anchors",
+      "check-ledger",
+      "check-corpus-gates"
+    ],
+    "documentation": "check_documentation.py and diff --check; passed on code inputs",
+    "corpus": "Historical pre-integration pass and inherited post-integration failures are superseded by the admitted corrected integrated corpus below",
+    "browser": "Final instance-values.e2e.ts: four en/de narrow/wide Inspector fixture cases passed, literal raw HTML-looking text, no edit controls or non-GET requests",
+    "visualInspection": "All four final synthetic evidence-region frames inspected: labels clear, values readable, narrow identifiers wrapped, no visible clipping; not packaged/native application evidence",
+    "mutations": [
+      "Sibling fallback: named productdb witness failed",
+      "HTTP evidence omitted: named HTTP witness failed"
+    ],
+    "inputBinding": "Successful package gate reported equal start/end inputs; code committed afterward without source changes",
+    "network": "Broad, corpus and browser gates loopback-only; corpus runner clears KNX_* environment"
+  },
+  "reviewFindings": [
+    {
+      "severity": "IMPORTANT",
+      "location": "apps/knx-mcp/Cargo.toml:26 and Cargo.lock:2094",
+      "finding": "Initial code commit omitted the already-tested synthetic witness dev dependency",
+      "resolution": "Manifest and lockfile committed before publication; codeRevision names the complete snapshot"
+    },
+    {
+      "severity": "IMPORTANT",
+      "location": "crates/knx-productdb/src/device_evaluation.rs:266-278",
+      "finding": "Definition namespace condition regressed legacy lone-instance write authority",
+      "resolution": "Condition restricted to the new map; alias RED/GREEN and unchanged 39 HTTP parameter tests passed"
+    },
+    {
+      "severity": "IMPORTANT",
+      "location": "crates/knx-productdb/src/device_evaluation.rs:266-278",
+      "finding": "Conflicting module declarations could authorize stored evidence",
+      "resolution": "Unique declaration required; named negative witness passed"
+    },
+    {
+      "severity": "MINOR",
+      "location": "crates/knx-app/tests/private_module_instance_values.rs:1",
+      "finding": "Multiline first paragraph raised the no-header ceiling",
+      "resolution": "Header separated; original ceiling retained"
+    }
+  ],
+  "rejectedAttempts": "First broad gate had two legacy HTTP failures and a header failure, all fixed before admitted gate; runner permission refusal executed no tests",
+  "privateComparison": {
+    "status": "passed again on final integrated source f4af614eac3049f18fc0a5534414a3ac8796ba87",
+    "test": "private_instances_read_their_own_stored_values",
+    "refIdGate": "a_second_schema_23_project_resolves_every_object_id_through_the_production_rules; passed explicitly",
+    "privacy": "Boolean assertions; output retained only in ignored local evidence",
+    "historicalAttempt": "Basis8901affa parser refused before comparison; superseded after import-integrity integration",
+    "notClaimed": "Repeat activation, full ETS, Secure or hardware compatibility"
+  },
+  "publication": {
+    "status": "DELIVERED",
+    "merge": "2e264f6cc6ece52cb463ed77b4fdf68cfa96706b",
+    "noFastForward": true,
+    "pushedTo": "origin/main",
+    "HEADTrackingLiveEqual": true,
+    "postMergeChecks": "five nonempty repo gates, documentation/diff and mechanical private-source-value scan passed; source tree unchanged from f4af614e admission"
+  },
+  "importIntegrityIntegrated": "9a5b55fe84d6",
+  "postIntegrationChecks": {
+    "revision": "f4af614eac3049f18fc0a5534414a3ac8796ba87",
+    "rust": {
+      "passed": 2876,
+      "failed": 0,
+      "ignored": 160,
+      "packages": [
+        "knx-core",
+        "knx-store",
+        "knx-etsproj",
+        "knx-productdb",
+        "knx-testsupport",
+        "knx-app",
+        "knx-server",
+        "knx-mcp"
+      ]
+    },
+    "web": {
+      "passed": 2597,
+      "failed": 0,
+      "files": 163
+    },
+    "quality": "fmt, all-targets strict clippy, tsc, five nonempty repository gates and docs/diff passed",
+    "corpus": {
+      "passed": 143,
+      "total": 143,
+      "targets": 31,
+      "exit": 0,
+      "linkRemoved": true
+    },
+    "browser": "Integrated browser replay passed all four en/de narrow/wide cases independently after corpus failure; original chained runner did not execute it",
+    "gateBinding": "HEAD unchanged through final source+full corpus+private runner; clean tracked diffs frozen through broad gate; not a full source-byte manifest",
+    "ownValuePrivate": {
+      "passed": 1,
+      "failed": 0
+    },
+    "refIdPrivate": {
+      "passed": 3,
+      "failed": 0
+    }
+  },
+  "historicalCorpusBlocker": "FAILED: fresh origin/main d9da8e61 also fails the same three corpus targets with four failed tests and identical per-target result totals. Baseline code root verified; full per-case replay still needed because runner clipped early assertion blocks. No F-owner file modified.",
+  "corpusCorrection": {
+    "ownerAuthorization": "Exactly four existing test functions; no runtime change or private golden values",
+    "codeRevision": "e74be53a",
+    "RED": "Four exact failures independently reproduced on fresh main d9da8e61 with full private logs",
+    "GREEN": "Four exact functions passed individually before all31-target corpus replay",
+    "contract": "Independent whole-member inventory with duplicate/missing/exact-byte refusal; explicit preserved/uninterpreted/no-execution baggage boundary; exact independently derived server diagnostics"
+  }
+}

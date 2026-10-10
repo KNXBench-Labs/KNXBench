@@ -825,6 +825,7 @@ export const messages: Record<MessageKey, string> = {
   "logPanel.emptyNoEntries": "Noch keine Protokolleinträge.",
   "logPanel.loading": "Sitzungsprotokoll wird geladen…",
   "logPanel.emptyFiltered": "Keine Protokolleinträge entsprechen den aktuellen Filtern.",
+  "logPanel.rawRtfLike": "RTF-ähnlicher Rohtext — nicht interpretiert",
   "logPanel.search": "Sitzungsprotokoll durchsuchen",
   "logPanel.clear": "Suche löschen",
   "logPanel.count": "{shown} von {total} Einträgen",

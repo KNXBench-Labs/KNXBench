@@ -658,3 +658,13 @@ members using the existing product adapter byte sniffer. Descriptive role hints
 never change source ownership, exact resolution, normalized core or storage
 destinations. Independent diagnostics survive. No new schema or archive reader;
 [ADR-0109](adr/0109-opaque-payload-content-and-candidate-roles.md).
+
+
+### Bounded raw-header report hints (ADR-0110)
+
+Infrastructure import reports may carry optional literal `raw_text_preview` for
+retained attribute header candidates. This never becomes domain/default/activation
+state. Full logical attribute and original XML stay in source storage; clipped
+previews disclose truncation and must not regenerate/export values. Application
+session logs add raw evidence rows while keeping existing hash diagnostics; UI
+renders literal text and localized raw labels, no RTF/HTML interpretation.

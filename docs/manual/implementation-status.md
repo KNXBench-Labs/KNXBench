@@ -38,8 +38,8 @@ shown plainly in both the popup and persistent load-failure banner, for example:
 The displayed limit comes from the server, including an older server's 512 MiB
 limit. MiB accurately names the binary unit used by the importer, rather than
 compressed file size. Unknown technical messages still pass through unchanged.
-The source integration is verified separately from release/deployment; Alpha.7
-artifacts retain their existing limits.
+The verified source change is published on `main`, separately from any new
+release/deployment; Alpha.7 artifacts retain their existing limits.
 [Verification](../IMPLEMENTATION_STATUS.md#2026-10-10--archive-budgetreadable-refusals-main-integration-accepted)
 · [Import limits](../IMPORT_EXPORT.md).
 

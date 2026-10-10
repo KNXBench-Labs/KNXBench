@@ -25,7 +25,8 @@ was disabled without an opener. Neither was a KNX format or domain failure.
 - Refuse oversized files with HTTP 413 and an explicit 256 MiB message;
   delete incomplete staging files and never overwrite earlier uploads.
 - Upload acceptance is not import compatibility. Keep the importer's existing
-  64 MiB per-member and 512 MiB total expanded-archive limits unchanged.
+  64 MiB per-member limit unchanged. The total expanded-archive limit is
+  1024 MiB after the separately requested 2026-10-10 increase.
   No claim is made that the reporter's undisclosed archive imports successfully.
 - The browser's explicit return button navigates the current document to the
   same-origin editor URL. It removes `source` and changes `view` to the explicit

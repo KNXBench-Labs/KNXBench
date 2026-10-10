@@ -10,6 +10,30 @@ as source reconciliation only. §1/COMPATIBILITY/ledger narrowed accordingly;
 merged-source full gates and publication still pending.
 [Receipt](evidence/kl1-source-reconciliation-2026-10-10.json).
 
+## 2026-10-10 — Archive budget/readable refusals: main integration accepted
+
+- Owner authorized commit/main push. Feature `1be6f9bd1694` integrated with the
+  concurrently published instance-value source; final tested merge `7520fa389ed4`.
+  Only additive status/handover conflicts required resolution; upstream content
+  and all reviewed source changes are preserved. Source publication `f08b9776ea6c`
+  was pushed normally; local/fetched/live main equality, feature ancestry and
+  exact owned blobs were verified. Later closure changes documentation only.
+- Fresh merged-source acceptance: importer197/0/56 ignored; application/product/
+  server/MCP consumers1799/0/101 ignored; frontend2610/0 in164 files; full
+  intercepted Chromium244/0 and built-app EN/DE1440/400 checks4/0. All four
+  final frames inspected. Explicit reference-container3/0, own-instance1/0,
+  RefId3/0 checks executed with unchanged read-only inputs.
+- Production frontend/server builds, all type checks, importer Clippy with
+  warnings denied, formatting, all five nonempty checkout-bound repository
+  checks, documentation and whitespace pass. All consumed source inputs were
+  frozen for the run; later closure edits are documentation-only. Self-review.
+- The cumulative expanded archive budget is1024 MiB; the64 MiB member limit
+  and all archive guards remain. Both popup and persistent failure banner show
+  clear localized size/limit copy, using the actual server values.
+- [Source-bound evidence](evidence/project-archive-budget-2026-10-10.json).
+  This is not a new release/deployment, tester-archive import or large-project
+  peak-memory measurement. Earlier local entries below are historical.
+
 ## 2026-10-10 — KL-68/PDB-01 final integrated source admission
 
 Final corrected source `f4af614eac30`: eight Rust crates2876/0/160,
@@ -22,6 +46,39 @@ Read-only own raw values remain separate from Dynamic inputs, defaults and
 siblings; Repeat/activation/write boundaries remain. Published no-ff merge `2e264f6cc6ec`, HEAD/tracking/live equal. [Evidence](evidence/kl68-instance-values-2026-10-10.json).
 
 # IMPLEMENTATION_STATUS.md
+
+## 2026-10-10 — Project archive budget: 1024 MiB (local source)
+
+- Owner-requested increase of the cumulative expanded `.knxproj` budget from
+  512 MiB to 1024 MiB (1,073,741,824 bytes). The 64 MiB per-member guard,
+  bounded reads, member identity/layout checks and outer/nested accounting
+  are unchanged; no API/schema/protocol/dependency change. The follow-up UI
+  request adds shared EN/DE wording for the exact size refusal in error
+  toasts and the persistent load-failure banner. It names expanded size and
+  the actual server limit, skips the joke/English-only disclosure for this
+  translated toast, and preserves unknown messages and raw diagnostics.
+- Three new regressions fail on the previous constant and pass on the new
+  one: the exact budget, container admission above the former budget, and
+  exact refusal one byte above 1024 MiB. Existing exact-boundary and outer/
+  nested over-budget tests remain green, with refusal fixtures scaled to
+  the configured budget. Declared-size fixtures do not prove full large
+  imports or peak-memory use.
+- Local acceptance: `knx-etsproj` 197 passed / 0 failed / 56 ignored;
+  warning-denied all-targets Clippy, formatting, fresh server build and
+  `--version`, all five checkout-bound repository checks, documentation and
+  whitespace checks pass. Follow-up UI acceptance: full frontend 2608 passed /
+  0 failed in 164 files, production build and explicit E2E type check pass;
+  four intercepted built-Chromium cases cover EN/DE at1440/400 pixels,
+  with all four frames inspected for clear banner/toast text and fit.
+  Named toast and persistent-banner assertions fail before their respective
+  fixes; private-use locale fallback also has a named RED/GREEN control.
+  The first browser fixture omitted the achievements startup response and
+  was refused; the corrected fixture reuses the existing shared adapter.
+  Only the final post-banner browser run is acceptance. Self-review only;
+  corpus tests were not selected.
+- Local source only, not committed/published/deployed. Existing release
+  artifacts are unchanged; the tester archive was not supplied or imported.
+  See [import limits](IMPORT_EXPORT.md) and [KL-159](KNOWN_LIMITATIONS.md#159-a-project-archive-may-unpack-to-at-most-1024-mib-and-every-member-name-must-be-unique).
 
 ## 2026-10-10 — KL-68/PDB-01: own stored module-instance values, read-only
 

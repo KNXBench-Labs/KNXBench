@@ -497,10 +497,11 @@ fn unicode_path_twins_inside_a_protected_payload_are_refused() {
 
 #[test]
 fn a_protected_payload_declaring_more_than_the_budget_is_refused_before_unpacking() {
-    // Nine members that each *declare* 60 MiB but hold a few bytes: the
-    // refusal must come from the declared total, before the first member is
-    // read — reading would fail differently ("decompressed to N bytes").
-    let inner = (0..9)
+    // Enough members declaring 60 MiB each to exceed the current budget,
+    // despite holding only a few bytes. Refuse before reading the first:
+    // reading would fail differently ("decompressed to N bytes").
+    let member_count = knx_etsproj::MAX_ARCHIVE_UNCOMPRESSED / (60 * 1024 * 1024) + 1;
+    let inner = (0..member_count)
         .map(|i| Member {
             declared: 60 * 1024 * 1024,
             ..member(&format!("P-0001/BinaryData/{i}.dat"), b"tiny")

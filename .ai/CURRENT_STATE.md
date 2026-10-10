@@ -7,6 +7,22 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:38 CEST
+- **Completed:** Owner-authorized archive-budget/readable-refusal source published on main atf08b9776ea6c. Exact local/fetched/live main equality, feature1be6f9bd ancestry and owned source/receipt/handover blob identity verified. Actual final merged source7520fa38 passes24 frozen stages: parser197/0/56 ignored; consumers1799/0/101 ignored; frontend2610/0/164 files; Chromium244/0 and built-browser4/0/four inspected frames; explicit reference3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo checks/docs/whitespace pass; self-review only. Public receipt/manual/status record source publication and release separation.
+- **Pending/Next Steps:** No feature work remains. This closure changes docs only; verify its normal push/readback, archive compact evidence and retire only owned checkout/branches/build/scratch. No release/deployment/hardware scope.
+- **Notes for Codex oder Claude:** Shared root stays intentionally stale/dirty; HEAD/index/foreign documents preserved. Runtime evidence is bound to7520fa38; publication/closure app inputs are equal. Tester archive and new large-project memory behavior remain unverified. Earlier lease/interrupted/pre-upstream receipts are not final acceptance. Canonical public receipt docs/evidence/project-archive-budget-2026-10-10.json; private gate evidence stays ignored under own .ai/logs archive. No subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:34 CEST
+- **Completed:** Actual final main-integration source7520fa38 accepted after reconciling published65e1c809. Twenty-four stages exit0 with frozen inputs: parser197/0/56 ignored, consumers1799/0/101 ignored, frontend2610/0/164 files, full Chromium244/0, built-browser4/0/four frames inspected; explicit reference-container3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo gates/docs/whitespace pass. Source-bound public receipt/manual/status updated after the run; self-review only. Feature1be6f9bd included. No push yet.
+- **Pending/Next Steps:** Final documentation gates and metadata commit; fetch/inspect upstream, normal main push and exact ref/blob/ancestry readback; then owned worktree/branches/build/scratch cleanup and publication closure. No release/deployment/hardware action.
+- **Notes for Codex oder Claude:** Earlier interrupted and pre-upstream superseded attempts are distinct, not final acceptance. Runtime/test evidence is bound to7520fa38; subsequent changes are docs-only. Preserve all upstream history and foreign root/index/documents. Tester archive and new large-project peak memory remain unverified. Own integration/project-archive-1024mib-20261010 and publication scratch archive1024-publish-20261010 only.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 17:22
 - **Completed:** Corrected package4 private runner proc_854b5ffe9a46 exits0 for actual reconciliation/native/RefId targets; no skipped/missing-input pass. Main65e1c809 integrated as 2530ad8edc4e, both handover/log histories retained. New test 6f8ac4332c79 independently verifies complete original XML/project+product ownership and bytes, native reopen/resave and unchanged input. §1, COMPATIBILITY, ledger/open-work/status and pending receipt drafted. Unknowns/has_losses deliberately remain visible; preservation-only owner decision recorded, no runtime or F-owner change.
 - **Pending/Next Steps:** Review complete candidate, run merged-source crate/clippy/fmt/five xtask/docs/diff plus full corpus and explicit private checks; then privacy scan/no-ff push/ref equality/cleanup. Package4 NOT delivered yet. Packages5–8 actual remaining scope open; packages1,2,3,9 delivered.
@@ -59,6 +75,22 @@
 - **Completed:** Package4 self-review tightened private reconciliation source reading: one opened regular-file handle, bounded declared/actual sizes, identical captured bytes passed to the genuine byte-import service with real product database. Duplicate retained XML identities now refuse instead of silently overwrite, and report has_losses must be false. Synthetic bounded-reader RED independently confirmed E0425; GREEN2/0/1 includes exact-bound, oversized, missing and non-regular inputs plus missing/corrupt/wrong-owner report controls. No production runtime changes.
 - **Pending/Next Steps:** Hardened private source+product+save/reopen/resave+unchanged-source run and independent native/RefId replay; source-byte-bound review/evidence, precise §1/COMPATIBILITY/ledger status and delivery. Package3 final source gates green on f4af614e; full corpus still running before admission/push. No goal completion claimed.
 - **Notes for Codex oder Claude:** Owner accepted retained-uninterpreted only when byte-exact and explicitly reported, never semantic/ETS compatibility. User source path opt-in remains required; missing source refuses. All source-derived errors/assertions static boolean; captured archive passed as generic private-source.knxproj name, data and native temp stores confined to ignored private area. No foreign runtime/worktree edits, hardware or executable unpacking/runs.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:33 CEST
+- **Completed:** Owner authorized commit and push of the accepted1024 MiB archive-budget/readable-refusal package. Fresh origin/main still d9da8e61, source hashes equal accepted local receipt, exact18-path owned scope and self-review confirmed. Shared root HEAD/index/foreign documents captured for preservation. No publication yet.
+- **Pending/Next Steps:** Focused feature commit with KNXBench identity, no-ff main integration in this owned checkout, fresh integrated parser/frontend/browser/build/lint/repository/documentation gates, normal main push with exact remote readback, then owned cleanup. No release/deployment/hardware scope.
+- **Notes for Codex oder Claude:** Work in fix/project-archive-1024mib-20261010; do not stage or sync shared root. Earlier local receipts remain historical, not new merged acceptance. Publication logs/manifest under own archive1024-publish-20261010 scratch until final archival.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:26 CEST
+- **Completed:** Owner-requested local archive budget and readable refusal delivery accepted in fix/project-archive-1024mib-20261010 (base d9da8e61). Cumulative expanded project budget is 1024 MiB/1073741824 bytes; 64 MiB/member, bounded reads and outer/nested identity/layout/accounting guards unchanged. Shared EN/DE presenter makes both error toast and persistent load-failure banner name the expanded size and actual server limit, without a joke or incorrect English disclosure. Unknown/unsafe text and underlying error/progress/log data remain unchanged. Named parser/toast/banner/private-use locale RED controls verified. Final parser 197/0/56 ignored; frontend 2608/0 in164 files, production build and explicit E2E type check; built offline Chromium4/4 EN/DE1440/400 with all four frames inspected; Clippy/fmt/server build/version/five nonempty repository gates/docs/whitespace pass. Self-review only. Docs and handover synchronized; owned workers/caches/probes removed, reviewed source and built frontend retained.
+- **Pending/Next Steps:** None for the requested local implementation. Changes remain uncommitted/unpublished in KNXBench.worktrees/project-archive-1024mib-20261010; integration/publication/deployment are separate scope. Tester archive was not supplied/imported; no large-project peak-memory or private-corpus acceptance.
+- **Notes for Codex oder Claude:** Evidence retained ignored at .ai/logs/2026-10-10_codex_project-archive-1024mib/final-receipt.json with actual logs/manifests/final frames. First browser fixture missed achievements bootstrap and remains a refused attempt; toast-only earlier success is not final post-banner acceptance. Existing API exposes size only in the exact verified English text; the presenter narrowly recognizes that text and otherwise preserves it. Rust inputs remain byte-identical to their accepted gate; later changes are UI/docs only. Root HEAD/index/application and foreign work were not synchronized/staged. No API/schema/protocol/dependency, release/container/hardware action. Preserve every inherited handover below.
 
 ---
 

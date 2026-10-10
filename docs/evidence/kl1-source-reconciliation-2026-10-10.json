@@ -38,5 +38,16 @@
     "semantic understanding of retained unknowns"
   ],
   "finalGates": "pending on actual integrated candidate",
-  "publication": "pending; not delivered"
+  "publication": "pending; not delivered",
+  "supersededCandidate": {
+    "revision": "f3e69eb5c816616c72e8834fbdfbfe28c12f0065",
+    "rust": {
+      "passed": 1357,
+      "failed": 0,
+      "ignored": 116
+    },
+    "fmtClippyRepoDocs": "passed, actual gate root and nonempty check scope inspected",
+    "corpus": "interrupted by owner on upstream container/UI advancement; no full-corpus acceptance",
+    "reason": "fresh main c50b90c4 changed relevant container and UI source; no results retagged"
+  }
 }

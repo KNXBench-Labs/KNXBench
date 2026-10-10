@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 18:02
+- **Completed:** Old actual candidate f3e69eb5 source gate1357/0/116 plus fmt/clippy/five real nonempty repo checks/docs/diff passed. During full corpus, fetched main advanced to c50b90c4 with container archive-cap and related Web source/test changes. Stopped only own proc_18e43f2a1910 and queued own KL173 proc_b82f4a4fee6c; interrupted corpus has no final pass claim. Source/gate/raw evidence preserved in pre-archive-limit-integration and pre-archive-limit-gate; own corpus/oracle links removed, no own compiler remains. Package4 not delivered.
+- **Pending/Next Steps:** Integrate fresh main c50b90c4, preserve both newest-first histories, run actual merged candidate with affected Crates AND changed Web suite + full corpus/private gates; then outgoing privacy/no-ff push/live equality/cleanup. KL173 synthetic witness prepared in separate own worktree, not yet tested; resume only after package4. All-goal not complete.
+- **Notes for Codex oder Claude:** Do not reuse older source success for new container. Earlier corrected private positives remain historical; conservative unknown/has_losses boundary stays true. Root/foreign worktrees/processes untouched. No private source values/counts in public receipt, no hardware/vendor execution/release/subagents/quota checks. Only own workers killed to avoid finishing an obsolete delivery candidate.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 17:22
 - **Completed:** Corrected package4 private runner proc_854b5ffe9a46 exits0 for actual reconciliation/native/RefId targets; no skipped/missing-input pass. Main65e1c809 integrated as 2530ad8edc4e, both handover/log histories retained. New test 6f8ac4332c79 independently verifies complete original XML/project+product ownership and bytes, native reopen/resave and unchanged input. §1, COMPATIBILITY, ledger/open-work/status and pending receipt drafted. Unknowns/has_losses deliberately remain visible; preservation-only owner decision recorded, no runtime or F-owner change.
 - **Pending/Next Steps:** Review complete candidate, run merged-source crate/clippy/fmt/five xtask/docs/diff plus full corpus and explicit private checks; then privacy scan/no-ff push/ref equality/cleanup. Package4 NOT delivered yet. Packages5–8 actual remaining scope open; packages1,2,3,9 delivered.

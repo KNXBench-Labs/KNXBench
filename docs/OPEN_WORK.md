@@ -75,7 +75,7 @@ Final KL-68/PDB-01 candidate `f4af614eac30` now passes the full143/143 corpus
 across31 targets, eight-crate Rust and Web gates, explicit own-value/RefId gates
 and independent four-case browser replay. Four inherited corpus contracts were
 corrected test-only (`e74be53a`) after exact fresh-main RED baselines and owner
-permission. Main publication/ref verification is pending this receipt.
+permission. Published no-ff merge `2e264f6cc6ec`; local/tracking/live equality verified.
 
 Import-integrity is integrated, not a current waiting dependency. Next rest scopes:
 KL-1/F01–F04 original project/product source reconciliation; KL-173/F06 out-of-tree

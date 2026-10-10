@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:56
+- **Completed:** Package3 DELIVERED: no-ff merge 2e264f6cc6ece52cb463ed77b4fdf68cfa96706b, pushed origin/main, HEAD/tracking/live equal. Final source f4af614eac30: Rust2876/0/160, Web2597/0/163, corpus143/143 in31 targets, private own-value1/0 and RefId3/0; independent browser4/4. Fmt/clippy/tsc, five nonempty repo checks, docs/diff, fixed tracked-input binding and outgoing original-value/privacy scan green. Narrow authorized test-only correction e74be53a; no runtime/private golden values. Receipt/ledger/open-work/status published boundary scope, not Repeat/activation/writes/ETS hardware support.
+- **Pending/Next Steps:** Push this docs-only publication checkpoint after docs/privacy and live equality; copy essential private evidence to active package4 and remove own package3 worktree/branch/build scratch. Package4 hardened full-original XML/report/native/product comparison runner proc_7aaf1b7c7987 active; then remaining packages5–8 from fresh main. Packages1,2,3,9 delivered; all-goal completion NOT claimed.
+- **Notes for Codex oder Claude:** Code and UI source unchanged through merge; conservative Repeat/MI semantics stay ADR-0108 accepted read-only boundary. Owner-approved correction scope exactly existing four corpus test functions; foreign F runtime untouched. All source-derived logs/census/data remain ignored/private. Root/foreign trees untouched; no hardware/vendor code/release/deployment/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 16:51
 - **Completed:** Final integrated package3 source f4af614eac30 passed Rust2876/0/160, Web2597/0/163, strict clippy/fmt/tsc/five nonempty repo gates/docs/diff; full corpus143/143 across31 targets, explicit private own-value1/0 and independent RefId3/0. Corpus source link removed. Four inherited test-only corrections e74be53a green after exact fresh-main RED and narrow owner approval; no runtime/private golden values. Final receipt/statuses updated, obsolete parser/corpus waiting claims superseded; accepted Repeat boundary unchanged. Completed baseline tree/branch/build target removed after private evidence copy.
 - **Pending/Next Steps:** Docs-only final gates/privacy, candidate no-ff main merge/push/live equality/cleanup for package3. Package4 bounded-source controls2/0/1 green, hardened private reconciliation+native+RefId queued under own runner proc_7aaf1b7c7987; precise §1/COMPATIBILITY/evidence delivery follows. Packages5–8 actual remaining scope still open; package9 published.

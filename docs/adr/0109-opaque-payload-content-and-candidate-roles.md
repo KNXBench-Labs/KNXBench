@@ -11,16 +11,19 @@ JPEG, GIF, BMP, PDF, ZIP, PE executable, OLE2 compound, XML, empty or unknown.
 KL-174/F08 already applied that classification to manufacturer baggage in the
 application import report. Project UserFiles/AddinData lacked equivalent evidence.
 
-Public KNX Association guidance, primary pages retrieved by the web reader 2026-10-10:
+Registered official KNX Association references (2026-10-10):
 
-- [Install ETS6 Apps](https://support.knx.org/hc/en-us/articles/4402814860434-Install-ETS6-Apps), updated 2026-08-27, identifies `.etsapp` as the installed App binary.
-- [App validation rules](https://support.knx.org/hc/en-us/articles/360001508820-App-validation-rules), updated 2026-09-10, distinguishes validation tests and describes project-related App data within AddInData.
+- [Install ETS6 Apps](https://support.knx.org/hc/en-us/articles/4402814860434-Install-ETS6-Apps): an official-domain indexed excerpt supports the `.etsapp` naming hint.
+- [App validation rules](https://support.knx.org/hc/en-us/articles/360001508820-App-validation-rules): registered reference only; current direct text retrieval and the exact-article indexed AddInData query did not provide verified text.
 
-Earlier direct HTTP attempts failed; these primary-page retrievals
-supersede the absence of textual guidance, not the absent package validation
-specification. Neither text supplies a content-level authenticity/signature or
-manifest verification algorithm suitable for this implementation. No such
-algorithm is inferred from ZIP or PE magic. Nothing here installs an App.
+**Retrieval correction:** earlier candidate notes overstated full-page retrieval
+and page update dates. The configured extractor is search-only; browser retrieval
+was blocked by an existing profile lock, which was not disturbed. Only the
+Install indexed excerpt is verified here. No page update dates, full contents,
+App manifest/signature validation algorithm or complete Add-in semantics were
+verified. The supplied review/location names and owner-approved candidate scope,
+not an invented proprietary format contract, define the descriptive roles.
+Nothing here installs an App or infers validity from ZIP/PE magic.
 
 The owner chose **unverified role candidates, separate content classes, explicit
 retention of unknown bytes** rather than guessing complete ETS-App/Add-in support.

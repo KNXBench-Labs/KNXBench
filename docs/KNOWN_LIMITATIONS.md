@@ -9434,8 +9434,10 @@ Named evidence: `project_and_manufacturer_payloads_report_content_without_certif
 (with/without product DB, native Save/Reopen),
 `independent_capability_diagnostics_are_not_replaced_by_content_evidence`,
 `payload_evidence_reaches_the_http_session_log_without_certifying_an_app`.
-Two assertion-killed mutations and restored-source focuses pass; broad final
-quality/corpus/source acceptance and remote publication are pending.
+Two assertion-killed mutations and restored-source focuses pass. Final no-ff
+source `566afbdd` passes eight scoped crates (2400/0/181), strict Clippy/fmt,
+five nonempty repository/docs gates, complete nonempty corpus, private original
+reconciliation and RefIds. Publication/readback pending; no source values published.
 
 **Remaining boundary.** The owner explicitly accepts descriptive, unverified
 candidates. Content magic is not App identity/authenticity, licensing, manifest

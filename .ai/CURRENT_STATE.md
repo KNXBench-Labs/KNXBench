@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 19:55
+- **Completed:** Package4 final runner proc_45f724e1aaf2 exit0 at actual382ab577: five-crate1360/0/116, Web2610/0/164, full nonempty corpus, explicit original reconciliation/native/RefId, archive-browser4/4; quality/repo/docs gates green. Fresh upstreamfc81326b adds four test files/docs only; integrateddd4b8165 passes app/parser/HTTP cases, full Web2611/0/164, tsc and strict server/app/parser Clippy. Complete upstream path delta checked; no runtime/dependency/browser-source changes or retagged old outputs. Receipt/§1/COMPATIBILITY/ledger/status/open-work synchronized. Self-review only, earlier bounded-source and semantic-loss findings fixed.
+- **Pending/Next Steps:** Final docs/privacy check, no-ff main publication and local/tracking/live equality, docs-only publication receipt and cleanup; then fresh-main KL173 persistence focus. Packages1,2,3,9 delivered,4 candidate ready,5–8 still open. Overall goal not complete.
+- **Notes for Codex oder Claude:** Unknown has_losses remains true and no source counts/identities printed; private original bytes/digests remain ignored. Own runner complete so metadata writes do not interrupt tests. Root/foreign F code/worktrees untouched; no hardware/vendor execution/release/subagents/quota checks. Do not stop after status report: publish green candidate before next package.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 18:38 CEST
 - **Completed:** Owner-authorized import regression merge published to main9d3c8f0c; local/tracking/live refs identical and eff4df95 ancestry verified. Actual frozen runtime source7503f10f passed20 gates (Rust3906/0, Web2611/0), explicit private original/native/instance/RefId and fresh production CLI/product/offline/source-native-product comparisons with two omission controls. Later docs-only integration retained all1207 runtime inputs byte-exact; seven final metadata gates and outgoing privacy scan passed. This additive checkpoint records verified publication, not new runtime behavior.
 - **Pending/Next Steps:** None for the authorized merge work package. Preserve source/evidence for owner review; no additional feature, release, deployment or hardware work authorized here.

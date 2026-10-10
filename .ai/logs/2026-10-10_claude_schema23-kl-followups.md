@@ -109,3 +109,11 @@ hardened positive replay and all publications after this blocker remain pending.
 - IMPORTANT (same file:187): has_losses includes uninterpreted unknown semantics. invalid !has_losses test failed; conservative signal now pinned true, source preservation tested separately, production diagnostic unchanged.
 - Reviewed entire test: private errors/byte comparisons use static boolean assertions; generic import filename, ignored opt-in, absent source refusal; duplicate identities refuse; independent XML/member budgets; native reopen/resave equality. No unresolved CRITICAL/IMPORTANT finding. Scope only original XML preservation/unknown source reconciliation, no semantics/ETS/hardware claims.
 - Full merged-source/corpus gates and publication still pending; raw private results remain ignored locally.
+
+
+## Package4 final acceptance and self-review
+
+- Actual382ab577 full chain exit0, import tests1360/0/116, Web2610/0/164, complete nonempty corpus, private original/native/RefId positives and synthetic archive browser4/4.
+- New upstreamfc81326b delta only four regression test files/docs; dd4b8165 runs them including HTTP plus full Web2611/0/164, types and strict Clippy. Historical results are not retagged.
+- Self-review IMPORTANT private_schema23_reconciliation.rs:11 opened-input binding and :187 semantic-loss conflation fixed with test controls; CRITICAL0/unresolvedIMPORTANT0/MINOR0. Original-source output remains ignored/private; no F runtime edits, semantic/ETS/hardware claim.
+- Final docs/privacy and no-ff remote readback pending, overall goal remains open.

@@ -1409,6 +1409,14 @@ rollback or RF hardware support is established by one device.
 
 ## 8. KNX Secure is not implemented
 
+**Key provenance research, 10 October 2026:** [the primary-source review](research/secure-key-provenance.md)
+distinguishes project XML, complete keyring backups, interface exports, factory
+credentials, Data/IP keys and project/keyring protection. This does not add a
+keyring decoder, AES-project import, credential vault or Secure runtime.
+Retained original/uninterpreted source can still contain sensitive material;
+a native/source backup is not automatically encrypted or sanitized. Existing
+Secure and container refusals stay unchanged.
+
 **Update 2026-10-10 (secure-capable programs in a plain project).** A
 privately supplied project contains secure-capable programs
 (`IsSecureEnabled`) but no device `Security` element and no secure group

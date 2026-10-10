@@ -17,7 +17,7 @@ fn modern_node_and_root_styles_keep_unassigned_configuration_across_resave() {
             let native = dir.path().join("native.knxdb");
             let input = dir.path().join("synthetic.knxproj");
             let topology = format!(
-                r#"<KNX xmlns="http://knx.org/xml/project/{version}"><Project Id="P-0001"><Installations><Installation InstallationId="0"><Topology><UnassignedDevices><DeviceInstance Id="P-0001-0_DI-1" ProductRefId="M-0001_P-1" Hardware2ProgramRefId="M-0001_H-1_HP-1" CompletionStatus="Accepted" InstallationHints="synthetic hint"><ParameterInstanceRefs><ParameterInstanceRef RefId="P-1_R-1" Value="37"/></ParameterInstanceRefs><ModuleInstances><ModuleInstance Id="MI-1" RefId="MD-1" RepeatIndex="1"><Arguments><Argument RefId="A-1" Value="13"/></Arguments></ModuleInstance></ModuleInstances><ComObjectInstanceRefs><ComObjectInstanceRef RefId="O-7_R-1" Links="GA-1" ReadFlag="Enabled" DatapointType="DPST-1-1" Text="synthetic text"/></ComObjectInstanceRefs>{tree}</DeviceInstance></UnassignedDevices></Topology><Locations><Space Id="P-0001-0_BP-1" Name="Synthetic" Type="Room"><DeviceInstanceRef RefId="P-0001-0_DI-1"/></Space></Locations><GroupAddresses><GroupRanges><GroupRange Id="P-0001-0_GR-1" RangeStart="0" RangeEnd="65535"><GroupAddress Id="P-0001-0_GA-1" Address="1"/></GroupRange></GroupRanges></GroupAddresses></Installation></Installations></Project></KNX>"#
+                r#"<KNX xmlns="http://knx.org/xml/project/{version}"><Project Id="P-0001"><Installations><Installation InstallationId="0"><Topology><UnassignedDevices><DeviceInstance Id="P-0001-0_DI-1" ProductRefId="M-0001_P-1" Hardware2ProgramRefId="M-0001_H-1_HP-1" CompletionStatus="Accepted" InstallationHints="synthetic hint" SameName="topology"><ParameterInstanceRefs><ParameterInstanceRef RefId="P-1_R-1" Value="37"/></ParameterInstanceRefs><ModuleInstances><ModuleInstance Id="MI-1" RefId="MD-1" RepeatIndex="1"><Arguments><Argument RefId="A-1" Value="13"/></Arguments></ModuleInstance></ModuleInstances><ComObjectInstanceRefs><ComObjectInstanceRef RefId="O-7_R-1" Links="GA-1" ReadFlag="Enabled" DatapointType="DPST-1-1" Text="synthetic text"/></ComObjectInstanceRefs>{tree}</DeviceInstance></UnassignedDevices></Topology><Locations><Space Id="P-0001-0_BP-1" Name="Synthetic" Type="Room"><DeviceInstanceRef RefId="P-0001-0_DI-1"/></Space></Locations><GroupAddresses><GroupRanges><GroupRange Id="P-0001-0_GR-1" RangeStart="0" RangeEnd="65535"><GroupAddress Id="P-0001-0_GA-1" Address="1"/></GroupRange></GroupRanges></GroupAddresses></Installation></Installations></Project></KNX>"#
             );
             let info = format!(
                 r#"<KNX xmlns="http://knx.org/xml/project/{version}"><Project Id="P-0001"><ProjectInformation Name="Synthetic" CompletionStatus="Accepted" SameName="metadata"><ToDoItems><ToDoItem Description="synthetic-marker"/></ToDoItems></ProjectInformation></Project></KNX>"#
@@ -55,9 +55,13 @@ fn modern_node_and_root_styles_keep_unassigned_configuration_across_resave() {
             assert_eq!(observations.topology["ParameterInstanceRef"], 1);
             assert_eq!(observations.topology["ModuleInstance"], 1);
             let opaque = knx_store::load_opaque(&conn).unwrap();
+            assert_eq!(opaque.iter().filter(|e| e.name == "SameName").count(), 2);
             assert!(opaque.iter().any(|e| e.source_path == "P-0001/project.xml"
                 && e.name == "SameName"
                 && e.bytes == b"metadata"));
+            assert!(opaque.iter().any(|e| e.source_path == "P-0001/0.xml"
+                && e.name == "SameName"
+                && e.bytes == b"topology"));
             assert!(opaque.iter().any(|e| e.source_path == "P-0001/project.xml"
                 && e.xpath.is_empty()
                 && e.bytes == info.as_bytes()));

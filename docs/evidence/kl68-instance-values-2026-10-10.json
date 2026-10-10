@@ -3,7 +3,10 @@
   "date": "2026-10-10",
   "package": "KL-68 / PDB-01 read-only stored instance values",
   "basis": "8901affa9629384a23e0a4b5461af5aeb1b6b8b0",
-  "codeRevision": "d050c7e78b02",
+  "codeRevision": "8b7a9dc61516",
+  "implementationCommit": "d050c7e78b02",
+  "dependencyCommit": "8b7a9dc61516",
+  "documentationMainIntegrated": "6ac34e6152b7",
   "review": "codex, in-session self-review only; no independent review",
   "scope": {
     "implemented": "Separate stored (module, instance, ref) dimension, HTTP/Web/MCP read-only evidence; no sibling/default fallback",
@@ -26,6 +29,7 @@
     "network": "Broad, corpus and browser gates loopback-only; corpus runner clears KNX_* environment"
   },
   "reviewFindings": [
+    {"severity": "IMPORTANT", "location": "apps/knx-mcp/Cargo.toml:26 and Cargo.lock:2094", "finding": "Initial code commit omitted the already-tested synthetic witness dev dependency", "resolution": "Manifest and lockfile committed before publication; codeRevision names the complete snapshot"},
     {"severity": "IMPORTANT", "location": "crates/knx-productdb/src/device_evaluation.rs:266-278", "finding": "Definition namespace condition regressed legacy lone-instance write authority", "resolution": "Condition restricted to the new map; alias RED/GREEN and unchanged 39 HTTP parameter tests passed"},
     {"severity": "IMPORTANT", "location": "crates/knx-productdb/src/device_evaluation.rs:266-278", "finding": "Conflicting module declarations could authorize stored evidence", "resolution": "Unique declaration required; named negative witness passed"},
     {"severity": "MINOR", "location": "crates/knx-app/tests/private_module_instance_values.rs:1", "finding": "Multiline first paragraph raised the no-header ceiling", "resolution": "Header separated; original ceiling retained"}
@@ -37,5 +41,5 @@
     "ownerDecision": "Deliver narrow read-only function; document private comparison blocked and rerun after integration",
     "notClaimed": "Private pass, full original reconciliation, ETS compatibility, Secure or hardware compatibility"
   },
-  "publication": "Code committed; documentation/integrated-tree gates and merge/push acceptance are separate"
+  "publication": "Complete code/dependencies committed; additive test-catalogue main merge integrated with both status entries preserved; integrated-tree gates and no-ff push acceptance pending"
 }

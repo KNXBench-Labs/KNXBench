@@ -1,8 +1,10 @@
 # Import integrity implementation
 
-The owner authorized source integration after local acceptance. The merged
-candidate is gated separately; releases and hardware actions remain outside
-this package. The verification below records the earlier local acceptance.
+The owner authorized source integration after local acceptance. Separate
+[merged-source acceptance](status/2026-10-10-import-integrity-integration.md)
+records the tested combined code and reconciled concurrent documentation.
+Releases and hardware actions remain outside this package. Dated local-status
+paragraphs elsewhere record the earlier pre-publication acceptance.
 
 See [ADR-0107](adr/0107-import-source-integrity.md) for the decisions and acceptance
 boundary. No project-specific data or private measurements belong in this file.

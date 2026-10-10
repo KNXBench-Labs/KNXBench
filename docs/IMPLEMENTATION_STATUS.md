@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-10 — Import-integrity merged candidate accepted
+
+[Separate integration acceptance](status/2026-10-10-import-integrity-integration.md)
+records full merged-source tests/builds and actual private/corpus checks on
+`367405f1`, followed by code-identical reconciliation of the concurrent test
+catalogue. Original-input CLI and independent source/native/product comparisons
+pass; private measurements stay local. Publication requires final doc gates and
+normal-push ref equality, not merely a local commit. Native/model12 is vocabulary
+only; no release, vendor execution, signature or hardware claim. Self-review only.
+The earlier uncommitted/local statements below are dated history.
+
 ## Import integrity implementation — local acceptance (2026-10-10)
 
 The following records local verification before the owner subsequently

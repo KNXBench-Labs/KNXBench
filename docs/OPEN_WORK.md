@@ -51,6 +51,15 @@ baselines, future-model closure before model changes, and primary cvexc semantic
 before enabling any runtime rule. Synthetic browser/CLI checks are not real
 ETS/hardware/native accessibility evidence. No release/deployment or bus action.
 
+## Import-integrity merged-source acceptance (10 October 2026)
+
+[Integration proof](status/2026-10-10-import-integrity-integration.md) covers
+actual original-input production/native checks and independent source/persistence
+comparison. The current ledger has 197 source IDs: 54 delivered, 120 accepted
+boundaries, 22 later-scope rows and one external prerequisite; these are not a
+product-completion percentage. The dated earlier inventories remain historical.
+No release or hardware action follows from successful source integration.
+
 ## Private schema-23 sample review (10 October 2026)
 
 A read-only review of a privately supplied ETS6 project lifted KNOWN_LIMITATIONS
@@ -58,14 +67,18 @@ A read-only review of a privately supplied ETS6 project lifted KNOWN_LIMITATIONS
 §6, §8, §11, §52, §68, §106, §134, §146 and PDB-9. Open follow-ups, none
 authorized yet: little-endian and UTF-8 image encoding (needs a documented
 source), repeated-module semantics with a `ValueMap` instance dimension (ADR
-first), overrides outside the object tree (§173, import-integrity package),
+first), applying inactive-object overrides after reactivation (preservation
+and reporting repaired by the import-integrity package),
 content-based classification of project user files/add-in data and the
 stored-image reference (research only). The redaction audit of retained network
 endpoints is done (§106, 2026-10-10: MAC addresses redacted, every other output
 withholds the data or names it). The secure-capable-but-not-activated case is
 pinned by a synthetic witness (§8): treated exactly like a plain program, no
-Secure semantics added. The import repairs that let that project import end to end belong to the
-separate import-integrity package.
+Secure semantics added. The import-integrity package now has separate
+[merged-source acceptance](status/2026-10-10-import-integrity-integration.md):
+archive identity, object trees, unassigned placement, metadata provenance and
+source/diagnostic preservation are repaired. Retained extensions and offline
+execution limits remain research/follow-up work, not wider runtime support.
 
 ## 1. Running or waiting right now
 

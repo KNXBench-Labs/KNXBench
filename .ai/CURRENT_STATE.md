@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 13:48 CEST
+- **Completed:** Owner-authorized import-integrity source integration has full combined-source acceptance on 367405f1: Rust3893/0, Web2595/0, explicit private original/native and RefId checks, selected offline corpus targets, builds/lint and repository gates. Concurrent test-catalogue documentation from 6ac34e61 is preserved byte-for-byte outside the additive status reconciliation; runtime inputs are unchanged. Diagnostic/preservation scope for KL-173 meets its condition; reactivation semantics stay unverified. Shared evidence is generic, private source and source-bearing results remain local/ignored. Self-review only.
+- **Pending/Next Steps:** Final doc gates and normal main remote-ref readback guard publication; then retire only the owned feature/integration branches/worktrees and scratch. No release, deployment, bus/hardware, added execution support or root synchronization. Remaining channel/address/IP and parameter/loader work is research-assessed, not implemented capability.
+- **Notes for Codex oder Claude:** Preserve all upstream owner history and foreign root/worktrees. Native/model12 is a scalar-only vocabulary barrier, not a new reference/entity graph; future unmerged model packages must reconcile the version and closure. The corpus test correction preserves strict unknown/loss checks and adds indexed ZIP-byte equality with a named negative control. Private acceptance is not full ETS, signature, vendor execution or native-accessibility verification.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-10 10:25 CEST
 - **Completed:** Schema-23 follow-up package 2 (KL-8, G13): synthetic witness `crates/knx-app/tests/secure_capable_not_activated.rs` (`59a0c162`) imports one plain schema-21 project with the same MV-0701 ProductProcedure program as `IsSecureEnabled` true (+ security table sizes) and false. Import model, readiness (`untested`) and the 8-step memory plan are identical; flag only rides along as a verbatim program attribute; exhaustive match shows no plan step writes a key. Planner-refuses-secure mutant killed. §8 update, ledger KL-8 (ACCEPTED_BOUNDARY, test+revision), OPEN_WORK, IMPLEMENTATION_STATUS, receipt. Gate: knx-app 186/0/29 ign, clippy, five xtask, doc check.

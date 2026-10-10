@@ -144,6 +144,7 @@ pub fn import_ets_project_with_password(
 ) -> Result<ImportedProject, AppError> {
     let outcome =
         knx_etsproj::import_knxproj_with(path, password, &crate::progress::ParseStages(observer))?;
+
     persist_outcome(outcome, conn, options, observer)
 }
 
@@ -165,6 +166,26 @@ fn persist_outcome(
     options: ImportOptions<'_>,
     observer: &dyn LoadObserver,
 ) -> Result<ImportedProject, AppError> {
+    // Classify preserved payloads using the existing product adapter. A picture
+    // or document is not plugin code; this does not decode or execute anything.
+    for file in &outcome.manufacturer {
+        if file.kind == knx_etsproj::opaque::OpaqueKind::Baggage {
+            let class = knx_productdb::sniff_media(&file.bytes).as_str();
+            let description = format!(
+                "manufacturer payload ({class}); retained byte-exact, not rendered or executed"
+            );
+            for feature in &mut outcome.report.unsupported {
+                if feature.what == file.source_path {
+                    feature.consequence = description.clone();
+                }
+            }
+            for summary in &mut outcome.report.opaque {
+                if summary.source_path == file.source_path && summary.kind == "Baggage" {
+                    summary.reason = description.clone();
+                }
+            }
+        }
+    }
     // The manifest is written whichever way the manufacturer files are
     // stored: it describes what the project was imported with, not where
     // the bytes ended up.
@@ -186,12 +207,67 @@ fn persist_outcome(
 
     match options.product_db {
         Some(products) => {
+            // Validate cached evidence for the complete source set before a new
+            // file is installed. A late corrupted cache row must not leave an
+            // earlier manufacturer's newly committed data behind.
+            for file in &outcome.manufacturer {
+                knx_productdb::source_diagnostics(products, &file.sha256)?;
+            }
             observer.stage(LoadStage::IngestManufacturerData);
             let total = outcome.manufacturer.len() as u64;
             for (index, file) in outcome.manufacturer.iter().enumerate() {
                 match knx_productdb::ingest_file(products, &file.source_path, &file.bytes)? {
                     knx_productdb::IngestOutcome::Ingested { .. } => ingested += 1,
                     knx_productdb::IngestOutcome::Skipped { .. } => skipped += 1,
+                }
+                match knx_productdb::source_diagnostics(products, &file.sha256)? {
+                    Some(findings) => {
+                        for finding in findings {
+                            match finding.kind.as_str() {
+                                "Element" | "Attribute" => {
+                                    outcome.report.unknown.push(knx_etsproj::UnknownConstruct {
+                                        source_path: file.source_path.clone(),
+                                        xpath: finding.xpath,
+                                        kind: if finding.kind == "Element" {
+                                            knx_etsproj::UnknownKind::Element
+                                        } else {
+                                            knx_etsproj::UnknownKind::Attribute
+                                        },
+                                        name: finding.name,
+                                        occurrences: finding.occurrences,
+                                        sample: finding.sample,
+                                    })
+                                }
+                                _ => outcome
+                                    .report
+                                    .errors
+                                    .push(knx_etsproj::report::ImportError {
+                                        source_path: Some(file.source_path.clone()),
+                                        stage: "manufacturer",
+                                        severity: knx_etsproj::report::Severity::Error,
+                                        xpath: String::new(),
+                                        detail: format!(
+                                            "{}: {}/{} ({} occurrences); original source retained",
+                                            finding.kind,
+                                            finding.xpath,
+                                            finding.name,
+                                            finding.occurrences
+                                        ),
+                                    }),
+                            }
+                        }
+                    }
+                    None => {
+                        outcome
+                            .report
+                            .unsupported
+                            .push(knx_etsproj::report::UnsupportedFeature {
+                                what: format!("manufacturer diagnostics: {}", file.source_path),
+                                consequence:
+                                    "unavailable: retained source has no measured parser evidence"
+                                        .into(),
+                            })
+                    }
                 }
                 observer.items(index as u64 + 1, total);
             }
@@ -203,12 +279,40 @@ fn persist_outcome(
                     && outcome.master_metadata_error.is_none()
             }) {
                 observer.stage(LoadStage::IngestMasterData);
-                knx_productdb::ingest_master_data(products, &master.bytes)?;
+                let findings = knx_productdb::ingest_master_data(products, &master.bytes)?;
+                outcome
+                    .report
+                    .unknown
+                    .extend(findings.unknown.into_iter().map(|finding| {
+                        knx_etsproj::UnknownConstruct {
+                            source_path: master.source_path.clone(),
+                            xpath: finding.xpath,
+                            kind: match finding.kind {
+                                knx_productdb::report::UnknownKind::Element => {
+                                    knx_etsproj::UnknownKind::Element
+                                }
+                                knx_productdb::report::UnknownKind::Attribute => {
+                                    knx_etsproj::UnknownKind::Attribute
+                                }
+                            },
+                            name: finding.name,
+                            occurrences: finding.occurrences,
+                            sample: finding.sample,
+                        }
+                    }));
             }
             observer.stage(LoadStage::EnrichFromProductDatabase);
             enrichment = Some(knx_productdb::enrich(&mut outcome.project, products)?);
         }
-        None => stored.extend(outcome.manufacturer.iter().map(manufacturer_to_stored)),
+        None => {
+            stored.extend(outcome.manufacturer.iter().map(manufacturer_to_stored));
+            if !outcome.manufacturer.is_empty() {
+                outcome.report.unsupported.push(knx_etsproj::report::UnsupportedFeature {
+                    what: "manufacturer semantic diagnostics".into(),
+                    consequence: "unavailable without a product database; source files are retained, not semantically installed".into(),
+                });
+            }
+        }
     }
 
     let opaque_entries = stored.len();

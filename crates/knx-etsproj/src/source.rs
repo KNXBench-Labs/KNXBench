@@ -16,6 +16,7 @@
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SourceDocument {
     pub schema_version: u32,
+    pub xml_observations: std::collections::BTreeMap<String, u32>,
     pub created_by: Option<String>,
     pub tool_version: Option<String>,
     pub project_id: String,
@@ -25,6 +26,7 @@ pub struct SourceDocument {
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SourceProjectInfo {
+    pub xml_observations: std::collections::BTreeMap<String, u32>,
     pub name: Option<String>,
     pub project_number: Option<String>,
     pub group_address_style: Option<String>,
@@ -35,6 +37,7 @@ pub struct SourceProjectInfo {
     /// an audit log — RESEARCH §3.4: "purpose not investigated"), retained
     /// verbatim for export.
     pub project_traces_raw: Option<RetainedElement>,
+    pub retained_elements: Vec<RetainedElement>,
     pub other: Vec<RetainedAttribute>,
 }
 

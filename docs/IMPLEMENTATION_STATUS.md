@@ -7,12 +7,31 @@ siblings and Dynamic evaluation. Validated stored evidence is exposed through
 HTTP `instanceValues`, the Inspector and both MCP readers (`notEvaluated`).
 Legacy single-instance write authority remains unchanged; conflicting declarations
 and identities cannot authorize the new map. Repeat activation/mapping stays
-unsupported (ADR-0107). Rust1793/0, Web2596/0, Clippy, TypeScript, five xtask
+unsupported (ADR-0108). Rust1793/0, Web2596/0, Clippy, TypeScript, five xtask
 checks, documentation checks, corpus runner and four en/de browser cases passed;
 two focused mutants were caught. In-session self-review only. The real private
 comparison still refuses in the project parser on basis `8901affa`; owner
 approved narrow delivery with verification waiting on import-integrity.
 [Receipt](evidence/kl68-instance-values-2026-10-10.json).
+
+## 2026-10-10 — Import-integrity merged candidate accepted
+
+[Separate integration acceptance](status/2026-10-10-import-integrity-integration.md)
+records full merged-source tests/builds and actual private/corpus checks on
+`367405f1`, followed by code-identical reconciliation of the concurrent test
+catalogue. Original-input CLI and independent source/native/product comparisons
+pass; private measurements stay local. Publication requires final doc gates and
+normal-push ref equality, not merely a local commit. Native/model12 is vocabulary
+only; no release, vendor execution, signature or hardware claim. Self-review only.
+The earlier uncommitted/local statements below are dated history.
+
+## Import integrity implementation — local acceptance (2026-10-10)
+
+The following records local verification before the owner subsequently
+authorized source integration. The actual merged candidate is tested separately;
+no release or hardware action is included.
+
+The late metadata-namespace repair has runtime RED/GREEN, two guard-removal controls, full owning-parser and repeated whole-source/original acceptance. Owned uncommitted source implements [ADR-0107](adr/0107-import-source-integrity.md) and [IMPORT_INTEGRITY](IMPORT_INTEGRITY.md). Independent synthetic RED/GREEN and hostile-archive controls, full Rust/frontend tests and builds, warning-denied Clippy, repository/documentation gates, actual service/HTTP/component diagnostics, native roundtrips and explicit unchanged-original verification passed locally. Native/model12 is a scalar-vocabulary barrier, additionally exercised with an authentic prior reader and synthetic native11 input. Source/model/retention and post-model offline findings remain privately recorded, not public measurements. Self-review only; no commit, integration, publication, release or hardware action. Retained extensions and unsupported offline execution remain bounded follow-up work, not implemented capabilities.
 
 ## 2026-10-10 — Local categorized test catalogue
 

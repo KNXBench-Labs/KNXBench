@@ -97,6 +97,9 @@ pub struct EntryInfo {
 pub struct Container {
     archive: ZipArchive<Cursor<Vec<u8>>>,
     entries: Vec<EntryInfo>,
+    // Validated decoded identity -> physical member. zip 8 keys raw name bytes,
+    // so by_name(name()) is not reversible for CP437 names.
+    archive_indices: BTreeMap<String, usize>,
     decrypted: BTreeMap<String, Vec<u8>>,
     /// The nested payload `decrypted` came from (e.g. `P-0001.zip`), set
     /// together with it by [`Container::open_with_password`].
@@ -298,14 +301,13 @@ impl Container {
             });
         }
 
-        let mut payload =
-            container
-                .archive
-                .by_name(&nested_info.path)
-                .map_err(|e| ContainerError::Read {
-                    path: nested_info.path.clone(),
-                    cause: e.to_string(),
-                })?;
+        let mut payload = container
+            .archive
+            .by_index(container.archive_indices[&nested_info.path])
+            .map_err(|e| ContainerError::Read {
+                path: nested_info.path.clone(),
+                cause: e.to_string(),
+            })?;
         let payload_size = payload.size();
         let payload_bytes = read_declared(&mut payload, payload_size, nested_info.path.clone())?;
         drop(payload);
@@ -562,6 +564,7 @@ impl Container {
             .map_err(|e| ContainerError::NotAZip(e.to_string()))?;
 
         let mut entries = Vec::with_capacity(archive.len());
+        let mut archive_indices = BTreeMap::new();
         for i in 0..archive.len() {
             let entry = archive
                 .by_index(i)
@@ -569,6 +572,7 @@ impl Container {
             if entry.is_dir() {
                 continue;
             }
+            archive_indices.insert(entry.name().to_string(), i);
             entries.push(EntryInfo {
                 path: entry.name().to_string(),
                 size: entry.size(),
@@ -579,6 +583,7 @@ impl Container {
         Ok(Self {
             archive,
             entries,
+            archive_indices,
             decrypted: BTreeMap::new(),
             decrypted_from: None,
         })
@@ -641,7 +646,7 @@ impl Container {
 
         let mut entry = self
             .archive
-            .by_name(&real_path)
+            .by_index(self.archive_indices[&real_path])
             .map_err(|e| ContainerError::Read {
                 path: real_path.clone(),
                 cause: e.to_string(),
@@ -838,6 +843,12 @@ fn check_decoded_names<R: Read + std::io::Seek>(
     let mut directories = Vec::new();
     let mut extents = Vec::with_capacity(raw.len());
     for (i, record) in raw.iter().enumerate() {
+        if record.flags & 0x0800 != 0 && std::str::from_utf8(&record.name).is_err() {
+            return Err(inconsistent(
+                &String::from_utf8_lossy(&record.name),
+                "declared UTF-8 member name is invalid",
+            ));
+        }
         let entry = archive
             .by_index_raw(i)
             .map_err(|e| ContainerError::NotAZip(e.to_string()))?;

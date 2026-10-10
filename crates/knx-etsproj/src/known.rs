@@ -316,6 +316,8 @@ const DEVICE_INSTANCE_ATTRS_21: &[&str] = &[
     "MediumConfigLoaded",
     "ParametersLoaded",
     "IsActivityCalculated",
+    "CompletionStatus",
+    "InstallationHints",
     "LastModified",
     "LastDownload",
     "LastUsedAPDULength",
@@ -387,6 +389,9 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
                 "LastUsedPuid",
                 "Guid",
                 "ProjectType",
+                "CompletionStatus",
+                "CodePage",
+                "ArchivedVersion",
             ],
         },
         KnownElement {
@@ -403,7 +408,7 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation",
-            attributes: &["Name", "BCUKey", "DefaultLine", "IPRoutingLatencyTolerance"],
+            attributes: &["Name", "BCUKey", "DefaultLine", "IPRoutingLatencyTolerance", "CompletionStatus"],
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology",
@@ -411,11 +416,11 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area",
-            attributes: &["Id", "Address", "Puid"],
+            attributes: &["Id", "Name", "Address", "Puid", "Description", "Comment", "CompletionStatus"],
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line",
-            attributes: &["Id", "Address", "Puid"],
+            attributes: &["Id", "Name", "Address", "Puid", "Description", "Comment", "CompletionStatus"],
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment",
@@ -511,7 +516,7 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Locations/Space",
-            attributes: &["Id", "Name", "Number", "Type", "DefaultLine", "Puid"],
+            attributes: &["Id", "Name", "Number", "Type", "DefaultLine", "Puid", "Usage", "Description", "Comment", "CompletionStatus"],
         },
         KnownElement {
             // Measured (Task 3): the ETS 6.3.0 reference project carries 35
@@ -546,6 +551,7 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
                 "Name",
                 "Address",
                 "DatapointType",
+                "Description",
                 "Central",
                 "Unfiltered",
                 "Puid",
@@ -584,6 +590,9 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
                 "LastUsedPuid",
                 "Guid",
                 "ProjectType",
+                "CompletionStatus",
+                "CodePage",
+                "ArchivedVersion",
             ],
         },
         KnownElement {
@@ -600,7 +609,7 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation",
-            attributes: &["Name", "BCUKey", "DefaultLine", "IPRoutingLatencyTolerance"],
+            attributes: &["Name", "BCUKey", "DefaultLine", "IPRoutingLatencyTolerance", "CompletionStatus"],
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology",
@@ -608,11 +617,11 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area",
-            attributes: &["Id", "Address", "Puid"],
+            attributes: &["Id", "Name", "Address", "Puid", "Description", "Comment", "CompletionStatus"],
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line",
-            attributes: &["Id", "Address", "Puid"],
+            attributes: &["Id", "Name", "Address", "Puid", "Description", "Comment", "CompletionStatus"],
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment",
@@ -681,6 +690,14 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
             attributes: &["GroupObjectInstances"],
         },
         KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/GroupObjectTree/Nodes",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/GroupObjectTree/Nodes/Node",
+            attributes: &["Type", "RefId", "GroupObjectInstances"],
+        },
+        KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/Security",
             attributes: &["SequenceNumber", "SequenceNumberTimestamp"],
         },
@@ -690,7 +707,7 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Locations/Space",
-            attributes: &["Id", "Name", "Number", "Type", "DefaultLine", "Puid"],
+            attributes: &["Id", "Name", "Number", "Type", "DefaultLine", "Puid", "Usage", "Description", "Comment", "CompletionStatus"],
         },
         KnownElement {
             // Measured (Task 3): the ETS 6.3.0 reference project carries 35
@@ -725,6 +742,7 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
                 "Name",
                 "Address",
                 "DatapointType",
+                "Description",
                 "Central",
                 "Unfiltered",
                 "Puid",

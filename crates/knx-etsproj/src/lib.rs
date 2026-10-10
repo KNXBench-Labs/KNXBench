@@ -252,7 +252,7 @@ fn import_knxproj_bytes_inner(
         .map_err(ImportFailure::Container)?
         .to_string();
     let topology_path = format!("{part}/0.xml");
-    let info_path = format!("{part}/Project.xml");
+    let info_lookup = format!("{part}/Project.xml");
 
     // Read once, used for both detection and parsing — `Container::read`
     // has no cache, so reading `0.xml` (typically the container's largest
@@ -282,6 +282,13 @@ fn import_knxproj_bytes_inner(
     .map_err(ImportFailure::Parse)?;
 
     observer.stage(ImportStage::ParseProjectInfo);
+    let info_path = container
+        .find(&info_lookup)
+        .ok_or_else(|| {
+            ImportFailure::Container(ContainerError::EntryNotFound(info_lookup.clone()))
+        })?
+        .path
+        .clone();
     let info_bytes = container
         .read(&info_path)
         .map_err(ImportFailure::Container)?;
@@ -302,16 +309,18 @@ fn import_knxproj_bytes_inner(
     let inference = infer::infer_group_address_dpts(&mapped.project);
 
     observer.stage(ImportStage::CollectContainerEntries);
-    let collected = opaque::collect_container_entries_observed(
-        &mut container,
-        &[topology_path.as_str(), info_path.as_str()],
-        observer,
-    )
-    .map_err(ImportFailure::Container)?;
+    let collected = opaque::collect_container_entries_observed(&mut container, &[], observer)
+        .map_err(ImportFailure::Container)?;
     let mut opaque_entries = collected.opaque;
     let manufacturer = collected.manufacturer;
     for attribute in &mapped.retained {
         opaque_entries.push(opaque::from_retained_attribute(&topology_path, attribute));
+    }
+    for attribute in &mapped.project_info_retained {
+        opaque_entries.push(opaque::from_retained_attribute(&info_path, attribute));
+    }
+    for element in &parsed.document.info.retained_elements {
+        opaque_entries.push(opaque::from_retained_element(&info_path, element));
     }
     for element in &parsed.retained_elements {
         opaque_entries.push(opaque::from_retained_element(&topology_path, element));
@@ -421,6 +430,11 @@ fn import_knxproj_bytes_inner(
         &opaque_entries,
         &manufacturer,
     );
+    import_report.source_observations = Some(report::SourceObservations {
+        meaning: "xml-element-occurrences-not-semantic-acceptance",
+        topology: parsed.document.xml_observations.clone(),
+        metadata: parsed.document.info.xml_observations.clone(),
+    });
     // The project part was decrypted on the way in. Everything downstream
     // (opaque store, native save) keeps plaintext and the ZipCrypto
     // ciphertext is gone, so a project exported from this import would come

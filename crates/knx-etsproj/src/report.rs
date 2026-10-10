@@ -30,6 +30,9 @@ use crate::validate::ValidationOutput;
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ImportReport {
     pub source: SourceInfo,
+    /// Parser-stream lexical counts, including uninterpreted subtrees.
+    /// Absent for independently constructed/historical reports, never measured zero.
+    pub source_observations: Option<SourceObservations>,
     pub counts: EntityCounts,
     pub unknown: Vec<UnknownConstruct>,
     pub opaque: Vec<OpaqueSummary>,
@@ -37,6 +40,13 @@ pub struct ImportReport {
     pub conflicts: Vec<crate::infer::Conflict>,
     pub unsupported: Vec<UnsupportedFeature>,
     pub errors: Vec<ImportError>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SourceObservations {
+    pub meaning: &'static str,
+    pub topology: std::collections::BTreeMap<String, u32>,
+    pub metadata: std::collections::BTreeMap<String, u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -95,6 +105,9 @@ pub enum Severity {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ImportError {
+    /// Actual logical member, when the diagnostic is owned by manufacturer input.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_path: Option<String>,
     /// Which stage found this: `"validate"` or `"map"`.
     pub stage: &'static str,
     pub severity: Severity,
@@ -194,8 +207,7 @@ pub fn build(
         .map(|m| UnsupportedFeature {
             what: m.source_path.clone(),
             consequence: format!(
-                "{}: vendor-supplied plugin code; not executed by this application, so any \
-                 device configuration behavior it implements is unavailable here",
+                "{}: opaque manufacturer payload; preserved, not interpreted or executed",
                 m.source_path
             ),
         })
@@ -240,6 +252,7 @@ pub fn build(
     let mut errors: Vec<ImportError> = Vec::new();
     for p in &validation.errors {
         errors.push(ImportError {
+            source_path: None,
             stage: "validate",
             severity: Severity::Error,
             xpath: p.xpath.clone(),
@@ -248,6 +261,7 @@ pub fn build(
     }
     for p in &validation.warnings {
         errors.push(ImportError {
+            source_path: None,
             stage: "validate",
             severity: Severity::Warning,
             xpath: p.xpath.clone(),
@@ -256,14 +270,23 @@ pub fn build(
     }
     for p in &map.problems {
         errors.push(ImportError {
+            source_path: None,
             stage: "map",
-            severity: Severity::Error,
+            severity: if matches!(
+                p.detail,
+                crate::map::MapProblemDetail::UnmappedObjectOverride { .. }
+            ) {
+                Severity::Warning
+            } else {
+                Severity::Error
+            },
             xpath: p.xpath.clone(),
             detail: format!("{:?}", p.detail),
         });
     }
 
     ImportReport {
+        source_observations: None,
         source,
         counts,
         unknown: unknown.to_vec(),
@@ -290,7 +313,7 @@ fn opaque_kind_reason(kind: crate::opaque::OpaqueKind) -> &'static str {
         OpaqueKind::ManufacturerData => {
             "manufacturer/application-program data; stored in the shared product database (ADR-0005)"
         }
-        OpaqueKind::Baggage => "vendor plugin binary; never executed",
+        OpaqueKind::Baggage => "opaque manufacturer payload; preserved, never executed",
         OpaqueKind::BinaryData => "opaque per-device binary blob, not interpreted",
         OpaqueKind::ExtraData => "ETS tool-internal data, not interpreted",
         OpaqueKind::Signature => "archive signature; cannot be regenerated",
@@ -484,6 +507,7 @@ mod tests {
     #[test]
     fn has_losses_ignores_warnings_and_counts_only_real_errors() {
         let mut report = ImportReport {
+            source_observations: None,
             source: SourceInfo {
                 file_name: "t".into(),
                 file_size: 0,
@@ -500,6 +524,7 @@ mod tests {
             conflicts: vec![],
             unsupported: vec![],
             errors: vec![ImportError {
+                source_path: None,
                 stage: "validate",
                 severity: Severity::Warning,
                 xpath: "t".into(),
@@ -509,6 +534,7 @@ mod tests {
         assert!(!report.has_losses(), "a warning-only report has no losses");
 
         report.errors.push(ImportError {
+            source_path: None,
             stage: "validate",
             severity: Severity::Error,
             xpath: "t".into(),

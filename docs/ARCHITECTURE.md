@@ -1,5 +1,9 @@
 # Architecture
 
+## Local import-integrity adapter repair (2026-10-10)
+
+[ADR-0107](adr/0107-import-source-integrity.md) and [the contract](IMPORT_INTEGRITY.md) bind ZIP reads to validated member identity, retain original XML, separate metadata provenance and record parser-owned lexical observations. Application code reuses persisted product diagnostics and baggage classification. Completion vocabulary requires a scalar-only schema12 refusal barrier; no UI/core coupling, new dependency or protocol capability. Local and unpublished; final acceptance remains separately recorded.
+
 ## Docker upload and explicit browser return (2026-10-09)
 
 [Separate integration verification](status/2026-10-10-import-expansion-integration.md) supersedes the local-only delivery status, not its historical test results. This is source integration, not a new release or deployment.

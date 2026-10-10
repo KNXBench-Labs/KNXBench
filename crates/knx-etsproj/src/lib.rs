@@ -542,9 +542,44 @@ mod import_tests {
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
         let out = import_knxproj(&reference_ets4_path()).unwrap();
-        // 36 whole-file entries, split between the opaque store and the
-        // manufacturer files now handed out separately (Task 12).
-        let opaque_whole_files = out.opaque.iter().filter(|e| e.xpath.is_empty()).count();
-        assert_eq!(opaque_whole_files + out.manufacturer.len(), 36);
+        // Import retains every original member in one of the two stores.
+        // Derive coverage from the container, not a private fixture's size.
+        let mut kept = std::collections::BTreeMap::new();
+        for (path, bytes) in out
+            .opaque
+            .iter()
+            .filter(|entry| entry.xpath.is_empty())
+            .map(|entry| (entry.source_path.as_str(), entry.bytes.as_slice()))
+            .chain(
+                out.manufacturer
+                    .iter()
+                    .map(|entry| (entry.source_path.as_str(), entry.bytes.as_slice())),
+            )
+        {
+            assert!(kept.insert(path, bytes).is_none(), "duplicate whole source");
+        }
+        let input = std::fs::read(reference_ets4_path())
+            .unwrap_or_else(|_| panic!("reference source read refused"));
+        let mut container =
+            Container::open(input).unwrap_or_else(|_| panic!("reference container open refused"));
+        assert!(
+            kept.len() == container.entries().len(),
+            "member coverage differs"
+        );
+        let paths: Vec<_> = container
+            .entries()
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
+        for path in paths {
+            let original = container
+                .read(&path)
+                .unwrap_or_else(|_| panic!("reference member read refused"));
+            assert!(
+                kept.get(path.as_str())
+                    .is_some_and(|bytes| *bytes == original.as_slice()),
+                "whole source missing or changed"
+            );
+        }
     }
 }

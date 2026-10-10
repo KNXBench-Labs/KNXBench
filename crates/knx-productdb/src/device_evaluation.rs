@@ -251,7 +251,7 @@ pub fn evaluate_device(
         let module_id = format!("{prefix}_M-{module_digits}");
         let declared_id = format!("{prefix}_{suffix}");
         // Resolve stored identity even below a skipped Repeat. This does not
-        // walk its iterations or decide activation (ADR-0107).
+        // walk its iterations or decide activation (ADR-0108).
         let matches: Vec<_> = module_instances
             .iter()
             .filter(|m| {

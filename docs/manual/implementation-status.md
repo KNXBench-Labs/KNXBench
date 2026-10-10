@@ -36,6 +36,20 @@ A separate browser editor is not closed and transient selection is not copied.
 These fixes are **not in the published alpha.6 artifacts**. See the
 [behavioral contract](../contracts/DOCKER_UPLOAD_AND_RETURN.md).
 
+## Source integration: selected lines/devices
+
+The 10 October 2026 source package adds a File-menu selector and the matching
+CLI for a previewed merge into the open project. Shared application logic maps
+required dependencies, refuses conflicts/stale confirmations and creates one
+native undo step. Target settings/identity remain owned by the open project.
+Retained complete source evidence can include unselected private data and
+survives Undo; explicit consent is required. [Source integration acceptance](../status/2026-10-10-import-expansion-integration.md)
+is separate from a release; the existing alpha.7 artifacts are not changed. [Workflow](../SELECTIVE_IMPORT.md) ·
+[local verification](../status/2026-10-10-import-expansion-verification.md).
+The authorized historical-export harness lacks its real export set; cvexc
+analysis does not activate device comparison/download rules. Native/Orca and
+real ETS/hardware evidence remain unverified.
+
 ## Communication-object table: accepted main-delivery source
 
 The 2026-10-09 owner-approved local UI package adds explicit column headings,

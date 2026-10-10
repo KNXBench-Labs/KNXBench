@@ -164,6 +164,9 @@ pub struct DeviceEvaluation {
     /// The stored id behind each `validated_scoped` key, inverted: the
     /// `(module_id, declared_id)` a stored module-scoped id resolved to.
     pub scoped_ids: HashMap<String, (String, String)>,
+    /// Stored id -> (declared module, verbatim imported instance id, declared ref).
+    /// Read-only evidence, independent of Repeat expansion and write authority.
+    pub instance_scoped_ids: HashMap<String, (String, String, String)>,
     pub stale: Vec<StaleValue>,
     /// Pass A/B findings, in the order the parameter panel lists them.
     pub findings: Vec<EvaluationFinding>,
@@ -239,9 +242,68 @@ pub fn evaluate_device(
     // loser is `stale`, named alongside the winner in a diagnostic).
     let mut validated_scoped: HashMap<(String, String), String> = HashMap::new();
     let mut validated_scoped_ets_id: HashMap<(String, String), String> = HashMap::new();
+    let mut instance_scoped_ids = HashMap::new();
+    let declarations: Vec<(String, String)> = products.prepare(
+        "SELECT element_id, ref_id FROM dynamic_node WHERE program_id = ?1 AND kind = 'Module' AND element_id IS NOT NULL AND ref_id IS NOT NULL"
+    )?.query_map([program_id], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<_, _>>()?;
+    let mut instance_winners: HashMap<(String, String, String), String> = HashMap::new();
     for (ets_id, raw, prefix, module_digits, mi_digits, suffix) in candidates {
         let module_id = format!("{prefix}_M-{module_digits}");
         let declared_id = format!("{prefix}_{suffix}");
+        // Resolve stored identity even below a skipped Repeat. This does not
+        // walk its iterations or decide activation (ADR-0107).
+        let matches: Vec<_> = module_instances
+            .iter()
+            .filter(|m| {
+                module_id.ends_with(&format!("_{}", m.source.ets_id))
+                    && m.instance_ets_id == format!("{}_MI-{mi_digits}", m.source.ets_id)
+            })
+            .collect();
+        let declared: Vec<_> = declarations
+            .iter()
+            .filter(|(id, _)| id == &module_id)
+            .collect();
+        let has_unique_declaration = declared.len() == 1;
+        // Namespace association is required for the new read-only map. The
+        // existing evaluator also supports legacy declaration aliases; don't
+        // silently change that single-instance write/read contract here.
+        let has_matching_definition = has_unique_declaration && declared[0].1 == prefix;
+        let has_imported_owner = module_instances
+            .iter()
+            .any(|m| module_id.ends_with(&format!("_{}", m.source.ets_id)));
+        if has_imported_owner && (matches.len() != 1 || !has_unique_declaration) {
+            stale.push(StaleValue { ets_id, raw });
+            continue;
+        }
+        if matches.len() == 1 && has_matching_definition && ref_ids.contains(&declared_id) {
+            let instance_id = matches[0].instance_ets_id.clone();
+            let key = (module_id.clone(), instance_id.clone(), declared_id.clone());
+            if let Some(winner) = instance_winners.get(&key) {
+                findings.push(EvaluationFinding::DuplicateModuleScopedValue {
+                    scope: None,
+                    winner_ets_id: winner.clone(),
+                    ets_id: ets_id.clone(),
+                    module_id: module_id.clone(),
+                    declared_id: declared_id.clone(),
+                });
+                stale.push(StaleValue { ets_id, raw });
+                continue;
+            }
+            instance_winners.insert(key.clone(), ets_id.clone());
+            values.insert_instance(key.0, key.1, key.2, raw.clone());
+            instance_scoped_ids.insert(
+                ets_id.clone(),
+                (module_id.clone(), instance_id, declared_id.clone()),
+            );
+            if !module_ids.contains(&module_id)
+                || !matches!(
+                    resolve_mi_authority(module_instances, &module_id),
+                    MiAuthority::Found(_)
+                )
+            {
+                continue;
+            }
+        }
         if !module_ids.contains(&module_id) || !ref_ids.contains(&declared_id) {
             stale.push(StaleValue { ets_id, raw });
             continue;
@@ -306,6 +368,7 @@ pub fn evaluate_device(
             .into_iter()
             .map(|(key, ets_id)| (ets_id, key))
             .collect(),
+        instance_scoped_ids,
         stale,
         findings,
         values,
@@ -361,6 +424,9 @@ impl DeviceEvaluation {
                         .as_ref()
                         .is_some_and(|s| s.module_id.as_deref() == Some(module_id.as_str()))
             })
+        } else if self.instance_scoped_ids.contains_key(ets_id) {
+            // Identity resolved, but no accepted iteration/activation rule.
+            return ValueStatus::Unknown;
         } else if self.stale.iter().any(|s| s.ets_id == ets_id) {
             return ValueStatus::Stale;
         } else {

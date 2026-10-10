@@ -8859,10 +8859,12 @@ were no longer available); the earlier native receipt remains historical.
 needs the old workaround. No universal compositor/GPU support or broad
 native-UI acceptance follows.
 
-## 159. A project archive may unpack to at most 512 MiB, and every member name must be unique
+<a id="159-a-project-archive-may-unpack-to-at-most-512-mib-and-every-member-name-must-be-unique"></a>
+
+## 159. A project archive may unpack to at most 1024 MiB, and every member name must be unique
 
 **Limitation.** `knx-etsproj` refuses a `.knxproj` whose members together
-declare more than 512 MiB uncompressed (`MAX_ARCHIVE_UNCOMPRESSED`), or one
+declare more than 1024 MiB uncompressed (`MAX_ARCHIVE_UNCOMPRESSED`), or one
 member of more than 64 MiB, and it reads every member only up to the size its
 headers declare: a member that inflates further is refused by name. It also
 refuses an archive in which two file members share a name, byte for byte or
@@ -8875,14 +8877,20 @@ without a report — while the documentation promised that nothing is dropped
 silently. Lookups in the archive are case-insensitive, so either repeat let
 one member's bytes stand in for another's.
 
-**Impact.** The largest real project measured so far declares 22 MiB, so the
-budget leaves more than twenty times that; a genuine project above 512 MiB
-would be refused with the totals in the message instead of imported. ETS is
-not known to write duplicate or case-variant names; such an archive is now
-refused instead of imported with lost bytes.
+**Impact.** A genuine project above 1024 MiB is refused with the totals in the
+message instead of imported. ETS is not known to write duplicate or case-variant
+names; such an archive is refused instead of imported with lost bytes. The total
+budget bounds expanded archive payloads, not peak process memory.
+
+**Update 2026-10-10:** the owner requested raising the former 512 MiB total
+budget to 1024 MiB (1,073,741,824 bytes). The 64 MiB member limit, bounded reads,
+identity/layout checks and cumulative outer/nested budget remain unchanged.
+The tester-reported size motivated the increase; no tester archive was supplied
+or imported, and no new large-project peak-memory measurement is claimed.
+Existing memory-amplification observations below remain historical evidence.
 
 **Lifted when.** A streaming import that keeps members on disk instead of in
-memory, or measured evidence that real projects need a larger budget.
+memory, or measured evidence justifying a further bounded budget increase.
 
 **Update 2026-10-06 (AR18 re-check N1/N2): identity is judged on the names
 the reader uses, and a protected payload is counted before it is unpacked.**
@@ -9287,7 +9295,7 @@ smoke-tested on its build runner only, not on a Raspberry Pi.
 with a separate 16 KiB multipart-envelope allowance and streams into a staging
 file. Larger HTTP uploads receive 413; a reverse proxy may impose a smaller
 limit. Server-mounted files bypass HTTP admission, not the unchanged importer
-limits (64 MiB per expanded member; 512 MiB expanded archive). The reporter
+limits (64 MiB per expanded member; 1024 MiB expanded archive). The reporter
 has not supplied the 115 MB archive, so its import compatibility is unverified.
 
 The explicit Diagnostics/Flow browser return navigates the current tab to the

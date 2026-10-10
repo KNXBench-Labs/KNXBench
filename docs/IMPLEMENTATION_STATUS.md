@@ -1,3 +1,19 @@
+## 2026-10-11 — bounded RTF adapter foundation (AP2 still open)
+
+- `knx-etsproj::rtf` derives bounded literal/basic-style views and writes only
+  its admitted subset. Schema23 explicitly admits plain/RTF InstallationHints;
+  this does not establish RTF for other text fields.
+- Original logical attributes and whole XML remain independent and exact in
+  five synthetic native Save/Reopen cases, including partial/malformed/large
+  preview refusal. No domain/schema/importer/storage mutation was needed.
+- Actual main-integrated ordinary crate219/0 (56 ignored/unadmitted), Clippy,
+  formatting, documentation and three-test native roundtrip target are accepted
+  in [the bounded receipt](evidence/rtf-foundation-2026-10-11.json). See
+  [the scope contract](contracts/rtf-text.md). Self-review, not independent review.
+- Full AP2 remains open: original-bound edits, service validation/history,
+  edited-value persistence and isolated editor/browser execution. No complete
+  RTF, ETS-export or hardware compatibility claim.
+
 ## 2026-10-10 — Secure key provenance, not Secure runtime
 
 - Owner-approved Session2 research reads seven primary KNX articles and public

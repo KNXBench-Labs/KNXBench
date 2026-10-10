@@ -82,7 +82,8 @@ KL-1/F01–F04 original project/product source reconciliation now has positive
 private proof and the preservation-only owner decision; package4 final gates
 are green on `382ab577`, with upstream-only test followup `dd4b8165` also green.
 No-ff `992032c32327` published with local/tracking/live equality. KL-173/F06 out-of-tree
-save/reopen evidence; KL-174/F08 content classification; KL-175/F09 raw RTF labels;
+save/reopen evidence has focused synthetic proof `01e6be99`; final gates and
+publication pending. KL-174/F08 content classification; KL-175/F09 raw RTF labels;
 KL-146 evaluator-vs-saved-state comparison. KL-170–172 public research package9 is
 published; implementation limits remain research-bound. Do not reuse old-base
 results for a changed main.

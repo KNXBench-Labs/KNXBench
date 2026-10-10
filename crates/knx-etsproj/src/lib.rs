@@ -16,6 +16,7 @@ pub mod opaque;
 pub mod parse;
 pub mod progress;
 pub mod report;
+pub mod rtf;
 pub mod source;
 #[cfg(test)]
 mod testutil;

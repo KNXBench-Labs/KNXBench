@@ -129,3 +129,80 @@ fn baggage_magic_descriptions_and_original_payloads_survive_without_execution() 
             .any(|e| e.source_path.ends_with("synthetic.dat") && e.bytes == payload));
     }
 }
+
+#[test]
+fn installation_hints_keep_exact_originals_when_rtf_preview_succeeds_or_refuses() {
+    use knx_etsproj::rtf::{inspect_text, TextError};
+    let large = format!(
+        "{{\\rtf1 {}}}",
+        "x".repeat(knx_etsproj::rtf::MAX_OUTPUT_BYTES + 1)
+    );
+    let values = [
+        "Plain Unicode Grüße",
+        r"{\rtf1\ansi\ansicpg1252 a{\b b}\u252?}",
+        r"{\rtf1 a{\*\unknown retained metadata}b}",
+        r"{\rtf1 incomplete",
+        large.as_str(),
+    ];
+    for (index, value) in values.iter().enumerate() {
+        let xml_value = value
+            .replace('&', "&amp;")
+            .replace('"', "&quot;")
+            .replace('<', "&lt;");
+        let topology = format!(
+            r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><Installations><Installation InstallationId="0"><Topology><UnassignedDevices><DeviceInstance Id="P-0001-0_DI-1" Name="Synthetic hint" ProductRefId="M-0001_P-1" Hardware2ProgramRefId="M-0001_H-1_HP-1" InstallationHints="{xml_value}"/></UnassignedDevices></Topology></Installation></Installations></Project></KNX>"#
+        );
+        let info = r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><ProjectInformation Name="Synthetic hint preservation" GroupAddressStyle="ThreeLevel"/></Project></KNX>"#;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("source-preservation.knxdb");
+        let conn = knx_store::open_and_migrate(&path).unwrap();
+        let result = knx_app::import_ets_project_bytes(
+            zip_with_entries(&[
+                ("P-0001.signature", b""),
+                ("P-0001/0.xml", topology.as_bytes()),
+                ("P-0001/Project.xml", info.as_bytes()),
+            ]),
+            "synthetic-hints.knxproj",
+            &conn,
+            knx_app::ImportOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            result.report.error_count(),
+            0,
+            "nonempty valid source required"
+        );
+        assert_eq!(result.project.devices.iter().count(), 1);
+        // The import service persists original evidence and returns the model;
+        // its caller owns the explicit native-model save boundary.
+        knx_store::save_project(&conn, &result.project).unwrap();
+        assert_eq!(knx_store::load_project(&conn).unwrap(), result.project);
+        let original = knx_store::load_opaque(&conn).unwrap();
+        let retained: Vec<_> = original
+            .iter()
+            .filter(|entry| entry.name == "InstallationHints")
+            .collect();
+        assert_eq!(retained.len(), 1);
+        assert_eq!(retained[0].bytes, value.as_bytes());
+        assert!(original
+            .iter()
+            .any(|entry| entry.source_path == "P-0001/0.xml"
+                && entry.xpath.is_empty()
+                && entry.bytes == topology.as_bytes()));
+        match index {
+            0 | 1 => assert!(inspect_text(value).unwrap().unsupported.is_empty()),
+            2 => assert_eq!(inspect_text(value).unwrap().unsupported, vec!["unknown"]),
+            3 => assert_eq!(inspect_text(value), Err(TextError::Malformed)),
+            4 => assert_eq!(inspect_text(value), Err(TextError::OutputLimit)),
+            _ => unreachable!(),
+        }
+        assert_eq!(knx_store::load_opaque(&conn).unwrap(), original);
+        knx_store::save_project(&conn, &result.project).unwrap();
+        drop(conn);
+        let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+        assert_eq!(knx_store::load_project(&conn).unwrap(), result.project);
+        assert_eq!(knx_store::load_opaque(&conn).unwrap(), original);
+        knx_store::save_project(&conn, &result.project).unwrap();
+        assert_eq!(knx_store::load_opaque(&conn).unwrap(), original);
+    }
+}

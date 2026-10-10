@@ -4545,6 +4545,14 @@ parser refusal on `8901affa` is historical, not the current result.
 Whole-project reconciliation remains a separate KL-1 gate.
 Full Repeat support remains an accepted boundary (PDB-01).
 
+**Final integrated admission 2026-10-10 (`f4af614eac30`).** The explicit
+`private_instances_read_their_own_stored_values` and independent RefId gates
+pass again after import-integrity and public-research integration. The full
+corrected corpus also passes; its four inherited test contracts were updated
+only with owner authorization after exact fresh-main failures (`e74be53a`),
+without runtime changes or private expected values. This closes the old parser
+and corpus delivery blockers, not the Repeat/activation/write boundary.
+
 ## 69. A `Module` with no `@Id` cannot be matched to a project instance
 
 **Limitation.** `Module/@Id` is an optional XML attribute

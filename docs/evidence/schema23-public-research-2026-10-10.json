@@ -35,5 +35,11 @@
       "inputBinding": "start/end equal"
     }
   },
-  "publication": "Actual merged documentation scope gated; closure docs/privacy check and normal push/readback pending"
+  "publication": {
+    "merge": "3a3037871b627e56a73a2ca46c5d2a57fb104ec4",
+    "pushed": "main",
+    "refReadback": "own HEAD = origin/main = live main",
+    "closure": "five nonempty repository gates, documentation/diff checks and mechanical private-source value scan passed on delivered merge",
+    "runtimeScope": "docs-only tree changes; no runtime or encoder support"
+  }
 }

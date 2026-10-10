@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 15:00
+- **Completed:** Package9 delivered: no-ff3a3037871b62 pushed to main, own HEAD/tracking/live identical. Public KL-170–172 research4fd23f6ac4fe;97 xtask tests and strict clippy/fmt, all five nonempty repository checks, docs/diff and final mechanical private-value scan pass. Closure changes docs only. Implementation limits remain LATER; insufficient endian/UTF8-field/loaded-image contracts documented, no runtime changes. Receipt docs/evidence/schema23-public-research-2026-10-10.json. In-session self-review only.
+- **Pending/Next Steps:** Own package9 worktree/branch/scratch cleanup after this additive publication receipt. Package3 integrated broad2876 Rust/2597 Web green, integrated corpus/browser replay running in its own worktree. Package4 original/report/native controls running separately. Continue KL-173 rest,174/175 and146; final origin/main gates and full per-KL handover still required.
+- **Notes for Codex oder Claude:** Import-integrity F01–F09 is upstream. Package3 must integrate this documentation-only main advancement, preserving source gate provenance and both histories. Root stays stale and untouched; no original values, hardware, vendor code, release/deployment or subagents. Current handover is documentation-only post-publication closure, not a new runtime acceptance claim.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 14:58
 - **Completed:** Package9 public-only research complete in4fd23f6ac4fe; actual no-ff candidate a3f88cac2b72 passes97 xtask unit tests, strict clippy/fmt, five repository gates and docs/diff. Citation evidence validation passes. Only docs and handover differ from main; no runtime encoding support added. KL-170–172 remain LATER with explicit per-type/field/payload specification gaps.
 - **Pending/Next Steps:** Closure-doc checks, outgoing source-value privacy scan, normal main push/ref readback, task-owned cleanup. Package3 integrated broad gate passed2876 Rust/2597 Web; its actual integrated corpus/browser replay is separately queued. Package4 new source-report reconciliation controls/genuine original tests are running, no pass claimed yet. KL-173 residual audit, KL-174/175 and146 still open.

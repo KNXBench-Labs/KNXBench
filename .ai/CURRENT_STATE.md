@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 00:29
+- **Completed:** AP2 bounded pure RTF adapter/writer on admitted InstallationHints scope. Initial real baseline1/15 RED, retained compile refusal, corrected16/0; expanded22/0. Existing native target now1/0 for five synthetic original-preservation inputs, repeated saves/close/reopen and full model/opaque equality. First native attempt failed NotSaved due omitted explicit caller model-save; corrected test only, no importer/store change. Final expanded source hashes frozen.
+- **Pending/Next Steps:** Integrate published AP1/current main into this owned branch, review/owning-crate build/clippy/docs/ordinary regressions and publish only the bounded foundation. Full AP2 editor/service mutation/history/edited-value native/browser acceptance remain. AP3–AP7 and AP9 pending; AP8 separate181/0 suite and real pinned-main CSS report passed but full ID/review/publication pending. Goal incomplete.
+- **Notes for Codex oder Claude:** No universal field/RTF/ETS-export claim; no domain/schema or UI shell mutation. Pure adapter performs no IO/HTML/plugins/resources. Original logical attrs/full XML preserved even when preview refuses. Native import persists source but returns model for explicit save by caller. Own source/tests/contract only; original XML, hardware, private corpus, foreign source, immutable Alpha8 release unchanged. No subagents/quota/release/deployment/live operation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 23:02 CEST
+- **Completed:** AP2 parser subpackage started in independent feature/data-tooling-rtf-20261010 from own AP1 candidate6cb746ec1985c87c01c65dcfcc6430b52a02d1ae; AP1 source stays frozen. Public Schema23 InstallationHints field and Microsoft RTF1.9.1 syntax/Unicode primary passages inspected. Exact ownership/subset/preservation/budgets contract in docs/contracts/rtf-text.md. Sixteen synthetic adapter regressions written before implementation; literal-only baseline prepared for actual named RED, not delivered support.
+- **Pending/Next Steps:** Execute actual RED through cooperative shared leases, replace baseline with bounded pure adapter and verify GREEN/edge controls; isolated editing/storage/history and native roundtrips/browser remain afterward. AP1 docs acceptance still queued separately. Nine-package goal incomplete.
+- **Notes for Codex oder Claude:** Only knx-etsproj rtf module/export/new tests owned here; parser never enters KNX Core. No existing report/raw-preview/UI/shared catalogues touched. All inputs synthetic; no private project/keyring or embedded-resource access. Original is borrowed/unchanged; unsupported rendering cannot authorize rewriting. No subagents/quota/bus/releases/deployments. Preserve inherited entries.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 22:53 CEST
 - **Completed:** Session2 nine-package goal activated in own feature/data-tooling-20261010 from fd6b1cff37b2713361e256282cc2aef46e2cbcb9. Startup/latest-doc/source/Session1 ownership inspection complete; exact pre-change surfaces in docs/contracts/data-tooling-ownership.md. AP1 primary-source Secure key provenance drafted from seven KNX articles and public Schema23; isolated source/code boundaries and contradictions disclosed. No runtime Secure/keyring or real-secret access.
 - **Pending/Next Steps:** AP1 source/citation/doc gates and coordinated publication; then AP2 bounded RTF preservation/editing, AP3 typed editors, AP4 notes/help, AP5 offline automation, AP6 opt-in MCP mutations, AP7 catalogue updates, AP8 actual collector measurement gaps; AP9 separate hardware prerequisites/test plans only. Goal incomplete.

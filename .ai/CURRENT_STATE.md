@@ -1,4 +1,60 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:05
+- **Completed:** Package3 no-ff2e264f6c + publication65e1c809 delivered/pushed/live-ref verified and cleaned; private evidence retained here. Package4 conservative semantic-report boundary corrected in own test only: unknowns keep has_losses=true, preservation-only reconciliation proved separately. Synthetic bounds and missing/corrupt/wrong-owner controls2/0/1 green. Prior exact private RED and independent native/RefId positives preserved in has-loss-contract-red/. Corrected hardened private runner proc_854b5ffe9a46 now started with loopback-only network and ignored private TMP/XDG stores. Corpus baseline/output-safety lessons recorded in private-corpus-regression-testing reference.
+- **Pending/Next Steps:** Await current private full-original XML/project/product/unknown-source/native/RefId results; then fresh65e1c809 integration, precise §1/COMPATIBILITY/ledger/status/docs evidence/gates/self-review/privacy and package4 no-ff push. Packages5–8 unresolved remainder; packages1,2,3,9 delivered. Overall goal remains IN PROGRESS, no need for user input at this checkpoint.
+- **Notes for Codex oder Claude:** Current runner proc_854b5ffe9a46/PID8227, previous proc_7aaf1b7c7987 exited1 solely because !has_losses assertion was inappropriate; report implementation untouched. Do not weaken actual whole-source byte/owner coverage or suppress semantic-loss signal. Preserve all private original-derived values only in ignored area. No foreign F edits, hardware/vendor execution/release/deployment/subagents/quota checks. Continue from actual result, do not replay source3 delivery.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:03
+- **Completed:** Package3 fully delivered/pushed/cleaned (2e264f6c, publication65e1c809). Package4 hardened RED exposed important test-contract error: asserting !has_losses conflated byte-preservation reconciliation with import report's deliberately conservative unknown/semantic-loss signal. Production report unchanged: unknown constructs must keep has_losses=true while owner-approved source-byte reconciliation is proved independently. Synthetic future-attribute control now pins both preserved/reconciled bytes and has_losses=true. Original independent native and RefId gate exits0; hardened reconciliation prior attempt2/1, no admission claimed.
+- **Pending/Next Steps:** Rerun synthetic and corrected hardened private full-XML/project/product/persistence comparisons; integrate fresh65e1c809 main, then exact §1/COMPATIBILITY/ledger/status/receipt and package4 gates/delivery. Packages5–8 actual rest scopes remain. All-goal completion not claimed.
+- **Notes for Codex oder Claude:** Owner defined retained-uninterpreted as reconciled ONLY for byte-exact reported source; never change or suppress has_losses/unknown entries to make that green. Private report source observations/unknowns remain nonempty, errors/conflicts zero; whole original XML and correct owners must match native/product bytes. F runtime untouched. Private logs/temp/XDG under ignored area; no hardware/vendor executions/release/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:58
+- **Completed:** Package3 delivered no-ff merge2e264f6cc6ec, publication receipt65e1c809d4bd, both pushed with local/tracking/live equality. Final source gates Rust2876/0/160 Web2597/0/163, corpus143/143 across31 targets, explicit own-value1/0 RefId3/0, browser4/4; docs/repo/ledger/privacy scans green. Essential private full baseline/replay/gate evidence copied into ignored package3-delivery/ in this active worktree; completed own package3/baseline worktrees, branches and package-specific build scratch removed. Root/foreign worktrees untouched. Packages1,2,3,9 delivered.
+- **Pending/Next Steps:** Hardened package4 private runner proc_7aaf1b7c7987 currently active: full original XML/project/product evidence, unknown report reconciliation, native save/reopen/resave and RefId independent checks. Final original replay/receipt/private errors review, fresh-main65e1c809 integration, §1/COMPATIBILITY/ledger/open-work/status/docs gates and no-ff push. Packages5–8 still need remainder delivery/valid owner-bound decisions; all-goal completion not claimed.
+- **Notes for Codex oder Claude:** Package4 synthetic bounded-source and report controls2/0/1 green; whole original XML inventory must be present byte-exact, no duplicate overwrite or report losses. Original opt-in/read-only; raw bytes feed real byte importer with real productDB, generic private-source name. All native temp/XDG stores and source-derived outputs confined to ignored private area. Existing four test corrections authorized only, F runtime untouched. No hardware, vendor binary runs, release/deployment, subagents or quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:40
+- **Completed:** Package4 self-review tightened private reconciliation source reading: one opened regular-file handle, bounded declared/actual sizes, identical captured bytes passed to the genuine byte-import service with real product database. Duplicate retained XML identities now refuse instead of silently overwrite, and report has_losses must be false. Synthetic bounded-reader RED independently confirmed E0425; GREEN2/0/1 includes exact-bound, oversized, missing and non-regular inputs plus missing/corrupt/wrong-owner report controls. No production runtime changes.
+- **Pending/Next Steps:** Hardened private source+product+save/reopen/resave+unchanged-source run and independent native/RefId replay; source-byte-bound review/evidence, precise §1/COMPATIBILITY/ledger status and delivery. Package3 final source gates green on f4af614e; full corpus still running before admission/push. No goal completion claimed.
+- **Notes for Codex oder Claude:** Owner accepted retained-uninterpreted only when byte-exact and explicitly reported, never semantic/ETS compatibility. User source path opt-in remains required; missing source refuses. All source-derived errors/assertions static boolean; captured archive passed as generic private-source.knxproj name, data and native temp stores confined to ignored private area. No foreign runtime/worktree edits, hardware or executable unpacking/runs.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 15:40
+- **Completed:** Fresh origin/main d9da8e61 baseline reproduces the same three red corpus targets and four failed tests with identical result totals; correct baseline manifest source root verified. Early assertion blocks were clipped by runner's stderr tail; exact per-case replay still needed. Independent integrated instance browser replay passes4/4. Package9 delivered/cleaned. Package3 source/web gates green but corpus NOT green, not delivered. Package4 preliminary positives/controls and refusal cases documented; hardened final replay pending.
+- **Pending/Next Steps:** Owner decision required: permission for minimal test-only corrections in inherited files overlapping import-integrity ownership, or have that owner repair them. No runtime/source-format fixes or assertion weakening authorized by this note. Capture full per-case baselines, derive source-preservation/report expectations without publishing private counts/strings, rerun entire corpus and quality gates, then publish package3. Continue package4–8 only within stated boundaries; final all-main goal still open.
+- **Notes for Codex oder Claude:** Blocking locations on package3: etsproj lib.rs548/report.rs463 and server http_project_routes.rs47/open_reference_project.rs28. No F-owner file edited. Own baseline worktree schema23-corpus-baseline remains with ignored evidence; own implementation worktrees remain active. User clarification is the only authority to widen the file ownership boundary. Raw assertions stay private; package3 receipt now includes actual red baseline and independent browser pass.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 15:28
+- **Completed:** Package9 delivered at no-ff3a303787 and publication receipt d9da8e61; own/tracking/live equality verified, research worktree/branch/dedicated scratch cleaned; compact evidence retained here privately. Package4 preliminary original unknown/report/source reconciliation passed, original/native roundtrip and mandatory RefId checks passed explicitly. Synthetic positive/missing/corrupt/wrong-owner controls pass after including both original XML members; absent env and missing file intentionally refuse with exit101. Private errors redacted and actual cumulative byte budget hardened.
+- **Pending/Next Steps:** Package4 final hardened positive replay, focused/public gates, review, KL-1/COMPATIBILITY/Ledger/OPEN_WORK docs and publication pending. Package3 is NOT delivered: integrated corpus replay found four inherited unchanged assertion failures, fresh-main baseline running before owner-bound edits. Other residual packages still open; no whole-goal completion.
+- **Notes for Codex oder Claude:** No foreign file/worktree, root code or shared Git configuration modified. No hardware, vendor code, release/deployment, subagents or quota checks. Four failures are test-contract candidates, not yet attributed to baseline by execution. Private result payloads remain ignored/local, no original counts or strings in shared evidence. Preserve this active gate/evidence state until owner resolution; do not relabel old successful gates as current-main success.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 14:54
+- **Completed:** Package4 from fresh origin/main9a5b55fe; reread required private/upstream sources. Owner accepted byte-exact retained-uninterpreted data as reconciled when explicitly reported, without semantic/ETS claims. New explicit opt-in source-report reconciliation test written, with synthetic missing/corrupt/wrong-owner negative controls. It binds unknown findings to independent indexed XML source bytes and native/product retained bytes, checks save/reopen/resave and unchanged source. No F01–F09 production changes duplicated.
+- **Pending/Next Steps:** Execute public controls and configured original/project/product and RefId gates; no pass claimed before actual results. Then reconcile KL-1/COMPATIBILITY/status docs, self-review, full relevant gates/corpus, privacy scan/no-ff/push/equality/cleanup. Package3 broad and package9 docs gates remain queued on shared locks in their own worktrees.
+- **Notes for Codex oder Claude:** New private test is ignored/env-gated and uses bool assertions; source-bearing output only under ignored private analysis. Unknown presence is still a report fact, not suppressed. Native/model12 unchanged. Foreign/root worktrees, gate owners and processes untouched; no hardware or nested app payload extraction.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 14:08 CEST
 - **Completed:** Owner-authorized import-integrity source integration is published on main at ab77a0e7 (exact local/tracking/live equality), with full combined-source acceptance on 367405f1: Rust3893/0, Web2595/0, explicit private original/native and RefId checks, selected offline corpus targets, builds/lint and repository gates. Concurrent test-catalogue documentation from 6ac34e61 is preserved byte-for-byte outside the additive status reconciliation; runtime inputs are unchanged. Diagnostic/preservation scope for KL-173 meets its condition; reactivation semantics stay unverified. Shared evidence is generic, private source and source-bearing results remain local/ignored. Self-review only.
 - **Pending/Next Steps:** Final doc gates and remote equality are verified; owned feature/integration branches/worktrees and build targets are retired. No remaining work in this delivery scope. No release, deployment, bus/hardware, added execution support or root synchronization. F01–F09 are implemented and verified; F10/F11 channel/address/IP and parameter/loader work is research-assessed, not implemented capability. Separate authorization/decisions are required before implementation.

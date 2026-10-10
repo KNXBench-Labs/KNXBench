@@ -79,7 +79,13 @@ impl ProgramLookup {
             Visibility::Evaluated(evaluation) => evaluation
                 .scoped_ids
                 .get(ets_id)
-                .and_then(|(_, declared)| self.views.get(declared)),
+                .and_then(|(_, declared)| self.views.get(declared))
+                .or_else(|| {
+                    evaluation
+                        .instance_scoped_ids
+                        .get(ets_id)
+                        .and_then(|(_, _, declared)| self.views.get(declared))
+                }),
             Visibility::NotEvaluated(_) => None,
         })
     }
@@ -88,6 +94,12 @@ impl ProgramLookup {
     fn stored_visibility(&self, ets_id: &str) -> (&'static str, Option<&'static str>) {
         match &self.visibility {
             Visibility::NotEvaluated(reason) => ("notEvaluated", Some(reason)),
+            Visibility::Evaluated(evaluation)
+                if evaluation.instance_scoped_ids.contains_key(ets_id)
+                    && !evaluation.scoped_ids.contains_key(ets_id) =>
+            {
+                ("notEvaluated", Some("moduleInstanceNotEvaluated"))
+            }
             Visibility::Evaluated(evaluation) => match evaluation.value_status(ets_id) {
                 ValueStatus::Active => ("active", None),
                 ValueStatus::Inactive => ("inactive", None),
@@ -671,4 +683,56 @@ pub fn get_group_address(ws: &Workspace, alias: &str, reference: &str) -> ToolRe
         snapshot.source_json(),
         json!({ "matches": matches }),
     ))
+}
+
+#[cfg(test)]
+mod instance_tests {
+    use super::*;
+
+    #[test]
+    fn stored_instance_visibility_is_not_evaluated_and_keeps_its_declared_metadata() {
+        let dir = tempfile::tempdir().unwrap();
+        let products =
+            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        knx_productdb::ingest_file(
+            &products,
+            "M-TEST/program.xml",
+            knx_testsupport::REPEATED_INSTANCE_PROGRAM_XML.as_bytes(),
+        )
+        .unwrap();
+        let id = "A-TEST_MD-71_M-93_MI-2_P-83_R-61";
+        let instance = knx_core::ModuleInstance {
+            id: knx_core::ModuleInstanceId(2),
+            device: DeviceId(1),
+            source: knx_core::SourceRef {
+                path: "synthetic".into(),
+                ets_id: "MD-71_M-93".into(),
+            },
+            instance_ets_id: "MD-71_M-93_MI-2".into(),
+            repeat_index: "71x2".into(),
+            arguments: vec![],
+        };
+        let evaluation = knx_productdb::device_evaluation::evaluate_device(
+            &products,
+            "A-TEST",
+            vec![(id.into(), "17".into())],
+            &[instance],
+        )
+        .unwrap();
+        let lookup = ProgramLookup {
+            state: "installed",
+            program_id: Some("A-TEST".into()),
+            views: knx_productdb::query::parameter_views(&products, "A-TEST", None)
+                .unwrap()
+                .into_iter()
+                .map(|v| (v.id.clone(), v))
+                .collect(),
+            visibility: Visibility::Evaluated(Box::new(evaluation)),
+        };
+        assert_eq!(
+            lookup.stored_visibility(id),
+            ("notEvaluated", Some("moduleInstanceNotEvaluated"))
+        );
+        assert_eq!(lookup.view(id).unwrap().id, "A-TEST_MD-71_P-83_R-61");
+    }
 }

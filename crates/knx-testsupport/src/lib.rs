@@ -2,6 +2,27 @@
 
 use std::path::{Path, PathBuf};
 
+/// Synthetic repeated Module fixture with canonical Dynamic ancestors (ADR-0107).
+pub const REPEATED_INSTANCE_PROGRAM_XML: &str = r#"<KNX xmlns="http://knx.org/xml/project/23">
+<ManufacturerData><Manufacturer RefId="M-TEST"><ApplicationPrograms>
+<ApplicationProgram Id="A-TEST" Name="Synthetic repeat" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static><ParameterTypes><ParameterType Id="PT-TEST" Name="number">
+<TypeNumber Type="unsignedInt" SizeInBit="8" minInclusive="0" maxInclusive="255"/>
+</ParameterType></ParameterTypes><Parameters>
+<Parameter Id="P-TEST" Name="count" ParameterType="PT-TEST" Value="4"/>
+</Parameters><ParameterRefs><ParameterRef Id="P-TEST_R-1" RefId="P-TEST"/></ParameterRefs></Static>
+<Dynamic><Channel Id="CH-TEST" Number="1"><ParameterBlock Id="PB-TEST">
+<choose ParamRefId="P-TEST_R-1"><when test="4">
+<Repeat ParameterRefId="P-TEST_R-1"><Module Id="A-TEST_MD-71_M-93" RefId="A-TEST_MD-71"/></Repeat>
+</when></choose></ParameterBlock></Channel></Dynamic>
+<ModuleDefs><ModuleDef Id="A-TEST_MD-71" Name="test module"><Static>
+<Parameters><Parameter Id="A-TEST_MD-71_P-83" Name="own value" ParameterType="PT-TEST" Value="99"/></Parameters>
+<ParameterRefs><ParameterRef Id="A-TEST_MD-71_P-83_R-61" RefId="A-TEST_MD-71_P-83"/></ParameterRefs>
+</Static><Dynamic><Channel Id="MD-CH-TEST"><ParameterBlock Id="MD-PB-TEST">
+<ParameterRefRef RefId="A-TEST_MD-71_P-83_R-61"/>
+</ParameterBlock></Channel></Dynamic></ModuleDef></ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
 /// The workspace root, resolved from *this crate's own* `CARGO_MANIFEST_DIR`
 /// (`<root>/crates/knx-testsupport`) rather than the caller's. `env!` expands
 /// where it is written, so this is always this crate's manifest directory no

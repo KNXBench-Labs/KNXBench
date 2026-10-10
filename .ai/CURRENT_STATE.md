@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 00:35
+- **Completed:** Package7 published/read back 6ef0b2d8854bb498c68ba0def63caf91f0a09969, local/tracking/live main equal. Complete frozen d8cde545 public/private acceptance and production build; later changes metadata-only with five nonempty repo/docs/whitespace/full outgoing privacy gates. Fresh Secure research owner contributions preserved. Bounded raw-label scope DONE; parsing/rendering/editing stays separate tooling scope. Packages1–7/9 delivered.
+- **Pending/Next Steps:** Publication closure metadata gates/readback, preserve compact private proofs and retire owned package7 tree/branch/scratch. Then fresh-main package8 KL146 original evaluated-activation comparison and exact per-KL/origin-main final closure. Overall goal not complete.
+- **Notes for Codex oder Claude:** codex, in-session self-review only; no independent review. Exact runtime admitted d8cde545, publication6ef0b2d8; no release/tag/deployment/bus action. Own proof/scanner archive private only. Never touch root/foreign/F/tooling worktrees or implement the other owner's RTF parser/editing; private differential must not turn stored activation or program defaults into invented evaluation semantics.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 00:24
 - **Completed:** Package7 complete frozen admission on d8cde545d065fd51b68bcde00e91dbb29694a6d4: eight-crate Rust2403/0/182, Web2612/0 in164 files, strict/repo/docs gates, production Web build, full nonempty corpus and explicit private reconciliation/RefIds/raw-preview gates passed. Original bytes unchanged; fixture four cases and relevant runtime equality verified, four screenshots re-inspected. Fresh upstream f6c3f64d4ece02fb6c6ea2b7a26d6735a0e47f6a adds Secure research/ownership metadata only, integrated with both journals preserved. No release/tag/deployment action.
 - **Pending/Next Steps:** Finish metadata gates/full staged outgoing privacy scan, commit/push exact candidate and verify local/tracking/live main equality, publication receipt and owned cleanup. Package8 KL146 original activation differential and exact per-KL final closure remain. Packages1–6/9 delivered;7 admitted pending publication;8 open.

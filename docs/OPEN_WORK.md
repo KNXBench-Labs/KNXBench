@@ -97,8 +97,9 @@ full corpus/quality/repo admission; no-ff `4c38af5b` published and read back
 at `4c484227` with local/tracking/live equality. KL-174/F08 bounded content/role candidate `41b3d6267731` passes synthetic
 app/native/product/HTTP focuses and final source `566afbdd` (Rust2400/0/181,
 strict quality/repo/docs, full nonempty corpus/private reconciliation/RefIds);
-delivered/read back `68147ba3` with local/tracking/live ref equality. KL-175/F09 raw RTF labels;
-KL-146 evaluator-vs-saved-state comparison. KL-170–172 public research package9 is
+delivered/read back `68147ba3` with local/tracking/live ref equality. KL-175/F09
+bounded raw labels delivered/read back `6ef0b2d8`; interpretation stays separate.
+KL-146 evaluator-vs-saved-state comparison remains. KL-170–172 public research package9 is
 published; implementation limits remain research-bound. Do not reuse old-base
 results for a changed main.
 
@@ -263,10 +264,10 @@ to owner `later`. Routes naming removed goal files are kept as history.
   once the devices-navigation interview ends.
 
 
-### Schema23 package7 raw candidates — publication pending
+### Schema23 review — remaining package8 and overall closure
 
-Frozen `d8cde545` passed broad Rust/Web/production-build/strict/repo/docs,
-nonempty corpus and explicit original/native/RefId/raw-preview admission.
-The bounded ADR-0110 scope stays unchanged; no RTF interpretation or editing.
-Metadata/outgoing privacy gates, exact main push/readback and owned cleanup remain.
-Package8 KL146 original evaluated-activation comparison follows.
+Package7 bounded raw candidates delivered/read back `6ef0b2d8`; final source
+`d8cde545` passed public/private acceptance, production build and outgoing privacy.
+No RTF parsing/rendering/editing claim; that belongs to the separate tooling owner.
+Own cleanup is recorded in the handover. Package8 KL146 original activation
+differential and exact per-KL/origin-main final closure remain open.

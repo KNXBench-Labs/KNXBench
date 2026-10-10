@@ -24,3 +24,10 @@ no classifier/semantics/scan-policy change, complete frozen-source scan passed.
 Fresh cdff5b56 adds handover/log only; preserve both contributions and verify final
 runtime/test/config equality plus metadata/privacy before publication.
 In-session codex self-review only, no independent review. Publication still pending.
+
+## Publication readback
+
+6ef0b2d8854bb498c68ba0def63caf91f0a09969 published to main; local/tracking/live
+equal. Latest Secure-owner metadata merged without runtime changes; five fresh
+repository/docs/privacy gates pass. Bounded raw-label scope delivered, rendering
+and editing separate. Own cleanup and package8/final closure remain in handover.

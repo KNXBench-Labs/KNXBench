@@ -9493,7 +9493,8 @@ with inspected screenshots; two omission mutations assertion-killed/restored.
 Frozen source `d8cde545` admitted 2026-10-11: Rust2403/0/182, Web2612/0,
 production build, strict/repository/documentation gates, nonempty all-pass corpus
 and explicit original reconciliation/RefId/raw-preview gates pass; original bytes
-unchanged. Publication and task-owned cleanup pending; bounded semantics unchanged.
+unchanged. Bounded raw-label scope delivered/read back `6ef0b2d8` on
+2026-10-11; remaining interpretation/rendering is separate scope.
 
 **Remaining boundary.** Modeled strings, whole retained XML/elements, file bodies,
 leading whitespace/BOM/alternative headers and older logs are not reclassified.

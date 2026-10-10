@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { ERROR_WRAPPERS, HOLIDAYS, LATE_NIGHT_MESSAGES } from "./toastCopy";
 import type { HolidayEntry } from "./toastCopy";
 import { formatTemplate, translate } from "./i18n";
+import { readableArchiveSizeError } from "./archiveSizeError";
 import { emitAchievementEvent } from "./achievementEvents";
 import type { TranslatableKey } from "./i18n";
 import type { AchievementTier } from "./achievementCatalog";
@@ -136,10 +137,11 @@ export function useToasts() {
    * Annoying beats dishonest. */
   function pushError(rawMessage: string, options?: { serverText?: boolean }) {
     const serverText = options?.serverText ?? true;
+    const readable = serverText ? readableArchiveSizeError(rawMessage) : undefined;
     const id = nextId.current++;
     setToasts((ts) => [
       ...ts.filter((t) => t.kind !== "error"),
-      { id, kind: "error" as const, message: humorizeError(rawMessage), serverText },
+      { id, kind: "error" as const, message: readable ?? humorizeError(rawMessage), serverText: readable ? false : serverText },
     ]);
     // Outside the state updater, which StrictMode may run twice.
     emitAchievementEvent({ type: "errorToastShown" });

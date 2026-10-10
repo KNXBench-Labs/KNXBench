@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:38 CEST
+- **Completed:** Owner-authorized regression integration reconciled with current upstream archive/UI package. Prior source55362f52 gate intentionally superseded after runtime inputs changed; partial evidence retained, not credited as final acceptance. Only additive handover conflict; full upstream history and own entries preserved.
+- **Pending/Next Steps:** Fresh complete merged-source gates and private original/native/product/census/instance/RefId checks on final source; final privacy/doc checks, normal main push and exact live readback. No release/deployment/hardware action.
+- **Notes for Codex oder Claude:** Own isolated integration/import-revalidation-c0e72cdb5ee5 checkout. No subagents, copied originals, private source in public files, foreign root/leases/worktrees modified. Prior feature/local receipts stay historical. Wait cooperatively on shared repository leases; no force-push or silent dropped warnings.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 17:19 CEST
 - **Completed:** Owner explicitly authorized main integration of eff4df95. Isolated merge preserves the complete upstream handover and four accepted independent synthetic regression changes; only additive documentation conflicts. Feature publication and original local acceptance remain historical, not merged-result verdicts.
 - **Pending/Next Steps:** Freeze merge source; execute fresh full Rust/Web/build/lint/repository/documentation gates and explicit private original/native/RefId/instance gates. Fetch again before normal main push; reconcile any advanced main and rerun consumed inputs. No release/deployment/hardware action.
@@ -11,6 +19,30 @@
 - **Completed:** Local F01–F09 revalidation accepted on pinned source with four synthetic regression enhancements; 19 baseline/19 candidate/9 final metadata gates, Rust3894/0, Web2596/0, nine compiled RED/restored GREEN controls and actual private CLI/source/native/product/offline checks passed. Two store-omission controls caught; original and runtime-source bytes unchanged. F10/F11 separately researched/reassessed, not newly implemented. Scoped privacy check passed; self-review only.
 - **Pending/Next Steps:** No further implementation in this scope. Owner subsequently authorized commit/push of the reviewed package on test/import-integrity-revalidation-20261010. Remote publication is verified against exact tracking/live refs separately from frozen local acceptance; no main integration, release or deployment requested.
 - **Notes for Codex oder Claude:** Private source/evidence remains ignored/restricted/untracked and must never be staged or uploaded. Preserve shared root HEAD/index/application, parallel documentation and foreign worktrees. Canonical CLI/accepted stores and compact evidence stay local. Historical no-publication statements describe the earlier verification scope, superseded only by this explicit source-branch commit/push authorization. No full ETS/signature/hardware claim.
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:34 CEST
+- **Completed:** Actual final main-integration source7520fa38 accepted after reconciling published65e1c809. Twenty-four stages exit0 with frozen inputs: parser197/0/56 ignored, consumers1799/0/101 ignored, frontend2610/0/164 files, full Chromium244/0, built-browser4/0/four frames inspected; explicit reference-container3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo gates/docs/whitespace pass. Source-bound public receipt/manual/status updated after the run; self-review only. Feature1be6f9bd included. No push yet.
+- **Pending/Next Steps:** Final documentation gates and metadata commit; fetch/inspect upstream, normal main push and exact ref/blob/ancestry readback; then owned worktree/branches/build/scratch cleanup and publication closure. No release/deployment/hardware action.
+- **Notes for Codex oder Claude:** Earlier interrupted and pre-upstream superseded attempts are distinct, not final acceptance. Runtime/test evidence is bound to7520fa38; subsequent changes are docs-only. Preserve all upstream history and foreign root/index/documents. Tester archive and new large-project peak memory remain unverified. Own integration/project-archive-1024mib-20261010 and publication scratch archive1024-publish-20261010 only.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:33 CEST
+- **Completed:** Owner authorized commit and push of the accepted1024 MiB archive-budget/readable-refusal package. Fresh origin/main still d9da8e61, source hashes equal accepted local receipt, exact18-path owned scope and self-review confirmed. Shared root HEAD/index/foreign documents captured for preservation. No publication yet.
+- **Pending/Next Steps:** Focused feature commit with KNXBench identity, no-ff main integration in this owned checkout, fresh integrated parser/frontend/browser/build/lint/repository/documentation gates, normal main push with exact remote readback, then owned cleanup. No release/deployment/hardware scope.
+- **Notes for Codex oder Claude:** Work in fix/project-archive-1024mib-20261010; do not stage or sync shared root. Earlier local receipts remain historical, not new merged acceptance. Publication logs/manifest under own archive1024-publish-20261010 scratch until final archival.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:26 CEST
+- **Completed:** Owner-requested local archive budget and readable refusal delivery accepted in fix/project-archive-1024mib-20261010 (base d9da8e61). Cumulative expanded project budget is 1024 MiB/1073741824 bytes; 64 MiB/member, bounded reads and outer/nested identity/layout/accounting guards unchanged. Shared EN/DE presenter makes both error toast and persistent load-failure banner name the expanded size and actual server limit, without a joke or incorrect English disclosure. Unknown/unsafe text and underlying error/progress/log data remain unchanged. Named parser/toast/banner/private-use locale RED controls verified. Final parser 197/0/56 ignored; frontend 2608/0 in164 files, production build and explicit E2E type check; built offline Chromium4/4 EN/DE1440/400 with all four frames inspected; Clippy/fmt/server build/version/five nonempty repository gates/docs/whitespace pass. Self-review only. Docs and handover synchronized; owned workers/caches/probes removed, reviewed source and built frontend retained.
+- **Pending/Next Steps:** None for the requested local implementation. Changes remain uncommitted/unpublished in KNXBench.worktrees/project-archive-1024mib-20261010; integration/publication/deployment are separate scope. Tester archive was not supplied/imported; no large-project peak-memory or private-corpus acceptance.
+- **Notes for Codex oder Claude:** Evidence retained ignored at .ai/logs/2026-10-10_codex_project-archive-1024mib/final-receipt.json with actual logs/manifests/final frames. First browser fixture missed achievements bootstrap and remains a refused attempt; toast-only earlier success is not final post-banner acceptance. Existing API exposes size only in the exact verified English text; the presenter narrowly recognizes that text and otherwise preserves it. Rust inputs remain byte-identical to their accepted gate; later changes are UI/docs only. Root HEAD/index/application and foreign work were not synchronized/staged. No API/schema/protocol/dependency, release/container/hardware action. Preserve every inherited handover below.
+
 ---
 
 - **Last Agent:** codex

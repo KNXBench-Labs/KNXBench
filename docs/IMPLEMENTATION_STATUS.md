@@ -1,3 +1,13 @@
+## 2026-10-10 — KL-1 final source-preservation acceptance
+
+Candidate `382ab577`: five Rust crates1360/0/116 and Web2610/0/164, full
+nonempty corpus, private original reconciliation/native/RefId and browser4/4
+passed. Final upstream `fc81326b` changed only four test files and docs;
+`dd4b8165` passes those crate/HTTP cases, full Web2611/0/164, tsc and strict
+server/app/parser Clippy. Runtime/dependencies/archive-browser inputs unchanged.
+Unknowns/has_losses stay visible and retained-uninterpreted reconciliation means
+source preservation only. Main publication/readback pending; [receipt](evidence/kl1-source-reconciliation-2026-10-10.json).
+
 ## 2026-10-10 — KL-1 preservation-only reconciliation candidate
 
 New opt-in witness `private_original_unknown_report_is_backed_by_exact_retained_sources`

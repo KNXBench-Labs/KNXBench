@@ -16,6 +16,11 @@ ETS export, Secure or hardware behavior. Schemas 12/13/14/20/22 remain outside
 this evidence. [Receipt](evidence/kl1-source-reconciliation-2026-10-10.json).
 
 
+Final source acceptance `382ab577` includes full corpus, private production
+reconciliation/native/RefId and synthetic browser gates; additional upstream
+regression tests pass on `dd4b8165`. This is source-preservation evidence, not
+ETS semantic or hardware certification.
+
 ## Local bounded import-integrity changes (2026-10-10)
 
 [IMPORT_INTEGRITY](IMPORT_INTEGRITY.md) distinguishes byte retention, lexical observation, typed mapping and hardware support. Object-tree and unassigned-device repairs do not certify complete manufacturer/runtime semantics. Native12 prevents old decoders from erasing the expanded completion vocabulary; back up before upgrading and do not expect downgrade. New local sources are not changes to published alpha.7 artifacts.

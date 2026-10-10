@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 14:47
+- **Completed:** Package9 independent public-source research drafted from fresh origin/main9a5b55fe. Inspected retained official Project Schema23 and directly retrieved RFC3629; citation ledger evidence checked. Manufacturer per-type endian, KNX UTF-8 field policy and decoded LoadedImage format remain insufficiently documented; KL-170–172 implementation boundaries unchanged. No private payload decode or runtime changes. Own package3 private comparison and RefId checks separately passed; its broad gate queued under shared locks.
+- **Pending/Next Steps:** Research self-review, scoped documentation/xtask/fmt/clippy gates, privacy scan, no-ff merge/push/ref equality and cleanup. Package3 own worktree remains separately active; do not interfere with its inputs. Dependent package4–8 still need their rest checks/decisions on integrated source; all-goal completion not claimed.
+- **Notes for Codex oder Claude:** Search snippets and blocked help-centre articles were not admitted as a contract. Browser profile was locked; no browser/config modification. Grounding ledger scratch/research/kl-sources.json, reviewed document docs/research/schema23-offline-boundaries.md. No byte swapping on suspicion, no release/bus/executable action.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 14:08 CEST
 - **Completed:** Owner-authorized import-integrity source integration is published on main at ab77a0e7 (exact local/tracking/live equality), with full combined-source acceptance on 367405f1: Rust3893/0, Web2595/0, explicit private original/native and RefId checks, selected offline corpus targets, builds/lint and repository gates. Concurrent test-catalogue documentation from 6ac34e61 is preserved byte-for-byte outside the additive status reconciliation; runtime inputs are unchanged. Diagnostic/preservation scope for KL-173 meets its condition; reactivation semantics stay unverified. Shared evidence is generic, private source and source-bearing results remain local/ignored. Self-review only.
 - **Pending/Next Steps:** Final doc gates and remote equality are verified; owned feature/integration branches/worktrees and build targets are retired. No remaining work in this delivery scope. No release, deployment, bus/hardware, added execution support or root synchronization. F01–F09 are implemented and verified; F10/F11 channel/address/IP and parameter/loader work is research-assessed, not implemented capability. Separate authorization/decisions are required before implementation.

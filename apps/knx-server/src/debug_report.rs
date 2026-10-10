@@ -3,16 +3,16 @@
 //! T29. Two things live here, and nothing else:
 //!
 //! 1. A redaction pass that works **by pattern class**, never by a list of
-//!    known values — any IPv4 dotted quad, any IPv6 literal, the user's home
-//!    directory prefix, the machine's hostname. A sweep for one remembered
-//!    literal is not a sweep: RFC 1918 ranges are exactly where a real
-//!    gateway address hides, and the only honest way to catch them is to
-//!    catch the shape.
+//!    known values — any IPv4 dotted quad, any IPv6 literal, any MAC/EUI
+//!    hardware address, the user's home directory prefix, the machine's
+//!    hostname. A sweep for one remembered literal is not a sweep: RFC 1918
+//!    ranges are exactly where a real gateway address hides, and the only
+//!    honest way to catch them is to catch the shape.
 //! 2. The bundle itself: which files it holds for a given set of opt-ins,
 //!    what each one contains, and how it becomes a zip on disk.
 //!
 //! Redaction covers `report.md`, `environment.json` and `log.json` — and
-//! covers the four pattern classes above, not KNX addresses (`report.md`
+//! covers the five pattern classes above, not KNX addresses (`report.md`
 //! names every class it keeps, AR13): `log.json`
 //! records import conflicts by group address and by element name, which is
 //! the only thing that makes a conflict diagnosable, and the dialog says so
@@ -38,6 +38,8 @@ pub(crate) const IPV4_PLACEHOLDER: &str = "[redacted-ipv4]";
 pub(crate) const IPV6_PLACEHOLDER: &str = "[redacted-ipv6]";
 /// What the machine's own hostname is replaced with.
 pub(crate) const HOST_PLACEHOLDER: &str = "[redacted-host]";
+/// What a MAC (or longer EUI) hardware address is replaced with.
+pub(crate) const MAC_PLACEHOLDER: &str = "[redacted-mac]";
 
 pub(crate) const REPORT_MD: &str = "report.md";
 pub(crate) const ENVIRONMENT_JSON: &str = "environment.json";
@@ -79,6 +81,8 @@ impl Redactor {
     /// is still seen afterwards, and IPv4 goes before IPv6 so that an
     /// IPv4-mapped literal (`::ffff:192.0.2.1`) loses its dotted quad rather
     /// than being left whole by an IPv6 parser that rejects the mapped form.
+    /// MAC addresses go last, so an IPv6 literal whose tail looks like one
+    /// (`fe80::1a:2b:3c:4d:5e:6f`) is removed whole rather than in part.
     pub(crate) fn apply(&self, text: &str) -> String {
         let mut out = text.to_string();
         if let Some(home) = &self.home {
@@ -88,7 +92,8 @@ impl Redactor {
             out = replace_hostname(&out, hostname);
         }
         out = redact_ipv4(&out);
-        redact_ipv6(&out)
+        out = redact_ipv6(&out);
+        redact_mac(&out)
     }
 }
 
@@ -273,6 +278,74 @@ fn ipv6_hit(run: &str) -> Option<Hit> {
         }
     }
     None
+}
+
+/// The fewest two-hex-digit groups that count as a hardware address: an
+/// EUI-48 (MAC) has six. Longer runs (EUI-64) are redacted whole.
+const MAC_MIN_GROUPS: usize = 6;
+
+/// Replaces every MAC address written as two-hex-digit groups joined by one
+/// consistent separator, `:` or `-` (`02:00:5e:10:00:01`,
+/// `02-00-5E-10-00-02`), and any longer run of such groups (EUI-64).
+/// A KNXnet/IP interface's MAC address and an imported `IPConfig` value both
+/// take this shape. Bare twelve-digit hex strings are deliberately not
+/// matched: hashes and identifiers in the log share that shape.
+fn redact_mac(text: &str) -> String {
+    scan_and_replace(
+        text,
+        |c| c.is_ascii_hexdigit() || c == ':' || c == '-',
+        mac_hits,
+    )
+}
+
+/// Every non-overlapping hardware address in `run`, left to right.
+fn mac_hits(run: &str) -> Vec<Hit> {
+    let bytes = run.as_bytes();
+    let mut hits = Vec::new();
+    let mut i = 0usize;
+    while i < bytes.len() {
+        match mac_end(bytes, i) {
+            Some(end) => {
+                hits.push(Hit {
+                    start: i,
+                    end,
+                    placeholder: MAC_PLACEHOLDER,
+                });
+                i = end;
+            }
+            None => i += 1,
+        }
+    }
+    hits
+}
+
+/// The end of a hardware address starting at `start`, if one does: a group
+/// boundary, then at least [`MAC_MIN_GROUPS`] two-digit groups that all use
+/// the separator following the first one.
+fn mac_end(bytes: &[u8], start: usize) -> Option<usize> {
+    if start > 0 && bytes[start - 1].is_ascii_hexdigit() {
+        return None;
+    }
+    let pair = |at: usize| {
+        bytes
+            .get(at..at + 2)
+            .is_some_and(|p| p.iter().all(u8::is_ascii_hexdigit))
+            && !bytes.get(at + 2).is_some_and(u8::is_ascii_hexdigit)
+    };
+    if !pair(start) {
+        return None;
+    }
+    let separator = *bytes.get(start + 2)?;
+    if separator != b':' && separator != b'-' {
+        return None;
+    }
+    let mut end = start + 2;
+    let mut groups = 1usize;
+    while bytes.get(end) == Some(&separator) && pair(end + 1) {
+        end += 3;
+        groups += 1;
+    }
+    (groups >= MAC_MIN_GROUPS).then_some(end)
 }
 
 /// Walks `text` once, hands every maximal run of `in_class` characters to
@@ -465,12 +538,15 @@ fn report_markdown(input: &BundleInput, included: &[&'static str]) -> String {
         md.push_str(&format!("- `{name}` — {}\n", describe_file(name)));
     }
     md.push_str(
-        "\nIP addresses, the home directory prefix and the machine hostname have been \
-         replaced by placeholders in `report.md`, `environment.json` and `log.json`. \
-         Nothing else is replaced: KNX addresses, project and element names, file paths \
-         outside the home directory, MAC addresses, serial numbers, e-mail addresses and \
-         anything else typed into the description stay as written. Review the files before \
-         sharing them.\n\n\
+        "\nIP addresses, MAC addresses, the home directory prefix and the machine hostname \
+         have been replaced by placeholders in `report.md`, `environment.json` and \
+         `log.json`. Nothing else is replaced: KNX addresses, project and element names, \
+         user names, file paths outside the home directory, serial numbers, e-mail \
+         addresses and anything else typed into the description stay as written. Review the \
+         files before sharing them.\n\n\
+         The retained ETS source subtrees of an imported project (interface and tunnelling \
+         settings, IP configuration, additional addresses, project traces with their user \
+         names) are never included; the log names them by location, size and hash only.\n\n\
          `bus-telegrams.json`, when present, is not redacted at all: it keeps KNX individual \
          and group addresses, group address names, every telegram's values (text values \
          included) and their timestamps, which together can show when the installation was \
@@ -588,6 +664,10 @@ pub(crate) fn write_zip(path: &Path, files: &[BundleFile]) -> Result<(), String>
         .map_err(|e| format!("cannot finish the bundle: {e}"))?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "debug_report_redaction_tests.rs"]
+mod redaction_tests;
 
 #[cfg(test)]
 mod tests {
@@ -1115,10 +1195,12 @@ mod tests {
             "::ffff:10.0.0.7",
             "/home/alice",
             "alice-laptop",
+            "00:1a:2b:3c:4d:5e",
+            "00-1A-2B-3C-4D-5F",
         ];
         // Kept as written, each with the words the warning must use for it.
         const KEPT: &[(&str, &str)] = &[
-            ("00:1a:2b:3c:4d:5e", "MAC addresses"),
+            ("ets-operator-q", "user names"),
             ("00FA:10203040", "serial numbers"),
             ("alice@example.org", "e-mail addresses"),
             (

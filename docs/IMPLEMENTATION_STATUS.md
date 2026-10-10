@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-10 — KL-68/PDB-01: own stored module-instance values, read-only
+
+Code `d050c7e78b02` adds a separate instance dimension, independent of defaults,
+siblings and Dynamic evaluation. Validated stored evidence is exposed through
+HTTP `instanceValues`, the Inspector and both MCP readers (`notEvaluated`).
+Legacy single-instance write authority remains unchanged; conflicting declarations
+and identities cannot authorize the new map. Repeat activation/mapping stays
+unsupported (ADR-0108). Rust1793/0, Web2596/0, Clippy, TypeScript, five xtask
+checks, documentation checks, corpus runner and four en/de browser cases passed;
+two focused mutants were caught. In-session self-review only. After integrating
+import-integrity, the explicit own-value and independent RefId gates pass on
+`734064823e19`; the earlier parser refusal on `8901affa` is superseded.
+Merged-source broad acceptance and publication are recorded separately.
+[Receipt](evidence/kl68-instance-values-2026-10-10.json).
+
 ## 2026-10-10 — Import-integrity merged candidate accepted
 
 [Separate integration acceptance](status/2026-10-10-import-integrity-integration.md)

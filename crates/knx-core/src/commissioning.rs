@@ -38,6 +38,9 @@ pub enum CompletionStatus {
     Undefined,
     Editing,
     FinishedDesign,
+    FinishedCommissioning,
+    Tested,
+    Locked,
     Accepted,
 }
 

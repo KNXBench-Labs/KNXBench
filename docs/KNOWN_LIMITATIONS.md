@@ -1,5 +1,9 @@
 # Known limitations
 
+## Local integrity repairs and remaining boundaries (2026-10-10)
+
+[IMPORT_INTEGRITY](IMPORT_INTEGRITY.md) records the unpublished repairs and schema12 vocabulary barrier. Historical opaque attributes are not guessed into typed values. Retained channel/address/IP extensions and offline loading limitations remain separately bounded. Import reports/session diagnostics are not persistently restored as a new report format; retained original XML preserves independently reconstructable source observations. Session-log caps remain explicit. No ETS/native-accessibility/hardware acceptance is claimed.
+
 ## Selective import and evidence boundaries (2026-10-10 source integration)
 
 [Separate integration verification](status/2026-10-10-import-expansion-integration.md) supersedes the local-only delivery status, not its historical test results. This is source integration, not a new release or deployment.

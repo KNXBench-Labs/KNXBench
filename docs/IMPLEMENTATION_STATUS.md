@@ -1,3 +1,21 @@
+## 2026-10-10 — Secure key provenance, not Secure runtime
+
+- Owner-approved Session2 research reads seven primary KNX articles and public
+  Project Schema23. [Findings](research/secure-key-provenance.md) separate
+  project XML, complete/interface keyring exports, access conditions, Data/IP
+  keys, factory credentials and project/signature protection. Contradictory
+  certificate/visibility claims and the deprecated IP article stay disclosed.
+- No real keys, keyrings, protected projects, device certificates or bus opened.
+  Current source inspected; no Secure implementation or new application/corpus/
+  ETS/hardware test. Bounded offline-keyring follow-up is a proposal only.
+- Accepted documentation source `8fdf716713006f94fa7a52d163afc3e3106f98ad`:
+  eight-source quote/evidence verifier,12 documentation checker tests, five
+  nonempty fresh-root repository gates,525 anchors/234 Markdown files and
+  whitespace. First adjacent-citation syntax refusal remains historical,
+  downstream stages then unstarted. In-session self-review only.
+- [Source-bound receipt](evidence/secure-key-provenance-2026-10-10.json);
+  local acceptance, coordinated integration/publication remains separate.
+
 ## 2026-10-10 — Alpha.8 released and independently verified
 
 - Immutable annotated `v0.1.0-alpha.8` points to `fdddad8ffe0bd9b4a33f2f992a15eac9b1a3c86d`.

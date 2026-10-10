@@ -51,6 +51,19 @@ baselines, future-model closure before model changes, and primary cvexc semantic
 before enabling any runtime rule. Synthetic browser/CLI checks are not real
 ETS/hardware/native accessibility evidence. No release/deployment or bus action.
 
+## Private schema-23 sample review (10 October 2026)
+
+A read-only review of a privately supplied ETS6 project lifted KNOWN_LIMITATIONS
+§125 and recorded six new limitations (§170–§175) plus evidence updates for §1,
+§6, §8, §11, §52, §68, §106, §134, §146 and PDB-9. Open follow-ups, none
+authorized yet: little-endian and UTF-8 image encoding (needs a documented
+source), repeated-module semantics with a `ValueMap` instance dimension (ADR
+first), overrides outside the object tree (§173, import-integrity package),
+content-based classification of project user files/add-in data, a redaction
+audit of retained network endpoints, and the stored-image reference (research
+only). The import repairs that let that project import end to end belong to the
+separate import-integrity package.
+
 ## 1. Running or waiting right now
 
 | Track | State | Next step | Where |

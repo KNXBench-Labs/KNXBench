@@ -23,6 +23,38 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 23:36 CEST
+- **Completed:** Alpha8 functional release complete and verified at immutablefdddad8f/tag7e796b17. Actual26+6 gates, Rust3912/0/190, Web2611/0/164, Chromium244/0/0, corpus146/0 and explicit original/native/source/reference controls pass. Both dryruns/tag workflows, three downloaded asset digests/checksums, executed MCP, AppImage extraction, anonymous multiarch Docker/full OCI labels/HTTPS-auth-save-reopen/orderly-stop0 accepted. Final documentation main publishede7fc8def with exact readback/runtime delta0,233 Markdown/3006 targets/33 chapters/0 errors and five nonempty fresh-target gates. Root HEAD/index/protected foreign bytes/inherited journal preserved. Owned source local/remote branch/worktree, a8/a82 scratch/download/build caches and local verification image removed; compact private evidence archived and byte-verified. Existing user container remains unchanged/running.
+- **Pending/Next Steps:** None for functionality, release artifacts or installation documentation. This tiny docs-only closure records delivery; current final docs checkout/branch retirement follows its verified push and is recorded in the canonical local cleanup receipt/root handover. Other owners' pending work is not resumed by this release.
+- **Notes for Codex oder Claude:** Tag must never move. Public receipt docs/evidence/release-alpha8-2026-10-10.json; private aggregate provenance/cleanup .ai/logs/2026-10-10_codex_alpha8/. Native/model12 backups remain mandatory; no downgrade conversion/new ETS/hardware/Orca/Pi/memory claim. Source cutofffd6b1cff excludes later parallel work. Self-review only, no subagents/quota checks/bus/live deployment; preserve inherited histories.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 23:28 CEST
+- **Completed:** Alpha8 annotated immutable tag7e796b17 points tofdddad8f; source-main/prerelease/body/tag readbacks match. Final combined26 primary+6 supplementary stages pass: Rust3912/0/190 ignored, Web2611/0/164, Chromium244/0/0 skipped, corpus146/0 plus explicit original/native/instance/RefId/source-reconciliation/reference positives. Both exact dryruns and tag workflows pass. Three downloaded assets match sizes/GitHub digests/SHA256SUMS; MCP executes matching version, AppImage extracts. Anonymous multiarch version/latest index and full OCI labels verified; published HTTPS/auth/save/reopen and isolated orderly-stop0 pass. Existing user container remains same identity/image/start time/running. Public receipt and upgrade/docs prepared; self-review only.
+- **Pending/Next Steps:** Final docs-only five nonempty repository/link/privacy/whitespace gates and main publication/readback; retire only owned source/docs worktrees/branches/build/download/scratch after archiving compact evidence. No functional release acceptance remains pending; cleanup/documentation closure not yet complete.
+- **Notes for Codex oder Claude:** Tag must not move. Native/model12 requires independent backups; no downgrade conversion or new ETS/export/signing/hardware/Orca/Pi/memory claim. Source cutoff fd6b1cff; later unmerged work excluded. Initial7b acceptance/matrix confinement refusal/retry retained separately, not final-source counts. Root/foreign files/index/user data untouched; no subagents/quota checks/bus/deployment. Preserve all inherited handovers below.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 22:26 CEST
+- **Completed:** First Alpha8 candidate7b6389f5 passed26 whole-source gates, full corpus, corrected matrix retry and both packaging dry runs. Final preflight refused before any main/tag/release write because main advanced tofd6b1cff with bounded payload-report classification. Combined candidate incorporates that published source and preserves both complete handover contributions; no tag/release exists.
+- **Pending/Next Steps:** Freeze and reaccept this combined runtime and its exact-source packaging dry runs, publish immutable Alpha8 tag/prerelease, verify downloaded artifacts/anonymous Docker, finish docs/receipt/owned cleanup. Source cutoff is fd6b1cff; later parallel work stays outside this snapshot.
+- **Notes for Codex oder Claude:** Keep first acceptance, output-filesystem refusal and corrected matrix retry separately bound as historical evidence. Candidate roles are not ETS-App certification or nested execution. Root/index/foreign changes/live containers preserved; no subagents/quota checks/bus action. Historical own preparation checkpoint follows, then complete authoritative upstream journal.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 21:26 CEST
+- **Completed:** Owner requested Alpha 8 including Docker. Own release/alpha8-20261010 worktree from freshly fetched 7d39628f main; application manifests/web lock/workspace lock aligned to 0.1.0-alpha.8, dependency versions/checksums unchanged. Handwritten notes docs/releases/alpha8.md distinguish published import/instance/archive features from unmerged work and schema12 backup/downgrade boundaries. Self-reviewed version delta; root HEAD/index/foreign edits and running containers preserved.
+- **Pending/Next Steps:** Frozen whole-workspace/frontend/browser/repository/private gates, dry-run AppImage/native amd64+arm64 Docker workflows, explicit immutable tag/prerelease publication, independent downloaded-asset checks and anonymous Docker smoke, final docs/receipt/owned cleanup. No gate or publication acceptance yet.
+- **Notes for Codex oder Claude:** Candidate pinned to inspected published source; later parallel packages are not silently included. No subagents/quota checks, bus actions or live container replacement. Private evidence stays ignored/restricted at canonical .ai/logs/2026-10-10_codex_alpha8/. Preserve all inherited handovers.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 22:15
 - **Completed:** Package6 KL174 DELIVERED no-ff566afbdd, actual publication/readback68147ba3 with local/tracking/live equality. Rust2400/0/181, strict quality/repo/docs, complete nonempty corpus and explicit private original reconciliation/RefIds green. Original stable during explicit private runs; tracked source/HEAD frozen. Indexed Install excerpt only, direct/update-date overclaims withdrawn. No ETS-App/Add-in validity, manifest, executable or nested parser support.
 - **Pending/Next Steps:** Publish closure after docs/privacy, preserve compact private proofs and remove own tree/branch/scratch. Independent package7 worktree kl175-raw-evidence-20261010 has uncommitted report raw-header preview, additive session log and literal en/de UI plus synthetic RED/GREEN/native/UTF8/clip/HTTP/React/tsc; fresh-main integration, private/browser/mutations/broad admission/docs/self-review remain. Package8 KL146 comparison then final exact per-KL handover. Packages1–6 and9 delivered;7–8 open.

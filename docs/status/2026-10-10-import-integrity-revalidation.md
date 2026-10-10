@@ -1,5 +1,22 @@
 # Local import-integrity revalidation — 2026-10-10
 
+## Main integration verification — 2026-10-10
+
+Owner subsequently authorized source publication and main integration. Feature
+`eff4df95` is integrated with the current archive/UI and stored-instance packages.
+Fresh combined source `7503f10f` passed all20 gates: Rust3906/0 and Web2611/0,
+workspace/frontend builds, strict Clippy, types and repository/docs checks. Explicit
+private original/native, instance-value and RefId targets actually ran. A fresh
+production CLI import, product verification, complete-model offline analysis and
+independent bounded source/native/product comparison passed; two store-omission
+controls were caught and original bytes stayed unchanged. Later upstream edits
+were documentation-only: every1207 non-documentation tracked input matched.
+Final publication/readback is recorded separately from these source-bound results.
+No original identities, payloads or project measurement vectors are published.
+Self-review only; no new runtime behavior, F10/F11 support, full ETS/signature
+claim, release, deployment or hardware action. The earlier local-only section
+below remains historical, not the current publication boundary.
+
 This is a new local acceptance of the existing F01–F09 implementation, not a
 second implementation or a publication. The detached candidate starts at
 `9a5b55fe84d6608121e99bfb3c9408235f1f4b00`; four independent synthetic regression

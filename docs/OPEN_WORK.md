@@ -22,6 +22,16 @@ counts below remain historical. What remains is
 and publication follow-up, (3) deferred items with a recorded user decision, and
 (4) later scope that never was an alpha task.
 
+## Alpha.8 publication boundary
+
+Alpha.8 packages the published selective-import, import-integrity, read-only
+instance-value and archive-budget source changes. It does not complete the
+remaining KL-175/146 follow-ups, externally blocked revision-export proof or
+unmerged Functions/Sites work. Native/model schema12 requires independent
+backups; a release is not a new ETS/hardware claim.
+[Release notes](releases/alpha8.md). Dated source-package no-release statements
+below remain historical, not a claim that Alpha.8 was never published.
+
 ## Public-source research follow-up (10 October 2026)
 
 Package 9's bounded research pass for KL-170, KL-171 and KL-172 is complete in
@@ -96,7 +106,7 @@ results for a changed main.
 
 [Integration proof](status/2026-10-10-import-integrity-integration.md) covers
 actual original-input production/native checks and independent source/persistence
-comparison. The current ledger has 197 source IDs: 54 delivered, 120 accepted
+comparison. At that integration's recorded snapshot, the ledger had 197 source IDs: 54 delivered, 120 accepted
 boundaries, 22 later-scope rows and one external prerequisite; these are not a
 product-completion percentage. The dated earlier inventories remain historical.
 No release or hardware action follows from successful source integration.
@@ -214,8 +224,10 @@ not erase subsequently delivered functionality.
   updates (`FUTURE-05`). More humour (`FUTURE-08`) means optional expansion:
   the original thirty-entry lists already exist. Per-category motion controls
   remain later scope; global motion controls already work.
-- **KNX Secure research:** where usable Data Secure runtime keys come from,
-  project file or keyring (`R-SEC-01`, RESEARCH §9).
+- **KNX Secure follow-up:** [key provenance research](research/secure-key-provenance.md)
+  answers the documented project/keyring routes (`R-SEC-01`). Offline keyring
+  admission, a separate credential store, actual protected-project extraction
+  and Secure interoperability remain new scope, not runtime support.
 - **Tooling/statistics** (`TOOLS-01` to `TOOLS-05`): where the AI statistics
   generator lives, and the measurement gaps it discloses (network traffic, end
   times, unattributed sessions, CSS/shell metrics).

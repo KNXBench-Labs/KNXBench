@@ -317,3 +317,15 @@ describe("LogPanel", () => {
     root.unmount();
   });
 });
+
+
+it("labels raw RTF-like previews without interpreting control words or HTML", async () => {
+  const raw = String.raw`{\rtf1\ansi <b>literal</b> \u20320?}`;
+  apiMock.getSessionLog.mockResolvedValue([entry({ source: "import:opaque:raw-text", message: "RTF-like raw text candidate; not validated or interpreted; original retained", detail: raw })]);
+  const root = await renderPanel(baseTree());
+  expect(host?.textContent).toContain("RTF-like raw text — not interpreted");
+  expect(host?.querySelector(".log-entry-raw-text")?.textContent).toBe(raw);
+  expect(host?.querySelector(".log-entry-raw-text b")).toBeNull();
+  expect(host?.querySelector(".log-entry-raw-text input, .log-entry-raw-text textarea")).toBeNull();
+  await act(async () => root.unmount());
+});

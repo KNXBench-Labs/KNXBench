@@ -6,6 +6,13 @@ section index and the sources. Section numbers are global and stable;
 dated entries are newest first. Moved here verbatim from `RESEARCH.md` on
 2026-10-04 (AR14D D4); only relative links changed.
 
+## 2026-10-10 — Little-endian, UTF-8 fields and stored images remain research-bound
+
+[Public-source review](schema23-offline-boundaries.md) records the inspected
+Project Schema23/RFC3629 evidence and the missing manufacturer encoding/payload
+contracts. This closes the requested research pass, not the implementation
+limitations KL-170–172. No private image inflation or hardware action.
+
 ## 2026-10-04 — Product scheme23: project documentation is not manufacturer grammar
 
 - **[D]** The official Project Schema23 v01.00.00 (2024-03-01) describes

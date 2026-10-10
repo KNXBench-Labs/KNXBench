@@ -22,6 +22,14 @@ counts below remain historical. What remains is
 and publication follow-up, (3) deferred items with a recorded user decision, and
 (4) later scope that never was an alpha task.
 
+## Public-source research follow-up (10 October 2026)
+
+Package 9's bounded research pass for KL-170, KL-171 and KL-172 is complete in
+[the source review](research/schema23-offline-boundaries.md). Implementation
+rows stay LATER: per-type endian placement, KNX UTF-8 capacity/termination and
+the loaded-image binary format still lack an admitted contract. Existing
+refusals/source retention remain unchanged; no hardware follow-up authorized.
+
 ## How this was checked
 
 - Historical goal checkboxes, counted before removal: `alpha-release-goal.md` 93

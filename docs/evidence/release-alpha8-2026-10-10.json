@@ -1,0 +1,163 @@
+{
+  "status": "released and independently verified",
+  "version": "v0.1.0-alpha.8",
+  "recordedAt": "2026-10-10T23:28:15+02:00",
+  "source": {
+    "tagCommit": "fdddad8ffe0bd9b4a33f2f992a15eac9b1a3c86d",
+    "cutoffMain": "fd6b1cff37b2713361e256282cc2aef46e2cbcb9",
+    "tagObject": "7e796b17857387c0bf90b9c91e685bc73e508071",
+    "frozen": true,
+    "externalDependenciesChanged": false,
+    "laterParallelWorkExcluded": true
+  },
+  "applicationGate": {
+    "mainStages": 26,
+    "supplementaryStages": 6,
+    "allExitsZero": true,
+    "freshTarget": true,
+    "rust": {
+      "passed": 3912,
+      "failed": 0,
+      "ignored": 190
+    },
+    "frontend": {
+      "passed": 2611,
+      "failed": 0,
+      "files": 164
+    },
+    "chromium": {
+      "passed": 244,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0
+    },
+    "pythonToolTests": 54,
+    "buildsTypesStrictClippyFormatAndFiveNonemptyRepositoryGatesPassed": true
+  },
+  "corpus": {
+    "registeredPassed": 143,
+    "registeredSelected": 143,
+    "registeredTargets": 31,
+    "extraDownloadAP1AndMatrixPassed": 3,
+    "totalPassed": 146,
+    "failed": 0,
+    "networkInterfaces": [
+      "lo"
+    ],
+    "rawPrivateDataPublished": false,
+    "legacyPasswordDependentFreshSelection": false
+  },
+  "explicitPrivateChecks": {
+    "originalImportAndNativeRoundtripPassed": true,
+    "storedOwnInstanceValuesPassed": true,
+    "schema23RefIdAndPublicControlsPassed": true,
+    "retainedSourceReconciliationPassed": true,
+    "originalInputUnchanged": true,
+    "referenceContainersPassed": 3,
+    "referenceInputsUnchanged": true
+  },
+  "dryRuns": [
+    {
+      "id": 38083917277,
+      "workflow": "Linux AppImage",
+      "head": "fdddad8ffe0bd9b4a33f2f992a15eac9b1a3c86d",
+      "conclusion": "success",
+      "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38083917277"
+    },
+    {
+      "id": 38083919715,
+      "workflow": "Docker release",
+      "head": "fdddad8ffe0bd9b4a33f2f992a15eac9b1a3c86d",
+      "conclusion": "success",
+      "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38083919715"
+    }
+  ],
+  "publication": {
+    "url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.8",
+    "prerelease": true,
+    "handwrittenNotesExact": true,
+    "mainSnapshotPublishedWithExactReadback": true,
+    "tagMustNotMove": true,
+    "tagWorkflows": [
+      {
+        "id": 38087104639,
+        "workflow": "Linux AppImage",
+        "head": "fdddad8ffe0bd9b4a33f2f992a15eac9b1a3c86d",
+        "conclusion": "success",
+        "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38087104639"
+      },
+      {
+        "id": 38087104641,
+        "workflow": "Docker release",
+        "head": "fdddad8ffe0bd9b4a33f2f992a15eac9b1a3c86d",
+        "conclusion": "success",
+        "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38087104641"
+      }
+    ],
+    "assets": [
+      {
+        "name": "knx-mcp-x86_64-linux",
+        "size": 10387880,
+        "sha256": "da2699521bab744b85ee637c97360b0bc0cdee28a06ef7d17a5d48d38e3a7c15",
+        "githubDigestMatched": true
+      },
+      {
+        "name": "KNXBench_0.1.0-alpha.8_amd64.AppImage",
+        "size": 88283640,
+        "sha256": "c2296f2a0131d736e83c96e683fd0b3366909db73660eae2af3ab986ae57ac3d",
+        "githubDigestMatched": true
+      },
+      {
+        "name": "SHA256SUMS",
+        "size": 193,
+        "sha256": "34344209135308b6777b796ecb8f0b12b547f0e02357cf16b026c86c58bc8819",
+        "githubDigestMatched": true
+      }
+    ],
+    "checksumFileVerified": true,
+    "mcpExecuted": "knx-mcp 0.1.0-alpha.8+gfdddad8",
+    "appimageExtractionPassed": true,
+    "docker": {
+      "image": "knxbench/knxbench-server:0.1.0-alpha.8",
+      "digest": "sha256:9033255fb4c1195e0afdd1f7d9b86547f337aa833454e0c68b5283ec2b8a882e",
+      "versionAndLatestMatch": true,
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "anonymousPull": true,
+      "versionLabel": "v0.1.0-alpha.8",
+      "revision": "fdddad8ffe0bd9b4a33f2f992a15eac9b1a3c86d",
+      "serverExecuted": "knx-server 0.1.0-alpha.8+gfdddad8",
+      "httpsAuthSaveReopenPassed": true
+    },
+    "orderlyStop": {
+      "exitCode": 0,
+      "seconds": 0.711
+    }
+  },
+  "review": "in-session self-review, not independent review",
+  "upgrade": "native/model12; independent backups before upgrade; older builds refuse upgraded files; no downgrade conversion",
+  "existingUserContainer": {
+    "sameIdentityImageAndStartTime": true,
+    "stillRunning": true,
+    "replaced": false
+  },
+  "historicalAttempts": {
+    "initialSource": "7b6389f5a7e3af029912b60354ac65a5100d09f3",
+    "initialAcceptanceNotRelabelledAsFinal": true,
+    "firstMatrixOutputConfinementRefusalBeforeObservation": true,
+    "unchangedMatrixRetryPassed": true,
+    "finalPublicationPreflightRefusedChangedMainBeforeAnyWrite": true,
+    "combinedSourceFullyReaccepted": true,
+    "noGuardOrBaselineWeakened": true
+  },
+  "exclusions": [
+    "No fresh interactive desktop or Orca session",
+    "No Raspberry Pi deployment",
+    "No new ETS export/signing or complete ETS semantics",
+    "No new physical-device/bus certification or expanded download eligibility",
+    "Unmerged Functions/Sites and later parallel work excluded",
+    "No new large-project peak-memory certification"
+  ]
+}

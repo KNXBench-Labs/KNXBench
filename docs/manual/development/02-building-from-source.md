@@ -175,15 +175,15 @@ The workflow also validates the artifact afterwards, and you can run that check 
 
 ```bash
 cargo run -p xtask -- check-appimage
-cargo run -p xtask -- check-appimage --tag v0.1.0-alpha.6
+cargo run -p xtask -- check-appimage --tag v0.1.0-alpha.8
 ```
 
 The tagged form additionally checks that the artifact's file name matches the tag.
 
 > **Note**
 >
-> The public alpha.6 AppImage is available through [Installation](../getting-started/04-installation.md#a-linux-appimage).
-> It is the first one built by this release workflow (alpha.5 and earlier were built
+> The public alpha.8 AppImage is available through [Installation](../getting-started/04-installation.md#a-linux-appimage).
+> Alpha.6 was the first one built by this release workflow (alpha.5 and earlier were built
 > locally). Native display policy and
 > tested host boundaries are documented in [the launcher contract](../../APPIMAGE_LAUNCHER.md).
 > One successful host is evidence, not a Linux-wide portability certificate.

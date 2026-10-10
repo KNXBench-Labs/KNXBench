@@ -1,5 +1,38 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-10 — Project archive budget: 1024 MiB (local source)
+
+- Owner-requested increase of the cumulative expanded `.knxproj` budget from
+  512 MiB to 1024 MiB (1,073,741,824 bytes). The 64 MiB per-member guard,
+  bounded reads, member identity/layout checks and outer/nested accounting
+  are unchanged; no API/schema/protocol/dependency change. The follow-up UI
+  request adds shared EN/DE wording for the exact size refusal in error
+  toasts and the persistent load-failure banner. It names expanded size and
+  the actual server limit, skips the joke/English-only disclosure for this
+  translated toast, and preserves unknown messages and raw diagnostics.
+- Three new regressions fail on the previous constant and pass on the new
+  one: the exact budget, container admission above the former budget, and
+  exact refusal one byte above 1024 MiB. Existing exact-boundary and outer/
+  nested over-budget tests remain green, with refusal fixtures scaled to
+  the configured budget. Declared-size fixtures do not prove full large
+  imports or peak-memory use.
+- Local acceptance: `knx-etsproj` 197 passed / 0 failed / 56 ignored;
+  warning-denied all-targets Clippy, formatting, fresh server build and
+  `--version`, all five checkout-bound repository checks, documentation and
+  whitespace checks pass. Follow-up UI acceptance: full frontend 2608 passed /
+  0 failed in 164 files, production build and explicit E2E type check pass;
+  four intercepted built-Chromium cases cover EN/DE at1440/400 pixels,
+  with all four frames inspected for clear banner/toast text and fit.
+  Named toast and persistent-banner assertions fail before their respective
+  fixes; private-use locale fallback also has a named RED/GREEN control.
+  The first browser fixture omitted the achievements startup response and
+  was refused; the corrected fixture reuses the existing shared adapter.
+  Only the final post-banner browser run is acceptance. Self-review only;
+  corpus tests were not selected.
+- Local source only, not committed/published/deployed. Existing release
+  artifacts are unchanged; the tester archive was not supplied or imported.
+  See [import limits](IMPORT_EXPORT.md) and [KL-159](KNOWN_LIMITATIONS.md#159-a-project-archive-may-unpack-to-at-most-1024-mib-and-every-member-name-must-be-unique).
+
 ## 2026-10-10 — KL-170–172 public-source research (no runtime change)
 
 The requested public-only research pass is complete; insufficient contracts

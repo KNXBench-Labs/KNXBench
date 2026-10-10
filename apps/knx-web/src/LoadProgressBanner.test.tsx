@@ -116,6 +116,17 @@ describe("LoadProgressBanner", () => {
     root.unmount();
   });
 
+  it("keeps a readable archive-size refusal after the toast has disappeared without changing the snapshot", async () => {
+    const raw = "the archive declares 1342177280 uncompressed bytes, more than the 1073741824-byte limit";
+    const failed = snapshot({ status: "failed", error: raw });
+    const root = await render("fictional-large.knxproj", failed);
+    expect(host!.querySelector(".load-progress-error")!.textContent).toBe(
+      "The file is too large when unpacked: 1280 MiB. The limit is 1024 MiB.",
+    );
+    expect(failed.error).toBe(raw);
+    root.unmount();
+  });
+
   it("shows an unknown phase as itself rather than hiding a version mismatch", async () => {
     const root = await render("villa.knxproj", snapshot({ phase: "parseSomethingNewer" }));
     expect(host!.textContent).toContain("parseSomethingNewer");

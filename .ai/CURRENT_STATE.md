@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 20:04
+- **Completed:** KL173 focused witness code01e6be99 passes1/0, two synthetic variants: empty active tree and distinct active neighbour. Actual import service warning/ref, original XML owner/bytes/hash, native save/reopen/resave, no artificial typed outside object or sibling text/link contamination. No F06/runtime modifications. Self-review IMPORTANT stronger nonempty-tree identity/default-free proof added before final GREEN; initial wrong enum import compile refusal fixed, not RED semantic evidence. Public status/receipt prepared.
+- **Pending/Next Steps:** Frozen candidate scoped crates/clippy/fmt/five xtask/docs/diff plus full corpus; self-review/privacy and no-ff main push/readback/cleanup. Then KL174 content classification rest, KL175 raw RTF labels, KL146 private activation comparison. Packages1–4 and9 delivered,5 candidate,6–8 open; goal incomplete.
+- **Notes for Codex oder Claude:** Single registered test matrix must not be counted twice. All fixture values P-TEST/M-TEST synthetic; private source original proofs retained ignored. Existing F06 behavior already integrated367405f1, no new reactivation or write authority. Root/foreign worktrees untouched; no bus/hardware/vendor code/releases/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 19:59
+- **Completed:** Packages1–4 and9 delivered; package4 no-ff992032c3 + publication98e3dbb1 pushed/readback verified, prior own trees/branches/build scratch cleaned with private evidence retained here. Package5 fresh origin98e3dbb1, mandatory review/F ownership/public sections re-read, import owner367405f1 verified ancestor. Prepared synthetic actual-service witness transferred unchanged: unconsumed override warning, exact source owner/bytes, Save/Reopen/Re-Save retention, no typed object/activation. No new runtime implementation needed unless real regression fails.
+- **Pending/Next Steps:** Execute focused synthetic witness, review exact production retention/report paths, add meaningful negative/mutation checks; scope tests/Clippy/fmt/five repo/docs/corpus gates, docs/evidence and no-ff push/readback/cleanup. Packages6–8 remain after this. Overall goal not complete.
+- **Notes for Codex oder Claude:** Current own tree kl173-evidence-20261010; untested synthetic fixture P-TEST/M-TEST only. F06 runtime untouched; no active/inactive semantic guess. Package4 full private proof now here under ignored package4-delivery. Root/foreign code/index/worktrees untouched; no hardware/binaries/releases/deployment/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 19:57
 - **Completed:** Package4 DELIVERED no-ff992032c32327, normal main push, local/tracking/live equality verified. Actual382ab577 final chain1360 Rust/0, Web2610/0/164, full nonempty corpus, explicit original reconciliation/native/RefId positives, archive-browser4/4; upstream test-only delta dd4b8165 passes app/parser/HTTP tests, full Web2611/0/164, tsc/strict Clippy. Delivered source equal dd4b8165, five nonempty repo gates/docs/diff and outgoing original-value scan green. Preservation-only owner decision implemented in tests/docs, unknowns/has_losses remain true. Receipt/§1/COMPATIBILITY/ledger/status/open-work synchronized; self-review only.
 - **Pending/Next Steps:** Push docs-only publication record after repo/docs/privacy gates, preserve compact private evidence and clean own package4 worktree/branch/scratch. Then KL173 fresh main own worktree with prepared synthetic persistence witness; packages5–8 remain. Packages1–4 and9 delivered; goal not complete.

@@ -45,10 +45,16 @@
     },
     "binding": "tracked inputs/HEAD frozen, actual no-ff result tested, temporary corpus links removed; no complete external corpus manifest claimed"
   },
-  "publication": "pending origin/main",
+  "publication": {
+    "mergeRevision": "566afbddfd2cee7d4e667e5d8b91bf9209150992",
+    "readbackRevision": "68147ba3b8bb7b1c1f3aed1231b056906e4a1f3c",
+    "localTrackingLiveEqual": true,
+    "runtimeUnchangedThroughMetadata": true
+  },
   "research": {
     "verified": "official Install ETS6 Apps indexed excerpt supports .etsapp extension",
     "unverified": "full page retrieval, update dates, validation reference contents, authenticity/manifest algorithm and full Add-in semantics",
     "correction": "previous candidate direct-page retrieval/update-date claims withdrawn; no source/profile lock disturbed"
-  }
+  },
+  "status": "DELIVERED"
 }

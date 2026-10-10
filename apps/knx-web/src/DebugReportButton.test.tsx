@@ -185,6 +185,15 @@ describe("DebugReportButton", () => {
     for (const part of parts) expect(text).toContain(part);
   });
 
+  // KL-106: mirrors report.md — MAC addresses are a redacted class, user
+  // names are kept, and retained ETS source subtrees never enter the file.
+  it.each([
+    ["en", en["debugReport.privacyRedacted"], ["IP addresses", "MAC addresses", "user names", "ETS source"]],
+    ["de", de["debugReport.privacyRedacted"], ["IP-Adressen", "MAC-Adressen", "Benutzernamen", "ETS-Quell"]],
+  ])("names the redacted and the kept classes (%s)", (_language, text, parts) => {
+    for (const part of parts) expect(text).toContain(part);
+  });
+
   it("says what is redacted before anything can be written", async () => {
     await openDialog();
     expect(dialogText()).toContain(en["debugReport.privacyRedacted"]);

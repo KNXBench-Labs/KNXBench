@@ -6231,29 +6231,54 @@ MDT `1.1.67` accepted subsequent download sessions, but no independent
 bus trace established whether the priority survived tunnelling onto TP1.
 The residual is *wire-level evidence*, not the old low-priority encoder bug.
 
-## 106. The debug report redacts four pattern classes, and nothing else
+## 106. The debug report redacts five pattern classes, and nothing else
 
-**Update 2026-10-10 (retained source attributes).** Imported projects keep
-source attributes and subtrees verbatim. These can carry a tunnelling target
-and connection parameters (`BusAccess/@Parameter`), IP and MAC configuration
-(`IPConfig`), additional device addresses and user names (`ProjectTraces`). The
-four classes below catch IPv4/IPv6 literals and host/home names in the
-bundle's text. MAC addresses and user names are not redacted, and
-unknown-attribute samples reach `log.json` verbatim. Other outputs that carry
-retained source evidence have not been audited for these fields: selective
-import source retention, the MCP read path and contribution bundles. Lifted
-when each such output withholds them or tells the user it does not.
+**Audit 2026-10-10 (retained source evidence; the update of the same day is
+closed).** Imported projects keep source subtrees verbatim, and those can
+carry a tunnelling target and connection parameters (`BusAccess/@Parameter`),
+IP and MAC configuration (`IPConfig`), additional device addresses
+(`AdditionalAddresses`) and ETS user names (`ProjectTraces/ProjectTrace/@UserName`).
+Every output that can carry retained source evidence was checked against a
+synthetic witness with planted values
+(`knx_testsupport::retained_privacy_knxproj_bytes`):
+
+- **Debug report.** Retained subtrees never enter it: `log.json` names them by
+  location, size and hash only. Unknown-attribute samples do reach `log.json`
+  verbatim, so MAC addresses are now a fifth redaction class (below). User
+  names have no recognisable shape; where one appears in a sample or in the
+  description it stays, and `report.md` and the dialog now say "user names"
+  are kept and that retained ETS source data is never included
+  (`debug_report::redaction_tests`).
+- **MCP read path.** Loads only the domain model, never the retained-source
+  store; no tool response or search hit carries a planted value
+  (`apps/knx-mcp/tests/retained_source.rs`).
+- **Contribution bundles.** Reduced findings drop every source value
+  (`reduced_bundle_withholds_retained_network_and_user_values`). Selected
+  context samples and a private original are unmodified on purpose; their
+  README now names network endpoints, MAC addresses, additional device
+  addresses and project-trace user names.
+- **Selective import.** The original archive and opaque evidence, unselected
+  parts included, are copied into the destination project and stay local;
+  the preview note now names the same classes
+  (`retention_note_names_network_endpoints_and_user_names`).
+- **Project export (`.knxproj`).** Re-emits retained subtrees verbatim by
+  design: it is the user's own project, and dropping them would break the
+  roundtrip guarantee. It is not a sharing channel of the application.
+- **Telemetry and achievements.** There is no telemetry; the achievements
+  record holds ids, timestamps and counters only.
 
 **Limitation.** The debug-report bundle (T29,
-`apps/knx-server/src/debug_report.rs`) replaces exactly four things in
+`apps/knx-server/src/debug_report.rs`) replaces exactly five things in
 `report.md`, `environment.json` and `log.json`: any IPv4 dotted quad, any
-IPv6 literal, the user's home-directory prefix, and the machine's hostname.
-Anything else identifying that reaches those files travels with them — a MAC
-address, a device serial number, a project file name sitting outside the home
+IPv6 literal, any MAC (or longer EUI) address written as two-hex-digit groups
+with one consistent `:` or `-` separator (since 2026-10-10), the user's
+home-directory prefix, and the machine's hostname. Anything else identifying
+that reaches those files travels with them — a user name, a device serial
+number, a project file name sitting outside the home
 directory, a hostname the machine does not report, or whatever the user types
 into the description field beyond those four shapes.
 
-**KNX addresses are not one of the four classes.** `log.json` is on by
+**KNX addresses are not one of the five classes.** `log.json` is on by
 default and can name group addresses and imported element names, because
 `session_log.rs` puts `conflict.group_address`, `unknown.name` and
 `unknown.sample` into its messages verbatim. That is deliberate: a debug log
@@ -6262,7 +6287,7 @@ The dialog says so in the user's language — "with IP addresses removed", not
 "with addresses removed" — and the privacy paragraph states plainly that KNX
 addresses and project names are never replaced anywhere.
 
-**Three knowable failure modes inside the four classes.** An IPv6 literal that
+**Three knowable failure modes inside the address classes.** An IPv6 literal that
 follows a word character with no separator at all (`peer2001:db8::1`) is not
 redacted: the boundary rule that keeps `knx_core::Project` from being read as
 a compressed address cannot tell that case from a Rust path. One separating
@@ -6311,9 +6336,16 @@ zip is written locally and shown to the user before anything is shared. The
 GitHub path opens a prefilled issue page in the browser and stops there: no
 token, no credential, no `POST` from the application, and no upload anywhere.
 
-**Lifted when.** Nothing here is waiting on a fix. If a further class is ever
-worth adding — MAC addresses are the obvious candidate — it goes in as
-another shape-recognising pass next to the existing four, with the same
+**MAC class, knowable edges (2026-10-10).** Six or more two-digit groups with
+one consistent separator are redacted whether or not they are a hardware
+address, so a six-pair number such as `12-34-56-78-90-12` is over-redacted.
+Not matched: a bare twelve-digit hex string (hashes and identifiers in the
+log share that shape), the dotted `0200.5e10.0001` form, mixed separators,
+and a run glued to a word character. Eight colon-separated pairs are also a
+valid IPv6 literal and become `[redacted-ipv6]` instead.
+
+**Lifted when.** Nothing here is waiting on a fix. A further class goes in as
+another shape-recognising pass next to the existing five, with the same
 requirement that it name what it removes rather than silently blanking text.
 
 **AR13 (2026-10-04) — audited with one fixture per class.**
@@ -6321,9 +6353,9 @@ requirement that it name what it removes rather than silently blanking text.
 (private and public), IPv6 (including IPv4-mapped), the home prefix and the
 hostname (bare and FQDN) through every input channel — description, the four
 client facts, log message/location/detail — and finds none of them in
-`report.md`, `environment.json` or `log.json`. MAC addresses, serial numbers,
-e-mail addresses, paths outside the home directory, KNX addresses and names
-survive as written, and `report.md` (also the GitHub issue body) now names
+`report.md`, `environment.json` or `log.json`. Serial numbers, e-mail
+addresses, paths outside the home directory, KNX addresses and names survive
+as written (MAC addresses until the 2026-10-10 audit above), and `report.md` (also the GitHub issue body) now names
 each of them. It also says `bus-telegrams.json` is not redacted and carries
 values — text values included — and timestamps, which together can show when
 the installation was in use; before, only its addresses were mentioned.

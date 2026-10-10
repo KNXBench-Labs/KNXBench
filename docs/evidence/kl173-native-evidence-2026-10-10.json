@@ -13,6 +13,17 @@
   "scope": "exact retained original XML/owner/hash and warning; actual import Save/Reopen/Re-Save; no artificial active object or neighbour override contamination",
   "unchanged": "F06 runtime, activation semantics, typed inactive modelling, hardware/download authority",
   "review": "codex, in-session self-review only",
-  "finalGates": "pending",
-  "publication": "pending"
+  "finalGates": {
+    "revision": "4c38af5b24d9b797e3e65e460a53ad6d48b8119c",
+    "rust": {
+      "passed": 547,
+      "failed": 0,
+      "ignored": 91
+    },
+    "corpus": "complete nonempty selected corpus passes in31 targets; raw output remains private",
+    "quality": "scoped all-targets Clippy-Dwarnings, fmt, five nonempty repo checks, docs/diff green",
+    "binding": "actual same HEAD, clean tracked diffs, temporary corpus link removed; no external-input manifest claimed",
+    "review": "in-session self-review, Critical0 unresolvedImportant0; exact typed neighbor proof added before acceptance"
+  },
+  "publication": "green actual no-ff candidate4c38af5b; push/readback pending"
 }

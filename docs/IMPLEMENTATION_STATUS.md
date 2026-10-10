@@ -5,7 +5,7 @@ empty/nonempty tree, exact original source/owner/hash, warning-level diagnostic,
 no override/links/text leakage into active neighbour, actual native Save/Reopen/
 Re-Save equality. Focus passed1/0 (two fixture variants, one registered test).
 No F06 runtime change; reactivation/inactive typed-model boundary unchanged.
-Final gates/publication pending. [Receipt](evidence/kl173-native-evidence-2026-10-10.json).
+Final source `4c38af5b` passes scoped crates547/0/91, full nonempty corpus, strict Clippy/fmt/five repo/docs/diff checks; publication/readback pending. [Receipt](evidence/kl173-native-evidence-2026-10-10.json).
 
 ## 2026-10-10 — KL-1 final source-preservation acceptance
 

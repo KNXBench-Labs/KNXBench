@@ -44,7 +44,20 @@ version/latest and full OCI labels match. Published HTTPS/auth/save/reopen and
 isolated orderly-stop0 pass; existing user container remains unchanged/running.
 Public receipt: docs/evidence/release-alpha8-2026-10-10.json.
 
-Documentation-only gates/main publication and owned cleanup remain. No new
-interactive desktop/Orca/Pi/ETS/bus or memory certification; no live deployment.
-Native/model12 backups are mandatory. Self-review only; private proof stays
+At that checkpoint, documentation-only gates/main publication and cleanup remained.
+No new interactive desktop/Orca/Pi/ETS/bus or memory certification or live deployment.
+Native/model12 backups remain mandatory. Self-review only; private proof stays
 restricted/ignored. No subagent/quota checks. The tag must not move.
+
+## Delivery closure — 2026-10-10 23:36 CEST
+
+Documentation publicatione7fc8def has exact local/tracking/live readback, unchanged
+runtime and exact public receipt bytes. All five fresh-target repository gates,
+233 Markdown/3006 local targets/33 chapters/0 errors, privacy and whitespace pass.
+Root HEAD/index/protected foreign files and inherited journal are unchanged.
+Owned source checkout/local+remote branch, a8/a82 build/download/runtime scratch
+and verification image are removed. Private receipts/logs/scripts and matrix
+outputs are archived and verified; user container identity/image/start time
+remain unchanged and running. Only this final docs checkout/branch remains for
+its own closing commit, then immediate verified retirement. No functional work
+remains. Canonical final cleanup/root checkpoint records that retirement.

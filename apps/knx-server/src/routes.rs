@@ -349,6 +349,8 @@ pub(crate) struct ParameterPanelDto {
     pub(crate) source_language: Option<String>,
     pub(crate) sections: Vec<ParameterSectionDto>,
     pub(crate) stale: Vec<StaleParameterDto>,
+    /// Own stored values whose module activation is not evaluated (ADR-0107).
+    pub(crate) instance_values: Vec<StaleParameterDto>,
     pub(crate) diagnostics: Vec<ParameterDiagnosticDto>,
     /// The authoritative tree `apply()` already built from the genuine
     /// post-write `CommandStack` (T3 fix round 1, item 6) — `Some` only from

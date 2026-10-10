@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 20:30
+- **Completed:** Package5 KL173 DELIVERED no-ff4c38af5b, main publication/readback4c484227 with local/tracking/live equality. Actual scoped crates547/0/91, complete nonempty corpus31 targets, strict Clippy/fmt/five repo/docs/diff and outgoing original-value privacy scan green. Focus01e6be99 pins outside override source/report/native persistence for empty/nonempty active trees, no sibling contamination or inferred activation. No F/runtime code modified. Packages1–5 and9 delivered.
+- **Pending/Next Steps:** Push this docs-only delivered receipt after docs/privacy, clean own tree/branch/scratch retaining compact private evidence, then fresh-main KL174 bounded classification. Owner approved content classes separated from unverified App/Add-in candidate roles, unknown retained, no nested extraction/execution. KL175 raw RTF and KL146 private activation comparison afterward; overall goal incomplete.
+- **Notes for Codex oder Claude:** Actual runtime acceptance4c38af5b unchanged through documentation-only publication. Single matrix test counted once, no guessed semantics/ETS or hardware compatibility. Root/foreign runtime/worktrees/index untouched, no hardware/binaries/releases/deployment/subagents/quota checks. Private-source evidence stays ignored and local.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 20:29
 - **Completed:** KL173 actual no-ff candidate4c38af5b passed scoped crates547/0/91 and complete nonempty selected corpus across31 targets, strict Clippy/fmt/five nonempty repo/docs/diff gates. Source/HEAD frozen; corpus link removed. Focused single test01e6be99 covers empty/nonempty tree, warning/retained original owner-bytes-hash, actual Save/Reopen/Re-Save and no active-neighbour text/link/ref contamination. F runtime untouched. KL174 owner accepts bounded classification: unverified candidate roles separated from sniffed content, unknown preserved; no nested unpacking/execution.
 - **Pending/Next Steps:** Docs/privacy and normal push/readback/receipt/cleanup for KL173. Then fresh main KL174 application-level report enrichment reuses existing productDB sniffing, no import/model destination change or fake ETS-app validity. KL175 raw RTF marking and KL146 private activation comparison afterward; packages1–4 and9 delivered,5 green candidate,6–8 open.

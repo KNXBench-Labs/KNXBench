@@ -83,7 +83,8 @@ private proof and the preservation-only owner decision; package4 final gates
 are green on `382ab577`, with upstream-only test followup `dd4b8165` also green.
 No-ff `992032c32327` published with local/tracking/live equality. KL-173/F06 out-of-tree
 save/reopen evidence `01e6be99` now has green final source `4c38af5b` and
-full corpus/quality/repo admission; remote publication/readback pending. KL-174/F08 content classification; KL-175/F09 raw RTF labels;
+full corpus/quality/repo admission; no-ff `4c38af5b` published and read back
+at `4c484227` with local/tracking/live equality. KL-174/F08 content classification; KL-175/F09 raw RTF labels;
 KL-146 evaluator-vs-saved-state comparison. KL-170–172 public research package9 is
 published; implementation limits remain research-bound. Do not reuse old-base
 results for a changed main.

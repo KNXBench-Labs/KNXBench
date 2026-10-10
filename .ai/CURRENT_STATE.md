@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 07:48 CEST
+- **Completed:** Owner-authorized import integration candidate combines feature 99e054250a98aae0b7268f81728f16000123cd21 with main 550318d3e7faef97a163d37da84ca7fce8ab28f7; three additive docs conflicts retain both sides, no code conflict. Full19 gates exit0: Rust3856/0/186ignored, Web2592/0/163files, Python54/0, Chromium236/236, registered private143/143/31targets; extra3 type configs pass. Workspace-built real API Chromium4/4 and8 inspected frames pass, running artifact hash verified. Source inputs unchanged; historical local receipt exact. Closing pre-commit metadata8/8 passed; the same checks guard the final merge commit before push.
+- **Pending/Next Steps:** No import source implementation remains. IMPORT-02 needs externally supplied authorized revision exports/baselines. Exact normal-main-push and owned-cleanup readback belongs to the canonical local handover; inspect live refs rather than replaying this integration. No new feature, release or hardware scope.
+- **Notes for Codex oder Claude:** docs/evidence/import-expansion-integration-2026-10-10.json is merged-tree source evidence, not a release or final commit stamp. Self-review only. Shared root HEAD/index/foreign content protected; do not synchronize dirty root or include its foreign edits. Local publication readback will record final merge SHA and cleanup. Preserve historical entries below.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 00:26 CEST
 - **Completed:** Alpha.7 released at immutable annotated 839d5afd90559f1435d77a05ece3bbce2de3f2cf; exact handwritten prerelease/tag readback verified. Both tag workflows passed. AppImage/MCP/SHA256SUMS downloaded back; every GitHub digest/size and checksum entry matches; MCP executes expected build, AppImage extraction passes (GUI/Orca not freshly tested). Anonymous Docker version/latest digest equality and real amd64/arm64 manifests verified; exact full OCI version/revision and published HTTPS/auth/save/reopen smoke pass. Source18 gates/private146/0 and CI5/full47 Python already accepted; schema11 backup warnings preserved. PR #3 merged, #1/#2 remain OPEN; shared root HEAD/index/foreign dirty hashes unchanged.
 - **Pending/Next Steps:** No release acceptance remains. Retire only owned generation/build scratch and three task worktrees after this bookkeeping commit; retain compact public evidence and canonical local log. Other owners' work is preserved below; do not resume it on this task's authority.

@@ -1363,6 +1363,7 @@ describe("App — the File menu by keyboard alone", () => {
       "Open (.knxdb)…",
       "Save As…",
       "Export project…",
+      "Import selected lines/devices…",
       "Export group addresses (CSV)…",
       "Import group addresses (CSV)…",
       "Export documentation…",

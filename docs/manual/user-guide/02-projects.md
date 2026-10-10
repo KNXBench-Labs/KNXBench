@@ -25,6 +25,25 @@ When no project is open, the welcome workspace offers three separate cards:
 `.knxdb`; **Import ETS project** reads a `.knxproj`. Import never turns an ETS
 archive into a file you edit in place. Save the imported work as `.knxdb` later.
 
+## Import selected lines or devices into the open project
+
+**Source integration, 10 October 2026 — not a release claim.**
+[Separate acceptance](../../status/2026-10-10-import-expansion-integration.md). Use
+**File → Import selected lines/devices…**, choose a `.knxproj`, its installation
+and the destination installation, then select devices or whole lines. Review
+included group addresses/communication objects, ID mappings, reuse notes and
+the source import report before confirming. Conflicting addresses/settings or
+a changed project refuse rather than silently overwriting existing data.
+
+The source archive is not modified. Required source dependencies are imported
+in one undo step; Save/Open preserves the working model and retained context.
+Complete retained archives may include unselected confidential data. Confirm
+retention only after review, keep native copies private, and remember that
+**Undo does not erase retained source evidence**. There is no building-only or
+new command-palette selector. Whole-project replacement import is unchanged.
+[CLI and bounds](../../SELECTIVE_IMPORT.md) ·
+[verification](../../status/2026-10-10-import-expansion-verification.md).
+
 ## Starting a new project
 
 **New project…** opens a wizard. The first step asks for four fields:

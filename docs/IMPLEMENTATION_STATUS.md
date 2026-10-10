@@ -1,3 +1,9 @@
+## 2026-10-10 — KL174 bounded payload content/role evidence
+
+- Candidate code `41b3d6267731` reuses existing product `sniff_media` at app/report boundary; project UserFiles/AddinData and manufacturer payloads carry separate content and explicitly unverified roles. No F reimplementation, source/model/storage changes or new dependency.
+- Synthetic imports with/without product DB, exact source/native Save/Reopen, independent warning preservation and HTTP/session-log projection pass; two assertion-killed mutants restored.
+- Owner accepts candidate roles only; no App identity/authenticity/manifest validity or execution claim. Broad source/corpus/quality admission and publication pending. ADR-0109/receipt pin the exact scope.
+
 ## 2026-10-10 — KL-173 independent service/native evidence
 
 `01e6be99` adds `outside_tree_overrides_are_reported_and_preserved_without_activation`:

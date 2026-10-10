@@ -621,7 +621,7 @@ fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
             name,
             project_number,
             group_address_style: style_from_str(&style)?,
-            completion: completion_from_str(&completion),
+            completion: completion_from_str(&completion)?,
             last_modified: last_modified.map(|s| {
                 chrono::DateTime::parse_from_rfc3339(&s)
                     .expect("stored timestamp is always valid RFC3339")

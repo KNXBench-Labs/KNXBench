@@ -1,4 +1,4 @@
-# ADR 0107: Read stored module-instance values without interpreting RepeatIndex
+# ADR 0108: Read stored module-instance values without interpreting RepeatIndex
 
 Date: 2026-10-10
 Status: Accepted (owner decision; Repeat evaluation remains research-bound)

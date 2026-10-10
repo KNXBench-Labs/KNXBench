@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 11;
+pub const CURRENT_SCHEMA_VERSION: i64 = 12;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -653,6 +653,9 @@ fn migrations() -> Vec<Migration> {
         migrate_v8_to_v9,
         migrate_v9_to_v10,
         migrate_v10_to_v11,
+        // Vocabulary-only barrier: older decoders silently substitute Undefined
+        // for the new documented completion statuses. Rows/history stay exact.
+        |_conn| Ok(()),
     ]
 }
 

@@ -55,7 +55,7 @@ ETS/hardware/native accessibility evidence. No release/deployment or bus action.
 
 KL-106 output audit and KL-8 secure-capable/not-activated witness are published.
 KL-68/PDB-01 own stored instance values are implemented read-only (`d050c7e78b02`,
-[ADR-0107](adr/0107-read-only-module-instance-values.md)); no Dynamic consumption,
+[ADR-0108](adr/0108-read-only-module-instance-values.md)); no Dynamic consumption,
 sibling/default fallback or additional write authority. Repeat mapping and
 activation remain an accepted, research-bound limitation. The private own-value
 comparison is **waiting on import-integrity**: on `8901affa` the genuine parser
@@ -66,6 +66,35 @@ Next: re-fetch the import-integrity integration; rerun the private gates; handle
 KL-1/F01–F04 (including owner reconciliation decision), KL-173/F06, KL-174/F08,
 KL-175/F09 and KL-146 only after their prerequisites. KL-170–172 remain public
 research-only tasks. Do not reuse old-base green results for a changed main.
+
+## Import-integrity merged-source acceptance (10 October 2026)
+
+[Integration proof](status/2026-10-10-import-integrity-integration.md) covers
+actual original-input production/native checks and independent source/persistence
+comparison. The current ledger has 197 source IDs: 54 delivered, 120 accepted
+boundaries, 22 later-scope rows and one external prerequisite; these are not a
+product-completion percentage. The dated earlier inventories remain historical.
+No release or hardware action follows from successful source integration.
+
+## Private schema-23 sample review (10 October 2026)
+
+A read-only review of a privately supplied ETS6 project lifted KNOWN_LIMITATIONS
+§125 and recorded six new limitations (§170–§175) plus evidence updates for §1,
+§6, §8, §11, §52, §68, §106, §134, §146 and PDB-9. Open follow-ups, none
+authorized yet: little-endian and UTF-8 image encoding (needs a documented
+source), repeated-module semantics with a `ValueMap` instance dimension (ADR
+first), applying inactive-object overrides after reactivation (preservation
+and reporting repaired by the import-integrity package),
+content-based classification of project user files/add-in data and the
+stored-image reference (research only). The redaction audit of retained network
+endpoints is done (§106, 2026-10-10: MAC addresses redacted, every other output
+withholds the data or names it). The secure-capable-but-not-activated case is
+pinned by a synthetic witness (§8): treated exactly like a plain program, no
+Secure semantics added. The import-integrity package now has separate
+[merged-source acceptance](status/2026-10-10-import-integrity-integration.md):
+archive identity, object trees, unassigned placement, metadata provenance and
+source/diagnostic preservation are repaired. Retained extensions and offline
+execution limits remain research/follow-up work, not wider runtime support.
 
 ## 1. Running or waiting right now
 

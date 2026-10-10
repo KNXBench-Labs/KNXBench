@@ -57,3 +57,22 @@ import-integrity worktree; overlapping packages wait for its integration.
 - Finding: the flag reaches `ProgramCode.program_attributes` verbatim; no
   planning rule reads it. Readiness `untested` for both.
 - Not claimed: what a real secure-capable device needs when Secure is off.
+
+
+## Integrated replay blocker — corpus, not a green publication
+
+Actual source candidate a8ca10767750 passes2876 Rust tests (160 explicitly
+ignored) and2597 Web tests, strict clippy/fmt/tsc, five nonempty repository checks
+and docs/diff. Full integrated corpus replay failed four inherited tests in
+unchanged source files: etsproj lib.rs548/report.rs463, server
+http_project_routes.rs47/open_reference_project.rs28. The assertions concern
+whole-file accounting, prior baggage consequence text and prior warnings.
+No assertion values or original aggregate dataset statistics are copied here.
+Fresh origin/main d9da8e61 baseline is running in a separate owned worktree and
+fresh Cargo target; do not attribute baseline failures before execution.
+Original F-owner code remains untouched. Browser replay queued separately.
+Receipt and handover now explicitly state NOT DELIVERED/corpus red. Prior corpus
+success is historical pre-integration, not a current source admission.
+Package9 was pushed with actual equality and cleanup; package4 has preliminary
+boolean source/native/RefId success and repaired synthetic controls. Final
+hardened positive replay and all publications after this blocker remain pending.

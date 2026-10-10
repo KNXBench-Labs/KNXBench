@@ -1,0 +1,169 @@
+{
+  "feature_commit": "1be6f9bd16941af2aaaa23f51db36731d82a0941",
+  "tested_merge_commit": "7520fa389ed4dd5c46b797e123ab5be5955253ee",
+  "tested_source_manifest_digest": "78d46d92e81348c70350ee0b1860d601d49c290371f45d9ef25afb5f3fb6d9d9",
+  "scope": "Scoped importer/frontend main-integration acceptance; not a whole-workspace or ETS/hardware certification",
+  "limits": {
+    "expanded_archive_bytes": 1073741824,
+    "expanded_member_bytes": 67108864,
+    "compressed_upload_policy_changed": false
+  },
+  "tests": {
+    "parser": {
+      "passed": 197,
+      "failed": 0,
+      "ignored": 56
+    },
+    "consumers": {
+      "passed": 1799,
+      "failed": 0,
+      "ignored": 101
+    },
+    "private_instance": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "private_refids": {
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0
+    },
+    "private_instance_input_unchanged": true,
+    "reference_container": {
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "inputs_unchanged": true
+    },
+    "frontend": {
+      "passed": 2610,
+      "failed": 0,
+      "files": 164
+    },
+    "chromium": {
+      "passed": 244,
+      "failed": 0
+    },
+    "built_chromium": {
+      "passed": 4,
+      "failed": 0
+    }
+  },
+  "stages": [
+    {
+      "name": "npm-ci",
+      "exit": 0
+    },
+    {
+      "name": "frontend",
+      "exit": 0
+    },
+    {
+      "name": "frontend-build",
+      "exit": 0
+    },
+    {
+      "name": "flow-types",
+      "exit": 0
+    },
+    {
+      "name": "theme-types",
+      "exit": 0
+    },
+    {
+      "name": "archive-e2e-types",
+      "exit": 0
+    },
+    {
+      "name": "format",
+      "exit": 0
+    },
+    {
+      "name": "parser",
+      "exit": 0
+    },
+    {
+      "name": "reference-container",
+      "exit": 0
+    },
+    {
+      "name": "consumers",
+      "exit": 0
+    },
+    {
+      "name": "private-instance",
+      "exit": 0
+    },
+    {
+      "name": "private-refids",
+      "exit": 0
+    },
+    {
+      "name": "clippy",
+      "exit": 0
+    },
+    {
+      "name": "server-build",
+      "exit": 0
+    },
+    {
+      "name": "server-version",
+      "exit": 0
+    },
+    {
+      "name": "chromium",
+      "exit": 0
+    },
+    {
+      "name": "built-chromium",
+      "exit": 0
+    },
+    {
+      "name": "check-layering",
+      "exit": 0
+    },
+    {
+      "name": "check-headers",
+      "exit": 0
+    },
+    {
+      "name": "check-anchors",
+      "exit": 0
+    },
+    {
+      "name": "check-ledger",
+      "exit": 0
+    },
+    {
+      "name": "check-corpus-gates",
+      "exit": 0
+    },
+    {
+      "name": "documentation",
+      "exit": 0
+    },
+    {
+      "name": "whitespace",
+      "exit": 0
+    }
+  ],
+  "inputs_frozen": true,
+  "review": "in-session self-review",
+  "tester_archive_imported": false,
+  "new_large_project_peak_memory_measurement": false,
+  "release_or_deployment_performed": false,
+  "root_head_index_foreign_documents_preserved": true,
+  "final_frames_visually_inspected": 4,
+  "frame_assessment": "EN/DE at 1440/400 pixels: localized expanded size and actual limit readable in both popup and persistent banner; full warning/dismiss control fits; no raw bytes text or English-only disclosure.",
+  "historical_attempts": "One owned lease retry interrupted after npm-ci; an older-source gate superseded when upstream changed consumed inputs. Neither is counted as final acceptance.",
+  "publication_boundary": "Main-integration source acceptance; normal push and exact ref readback are verified separately. Existing release/container artifacts unchanged.",
+  "publication": {
+    "verified_main_commit": "f08b9776ea6c0f3350c422407d8a8fcde58264ad",
+    "feature_ancestor": true,
+    "owned_blobs_equal": true,
+    "application_inputs_unchanged_since_tested_merge": true,
+    "verified_at": "2026-10-10 17:38 CEST",
+    "closure": "Subsequent bookkeeping is documentation-only; no release/container deployment or hardware action."
+  }
+}

@@ -809,66 +809,49 @@ are **not** open issues. The numbers are intentionally not reused.
 
 ## 1. Single-sample bias
 
-**Update 2026-10-10 (private schema-23 sample; evidence, not lifted).** A
-privately supplied, independently produced, module-using schema-23 project
-now exists locally. Counted outside the importer with the production rules,
-every module object id (`MD-…_M-…_MI-…_O-<a>-<b>_R-…`) resolves through
-`module_com_object_ref` to its program's `ModuleDef` `ComObjectRef`, and the
-referenced `ComObject/@Number` equals `<b>` every time (§125's private gate).
-A read-only census also resolved every `ModuleInstance`, module argument and
-module-scoped `ParameterInstanceRef` against the embedded programs. So the
-schema-21 module rule holds on independent schema-23 data. The same sample
-shows that the `SCHEMA_23` element table's inference was incomplete. It lacks
-the `GroupObjectTree/Nodes/Node` shape and the `Topology/UnassignedDevices`
-device grammar, so the current importer skips those subtrees. Lifting still
-needs that project imported with its unknown-construct report reconciled to
-empty. The project also carries uninterpreted device extensions
-(`ChannelInstances`, `AdditionalAddresses`, `IPConfig`) and project metadata.
-Whether retained-but-uninterpreted data counts as "reconciled" needs an owner
-decision. Schemas 12/13/14/20/22 are unaffected.
+**Narrowed 2026-10-10: independent module-using schema-23 import evidenced.**
+Import-integrity's `GroupObjectTree/Nodes/Node` and `UnassignedDevices` repairs
+are integrated. The unchanged independent source passes the genuine project
+and embedded-product import, product database verification, native save/reopen
+and resave, and the independent production RefId gate. The new opt-in witness
+`private_original_unknown_report_is_backed_by_exact_retained_sources`
+(`crates/knx-app/tests/private_schema23_reconciliation.rs`, `6f8ac4332c79`)
+independently inventories original XML members and requires each to survive
+byte-exactly under its original source identity in native/project or product
+source storage. Duplicate identities refuse rather than overwrite.
 
-**Limitation.** Everything verified about the `.knxproj` format comes from two
-installations: the "Unser Zuhause" project (schema 11, ETS 4.1.8, and schema
-23, ETS 6.3.7959.0 — the same project exported twice, risk R1) and, since
-Session 7 (2026-09-06), the KNX Association "KV v2.5" demo project (schema
-21, ETS 5.7 — a genuinely different installation).
+**Final source admission:** `382ab577` passed the full source/Web/corpus/private/
+browser chain. New upstream-only regression tests pass on `dd4b8165`; runtime
+inputs are unchanged. This evidence narrows preservation coverage only.
 
-**Cause.** Independent ETS5/ETS6 sample projects remain scarce. The second
-export of the ETS4 reference project (RESEARCH §2.4/§3.3) confirms the
-schema-11→23 format diff for one installation; the KV demo project (RESEARCH
-§2.5/§3.4) independently confirms most of that same diff already exists at
-schema 21, on unrelated data. Together they say nothing about schema 12, 13,
-14, 20 or 22, and nothing about a differently-structured schema-23 project
-(e.g. one using `Functions`, KNX Secure, or multiple areas/lines for real).
+**Owner-approved reconciliation boundary.** Reported, byte-exact
+*retained-uninterpreted* data counts as source-preservation reconciliation,
+not as understood semantics. The unknown report remains nonempty and
+`ImportReport.has_losses()` deliberately remains true: its conservative
+meaning includes unknown or misunderstood semantics. No warning is hidden
+or downgraded by this test. Each unknown report source must resolve to its
+original retained bytes; import errors and inference conflicts must be absent.
+The previous requirement to reconcile unknowns "to empty" is superseded by
+this explicitly accepted, narrower preservation contract, not by deleting
+unknown entries.
 
-**Impact.** Schema 21 is implemented and round-trip verified against one
-sample (the KV project) — a first import of a *structurally different*
-schema-21 project (e.g. one with `Functions`, multiple areas/lines for real,
-or a `GroupObjectTree` shape this session never saw) will still likely
-produce unknown-construct entries. Schema 23's module-based handling
-specifically remains *inferred, not evidenced* — it reuses schema 21's
-measured element/attribute set by inference (`known.rs`'s `SCHEMA_23`
-table, commented as such), with no independent module-using schema-23
-sample to confirm the inference. Schema 12/13/14/20/22 remain fully
-undocumented-by-evidence, unaffected by this work.
+**Scope.** Independent schema-23 module/RefId handling is now evidenced for the
+imported sample, rather than inferred only from the schema-21 reference. The
+runtime's broader conservative module-support warning is unchanged. This
+single additional sample does not establish complete ETS semantics, writable
+Repeat activation, or coverage of arbitrary module/program shapes. Device
+extensions and project metadata can remain uninterpreted while their original
+source bytes are retained. Native persistence is verified, not an ETS export
+roundtrip (the historical schema-21 writer was withdrawn by ADR-0028).
 
-**Current import/native persistence scope.** Schema 21 import shipped;
-native `.knxdb` save/reopen is verified on the reference samples. The old
-schema-21 writer was withdrawn by ADR-0028, so no current ETS roundtrip is
-claimed. Import evidence includes `knx-etsproj`'s
-`importing_the_kv_schema_21_project_succeeds_with_zero_unknown_constructs`.
-Schema 23 import shipped, with no round-trip claim; its module handling is
-flagged as inferred both here and in `ImportReport.unsupported` at runtime.
-[ADR-0013](adr/0013-module-instance-representation.md) and
-[ADR-0014](adr/0014-group-object-tree-authoritative-source.md) record the
-design decisions this rests on.
-
-**Lifted when.** A second, independent, module-using schema-21 or schema-23
-sample project has been imported and its unknown-construct report
-reconciled to empty — this would upgrade schema 23's module handling from
-inferred to evidenced, and schema 21's claim from one-sample to
-cross-validated. Schema 12/13/14/20/22 still need their own first sample
-each, unrelated to this upgrade.
+**Remaining boundary.** Schemas 12/13/14/20/22 still need independent source
+and format evidence (§6); wider schema-21/23 feature and manufacturer coverage
+still needs further independent samples. KL-1 remains `ACCEPTED_BOUNDARY` for
+that residual coverage, but the independent schema-23 import/reconciliation
+prerequisite is complete. No ETS, Secure or hardware compatibility claim.
+[Compatibility](COMPATIBILITY.md) and the
+[package receipt](evidence/kl1-source-reconciliation-2026-10-10.json) separate
+source preservation from semantics and publication.
 
 ## 2. No authoritative XSD is publicly available
 

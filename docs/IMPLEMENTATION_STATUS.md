@@ -1,3 +1,25 @@
+## 2026-10-10 — KL-1 final source-preservation acceptance
+
+Candidate `382ab577`: five Rust crates1360/0/116 and Web2610/0/164, full
+nonempty corpus, private original reconciliation/native/RefId and browser4/4
+passed. Final upstream `fc81326b` changed only four test files and docs;
+`dd4b8165` passes those crate/HTTP cases, full Web2611/0/164, tsc and strict
+server/app/parser Clippy. Runtime/dependencies/archive-browser inputs unchanged.
+Unknowns/has_losses stay visible and retained-uninterpreted reconciliation means
+source preservation only. Main publication/readback pending; [receipt](evidence/kl1-source-reconciliation-2026-10-10.json).
+
+## 2026-10-10 — KL-1 preservation-only reconciliation candidate
+
+New opt-in witness `private_original_unknown_report_is_backed_by_exact_retained_sources`
+(`6f8ac4332c79`) passes unchanged original project+product import, independently
+inventoried original XML/source identity equality, native reopen/resave, and
+unchanged input. Synthetic bounded-reader and missing/corrupt/wrong-owner
+controls pass; independent native and RefId gates pass. Unknowns remain visible
+and conservative has_losses remains true. The owner accepted retained-uninterpreted
+as source reconciliation only. §1/COMPATIBILITY/ledger narrowed accordingly;
+merged-source full gates and publication still pending.
+[Receipt](evidence/kl1-source-reconciliation-2026-10-10.json).
+
 ## 2026-10-10 — Archive budget/readable refusals: main integration accepted
 
 - Owner authorized commit/main push. Feature `1be6f9bd1694` integrated with the

@@ -1,5 +1,9 @@
 # Roadmap
 
+## Local source-integrity repair scope (2026-10-10)
+
+The [import integrity contract](IMPORT_INTEGRITY.md) covers the bounded parser/provenance/reporting repairs and scalar completion vocabulary. New device-extension modelling and execution/planner support remain separate research/owner decisions, not automatic follow-ons. Source integration, release and hardware scope are not authorized by local completion.
+
 ## Import expansion source integration, not a release (2026-10-10)
 
 Selected devices/lines, a private authorized-export regression harness and a

@@ -1,5 +1,13 @@
 # IMPLEMENTATION_STATUS.md
 
+## Import integrity implementation — local acceptance (2026-10-10)
+
+The following records local verification before the owner subsequently
+authorized source integration. The actual merged candidate is tested separately;
+no release or hardware action is included.
+
+The late metadata-namespace repair has runtime RED/GREEN, two guard-removal controls, full owning-parser and repeated whole-source/original acceptance. Owned uncommitted source implements [ADR-0107](adr/0107-import-source-integrity.md) and [IMPORT_INTEGRITY](IMPORT_INTEGRITY.md). Independent synthetic RED/GREEN and hostile-archive controls, full Rust/frontend tests and builds, warning-denied Clippy, repository/documentation gates, actual service/HTTP/component diagnostics, native roundtrips and explicit unchanged-original verification passed locally. Native/model12 is a scalar-vocabulary barrier, additionally exercised with an authentic prior reader and synthetic native11 input. Source/model/retention and post-model offline findings remain privately recorded, not public measurements. Self-review only; no commit, integration, publication, release or hardware action. Retained extensions and unsupported offline execution remain bounded follow-up work, not implemented capabilities.
+
 ## 2026-10-10 — KL-8: secure-capable programs without Secure, pinned
 
 A synthetic witness (`crates/knx-app/tests/secure_capable_not_activated.rs`,

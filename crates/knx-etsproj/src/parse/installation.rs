@@ -19,8 +19,8 @@
 //! path is still what gets reported in `UnknownConstruct`/`RetainedAttribute`
 //! xpaths, since that is more useful to a human reading the import report.
 
+use super::observed_reader::ObservedReader as Reader;
 use quick_xml::events::{BytesStart, Event};
-use quick_xml::Reader;
 
 use crate::known::KnownSchema;
 use crate::source::{
@@ -283,6 +283,7 @@ pub fn parse_installation(
         });
     }
 
+    document.xml_observations = reader.counts;
     Ok(ParseOutput {
         document,
         unknown: aggregator.into_sorted_vec(source_path),

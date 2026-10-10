@@ -410,6 +410,51 @@ fn a_cp437_name_and_its_utf8_twin_are_refused() {
 }
 
 #[test]
+fn invalid_declared_utf8_is_refused_before_extraction() {
+    let invalid = Member {
+        flags: UTF8_FLAG,
+        name: b"P-0001/BinaryData/\xff.dat".to_vec(),
+        ..member("", b"synthetic")
+    };
+    assert!(Container::open(project_with(vec![invalid])).is_err());
+}
+
+#[test]
+fn a_cp437_member_is_read_by_its_validated_identity() {
+    let entry = Member {
+        name: b"P-0001/BinaryData/\x82.dat".to_vec(),
+        ..member("", b"synthetic-legacy-payload")
+    };
+    let bytes = project_with(vec![entry]);
+    let mut container = Container::open(bytes.clone()).unwrap();
+    assert_eq!(
+        container.read("p-0001/binarydata/é.dat").unwrap(),
+        b"synthetic-legacy-payload"
+    );
+    let imported = import_knxproj_bytes(bytes, "synthetic.knxproj").unwrap();
+    let retained = imported
+        .opaque
+        .iter()
+        .find(|e| e.source_path == "P-0001/BinaryData/é.dat")
+        .unwrap();
+    assert_eq!(retained.bytes, b"synthetic-legacy-payload");
+}
+
+#[test]
+fn a_cp437_member_in_a_nested_payload_keeps_its_bytes() {
+    let entry = Member {
+        name: b"P-0001/BinaryData/\x82.dat".to_vec(),
+        ..member("", b"synthetic-nested-payload")
+    };
+    let mut container =
+        Container::open_with_password(protected_with(vec![entry]), "fictional").unwrap();
+    assert_eq!(
+        container.read("P-0001/BinaryData/é.dat").unwrap(),
+        b"synthetic-nested-payload"
+    );
+}
+
+#[test]
 fn two_distinct_non_ascii_names_still_import() {
     let a = Member {
         flags: UTF8_FLAG,

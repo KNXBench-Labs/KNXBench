@@ -20,17 +20,33 @@ pub fn completion_to_str(c: CompletionStatus) -> &'static str {
         CompletionStatus::Undefined => "Undefined",
         CompletionStatus::Editing => "Editing",
         CompletionStatus::FinishedDesign => "FinishedDesign",
+        CompletionStatus::FinishedCommissioning => "FinishedCommissioning",
+        CompletionStatus::Tested => "Tested",
+        CompletionStatus::Locked => "Locked",
         CompletionStatus::Accepted => "Accepted",
     }
 }
 
-pub fn completion_from_str(s: &str) -> CompletionStatus {
-    match s {
+pub fn completion_from_str(s: &str) -> rusqlite::Result<CompletionStatus> {
+    Ok(match s {
         "Editing" => CompletionStatus::Editing,
         "FinishedDesign" => CompletionStatus::FinishedDesign,
+        "FinishedCommissioning" => CompletionStatus::FinishedCommissioning,
+        "Tested" => CompletionStatus::Tested,
+        "Locked" => CompletionStatus::Locked,
         "Accepted" => CompletionStatus::Accepted,
-        _ => CompletionStatus::Undefined,
-    }
+        "Undefined" => CompletionStatus::Undefined,
+        _ => {
+            return Err(rusqlite::Error::FromSqlConversionFailure(
+                0,
+                rusqlite::types::Type::Text,
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "unknown native completion status",
+                )),
+            ))
+        }
+    })
 }
 
 pub fn upsert_installation_row(
@@ -161,7 +177,7 @@ pub fn load_installation_rows(conn: &Connection) -> Result<Vec<InstallationRow>,
             default_line: default_line.map(LineId),
             multicast_address: multicast_address
                 .map(|a| a.parse().expect("stored multicast address is always valid")),
-            completion: completion_from_str(&completion),
+            completion: completion_from_str(&completion)?,
         })
     })
     .collect()
@@ -201,7 +217,7 @@ pub fn load_topology(
                 },
                 name,
                 address,
-                completion: completion_from_str(&completion),
+                completion: completion_from_str(&completion)?,
                 lines,
             })
         })
@@ -275,7 +291,7 @@ pub fn load_topology(
                 ip_routing_multicast_address: ip_routing_multicast_address
                     .map(|a| a.parse().expect("stored address is always valid")),
                 multicast_ttl,
-                completion: completion_from_str(&completion),
+                completion: completion_from_str(&completion)?,
                 devices,
             })
         })

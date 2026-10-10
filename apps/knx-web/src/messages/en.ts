@@ -858,6 +858,7 @@ export const messages = {
   "logPanel.emptyNoEntries": "No log entries yet.",
   "logPanel.loading": "Loading session log…",
   "logPanel.emptyFiltered": "No log entries match the current filters.",
+  "logPanel.rawRtfLike": "RTF-like raw text — not interpreted",
   "logPanel.search": "Search session log",
   "logPanel.clear": "Clear search",
   "logPanel.count": "{shown} of {total} entries",

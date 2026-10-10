@@ -8,6 +8,24 @@ no release or hardware action is included.
 
 The late metadata-namespace repair has runtime RED/GREEN, two guard-removal controls, full owning-parser and repeated whole-source/original acceptance. Owned uncommitted source implements [ADR-0107](adr/0107-import-source-integrity.md) and [IMPORT_INTEGRITY](IMPORT_INTEGRITY.md). Independent synthetic RED/GREEN and hostile-archive controls, full Rust/frontend tests and builds, warning-denied Clippy, repository/documentation gates, actual service/HTTP/component diagnostics, native roundtrips and explicit unchanged-original verification passed locally. Native/model12 is a scalar-vocabulary barrier, additionally exercised with an authentic prior reader and synthetic native11 input. Source/model/retention and post-model offline findings remain privately recorded, not public measurements. Self-review only; no commit, integration, publication, release or hardware action. Retained extensions and unsupported offline execution remain bounded follow-up work, not implemented capabilities.
 
+## 2026-10-10 — Local categorized test catalogue
+
+- Added [the test catalogue](TEST_CATALOGUE.md): 199 related suite groups,
+  640 linked test-bearing modules/acceptance scripts, 20 categories and eight
+  separately identified quality gates on source snapshot `8901affa`.
+- Every suite/check description has 10–15 words. README, manual index, build
+  guide and documentation hub link to it; maintenance rules are documented.
+- Privacy controls distinguish Git exclusion, private local inputs, reduced
+  contributions and diagnostic redaction. The sole customer-file illustration
+  is explicitly fictional; no private corpus input was opened or copied.
+- Local documentation acceptance: 12 checker tests, file/image targets and all
+  33 manual chapters, five fresh-checkout repository gates and whitespace pass.
+  The initial dotted Python module invocation failed before running tests;
+  discovery of the same checker suite passed. Self-review only.
+- Documentation-only local delivery: no application tests, private regressions,
+  live hardware, commit, push, release or deployment. Suite presence is not a
+  fresh passing result or a new compatibility claim.
+
 ## 2026-10-10 — KL-8: secure-capable programs without Secure, pinned
 
 A synthetic witness (`crates/knx-app/tests/secure_capable_not_activated.rs`,

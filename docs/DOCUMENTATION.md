@@ -68,6 +68,14 @@ For a screenshot/capture-script change, rebuild the frontend and server and run
 the isolated capture recipe too. Review each changed screenshot and sample GIF
 frames at full size. A successful encoder does not establish legible text.
 
+## Test catalogue maintenance
+
+Keep [the test catalogue](TEST_CATALOGUE.md) alongside test changes: add or revise
+its suite group, source links and prerequisites when coverage changes. Descriptions
+use 10–15 words; fictional examples must be labelled and never derived from private
+project data. Refresh the inspected revision and timestamp after a complete inventory
+review. Catalogue presence is not fresh execution evidence or a compatibility claim.
+
 ## Before calling it finished
 
 - Follow installation as a beginner, including prerequisites and where files land.

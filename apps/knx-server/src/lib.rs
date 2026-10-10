@@ -74,6 +74,7 @@ mod paths;
 mod project_history;
 mod rename_routes;
 mod routes;
+mod selective_import_routes;
 mod session_log;
 mod settings;
 /// Exported so `apps/knx-desktop` and integration tests can name the file

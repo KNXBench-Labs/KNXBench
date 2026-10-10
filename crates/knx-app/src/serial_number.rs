@@ -26,6 +26,9 @@ pub enum ProjectSerialNumberError {
     NotBase64,
     /// Base64, but not the six octets RES §4.22.1.2 makes a serial number.
     WrongLength(usize),
+    /// A source-bearing import requires exact device/source identity.
+    SourceContextRequired,
+    AmbiguousAttribute,
 }
 
 impl fmt::Display for ProjectSerialNumberError {
@@ -34,6 +37,12 @@ impl fmt::Display for ProjectSerialNumberError {
             Self::NotBase64 => f.write_str(
                 "the project's SerialNumber for this device is not base64 (Project Schema: \
                  xs:base64Binary)",
+            ),
+            Self::SourceContextRequired => {
+                f.write_str("serial lookup requires an unambiguous device and exact source context")
+            }
+            Self::AmbiguousAttribute => f.write_str(
+                "several serial attributes match the device source; no value was selected",
             ),
             Self::WrongLength(length) => write!(
                 f,
@@ -51,14 +60,63 @@ pub fn project_serial_number(
     opaque: &[StoredOpaqueEntry],
     device_ets_id: &str,
 ) -> Result<Option<SerialNumber>, ProjectSerialNumberError> {
+    if opaque.iter().any(|e| e.kind == "SelectiveImportArchive") {
+        return Err(ProjectSerialNumberError::SourceContextRequired);
+    }
+    read_serial(opaque, device_ets_id, None)
+}
+
+/// Resolves imported metadata by the complete SourceRef, never the ETS id alone.
+pub fn project_serial_number_for_source(
+    opaque: &[StoredOpaqueEntry],
+    source: &knx_core::SourceRef,
+) -> Result<Option<SerialNumber>, ProjectSerialNumberError> {
+    read_serial(opaque, &source.ets_id, Some(&source.path))
+}
+
+/// Keeps old single-source callers compatible while refusing multi-source ambiguity.
+pub fn project_serial_number_from_project(
+    opaque: &[StoredOpaqueEntry],
+    project: Option<&knx_core::Project>,
+    device_ets_id: &str,
+) -> Result<Option<SerialNumber>, ProjectSerialNumberError> {
+    if !opaque.iter().any(|e| e.kind == "SelectiveImportArchive") {
+        return project_serial_number(opaque, device_ets_id);
+    }
+    let project = project.ok_or(ProjectSerialNumberError::SourceContextRequired)?;
+    let mut matches = project
+        .devices
+        .iter()
+        .filter(|d| d.source.ets_id == device_ets_id);
+    let device = matches
+        .next()
+        .ok_or(ProjectSerialNumberError::SourceContextRequired)?;
+    if matches.next().is_some() {
+        return Err(ProjectSerialNumberError::SourceContextRequired);
+    }
+    project_serial_number_for_source(opaque, &device.source)
+}
+
+fn read_serial(
+    opaque: &[StoredOpaqueEntry],
+    device_ets_id: &str,
+    source_path: Option<&str>,
+) -> Result<Option<SerialNumber>, ProjectSerialNumberError> {
     let element = format!("/DeviceInstance[@Id='{device_ets_id}']");
-    let Some(entry) = opaque.iter().find(|entry| {
-        entry.kind == RETAINED_ATTRIBUTE_KIND
+    let mut matches = opaque.iter().filter(|entry| {
+        (entry.kind == RETAINED_ATTRIBUTE_KIND
+            || (source_path.is_some()
+                && entry.kind == crate::selective_import::SELECTIVE_ATTRIBUTE_KIND))
             && entry.name == SERIAL_NUMBER_ATTRIBUTE
             && entry.xpath.ends_with(&element)
-    }) else {
+            && source_path.is_none_or(|path| entry.source_path == path)
+    });
+    let Some(entry) = matches.next() else {
         return Ok(None);
     };
+    if matches.next().is_some() {
+        return Err(ProjectSerialNumberError::AmbiguousAttribute);
+    }
     let text =
         std::str::from_utf8(&entry.bytes).map_err(|_| ProjectSerialNumberError::NotBase64)?;
     let octets = STANDARD

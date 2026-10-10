@@ -77,10 +77,10 @@ pub fn parse_address_by_serial_args(args: &[String]) -> Result<AddressBySerialAr
             return Err(
                 "name the device: --serial MMMM:NNNNNNNN, or --project <p.knxdb> --device <id>"
                     .to_string(),
-            )
+            );
         }
         (Some(_), _, _) => {
-            return Err("--serial and --project/--device name the device twice".to_string())
+            return Err("--serial and --project/--device name the device twice".to_string());
         }
         _ => return Err("--project and --device go together".to_string()),
     };
@@ -105,18 +105,29 @@ pub fn resolve_serial(source: &SerialSource) -> Result<SerialNumber, String> {
             if !Path::new(project).exists() {
                 return Err(format!("project not found: {project}"));
             }
-            let conn = knx_store::open_existing_and_migrate(Path::new(project))
+            let admitted = knx_store::open_existing_read_only(Path::new(project))
                 .map_err(|e| format!("could not read project {project}: {e}"))?;
-            let opaque = knx_store::load_opaque(&conn)
-                .map_err(|e| format!("could not read project {project}: {e}"))?;
-            knx_app::serial_number::project_serial_number(&opaque, device)
-                .map_err(|e| format!("project {project}, device {device}: {e}"))?
-                .ok_or_else(|| {
-                    format!(
-                        "project {project} records no serial number for device {device}; \
+            // Retained source identities belong to the recovered working
+            // snapshot, not necessarily the last explicit Save's root tables.
+            let snapshot = match knx_store::project_history::load_editor(&admitted.conn)
+                .map_err(|e| format!("could not read project {project}: {e}"))?
+            {
+                Some(history) => history.working,
+                None => knx_store::project_history::NativeSnapshot::read(&admitted.conn)
+                    .map_err(|e| format!("could not read project {project}: {e}"))?,
+            };
+            knx_app::serial_number::project_serial_number_from_project(
+                &snapshot.opaque,
+                Some(&snapshot.project),
+                device,
+            )
+            .map_err(|e| format!("project {project}, device {device}: {e}"))?
+            .ok_or_else(|| {
+                format!(
+                    "project {project} records no serial number for device {device}; \
                          give it with --serial MMMM:NNNNNNNN (from the device label)"
-                    )
-                })
+                )
+            })
         }
     }
 }
@@ -321,7 +332,7 @@ pub fn parse_find_serial_args(args: &[String]) -> Result<FindSerialArgs, String>
             FindSerial::SerialNumber(ContactableAddress::new(parsed).map_err(|e| e.to_string())?)
         }
         (None, None) => {
-            return Err("give a serial number (0083:12345678) or --address <a.l.d>".to_string())
+            return Err("give a serial number (0083:12345678) or --address <a.l.d>".to_string());
         }
         (Some(_), Some(_)) => return Err("give a serial number or --address, not both".to_string()),
     };
@@ -480,6 +491,75 @@ mod tests {
                 "{bad}"
             );
         }
+    }
+
+    #[test]
+    fn recovered_import_ambiguity_refuses_the_saved_roots_serial() {
+        use knx_app::selective_import::{self as import, Selection};
+        use knx_store::project_history::{self as history, NativeSnapshot};
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("journal.knxdb");
+        let conn = knx_store::open_and_migrate(&path).unwrap();
+        let source =
+            import::source_from_bytes(knx_testsupport::minimal_knxproj_bytes(), None).unwrap();
+        let mut project = source.project.clone();
+        let device_id = project.devices.iter().next().unwrap().id;
+        let device = project.devices.get_mut(device_id).unwrap();
+        device.address = Some("1.1.220".parse().unwrap());
+        let ets_id = device.source.ets_id.clone();
+        let serial_bytes = b"AIMSNFZ4".to_vec();
+        let root = NativeSnapshot {
+            opaque: vec![knx_store::StoredOpaqueEntry {
+                source_path: device.source.path.clone(),
+                xpath: format!("/DeviceInstance[@Id='{ets_id}']"),
+                kind: "RetainedAttribute".into(),
+                name: "SerialNumber".into(),
+                sha256: knx_etsproj::opaque::sha256_hex(&serial_bytes),
+                bytes: serial_bytes,
+            }],
+            project,
+            manufacturer_refs: vec![],
+        };
+        let mut stack = knx_core::CommandStack::new();
+        let generation = history::save_editor(&conn, &root, &stack, None, true).unwrap();
+        assert_eq!(NativeSnapshot::read(&conn).unwrap(), root);
+        let mut working = root.clone();
+        let selection = Selection {
+            source_installation: source.project.installations[0].id.0,
+            target_installation: working.project.installations[0].id.0,
+            devices: vec![device_id.0],
+            lines: vec![],
+        };
+        let plan = import::plan(&working, &source, selection).unwrap();
+        import::apply(&mut working, &mut stack, plan).unwrap();
+        history::save_editor(&conn, &working, &stack, Some(generation), false).unwrap();
+        assert_eq!(NativeSnapshot::read(&conn).unwrap(), root);
+        assert_eq!(
+            history::load_editor(&conn).unwrap().unwrap().working,
+            working
+        );
+        assert_eq!(
+            working
+                .project
+                .devices
+                .iter()
+                .filter(|d| d.source.ets_id == ets_id)
+                .count(),
+            2
+        );
+        let before = std::fs::read(&path).unwrap();
+        let error = resolve_serial(&SerialSource::Project {
+            project: path.display().to_string(),
+            device: ets_id,
+        })
+        .expect_err("recovered working-state ambiguity must not resolve a saved-root serial");
+        assert!(error.contains("unambiguous"), "{error}");
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        assert_eq!(
+            history::load_editor(&conn).unwrap().unwrap().working,
+            working
+        );
     }
 
     #[test]

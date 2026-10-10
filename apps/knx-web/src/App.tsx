@@ -57,6 +57,7 @@ import { emitAchievementEvent } from "./achievementEvents";
 import { countDevices, observeProject } from "./achievementObservation";
 import AchievementsDialog from "./AchievementsDialog";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
+import SelectiveImportButton from "./SelectiveImportButton";
 import DocumentationExportButton from "./DocumentationExportButton";
 import DebugReportButton from "./DebugReportButton";
 import ContributionButton from "./ContributionButton";
@@ -1297,6 +1298,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       {!isTauri() && (
         <button onClick={exportProject} disabled={!tree}>{t("toolbar.exportProject")}</button>
       )}
+      <SelectiveImportButton tree={tree} scope={loadKey} onTreeUpdate={handleTreeUpdate} />
       <GroupAddressCsvButtons
         tree={tree}
         onTreeUpdate={handleTreeUpdate}

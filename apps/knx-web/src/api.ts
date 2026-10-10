@@ -173,6 +173,33 @@ export function renameEntity(kind: "device" | "group_address", id: number, name:
   });
 }
 
+export interface ImportSelection {
+  sourceInstallation: number; targetInstallation: number; devices: number[]; lines: number[];
+}
+export interface ImportSourceInventory {
+  sourceHash: string; sourceReport: unknown;
+  installations: { id: number; name: string;
+    devices: { id: number; name: string; address: string | null; line: number | null }[];
+    lines: { id: number; name: string; address: string; deviceCount: number }[] }[];
+}
+export interface SelectionPreview {
+  sourceHash: string; selection: ImportSelection;
+  counts: { devices: number; lines: number; communicationObjects: number; parameters: number; modules: number; groupAddresses: number; buildingParts: number };
+  mappings: { kind: string; source: number; target: number; reused: boolean }[];
+  sourceReport: unknown; retainedSourceMayContainUnselectedData: boolean; retainedSourceEntries: number; notes: string[];
+}
+export interface SelectionPreviewResponse { preview: SelectionPreview; confirmationToken: string; }
+export interface SelectionRequest { path: string; password?: string; sourceHash: string; selection: ImportSelection; confirmationToken?: string; }
+export function inspectImportSource(path: string, password?: string): Promise<ImportSourceInventory> {
+  return request("/api/project/import-selection/source", { method: "POST", body: JSON.stringify({ path, ...(password ? { password } : {}) }) });
+}
+export function previewImportSelection(body: SelectionRequest): Promise<SelectionPreviewResponse> {
+  return request("/api/project/import-selection/preview", { method: "POST", body: JSON.stringify(body) });
+}
+export function applyImportSelection(body: SelectionRequest): Promise<{ preview: SelectionPreview; project: ProjectTree }> {
+  return request("/api/project/import-selection/apply", { method: "POST", body: JSON.stringify(body) });
+}
+
 export function currentProject(): Promise<ProjectTree & { has_store_path: boolean }> {
   return request("/api/project");
 }

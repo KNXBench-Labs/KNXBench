@@ -1,5 +1,20 @@
 # Compatibility
 
+## Selective import does not widen ETS admission (2026-10-10 local source)
+
+The local [selective importer](SELECTIVE_IMPORT.md) reuses the existing complete
+ETS reader, then remaps a frozen normalized-model-v11 dependency closure.
+It refuses source mapping errors, incompatible destination configurations,
+ambiguous identities and future model versions rather than inventing mappings.
+Existing native snapshot/history size and representability limits still apply.
+Original archive and opaque-byte retention do not imply semantic understanding
+or ETS export compatibility. Selected source attributes cannot become unscoped
+destination access keys; serial metadata needs exact source/device identity.
+Synthetic HTTP/CLI/Chromium evidence is not real ETS/hardware/native acceptance.
+[Historical authorized exports](AUTHORIZED_RESTORE_EXPORTS.md) remain an external
+prerequisite; [cvexc observations](research/cvexc.md) do not verify signatures,
+option defaults or executable device rules. This package is unpublished.
+
 ## Offline AP1 reconstruction is not executable compatibility (2026-10-09)
 
 The local [AP1 resolver](OFFLINE_PROCEDURE_RESOLUTION.md) combines uniquely

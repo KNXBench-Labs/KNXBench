@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-10",
+  "item": "KL-174 package6",
+  "base": "7d39628fce2b",
+  "code": "41b3d6267731",
+  "scope": "application report enrichment reuses product sniff; no storage/model/parser admission/schema/dependency change",
+  "owner": "unverified role candidates separated from content; unknown retained",
+  "tests": [
+    "project_and_manufacturer_payloads_report_content_without_certifying_roles",
+    "independent_capability_diagnostics_are_not_replaced_by_content_evidence",
+    "payload_evidence_reaches_the_http_session_log_without_certifying_an_app"
+  ],
+  "focused": "synthetic app/native/product/unit/HTTP pass; single matrix test runs both product modes",
+  "mutations": [
+    {
+      "name": "omit-evidence",
+      "killedByAssertion": true
+    },
+    {
+      "name": "fabricate-app-validity",
+      "killedByAssertion": true
+    }
+  ],
+  "review": "codex, in-session self-review only; no independent review. Important independent-diagnostic replacement finding fixed RED/GREEN; Critical0/unresolvedImportant0. Added lines have no secrets/shell/eval/SQL/file extraction; sniffer only.",
+  "boundaries": [
+    "No nested unpacking/rendering/execution",
+    "No App authenticity/manifest/licensing validation or Add-in state semantics",
+    "Existing source kind/owner/path/bytes/hash/storage destination unchanged",
+    "Historical and parser-only generic reports not silently rewritten",
+    "Standalone baggage inventory behavior unchanged"
+  ],
+  "finalGates": "pending actual frozen candidate",
+  "publication": "pending origin/main"
+}

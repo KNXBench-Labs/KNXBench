@@ -820,6 +820,10 @@ independently inventories original XML members and requires each to survive
 byte-exactly under its original source identity in native/project or product
 source storage. Duplicate identities refuse rather than overwrite.
 
+**Final source admission:** `382ab577` passed the full source/Web/corpus/private/
+browser chain. New upstream-only regression tests pass on `dd4b8165`; runtime
+inputs are unchanged. This evidence narrows preservation coverage only.
+
 **Owner-approved reconciliation boundary.** Reported, byte-exact
 *retained-uninterpreted* data counts as source-preservation reconciliation,
 not as understood semantics. The unknown report remains nonempty and

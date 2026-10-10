@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:38 CEST
+- **Completed:** Owner-authorized archive-budget/readable-refusal source published on main atf08b9776ea6c. Exact local/fetched/live main equality, feature1be6f9bd ancestry and owned source/receipt/handover blob identity verified. Actual final merged source7520fa38 passes24 frozen stages: parser197/0/56 ignored; consumers1799/0/101 ignored; frontend2610/0/164 files; Chromium244/0 and built-browser4/0/four inspected frames; explicit reference3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo checks/docs/whitespace pass; self-review only. Public receipt/manual/status record source publication and release separation.
+- **Pending/Next Steps:** No feature work remains. This closure changes docs only; verify its normal push/readback, archive compact evidence and retire only owned checkout/branches/build/scratch. No release/deployment/hardware scope.
+- **Notes for Codex oder Claude:** Shared root stays intentionally stale/dirty; HEAD/index/foreign documents preserved. Runtime evidence is bound to7520fa38; publication/closure app inputs are equal. Tester archive and new large-project memory behavior remain unverified. Earlier lease/interrupted/pre-upstream receipts are not final acceptance. Canonical public receipt docs/evidence/project-archive-budget-2026-10-10.json; private gate evidence stays ignored under own .ai/logs archive. No subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 17:34 CEST
 - **Completed:** Actual final main-integration source7520fa38 accepted after reconciling published65e1c809. Twenty-four stages exit0 with frozen inputs: parser197/0/56 ignored, consumers1799/0/101 ignored, frontend2610/0/164 files, full Chromium244/0, built-browser4/0/four frames inspected; explicit reference-container3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo gates/docs/whitespace pass. Source-bound public receipt/manual/status updated after the run; self-review only. Feature1be6f9bd included. No push yet.
 - **Pending/Next Steps:** Final documentation gates and metadata commit; fetch/inspect upstream, normal main push and exact ref/blob/ancestry readback; then owned worktree/branches/build/scratch cleanup and publication closure. No release/deployment/hardware action.

@@ -3,7 +3,9 @@
 - Owner authorized commit/main push. Feature `1be6f9bd1694` integrated with the
   concurrently published instance-value source; final tested merge `7520fa389ed4`.
   Only additive status/handover conflicts required resolution; upstream content
-  and all reviewed source changes are preserved.
+  and all reviewed source changes are preserved. Source publication `f08b9776ea6c`
+  was pushed normally; local/fetched/live main equality, feature ancestry and
+  exact owned blobs were verified. Later closure changes documentation only.
 - Fresh merged-source acceptance: importer197/0/56 ignored; application/product/
   server/MCP consumers1799/0/101 ignored; frontend2610/0 in164 files; full
   intercepted Chromium244/0 and built-app EN/DE1440/400 checks4/0. All four

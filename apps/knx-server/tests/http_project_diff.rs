@@ -121,6 +121,46 @@ async fn diff_project(app: &axum::Router, path: &std::path::Path) -> axum::respo
 }
 
 #[tokio::test]
+async fn modern_completion_statuses_survive_native_http_projection() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("completion.knxdb");
+    let mut left = project_with_device_description("Same");
+    left.info.completion = CompletionStatus::FinishedCommissioning;
+    left.installations[0].completion = CompletionStatus::Tested;
+    left.devices
+        .get_mut(DeviceId(1))
+        .unwrap()
+        .commissioning
+        .completion = CompletionStatus::Tested;
+    let mut right = left.clone();
+    right.info.completion = CompletionStatus::Locked;
+    right.installations[0].completion = CompletionStatus::Locked;
+    right
+        .devices
+        .get_mut(DeviceId(1))
+        .unwrap()
+        .commissioning
+        .completion = CompletionStatus::Locked;
+    write_knxdb_fixture(&db_path, &right);
+    let app = knx_server::app(Arc::new(state_with_project(left)), None);
+
+    let response = diff_project(&app, &db_path).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(
+        body["infoChanges"],
+        json!([{"field":"completion","left":"FinishedCommissioning","right":"Locked"}])
+    );
+    assert_eq!(
+        body["installations"][0]["fieldChanges"],
+        json!([{"field":"completion","left":"Tested","right":"Locked"}])
+    );
+    let device = &body["installations"][0]["devices"]["changed"][0];
+    assert_eq!(device["left"]["commissioning"]["completion"], "Tested");
+    assert_eq!(device["right"]["commissioning"]["completion"], "Locked");
+}
+
+#[tokio::test]
 async fn a_live_project_identical_to_the_comparison_file_produces_an_empty_diff() {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("compare.knxdb");

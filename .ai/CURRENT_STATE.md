@@ -1,4 +1,19 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:19 CEST
+- **Completed:** Owner explicitly authorized main integration of eff4df95. Isolated merge preserves the complete upstream handover and four accepted independent synthetic regression changes; only additive documentation conflicts. Feature publication and original local acceptance remain historical, not merged-result verdicts.
+- **Pending/Next Steps:** Freeze merge source; execute fresh full Rust/Web/build/lint/repository/documentation gates and explicit private original/native/RefId/instance gates. Fetch again before normal main push; reconcile any advanced main and rerun consumed inputs. No release/deployment/hardware action.
+- **Notes for Codex oder Claude:** Own integration/import-revalidation-c0e72cdb5ee5 worktree only. Preserve foreign root/index/docs/worktrees and queued parallel archive gate; wait on repository leases without interruption. Original only via explicit local path, all source-bearing output ignored/private; no private copy into worktree, no subagents or new feature support.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:52 CEST
+- **Completed:** Local F01–F09 revalidation accepted on pinned source with four synthetic regression enhancements; 19 baseline/19 candidate/9 final metadata gates, Rust3894/0, Web2596/0, nine compiled RED/restored GREEN controls and actual private CLI/source/native/product/offline checks passed. Two store-omission controls caught; original and runtime-source bytes unchanged. F10/F11 separately researched/reassessed, not newly implemented. Scoped privacy check passed; self-review only.
+- **Pending/Next Steps:** No further implementation in this scope. Owner subsequently authorized commit/push of the reviewed package on test/import-integrity-revalidation-20261010. Remote publication is verified against exact tracking/live refs separately from frozen local acceptance; no main integration, release or deployment requested.
+- **Notes for Codex oder Claude:** Private source/evidence remains ignored/restricted/untracked and must never be staged or uploaded. Preserve shared root HEAD/index/application, parallel documentation and foreign worktrees. Canonical CLI/accepted stores and compact evidence stay local. Historical no-publication statements describe the earlier verification scope, superseded only by this explicit source-branch commit/push authorization. No full ETS/signature/hardware claim.
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 16:56
 - **Completed:** Package3 DELIVERED: no-ff merge 2e264f6cc6ece52cb463ed77b4fdf68cfa96706b, pushed origin/main, HEAD/tracking/live equal. Final source f4af614eac30: Rust2876/0/160, Web2597/0/163, corpus143/143 in31 targets, private own-value1/0 and RefId3/0; independent browser4/4. Fmt/clippy/tsc, five nonempty repo checks, docs/diff, fixed tracked-input binding and outgoing original-value/privacy scan green. Narrow authorized test-only correction e74be53a; no runtime/private golden values. Receipt/ledger/open-work/status published boundary scope, not Repeat/activation/writes/ETS hardware support.
 - **Pending/Next Steps:** Push this docs-only publication checkpoint after docs/privacy and live equality; copy essential private evidence to active package4 and remove own package3 worktree/branch/build scratch. Package4 hardened full-original XML/report/native/product comparison runner proc_7aaf1b7c7987 active; then remaining packages5–8 from fresh main. Packages1,2,3,9 delivered; all-goal completion NOT claimed.

@@ -1,0 +1,24 @@
+{
+  "schema": "knxbench-evidence/1",
+  "date": "2026-10-10",
+  "package": "9: KL-170/KL-171/KL-172 public research",
+  "basis": "9a5b55fe84d6",
+  "researchRevision": "4fd23f6ac4fe",
+  "review": "codex, in-session self-review; no independent reviewer",
+  "findings": [
+    {
+      "severity": "MINOR",
+      "location": "docs/research/schema23-offline-boundaries.md:14-26",
+      "finding": "Search candidates could be mistaken for inspected normative evidence",
+      "resolution": "Excluded blocked articles/snippets; admitted only inspected schema/RFC with ledger evidence"
+    }
+  ],
+  "researchResult": "Insufficient per-type endian, KNX UTF-8 field-policy and loaded-image payload contracts in inspected public sources; scoped negative result",
+  "unchanged": "Runtime, encoder refusals and original source retention; no private decode or hardware action",
+  "checks": {
+    "citationEvidence": "passed",
+    "mechanicalPrivateValueScan": "clear before content commit",
+    "documentationGate": "pending"
+  },
+  "publication": "pending; research pass closure is not implementation support"
+}

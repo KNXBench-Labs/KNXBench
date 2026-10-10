@@ -105,6 +105,10 @@ a description without a report ZIP is welcome.
 32. [Building from source](development/02-building-from-source.md)
 33. [Architecture tour](development/03-architecture-tour.md)
 
+For a categorized map of existing suites, source links and privacy safeguards,
+see the [test catalogue](../TEST_CATALOGUE.md). It describes test coverage, not
+fresh passing results — the distinction is rather important.
+
 ## The engineering documents
 
 The chapters above are written for people using KNXBench. The documents below are the

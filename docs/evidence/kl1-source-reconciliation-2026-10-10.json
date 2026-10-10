@@ -1,0 +1,42 @@
+{
+  "schema": "knxbench-evidence/1",
+  "date": "2026-10-10",
+  "package": "KL-1 preservation-only source reconciliation",
+  "implementationRevision": "6f8ac4332c79c66e380d2178137c16d5662a4bff",
+  "candidateIntegrationRevision": "2530ad8edc4e9c0a6089946ab5bc10f1512bfb56",
+  "review": "codex, in-session self-review only; no independent review",
+  "ownerDecision": "Reported byte-exact retained-uninterpreted source is reconciled for preservation, never for understood semantics",
+  "verifiedPrivateChecks": {
+    "reconciliation": "actual nonempty test result and exit0: original XML inventory, real project/product import, exact retained source bytes and owners, native reopen/resave and unchanged source",
+    "native": "independent configured-source native roundtrip: actual nonempty pass and exit0",
+    "refids": "independent production RefId rules: actual nonempty pass and exit0",
+    "refusals": "prior absent-env and absent-source attempts refused, never skipped/pass"
+  },
+  "publicControls": [
+    "bounded_source_reader_rejects_oversized_missing_and_non_regular_inputs",
+    "source_reconciliation_rejects_missing_corrupt_and_wrong_owner_evidence"
+  ],
+  "reviewFindings": [
+    {
+      "severity": "IMPORTANT",
+      "location": "crates/knx-app/tests/private_schema23_reconciliation.rs:11",
+      "finding": "Separate source metadata/read paths could bind different input",
+      "resolution": "single regular-file handle and actual-byte budget; captured bytes feed real importer; synthetic RED/GREEN"
+    },
+    {
+      "severity": "IMPORTANT",
+      "location": "crates/knx-app/tests/private_schema23_reconciliation.rs:187",
+      "finding": "Initial !has_losses assertion conflated byte preservation with conservative semantic loss",
+      "resolution": "keep has_losses true; synthetic unknown control pins independent preservation-only reconciliation; no production change"
+    }
+  ],
+  "notClaimed": [
+    "full ETS or Secure compatibility",
+    "hardware behavior",
+    "Repeat activation",
+    "ETS export roundtrip",
+    "semantic understanding of retained unknowns"
+  ],
+  "finalGates": "pending on actual integrated candidate",
+  "publication": "pending; not delivered"
+}

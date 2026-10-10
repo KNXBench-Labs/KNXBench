@@ -157,5 +157,13 @@
   "final_frames_visually_inspected": 4,
   "frame_assessment": "EN/DE at 1440/400 pixels: localized expanded size and actual limit readable in both popup and persistent banner; full warning/dismiss control fits; no raw bytes text or English-only disclosure.",
   "historical_attempts": "One owned lease retry interrupted after npm-ci; an older-source gate superseded when upstream changed consumed inputs. Neither is counted as final acceptance.",
-  "publication_boundary": "Main-integration source acceptance; normal push and exact ref readback are verified separately. Existing release/container artifacts unchanged."
+  "publication_boundary": "Main-integration source acceptance; normal push and exact ref readback are verified separately. Existing release/container artifacts unchanged.",
+  "publication": {
+    "verified_main_commit": "f08b9776ea6c0f3350c422407d8a8fcde58264ad",
+    "feature_ancestor": true,
+    "owned_blobs_equal": true,
+    "application_inputs_unchanged_since_tested_merge": true,
+    "verified_at": "2026-10-10 17:38 CEST",
+    "closure": "Subsequent bookkeeping is documentation-only; no release/container deployment or hardware action."
+  }
 }

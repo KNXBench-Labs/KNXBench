@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 18:35 CEST
+- **Completed:** Final integrated regression source7503f10f passed20 full gates (Rust3906/0, Web2611/0), explicit original/native/instance/RefId tests, fresh real production CLI import/product/offline checks, independent bounded source/native/product comparison and two omission controls. Original/source bytes unchanged, self-review and privacy green. Later upstream changes are documentation-only with all1207 non-documentation tracked inputs equal; full upstream handover preserved.
+- **Pending/Next Steps:** Final additive documentation/privacy checks, normal main push and exact local/tracking/live readback. No new implementation, release, deployment or hardware action.
+- **Notes for Codex oder Claude:** Own integration/import-revalidation-c0e72cdb5ee5 checkout; shared root remains intentionally stale/dirty and foreign work unchanged. Prior55362f52 gate superseded rather than credited. Private original/results retained only ignored/restricted/untracked; tests use explicit source path, never copied corpus. F10/F11 remain separately researched/reassessed follow-ups, no new support claim. No subagents or force-push.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 17:38 CEST
 - **Completed:** Owner-authorized regression integration reconciled with current upstream archive/UI package. Prior source55362f52 gate intentionally superseded after runtime inputs changed; partial evidence retained, not credited as final acceptance. Only additive handover conflict; full upstream history and own entries preserved.
 - **Pending/Next Steps:** Fresh complete merged-source gates and private original/native/product/census/instance/RefId checks on final source; final privacy/doc checks, normal main push and exact live readback. No release/deployment/hardware action.
@@ -19,6 +27,14 @@
 - **Completed:** Local F01–F09 revalidation accepted on pinned source with four synthetic regression enhancements; 19 baseline/19 candidate/9 final metadata gates, Rust3894/0, Web2596/0, nine compiled RED/restored GREEN controls and actual private CLI/source/native/product/offline checks passed. Two store-omission controls caught; original and runtime-source bytes unchanged. F10/F11 separately researched/reassessed, not newly implemented. Scoped privacy check passed; self-review only.
 - **Pending/Next Steps:** No further implementation in this scope. Owner subsequently authorized commit/push of the reviewed package on test/import-integrity-revalidation-20261010. Remote publication is verified against exact tracking/live refs separately from frozen local acceptance; no main integration, release or deployment requested.
 - **Notes for Codex oder Claude:** Private source/evidence remains ignored/restricted/untracked and must never be staged or uploaded. Preserve shared root HEAD/index/application, parallel documentation and foreign worktrees. Canonical CLI/accepted stores and compact evidence stay local. Historical no-publication statements describe the earlier verification scope, superseded only by this explicit source-branch commit/push authorization. No full ETS/signature/hardware claim.
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:38 CEST
+- **Completed:** Owner-authorized archive-budget/readable-refusal source published on main atf08b9776ea6c. Exact local/fetched/live main equality, feature1be6f9bd ancestry and owned source/receipt/handover blob identity verified. Actual final merged source7520fa38 passes24 frozen stages: parser197/0/56 ignored; consumers1799/0/101 ignored; frontend2610/0/164 files; Chromium244/0 and built-browser4/0/four inspected frames; explicit reference3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo checks/docs/whitespace pass; self-review only. Public receipt/manual/status record source publication and release separation.
+- **Pending/Next Steps:** No feature work remains. This closure changes docs only; verify its normal push/readback, archive compact evidence and retire only owned checkout/branches/build/scratch. No release/deployment/hardware scope.
+- **Notes for Codex oder Claude:** Shared root stays intentionally stale/dirty; HEAD/index/foreign documents preserved. Runtime evidence is bound to7520fa38; publication/closure app inputs are equal. Tester archive and new large-project memory behavior remain unverified. Earlier lease/interrupted/pre-upstream receipts are not final acceptance. Canonical public receipt docs/evidence/project-archive-budget-2026-10-10.json; private gate evidence stays ignored under own .ai/logs archive. No subagents/quota checks.
+
 ---
 
 - **Last Agent:** codex

@@ -1264,6 +1264,24 @@ main {
   width: 100%;
 }
 
+.log-entry-raw-label {
+  width: 100%;
+  font-weight: 600;
+}
+
+.log-entry-raw-text {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  max-height: 12em;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-family: var(--knx-font-mono);
+  font-style: normal;
+  font-size: inherit;
+}
+
 /* `ProjectDiffPanel` — a result panel `open`ed from a toolbar button
    rather than docked in `.workspace` like `.log-panel`, so it gets its
    own card frame instead of `.log-panel`'s `flex: 1 1 60%`; the empty

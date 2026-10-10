@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 18:05
+- **Completed:** Fresh upstream c50b90c460b1 archive-cap/container/Web changes integrated into own package4 source 6be234b78128; additive implementation status and both complete newest-first histories retained above byte-unchanged shared archive. Earlier f3e69eb5 source gate1357/0/116 remains historical; its full corpus was stopped due relevant upstream change, no final corpus pass claimed. Own KL173 queued focus stopped before execution, synthetic witness remains untested in own separate worktree. No foreign workers/files touched.
+- **Pending/Next Steps:** Refreshed final chain includes affected Crates and changed Web suites, full corpus, explicit original reconciliation/native/RefId, and inherited archive UI fixture cases; final privacy/no-ff publication/ref equality/cleanup. Package4 NOT delivered; packages5–8 remain, no overall goal completion.
+- **Notes for Codex oder Claude:** Keep source frozen throughout refreshed chain. Public receipts contain only coarse source-preservation outcomes, never original counts/values/digests. Unknown/has_losses boundary unchanged and owner approved preservation-only reconciliation. User interim status answered; no pause requested. Native/ETS export byte equality scopes clarified in roundtrip skill, not production code. No hardware/vendor execution/release/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 18:02
 - **Completed:** Old actual candidate f3e69eb5 source gate1357/0/116 plus fmt/clippy/five real nonempty repo checks/docs/diff passed. During full corpus, fetched main advanced to c50b90c4 with container archive-cap and related Web source/test changes. Stopped only own proc_18e43f2a1910 and queued own KL173 proc_b82f4a4fee6c; interrupted corpus has no final pass claim. Source/gate/raw evidence preserved in pre-archive-limit-integration and pre-archive-limit-gate; own corpus/oracle links removed, no own compiler remains. Package4 not delivered.
 - **Pending/Next Steps:** Integrate fresh main c50b90c4, preserve both newest-first histories, run actual merged candidate with affected Crates AND changed Web suite + full corpus/private gates; then outgoing privacy/no-ff push/live equality/cleanup. KL173 synthetic witness prepared in separate own worktree, not yet tested; resume only after package4. All-goal not complete.

@@ -7,6 +7,7 @@
 
 mod installation;
 mod installation_v21;
+mod observed_reader;
 mod project_info;
 
 pub use installation::parse_installation;
@@ -14,8 +15,9 @@ pub use installation_v21::parse_installation_v21;
 pub use project_info::parse_project_info;
 
 use crate::source::{RetainedElement, SourceDocument};
+use observed_reader::ObservedReader as Reader;
 use quick_xml::events::BytesStart;
-use quick_xml::{Reader, XmlVersion};
+use quick_xml::XmlVersion;
 
 /// The result of parsing one XML document: the document shape, plus
 /// everything the known-element table for this schema version did not

@@ -145,6 +145,7 @@ fn the_schema21_empty_default_line_is_one_exact_mapping_diagnostic() {
     assert_eq!(
         imported.report.errors,
         vec![ImportError {
+            source_path: None,
             stage: "map",
             severity: Severity::Error,
             xpath: "/KNX/Project/Installations/Installation".to_string(),

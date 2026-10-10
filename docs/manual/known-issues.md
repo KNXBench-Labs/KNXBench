@@ -92,14 +92,22 @@ promise that anything is finished.
 
 ### There is no partial or selective import
 
-- **Affected:** importing into an existing project.
-- **Limitation:** import is whole-file. You cannot pull one line, one
-  building part or one device out of another `.knxproj` and merge it into a
-  project you already have.
-- **Consequence:** the common ETS habit of copying a working subsystem out of
-  an old project has no equivalent here.
-- **Workaround:** none.
-- **Details:** [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md), row C3
+**Historical heading retained for links; amended 10 October 2026.** The local,
+unpublished source now has **File → Import selected lines/devices…** and the
+matching CLI. This does not claim integration into main or a released artifact.
+
+- **Affected:** merging a subsystem into the currently open project.
+- **Implemented scope:** choose explicit source/target installations and devices
+  or complete lines, inspect dependencies/mappings, preview, then consent. One
+  import is one undo step; existing devices/addresses are not silently replaced.
+- **Retained boundary:** no building-only selector, automatic address reassignment,
+  conflict overwrite or new command-palette entry. Native snapshot limits apply;
+  future model versions need a reference audit. Full source evidence can include
+  unselected private data and remains even after Undo.
+- **Next evidence:** authorized historical ETS revision exports, native/Orca and
+  real ETS/device acceptance are separate from synthetic browser/CLI checks.
+- **Details:** [Selective import](../SELECTIVE_IMPORT.md),
+  [local verification](../status/2026-10-10-import-expansion-verification.md).
 
 ## Export
 

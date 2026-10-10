@@ -7,6 +7,31 @@ for practical boundaries use [known issues](manual/known-issues.md), and for
 formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
 does not erase a broader platform/device limitation or imply a new release.
 
+## 2026-10-10 — Selective imports: small selection, honest baggage (local)
+
+- Uncommitted/unpublished owned worktree based on `b042048b`; devices or whole
+  lines merge into the open project through shared application/HTTP/CLI logic.
+  Explicit preview/retention consent, reference closure, conflicts/staleness,
+  one-step native Undo/Redo and retained source evidence are verified.
+- Fresh owning Rust **1331/0/97 ignored**, frontend **2577/0 in163 files**, CVEXC
+  Python **7/0**, warnings-denied Clippy/formatting and production build pass.
+  Private registered corpus and repository closure are recorded by stage in the
+  [receipt](evidence/import-expansion-local-2026-10-10.json), not inferred here.
+- Fresh isolated production Chromium: **four cases** (en/de,1440/400px), actual
+  source picker/inspection/preview/consent/apply and exact Undo; **eight frames**
+  inspected. Localized unnamed-installation labels preserve names and IDs.
+  Backend diagnostic notes remain raw English. No API interception or real bus.
+- CLI serial lookup now reads the recovered working snapshot read-only; saved
+  root data cannot conceal imported source-identity ambiguity. Named RED/GREEN
+  and whole owning suites pass; invalid setup/harness attempts remain separate.
+- Authorized restore-export harness is ready, but real historical exports were
+  not supplied. CVEXC analysis observes declarations without enabling runtime
+  comparison/download rules or claiming signature/default/precedence knowledge.
+- [Verification](status/2026-10-10-import-expansion-verification.md),
+  [contract](SELECTIVE_IMPORT.md), [ADR0106](adr/0106-selective-project-import.md)
+  and manual carry the local boundary. Self-review only; no main/release/native
+  accessibility/full-ETS/hardware claim or publication authorization.
+
 ## 2026-10-09 — Communication-object table: final names/AP1/logo candidate
 
 - Final integrated source `58e2852f` retains published device/project

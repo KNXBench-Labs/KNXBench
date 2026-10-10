@@ -60,20 +60,23 @@ fn resolve(
     match (serial_number, device) {
         (Some(text), None) => parse_serial(text),
         (None, Some(device)) => {
+            let project = state.project.lock().expect("state mutex poisoned");
             let opaque = state.opaque.lock().expect("state mutex poisoned");
-            knx_app::serial_number::project_serial_number(&opaque, device)
-                .map_err(|e| {
-                    ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, e.to_string())
-                })?
-                .ok_or_else(|| {
-                    ApiError::with_status(
-                        StatusCode::UNPROCESSABLE_ENTITY,
-                        format!(
-                            "the open project records no serial number for device {device}; \
+            knx_app::serial_number::project_serial_number_from_project(
+                &opaque,
+                project.as_ref(),
+                device,
+            )
+            .map_err(|e| ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, e.to_string()))?
+            .ok_or_else(|| {
+                ApiError::with_status(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    format!(
+                        "the open project records no serial number for device {device}; \
                              give serialNumber (from the device label)"
-                        ),
-                    )
-                })
+                    ),
+                )
+            })
         }
         (None, None) => Err(ApiError::bad_request(
             "name the device: serialNumber, or device (its DeviceInstance id)",

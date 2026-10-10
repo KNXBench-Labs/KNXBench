@@ -23,6 +23,18 @@ pub fn project_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/project", get(current_project))
         .route("/api/project/import", post(import_project))
+        .route(
+            "/api/project/import-selection/source",
+            post(crate::selective_import_routes::source),
+        )
+        .route(
+            "/api/project/import-selection/preview",
+            post(crate::selective_import_routes::preview),
+        )
+        .route(
+            "/api/project/import-selection/apply",
+            post(crate::selective_import_routes::apply),
+        )
         .route("/api/project/load-progress", get(load_progress))
         .route("/api/project/new", post(new_project))
         .route("/api/project/open", post(open_native_project))
@@ -1593,7 +1605,7 @@ fn documentation_options(
         other => {
             return Err(ApiError::bad_request(format!(
                 "unsupported report language: {other}"
-            )))
+            )));
         }
     };
     let sections = match sections {
@@ -1610,7 +1622,7 @@ fn documentation_options(
                     other => {
                         return Err(ApiError::bad_request(format!(
                             "unsupported report section: {other}"
-                        )))
+                        )));
                     }
                 };
                 selected.insert(section);

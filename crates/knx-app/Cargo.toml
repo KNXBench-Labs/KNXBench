@@ -29,6 +29,8 @@ quick-xml.workspace = true
 tempfile.workspace = true
 
 [dev-dependencies]
+# Confines opt-in authorized-export reads to a held directory, without symlinks.
+rustix.workspace = true
 tempfile.workspace = true
 knx-testsupport.workspace = true
 # Only `tests/csv_roundtrip.rs` needs this — no production `knx-app` code

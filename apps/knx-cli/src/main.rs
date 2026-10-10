@@ -20,11 +20,15 @@ mod legacy_import;
 mod legacy_inspect;
 mod legacy_password;
 mod scan;
+mod selective_import;
 
-const USAGE: &str =
-    "usage: knx import <file.knxproj> [--store <path.knxdb> [--replace]] [--report-json <path.json>]\n\
+const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--replace]] [--report-json <path.json>]\n\
      \x20                  [--product-db <path>] [--no-product-db] [--password-stdin]\n\
      \x20         (an existing --store file is refused, untouched, unless --replace is given)\n\
+     \x20     knx import-selection inspect <source.knxproj> [--password-stdin]\n\
+     \x20     knx import-selection <source.knxproj> --project <target.knxdb>\n\
+     \x20                   --source-installation <id> --target-installation <id>\n\
+     \x20                   [--device <id>]... [--line <id>]... [--confirm <token>] [--password-stdin]\n\
      \x20     knx ga-export <store.knxdb> <out.csv> [--installation <id>]\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]\n\
      \x20                   [--installation <id>]\n\
@@ -168,6 +172,7 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("import") => run_import(&args[1..]),
+        Some("import-selection") => selective_import::run(&args[1..]),
         Some("ga-export") => run_ga_export(&args[1..]),
         Some("ga-import") => run_ga_import(&args[1..]),
         Some("doc-export") => run_doc_export(&args[1..]),
@@ -1770,7 +1775,9 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
     }
 
     println!("{ingested} manufacturer file(s) ingested, {skipped} already known");
-    println!("facts: not applicable (single-file project ingest; package facts are only measured for standalone package installs)");
+    println!(
+        "facts: not applicable (single-file project ingest; package facts are only measured for standalone package installs)"
+    );
     ExitCode::SUCCESS
 }
 
@@ -2126,7 +2133,9 @@ fn run_device_download(args: &[String]) -> ExitCode {
         }
     };
     if matches!(mode, device_download::Mode::Write { .. }) && parsed.activity_history.is_none() {
-        eprintln!("activity history is required for a confirmed download; not sent (add --activity-history <path>)");
+        eprintln!(
+            "activity history is required for a confirmed download; not sent (add --activity-history <path>)"
+        );
         return ExitCode::FAILURE;
     }
     // `open_and_migrate` creates a missing file; a typo must not become an
@@ -2628,7 +2637,9 @@ fn run_device_restore(args: &[String]) -> ExitCode {
         return ExitCode::FAILURE;
     }
     if confirm.is_some() && activity_history.is_none() {
-        eprintln!("activity history is required for a confirmed restore; not sent (add --activity-history <path>)");
+        eprintln!(
+            "activity history is required for a confirmed restore; not sent (add --activity-history <path>)"
+        );
         return ExitCode::FAILURE;
     }
     // History admission must not manufacture a missing recovery input, even
@@ -3265,7 +3276,9 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
             }
         },
         None if writing => {
-            eprintln!("activity history is required for a confirmed write; use --activity-history <path>; not sent");
+            eprintln!(
+                "activity history is required for a confirmed write; use --activity-history <path>; not sent"
+            );
             return ExitCode::FAILURE;
         }
         None => None,

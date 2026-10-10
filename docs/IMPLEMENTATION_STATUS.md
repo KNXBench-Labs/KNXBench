@@ -14,6 +14,24 @@ comparison still refuses in the project parser on basis `8901affa`; owner
 approved narrow delivery with verification waiting on import-integrity.
 [Receipt](evidence/kl68-instance-values-2026-10-10.json).
 
+## 2026-10-10 — Local categorized test catalogue
+
+- Added [the test catalogue](TEST_CATALOGUE.md): 199 related suite groups,
+  640 linked test-bearing modules/acceptance scripts, 20 categories and eight
+  separately identified quality gates on source snapshot `8901affa`.
+- Every suite/check description has 10–15 words. README, manual index, build
+  guide and documentation hub link to it; maintenance rules are documented.
+- Privacy controls distinguish Git exclusion, private local inputs, reduced
+  contributions and diagnostic redaction. The sole customer-file illustration
+  is explicitly fictional; no private corpus input was opened or copied.
+- Local documentation acceptance: 12 checker tests, file/image targets and all
+  33 manual chapters, five fresh-checkout repository gates and whitespace pass.
+  The initial dotted Python module invocation failed before running tests;
+  discovery of the same checker suite passed. Self-review only.
+- Documentation-only local delivery: no application tests, private regressions,
+  live hardware, commit, push, release or deployment. Suite presence is not a
+  fresh passing result or a new compatibility claim.
+
 ## 2026-10-10 — KL-8: secure-capable programs without Secure, pinned
 
 A synthetic witness (`crates/knx-app/tests/secure_capable_not_activated.rs`,

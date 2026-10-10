@@ -253,6 +253,8 @@ A few numbers you can check yourself, as of 8 October 2026:
 - 📖 **[The KNXBench manual](docs/manual/README.md)** — installation, a KNX primer, the user
   guide, reference and troubleshooting. No ETS experience required.
 - 🧭 **[Documentation hub](docs/README.md)** — which shelf to read for which question.
+- 🧪 **[Test catalogue](docs/TEST_CATALOGUE.md)** — categorized suites, short descriptions,
+  source links and privacy safeguards. An inventory, not a fresh passing-test report.
 - **Tutorials:** [your first project](docs/manual/getting-started/06-first-start.md#tutorial-create-save-and-reopen-your-first-project)
   and [a complete editing workflow](docs/manual/user-guide/06-configuration-workflow.md)
   (add a device, link a group address, save — no bus writes).

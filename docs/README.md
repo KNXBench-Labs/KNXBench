@@ -19,6 +19,7 @@ below are the engineering record behind it, not extra reading before your first 
 | Future work, not promises | [Ideas and roadmap](manual/ideas-and-roadmap.md), [Open work](OPEN_WORK.md), [Roadmap](ROADMAP.md) |
 | What happened to the original wish list? | [Source/test audit of all twelve ideas](status/2026-10-08-ideas-roadmap-audit.md) |
 | A contributor's starting point | [Contributing](manual/development/01-contributing.md), [Build instructions](manual/development/02-building-from-source.md) |
+| Which tests exist, and how private inputs are protected | [Test catalogue](TEST_CATALOGUE.md) — categories, source modules and explicit prerequisites |
 
 ## Understand the implementation
 

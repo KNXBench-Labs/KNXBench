@@ -1,5 +1,14 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-10 — KL-170–172 public-source research (no runtime change)
+
+The requested public-only research pass is complete; insufficient contracts
+remain explicitly documented in [the source review](research/schema23-offline-boundaries.md).
+Project Schema23 identifies loaded-image fields; RFC3629 defines UTF-8, not KNX
+field policy. No little-endian layout, KNX text-capacity or decoded-image contract
+was admitted. Implementation boundaries unchanged; no private decode or bus use.
+Publication gates and receipt are separate from this content checkpoint.
+
 ## 2026-10-10 — Import-integrity merged candidate accepted
 
 [Separate integration acceptance](status/2026-10-10-import-integrity-integration.md)

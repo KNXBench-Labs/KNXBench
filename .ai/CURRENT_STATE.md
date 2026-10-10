@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 20:29
+- **Completed:** KL173 actual no-ff candidate4c38af5b passed scoped crates547/0/91 and complete nonempty selected corpus across31 targets, strict Clippy/fmt/five nonempty repo/docs/diff gates. Source/HEAD frozen; corpus link removed. Focused single test01e6be99 covers empty/nonempty tree, warning/retained original owner-bytes-hash, actual Save/Reopen/Re-Save and no active-neighbour text/link/ref contamination. F runtime untouched. KL174 owner accepts bounded classification: unverified candidate roles separated from sniffed content, unknown preserved; no nested unpacking/execution.
+- **Pending/Next Steps:** Docs/privacy and normal push/readback/receipt/cleanup for KL173. Then fresh main KL174 application-level report enrichment reuses existing productDB sniffing, no import/model destination change or fake ETS-app validity. KL175 raw RTF marking and KL146 private activation comparison afterward; packages1–4 and9 delivered,5 green candidate,6–8 open.
+- **Notes for Codex oder Claude:** Actual runner proc_f1564d1e9dbf exited0. Existing retention/report behavior tested, no new production code. Metadata updates follow completed frozen gates. All original values/private source stats retained ignored; no bus/hardware/binaries/release/subagents/quota checks, root/foreign untouched. Review self-only, never independent approval.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 20:04
 - **Completed:** KL173 focused witness code01e6be99 passes1/0, two synthetic variants: empty active tree and distinct active neighbour. Actual import service warning/ref, original XML owner/bytes/hash, native save/reopen/resave, no artificial typed outside object or sibling text/link contamination. No F06/runtime modifications. Self-review IMPORTANT stronger nonempty-tree identity/default-free proof added before final GREEN; initial wrong enum import compile refusal fixed, not RED semantic evidence. Public status/receipt prepared.
 - **Pending/Next Steps:** Frozen candidate scoped crates/clippy/fmt/five xtask/docs/diff plus full corpus; self-review/privacy and no-ff main push/readback/cleanup. Then KL174 content classification rest, KL175 raw RTF labels, KL146 private activation comparison. Packages1–4 and9 delivered,5 candidate,6–8 open; goal incomplete.

@@ -1,0 +1,43 @@
+{
+  "schema": "knxbench-evidence/1",
+  "title": "KL-106 audit: retained ETS source data in shared outputs",
+  "date": "2026-10-10",
+  "agent": "Claude (self-review only)",
+  "base_revision": "90f93126",
+  "code_commit": "37664bad",
+  "witness": "knx_testsupport::retained_privacy_knxproj_bytes (synthetic schema-21 project; RFC 5737 addresses, locally administered MACs, .invalid hosts)",
+  "outputs": {
+    "debug_report": "retained subtrees never included; MAC/EUI addresses are a fifth redaction class; user names named as kept",
+    "mcp_read_path": "loads the domain model only; no response or search hit carries a planted value",
+    "contribution_bundle": "reduced findings drop values; README names network data inside unmodified samples/originals",
+    "selective_import": "retains original and opaque evidence locally; preview note names the classes",
+    "project_export": "re-emits retained subtrees verbatim by design (user's own project)",
+    "telemetry_achievements": "no telemetry; achievements hold ids, timestamps and counters"
+  },
+  "tests": [
+    "apps/knx-server/src/debug_report_redaction_tests.rs (5 tests)",
+    "debug_report::tests::every_privacy_class_is_either_redacted_or_named_in_the_report",
+    "apps/knx-mcp/tests/retained_source.rs::no_tool_response_carries_retained_source_values",
+    "crates/knx-app/tests/contribution_bundle.rs::reduced_bundle_withholds_retained_network_and_user_values",
+    "crates/knx-app/tests/selective_import.rs::retention_note_names_network_endpoints_and_user_names",
+    "apps/knx-web/src/DebugReportButton.test.tsx: names the redacted and the kept classes (en, de)"
+  ],
+  "red_before_fix": "3 of 5 new debug-report tests failed on the base code; only the unknown-attribute MAC reached log.json",
+  "mutants": {
+    "remove MAC pass": "killed (3 tests)",
+    "revert contribution README wording": "killed",
+    "revert selective-import note": "killed",
+    "MAC_MIN_GROUPS 6 -> 5": "killed"
+  },
+  "gate": {
+    "crates": ["knx-server", "knx-app", "knx-mcp", "knx-testsupport"],
+    "rust_tests": "976 passed, 0 failed, 74 ignored",
+    "clippy_all_targets_deny_warnings": "exit 0",
+    "rustfmt_check": "exit 0",
+    "xtask": "check-layering, check-headers (790/155, ceiling 155), check-anchors (496 links), check-ledger (197 rows), check-corpus-gates (498 files): all exit 0",
+    "web": "tsc exit 0; vitest 2594 passed, 0 failed, 163 files",
+    "git_diff_check": "exit 0",
+    "check_documentation": "rerun after this receipt was written"
+  },
+  "boundaries": "Pattern-class redaction stays the accepted boundary: user names, serial numbers and project names are not recognisable by shape and are named, not removed. No compatibility claim."
+}

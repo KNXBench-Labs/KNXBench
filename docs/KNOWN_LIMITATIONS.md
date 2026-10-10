@@ -9393,6 +9393,15 @@ checks meet the diagnostic/preservation condition. See
 [merged-source acceptance](status/2026-10-10-import-integrity-integration.md).
 Project-specific identifiers, values and measurements remain private.
 
+**Independent service/native witness (2026-10-10, `01e6be99`).**
+`outside_tree_overrides_are_reported_and_preserved_without_activation` exercises
+both empty and nonempty active trees through the genuine project import service.
+It pins the warning and original reference, full XML source bytes/hash/owner,
+native Save/Reopen/Re-Save equality, and absence of the outside override in the
+typed model. An active neighbour keeps its own reference, no links and no text
+override: retention cannot masquerade as activation or leak into siblings.
+[Receipt](evidence/kl173-native-evidence-2026-10-10.json).
+
 **Remaining boundary.** Applying an override after reactivation needs documented
 activation semantics. Retention and warning-level diagnostics are not typed
 inactive-object modelling or new download authority. Read/Mapped counters remain

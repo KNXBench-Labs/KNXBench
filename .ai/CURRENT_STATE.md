@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 00:56
+- **Completed:** Bounded AP2 foundation fresh raw-evidence-owner prerequisite a8d1c68c8d528eba5916abd620aac6ee4027fc17 integrated in owned tree with full foreign journals/status preserved. Source 05aaab523b5e85cb15ff9b16435ff2edd14049dc passes ordinary ETSProj220/0 (56 ignored/unadmitted),native roundtrip3/0,Clippy/format/docs/whitespace,frozen inputs. Original foundation303c47bd remains historical; new public receipt binding added. AP1 published f6c3f64d read back. Collector local commit2ac5dfb072fffc97e1622defd042b0a6adf41e19 passes181 tests and real pinned-main report; configured collector origin Repository not found, no upload/replacement inferred.
+- **Pending/Next Steps:** Metadata docs gates and fast-forward/readback for bounded foundation; full AP2 editor/service/history/edited native/browser remains. Separate editing worktree has proposed ADR0111/ownership only, no native model/schema mutation. AP8 exact ID contracts/report delivery/local source retention; AP3–AP7/AP9 pending. Goal remains active/incomplete.
+- **Notes for Codex oder Claude:** Earlier non-FF guard stopped before push; no lost source/foreign revert. Session1 raw labels are DONE and are not RTF parsing/rewriting authority. Pure bounded interpreter stays separate and no full RTF/ETS/hardware claim. Self-review only. Keep root/index/foreign source/canonical settings/release untouched; no bus/subagents/quota/deployment/release. Retain active evidence/own editing branch.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 00:36
 - **Completed:** AP1/R-SEC-01 docs-only main publication f6c3f64d4ece02fb6c6ea2b7a26d6735a0e47f6a read back HEAD=tracking=live; nine exact owned documentation paths, no runtime Secure implementation. AP2 foundation main-integrated source303c47bd013feea5e1244b939c0bdc224fa30722 accepted:219 ordinary owning-crate tests,56 ignored/unadmitted, three existing native-roundtrip tests (one covers five original-preservation cases),22 adapter controls, Clippy/format/docs/whitespace, frozen inputs. Public compact foundation receipt added; metadata gates/publication next.
 - **Pending/Next Steps:** Publish only bounded AP2 foundation after metadata/fresh-root gates; full AP2 original-bound editor/service/history/edited-value Save-Reopen/browser remains. AP8 separate source181/0/full real report accepted pending ID audit/collector commit/report delivery; AP3–AP7/AP9 still open. Continue goal, no permission/quota stop.

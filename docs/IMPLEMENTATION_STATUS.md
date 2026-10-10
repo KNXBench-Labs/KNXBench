@@ -45,7 +45,7 @@
   [release notes](releases/alpha8.md). Self-review only. Documentation/cleanup
   closure is recorded separately; the release tag must not move.
 
-## 2026-10-11 — KL175 raw-header evidence admitted; publication pending
+## 2026-10-11 — KL175 bounded raw-header evidence delivered
 
 Frozen source `d8cde545` passes eight-crate Rust2403/0/182, Web2612/0 in164
 files, production Web build, strict quality/five repository/docs gates, full
@@ -56,9 +56,11 @@ readable localized labels and wrapped previews, not packaged-desktop acceptance.
 Earlier socket-path infrastructure refusal and two restored assertion-killed
 omission mutants remain distinct evidence. ADR-0110 keeps full source authoritative;
 no field/format validation, RTF rendering, plain extraction, domain/storage change
-or compatibility claim. In-session codex self-review only. Fresh upstream cdff5b56
-is handover/log-only; exact metadata/privacy publication and cleanup remain.
-Packages1–6/9 delivered;7 admitted pending publication;8 KL146 differential open.
+or compatibility claim. In-session codex self-review only. Intervening handover
+and Secure-research changes were metadata-only; all owner contributions retained.
+Published/read back `6ef0b2d8` with local/tracking/live main equality and
+fresh metadata/privacy gates; source/runtime remains `d8cde545`. Packages1–7/9
+delivered;8 KL146 differential and overall closure remain open.
 
 ## 2026-10-10 — KL174 bounded payload content/role evidence
 

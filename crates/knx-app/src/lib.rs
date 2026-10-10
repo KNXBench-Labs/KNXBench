@@ -20,6 +20,7 @@ pub mod device_download;
 pub mod documentation;
 pub mod download_support;
 pub mod import;
+mod import_payload_evidence;
 pub mod individual_address_programming_recovery;
 pub mod individual_address_reset_recovery;
 pub mod legacy;

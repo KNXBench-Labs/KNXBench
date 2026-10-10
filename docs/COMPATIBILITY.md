@@ -1,5 +1,16 @@
 # Compatibility
 
+## Payload evidence is not ETS-App compatibility (2026-10-10)
+
+Application import `41b3d6267731` separately reports existing byte-sniffed content
+and unverified `.etsapp`/AddinData role candidates for retained project/manufacturer
+payloads. Unknown and misleading content remains exact source evidence; native
+storage and product schemas, source ownership and admission are unchanged.
+No manifest/authenticity/licensing validation, unpacking, rendering, execution,
+Add-in-state semantics or ETS/hardware compatibility is claimed. Fresh imports,
+not silent historical-report rewrites, provide these descriptions.
+[ADR-0109](adr/0109-opaque-payload-content-and-candidate-roles.md).
+
 ## Independent schema-23 source reconciliation (2026-10-10)
 
 The opt-in `private_original_unknown_report_is_backed_by_exact_retained_sources`

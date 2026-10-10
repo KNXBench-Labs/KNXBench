@@ -1,3 +1,15 @@
+## 2026-10-10 — KL-1 preservation-only reconciliation candidate
+
+New opt-in witness `private_original_unknown_report_is_backed_by_exact_retained_sources`
+(`6f8ac4332c79`) passes unchanged original project+product import, independently
+inventoried original XML/source identity equality, native reopen/resave, and
+unchanged input. Synthetic bounded-reader and missing/corrupt/wrong-owner
+controls pass; independent native and RefId gates pass. Unknowns remain visible
+and conservative has_losses remains true. The owner accepted retained-uninterpreted
+as source reconciliation only. §1/COMPATIBILITY/ledger narrowed accordingly;
+merged-source full gates and publication still pending.
+[Receipt](evidence/kl1-source-reconciliation-2026-10-10.json).
+
 ## 2026-10-10 — KL-68/PDB-01 final integrated source admission
 
 Final corrected source `f4af614eac30`: eight Rust crates2876/0/160,

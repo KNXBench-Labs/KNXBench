@@ -9,3 +9,18 @@ Agent: codex, in-session self-review only; no independent review.
 - Chromium initially failed before tests due to socket path; failed run retained as failure. Own short profile scratch path supports real launch, then four en/de400/1440 isolated intercepted-API cases pass. All four screenshots inspected, raw/control/HTML strings literal and legible. Explicit fixture/spec tsc passes.
 - Omit-preview and omit-log-row mutants assertion-killed101, no compiler-error acceptance; original source restored. Scoped in-session diff review: native untouched, clipping explicitly disclosed, old hash row retained, React text not HTML, optional report metadata absent for non-candidates. Raw previews remain sensitive user evidence; KL106 redaction is not anonymization.
 - ADR0110, relevant architecture/compatibility/limitations/status/ledger/evidence synchronized. Full frozen-source broad quality/Web/corpus/private/repo/docs/privacy and no-ff publication still pending. No protocol/hardware/release/action or foreign worktree changes.
+
+## 2026-10-11 frozen admission
+
+Source d8cde545d065fd51b68bcde00e91dbb29694a6d4, proc_5cd34371629a exited0.
+Rust2403/0/182; Web2612/0 in164 files; production Web build0; strict quality,
+five nonempty repository gates/docs/whitespace, full nonempty all-pass corpus and
+explicit private source-reconciliation/RefId/raw-preview gates0. Original unchanged,
+private symlinks retired. Four fixture cases admitted against unchanged relevant
+runtime; four images re-inspected: readable labels, literal tags and wrapping.
+Only component-fixture acceptance, not packaged-desktop validation.
+Full staged privacy scan initially refused a prose overlap; wording adjusted with
+no classifier/semantics/scan-policy change, complete frozen-source scan passed.
+Fresh cdff5b56 adds handover/log only; preserve both contributions and verify final
+runtime/test/config equality plus metadata/privacy before publication.
+In-session codex self-review only, no independent review. Publication still pending.

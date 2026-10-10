@@ -27,22 +27,22 @@
   [release notes](releases/alpha8.md). Self-review only. Documentation/cleanup
   closure is recorded separately; the release tag must not move.
 
+## 2026-10-11 — KL175 raw-header evidence admitted; publication pending
+
+Frozen source `d8cde545` passes eight-crate Rust2403/0/182, Web2612/0 in164
+files, production Web build, strict quality/five repository/docs gates, full
+nonempty all-pass corpus and explicit private source reconciliation/RefId/raw-preview
+checks. Original bytes unchanged. Four en/de400/1440 real LogPanel fixture cases
+pass; relevant runtime remains equal, four screenshots re-inspected: literal tags,
+readable localized labels and wrapped previews, not packaged-desktop acceptance.
+Earlier socket-path infrastructure refusal and two restored assertion-killed
+omission mutants remain distinct evidence. ADR-0110 keeps full source authoritative;
+no field/format validation, RTF rendering, plain extraction, domain/storage change
+or compatibility claim. In-session codex self-review only. Fresh upstream cdff5b56
+is handover/log-only; exact metadata/privacy publication and cleanup remain.
+Packages1–6/9 delivered;7 admitted pending publication;8 KL146 differential open.
+
 ## 2026-10-10 — KL174 bounded payload content/role evidence
-
-## 2026-10-10 — KL175 bounded raw-header evidence (admission pending)
-
-Code/main checkpoint `68922cc4` marks retained raw-attribute header candidates,
-not field/RTF validity. Literal512-scalar previews with explicit truncation leave
-full source/native bytes and opaque hash rows intact; additive log rows and en/de
-literal UI. Synthetic unit/service/native/HTTP/project-unchanged/React/tsc focuses,
-original boolean native comparison, missing-env refusal, two assertion-killed
-omission mutants and four en/de400/1440 Chromium cases pass (screenshots inspected).
-Browser launch initially failed on long socket path, independently fixed with own
-short scratch path and actual launch probe; failed run not acceptance. No domain,
-storage/dependency or format interpretation changes. ADR-0110 scope. Frozen broad
-quality/corpus/repo/docs/privacy and publication remain pending; in-session codex
-self-review only. Packages1–6/9 delivered;7–8 open.
-
 
 - Candidate code `41b3d6267731` reuses existing product `sniff_media` at app/report boundary; project UserFiles/AddinData and manufacturer payloads carry separate content and explicitly unverified roles. No F reimplementation, source/model/storage changes or new dependency.
 - Synthetic imports with/without product DB, exact source/native Save/Reopen, independent warning preservation and HTTP/session-log projection pass; two assertion-killed mutants restored.

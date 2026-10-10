@@ -261,11 +261,10 @@ to owner `later`. Routes naming removed goal files are kept as history.
   once the devices-navigation interview ends.
 
 
-### Schema23 package7 raw candidates — final admission pending
+### Schema23 package7 raw candidates — publication pending
 
-KL175 owner permits retained header-like raw previews only; no field/format
-validation/plain extraction (ADR-0110, code/main checkpoint `68922cc4`). Focused
-synthetic/native/HTTP/UI, private boolean original/native/refusal, two mutants and
-four real Chromium cases pass. Full frozen-source gates/privacy/publication and
-cleanup remain; packet8 KL146 original activation comparison follows. No global
-RTF renderer/catalogue or compatibility claim. Full source remains authoritative.
+Frozen `d8cde545` passed broad Rust/Web/production-build/strict/repo/docs,
+nonempty corpus and explicit original/native/RefId/raw-preview admission.
+The bounded ADR-0110 scope stays unchanged; no RTF interpretation or editing.
+Metadata/outgoing privacy gates, exact main push/readback and owned cleanup remain.
+Package8 KL146 original evaluated-activation comparison follows.

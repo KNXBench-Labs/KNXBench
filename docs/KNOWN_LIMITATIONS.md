@@ -4498,81 +4498,60 @@ design, and the log panel and every error toast say so where the reader is
 the report's detailed labels are §48's accepted boundary. No server string
 added by AR10 is prose: the new language markers are identifiers.
 
-## 68. Repeated module instantiation is refused, not supported
+<a id="68-repeated-module-instantiation-is-refused-not-supported"></a>
 
-**Update 2026-10-10 (now observed; still refused).** The privately supplied
-schema-23 project exercises exactly this case. Some devices instantiate one
-module more than once (`MI-` above 1). Their `RepeatIndex` comes in a one-pair
-(`<XmlOrder>x<counter>`) and a two-pair form, with counters above 1, and the
-program-side `Module`s sit under `Repeat` elements controlled by
-`@ParameterRefId` (no `@Count`). In a read-only census, the observed counters
-of every repeat stay within `1..N`, where N is the controlling parameter's
-project value or program default. Sometimes they cover the whole range,
-sometimes a subset; they never exceed N. Module-scoped parameter and object ids
-carry the `MI-` segment, so the source does tell the instances apart. The "0/32
-… nothing observed regresses" statement below no longer holds: once that
-project imports, its repeated modules fall back to read-only fields evaluated
-with program defaults in every copy. The sample is the "authorized multi-repeat
-fixture" that `PDB-01` names as missing input. Lifting still needs the
-`RepeatIndex`/`MI-` semantics (including why some counters are absent) in an
-ADR, a `ValueMap` instance dimension, and synthetic fixtures that copy the real
-wrapper shape.
+## 68. Repeat activation stays unsupported; own instance values are readable
 
-**Limitation.** When two or more `ModuleInstance` elements in a project
-share one `RefId` — a genuinely repeated module, i.e. its `MI-` component
-would need to exceed `1` to tell the copies apart — that module's fields
-stay read-only, with a diagnostic ("Two or more imported module instances
-share this module; its fields are read-only.") naming the shared `RefId`
-and every claiming `instance_ets_id`.
+**Update 2026-10-10 — read-only instance dimension delivered in code.**
+[ADR-0108](adr/0108-read-only-module-instance-values.md) separates stored
+instance evidence from Dynamic evaluation. `ValueMap` now has a separate
+`(module_id, instance_id, ref_id)` map. The device evaluator validates the
+imported owner and a unique declaration, then records each recognized instance's
+own raw value. Missing values never fall back to a sibling or a program default.
+The new map is not seeded from defaults and is not consumed by Dynamic.
 
-**Not the same case, and not refused:** a **lone** `ModuleInstance` whose
-own `@Id` happens to end `MI-2` or higher is accepted and writable — D39
-rule 2 asks only "does exactly one `ModuleInstance` match this module?",
-not "does its `MI-` digit equal `1`?". Refusing a project's own `MI-2`
-would mean guessing that it must be wrong, which is precisely what D38
-exists to avoid (see design D40, corrected in this revision — it used to
-say the opposite).
+HTTP `instanceValues`, the Inspector's explicitly read-only/not-evaluated
+section, and both MCP parameter readers expose this evidence separately.
+MCP uses `notEvaluated` / `moduleInstanceNotEvaluated`. Unknown, missing or
+ambiguous identities remain raw/stale evidence; duplicate stored rows preserve
+the first own row and report the later raw row instead of overwriting it.
+Namespace association is an additional guard for this new map, not a new
+restriction on the existing alias-tolerant single-instance evaluator.
 
-**Cause.** `ValueMap`'s scoped key is `(module_id, ref_id)`, with no `MI-`
-dimension, because a program-side `Module` node carries no repeat-index
-concept at all — the evaluator has nothing to key sibling channels by.
-Two `ModuleInstance`s instantiating one `Module` therefore cannot be told
-apart on the read side, and this slice does not pretend otherwise
-(design D40).
+**Still unsupported:** expansion/activation of a `Module` beneath `Repeat`,
+iteration-to-MI mapping, writable repeated instances and inferred resolution
+of omitted counters. Project Schema23 describes the list-valued `RepeatIndex`
+shape and nominal identity reference; that is not a complete mapping algorithm
+for nested pairs, subsets or missing controlling values. Private correlation
+is not normative evidence. RepeatIndex stays uninterpreted.
 
-**Impact.** 0/32 `ModuleInstance` elements in the corpus exercise this —
-nothing observed regresses. A device that genuinely has repeated
-instantiation falls back entirely to the pre-T18-slice-4 behaviour for
-that module: displayed, not writable, evaluated against the program
-default in every copy.
+**Unchanged single-instance contract:** a lone imported instance may have an
+MI suffix above one and remain writable under the existing authority rules.
+The legacy definition-alias path is likewise unchanged. Neither fact grants
+write authority to the new read-only evidence.
 
-**Also recorded here, cosmetic and deliberately left as-is:** when the
-two-or-more claiming instances have *different* `RefId`s, the diagnostic's
-detail string says `"RefId '{X}' matches module '{module_id}' …"` —
-singular, naming only the first (`apps/knx-server/src/domain.rs:2308-2334`,
-`MiAuthority::Ambiguous`). It already names every claiming
-`instance_ets_id` in the same sentence, which is the information a user
-needs; making the `RefId` clause itself plural would touch the
-`MiAuthority::Ambiguous` variant's shape, its one construction site, and
-the format string — more than a one-line fix, so left for a future pass
-rather than done here.
+**Verification:** `repeated_instance_values` (including sibling isolation,
+missing values, identity/declaration ambiguity, duplicates, controller/default
+independence and legacy aliases); `http_repeated_instance_values`; unchanged
+`http_parameter_panel` write tests; MCP `instance_tests`; Inspector en/de unit
+and browser witnesses. Code `d050c7e78b02`.
+[Receipt](evidence/kl68-instance-values-2026-10-10.json).
 
-**Task 12 (2026-09-14), and why it does not lift this.** Argument
-interpretation now tells two *program-side* instantiations of one
-`ModuleDef` apart — `MOD-A` and `MOD-B` produce different labels because
-they bind different values. This limitation is about the *project* side:
-two `ModuleInstance` elements claiming one `Module`. `ValueMap`'s scoped
-key is still `(module_id, ref_id)` with no `MI-` dimension, because the
-thing that is missing is a repeat index in the project file's authority,
-not a way to distinguish `Module` nodes. Unchanged, in full.
+**Private verification passed after import integration (2026-10-10).** The
+ignored opt-in `private_instances_read_their_own_stored_values` ran explicitly
+on `734064823e19` and passed with boolean assertions; the independent private
+RefId gate passed too. Missing input still refuses, never passes. The earlier
+parser refusal on `8901affa` is historical, not the current result.
+Whole-project reconciliation remains a separate KL-1 gate.
+Full Repeat support remains an accepted boundary (PDB-01).
 
-**Lifted when.** RESEARCH.md's sharpest unknown #1 (what
-`ModuleInstance/@RepeatIndex`'s embedded `MI-<k>` component means, and
-whether/how it legitimately exceeds `1`,
-[docs/RESEARCH.md §4.4](research/product-database.md#44-modulemoduledef-expansion-semantics--r4-spike-session-4-2026-09-11))
-would have to be settled — by a normative worked example or a hand-built
-multi-repeat fixture — before a scoped key that tells repeated copies
-apart could be designed without inventing one.
+**Final integrated admission 2026-10-10 (`f4af614eac30`).** The explicit
+`private_instances_read_their_own_stored_values` and independent RefId gates
+pass again after import-integrity and public-research integration. The full
+corrected corpus also passes; its four inherited test contracts were updated
+only with owner authorization after exact fresh-main failures (`e74be53a`),
+without runtime changes or private expected values. This closes the old parser
+and corpus delivery blockers, not the Repeat/activation/write boundary.
 
 ## 69. A `Module` with no `@Id` cannot be matched to a project instance
 

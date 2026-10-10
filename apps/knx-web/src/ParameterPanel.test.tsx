@@ -134,6 +134,28 @@ function setSelectValue(select: HTMLSelectElement, value: string) {
 }
 
 describe("ParameterPanel", () => {
+  it.each(["en", "de"] as const)("shows stored instance values as read-only and not evaluated (%s)", async (language) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    const evidence: ParameterPanelDto = {
+      ...fixture, sections: [], stale: [], diagnostics: [],
+      instanceValues: [
+        { etsId: "A-TEST_MD-71_M-93_MI-2_P-83_R-61", raw: "17" },
+        { etsId: "A-TEST_MD-71_M-93_MI-4_P-83_R-61", raw: "23" },
+      ],
+    };
+    apiMock.deviceParameters.mockResolvedValue(evidence);
+    const root = await renderPanel(1, "diagnostics");
+    const region = host!.querySelector(".parameter-instance-values");
+    expect(region?.textContent).toContain(language === "de" ? "Gespeicherte Modulinstanzwerte" : "Stored module-instance values");
+    expect(region?.textContent).toContain(language === "de" ? "nicht ausgewertet" : "not evaluated");
+    expect(region?.textContent).toContain(evidence.instanceValues![0].etsId);
+    expect(region?.textContent).toContain("17");
+    expect(region?.textContent).toContain("23");
+    expect(region?.textContent).not.toContain("99");
+    expect(region?.querySelector("input, select, textarea, button")).toBeNull();
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
   it("reloads the same device after a project snapshot and ignores the older pending reply", async () => {
     let resolveOld!: (panel: ParameterPanelDto) => void;
     apiMock.deviceParameters

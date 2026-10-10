@@ -27,8 +27,8 @@ similar) can look things up in a project instead of guessing:
 > is not even linked against the bus code. The tool names and answers may
 > still change during the alpha.
 
-**Alpha.7 upgrade:** use the matching `knx-mcp-x86_64-linux` binary for
-schema11 native projects. Old MCP builds may refuse the new store schema.
+**Alpha.8 upgrade:** use the matching `knx-mcp-x86_64-linux` binary for
+schema12 native projects. Old MCP builds may refuse the new store schema.
 The read-only saved-file/no-bus boundary remains unchanged.
 
 ## What it can and cannot do

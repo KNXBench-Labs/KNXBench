@@ -59,6 +59,22 @@ import-integrity worktree; overlapping packages wait for its integration.
 - Not claimed: what a real secure-capable device needs when Secure is off.
 
 
+## Package4 bounded-source self-review
+
+- Exact single-handle metadata/read and actual-byte bounds added; source bytes feed production byte import with real product DB, generic source name and no second-path race.
+- Duplicate source identity overwrite is refused; report must declare no data loss.
+- Synthetic bounded-reader RED and GREEN2/0/1 passed; private hardened replay and final admission pending.
+- Reviewer: codex, in-session self-review only. No runtime/foreign-source changes or independent reviewer claimed.
+
+
+## Package3 delivery and package4 semantic-boundary review
+
+- Package3 no-ff2e264f6c and receipt65e1c809 pushed; local/tracking/live equality verified, own worktree/branch/build scratch removed. Essential private proof retained here in package3-delivery/.
+- Package4 tightened test found important semantic-contract error: has_losses deliberately includes unknown constructs, even byte-retained ones. Test must pin conservative has_losses=true, not suppress warnings to satisfy preservation-only reconciliation. F runtime unchanged.
+- Corrected synthetic bounded-source/report controls2/0/1 green; previous hardened private attempt2/1 fails exactly the invalid !has_losses assertion, independent native1/0 and RefId3/0 green. Full private RED evidence retained under has-loss-contract-red/.
+- Corrected hardened private replay queued next. No final package4 admission or overall-goal completion claimed.
+- Review: codex, in-session self-review only. Reusable corpus-baseline/output-safety lessons added to private-corpus-regression-testing reference.
+
 ## Integrated replay blocker — corpus, not a green publication
 
 Actual source candidate a8ca10767750 passes2876 Rust tests (160 explicitly
@@ -84,3 +100,12 @@ hardened positive replay and all publications after this blocker remain pending.
 - e74be53a: four owner-approved test-only inherited corpus contract corrections, each baseline RED then isolated GREEN, full corpus now green; no F-runtime edits/private golden values.
 - Final docs/privacy/no-ff main publication still pending. Repeat/activation/writable repeated-instance boundary unchanged.
 - Self-review: codex in-session only, no independent reviewer claimed.
+
+
+## Package4 final candidate self-review
+
+- Reviewer: codex, in-session self-review only; no independent reviewer.
+- IMPORTANT (private_schema23_reconciliation.rs:11): bind source metadata and bounded actual bytes to one open handle; captured bytes feed real project/product importer. Synthetic RED/GREEN and hardened private pass.
+- IMPORTANT (same file:187): has_losses includes uninterpreted unknown semantics. invalid !has_losses test failed; conservative signal now pinned true, source preservation tested separately, production diagnostic unchanged.
+- Reviewed entire test: private errors/byte comparisons use static boolean assertions; generic import filename, ignored opt-in, absent source refusal; duplicate identities refuse; independent XML/member budgets; native reopen/resave equality. No unresolved CRITICAL/IMPORTANT finding. Scope only original XML preservation/unknown source reconciliation, no semantics/ETS/hardware claims.
+- Full merged-source/corpus gates and publication still pending; raw private results remain ignored locally.

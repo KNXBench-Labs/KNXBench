@@ -1,5 +1,21 @@
 # Import and export
 
+## Selective import into the open project (2026-10-10 source integration)
+
+[Separate integration verification](status/2026-10-10-import-expansion-integration.md) supersedes the local-only delivery status, not its historical test results. This is source integration, not a new release or deployment.
+
+[SELECTIVE_IMPORT](SELECTIVE_IMPORT.md) documents the File-menu device/line
+selector and `knx import-selection`. Source inspection and preview are read-only;
+confirmed merge adds explicit dependencies without silently replacing existing
+project data. Complete retained archives may contain unselected private data,
+which is disclosed before consent; Undo does not erase retained source evidence.
+The full-project import/replacement path remains available and unchanged.
+[Authorized revision-export regressions](AUTHORIZED_RESTORE_EXPORTS.md) accept
+only supplied authorized `.knxproj` files, not ETS internal restore points.
+No historical export set has been tested. [cvexc analysis](research/cvexc.md)
+is read-only observation, not executable comparison/download policy.
+[Verification](status/2026-10-10-import-expansion-verification.md).
+
 ## Native working-state recovery and versions (2026-10-09)
 
 Native schema v11 carries the clean saved root separately from the most recent

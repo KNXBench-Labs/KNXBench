@@ -20,6 +20,7 @@ stay at the end of this file.
 
 | Section | Where |
 | --- | --- |
+| [2026-10-10 — Converter-exception declaration census](research/cvexc.md) | Bounded cvexc11/14 observations; no executable policy or verified defaults |
 | [2026-10-09 — Source-bound offline AP1 procedure rules and boundaries](OFFLINE_PROCEDURE_RESOLUTION.md#evidence-and-first-family) | Configuration Procedures v02.01.01 / Schema23 primary inspection; ADR-0098 |
 | [2026-10-09 — Bathroom fourfold button: complete download and restore](research/commissioning.md#2026-10-09--bathroom-fourfold-button-complete-download-and-restore) | Commissioning and device download |
 | [2026-10-09 — Full product-corpus coverage with bounded large admission](research/commissioning.md#1920-full-product-corpus-coverage-with-bounded-large-admission-2026-10-09) | Commissioning and device download |

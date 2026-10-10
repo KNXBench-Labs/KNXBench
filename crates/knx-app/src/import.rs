@@ -142,9 +142,29 @@ pub fn import_ets_project_with_password(
     password: Option<&knx_etsproj::ProjectPassword>,
     observer: &dyn LoadObserver,
 ) -> Result<ImportedProject, AppError> {
-    let mut outcome =
+    let outcome =
         knx_etsproj::import_knxproj_with(path, password, &crate::progress::ParseStages(observer))?;
+    persist_outcome(outcome, conn, options, observer)
+}
 
+/// Imports already bounded/captured source bytes without reopening a private input.
+/// This reuses the exact path-based pipeline and persistence, not a second parser.
+pub fn import_ets_project_bytes(
+    bytes: Vec<u8>,
+    file_name: &str,
+    conn: &Connection,
+    options: ImportOptions<'_>,
+) -> Result<ImportedProject, AppError> {
+    let outcome = knx_etsproj::import_knxproj_bytes_with(bytes, file_name, None, &())?;
+    persist_outcome(outcome, conn, options, &())
+}
+
+fn persist_outcome(
+    mut outcome: knx_etsproj::ImportOutcome,
+    conn: &Connection,
+    options: ImportOptions<'_>,
+    observer: &dyn LoadObserver,
+) -> Result<ImportedProject, AppError> {
     // The manifest is written whichever way the manufacturer files are
     // stored: it describes what the project was imported with, not where
     // the bytes ended up.

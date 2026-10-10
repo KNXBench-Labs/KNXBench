@@ -1,0 +1,179 @@
+{
+  "formatVersion": 1,
+  "scope": "combined-source integration; not a new release or deployment",
+  "date": "2026-10-10",
+  "sourceParents": {
+    "feature": "99e054250a98aae0b7268f81728f16000123cd21",
+    "main": "550318d3e7faef97a163d37da84ca7fce8ab28f7",
+    "combinedApplicationDelta": [
+      "Cargo.lock",
+      "apps/knx-cli/Cargo.toml",
+      "apps/knx-desktop/src-tauri/Cargo.toml",
+      "apps/knx-mcp/Cargo.toml",
+      "apps/knx-server/Cargo.toml",
+      "apps/knx-server/src/fs_routes.rs",
+      "apps/knx-server/tests/http_fs_routes.rs",
+      "apps/knx-web/e2e/companion-return.e2e.ts",
+      "apps/knx-web/package-lock.json",
+      "apps/knx-web/package.json",
+      "apps/knx-web/src/App.test.tsx",
+      "apps/knx-web/src/App.tsx",
+      "apps/knx-web/src/DiagnosticsCompanion.test.tsx",
+      "apps/knx-web/src/DiagnosticsCompanion.tsx",
+      "apps/knx-web/src/FlowWindow.tsx",
+      "apps/knx-web/src/diagnosticsWindow.test.ts",
+      "apps/knx-web/src/diagnosticsWindow.ts",
+      "apps/knx-web/src/main.tsx"
+    ]
+  },
+  "sourceBinding": {
+    "kind": "merged application/source/configuration tree before merge commit; later documentation-only closure",
+    "files": 1075,
+    "sha256CompactSortedJson": "9b5e1b54cc6415f4228a212c190bee2eaf47960782921a4d3b9f32d0f2c16cc0",
+    "unchangedAfterAcceptance": true,
+    "buildStamp": "candidate parent plus dirty marker, not final merge commit; no released artifact claim"
+  },
+  "acceptedPipeline": {
+    "process": "proc_79c33bb1c71a",
+    "exit": 0,
+    "stageCount": 19,
+    "exits": [
+      "web_build_exit=0",
+      "fmt_exit=0",
+      "clippy_exit=0",
+      "rust_exit=0",
+      "python_exit=0",
+      "web_exit=0",
+      "theme_types_exit=0",
+      "flow_types_exit=0",
+      "chromium_exit=0",
+      "rust_build_exit=0",
+      "corpus_exit=0",
+      "check-layering_exit=0",
+      "check-headers_exit=0",
+      "check-anchors_exit=0",
+      "check-ledger_exit=0",
+      "check-corpus-gates_exit=0",
+      "documentation_exit=0",
+      "whitespace_exit=0",
+      "staged_whitespace_exit=0",
+      "completed=1"
+    ]
+  },
+  "results": {
+    "rust": {
+      "passed": 3856,
+      "failed": 0,
+      "ignored": 186,
+      "resultBlocks": 237
+    },
+    "web": {
+      "passed": 2592,
+      "failed": 0,
+      "files": 163
+    },
+    "python": {
+      "passed": 54,
+      "failed": 0
+    },
+    "corpus": {
+      "passed": 143,
+      "selected": 143,
+      "targets": 31,
+      "failed": 0
+    },
+    "fixtureBrowser": {
+      "passed": 236,
+      "failed": 0,
+      "renderer": "intercepted API Chromium fixtures",
+      "commandExit": 0
+    }
+  },
+  "additionalTypeConfigurations": {
+    "count": 3,
+    "exit": 0,
+    "configs": [
+      "history",
+      "rename",
+      "communication"
+    ]
+  },
+  "productionBrowser": {
+    "cases": 4,
+    "languages": [
+      "en",
+      "de"
+    ],
+    "widths": [
+      1440,
+      400
+    ],
+    "freshBrowserContexts": true,
+    "interceptedApi": false,
+    "syntheticData": true,
+    "previewReadOnly": true,
+    "explicitRetentionConsentRequired": true,
+    "undo": "exact installation projection; append-only retained context is not erased",
+    "screenshotsInspected": 8,
+    "artifactBinding": {
+      "serverBinarySha256": "478dacf264cf581b72a9e6ffe8cc32cfc9f46f59329c1feca5709a5fdc20da59",
+      "frontendBuildCommitment": "d98dacedae6b4b93529e4db0b4a28747e06cc9d0b0eaa1d239ae3bc8ff851a9f",
+      "sourceCommitment": "9b5e1b54cc6415f4228a212c190bee2eaf47960782921a4d3b9f32d0f2c16cc0"
+    },
+    "scope": "workspace-built server and production frontend in loopback-only namespace; running executable hash checked"
+  },
+  "review": {
+    "kind": "self-review",
+    "independent": false,
+    "codeConflicts": 0,
+    "additiveDocumentationConflicts": 3,
+    "blockingFindings": []
+  },
+  "preservation": {
+    "originalLocalReceiptUnchanged": true,
+    "sharedRootHeadIndexAndForeignContentUnchanged": true,
+    "corpusSourceOnlyRead": true,
+    "temporaryFixtureLinksRemoved": true
+  },
+  "excludedAttempts": [
+    {
+      "kind": "initial whitespace command timeout",
+      "exit": 124,
+      "accepted": false
+    },
+    {
+      "kind": "initial production observer/initialization attempt",
+      "exit": 1,
+      "accepted": false,
+      "classification": "unclassified; full diagnostic not retained"
+    },
+    {
+      "kind": "first accepted test-build server observer",
+      "exit": 0,
+      "acceptedAsFinalWorkspaceArtifact": false,
+      "reason": "workspace build produced a different binary; final workspace artifact was freshly exercised"
+    }
+  ],
+  "remainingExternal": [
+    "IMPORT-02: authorized same-project revision exports and independently reviewed baselines not supplied",
+    "CVEXC normative semantics/signatures/defaults/runtime rules unverified",
+    "No native WebKitGTK/Orca/full ETS/hardware acceptance"
+  ],
+  "publicationAuthorization": {
+    "commitMergePush": true,
+    "forcePush": false,
+    "rootSynchronization": false,
+    "releaseOrBusActions": false
+  },
+  "closingGateContract": "Final explicit-root repository/documentation and staged/working whitespace checks must pass after these metadata edits; remote exact-ref verification is recorded in the local publication handover.",
+  "logCommitments": {
+    "gates/exits.txt": "855ecc3b34bb6757e7769ba7e9fd96894814b6736f7c0392d7a734f8d0fdeb4a",
+    "gates/rust.log": "94527c8d6aba1685f6854927b1d1cf4a78084139748725b16f1596a0ab93fd96",
+    "gates/python.log": "44ab48b1c451734487ee879f6e85cf6e84aea7b209795223600912d979735f41",
+    "gates/web.log": "a1c971fbab03d57916056b528447a1f956e6833e2aa09e2e7561d56583bfcdef",
+    "gates/chromium.log": "8c45e65c0727445d95d0f5cee5d8c6640f12dc5cb48116beee50ce6a20be485e",
+    "gates/corpus.log": "d961725e27da52ac1157d16bcb0ad6ceb16dba6ddb3237fd44b7541d9853f8c5",
+    "gates/clippy.log": "cf4e2bf633c63256b17b6f8cae197dbfbb6b80eccc2a4a65dd4bd9f22c667305",
+    "gates/rust_build.log": "cd0a66d1f3a1ac47ee940c43d5ea1edc47595cf54794282de1825b27eabf553a"
+  }
+}

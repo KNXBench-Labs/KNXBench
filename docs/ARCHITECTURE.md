@@ -2,6 +2,8 @@
 
 ## Docker upload and explicit browser return (2026-10-09)
 
+[Separate integration verification](status/2026-10-10-import-expansion-integration.md) supersedes the local-only delivery status, not its historical test results. This is source integration, not a new release or deployment.
+
 The [upload and return contract](contracts/DOCKER_UPLOAD_AND_RETURN.md)
 keeps HTTP size admission and streamed temporary-file publication in the server
 file adapter. Explicit browser return navigates the current document; native
@@ -9,6 +11,21 @@ focus and source-bound Flow selection keep their existing adapter behavior.
 A consumed `view=editor` marker requests read-only project resume through the
 existing authenticated `/api/project` projection, not open/import or a mutation.
 No KNX model, parser budget, storage schema, protocol or dependency changes.
+
+## Selective import shares one application planner (2026-10-10 local source)
+
+[ADR-0106](adr/0106-selective-project-import.md) puts bounded source reading,
+explicit installation selection, reference-closure remapping and conflict checks
+in `knx-app::selective_import`. HTTP and CLI consume the same admitted plan; UI
+only selects, previews and confirms. Native snapshot history provides one undo
+step; durable admission precedes publication. CLI compare-and-save checks both
+history generation and the reviewed working-snapshot hash under one write lock.
+Complete retained sources are scoped by archive identity; selected source
+attributes remain evidence, not destination defaults. No KNX Core/UI dependency,
+new schema, manufacturer installation or protocol capability is introduced.
+The [original local acceptance](status/2026-10-10-import-expansion-verification.md)
+is historical; integration acceptance and release remain separate. Future model versions require a new
+reference-closure audit rather than automatic acceptance.
 
 ## Communication-object table (2026-10-09 source)
 

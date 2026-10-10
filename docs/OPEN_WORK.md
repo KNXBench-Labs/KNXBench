@@ -14,8 +14,10 @@ The [known-issues/status follow-up](status/2026-10-08-known-issues-status-audit.
 also reconciles current source claims, historical limitations and evidence type;
 it changes documentation, not owner rows or device behavior.
 
-Short version: **every goal file is finished.** Nothing in the ledger is
-`TODO`, `IN_PROGRESS`, `BLOCKED_EXTERNAL` or `WAITING_*`. What remains is
+Short version: **the original alpha goal files are finished at their recorded
+scope, not every later feature.** The current ledger includes the owner-approved
+source import expansion and its missing authorized-export evidence. Dated audit
+counts below remain historical. What remains is
 (1) work that is running or waiting right now, (2) parked unpublished packages
 and publication follow-up, (3) deferred items with a recorded user decision, and
 (4) later scope that never was an alpha task.
@@ -31,10 +33,23 @@ and publication follow-up, (3) deferred items with a recorded user decision, and
   LATER 20; post-snapshot 11 rows — DONE 9, ACCEPTED_BOUNDARY 2.
 - Handover `.ai/CURRENT_STATE.md` (newest entries per track), worktree list,
   and a path-by-path check of which root files exist on `origin/main`.
-- Current ledger mechanically recounted: 191 distinct IDs, 50 delivered,
-  121 accepted boundaries and 20 later-scope rows; no active/waiting rows.
-  Every later-scope row is owned by `later`; no finished session owns open work.
+- Current ledger mechanically recounted after import expansion: 191 distinct IDs,
+  52 delivered, 121 accepted boundaries, 17 later-scope rows and 1 externally
+  blocked row (`IMPORT-02`); no active/running source work. The earlier census
+  above remains historical. Every later-scope row is owned by `later`; the
+  external restore-export prerequisite belongs to the maintainer/ETS owner.
   These are unequal source IDs, not a product-completion percentage.
+
+## Import expansion source integration (10 October 2026)
+
+Selected-device/line merge into the open project, the authorized revision-export
+harness and read-only cvexc declaration analysis have completed local acceptance.
+The owner subsequently authorized commit/merge/push; [integration acceptance](status/2026-10-10-import-expansion-integration.md)
+is separate from the [historical local record](status/2026-10-10-import-expansion-verification.md).
+Remaining: real authorized ETS revision exports with independently reviewed
+baselines, future-model closure before model changes, and primary cvexc semantics
+before enabling any runtime rule. Synthetic browser/CLI checks are not real
+ETS/hardware/native accessibility evidence. No release/deployment or bus action.
 
 ## 1. Running or waiting right now
 
@@ -110,10 +125,12 @@ not erase subsequently delivered functionality.
   Secure (`DM_SecureSync_*`), Easy Modes, USB interface configuration
   (`KL-110`, `GAP-T30-04`). RF stays simulator-only.
 - **Model/import:** KNX `Functions` (`MODEL-07`, needs an ADR and samples);
-  several installations under one Site (`MODEL-05`, needs an ADR); selective
-  import of single lines/devices (`IMPORT-01`); ETS restore-point revisions as
-  extra private regressions (`IMPORT-02`, needs authorized ETS export);
-  semantic evaluation of the `knx_cvexc` XML files (`IMPORT-04`); dedicated
+  several installations under one Site (`MODEL-05`, needs an ADR); ETS
+  restore-point revisions as extra private regressions (`IMPORT-02`, requires
+  authorized ETS exports and reviewed baselines). Selective lines/devices and
+  bounded `knx_cvexc` content analysis have verified local implementation and
+  separately authorized [source integration](status/2026-10-10-import-expansion-integration.md);
+  neither replaces the missing authorized revision exports. Dedicated
   time/colour/picture/slider parameter editors from Type attributes and UIHints
   (`PDB-04`); independent `.knxproj` samples for untested schemas
   (12/13/14/20/22) and an AES-protected ETS6 sample.

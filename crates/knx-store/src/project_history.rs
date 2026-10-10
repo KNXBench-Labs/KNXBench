@@ -50,9 +50,18 @@ impl fmt::Display for HistoryError {
             Self::Migration(error) => write!(f, "{error}"),
             Self::Sqlite(error) => write!(f, "project history storage: {error}"),
             Self::Store(error) => write!(f, "project history snapshot: {error}"),
-            Self::Invalid(reason) => write!(f, "project history is unavailable: {reason}; no history was discarded"),
-            Self::Limit(reason) => write!(f, "project history limit: {reason}; explicitly delete versions or clear undo history before retrying"),
-            Self::Stale => write!(f, "project history changed in another editor; reopen before editing or restoring"),
+            Self::Invalid(reason) => write!(
+                f,
+                "project history is unavailable: {reason}; no history was discarded"
+            ),
+            Self::Limit(reason) => write!(
+                f,
+                "project history limit: {reason}; explicitly delete versions or clear undo history before retrying"
+            ),
+            Self::Stale => write!(
+                f,
+                "project history changed in another editor; reopen before editing or restoring"
+            ),
         }
     }
 }
@@ -369,6 +378,37 @@ pub fn save_editor(
     expected_generation: Option<i64>,
     save_root: bool,
 ) -> Result<i64, HistoryError> {
+    save_editor_inner(conn, working, stack, expected_generation, save_root, None)
+}
+
+/// Compare the reviewed working snapshot under the same write lock as all writes.
+/// Generation zero alone cannot detect a plain save that cleared the journal.
+pub fn save_editor_if_unchanged(
+    conn: &Connection,
+    working: &NativeSnapshot,
+    stack: &CommandStack,
+    expected_generation: i64,
+    expected_working_hash: &str,
+    save_root: bool,
+) -> Result<i64, HistoryError> {
+    save_editor_inner(
+        conn,
+        working,
+        stack,
+        Some(expected_generation),
+        save_root,
+        Some(expected_working_hash),
+    )
+}
+
+fn save_editor_inner(
+    conn: &Connection,
+    working: &NativeSnapshot,
+    stack: &CommandStack,
+    expected_generation: Option<i64>,
+    save_root: bool,
+    expected_working_hash: Option<&str>,
+) -> Result<i64, HistoryError> {
     let (undo_steps, redo_steps) = stack.history_lengths();
     if undo_steps.saturating_add(redo_steps) > MAX_STACK_STATES {
         return Err(HistoryError::Limit("undo and redo exceed 256 states"));
@@ -384,6 +424,15 @@ pub fn save_editor(
         Err(HistoryError::Store(StoreError::NotSaved)) => None,
         Err(error) => return Err(error),
     };
+    if let Some(expected) = expected_working_hash {
+        let current = load_editor_inner(&tx)?
+            .map(|editor| editor.working)
+            .or_else(|| old.clone())
+            .ok_or(HistoryError::Stale)?;
+        if current.semantic_hash()? != expected {
+            return Err(HistoryError::Stale);
+        }
+    }
     if save_root {
         if expected_generation.is_none() {
             if let Some(previous) = load_editor_inner(&tx)? {

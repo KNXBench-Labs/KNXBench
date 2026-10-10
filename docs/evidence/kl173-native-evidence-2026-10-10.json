@@ -25,5 +25,12 @@
     "binding": "actual same HEAD, clean tracked diffs, temporary corpus link removed; no external-input manifest claimed",
     "review": "in-session self-review, Critical0 unresolvedImportant0; exact typed neighbor proof added before acceptance"
   },
-  "publication": "green actual no-ff candidate4c38af5b; push/readback pending"
+  "publication": {
+    "status": "DELIVERED",
+    "noFastForwardMerge": "4c38af5b24d9b797e3e65e460a53ad6d48b8119c",
+    "firstReadback": "4c4842278781c6474d0245f7155e46cabd2f9963",
+    "destination": "origin/main",
+    "localTrackingLiveEqual": true,
+    "laterChanges": "docs-only source acceptance record; original tested revision retained"
+  }
 }

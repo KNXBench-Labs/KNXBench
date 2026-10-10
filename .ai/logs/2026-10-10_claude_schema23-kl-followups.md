@@ -125,3 +125,10 @@ hardened positive replay and all publications after this blocker remain pending.
 - Self-review IMPORTANT out_of_tree_override_persistence.rs:29: empty tree alone would miss wrong active-object substitution; corrected with nonempty tree, exact typed neighbour ID and absent text/link assertions. CRITICAL0/unresolvedIMPORTANT0.
 - Compile refusal from guessed enum module corrected from documented re-export; not semantic RED evidence. This is a regression witness for existing behavior, no production implementation claimed.
 - Final source/corpus/repo gates, privacy and remote publication pending; self-review only.
+
+
+## Package5 publication
+
+- No-ff4c38af5b delivered on main, readback4c484227 local/tracking/live equal. Scoped crates547/0/91 and full nonempty corpus31 targets, strict quality/repo/docs gates and mechanical outgoing original-value scan passed.
+- No F/runtime changes, single registered synthetic service/native witness covers both tree variants. Unchanged reactivation boundary.
+- KL174 owner explicitly accepted content classes separated from unverified App/Add-in role candidates; no nested unpacking or execution. Next fresh worktree after cleanup.

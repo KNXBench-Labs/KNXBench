@@ -2,7 +2,7 @@
 
 - Candidate code `41b3d6267731` reuses existing product `sniff_media` at app/report boundary; project UserFiles/AddinData and manufacturer payloads carry separate content and explicitly unverified roles. No F reimplementation, source/model/storage changes or new dependency.
 - Synthetic imports with/without product DB, exact source/native Save/Reopen, independent warning preservation and HTTP/session-log projection pass; two assertion-killed mutants restored.
-- Owner accepts candidate roles only; no App identity/authenticity/manifest validity or execution claim. Final source `566afbdd` passes Rust2400/0/181, strict quality/repo/docs admission, full nonempty corpus and explicit private original reconciliation/RefIds; publication/readback pending. ADR-0109/receipt pin the exact scope. Only an Install-page indexed excerpt is verified, not full primary pages or update dates.
+- Owner accepts candidate roles only; no App identity/authenticity/manifest validity or execution claim. Final source `566afbdd` passes Rust2400/0/181, strict quality/repo/docs admission, full nonempty corpus and explicit private original reconciliation/RefIds; delivered/read back `68147ba3` with local/tracking/live equality. ADR-0109/receipt pin the exact scope. Only an Install-page indexed excerpt is verified, not full primary pages or update dates.
 
 ## 2026-10-10 — KL-173 independent service/native evidence
 

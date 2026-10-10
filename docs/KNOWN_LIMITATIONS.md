@@ -9437,7 +9437,7 @@ Named evidence: `project_and_manufacturer_payloads_report_content_without_certif
 Two assertion-killed mutations and restored-source focuses pass. Final no-ff
 source `566afbdd` passes eight scoped crates (2400/0/181), strict Clippy/fmt,
 five nonempty repository/docs gates, complete nonempty corpus, private original
-reconciliation and RefIds. Publication/readback pending; no source values published.
+reconciliation and RefIds. Published/read back `68147ba3` with local/tracking/live equality; no source values published.
 
 **Remaining boundary.** The owner explicitly accepts descriptive, unverified
 candidates. Content magic is not App identity/authenticity, licensing, manifest

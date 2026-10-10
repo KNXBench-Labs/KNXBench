@@ -87,7 +87,7 @@ full corpus/quality/repo admission; no-ff `4c38af5b` published and read back
 at `4c484227` with local/tracking/live equality. KL-174/F08 bounded content/role candidate `41b3d6267731` passes synthetic
 app/native/product/HTTP focuses and final source `566afbdd` (Rust2400/0/181,
 strict quality/repo/docs, full nonempty corpus/private reconciliation/RefIds);
-publication pending. KL-175/F09 raw RTF labels;
+delivered/read back `68147ba3` with local/tracking/live ref equality. KL-175/F09 raw RTF labels;
 KL-146 evaluator-vs-saved-state comparison. KL-170–172 public research package9 is
 published; implementation limits remain research-bound. Do not reuse old-base
 results for a changed main.

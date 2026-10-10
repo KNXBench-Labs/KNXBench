@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-10 — KL-106 audit: retained ETS source data stays out of shared outputs
+
+Every output that can carry retained source evidence was audited with a
+synthetic planted witness (`knx_testsupport::retained_privacy_knxproj_bytes`).
+The debug-report bundle gains a fifth redaction class, MAC/EUI addresses
+(`[redacted-mac]`). Retained `BusAccess`, `IPConfig`, `AdditionalAddresses`
+and `ProjectTraces` subtrees remain retained for export but never reach the
+debug bundle, an MCP response or a reduced contribution bundle. `report.md`,
+the dialog (en/de), the contribution README and the selective-import note now
+name the kept classes (user names; network data inside unmodified samples or
+originals). Code `37664bad`; four mutants killed; KNOWN_LIMITATIONS §106
+updated. [Receipt](evidence/kl106-retained-source-audit-2026-10-10.json).
+
 ## 2026-10-10 — Private schema-23 sample: KL-125 lifted, six limitations recorded
 
 A privately supplied, independently produced ETS6 project was reviewed

@@ -255,6 +255,78 @@ pub fn mapping_boundary_knxproj_bytes(
     ])
 }
 
+/// Synthetic values that a [`retained_privacy_knxproj_bytes`] import keeps
+/// only inside retained source subtrees (`BusAccess`, `IPConfig`,
+/// `AdditionalAddresses`, `ProjectTraces`): a tunnelling host and peer, a
+/// device IP and MAC, an additional address name and a trace user name and
+/// comment. RFC 5737 addresses, a locally administered MAC, `.invalid`.
+pub const RETAINED_PRIVACY_PLANTED: &[&str] = &[
+    "tunnel-gw-q7.example.invalid",
+    "198.51.100.23",
+    "192.0.2.77",
+    "02:00:5e:10:00:01",
+    "planted-user-zq",
+    "planted trace comment",
+    "planted extra address",
+];
+/// A MAC address in an attribute the parser does not know, so its value
+/// becomes the unknown-construct sample of the import report.
+pub const RETAINED_PRIVACY_UNKNOWN_MAC: &str = "02-00-5E-10-00-02";
+/// A user name in an attribute the parser does not know (report sample).
+pub const RETAINED_PRIVACY_UNKNOWN_OWNER: &str = "planted-owner-kw";
+
+/// Synthetic schema-21 witness for privacy audits of retained source data
+/// (KNOWN_LIMITATIONS §106). Not a genuine ETS sample or XSD-validity claim.
+pub fn retained_privacy_knxproj_bytes() -> Vec<u8> {
+    let p = RETAINED_PRIVACY_PLANTED;
+    let topology = format!(
+        r#"<KNX xmlns="http://knx.org/xml/project/21">
+          <Project Id="P-0001"><Installations>
+            <Installation InstallationId="0">
+              <Topology><Area Id="P-0001-0_A-1" Address="1">
+                <Line Id="P-0001-0_L-2" Address="1">
+                  <Segment Id="P-0001-0_L-2_S-1" Number="0" MediumTypeRefId="MT-0">
+                    <BusAccess Name="Synthetic interface" Edi="synthetic"
+                      Parameter="Target={host};Peer={peer};Port=3671"/>
+                    <DeviceInstance Id="P-0001-0_DI-1" Name="first device" Address="1"
+                        ProductRefId="M-TEST_H-1_P-1" Hardware2ProgramRefId="M-TEST_H-1_HP-1"
+                        FutureHardwareTag="{unknown_mac}">
+                      <IPConfig IPAddress="{ip}" MACAddress="{mac}"/>
+                      <AdditionalAddresses><Address Address="9" Name="{extra}"/></AdditionalAddresses>
+                    </DeviceInstance>
+                  </Segment>
+                </Line>
+              </Area></Topology>
+            </Installation>
+          </Installations></Project>
+        </KNX>"#,
+        host = p[0],
+        peer = p[1],
+        ip = p[2],
+        mac = p[3],
+        extra = p[6],
+        unknown_mac = RETAINED_PRIVACY_UNKNOWN_MAC,
+    );
+    let info = format!(
+        r#"<KNX xmlns="http://knx.org/xml/project/21"><Project Id="P-0001">
+          <ProjectInformation Name="Synthetic redaction witness" GroupAddressStyle="ThreeLevel"
+              FutureOwner="{owner}">
+            <ProjectTraces>
+              <ProjectTrace Date="2001-02-03T04:05:06" UserName="{user}" Comment="{comment}"/>
+            </ProjectTraces>
+          </ProjectInformation>
+        </Project></KNX>"#,
+        owner = RETAINED_PRIVACY_UNKNOWN_OWNER,
+        user = p[4],
+        comment = p[5],
+    );
+    zip_with_entries(&[
+        ("P-0001.signature", b"synthetic signature"),
+        ("P-0001/0.xml", topology.as_bytes()),
+        ("P-0001/Project.xml", info.as_bytes()),
+    ])
+}
+
 const MINIMAL_TOPOLOGY: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11" CreatedBy="ETS4" ToolVersion="ETS 4.1.8">
   <Project Id="P-0001">

@@ -123,3 +123,37 @@ fn preview_manifest_and_every_text_artifact_equal_deterministic_export() {
         preview.manifest_sha256
     );
 }
+
+/// KL-106: a reduced bundle withholds retained endpoints, MACs and user
+/// names; the README names them for the unmodified samples and original.
+#[test]
+fn reduced_bundle_withholds_retained_network_and_user_values() {
+    let bytes = knx_testsupport::retained_privacy_knxproj_bytes();
+    let o: BundleOptions =
+        serde_json::from_str(r#"{"audience":"public","sampleIds":[],"consent":true}"#).unwrap();
+    let bundle = build_bundle(&bytes, "synthetic.knxproj", &o).unwrap();
+    assert_eq!(bundle.manifest.disclosure, "reduced");
+    let mut zip = zip::ZipArchive::new(Cursor::new(bundle.bytes)).unwrap();
+    let mut readme = String::new();
+    for i in 0..zip.len() {
+        let mut file = zip.by_index(i).unwrap();
+        let mut text = String::new();
+        file.read_to_string(&mut text).unwrap();
+        for planted in knx_testsupport::RETAINED_PRIVACY_PLANTED.iter().chain([
+            &knx_testsupport::RETAINED_PRIVACY_UNKNOWN_MAC,
+            &knx_testsupport::RETAINED_PRIVACY_UNKNOWN_OWNER,
+        ]) {
+            assert!(
+                !text.contains(planted),
+                "{planted} leaked into {}",
+                file.name()
+            );
+        }
+        if file.name() == "README.md" {
+            readme = text;
+        }
+    }
+    for named in ["network endpoints", "MAC addresses", "user names"] {
+        assert!(readme.contains(named), "README must name {named}: {readme}");
+    }
+}

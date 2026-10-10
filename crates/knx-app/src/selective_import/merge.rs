@@ -124,7 +124,7 @@ pub(super) fn plan(
     }
     let mut after = before.clone();
     let mut mappings = vec![];
-    let mut notes=vec!["Original archive and opaque evidence are retained, including unselected source data. Undo removes imported model data, not retained source evidence.".into()];
+    let mut notes=vec!["Original archive and opaque evidence are retained, including unselected source data such as network endpoints, MAC addresses and the user names in ETS project traces. Undo removes imported model data, not retained source evidence.".into()];
     let mut counts = Counts::default();
     let mut device_map = BTreeMap::new();
     for old in &devices {

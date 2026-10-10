@@ -429,6 +429,7 @@ export const messages = {
   // left standing on purpose (KNOWN_LIMITATIONS.md §66) — disclosed
   // rather than silently presented as a translation gap. Rendered once
   // per error toast, next to the `{msg}` it explains.
+  "toast.error.archiveTooLarge": "The file is too large when unpacked: {size} MiB. The limit is {limit} MiB.",
   "toast.error.messageIsEnglish": "This message is the server's own text, in English.",
 
   "toast.error.notAsPlanned": "Well, that didn't go as planned: {msg}",

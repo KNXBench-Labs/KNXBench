@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 19:59
+- **Completed:** Packages1–4 and9 delivered; package4 no-ff992032c3 + publication98e3dbb1 pushed/readback verified, prior own trees/branches/build scratch cleaned with private evidence retained here. Package5 fresh origin98e3dbb1, mandatory review/F ownership/public sections re-read, import owner367405f1 verified ancestor. Prepared synthetic actual-service witness transferred unchanged: unconsumed override warning, exact source owner/bytes, Save/Reopen/Re-Save retention, no typed object/activation. No new runtime implementation needed unless real regression fails.
+- **Pending/Next Steps:** Execute focused synthetic witness, review exact production retention/report paths, add meaningful negative/mutation checks; scope tests/Clippy/fmt/five repo/docs/corpus gates, docs/evidence and no-ff push/readback/cleanup. Packages6–8 remain after this. Overall goal not complete.
+- **Notes for Codex oder Claude:** Current own tree kl173-evidence-20261010; untested synthetic fixture P-TEST/M-TEST only. F06 runtime untouched; no active/inactive semantic guess. Package4 full private proof now here under ignored package4-delivery. Root/foreign code/index/worktrees untouched; no hardware/binaries/releases/deployment/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 19:57
 - **Completed:** Package4 DELIVERED no-ff992032c32327, normal main push, local/tracking/live equality verified. Actual382ab577 final chain1360 Rust/0, Web2610/0/164, full nonempty corpus, explicit original reconciliation/native/RefId positives, archive-browser4/4; upstream test-only delta dd4b8165 passes app/parser/HTTP tests, full Web2611/0/164, tsc/strict Clippy. Delivered source equal dd4b8165, five nonempty repo gates/docs/diff and outgoing original-value scan green. Preservation-only owner decision implemented in tests/docs, unknowns/has_losses remain true. Receipt/§1/COMPATIBILITY/ledger/status/open-work synchronized; self-review only.
 - **Pending/Next Steps:** Push docs-only publication record after repo/docs/privacy gates, preserve compact private evidence and clean own package4 worktree/branch/scratch. Then KL173 fresh main own worktree with prepared synthetic persistence witness; packages5–8 remain. Packages1–4 and9 delivered; goal not complete.

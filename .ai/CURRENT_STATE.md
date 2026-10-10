@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 18:38 CEST
+- **Completed:** Owner-authorized import regression merge published to main9d3c8f0c; local/tracking/live refs identical and eff4df95 ancestry verified. Actual frozen runtime source7503f10f passed20 gates (Rust3906/0, Web2611/0), explicit private original/native/instance/RefId and fresh production CLI/product/offline/source-native-product comparisons with two omission controls. Later docs-only integration retained all1207 runtime inputs byte-exact; seven final metadata gates and outgoing privacy scan passed. This additive checkpoint records verified publication, not new runtime behavior.
+- **Pending/Next Steps:** None for the authorized merge work package. Preserve source/evidence for owner review; no additional feature, release, deployment or hardware work authorized here.
+- **Notes for Codex oder Claude:** Shared root intentionally remains stale/dirty; foreign changes/worktrees/leases preserved. Own source checkout stays available; only owned finished build/temp caches are cleaned. Private source/report/store/hash evidence stays ignored/restricted/untracked locally. F10/F11 remain researched/reassessed follow-ups, no new ETS/signature/hardware or loader/encoder claim. Self-review only, no subagents or force-push.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 18:35 CEST
+- **Completed:** Final integrated regression source7503f10f passed20 full gates (Rust3906/0, Web2611/0), explicit original/native/instance/RefId tests, fresh real production CLI import/product/offline checks, independent bounded source/native/product comparison and two omission controls. Original/source bytes unchanged, self-review and privacy green. Later upstream changes are documentation-only with all1207 non-documentation tracked inputs equal; full upstream handover preserved.
+- **Pending/Next Steps:** Final additive documentation/privacy checks, normal main push and exact local/tracking/live readback. No new implementation, release, deployment or hardware action.
+- **Notes for Codex oder Claude:** Own integration/import-revalidation-c0e72cdb5ee5 checkout; shared root remains intentionally stale/dirty and foreign work unchanged. Prior55362f52 gate superseded rather than credited. Private original/results retained only ignored/restricted/untracked; tests use explicit source path, never copied corpus. F10/F11 remain separately researched/reassessed follow-ups, no new support claim. No subagents or force-push.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 18:31
 - **Completed:** Package4 current-source test/docs candidate a04f77ec includes fresh c50b90c4 container/Web source, offline npm installed. Earlier f3e69eb5 gate1357/0/116 and scoped checks remain historical only; unfinished corpus was stopped on relevant upstream change. Refreshed proc_09515059b5f1 waited behind active foreign import-main verification; lease became available just as it was stopped for metadata checkpoint. It actually completed fmt0, then was interrupted before any test result; no zero-stage or suite-pass claim. Full attempt logs preserved in metadata-interrupted-p4/gate, no source fix or foreign process action. User interim status answered.
 - **Pending/Next Steps:** Restart frozen 5-crate+Web/tsc+full corpus+explicit original reconciliation/native/RefId+archive-browser4 chain. Validate actual nonempty results, input binding and unchanged source; docs/privacy, fresh-main check, no-ff push/live equality/cleanup. Then resume prepared independent KL173 service/native witness, still untested. Packages1,2,3,9 delivered;4–8 not delivered; no overall completion or user semantic input requirement.
@@ -31,6 +47,14 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:38 CEST
+- **Completed:** Owner-authorized regression integration reconciled with current upstream archive/UI package. Prior source55362f52 gate intentionally superseded after runtime inputs changed; partial evidence retained, not credited as final acceptance. Only additive handover conflict; full upstream history and own entries preserved.
+- **Pending/Next Steps:** Fresh complete merged-source gates and private original/native/product/census/instance/RefId checks on final source; final privacy/doc checks, normal main push and exact live readback. No release/deployment/hardware action.
+- **Notes for Codex oder Claude:** Own isolated integration/import-revalidation-c0e72cdb5ee5 checkout. No subagents, copied originals, private source in public files, foreign root/leases/worktrees modified. Prior feature/local receipts stay historical. Wait cooperatively on shared repository leases; no force-push or silent dropped warnings.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-10 17:34 CEST
 - **Completed:** Actual final main-integration source7520fa38 accepted after reconciling published65e1c809. Twenty-four stages exit0 with frozen inputs: parser197/0/56 ignored, consumers1799/0/101 ignored, frontend2610/0/164 files, full Chromium244/0, built-browser4/0/four frames inspected; explicit reference-container3/0, own-instance1/0, RefId3/0 with originals unchanged. Builds/types/importer-Clippy/fmt/five nonempty repo gates/docs/whitespace pass. Source-bound public receipt/manual/status updated after the run; self-review only. Feature1be6f9bd included. No push yet.
 - **Pending/Next Steps:** Final documentation gates and metadata commit; fetch/inspect upstream, normal main push and exact ref/blob/ancestry readback; then owned worktree/branches/build/scratch cleanup and publication closure. No release/deployment/hardware action.
@@ -43,6 +67,14 @@
 - **Completed:** Corrected package4 private runner proc_854b5ffe9a46 exits0 for actual reconciliation/native/RefId targets; no skipped/missing-input pass. Main65e1c809 integrated as 2530ad8edc4e, both handover/log histories retained. New test 6f8ac4332c79 independently verifies complete original XML/project+product ownership and bytes, native reopen/resave and unchanged input. §1, COMPATIBILITY, ledger/open-work/status and pending receipt drafted. Unknowns/has_losses deliberately remain visible; preservation-only owner decision recorded, no runtime or F-owner change.
 - **Pending/Next Steps:** Review complete candidate, run merged-source crate/clippy/fmt/five xtask/docs/diff plus full corpus and explicit private checks; then privacy scan/no-ff push/ref equality/cleanup. Package4 NOT delivered yet. Packages5–8 actual remaining scope open; packages1,2,3,9 delivered.
 - **Notes for Codex oder Claude:** Private proof has actual pass counts but no original values/counts in public receipt. No hardware/executables/release/deployment/subagents/quota checks. Source preservation does not suppress semantic warnings. Root/foreign worktrees untouched; shared source histories preserved. Candidate gate is next, not already green.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 17:19 CEST
+- **Completed:** Owner explicitly authorized main integration of eff4df95. Isolated merge preserves the complete upstream handover and four accepted independent synthetic regression changes; only additive documentation conflicts. Feature publication and original local acceptance remain historical, not merged-result verdicts.
+- **Pending/Next Steps:** Freeze merge source; execute fresh full Rust/Web/build/lint/repository/documentation gates and explicit private original/native/RefId/instance gates. Fetch again before normal main push; reconcile any advanced main and rerun consumed inputs. No release/deployment/hardware action.
+- **Notes for Codex oder Claude:** Own integration/import-revalidation-c0e72cdb5ee5 worktree only. Preserve foreign root/index/docs/worktrees and queued parallel archive gate; wait on repository leases without interruption. Original only via explicit local path, all source-bearing output ignored/private; no private copy into worktree, no subagents or new feature support.
 
 ---
 
@@ -75,6 +107,14 @@
 - **Completed:** Package3 DELIVERED: no-ff merge 2e264f6cc6ece52cb463ed77b4fdf68cfa96706b, pushed origin/main, HEAD/tracking/live equal. Final source f4af614eac30: Rust2876/0/160, Web2597/0/163, corpus143/143 in31 targets, private own-value1/0 and RefId3/0; independent browser4/4. Fmt/clippy/tsc, five nonempty repo checks, docs/diff, fixed tracked-input binding and outgoing original-value/privacy scan green. Narrow authorized test-only correction e74be53a; no runtime/private golden values. Receipt/ledger/open-work/status published boundary scope, not Repeat/activation/writes/ETS hardware support.
 - **Pending/Next Steps:** Push this docs-only publication checkpoint after docs/privacy and live equality; copy essential private evidence to active package4 and remove own package3 worktree/branch/build scratch. Package4 hardened full-original XML/report/native/product comparison runner proc_7aaf1b7c7987 active; then remaining packages5–8 from fresh main. Packages1,2,3,9 delivered; all-goal completion NOT claimed.
 - **Notes for Codex oder Claude:** Code and UI source unchanged through merge; conservative Repeat/MI semantics stay ADR-0108 accepted read-only boundary. Owner-approved correction scope exactly existing four corpus test functions; foreign F runtime untouched. All source-derived logs/census/data remain ignored/private. Root/foreign trees untouched; no hardware/vendor code/release/deployment/subagents/quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 16:52 CEST
+- **Completed:** Local F01–F09 revalidation accepted on pinned source with four synthetic regression enhancements; 19 baseline/19 candidate/9 final metadata gates, Rust3894/0, Web2596/0, nine compiled RED/restored GREEN controls and actual private CLI/source/native/product/offline checks passed. Two store-omission controls caught; original and runtime-source bytes unchanged. F10/F11 separately researched/reassessed, not newly implemented. Scoped privacy check passed; self-review only.
+- **Pending/Next Steps:** No further implementation in this scope. Owner subsequently authorized commit/push of the reviewed package on test/import-integrity-revalidation-20261010. Remote publication is verified against exact tracking/live refs separately from frozen local acceptance; no main integration, release or deployment requested.
+- **Notes for Codex oder Claude:** Private source/evidence remains ignored/restricted/untracked and must never be staged or uploaded. Preserve shared root HEAD/index/application, parallel documentation and foreign worktrees. Canonical CLI/accepted stores and compact evidence stay local. Historical no-publication statements describe the earlier verification scope, superseded only by this explicit source-branch commit/push authorization. No full ETS/signature/hardware claim.
 
 ---
 

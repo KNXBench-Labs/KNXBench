@@ -238,6 +238,21 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
             diagnostic: None,
             detail: Some(format!("{} bytes, sha256 {}", opaque.size, opaque.sha256)),
         });
+        if let Some(preview) = &opaque.raw_text_preview {
+            entries.push(LogEntry {
+                timestamp: now(),
+                severity: Severity::Info,
+                source: "import:opaque:raw-text".to_string(),
+                message: format!(
+                    "RTF-like raw text candidate ({}); not validated or interpreted; original retained{}",
+                    opaque.name,
+                    if preview.truncated { "; preview truncated" } else { "" },
+                ),
+                location: Some(format!("{} {}", opaque.source_path, opaque.xpath)),
+                diagnostic: None,
+                detail: Some(preview.value.clone()),
+            });
+        }
     }
 
     for conflict in &report.conflicts {
@@ -413,6 +428,7 @@ mod tests {
                 size: 42,
                 sha256: "deadbeef".into(),
                 reason: "unrecognized manufacturer namespace".into(),
+                raw_text_preview: None,
             }],
             vec![knx_etsproj::infer::Conflict {
                 group_address: knx_core::GroupAddressId(7),

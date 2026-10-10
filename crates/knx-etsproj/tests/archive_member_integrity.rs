@@ -204,15 +204,17 @@ fn a_member_that_inflates_past_its_declared_size_is_refused() {
 
 #[test]
 fn members_declaring_more_than_the_total_budget_are_refused_at_open() {
-    let names: Vec<String> = (0..9)
+    let member_size = 60 * 1024 * 1024;
+    let member_count = knx_etsproj::MAX_ARCHIVE_UNCOMPRESSED / member_size + 1;
+    let names: Vec<String> = (0..member_count)
         .map(|i| format!("P-0001/BinaryData/{i}.dat"))
         .collect();
     let extra: Vec<(&str, &[u8])> = names.iter().map(|n| (n.as_str(), &b"y"[..])).collect();
     let mut bytes = knxproj_with(&extra);
-    // Nine members of 60 MiB each: every one is under the per-member limit,
-    // together they are over the archive budget.
+    // Each filler stays under the per-member limit; together they exceed
+    // the archive budget without allocating the declared payloads.
     for name in &names {
-        declare_size(&mut bytes, name, 60 * 1024 * 1024);
+        declare_size(&mut bytes, name, u32::try_from(member_size).unwrap());
     }
     match Container::open(bytes) {
         Err(ContainerError::TooLarge { total, limit }) => {
@@ -221,6 +223,47 @@ fn members_declaring_more_than_the_total_budget_are_refused_at_open() {
         }
         other => panic!("expected TooLarge, got {:?}", other.map(|_| ())),
     }
+}
+
+#[test]
+fn the_archive_budget_is_1024_mib() {
+    assert_eq!(knx_etsproj::MAX_ARCHIVE_UNCOMPRESSED, 1024 * 1024 * 1024);
+}
+
+#[test]
+fn an_archive_above_the_previous_512_mib_budget_still_opens() {
+    let names: Vec<String> = (0..11)
+        .map(|i| format!("P-0001/BinaryData/{i}.dat"))
+        .collect();
+    let extra: Vec<(&str, &[u8])> = names.iter().map(|n| (n.as_str(), &b"y"[..])).collect();
+    let mut bytes = knxproj_with(&extra);
+    // 660 MiB of declared payload, no giant allocation or member read.
+    // This proves container admission only, not a successful full import.
+    for name in &names {
+        declare_size(&mut bytes, name, 60 * 1024 * 1024);
+    }
+    assert!(Container::open(bytes).is_ok());
+}
+
+#[test]
+fn one_byte_above_1024_mib_is_refused_with_the_exact_totals() {
+    let name = "P-0001/BinaryData/fill.dat";
+    let mut bytes = knxproj_with(&[(name, b"y")]);
+    let real: u64 = Container::open(bytes.clone())
+        .unwrap()
+        .entries()
+        .iter()
+        .filter(|e| e.path != name)
+        .map(|e| e.size)
+        .sum();
+    let limit = 1024 * 1024 * 1024;
+    let total = limit + 1;
+    declare_size(&mut bytes, name, u32::try_from(total - real).unwrap());
+    assert!(matches!(
+        Container::open(bytes),
+        Err(ContainerError::TooLarge { total: actual_total, limit: actual_limit })
+            if actual_total == total && actual_limit == limit
+    ));
 }
 
 #[test]

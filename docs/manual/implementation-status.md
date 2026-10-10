@@ -25,6 +25,22 @@ The detailed entries below retain their original source acceptance boundaries;
 Alpha.6 still does not contain those later additions. Back up native projects
 before upgrading: old builds refuse schema11. No new whole-ETS/hardware claim.
 
+## Project archive budget (2026-10-10 local source)
+
+The owner-requested local change raises the expanded `.knxproj` archive budget
+from 512 MiB to **1024 MiB**. The 64 MiB limit per expanded member and all
+archive identity, layout and bounded-read checks remain in place. This does not
+raise HTTP upload limits or guarantee peak memory usage. The size refusal is
+shown plainly in both the popup and persistent load-failure banner, for example:
+“Die Datei ist entpackt mit 1280 MiB zu groß. Das Limit liegt bei 1024 MiB.”
+The displayed limit comes from the server, including an older server's 512 MiB
+limit. MiB accurately names the binary unit used by the importer, rather than
+compressed file size. Unknown technical messages still pass through unchanged.
+The change is not yet published or deployed; Alpha.7 artifacts retain their
+existing limits.
+[Verification](../IMPLEMENTATION_STATUS.md#2026-10-10--project-archive-budget-1024-mib-local-source)
+· [Import limits](../IMPORT_EXPORT.md).
+
 ## Docker upload and browser return fixes (2026-10-09 source)
 
 The source fixes for GitHub #1/#2 raise the streamed upload file ceiling to

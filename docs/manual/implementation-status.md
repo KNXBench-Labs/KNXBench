@@ -24,7 +24,7 @@ values in read-only views and the **1024 MiB**
 expanded project budget with localized refusals. It requires native/model
 **schema12**; back up before upgrading, because Alpha.7 and earlier refuse the
 new files. [Release notes](../releases/alpha8.md) and the source-bound publication
-receipt separate downloaded artifacts from later `main`, synthetic/private
+[receipt](../evidence/release-alpha8-2026-10-10.json) separate downloaded artifacts from later `main`, synthetic/private
 evidence from full ETS semantics, and packaging from hardware certification.
 Unmerged Functions/Sites and remaining research work are not included.
 

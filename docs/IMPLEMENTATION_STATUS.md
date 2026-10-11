@@ -1,3 +1,27 @@
+## 2026-10-11 — Structure headings stop fleeing the mouse (issue #5)
+
+- Reproduced the reported Ground/building heading clipping in the production
+  browser: generic `button:hover:not(:disabled)` applied `scale(1.05)` despite
+  the less-specific `button:hover` reset. Full-width headings moved into their
+  cards' clipped edges, hiding icons. A scoped `.diagram-heading` hover reset
+  removes magnification/shadow while retaining colour feedback; existing device
+  row styling, selection, keyboard actions and project data remain unchanged.
+- Regression: eight production-built Chromium cases cover EN/DE, Porcelain/
+  Graphite, 400/1440 px, Ground/building/floor and area/line headings. Settled
+  button/icon/text geometry remains identical before/after real hover; icons
+  stay within the row, mouse/keyboard navigation works and no unexpected API
+  calls or project writes occur. All eight hierarchy screenshots were inspected.
+- Verification: all 2,738 Vitest tests across 174 files pass; production build
+  and explicit new E2E typecheck pass; 17 existing hierarchy/device-layout/pane
+  browser regressions pass. The original named magnification assertion failed
+  before the fix. Earlier fixture-scroll/scoping/selector failures and a combined
+  CSS-selector source-pin failure remain historical, not successful acceptance.
+- Run the built regression with `npm run build` followed by
+  `npx playwright test --config playwright.structure.config.ts` in `apps/knx-web`.
+  This source repair is not in the already-published Alpha.9 artifacts. No
+  architecture/domain/API/schema/dependency/protocol change or native WebKitGTK
+  visual acceptance is claimed. Active-session self-review, not independent review.
+
 ## 2026-10-11 — AP8 collector source publication verified
 
 ## 2026-10-11 — Notes Foundation/service bounded integration acceptance

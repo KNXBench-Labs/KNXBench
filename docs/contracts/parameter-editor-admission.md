@@ -101,3 +101,55 @@ ref→parameter→type chains do not authorize specialized controls. Qualified r
 attributes retain their names and must not be mistaken for unqualified hints.
 There is no resource loading, HTML rendering, codec, unit conversion, catalogue
 write, parameter mutation, API DTO or production-shell mount in this slice.
+
+## Next owned slice: isolated editor admission and controls
+
+Before coding, own `apps/knx-web/src/features/parameter-editors/plan.ts`,
+`plan.test.ts`, `ParameterEditor.tsx`, `ParameterEditor.test.tsx`, `copy.ts` and
+`editor.module.css`, this contract and own handover. No ParameterPanel/api/global
+styles/catalogues/manifests/shell mutation. Initially pass exact evidence from a
+typed host adapter; producer HTTP adoption is a separate declared step.
+
+The selector must not turn raw evidence into a guessed codec. Admitted Time is
+a decimal integer count only, no h:m:s/date conversion; raw unit is visibly
+verbatim/uninterpreted. Numeric Slider is a bounded safe integer presentation
+only for an explicit unqualified Slider hint and valid integer subtype/bounds;
+unsupported Increment or conflicting hints fall back, rather than rounding.
+Source lexical strings are not rewritten on selection/render or a no-op.
+Color/Picture receive their own visible unsupported-codec fallback, not an
+enabled browser colour/file control. Current host write authority and existing
+application validation/dependency/persistence remain authoritative.
+
+Only explicit user Apply invokes the supplied existing-service callback. Draft
+context changes revoke stale results; rejected writes retain a recoverable draft
+and visible refusal. Host must refresh the actual panel/tree after success and
+provide module/source/revision identity; no local reconstruction of dependencies.
+
+## Read-only HTTP producer and isolated fixture ownership
+
+Next exact owned paths: `apps/knx-server/src/parameter_editor_routes.rs`,
+server `lib.rs` (one module/authorized-router merge),
+`apps/knx-server/tests/http_parameter_editor_source.rs`,
+`apps/knx-web/src/features/parameter-editors/fixture.html`, `fixture.tsx`,
+`build-fixture.mjs`, plus this contract/owned handover/status. Existing parameter
+routes/domain/write DTOs, global styles and shell remain unchanged.
+
+GET `/api/device/{id}/parameter-editor-source?etsId=...` will resolve only the
+device's existing Hardware2Program mapping; no client-supplied program authority.
+The response binds device/ref/server/project/snapshot identity and named source
+evidence. Project and ProductDB mutexes must never be held together: copy the
+program reference and project identity, read ProductDB, then recheck project
+identity/reference and refuse concurrent drift. Optional unavailable sources stay
+200 with explicit status; actual SQL errors remain500. No new write endpoint or
+revision-conditional mutation claim. The reused legacy parameter write endpoint
+remains the authority; UI stale-result suppression cannot roll back a sent edit.
+
+The isolated fixture may use clearly synthetic source/value/service results for
+component browser acceptance. It must not be presented as real persistence or
+API acceptance; HTTP tests separately exercise real handlers/native save/reopen.
+No API/bus/network resources may escape the loopback request allowlist.
+
+Owned documentation closure additionally includes `docs/contracts/parameter-editor-host.md`,
+`docs/KNOWN_LIMITATIONS.md`, `docs/IMPLEMENTATION_STATUS.md`, and
+`docs/evidence/parameter-editors-2026-10-11.json`. These record the bounded
+controls and independent evidence scopes; PDB-04 is not closed by this subset.

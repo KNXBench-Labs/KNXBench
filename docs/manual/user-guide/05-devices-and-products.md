@@ -295,7 +295,7 @@ edit the project; they do not connect to, program or download a KNX device.
 
 ### Communication objects
 
-**Source update (2026-10-11, accepted main integration, not in Alpha.8):** the DPT field is now a
+**Source update (2026-10-11, published on main, not in Alpha.8):** the DPT field is now a
 dropdown, not a free-text input. Each known option shows its number and the name
 in the UI language, for example **9.001 – Temperature / Temperatur** or
 **17.001 – Scene number / Szenennummer**. Choose a value, then leave the field

@@ -23,6 +23,14 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:41 CEST
+- **Completed:** Owner-requested DPT featurefd5306dd/no-ff mergee57e3a09 published normally on main atab7db1ae; exact local/fetched/live refs, feature/merge ancestry, all changed blobs and KNXBench identities/no coauthor verified. Actual merged frozen1878-input19 stages all0: Web2648/0/167, Rust3946/0/192ignored, full Chromium274/0/0skipped, built23/0; build/types/fmt/Clippy/five repo/docs/whitespace pass, four final frames inspected. Public receipt/status now record actual publication; self-review.
+- **Pending/Next Steps:** Documentation-only publication closure gates/commit/push/readback; archive compact accepted evidence and retire only the two owned source worktrees/branches/dp11p scratch after process teardown. No feature implementation remains.
+- **Notes for Codex oder Claude:** Runtime tested sourcee57e3a09, first publicationab7db1ae; later delta docs only. Own dpt-integration-20261011 and dpt-labels-20261011, evidence .ai/logs/2026-10-11_codex_dpt-selection/publication/. No release/deployment/root synchronization/private or ignored corpus/unmocked-server/native/Orca/ETS/hardware claim. Preserve every foreign root file/journal/worktree.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 11:39 CEST
 - **Completed:** Owner-authorized DPT featurefd5306dd and no-ff main mergee57e3a09 locally accepted on actual upstream8505dc96. Frozen1878-input19 stages all0: Web2648/0/167, Rust3946/0/192ignored, full Chromium274/0/0skipped, built23/0; build/three types/fmt/Clippy/five explicit-root repo/docs/whitespace. Four final merged frames inspected; required identities/no coauthor and upstream app/journal preservation verified. Metadata records original-vs-merge acceptance; no push yet.
 - **Pending/Next Steps:** Final documentation/disclosure gates, normal HEAD:main push/exact remote ref/blob readback, verified closure and only-owned source/build/scratch cleanup.

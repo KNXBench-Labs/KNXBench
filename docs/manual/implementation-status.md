@@ -117,7 +117,7 @@ The authorized historical-export harness lacks its real export set; cvexc
 analysis does not activate device comparison/download rules. Native/Orca and
 real ETS/hardware evidence remain unverified.
 
-## Accepted main-integration source: localized DPT dropdown and field provenance
+## Published main source: localized DPT dropdown and field provenance
 
 The 2026-10-11 [display/selection extension](../contracts/dpt-selection.md)
 replaces the CO DPT free-text field with a native dropdown containing 454

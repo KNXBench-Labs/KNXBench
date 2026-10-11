@@ -1,4 +1,5 @@
 //! Normalized installation instructions, independent of imported formatting.
+//!
 //! Pure value module; project/native admission is a separate integration gate.
 
 pub const MAX_DOCUMENT_BYTES: usize = 64 * 1024;

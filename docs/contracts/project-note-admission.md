@@ -111,3 +111,85 @@ no-notes non-note command fast path stays unchanged. Batch invokes this same
 policy and explicit note disposition must precede target deletion. Undo order
 restores a removed entity before its notes. A refused delete leaves content,
 originals, allocation counters and history unchanged; no implicit retarget.
+
+## Native14 admission slice
+
+Latest fetched main0bed9e2a still writes13;14 is unclaimed in this worktree.
+Exact owned next paths: core `project.rs`, store `notes.rs`, `migration.rs`,
+`project.rs`, `representable.rs`, `project_history/snapshot.rs`, `lib.rs`,
+`tests/notes_admission.rs` (replace intermediate refusal with new native-support
+REDs), `tests/instructions.rs` (current-version assertion only), own contract/
+handover/model docs. Existing instructions/large-history codec preserved.
+
+Use strict ordered `project_note` plus singleton `project_note_state` counter
+tables. Separate counter avoids changing predecessor id_allocators column/hash
+shape. Load budgets before allocating text; target/id/position/include/text and
+state validated. Save requires representable note state and counter coverage;
+load reuses existing allocator-repair reporting for stale note counters. Missing
+state is corrupt, never guessed. Native13 migration starts empty notes/counter0.
+Snapshot admission covers only actual supported12/13/14 shapes; new empty notes
+and zero counter preserve older identity only with real13history proof. Any
+notes/nonzero counter uses14identity. No downgrade compatibility claim.
+
+Selective-model14 gate must be audited before publication: declare app
+`selective_import.rs`, `selective_import/merge.rs`, existing selective tests
+before changes; preserve destination notes, refuse source notes with a named
+unsupported reason until target selection/disposition mapping is verified.
+Do not allow notes to vanish merely by increasing a numeric version constant.
+
+Exact selective-import14 scope now declared: `crates/knx-app/src/selective_import.rs`,
+`src/selective_import/merge.rs`, `tests/selective_import.rs`. Audit accepts14
+only with empty source notes; source-authored notes get explicit loss refusal
+before candidate creation. Destination collection/counter preserved and tested.
+It is an unsupported native-note selective-source boundary, not full mapping.
+
+Native14 compilation exposed `crates/knx-app/tests/perf_baseline.rs`'s explicit
+Project initializer. That exact fixture path is additionally owned for an empty
+`notes` field only; benchmark sizes/semantics unchanged. Existing instruction
+predecessor test uses current-schema constant for final migration assertion;
+authentic source-version/hash expectations remain unchanged.
+
+## Reconstructed old-schema fixture corrections
+
+Broad native14 test exposed a pre-v9 helper retaining the new tables. Exact
+additional test-only paths: `crates/knx-store/tests/project_history.rs`,
+`crates/knx-store/tests/read_only_open.rs`, `apps/knx-mcp/tests/tools.rs`,
+`apps/knx-server/tests/http_project_history.rs`; store migration.rs test helper
+already owned. Add DROP project_note/project_note_state only to existing
+artificial predecessor reconstruction SQL. Keep real13fixture bytes, readonly
+file/rollback/version/data assertions and production migration unchanged.
+
+## Application/HTTP follow-up design, not yet implemented
+
+Reuse the established preview-first instruction edit pattern instead of a new
+transaction framework. A note request (Create/Replace/Remove/Move) becomes a
+Core command evaluated on a private full NativeSnapshot. Preview binds the
+actual server/project revision and before snapshot; create allocates only on
+a private candidate. Apply rechecks exact context, preserves no-op redo, and
+persists candidate model/history before live publication via existing native
+working-state history services. Refusal cannot consume an ID or alter stacks,
+originals or root/working files. Project/site/device note deletion policy remains
+Core's explicit same-Batch disposition; no API silently retargets notes.
+
+Bounded authenticated router-local preview plan with TTL, token-only Apply and
+Cancel should mirror the current instruction route; no client replacement of
+after-model/command at Apply. No new AppState/schema change solely for plan cache.
+Later exact service/HTTP/UI paths must be declared before implementation.
+Selected notes are literal text; documentation opt-in is an explicit checkbox,
+not derived from nonempty body or a target. Static HelpPanel already provides
+help; contextual note guidance is separate static content, never persisted into
+authored notes. Revision guards are necessary before optimistic publishing.
+
+## Note diff and documentation inclusion slice
+
+Exact owned paths: `crates/knx-diff/src/diff.rs`, `crates/knx-diff/tests/notes.rs`,
+`crates/knx-report/src/render.rs`, `crates/knx-report/tests/notes.rs`.
+Native diff compares the typed ordered collection as a structured `notes`
+project-level field; it must detect content/target/order/inclusion changes and
+exclude allocator-only differences. No fake imported identity matching.
+Report renders only per-note documentation-opted-in notes, in original order,
+with escaped title/body/typed target and preserved linebreaks. Its note section
+is controlled by each note's explicit flag, independent of the existing5
+optional entity sections; no shared report selector/catalogue changes.
+Opted-out notes must not leak into report text, warnings, IDs or contents.
+Empty/opted-out collections leave existing report output unchanged.

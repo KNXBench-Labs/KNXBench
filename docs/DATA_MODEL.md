@@ -1,5 +1,32 @@
 # Data model
 
+## Native project notes, model/storage14 candidate (2026-10-11)
+
+[ADR-0031](adr/0031-project-notes-are-a-project-owned-collection.md) is implemented
+locally at the Core/store Foundation scope: ordered `Project.notes` with
+`ProjectNoteId`, exact typed targets, literal title/body and explicit report
+inclusion default false. Limits:4096notes,512-byte nonblank title,64KiB body and
+4MiB total UTF8. Invalid/duplicate IDs and missing/ambiguous targets refuse.
+Controls other than tab/CR/LF refuse; valid whitespace/linebreaks stay exact.
+
+Reversible note Insert/Remove/Replace/Move commands use private validated
+candidates whenever notes are affected; target deletion requires explicit note
+disposition in the same Batch or refuses without changing IDs/history/content.
+No-op Replace/Move preserves redo. The independent note allocator high-water
+never rewinds on remove/undo; exhaustion refuses. Strict native14 note/state
+tables preserve order, target, text and inclusion; authentic13root/working/both
+stacks migrate with no notes and unchanged readonly originals. Zero notes/counter
+retain12/13semantic baseline identities; note state uses14identity, not downgrade.
+Stale note counters use existing explicitly reported repair; malformed native
+note content never gets silently repaired. Native diff sees the typed collection;
+report includes only opted-in notes as escaped literal text. Selective14 keeps
+destination notes and explicitly refuses source-authored notes pending mapping.
+[Admission and exact scope](contracts/project-note-admission.md).
+
+Foundation full-workspace/source-bound acceptance is pending; local code is not
+published or full AP4. No note Application/HTTP/editor integration yet. Existing
+static HelpPanel remains separate and is reused, not stored in note rows.
+
 ## Native instruction overlays, model/storage13 (2026-10-11)
 
 [ADR-0112](adr/0112-native-instruction-overlays.md) introduces

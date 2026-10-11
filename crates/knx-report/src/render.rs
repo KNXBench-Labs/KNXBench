@@ -75,6 +75,7 @@ pub(crate) fn render(project: &Project, options: &ReportOptions) -> HtmlReport {
             &mut warnings,
         );
     }
+    render_notes(&mut out, project, options.language);
     render_limits(&mut out, &warnings, options.language);
 
     out.push_str(&document_tail());
@@ -83,6 +84,31 @@ pub(crate) fn render(project: &Project, options: &ReportOptions) -> HtmlReport {
         html: out,
         warnings,
     }
+}
+
+/// Author-controlled inclusion is independent from the optional entity sections.
+fn render_notes(out: &mut String, project: &Project, language: ReportLanguage) {
+    if !project
+        .notes
+        .iter()
+        .any(|note| note.include_in_documentation())
+    {
+        return;
+    }
+    write!(
+        out,
+        "<section id=\"project-notes\"><h2>{}</h2>",
+        language.text("Project notes", "Projektnotizen")
+    )
+    .unwrap();
+    for note in project
+        .notes
+        .iter()
+        .filter(|note| note.include_in_documentation())
+    {
+        write!(out, "<article><h3>{}</h3><p>{}: {}</p><div style=\"white-space:pre-wrap;overflow-wrap:anywhere\">{}</div></article>", escape_text(note.title()), language.text("Target", "Ziel"), escape_text(&format!("{:?}", note.target())), escape_text(note.body())).unwrap();
+    }
+    out.push_str("</section>");
 }
 
 fn document_title(project: &Project, language: ReportLanguage) -> String {
@@ -240,6 +266,18 @@ fn render_contents(out: &mut String, project: &Project, options: &ReportOptions)
             out,
             "<li><a href=\"#devices\">{}</a></li>",
             language.text("Devices", "Geräte")
+        )
+        .unwrap();
+    }
+    if project
+        .notes
+        .iter()
+        .any(|note| note.include_in_documentation())
+    {
+        write!(
+            out,
+            "<li><a href=\"#project-notes\">{}</a></li>",
+            language.text("Project notes", "Projektnotizen")
         )
         .unwrap();
     }

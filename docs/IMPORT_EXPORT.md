@@ -1165,3 +1165,18 @@ unverified name/location candidate roles. Unknown bytes, original paths/owners
 and existing native/product destinations stay exact; no nested unpack/render/
 execution or App/manifest validity. Parser-only reports and historical persisted
 reports are not silently rewritten. See [ADR-0109](adr/0109-opaque-payload-content-and-candidate-roles.md).
+
+## Authored note boundary, native14 candidate (2026-10-11)
+
+Project notes are native-only typed plain-text authored data, separate from
+retained ETS sources and device instruction overlays. ETS imports create none;
+KNXBench still does not write `.knxproj`. Native save/reopen/history preserves
+notes/identity/order/inclusion. The independent note allocator is persisted even
+after notes are removed. Any future whole-project converter lacking notes must
+identify unsupported notes before conversion; no inferred external notes mapping.
+The existing selected GA CSV exchange is a group-address subset, not complete
+project conversion. Selective14 import preserves destination notes and explicitly
+refuses source notes pending audited selection/disposition mapping; it never
+claims to preserve them by dropping them. Report exports only opted-in notes.
+Current Foundation admission/publication and service/editor adoption are pending;
+[exact contract](contracts/project-note-admission.md).

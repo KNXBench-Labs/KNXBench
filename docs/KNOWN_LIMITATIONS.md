@@ -9585,3 +9585,15 @@ mutations remain server-validated but not revision-conditional: ignoring a late
 UI reply does not cancel/roll back a sent request. Synthetic component browser
 checks are distinct from actual HTTP/native persistence witnesses. No shared
 production-shell mount or full specialized Color/Picture editor is delivered.
+
+## Native notes Foundation candidate (2026-10-11, AP4 not delivered yet)
+
+Core/store14/diff/report additions are local and focused-tested, not published
+full notes editing. Note-bearing target deletes now refuse unless explicit note
+disposition is part of the same undoable Batch. No note services/HTTP/editor yet;
+existing help remains separate static prose. Text is literal, no Markdown/HTML
+or attachments. Selective import keeps destination notes but refuses authored
+source notes until explicit selection/disposition mapping exists. Native14 has
+no downgrade promise; original13readonly fixtures/history preservation is a
+focused synthetic witness, not universal ETS/corpus/hardware certification.
+[Admission](contracts/project-note-admission.md).

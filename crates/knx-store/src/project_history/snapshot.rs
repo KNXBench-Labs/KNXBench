@@ -100,7 +100,7 @@ impl NativeSnapshot {
         conn.deserialize_read_exact(MAIN_DB, bytes, bytes.len(), false)?;
         conn.execute_batch("PRAGMA trusted_schema = OFF; PRAGMA foreign_keys = ON;")?;
         let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if version != crate::CURRENT_SCHEMA_VERSION && version != 12 {
+        if ![12, 13, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
             return Err(HistoryError::Invalid("unsupported snapshot schema version"));
         }
         let creator: String = conn.query_row(
@@ -132,7 +132,7 @@ impl NativeSnapshot {
             }
         }
         check_schema_version(&conn, version)?;
-        if version == 12 {
+        if version < crate::CURRENT_SCHEMA_VERSION {
             crate::migration::migrate(&conn)
                 .map_err(|_| HistoryError::Invalid("predecessor snapshot upgrade refused"))?;
         }
@@ -171,10 +171,14 @@ fn check_schema_version(conn: &Connection, version: i64) -> Result<(), HistoryEr
     }
     let expected = crate::open_and_migrate_in_memory()
         .map_err(|_| HistoryError::Invalid("native schema admission initialization failed"))?;
+    if ![12, 13, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+        return Err(HistoryError::Invalid("unsupported native schema shape"));
+    }
+    if version < 14 {
+        expected.execute_batch("DROP TABLE project_note; DROP TABLE project_note_state;")?;
+    }
     if version == 12 {
         expected.execute_batch("DROP TABLE instruction_run; DROP TABLE instruction_document;")?;
-    } else if version != crate::CURRENT_SCHEMA_VERSION {
-        return Err(HistoryError::Invalid("unsupported native schema shape"));
     }
     if shape(conn)? != shape(&expected)? {
         return Err(HistoryError::Invalid(
@@ -200,7 +204,14 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
         [],
         |row| row.get(0),
     )?;
-    let identity_version: u32 = if instructions { 13 } else { 12 };
+    let notes: bool = conn.query_row("SELECT EXISTS(SELECT 1 FROM project_note) OR EXISTS(SELECT 1 FROM project_note_state WHERE last_id!=0)", [], |row|row.get(0))?;
+    let identity_version: u32 = if notes {
+        14
+    } else if instructions {
+        13
+    } else {
+        12
+    };
     hash.update(identity_version.to_be_bytes());
     let tables: Vec<String> = conn
         .prepare(
@@ -212,6 +223,7 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
         if name.starts_with("sqlite_")
             || name.starts_with("project_history_")
             || name == "schema_meta"
+            || (!notes && matches!(name.as_str(), "project_note" | "project_note_state"))
             || (!instructions
                 && matches!(name.as_str(), "instruction_document" | "instruction_run"))
         {

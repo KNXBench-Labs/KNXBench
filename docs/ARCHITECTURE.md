@@ -716,3 +716,14 @@ state. Full logical attribute and original XML stay in source storage; clipped
 previews disclose truncation and must not regenerate/export values. Application
 session logs add raw evidence rows while keeping existing hash diagnostics; UI
 renders literal text and localized raw labels, no RTF/HTML interpretation.
+
+## Native notes Foundation candidate (2026-10-11)
+
+[ADR-0031](adr/0031-project-notes-are-a-project-owned-collection.md) adds an
+ordered typed project-owned plain-text collection in Core and separate native14
+note/state tables. Commands publish only validated private note-bearing
+candidates; entity deletes require explicit same-Batch note disposition, never
+a silent cascade. Storage/domain are independent of UI; report inclusion is
+explicit, static help remains application prose. Source-bound full admission and
+Application/HTTP/isolated-editor slices remain pending.
+[Scope](contracts/project-note-admission.md); no published AP4/shell claim.

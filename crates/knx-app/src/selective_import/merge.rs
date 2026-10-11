@@ -12,12 +12,15 @@ pub(super) fn plan(
     source: &Source,
     selection: Selection,
 ) -> Result<Plan, String> {
-    // This closure enumerates model-v13 references, including instruction overrides. A model bump needs a new audit,
+    // Model14 preserves destination notes and explicitly refuses source notes without disposition mapping. A model bump needs a new audit,
     // not accidental acceptance of newly cloned but unremapped entity fields.
     if before.project.schema_version != super::SELECTIVE_MODEL_VERSION
         || source.project.schema_version != super::SELECTIVE_MODEL_VERSION
     {
-        return Err("selective import supports normalized model v13 only; a new model requires an audited dependency mapping".into());
+        return Err("selective import supports normalized model v14 only; a new model requires an audited dependency mapping".into());
+    }
+    if !source.project.notes.is_empty() {
+        return Err("source project notes require an explicit selection/disposition mapping; selective import refused without dropping authored data".into());
     }
     before.encode().map_err(|e| e.to_string())?;
     if source

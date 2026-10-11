@@ -149,6 +149,116 @@ function setTextInputValue(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+describe("selected installation properties", () => {
+  afterEach(() => apiMock.renameInstallation.mockReset());
+  it.each(["en", "de"])("explains and renames only the selected unnamed installation (%s)", async (language) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    const tree = twoInstallationTree();
+    tree.installations[1].name = "";
+    const renamed = structuredClone(tree);
+    renamed.installations[1].name = "Annex";
+    apiMock.renameInstallation.mockResolvedValueOnce(renamed);
+    const onApplied = await renderInspector({ kind: "installation", id: 1 }, tree);
+    const word = language === "de" ? "Unbenannte Installation" : "Unnamed installation";
+    expect(host!.querySelector("h2")?.textContent).toBe(`${word} (ID 1)`);
+    expect(host!.textContent).toContain(language === "de" ? "Gruppenadressen" : "group addresses");
+    expect(host!.textContent).toContain(language === "de" ? "kein Gerät" : "not a device");
+    expect(apiMock.renameInstallation).not.toHaveBeenCalled();
+    const fields = host!.querySelectorAll<HTMLInputElement>("input");
+    expect(fields.length).toBe(1);
+    expect(fields[0].value).toBe("");
+    await act(async () => setTextInputValue(fields[0], "Annex"));
+    await act(async () => fields[0].dispatchEvent(new Event("focusout", { bubbles: true })));
+    expect(apiMock.renameInstallation).toHaveBeenCalledExactlyOnceWith(1, "Annex");
+    expect(onApplied).toHaveBeenCalledExactlyOnceWith(renamed);
+    expect(tree.installations[1].name).toBe("");
+  });
+
+  it("does not overlap installation renames and reports a refused write", async () => {
+    let reject!: (reason: Error) => void;
+    apiMock.renameInstallation.mockReturnValueOnce(new Promise<ProjectTree>((_, fail) => { reject = fail; }));
+    const onApplied = await renderInspector({ kind: "installation", id: 1 }, twoInstallationTree());
+    const field = host!.querySelector<HTMLInputElement>("input")!;
+    await act(async () => setTextInputValue(field, "Annex"));
+    await act(async () => {
+      field.dispatchEvent(new Event("focusout", { bubbles: true }));
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      field.dispatchEvent(new Event("focusout", { bubbles: true }));
+    });
+    expect(apiMock.renameInstallation).toHaveBeenCalledExactlyOnceWith(1, "Annex");
+    expect(field.disabled).toBe(true);
+    await act(async () => reject(new Error("rename refused")));
+    expect(host!.querySelector('[role="alert"]')?.textContent).toBe("rename refused");
+    expect(field.disabled).toBe(false);
+    expect(field.value).toBe("Installation 2");
+    expect(onApplied).not.toHaveBeenCalled();
+  });
+
+  it("cancels an installation draft with Escape and refuses a new blank name", async () => {
+    await renderInspector({ kind: "installation", id: 1 }, twoInstallationTree());
+    const field = host!.querySelector<HTMLInputElement>("input")!;
+    await act(async () => setTextInputValue(field, "Annex"));
+    await act(async () => field.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await act(async () => field.dispatchEvent(new Event("focusout", { bubbles: true })));
+    expect(field.value).toBe("Installation 2");
+    await act(async () => setTextInputValue(field, "  "));
+    await act(async () => field.dispatchEvent(new Event("focusout", { bubbles: true })));
+    expect(host!.querySelector('[role="alert"]')?.textContent).toBeTruthy();
+    expect(field.value).toBe("Installation 2");
+    expect(apiMock.renameInstallation).not.toHaveBeenCalled();
+  });
+
+  it("keeps an installation draft across an unrelated snapshot refresh", async () => {
+    const tree = twoInstallationTree();
+    const onApplied = await renderInspector({ kind: "installation", id: 1 }, tree);
+    const field = host!.querySelector<HTMLInputElement>("input")!;
+    await act(async () => setTextInputValue(field, "Unsubmitted draft"));
+    await act(async () => root!.render(<Inspector selection={{ kind: "installation", id: 1 }}
+      tree={{ ...tree, snapshot_revision: 2 }} deviceDetail={null} onApplied={onApplied} onDeleted={vi.fn()} />));
+    expect(field.value).toBe("Unsubmitted draft");
+    expect(apiMock.renameInstallation).not.toHaveBeenCalled();
+  });
+
+  it.each(["snapshot", "selection", "unmount"])("ignores an installation rename reply after %s changes", async (change) => {
+    let resolve!: (tree: ProjectTree) => void;
+    apiMock.renameInstallation.mockReturnValueOnce(new Promise<ProjectTree>((done) => { resolve = done; }));
+    const tree = twoInstallationTree();
+    const onApplied = await renderInspector({ kind: "installation", id: 1 }, tree);
+    const field = host!.querySelector<HTMLInputElement>("input")!;
+    await act(async () => setTextInputValue(field, "Annex"));
+    await act(async () => field.dispatchEvent(new Event("focusout", { bubbles: true })));
+    expect(apiMock.renameInstallation).toHaveBeenCalledExactlyOnceWith(1, "Annex");
+    await act(async () => {
+      if (change === "unmount") root!.unmount();
+      else root!.render(<Inspector selection={{ kind: "installation", id: change === "selection" ? 0 : 1 }}
+        tree={change === "snapshot" ? structuredClone(tree) : tree} deviceDetail={null}
+        onApplied={onApplied} onDeleted={vi.fn()} />);
+    });
+    if (change === "snapshot") {
+      expect(field.disabled).toBe(true);
+      expect(field.value).toBe("Annex");
+      await act(async () => field.dispatchEvent(new Event("focusout", { bubbles: true })));
+      expect(apiMock.renameInstallation).toHaveBeenCalledExactlyOnceWith(1, "Annex");
+    }
+    await act(async () => resolve({ ...tree, can_undo: true }));
+    expect(onApplied).not.toHaveBeenCalled();
+    if (change === "snapshot") {
+      expect(field.disabled).toBe(false);
+      expect(field.value).toBe("Annex");
+      expect(host!.querySelector('[role="alert"]')?.textContent).toContain("server operation may have completed");
+    }
+    if (change === "unmount") root = undefined;
+  });
+
+  it.each(["unknown", "ambiguous"])("does not edit an %s installation", async (kind) => {
+    const tree = twoInstallationTree();
+    tree.installations.push({ ...tree.installations[1] });
+    await renderInspector({ kind: "installation", id: kind === "unknown" ? 999 : 1 }, tree);
+    expect(host!.querySelector("input")).toBeNull();
+    expect(apiMock.renameInstallation).not.toHaveBeenCalled();
+  });
+});
+
 function movableBuildingTree(): ProjectTree {
   const tree = twoInstallationTree();
   tree.installations[0].buildings = [

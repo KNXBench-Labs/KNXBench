@@ -6,6 +6,7 @@
 // relies on structurally, not because `0` means anything.
 export type Selection =
   | { kind: "project"; id: number }
+  | { kind: "installation"; id: number }
   | { kind: "device"; id: number }
   | { kind: "group_address"; id: number }
   | { kind: "group_range"; id: number }

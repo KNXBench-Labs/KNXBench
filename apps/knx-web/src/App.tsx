@@ -594,6 +594,10 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
       setView("device");
       if (window.innerWidth <= 650) setNavigationOpen(false);
     }
+    if (sel.kind === "installation") {
+      setInspectorOpen(true);
+      if (window.innerWidth <= 650) setNavigationOpen(false);
+    }
     setDeviceDetailLoading(sel.kind === "device");
     selectionRef.current = sel;
     setSelection(sel);

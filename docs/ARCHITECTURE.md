@@ -1,5 +1,16 @@
 # Architecture
 
+## Local installation-node presentation (2026-10-11)
+
+[The installation-node contract](contracts/installation-node.md) keeps translated
+unnamed labels, selection and explanation in the UI. The existing command-backed
+installation rename service remains authoritative for admission, undo/redo and
+native persistence. Display labels never become imported names; the new UI-only
+selection discriminant is neither a domain ID change nor a schema migration.
+No new dependency, importer rule or protocol behavior. The shared simple name field
+blocks duplicate submissions and ignores superseded replies without claiming that
+server operations were canceled or that the legacy API is revision-conditional.
+
 ## Local import-integrity adapter repair (2026-10-10)
 
 [ADR-0107](adr/0107-import-source-integrity.md) and [the contract](IMPORT_INTEGRITY.md) bind ZIP reads to validated member identity, retain original XML, separate metadata provenance and record parser-owned lexical observations. Application code reuses persisted product diagnostics and baggage classification. Completion vocabulary requires a scalar-only schema12 refusal barrier; no UI/core coupling, new dependency or protocol capability. Local and unpublished; final acceptance remains separately recorded.

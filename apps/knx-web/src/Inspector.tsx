@@ -20,6 +20,7 @@ import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { LineNode } from "./bindings/LineNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
+import { installationLabel } from "./installationPresentation";
 import { ParameterPanelContent, useDeviceParameters } from "./ParameterPanel";
 import HelpTip from "./HelpTip";
 import RenameNameField from "./RenameNameField";
@@ -1375,7 +1376,7 @@ function ProjectInspector(props: { tree: ProjectTree; onApplied: (tree: ProjectT
       {/* MODEL-01: `Command::RenameInstallation`, one undo step each. */}
       <h3>{t("inspector.installations")}</h3>
       {props.tree.installations.map((installation, index) => (
-        <NameField key={installation.id} id={installation.id} name={installation.name}
+        <NameField key={installation.id} id={installation.id} name={installation.name} tree={props.tree}
           label={t("inspector.name")} inputLabel={t("inspector.installationName", { n: index + 1 })}
           rename={(value) => api.renameInstallation(installation.id, value)} onApplied={props.onApplied} />
       ))}
@@ -1388,38 +1389,70 @@ function ProjectInspector(props: { tree: ProjectTree; onApplied: (tree: ProjectT
 function NameField(props: {
   id: number;
   name: string;
+  tree?: ProjectTree;
   label: string;
   inputLabel?: string;
   rename: (name: string) => Promise<ProjectTree>;
   onApplied: (tree: ProjectTree) => void;
 }) {
   const { id, name, rename, onApplied } = props;
+  const t = useTranslate();
   const [value, setValue] = useState(name);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
+  const alive = useRef(true);
+  const generation = useRef(0);
+  const context = useRef({ id, name, tree: props.tree });
+  if (context.current.id !== id || context.current.name !== name || context.current.tree !== props.tree) {
+    generation.current++;
+    context.current = { id, name, tree: props.tree };
+  }
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
   useEffect(() => {
     setValue(name);
     setError(null);
-  }, [id, name]);
+  }, [id, name, props.tree?.server_incarnation, props.tree?.project_incarnation]);
 
   async function apply() {
+    if (pending.current) return;
     if (value === name || value.trim() === "") {
       setValue(name);
+      if (value !== name && props.tree) setError(t("rename.blank"));
       return;
     }
+    const ownedGeneration = generation.current;
+    pending.current = true;
+    setBusy(true);
     setError(null);
     try {
-      onApplied(await rename(value));
+      const updated = await rename(value);
+      if (alive.current && generation.current === ownedGeneration) onApplied(updated);
+      else if (alive.current && props.tree) setError(t("installation.staleReply"));
     } catch (e) {
-      setError(api.errorMessage(e));
-      setValue(name);
+      if (alive.current && generation.current === ownedGeneration) {
+        setError(api.errorMessage(e));
+        setValue(name);
+      }
+    } finally {
+      if (alive.current) {
+        pending.current = false;
+        setBusy(false);
+      }
     }
   }
 
   return <label className="inspector-field">
     {props.label}
-    <input value={value} aria-label={props.inputLabel} onChange={(e) => setValue(e.target.value)} onBlur={apply}
-      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
-    {error && <span className="field-error">{error}</span>}
+    <input value={value} disabled={busy} aria-label={props.inputLabel} onChange={(e) => setValue(e.target.value)} onBlur={apply}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setValue(name); setError(null); }
+        if (e.key === "Enter" && !e.nativeEvent.isComposing) (e.target as HTMLInputElement).blur();
+      }} />
+    {error && <span className="field-error" role="alert">{error}</span>}
   </label>;
 }
 
@@ -1728,6 +1761,20 @@ export default function Inspector(props: {
 }) {
   const { selection, tree, deviceDetail, onApplied, onDeleted } = props;
   const t = useTranslate();
+
+  if (selection.kind === "installation") {
+    const matches = tree.installations.filter((installation) => installation.id === selection.id);
+    if (matches.length !== 1) return null;
+    const installation = matches[0];
+    return <div className="inspector">
+      <h2>{installationLabel(t, installation)}</h2>
+      <p className="inspector-description">{t("installation.description")}</p>
+      <NameField key={installation.id} id={installation.id} name={installation.name} tree={tree}
+        label={t("inspector.name")}
+        rename={(value) => api.renameInstallation(installation.id, value)} onApplied={onApplied} />
+      <p className="inspector-description">{t("installation.editHint")}</p>
+    </div>;
+  }
 
   if (selection.kind === "project") {
     return <ProjectInspector tree={tree} onApplied={onApplied} />;

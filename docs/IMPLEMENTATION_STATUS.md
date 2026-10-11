@@ -1,3 +1,38 @@
+## 2026-10-11 — local installation nodes get a nameplate and editable Properties
+
+- Owner-requested local UI repair in `fix/installation-node-20261011`, based on
+  `9298242c`. Empty/whitespace-only installation names receive translated,
+  stable-ID display labels; imported names/IDs remain unchanged. Label selection
+  opens explanatory Properties with the existing command-backed name edit;
+  arrows still toggle the subtree. Selected-installation add-device scope remains
+  explicit. [Focused contract](contracts/installation-node.md) and
+  [manual](manual/user-guide/02-projects.md#installation-nodes-and-their-names).
+- Named RED controls precede label/selection/editor, placement and unrelated
+  snapshot draft-preservation repairs. The shared simple name field blocks
+  duplicate pending writes, supports Escape/refusal/blank feedback and ignores
+  superseded replies without pretending the server operation was canceled.
+- Final frontend **2633 passed / 0 failed in 165 files**; production build,
+  theme/flow/explicit E2E type checks pass. Full intercepted Chromium **254/0/0
+  skipped**; six additional production-built EN/DE 1440/400 Graphite/Porcelain/CRT
+  cases pass, with all final frames inspected. Existing Core multi-installation
+  **10/0** and HTTP route **2/0** pass; fresh-target server and xtask build pass.
+- A real production-server/browser probe in a loopback-only namespace passes
+  **eight** checks: exact unnamed Undo, Redo, blank refusal without mutation,
+  scoped name change, native Save/Open, and native reopen after actual browser
+  rename/Undo/Redo. No bus discovery reaches hardware; all storage roots are owned
+  and isolated. Six final Properties frames and the final real CRT workbench are
+  inspected. In-session self-review, not independent approval.
+- Five nonempty explicit-root repository checks, documentation and whitespace
+  pass. After the completed frozen runtime chain, only one source comment and
+  one test description were corrected; final full frontend/build/types reran,
+  and **all 90 built files match the runtime-tested artifact byte-for-byte**.
+  The ignored receipts retain both source manifests and exact equivalence proof.
+- Local/uncommitted/unpublished; no main integration, Alpha.8 replacement,
+  deployment, fresh private ETS import or native WebKitGTK/Orca claim. The legacy
+  installation rename endpoint remains non-revision-conditional, explicitly
+  documented. Source and built frontend remain in the owned worktree; compact
+  evidence stays under `.ai/logs/2026-10-11_codex_installation-node/`.
+
 ## 2026-10-11 — local collector delivery and scoped measurement contract
 
 The standalone ProjectStats generator at its canonical local checkout now

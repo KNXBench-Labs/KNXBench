@@ -4,7 +4,14 @@ Status: locally implemented source package, 2026-10-11. Publication, release and
 running-container deployment are separate decisions. No project/native schema,
 KNX protocol, importer identity rule or dependency is changed.
 
-## Login identity
+## Main-integration acceptance
+
+The [acceptance/publication receipt](../evidence/login-feedback-publication-2026-10-11.json)
+records actual combined-main runtime tests separately from original local
+acceptance, metadata reconciliation and remote-readback. This does not change
+release/deployment/native/vendor/hardware boundaries.
+
+## Login build identity
 
 The login page reuses `src/assets/knxbench-mark.png`, imported through Vite,
 instead of the letter badge. The adjacent KNXBench name is its accessible label;

@@ -11,10 +11,10 @@ mod saved_activation;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use saved_activation::{
-    Comparison, SavedDevice, channel_claim_matches, compare_activity,
-    diagnostic_observed_agreement, diagnostic_report, saved_devices,
+    channel_claim_matches, compare_activity, diagnostic_observed_agreement, diagnostic_report,
+    saved_devices, Comparison, SavedDevice,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
@@ -117,8 +117,8 @@ fn mark(report: &mut BTreeMap<&'static str, bool>, prefix: bool, outcome: Compar
 
 #[tokio::test]
 #[ignore = "requires KNXBENCH_PRIVATE_SCHEMA23_PROJECT; private read-only differential"]
-async fn private_saved_activation_compares_every_imported_tree_object_without_rounding_unknown_states()
- {
+async fn private_saved_activation_compares_every_imported_tree_object_without_rounding_unknown_states(
+) {
     let evidence = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../.ai/logs/private-import-analysis/kl146-final");
     std::fs::create_dir_all(&evidence)

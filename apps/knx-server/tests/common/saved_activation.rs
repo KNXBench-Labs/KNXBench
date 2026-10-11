@@ -382,11 +382,9 @@ mod tests {
         let xml = SYNTHETIC
             .replace("<Topology>", "<Extensions><Topology>")
             .replace("</Topology>", "</Topology></Extensions>");
-        assert!(
-            saved_devices(xml.as_bytes())
-                .expect("synthetic lookalike remains XML")
-                .is_empty()
-        );
+        assert!(saved_devices(xml.as_bytes())
+            .expect("synthetic lookalike remains XML")
+            .is_empty());
     }
 
     #[test]
@@ -416,11 +414,9 @@ mod tests {
             "<DeviceInstance Id=",
             "<DeviceInstance xmlns=\"urn:synthetic-foreign\" Id=",
         );
-        assert!(
-            saved_devices(foreign.as_bytes())
-                .expect("foreign data stays XML")
-                .is_empty()
-        );
+        assert!(saved_devices(foreign.as_bytes())
+            .expect("foreign data stays XML")
+            .is_empty());
         let deep = format!(
             "<KNX xmlns=\"http://knx.org/xml/project/23\">{}{}</KNX>",
             "<Wrapper>".repeat(130),

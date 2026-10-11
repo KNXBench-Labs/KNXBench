@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:05
+- **Completed:** Complete first final-chain attempt on5259ba84 refused at fmt only: prior standalone rustfmt2024 differs from workspace2021. Only two owned test files normalized by cargo fmt; check now green, no runtime semantics change. Rejected attempt preserved as diagnostic-admission-format-refused, no Rust/Web/corpus/private stages accepted. Owner diagnostic-only decision remains; production unchanged.
+- **Pending/Next Steps:** Commit exact edition-correct test bytes and frozen handover, relaunch full candidate acceptance. Gate includes all Rust packages except unchanged native desktop shell, strict clippy, Web build/tests/tsc, five fresh-root repo gates/docs, full corpus and five opt-in private gates. Then actual receipt/self-review/privacy/fresh-main no-ff push/ref equality/cleanup and whole-goal closure.
+- **Notes for Codex oder Claude:** Do not use standalone edition2024 formatter in a2021 workspace. Three assertion mutants remain historical proof on semantically identical helpers, all bytes restored before formatting. New runner identity private sidecar, no tracked edits during tests. Original differences stay flags with parity_accepted=false; no private golden expectations/runtime patch.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 06:01
 - **Completed:** Owner-approved diagnostic candidate c1f43cca integrated other-owner RTF foundation aeb5a386 as f6d494da, both histories retained byte-identical common archive. Eight synthetic controls8/0/1 and strict focused Clippy passed; three named assertion mutants killed (finding erasure, unknown rounding, instance/channel conflation), exact helper bytes restored. Source/imported device uniqueness guard added. Contextual outgoing private-value scan clear; original identity fields remain fail-closed. Historical original Cargo101 proof archived, never retagged green. No production behavior changes.
 - **Pending/Next Steps:** Commit this source-frozen checkpoint, final whole non-desktop Rust/workspace strict gates + Web production build/tests/tsc + five fresh-root repo checks/docs + full corpus + original diagnostic/refId/instance/reconciliation/raw gates. Bind actual HEAD/source inputs, retain original privacy. Then final receipt/status/self-review/privacy, fresh-main containment and no-ff push/ref equality/cleanup; exact per-KL main goal acceptance. Packages1–7/9 delivered;8 and whole-goal finish open.

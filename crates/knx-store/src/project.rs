@@ -70,6 +70,8 @@ pub fn set_group_address_style(
 
 const DELETE_ALL_TABLES: &[&str] = &[
     // Child-to-parent order — matches the reverse of the insert order below.
+    "instruction_run",
+    "instruction_document",
     "com_object_program_default",
     "com_object_override",
     "group_link",
@@ -356,6 +358,7 @@ pub(crate) fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(
         }
     }
 
+    crate::instructions::write(tx, project)?;
     Ok(())
 }
 
@@ -636,6 +639,7 @@ fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
             unlifted_group_address_dpt_declarations,
         },
         installations,
+        instructions: crate::instructions::load(conn, &devices)?,
         devices,
         ids,
     })

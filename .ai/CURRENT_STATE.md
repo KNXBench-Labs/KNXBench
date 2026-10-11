@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:39 CEST
+- **Completed:** Owner-authorized DPT featurefd5306dd and no-ff main mergee57e3a09 locally accepted on actual upstream8505dc96. Frozen1878-input19 stages all0: Web2648/0/167, Rust3946/0/192ignored, full Chromium274/0/0skipped, built23/0; build/three types/fmt/Clippy/five explicit-root repo/docs/whitespace. Four final merged frames inspected; required identities/no coauthor and upstream app/journal preservation verified. Metadata records original-vs-merge acceptance; no push yet.
+- **Pending/Next Steps:** Final documentation/disclosure gates, normal HEAD:main push/exact remote ref/blob readback, verified closure and only-owned source/build/scratch cleanup.
+- **Notes for Codex oder Claude:** Own dpt-integration-20261011/dp11p; compact root publication archive .ai/logs/2026-10-11_codex_dpt-selection/publication/. Self-review only; no private/ignored corpus execution, unmocked-server/native/Orca/ETS/hardware/release/container/root-sync action. Source manifest frozen during actual gate; later changes docs only. Preserve all foreign work and inherited journals.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 10:23 CEST
 - **Completed:** Delayed proc_1df803e66763 exit0 reconciled with archived final DPT-selection reports: Web2625/0/166files, full Chromium252/0, focused layout10/0, production-built23/0, no skipped/flaky browser cases.507-input final manifest/hash matches accepted receipt; notification confirms already-counted unchanged-source completion, not a new test run.
 - **Pending/Next Steps:** None for this notification. Local DPT delivery remains complete, uncommitted/unpublished; publication/deployment boundary unchanged.

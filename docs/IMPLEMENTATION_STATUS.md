@@ -1,3 +1,22 @@
+## 2026-10-11 — DPT dropdown accepted on actual main integration
+
+Owner explicitly authorized feature commit/no-ff main merge/push. Feature
+`fd5306dd5ede`, actual tested merge `e57e3a09ff34` onto `8505dc96831d` retain
+the published installation-node, download-radio and import-banner packages.
+Two additive documentation conflicts preserve both contributions; UI merges
+were re-reviewed, not copied wholesale. Actual frozen1878-input,19-stage
+acceptance passes: Web2648/0 in167 files,
+Rust3946/0/192ignored,
+complete intercepted Chromium274/0/0skipped,
+production-built communication suite23/0/0skipped.
+Build/three type scopes/fmt/strict Clippy/five explicit-root repository gates/docs/
+whitespace pass. Four actual merged-build EN/DE1440/400 frames inspected;
+source hashes/HEAD unchanged. [Publication receipt](evidence/dpt-selection-publication-2026-10-11.json)
+records source binding and the separate remote-readback boundary. Self-review only.
+No ignored/private-corpus sweep, unmocked-server/native/Orca/ETS/hardware claim;
+Alpha.8/live container and shared-root checkout are not replaced/synchronized.
+Original local results below remain historical, not relabelled as merged evidence.
+
 ## 2026-10-11 — local EN/DE DPT selection and field provenance
 
 Owner-requested UI extension in `fix/dpt-labels-20261011`, base `9298242c`.

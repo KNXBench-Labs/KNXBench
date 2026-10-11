@@ -5,7 +5,11 @@
 Local source update, 2026-10-11, based on `9298242c`. This extends the
 [communication-object table contract](../COMMUNICATION_OBJECT_TABLE.md), not
 KNX codecs, manufacturer/application semantics or storage. Release, main
-integration and deployment remain separate.
+integration and deployment remain separate from the original local evidence.
+The owner subsequently authorized feature commit/no-ff main merge/push; actual
+merged-source acceptance is recorded in the
+[publication receipt](../evidence/dpt-selection-publication-2026-10-11.json).
+This does not publish a new release or replace the running container.
 
 ## Display vocabulary
 

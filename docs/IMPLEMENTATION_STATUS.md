@@ -19,9 +19,17 @@ field/write/persistence authority and Session1 shell ownership. Focused controls
 pass21 tests; real HTTP5 includes native Save/Open, undo/redo, refusal without
 mutation and retained source bytes. Earlier isolated browser20 checks were viewed
 EN1440/Graphite and DE400/Porcelain; a later admission guard changed source, so
-that earlier browser receipt remains historical and final recheck is pending.
-Whole server/web/repository acceptance and publication pending. No whole PDB-04,
-codec, duration conversion, module mapping, physical device or shell-mount claim.
+that earlier browser receipt stays historical. The new same-source browser
+acceptance below supersedes it, without duplicating counts.
+Frozen candidate `4c3bd83d9806c9a61a12174c2cb6a360c553b21a` now passes all17 gates:
+Web2738/0/174files, workspace Rust4048/0/194ignored, strict workspace Clippy,
+format/production and fixture builds, two other type scopes, source-stamped
+server/CLI/MCP and five explicit-root repository gates. New browser20 checks
+pass on that same candidate; full-page EN/DE frames actually viewed. Earlier
+attempt1 was tool-timeout interrupted during Rust, not a completed gate.
+[Compact evidence](evidence/parameter-editors-2026-10-11.json).
+Publication metadata checks pending. No whole PDB-04, full Colour/Picture codec,
+duration conversion, module mapping, hardware or shell-mount claim.
 Active-session self-review, not independent approval.
 
 ## 2026-10-11 — native instruction foundation, not the full RTF editor

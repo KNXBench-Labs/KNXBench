@@ -1,3 +1,22 @@
+## 2026-10-11 — Alpha 9 release media and manual/site refresh
+
+Published Alpha 9 frontend and server, not moving main or invented API replies,
+now supply **46 PNGs and three workflow GIFs**. Porcelain/Graphite cover the real
+fictional-project workspace; CRT/LCARS retain the optional-theme gallery.
+The DE/EN site keeps its existing voice and adds device overview, named DPT,
+project-history and message-detail cards with full-size lossless WebP links.
+Manual availability/captions match the release; older website videos stay visibly
+historical. Native13 backups/Alpha8 refusal and unmounted editor foundations are
+explicit, without claiming new hardware or codec compatibility.
+
+Actual scoped acceptance: real-release capture2/0/0skipped; website24/0 and
+documentation12/0; eight Chromium recipes670 checks/0 errors (preview/release,
+DE/EN, mobile/desktop, JS on/off). Frontend build and all five nonempty repository
+policy gates pass. Existing frontend chunk warning remains. In-session self-review;
+no full Rust/private-corpus or native accessibility rerun is claimed.
+[Acceptance](evidence/alpha9-media-2026-10-11.json) ·
+[Provenance and regeneration](assets/README.md) · [Website contract](WEBSITE.md).
+
 ## 2026-10-11 — Structure headings stop fleeing the mouse (issue #5)
 
 - Reproduced the reported Ground/building heading clipping in the production

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 23:38 CEST
+- **Completed:** Alpha9 media/site/manual package accepted locally on integrated source 636d55d30c2c2050bab26c48774a5e92d7b21684. Real published-image capture2/0/0skipped,46PNG/3GIF;7lossless WebPs preserve source pixels. DE/EN feature cards, dark/light media, honest historical-video captions, native13/Alpha8 backup boundary and unmounted-editor limits updated. Static website24/0, docs12/0, eight Chromium recipes670checks/0errors; frontend build and five nonempty repo-policy gates pass. Source self-review only.
+- **Pending/Next Steps:** Publish this accepted docs/media package and verify the existing Pages deployment; no new release/tag, shared-root sync or further feature task. Other owners' Notes/editor/Functions/design work unchanged.
+- **Notes for Codex oder Claude:** Session478dc6a8327f. Capture pinned to released5b21323e and imagecaa5ab31, independent of newer main. All76owned inputs byte-equal through rebase; incoming Alpha9 release wording retained. Canonical public receipt docs/evidence/alpha9-media-2026-10-11.json; private raw logs will be archived ignored. No live bus, user-container replacement, vendor/private-corpus acceptance or subagents; existing frontend chunk warning retained. Shared root remains deliberately stale/dirty and must not be reset or staged wholesale.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 23:15 CEST
 - **Completed:** Notes Foundation/service accepted in bounded layered scope: runtime51c09fa3 focused13/workspace4090/0/194ignored/Web2738/0/174files/strictClippy/build/stamped binaries; corrected docs33a19c15 eight fresh gates and selected native corpus11/0/no skips with unchanged originals. Initial whole chain remains failed at ledger syntax, not relabelled green. Latest release closure 93283f93 is docs-only; incorporated with byte-identical runtime and all journal entries preserved. Public bounded evidence prepared, no HTTP/UI or full AP4 claim.
 - **Pending/Next Steps:** Fresh final metadata privacy/ledger/doc checks, normal main push/exact readback and archive/owned cleanup. HTTP isolated CreateGREEN1 verified; action/cancel tests await actual RED before extension. AP3/AP5/AP6/AP7 and isolated EN/DE notes/help remain open.

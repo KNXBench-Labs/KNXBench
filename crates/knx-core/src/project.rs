@@ -37,6 +37,7 @@ pub struct IdAllocators {
     building_part: u32,
     parameter_instance: u32,
     module_instance: u32,
+    project_note: u32,
 }
 
 /// A project-local ID space has no representable ID left. This is not a
@@ -66,6 +67,21 @@ macro_rules! next_id {
 }
 
 impl IdAllocators {
+    pub fn next_project_note_id(&mut self) -> Result<crate::ProjectNoteId, IdAllocationError> {
+        let next = self.project_note.checked_add(1).ok_or(IdAllocationError {
+            kind: "project_note",
+        })?;
+        self.project_note = next;
+        Ok(crate::ProjectNoteId(next))
+    }
+    pub fn peek_project_note(&self) -> u32 {
+        self.project_note
+    }
+    pub fn with_project_note_count(mut self, count: u32) -> Self {
+        self.project_note = count;
+        self
+    }
+
     pub fn next_device_id(&mut self) -> Result<DeviceId, IdAllocationError> {
         next_id!(self, device, DeviceId)
     }
@@ -146,6 +162,7 @@ impl IdAllocators {
         self.building_part = self.building_part.max(other.building_part);
         self.parameter_instance = self.parameter_instance.max(other.parameter_instance);
         self.module_instance = self.module_instance.max(other.module_instance);
+        self.project_note = self.project_note.max(other.project_note);
         *self != before
     }
 
@@ -174,6 +191,7 @@ impl IdAllocators {
             building_part,
             parameter_instance,
             module_instance,
+            project_note: 0,
         }
     }
 }
@@ -238,6 +256,8 @@ pub struct Project {
     /// instructions; a present empty document explicitly clears the view.
     /// The original external text remains infrastructure-owned and immutable.
     pub instructions: std::collections::BTreeMap<DeviceId, crate::instruction::InstructionDocument>,
+    /// Ordered authored plain-text notes; original import data remains separate.
+    pub notes: Vec<crate::note::ProjectNote>,
     pub ids: IdAllocators,
 }
 
@@ -250,6 +270,7 @@ impl Project {
             installations: Vec::new(),
             devices: Devices::new(),
             instructions: Default::default(),
+            notes: Vec::new(),
             ids: IdAllocators::default(),
         }
     }

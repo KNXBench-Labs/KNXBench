@@ -43,6 +43,8 @@ impl fmt::Display for EntityKind {
 /// One reason the schema cannot hold the project exactly.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RepresentationIssue {
+    /// Intermediate Core note state has no native schema support yet.
+    NotesNotYetStored,
     /// The same id is used by several entities of one kind (anywhere in the
     /// project); the table would keep only the last one.
     DuplicateId { kind: EntityKind, id: u32 },
@@ -64,6 +66,9 @@ pub enum RepresentationIssue {
 impl fmt::Display for RepresentationIssue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            RepresentationIssue::NotesNotYetStored => f.write_str(
+                "project notes or their allocator are not yet supported by the native schema",
+            ),
             RepresentationIssue::DuplicateId { kind, id } => {
                 write!(f, "{kind} id {id} is used more than once")
             }
@@ -88,6 +93,11 @@ impl fmt::Display for RepresentationIssue {
 /// keeps its own error (MODEL-02 repair commands exist for it); every other
 /// finding is reported together as [`StoreError::Unrepresentable`].
 pub(crate) fn check_representable(project: &Project) -> Result<(), StoreError> {
+    if !project.notes.is_empty() || project.ids.peek_project_note() != 0 {
+        return Err(StoreError::Unrepresentable(vec![
+            RepresentationIssue::NotesNotYetStored,
+        ]));
+    }
     crate::instructions::check(project)?;
     check_unambiguous_topology(project)?;
     let mut issues = BTreeSet::new();

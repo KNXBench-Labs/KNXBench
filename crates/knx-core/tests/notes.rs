@@ -315,3 +315,293 @@ fn utf8_limits_are_bytes_and_exact_boundary_text_stays_verbatim() {
         Err(NoteError::BodyBudget)
     );
 }
+
+#[test]
+fn note_commands_restore_exact_order_text_target_and_inclusion() {
+    use knx_core::Command;
+    let mut project = target_project();
+    let first = note(1);
+    let second = note(2);
+    let remove_first = Command::InsertProjectNote {
+        note: first.clone(),
+        position: 0,
+    }
+    .apply(&mut project)
+    .unwrap();
+    Command::InsertProjectNote {
+        note: second.clone(),
+        position: 1,
+    }
+    .apply(&mut project)
+    .unwrap();
+    assert_eq!(project.ids.peek_project_note(), 2);
+    let before = project.clone();
+    let inverse = Command::MoveProjectNote {
+        id: ProjectNoteId(1),
+        position: 1,
+    }
+    .apply(&mut project)
+    .unwrap();
+    assert_eq!(project.notes, [second.clone(), first.clone()]);
+    inverse.apply(&mut project).unwrap();
+    assert_eq!(project, before);
+    let replacement = ProjectNote::new(
+        ProjectNoteId(1),
+        Target::Device(DeviceId(1)),
+        "edited".into(),
+        "body\r\n".into(),
+    )
+    .unwrap()
+    .with_documentation(true);
+    let inverse = Command::ReplaceProjectNote {
+        note: replacement.clone(),
+    }
+    .apply(&mut project)
+    .unwrap();
+    assert_eq!(project.notes[0], replacement);
+    inverse.apply(&mut project).unwrap();
+    assert_eq!(project, before);
+    let inverse = Command::RemoveProjectNote {
+        id: ProjectNoteId(1),
+    }
+    .apply(&mut project)
+    .unwrap();
+    assert_eq!(project.notes, [second]);
+    inverse.apply(&mut project).unwrap();
+    assert_eq!(project, before);
+    remove_first.apply(&mut project).unwrap();
+    assert_eq!(project.ids.peek_project_note(), 2);
+    assert_eq!(
+        project.ids.next_project_note_id().unwrap(),
+        ProjectNoteId(3)
+    );
+}
+#[test]
+fn invalid_note_command_leaves_content_and_counters_exactly_unchanged() {
+    use knx_core::Command;
+    let mut project = target_project();
+    let before = project.clone();
+    let invalid = ProjectNote::new(
+        ProjectNoteId(5),
+        Target::Device(DeviceId(99)),
+        "x".into(),
+        "x".into(),
+    )
+    .unwrap();
+    assert!(Command::InsertProjectNote {
+        note: invalid,
+        position: 0
+    }
+    .apply(&mut project)
+    .is_err());
+    assert_eq!(project, before);
+    assert!(Command::InsertProjectNote {
+        note: note(1),
+        position: 1
+    }
+    .apply(&mut project)
+    .is_err());
+    assert_eq!(project, before);
+}
+#[test]
+fn every_existing_delete_command_refuses_an_implicitly_orphaned_note_atomically() {
+    use knx_core::{Command, CommandError};
+    for (target, delete) in [
+        (
+            Target::Area(AreaId(1)),
+            Command::DeleteArea { id: AreaId(1) },
+        ),
+        (
+            Target::Line(LineId(1)),
+            Command::DeleteLine { id: LineId(1) },
+        ),
+        (
+            Target::BuildingPart(BuildingPartId(1)),
+            Command::DeleteBuildingPart {
+                id: BuildingPartId(1),
+            },
+        ),
+        (
+            Target::Device(DeviceId(1)),
+            Command::DeleteDevice { id: DeviceId(1) },
+        ),
+        (
+            Target::GroupRange(GroupRangeId(1)),
+            Command::DeleteGroupRange {
+                id: GroupRangeId(1),
+            },
+        ),
+        (
+            Target::GroupAddress(GroupAddressId(1)),
+            Command::DeleteGroupAddress {
+                id: GroupAddressId(1),
+            },
+        ),
+        (
+            Target::ComObject(ComObjectInstanceId(1)),
+            Command::DeleteDevice { id: DeviceId(1) },
+        ),
+    ] {
+        let mut project = target_project();
+        match target {
+            Target::Area(_) => {
+                project.installations[0].topology.areas[0].lines.clear();
+                project.installations[0].topology.lines.clear();
+                project.installations[0]
+                    .topology
+                    .unassigned
+                    .push(DeviceId(1));
+            }
+            Target::Line(_) => {
+                project.installations[0].topology.lines[0].devices.clear();
+                project.installations[0]
+                    .topology
+                    .unassigned
+                    .push(DeviceId(1));
+            }
+            Target::BuildingPart(_) | Target::Device(_) | Target::ComObject(_) => {
+                project.installations[0].buildings[0].devices.clear()
+            }
+            Target::GroupRange(_) => project.installations[0].group_addresses[0].range = None,
+            _ => {}
+        }
+        project.notes.push(
+            ProjectNote::new(ProjectNoteId(1), target, "retain".into(), "reason".into()).unwrap(),
+        );
+        project.ids = project.ids.clone().with_project_note_count(1);
+        let before = project.clone();
+        assert_eq!(
+            delete.apply(&mut project),
+            Err(CommandError::InvalidNote(NoteError::MissingTarget(target))),
+            "{target:?}"
+        );
+        assert_eq!(project, before);
+    }
+}
+#[test]
+fn explicit_note_disposition_and_target_delete_share_one_undo_step() {
+    use knx_core::{Command, CommandStack};
+    let mut project = target_project();
+    project.installations[0].buildings[0].devices.clear();
+    let n = ProjectNote::new(
+        ProjectNoteId(1),
+        Target::ComObject(ComObjectInstanceId(1)),
+        "retain".into(),
+        "literal".into(),
+    )
+    .unwrap();
+    project.notes.push(n.clone());
+    project.ids = project.ids.clone().with_project_note_count(1);
+    let before = project.clone();
+    let mut history = CommandStack::default();
+    history
+        .do_command(
+            &mut project,
+            Command::Batch(vec![
+                Command::RemoveProjectNote { id: n.id() },
+                Command::DeleteDevice { id: DeviceId(1) },
+            ]),
+        )
+        .unwrap();
+    assert!(project.notes.is_empty());
+    assert!(project.devices.get(DeviceId(1)).is_none());
+    history.undo(&mut project).unwrap();
+    assert_eq!(project, before);
+    history.redo(&mut project).unwrap();
+    assert!(project.notes.is_empty());
+}
+#[test]
+fn note_id_exhaustion_refuses_without_rewinding_or_panicking() {
+    let mut ids = knx_core::IdAllocators::default().with_project_note_count(u32::MAX - 1);
+    assert_eq!(ids.next_project_note_id().unwrap(), ProjectNoteId(u32::MAX));
+    let before = ids.clone();
+    assert!(ids.next_project_note_id().is_err());
+    assert_eq!(ids, before);
+}
+
+#[test]
+fn note_noop_preserves_existing_redo_and_adds_no_undo_step() {
+    use knx_core::{Command, CommandStack};
+    let mut project = target_project();
+    project.notes.push(note(1));
+    project.ids = project.ids.clone().with_project_note_count(1);
+    let mut history = CommandStack::default();
+    history
+        .do_command(
+            &mut project,
+            Command::InsertProjectNote {
+                note: note(2),
+                position: 1,
+            },
+        )
+        .unwrap();
+    history.undo(&mut project).unwrap();
+    let before = project.clone();
+    let counts = history.history_lengths();
+    history
+        .do_command(&mut project, Command::ReplaceProjectNote { note: note(1) })
+        .unwrap();
+    assert_eq!(history.history_lengths(), counts);
+    assert_eq!(project, before);
+    history
+        .do_command(
+            &mut project,
+            Command::MoveProjectNote {
+                id: ProjectNoteId(1),
+                position: 0,
+            },
+        )
+        .unwrap();
+    assert_eq!(history.history_lengths(), counts);
+    history.redo(&mut project).unwrap();
+    assert_eq!(project.notes, [note(1), note(2)]);
+}
+#[test]
+fn failed_note_batch_preserves_originals_ids_and_both_history_stacks() {
+    use knx_core::{Command, CommandStack};
+    let mut project = target_project();
+    project.notes.push(note(1));
+    project.ids = project.ids.clone().with_project_note_count(1);
+    project.instructions.insert(
+        DeviceId(1),
+        knx_core::instruction::InstructionDocument::new(vec![]).unwrap(),
+    );
+    let mut history = CommandStack::default();
+    history
+        .do_command(
+            &mut project,
+            Command::InsertProjectNote {
+                note: note(2),
+                position: 1,
+            },
+        )
+        .unwrap();
+    history.undo(&mut project).unwrap();
+    let before = project.clone();
+    let counts = history.history_lengths();
+    let bad = ProjectNote::new(
+        ProjectNoteId(5),
+        Target::Device(DeviceId(99)),
+        "bad".into(),
+        String::new(),
+    )
+    .unwrap();
+    assert!(history
+        .do_command(
+            &mut project,
+            Command::Batch(vec![
+                Command::RemoveProjectNote {
+                    id: ProjectNoteId(1)
+                },
+                Command::InsertProjectNote {
+                    note: bad,
+                    position: 0
+                }
+            ])
+        )
+        .is_err());
+    assert_eq!(project, before);
+    assert_eq!(history.history_lengths(), counts);
+    history.redo(&mut project).unwrap();
+    assert_eq!(project.notes, [note(1), note(2)]);
+}

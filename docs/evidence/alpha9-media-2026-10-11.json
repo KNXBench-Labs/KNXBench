@@ -129,5 +129,31 @@
     "capture_manifest_sha256": "20c05826eef24655f010280c23bdb661a6cf37d25d5832ec41907b16cc3614b1",
     "website_media_manifest_sha256": "1508fd963f6cdf5a0a33ec86a254aba213de524464170fa5e499f526fc5291a7",
     "source_hash_invariant": "All 76 owned inputs remained byte-identical across rebase; later closure edits are documentation metadata only."
+  },
+  "integration_followup": {
+    "accepted_at": "2026-10-11 23:45 CEST",
+    "tested_source_head": "0b3e412c12ab1392ed52bf309f9e17be61c869b8",
+    "incoming": "c4e799d8021d4075e18a8c9baaa1b14f1146c1f0: published structure-heading hover repair; not in the pinned Alpha9 captures",
+    "own_source_and_media": "75 non-receipt package inputs byte-identical to original accepted media candidate; both status entries preserved",
+    "fresh_checks": {
+      "frontend_build_exit": 0,
+      "web_unit_tests": {
+        "passed": 2738,
+        "failed": 0,
+        "files": 174
+      },
+      "website_unit_tests": {
+        "passed": 24,
+        "failed": 0
+      },
+      "documentation_unit_tests": {
+        "passed": 12,
+        "failed": 0
+      },
+      "repository_policy_gates": 5,
+      "browser_recipes": 8,
+      "browser_checks": 670,
+      "browser_errors": 0
+    }
   }
 }

@@ -92,5 +92,7 @@
     ],
     "allProductionSourceAndExecutedTestDependenciesUnchanged": true,
     "earlierFullWebManifestPreservedAsAcceptanceSnapshot": true
-  }
+  },
+  "sourcePublicationCommit": "55384982c9a38d269e7e68f76a792c757b6aea15",
+  "sourcePublicationVerified": true
 }

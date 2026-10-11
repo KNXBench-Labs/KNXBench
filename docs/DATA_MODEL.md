@@ -2,7 +2,7 @@
 
 ## Native instruction overlays, model/storage13 (2026-10-11)
 
-[ADR-0111](adr/0111-native-instruction-overlays.md) introduces
+[ADR-0112](adr/0112-native-instruction-overlays.md) introduces
 `Project.instructions: BTreeMap<DeviceId, InstructionDocument>`.
 Documents contain literal UTF-8 runs and only bold/italic/underline flags;
 Core has no RTF, HTML, UI or I/O dependency. Limits are64KiB text and4096

@@ -1,5 +1,9 @@
-# ADR 0111: Native instruction overlays keep imported text authoritative
+# ADR 0112: Native instruction overlays keep imported text authoritative
 
+
+Renumbered from the original local ADR0111 on 2026-10-11 because main already
+published ADR0111 for bounded large history images. Earlier receipt references
+remain historical; this is the instruction overlay decision, not the codec ADR.
 Date: 2026-10-11
 Status: Accepted — native foundation locally verified; application/API/UI acceptance pending
 

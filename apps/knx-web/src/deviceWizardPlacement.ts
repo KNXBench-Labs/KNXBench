@@ -79,8 +79,9 @@ export function withInstallation(tree: ProjectTree, placement: Placement, instal
   };
 }
 
-/** The palette's add-device target: the selected line or building part, else none. */
+/** The palette's add-device target: selected installation, line or building part, else none. */
 export function wizardTargetFor(selection: Selection | null): DeviceWizardTarget {
+  if (selection?.kind === "installation") return { installationId: selection.id, lineId: null };
   if (selection?.kind === "line") return { lineId: selection.id };
   if (selection?.kind === "building_part") return { buildingPartId: selection.id };
   return {};

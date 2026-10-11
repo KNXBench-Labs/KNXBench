@@ -1,5 +1,14 @@
 # Known limitations
 
+## Local installation-node UI boundary (2026-10-11)
+
+[The focused contract](contracts/installation-node.md) makes unnamed nodes readable
+and selectable with command-backed name editing. This is local source, not an
+Alpha.8 artifact update. The existing installation rename API remains a legacy,
+non-revision-conditional endpoint; ignoring a superseded UI reply does not undo
+or cancel a server operation. No installation create/delete/move capability,
+fresh private ETS import, ETS export or native screen-reader acceptance is added.
+
 ## Alpha.8 release snapshot (2026-10-10)
 
 [Alpha.8 notes](releases/alpha8.md) and the

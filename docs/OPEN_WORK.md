@@ -269,5 +269,10 @@ to owner `later`. Routes naming removed goal files are kept as history.
 Package7 bounded raw candidates delivered/read back `6ef0b2d8`; final source
 `d8cde545` passed public/private acceptance, production build and outgoing privacy.
 No RTF parsing/rendering/editing claim; that belongs to the separate tooling owner.
-Own cleanup is recorded in the handover. Package8 KL146 original activation
-differential and exact per-KL/origin-main final closure remain open.
+Own cleanup is recorded in the handover. Package8 KL146 owner selected read-only
+diagnostic delivery with differences retained and no parity claim. Historical
+comparison preserves input/project; diagnostic coverage and agreement now have
+separate contracts. Candidate final integrated gates and publication pending;
+KL146 activation differences/unsupported scoped sets remain an ACCEPTED_BOUNDARY,
+not an owner blocker or a producer-semantic fix. Exact per-KL/origin-main final
+closure remains open.

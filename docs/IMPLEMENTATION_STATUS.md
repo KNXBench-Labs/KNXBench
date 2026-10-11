@@ -1,3 +1,14 @@
+## 2026-10-11 — KL146 owner-approved diagnostic candidate
+
+Independent source oracle and real import/HTTP/shared-evaluator comparison,
+read-only. Owner selected diagnostic delivery while retaining KL146 and no
+parity claim. Eight synthetic controls cover complete finding-bearing diagnostics
+versus failed integrity and unknown/unadjudicated observations. Historical original
+comparison completed with input/project unchanged and explicit differences.
+Final source-bound diagnostic replay and merged-source gates/publication pending.
+No production semantics changed. See [contract](research/schema23-activation-differential.md)
+and [receipt](evidence/kl146-saved-activation-2026-10-11.json); private details stay local.
+
 ## 2026-10-10 — Secure key provenance, not Secure runtime
 
 - Owner-approved Session2 research reads seven primary KNX articles and public

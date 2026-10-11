@@ -1,0 +1,35 @@
+{
+  "writer_source": "e0dbd93a4709d9489409f0f685202294ff2ab42d",
+  "writer_sha256": "6f04b5e4ab52748523540e70b8976007c4cc694d30d43103b5dd07a3d3ea5f80",
+  "native_schema": 13,
+  "scope": "synthetic real predecessor writer before any notes model/store change; no corpus or ETS certification",
+  "fixtures": {
+    "saved": {
+      "file": "native13-saved.sqlite",
+      "fixture_file": "native13-before-notes-saved.sqlite",
+      "sha256": "984eebeba174a2c2edd1e98743208ed54ab1c3b9c300d5f3f5cacf25cc8f7e29",
+      "native_schema": 13
+    },
+    "working": {
+      "file": "native13-working.sqlite",
+      "fixture_file": "native13-before-notes-working.sqlite",
+      "sha256": "a056a3fe170ca22ca04832775e7ab7a6345cb8a4284be4fcf058fe13bf2260c3",
+      "native_schema": 13,
+      "undo_steps": 3,
+      "redo_steps": 1,
+      "effective_document": {
+        "runs": [
+          {
+            "text": "Working two Gr\u00fc\u00dfe\ud83d\ude42",
+            "style": {
+              "bold": true,
+              "italic": false,
+              "underline": true
+            }
+          }
+        ]
+      },
+      "original_xml_sha256": "723e019602b1705b8345418020bbaa22c20362c8f5d44e6156890a02f2357f0b"
+    }
+  }
+}

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 07:22
+- **Completed:** AP9 preparation delivered: source6e23f11e5b035f2ab4e385db9f6e9d9401ac32a3 accepted on actual current-main merge by all docs/12 regressions/five fresh-root repository gates/whitespace with frozen inputs, then pushed HEAD:main and read back HEAD=tracking=live. Exact five owned documentation paths, no runtime source. Two separate Powerline/changed-parts plans include prerequisites, staged later tests and explicit no-go/recovery requirements.
+- **Pending/Next Steps:** No AP9 preparation implementation remains; this doc-only publication journal closure needs checks/readback. Future KL-110/GAP-T30-04 hardware implementation remains LATER and needs separate target-specific Go; not authorized by Goal2. Continue remaining Goal2 packages, full RTF edits/notes/parameter/UI/services/MCP/catalogue/tooling residue.
+- **Notes for Codex oder Claude:** Preparation delivery is not hardware/protocol support; existing full-download fallback untouched. No bus/discovery/live connection/write, vendor execution,subagents/quota,release/deployment. Earlier failed module invocation remains setup refusal, no test pass claimed. Self-review only, original/foreign/root paths retained. Exact accepted receipt in hardware-integrated-gates, compact delivery retained privately.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 06:50 CEST
 - **Completed:** proc_659ef8f7df13 exit0 reconciled with hardware-doc-gates-1 receipt: candidatefff503cbc88ed51809ba6354b2728b2e9e6d6ccb matches clean current HEAD, all recorded documentation/regression/fresh-root layering/header/anchor/ledger/corpus-gate/whitespace stages valid/exit0, all_passed/inputs_frozen true. Actual logs inspected. Two documentation-only readiness plans locally accepted; no new test execution or duplicate count.
 - **Pending/Next Steps:** Coordinated fresh-main integration and publication still pending; AP9 preparation not yet published. KL-110/GAP-T30-04 remain LATER and require separate target/operation Go for implementation/live evidence. Overall goal incomplete; AP2 reader focused GREEN verified separately, full editable model/native/history/browser and other work remain.

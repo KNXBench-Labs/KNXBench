@@ -1,4 +1,36 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:23 CEST
+- **Completed:** Delayed proc_1df803e66763 exit0 reconciled with archived final DPT-selection reports: Web2625/0/166files, full Chromium252/0, focused layout10/0, production-built23/0, no skipped/flaky browser cases.507-input final manifest/hash matches accepted receipt; notification confirms already-counted unchanged-source completion, not a new test run.
+- **Pending/Next Steps:** None for this notification. Local DPT delivery remains complete, uncommitted/unpublished; publication/deployment boundary unchanged.
+- **Notes for Codex oder Claude:** Both delayed DPT workers reconciled individually. Compact evidence .ai/logs/2026-10-11_codex_dpt-selection/. No rerun/code/commit/push/integration/deployment/bus action; preserve foreign publication work and inherited journals.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:22 CEST
+- **Completed:** Delayed proc_cc0b97e24009 exit1 reconciled with archived browser-full-retry.json: historical250/2/0skipped, two legacy whole-line layout assertions at360px. Already corrected and superseded by separately accepted browser-full-closure.json252/0/0skipped/0flaky. No new execution or additional acceptance count.
+- **Pending/Next Steps:** None for this notification. Local DPT selection delivery stays complete, uncommitted/unpublished; publication/deployment boundary unchanged.
+- **Notes for Codex oder Claude:** Canonical compact evidence .ai/logs/2026-10-11_codex_dpt-selection/. No rerun/code/commit/push/integration/deployment/bus action. Preserve installation-node owner's active publication and every inherited handover.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:11 CEST
+- **Completed:** Local DPT dropdown/provenance package closure complete: final five explicit-root repository gates/documentation/all-owned whitespace pass; source507-input manifest and exact evidence copies verified. Accepted Web2625/0/166, full Chromium252/0, built23/0, layout10/0 and keyboard1/0 remain the previously counted actual runs, not new executions. Only owned scratch/browser outputs/temporary configs retired; source, dependencies and production frontend retained.
+- **Pending/Next Steps:** None for local implementation. Source remains uncommitted/unpublished in fix/dpt-labels-20261011 / KNXBench.worktrees/dpt-labels-20261011. Main integration, commit/push, release and live-container update require their separate scope; reconcile overlapping UI work without copying whole files.
+- **Notes for Codex oder Claude:** Canonical compact receipt/507-input manifest/raw reports/four inspected frames/cleanup .ai/logs/2026-10-11_codex_dpt-selection/ in root. Historical timeout250/2/keyboard-setup refusals retained and superseded only by actual accepted final runs. No bus/unmocked-server/native/Orca/ETS/device-codec claim; root application/index/foreign work untouched by this package, inherited handovers preserved. No subagents or quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:45 CEST
+- **Completed:** Local owner-requested CO DPT dropdown/provenance in fix/dpt-labels-20261011, base9298242c. Versioned454-ID EN/DE display vocabulary; native select, localized table/filter/search, exact unknown/main-only/alias options, display-only program default and field-owned translated source/tooltips. Final Web2625/0/166files, production build/explicit E2E types, full intercepted Chromium252/0/0skipped, built Chromium23/0 and native ArrowDown/Enter1/0; four final frames inspected,507 frontend inputs frozen. Five fresh explicit-root repo gates/docs/whitespace pass; closure metadata/cleanup checks follow. Self-review, no Rust/model/API/DB/dependency/protocol changes.
+- **Pending/Next Steps:** No feature implementation remains. Local/uncommitted/unpublished source and built frontend retained at KNXBench.worktrees/dpt-labels-20261011; commit/main integration/push/release/live container update are separate scope. Reconcile shared Inspector/styles/messages with parallel UX/download-layout/installation work only during authorized integration.
+- **Notes for Codex oder Claude:** Compact evidence/log under .ai/logs/2026-10-11_codex_dpt-selection/. First full run was externally interrupted without verdict; subsequent250/2 legacy whole-line assertions superseded by actual252/0 token-level wrap checks, exactly two facts retained. Keyboard setup cwd refusal preceded corrected1/0. No codec/device/ETS/native/Orca/unmocked-server/hardware acceptance. Preserve root/foreign work and inherited journals; no subagents/quota/bus/deployment.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 10:49 CEST
 - **Completed:** Installation-node source delivered on main e2e425d8: normal push, exact local/fetched/live equality, feature16e20a59/tested mergef0ce1b80 ancestry and1863 accepted input contents/8 metadata blobs read back. KNXBench authors/committers/no coauthors. Complete actual merge20-stage acceptance remains Web2635/0/165, Rust3946/0/192ignored, full Chromium270/0 plus built6/0, real isolated server/native8, build/types/Clippy/repo/docs. Seven final frames inspected; self-review. Public source receipt/manual/status now record verified publication.
 - **Pending/Next Steps:** Finish documentation-only closure gates/push/readback and retire only owned worktrees/branches/build scratch after compact archival; no application changes remain. No release/container deployment authorized.

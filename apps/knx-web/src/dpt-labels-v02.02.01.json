@@ -1,0 +1,2275 @@
+{
+  "version": "02.02.01",
+  "entries": [
+    {
+      "number": "1.001",
+      "en": "Switch",
+      "de": "Schalten"
+    },
+    {
+      "number": "1.002",
+      "en": "Boolean",
+      "de": "Boolescher Wert"
+    },
+    {
+      "number": "1.003",
+      "en": "Enable",
+      "de": "Freigabe"
+    },
+    {
+      "number": "1.004",
+      "en": "Ramp",
+      "de": "Rampe"
+    },
+    {
+      "number": "1.005",
+      "en": "Alarm",
+      "de": "Alarm"
+    },
+    {
+      "number": "1.006",
+      "en": "Binary value",
+      "de": "Binärwert"
+    },
+    {
+      "number": "1.007",
+      "en": "Step",
+      "de": "Schritt"
+    },
+    {
+      "number": "1.008",
+      "en": "Up / down",
+      "de": "Auf / ab"
+    },
+    {
+      "number": "1.009",
+      "en": "Open / close",
+      "de": "Öffnen / schließen"
+    },
+    {
+      "number": "1.010",
+      "en": "Start / stop",
+      "de": "Start / Stopp"
+    },
+    {
+      "number": "1.011",
+      "en": "State",
+      "de": "Zustand"
+    },
+    {
+      "number": "1.012",
+      "en": "Invert",
+      "de": "Invertieren"
+    },
+    {
+      "number": "1.013",
+      "en": "Dimming send style",
+      "de": "Dimm-Sendeverhalten"
+    },
+    {
+      "number": "1.014",
+      "en": "Input source",
+      "de": "Eingangsquelle"
+    },
+    {
+      "number": "1.015",
+      "en": "Reset",
+      "de": "Zurücksetzen"
+    },
+    {
+      "number": "1.016",
+      "en": "Acknowledge",
+      "de": "Quittierung"
+    },
+    {
+      "number": "1.017",
+      "en": "Trigger",
+      "de": "Auslöser"
+    },
+    {
+      "number": "1.018",
+      "en": "Occupancy",
+      "de": "Belegung"
+    },
+    {
+      "number": "1.019",
+      "en": "Window / door",
+      "de": "Fenster / Tür"
+    },
+    {
+      "number": "1.021",
+      "en": "Logical function",
+      "de": "Logikfunktion"
+    },
+    {
+      "number": "1.022",
+      "en": "Scene A / B",
+      "de": "Szene A / B"
+    },
+    {
+      "number": "1.023",
+      "en": "Shutter / blind mode",
+      "de": "Rollladen- / Jalousiemodus"
+    },
+    {
+      "number": "1.024",
+      "en": "Day / night",
+      "de": "Tag / Nacht"
+    },
+    {
+      "number": "1.100",
+      "en": "Heating / cooling",
+      "de": "Heizen / Kühlen"
+    },
+    {
+      "number": "1.1200",
+      "en": "Consumer / producer",
+      "de": "Verbraucher / Erzeuger"
+    },
+    {
+      "number": "1.1201",
+      "en": "Energy direction",
+      "de": "Energierichtung"
+    },
+    {
+      "number": "2.001",
+      "en": "Switch with priority",
+      "de": "Schalten mit Priorität"
+    },
+    {
+      "number": "2.002",
+      "en": "Boolean with priority",
+      "de": "Boolescher Wert mit Priorität"
+    },
+    {
+      "number": "2.003",
+      "en": "Enable with priority",
+      "de": "Freigabe mit Priorität"
+    },
+    {
+      "number": "2.004",
+      "en": "Ramp with priority",
+      "de": "Rampe mit Priorität"
+    },
+    {
+      "number": "2.005",
+      "en": "Alarm with priority",
+      "de": "Alarm mit Priorität"
+    },
+    {
+      "number": "2.006",
+      "en": "Binary value with priority",
+      "de": "Binärwert mit Priorität"
+    },
+    {
+      "number": "2.007",
+      "en": "Step with priority",
+      "de": "Schritt mit Priorität"
+    },
+    {
+      "number": "2.008",
+      "en": "Direction 1 with priority",
+      "de": "Richtung 1 mit Priorität"
+    },
+    {
+      "number": "2.009",
+      "en": "Direction 2 with priority",
+      "de": "Richtung 2 mit Priorität"
+    },
+    {
+      "number": "2.010",
+      "en": "Start with priority",
+      "de": "Start mit Priorität"
+    },
+    {
+      "number": "2.011",
+      "en": "State with priority",
+      "de": "Zustand mit Priorität"
+    },
+    {
+      "number": "2.012",
+      "en": "Invert with priority",
+      "de": "Invertieren mit Priorität"
+    },
+    {
+      "number": "3.007",
+      "en": "Relative dimming",
+      "de": "Relatives Dimmen"
+    },
+    {
+      "number": "3.008",
+      "en": "Relative blind control",
+      "de": "Relative Jalousiesteuerung"
+    },
+    {
+      "number": "4.001",
+      "en": "ASCII character",
+      "de": "ASCII-Zeichen"
+    },
+    {
+      "number": "4.002",
+      "en": "ISO 8859-1 character",
+      "de": "ISO-8859-1-Zeichen"
+    },
+    {
+      "number": "5.001",
+      "en": "Scaling (0–100%)",
+      "de": "Skalierung (0–100 %)"
+    },
+    {
+      "number": "5.003",
+      "en": "Angle",
+      "de": "Winkel"
+    },
+    {
+      "number": "5.004",
+      "en": "Percentage (U8)",
+      "de": "Prozentwert (U8)"
+    },
+    {
+      "number": "5.005",
+      "en": "Decimal factor",
+      "de": "Dezimalfaktor"
+    },
+    {
+      "number": "5.006",
+      "en": "Tariff",
+      "de": "Tarif"
+    },
+    {
+      "number": "5.010",
+      "en": "Unsigned counter (8 bit)",
+      "de": "Zähler ohne Vorzeichen (8 Bit)"
+    },
+    {
+      "number": "6.001",
+      "en": "Percentage (V8)",
+      "de": "Prozentwert (V8)"
+    },
+    {
+      "number": "6.010",
+      "en": "Signed counter (8 bit)",
+      "de": "Zähler mit Vorzeichen (8 Bit)"
+    },
+    {
+      "number": "6.020",
+      "en": "Status and mode (3 modes)",
+      "de": "Status und Modus (3 Modi)"
+    },
+    {
+      "number": "7.001",
+      "en": "Unsigned counter (16 bit)",
+      "de": "Zähler ohne Vorzeichen (16 Bit)"
+    },
+    {
+      "number": "7.002",
+      "en": "Time period (ms)",
+      "de": "Zeitdauer (ms)"
+    },
+    {
+      "number": "7.003",
+      "en": "Time period (10 ms)",
+      "de": "Zeitdauer (10 ms)"
+    },
+    {
+      "number": "7.004",
+      "en": "Time period (100 ms)",
+      "de": "Zeitdauer (100 ms)"
+    },
+    {
+      "number": "7.005",
+      "en": "Time period (s)",
+      "de": "Zeitdauer (s)"
+    },
+    {
+      "number": "7.006",
+      "en": "Time period (min)",
+      "de": "Zeitdauer (min)"
+    },
+    {
+      "number": "7.007",
+      "en": "Time period (h)",
+      "de": "Zeitdauer (h)"
+    },
+    {
+      "number": "7.010",
+      "en": "Property data type",
+      "de": "Eigenschaftsdatentyp"
+    },
+    {
+      "number": "7.011",
+      "en": "Length (mm)",
+      "de": "Länge (mm)"
+    },
+    {
+      "number": "7.012",
+      "en": "Electric current (mA, unsigned)",
+      "de": "Elektrischer Strom (mA, ohne Vorzeichen)"
+    },
+    {
+      "number": "7.013",
+      "en": "Brightness",
+      "de": "Helligkeit"
+    },
+    {
+      "number": "7.600",
+      "en": "Absolute colour temperature",
+      "de": "Absolute Farbtemperatur"
+    },
+    {
+      "number": "8.001",
+      "en": "Signed counter (16 bit)",
+      "de": "Zähler mit Vorzeichen (16 Bit)"
+    },
+    {
+      "number": "8.002",
+      "en": "Time difference (ms)",
+      "de": "Zeitdifferenz (ms)"
+    },
+    {
+      "number": "8.003",
+      "en": "Time difference (10 ms)",
+      "de": "Zeitdifferenz (10 ms)"
+    },
+    {
+      "number": "8.004",
+      "en": "Time difference (100 ms)",
+      "de": "Zeitdifferenz (100 ms)"
+    },
+    {
+      "number": "8.005",
+      "en": "Time difference (s)",
+      "de": "Zeitdifferenz (s)"
+    },
+    {
+      "number": "8.006",
+      "en": "Time difference (min)",
+      "de": "Zeitdifferenz (min)"
+    },
+    {
+      "number": "8.007",
+      "en": "Time difference (h)",
+      "de": "Zeitdifferenz (h)"
+    },
+    {
+      "number": "8.010",
+      "en": "Percentage (V16)",
+      "de": "Prozentwert (V16)"
+    },
+    {
+      "number": "8.011",
+      "en": "Rotation angle",
+      "de": "Drehwinkel"
+    },
+    {
+      "number": "8.012",
+      "en": "Length (m)",
+      "de": "Länge (m)"
+    },
+    {
+      "number": "9.001",
+      "en": "Temperature",
+      "de": "Temperatur"
+    },
+    {
+      "number": "9.002",
+      "en": "Temperature difference",
+      "de": "Temperaturdifferenz"
+    },
+    {
+      "number": "9.003",
+      "en": "Absolute temperature",
+      "de": "Absolute Temperatur"
+    },
+    {
+      "number": "9.004",
+      "en": "Illuminance",
+      "de": "Beleuchtungsstärke"
+    },
+    {
+      "number": "9.005",
+      "en": "Wind speed",
+      "de": "Windgeschwindigkeit"
+    },
+    {
+      "number": "9.006",
+      "en": "Pressure",
+      "de": "Druck"
+    },
+    {
+      "number": "9.007",
+      "en": "Humidity",
+      "de": "Luftfeuchtigkeit"
+    },
+    {
+      "number": "9.008",
+      "en": "Air quality",
+      "de": "Luftqualität"
+    },
+    {
+      "number": "9.009",
+      "en": "Air flow",
+      "de": "Luftstrom"
+    },
+    {
+      "number": "9.010",
+      "en": "Time (s)",
+      "de": "Zeit (s)"
+    },
+    {
+      "number": "9.011",
+      "en": "Time (ms)",
+      "de": "Zeit (ms)"
+    },
+    {
+      "number": "9.020",
+      "en": "Voltage",
+      "de": "Spannung"
+    },
+    {
+      "number": "9.021",
+      "en": "Electric current",
+      "de": "Elektrischer Strom"
+    },
+    {
+      "number": "9.022",
+      "en": "Power density",
+      "de": "Leistungsdichte"
+    },
+    {
+      "number": "9.023",
+      "en": "Kelvin per percent",
+      "de": "Kelvin pro Prozent"
+    },
+    {
+      "number": "9.024",
+      "en": "Power",
+      "de": "Leistung"
+    },
+    {
+      "number": "9.025",
+      "en": "Volume flow",
+      "de": "Volumenstrom"
+    },
+    {
+      "number": "9.026",
+      "en": "Rain amount",
+      "de": "Niederschlagsmenge"
+    },
+    {
+      "number": "9.027",
+      "en": "Temperature (°F)",
+      "de": "Temperatur (°F)"
+    },
+    {
+      "number": "9.028",
+      "en": "Wind speed (km/h)",
+      "de": "Windgeschwindigkeit (km/h)"
+    },
+    {
+      "number": "9.029",
+      "en": "Absolute humidity",
+      "de": "Absolute Luftfeuchtigkeit"
+    },
+    {
+      "number": "9.030",
+      "en": "Concentration (µg/m³)",
+      "de": "Konzentration (µg/m³)"
+    },
+    {
+      "number": "10.001",
+      "en": "Time of day",
+      "de": "Uhrzeit"
+    },
+    {
+      "number": "11.001",
+      "en": "Date",
+      "de": "Datum"
+    },
+    {
+      "number": "12.001",
+      "en": "Unsigned counter (32 bit)",
+      "de": "Zähler ohne Vorzeichen (32 Bit)"
+    },
+    {
+      "number": "12.100",
+      "en": "Long time period (s)",
+      "de": "Lange Zeitdauer (s)"
+    },
+    {
+      "number": "12.101",
+      "en": "Long time period (min)",
+      "de": "Lange Zeitdauer (min)"
+    },
+    {
+      "number": "12.102",
+      "en": "Long time period (h)",
+      "de": "Lange Zeitdauer (h)"
+    },
+    {
+      "number": "12.1200",
+      "en": "Liquid volume (l)",
+      "de": "Flüssigkeitsvolumen (l)"
+    },
+    {
+      "number": "12.1201",
+      "en": "Volume (m³)",
+      "de": "Volumen (m³)"
+    },
+    {
+      "number": "13.001",
+      "en": "Signed counter (32 bit)",
+      "de": "Zähler mit Vorzeichen (32 Bit)"
+    },
+    {
+      "number": "13.002",
+      "en": "Flow rate (m³/h)",
+      "de": "Durchfluss (m³/h)"
+    },
+    {
+      "number": "13.010",
+      "en": "Active energy",
+      "de": "Wirkenergie"
+    },
+    {
+      "number": "13.011",
+      "en": "Apparent energy",
+      "de": "Scheinenergie"
+    },
+    {
+      "number": "13.012",
+      "en": "Reactive energy",
+      "de": "Blindenergie"
+    },
+    {
+      "number": "13.013",
+      "en": "Active energy (kWh)",
+      "de": "Wirkenergie (kWh)"
+    },
+    {
+      "number": "13.014",
+      "en": "Apparent energy (kVAh)",
+      "de": "Scheinenergie (kVAh)"
+    },
+    {
+      "number": "13.015",
+      "en": "Reactive energy (kVARh)",
+      "de": "Blindenergie (kVARh)"
+    },
+    {
+      "number": "13.016",
+      "en": "Active energy (MWh)",
+      "de": "Wirkenergie (MWh)"
+    },
+    {
+      "number": "13.100",
+      "en": "Long time difference (s)",
+      "de": "Lange Zeitdifferenz (s)"
+    },
+    {
+      "number": "13.1200",
+      "en": "Liquid volume difference (l)",
+      "de": "Flüssigkeitsvolumendifferenz (l)"
+    },
+    {
+      "number": "13.1201",
+      "en": "Volume difference (m³)",
+      "de": "Volumendifferenz (m³)"
+    },
+    {
+      "number": "14.000",
+      "en": "Acceleration",
+      "de": "Beschleunigung"
+    },
+    {
+      "number": "14.001",
+      "en": "Angular acceleration",
+      "de": "Winkelbeschleunigung"
+    },
+    {
+      "number": "14.002",
+      "en": "Activation energy",
+      "de": "Aktivierungsenergie"
+    },
+    {
+      "number": "14.003",
+      "en": "Activity",
+      "de": "Aktivität"
+    },
+    {
+      "number": "14.004",
+      "en": "Amount of substance",
+      "de": "Stoffmenge"
+    },
+    {
+      "number": "14.005",
+      "en": "Amplitude",
+      "de": "Amplitude"
+    },
+    {
+      "number": "14.006",
+      "en": "Angle (rad)",
+      "de": "Winkel (rad)"
+    },
+    {
+      "number": "14.007",
+      "en": "Angle (°)",
+      "de": "Winkel (°)"
+    },
+    {
+      "number": "14.008",
+      "en": "Angular momentum",
+      "de": "Drehimpuls"
+    },
+    {
+      "number": "14.009",
+      "en": "Angular velocity",
+      "de": "Winkelgeschwindigkeit"
+    },
+    {
+      "number": "14.010",
+      "en": "Area",
+      "de": "Fläche"
+    },
+    {
+      "number": "14.011",
+      "en": "Capacitance",
+      "de": "Kapazität"
+    },
+    {
+      "number": "14.012",
+      "en": "Surface charge density",
+      "de": "Flächenladungsdichte"
+    },
+    {
+      "number": "14.013",
+      "en": "Volume charge density",
+      "de": "Raumladungsdichte"
+    },
+    {
+      "number": "14.014",
+      "en": "Compressibility",
+      "de": "Kompressibilität"
+    },
+    {
+      "number": "14.015",
+      "en": "Conductance",
+      "de": "Leitwert"
+    },
+    {
+      "number": "14.016",
+      "en": "Electrical conductivity",
+      "de": "Elektrische Leitfähigkeit"
+    },
+    {
+      "number": "14.017",
+      "en": "Density",
+      "de": "Dichte"
+    },
+    {
+      "number": "14.018",
+      "en": "Electric charge",
+      "de": "Elektrische Ladung"
+    },
+    {
+      "number": "14.019",
+      "en": "Electric current",
+      "de": "Elektrischer Strom"
+    },
+    {
+      "number": "14.020",
+      "en": "Electric current density",
+      "de": "Elektrische Stromdichte"
+    },
+    {
+      "number": "14.021",
+      "en": "Electric dipole moment",
+      "de": "Elektrisches Dipolmoment"
+    },
+    {
+      "number": "14.022",
+      "en": "Electric displacement",
+      "de": "Elektrische Verschiebung"
+    },
+    {
+      "number": "14.023",
+      "en": "Electric field strength",
+      "de": "Elektrische Feldstärke"
+    },
+    {
+      "number": "14.024",
+      "en": "Electric flux",
+      "de": "Elektrischer Fluss"
+    },
+    {
+      "number": "14.025",
+      "en": "Electric flux density",
+      "de": "Elektrische Flussdichte"
+    },
+    {
+      "number": "14.026",
+      "en": "Electric polarization",
+      "de": "Elektrische Polarisation"
+    },
+    {
+      "number": "14.027",
+      "en": "Electric potential",
+      "de": "Elektrisches Potenzial"
+    },
+    {
+      "number": "14.028",
+      "en": "Electric potential difference",
+      "de": "Elektrische Potenzialdifferenz"
+    },
+    {
+      "number": "14.029",
+      "en": "Electromagnetic moment",
+      "de": "Elektromagnetisches Moment"
+    },
+    {
+      "number": "14.030",
+      "en": "Electromotive force",
+      "de": "Elektromotorische Kraft"
+    },
+    {
+      "number": "14.031",
+      "en": "Energy",
+      "de": "Energie"
+    },
+    {
+      "number": "14.032",
+      "en": "Force",
+      "de": "Kraft"
+    },
+    {
+      "number": "14.033",
+      "en": "Frequency",
+      "de": "Frequenz"
+    },
+    {
+      "number": "14.034",
+      "en": "Angular frequency",
+      "de": "Kreisfrequenz"
+    },
+    {
+      "number": "14.035",
+      "en": "Heat capacity",
+      "de": "Wärmekapazität"
+    },
+    {
+      "number": "14.036",
+      "en": "Heat flow rate",
+      "de": "Wärmestrom"
+    },
+    {
+      "number": "14.037",
+      "en": "Heat quantity",
+      "de": "Wärmemenge"
+    },
+    {
+      "number": "14.038",
+      "en": "Impedance",
+      "de": "Impedanz"
+    },
+    {
+      "number": "14.039",
+      "en": "Length",
+      "de": "Länge"
+    },
+    {
+      "number": "14.040",
+      "en": "Light quantity",
+      "de": "Lichtmenge"
+    },
+    {
+      "number": "14.041",
+      "en": "Luminance",
+      "de": "Leuchtdichte"
+    },
+    {
+      "number": "14.042",
+      "en": "Luminous flux",
+      "de": "Lichtstrom"
+    },
+    {
+      "number": "14.043",
+      "en": "Luminous intensity",
+      "de": "Lichtstärke"
+    },
+    {
+      "number": "14.044",
+      "en": "Magnetic field strength",
+      "de": "Magnetische Feldstärke"
+    },
+    {
+      "number": "14.045",
+      "en": "Magnetic flux",
+      "de": "Magnetischer Fluss"
+    },
+    {
+      "number": "14.046",
+      "en": "Magnetic flux density",
+      "de": "Magnetische Flussdichte"
+    },
+    {
+      "number": "14.047",
+      "en": "Magnetic moment",
+      "de": "Magnetisches Moment"
+    },
+    {
+      "number": "14.048",
+      "en": "Magnetic polarization",
+      "de": "Magnetische Polarisation"
+    },
+    {
+      "number": "14.049",
+      "en": "Magnetization",
+      "de": "Magnetisierung"
+    },
+    {
+      "number": "14.050",
+      "en": "Magnetomotive force",
+      "de": "Magnetomotorische Kraft"
+    },
+    {
+      "number": "14.051",
+      "en": "Mass",
+      "de": "Masse"
+    },
+    {
+      "number": "14.052",
+      "en": "Mass flux",
+      "de": "Massenstrom"
+    },
+    {
+      "number": "14.053",
+      "en": "Momentum",
+      "de": "Impuls"
+    },
+    {
+      "number": "14.054",
+      "en": "Phase angle (rad)",
+      "de": "Phasenwinkel (rad)"
+    },
+    {
+      "number": "14.055",
+      "en": "Phase angle (°)",
+      "de": "Phasenwinkel (°)"
+    },
+    {
+      "number": "14.056",
+      "en": "Power",
+      "de": "Leistung"
+    },
+    {
+      "number": "14.057",
+      "en": "Power factor",
+      "de": "Leistungsfaktor"
+    },
+    {
+      "number": "14.058",
+      "en": "Pressure",
+      "de": "Druck"
+    },
+    {
+      "number": "14.059",
+      "en": "Reactance",
+      "de": "Blindwiderstand"
+    },
+    {
+      "number": "14.060",
+      "en": "Resistance",
+      "de": "Widerstand"
+    },
+    {
+      "number": "14.061",
+      "en": "Resistivity",
+      "de": "Spezifischer Widerstand"
+    },
+    {
+      "number": "14.062",
+      "en": "Self-inductance",
+      "de": "Selbstinduktivität"
+    },
+    {
+      "number": "14.063",
+      "en": "Solid angle",
+      "de": "Raumwinkel"
+    },
+    {
+      "number": "14.064",
+      "en": "Sound intensity",
+      "de": "Schallintensität"
+    },
+    {
+      "number": "14.065",
+      "en": "Speed",
+      "de": "Geschwindigkeit"
+    },
+    {
+      "number": "14.066",
+      "en": "Stress",
+      "de": "Mechanische Spannung"
+    },
+    {
+      "number": "14.067",
+      "en": "Surface tension",
+      "de": "Oberflächenspannung"
+    },
+    {
+      "number": "14.068",
+      "en": "Common temperature",
+      "de": "Temperatur (allgemein)"
+    },
+    {
+      "number": "14.069",
+      "en": "Absolute temperature",
+      "de": "Absolute Temperatur"
+    },
+    {
+      "number": "14.070",
+      "en": "Temperature difference",
+      "de": "Temperaturdifferenz"
+    },
+    {
+      "number": "14.071",
+      "en": "Thermal capacity",
+      "de": "Thermische Kapazität"
+    },
+    {
+      "number": "14.072",
+      "en": "Thermal conductivity",
+      "de": "Wärmeleitfähigkeit"
+    },
+    {
+      "number": "14.073",
+      "en": "Thermoelectric power (V/K)",
+      "de": "Thermokraft (V/K)"
+    },
+    {
+      "number": "14.074",
+      "en": "Time",
+      "de": "Zeit"
+    },
+    {
+      "number": "14.075",
+      "en": "Torque",
+      "de": "Drehmoment"
+    },
+    {
+      "number": "14.076",
+      "en": "Volume",
+      "de": "Volumen"
+    },
+    {
+      "number": "14.077",
+      "en": "Volume flux",
+      "de": "Volumenstrom"
+    },
+    {
+      "number": "14.078",
+      "en": "Weight",
+      "de": "Gewicht"
+    },
+    {
+      "number": "14.079",
+      "en": "Work",
+      "de": "Arbeit"
+    },
+    {
+      "number": "14.080",
+      "en": "Apparent power",
+      "de": "Scheinleistung"
+    },
+    {
+      "number": "14.1200",
+      "en": "Meter volume flow (m³/h)",
+      "de": "Zähler-Volumenstrom (m³/h)"
+    },
+    {
+      "number": "14.1201",
+      "en": "Volume flux (l/s)",
+      "de": "Volumenstrom (l/s)"
+    },
+    {
+      "number": "15.000",
+      "en": "Access data",
+      "de": "Zugangsdaten"
+    },
+    {
+      "number": "16.000",
+      "en": "ASCII string",
+      "de": "ASCII-Zeichenfolge"
+    },
+    {
+      "number": "16.001",
+      "en": "ISO 8859-1 string",
+      "de": "ISO-8859-1-Zeichenfolge"
+    },
+    {
+      "number": "17.001",
+      "en": "Scene number",
+      "de": "Szenennummer"
+    },
+    {
+      "number": "18.001",
+      "en": "Scene control",
+      "de": "Szenensteuerung"
+    },
+    {
+      "number": "19.001",
+      "en": "Date and time",
+      "de": "Datum und Uhrzeit"
+    },
+    {
+      "number": "20.001",
+      "en": "SCLO mode",
+      "de": "SCLO-Modus"
+    },
+    {
+      "number": "20.002",
+      "en": "Building mode",
+      "de": "Gebäudemodus"
+    },
+    {
+      "number": "20.003",
+      "en": "Occupancy mode",
+      "de": "Belegungsmodus"
+    },
+    {
+      "number": "20.004",
+      "en": "Priority",
+      "de": "Priorität"
+    },
+    {
+      "number": "20.005",
+      "en": "Lighting application mode",
+      "de": "Beleuchtungs-Anwendungsmodus"
+    },
+    {
+      "number": "20.006",
+      "en": "Application area",
+      "de": "Anwendungsbereich"
+    },
+    {
+      "number": "20.007",
+      "en": "Alarm class",
+      "de": "Alarmklasse"
+    },
+    {
+      "number": "20.008",
+      "en": "Power supply mode",
+      "de": "Versorgungsmodus"
+    },
+    {
+      "number": "20.011",
+      "en": "System error class",
+      "de": "System-Fehlerklasse"
+    },
+    {
+      "number": "20.012",
+      "en": "HVAC error class",
+      "de": "HLK-Fehlerklasse"
+    },
+    {
+      "number": "20.013",
+      "en": "Time delay",
+      "de": "Zeitverzögerung"
+    },
+    {
+      "number": "20.014",
+      "en": "Wind force (Beaufort)",
+      "de": "Windstärke (Beaufort)"
+    },
+    {
+      "number": "20.017",
+      "en": "Sensor selection",
+      "de": "Sensorauswahl"
+    },
+    {
+      "number": "20.020",
+      "en": "Actuator connection type",
+      "de": "Aktor-Anschlussart"
+    },
+    {
+      "number": "20.021",
+      "en": "Cloud cover",
+      "de": "Bewölkung"
+    },
+    {
+      "number": "20.022",
+      "en": "Power return mode",
+      "de": "Modus bei Spannungswiederkehr"
+    },
+    {
+      "number": "20.100",
+      "en": "Fuel type",
+      "de": "Brennstoffart"
+    },
+    {
+      "number": "20.101",
+      "en": "Burner type",
+      "de": "Brennerart"
+    },
+    {
+      "number": "20.102",
+      "en": "HVAC mode",
+      "de": "HLK-Modus"
+    },
+    {
+      "number": "20.103",
+      "en": "Domestic hot water mode",
+      "de": "Warmwassermodus"
+    },
+    {
+      "number": "20.104",
+      "en": "Load priority",
+      "de": "Lastpriorität"
+    },
+    {
+      "number": "20.105",
+      "en": "HVAC control mode",
+      "de": "HLK-Regelmodus"
+    },
+    {
+      "number": "20.106",
+      "en": "HVAC emergency mode",
+      "de": "HLK-Notbetrieb"
+    },
+    {
+      "number": "20.107",
+      "en": "Changeover mode",
+      "de": "Umschaltmodus"
+    },
+    {
+      "number": "20.108",
+      "en": "Valve mode",
+      "de": "Ventilmodus"
+    },
+    {
+      "number": "20.109",
+      "en": "Damper mode",
+      "de": "Klappenmodus"
+    },
+    {
+      "number": "20.110",
+      "en": "Heater mode",
+      "de": "Heizgerätemodus"
+    },
+    {
+      "number": "20.111",
+      "en": "Fan mode",
+      "de": "Ventilatormodus"
+    },
+    {
+      "number": "20.112",
+      "en": "Master / slave mode",
+      "de": "Master- / Slave-Modus"
+    },
+    {
+      "number": "20.113",
+      "en": "Room setpoint status",
+      "de": "Raumsollwertstatus"
+    },
+    {
+      "number": "20.114",
+      "en": "Metering device type",
+      "de": "Zählergerätetyp"
+    },
+    {
+      "number": "20.115",
+      "en": "Humidification / dehumidification mode",
+      "de": "Befeuchtungs- / Entfeuchtungsmodus"
+    },
+    {
+      "number": "20.120",
+      "en": "ADA type",
+      "de": "ADA-Typ"
+    },
+    {
+      "number": "20.121",
+      "en": "Backup mode",
+      "de": "Reservemodus"
+    },
+    {
+      "number": "20.122",
+      "en": "Start synchronization",
+      "de": "Startsynchronisierung"
+    },
+    {
+      "number": "20.600",
+      "en": "Lock / unlock behaviour",
+      "de": "Verhalten bei Sperren / Entsperren"
+    },
+    {
+      "number": "20.601",
+      "en": "Bus power up / down behaviour",
+      "de": "Verhalten bei Busspannungswiederkehr / -ausfall"
+    },
+    {
+      "number": "20.602",
+      "en": "DALI fade time",
+      "de": "DALI-Überblendzeit"
+    },
+    {
+      "number": "20.603",
+      "en": "Blinking mode",
+      "de": "Blinkmodus"
+    },
+    {
+      "number": "20.604",
+      "en": "Light control mode",
+      "de": "Lichtsteuermodus"
+    },
+    {
+      "number": "20.605",
+      "en": "Switch push-button model",
+      "de": "Schalttastermodell"
+    },
+    {
+      "number": "20.606",
+      "en": "Push-button action",
+      "de": "Tasteraktion"
+    },
+    {
+      "number": "20.607",
+      "en": "Dimming push-button model",
+      "de": "Dimmtastermodell"
+    },
+    {
+      "number": "20.608",
+      "en": "Switch-on mode",
+      "de": "Einschaltmodus"
+    },
+    {
+      "number": "20.609",
+      "en": "Configured load type",
+      "de": "Eingestellte Lastart"
+    },
+    {
+      "number": "20.610",
+      "en": "Detected load type",
+      "de": "Erkannte Lastart"
+    },
+    {
+      "number": "20.611",
+      "en": "Converter test control",
+      "de": "Konverter-Teststeuerung"
+    },
+    {
+      "number": "20.612",
+      "en": "Converter control",
+      "de": "Konvertersteuerung"
+    },
+    {
+      "number": "20.613",
+      "en": "Converter data request",
+      "de": "Konverter-Datenanforderung"
+    },
+    {
+      "number": "20.801",
+      "en": "Shutter / blind exception behaviour",
+      "de": "Rollladen- / Jalousie-Ausnahmeverhalten"
+    },
+    {
+      "number": "20.802",
+      "en": "Shutter / blind lock behaviour",
+      "de": "Rollladen- / Jalousie-Sperrverhalten"
+    },
+    {
+      "number": "20.803",
+      "en": "SSSB mode",
+      "de": "SSSB-Modus"
+    },
+    {
+      "number": "20.804",
+      "en": "Blind control mode",
+      "de": "Jalousie-Steuermodus"
+    },
+    {
+      "number": "20.1000",
+      "en": "Communication mode",
+      "de": "Kommunikationsmodus"
+    },
+    {
+      "number": "20.1001",
+      "en": "Additional information type",
+      "de": "Zusatzinformationstyp"
+    },
+    {
+      "number": "20.1002",
+      "en": "RF mode selection",
+      "de": "RF-Modusauswahl"
+    },
+    {
+      "number": "20.1003",
+      "en": "RF filter selection",
+      "de": "RF-Filterauswahl"
+    },
+    {
+      "number": "20.1004",
+      "en": "Medium",
+      "de": "Medium"
+    },
+    {
+      "number": "20.1005",
+      "en": "Push-button function",
+      "de": "Tasterfunktion"
+    },
+    {
+      "number": "20.1200",
+      "en": "M-Bus breaker / valve state",
+      "de": "M-Bus-Schalter- / Ventilzustand"
+    },
+    {
+      "number": "20.1202",
+      "en": "Gas measurement condition",
+      "de": "Gasmessbedingung"
+    },
+    {
+      "number": "20.1203",
+      "en": "Breaker status",
+      "de": "Schalterstatus"
+    },
+    {
+      "number": "20.1204",
+      "en": "Euridis communication interface status",
+      "de": "Euridis-Kommunikationsschnittstellenstatus"
+    },
+    {
+      "number": "20.1205",
+      "en": "PLC status",
+      "de": "PLC-Status"
+    },
+    {
+      "number": "20.1206",
+      "en": "Peak event notice",
+      "de": "Spitzenlast-Ereignisankündigung"
+    },
+    {
+      "number": "20.1207",
+      "en": "Peak event",
+      "de": "Spitzenlast-Ereignis"
+    },
+    {
+      "number": "20.1208",
+      "en": "TIC type",
+      "de": "TIC-Typ"
+    },
+    {
+      "number": "20.1209",
+      "en": "TIC channel type",
+      "de": "TIC-Kanaltyp"
+    },
+    {
+      "number": "21.001",
+      "en": "General status",
+      "de": "Allgemeiner Status"
+    },
+    {
+      "number": "21.002",
+      "en": "Device control",
+      "de": "Gerätesteuerung"
+    },
+    {
+      "number": "21.100",
+      "en": "Force signal",
+      "de": "Zwangssignal"
+    },
+    {
+      "number": "21.101",
+      "en": "Cooling force signal",
+      "de": "Kühlungs-Zwangssignal"
+    },
+    {
+      "number": "21.102",
+      "en": "RHC status",
+      "de": "RHC-Status"
+    },
+    {
+      "number": "21.103",
+      "en": "SDHWC status",
+      "de": "SDHWC-Status"
+    },
+    {
+      "number": "21.104",
+      "en": "Fuel type set",
+      "de": "Brennstoffarten"
+    },
+    {
+      "number": "21.105",
+      "en": "RCC status",
+      "de": "RCC-Status"
+    },
+    {
+      "number": "21.106",
+      "en": "Air handling unit status",
+      "de": "Luftbehandlungsgerät-Status"
+    },
+    {
+      "number": "21.601",
+      "en": "Lighting actuator error information",
+      "de": "Lichtaktor-Fehlerinformation"
+    },
+    {
+      "number": "21.1000",
+      "en": "RF mode information",
+      "de": "RF-Modusinformation"
+    },
+    {
+      "number": "21.1001",
+      "en": "RF filter information",
+      "de": "RF-Filterinformation"
+    },
+    {
+      "number": "21.1002",
+      "en": "Security report",
+      "de": "Sicherheitsbericht"
+    },
+    {
+      "number": "21.1010",
+      "en": "Channel activation (8 channels)",
+      "de": "Kanalaktivierung (8 Kanäle)"
+    },
+    {
+      "number": "21.1200",
+      "en": "Virtual dry contact",
+      "de": "Virtueller potenzialfreier Kontakt"
+    },
+    {
+      "number": "21.1201",
+      "en": "Phase status",
+      "de": "Phasenstatus"
+    },
+    {
+      "number": "22.100",
+      "en": "DHWC status",
+      "de": "DHWC-Status"
+    },
+    {
+      "number": "22.101",
+      "en": "RHCC status",
+      "de": "RHCC-Status"
+    },
+    {
+      "number": "22.1000",
+      "en": "Media",
+      "de": "Medien"
+    },
+    {
+      "number": "22.1010",
+      "en": "Channel activation (16 channels)",
+      "de": "Kanalaktivierung (16 Kanäle)"
+    },
+    {
+      "number": "23.001",
+      "en": "On / off action",
+      "de": "Ein- / Aus-Aktion"
+    },
+    {
+      "number": "23.002",
+      "en": "Alarm reaction",
+      "de": "Alarmreaktion"
+    },
+    {
+      "number": "23.003",
+      "en": "Up / down action",
+      "de": "Auf- / Ab-Aktion"
+    },
+    {
+      "number": "23.102",
+      "en": "HVAC push-button action",
+      "de": "HLK-Tasteraktion"
+    },
+    {
+      "number": "24.001",
+      "en": "Variable ISO 8859-1 string",
+      "de": "Variable ISO-8859-1-Zeichenfolge"
+    },
+    {
+      "number": "25.1000",
+      "en": "Double nibble",
+      "de": "Doppel-Nibble"
+    },
+    {
+      "number": "26.001",
+      "en": "Scene information",
+      "de": "Szeneninformation"
+    },
+    {
+      "number": "27.001",
+      "en": "Combined on / off information",
+      "de": "Kombinierte Ein- / Aus-Information"
+    },
+    {
+      "number": "28.001",
+      "en": "UTF-8 string",
+      "de": "UTF-8-Zeichenfolge"
+    },
+    {
+      "number": "29.010",
+      "en": "Active energy (64 bit)",
+      "de": "Wirkenergie (64 Bit)"
+    },
+    {
+      "number": "29.011",
+      "en": "Apparent energy (64 bit)",
+      "de": "Scheinenergie (64 Bit)"
+    },
+    {
+      "number": "29.012",
+      "en": "Reactive energy (64 bit)",
+      "de": "Blindenergie (64 Bit)"
+    },
+    {
+      "number": "30.1010",
+      "en": "Channel activation (24 channels)",
+      "de": "Kanalaktivierung (24 Kanäle)"
+    },
+    {
+      "number": "31.101",
+      "en": "Extended HVAC push-button action",
+      "de": "Erweiterte HLK-Tasteraktion"
+    },
+    {
+      "number": "200.100",
+      "en": "Heating / cooling with status / command",
+      "de": "Heizen / Kühlen mit Status / Befehl"
+    },
+    {
+      "number": "200.101",
+      "en": "Binary value with status / command",
+      "de": "Binärwert mit Status / Befehl"
+    },
+    {
+      "number": "201.100",
+      "en": "HVAC mode with status / command",
+      "de": "HLK-Modus mit Status / Befehl"
+    },
+    {
+      "number": "201.102",
+      "en": "Domestic hot water mode with status / command",
+      "de": "Warmwassermodus mit Status / Befehl"
+    },
+    {
+      "number": "201.104",
+      "en": "HVAC control mode with status / command",
+      "de": "HLK-Regelmodus mit Status / Befehl"
+    },
+    {
+      "number": "201.105",
+      "en": "Heating / cooling stage enable with status / command",
+      "de": "Heiz- / Kühlstufenfreigabe mit Status / Befehl"
+    },
+    {
+      "number": "201.107",
+      "en": "Building mode with status / command",
+      "de": "Gebäudemodus mit Status / Befehl"
+    },
+    {
+      "number": "201.108",
+      "en": "Occupancy mode with status / command",
+      "de": "Belegungsmodus mit Status / Befehl"
+    },
+    {
+      "number": "201.109",
+      "en": "HVAC emergency mode with status / command",
+      "de": "HLK-Notbetrieb mit Status / Befehl"
+    },
+    {
+      "number": "202.001",
+      "en": "Relative value with status / command",
+      "de": "Relativer Wert mit Status / Befehl"
+    },
+    {
+      "number": "202.002",
+      "en": "Unsigned counter (8 bit) with status / command",
+      "de": "Zähler ohne Vorzeichen (8 Bit) mit Status / Befehl"
+    },
+    {
+      "number": "203.002",
+      "en": "Time period (ms) with status / command",
+      "de": "Zeitdauer (ms) mit Status / Befehl"
+    },
+    {
+      "number": "203.003",
+      "en": "Time period (10 ms) with status / command",
+      "de": "Zeitdauer (10 ms) mit Status / Befehl"
+    },
+    {
+      "number": "203.004",
+      "en": "Time period (100 ms) with status / command",
+      "de": "Zeitdauer (100 ms) mit Status / Befehl"
+    },
+    {
+      "number": "203.005",
+      "en": "Time period (s) with status / command",
+      "de": "Zeitdauer (s) mit Status / Befehl"
+    },
+    {
+      "number": "203.006",
+      "en": "Time period (min) with status / command",
+      "de": "Zeitdauer (min) mit Status / Befehl"
+    },
+    {
+      "number": "203.007",
+      "en": "Time period (h) with status / command",
+      "de": "Zeitdauer (h) mit Status / Befehl"
+    },
+    {
+      "number": "203.011",
+      "en": "Unsigned flow rate (l/h) with status / command",
+      "de": "Durchfluss ohne Vorzeichen (l/h) mit Status / Befehl"
+    },
+    {
+      "number": "203.012",
+      "en": "Unsigned counter (16 bit) with status / command",
+      "de": "Zähler ohne Vorzeichen (16 Bit) mit Status / Befehl"
+    },
+    {
+      "number": "203.013",
+      "en": "Electric current (µA, unsigned) with status / command",
+      "de": "Elektrischer Strom (µA, ohne Vorzeichen) mit Status / Befehl"
+    },
+    {
+      "number": "203.014",
+      "en": "Power (kW) with status / command",
+      "de": "Leistung (kW) mit Status / Befehl"
+    },
+    {
+      "number": "203.015",
+      "en": "Absolute atmospheric pressure with status / command",
+      "de": "Absoluter Luftdruck mit Status / Befehl"
+    },
+    {
+      "number": "203.017",
+      "en": "Percentage (U16) with status / command",
+      "de": "Prozentwert (U16) mit Status / Befehl"
+    },
+    {
+      "number": "203.100",
+      "en": "HVAC air quality with status / command",
+      "de": "HLK-Luftqualität mit Status / Befehl"
+    },
+    {
+      "number": "203.101",
+      "en": "Wind speed with status / command",
+      "de": "Windgeschwindigkeit mit Status / Befehl"
+    },
+    {
+      "number": "203.102",
+      "en": "Sun intensity with status / command",
+      "de": "Sonnenintensität mit Status / Befehl"
+    },
+    {
+      "number": "203.104",
+      "en": "Absolute HVAC air flow with status / command",
+      "de": "Absoluter HLK-Luftstrom mit Status / Befehl"
+    },
+    {
+      "number": "204.001",
+      "en": "Relative signed value with status / command",
+      "de": "Relativer Wert mit Vorzeichen und Status / Befehl"
+    },
+    {
+      "number": "205.002",
+      "en": "Time difference (ms) with status / command",
+      "de": "Zeitdifferenz (ms) mit Status / Befehl"
+    },
+    {
+      "number": "205.003",
+      "en": "Time difference (10 ms) with status / command",
+      "de": "Zeitdifferenz (10 ms) mit Status / Befehl"
+    },
+    {
+      "number": "205.004",
+      "en": "Time difference (100 ms) with status / command",
+      "de": "Zeitdifferenz (100 ms) mit Status / Befehl"
+    },
+    {
+      "number": "205.005",
+      "en": "Time difference (s) with status / command",
+      "de": "Zeitdifferenz (s) mit Status / Befehl"
+    },
+    {
+      "number": "205.006",
+      "en": "Time difference (min) with status / command",
+      "de": "Zeitdifferenz (min) mit Status / Befehl"
+    },
+    {
+      "number": "205.007",
+      "en": "Time difference (h) with status / command",
+      "de": "Zeitdifferenz (h) mit Status / Befehl"
+    },
+    {
+      "number": "205.017",
+      "en": "Percentage (V16) with status / command",
+      "de": "Prozentwert (V16) mit Status / Befehl"
+    },
+    {
+      "number": "205.100",
+      "en": "Absolute HVAC temperature with status / command",
+      "de": "Absolute HLK-Temperatur mit Status / Befehl"
+    },
+    {
+      "number": "205.101",
+      "en": "Relative HVAC temperature with status / command",
+      "de": "Relative HLK-Temperatur mit Status / Befehl"
+    },
+    {
+      "number": "205.102",
+      "en": "Relative HVAC air flow with status / command",
+      "de": "Relativer HLK-Luftstrom mit Status / Befehl"
+    },
+    {
+      "number": "205.103",
+      "en": "Relative HVAC air quality with status / command",
+      "de": "Relative HLK-Luftqualität mit Status / Befehl"
+    },
+    {
+      "number": "206.100",
+      "en": "Next HVAC mode",
+      "de": "Nächster HLK-Modus"
+    },
+    {
+      "number": "206.102",
+      "en": "Next domestic hot water mode",
+      "de": "Nächster Warmwassermodus"
+    },
+    {
+      "number": "206.104",
+      "en": "Next occupancy mode",
+      "de": "Nächster Belegungsmodus"
+    },
+    {
+      "number": "206.105",
+      "en": "Next building mode",
+      "de": "Nächster Gebäudemodus"
+    },
+    {
+      "number": "207.100",
+      "en": "BUC status",
+      "de": "BUC-Status"
+    },
+    {
+      "number": "207.101",
+      "en": "Lock signal",
+      "de": "Sperrsignal"
+    },
+    {
+      "number": "207.102",
+      "en": "BOC demand value",
+      "de": "BOC-Bedarfswert"
+    },
+    {
+      "number": "207.104",
+      "en": "Absolute actuator position demand",
+      "de": "Absoluter Stellpositionsbedarf"
+    },
+    {
+      "number": "207.105",
+      "en": "Actuator status",
+      "de": "Aktorstatus"
+    },
+    {
+      "number": "207.600",
+      "en": "Lighting actuator status",
+      "de": "Lichtaktorstatus"
+    },
+    {
+      "number": "209.100",
+      "en": "HPM status",
+      "de": "HPM-Status"
+    },
+    {
+      "number": "209.101",
+      "en": "Absolute room temperature demand",
+      "de": "Absoluter Raumtemperaturbedarf"
+    },
+    {
+      "number": "209.102",
+      "en": "CPM status",
+      "de": "CPM-Status"
+    },
+    {
+      "number": "209.103",
+      "en": "WTC status",
+      "de": "WTC-Status"
+    },
+    {
+      "number": "210.100",
+      "en": "Absolute water flow temperature demand",
+      "de": "Absoluter Wasservorlauftemperaturbedarf"
+    },
+    {
+      "number": "211.100",
+      "en": "Water energy demand",
+      "de": "Wasser-Energiebedarf"
+    },
+    {
+      "number": "212.100",
+      "en": "Room temperature setpoints with shift (3)",
+      "de": "Raumtemperatursollwerte mit Verschiebung (3)"
+    },
+    {
+      "number": "212.101",
+      "en": "Room temperature setpoints (3)",
+      "de": "Raumtemperatursollwerte (3)"
+    },
+    {
+      "number": "213.100",
+      "en": "Room temperature setpoints (4)",
+      "de": "Raumtemperatursollwerte (4)"
+    },
+    {
+      "number": "213.101",
+      "en": "Domestic hot water temperature setpoints (4)",
+      "de": "Warmwassertemperatursollwerte (4)"
+    },
+    {
+      "number": "213.102",
+      "en": "Room temperature setpoints with shift (4)",
+      "de": "Raumtemperatursollwerte mit Verschiebung (4)"
+    },
+    {
+      "number": "214.100",
+      "en": "HPM water flow power demand",
+      "de": "HPM-Wasservorlauf-Leistungsbedarf"
+    },
+    {
+      "number": "214.101",
+      "en": "CPM water flow power demand",
+      "de": "CPM-Wasservorlauf-Leistungsbedarf"
+    },
+    {
+      "number": "215.100",
+      "en": "BOC status",
+      "de": "BOC-Status"
+    },
+    {
+      "number": "215.101",
+      "en": "CC status",
+      "de": "CC-Status"
+    },
+    {
+      "number": "216.100",
+      "en": "Specific heat production",
+      "de": "Spezifische Wärmeerzeugung"
+    },
+    {
+      "number": "217.001",
+      "en": "Version",
+      "de": "Version"
+    },
+    {
+      "number": "218.001",
+      "en": "Volume (l) with status / command",
+      "de": "Volumen (l) mit Status / Befehl"
+    },
+    {
+      "number": "218.002",
+      "en": "Flow rate (m³/h) with status / command",
+      "de": "Durchfluss (m³/h) mit Status / Befehl"
+    },
+    {
+      "number": "219.001",
+      "en": "Alarm information",
+      "de": "Alarminformation"
+    },
+    {
+      "number": "220.100",
+      "en": "Next absolute HVAC temperature",
+      "de": "Nächste absolute HLK-Temperatur"
+    },
+    {
+      "number": "221.001",
+      "en": "Serial number",
+      "de": "Seriennummer"
+    },
+    {
+      "number": "222.100",
+      "en": "Room temperature setpoints (F16, 3)",
+      "de": "Raumtemperatursollwerte (F16, 3)"
+    },
+    {
+      "number": "222.101",
+      "en": "Room temperature setpoints with shift (F16, 3)",
+      "de": "Raumtemperatursollwerte mit Verschiebung (F16, 3)"
+    },
+    {
+      "number": "223.100",
+      "en": "Air energy demand",
+      "de": "Luft-Energiebedarf"
+    },
+    {
+      "number": "224.100",
+      "en": "Supply air temperature setpoints",
+      "de": "Zulufttemperatursollwerte"
+    },
+    {
+      "number": "225.001",
+      "en": "Scaling and speed",
+      "de": "Skalierung und Geschwindigkeit"
+    },
+    {
+      "number": "225.002",
+      "en": "Scaling, step and time",
+      "de": "Skalierung, Schritt und Zeit"
+    },
+    {
+      "number": "225.003",
+      "en": "Next tariff",
+      "de": "Nächster Tarif"
+    },
+    {
+      "number": "229.001",
+      "en": "Metering value",
+      "de": "Zählermesswert"
+    },
+    {
+      "number": "230.1000",
+      "en": "M-Bus address",
+      "de": "M-Bus-Adresse"
+    },
+    {
+      "number": "231.001",
+      "en": "Locale (ASCII)",
+      "de": "Gebietsschema (ASCII)"
+    },
+    {
+      "number": "232.600",
+      "en": "RGB colour",
+      "de": "RGB-Farbe"
+    },
+    {
+      "number": "234.001",
+      "en": "Language code (2 ASCII letters)",
+      "de": "Sprachcode (2 ASCII-Buchstaben)"
+    },
+    {
+      "number": "234.002",
+      "en": "Region code (2 ASCII letters)",
+      "de": "Regionscode (2 ASCII-Buchstaben)"
+    },
+    {
+      "number": "235.001",
+      "en": "Tariff and active energy",
+      "de": "Tarif und Wirkenergie"
+    },
+    {
+      "number": "236.001",
+      "en": "Prioritized mode control",
+      "de": "Priorisierte Modussteuerung"
+    },
+    {
+      "number": "237.600",
+      "en": "DALI control gear diagnostic",
+      "de": "DALI-Betriebsgerätediagnose"
+    },
+    {
+      "number": "238.001",
+      "en": "Scene configuration",
+      "de": "Szenenkonfiguration"
+    },
+    {
+      "number": "238.600",
+      "en": "DALI diagnostics",
+      "de": "DALI-Diagnose"
+    },
+    {
+      "number": "239.001",
+      "en": "Scaling with flags",
+      "de": "Skalierung mit Flags"
+    },
+    {
+      "number": "240.800",
+      "en": "Combined position",
+      "de": "Kombinierte Position"
+    },
+    {
+      "number": "241.800",
+      "en": "Shutter / blind status",
+      "de": "Rollladen- / Jalousiestatus"
+    },
+    {
+      "number": "242.600",
+      "en": "xyY colour",
+      "de": "xyY-Farbe"
+    },
+    {
+      "number": "243.600",
+      "en": "xyY colour transition",
+      "de": "xyY-Farbübergang"
+    },
+    {
+      "number": "244.600",
+      "en": "Converter status",
+      "de": "Konverterstatus"
+    },
+    {
+      "number": "245.600",
+      "en": "Converter test result",
+      "de": "Konverter-Testergebnis"
+    },
+    {
+      "number": "246.600",
+      "en": "Battery information",
+      "de": "Batterieinformation"
+    },
+    {
+      "number": "247.600",
+      "en": "Converter test information",
+      "de": "Konverter-Testinformation"
+    },
+    {
+      "number": "248.600",
+      "en": "Fixed converter information",
+      "de": "Feste Konverterinformation"
+    },
+    {
+      "number": "249.600",
+      "en": "Brightness and colour temperature transition",
+      "de": "Helligkeits- und Farbtemperaturübergang"
+    },
+    {
+      "number": "250.600",
+      "en": "Brightness and colour temperature control",
+      "de": "Helligkeits- und Farbtemperatursteuerung"
+    },
+    {
+      "number": "251.600",
+      "en": "RGBW colour",
+      "de": "RGBW-Farbe"
+    },
+    {
+      "number": "252.600",
+      "en": "Relative RGBW control",
+      "de": "Relative RGBW-Steuerung"
+    },
+    {
+      "number": "253.600",
+      "en": "Relative xyY control",
+      "de": "Relative xyY-Steuerung"
+    },
+    {
+      "number": "254.600",
+      "en": "Relative RGB control",
+      "de": "Relative RGB-Steuerung"
+    },
+    {
+      "number": "255.001",
+      "en": "Geographical location",
+      "de": "Geografischer Standort"
+    },
+    {
+      "number": "256.001",
+      "en": "Date and time period",
+      "de": "Datums- und Zeitintervall"
+    },
+    {
+      "number": "257.1200",
+      "en": "Electric current (3 values)",
+      "de": "Elektrischer Strom (3 Werte)"
+    },
+    {
+      "number": "257.1201",
+      "en": "Electric potential (3 values)",
+      "de": "Elektrisches Potenzial (3 Werte)"
+    },
+    {
+      "number": "257.1202",
+      "en": "Apparent power (3 values)",
+      "de": "Scheinleistung (3 Werte)"
+    },
+    {
+      "number": "265.001",
+      "en": "Switch with date and time",
+      "de": "Schalten mit Datum und Uhrzeit"
+    },
+    {
+      "number": "265.005",
+      "en": "Alarm with date and time",
+      "de": "Alarm mit Datum und Uhrzeit"
+    },
+    {
+      "number": "265.009",
+      "en": "Open / close with date and time",
+      "de": "Öffnen / schließen mit Datum und Uhrzeit"
+    },
+    {
+      "number": "265.011",
+      "en": "State with date and time",
+      "de": "Zustand mit Datum und Uhrzeit"
+    },
+    {
+      "number": "265.012",
+      "en": "Invert with date and time",
+      "de": "Invertieren mit Datum und Uhrzeit"
+    },
+    {
+      "number": "265.1200",
+      "en": "Consumer / producer with date and time",
+      "de": "Verbraucher / Erzeuger mit Datum und Uhrzeit"
+    },
+    {
+      "number": "265.1201",
+      "en": "Energy direction with date and time",
+      "de": "Energierichtung mit Datum und Uhrzeit"
+    },
+    {
+      "number": "266.027",
+      "en": "Electric potential with date and time",
+      "de": "Elektrisches Potenzial mit Datum und Uhrzeit"
+    },
+    {
+      "number": "266.056",
+      "en": "Power with date and time",
+      "de": "Leistung mit Datum und Uhrzeit"
+    },
+    {
+      "number": "266.080",
+      "en": "Apparent power with date and time",
+      "de": "Scheinleistung mit Datum und Uhrzeit"
+    },
+    {
+      "number": "267.001",
+      "en": "UTF-8 string with date and time",
+      "de": "UTF-8-Zeichenfolge mit Datum und Uhrzeit"
+    },
+    {
+      "number": "268.1203",
+      "en": "Breaker status with date and time",
+      "de": "Schalterstatus mit Datum und Uhrzeit"
+    },
+    {
+      "number": "268.1204",
+      "en": "Euridis interface status with date and time",
+      "de": "Euridis-Schnittstellenstatus mit Datum und Uhrzeit"
+    },
+    {
+      "number": "268.1205",
+      "en": "PLC status with date and time",
+      "de": "PLC-Status mit Datum und Uhrzeit"
+    },
+    {
+      "number": "268.1206",
+      "en": "Peak notice with date and time",
+      "de": "Spitzenlastankündigung mit Datum und Uhrzeit"
+    },
+    {
+      "number": "269.1200",
+      "en": "Tariff and active energy with date and time",
+      "de": "Tarif und Wirkenergie mit Datum und Uhrzeit"
+    },
+    {
+      "number": "270.1200",
+      "en": "Electric current (3 values) with date and time",
+      "de": "Elektrischer Strom (3 Werte) mit Datum und Uhrzeit"
+    },
+    {
+      "number": "270.1201",
+      "en": "Electric potential (3 values) with date and time",
+      "de": "Elektrisches Potenzial (3 Werte) mit Datum und Uhrzeit"
+    },
+    {
+      "number": "270.1202",
+      "en": "Apparent power (3 values) with date and time",
+      "de": "Scheinleistung (3 Werte) mit Datum und Uhrzeit"
+    },
+    {
+      "number": "271.1200",
+      "en": "Daily tariff profile",
+      "de": "Tagestarifprofil"
+    },
+    {
+      "number": "272.600",
+      "en": "Converter information",
+      "de": "Konverterinformation"
+    },
+    {
+      "number": "273.001",
+      "en": "Temperature forecast",
+      "de": "Temperaturvorhersage"
+    },
+    {
+      "number": "273.002",
+      "en": "Wind speed forecast",
+      "de": "Windgeschwindigkeitsvorhersage"
+    },
+    {
+      "number": "273.003",
+      "en": "Relative humidity forecast",
+      "de": "Vorhersage der relativen Luftfeuchtigkeit"
+    },
+    {
+      "number": "273.004",
+      "en": "Absolute humidity forecast",
+      "de": "Vorhersage der absoluten Luftfeuchtigkeit"
+    },
+    {
+      "number": "273.005",
+      "en": "CO₂ forecast",
+      "de": "CO₂-Vorhersage"
+    },
+    {
+      "number": "273.006",
+      "en": "Air pollutant forecast",
+      "de": "Luftschadstoffvorhersage"
+    },
+    {
+      "number": "273.007",
+      "en": "Sun intensity forecast",
+      "de": "Sonnenintensitätsvorhersage"
+    },
+    {
+      "number": "274.001",
+      "en": "Wind direction forecast",
+      "de": "Windrichtungsvorhersage"
+    },
+    {
+      "number": "276.1200",
+      "en": "ERL status",
+      "de": "ERL-Status"
+    },
+    {
+      "number": "277.1200",
+      "en": "Energy registers (4)",
+      "de": "Energieregister (4)"
+    },
+    {
+      "number": "278.1200",
+      "en": "Energy registers (5)",
+      "de": "Energieregister (5)"
+    },
+    {
+      "number": "279.1200",
+      "en": "Energy registers (6)",
+      "de": "Energieregister (6)"
+    },
+    {
+      "number": "280.1200",
+      "en": "Energy registers (11)",
+      "de": "Energieregister (11)"
+    },
+    {
+      "number": "281.1200",
+      "en": "Energy registers (4) with date and time",
+      "de": "Energieregister (4) mit Datum und Uhrzeit"
+    },
+    {
+      "number": "282.1200",
+      "en": "Energy registers (5) with date and time",
+      "de": "Energieregister (5) mit Datum und Uhrzeit"
+    },
+    {
+      "number": "283.1200",
+      "en": "Energy registers (6) with date and time",
+      "de": "Energieregister (6) mit Datum und Uhrzeit"
+    },
+    {
+      "number": "284.1200",
+      "en": "Energy registers (11) with date and time",
+      "de": "Energieregister (11) mit Datum und Uhrzeit"
+    }
+  ]
+}

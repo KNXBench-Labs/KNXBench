@@ -105,6 +105,19 @@ The authorized historical-export harness lacks its real export set; cvexc
 analysis does not activate device comparison/download rules. Native/Orca and
 real ETS/hardware evidence remain unverified.
 
+## Local source: localized DPT dropdown and field provenance
+
+The 2026-10-11 [display/selection extension](../contracts/dpt-selection.md)
+replaces the CO DPT free-text field with a native dropdown containing 454
+versioned EN/DE names, resolves primary table/filter/search labels by UI language
+and explains provenance directly at the DPT/description heading. Unknown/raw
+aliases and main-only values stay exact options; program defaults stay display-only.
+Ordinary Web2625/0 in166 files, production build/types, complete intercepted
+Chromium252/0 and built Chromium23/0 are verified; native ArrowDown/Enter1/0
+also commits exactly the selected canonical DPT. All browser cases are offline.
+Local/uncommitted source only, **not in Alpha.8 or the live container**; no
+core/database/API/protocol or device/codec compatibility extension.
+
 ## Communication-object table: accepted main-delivery source
 
 The 2026-10-09 owner-approved local UI package adds explicit column headings,

@@ -28,7 +28,9 @@ server/CLI/MCP and five explicit-root repository gates. New browser20 checks
 pass on that same candidate; full-page EN/DE frames actually viewed. Earlier
 attempt1 was tool-timeout interrupted during Rust, not a completed gate.
 [Compact evidence](evidence/parameter-editors-2026-10-11.json).
-Publication metadata checks pending. No whole PDB-04, full Colour/Picture codec,
+Published normally as `4a7856b111dc84f7dbc08f4c77c0855b21e6ff6e` after accepted
+metadata gates; HEAD/tracking/live refs and exact evidence blob read back.
+No whole PDB-04, full Colour/Picture codec,
 duration conversion, module mapping, hardware or shell-mount claim.
 Active-session self-review, not independent approval.
 

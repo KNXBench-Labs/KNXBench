@@ -1,3 +1,24 @@
+## 2026-10-11 — local device-download configuration layout repair
+
+The download-scope fieldset had no dedicated layout: its labels inherited
+stacked grid layout and radios inherited text-input minimum height. Combined
+with the fieldset's intrinsic minimum width, the configuration could overlap
+the device selector. The reproduced CRT case measured a 241 px radio box.
+
+Scoped CSS now gives the scope its own full-width row, compact 16 px radios
+(including a minimum-height reset), horizontal labels and shrinkable controls.
+Gateway precedes scope in DOM/keyboard order. Download planning, consent,
+protocol behavior and persistent data are unchanged.
+
+Named pre-fix Chromium RED caught the sizing defect. Final production-bundle
+Chromium: 14 passed, 0 failed, 0 skipped (12 EN/DE × 400/1440 px ×
+Graphite/Porcelain/CRT layout and keyboard cases plus two existing scope/plan
+cases). Vitest: 2612 passed, 0 failed across 164 files; production build and
+explicit new-spec TypeScript check passed. Browser APIs were intercepted in a
+loopback-only namespace; no live bus operation or hardware acceptance.
+Self-review only. Local source on `fix/device-download-layout-20261011`, based
+on `9298242c`; uncommitted/unpublished, not included in deployed artifacts.
+
 ## 2026-10-11 — local collector delivery and scoped measurement contract
 
 The standalone ProjectStats generator at its canonical local checkout now

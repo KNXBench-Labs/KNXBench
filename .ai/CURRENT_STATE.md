@@ -1,4 +1,18 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 12:48 CEST
+- **Completed:** Seven HTTP instruction lifecycle tests pass on frozen inputs; active-session self-review verifies existing authentication, explicit confirmation, replay/substitution refusal and persist-before-publication.
+- **Pending/Next Steps:** Merge newest native foundation; gate the actual merged server/application and isolated editor. AP2 remains in progress; AP3–AP7 remain open.
+- **Notes for Claude:** Browser fixture proof is not workbench integration or process-restart acceptance. Preserve Session1 shell ownership and imported source bytes.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:48
+- **Completed:** Ten application instruction service tests passed in fresh isolated target. Actual HTTP setup initially used SQLite open for ETS ZIP and failed before feature; corrected to real ETS import. Locked stub baseline registered0/4 with successful setup; exact production source restored. Source-frozen HTTP successor4/0 accepted, covering preview/refusal/undo/redo/native recovery. Three additional contract regressions now added; expanded admission pending.
+- **Pending/Next Steps:** Run expanded HTTP7 and broad app/server checks; preserve no-op/redo, candidate-first native persistence, source/revision binding, exact pending token and cancellation. Full browser editor remains pending.
+- **Notes for Codex oder Claude:** Nine-package goal continues; AP1/AP8/AP9 delivered, AP2 incomplete, AP3–AP7 pending. Self-review only; no hardware, private source/keys, subagents/quota, release/deployment. Root/foreign worktrees preserved. Evidence stays in owned data-tooling-editing-20261011 scratch; rejected attempts never restamped or added to totals.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 08:30
 - **Completed:** Native instruction integration refinement: first broad attempt rejected module ordering; next broad attempt exercised application tests and correctly refused selective-import model version. Explicit v13 instruction owner remapping, preserved destination overlays, dangling-owner refusal and preview note added; genuine selective RED1/14 to GREEN15/0. Native comparison genuine RED1/3 to GREEN4/0: full normalized runs/styles, absent versus empty, unchanged source identity. Private application edit-service tranche is separate; its eight focused tests passed but API/browser still pending. Self-review only.
 - **Pending/Next Steps:** Fresh source-bound broad model/store/app/diff/Clippy/doc acceptance; no runtime acceptance carried from rejected attempts. Then validated application/API and isolated editor, public evidence/docs and coordinated integration. Overall nine-package goal is not complete.

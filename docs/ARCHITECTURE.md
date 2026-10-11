@@ -3,7 +3,7 @@
 
 ## Native installation instruction editing (2026-10-11)
 
-[ADR-0111](adr/0111-native-instruction-overlays.md) keeps exact imported
+[ADR-0112](adr/0112-native-instruction-overlays.md) keeps exact imported
 InstallationHints/XML separate from normalized, native device-owned instruction
 overrides. Pure Core values/commands, versioned Store migration/history,
 source/revision-bound application previews and router-local HTTP plans remain

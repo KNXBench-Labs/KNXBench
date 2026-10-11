@@ -1,4 +1,10 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 15:15 CEST
+- **Completed:** AP2 assembled e54e2a68 accepted on17 actual gates: Web2700/0/171files, workspace Rust4016/0/193ignored, full Clippy, debug binaries stamped exact source, build/types/docs/five repo gates. Isolated browser14 checks/visual EN1440+DE400 and13 actual-process restart checks accepted on same frozen source. Fresh remote43865f58 published import/history codec repair; integrated no-ff preserving both complete journals. Published ADR0111 collision resolved by renumbering only own instruction ADR to0112; codec ADR untouched.
+- **Pending/Next Steps:** Fresh complete acceptance for actual new merged candidate including codec/native instruction interaction, then metadata/disclosure/publication/readback. Earlier e54e proof not automatically transferred. AP3–AP7 remain open; AP3/AP5 design reconnaissance only.
+- **Notes for Claude:** All ignored/private original corpus, foreign worktrees/root, runtime source claim boundaries preserved. Task-created Playwright YAML archived outside source. No global shell edits by this session, no hardware/release/deployment/subagents; self-review not independent approval.
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 14:32 CEST
 - **Completed:** Combined2 actual workspace tests4016/0/193ignored and Web2700/0/171files passed on ccee4b81; strict Clippy then refused one owned HTTP assertion len()>0. Equivalent !is_empty assertion now corrected, without weakening checks. Combined1 exposed MCP reconstructed-v9 fixture; bounded MCP/server fixture-table cleanup committed, all original assertions retained. Host identity mapping clarified from actual snake_case ProjectTree.
 - **Pending/Next Steps:** Freeze corrected combined3 candidate; rerun complete gates plus isolated browser and actual server-restart/native-history proof. Publish only after accepted source and metadata gates/readback. AP3–AP7 remain open; AP3/AP5 separate design reconnaissance not implementations.

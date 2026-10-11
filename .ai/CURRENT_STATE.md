@@ -1,9 +1,33 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 22:46 CEST
+- **Completed:** Foundation e974624e and locally committed note-service dfed9cac integrated with fresh upstream e3378712. All own and foreign journal entries retained verbatim, combined in timestamp order; common upstream base suffix unchanged. Service runtime acceptance is historical source-bound; equivalent blank-title test escape correction awaits the fresh combined gate. No release/tag/root synchronization.
+- **Pending/Next Steps:** Commit integration candidate, run full ordinary workspace/web/build/repository chain and selected original-preserving native corpus regressions on that committed head. Publish only after fresh acceptance. Prepare HTTP/isolated note editor separately while sources are frozen. AP3/AP5/AP6/AP7 remain open.
+- **Notes for Codex oder Claude:** Release owner evidence, version alignment and immutable Alpha9/native13 cutoff retained. Current future main notes schema14 is distinct from that release. Interrupted/no-source-mutation attempts are not acceptance. Active-session self-review only; existing ordered gate leases. No shell/global catalogue takeover, hardware, Secure, vendor/REA, subagents, quota, release or deployment.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 22:43 CEST
 - **Completed:** Notes application service Create/Replace/Remove/Move, complete private preview, revision/no-op and persist-before-live verified: 13 focused; owning app 235 passed/33 ignored; all 12 acceptance stages exit0 with unchanged manifests. Two registered synthetic source mutants caught, canonical bytes unchanged. Active-session self-review has no blocking findings; no independent approval. AP8 delivery remains verified separately.
 - **Pending/Next Steps:** Commit bounded service, integrate fresh origin/main with Foundation and run combined acceptance plus selected native corpus before normal publication. Then authenticated HTTP CRUD/preview/confirmed apply/cancel, isolated EN/DE UI and existing help reuse. AP3/AP5/AP6/AP7 remain open; no whole AP4 verdict.
 - **Notes for Codex oder Claude:** Exact service ownership unchanged; source receipts and mutation negatives in data-tooling-continuation-20261011. Prior timeout/interrupted controls are not acceptance. Keep foreign release journal and immutable Alpha9 tag/cutoff native13; integrated future main may use14. No root sync/shared shell/global catalog edits, subagents, quota, hardware, Secure, vendor/REA, release or deployment.
 
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 22:27 CEST
+- **Completed:** Owner-authorized Alpha9 release published on immutable5b21323e/tag object0bf7d8c9; cutoff0bed9e2a.33 real source-frozen stages exit0, Rust4048/0/194ignored, Web2738/0/174files, Chromium302/0/no skips/flakes, corpus143/143/31targets; six supplementary/seven private regressions and tools54. Both exact-source packaging dry runs and tag workflows succeed. Downloaded checksums/GitHub digests/MCP version/AppImage extraction plus Docker version/latest/index platforms/revision/anonymous pull/HTTPS-native smoke verified. Published-image actual authentic public native12 open/save/reopen yields13 with projected working content and both history-stack availability flags; synthetic original unchanged, orderly own probe exit0. Current-facing docs/public aggregate receipt prepared; inherited main collector docs preserved.
+- **Pending/Next Steps:** Docs-only closure gates, exact focused commit/main push/readback and owned archive/cleanup remain before release task shutdown. Tag must never move. Unmounted instruction/parameter editors, local report/payload/metadata, Functions/Sites, notes and later source remain excluded; all other owners retain their own queues. No further feature task activated by release completion.
+- **Notes for Codex oder Claude:** Session77b2583fcda2 owns release-alpha9 and release-alpha9-docs worktrees/profile scratch. Canonical public docs/evidence/release-alpha9-2026-10-11.json; private accepted-final/tag/publication/migration receipts preserve failed binding-count finalizer and gh shim attempt separately. Per-case original-input guards, not unpersisted full-run reference fingerprints. Existing user container/root HEAD/index unchanged; no live deployment/bus/vendor/subagents/quota or new compatibility claim. Preserve complete inherited journal and foreign owners; release13 is distinct from future main schema/features.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 22:02 CEST
+- **Completed:** Resumed AP8 source-publication residue delivered on exact configured collector main2ac5dfb0:181/0/0skip actual offline fixture acceptance, matching existing-owner credential with no persistent switch, exact ref/all accepted blob readback. This isolated KNXBench docs-only package supersedes historical404 boundary and retains all fiveTOOLS semantic residues. No collector source modification, report regeneration, shared root/shell/runtime edit.
+- **Pending/Next Steps:** Eight frozen documentation gates passed, including12regressions and five nonempty explicit-root repository checks; exact four-path stagedscope/privacy/self-review passed. Metadata-only closure checks and normal main publication/readback remain. Overall data/tooling Goal remains open; AP4 serviceGREEN queued separately, AP3/AP5/AP6/AP7 incomplete.
+- **Notes for Codex oder Claude:** Own exact four-path docs scope declared in collector-docs-setup.json; no private account/host path/token copied publicly. Preexisting broken non-discovered collector diagnostic stays explicitly outside source-change acceptance. Foundation/service and foreign release/native/UI checkouts untouched. No subagents/quota/Secure/bus/release/deploy or SmartSensor side scope.
 
 ---
 
@@ -36,6 +60,14 @@
 - **Completed:** Foundation2 proc_4d353e8002a7 exit0 verified against receipt and all1956 tracked input hashes on e974624e5356547c7f86b2769ad36ba346f9c5ef:17valid exit0 gates,Web2738/0/174files,workspaceRust4077/0/194ignored,strictClippy/builds/types/docs/nonempty repository gates. Actual current Foundation bytes match frozen inputs. First attempt remains setup refusal, no duplicate counts. No publication or fullAP4 claim.
 - **Pending/Next Steps:** Continue preview-first note Application service/tests in this isolated worktree, then HTTP/isolatedUI/help and required corpus/integration/delivery gates. Service remains design-only now; native14Foundation local, not published. User continuation prompt can now replace pendingFoundation verdict with verified local acceptance.
 - **Notes for Claude:** Alpha9 release owner independently freezes schema13 cutoff0bed9e2a; native14local notes are NOT part of that release. Do not alter/merge into release worktree or claim its authority. Foundation2 receipt in profile scratch data-tooling-editing-20261011/notes-foundation-2/receipt.json; ignored corpus counts excluded. Preserve foreign root/acceptedFoundation manifest; no hardware/release/deploy/subagents/quota.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 20:57 CEST
+- **Completed:** Owner explicitly authorized Alpha9 publication including existing release distribution. Own release/alpha9-20261011 worktree from fetched main0bed9e2a; all application versions aligned to0.1.0-alpha.9, Cargo external dependency identities unchanged. Handwritten release notes disclose native/model13 migration/backups, published import/history/DPT/navigation/login/layout repairs, and unmounted instruction/parameter editors. No foreign root/branch changes imported, no user container replacement or hardware/vendor operation.
+- **Pending/Next Steps:** Freeze/review source, acquire existing workspace/alpha/browser leases in fixed order, execute full release gates and private offline preservation regressions; then publish exact accepted bump snapshot, dry-run packaging, tag/pre-release and independently verify artifacts/Docker version+latest. Publication remains pending until actual gates/artifact readback pass.
+- **Notes for Codex oder Claude:** Release owner is session77b2583fcda2, worktree release-alpha9-20261011, private profile scratch release-alpha9-77b2583fcda2. Main runtime cutoff0bed9e2a; later parallel runtime work stays excluded unless explicitly reconciled/reaccepted. No subagents/quota checks, shared root sync, live bus or default project/product stores. Source/self-review only, never independent approval. Preserve all inherited journal entries.
+
+---
 
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-11 20:47 CEST
@@ -98,7 +130,6 @@
 - **Notes for Claude:** Fixture metadata in crates/knx-store/tests/fixtures/native13-before-notes.json, raw generator receipt in owned notes-native13-predecessor-1 scratch. Never relabel current files as predecessors. Static help is not note persistence. No hardware/HTML/automatic target disposition/corpus/accountactivation/subagents/quota/release/deploy/global shell/foreign-root edits. All inherited journal content retained.
 
 - **Last Agent:** codex
-
 - **Timestamp:** 2026-10-11 19:30 CEST
 - **Completed:** Bounded AP3 package published normally as4a7856b111dc84f7dbc08f4c77c0855b21e6ff6e; HEAD/fetched/live main and exact evidence blob read back. Accepted runtime4c3bd83d9806c9a61a12174c2cb6a360c553b21a:17gates/Web2738/0/174files/Rust4048/0/194ignored plus20isolated browser checks and actual EN/DE full-frame review. HTTP5 includes validation/refusal/Undo/Redo/native Save/Open/source preservation. No release/deployment/root sync.
 - **Pending/Next Steps:** AP4 native project notes next; authentic predecessor13 saved/working files generated by accepted archived writer in separate notes worktree, receipt review pending. AP3 Color/Picture codec/module mappings and Session1 host mount remain open; PDB04 LATER preserved. AP5–AP7 remain open.

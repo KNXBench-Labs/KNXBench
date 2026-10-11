@@ -1,5 +1,20 @@
 # Compatibility
 
+## Alpha9 snapshot and native13 barrier (11 October 2026)
+
+The [Alpha9 release](releases/alpha9.md) freezes `5b21323e`, not moving main.
+Native/model13 adds instruction overlay tables separately from imported
+originals; Alpha8 and earlier refuse upgraded files. Independent project/Docker
+backups are required before upgrade, and rollback needs those backups.
+[Published artifact verification](evidence/release-alpha9-2026-10-11.json)
+includes an actual public native12 predecessor through the published Docker
+image: open/save/reopen yields13 and preserves the projected working model and
+both history-stack availability flags. It is one synthetic migration witness,
+not universal older-history, ETS, hardware or production-shell certification.
+Instruction/parameter editors are not mounted production workbench features in
+this tag. Later parallel source does not change the released-artifact boundary.
+
+
 ## Payload evidence is not ETS-App compatibility (2026-10-10)
 
 Application import `41b3d6267731` separately reports existing byte-sniffed content

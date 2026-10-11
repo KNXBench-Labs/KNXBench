@@ -15,6 +15,46 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 01:12
+- **Completed:** AP1 research published/read back f6c3f64d4ece02fb6c6ea2b7a26d6735a0e47f6a. Bounded AP2 foundation published/read back c7d1eb0d80507949fcb91db8939d3bd8245ed32c: HEAD=tracking=live, exact eight owned paths, runtime source05aaab52 fresh220/0 ordinary crate (56 ignored/unadmitted),native target3/0 including five original-preservation cases,22 adapter controls,Clippy/format/docs and fresh-root metadata gates; self-review. Collector local2ac5dfb072fffc97e1622defd042b0a6adf41e19 full181/0 and real isolated six/six CSS report; remote unavailable.
+- **Pending/Next Steps:** Goal not complete. Full AP2 source-bound reader/normalized override model/migration/history/edited-value native/UI/browser still open; separate editing tree has proposed ADR0111/contract only. AP3 specialized editors,AP4 native notes/help,AP5 offline automation,AP6 MCP writes,AP7 catalogue updates and AP9 separate hardware plans remain. AP8 ID/data-source audit/report delivery open; collector publication requires a working approved repository target because configured origin returns Repository not found.
+- **Notes for Codex oder Claude:** Published foundation is not a complete RTF feature, ETS export or hardware support. Session1 raw diagnostics remain independently DONE. Native import caller explicitly saves returned model; generic retained XPath cannot select source device. Editing design has no schema/model/code mutation yet. Preserve foreign journals/root/index/canonical settings/release. No live/hardware/secret operation,subagents/quota/release/deployment. Private active evidence retained; committed local collector source remains reachable.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 00:56
+- **Completed:** Bounded AP2 foundation fresh raw-evidence-owner prerequisite a8d1c68c8d528eba5916abd620aac6ee4027fc17 integrated in owned tree with full foreign journals/status preserved. Source 05aaab523b5e85cb15ff9b16435ff2edd14049dc passes ordinary ETSProj220/0 (56 ignored/unadmitted),native roundtrip3/0,Clippy/format/docs/whitespace,frozen inputs. Original foundation303c47bd remains historical; new public receipt binding added. AP1 published f6c3f64d read back. Collector local commit2ac5dfb072fffc97e1622defd042b0a6adf41e19 passes181 tests and real pinned-main report; configured collector origin Repository not found, no upload/replacement inferred.
+- **Pending/Next Steps:** Metadata docs gates and fast-forward/readback for bounded foundation; full AP2 editor/service/history/edited native/browser remains. Separate editing worktree has proposed ADR0111/ownership only, no native model/schema mutation. AP8 exact ID contracts/report delivery/local source retention; AP3–AP7/AP9 pending. Goal remains active/incomplete.
+- **Notes for Codex oder Claude:** Earlier non-FF guard stopped before push; no lost source/foreign revert. Session1 raw labels are DONE and are not RTF parsing/rewriting authority. Pure bounded interpreter stays separate and no full RTF/ETS/hardware claim. Self-review only. Keep root/index/foreign source/canonical settings/release untouched; no bus/subagents/quota/deployment/release. Retain active evidence/own editing branch.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 00:36
+- **Completed:** AP1/R-SEC-01 docs-only main publication f6c3f64d4ece02fb6c6ea2b7a26d6735a0e47f6a read back HEAD=tracking=live; nine exact owned documentation paths, no runtime Secure implementation. AP2 foundation main-integrated source303c47bd013feea5e1244b939c0bdc224fa30722 accepted:219 ordinary owning-crate tests,56 ignored/unadmitted, three existing native-roundtrip tests (one covers five original-preservation cases),22 adapter controls, Clippy/format/docs/whitespace, frozen inputs. Public compact foundation receipt added; metadata gates/publication next.
+- **Pending/Next Steps:** Publish only bounded AP2 foundation after metadata/fresh-root gates; full AP2 original-bound editor/service/history/edited-value Save-Reopen/browser remains. AP8 separate source181/0/full real report accepted pending ID audit/collector commit/report delivery; AP3–AP7/AP9 still open. Continue goal, no permission/quota stop.
+- **Notes for Codex oder Claude:** Research publication supersedes historical pending AP1 lines below, not their original acceptance. Foundation is not a whole editor or ETS/hardware claim; skipped tests are not counted as passed. Native import caller explicitly saves model; source inspection never mutates original. Preserve inherited handovers/shared root/index, immutable Alpha8 release, foreign shell/styles/catalogues and private data. No live operations, subagents, quota/release/deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 00:29
+- **Completed:** AP2 bounded pure RTF adapter/writer on admitted InstallationHints scope. Initial real baseline1/15 RED, retained compile refusal, corrected16/0; expanded22/0. Existing native target now1/0 for five synthetic original-preservation inputs, repeated saves/close/reopen and full model/opaque equality. First native attempt failed NotSaved due omitted explicit caller model-save; corrected test only, no importer/store change. Final expanded source hashes frozen.
+- **Pending/Next Steps:** Integrate published AP1/current main into this owned branch, review/owning-crate build/clippy/docs/ordinary regressions and publish only the bounded foundation. Full AP2 editor/service mutation/history/edited-value native/browser acceptance remain. AP3–AP7 and AP9 pending; AP8 separate181/0 suite and real pinned-main CSS report passed but full ID/review/publication pending. Goal incomplete.
+- **Notes for Codex oder Claude:** No universal field/RTF/ETS-export claim; no domain/schema or UI shell mutation. Pure adapter performs no IO/HTML/plugins/resources. Original logical attrs/full XML preserved even when preview refuses. Native import persists source but returns model for explicit save by caller. Own source/tests/contract only; original XML, hardware, private corpus, foreign source, immutable Alpha8 release unchanged. No subagents/quota/release/deployment/live operation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-10 23:02 CEST
+- **Completed:** AP2 parser subpackage started in independent feature/data-tooling-rtf-20261010 from own AP1 candidate6cb746ec1985c87c01c65dcfcc6430b52a02d1ae; AP1 source stays frozen. Public Schema23 InstallationHints field and Microsoft RTF1.9.1 syntax/Unicode primary passages inspected. Exact ownership/subset/preservation/budgets contract in docs/contracts/rtf-text.md. Sixteen synthetic adapter regressions written before implementation; literal-only baseline prepared for actual named RED, not delivered support.
+- **Pending/Next Steps:** Execute actual RED through cooperative shared leases, replace baseline with bounded pure adapter and verify GREEN/edge controls; isolated editing/storage/history and native roundtrips/browser remain afterward. AP1 docs acceptance still queued separately. Nine-package goal incomplete.
+- **Notes for Codex oder Claude:** Only knx-etsproj rtf module/export/new tests owned here; parser never enters KNX Core. No existing report/raw-preview/UI/shared catalogues touched. All inputs synthetic; no private project/keyring or embedded-resource access. Original is borrowed/unchanged; unsupported rendering cannot authorize rewriting. No subagents/quota/bus/releases/deployments. Preserve inherited entries.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 00:35
 - **Completed:** Package7 published/read back 6ef0b2d8854bb498c68ba0def63caf91f0a09969, local/tracking/live main equal. Complete frozen d8cde545 public/private acceptance and production build; later changes metadata-only with five nonempty repo/docs/whitespace/full outgoing privacy gates. Fresh Secure research owner contributions preserved. Bounded raw-label scope DONE; parsing/rendering/editing stays separate tooling scope. Packages1–7/9 delivered.
 - **Pending/Next Steps:** Publication closure metadata gates/readback, preserve compact private proofs and retire owned package7 tree/branch/scratch. Then fresh-main package8 KL146 original evaluated-activation comparison and exact per-KL/origin-main final closure. Overall goal not complete.

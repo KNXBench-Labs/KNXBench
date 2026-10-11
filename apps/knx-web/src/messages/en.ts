@@ -1936,6 +1936,8 @@ export const messages = {
   "loadProgress.failedDuring": "Failed during: {phase}",
   "loadProgress.barLabel": "Load progress",
   "loadProgress.counted": "{completed} of {total}",
+  "loadProgress.currentStep": "Current step: {phase}",
+  "loadProgress.unmeasured": "No item total is available for this step.",
   "loadProgress.phase.starting": "Starting…",
   "loadProgress.phase.openContainer": "Opening the archive",
   "loadProgress.phase.detectSchema": "Detecting the schema version",

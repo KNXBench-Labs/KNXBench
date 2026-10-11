@@ -1790,6 +1790,8 @@ export const messages: Record<MessageKey, string> = {
   "loadProgress.failedDuring": "Fehlgeschlagen bei: {phase}",
   "loadProgress.barLabel": "Ladefortschritt",
   "loadProgress.counted": "{completed} von {total}",
+  "loadProgress.currentStep": "Aktuell: {phase}",
+  "loadProgress.unmeasured": "Für diesen Schritt gibt es keinen Gesamtzähler.",
   "loadProgress.phase.starting": "Wird gestartet…",
   "loadProgress.phase.openContainer": "Archiv wird geöffnet",
   "loadProgress.phase.detectSchema": "Schemaversion wird erkannt",

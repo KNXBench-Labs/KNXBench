@@ -153,3 +153,7 @@ Owned documentation closure additionally includes `docs/contracts/parameter-edit
 `docs/KNOWN_LIMITATIONS.md`, `docs/IMPLEMENTATION_STATUS.md`, and
 `docs/evidence/parameter-editors-2026-10-11.json`. These record the bounded
 controls and independent evidence scopes; PDB-04 is not closed by this subset.
+
+Metadata-only closure also owns the exact PDB-04 row annotation in
+`docs/status/LEDGER.md` and an additive AP3 boundary in `docs/OPEN_WORK.md`.
+The PDB-04 status stays LATER; no other row/owner/status/count changes.

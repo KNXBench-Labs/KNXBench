@@ -1,0 +1,160 @@
+{
+  "date": "2026-10-11",
+  "runtime_source": "4c3bd83d9806c9a61a12174c2cb6a360c553b21a",
+  "base_main": "2ff5d51312bf7db5a468eb7870257afd31d49f75",
+  "review": "active-session self-review; not independent approval",
+  "scope": "bounded AP3 source evidence, authenticated read-only producer and isolated Time count/integer Slider; PDB-04 not complete",
+  "gates": [
+    {
+      "name": "format",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "web",
+      "exit": 0,
+      "valid": true,
+      "passed": 2738,
+      "failed": 0,
+      "pending": 0,
+      "files": 174
+    },
+    {
+      "name": "web-build",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "theme-types",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "flow-types",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "fixture-build",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "rust-workspace",
+      "exit": 0,
+      "valid": true,
+      "passed": 4048,
+      "failed": 0,
+      "ignored": 194,
+      "skip_lines": []
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "binaries",
+      "exit": 0,
+      "valid": true,
+      "versions": {
+        "knx-server": "knx-server 0.1.0-alpha.8+g4c3bd83d",
+        "knx": "knx 0.1.0-alpha.8+g4c3bd83d",
+        "knx-mcp": "knx-mcp 0.1.0-alpha.8+g4c3bd83d"
+      }
+    },
+    {
+      "name": "documentation",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "documentation-tests",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-layering",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-headers",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-anchors",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-ledger",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-corpus-gates",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "whitespace",
+      "exit": 0,
+      "valid": true
+    }
+  ],
+  "source_manifest_sha256": "3372c941c684538c1ed6ade6e16c76bcafca0a0a8c999b1026a65ea6fa569e3d",
+  "component_tests": {
+    "passed": 21,
+    "scope": "source-bound current focused controls; subset of full Web suite"
+  },
+  "HTTP_tests": {
+    "passed": 5,
+    "scope": "actual source/auth/refusal plus existing validation/undo/redo/native Save/Open; no browser/hardware"
+  },
+  "browser": {
+    "scope": "built isolated component with synthetic host callbacks; no real storage/HTTP/hardware acceptance",
+    "checks": [
+      "en:original time lexeme unchanged",
+      "en:render makes no service call",
+      "en:actual theme resolved",
+      "en:unsupported resources and codecs not activated",
+      "en:no horizontal page overflow",
+      "de:original time lexeme unchanged",
+      "de:render makes no service call",
+      "de:actual theme resolved",
+      "de:unsupported resources and codecs not activated",
+      "de:no horizontal page overflow",
+      "out of bounds draft blocked",
+      "invalid draft not written",
+      "explicit time draft transmitted without lexical rewrite",
+      "authoritative synthetic refresh retains lexeme",
+      "keyboard slider change is draft only",
+      "slider commits exact unit-step value only on Apply",
+      "changed revision blocks dirty draft",
+      "changed revision preserves draft",
+      "rejected draft recoverable with visible exact refusal",
+      "no unexpected resource or API request"
+    ],
+    "blocked": []
+  },
+  "visual_review": {
+    "en1440graphite": "Count/unit disclaimer, slider and unsupported originals readable without visible clipping.",
+    "de400porcelain": "Full-page labels/disclosures/actions wrap and remain readable; raw literal/URL visible, no image interpretation."
+  },
+  "screenshots": {
+    "parameter-en-1440-graphite.png": "6b040a9f88edba3452d336e61b2b8a14e8ac2a0432f25fc4bd05d707986a6b87",
+    "parameter-de-400-porcelain.png": "27696dd2c18396391a1263b4a5918f561f963af7353db1a642e7795a7544a0b9"
+  },
+  "limits": [
+    "No full Color/Picture codec or image upload/resource execution",
+    "No duration/clock conversion or unproved increment scaling",
+    "No direct Static source mapping for modules",
+    "No production shell mount or full browser-to-native combination",
+    "Existing legacy writes not revision-conditional; stale UI suppression is not rollback",
+    "Synthetic source/HTTP/browser evidence; corpus-ignored/hardware/native WebKit/Orca/ETS reimport not certified",
+    "Attempt1 tool timeout is incomplete, not a registered Rust test failure"
+  ],
+  "handoff": "../contracts/parameter-editor-host.md"
+}

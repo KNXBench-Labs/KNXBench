@@ -76,7 +76,11 @@ describe("deviceWizardPlacement", () => {
     expect(withInstallation(tree(), start, 0)).toEqual(start);
   });
 
-  it("aims the palette command at the selected line or building part only", () => {
+  it("keeps the selected installation as the add-device target", () => {
+    expect(wizardTargetFor({ kind: "installation", id: 1 })).toEqual({ installationId: 1, lineId: null });
+  });
+
+  it("targets the selected line or building part and ignores device/no selection", () => {
     expect(wizardTargetFor({ kind: "line", id: 2 })).toEqual({ lineId: 2 });
     expect(wizardTargetFor({ kind: "building_part", id: 12 })).toEqual({ buildingPartId: 12 });
     expect(wizardTargetFor({ kind: "device", id: 7 })).toEqual({});

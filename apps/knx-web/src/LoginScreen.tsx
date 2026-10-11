@@ -10,6 +10,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import { useTranslate } from "./i18n";
+import brandMark from "./assets/knxbench-mark.png";
+import { version } from "../package.json";
 
 /**
  * Why the screen is up. It changes exactly one thing — the sentence above
@@ -104,11 +106,10 @@ export default function LoginScreen(props: {
       >
         <p className="eyebrow">{t("login.eyebrow")}</p>
         <h1 className="login-title" id="login-title">
-          <span className="brand-mark" aria-hidden="true">
-            K
-          </span>
+          <img className="login-logo" src={brandMark} width="60" height="46" alt="" draggable={false} />
           <span className="login-wordmark">KNXBench</span>
         </h1>
+        <p className="login-version">v{version}</p>
         <p className="login-intro">{t("login.intro")}</p>
         {/* `role="status"` rather than `alert`: this explains the situation
             the user arrived in, it does not report a failure of anything

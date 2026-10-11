@@ -1,3 +1,4 @@
+//! Verifies normalized instruction integrity with synthetic data.
 use knx_etsproj::instructions::{
     read_installation_hints as read, InstructionReadError as E, MAX_XML_BYTES, MAX_XML_DEPTH,
     MAX_XML_EVENTS,

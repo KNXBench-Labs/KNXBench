@@ -1,3 +1,4 @@
+//! Verifies normalized instruction integrity with synthetic data.
 #[path = "../src/testutil.rs"]
 #[allow(dead_code)]
 mod testutil;

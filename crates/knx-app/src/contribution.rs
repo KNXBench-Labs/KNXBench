@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const FORMAT_VERSION: u32 = 1;
-pub const MAX_INPUT_BYTES: usize = 32 * 1024 * 1024;
+pub const MAX_INPUT_BYTES: usize = 1024 * 1024 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -86,7 +86,7 @@ impl std::error::Error for AnalysisError {}
 pub fn analyze(bytes: &[u8], filename: &str) -> Result<Analysis, AnalysisError> {
     if bytes.is_empty() || bytes.len() > MAX_INPUT_BYTES {
         return Err(AnalysisError::Input(
-            "analysis input must be between 1 byte and 32 MiB",
+            "analysis input must be between 1 byte and 1024 MiB",
         ));
     }
     let project_input = filename.to_ascii_lowercase().ends_with(".knxproj");

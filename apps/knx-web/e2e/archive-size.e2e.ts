@@ -53,7 +53,7 @@ for (const language of ["en", "de"] as const) {
         ? "Die Datei ist entpackt mit 1280 MiB zu groß. Das Limit liegt bei 1024 MiB."
         : "The file is too large when unpacked: 1280 MiB. The limit is 1024 MiB.");
       await expect(toast.locator(".toast-hint")).toHaveCount(0);
-      await expect(toast.getByRole("button")).toBeInViewport();
+      await expect(toast.getByRole("button", { name: messages["toast.dismiss"], exact: true })).toBeInViewport();
       const box = await toast.boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width).toBeLessThanOrEqual(width);

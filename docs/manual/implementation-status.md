@@ -79,6 +79,18 @@ packages the new budget.
 [Verification](../IMPLEMENTATION_STATUS.md#2026-10-10--archive-budgetreadable-refusals-main-integration-accepted)
 · [Import limits](../IMPORT_EXPORT.md).
 
+## Local login, notification details and larger inputs (2026-10-11)
+
+The isolated login/feedback package reuses the KNXBench logo and shows the built
+frontend version before authentication. Toast message actions navigate by exact
+local ID into the separately disclosed browser notification history; server/UI
+messages have raw details, exact clipboard copying and a selected-text fallback.
+Backend JSON export remains v1/server-only. Raw analysis/evidence sources and
+streamed file uploads admit 1024 MiB; contribution expanded inventory also
+admits 1024 MiB. XML/member/manufacturer/selective-source/public-output safety
+budgets are not blanket-raised. This is **local source**, not a released or
+deployed image. [Contract](../contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md).
+
 ## Docker upload and browser return fixes (2026-10-09 source)
 
 The source fixes for GitHub #1/#2 raise the streamed upload file ceiling to

@@ -324,6 +324,14 @@ main {
   backdrop-filter: blur(12px);
 }
 
+/* Transparent whole-card action keeps a separate dismiss control. */
+.toast { position: relative; }
+.toast .toast-open { position: absolute; inset: 0; width: 100%; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.toast .toast-open:hover { transform: none; box-shadow: none; }
+.toast .toast-open:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
+.toast-body, .toast > .achievement-badge { pointer-events: none; }
+.toast .toast-dismiss { position: relative; z-index: 1; }
+
 .toast-body {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -1238,6 +1246,18 @@ main {
   border: 1px solid var(--knx-border);
   border-radius: var(--knx-radius-card);
 }
+
+.log-entry--selected { outline: 2px solid var(--knx-accent); outline-offset: -2px; }
+.log-entry .log-entry-open { min-width: 0; max-width: 100%; margin: 0; padding: 0; border: 0; box-shadow: none; background: transparent; color: var(--knx-foreground); text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.log-entry .log-entry-open:hover { text-decoration: underline; transform: none; box-shadow: none; }
+.log-detail-panel { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; }
+.log-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.log-detail-heading h2 { margin-top: 0; }
+.log-detail-meta, .log-detail-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; user-select: text; }
+.log-detail-meta { color: var(--knx-muted); font-family: var(--knx-font-mono); }
+.log-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.log-detail-raw { display: grid; gap: 8px; margin-top: 12px; }
+.log-detail-raw textarea { width: 100%; min-height: 180px; resize: vertical; font-family: var(--knx-font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .log-entry-severity {
   font-weight: bold;
@@ -3366,6 +3386,9 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   margin: 6px 0 14px;
   font-size: 26px;
 }
+
+.login-logo { display: block; width: 60px; height: 46px; object-fit: contain; flex: none; }
+.login-version { margin: -4px 0 14px; color: var(--knx-muted); font-family: var(--knx-font-mono); font-size: 12px; }
 
 .login-wordmark { background: var(--knx-gradient-display); -webkit-background-clip: text; background-clip: text; color: transparent; }
 

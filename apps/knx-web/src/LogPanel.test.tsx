@@ -29,6 +29,7 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
   apiMock.getSessionLog.mockResolvedValue([]);
   exportMock.saveSessionLog.mockResolvedValue(true);
 });
@@ -66,6 +67,86 @@ async function renderPanel(tree: ProjectTree, refreshKey = 0) {
 }
 
 describe("LogPanel", () => {
+  it("keeps the full backend v1 export at 1000 records despite a separate 1000 UI records", async () => {
+    const server = Array.from({ length: 1000 }, (_, index) => entry({ message: `server ${index}` }));
+    const notifications = Array.from({ length: 1000 }, (_, id) => ({ id, entry: entry({ source: "ui:toast:error", message: `browser ${id}` }) }));
+    apiMock.getSessionLog.mockResolvedValue(server);
+    const tree = baseTree(); const root = await renderPanel(tree);
+    await act(() => root.render(<LogPanel tree={tree} refreshKey={0} notifications={notifications} notificationDroppedCount={7} />));
+    const scope = host!.querySelector<HTMLSelectElement>(".log-panel-export-scope")!;
+    await act(() => { scope.value = "all"; scope.dispatchEvent(new Event("change", { bubbles: true })); });
+    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith(server, server, "all");
+    expect(host!.textContent).toContain("JSON export contains only server entries");
+    expect(host!.textContent).toContain("7 UI notifications dropped");
+    await act(() => root.unmount());
+  });
+  it("exports no fake server rows when the search matches only a client notification", async () => {
+    const raw = entry({ message: "actual server entry" });
+    apiMock.getSessionLog.mockResolvedValue([raw]);
+    const tree = baseTree(); const root = await renderPanel(tree);
+    await act(() => root.render(<LogPanel tree={tree} refreshKey={0} notifications={[{ id: 1, entry: entry({ source: "ui:toast:error", message: "browser-only search" }) }]} />));
+    await act(() => setSearch(host!.querySelector<HTMLInputElement>(".log-panel-search input")!, "browser-only search"));
+    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith([raw], [], "filtered");
+    await act(() => root.unmount());
+  });
+  it("opens a backend entry and exposes exact multiline raw text for selection and copy", async () => {
+    const raw = entry({ message: "raw message\nsecond line", detail: "detail\n<not HTML>", location: "1.1.1", diagnostic: { kind: "migrated", fromVersion: 0, toVersion: 1 } });
+    apiMock.getSessionLog.mockResolvedValue([raw]);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const root = await renderPanel(baseTree());
+    const open = host!.querySelector<HTMLButtonElement>(".log-entry-open");
+    expect(open).not.toBeNull();
+    await act(() => open!.click());
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog).not.toBeNull();
+    const text = dialog.querySelector<HTMLTextAreaElement>("textarea")!;
+    expect(JSON.parse(text.value)).toEqual(raw);
+    expect(text.readOnly).toBe(true);
+    await act(async () => dialog.querySelector<HTMLButtonElement>(".log-detail-copy-message")!.click());
+    expect(writeText).toHaveBeenLastCalledWith(raw.message);
+    await act(async () => dialog.querySelector<HTMLButtonElement>(".log-detail-copy-all")!.click());
+    expect(JSON.parse(writeText.mock.lastCall![0])).toEqual(raw);
+    await act(() => root.unmount()); vi.unstubAllGlobals();
+  });
+  it("falls back to selectable exact JSON when clipboard permission is refused", async () => {
+    const raw = entry({ message: "same\nraw", detail: "\tUnicode ü <xml>" });
+    apiMock.getSessionLog.mockResolvedValue([raw]);
+    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockRejectedValue(new Error("permission denied")) } });
+    const root = await renderPanel(baseTree());
+    await act(() => host!.querySelector<HTMLButtonElement>(".log-entry-open")!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>(".log-detail-copy-all")!.click());
+    const text = document.querySelector<HTMLTextAreaElement>(".log-detail-raw textarea")!;
+    expect(document.activeElement).toBe(text);
+    expect(text.selectionStart).toBe(0); expect(text.selectionEnd).toBe(text.value.length);
+    expect(JSON.parse(text.value)).toEqual(raw);
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain("copy it manually");
+    await act(() => root.unmount());
+  });
+  it("reports an evicted target without opening a same-text replacement", async () => {
+    const root = await renderPanel(baseTree());
+    await act(() => root.render(<LogPanel tree={baseTree()} refreshKey={0} notificationTarget={{ id: 7 }} notifications={[{ id: 8, entry: entry({ message: "same" }) }]} />));
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(host!.textContent).toContain("No other message was selected");
+    await act(() => root.unmount());
+  });
+  it("jumps to an exact UI notification even with duplicate text and restores filters", async () => {
+    apiMock.getSessionLog.mockResolvedValue([]);
+    const notifications = [4, 5].map(id => ({ id, entry: entry({ source: "ui:toast:error", severity: "error", message: "same", detail: `detail ${id}` }) }));
+    const tree = baseTree();
+    const root = await renderPanel(tree);
+    await act(() => host!.querySelector<HTMLInputElement>('.log-panel-filter input')!.click());
+    await act(() => setSearch(host!.querySelector<HTMLInputElement>('input[type="search"]')!, "hidden"));
+    await act(() => root.render(<LogPanel tree={tree} refreshKey={0} notifications={notifications} notificationTarget={{ id: 4 }} notificationDroppedCount={2} />));
+    expect(host!.querySelector('.log-entry--selected')?.textContent).toContain("detail 4");
+    const text = document.querySelector<HTMLTextAreaElement>('[role="dialog"] textarea')!;
+    expect(JSON.parse(text.value).detail).toBe("detail 4");
+    expect(host!.querySelector<HTMLInputElement>('input[type="search"]')!.value).toBe("");
+    expect(host!.textContent).toContain("2 UI notifications dropped");
+    await act(() => root.unmount());
+  });
   it("renders known settings diagnostics from the catalogue instead of fallback prose", async () => {
     apiMock.getSessionLog.mockResolvedValue([
       entry({

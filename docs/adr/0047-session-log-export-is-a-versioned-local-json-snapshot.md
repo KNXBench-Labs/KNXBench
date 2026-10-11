@@ -44,6 +44,17 @@ coverage or expose a server filesystem path to the browser.
 - Labelling the export as a full history: false after cap eviction,
   project replacement or server restart.
 
+## Browser notification supplement (2026-10-11 local source)
+
+Toast navigation adds a separate browser-memory history, with explicit local
+IDs and at most 1000 UI records. It does not create backend log identities.
+Read-only message details offer exact message/full-record copying for either
+origin. Preserve the v1 JSON export as backend-only: its capacity, loss marker,
+server-run notice and native maximum of 1000 records must not be applied to a
+mixed server/browser array. The history notice explicitly states the export
+exclusion; filtering still selects only matching server rows. No export schema
+or native validation change. See the [contract](../contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md).
+
 ## Consequences and limits
 
 - The existing `/api/log` array contract is unchanged. JSON v1 is a

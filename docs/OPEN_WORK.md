@@ -99,7 +99,11 @@ app/native/product/HTTP focuses and final source `566afbdd` (Rust2400/0/181,
 strict quality/repo/docs, full nonempty corpus/private reconciliation/RefIds);
 delivered/read back `68147ba3` with local/tracking/live ref equality. KL-175/F09
 bounded raw labels delivered/read back `6ef0b2d8`; interpretation stays separate.
-KL-146 evaluator-vs-saved-state comparison remains. KL-170–172 public research package9 is
+KL-146 read-only diagnostic source is accepted on `f045390fdf7b`; differences
+and unsupported scoped sets remain boundaries, not a deferred comparison.
+Diagnostic delivered/read back on `70c05fdc58e5`; the scoped review is closed
+([receipt](evidence/private-schema23-review-closure-2026-10-11.json)).
+KL-170–172 public research package9 is
 published; implementation limits remain research-bound. Do not reuse old-base
 results for a changed main.
 
@@ -264,10 +268,20 @@ to owner `later`. Routes naming removed goal files are kept as history.
   once the devices-navigation interview ends.
 
 
-### Schema23 review — remaining package8 and overall closure
+### Schema23 review — scoped follow-up closed
 
 Package7 bounded raw candidates delivered/read back `6ef0b2d8`; final source
 `d8cde545` passed public/private acceptance, production build and outgoing privacy.
 No RTF parsing/rendering/editing claim; that belongs to the separate tooling owner.
-Own cleanup is recorded in the handover. Package8 KL146 original activation
-differential and exact per-KL/origin-main final closure remain open.
+Own cleanup is recorded in the handover. Package8 KL146 owner selected read-only
+diagnostic delivery with differences retained and no parity claim. Historical
+comparison preserves input/project; diagnostic coverage and agreement now have
+separate contracts. Final source `f045390fdf7b` passes full Rust/Web/build/repo/docs,
+corpus and private diagnostic/RefId/own-values/reconciliation/raw-evidence gates.
+Diagnostic published/read back no-ff `70c05fdc58e5`, outgoing privacy clear;
+KL146 activation differences/unsupported scoped sets remain an ACCEPTED_BOUNDARY,
+not an owner blocker or a producer-semantic fix. All nine review packages are
+delivered within their accepted scopes; exact twelve-ID states and gate/source
+publication proof are in the [closure receipt](evidence/private-schema23-review-closure-2026-10-11.json).
+No import-integrity/owner blocker remains for this follow-up. Product-wide and
+research-bound implementation work in this file is not closed by that receipt.

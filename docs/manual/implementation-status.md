@@ -105,7 +105,7 @@ The authorized historical-export harness lacks its real export set; cvexc
 analysis does not activate device comparison/download rules. Native/Orca and
 real ETS/hardware evidence remain unverified.
 
-## Local source: localized DPT dropdown and field provenance
+## Accepted main-integration source: localized DPT dropdown and field provenance
 
 The 2026-10-11 [display/selection extension](../contracts/dpt-selection.md)
 replaces the CO DPT free-text field with a native dropdown containing 454
@@ -115,8 +115,12 @@ aliases and main-only values stay exact options; program defaults stay display-o
 Ordinary Web2625/0 in166 files, production build/types, complete intercepted
 Chromium252/0 and built Chromium23/0 are verified; native ArrowDown/Enter1/0
 also commits exactly the selected canonical DPT. All browser cases are offline.
-Local/uncommitted source only, **not in Alpha.8 or the live container**; no
-core/database/API/protocol or device/codec compatibility extension.
+Owner-authorized no-ff main integration is accepted on actual `e57e3a09ff34`:
+Web2648/0, Rust3946/0,
+full Chromium274/0 and built23/0.
+[Source/remote-boundary receipt](../evidence/dpt-selection-publication-2026-10-11.json).
+**Not in Alpha.8 or the live container**; no core/database/API/protocol or
+device/codec compatibility extension. Earlier local counts above are historical.
 
 ## Communication-object table: accepted main-delivery source
 

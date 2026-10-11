@@ -1,0 +1,160 @@
+{
+  "feature": "localized communication-object DPT dropdown and field provenance",
+  "date": "2026-10-11",
+  "featureCommit": "fd5306dd5edeb084d410bf7c2547d72b13f74fdf",
+  "testedMergeCommit": "e57e3a09ff34a1c43334fcee22e761e6ad99b46c",
+  "upstream": "8505dc96831dc7f1b2f85056ae3565e9d941abce",
+  "review": "self-review; no subagents or independent review",
+  "sourceFreeze": {
+    "trackedInputs": 1878,
+    "unchanged": true,
+    "manifestSha256": "840b293dee190a2a6b4ff94b6a67a5b364e271bdea5d7a107aac2e564a9b8143"
+  },
+  "vocabulary": {
+    "standardVersion": "02.02.01",
+    "numberedIds": 454,
+    "languages": [
+      "en",
+      "de"
+    ],
+    "role": "display only, authored labels; not official translations or codec/device support"
+  },
+  "web": {
+    "passed": 2648,
+    "failed": 0,
+    "files": 167
+  },
+  "rustOrdinaryWorkspace": {
+    "passed": 3946,
+    "failed": 0,
+    "ignored": 192,
+    "resultBlocks": 258
+  },
+  "browser": {
+    "completeInterceptedSuite": {
+      "startTime": "2026-10-11T09:32:05.521Z",
+      "duration": 370946.659,
+      "expected": 274,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "productionBuiltCommunicationSuite": {
+      "startTime": "2026-10-11T09:31:25.888Z",
+      "duration": 38966.438,
+      "expected": 23,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "stages": [
+    {
+      "name": "npm-ci",
+      "exit": 0
+    },
+    {
+      "name": "web-tests",
+      "exit": 0
+    },
+    {
+      "name": "web-build",
+      "exit": 0
+    },
+    {
+      "name": "theme-types",
+      "exit": 0
+    },
+    {
+      "name": "flow-types",
+      "exit": 0
+    },
+    {
+      "name": "e2e-types",
+      "exit": 0
+    },
+    {
+      "name": "rust-format",
+      "exit": 0
+    },
+    {
+      "name": "workspace-tests",
+      "exit": 0
+    },
+    {
+      "name": "clippy",
+      "exit": 0
+    },
+    {
+      "name": "server-xtask-build",
+      "exit": 0
+    },
+    {
+      "name": "check-layering",
+      "exit": 0
+    },
+    {
+      "name": "check-headers",
+      "exit": 0
+    },
+    {
+      "name": "check-anchors",
+      "exit": 0
+    },
+    {
+      "name": "check-ledger",
+      "exit": 0
+    },
+    {
+      "name": "check-corpus-gates",
+      "exit": 0
+    },
+    {
+      "name": "documentation",
+      "exit": 0
+    },
+    {
+      "name": "whitespace",
+      "exit": 0
+    },
+    {
+      "name": "built-browser",
+      "exit": 0
+    },
+    {
+      "name": "full-browser",
+      "exit": 0
+    }
+  ],
+  "visualArtifacts": [
+    {
+      "name": "dpt-en-1440.png",
+      "sha256": "3a24588b086c4de1dc7068b5f731b206768a6dfaedf85b0caf8181f72865490b"
+    },
+    {
+      "name": "dpt-en-400.png",
+      "sha256": "b7fc0458a28846862303709bbbc697588e3b7caeb5255b23be718fff0caa30a2"
+    },
+    {
+      "name": "dpt-de-1440.png",
+      "sha256": "8c45bde9d65f9fe3d30f49b996f516cbe417ea69a8fb7f2e748542f2323ee06c"
+    },
+    {
+      "name": "dpt-de-400.png",
+      "sha256": "a2ce3a3823aef1ff8f859a25a11e8e5de1f41cb9ab0b2943813716ed0351899d"
+    }
+  ],
+  "visualReview": "Four final merged-source EN/DE1440/400 production-built frames directly inspected: native dropdown/source readable and bounded, no toast occlusion; summary table intentionally remains horizontally scrollable.",
+  "publication": {
+    "authorizedTarget": "main",
+    "remoteReadbackVerified": false,
+    "releaseOrDeployment": false
+  },
+  "boundaries": [
+    "Unknown/main-only/noncanonical references preserved as exact selected values",
+    "Program defaults remain display-only without an explicit edit",
+    "No Rust/API/model/product/native-schema/dependency/protocol changes",
+    "No ignored/private-corpus sweep, unmocked server, native WebKitGTK/Orca, ETS or hardware acceptance",
+    "Existing container and deliberately stale dirty shared root are not replaced/synchronized"
+  ]
+}

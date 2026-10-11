@@ -20,7 +20,10 @@ program defaults remain display-only. Table/search/exact-filter names follow the
 UI language, with original references and master text separately retained.
 DPT/description source badges now belong to their own field headings and explain
 the source. Blur/Enter, pending/refusal/lifetime and application validators remain
-unchanged. This local extension is not a release/deployment or new codec support.
+unchanged. The owner subsequently authorized main integration, with actual
+combined-source acceptance in the
+[publication receipt](evidence/dpt-selection-publication-2026-10-11.json).
+This extension is not a release/deployment or new codec support.
 
 ## Presentation and derived data
 

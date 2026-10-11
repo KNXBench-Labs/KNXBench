@@ -22,9 +22,11 @@ The local layout correction keeps the four download-scope radios compact,
 places their labels beside them and separates the scope from the device and
 gateway fields. EN/DE production-browser checks cover 400/1440 px in Graphite,
 Porcelain and CRT, including keyboard selection. The change is presentation
-only; download planning and safety confirmations are unchanged. It remains
-unpublished local source, not an update to the Alpha.8 release or a running
-container. [Scoped acceptance](../IMPLEMENTATION_STATUS.md#2026-10-11--local-device-download-configuration-layout-repair).
+only; download planning and safety confirmations are unchanged. The source
+repair is now published on `main` as merge `0dae7c93`, but is not included
+in the existing Alpha.8 release or running containers.
+[Source publication](../IMPLEMENTATION_STATUS.md#2026-10-11--device-download-layout-published-on-main);
+[initial local acceptance](../IMPLEMENTATION_STATUS.md#2026-10-11--local-device-download-configuration-layout-repair).
 
 ## Alpha.8 release boundary
 

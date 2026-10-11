@@ -8,7 +8,8 @@ Static help remains separate from authored project data.
 
 ## Verified implementation facts
 
-- No ProjectNote symbols exist in the inspected domain/store/application/UI.
+- Initial survey found no ProjectNote symbols; the standalone validated Core
+  primitive is now implemented, not yet a Project-owned persisted collection.
 - `Project` currently writes schema13, including AP2 device instructions.
 - `Command::Batch` already gives atomic rollback/inverse ordering and restores
   ID allocator state on refusal; there is no need for a second batch framework.
@@ -78,3 +79,15 @@ Save/Reopen, working-state undo/redo restart and refusal/persistence rollback
 must pass before API/UI adoption. Existing help is reused as static content;
 project notes cannot become hidden help text or disappear from compatibility
 reports when an external format has no note representation.
+
+## First core slice (before model/store adoption)
+
+Exact edits initially restricted to core `note.rs`, `ids.rs` (ProjectNoteId),
+`lib.rs` (module/export) and `tests/notes.rs`, this contract and own handover.
+Provide a standalone typed note value, literal text validation and exact-target
+validation against an existing Project; do not yet add a Project field, allocator
+or schema bump. Budgets:4096 notes,512-byte nonblank title,64KiB body and4MiB total
+UTF8 text. Preserve whitespace/linebreaks; control characters other than tab/CR/LF
+are explicitly refused. No target guessing or author fabrication. Tests first.
+The authenticity receipt now confirms frozen saved+working native13 fixtures
+from the accepted e0dbd93a writer, including3undo/1redo working state.

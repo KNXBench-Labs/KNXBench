@@ -43,6 +43,7 @@ id_type!(GroupAddressId, u32);
 id_type!(BuildingPartId, u32);
 id_type!(ParameterInstanceId, u32);
 id_type!(ModuleInstanceId, u32);
+id_type!(ProjectNoteId, u32);
 
 // `InstallationId` mirrors ETS's own installation number (`InstallationId`
 // in `0.xml`) rather than a synthetic counter: it is already stable and

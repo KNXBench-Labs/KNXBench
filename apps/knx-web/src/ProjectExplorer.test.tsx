@@ -276,6 +276,42 @@ function hasTreeLabel(text: string): boolean {
     .some((label) => label.textContent === text);
 }
 
+describe("installation nodes", () => {
+  it.each(["en", "de"])("labels unnamed installations without changing their names (%s)", async (language) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    const tree = treeWithSecondInstallation();
+    tree.installations[0].name = "";
+    tree.installations[1].name = "  \t";
+    const before = structuredClone(tree);
+    const { root, onSelect, onTreeUpdate } = await renderExplorer(tree);
+    const word = language === "de" ? "Unbenannte Installation" : "Unnamed installation";
+    const first = labelFor(`${word} (ID 0)`);
+    const second = labelFor(`${word} (ID 2)`);
+    expect(first.title).toContain(language === "de" ? "Topologie" : "topology");
+    await click(second);
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith({ kind: "installation", id: 2 });
+    const areaLabel = language === "de" ? "Bereich 2: Area 2" : "Area 2: Area 2";
+    expect(hasTreeLabel(areaLabel)).toBe(true);
+    await click(toggleFor(`${word} (ID 2)`));
+    expect(hasTreeLabel(areaLabel)).toBe(false);
+    expect(onTreeUpdate).not.toHaveBeenCalled();
+    expect(tree).toEqual(before);
+    await act(async () => root.unmount());
+  });
+
+  it("preserves a named installation and reveals its selected node", async () => {
+    const { root, rerender, onSelect } = await renderExplorer(baseTree());
+    await click(labelFor("Installation"));
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith({ kind: "installation", id: 0 });
+    await click(toggleFor("Installation"));
+    expect(toggleFor("Installation").getAttribute("aria-expanded")).toBe("false");
+    await rerender({ selection: { kind: "installation", id: 0 }, generation: 1 });
+    expect(labelFor("Installation").getAttribute("aria-pressed")).toBe("true");
+    expect(toggleFor("Installation").getAttribute("aria-expanded")).toBe("true");
+    await act(async () => root.unmount());
+  });
+});
+
 function treeLabelCount(text: string): number {
   return Array.from(host!.querySelectorAll<HTMLElement>(".tree-label"))
     .filter((label) => label.textContent === text).length;

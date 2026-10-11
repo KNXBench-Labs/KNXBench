@@ -16,6 +16,15 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Installation-node navigation (11 October 2026, local source)
+
+Unnamed imported installations now have translated display-only labels with
+stable IDs. Their Explorer labels select Properties with a name editor and an
+explanation; arrows still toggle the subtree. This reuses the existing installation
+rename command and native history/storage, with no new model, schema or bus behavior.
+Local acceptance is recorded in [the focused contract](../contracts/installation-node.md);
+this is not an Alpha.8 release or live deployment claim.
+
 ## Alpha.8 release boundary
 
 Alpha.8 packages selected-line/device import, schema-23 source/ZIP integrity

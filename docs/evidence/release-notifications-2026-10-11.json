@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-11",
+  "feature": "GitHub release notifications",
+  "baseCommit": "c4e799d8021d4075e18a8c9baaa1b14f1146c1f0",
+  "review": "active-session self-review; no independent/subagent review",
+  "runtimeManifestSha256": "60dc2eaef5833bc88065e294de3569a659f784ed7270e8aed15e0fedaa4eaafa",
+  "runtimeInputsFrozen": true,
+  "web": {
+    "passed": 2794,
+    "failed": 0,
+    "files": 178
+  },
+  "browser": {
+    "updateCases": 7,
+    "existingLoginNotificationCases": 20,
+    "failed": 0,
+    "productionBundle": true,
+    "syntheticApiAndReleaseFixtures": true,
+    "loopbackOnlyNetworkNamespace": true,
+    "actualReleaseLinkPopupExercised": true
+  },
+  "visual": {
+    "screenshots": 8,
+    "languages": [
+      "en",
+      "de"
+    ],
+    "widths": [
+      400,
+      1440
+    ],
+    "themes": [
+      "porcelain",
+      "graphite"
+    ],
+    "allFinalFramePixelsEqualInspectedFrames": true,
+    "assessment": "Version, official link, dismiss, prerelease warning and manual check visible; no horizontal clipping in retained frames."
+  },
+  "publicGitHubTransport": {
+    "status": 200,
+    "corsSucceeded": true,
+    "count": 5,
+    "tags": [
+      "v0.1.0-alpha.9",
+      "v0.1.0-alpha.8",
+      "v0.1.0-alpha.7",
+      "v0.1.0-alpha.6",
+      "v0.1.0-alpha.5"
+    ]
+  },
+  "acceptedStageCount": 13,
+  "earlierAttempts": "Failed fixture/version-field/palette/server-cwd/header attempts retained separately; successful unchanged-input runtime stages reused only after complete manifest equality. No earlier failed attempt reclassified as passing.",
+  "featureSourceSha256": {
+    "apps/knx-web/e2e/release-updates.e2e.ts": "dad9b2738f910e20abb3e8b20db22371ffc274525aa8c922fea7b06a5d28e5e5",
+    "apps/knx-web/playwright.updates.config.ts": "f6034b438619b97d5dbb42fdfa4e59720e6ceedcfe259fe93c43ebdc4d09e212",
+    "apps/knx-web/src/AboutDialog.tsx": "bdd5abd6988842f75aceb5de351b3477f42fbcae58a0002e0a19007f69e174bd",
+    "apps/knx-web/src/App.tsx": "6f433095954441546a9014853c7f02adc9302acfb2813f774429f973bc87f155",
+    "apps/knx-web/src/ReleaseUpdatePanel.tsx": "f879c558d5cc10f48eb8ee3784c4229a6ff036fdd75a478d518bb0b84fde1ac5",
+    "apps/knx-web/src/SettingsPanel.test.tsx": "dbdf7b4501cb1b971c6325b840fdd23871764b9105b5c4dbde55bc0474c4d8eb",
+    "apps/knx-web/src/SettingsPanel.tsx": "82ac4078855e30df8d566eb35cc438c6cc384fe2525ee9fbb8a7de581aa151ab",
+    "apps/knx-web/src/Toast.tsx": "739ef161c89068f7f97e3ca81e115b3e61e066c2bbd65b63fdf7bae0ff610aa9",
+    "apps/knx-web/src/UpdateSettings.tsx": "d214f0e80471288aad4d613190678208223fbffad1f8156d2096fcb0bc073329",
+    "apps/knx-web/src/api.ts": "8d19cab1c8af4a99c122bda60a2c0d9b2fd72aa66650853d8759790cae48fa24",
+    "apps/knx-web/src/githubReleases.test.ts": "000abe66073f00f86769b7e57a3ebeab66b0e89a97f84280f04ffb88af072275",
+    "apps/knx-web/src/githubReleases.ts": "c42a77842b37d241d91f702463c4ff2bfd856d9672c04ce8b7864b16fe0e9ecb",
+    "apps/knx-web/src/messages/de.ts": "84da035dc208bbacb18a154b0509233497b4a2d06ab03108c0f5b0d1b1ed8f0e",
+    "apps/knx-web/src/messages/en.ts": "a40918fb26acf0433deb3d6f3dd80725b9477cd013ae7c886eb565c00c0ae065",
+    "apps/knx-web/src/releaseUpdatePreference.test.ts": "4ac552e3c04731b4817e0d98b581dec8ac11164a7c4d2892562ee2b87f66d1a2",
+    "apps/knx-web/src/releaseUpdatePreference.ts": "fc0d3e8e62135ac13d66d6d70abfbc832718ef7276808dc7f4abb82475771750",
+    "apps/knx-web/src/releaseUpdates.test.ts": "28a1a7b59cf38f6aacbea220483b9d0874b38246c89531bde7f5706c2f2995ae",
+    "apps/knx-web/src/releaseUpdates.ts": "23aea318a8eb4f677e02273b708b671d227f79d3e685a3ecbae596e020c1d4aa",
+    "apps/knx-web/src/styles.css": "9508d3563b730c6f13e109d9aa4671519de1e7477d39327004c908513e505a3e",
+    "apps/knx-web/src/toast.ts": "68349c28be108e595dd3e0be0d76fdf4c01e306f7b274de115349b8c1b356dc4",
+    "apps/knx-web/src/useReleaseUpdates.test.tsx": "6b2060cdcc1346c8f713fa3d065e3e31b618b13e0c46c28076a103331600690f",
+    "apps/knx-web/src/useReleaseUpdates.ts": "1b6f3a83acc335bd7c8761e309d1142193d7ca3967b4b2cf2af26179765920a6",
+    "apps/knx-web/src/useToasts.test.tsx": "deef170b114bffe55178f9c7a318157e53c1ecaa3da521328885d3a4516ecb7a"
+  },
+  "exclusions": [
+    "No automatic download/install",
+    "No release tag or running-container deployment",
+    "No interactive native WebKitGTK/AppImage certification",
+    "No Rust domain/schema/protocol change from this feature",
+    "No private corpus or live KNX operation"
+  ],
+  "integrationBaseCommit": "4161f366e75be70fc67645e7d8c67f17c2942868",
+  "postAcceptanceUpstreamDelta": {
+    "scope": "public-media documentation/images and unexecuted manual screenshot tooling only",
+    "webFilesChanged": [
+      "apps/knx-web/e2e/manual-screenshots.shots.ts",
+      "apps/knx-web/playwright.manual.config.ts"
+    ],
+    "allProductionSourceAndExecutedTestDependenciesUnchanged": true,
+    "earlierFullWebManifestPreservedAsAcceptanceSnapshot": true
+  }
+}

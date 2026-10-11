@@ -63,6 +63,21 @@ history is not a disaster backup. Update `knx-mcp` too.
 start it. There is no auto-updater. **Remove:** delete the AppImage. Project data
 lives separately and is not removed with it. Keep independent project backups.
 
+## Release notifications (newer source, not Alpha.9)
+
+The workbench checks GitHub after startup and hourly while visible. A newer
+eligible release appears as a nine-second informational toast with a link to its
+release notes; File → About KNXBench retains it and offers **Check for updates**.
+Alpha/beta builds also consider newer prereleases; stable builds only consider
+stable releases. Settings → Updates disables automatic checks; a manual check is
+still your explicit choice. GitHub receives your public IP/browser metadata, not
+project data or login/product information. Offline/rate-limited checks do not
+block editing. No release is automatically downloaded or installed.
+
+Read the release notes and independently back up project/data files before
+replacing an AppImage or Docker image. This is a source feature, not retroactively
+part of the already published Alpha.9. [Detailed scope and privacy](../../contracts/RELEASE_NOTIFICATIONS.md).
+
 ## b) Docker / web
 
 The ready-made image is downloadable from

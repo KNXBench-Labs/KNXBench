@@ -32,6 +32,7 @@ import type { CommandContext } from "./commandRegistry";
 import SettingsPanel from "./SettingsPanel";
 import { serverLegacyPassword } from "./LegacyPasswordSettings";
 import Dashboard from "./Dashboard";
+import ImportDiagnosticsNotice from "./ImportDiagnosticsNotice";
 import DevicesWorkspace from "./DevicesWorkspace";
 import type { DeviceCatalog } from "./deviceList";
 import { DeviceNavigationProvider } from "./DeviceLink";
@@ -1371,6 +1372,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
             onDone={clearMultiSelection}
           />
         )}
+        {tree && <ImportDiagnosticsNotice available={tree.import_report_available} compact onOpen={() => { setView("overview"); setLogOpen(false); setMonitorOpen(false); }} />}
         {tree && (tree.errors > 0 || tree.warnings > 0) && <button className="import-notice" onClick={() => { setView("overview"); setLogOpen(false); setMonitorOpen(false); }}>{t("workbench.importNotices", { errors: tree.errors, warnings: tree.warnings })}</button>}
         <button aria-expanded={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)}>{t("workbench.properties")}<WorkbenchIcon name="panel" /></button>
       </div>

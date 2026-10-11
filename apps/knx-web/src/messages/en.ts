@@ -39,6 +39,8 @@
 // two different ways in two files is a bug waiting to happen, not a
 // feature of the namespacing convention.
 export const messages = {
+  "diagnostics.importReportUnavailable": "Historical import report unavailable",
+  "diagnostics.nativeImportReportUnavailableExplanation": "Native open does not restore the historical import report. ETS compatibility is not reassessed; zero counters do not mean zero issues. Any findings shown belong to the current session.",
   "selectiveImport.button": "Import selected lines/devices…",
   "selectiveImport.title": "Import into the open project",
   "selectiveImport.intro": "Choose devices or whole lines. Existing devices and addresses are never silently overwritten. No bus actions are performed.",
@@ -132,7 +134,10 @@ export const messages = {
   "projectHistory.clearTitle": "Clear undo and redo history?",
   "projectHistory.clearWarning": "The current project and all project versions stay intact. Earlier undo/redo steps will be removed permanently. Unsaved changes do not become saved.",
   "projectHistory.confirmClear": "Clear undo and redo",
-  "projectHistory.limits": "Limits: {steps} undo/redo states, {versions} versions, {image} MiB per stored image and {total} MiB total. Nothing is automatically trimmed.",
+  "projectHistory.limits": "Limits: {steps} undo/redo states, {versions} versions, {image} MiB per stored model image and {total} MiB total. Nothing is automatically trimmed.",
+  "projectHistory.contextLimit": "Shared source-context limit: {context} MiB stored.",
+  "projectHistory.decodedLimit": "Decoded image limit: {decoded} MiB per image.",
+  "projectHistory.decodedHistoryLimit": "Total decoded history limit: {decoded} MiB; shared context is counted once.",
   "projectHistory.nearLimit": "History is approaching a limit. Explicitly remove unneeded versions or clear undo/redo before it fills up.",
   "projectHistory.selected": "Selected: {name}",
   "projectHistory.reason.save": "Previous saved state",

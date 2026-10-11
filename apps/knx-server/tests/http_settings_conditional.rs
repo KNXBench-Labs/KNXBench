@@ -21,6 +21,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         command_stack: Default::default(),
         history_generation: Default::default(),
         import_counts: Default::default(),
+        import_report_available: std::sync::atomic::AtomicBool::new(true),
         server_incarnation: "synthetic-settings-test".into(),
         project_revision: Default::default(),
         project_incarnation: Default::default(),

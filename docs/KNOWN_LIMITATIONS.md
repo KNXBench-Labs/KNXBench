@@ -116,10 +116,13 @@ A restored version becomes the saved baseline and resets undo/redo; the precedin
 working state is preserved as a version. These are project edits, never bus writes.
 
 Admission refuses rather than silently trims: at most 256 combined undo/redo
-states, 256 versions, 64 MiB per individual model/context image and 512 MiB of
-stored history image payloads. Logical version sizes include shared context;
-physical payload usage counts each context once and excludes SQLite page overhead.
-Large projects may hit a limit and require explicit history/version deletion.
+states, 256 versions, 64 MiB per stored model/stack/version image, 256 MiB for
+the shared source context, 512 MiB per decoded image and 512 MiB total stored
+history payload ([local bounded codec](contracts/large-history-images.md),
+ADR-0111). Logical version sizes include shared context; physical usage counts
+each context once and excludes SQLite page overhead. Total history exhaustion
+may require explicit history/version deletion; a single oversized source context
+cannot be fixed by deleting old versions and is reported separately.
 Snapshots retain opaque project data and references, not the global catalogue,
 credentials or device memory. Unknown native tables, views, persistent triggers and columns (including generated
 columns) are refused rather than partly versioned.

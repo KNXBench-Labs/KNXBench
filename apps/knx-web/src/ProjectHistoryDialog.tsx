@@ -154,6 +154,9 @@ export default function ProjectHistoryDialog(props: {
       {nearingLimit && <p className="project-history-notice" role="status">{t("projectHistory.nearLimit")}</p>}
       <p className="project-history-limit-note">{t("projectHistory.limits", { steps: view.limits.maxStackStates, versions: view.limits.maxVersions,
         image: view.limits.maxImageBytes / (1024 * 1024), total: view.limits.maxHistoryBytes / (1024 * 1024) })}</p>
+      {view.limits.maxContextBytes !== undefined && <p className="project-history-limit-note" data-history-limit="context">{t("projectHistory.contextLimit", {context: view.limits.maxContextBytes / (1024 * 1024)})}</p>}
+      {view.limits.maxDecodedImageBytes !== undefined && <p className="project-history-limit-note" data-history-limit="decoded">{t("projectHistory.decodedLimit", {decoded: view.limits.maxDecodedImageBytes / (1024 * 1024)})}</p>}
+      {view.limits.maxDecodedHistoryBytes !== undefined && <p className="project-history-limit-note" data-history-limit="total-decoded">{t("projectHistory.decodedHistoryLimit", {decoded: view.limits.maxDecodedHistoryBytes / (1024 * 1024)})}</p>}
       <p className="project-history-caveat">{t("projectHistory.backupCaveat")}</p>
     </>}
     <footer className="project-history-footer"><button type="button" disabled={busy || loading} onClick={() => void refresh()}>{t("projectHistory.refresh")}</button></footer>

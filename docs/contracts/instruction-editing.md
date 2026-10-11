@@ -201,3 +201,17 @@ and scoped evidence. No shell/navigation/global CSS/catalogue/manifest changes.
 Combined workspace/server/web tests/builds and explicit-root repository gates
 run on frozen inputs. Browser and process-restart/native-history checks use only
 synthetic data in an isolated loopback namespace. No hardware or ETS exporter.
+
+
+### Whole-workspace predecessor fixture correction
+
+Combined acceptance exposed another reconstructed-native predecessor collision.
+Own test-fixture SQL only in `apps/knx-mcp/tests/tools.rs`
+(`an_older_project_file_is_served_and_never_upgraded`) and
+`apps/knx-server/tests/http_project_history.rs`
+(`opening_a_legacy_native_store_validates_history_without_rewriting_the_file`).
+Remove new instruction tables before reconstructing old schema9/10. Preserve all
+read-only, file-byte equality, no-journal, history and product-store assertions.
+No production migration, MCP write operation or server-load change is authorized
+by this correction. Product-database predecessor fixtures are unrelated and stay
+untouched. Combined1 refusal retained; corrected candidate requires full re-gate.

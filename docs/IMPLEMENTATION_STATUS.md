@@ -1,3 +1,30 @@
+## 2026-10-11 — GitHub release notifications
+
+The production workbench checks the official public GitHub release list at startup
+and hourly while visible, comparing against the actual authenticated backend
+version. Newer eligible releases produce one localized actionable toast per
+version/session; About retains the information and offers explicit retry.
+Settings persists automatic-check opt-out. Stable builds exclude prereleases;
+alpha/beta builds include newer prerelease/stable publications. Credential-free
+fixed-origin HTTP, ten-second owner cancellation, 100-record/4MiB bounds,
+acknowledged-settings admission and no-overlap/deduplication stay outside KNX
+Core/project data. No installer, new dependency or schema/protocol change.
+
+Frozen feature working tree based on `c4e799d8`: Web **2794/0/178 files**,
+production build and explicit UI/E2E types pass; **7 new + 20 existing
+production-browser cases** pass with synthetic intercepted requests/loopback-only
+network. Actual public GitHub Chromium CORS read also succeeds. Eight final EN/DE
+400/1440 frames are pixel-equal to inspected frames; release link opens the exact
+synthetic official-tag popup. Five nonempty explicit-root repository gates,
+documentation and whitespace pass. Active-session self-review only; historical
+fixture/header failures remain separate, not retroactively green.
+[Evidence](evidence/release-notifications-2026-10-11.json),
+[ADR-0114](adr/0114-client-release-discovery.md),
+[contract/privacy/limits](contracts/RELEASE_NOTIFICATIONS.md).
+This source feature is not in already-published Alpha.9 or deployed containers;
+interactive native WebKitGTK, installer/integrity/migration approval and hardware
+are not certified by these checks.
+
 ## 2026-10-11 — Alpha 9 release media and manual/site refresh
 
 Published Alpha 9 frontend and server, not moving main or invented API replies,

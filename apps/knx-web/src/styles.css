@@ -331,6 +331,7 @@ main {
 .toast .toast-open:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
 .toast-body, .toast > .achievement-badge { pointer-events: none; }
 .toast .toast-dismiss { position: relative; z-index: 1; }
+.toast .toast-release-link { position: relative; z-index: 1; pointer-events: auto; color: var(--knx-accent); font-size: 0.8rem; }
 
 .toast-body {
   min-width: 0;

@@ -12,9 +12,11 @@
 import { useEffect, useState } from "react";
 import * as api from "./api";
 import Overlay from "./Overlay";
+import ReleaseUpdatePanel from "./ReleaseUpdatePanel";
+import type { ReleaseUpdateControls } from "./useReleaseUpdates";
 import { useTranslate } from "./i18n";
 
-export default function AboutDialog(props: { onClose: () => void }) {
+export default function AboutDialog(props: { onClose: () => void; updates?: ReleaseUpdateControls }) {
   const { onClose } = props;
   const t = useTranslate();
   // `null` covers both "not answered yet" and "did not answer at all". The
@@ -46,6 +48,7 @@ export default function AboutDialog(props: { onClose: () => void }) {
         <dt>{t("about.licence")}</dt>
         <dd>{t("about.licenceValue")}</dd>
       </dl>
+      {props.updates && <ReleaseUpdatePanel updates={props.updates} />}
       <p>{t("about.independence")}</p>
       <p>{t("about.trademark")}</p>
       <footer className="about-dialog-footer">

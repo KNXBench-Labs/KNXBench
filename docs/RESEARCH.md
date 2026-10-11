@@ -18,6 +18,8 @@ file. New findings go into the topic file they belong to: a dated entry at
 its top, or the next free section number (§26 next) at its end. Sources
 stay at the end of this file.
 
+[2026-10-11: public GitHub release discovery and SemVer evidence](contracts/RELEASE_NOTIFICATIONS.md#research-and-limitations) informs notification-only ADR-0114. No KNX format/protocol facts are inferred.
+
 | Section | Where |
 | --- | --- |
 | [2026-10-11 — Saved activation differential contract](research/schema23-activation-differential.md) | KL-146 independent saved-state comparison; original parity unresolved |

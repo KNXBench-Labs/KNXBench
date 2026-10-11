@@ -30,7 +30,13 @@ pub fn open_editor_store(
 
 pub const FORMAT_VERSION: i64 = 1;
 pub const MAX_IMAGE_BYTES: usize = 64 * 1024 * 1024;
+/// One shared source context, not a per-edit model image.
+pub const MAX_CONTEXT_BYTES: usize = 256 * 1024 * 1024;
+/// Independent decoding budget; model and shared-context storage remain separately bounded.
+pub const MAX_DECODED_IMAGE_BYTES: usize = 512 * 1024 * 1024;
 pub const MAX_HISTORY_BYTES: i64 = 512 * 1024 * 1024;
+/// Cumulative decoded charge for all physical images, counting shared context once.
+pub const MAX_DECODED_HISTORY_BYTES: usize = 512 * 1024 * 1024;
 pub const MAX_STACK_STATES: usize = 256;
 pub const MAX_VERSIONS: usize = 256;
 
@@ -41,6 +47,8 @@ pub enum HistoryError {
     Store(StoreError),
     Invalid(&'static str),
     Limit(&'static str),
+    /// Image-admission budget refusal; deleting history is not assumed to repair it.
+    ImageLimit(&'static str),
     Stale,
 }
 
@@ -58,6 +66,7 @@ impl fmt::Display for HistoryError {
                 f,
                 "project history limit: {reason}; explicitly delete versions or clear undo history before retrying"
             ),
+            Self::ImageLimit(reason) => write!(f, "project history image limit: {reason}; project data was not discarded; this context requires a supported image budget"),
             Self::Stale => write!(
                 f,
                 "project history changed in another editor; reopen before editing or restoring"
@@ -84,6 +93,9 @@ impl From<StoreError> for HistoryError {
 }
 
 mod context;
+#[cfg(test)]
+mod decoded_budget_tests;
+mod image_codec;
 mod snapshot;
 pub use snapshot::{image_hash, NativeSnapshot};
 #[derive(Debug)]
@@ -121,12 +133,14 @@ fn check_limits(conn: &Connection) -> Result<(), HistoryError> {
         "SELECT EXISTS(SELECT 1 FROM project_history_state WHERE length(working) > ?1)
           OR EXISTS(SELECT 1 FROM project_history_stack WHERE length(image) > ?1)
           OR EXISTS(SELECT 1 FROM project_history_version WHERE length(image) > ?1)
-          OR EXISTS(SELECT 1 FROM project_history_context WHERE length(image) > ?1)",
-        [MAX_IMAGE_BYTES as i64],
+          OR EXISTS(SELECT 1 FROM project_history_context WHERE length(image) > ?2)",
+        [MAX_IMAGE_BYTES as i64, MAX_CONTEXT_BYTES as i64],
         |r| r.get(0),
     )?;
     if oversized {
-        return Err(HistoryError::Limit("one native snapshot exceeds 64 MiB"));
+        return Err(HistoryError::ImageLimit(
+            "encoded native snapshot exceeds its model/context budget",
+        ));
     }
     let (contexts, unsupported): (i64, i64) = conn.query_row(
         "SELECT count(*), coalesce(sum(format_version != 1 OR length(content_hash) != 64 OR length(image_hash) != 64
@@ -161,6 +175,29 @@ fn check_limits(conn: &Connection) -> Result<(), HistoryError> {
     }
     if versions > MAX_VERSIONS as i64 {
         return Err(HistoryError::Limit("more than 256 project versions"));
+    }
+    // Return only fixed-size prefixes after row/stored-byte caps, before inflation.
+    // SQLite may materialize a bounded stored blob internally for substr().
+    // Do not trust compressed length declarations
+    // as integrity evidence: exact length, hash and stream checks still follow.
+    let mut stmt = conn.prepare(
+        "SELECT substr(working,1,16), length(working) FROM project_history_state
+        UNION ALL SELECT substr(image,1,16), length(image) FROM project_history_stack
+        UNION ALL SELECT substr(image,1,16), length(image) FROM project_history_version
+        UNION ALL SELECT substr(image,1,16), length(image) FROM project_history_context",
+    )?;
+    let mut rows = stmt.query([])?;
+    let mut total = 0usize;
+    while let Some(row) = rows.next()? {
+        let prefix: Vec<u8> = row.get(0)?;
+        let stored = usize::try_from(row.get::<_, i64>(1)?)
+            .map_err(|_| HistoryError::Invalid("invalid stored image length"))?;
+        total = total
+            .checked_add(image_codec::decoded_size(&prefix, stored)?)
+            .filter(|total| *total <= MAX_DECODED_HISTORY_BYTES)
+            .ok_or(HistoryError::ImageLimit(
+                "total decoded history exceeds 512 MiB",
+            ))?;
     }
     Ok(())
 }

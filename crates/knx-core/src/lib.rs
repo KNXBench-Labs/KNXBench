@@ -17,6 +17,7 @@ pub mod group;
 pub mod group_address_names;
 pub mod ids;
 pub mod installation;
+pub mod instruction;
 pub mod module;
 pub mod names;
 pub mod parameter;

@@ -1,3 +1,102 @@
+
+## 2026-10-11 — native instruction foundation, not the full RTF editor
+
+## 2026-10-11 — Bounded installation instruction editing accepted for Session1 handoff
+
+Native13 device-owned instruction overlays, exact imported-source retention,
+commands/undo/redo, history/migration, selective mapping and native diff are
+assembled with the preview-first application/HTTP service and isolated EN/DE
+editor. Four asynchronous component cases cover late preview/apply, unmount and
+revision changes. [ADR-0112](adr/0112-native-instruction-overlays.md) was renumbered
+to preserve the published large-history codec ADR0111; both features coexist.
+
+Accepted runtime `e0dbd93a4709d9489409f0f685202294ff2ab42d` includes published
+import/history repairs from `43865f58`. All17 stages passed with frozen inputs:
+Web2715/0/172 files, full workspace Rust4026/0/194 explicitly ignored, strict
+workspace Clippy, format, production/isolated-fixture builds, three type scopes,
+source-stamped debug server/CLI/MCP, docs/regressions and all five explicit-root
+repository gates. Real loopback-only Chromium14 checks and13 native checks with
+two actual server restarts passed on the same source. Working recovery, original
+digest/file bytes, both stack lengths, stale pre-restart plan refusal, undo/redo
+and explicit Save/reopen were exercised. EN1440 Graphite and DE400 Porcelain
+frames were actually viewed. [Compact evidence](evidence/instruction-editing-2026-10-11.json).
+
+[Session1 host contract](contracts/instruction-editor-host.md) specifies exact
+snake_case-to-camelCase identity mapping, authoritative refresh and dirty-state
+policy. Shell/navigation integration belongs to Session1 and is not claimed.
+Source interpretation is Schema23 UTF-8/unprefixed XML only; editing supports
+text/paragraphs/bold/italic/underline with explicit unsupported-conversion consent.
+No ETS edited-project exporter, universal compatibility, hardware, release or
+deployment. In-session self-review, not independent approval. Published normally
+on `main` as `baaad1a6dc1c09acbbc06cdf40b21a1fb8804a2a` after separately accepted
+metadata/disclosure gates; local/tracking/live refs and committed evidence blob
+read back exactly. Runtime/test inputs unchanged by closure metadata.
+
+
+Normalized literal/basic-style instruction documents, reversible edit/reset and
+device-delete inverses, additive native13 persistence/history, authentic12
+predecessor migration, audited selective-import remapping and full normalized
+native diff visibility implemented. The source-bound owning-crate run executed
+1209 tests; ignored/unadmitted cases are separately recorded. Strict Clippy,
+formatting, documentation and whitespace passed with frozen inputs. Source
+self-review, not independent approval. Earlier rejected attempts remain rejected;
+reconstructed-old-schema test fixtures were corrected without weakening runtime
+migration or byte-preservation assertions. [Exact evidence](evidence/instruction-native-foundation-2026-10-11.json).
+AP2 remains in progress: validated application write services/API and actual
+isolated editor/browser delivery are separate. No source mutation, ETS export,
+full compatibility claim, hardware or Secure implementation.
+
+
+## 2026-10-11 — import/application repair accepted on main integration
+
+Feature `4e0e874d9bf2` is integrated and tested as merge `481f2cd9735e`
+on upstream `f7a5d8dcdf40`; published on main as `e27aca526a8a`
+with exact fetched/live remote readback. Publication is not deployment or release.
+[Source-bound acceptance receipt](evidence/import-lifecycle-publication-2026-10-11.json)
+separates the new merged results from the earlier local acceptance below.
+
+All 20 stages pass on 1626 frozen inputs: workspace Rust **3964 passed,
+193 ignored**, complete Web **2680 passed / 169 files**, complete intercepted
+Chromium **302 passed** and production-built Chromium **14 passed**, both with
+zero skips/flakes. Workspace strict Clippy, builds, three type scopes, five
+explicit-root repository gates, documentation, formatter and whitespace pass;
+generated bindings match. One separately enabled private application lifecycle
+passes all nine HTTP steps and original-integrity assertions. No source values,
+private inventories or payloads are included in the public receipt or fixtures.
+
+Production EN/DE wide frames show readable missing-historical-evidence notices
+and explanations; narrow frames cover the visible top notice and controls, not
+the below-viewport explanation. Review is in-session self-review. Full durable
+report persistence, early write preflight and the remaining functional matrix
+are not claimed complete. No deployment, ETS parity, vendor execution, bus action
+or shared-root synchronization is included.
+
+## 2026-10-11 — local import/application lifecycle repair
+
+Large retained source contexts can now enter native editing/history through a
+versioned bounded codec and independent model, shared-context and decoded-image
+budgets. No opaque data is removed to make a write fit. Cumulative decoded
+charge is checked before application-level inflation; SQLite internal blob
+materialization/allocator overhead is not claimed to be limited to prefix size.
+Native open exposes unavailable historical import evidence instead of pretending
+zero counters are a compatibility assessment; current-session warnings survive.
+See [large-image contract](contracts/large-history-images.md),
+[native-evidence contract](contracts/native-import-evidence.md), and the
+[remaining functional matrix](status/2026-10-11-import-application-followups.md).
+
+Frozen combined local acceptance: five owning Rust packages **1917 passed,
+83 ignored**; whole Web **2629 passed / 165 files**; built intercepted Chromium
+**14 passed, no skips/flakes**; owning strict Clippy, server/CLI build, explicit
+E2E types, generated binding equality, five nonempty repository/documentation/
+format/whitespace checks pass. An additional opt-in private application lifecycle
+and a real standalone synthetic restart pass; no source inventory or private
+content is published. Eleven deliberate source mutations were caught at named
+runtime assertions and restored byte-exactly. Self-review only.
+
+This is local source on `fix/import-lifecycle-20261011`, not integrated into
+current main, pushed, released or deployed. Other functional findings remain
+open under the matrix; manufacturer semantics are not invented and no bus or
+vendor extension is executed.
 ## 2026-10-11 — login, notification details and size limits accepted on main integration
 
 Published on main with exact remote readback of `e476626e2eb5`.

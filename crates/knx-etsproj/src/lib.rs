@@ -10,6 +10,7 @@ pub mod container;
 pub mod detect;
 mod id_table;
 pub mod infer;
+pub mod instructions;
 pub mod known;
 pub mod map;
 pub mod opaque;

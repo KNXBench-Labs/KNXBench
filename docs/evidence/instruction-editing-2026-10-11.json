@@ -1,0 +1,167 @@
+{
+  "date": "2026-10-11",
+  "scope": "AP2 bounded installation instruction services/API and isolated editor; Session1 shell handoff",
+  "runtime_source": "e0dbd93a4709d9489409f0f685202294ff2ab42d",
+  "integrated_parent_main": "43865f58db1d00e246d9d7f6aa7b4a0e6cded288",
+  "review": "active-session self-review",
+  "source_manifest_sha256": "9120d1854ed008b5d658303ce09573057a0d69047c92bda62dfa8b099d7689a8",
+  "gates": [
+    {
+      "name": "format",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "web",
+      "exit": 0,
+      "valid": true,
+      "passed": 2715,
+      "failed": 0,
+      "pending": 0,
+      "files": 172
+    },
+    {
+      "name": "web-build",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "theme-types",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "flow-types",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "fixture-build",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "rust-workspace",
+      "exit": 0,
+      "valid": true,
+      "passed": 4026,
+      "failed": 0,
+      "ignored": 194,
+      "skip_lines": []
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "binaries",
+      "exit": 0,
+      "valid": true,
+      "versions": {
+        "knx-server": "knx-server 0.1.0-alpha.8+ge0dbd93a",
+        "knx": "knx 0.1.0-alpha.8+ge0dbd93a",
+        "knx-mcp": "knx-mcp 0.1.0-alpha.8+ge0dbd93a"
+      }
+    },
+    {
+      "name": "documentation",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "documentation-tests",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-layering",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-headers",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-anchors",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-ledger",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-corpus-gates",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "whitespace",
+      "exit": 0,
+      "valid": true
+    }
+  ],
+  "browser": {
+    "scope": "real built isolated feature and real HTTP with synthetic data, loopback-only network namespace",
+    "checks": [
+      "en:real source loaded",
+      "en:no automatic write on read",
+      "en:no executable or fetched embedded content",
+      "en:no global horizontal overflow",
+      "de:real source loaded",
+      "de:no automatic write on read",
+      "de:no executable or fetched embedded content",
+      "de:no global horizontal overflow",
+      "preview does not apply",
+      "native working edit survives real browser reload",
+      "edited literal markup not executed",
+      "explicit reset returns imported original",
+      "cancel makes no project change",
+      "no unexpected resource/API request"
+    ],
+    "unexpected_requests": 0,
+    "physical_bus_operations": 0
+  },
+  "native_process_restart": {
+    "checks": [
+      "actual HTTP commit matches exact normalized document",
+      "actual server PID changed before working-history reopen",
+      "server incarnation changed on real restart",
+      "native working instruction survives real server restart and reopen",
+      "retained original source digest survives real restart",
+      "native reopen leaves durable file bytes unchanged",
+      "both history stack lengths survive real server restart",
+      "pre-restart plan refused without mutation",
+      "recovered undo returns exact original document",
+      "recovered redo restores exact normalized edit",
+      "explicit Save commits normalized text and style to native root",
+      "explicitly saved native edit and original survive another process restart",
+      "saved native reopen preserves exact file bytes"
+    ],
+    "actual_restarts": 2,
+    "server_binary_sha256": "6f04b5e4ab52748523540e70b8976007c4cc694d30d43103b5dd07a3d3ea5f80"
+  },
+  "screenshots": {
+    "instruction-en-1440-graphite.png": "741035348c9c8eabf580e96c7b51d80b406d8019a57881ef172402cc31272c95",
+    "instruction-de-400-porcelain.png": "2b8a5841642fa6f7cbeaa01890dd9f897b9c9baca70e875143006b815716a79c"
+  },
+  "visual_review": {
+    "EN_1440_graphite": "Readable controls, source/history notice and text preview; no visible clipping.",
+    "DE_400_porcelain": "Readable German feature labels/provenance; formatting toolbar wraps and actions fit. Fixture disclaimer is English; unused space outside the narrow fixture is not a workbench frame."
+  },
+  "handoff": "../contracts/instruction-editor-host.md",
+  "adr": "../adr/0112-native-instruction-overlays.md",
+  "limits": [
+    "Schema23 UTF-8 unprefixed XML exact-owner originals only",
+    "Text/paragraphs/bold/italic/underline; explicit unsupported conversion consent",
+    "No automatic writes, HTML execution or embedded-resource fetching",
+    "Native working recovery is distinct from explicit Save",
+    "Shared UI-shell/navigation mount belongs to Session1 and is not delivered here",
+    "No ETS edited-project exporter, universal RTF/ETS compatibility, hardware, release or deployment claim",
+    "Older pre-integration receipts stay historical; ignored tests are not credited as passed"
+  ]
+}

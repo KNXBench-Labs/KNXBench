@@ -31,6 +31,7 @@ fn state() -> Arc<knx_server::AppState> {
         command_stack: Default::default(),
         history_generation: Default::default(),
         import_counts: Default::default(),
+        import_report_available: std::sync::atomic::AtomicBool::new(true),
         server_incarnation: "synthetic-progress-test".into(),
         project_revision: Default::default(),
         project_incarnation: Default::default(),

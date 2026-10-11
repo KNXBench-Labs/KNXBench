@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "package": "import-application-lifecycle",
+  "date": "2026-10-11",
+  "featureCommit": "4e0e874d9bf2da2084f0acec70cc610846ebee46",
+  "testedMergeCommit": "481f2cd9735ebc48d7b8d7de2027a79eb1f2ce5e",
+  "testedUpstreamCommit": "f7a5d8dcdf403e373a5f6a3b02e0f559fb720211",
+  "review": "in-session self-review; not independent approval",
+  "acceptance": {
+    "stageCount": 20,
+    "stages": [
+      {
+        "name": "fmt",
+        "exit": 0
+      },
+      {
+        "name": "npm-ci",
+        "exit": 0
+      },
+      {
+        "name": "web",
+        "exit": 0
+      },
+      {
+        "name": "build",
+        "exit": 0
+      },
+      {
+        "name": "theme-types",
+        "exit": 0
+      },
+      {
+        "name": "flow-types",
+        "exit": 0
+      },
+      {
+        "name": "e2e-types",
+        "exit": 0
+      },
+      {
+        "name": "rust",
+        "exit": 0
+      },
+      {
+        "name": "clippy",
+        "exit": 0
+      },
+      {
+        "name": "binaries",
+        "exit": 0
+      },
+      {
+        "name": "check-layering",
+        "exit": 0
+      },
+      {
+        "name": "check-headers",
+        "exit": 0
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0
+      },
+      {
+        "name": "check-ledger",
+        "exit": 0
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0
+      },
+      {
+        "name": "documentation",
+        "exit": 0
+      },
+      {
+        "name": "browser-full",
+        "exit": 0
+      },
+      {
+        "name": "browser-built",
+        "exit": 0
+      },
+      {
+        "name": "private-lifecycle",
+        "exit": 0
+      },
+      {
+        "name": "whitespace",
+        "exit": 0
+      }
+    ],
+    "web": {
+      "passed": 2680,
+      "failed": 0,
+      "files": 169
+    },
+    "rust": {
+      "passed": 3964,
+      "failed": 0,
+      "ignored": 193
+    },
+    "fullBrowser": {
+      "expected": 302,
+      "unexpected": 0,
+      "skipped": 0,
+      "flaky": 0
+    },
+    "builtBrowser": {
+      "expected": 14,
+      "unexpected": 0,
+      "skipped": 0,
+      "flaky": 0
+    },
+    "explicitPrivateLifecycle": {
+      "passed": 1,
+      "failed": 0,
+      "originalUnchanged": true,
+      "httpStepsSuccessful": 9,
+      "sourceAndEvidencePublished": false
+    },
+    "inputCount": 1626,
+    "inputsFrozen": true,
+    "sourceManifestSha256": "c7e36a9c75187d4a5b6218502771740a141d67abb742666c17bdd66dc37d7dd1",
+    "bindingMatches": true
+  },
+  "visualAssessment": {
+    "renderer": "production Vite preview with intercepted synthetic API",
+    "wideFrames": "EN/DE at 1440px: notice and explanation readable without clipping; unavailable evidence distinguished from zero issues",
+    "narrowFrames": "EN/DE at 400px: visible top notice and controls readable; long Dashboard explanation below captured viewport, not visually assessed in these frames"
+  },
+  "boundaries": {
+    "durableHistoricalImportReport": false,
+    "initialWriteAdmissionPreflight": false,
+    "generalEtsCompatibility": false,
+    "hardware": false,
+    "vendorExecution": false,
+    "deployment": false,
+    "release": false,
+    "sharedRootSynchronization": false
+  },
+  "publication": {
+    "status": "published on main after normal push and exact remote readback",
+    "verifiedPublishedCommit": "e27aca526a8a014e602869665201c184bc29dc65",
+    "verifiedRemoteMain": "e27aca526a8a014e602869665201c184bc29dc65",
+    "verifiedTrackingMain": "e27aca526a8a014e602869665201c184bc29dc65",
+    "featureAndTestedMergeAreAncestors": true,
+    "closingMetadataCommit": "Subsequent metadata-only closure; exact final HEAD/readback retained in ignored local publication archive."
+  }
+}

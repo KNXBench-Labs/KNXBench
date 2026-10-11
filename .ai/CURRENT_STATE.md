@@ -4,6 +4,73 @@
 - **Pending/Next Steps:** Verify exact manufacturer type/UIHint contracts and define owned data-layer/isolated feature paths before implementing specialized editors. PDB-04 remains undelivered. AP2 combined-source acceptance runs in separate worktree; its inputs unchanged.
 - **Notes for Claude:** No private corpus/member login/vendor execution/dependency installation/hardware/source mutation. No color/picture encoding invented; unknown/ambiguous attributes require visible fallback and original retention. Session1 owns shell mount.
 
+- **Timestamp:** 2026-10-11 15:40 CEST
+- **Completed:** Bounded AP2 native/application/HTTP/isolated editor package published normally on main asbaaad1a6dc1c09acbbc06cdf40b21a1fb8804a2a; local HEAD/fetched/live main exact and committed evidence blob read back. Runtimee0dbd93a4709d9489409f0f685202294ff2ab42d remains byte-identical to accepted17-stage candidate (Web2715/0/172files, Rust4026/0/194ignored);14 actual browser and13 two-process-restart checks, actual frames viewed. Session1 host contract and own ADR112 published. No release/deployment/root synchronization.
+- **Pending/Next Steps:** AP3 specialized parameter editors, AP4 native notes/help, AP5 offline naming recipe, AP6 opt-in confirmed MCP mutations, AP7 verified-source catalogue workflow. AP3/AP5 separate worktrees contain design/reconnaissance only, no implementation credited. Session1 owns shell mount.
+- **Notes for Claude:** Publication readback/private receipts remain in owned scratch until archival. Earlier failures/cancelled waits preserved and never added to pass totals. This closure is metadata only; next work may begin without changing runtime source. Preserve all foreign/root state; no hardware/subagents/quota/release/deploy authority.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 15:34 CEST
+- **Completed:** Latest-main assembled AP2 runtime e0dbd93a4709d9489409f0f685202294ff2ab42d accepted:17 gates, Web2715/0/172files, Rust4026/0/194ignored, strict Clippy/format/build/types/docs/five explicit-root repo gates. Actual isolated browser14 checks and13 native checks with two real server restarts pass on same frozen source; EN/DE frames viewed. Imported originals/digest/native file bytes, undo/redo and explicit Save/reopen verified. New compact evidence and Session1 host contract updated; own ADR112 avoids published codec ADR111 collision.
+- **Pending/Next Steps:** Metadata/disclosure gates, normal coordinated main push and exact remote readback; no publication claimed yet. Then AP3–AP7. Session1 owns shell mount. AP3/AP5 reconnaissance contracts are separate unimplemented drafts.
+- **Notes for Claude:** Prior failed/source-bound receipts preserved, ignored tests not credited. No private corpus, hardware, source global styles/catalogue/shell edits by this owner, release/deployment/subagents. Root/foreign worktrees untouched; source self-review only.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 15:15 CEST
+- **Completed:** AP2 assembled e54e2a68 accepted on17 actual gates: Web2700/0/171files, workspace Rust4016/0/193ignored, full Clippy, debug binaries stamped exact source, build/types/docs/five repo gates. Isolated browser14 checks/visual EN1440+DE400 and13 actual-process restart checks accepted on same frozen source. Fresh remote43865f58 published import/history codec repair; integrated no-ff preserving both complete journals. Published ADR0111 collision resolved by renumbering only own instruction ADR to0112; codec ADR untouched.
+- **Pending/Next Steps:** Fresh complete acceptance for actual new merged candidate including codec/native instruction interaction, then metadata/disclosure/publication/readback. Earlier e54e proof not automatically transferred. AP3–AP7 remain open; AP3/AP5 design reconnaissance only.
+- **Notes for Claude:** All ignored/private original corpus, foreign worktrees/root, runtime source claim boundaries preserved. Task-created Playwright YAML archived outside source. No global shell edits by this session, no hardware/release/deployment/subagents; self-review not independent approval.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 14:32 CEST
+- **Completed:** Combined2 actual workspace tests4016/0/193ignored and Web2700/0/171files passed on ccee4b81; strict Clippy then refused one owned HTTP assertion len()>0. Equivalent !is_empty assertion now corrected, without weakening checks. Combined1 exposed MCP reconstructed-v9 fixture; bounded MCP/server fixture-table cleanup committed, all original assertions retained. Host identity mapping clarified from actual snake_case ProjectTree.
+- **Pending/Next Steps:** Freeze corrected combined3 candidate; rerun complete gates plus isolated browser and actual server-restart/native-history proof. Publish only after accepted source and metadata gates/readback. AP3–AP7 remain open; AP3/AP5 separate design reconnaissance not implementations.
+- **Notes for Claude:** Keep failed combined1/2 and cancelled queued diagnostic evidence separate from fresh acceptance. No production semantics changed by these test corrections. Exact shared exports/shell/global styles/catalogues/root preserved. Self-review only; no hardware/release/deployment/subagents.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 13:30 CEST
+- **Completed:** Explicit owner Go lifts pause. New feature/instruction-integration-20261011 worktree assembles native066b570d, HTTPdb4bcc24 and editora6c548a6 on fetched main ancestry. Both merge journals preserved; root/predecessor worktrees unchanged. Dependency records exact-equal except root project version; existing node_modules reused without installation.
+- **Pending/Next Steps:** Add isolated asynchronous-editor characterization tests and host contract; freeze actual combined workspace/server/web/build/repository acceptance plus real loopback browser and server-restart/native-history proof. Publish only accepted package, then AP3–AP7.
+- **Notes for Claude:** Exact owned feature/rtf and additive instruction documentation/handover scope only. No shell/navigation/global copy/styles/manifest/private-corpus/hardware/release/deployment/subagents. In-session self-review, not independent approval.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:48
+- **Completed:** Native foundation accepted on exact source in native-instructions-broad-7: owning crates1209/0, strict Clippy/format/docs/whitespace all pass, frozen. Genuine native12 fixtures, reversible commands, selection mapping and native diff preserved. Public bounded evidence and additive model/import/status/ADR documentation drafted. Earlier reconstructed-fixture failures kept rejected.
+- **Pending/Next Steps:** Review/document gates and coordinated current-main integration/publication pending. API/editor belongs to separate service/editor worktrees, not foundation closure.
+- **Notes for Codex oder Claude:** Nine-package goal continues; AP1/AP8/AP9 delivered, AP2 incomplete, AP3–AP7 pending. Self-review only; no hardware, private source/keys, subagents/quota, release/deployment. Root/foreign worktrees preserved. Evidence stays in owned data-tooling-editing-20261011 scratch; rejected attempts never restamped or added to totals.
+
+
+
+- **Timestamp:** 2026-10-11 14:22 CEST
+- **Completed:** Authorized import/application repair4e0e874d and tested no-ff merge481f2cd published normally on main ase27aca526a8a; local/fetched/live refs exact, feature/tested-merge ancestry verified.20 stages all0 on1626 frozen inputs: Rust3964/0/193ignored, Web2680/0/169files, full Chromium302/0 and built14/0; explicit private lifecycle1/0/nine HTTP steps/original unchanged. Self-review; public receipt contains no private source content.
+- **Pending/Next Steps:** No implementation remains in this repair tranche. Closing metadata gates/commit/push/readback and task-only retirement are recorded in the ignored publication archive. Parallel initial-admission/durable-report owners retain their unfinished work; the wider matrix remains open.
+- **Notes for Codex oder Claude:** Runtime source481f2cd9735e, first verified publicatione27aca526a8a; later delta documentation only. Canonical local archive .ai/logs/2026-10-11_codex_import-lifecycle-publication/. Do not reset/synchronize root, feature checkout or other owners' worktrees. No deployment/release/ETS/vendor/bus/general-compatibility claim. Preserve full inherited journal; historical unpublished checkpoints below stay historical.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 14:20 CEST
+- **Completed:** Source-bound merge481f2cd9735e accepted:20 stages all0, workspace Rust3964/0/193ignored, Web2680/0/169files, full Chromium302/0 and production-built14/0, no skips/flakes. Explicit private lifecycle1/0, nine HTTP steps, original unchanged. Generated binding/frozen1626-input equality pass. Production wide EN/DE evidence notice visually readable; narrow top notices/controls only. Self-review. No private content in public metadata.
+- **Pending/Next Steps:** Final additive metadata/disclosure gates, focused acceptance commit, fresh-main reconciliation, normal push/exact readback and closure. Initial-admission and durable-report work stay with parallel owners and outside this publication; remaining matrix open.
+- **Notes for Codex oder Claude:** Own integration branch/worktree and fi13 evidence only; root foreign index/docs remain untouched. Public receipt docs/evidence/import-lifecycle-publication-2026-10-11.json; private archive remains ignored. No deployment/release/ETS/vendor/bus/root synchronization. Preserve complete inherited journal.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 13:40 CEST
+- **Completed:** Owner-authorized commit/merge/push follow-up. Reviewed repair commit 4e0e874d9bf2da2084f0acec70cc610846ebee46 integrated on fetched main in an isolated checkout; additive message/status conflicts resolved and full upstream journal preserved. Parallel initial-admission edits in the feature checkout remain untouched and excluded. No private project content copied into public fixtures/docs.
+- **Pending/Next Steps:** Source-frozen merged acceptance is queued/running as proc_aa5c07ddeed6. The preceding launcher was stopped before any stage to correct the existing browser lease path. Require actual Web/build/types/full Rust/Clippy/repo/docs/full+production browser/private lifecycle receipts, inspect frames, reconcile fresh main and normal push/readback. No push yet; broader Finding matrix and preflight remain open.
+- **Notes for Codex oder Claude:** Own integration/import-lifecycle-20261011 and scratch fi13 only. Do not change gated source or the parallel feature/root. Loopback-only, isolated HOME/XDG/TMP, fixed-order shared leases. Runtime receipt fi13/receipt.private.json remains private; update later result without transferring earlier scope. No deployment, ETS/vendor execution or bus action.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 12:37
+- **Completed:** Combined local import-lifecycle candidate accepted on frozen 1608 public inputs: five owning Rust packages 1917/0/83 ignored, complete Web 2629/0/165 files, built intercepted Chromium 14/0/0 skipped/0 flaky; strict owning Clippy, server/CLI builds, binding equality, five nonempty repository checks, docs/fmt/whitespace all pass. Additional explicit private lifecycle and real standalone synthetic restart pass; original bytes unchanged, model/opaque/manufacturer-reference preservation asserted. Eleven compiled mutants caught at named assertions and source restored byte-exactly. Self-review only.
+- **Pending/Next Steps:** Canonical positive controls and documentation-only final gates passed; focused local commit is next. Remaining functional matrix still open; next independent package is initial native-write admission preflight via existing library service. Fresh main f7a5d8dc advanced independently; later coordinated source integration requires its own acceptance. No merge/push/release/deployment authority inferred.
+- **Notes for Codex oder Claude:** Own worktree/branch only. Evidence remains private profile scratch findings-implementation-20261011; initial compile/header refusals and accepted final run distinct. No private identities/values/fingerprints in public files; root index, foreign research/worktrees and inherited journal preserved. Mutation controls acquire established workspace/alpha/browser leases in that order before source edits. No subagents/quota/vendor execution/hardware. SQLite prefixes do not constitute engine-wide heap/RSS guarantees.
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-11 12:14
 - **Completed:** Owner-authorized login/feedback/limits feature5c59f6d2 and no-ff tested merged075b7cc published on main ase476626e2eb5; live/fetched HEAD refs exact, feature/tested-merge ancestry verified. Fresh-main docs0fd7a865 reconciled in cdfd1345 with unchanged accepted runtime. Actual1359-input18-stage merged acceptance all0: Web2665/0/168, Rust3954/0/192ignored, Chromium294/0/0skipped/0flaky, built24/0;26 actual built frames inspected. Workspace Clippy/build/three types/five explicit-root repo/docs/fmt/whitespace pass. Publication receipt records actual observed push, not a deployment.
@@ -130,9 +197,36 @@
 - **Pending/Next Steps:** No further import-status implementation/main-merge work remains. This metadata-only closure is separately checked/read back; final owned cleanup is recorded in ignored delivery evidence. Release/container deployment and shared-root synchronization are separate and not performed.
 - **Notes for Codex oder Claude:** Public receipt docs/evidence/import-status-publication-2026-10-11.json; ignored proof .ai/logs/2026-10-11_codex_import-status/integration/combined/. Runtime acceptance binds3d6c9d1f, not earlier9729fb95; earlier attempts remain historical. Phase means latest server observation, not a heartbeat/ETA or invented count. Preserve concurrent root manufacturer-DLL research and all foreign source/journals; no vendor/hardware/backend compatibility claim.
 
+
+- **Timestamp:** 2026-10-11 12:48 CEST
+- **Completed:** Seven HTTP instruction lifecycle tests pass on frozen inputs; active-session self-review verifies existing authentication, explicit confirmation, replay/substitution refusal and persist-before-publication.
+- **Pending/Next Steps:** Merge newest native foundation; gate the actual merged server/application and isolated editor. AP2 remains in progress; AP3–AP7 remain open.
+- **Notes for Claude:** Browser fixture proof is not workbench integration or process-restart acceptance. Preserve Session1 shell ownership and imported source bytes.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:48
+- **Completed:** Ten application instruction service tests passed in fresh isolated target. Actual HTTP setup initially used SQLite open for ETS ZIP and failed before feature; corrected to real ETS import. Locked stub baseline registered0/4 with successful setup; exact production source restored. Source-frozen HTTP successor4/0 accepted, covering preview/refusal/undo/redo/native recovery. Three additional contract regressions now added; expanded admission pending.
+- **Pending/Next Steps:** Run expanded HTTP7 and broad app/server checks; preserve no-op/redo, candidate-first native persistence, source/revision binding, exact pending token and cancellation. Full browser editor remains pending.
+
+- **Timestamp:** 2026-10-11 12:48 CEST
+- **Completed:** Isolated RTF editor has retained 29 unit/component passes and 14 real loopback-only browser checks. Owned frontend source headers added; current-header rebuild and combined API/native integration remain pending.
+- **Pending/Next Steps:** Merge accepted native/API, run fresh frontend and server gates, rebuild and re-exercise exact isolated fixture. Handoff shell integration to Session1; AP3–AP7 remain pending.
+- **Notes for Claude:** Preserve all source originals; no resources, HTML execution, automatic writes, global CSS, shared catalogues, shell changes, release or deployment. Review is active-session self-review, not independent approval.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:48
+- **Completed:** Pure canonical instruction document editing genuine RED3/9 to GREEN12/0, TypeScript noEmit passed. UTF-16 surrogate boundaries, existing CR/CRLF preservation, style-preserving edits, canonical coalescing, unknown metadata and UTF-8/run budgets verified. Existing exact dependency graph reused; project-version-only difference recorded. No component or browser claim.
+- **Pending/Next Steps:** Typed source-bound HTTP client and isolated EN/DE component still required, including stale/cancel/conversion paths and actual browser/native flow. Shell/navigation/global CSS/shared catalogues untouched.
+- **Notes for Codex oder Claude:** Nine-package goal continues; AP1/AP8/AP9 delivered, AP2 incomplete, AP3–AP7 pending. Self-review only; no hardware, private source/keys, subagents/quota, release/deployment. Root/foreign worktrees preserved. Evidence stays in owned data-tooling-editing-20261011 scratch; rejected attempts never restamped or added to totals.
+
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 08:30
+- **Completed:** Native instruction integration refinement: first broad attempt rejected module ordering; next broad attempt exercised application tests and correctly refused selective-import model version. Explicit v13 instruction owner remapping, preserved destination overlays, dangling-owner refusal and preview note added; genuine selective RED1/14 to GREEN15/0. Native comparison genuine RED1/3 to GREEN4/0: full normalized runs/styles, absent versus empty, unchanged source identity. Private application edit-service tranche is separate; its eight focused tests passed but API/browser still pending. Self-review only.
+- **Pending/Next Steps:** Fresh source-bound broad model/store/app/diff/Clippy/doc acceptance; no runtime acceptance carried from rejected attempts. Then validated application/API and isolated editor, public evidence/docs and coordinated integration. Overall nine-package goal is not complete.
+- **Notes for Codex oder Claude:** Parked foreign Functions/Sites tree not edited or integrated. Native12 fixture provenance, prior semantic identity and exact original XML preservation remain unchanged. Existing high-water allocator behavior intentionally retained through selective undo. Receipts in owned scratch data-tooling-editing-20261011; attempts1/2 remain rejected; attempt3 pending. No hardware, Secure runtime, quota, subagents, release or deployment.
+
 - **Timestamp:** 2026-10-11 08:31 CEST
 - **Completed:** Owner-requested focused import-banner commit/push delivered on fix/import-status-20261011 atdf868c7a. Local/tracking/live feature refs equal; exact12-path commit, KNXBench author/committer/no coauthor and accepted eight source/test hashes verified. Fresh explicit-root five repository gates/documentation/staged whitespace pass. Existing runtime acceptance2614Web/8built intercepted Chromium remains source-bound, not rerun or double-counted. In-session self-review.
 - **Pending/Next Steps:** No feature implementation or branch-publication work remains. Documentation closure follows on the same branch; main integration, release and container deployment remain separate. Keep owned clean source/build worktree for review and later coordinated merge with UX-feedback; do not clean foreign worktrees.
@@ -141,6 +235,11 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 07:52
+- **Completed:** Maintainer explicitly authorized current-main isolated RTF schema work; foreign functions-sites tree preserved. Normalized literal/basic-style document actual3/4 RED→7/0. Authentic native12 fixtures generated by unchanged predecessor writer before bump, including reachable device and saved/working/both stacks/context/named version. Native13 overlay persistence actual1/3 RED→4/0; expanded native/history/corrupt/future7/0. Core edit/reset/noop/delete inverse actual1/3 RED→4/0. Ordinary core/store attempt passed core tests then one legacy reconstructed-v7 fixture failed on leftover new tables; corrected test-only downgrade cleanup, broad rerun pending. No API/editor or compatibility claim yet.
+- **Pending/Next Steps:** Checkpoint isolated model; merge own accepted reader test correction and fresh current main preserving journals. Broader core/store/app/Clippy/native migrations/history/diff/selective-import admission required before native13 publication; implement revision/digest-bound application edit/API/editor/browser. AP9 plans published6e23f11e/closure85c6824c; AP8 contract/report published9298242c with local collector2ac5dfb. Full goal remains open.
+- **Notes for Codex oder Claude:** Empty native13 overlay uses exact prior12 semantic identity; present empty is13 state. Authentic12 embedded images verified then converted in owned memory, originals/hashes/context references unchanged. No unverified older embedded-history parity. Original XML never rewritten. Pure type has no RTF/UI/SQL dependency. Two fixture files never overwritten; first smaller one historical. No foreign source/index/root settings/report modification, hardware/bus/secret/subagents/quota/release/deployment.
+
 - **Timestamp:** 2026-10-11 08:30 CEST
 - **Completed:** Owner requested commit/push of accepted import-banner package. Exact eight runtime/test source hashes still match local acceptance; freshly fetched origin/main remains9298242c. Prepared focused feature-branch publication with KNXBench identity; no main integration or deployment.
 - **Pending/Next Steps:** Commit/push fix/import-status-20261011 and verify local/tracking/live refs, committed path set and accepted source bytes. Preserve unrelated root changes and UX-feedback owner branch; main integration remains separate.
@@ -149,6 +248,11 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 07:09
+- **Completed:** Continue-until-goal authorization received. Fresh remote70c05fdc activation-owner handover inspected read-only. Original reader XML review gained four tests: actual11/3 RED then14/0 GREEN; undefined/invalid body refs, illegal chars, misplaced/non1.0 declarations, reserved namespace and name negatives fixed. Direct dependency API0.42 verified (0.41 transitive not used). Seven app controls previously passed on their own frozen receipt; current broadened source requires new acceptance. Owned reader files formatted; no core/schema/native edits yet.
+- **Pending/Next Steps:** Commit source checkpoint, integrated current-main reader broad owning-crate/Clippy/native/doc gates; publish reader only as a foundation, then normalized edit model/native/history/editor. Independently integrate checked AP9 plans and AP8 contract/report at sequential metadata boundaries. AP3–AP7 pending, whole goal open.
+- **Notes for Codex oder Claude:** Primary XML1.0/Namespaces syntax sources documented in contract; bounded UTF8/schema23/unprefixed admission, not full XML/schema compatibility. Original source hash/owner uniqueness mandatory, no source rewrite. Current app native SourceRef absence remains explicit MissingSource, not invented native type. No foreign/root/style/catalogue/account/quota/hardware/release/deployment changes. Earlier setup/compile/timeouts remain unaccepted evidence.
+
 - **Timestamp:** 2026-10-11 08:24 CEST
 - **Completed:** Local import-banner correction in fix/import-status-20261011, base9298242c. Latest reported phase now foreground-coloured below bar; explicit no-item-total note/phase aria-valuetext, actual counts unchanged. Step/joke fonts +2pt, joke interval1800→4300ms. Named RED/GREEN timing/transition tests and old-font browser negative control; final Web2614/0/164files, built Chromium8/0, build/E2E types and five fresh-root repo/docs/whitespace gates0. Four final EN/DE1440/400 Graphite/Porcelain frames inspected; self-review. Manual/ADR0023/status updated.
 - **Pending/Next Steps:** Local source complete, uncommitted/unpublished in KNXBench.worktrees/import-status-20261011. Any commit/main integration/push/deployment is separate; preserve coordinated UX feedback branch and serially merge overlapping styles/messages rather than copying whole files. No container replacement performed.
@@ -157,6 +261,35 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:57 CEST
+- **Completed:** Goal2 remaining-scope status audit only. Fresh origin/main70c05fdc ledger still marks R-SEC-01 DONE; PDB-04/FUTURE01/02/03/05/TOOLS01–05 and hardware implementation IDs retain LATER. Own AP8 docs1ad70cc1 and AP9 plansfff503cb are not ancestors of current main. Reader focused10/0+7/0, AP8 docs/report gates and AP9 docs gates accepted locally, not whole-goal delivery. Shared-gate wait for these completed attempts resolved; no blanket queue blocker claimed.
+- **Pending/Next Steps:** Full AP2 editable model/native migration/history/API/UI/browser plus reader XML review/broader acceptance/publication; AP3–AP7 implementation/acceptance; AP8 coordinated contract/report integration, exact ID dispositions and retained measurement limits/collector remote; AP9 preparation integration/publication only. Hardware implementation requires separate Go and is not this goal's deliverable. Final source review/gates/docs/Session1 handoff remain. Status request does not start implementation.
+- **Notes for Codex oder Claude:** Interpreted goal2 as the Session2 data/tooling goal, distinguish AP2 if user intended just RTF. Remote advanced with other owner activation work; read full latest handover before any subsequent integration/code. No code/ledger edit, merge/push/deploy/hardware operation or test rerun during audit. Acceptance is snapshot-bound; foreign work and original unknown-data boundaries preserved.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:47 CEST
+- **Completed:** proc_3cee831aa4c4 exit0 reconciled with reader-gates-1/receipt.json: adapter10/0 and application7/0, both actual runtime targets, all_passed/inputs_frozen true. All seven recorded file hashes still match current owned bytes. Application GREEN is now verified; earlier lock wait is resolved for this attempt. No new test execution or duplicate count.
+- **Pending/Next Steps:** Original-reader tranche still needs recorded XML review negatives, broader owning-crate/Clippy acceptance and coordinated publication. Full AP2 normalized editing/model/migration/history/API/UI/browser remains open. AP9/stats gates and other goal residue unchanged; notification alone is not full feature acceptance.
+- **Notes for Codex oder Claude:** Read-only original inspection only; no edited-value persistence or schema/model write. Preserve initial behavioral RED and compile-only refusals as separate historical attempts. Only owned handover/task-state reconciliation performed; no rerun, source edit, commit/push, release/deployment or hardware/bus action. Foreign/root work remains untouched.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:45
+- **Completed:** Keep-going continuation: own proposed ADR/contract checkpointfc95cc6e and fresh published foundation merged. Implemented read-only Schema23 exact-device InstallationHints adapter/application reader in six owned Rust/export/test files. Real adapter baseline2/8 RED then10/0 GREEN; two compile-only API corrections retained. Real app corrected baseline1/6 RED (earlier fixture compilation refused; not RED). Application implementation now uses actual StoredOpaqueEntry and nonoptional SourceRef, source hash/unique whole-original owner and explicit absent/empty/error states. Source input frozen for queued reader-gates-1; no claimed app GREEN. AP9 separate plans localfff503cb with docs checker/12 controls; gate queued. AP8 canonical collector clean-root fast-forward2ac5dfb plus actual canonical entry-point current-main report six/six CSS verified, no settings/cloud change; contract/dated-report candidate committed in separate stats tree.
+- **Pending/Next Steps:** Reader gate proc_3cee831aa4c4 waits on shared workspace lease after prior foreground timeout; no receipt/stages yet. Follow-up XML review negatives and owning-crate/clippy/native source acceptance before publication; full normalized edit model/migration/history/API/UI/browser still open. AP9 proc_659ef8f7df13 and stats docs proc_99a27eeea8c6 queued; integrate only after actual gates and fresh-main ownership check. AP3–AP7 implementation remains. Goal incomplete, no permission/quota pause.
+- **Notes for Codex oder Claude:** Shared lease is held by another actual workspace gate, not ours; never kill/restart/bypass it. Own code remains uncommitted/frozen until queued receipt, only this handover/log updated. Original-reader API has no native-origin inference: missing original is explicit source error, not blank; selective archive reconstruction not admitted. XML preflight review still needs undefined refs/illegal body text negatives. Canonical collector remote inaccessible; local delivery verified, no remote created. Root generated stats has preexisting edits and stays untouched; own dated report snapshot sourceaeb5a386. No source model/schema bump, hardware/bus/secret operation,subagents/quota/release/deployment. Timed-out waiting run has no verdict; stored failed/RED attempts remain evidence, not duplicated counts.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 01:02
+- **Completed:** New owned editing worktree/branch from05aaab52. Proposed ADR0111 and instruction editing ownership contract only: normalized device-instruction overlay separate from imported originals and ADR0031 plain notes. Actual SourceDevice ownership, native schema12, project history and parser signature inspected. No model/schema/store/API/UI implementation or acceptance yet. AP1 published; bounded adapter foundation fresh executable owner integration passes220 ordinary tests,56 ignored, native3/0/Clippy/format/docs; separate metadata gate active.
+- **Pending/Next Steps:** Start source-bound original-reader vertical test/service before native override model; fully audit prospective next schema/history representability/deletion/selective import. Exact proposed existing file paths must be confirmed before code. Continue AP2 full editing/native/browser, then AP3–AP7. AP8 collector181/0/local2ac5dfb, remote Repository not found; ID contracts/report delivery remain. AP9 plans only. Goal incomplete.
+- **Notes for Codex oder Claude:** Proposed ADR not a functioning editor; generic opaque XPath cannot pick an owner. Use exact source path/ETS ID and unique parsed source device. Schema23 InstallationHints only for first interpretation; core never owns RTF syntax. Keep imported opaque bytes unmodified, revision/digest-bound explicit conversion for unsupported sources, absent vs empty and undo/history. No phase jump, root/foreign/shell/catalogue/global-style edits, bus/hardware/secret operations, subagents/quota/release/deployment.
+
 - **Timestamp:** 2026-10-11 08:55
 - **Completed:** Owner-authorized download layout source published on main0dae7c93 (feature0f7be1a3), exact fetched/live readback and accepted source/test blobs verified. Actual merge acceptance: Vitest2612/0/164 files, full intercepted Chromium260/0/0, built scope/layout Chromium14/0/0, build/explicit new+existing spec types, five fresh nonempty repo gates/docs/whitespace.1863 tracked files frozen; final DE400 Porcelain/DE1440 CRT frames inspected. Required KNXBench author/committer/no co-author; self-review.
 - **Pending/Next Steps:** None for the requested source publication. Release/container deployment and shared-root synchronization are separate, not authorized by this request.

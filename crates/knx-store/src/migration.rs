@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 12;
+pub const CURRENT_SCHEMA_VERSION: i64 = 13;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -609,6 +609,23 @@ fn migrate_v10_to_v11(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v12→v13: device instruction edits are separate from retained originals.
+fn migrate_v12_to_v13(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "CREATE TABLE instruction_document (
+             device_id INTEGER PRIMARY KEY REFERENCES device(id)
+         ) STRICT;
+         CREATE TABLE instruction_run (
+             device_id INTEGER NOT NULL REFERENCES instruction_document(device_id),
+             position INTEGER NOT NULL CHECK(position >= 0),
+             text TEXT NOT NULL CHECK(length(CAST(text AS BLOB)) BETWEEN 1 AND 65536),
+             style INTEGER NOT NULL CHECK(style BETWEEN 0 AND 7),
+             PRIMARY KEY(device_id, position)
+         ) STRICT;",
+    )?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// History owns the surrounding transaction so a refused editor write also
@@ -656,6 +673,7 @@ fn migrations() -> Vec<Migration> {
         // Vocabulary-only barrier: older decoders silently substitute Undefined
         // for the new documented completion statuses. Rows/history stay exact.
         |_conn| Ok(()),
+        migrate_v12_to_v13,
     ]
 }
 
@@ -848,7 +866,7 @@ pub fn open_and_migrate_in_memory() -> Result<Connection, MigrationError> {
 /// Runs every pending migration against an already-open connection and
 /// brings its `user_version` to `CURRENT_SCHEMA_VERSION`. Shared by the
 /// file-backed and in-memory entry points so the two can never drift.
-fn migrate(conn: &Connection) -> Result<(), MigrationError> {
+pub(crate) fn migrate(conn: &Connection) -> Result<(), MigrationError> {
     let found: i64 = conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
 
     if found > CURRENT_SCHEMA_VERSION {
@@ -1387,7 +1405,9 @@ mod tests {
             // dropping them and rewinding `user_version` leaves exactly the
             // file a v7 build would have written for this project.
             conn.execute_batch(
-                "DROP TABLE project_history_state;
+                "DROP TABLE instruction_run;
+                 DROP TABLE instruction_document;
+                 DROP TABLE project_history_state;
                  DROP TABLE project_history_stack;
                  DROP TABLE project_history_version;
          DROP TABLE project_history_context;

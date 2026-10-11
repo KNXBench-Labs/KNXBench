@@ -281,6 +281,7 @@ pub struct DeviceKey {
 pub struct DeviceFields {
     pub name: String,
     pub description: Option<String>,
+    pub instructions: Option<knx_core::instruction::InstructionDocument>,
     /// Formatted `IndividualAddress`, when present.
     pub address: Option<String>,
     pub product_ref: String,
@@ -305,10 +306,12 @@ pub fn device_fields(
     device: &DeviceInstance,
     line: Option<LineKey>,
     building: Option<BuildingPartKey>,
+    instructions: Option<&knx_core::instruction::InstructionDocument>,
 ) -> DeviceFields {
     DeviceFields {
         name: device.name.clone(),
         description: device.description.clone(),
+        instructions: instructions.cloned(),
         address: device.address.map(|a| a.to_string()),
         product_ref: device.product_ref.clone(),
         program_ref: device.program_ref.clone(),
@@ -325,6 +328,7 @@ pub fn device_changed_fields(left: &DeviceFields, right: &DeviceFields) -> Vec<&
         [
             name,
             description,
+            instructions,
             address,
             product_ref,
             program_ref,
@@ -675,6 +679,7 @@ impl FieldDiff for DeviceFields {
                 product_ref => fmt_plain,
                 program_ref => fmt_plain,
                 commissioning => fmt_debug,
+                instructions => fmt_debug,
                 line => fmt_debug,
                 building => fmt_debug,
             ]
@@ -1145,13 +1150,14 @@ mod tests {
         let device_id = add_device(&mut project, 1, None);
         let device = project.devices.get(device_id).unwrap();
 
-        let fields = device_fields(device, None, None);
+        let fields = device_fields(device, None, None, None);
         // Named field-by-field so a future accidental field addition to
         // `DeviceFields` that duplicates `EntityTable` data breaks this
         // test by refusing to compile, not just a reviewer's memory.
         let DeviceFields {
             name,
             description,
+            instructions,
             address,
             product_ref,
             program_ref,
@@ -1161,6 +1167,7 @@ mod tests {
         } = fields;
         assert_eq!(name, device.name);
         assert_eq!(description, device.description);
+        assert_eq!(instructions, None);
         assert_eq!(address, None);
         assert_eq!(product_ref, device.product_ref);
         assert_eq!(program_ref, device.program_ref);
@@ -1309,6 +1316,7 @@ mod tests {
         let left = DeviceFields {
             name: "D1".into(),
             description: None,
+            instructions: None,
             address: None,
             product_ref: "P-0".into(),
             program_ref: "H-0".into(),

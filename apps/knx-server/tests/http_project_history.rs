@@ -76,6 +76,29 @@ fn binding(view: &Value, confirmed: bool) -> Value {
 }
 
 #[tokio::test]
+async fn retained_context_and_decode_limits_are_exposed_separately_from_model_limit() {
+    let (_dir, _path, _state, app) = fixture().await;
+    let (status, view) = request(&app, "GET", "/api/project/history", Value::Null).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        view["limits"]["maxImageBytes"],
+        knx_store::project_history::MAX_IMAGE_BYTES
+    );
+    assert_eq!(
+        view["limits"]["maxContextBytes"],
+        knx_store::project_history::MAX_CONTEXT_BYTES
+    );
+    assert_eq!(
+        view["limits"]["maxDecodedImageBytes"],
+        knx_store::project_history::MAX_DECODED_IMAGE_BYTES
+    );
+    assert_eq!(
+        view["limits"]["maxDecodedHistoryBytes"],
+        knx_store::project_history::MAX_DECODED_HISTORY_BYTES
+    );
+}
+
+#[tokio::test]
 async fn named_version_restore_preserves_unsaved_pre_restore_state_and_clears_edit_stack() {
     let (_dir, _path, state, app) = fixture().await;
     let before = state.project.lock().unwrap().clone().unwrap();
@@ -284,7 +307,7 @@ async fn session_only_history_is_explicit_and_version_writes_require_a_native_pa
 async fn opening_a_legacy_native_store_validates_history_without_rewriting_the_file() {
     let (dir, path, _state, _app) = fixture().await;
     let conn = knx_store::Connection::open(&path).unwrap();
-    conn.execute_batch("DROP TABLE project_history_stack; DROP TABLE project_history_state; DROP TABLE project_history_version; DROP TABLE project_history_context; ALTER TABLE line DROP COLUMN model_position; PRAGMA user_version = 10;").unwrap();
+    conn.execute_batch("DROP TABLE instruction_run; DROP TABLE instruction_document; DROP TABLE project_history_stack; DROP TABLE project_history_state; DROP TABLE project_history_version; DROP TABLE project_history_context; ALTER TABLE line DROP COLUMN model_position; PRAGMA user_version = 10;").unwrap();
     drop(conn);
     let before = std::fs::read(&path).unwrap();
     let app = knx_server::app(

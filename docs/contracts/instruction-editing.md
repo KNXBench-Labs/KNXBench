@@ -120,6 +120,19 @@ weaken unknown/future/extra/corrupt snapshot refusal or silently rewrite history
 Regression requires root/working/both stacks/context/named versions and opaque
 bytes before/after actual migration. This policy requires tests before admission.
 
+## Application edit-service tranche ownership
+
+Own branch `feature/instruction-service-20261011` is separate while native
+model source is frozen. Own new `crates/knx-app/src/instruction_edit.rs`,
+`crates/knx-app/tests/instruction_edit.rs`, and its export in
+`crates/knx-app/src/lib.rs`. Use existing original-reader, immutable normalized
+document, core command and native working-history service only. Preview must
+bind full model plus exact source digest and explicit caller-supplied load/revision
+identity; unsupported-source conversion requires affirmative confirmation.
+No-op must preserve absence, source bytes and redo. Persist on private candidates
+before publishing memory state; failed durable save leaves live state untouched.
+No database shortcut, new schema/dependency, UI or hardware operation here.
+
 ### Existing-feature integration audit
 
 The broad native attempt correctly hit the selective-import model-version
@@ -145,3 +158,19 @@ Own reconstructed-v10 fixture SQL only in `crates/knx-store/tests/project_histor
 Own reconstructed-v9 cleanup in `crates/knx-store/tests/read_only_open.rs`, dropping only new instruction tables before old-layout reconstruction; byte identity/read-only/migration assertions remain intact.
 
 Native foundation closure owns additive DATA_MODEL/IMPORT_EXPORT/IMPLEMENTATION_STATUS entries, ADR0111 status/context and new docs/evidence/instruction-native-foundation-2026-10-11.json. No ledger ID or full-editor status is closed. Existing document bodies remain unchanged except historical wording in the owned ADR.
+
+## Isolated HTTP adapter tranche ownership
+
+Own new `apps/knx-server/src/instruction_routes.rs` and
+`apps/knx-server/tests/http_instructions.rs`; only its module export and router
+merge in `apps/knx-server/src/lib.rs`. The preview cache/counter is router-local,
+not global and not an AppState/domain schema addition. One bounded pending plan
+holds the exact private application preview: apply/cancel accepts its token only,
+not a substituted document. Bind to server incarnation and project revision,
+serialize mutation under the existing project lock, use existing recovery/history
+path and publish memory state only after application persistence succeeds.
+Read/preview/cancel must not mutate project/history; missing confirmation,
+conversion refusal, invalid document, stale source/revision/token or persistence
+failure must leave live state unchanged. No bus route or manufacturer assignment.
+Old foreign Functions/Sites module edits remain parked and untouched; only additive
+current-main route integration is owned here.

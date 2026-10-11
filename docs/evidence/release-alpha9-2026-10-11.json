@@ -153,11 +153,19 @@
     "syntheticPublicFixture": true,
     "sourceSchema": 12,
     "savedSchema": 13,
-    "openSaveReopenAndBothHistoryStacksPreserved": true,
+    "openSaveReopenAndHistoryStackAvailabilityPreserved": true,
     "originalFixtureUnchanged": true,
     "orderlyStop": {
       "exit_code": 0,
       "seconds": 0.442
     }
+  },
+  "documentationPublication": {
+    "source": "e337871205bc3b6aa494e39669763e19d12ca6f9",
+    "mainExactReadback": true,
+    "publicReceiptBytesExact": true,
+    "freshTargetGateStages": 8,
+    "allExitsZero": true,
+    "documentationOnly": true
   }
 }

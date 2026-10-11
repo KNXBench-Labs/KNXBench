@@ -57,10 +57,18 @@ See [build and media recipe](../website/README.md).
   device wizard. The catalog/link workflow remains the footage's scope.
 - Existing `telegram-flow.gif`: real monitor component, synthetic traffic,
   optional CRT theme, no live bus; MP4 duration 11.7 s.
-- Current production frontend at `a642eaf9`: group-address filtering/inspection,
-  8.8 s MP4, plus Graphite/CRT/LCARS screenshots. Fictional API answers are fully
-  intercepted. Seven capture checks pass with zero escaped/unhandled requests
-  or page errors; no live application server or KNX hardware.
+- Historical production frontend at `a642eaf9`: group-address
+  filtering/inspection in the retained 8.8 s MP4. Fictional API answers were fully
+  intercepted; its seven original capture checks remain historical evidence.
+  The Graphite/CRT/LCARS stills have since been replaced by Alpha 9 captures.
+- **Alpha 9 stills (11 October 2026):** hero, optional-theme gallery and four
+  feature cards use the published release frontend/server and fictional project
+  in a loopback-only namespace. Lossless WebPs retain the manual PNG pixels.
+  Devices, named DPT choices, native history and notification details are shown;
+  existing features are not all claimed as newly introduced in this release.
+  Older videos are visibly labelled in DE/EN. Schema 13, independent backups,
+  Alpha 8 refusal and unmounted editor foundations stay explicit in the copy.
+  [Capture provenance](assets/README.md) · [Acceptance](evidence/alpha9-media-2026-10-11.json).
 - Files, source provenance, stream probes and hashes: `website/media.json`.
   Videos are H.264/yuv420p, no audio, faststart, native controls, no autoplay/loop,
   same-host posters, DE/EN descriptive caption tracks and text walkthroughs.

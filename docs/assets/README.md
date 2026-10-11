@@ -2,9 +2,11 @@
 
 # Visual assets: real application, fictional building
 
-The manual uses the application's **Porcelain** theme (registry id `porcelain`).
-The pictures come from Chromium running the built frontend against a real,
-freshly built `knx-server`, not from a design mockup or invented API responses.
+The current manual stills show the published **v0.1.0-alpha.9**, in light
+**Porcelain** (`porcelain`) and dark **Graphite** (`graphite`). The optional
+CRT/LCARS stills also show that release. Chromium runs the production frontend
+against the real server extracted from the published Docker image, not from
+a design mockup, moving development build or invented API responses.
 All device names, rooms and products come from the generated **Sample house**
 or the first-project **Practice house** exercise. No customer project or live
 bus capture belongs in this directory.
@@ -22,13 +24,16 @@ files remain unchanged. Edge alpha is `clamp((max(R,G,B) - 10) / 50, 0, 1)`;
 RGB is unmatted against `(10, 10, 10)` and clamped to byte range.
 The app bundles the derived image locally, fits it into 44 × 34 CSS pixels
 without stretching, and keeps the adjacent KNXBench label and overview link.
-The login screen and historical manual captures are unchanged.
+The Alpha 9 login captures show the release logo and frontend version. Earlier
+README recordings remain historical media; replacing stills does not date them anew.
 
 ## Current manual media
 
 | Asset | What it teaches | Capture |
 | --- | --- | --- |
-| `screenshots/porcelain-*.png` | Real workspace, dialogs, project/device wizards, parameter tabs, search, settings, monitor and reopened practice project | 1440 × 900, 1× scale; refreshed 8 October 2026 |
+| `screenshots/porcelain-*.png` | Light workspace, dialogs, project/device wizards, search, settings, monitor, reopened practice project and history | Published Alpha 9; refreshed 11 October 2026 |
+| `screenshots/graphite-*.png` | Dark device overview, object/DPT and parameter editor, group addresses, installation properties, history, message details and login | Published Alpha 9; real server, same fictional project |
+| `screenshots/user-modern-retro-green-crt-group-addresses.png`, `screenshots/lcars-group-addresses.png` | Optional themes used by the website gallery | Published Alpha 9; no live bus |
 | [New project](workflows/new-project.gif) | Details → optional structure → review → creation; the result explicitly says **not saved yet** | Real UI actions, 960 × 600, 10 fps |
 | [Add device](workflows/add-device.gif) | Explorer action → product → placement → address preview → confirmed creation | Real project mutation, fictional actuator; no hardware access |
 | [Search](workflows/search.gif) | Ctrl+K → type `light` → filtered results → Escape | Search only; it does not connect to a gateway |
@@ -39,8 +44,13 @@ The login screen and historical manual captures are unchanged.
 byte sizes and SHA-256 hashes for the refreshed screenshots and workflow GIFs.
 The source snapshot and exercised checks are recorded in the documentation
 validation evidence linked from [the implementation log](../IMPLEMENTATION_STATUS.md).
-The PNGs are full workspace captures where surrounding navigation helps explain
-placement. GIFs are scaled for GitHub; static screenshots preserve readable details.
+There are **46 screenshots** and **three refreshed workflow GIFs**. PNGs are full
+workspace captures at 1× scale: 1440 × 900 normally, 1440 × 1080 for history, the
+expanded DPT field and message details. The extra height keeps the history notices
+and DPT explanation visible; it is not a painted or redesigned interface. Wide
+device/object tables can still scroll within their own pane. GIFs are scaled for
+GitHub; static screenshots preserve readable details. Website WebPs are lossless
+encodings of these actual PNG pixels.
 
 ## Reproduce the current captures
 
@@ -60,6 +70,32 @@ unshare --user --map-root-user --net sh -c \
   'ip link set lo up && exec "$@"' sh \
   npx playwright test -c playwright.manual.config.ts
 ```
+
+For these exact **release** captures, use the published image rather than the
+source build above. Extracting a stopped container does not start the application:
+
+```bash
+artifact="$(mktemp -d "${TMPDIR:-/tmp}/knx-alpha9.XXXXXX")"
+container="$(docker create --network none knxbench/knxbench-server:0.1.0-alpha.9)"
+docker cp "$container:/usr/local/bin/knx-server" "$artifact/knx-server"
+docker cp "$container:/app/frontend" "$artifact/frontend"
+docker rm -v "$container"
+export KNX_SERVER_BIN="$artifact/knx-server"
+export MANUAL_FRONTEND_DIR="$artifact/frontend"
+cd apps/knx-web
+unshare --user --map-root-user --net sh -c \
+  'ip link set lo up && exec "$@"' sh \
+  npx playwright test -c playwright.manual.config.ts
+```
+
+Run this alternative from the repository root, on Linux matching the extracted
+server architecture. `MANUAL_FRONTEND_DIR` overrides `dist/`; without it the config
+keeps the normal source-build route. Record the image revision/digest and binary
+hash in the manifest. The captures here bind to release source
+`5b21323e050f94953de9ff4683cc12462d753001` and published image digest
+`sha256:caa5ab31ee23edc35f5af645672defdf2d5b10dc27cf1d432eea0f345e24fd05`.
+Remove only your extraction directory after verifying the output and stopping the
+owned processes; leave existing application containers alone.
 
 The config creates temporary project, settings and product-database directories,
 generates the fictional `.knxproj`, and starts two servers **inside the isolated

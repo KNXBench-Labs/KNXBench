@@ -747,8 +747,8 @@ export function productLanguages(): Promise<ProductLanguage[]> {
 /// dialog puts the *application's* name in front of it. Fetched rather
 /// than imported from `package.json`, which versions the frontend package
 /// and nothing else.
-export function serverVersion(): Promise<{ version: string }> {
-  return request("/api/version");
+export function serverVersion(signal?: AbortSignal): Promise<{ version: string }> {
+  return request("/api/version", signal ? { signal } : undefined);
 }
 
 /**

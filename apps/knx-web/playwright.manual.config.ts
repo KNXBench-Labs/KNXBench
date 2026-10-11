@@ -14,12 +14,13 @@ const here = fileURLToPath(new URL(".", import.meta.url));
 // `dist/` (`npm run build`).
 const server = process.env.KNX_SERVER_BIN;
 if (!server) throw new Error("set KNX_SERVER_BIN to a freshly built knx-server binary");
+const frontend = resolve(process.env.MANUAL_FRONTEND_DIR ?? resolve(here, "dist"));
 const repo = resolve(here, "../..");
 const scratch = mkdtempSync(join(process.env.TMPDIR ?? tmpdir(), "knx-manual-"));
 const data = join(scratch, "projects");
 const sample = `python3 ${repo}/tools/manual_sample_project.py ${data}/sample-house.knxproj`;
 const env = (port: number) =>
-  `KNX_PORT=${port} KNX_STATIC_DIR=${resolve(here, "dist")} KNX_DATA_DIR=${data} ` +
+  `KNX_PORT=${port} KNX_STATIC_DIR=${frontend} KNX_DATA_DIR=${data} ` +
   `XDG_DATA_HOME=${scratch}/xdg-${port} XDG_CONFIG_HOME=${scratch}/config-${port}`;
 
 export default defineConfig({

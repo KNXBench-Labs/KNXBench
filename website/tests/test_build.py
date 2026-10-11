@@ -179,6 +179,45 @@ class BuildTests(unittest.TestCase):
             self.assertIn("noindex", html)
             self.assertIn('class="preview-note"', html)
 
+    def test_alpha9_features_use_release_screenshots_and_keep_upgrade_boundaries(self):
+        self.require_build()
+        for lang in ("de", "en"):
+            page = (self.out / lang / "index.html").read_text()
+            doc = Document(page)
+            self.assertTrue(any(attrs.get("id") == "release-features" for _, attrs in doc.elements))
+            for asset in ("alpha9-devices.webp", "alpha9-dpt.webp", "alpha9-history.webp", "alpha9-message-details.webp"):
+                self.assertTrue(any(tag == "img" and attrs.get("src", "").endswith("/" + asset)
+                                    and attrs.get("alt") for tag, attrs in doc.elements), (lang, asset))
+            text = json.loads((WEBSITE / "content" / f"{lang}.json").read_text())
+            for key in ("release_title", "release_devices_body", "release_dpt_body", "release_history_body",
+                        "release_messages_body", "upgrade_note", "release_scope_note"):
+                self.assertIn(text[key], page)
+            self.assertIn("Alpha 9", page)
+            self.assertIn("13", text["upgrade_note"])
+            self.assertIn("Alpha 8", text["upgrade_note"])
+            self.assertNotIn("Build the image", text["docker_step_two"])
+            self.assertNotIn("Baue das Image", text["docker_step_two"])
+
+    def test_alpha9_media_binds_to_release_and_keeps_historical_videos_separate(self):
+        media = json.loads((WEBSITE / "media.json").read_text())
+        capture = media["alpha9Capture"]
+        self.assertEqual(capture["application_release"], "v0.1.0-alpha.9")
+        self.assertEqual(media["applicationSource"], capture["application_source_commit"])
+        self.assertEqual(capture["capture_result"], {"passed": 2, "failed": 0, "skipped": 0})
+        self.assertIn("recordingChecks", media["historicalRecording"])
+        for name in ("graphite.webp", "crt.webp", "lcars.webp", "alpha9-devices.webp", "alpha9-dpt.webp",
+                     "alpha9-history.webp", "alpha9-message-details.webp"):
+            record = media["assets"][name]
+            source = WEBSITE.parent / record["source"]
+            self.assertEqual(record["sourceSha256"], hashlib.sha256(source.read_bytes()).hexdigest(), name)
+            self.assertEqual(record["applicationSource"], capture["application_source_commit"], name)
+            self.assertIn("lossless", record["encoding"])
+        for lang in ("de", "en"):
+            text = json.loads((WEBSITE / "content" / f"{lang}.json").read_text())
+            earlier = "Frühere Aufnahme" if lang == "de" else "Earlier recording"
+            for key in ("project_caption", "flow_caption", "details_caption"):
+                self.assertIn(earlier, text[key], (lang, key))
+
     def test_page_assets_are_local_exist_and_videos_do_not_autoplay(self):
         self.require_build()
         for lang in ("de", "en"):

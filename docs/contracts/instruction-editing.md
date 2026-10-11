@@ -150,3 +150,19 @@ Native instruction diff tranche owns only `crates/knx-diff/src/diff.rs`,
 `crates/knx-diff/tests/instructions.rs`. Preserve every unrelated Function/Site
 field and parked foreign source; compare full normalized style/run content,
 including absent versus explicit empty, without claiming imported bytes changed.
+
+## Isolated HTTP adapter tranche ownership
+
+Own new `apps/knx-server/src/instruction_routes.rs` and
+`apps/knx-server/tests/http_instructions.rs`; only its module export and router
+merge in `apps/knx-server/src/lib.rs`. The preview cache/counter is router-local,
+not global and not an AppState/domain schema addition. One bounded pending plan
+holds the exact private application preview: apply/cancel accepts its token only,
+not a substituted document. Bind to server incarnation and project revision,
+serialize mutation under the existing project lock, use existing recovery/history
+path and publish memory state only after application persistence succeeds.
+Read/preview/cancel must not mutate project/history; missing confirmation,
+conversion refusal, invalid document, stale source/revision/token or persistence
+failure must leave live state unchanged. No bus route or manufacturer assignment.
+Old foreign Functions/Sites module edits remain parked and untouched; only additive
+current-main route integration is owned here.

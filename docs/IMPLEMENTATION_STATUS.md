@@ -1,3 +1,30 @@
+## 2026-10-11 — local collector delivery and scoped measurement contract
+
+The standalone ProjectStats generator at its canonical local checkout now
+contains accepted source `2ac5dfb0` (181-test candidate). An actual canonical
+entry-point run against KNXBench `aeb5a386` produced the
+[dated report](evidence/statistics-report-2026-10-11.md) and
+[exact source/hash receipt](evidence/statistics-coverage-2026-10-11.json).
+The [TOOLS-01–05 contract](contracts/statistics-measurement.md) maps source,
+coverage, null/N/A semantics and the additive CLI CSS data contract for Session1.
+The shared root generated report remains untouched because of preexisting edits.
+Physical/TLS/job traffic, provider-dependent timing/outcomes, unattributed
+activity and Shell structural counts retain explicit unknown boundaries;
+configured collector remote publication remains unavailable. No blanket TOOLS
+completion, dashboard change, account enablement or deployment.
+
+## 2026-10-11 — AP9 hardware prerequisites and plans, no execution
+
+Two independent preparation contracts now exist:
+[Powerline / KL-110](contracts/powerline-readiness.md) and
+[changed-parts download / GAP-T30-04](contracts/incremental-download-readiness.md).
+They record existing source/standard boundaries, unresolved target/transport and
+recovery evidence, phased future tests, stop conditions and operation-specific
+Go requirements. Preparation does not implement or verify either hardware feature.
+Both implementation IDs stay `LATER / RECORDED_SCOPE`; full-download behavior,
+source and public operation guards are unchanged. No hardware discovery,
+connection, live tests, downloads or writes performed.
+
 ## 2026-10-11 — KL146 owner-approved diagnostic candidate
 
 Independent source oracle and real import/HTTP/shared-evaluator comparison,

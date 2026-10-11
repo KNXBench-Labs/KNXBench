@@ -1,0 +1,31 @@
+{
+  "generator": "2ac5dfb072fffc97e1622defd042b0a6adf41e19",
+  "project_source": "aeb5a3862470b89dad737ea101a1ab6a20026d50",
+  "canonical_entrypoint_verified": true,
+  "settings_unchanged": true,
+  "cloud_enabled": false,
+  "css": {
+    "version": 1,
+    "files": 6,
+    "measured": 6,
+    "rules": 1529,
+    "at_rules": 49,
+    "declarations": 4465,
+    "parser_version": "8.5.27",
+    "unavailable_files": 0
+  },
+  "report_sha256": "2bd3d378ed3b056af0b8802a6969cb36d192741bb80851ea7077a5fd482251d1",
+  "scope": "owned isolated real report, no remote publication or canonical project report write",
+  "collector_test_snapshot": "2ac5dfb072fffc97e1622defd042b0a6adf41e19",
+  "collector_tests": 181,
+  "generated_snapshot": "statistics-report-2026-10-11.md",
+  "review": "active-session self-review",
+  "remaining": [
+    "No measured physical network/TLS/remote model-job traffic.",
+    "Provider-dependent end/outcome/cache evidence is incomplete.",
+    "No inferred unknown session attribution or AI authorship.",
+    "No admitted Shell AST parser; CSS syntax is not browser/compiler validation.",
+    "Configured collector remote inaccessible; no replacement repository created.",
+    "Shared root generated report preserved; dated owned snapshot delivered separately."
+  ]
+}

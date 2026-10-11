@@ -7,6 +7,9 @@ import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import ComObjectTable from "./ComObjectTable";
 import { useComMutation } from "./ComMutationBoundary";
+import { useUiLanguage } from "./uiLanguage";
+import { DPT_OPTIONS, dptDisplay, dptEntry, retainedDptOptions } from "./dptLabels";
+import ValueProvenance from "./ValueProvenance";
 import type { DeviceProductNode } from "./bindings/DeviceProductNode";
 import type { DeviceProductCatalog } from "./bindings/DeviceProductCatalog";
 import type { ProductResolution } from "./bindings/ProductResolution";
@@ -279,8 +282,11 @@ function ComObjectDescriptionField(props: {
 
   return (
     <label className="inspector-field">
-      {t("inspector.description")}
+      <span className="inspector-field-heading">{t("inspector.description")}
+        <ValueProvenance layer={com.description_layer} />
+      </span>
       <input
+        aria-label={t("inspector.description")}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={apply}
@@ -296,6 +302,7 @@ function ComObjectDescriptionField(props: {
 function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) => void }) {
   const { com, onApplied } = props;
   const t = useTranslate();
+  const [language] = useUiLanguage();
   const mutate = useComMutation();
   const [value, setValue] = useState(com.dpt ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -322,17 +329,32 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
   }
 
   return (
-    <label className="inspector-field">
-      {t("inspector.dpt")}
-      <input
+    <label className="inspector-field dpt-field">
+      <span className="inspector-field-heading">{t("inspector.dpt")}
+        <ValueProvenance layer={com.dpt_layer ?? (com.dpt === null && com.program_dpt !== null ? "Program" : null)} />
+      </span>
+      <select
+        aria-label={t("inspector.dpt")}
+        aria-describedby={`com-dpt-hint-${com.id}`}
         value={value}
-        placeholder="DPST-9-1"
         onChange={(e) => setValue(e.target.value)}
         onBlur={apply}
         onKeyDown={(e) => {
-          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Enter") (e.target as HTMLSelectElement).blur();
         }}
-      />
+      >
+        <option value="">{com.program_dpt === null ? t("dpt.noProjectValue")
+          : t("dpt.programDefaultOption", { value: dptDisplay(com.program_dpt, language) })}</option>
+        {retainedDptOptions(com.dpt ?? "", value).map(raw => <option key={raw} value={raw}>
+          {dptEntry(raw) ? t("dpt.retainedOption", { value: dptDisplay(raw, language), raw })
+            : t("dpt.unlistedOption", { value: raw })}
+        </option>)}
+        {DPT_OPTIONS.map(entry => <option key={entry.id} value={entry.id}>
+          {dptDisplay(entry.id, language)}
+        </option>)}
+      </select>
+      {com.dpt !== null && <small className="dpt-reference mono">{t("dpt.reference", { value: com.dpt })}</small>}
+      <small id={`com-dpt-hint-${com.id}`} className="inspector-description">{t("dpt.selectionHint")}</small>
       {error && <span className="field-error">{error}</span>}
     </label>
   );
@@ -835,9 +857,7 @@ function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddre
   const { com, groupAddresses, onApplied } = props;
   return <div className="com-object-edit-fields">
     <DptField com={com} onApplied={onApplied} />
-    {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
     <ComObjectDescriptionField com={com} onApplied={onApplied} />
-    {com.description_layer && <span className="provenance-badge">{com.description_layer}</span>}
     <ComObjectFlagsRow com={com} onApplied={onApplied} />
     <ul className="group-link-list">
       {com.links.map(link => <GroupLinkRow key={`${link.ga_id}-${link.direction}`} com={com} link={link} onApplied={onApplied} />)}

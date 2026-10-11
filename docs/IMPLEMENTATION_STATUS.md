@@ -13,8 +13,11 @@ self-review only. Native reopen recovers both stacks and preserves originals;
 external writer, real SQLite lock and history-budget errors publish no changes.
 [Bounded source evidence](evidence/project-notes-http-2026-10-11.json).
 
-The current-source web integration must be freshly accepted before publication;
-newer unrelated web changes are not covered by the old backend-only receipt.
+Current-source integration `ddf88f86` passes all 19 frozen gates: workspace
+Rust 4103 / 0 failed / 194 ignored, Web 2794 in 178 files, strict workspace
+Clippy, all builds/types, source-stamped binaries and repository/docs checks.
+All 11 selected native-project corpus regressions pass with unchanged originals.
+The later upstream merge changes docs only, not this accepted runtime.
 Isolated EN/DE notes UI, existing-help adoption, browser/native-restart and
 Session1 host mount remain open. FUTURE-03 is still LATER, not whole AP4 done.
 

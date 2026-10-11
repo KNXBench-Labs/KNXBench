@@ -5,7 +5,12 @@ read-only. Owner selected diagnostic delivery while retaining KL146 and no
 parity claim. Eight synthetic controls cover complete finding-bearing diagnostics
 versus failed integrity and unknown/unadjudicated observations. Historical original
 comparison completed with input/project unchanged and explicit differences.
-Final source-bound diagnostic replay and merged-source gates/publication pending.
+Final source `f045390fdf7b` passes complete original diagnostic replay and
+Rust3934/0/192, Web2612/0/164, strict Clippy, production server/CLI/MCP/Web
+builds, TypeScript, five fresh-root repo gates/docs, full corpus and independent
+RefId/instance-own-value/reconciliation/raw-evidence private gates. Explicit
+missing opt-in/file refuse; three assertion mutants detected/restored. Native
+desktop shell unchanged/not exercised. Only publication/whole-goal closure pending.
 No production semantics changed. See [contract](research/schema23-activation-differential.md)
 and [receipt](evidence/kl146-saved-activation-2026-10-11.json); private details stay local.
 

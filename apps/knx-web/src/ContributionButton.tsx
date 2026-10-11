@@ -38,7 +38,7 @@ function ContributionDialog({ onClose }: { onClose: () => void }) {
   const controller = useRef<AbortController | null>(null);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => () => { ++epoch.current; controller.current?.abort(); }, []);
-  const valid = file && /\.(knxproj|knxprod)$/i.test(file.name) && file.size > 0 && file.size <= 32 * 1024 * 1024;
+  const valid = file && /\.(knxproj|knxprod)$/i.test(file.name) && file.size > 0 && file.size <= 1024 * 1024 * 1024;
   function invalidate() { ++epoch.current; controller.current?.abort(); setPreview(null); setConsent(false); setDownloadRequested(false); setError(""); }
   function options(): api.ContributionOptions { return { audience, sampleIds, includeOriginal, originalConsent, consent }; }
   async function run(operation: "analyze" | "preview" | "export") {
@@ -96,6 +96,7 @@ function ContributionDialog({ onClose }: { onClose: () => void }) {
         invalidate(); setFile(e.target.files?.[0] ?? null); setAnalysis(null); setSampleIds([]); setOriginal(false); setOriginalConsent(false);
       }} />
     </label>
+    <p className="contribution-warning">{t("contribution.limitHint")}</p>
     {file && !valid && <p role="alert">{t("contribution.invalid")}</p>}
     <div className="contribution-actions"><button disabled={!valid || busy} onClick={() => void run("analyze")}>{t("contribution.analyze")}</button></div>
     {busy && <p role="status">{t("contribution.busy")}</p>}

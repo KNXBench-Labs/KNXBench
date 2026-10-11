@@ -1,3 +1,4 @@
+//! Verifies previewed instruction edits and atomic native recovery persistence.
 use knx_app::instruction_edit::*;
 use knx_core::instruction::{InstructionDocument, InstructionRun};
 use knx_core::{Command, CommandStack, DeviceId};

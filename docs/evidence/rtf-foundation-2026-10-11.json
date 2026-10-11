@@ -1,0 +1,87 @@
+{
+  "package": "AP2 bounded RTF foundation (not complete editor)",
+  "runtime_source": "303c47bd013feea5e1244b939c0bdc224fa30722",
+  "review": "active-session self-review",
+  "adapter_tests": 22,
+  "native_original_witness_cases": 5,
+  "ordinary_crate_tests": 219,
+  "ignored_crate_tests": 56,
+  "native_roundtrip_target_tests": 3,
+  "stages": [
+    {
+      "name": "rustfmt",
+      "exit": 0,
+      "accepted": true
+    },
+    {
+      "name": "etsproj",
+      "exit": 0,
+      "accepted": true
+    },
+    {
+      "name": "native-roundtrip",
+      "exit": 0,
+      "accepted": true
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "accepted": true
+    },
+    {
+      "name": "documentation",
+      "exit": 0,
+      "accepted": true
+    },
+    {
+      "name": "whitespace",
+      "exit": 0,
+      "accepted": true
+    }
+  ],
+  "inputs_frozen": true,
+  "limitations": [
+    "Original text/whole XML retained; edited-value persistence and browser not yet implemented.",
+    "No universal field/RTF/ETS-export/hardware claim.",
+    "Ignored/private/special-operation tests not admitted by this run."
+  ],
+  "fresh_raw_evidence_integration": {
+    "runtime_source": "05aaab523b5e85cb15ff9b16435ff2edd14049dc",
+    "ordinary_crate_tests": 220,
+    "ignored_crate_tests": 56,
+    "native_roundtrip_target_tests": 3,
+    "stages": [
+      {
+        "name": "rustfmt",
+        "exit": 0,
+        "accepted": true
+      },
+      {
+        "name": "etsproj",
+        "exit": 0,
+        "accepted": true
+      },
+      {
+        "name": "native-roundtrip",
+        "exit": 0,
+        "accepted": true
+      },
+      {
+        "name": "clippy",
+        "exit": 0,
+        "accepted": true
+      },
+      {
+        "name": "documentation",
+        "exit": 0,
+        "accepted": true
+      },
+      {
+        "name": "whitespace",
+        "exit": 0,
+        "accepted": true
+      }
+    ],
+    "inputs_frozen": true
+  }
+}

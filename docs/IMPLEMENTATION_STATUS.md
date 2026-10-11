@@ -1,5 +1,8 @@
 ## 2026-10-11 — login, notification details and size limits accepted on main integration
 
+Published on main with exact remote readback of `e476626e2eb5`.
+This publication is distinct from release/deployment and shared-root synchronization.
+
 Owner explicitly authorized feature commit, merge commit and push. Feature
 `5c59f6d29905`, tested merge `d075b7cca880` onto `ab7db1ae7991`
 retain the previously integrated installation-node, import-banner and DPT work.

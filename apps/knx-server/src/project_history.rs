@@ -24,6 +24,9 @@ pub struct VersionView {
 #[serde(rename_all = "camelCase")]
 pub struct HistoryLimits {
     max_image_bytes: usize,
+    max_context_bytes: usize,
+    max_decoded_image_bytes: usize,
+    max_decoded_history_bytes: usize,
     max_history_bytes: i64,
     max_stack_states: usize,
     max_versions: usize,
@@ -60,7 +63,7 @@ pub struct HistoryRequest {
 fn storage_error(error: HistoryError) -> ApiError {
     match error {
         HistoryError::Stale => ApiError::conflict("projectHistoryStale", error.to_string()),
-        HistoryError::Invalid(_) | HistoryError::Limit(_) => {
+        HistoryError::Invalid(_) | HistoryError::Limit(_) | HistoryError::ImageLimit(_) => {
             ApiError::refused("projectHistoryUnavailable", error.to_string())
         }
         _ => ApiError::internal(error.to_string()),
@@ -129,6 +132,9 @@ fn view_from_parts(
         total_bytes,
         limits: HistoryLimits {
             max_image_bytes: history::MAX_IMAGE_BYTES,
+            max_context_bytes: history::MAX_CONTEXT_BYTES,
+            max_decoded_image_bytes: history::MAX_DECODED_IMAGE_BYTES,
+            max_decoded_history_bytes: history::MAX_DECODED_HISTORY_BYTES,
             max_history_bytes: history::MAX_HISTORY_BYTES,
             max_stack_states: history::MAX_STACK_STATES,
             max_versions: history::MAX_VERSIONS,
@@ -367,4 +373,29 @@ pub async fn clear_undo(
     Json(body): Json<HistoryRequest>,
 ) -> Result<Json<HistoryView>, ApiError> {
     run(state, body, Operation::ClearUndo).await
+}
+
+#[cfg(test)]
+mod image_limit_tests {
+    use super::*;
+    use axum::response::IntoResponse;
+
+    #[tokio::test]
+    async fn oversized_image_is_an_explicit_refusal_without_history_deletion_advice() {
+        let response =
+            storage_error(HistoryError::ImageLimit("synthetic context budget")).into_response();
+        assert_eq!(
+            response.status(),
+            axum::http::StatusCode::UNPROCESSABLE_ENTITY
+        );
+        let bytes = axum::body::to_bytes(response.into_body(), 4096)
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["kind"], "projectHistoryUnavailable");
+        let message = body["error"].as_str().unwrap();
+        assert!(message.contains("project data was not discarded"));
+        assert!(!message.contains("delete versions"));
+        assert!(!message.contains("clear undo"));
+    }
 }

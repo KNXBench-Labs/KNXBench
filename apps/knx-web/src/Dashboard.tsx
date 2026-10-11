@@ -2,6 +2,7 @@
 // apps/knx-desktop/src/Dashboard.tsx
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { computeStats } from "./dashboardStats";
+import ImportDiagnosticsNotice from "./ImportDiagnosticsNotice";
 import { useTranslate } from "./i18n";
 import { useDeviceNavigation } from "./DeviceLink";
 
@@ -34,6 +35,7 @@ export default function Dashboard(props: { tree: ProjectTree }) {
         <dt>{t("dashboard.comObjects")}</dt>
         <dd>{stats.comObjects}</dd>
       </dl>
+      <ImportDiagnosticsNotice available={props.tree.import_report_available} />
       {(props.tree.errors > 0 || props.tree.warnings > 0) && (
         <dl className="dashboard-stats dashboard-issues">
           {props.tree.errors > 0 && (

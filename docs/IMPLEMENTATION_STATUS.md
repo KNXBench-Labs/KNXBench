@@ -1,3 +1,16 @@
+## 2026-10-11 — AP8 collector source publication verified
+
+The existing standalone collector commits `e639f206` and `2ac5dfb0` are now
+published normally on its configured private main; exact remote tip and every
+accepted source blob were read back. Matching already-saved owner credentials
+cleared the earlier access-context404 without changing persistent accounts,
+remotes or settings. Actual isolated offline discovery:181 passed,0 failures,
+0 errors,0 skipped, frozen source, active-session self-review. First attempt
+had180 passed/1 skipped due to a missing existing parser fixture path and remains
+unaccepted. [Receipt](evidence/collector-publication-2026-10-11.json) and
+[contract](contracts/statistics-measurement.md). No new telemetry, shared report
+regeneration, dashboard, hardware or blanket TOOLS completion is claimed.
+
 
 ## 2026-10-11 — AP3 optional exact parameter source evidence (not editor completion)
 

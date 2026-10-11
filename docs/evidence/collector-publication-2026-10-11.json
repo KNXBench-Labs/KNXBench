@@ -1,0 +1,41 @@
+{
+  "format_version": 1,
+  "scope": "AP8 existing collector source-publication residue only",
+  "collector_source": "2ac5dfb072fffc97e1622defd042b0a6adf41e19",
+  "published_commits": [
+    "e639f206b92c46f95623c0f6891b0cea49e38401",
+    "2ac5dfb072fffc97e1622defd042b0a6adf41e19"
+  ],
+  "review": "active-session self-review",
+  "tests": {
+    "runner": "Python unittest discovery, synthetic offline fixtures",
+    "passed": 181,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "inputs_frozen": true,
+    "postcss": "8.5.27",
+    "first_attempt": {
+      "passed": 180,
+      "failed": 0,
+      "skipped": 1,
+      "accepted": false,
+      "reason": "existing pinned TypeScript parser path missing; dependency-only fixture shim corrected"
+    }
+  },
+  "publication": {
+    "normal_push_exit": 0,
+    "local_tracking_live_main_equal": true,
+    "all_accepted_source_blobs_equal": true,
+    "existing_matching_owner_credential": true,
+    "persistent_account_configuration_unchanged": true,
+    "configured_remote_unchanged": true
+  },
+  "limitations": [
+    "No new physical/job traffic, timing or attribution measurement",
+    "No Shell structural parser",
+    "No shared report regeneration or UI changes",
+    "Five TOOLS IDs retain their recorded semantic boundaries",
+    "Pre-existing non-discovered hermes_db_test.py SyntaxError is unchanged from remote baseline, outside this change and excluded from production/discovered-test compilation"
+  ]
+}

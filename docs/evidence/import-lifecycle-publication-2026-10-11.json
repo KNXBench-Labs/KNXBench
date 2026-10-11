@@ -140,6 +140,11 @@
     "sharedRootSynchronization": false
   },
   "publication": {
-    "status": "accepted local integration; normal main push and exact remote verification pending"
+    "status": "published on main after normal push and exact remote readback",
+    "verifiedPublishedCommit": "e27aca526a8a014e602869665201c184bc29dc65",
+    "verifiedRemoteMain": "e27aca526a8a014e602869665201c184bc29dc65",
+    "verifiedTrackingMain": "e27aca526a8a014e602869665201c184bc29dc65",
+    "featureAndTestedMergeAreAncestors": true,
+    "closingMetadataCommit": "Subsequent metadata-only closure; exact final HEAD/readback retained in ignored local publication archive."
   }
 }

@@ -1,3 +1,26 @@
+## 2026-10-11 — import/application repair accepted on main integration
+
+Feature `4e0e874d9bf2` is integrated and tested as merge `481f2cd9735e`
+on upstream `f7a5d8dcdf40`; normal main publication/readback is pending.
+[Source-bound acceptance receipt](evidence/import-lifecycle-publication-2026-10-11.json)
+separates the new merged results from the earlier local acceptance below.
+
+All 20 stages pass on 1626 frozen inputs: workspace Rust **3964 passed,
+193 ignored**, complete Web **2680 passed / 169 files**, complete intercepted
+Chromium **302 passed** and production-built Chromium **14 passed**, both with
+zero skips/flakes. Workspace strict Clippy, builds, three type scopes, five
+explicit-root repository gates, documentation, formatter and whitespace pass;
+generated bindings match. One separately enabled private application lifecycle
+passes all nine HTTP steps and original-integrity assertions. No source values,
+private inventories or payloads are included in the public receipt or fixtures.
+
+Production EN/DE wide frames show readable missing-historical-evidence notices
+and explanations; narrow frames cover the visible top notice and controls, not
+the below-viewport explanation. Review is in-session self-review. Full durable
+report persistence, early write preflight and the remaining functional matrix
+are not claimed complete. No deployment, ETS parity, vendor execution, bus action
+or shared-root synchronization is included.
+
 ## 2026-10-11 — local import/application lifecycle repair
 
 Large retained source contexts can now enter native editing/history through a

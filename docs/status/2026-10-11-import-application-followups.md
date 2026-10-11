@@ -26,6 +26,17 @@ Eleven compiled production-source mutations failed at their named assertions;
 canonical source bytes were restored exactly. Review is self-review. Main has
 advanced independently; integration/publication is not included in this result.
 
+## Main-integration acceptance
+
+The later tested merge `481f2cd9735e` passed the complete workspace and browser
+chain: 20 zero-exit stages, Rust3964/0/193ignored, Web2680/0/169files,
+full Chromium302/0 and production-built Chromium14/0, no skips/flakes.
+The explicitly enabled private lifecycle also passed, with unchanged original
+and nine successful HTTP steps. Evidence remains private; the
+[public receipt](../evidence/import-lifecycle-publication-2026-10-11.json)
+contains only generic acceptance and scope information. Normal main publication
+and exact readback are pending. Earlier local results above remain historical.
+
 ## Remaining functional work — not completion claims
 
 | Area | Required next implementation/evidence | Existing boundary / coordination |

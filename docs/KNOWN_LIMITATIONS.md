@@ -83,9 +83,10 @@ values; no subtype/name is invented for them. Additional UI language packs use
 English labels. Raw master-text language/fallback remains separately disclosed;
 these authored labels are not claimed as official KNX translations. Chromium
 checks do not establish native WebKitGTK/Orca, ETS or hardware compatibility.
-The owner-authorized main integration is accepted on `e57e3a09ff34`; the
+The owner-authorized main integration is accepted on `e57e3a09ff34` and
+published at `ab7db1ae7991`; the
 [source/publication receipt](evidence/dpt-selection-publication-2026-10-11.json)
-keeps merged-source acceptance and remote-readback separate. The extension stays
+records the separately verified merged-source and remote-readback evidence. The extension stays
 outside the Alpha.8 release snapshot and existing live container.
 
 The local UI table keeps all object summaries mounted for stable editor identity;

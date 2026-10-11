@@ -11,8 +11,10 @@ separate from the escaped-text isolated editor. The
 [host contract](contracts/instruction-editor-host.md) documents Session1's
 selection/revision/dirty-state integration. No format-specific Core dependency,
 ETS exporter, external resource loading or protocol behavior is introduced.
-Actual combined-source integration acceptance is pending; older individual
-receipts do not certify this assembled candidate or production shell mount.
+The [combined-source acceptance](evidence/instruction-editing-2026-10-11.json)
+covers native/application/HTTP plus the isolated editor on one frozen source,
+including actual native process restarts. It does not certify a production shell
+mount, hardware or universal ETS/RTF compatibility.
 
 ## Login and notification detail ownership (2026-10-11 local source)
 

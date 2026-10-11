@@ -88,8 +88,8 @@ model/originals/undo/redo unchanged. The API does not bypass application service
 
 ## Acceptance and deliberate limits
 
-The actual combined-source acceptance is recorded separately from earlier
-source-bound native, HTTP and UI receipts. The isolated fixture exercises the
+The [actual combined-source acceptance](../evidence/instruction-editing-2026-10-11.json)
+is recorded separately from earlier source-bound native, HTTP and UI receipts. The isolated fixture exercises the
 real HTTP/native implementation with synthetic input in a loopback-only network
 namespace; it is not a production shell integration, deployment, physical bus
 operation or general format compatibility test. Self-review is in-session, not

@@ -186,3 +186,18 @@ execution, image/link/resource fetching or automatic writes. Changing draft must
 revoke its preview; source/selection/revision invalidation must never auto-apply
 or silently reinterpret unsupported source. Host integration is a documented
 component contract, not an edit to Session1's App/Inspector.
+
+## Combined integration and Session1 handoff ownership
+
+On 2026-10-11, explicit owner Go resumed work in
+`feature/instruction-integration-20261011`. Earlier acceptance stays source-bound;
+a merge of native/model, application/HTTP and editor is not automatic acceptance.
+This tranche owns lifecycle tests in
+`apps/knx-web/src/features/rtf/InstructionEditor.test.tsx`, any proven fix only
+within that isolated feature, new `docs/contracts/instruction-editor-host.md`,
+additive instruction sections of `docs/ARCHITECTURE.md`,
+`IMPLEMENTATION_STATUS.md`, `KNOWN_LIMITATIONS.md`, and its own handover/logs
+and scoped evidence. No shell/navigation/global CSS/catalogue/manifest changes.
+Combined workspace/server/web tests/builds and explicit-root repository gates
+run on frozen inputs. Browser and process-restart/native-history checks use only
+synthetic data in an isolated loopback namespace. No hardware or ETS exporter.

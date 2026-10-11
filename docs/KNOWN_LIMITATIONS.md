@@ -2,6 +2,9 @@
 
 ## Local installation-node UI boundary (2026-10-11)
 
+[Fresh main-integration acceptance](evidence/installation-node-publication-2026-10-11.json)
+supersedes local-only availability, not the operation/compatibility bounds below.
+
 [The focused contract](contracts/installation-node.md) makes unnamed nodes readable
 and selectable with command-backed name editing. This is local source, not an
 Alpha.8 artifact update. The existing installation rename API remains a legacy,

@@ -10,6 +10,7 @@ import { formatGroupAddress } from "./gaNotation";
 import { ACTIVATION_ORDER, DEFAULT_FILTERS, channelKey, deriveComObjectView, dptOptions, evaluatedChannel,
   effectiveDpt, hasFilters, type ComFilters, type ComSort, type ComSortColumn } from "./comObjectView";
 import ComMutationBoundary from "./ComMutationBoundary";
+import { dptDisplay } from "./dptLabels";
 const COLUMNS: { column: ComSortColumn; label: MessageKey }[] = [
   { column: "number", label: "comTable.number" }, { column: "name", label: "workbench.name" },
   { column: "function", label: "comTable.function" }, { column: "dpt", label: "inspector.dpt" },
@@ -31,6 +32,7 @@ interface RowProps { com: ComObjectNode; flat: boolean; hidden: boolean; matches
   descriptionMatch: boolean; editor: (com: ComObjectNode) => ReactNode; onOpen: (id: number, open: boolean) => void }
 function ObjectRow({ com, flat, hidden, matches, open, descriptionMatch, editor, onOpen }: RowProps) {
   const t = useTranslate(); const [productLanguage] = useProductLanguage();
+  const [language] = useUiLanguage();
   const [visited, setVisited] = useState(false), [busy, setBusy] = useState(false);
   const details = useRef<HTMLDetailsElement>(null);
   const dpt = effectiveDpt(com);
@@ -46,9 +48,10 @@ function ObjectRow({ com, flat, hidden, matches, open, descriptionMatch, editor,
         {descriptionMatch && <small className="com-description-match">{t("comTable.descriptionMatch", { value: com.description ?? "" })}</small>}
         {!matches && open && <small className="com-edit-exception">{t("comTable.editException")}</small>}</td>
       <td>{com.function_text || "—"}</td>
-      <td className="com-object-effective-dpt"><span className="mono">{dpt ?? "—"}</span>
+      <td className="com-object-effective-dpt"><span>{dptDisplay(dpt, language)}</span>
+        {dpt !== null && dptDisplay(dpt, language) !== dpt && <small className="mono">{dpt}</small>}
         {com.dpt === null && com.program_dpt !== null && <small className="com-object-dpt-origin">{t("inspector.programDefault")}</small>}
-        {com.dpt_text && <small>{com.dpt_text}</small>}
+        {com.dpt_text && <small>{t("dpt.masterText", { value: com.dpt_text })}</small>}
         {productLanguage !== null && fellBack(com.dpt_text, com.dpt_text_language) && <LanguageFallbackBadge selected={productLanguage} source={null} />}</td>
       <td className="mono ga-address">{com.links.length ? com.links.map((link, i) => <span key={`${link.ga_id}-${link.direction}-${i}`} className="com-address-value">
         {link.address === null ? t("comTable.unresolvedLink", { id: link.ga_id }) : formatGroupAddress(link.address)}</span>) : "—"}</td>
@@ -136,7 +139,7 @@ export default function ComObjectTable({ objects, editor }: { objects: ComObject
         <option value="all">{t("comTable.allLinks")}</option><option value="linked">{t("comTable.linked")}</option><option value="unlinked">{t("comTable.unlinked")}</option></select></label>
       <label>{t("inspector.dpt")}<select aria-label={t("comTable.dptFilter")} value={filters.dpt} onChange={e => change("dpt", e.target.value)}>
         <option value="all">{t("comTable.allDpts")}</option>{options.map(value => <option key={value} value={value}>{value === "missing" ? t("comTable.noDpt")
-          : value.startsWith("family:") ? t("comTable.dptFamily", { number: value.slice(7) }) : value.slice(6)}</option>)}</select></label>
+          : value.startsWith("family:") ? t("comTable.dptFamily", { number: value.slice(7) }) : dptDisplay(value.slice(6), language)}</option>)}</select></label>
       <button type="button" onClick={() => { resetCollapse(); setFilters({ ...DEFAULT_FILTERS }); }}>{t("comTable.resetFilters")}</button>
       <button type="button" onClick={() => setSort({ column: null, descending: false })}>{t("comTable.originalOrder")}</button>
       <div className="com-table-views" role="group" aria-label={t("comTable.view")}>

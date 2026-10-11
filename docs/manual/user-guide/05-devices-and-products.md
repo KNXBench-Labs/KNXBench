@@ -295,6 +295,19 @@ edit the project; they do not connect to, program or download a KNX device.
 
 ### Communication objects
 
+**Local source update (2026-10-11, not in Alpha.8):** the DPT field is now a
+dropdown, not a free-text input. Each known option shows its number and the name
+in the UI language, for example **9.001 – Temperature / Temperatur** or
+**17.001 – Scene number / Szenennummer**. Choose a value, then leave the field
+or press Enter to apply it. An unknown imported reference stays selected and
+unchanged until you explicitly choose a different value. **No project DPT**
+clears the project value; if a program default exists, that option names it but
+does not save it as your edit. Source badges now belong to the DPT/description
+heading and explain their origin, e.g. **Source: application program / Quelle:
+Applikationsprogramm**. Catalogue names do not establish device or codec support.
+[Scope and evidence](../../contracts/dpt-selection.md). The screenshots below
+are historical and still show the earlier free-text field and raw Program badges.
+
 **Source update (2026-10-09, newer than alpha.6):** the object
 panel now has aligned **No., Name, Function, DPT, Group addresses, Status** headings,
 a **By channel / All objects** switch (flat view adds Channel), search and filters.
@@ -355,7 +368,8 @@ the focused headings. Expanded groups stay open when the same device's detail
 refreshes and reset when you select another device.
 
 Each object row shows its number, name, product function text when available,
-its canonical datapoint type and any translated DPT description, its activation
+its numbered/localized datapoint type, original reference and separate master-data
+DPT description when available, its activation
 state, and linked group addresses. **Active**, **Inactive**, **Undetermined**
 (cannot decide from the available product/parameter evidence), and **Not
 evaluated** (no usable program evaluation) mean different things. The project's
@@ -363,15 +377,15 @@ stored `IsActive` claim remains separate; if it disagrees with an evaluated
 active/inactive state, the row says **Stored active** or **Stored inactive**.
 No status silently rewrites the imported project. An object whose project DPT
 is empty can show a **Program default** DPT for reference; opening the row
-still leaves the editable DPT field empty until you explicitly set one.
-An unknown or ambiguous DPT remains absent instead of being guessed.
+still leaves the project DPT unset until you explicitly select one. An unknown
+reference stays verbatim; an absent/ambiguous type gets no invented name.
 
-The screenshot above predates the channel-group wrapper; the editing controls
-inside each object remain the same. Expanding a row gives you:
+The screenshot above predates the channel-group wrapper and localized DPT
+selection. Expanding a row gives you:
 
 | Control | What it does |
 | --- | --- |
-| DPT | Sets the object's datapoint type |
+| DPT | Selects the object's datapoint type by number and localized name; preserves unknown existing values |
 | Description | Sets the object's description |
 | Flags | Read, Write, Transmit, Update, Communication, Read on init (with standard letters) |
 | Group links | One row per directional link, with Unlink; paired links can be unlinked together |

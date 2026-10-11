@@ -75,6 +75,16 @@ are local evidence only; no commit, integration, release or deployment is implie
 
 ## Communication-object table scope (2026-10-09)
 
+The [local 2026-10-11 DPT selection extension](contracts/dpt-selection.md) names
+454 standard IDs in EN/DE without needing installed master data. This is a
+versioned display vocabulary, **not** additional codec/device support or a
+manufacturer database. Main-only/unknown/imported values remain exact selectable
+values; no subtype/name is invented for them. Additional UI language packs use
+English labels. Raw master-text language/fallback remains separately disclosed;
+these authored labels are not claimed as official KNX translations. Chromium
+checks do not establish native WebKitGTK/Orca, ETS or hardware compatibility.
+The extension remains local/unpublished, outside the Alpha.8 release snapshot.
+
 The local UI table keeps all object summaries mounted for stable editor identity;
 editing forms mount lazily when first opened. The synthetic 1,000-object measurement
 is one production-browser action-to-visible sample, not a universal latency bound

@@ -214,8 +214,8 @@ async fn uploading_a_115_mib_file_preserves_every_byte() {
 }
 
 #[tokio::test]
-async fn uploading_exactly_256_mib_allows_multipart_overhead() {
-    assert_large_upload_preserved(256 * 1024 * 1024).await;
+async fn uploading_exactly_1024_mib_allows_multipart_overhead() {
+    assert_large_upload_preserved(1024 * 1024 * 1024).await;
 }
 
 #[tokio::test]
@@ -223,14 +223,14 @@ async fn oversized_upload_is_413_and_leaves_no_partial_file() {
     let (state, dir) = state_with_data_dir();
     let state = Arc::new(state);
     let response = knx_server::app(state.clone(), None)
-        .oneshot(large_upload_request(256 * 1024 * 1024 + 1))
+        .oneshot(large_upload_request(1024 * 1024 * 1024 + 1))
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
     assert!(body_json(response).await["error"]
         .as_str()
         .unwrap()
-        .contains("256 MiB"));
+        .contains("1024 MiB"));
     assert_eq!(
         std::fs::read_dir(dir.path().join("uploads"))
             .unwrap()

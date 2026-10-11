@@ -1,4 +1,28 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:42
+- **Completed:** Feature5c59f6d2 committed with KNXBench identity; source merged into clean integration/login-feedback-limits-20261011 based on ab7db1ae7991. App/messages/styles automatically merged and reviewed; three additive documentation conflicts preserve both contributions, full upstream handover retained as exact suffix.
+- **Pending/Next Steps:** Commit no-ff merge and run actual merged-source workspace/Web/build/type/browser/Clippy/repository/documentation acceptance; normal push to main only after green and latest-main reconciliation. No deployment.
+- **Notes for Codex oder Claude:** root remains dirty with foreign documentation work, do not stash/reset/commit it. Retain historical local tests as original-source evidence only. Owned integration worker/evidence to follow; self-review, no delegation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:41
+- **Completed:** User explicitly authorized feature commit, merge commit and push. Previously accepted1088 retained runtime inputs byte-verified; exact public38-path package reviewed, no new feature changes. Root contains foreign documentation edits and remains untouched; integration uses separate clean checkout.
+- **Pending/Next Steps:** Commit only owned login/feedback/limits paths using KNXBench identity; merge into freshly fetched main in owned integration checkout, resolve additive contributions, run actual combined-source acceptance, then normal push with exact remote readback. Release/deployment remains outside scope.
+- **Notes for Codex oder Claude:** Historical local acceptance below remains valid for its source only. Reuse compact .ai/logs/2026-10-11_codex_login-feedback-limits evidence, not deleted scratch paths. No delegation; in-session self-review. Preserve unrelated root edits/index and parallel owner work.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:21 CEST
+- **Completed:** Local login/feedback/limits package implemented in fix/login-feedback-limits-20261011, base9298242c. Existing logo and frontend build version; exact local-ID toast navigation; raw server/UI details with exact copy and manual Ctrl+C; separately disclosed1000 UI records, backend-only JSON-v1 preserved. Raw analysis/expanded inventory/streamed upload1024MiB; XML/member/manufacturer/selective/public-output guards retained. Two hover REDs corrected by scoped flat actions. Final Web2629/0/165files, full Chromium268/0/0skipped/0flaky, built24/0, Rust201+290+22+5=518/0, build/E2E types/strictClippy and five nonempty repository/docs/fmt/whitespace gates pass on frozen1090 runtime inputs.26 actual built-only EN/DE wide/narrow dark/light frames inspected. Architecture/ADR/limits/contracts/manual/status synchronized; in-session self-review only.
+- **Pending/Next Steps:** No local feature implementation remains. Source is uncommitted/unpublished at KNXBench.worktrees/login-feedback-limits-20261011. Commit/main integration/push/release/live-container update are separate scope; later integration must reconcile overlapping App/styles/messages/status/ADR against fresh main and gate the combined inputs.
+- **Notes for Codex oder Claude:** Canonical compact evidence .ai/logs/2026-10-11_codex_login-feedback-limits/receipt.json and REPORT.md in shared root; exact configs/reports/manifest and26 production PNGs retained. Earlier fixture-server screenshots overwrote a shared path and were reclassified; isolated built-only capture supersedes them, repeated cases not double-counted. Final workers exited0. Task-only harness/targets/scratch retirement documented in cleanup.json; keep source and built frontend. No bus/vendor/private-corpus/native UI/deployment/GiB-analysis-RSS guarantee. Root application/index/foreign work and all inherited journals retained. UI skill records settled hover specificity and per-stage screenshot paths.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 11:39 CEST
 - **Completed:** Owner-authorized DPT featurefd5306dd and no-ff main mergee57e3a09 locally accepted on actual upstream8505dc96. Frozen1878-input19 stages all0: Web2648/0/167, Rust3946/0/192ignored, full Chromium274/0/0skipped, built23/0; build/three types/fmt/Clippy/five explicit-root repo/docs/whitespace. Four final merged frames inspected; required identities/no coauthor and upstream app/journal preservation verified. Metadata records original-vs-merge acceptance; no push yet.
 - **Pending/Next Steps:** Final documentation/disclosure gates, normal HEAD:main push/exact remote ref/blob readback, verified closure and only-owned source/build/scratch cleanup.

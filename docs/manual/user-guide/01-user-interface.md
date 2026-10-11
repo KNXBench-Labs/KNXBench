@@ -110,11 +110,27 @@ The Bus monitor and the Log replace the workspace entirely while they are open, 
 the properties pane hides itself while they are, because neither of them has a
 selection to inspect.
 
+Click a toast’s message action to open **Log**, jump to its exact retained
+UI notification and show details. The separate × still only dismisses the toast.
+Click any log message for **Message details**: **Copy message** copies its raw
+message and **Copy all details** copies the full JSON record. You can select
+the read-only text and use Ctrl+C; if clipboard permission is refused, the
+record is selected for manual copying. Escape closes details and returns focus
+to the log row. Text is not interpreted as HTML or changed for copying.
+
+The latest 1000 UI notifications are browser-local, independent of popup expiry
+and the server log. Older UI losses are counted; reload ends this history.
+A removed target reports that it is unavailable instead of opening a same-text
+replacement. **JSON session-log export stays server-only**; UI notifications
+are available through the detail copy controls, not silently mixed into that
+server-run audit format.
+
 In **Log**, type into **Search session log** to match operation, summary or
 detail without changing the severity checkboxes; **Clear search** restores
 the unsearched view. The result count compares shown entries with the
-retained total. **Export scope** chooses either those matching entries or
-all retained entries, then **Export log (JSON)…** saves `session-log.json` to
+retained total, including the explicitly separate UI notifications. **Export
+scope** chooses either matching **server** entries or all retained server
+entries, then **Export log (JSON)…** saves `session-log.json` to
 your computer. JSON v1 preserves raw timestamp, severity, source/operation,
 message/summary, location, detail and diagnostic metadata, including
 quotes, line breaks and Unicode; it is not spreadsheet CSV. The export

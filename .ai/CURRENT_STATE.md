@@ -1,4 +1,22 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 19:01 CEST
+- **Completed:** Continuing AP3: isolated EN/DE count/slider controls and visible Color/Picture fallback implemented test-first; guards reject large unsafe integers, unsupported increments/transforms, scope/source contradictions. GREEN21 and tsc. Optional authenticated read-only source route resolves device-owned program, binds/refchecks project identity without joint project/ProductDB locks. HTTP5 pass, strict server Clippy; actual service validation/refusal/native Save/Open/undo/redo/source bytes witnessed. Built component browser20 on earlier guard source accepted/frames viewed, now needs exact final-source recheck. No shell/API write/domain/schema mutation.
+- **Pending/Next Steps:** Full frozen server/productdb/web/build/repository gates and new browser2 on current exact source; metadata closure/self-review/current-main integration/publication after green only. PDB-04 stays partial for Color/Picture codecs/module mappings. AP4–AP7 remain open.
+- **Notes for Claude:** Source wire contract/Session1 binding in parameter-editor-host.md. Current onApply uses existing service contract; stale suppression is not network cancellation or multi-client optimistic authorization. HTTP green2 parser refused nonJSON400 body; fixture helper fixed, green3 passes5. No private corpus/hardware/accountactivation/subagents/quota/release/deploy/foreign-root edits. Prior receipts preserved; current browser1 cannot certify transform guard added after it.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 18:18 CEST
+- **Completed:** Late proc_dbab42736e9a exit1 reconciled against original instruction-combined-1 receipt (d6fb18cf,1598pass/1fail/109ignored; attempt not accepted). Exact MCP case an_older_project_file_is_served_and_never_upgraded fails there and passes in frozen accepted combined5 runtimee0dbd93a; runtime published ancestry verified. Historical failure remains failed; no duplicated totals or new regression claimed.
+- **Pending/Next Steps:** Unchanged AP3 selector/control boundary: latest slider implementation not GREEN verified; AP3 full delivery and AP4–AP7 remain open. No new feature execution or publication for this notification.
+- **Notes for Claude:** Retained late-notification projection in owned scratch combined1-late-notification-summary.json. Root/foreign handover and source untouched; no test rerun. Preserve earlier AP3 accepted metadata evidence separately from UI draft.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 18:16 CEST
+- **Completed:** User session-status verification: fetched/live main both2ff5d513; AP1/AP2/AP8docs/AP9plans published ancestry verified. AP3 optional readonly metadata slice local checkpoint eef5f766, frozen831/0/25ignored with17 new tests and ten gates. Isolated selection TDD time/source/range GREEN3 plus tsc on that earlier state. Slider test actual RED1/3pass, minimal implementation changed afterwards; no slider/new-current GREEN claimed.
+- **Pending/Next Steps:** Continue source-bounded AP3 controls: verify current slider change, add safe-integer/unsupported-hint/module/codecs guards, real components/API/host/persistence/browser acceptance; PDB-04 still open. AP4–AP7 not implemented. Session1 shell mount and collector remote publication remain external/pending.
+- **Notes for Claude:** User asked status only, not a pause. This turn does not start new feature tests or publication. Preserve local plan drafts and last accepted source separately. AP2 working debug artifacts/receipts archived in instruction-integration worktree .ai/logs/2026-10-11_codex_instruction-delivery; five completed own targets removed. No hardware/accountactivation/subagents/quota/release/deploy/foreign-root edits.
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 17:35 CEST
 - **Completed:** Initial AP3 exact optional read-only source-evidence slice frozen accepted:831 ProductDB passes/25ignored,17 focused tests, strict all-target Clippy/format/docs/five explicit-root repository gates. Source/ref/parameter/type/hash/namespace/bounds agreement, budgets/ambiguity/SQL errors and actual read-only reopen/file bytes verified. Contract/status synchronized; no schema/parser/project/UI mutation or whole PDB-04 claim.
 - **Pending/Next Steps:** Metadata gate and focused local checkpoint, then own editor selection/isolated controls/host API contract with TDD; colour/picture codec and module mappings unresolved. AP4–AP7 remain open. AP2 remote closure2ff5d513 already verified; preserve original accepted receipts.

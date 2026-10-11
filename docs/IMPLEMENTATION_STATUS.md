@@ -10,10 +10,19 @@ strict Clippy/format/docs and all five explicit-root repo gates passed. Native
 ProductDB close/read-only-reopen preserves database bytes and source evidence.
 [Admission and limitations](contracts/parameter-editor-admission.md).
 
-This is only the prerequisite for own isolated parameter controls. It adds no
-codec, duration conversion, API DTO or shell mount and does not close PDB-04.
-Module scopes and color/picture value contracts remain explicitly unresolved.
-Active-session self-review, not independent approval; publication not claimed.
+The read-only source prerequisite is followed by own isolated EN/DE controls and
+an authenticated optional HTTP source producer. Time stays a decimal count with
+verbatim uninterpreted units; explicit bounded integer Slider stays draft-only
+until Apply. Unknown metadata and Colour/Picture codecs have visible fallback.
+[Host contract](contracts/parameter-editor-host.md) preserves existing evaluated
+field/write/persistence authority and Session1 shell ownership. Focused controls
+pass21 tests; real HTTP5 includes native Save/Open, undo/redo, refusal without
+mutation and retained source bytes. Earlier isolated browser20 checks were viewed
+EN1440/Graphite and DE400/Porcelain; a later admission guard changed source, so
+that earlier browser receipt remains historical and final recheck is pending.
+Whole server/web/repository acceptance and publication pending. No whole PDB-04,
+codec, duration conversion, module mapping, physical device or shell-mount claim.
+Active-session self-review, not independent approval.
 
 ## 2026-10-11 — native instruction foundation, not the full RTF editor
 

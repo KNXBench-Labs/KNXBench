@@ -1,0 +1,39 @@
+/** Provides local EN/DE copy for isolated evidence-bound parameter controls. */
+export const parameterEditorCopy = {
+  en: {
+    count: "Decimal count; no time conversion. Declared unit (uninterpreted):",
+    unspecified: "not declared", apply: "Apply value", busy: "Applying…", reset: "Discard draft and reload",
+    stale: "The project view changed. Your draft is retained; reload before applying.",
+    restricted: "Read-only field: current write authority does not permit this edit.",
+    applied: "The service accepted the value. Refresh from the authoritative result.",
+    integer: "Enter a decimal integer without whitespace or exponent notation.", bounds: "The value is outside the declared range.",
+    unsupported: "This control cannot validate the declared value format.", slider: "Integer value slider",
+    fallback: {
+      "missing-evidence": "Exact source evidence is unavailable. Use the existing generic editor.",
+      "source-conflict": "Source identity or parameter metadata conflict. No specialized control is enabled.",
+      "unsupported-codec": "This value format is not verified. The original value is shown without conversion.",
+      "unsupported-hints": "Declared hints or increments are unsupported or contradictory. Use the generic editor.",
+      "invalid-range": "The range or current value cannot be represented safely by this control.",
+      "module-scope": "This module scope has no verified source mapping for specialized controls.",
+    },
+    failed: "The service refused the edit.", original: "Unchanged original value", absent: "No value is present.",
+  },
+  de: {
+    count: "Dezimaler Zähler; keine Zeitumrechnung. Deklarierte Einheit (uninterpretiert):",
+    unspecified: "nicht deklariert", apply: "Wert übernehmen", busy: "Wird übernommen…", reset: "Entwurf verwerfen und neu laden",
+    stale: "Die Projektansicht hat sich geändert. Dein Entwurf bleibt erhalten; lade vor dem Übernehmen neu.",
+    restricted: "Schreibgeschütztes Feld: Die aktuelle Schreibberechtigung erlaubt diese Änderung nicht.",
+    applied: "Der Dienst hat den Wert angenommen. Aktualisiere die Ansicht mit dem maßgeblichen Ergebnis.",
+    integer: "Gib eine dezimale Ganzzahl ohne Leerzeichen oder Exponentialschreibweise ein.", bounds: "Der Wert liegt außerhalb des deklarierten Bereichs.",
+    unsupported: "Diese Steuerung kann das deklarierte Wertformat nicht prüfen.", slider: "Schieberegler für Ganzzahlen",
+    fallback: {
+      "missing-evidence": "Exakte Quelldaten sind nicht verfügbar. Nutze den vorhandenen generischen Editor.",
+      "source-conflict": "Quellidentität oder Parametermetadaten widersprechen sich. Keine Spezialsteuerung ist freigegeben.",
+      "unsupported-codec": "Dieses Wertformat ist nicht verifiziert. Der Originalwert wird ohne Umrechnung angezeigt.",
+      "unsupported-hints": "Deklarierte Hinweise oder Schrittweiten sind nicht unterstützt oder widersprüchlich. Nutze den generischen Editor.",
+      "invalid-range": "Bereich oder aktueller Wert lassen sich mit dieser Steuerung nicht sicher darstellen.",
+      "module-scope": "Für diesen Modulkontext gibt es keine verifizierte Quellzuordnung für Spezialsteuerungen.",
+    },
+    failed: "Der Dienst hat die Änderung abgelehnt.", original: "Unveränderter Originalwert", absent: "Kein Wert vorhanden.",
+  },
+} as const;

@@ -1,4 +1,20 @@
 
+## 2026-10-11 — AP3 optional exact parameter source evidence (not editor completion)
+
+Dedicated ProductDB `parameter_editor::parameter_editor_evidence` resolves an
+exact program-local ParameterRef/parameter/type against its retained source hash.
+Bounded namespace/owner/ref-chain/model checks return raw qualified attributes or
+named unavailability; SQL errors stay errors. No schema migration or mutation.
+Frozen source checks:831 ProductDB passes,25 ignored;17 new synthetic controls,
+strict Clippy/format/docs and all five explicit-root repo gates passed. Native
+ProductDB close/read-only-reopen preserves database bytes and source evidence.
+[Admission and limitations](contracts/parameter-editor-admission.md).
+
+This is only the prerequisite for own isolated parameter controls. It adds no
+codec, duration conversion, API DTO or shell mount and does not close PDB-04.
+Module scopes and color/picture value contracts remain explicitly unresolved.
+Active-session self-review, not independent approval; publication not claimed.
+
 ## 2026-10-11 — native instruction foundation, not the full RTF editor
 
 ## 2026-10-11 — Bounded installation instruction editing accepted for Session1 handoff

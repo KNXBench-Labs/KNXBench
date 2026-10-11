@@ -34,8 +34,9 @@ full Chromium302/0 and production-built Chromium14/0, no skips/flakes.
 The explicitly enabled private lifecycle also passed, with unchanged original
 and nine successful HTTP steps. Evidence remains private; the
 [public receipt](../evidence/import-lifecycle-publication-2026-10-11.json)
-contains only generic acceptance and scope information. Normal main publication
-and exact readback are pending. Earlier local results above remain historical.
+contains only generic acceptance and scope information. Published on main as
+`e27aca526a8a`, verified by exact fetched/live readback; no deployment or
+release. Earlier local results above remain historical.
 
 ## Remaining functional work — not completion claims
 

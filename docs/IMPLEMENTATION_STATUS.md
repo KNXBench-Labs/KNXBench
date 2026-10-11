@@ -1,7 +1,8 @@
 ## 2026-10-11 — import/application repair accepted on main integration
 
 Feature `4e0e874d9bf2` is integrated and tested as merge `481f2cd9735e`
-on upstream `f7a5d8dcdf40`; normal main publication/readback is pending.
+on upstream `f7a5d8dcdf40`; published on main as `e27aca526a8a`
+with exact fetched/live remote readback. Publication is not deployment or release.
 [Source-bound acceptance receipt](evidence/import-lifecycle-publication-2026-10-11.json)
 separates the new merged results from the earlier local acceptance below.
 

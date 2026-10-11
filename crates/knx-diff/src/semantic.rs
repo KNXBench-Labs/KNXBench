@@ -1316,6 +1316,7 @@ mod tests {
         let left = DeviceFields {
             name: "D1".into(),
             description: None,
+            instructions: None,
             address: None,
             product_ref: "P-0".into(),
             program_ref: "H-0".into(),

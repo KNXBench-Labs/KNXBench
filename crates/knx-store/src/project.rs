@@ -640,6 +640,7 @@ fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
         },
         installations,
         instructions: crate::instructions::load(conn, &devices)?,
+        notes: Vec::new(),
         devices,
         ids,
     })

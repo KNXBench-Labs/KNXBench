@@ -574,6 +574,20 @@ pub enum Command {
     /// sub-command is rolled back (its inverse re-applied, in reverse order)
     /// before the original error is returned, so `apply`'s
     /// leave-`project`-untouched-on-`Err` contract holds for `Batch` too.
+    InsertProjectNote {
+        note: crate::note::ProjectNote,
+        position: usize,
+    },
+    RemoveProjectNote {
+        id: crate::ProjectNoteId,
+    },
+    ReplaceProjectNote {
+        note: crate::note::ProjectNote,
+    },
+    MoveProjectNote {
+        id: crate::ProjectNoteId,
+        position: usize,
+    },
     Batch(Vec<Command>),
 }
 
@@ -581,6 +595,9 @@ pub enum Command {
 pub enum CommandError {
     Validation(ValidationError),
     InvalidName(crate::names::NameError),
+    InvalidNote(crate::note::NoteError),
+    NoteNotFound(crate::ProjectNoteId),
+    NotePosition(usize),
     DeviceNotFound(DeviceId),
     /// Coupler evidence names a different product than the device now has.
     CouplerEvidenceMismatch {
@@ -771,6 +788,9 @@ impl fmt::Display for CommandError {
         match self {
             CommandError::Validation(e) => write!(f, "{e}"),
             CommandError::InvalidName(e) => write!(f, "{e}"),
+            CommandError::InvalidNote(e) => write!(f, "note validation refused: {e:?}"),
+            CommandError::NoteNotFound(id) => write!(f, "note {id} not found"),
+            CommandError::NotePosition(position) => write!(f, "note position {position} is invalid"),
             CommandError::DeviceNotFound(id) => write!(f, "device {id} not found"),
             CommandError::CouplerEvidenceMismatch {
                 device,
@@ -1869,7 +1889,80 @@ impl Command {
     /// Applies the command to `project`, returning its inverse on success.
     /// On failure, `project` is left untouched.
     pub fn apply(&self, project: &mut Project) -> Result<Command, CommandError> {
+        // A note-bearing edit is published only after complete target/budget
+        // validation. Failed candidate edits never touch live content or IDs.
+        if !project.notes.is_empty()
+            || matches!(
+                self,
+                Command::InsertProjectNote { .. }
+                    | Command::RemoveProjectNote { .. }
+                    | Command::ReplaceProjectNote { .. }
+                    | Command::MoveProjectNote { .. }
+            )
+        {
+            let mut candidate = project.clone();
+            let inverse = self.apply_inner(&mut candidate)?;
+            crate::note::validate_notes(&candidate, &candidate.notes)
+                .map_err(CommandError::InvalidNote)?;
+            *project = candidate;
+            Ok(inverse)
+        } else {
+            self.apply_inner(project)
+        }
+    }
+
+    fn apply_inner(&self, project: &mut Project) -> Result<Command, CommandError> {
         match self {
+            Command::InsertProjectNote { note, position } => {
+                if project.notes.iter().any(|n| n.id() == note.id()) {
+                    return Err(CommandError::InvalidNote(
+                        crate::note::NoteError::DuplicateId(note.id()),
+                    ));
+                }
+                if *position > project.notes.len() {
+                    return Err(CommandError::NotePosition(*position));
+                }
+                project.notes.insert(*position, note.clone());
+                project.ids = project
+                    .ids
+                    .clone()
+                    .with_project_note_count(project.ids.peek_project_note().max(note.id().0));
+                Ok(Command::RemoveProjectNote { id: note.id() })
+            }
+            Command::RemoveProjectNote { id } => {
+                let position = project
+                    .notes
+                    .iter()
+                    .position(|n| n.id() == *id)
+                    .ok_or(CommandError::NoteNotFound(*id))?;
+                let note = project.notes.remove(position);
+                Ok(Command::InsertProjectNote { note, position })
+            }
+            Command::ReplaceProjectNote { note } => {
+                let target = project
+                    .notes
+                    .iter_mut()
+                    .find(|n| n.id() == note.id())
+                    .ok_or(CommandError::NoteNotFound(note.id()))?;
+                let previous = std::mem::replace(target, note.clone());
+                Ok(Command::ReplaceProjectNote { note: previous })
+            }
+            Command::MoveProjectNote { id, position } => {
+                let previous = project
+                    .notes
+                    .iter()
+                    .position(|n| n.id() == *id)
+                    .ok_or(CommandError::NoteNotFound(*id))?;
+                if *position >= project.notes.len() {
+                    return Err(CommandError::NotePosition(*position));
+                }
+                let note = project.notes.remove(previous);
+                project.notes.insert(*position, note);
+                Ok(Command::MoveProjectNote {
+                    id: *id,
+                    position: previous,
+                })
+            }
             Command::SetIndividualAddress { device, address } => {
                 let device = *device;
                 let address = *address;
@@ -3581,6 +3674,17 @@ impl CommandStack {
     }
 
     pub fn do_command(&mut self, project: &mut Project, cmd: Command) -> Result<(), CommandError> {
+        match &cmd {
+            Command::ReplaceProjectNote { note } if project.notes.iter().any(|n| n == note) => {
+                return Ok(())
+            }
+            Command::MoveProjectNote { id, position }
+                if project.notes.iter().position(|n| n.id() == *id) == Some(*position) =>
+            {
+                return Ok(())
+            }
+            _ => {}
+        }
         if let Command::SetDeviceInstructions { device, document } = &cmd {
             if project.devices.get(*device).is_none() {
                 return Err(CommandError::DeviceNotFound(*device));

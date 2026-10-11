@@ -7,6 +7,7 @@ pub mod building;
 pub mod command_sync;
 pub mod devices;
 pub mod group;
+mod instructions;
 pub mod manifest;
 pub mod migration;
 pub mod module_instance;

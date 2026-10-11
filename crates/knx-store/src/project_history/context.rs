@@ -52,7 +52,7 @@ pub(super) fn read(conn: &Connection, hash: &str) -> Result<NativeSnapshot, Hist
             "unsupported retained-context version",
         ));
     }
-    let context = NativeSnapshot::decode(&image, &image_hash)?;
+    let context = NativeSnapshot::decode_context(&image, &image_hash)?;
     if context.project != empty_project() || context.semantic_hash()? != hash {
         return Err(HistoryError::Invalid(
             "retained context contains a model or has an invalid semantic identity",

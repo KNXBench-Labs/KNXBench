@@ -136,6 +136,13 @@ pub enum Command {
         device: DeviceId,
         description: Option<String>,
     },
+    /// Sets/reset a normalized instruction override; imported text is not
+    /// owned here. Present empty differs from absent. Same shape restores the
+    /// exact previous native override on undo.
+    SetDeviceInstructions {
+        device: DeviceId,
+        document: Option<crate::instruction::InstructionDocument>,
+    },
     /// Sets a communication object instance's datapoint type as a user
     /// edit. Always resolves to `Layer::UserEdit` — use `RestoreComObjectDpt`
     /// to put back an exact prior `Resolved<DptRef>` (that is what undo
@@ -2001,6 +2008,19 @@ impl Command {
                     description: previous,
                 })
             }
+            Command::SetDeviceInstructions { device, document } => {
+                if project.devices.get(*device).is_none() {
+                    return Err(CommandError::DeviceNotFound(*device));
+                }
+                let previous = match document {
+                    Some(value) => project.instructions.insert(*device, value.clone()),
+                    None => project.instructions.remove(device),
+                };
+                Ok(Command::SetDeviceInstructions {
+                    device: *device,
+                    document: previous,
+                })
+            }
             Command::SetComObjectDpt { com_object, dpt } => {
                 let com_object = *com_object;
                 let com: &mut ComObjectInstance = project
@@ -2754,13 +2774,24 @@ impl Command {
                         program_defaults.push((com_id, defaults));
                     }
                 }
-                Ok(Command::RestoreDevice {
+                let restore = Command::RestoreDevice {
                     device,
                     com_objects,
                     program_defaults,
                     installation: installation_id,
                     line,
                     position,
+                };
+                let instruction = project.instructions.remove(&id);
+                Ok(match instruction {
+                    None => restore,
+                    Some(document) => Command::Batch(vec![
+                        restore,
+                        Command::SetDeviceInstructions {
+                            device: id,
+                            document: Some(document),
+                        },
+                    ]),
                 })
             }
             Command::CreateBuildingPart { part, installation } => {
@@ -3550,6 +3581,14 @@ impl CommandStack {
     }
 
     pub fn do_command(&mut self, project: &mut Project, cmd: Command) -> Result<(), CommandError> {
+        if let Command::SetDeviceInstructions { device, document } = &cmd {
+            if project.devices.get(*device).is_none() {
+                return Err(CommandError::DeviceNotFound(*device));
+            }
+            if project.instructions.get(device) == document.as_ref() {
+                return Ok(());
+            }
+        }
         if let Some(current) = cmd.rename_target_name(project)? {
             if cmd.rename_value() == Some(current) {
                 return Ok(());

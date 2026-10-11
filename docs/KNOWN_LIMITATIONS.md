@@ -1,5 +1,20 @@
 # Known limitations
 
+
+## Installation instruction editor integration boundary (2026-10-11)
+
+AP2 exposes an isolated feature module and HTTP/application workflow, not a
+workbench navigation mount. [Host handoff](contracts/instruction-editor-host.md).
+The exact-source reader currently admits Schema23 UTF-8 XML1.0 unprefixed
+installation/device originals only. Other encodings/schemas, ambiguous owners,
+fragment-only originals and natively authored devices without retained imported
+source are explicit refusals. They do not lose original bytes. Editing supports
+plain text/Unicode/paragraphs/bold/italic/underline; unsupported conversion needs
+explicit consent and never overwrites the imported original. Native working
+history is recoverable but not implicit Save. There is no edited-override ETS
+export or full ETS compatibility claim. A later combined-source/browser receipt
+does not certify shell integration or hardware.
+
 ## Local installation-node UI boundary (2026-10-11)
 
 [Fresh main-integration acceptance](evidence/installation-node-publication-2026-10-11.json)
@@ -142,10 +157,13 @@ A restored version becomes the saved baseline and resets undo/redo; the precedin
 working state is preserved as a version. These are project edits, never bus writes.
 
 Admission refuses rather than silently trims: at most 256 combined undo/redo
-states, 256 versions, 64 MiB per individual model/context image and 512 MiB of
-stored history image payloads. Logical version sizes include shared context;
-physical payload usage counts each context once and excludes SQLite page overhead.
-Large projects may hit a limit and require explicit history/version deletion.
+states, 256 versions, 64 MiB per stored model/stack/version image, 256 MiB for
+the shared source context, 512 MiB per decoded image and 512 MiB total stored
+history payload ([local bounded codec](contracts/large-history-images.md),
+ADR-0111). Logical version sizes include shared context; physical usage counts
+each context once and excludes SQLite page overhead. Total history exhaustion
+may require explicit history/version deletion; a single oversized source context
+cannot be fixed by deleting old versions and is reported separately.
 Snapshots retain opaque project data and references, not the global catalogue,
 credentials or device memory. Unknown native tables, views, persistent triggers and columns (including generated
 columns) are refused rather than partly versioned.

@@ -1,0 +1,17 @@
+.panel { display: grid; gap: 14px; min-width: 0; color: var(--knx-foreground); font-family: var(--knx-font-body); }
+.header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+.header h3 { margin: 0; font-size: 1.1rem; }
+.provenance { color: var(--knx-muted); font-size: .85rem; }
+.warning { padding: 12px; border-inline-start: 3px solid var(--knx-warning-color); background: var(--knx-surface); overflow-wrap: anywhere; }
+.error { color: var(--knx-error-color); overflow-wrap: anywhere; }
+.toolbar, .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.panel button { padding: 7px 12px; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-button); color: var(--knx-foreground); background: var(--knx-surface); font: inherit; cursor: pointer; }
+.panel button:disabled { opacity: .55; cursor: not-allowed; }
+.panel button:focus-visible, .input:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
+.input { box-sizing: border-box; width: 100%; min-height: 180px; resize: vertical; padding: 12px; color: var(--knx-foreground); background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input); font: inherit; line-height: 1.5; }
+.preview { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; padding: 12px; background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input); line-height: 1.5; }
+.change { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--knx-accent); border-radius: var(--knx-radius-card); }
+.change h4, .panel h4 { margin: 0; font-size: .95rem; }
+.confirm { display: flex; gap: 10px; align-items: flex-start; line-height: 1.5; }
+.confirm input { margin-top: 5px; accent-color: var(--knx-accent); flex: none; }
+@media (max-width: 480px) { .panel { gap: 10px; } .input { min-height: 140px; } .panel button { min-height: 40px; } .change { padding: 12px; } }

@@ -1,3 +1,4 @@
+//! Verifies normalized instruction integrity with synthetic data.
 use knx_app::instructions::{
     original_device_instructions as read, InstructionSourceError as E, OriginalInstructions,
 };

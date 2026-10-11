@@ -9291,7 +9291,9 @@ smoke-tested on its build runner only, not on a Raspberry Pi.
 
 ## 169. Browser uploads remain bounded and return navigation reloads the editor
 
-**Limitation.** The source fix for GitHub #1/#2 accepts files up to 256 MiB
+**Local supplement, 2026-10-11.** The [login/feedback/size contract](contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md) raises streamed upload and contribution raw admission to 1024 MiB, with a separate 16 KiB envelope. Contribution expanded inventory also admits 1024 MiB, but XML scans stay at 8 MiB/member, normal project members at 64 MiB, manufacturer raw input at 256 MiB and selective source integration at 64 MiB. Large input admission does not prove complete scanning, compatible import or bounded peak RSS. This source package does not update existing release/container artifacts.
+
+**Limitation.** The original source fix for GitHub #1/#2 accepts files up to 256 MiB
 with a separate 16 KiB multipart-envelope allowance and streams into a staging
 file. Larger HTTP uploads receive 413; a reverse proxy may impose a smaller
 limit. Server-mounted files bypass HTTP admission, not the unchanged importer
@@ -9307,6 +9309,12 @@ main webview; no new real-desktop focus acceptance is claimed.
 
 **Why.** The old 100 MiB request ceiling rejected legitimate larger uploads.
 Browser `Window.focus()` offers no guaranteed foregrounding or acknowledgment.
+The local notification-history/detail supplement is memory-only and capped at
+1000 UI records, independently of the server log. An evicted toast target is
+reported, not matched by text. Clipboard permission is platform-dependent; raw
+JSON can be selected/copied manually. JSON log export stays server-only v1 and
+does not claim to include the UI history. Login version identifies the built
+frontend, not a queried remote server or newest release.
 The [contract](contracts/DOCKER_UPLOAD_AND_RETURN.md) records primary references
 and preserves bounded admission, no-clobber publication and source-bound Flow
 selection independently of explicit return.

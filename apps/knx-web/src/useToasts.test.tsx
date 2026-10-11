@@ -43,6 +43,28 @@ it("reports each error toast once, even under StrictMode, and nothing for other 
   expect(seen).toEqual([{ type: "errorToastShown" }, { type: "errorToastShown" }]);
 });
 
+it("retains raw error text and exact identities after replacement, clear and expiry", async () => {
+  vi.useFakeTimers(); await mount();
+  await act(() => { toasts!.pushError("first\nraw"); toasts!.pushError("second"); toasts!.pushFun("saved"); });
+  expect(toasts!.notifications).toHaveLength(3);
+  expect(toasts!.notifications.map(n => n.id)).toEqual([0, 1, 2]);
+  expect(toasts!.notifications[0].entry).toMatchObject({ source: "ui:toast:error", message: "first\nraw", severity: "error" });
+  expect(toasts!.notifications[0].entry.detail).toContain("first\nraw");
+  await act(() => toasts!.clearErrors());
+  await act(() => vi.advanceTimersByTime(10000));
+  expect(toasts!.toasts).toEqual([]);
+  expect(toasts!.notifications).toHaveLength(3);
+});
+it("retains achievements and reports notifications evicted by the bounded session history", async () => {
+  vi.useFakeTimers(); await mount();
+  await act(() => toasts!.pushAchievements([popup], n => `+${n} more`));
+  expect(toasts!.notifications[0].entry.detail).toBe(popup.description);
+  await act(() => { for (let i = 0; i < 1001; i++) toasts!.pushFun(`note ${i}`, 1); });
+  expect(toasts!.notifications).toHaveLength(1000);
+  expect(toasts!.notificationDroppedCount).toBe(2);
+  expect(toasts!.notifications[999].entry.message).toBe("note 1000");
+});
+
 const popup: AchievementPopup = { title: "Bus Master", description: "Unlocked every other achievement.", tier: "legendary", glyph: "trophy" };
 
 async function mount() {

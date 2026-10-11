@@ -10,6 +10,7 @@ export default function ToastStack(props: {
   toasts: ToastEntry[];
   onDismiss: (id: number) => void;
   onExited?: (id: number) => void;
+  onOpen?: (id: number) => void;
 }) {
   const t = useTranslate();
   if (props.toasts.length === 0) return null;
@@ -25,6 +26,7 @@ export default function ToastStack(props: {
           }}
         >
           {toast.achievement && <AchievementBadge tier={toast.achievement.tier} glyph={toast.achievement.glyph} />}
+          {props.onOpen && <button type="button" className="toast-open" aria-label={t("toast.openMessage")} onClick={() => props.onOpen?.(toast.id)} />}
           <div className="toast-body">
             {toast.achievement && <span className="toast-label">{t("achievements.unlockedLabel")}</span>}
             <span className="toast-title">{toast.message}</span>
@@ -42,7 +44,7 @@ export default function ToastStack(props: {
               <span className="toast-hint">{t("toast.error.messageIsEnglish")}</span>
             )}
           </div>
-          <button aria-label={t("toast.dismiss")} onClick={() => props.onDismiss(toast.id)}>
+          <button type="button" className="toast-dismiss" aria-label={t("toast.dismiss")} onClick={() => props.onDismiss(toast.id)}>
             ×
           </button>
         </div>

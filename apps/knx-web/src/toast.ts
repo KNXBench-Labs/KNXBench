@@ -8,6 +8,11 @@ import { emitAchievementEvent } from "./achievementEvents";
 import type { TranslatableKey } from "./i18n";
 import type { AchievementTier } from "./achievementCatalog";
 import type { WorkbenchIconName } from "./WorkbenchIcon";
+import type { LogEntry } from "./api";
+
+/** Browser-session records; IDs are local, never backend log identities. */
+export interface ToastNotification { id: number; entry: LogEntry }
+export const MAX_NOTIFICATION_HISTORY = 1000;
 
 export type ToastKind = "error" | "fun" | "achievement";
 
@@ -115,6 +120,19 @@ export function humorizeError(
 export function useToasts() {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
   const nextId = useRef(0);
+  const [history, setHistory] = useState<{ entries: ToastNotification[]; dropped: number }>({ entries: [], dropped: 0 });
+
+  function remember(id: number, kind: ToastKind, message: string, detail: string | null) {
+    const notification: ToastNotification = { id, entry: {
+      timestamp: new Date().toISOString(), severity: kind === "error" ? "error" : "info",
+      source: `ui:toast:${kind}`, message, detail, location: null,
+    } };
+    setHistory(previous => {
+      const entries = [...previous.entries, notification];
+      const excess = Math.max(0, entries.length - MAX_NOTIFICATION_HISTORY);
+      return { entries: entries.slice(excess), dropped: previous.dropped + excess };
+    });
+  }
 
   /** Every toast follows the same animated exit before removal. */
   function dismiss(id: number) {
@@ -139,9 +157,11 @@ export function useToasts() {
     const serverText = options?.serverText ?? true;
     const readable = serverText ? readableArchiveSizeError(rawMessage) : undefined;
     const id = nextId.current++;
+    const message = readable ?? humorizeError(rawMessage);
+    remember(id, "error", rawMessage, message);
     setToasts((ts) => [
       ...ts.filter((t) => t.kind !== "error"),
-      { id, kind: "error" as const, message: readable ?? humorizeError(rawMessage), serverText: readable ? false : serverText },
+      { id, kind: "error" as const, message, serverText: readable ? false : serverText },
     ]);
     // Outside the state updater, which StrictMode may run twice.
     emitAchievementEvent({ type: "errorToastShown" });
@@ -154,6 +174,7 @@ export function useToasts() {
 
   function pushFun(message: string, autoDismissMs = TOAST_MS) {
     const id = nextId.current++;
+    remember(id, "fun", message, null);
     setToasts((ts) => [...ts, { id, kind: "fun" as const, message, serverText: false }]);
     setTimeout(() => dismiss(id), autoDismissMs);
   }
@@ -166,10 +187,11 @@ export function useToasts() {
   ) {
     for (const planned of planAchievementToasts(popups, summary)) {
       const id = nextId.current++;
+      remember(id, "achievement", planned.message, planned.achievement?.description ?? null);
       setToasts((ts) => [...ts, { id, kind: "achievement" as const, serverText: false, ...planned }]);
       setTimeout(() => dismiss(id), autoDismissMs);
     }
   }
 
-  return { toasts, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit };
+  return { toasts, notifications: history.entries, notificationDroppedCount: history.dropped, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit };
 }

@@ -1,3 +1,28 @@
+## 2026-10-11 — login, notification details and size limits accepted on main integration
+
+Owner explicitly authorized feature commit, merge commit and push. Feature
+`5c59f6d29905`, tested merge `d075b7cca880` onto `ab7db1ae7991`
+retain the previously integrated installation-node, import-banner and DPT work.
+Fresh-main documentation `0fd7a8655f17` is reconciled in
+`cdfd1345f0ac` without runtime changes; additive conflicts retain both
+contributions and the full upstream handover.
+[Acceptance/publication receipt](evidence/login-feedback-publication-2026-10-11.json)
+separates tested source, metadata reconciliation and remote verification.
+
+Actual source-frozen 18-stage acceptance: Web2665/0 in168 files;
+workspace Rust3954/0/192ignored; complete intercepted Chromium294/0 and
+production-built Chromium24/0, both with zero skips/flaky cases.
+Production build, theme/flow/E2E types, formatter, workspace strict Clippy,
+five explicit-root repository gates, documentation and whitespace pass.
+26 actual merged-production EN/DE1440/400 Graphite/Porcelain frames inspected.
+Review is in-session self-review, not independent approval.
+The initial Chromium socket-path launch failure remains a separate failed
+attempt; short task-owned temp path, actual launch probe and complete rerun
+passed with no application code change. No ignored/private-corpus execution,
+native clipboard/Orca/vendor/ETS/hardware/release/live-container claim.
+Shared root's foreign documentation edits are not staged or synchronized.
+Earlier local acceptance below remains historical evidence of its own source.
+
 ## 2026-10-11 — login identity, actionable notifications and larger source admission
 
 - Login reuses the bundled KNXBench mark and shows the frontend package version

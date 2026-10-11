@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 12:11
+- **Completed:** Owner-authorized feature5c59f6d2/no-ff tested merged075b7cc accepted on actual mainab7db1ae7991, docs-only fresh main0fd7a8655f17 reconciled ascdfd1345f0ac with unchanged runtime. Frozen1359-input18 stages all0: Web2665/0/168, Rust3954/0/192ignored, full Chromium294/0/0skipped/0flaky, built24/0.26 actual production frames inspected. Build/three type scopes/fmt/workspace strictClippy/five explicit-root repo/docs/whitespace pass. Public source-bound receipt added; inherited upstream journal preserved. Self-review only.
+- **Pending/Next Steps:** Final metadata/disclosure checks, commit explicit acceptance paths, normal HEAD:main push/exact remote readback, publication closure and only-owned cleanup. No deployment/root synchronization.
+- **Notes for Codex oder Claude:** Original failed launcher attempt proc_09cf766f8cef was Socket path too long, no UI assertions; actual short-temp probe and full retry proc_80b5d18e5369 exit0. Keep both receipts attributed, do not reuse old source test numbers as merged proof. Own lp/lp-20261011/lp2-20261011 and login-integration worktree; preserve foreign root docs/index and historical logs. Canonical local archive .ai/logs/2026-10-11_codex_login-feedback-limits/publication/.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 11:42
 - **Completed:** Feature5c59f6d2 committed with KNXBench identity; source merged into clean integration/login-feedback-limits-20261011 based on ab7db1ae7991. App/messages/styles automatically merged and reviewed; three additive documentation conflicts preserve both contributions, full upstream handover retained as exact suffix.
 - **Pending/Next Steps:** Commit no-ff merge and run actual merged-source workspace/Web/build/type/browser/Clippy/repository/documentation acceptance; normal push to main only after green and latest-main reconciliation. No deployment.

@@ -336,23 +336,14 @@ save, but filtering adds no write of its own. Pending edits prevent duplicate
 starts; a delayed result cannot republish into a removed editor/another device.
 
 The table scrolls locally, keeping all columns reachable on narrow displays.
-[Full contract and evidence](../../COMMUNICATION_OBJECT_TABLE.md). The following
-screenshot is historical; it does not show the new table headings or toolbar.
+[Full contract and evidence](../../COMMUNICATION_OBJECT_TABLE.md). The
+[earlier source screenshot](../../evidence/communication-objects/real-demo-editor.png)
+remains historical evidence; the workbench views shown here are Alpha 9.
 
-![Local source communication table served by the newly built real server with a
-copy of the fictional home demo. The flat view shows object 0, its function,
-DPST-1-1 and 6/0/1; the open editor retains small Program badges, DPT/description
-inputs, flag controls and a directional link. Right-hand columns are reachable
-through the local table scroller, not all visible at once.](../../evidence/communication-objects/real-demo-editor.png)
-
-
-![The device panel for 1.1.1 with the Communication objects tab selected. The channel
-group "Channel A" (Name: Channel1, Number: 1, 2 objects) is open and object 0
-"Channel A: Switch" is expanded: DPT `DPST-1-1` with a Program badge, a Description
-field, the six flag checkboxes R W T U C I with W and C ticked, an existing Receive
-link to 0/0/1 "Living room ceiling light" with an Unlink button, and a row for adding
-the next link. Object 1 "Channel A: Status" and the closed group "Channel B"
-follow](../../assets/screenshots/porcelain-device-tab-communication-objects.png)
+![Alpha 9 in Porcelain: device 1.1.1 with Communication objects selected,
+Channel A open and object 0 expanded. The DPT selector shows 1.001 – Switch with
+an application-source badge; the original reference remains DPST-1-1. Table
+columns scroll within the workspace](../../assets/screenshots/porcelain-device-tab-communication-objects.png)
 
 One collapsible **channel group** per evaluated channel, initially closed. The
 application program's evaluated ownership determines grouping; neither the

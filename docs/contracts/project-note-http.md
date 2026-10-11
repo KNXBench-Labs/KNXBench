@@ -61,7 +61,10 @@ stacks, explicit root Save, concurrent native writer and real SQLite lock/histor
 budget refusals. This is active-session self-review, not independent approval.
 The whole owning server suite passes 811 tests (47 explicitly ignored), strict
 Clippy, format and build on frozen adapter inputs. Fresh published-prerequisite
-metadata integration and publication remain pending; this is not full AP4.
+metadata integration was followed by 19 actual source-frozen current-web/
+workspace/build/repository stages and 11 selected native-project regressions,
+recorded in [the source-bound receipt](../evidence/project-notes-http-2026-10-11.json).
+Final publication is a separate exact-ref/readback step; this is not full AP4.
 A first guard-control runner failed during an ambiguous restore anchor; canonical
 bytes were subsequently restored and verified, then only its unstarted third
 control was executed. This orchestration refusal is not a failed product test.

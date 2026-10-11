@@ -73,13 +73,22 @@ Imprint acceptance recipe: `tests/verify-imprint.js`.
 
 ## Media
 
-All recordings show the actual app with fictional data. `project-work.mp4` and
-`bus-flow.mp4` are first-loop transcodes of the existing README recordings, not
-new performance measurements. The former includes edited camera zoom/timing
-and an additional half-duration transcode (28.2 s);
-the latter is the real monitor component with synthetic traffic. The current
-production-frontend recording and theme screenshots use a fully intercepted,
-explicit offline API fixture (no live application server or hardware).
+The hero, CRT/LCARS gallery and four release-feature stills show the published
+**Alpha 9** frontend and real server, with fictional data in a loopback-only
+network namespace. They are lossless WebPs from the manual PNGs; no API successes
+or UI controls were invented. Capture provenance and regeneration:
+[`docs/assets/README.md`](../docs/assets/README.md).
+
+Videos remain **earlier recordings**, clearly labelled in both languages.
+`project-work.mp4` and `bus-flow.mp4` are first-loop transcodes of existing README
+recordings, not new performance measurements. The former includes camera
+zoom/timing and a half-duration transcode (28.2 s); the latter is the real monitor
+component with synthetic traffic. The historical `group-details.mp4` uses a fully
+intercepted fictional API fixture. Its original recording checks remain under
+`historicalRecording` in `media.json`, separate from `alpha9Capture`.
+The Alpha 9 feature section deliberately separates available workbench features
+from unmounted editor foundations, and the status section names native schema 13,
+independent backups and the lack of Alpha 8 downgrade support.
 
 Videos do not autoplay or loop. They have native controls, same-host posters,
 DE/EN descriptive captions and text walkthroughs. Do not silently swap in an old

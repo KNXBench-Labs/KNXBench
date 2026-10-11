@@ -61,9 +61,10 @@ grouping, free-text log parsing or project-diff links. The separate diagnostic
 companion does not become another editing window. See the
 [contract and evidence](../../DEVICE_NAVIGATION.md).
 
-The Devices view shipped with Alpha.6 and remains in `v0.1.0-alpha.9`
-(AppImage and Docker Hub image);
-the older alpha.5 AppImage does not include it.
+![Alpha 9 in Graphite: the filterable Devices overview with fictional products, individual addresses, KNX-line placement and the selected device’s properties](../../assets/screenshots/graphite-devices.png)
+
+The Devices view first shipped with Alpha 6 and remains in Alpha 9. The older
+Alpha 5 AppImage does not include it.
 
 ## The product catalog
 
@@ -72,11 +73,9 @@ line in the Topology view. Both open the same centre workspace; only the target 
 differs. The `+ Add device` rows in the project explorer open the
 [add-device wizard](#the-add-device-wizard) instead.
 
-![The Device catalog in the main workspace, opened from line 1.1 in the Topology
-view: an install file picker, the manufacturer filter and search, four fictional
-products with "Switch actuator 4-fold, DIN rail (1)" picked, the name field, quantity
-3, "Assign free addresses on the line" ticked, and a "Devices to create" preview
-naming Switch actuator 4-fold, DIN rail 1 to 3 for target line 1](../../assets/screenshots/porcelain-product-catalog.png)
+![Alpha 9’s Device catalog in the main workspace: an install file picker,
+manufacturer filter and search, and four fictional products. The first list row
+is highlighted, but no creation form or address preview is open](../../assets/screenshots/porcelain-product-catalog.png)
 
 A row shows `name (number) — description`, as in the screenshot, and the same
 product can appear more
@@ -295,7 +294,7 @@ edit the project; they do not connect to, program or download a KNX device.
 
 ### Communication objects
 
-**Source update (2026-10-11, published on main, not in Alpha.8):** the DPT field is now a
+**Alpha 9:** the DPT field is now a
 dropdown, not a free-text input. Each known option shows its number and the name
 in the UI language, for example **9.001 – Temperature / Temperatur** or
 **17.001 – Scene number / Szenennummer**. Choose a value, then leave the field
@@ -305,10 +304,14 @@ clears the project value; if a program default exists, that option names it but
 does not save it as your edit. Source badges now belong to the DPT/description
 heading and explain their origin, e.g. **Source: application program / Quelle:
 Applikationsprogramm**. Catalogue names do not establish device or codec support.
-[Scope and evidence](../../contracts/dpt-selection.md). The screenshots below
-are historical and still show the earlier free-text field and raw Program badges.
+[Scope and evidence](../../contracts/dpt-selection.md).
 
-**Source update (2026-10-09, newer than alpha.6):** the object
+![Alpha 9 in Graphite: the communication-object editor’s named 1.001 – Switch choice, application-source badge and exact stored DPST-1-1 reference](../../assets/screenshots/graphite-dpt-selection.png)
+
+*The name helps you choose. The stored reference and source badge explain what is
+actually in the project; a friendly label is not a new codec.*
+
+**Also available in Alpha 9:** the object
 panel now has aligned **No., Name, Function, DPT, Group addresses, Status** headings,
 a **By channel / All objects** switch (flat view adds Channel), search and filters.
 Click a heading to sort ascending/descending, within channels or globally in flat

@@ -1,298 +1,425 @@
 {
-  "captured_on": "2026-10-08",
-  "application_source_commit": "4c84ab9f2d80b7a7118402e8cb0c901dc5e4c14d",
-  "source_note": "Fresh debug server and production frontend from delivered main; only documentation and capture/check tooling modified locally.",
-  "theme": "porcelain",
+  "captured_on": "2026-10-11",
+  "application_release": "v0.1.0-alpha.9",
+  "application_source_commit": "5b21323e050f94953de9ff4683cc12462d753001",
+  "container_digest": "sha256:caa5ab31ee23edc35f5af645672defdf2d5b10dc27cf1d432eea0f345e24fd05",
+  "server_binary_sha256": "ff7e93c6818ce71813d9554e97099732a99b7002ab3ca9f220679233851ba31e",
+  "source_note": "Server binary and production frontend extracted from the published Alpha 9 Docker image, not rebuilt from moving main. Real server APIs and UI actions; no mocked API successes.",
+  "themes": [
+    "porcelain",
+    "graphite",
+    "user-modern-retro-green-crt",
+    "lcars"
+  ],
   "network": "isolated loopback-only user/network namespace",
-  "data": "fictional Sample house and Practice house",
-  "screenshots": 32,
+  "data": "fictional Sample house and Practice house; generated product data; no live bus",
+  "screenshots": 46,
   "workflow_gifs": 3,
+  "capture_spec_sha256": "6f6b6efa76d557774ab269b0c69305260e35ac8e61d57354cf937b2817dc9cf3",
+  "capture_config_sha256": "7a6c0b82f57bbf91b68d5f4eabf5d15266e6afc6d084226c99b6eca1e8bd6807",
+  "capture_result": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0
+  },
   "assets": [
+    {
+      "path": "screenshots/graphite-dashboard.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 93248,
+      "sha256": "04598e2b1626e14ae22655058951d159288bd85709d4d6e9522c7c7196309140",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/graphite-device-parameters.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 111969,
+      "sha256": "b7bd03ec7a62866bc525ad8de742daff2d9b0aad32fb5a8890472a114ff169a8",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/graphite-devices.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 148168,
+      "sha256": "3569b8078f2056b8a0058b1da87bdab64e3b98594912937d54a442e4f9652914",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/graphite-dpt-selection.png",
+      "width": 1440,
+      "height": 1080,
+      "bytes": 149995,
+      "sha256": "0919f0079f9eb90058893fb290aa649ced16985c23ff5e04853945fd08ec0243",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/graphite-group-addresses.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 151532,
+      "sha256": "8da0889bf478b5a87e72c5d8bc0dca10d5a3ddd66bb27a81d1df9c8dc1ecdc86",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/graphite-installation-inspector.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 123446,
+      "sha256": "0f284bb7a95d557d3431a2e81322d15f1e876eae10018fdd21caa37bc95f800a",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/graphite-login.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 32324,
+      "sha256": "3c0db0716f326e9831836e9d8d16d7c986a08433d28d73a9b0abcf8d6c85a2df",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/graphite-message-details.png",
+      "width": 1440,
+      "height": 1080,
+      "bytes": 112678,
+      "sha256": "69eb686a4c2e10f09992cdc2ac6aa69507141f368cc0b1378ca8a2bd8c78e37a",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/graphite-project-history.png",
+      "width": 1440,
+      "height": 1080,
+      "bytes": 147744,
+      "sha256": "fb684e4813d9ef881f1700ec44743e09ae25636591ae631993a074648ce0d387",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/graphite-topology.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 111579,
+      "sha256": "735bed9cbd7c0334e305e82ee89a8f6ce57ad182437d509aa0b85a8f4901b2ee",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/lcars-group-addresses.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 163965,
+      "sha256": "9eb9ff1d7b9caa85e4709199d80fa69f3db8a3bb15f952014a626ce62da52c18",
+      "kind": "real-app-screenshot"
+    },
     {
       "path": "screenshots/porcelain-buildings.png",
       "width": 1440,
       "height": 900,
-      "bytes": 89967,
-      "sha256": "b2db759a9240531fff669825782ae1c1050ef7af3f7183226256ea474a4c3574",
+      "bytes": 93256,
+      "sha256": "142a24ff196e30e45ef09eaaa885f91682315d88e2f780d05e1aabb346b6ed9d",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-bus-monitor.png",
       "width": 1440,
       "height": 900,
-      "bytes": 80815,
-      "sha256": "3436631231453e1cca52fcc28cb3b7bd1b6a232c096c88ded5ec2d880b11c233",
+      "bytes": 83609,
+      "sha256": "f2e723967a59659004657c6daa6af1d6ce95ba18b92478bb82ae313f182d5447",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-command-palette.png",
       "width": 1440,
       "height": 900,
-      "bytes": 134407,
-      "sha256": "8df30ed7dcf61cb74af8a2b36ad926745c72734eda36e1f1a6f708b3494526f3",
+      "bytes": 130447,
+      "sha256": "7fafbf8cecf481a7584763a60cef6b5dd411b441f2371b7c366a1eb6831bf2ae",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-dashboard.png",
       "width": 1440,
       "height": 900,
-      "bytes": 67767,
-      "sha256": "e53b7af3e533b831ae8fcfc16f156db8efe334f02e64525cd38a721481482c48",
+      "bytes": 73618,
+      "sha256": "98143760df7dd4b15385d638ec09d990434cfd00245eec13b6fa5b13774f9b13",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-device-inspector.png",
       "width": 1440,
       "height": 900,
-      "bytes": 113841,
-      "sha256": "c0b24d130ce9f095454959a8cd316e8250919c4e1674dd716f70cb4d0813a858",
+      "bytes": 124041,
+      "sha256": "4dd92d1aeb8bc1c1e684b872110d74e6544b742f5dbf99f84c571a68e0bda851",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-device-tab-communication-objects.png",
       "width": 1440,
       "height": 900,
-      "bytes": 115890,
-      "sha256": "5fd5bc0b4164be3af3042c095cbffbe70d8afd4f9968189b1e4dc53b374dafde",
+      "bytes": 129868,
+      "sha256": "c618e3be1760aacfc61f021dbb3f7a9af3c40727fe4870b3c3f4dc5ec234cbe4",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-device-tab-parameters.png",
       "width": 1440,
       "height": 900,
-      "bytes": 107514,
-      "sha256": "2c2cd3623a104979e2c55d4abfc1d4437565910b168666b3e7f8ba067f765bd9",
+      "bytes": 113977,
+      "sha256": "a7e41675c5b2dee4265e560f8d214603bbd5b1f2a0c7da2e9d351cc88d749ef1",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-device-tab-product-data.png",
       "width": 1440,
       "height": 900,
-      "bytes": 124886,
-      "sha256": "601661143049c362108ed018b43a1cc329d41034036e114777c94b5a98f2a795",
+      "bytes": 130881,
+      "sha256": "04e823504d6a694f5b78995c668a5e90a948571b0115c564c4336db730939b9b",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-device-wizard-placement.png",
       "width": 1440,
       "height": 900,
-      "bytes": 135431,
-      "sha256": "45ab148d5c2ed8024bf5eff61f435c89376ad8cc7a48876ae75ddff65611d87b",
+      "bytes": 126460,
+      "sha256": "703b26a85d5d319caa51394eeccca0fdcbbd4da88753e8e7b51c4855b8c26f45",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-device-wizard-product.png",
       "width": 1440,
       "height": 900,
-      "bytes": 146872,
-      "sha256": "b19570a3bf95aebb5ef4336edb5e6ffdce6aa93f0dc1c7f3945fc5169ce42341",
+      "bytes": 144861,
+      "sha256": "7efd35190dd7603e32d57da2dcd440c0c6d21b4f94116533f50b3051f2431e85",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-device-wizard-result.png",
       "width": 1440,
       "height": 900,
-      "bytes": 139990,
-      "sha256": "a8924fe9fa42e399494576cbb487f9094fe4560d4f3f3c36e970b2e574815f95",
+      "bytes": 134033,
+      "sha256": "9fda2e523b07ff1454bb9364c5a961a96234c174c276892200840eb9afdc5481",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-device-wizard-review.png",
       "width": 1440,
       "height": 900,
-      "bytes": 143564,
-      "sha256": "4fb24853aa0062e2ed8b19f4ace77d99b4909fa6b76f1ae9932f484b8593622f",
+      "bytes": 135672,
+      "sha256": "dce99a56757a46e9dbe1deb655b48fd55a01a22c5c1114c702c24271404fc8cf",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/porcelain-devices.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 144687,
+      "sha256": "f5e2eb42f1b71cea208d002b45b75381c8e177e06b93f09da149dcdaccc7a581",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-file-menu.png",
       "width": 1440,
       "height": 900,
-      "bytes": 84968,
-      "sha256": "08a7f87e1aa0336281d7913629159369e75292ccc9127d460c3597893bd8587d",
+      "bytes": 92376,
+      "sha256": "d8f2e99bdc955d9becad6e58b038f1f9822c4536b36146bca3ccee7f1cd9ed4a",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-group-addresses.png",
       "width": 1440,
       "height": 900,
-      "bytes": 135164,
-      "sha256": "b15dbb75756f70abacba9857dec8856218939aab83037ce5c9c3294b4973a6bd",
+      "bytes": 141430,
+      "sha256": "ec4d78bd825b3e98f051340b0afa2276d6a3baf8234509e70ce95636f13a3f23",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-help-panel.png",
       "width": 1440,
       "height": 900,
-      "bytes": 146651,
-      "sha256": "06deee8a3ab3354be47b75f6693ce1e53fa29b7288ea99ceaae05c80356033de",
+      "bytes": 143368,
+      "sha256": "167cc55dc7dd5eeca9735b79a19e896f8ca50b48e07b8691037e6689871e2c6f",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-loading-progress.png",
       "width": 1440,
       "height": 900,
-      "bytes": 82663,
-      "sha256": "69d12caffbb35f14e49d1d9095fcd6a21cb71d4f9a6cae97366a31eac84d485a",
+      "bytes": 91450,
+      "sha256": "c4bc7519c1a4c16c29ff36c41cd0c30c59fcd4cfe6d689f96e51cde0c3d52d9e",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-log.png",
       "width": 1440,
       "height": 900,
-      "bytes": 178303,
-      "sha256": "0bb1b38c52e59aeb94e6263228f324b0e217e22288b5edb663ef10e149ed889e",
+      "bytes": 161778,
+      "sha256": "7e63205a97ff2fc267ac4cff3d4e5e6ac7134686602b49b91c1a061068a3df89",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-login.png",
       "width": 1440,
       "height": 900,
-      "bytes": 26007,
-      "sha256": "055a83720c5d5114aa8df8f3e46579420f974d8a3a24ff7fa6a15905f7d79c7b",
+      "bytes": 32074,
+      "sha256": "008fb9c77edb2723b0af91ad76c9f8d9dd8d6856cbdd230b3ec56e7ed201c7f2",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-new-project.png",
       "width": 1440,
       "height": 900,
-      "bytes": 124024,
-      "sha256": "d5250dc480b60c7ded7b307893b848d8e5af69550a873fed80140b400f107ae0",
+      "bytes": 128101,
+      "sha256": "8100fa8e3f4729c5a79ab73f1b14aabd8659f29201bd5cd06ecc995d9133bd83",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-onboarding-guide.png",
       "width": 1440,
       "height": 900,
-      "bytes": 101356,
-      "sha256": "356e2a91ebace261dae7b9b773eb1c36f3e4f55554c020b0827cbce4b4ed732c",
+      "bytes": 109957,
+      "sha256": "3e8b5e9ac80df7c54849f844b8862e174f74ea9eccdcd7d78eb0afb9d298e480",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-open-project-dialog.png",
       "width": 1440,
       "height": 900,
-      "bytes": 79175,
-      "sha256": "b8bb0b3b22f197675cf147aedfdff3590f9c6c6f696999e81831fc0c26e208ab",
+      "bytes": 82651,
+      "sha256": "732726a915e6a43caa30f5832fd8ef1710df9deae87096f0cd26770af528f36e",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-practice-project-reopened.png",
       "width": 1440,
       "height": 900,
-      "bytes": 62703,
-      "sha256": "63dbc5d9d0791e37e7214128a03b4552dbe1f01ee5749a83b0eff84ab6a25461",
+      "bytes": 79622,
+      "sha256": "42047ecd9e91822bb6df57618e6b00fa065d9429757bd4d9d06685efa8c404d5",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-product-catalog.png",
       "width": 1440,
       "height": 900,
-      "bytes": 103440,
-      "sha256": "0ad393165ec6def17962ae41b4e192121f32c83acab3f4131a23d72a84de34d2",
+      "bytes": 110086,
+      "sha256": "d8213da5d64a4814d41628c913bb2da3e2ddf694e5172361ff02e6fc631363d7",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/porcelain-project-history.png",
+      "width": 1440,
+      "height": 1080,
+      "bytes": 161003,
+      "sha256": "3c8bb1455ec142fa20b368db77eb8369618dfc09d4bf18f53dd2a0977bdb6bb4",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-project-wizard-building.png",
       "width": 1440,
       "height": 900,
-      "bytes": 91060,
-      "sha256": "f4651719d643ac709290942c3ad10616a514eee06d4db20258f32fdd4c829745",
+      "bytes": 96585,
+      "sha256": "36c516b4c34fd36f309658dddab3884b47fad014e673bbe5f1bbdec9450b5776",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-project-wizard-groups.png",
       "width": 1440,
       "height": 900,
-      "bytes": 97350,
-      "sha256": "ec6fe88c7af3f8999bfef273a833d3b6b6673b2ef741e3a7d35e82d993ccf1f1",
+      "bytes": 102237,
+      "sha256": "1fbbbc592751304e63bb43c80f2ad05c706ba41e722c0f382df64c0d281d5db1",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-project-wizard-review.png",
       "width": 1440,
       "height": 900,
-      "bytes": 103420,
-      "sha256": "bf79c782ce95f0e26d40a19b8e3f5e828aee0c59ad7af428fd3334d5b7d8054d",
+      "bytes": 107490,
+      "sha256": "6285f244593601376a426511a32a158f20fdf2e9f5c5f256e4c48f305aa7bc9a",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-project-wizard-topology.png",
       "width": 1440,
       "height": 900,
-      "bytes": 100876,
-      "sha256": "2420b50d4495033b79695c75320749d853400bb078d7ea90d5d9005eddcf24a3",
+      "bytes": 104874,
+      "sha256": "aad38933f4cd3eb912d56d115e70854bf8f7f3ca19788d2fc02d07e590ec4c4e",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-search.png",
       "width": 1440,
       "height": 900,
-      "bytes": 129749,
-      "sha256": "2b3b9aeb3d885e25a94895ae59e67bf5492147426446136989943467d6861c7a",
+      "bytes": 123437,
+      "sha256": "d48818817a71b34fdcd7762ca2bf9a6673ce7f7ff2443684ddc525f7a7fa3cfb",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-settings.png",
       "width": 1440,
       "height": 900,
-      "bytes": 178451,
-      "sha256": "0c971e8c261e66a01391aa6b46fcef0b9c2ceac085be35d07fe99651ad6efc1f",
+      "bytes": 175509,
+      "sha256": "f92573796bb1a6adc8b9923d90efad7d91238eae16408f822e558079af693b97",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-support-gap-analysis.png",
       "width": 1440,
       "height": 900,
-      "bytes": 84719,
-      "sha256": "f07e42a8e88dea42aebe63b0096d7866c1464c2153810e83d81892cd1f3e52ce",
+      "bytes": 95902,
+      "sha256": "c1458fa86e93de75bf4c9489ea9c67c40d9d6b5c2c757bc3566463c6ea9000ce",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-topology.png",
       "width": 1440,
       "height": 900,
-      "bytes": 82711,
-      "sha256": "bdb7d93289f6bf9751150ae204d29b9aad4fe9f285d56403f087558900043c63",
+      "bytes": 86511,
+      "sha256": "e3f4d3d321ea24e5496c7e2ec3f76441859eb8f38d43f78b120fccdf97a4e1da",
       "kind": "real-app-screenshot"
     },
     {
       "path": "screenshots/porcelain-welcome.png",
       "width": 1440,
       "height": 900,
-      "bytes": 76598,
-      "sha256": "09a5e829adcf89c37dbb27c1564a3802e9be79ac23fae748dfac17d3864e56d2",
+      "bytes": 80675,
+      "sha256": "2e2609131060b2da95cee72e77fc93ee54a808b07280a957e9174545de9f73af",
+      "kind": "real-app-screenshot"
+    },
+    {
+      "path": "screenshots/user-modern-retro-green-crt-group-addresses.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 182353,
+      "sha256": "0f61ee9ab2a07d69bdd196b40569258db1e51f7fc60814a954a0250440e608f6",
       "kind": "real-app-screenshot"
     },
     {
       "path": "workflows/add-device.gif",
       "width": 960,
       "height": 600,
-      "bytes": 296475,
+      "bytes": 260834,
+      "sha256": "ed8e65ff5ac3db5d7f63b0c40cabf355ab2bbc319723d8b3de8d439dccc99849",
+      "kind": "real-ui-workflow",
       "duration_seconds": 11.6,
-      "frames": 116,
-      "sha256": "29703d26db4a6a3676cd1db5cc4f228dde6a56b58eaf94902250ef18dfc81d10",
-      "kind": "real-app-workflow"
+      "frames": 116
     },
     {
       "path": "workflows/new-project.gif",
       "width": 960,
       "height": 600,
-      "bytes": 321760,
+      "bytes": 312926,
+      "sha256": "b5247faae5e43172bd9cf211d887ddb9a6fb5cb7deec7fd6e7df910f749c3de7",
+      "kind": "real-ui-workflow",
       "duration_seconds": 10.1,
-      "frames": 101,
-      "sha256": "9478e6cfec1076d6b2a55f170671df83fd42799680279556d8a00d7dbfc519c4",
-      "kind": "real-app-workflow"
+      "frames": 101
     },
     {
       "path": "workflows/search.gif",
       "width": 960,
       "height": 600,
-      "bytes": 213986,
+      "bytes": 208188,
+      "sha256": "f6dc37cc54fe845e473d3eac7933c81a4ea1060857116555f73d2629f8fce73d",
+      "kind": "real-ui-workflow",
       "duration_seconds": 7.6,
-      "frames": 76,
-      "sha256": "69af5df61a410ac18bb6a9408951a7bf4bc032ab12594a721dbc148b4d3855ca",
-      "kind": "real-app-workflow"
+      "frames": 76
     }
   ]
 }

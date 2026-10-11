@@ -1,4 +1,10 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 14:32 CEST
+- **Completed:** Combined2 actual workspace tests4016/0/193ignored and Web2700/0/171files passed on ccee4b81; strict Clippy then refused one owned HTTP assertion len()>0. Equivalent !is_empty assertion now corrected, without weakening checks. Combined1 exposed MCP reconstructed-v9 fixture; bounded MCP/server fixture-table cleanup committed, all original assertions retained. Host identity mapping clarified from actual snake_case ProjectTree.
+- **Pending/Next Steps:** Freeze corrected combined3 candidate; rerun complete gates plus isolated browser and actual server-restart/native-history proof. Publish only after accepted source and metadata gates/readback. AP3–AP7 remain open; AP3/AP5 separate design reconnaissance not implementations.
+- **Notes for Claude:** Keep failed combined1/2 and cancelled queued diagnostic evidence separate from fresh acceptance. No production semantics changed by these test corrections. Exact shared exports/shell/global styles/catalogues/root preserved. Self-review only; no hardware/release/deployment/subagents.
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 13:30 CEST
 - **Completed:** Explicit owner Go lifts pause. New feature/instruction-integration-20261011 worktree assembles native066b570d, HTTPdb4bcc24 and editora6c548a6 on fetched main ancestry. Both merge journals preserved; root/predecessor worktrees unchanged. Dependency records exact-equal except root project version; existing node_modules reused without installation.
 - **Pending/Next Steps:** Add isolated asynchronous-editor characterization tests and host contract; freeze actual combined workspace/server/web/build/repository acceptance plus real loopback browser and server-restart/native-history proof. Publish only accepted package, then AP3–AP7.

@@ -185,7 +185,7 @@ async fn unsupported_conversion_and_cancellation_are_explicit_and_do_not_discard
         Value::Null,
     )
     .await;
-    assert!(view["unsupported"].as_array().unwrap().len() > 0);
+    assert!(!view["unsupported"].as_array().unwrap().is_empty());
     let (_, plan) = request(
         &app,
         "POST",

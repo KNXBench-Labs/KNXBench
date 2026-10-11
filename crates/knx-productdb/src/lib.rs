@@ -21,6 +21,7 @@ pub mod legacy;
 pub mod master_evidence;
 pub mod migration;
 pub mod package;
+pub mod parameter_editor;
 pub mod parse;
 pub mod procedure_resolution;
 pub mod query;

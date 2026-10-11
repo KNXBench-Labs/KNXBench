@@ -130,6 +130,18 @@
 - **Pending/Next Steps:** No further import-status implementation/main-merge work remains. This metadata-only closure is separately checked/read back; final owned cleanup is recorded in ignored delivery evidence. Release/container deployment and shared-root synchronization are separate and not performed.
 - **Notes for Codex oder Claude:** Public receipt docs/evidence/import-status-publication-2026-10-11.json; ignored proof .ai/logs/2026-10-11_codex_import-status/integration/combined/. Runtime acceptance binds3d6c9d1f, not earlier9729fb95; earlier attempts remain historical. Phase means latest server observation, not a heartbeat/ETA or invented count. Preserve concurrent root manufacturer-DLL research and all foreign source/journals; no vendor/hardware/backend compatibility claim.
 
+
+- **Timestamp:** 2026-10-11 12:48 CEST
+- **Completed:** Seven HTTP instruction lifecycle tests pass on frozen inputs; active-session self-review verifies existing authentication, explicit confirmation, replay/substitution refusal and persist-before-publication.
+- **Pending/Next Steps:** Merge newest native foundation; gate the actual merged server/application and isolated editor. AP2 remains in progress; AP3–AP7 remain open.
+- **Notes for Claude:** Browser fixture proof is not workbench integration or process-restart acceptance. Preserve Session1 shell ownership and imported source bytes.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:48
+- **Completed:** Ten application instruction service tests passed in fresh isolated target. Actual HTTP setup initially used SQLite open for ETS ZIP and failed before feature; corrected to real ETS import. Locked stub baseline registered0/4 with successful setup; exact production source restored. Source-frozen HTTP successor4/0 accepted, covering preview/refusal/undo/redo/native recovery. Three additional contract regressions now added; expanded admission pending.
+- **Pending/Next Steps:** Run expanded HTTP7 and broad app/server checks; preserve no-op/redo, candidate-first native persistence, source/revision binding, exact pending token and cancellation. Full browser editor remains pending.
+- **Notes for Codex oder Claude:** Nine-package goal continues; AP1/AP8/AP9 delivered, AP2 incomplete, AP3–AP7 pending. Self-review only; no hardware, private source/keys, subagents/quota, release/deployment. Root/foreign worktrees preserved. Evidence stays in owned data-tooling-editing-20261011 scratch; rejected attempts never restamped or added to totals.
+
 ---
 
 - **Last Agent:** codex

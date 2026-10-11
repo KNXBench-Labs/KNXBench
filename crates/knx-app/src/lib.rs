@@ -23,6 +23,7 @@ pub mod import;
 mod import_payload_evidence;
 pub mod individual_address_programming_recovery;
 pub mod individual_address_reset_recovery;
+pub mod instruction_edit;
 pub mod instructions;
 pub mod legacy;
 pub mod progress;

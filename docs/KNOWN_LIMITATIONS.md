@@ -7827,6 +7827,18 @@ recovery, durable history or hardware-support residues (ADR-0051 amendment).
 <a id="146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined"></a>
 ## §146 Channel labels are shown; undetermined activation and missing DPT remain
 
+**Owner-approved read-only differential 2026-10-11 (no lift).**
+`private_saved_activation_compares_every_imported_tree_object_without_rounding_unknown_states`
+compares source/import/HTTP/shared evaluation independently. Complete historical
+comparison preserved input/project and found evaluated-object differences and
+extra unscoped refs; unsupported scoped sets remain unadjudicated. Diagnostic
+admission requires coverage, actual evaluation and unchanged input/project, not
+agreement. All findings remain in private boolean evidence, with explicit
+`parity_accepted=false`; no runtime changed and no ETS answer adopted. Owner chose
+read-only delivery; final integrated gates/publication pending. Eight synthetic
+controls cover findings, unknowns and failed integrity independently.
+[Contract](research/schema23-activation-differential.md).
+
 **Update 2026-10-10 (comparison source; no change).** ETS writes its own
 activation result into the project: `ChannelInstance/@IsActive`,
 `ComObjectInstanceRef/@ChannelId` and the object set listed in

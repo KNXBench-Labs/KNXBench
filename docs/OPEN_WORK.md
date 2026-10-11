@@ -261,6 +261,12 @@ to owner `later`. Routes naming removed goal files are kept as history.
 
 ## 5. Repository chores
 
+- **Alpha9 publication** (11 October 2026): frozen tag `v0.1.0-alpha.9` and
+  downloaded AppImage/MCP/Docker verification are complete. Native/model13
+  requires pre-upgrade native/Docker backups. Unmounted editors and later local
+  packages remain outside this release; publication is not live deployment.
+  [Release scope](releases/alpha9.md) · [Receipt](evidence/release-alpha9-2026-10-11.json).
+
 - **Docker Hub release image** (ADR-0097, KL §168): live since
   `v0.1.0-alpha.6`; Alpha.7 version/latest and both architecture manifests
   externally verified on 2026-10-10, including anonymous HTTPS/save/reopen

@@ -165,7 +165,7 @@ import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
 Images are available for **x86-64 (`amd64`) and 64-bit Arm (`arm64`)**. `latest`
 follows published releases, including alphas, not the newest source. To stay on a
-specific release, use `knxbench/knxbench-server:0.1.0-alpha.8` in both commands
+specific release, use `knxbench/knxbench-server:0.1.0-alpha.9` in both commands
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
 
 Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
@@ -184,15 +184,15 @@ and may enter shell history.
 ### Linux desktop, via AppImage
 
 ```bash
-REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.8
-curl -LO "$REL/KNXBench_0.1.0-alpha.8_amd64.AppImage"
+REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.9
+curl -LO "$REL/KNXBench_0.1.0-alpha.9_amd64.AppImage"
 curl -LO "$REL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.8_amd64.AppImage
-./KNXBench_0.1.0-alpha.8_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.9_amd64.AppImage
+./KNXBench_0.1.0-alpha.9_amd64.AppImage
 ```
 
-This is the `v0.1.0-alpha.8` pre-release, x86-64 only, built by the release workflow.
+This is the `v0.1.0-alpha.9` pre-release, x86-64 only, built by the release workflow.
 `--ignore-missing` skips the `knx-mcp` binary listed in the same checksum file.
 Source changes after this tag still need a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The
@@ -200,9 +200,9 @@ Source changes after this tag still need a
 packages it needs and what has been tested.
 
 > [!IMPORTANT]
-> Before upgrading, close KNXBench and back up native project files. Alpha.8
-> requires schema 12; Alpha.7 and earlier cannot reopen upgraded files. Use a
-> pre-upgrade backup to go back. Internal project versions are not external backups.
+> Before upgrading, close KNXBench and back up native project files and Docker
+> data. Alpha.9 requires schema 13; Alpha.8 and earlier refuse upgraded files.
+> To go back, restore the pre-upgrade backup. Internal versions are not external backups.
 
 ### Where it runs
 
@@ -220,7 +220,7 @@ All the details: [Installation](docs/manual/getting-started/04-installation.md).
 ## Project status
 
 **Alpha — and we mean it.** The current pre-release is
-[`v0.1.0-alpha.8`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.8).
+[`v0.1.0-alpha.9`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9).
 The test suite is large, the documentation is honest, and things still move.
 
 - **Solid:** importing real ETS projects with a full report, editing with undo, the

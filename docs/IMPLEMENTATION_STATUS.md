@@ -596,6 +596,44 @@ siblings; Repeat/activation/write boundaries remain. Published no-ff merge `2e26
 
 # IMPLEMENTATION_STATUS.md
 
+This is a **newest-first delivery history**, not the live feature inventory.
+Older dates, failures, counts and compatibility milestones remain historical.
+For current source capabilities use [manual implementation status](manual/implementation-status.md);
+for practical boundaries use [known issues](manual/known-issues.md), and for
+formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
+does not erase a broader platform/device limitation or imply a new release.
+
+## 2026-10-11 — Alpha9 published and downloaded artifacts verified
+
+- Tag `v0.1.0-alpha.9` is immutable on `5b21323e`, with published-main source
+  cutoff `0bed9e2a`. All application versions are `0.1.0-alpha.9`; external
+  dependency identities are unchanged. [Release notes](releases/alpha9.md)
+  explicitly exclude unmounted instruction/parameter editors, local-only
+  report/payload/metadata, Functions/Sites and later parallel packages.
+- Source-frozen acceptance:33 actual stage exits0; Rust4048/0/194ignored,
+  frontend2738/0/174files, Chromium302/0/no skips/flakes, tools54;
+  registered private corpus143/143/31targets, six supplementary reference/
+  procedure/matrix tests and seven explicit private regressions. Strict Clippy,
+  builds/types/format, five nonempty explicit-root repository and docs gates pass.
+  Initial harness finalizer rejection is preserved; exact complete21/21 binding
+  path/semantic equality corrected its >25 assumption without product edits or
+  test replay. Private original integrity is per-case hash guards, not an
+  unpersisted whole-run reference-file fingerprint claim. In-session self-review.
+- Exact-source dry runs38170814561/38170821554 and tag publication runs
+  38171270865/38171270862 all successful. AppImage/MCP/SHA256SUMS downloaded
+  again, checksums/GitHub digests exact; MCP build suffix binds the tag. AppImage
+  extracted. Docker version and latest share one amd64/arm64 index; anonymous
+  pull, revision/version, HTTPS authentication and native Save/Reopen pass.
+- Actual published Docker image opens authentic public native12 fixture,
+  explicitly saves native13 and reopens with projected working model and both
+  history-stack availability flags preserved; original unchanged. Own bridge
+  probe stops orderly with exit0. No user-container replacement, root sync,
+  live bus/vendor operation, new ETS semantics, interactive GTK/Orca or Pi claim.
+  [Aggregate source-bound receipt](evidence/release-alpha9-2026-10-11.json).
+  Current-facing README/install/status/known-issues/Docker/MCP references updated;
+  older release and source-measurement sections remain historical.
+
+
 ## 2026-10-10 — Project archive budget: 1024 MiB (local source)
 
 - Owner-requested increase of the cumulative expanded `.knxproj` budget from
@@ -785,13 +823,6 @@ regressions/full47 Python controls pass. No new hardware/whole-ETS claim.
 [Source-bound release evidence](evidence/release-alpha7-2026-10-10.json).
 Publication/assets/registry readback is the next explicit gate, not inferred
 from those dry runs. Both reported issues remain open.
-
-This is a **newest-first delivery history**, not the live feature inventory.
-Older dates, failures, counts and compatibility milestones remain historical.
-For current source capabilities use [manual implementation status](manual/implementation-status.md);
-for practical boundaries use [known issues](manual/known-issues.md), and for
-formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
-does not erase a broader platform/device limitation or imply a new release.
 
 ## 2026-10-09 — Docker uploads and companion return: source fixes
 

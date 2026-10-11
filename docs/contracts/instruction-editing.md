@@ -174,3 +174,15 @@ conversion refusal, invalid document, stale source/revision/token or persistence
 failure must leave live state unchanged. No bus route or manufacturer assignment.
 Old foreign Functions/Sites module edits remain parked and untouched; only additive
 current-main route integration is owned here.
+
+## Isolated editor tranche ownership
+
+Own `apps/knx-web/src/features/rtf/` only: typed wire client, pure canonical
+run/selection edits with UTF-16 boundary guards, local EN/DE copy, component and
+CSS module plus colocated tests/fixture. No manifest, global CSS, shared language
+catalogue, generated DTO or shell/navigation edits. Read authoritative instruction
+HTTP context; preview/apply/cancel through its bounded service. No HTML/RTF
+execution, image/link/resource fetching or automatic writes. Changing draft must
+revoke its preview; source/selection/revision invalidation must never auto-apply
+or silently reinterpret unsupported source. Host integration is a documented
+component contract, not an edit to Session1's App/Inspector.

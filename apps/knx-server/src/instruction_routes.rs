@@ -1,4 +1,4 @@
-//! Source-bound installation instruction routes. No protocol or resource loading.
+//! Source-bound instruction routes without protocol operations or resource loading.
 use crate::{domain, errors::ApiError, SharedState};
 use axum::{
     extract::{DefaultBodyLimit, Path, State},

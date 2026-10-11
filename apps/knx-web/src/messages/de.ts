@@ -607,6 +607,27 @@ export const messages: Record<MessageKey, string> = {
   "inspector.address.mismatch": "Gespeicherte Adresse {address} passt nicht zur zugeordneten Linie {line}. Sie bleibt unverändert, bis du die Gerätenummer bearbeitest.",
   "inspector.description": "Beschreibung",
   "inspector.dpt": "DPT",
+  // Localized DPT selection and field-local value provenance.
+  "dpt.noProjectValue": "Kein Projekt-DPT",
+  "dpt.programDefaultOption": "Kein Projekt-DPT (Programmvorgabe: {value})",
+  "dpt.unlistedOption": "{value} – nicht in diesem Katalog",
+  "dpt.retainedOption": "{value} (gespeichert als {raw})",
+  "dpt.reference": "Gespeicherte Kennung: {value}",
+  "dpt.masterText": "Stammdaten: {value}",
+  "dpt.selectionHint": "Wähle einen Datenpunkttyp; verlasse das Feld oder drücke Enter zum Übernehmen.",
+  "valueSource.label": "Quelle: {source}",
+  "valueSource.program": "Applikationsprogramm",
+  "valueSource.programHelp": "Dieser Wert stammt aus dem Applikationsprogramm des Geräts, nicht aus einer Projektänderung.",
+  "valueSource.programRef": "Applikationsreferenz",
+  "valueSource.programRefHelp": "Dieser Wert stammt aus der Kommunikationsobjektreferenz im Applikationsprogramm.",
+  "valueSource.instance": "Geräteinstanz",
+  "valueSource.instanceHelp": "Dieser Wert ist an der Geräteinstanz im Projekt angegeben.",
+  "valueSource.inferred": "abgeleiteter Wert",
+  "valueSource.inferredHelp": "KNXBench hat diesen Wert abgeleitet; er wurde nicht ausdrücklich als Projektänderung angegeben.",
+  "valueSource.userEdit": "Projektänderung",
+  "valueSource.userEditHelp": "Dieser Wert wurde ausdrücklich im Projekt bearbeitet.",
+  "valueSource.unknownHelp": "Der Server meldet eine dieser Version unbekannte Quelle; ihre Kennung bleibt unverändert sichtbar.",
+
   // The German ETS's own flag names, not a fresh translation of the
   // English ones — "Transmit"/"Update" become "Übertragen"/"Aktualisieren",
   // not a literal "Senden"/"Erneuern" a dictionary would suggest.

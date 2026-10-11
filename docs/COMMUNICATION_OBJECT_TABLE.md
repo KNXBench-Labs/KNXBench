@@ -10,6 +10,18 @@ records the actual reconciled source, acceptance and publication boundary.
 lifetime boundary. Final aggregate acceptance is recorded in the
 [receipt](evidence/communication-objects-2026-10-09.json).
 
+## Local DPT selection extension (2026-10-11)
+
+The [selection/provenance contract](contracts/dpt-selection.md) replaces only the
+DPT free-text editor with a numbered, localized native select. The versioned
+454-ID display vocabulary follows DPT-AS v02.02.01, independently of installed
+master data. Current unknown/main-only/alias values remain exact selected options;
+program defaults remain display-only. Table/search/exact-filter names follow the
+UI language, with original references and master text separately retained.
+DPT/description source badges now belong to their own field headings and explain
+the source. Blur/Enter, pending/refusal/lifetime and application validators remain
+unchanged. This local extension is not a release/deployment or new codec support.
+
 ## Presentation and derived data
 
 The table shows Number, Name, Function, effective DPT, Group addresses and evaluated

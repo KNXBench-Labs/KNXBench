@@ -21,6 +21,7 @@ fixture/header failures remain separate, not retroactively green.
 [Evidence](evidence/release-notifications-2026-10-11.json),
 [ADR-0114](adr/0114-client-release-discovery.md),
 [contract/privacy/limits](contracts/RELEASE_NOTIFICATIONS.md).
+Source publication `55384982c9a38d269e7e68f76a792c757b6aea15` is verified on `main` (exact local/tracking/live tip and package blobs read back).
 This source feature is not in already-published Alpha.9 or deployed containers;
 interactive native WebKitGTK, installer/integrity/migration approval and hardware
 are not certified by these checks.

@@ -208,6 +208,10 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
               ))}
             </select>
           </label>
+          <label>
+            {t("deviceDownload.gateway")}
+            <input value={gateway} disabled={locked} onChange={(event) => setGateway(event.target.value)} placeholder="192.0.2.10:3671" />
+          </label>
           <fieldset className="device-download-scope">
             <legend>{t("deviceDownload.scope.legend")}</legend>
             {SCOPES.map((option) => (
@@ -218,10 +222,6 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
               </label>
             ))}
           </fieldset>
-          <label>
-            {t("deviceDownload.gateway")}
-            <input value={gateway} disabled={locked} onChange={(event) => setGateway(event.target.value)} placeholder="192.0.2.10:3671" />
-          </label>
           <div className="device-download-actions">
             <button disabled={locked || address === ""} onClick={() => void preparePlan()}>
               {t("deviceDownload.preparePlan")}

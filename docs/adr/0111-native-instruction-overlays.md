@@ -75,3 +75,32 @@ corrupt-row refusal, repeated native save/reopen and durable history, complete
 model/opaque equality, deletion/selected import/unsupported converter barriers,
 real server operation and isolated browser at wide/narrow EN/DE. Review and
 accept this decision from actual execution before claiming a working editor.
+
+## Native-history implementation finding (2026-10-11)
+
+The published predecessor writer is native12. Authentic synthetic fixtures
+were generated before the bump, including a reachable device/installation,
+Unicode description, different saved/working states, both stacks, retained
+opaque context and a named version; originals/hash frozen. No old image was
+manufactured by editing a current snapshot's user_version.
+
+Native13 adds instruction document/run tables only. Empty overlay collections
+retain exact semantic-native-v1 schema12 identity by omitting only the new empty
+tables and using its existing12 identity-version discriminator. Any present
+override, including empty text, uses13 and includes both new tables. This is a
+semantic-hash compatibility rule, not downgrade support: older readers refuse
+native13. Current and exact predecessor12 image hashes/marker/schema/FKs/no-
+recursive-history are checked before owned in-memory conversion. Original image
+bytes and stored hash/context links remain immutable, never restamped as new.
+Unknown/future/extra/corrupt images refuse. This narrowly admits actual12 history;
+no wider claim for older embedded history versions is made without authentic
+fixtures and their own identity mapping. Ordinary no-history older root stores
+still use the normal migration chain.
+
+Focused current native tests preserve full saved/working/undo/redo/version/context
+through read-only copied upgrade and actual migrated reopen, including new
+persisted edit→restart→undo→redo→save. Corrupt rows/hashes/future roots refuse.
+Seven domain-value tests and four command tests prove bounded construction,
+absent-versus-empty, exact edit/reset inverse, no-op redo preservation and
+safe device delete/restore. These focused tests are not broad acceptance or
+an implemented editor/API. Status stays Proposed until integration gates pass.

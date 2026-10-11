@@ -59,3 +59,63 @@ actual Core are nonoptional: no guessed native-origin state is introduced.
 A malformed/unsupported RTF preview leaves its logical original accessible.
 The application uses `StoredOpaqueEntry`, preserving the infrastructure type
 boundary. No original mutation, edit API, schema/model change or UI yet.
+
+## Normalized domain tranche ownership
+
+Own branch `feature/instruction-model-20261011` preserves the reader's frozen
+broad gate. First owns only new `crates/knx-core/src/instruction.rs` and
+`crates/knx-core/tests/instruction.rs`; the existing core export and native
+migration are deferred. `functions-sites-20261009` has unsynchronized changes
+in core exports/project/native migration: do not copy, overwrite or imply
+acceptance of that work. This tranche can test the pure module by path without
+editing those shared files. Native/history integration must coordinate the
+versioned model barrier before admitting edits; no sidecar storage workaround.
+
+### Shared model/schema decision
+
+2026-10-11: maintainer explicitly selected isolated RTF development on current
+main with the older `functions-sites-20261009` worktree retained unchanged.
+Thus this tree owns current-main Core export/project/command instruction changes,
+native v12→next migration and genuine history-image compatibility; no merge or
+acceptance of that older unpublished work is implied. Preserve its source/index.
+Exact persistence paths must still be declared before implementation; version
+compatibility/history cannot be bypassed by an unversioned editor sidecar.
+
+### Authentic predecessor fixture
+
+Before changing native schema12, own producer test
+`crates/knx-store/tests/instruction_predecessor.rs` and its synthetic output
+`crates/knx-store/fixtures/project_v12_instruction_history.sqlite`.
+The producer runs the unchanged schema12 writer, creates a saved root,
+different working state, one undo and redo state and named version plus
+retained opaque bytes. Freeze output/hash/oracle before the version bump.
+No private project or simulator/bus input is used.
+
+A second, stronger predecessor fixture is explicitly owned as
+`crates/knx-store/fixtures/project_v12_instruction_history_device.sqlite`: same
+unchanged schema12 writer with one reachable device/installation and nonempty
+Unicode description, counters, both history stacks/context and named version.
+The first smaller fixture remains historical, never overwritten.
+
+### Native-overlay implementation tranche: exact paths
+
+Own `crates/knx-core/src/lib.rs`, `project.rs`, `command.rs`; new
+`crates/knx-core/tests/instruction_commands.rs`; `crates/knx-store/src/lib.rs`,
+`project.rs`, `migration.rs`, `representable.rs`, `command_sync.rs`,
+`project_history/snapshot.rs`; new `crates/knx-store/src/instructions.rs` and
+`crates/knx-store/tests/instructions.rs`; existing app perf literal only for
+new Project field, `crates/knx-app/tests/perf_baseline.rs`.
+Ownership is authorized by the recorded maintainer current-main decision;
+foreign functions worktree preserved. Predecessor producer/fixtures already
+frozen before any model/schema change. No old fixture version forged by pragma.
+
+Proposed identity compatibility: native13 empty instruction map retains the
+exact semantic-native-v1 schema12 hash (same tables/data; omit only the new
+empty instruction tables). Any present instruction, including an explicitly
+empty document, switches to13 identity and includes both new tables. Old byte
+images/hashes stay immutable and verified; admitted schema12 history images
+are validated against exact predecessor shape and upgraded in isolated memory
+for normalized reads only. Older readers still refuse native13 files. Do not
+weaken unknown/future/extra/corrupt snapshot refusal or silently rewrite history.
+Regression requires root/working/both stacks/context/named versions and opaque
+bytes before/after actual migration. This policy requires tests before admission.

@@ -16,6 +16,18 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Device-download layout (2026-10-11 local source)
+
+The local layout correction keeps the four download-scope radios compact,
+places their labels beside them and separates the scope from the device and
+gateway fields. EN/DE production-browser checks cover 400/1440 px in Graphite,
+Porcelain and CRT, including keyboard selection. The change is presentation
+only; download planning and safety confirmations are unchanged. The source
+repair is now published on `main` as merge `0dae7c93`, but is not included
+in the existing Alpha.8 release or running containers.
+[Source publication](../IMPLEMENTATION_STATUS.md#2026-10-11--device-download-layout-published-on-main);
+[initial local acceptance](../IMPLEMENTATION_STATUS.md#2026-10-11--local-device-download-configuration-layout-repair).
+
 ## Alpha.8 release boundary
 
 Alpha.8 packages selected-line/device import, schema-23 source/ZIP integrity

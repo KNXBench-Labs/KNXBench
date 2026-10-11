@@ -233,7 +233,7 @@ not erase subsequently delivered functionality.
 - **Comparison/report extensions:** applying/merging diffs, three-way
   comparison and native PDF output remain absent; comparison and browser
   print-to-PDF already exist. These are recorded boundaries, not active work.
-- **Features:** project notes (`FUTURE-03`, ADR-0031 accepted, not built),
+- **Features:** project notes (`FUTURE-03`, ADR-0031; local Core/native14/diff/report and service candidates, combined publication/HTTP/isolated UI still open),
   repetitive-task automation (`FUTURE-02`), a mutation-capable LLM/MCP surface
   (`FUTURE-01`; the read-only MCP server shipped, ADR-0090), dashboard
   drill-down, mobile app, native ports and manufacturer online-catalog
@@ -260,6 +260,12 @@ owned by finished sessions (`FUTURE-05`, `KL-110`, `GAP-T30-04`, `KL-43`) moved
 to owner `later`. Routes naming removed goal files are kept as history.
 
 ## 5. Repository chores
+
+- **Alpha9 publication** (11 October 2026): frozen tag `v0.1.0-alpha.9` and
+  downloaded AppImage/MCP/Docker verification are complete. Native/model13
+  requires pre-upgrade native/Docker backups. Unmounted editors and later local
+  packages remain outside this release; publication is not live deployment.
+  [Release scope](releases/alpha9.md) · [Receipt](evidence/release-alpha9-2026-10-11.json).
 
 - **Docker Hub release image** (ADR-0097, KL §168): live since
   `v0.1.0-alpha.6`; Alpha.7 version/latest and both architecture manifests

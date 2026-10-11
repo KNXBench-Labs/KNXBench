@@ -33,17 +33,22 @@ checkout for evidence runs, not the shared project. Existing settings, profile
 selection and `include_cloud=false` were copied unchanged for the admitted run;
 no account/network instrumentation was enabled.
 
-The configured collector origin returned `Repository not found`, including an
-authenticated lookup. No new remote or repository was invented. Local versioned
-source and canonical entry-point execution are delivered; remote publication
-is unavailable, not successful. A future approved working remote is needed
-only for remote publication, not for local use or unrelated KNXBench work.
+The earlier configured-origin `Repository not found` and authenticated404
+results were access-context-specific. On 11 October 2026, the already-saved
+credential matching that exact private repository owner established access;
+no login, persistent account switch, new remote or repository was needed.
+Existing commits `e639f206b92c46f95623c0f6891b0cea49e38401` and
+`2ac5dfb072fffc97e1622defd042b0a6adf41e19` were pushed normally to its `main`.
+Exact local/tracking/live tip and all accepted tracked source blobs were read
+back. [Publication receipt](../evidence/collector-publication-2026-10-11.json).
+The source-publication residue is delivered, not new telemetry coverage or a
+new generated report. The original dated snapshot remains unchanged.
 
 ## Exact gap mapping, sources and retained limits
 
 | Original ID | Source and measured boundary | Still unknown / not admitted |
 | --- | --- | --- |
-| TOOLS-01 | The actual Git checkout/entry point above; accepted source SHA and clean-root fast-forward verified. | Remote publication is refused; local versioning is not a remote delivery. |
+| TOOLS-01 | The actual Git checkout/entry point above; accepted source SHA and clean-root fast-forward verified. | Source publication is now verified separately; this does not close physical-traffic or attribution gaps. |
 | TOOLS-02 | `ai_stats_traffic.py` optionally records the collector's own HTTP **response-body** bytes, request-attempt identity, outcome and observation UTC time in a private versioned SQLite database. Replay of one attempt is idempotent; different attempts are separate. No store/observations returns unavailable. | Those are not HTTP/TLS/on-wire totals, model-provider requests or remote-job traffic. No historical physical traffic can be reconstructed from tokens or cost. Instrumentation remains opt-in; no new real network measurement was performed here. |
 | TOOLS-03 | Existing loaders read provider-recorded session boundaries, activity timestamps and reported durations where available; the Hermes loader reads `started_at`/`ended_at` and end reason from source rows. Outcome/duration meaning is provider-specific. Report pricing/cache savings are explicitly dated API-equivalent scenarios, not invoices. | A last activity time is not proven execution termination; session duration is not joined per-event model generation time. Full tool-outcome rates and actual billing/cache discounts are not available across all sources. No fabricated throughput, completion time or measured savings. Missing source completeness is not solved by this CSS package. |
 | TOOLS-04 | Local path/repository matching, explicit profile opt-in and source session identity govern attribution. An opted-in profile can admit no-project sessions under its recorded policy; a populated unrelated project path does not become KNXBench by profile alone. Unknown providers are retained as Other in project-scoped totals, without assigning another provider's prices. | Cloud jobs without explicit project attribution and unknown source authorship remain unassigned/unknown. Git author names and AI-themed branch names do not prove AI authorship. An aggregate over selected available records is not total activity outside their scope. |

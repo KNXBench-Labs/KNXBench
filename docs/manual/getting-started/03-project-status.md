@@ -9,9 +9,9 @@ Read this chapter before you trust KNXBench with a project you care about.
 Every part of KNXBench carries its own version
 ([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). Since the
 `v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
-The CLI, desktop, web frontend, server and `knx-mcp` now carry `0.1.0-alpha.8`;
+The CLI, desktop, web frontend, server and `knx-mcp` now carry `0.1.0-alpha.9`;
 library crates keep their own numbers. The public pre-release is
-[`v0.1.0-alpha.8`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.8): AppImage, `knx-mcp` and the Docker Hub
+[`v0.1.0-alpha.9`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9): AppImage, `knx-mcp` and the Docker Hub
 image `knxbench/knxbench-server`, built and smoke-tested by the release workflows. See
 [Installation](04-installation.md).
 

@@ -28,6 +28,15 @@ in the existing Alpha.8 release or running containers.
 [Source publication](../IMPLEMENTATION_STATUS.md#2026-10-11--device-download-layout-published-on-main);
 [initial local acceptance](../IMPLEMENTATION_STATUS.md#2026-10-11--local-device-download-configuration-layout-repair).
 
+## Installation-node navigation (11 October 2026, local source)
+
+Unnamed imported installations now have translated display-only labels with
+stable IDs. Their Explorer labels select Properties with a name editor and an
+explanation; arrows still toggle the subtree. This reuses the existing installation
+rename command and native history/storage, with no new model, schema or bus behavior.
+Local acceptance is recorded in [the focused contract](../contracts/installation-node.md);
+this is not an Alpha.8 release or live deployment claim.
+
 ## Alpha.8 release boundary
 
 Alpha.8 packages selected-line/device import, schema-23 source/ZIP integrity

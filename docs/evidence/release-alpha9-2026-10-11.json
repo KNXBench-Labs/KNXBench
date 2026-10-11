@@ -1,0 +1,163 @@
+{
+  "version": "v0.1.0-alpha.9",
+  "status": "released and independently downloaded artifacts verified",
+  "source": {
+    "tagCommit": "5b21323e050f94953de9ff4683cc12462d753001",
+    "cutoffMain": "0bed9e2a82315bb1e1cf2d4d851b49347d5b631b",
+    "frozen": true,
+    "externalDependenciesChanged": false,
+    "laterParallelWorkExcluded": true,
+    "tagObject": "0bf7d8c99e0dc77dc9501a706682c52c946c8da8"
+  },
+  "applicationGate": {
+    "stages": 33,
+    "allRecordedStageExitsZero": true,
+    "rust": {
+      "passed": 4048,
+      "failed": 0,
+      "ignored": 194
+    },
+    "frontend": {
+      "passed": 2738,
+      "failed": 0,
+      "files": 174
+    },
+    "chromium": {
+      "expected": 302,
+      "unexpected": 0,
+      "skipped": 0,
+      "flaky": 0
+    },
+    "pythonToolTests": 54,
+    "strictClippyBuildTypesFormatFiveNonemptyRepositoryGatesAndDocumentationPassed": true,
+    "freshTarget": true,
+    "generatedBindingsCompared": 21,
+    "completeProducerConsumerPathSetsEqual": true,
+    "trackedInputsFrozen": true
+  },
+  "corpus": {
+    "passed": 143,
+    "selected": 143,
+    "targets": 31,
+    "additionalReferenceProcedureAndMatrixTestsPassed": 6,
+    "explicitPrivateRegressionTestsPassed": 7,
+    "networkInterfaces": [
+      "lo"
+    ],
+    "rawPrivateDataPublished": false
+  },
+  "historicalFinalization": {
+    "initialFinalizerRejected": true,
+    "reason": "Hard-coded >25 export count contradicted complete 21-file producer/consumer inventory",
+    "correctedExactInventoryAndSemanticComparisonPassed": true,
+    "applicationTestsRerun": false,
+    "privateOriginalIntegrity": "Per-case exact original-input hash guards in roundtrip, reconciliation and large lifecycle. Whole-run fingerprint comparison for additional reference containers is not claimed.",
+    "firstArtifactVerifierRejectedBeforeGitHubCall": "Isolated HOME prevented mise gh wrapper resolution; actual installed gh was bound in fresh verifier attempt2, which passed."
+  },
+  "visualReview": {
+    "renderer": "intercepted Chromium fixture, not native GTK or a real project",
+    "frames": 4,
+    "languages": [
+      "en",
+      "de"
+    ],
+    "widths": [
+      400,
+      1440
+    ],
+    "wide": "Central unavailable historical-import notice, session-only counter meaning, translated labels and controls readable; no observed clipping/occlusion. Footer alpha9 visible. Schema12 is synthetic fixture input, not a schema13 artifact check.",
+    "narrow": "Header unavailable-report badge, Save and navigation labels visible; detailed project notice is below the captured viewport and excluded from visual readability claim."
+  },
+  "review": "in-session self-review, not independent approval",
+  "upgrade": "native/model13; independent native/Docker backups before upgrading; Alpha8 and earlier refuse upgraded files; rollback needs the pre-upgrade backup",
+  "exclusions": [
+    "Instruction/parameter editors not mounted in the production workbench",
+    "Local report/payload/metadata, Functions/Sites and later parallel packages excluded",
+    "No new ETS exporter/signing/full-semantics or hardware/download certification",
+    "No interactive native GTK/Orca session or Raspberry Pi deployment",
+    "No replacement of existing user containers or stores"
+  ],
+  "recordedAt": "2026-10-11T22:25:42+02:00",
+  "dryRuns": [
+    {
+      "databaseId": 38170814561,
+      "headSha": "5b21323e050f94953de9ff4683cc12462d753001",
+      "conclusion": "success",
+      "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38170814561"
+    },
+    {
+      "databaseId": 38170821554,
+      "headSha": "5b21323e050f94953de9ff4683cc12462d753001",
+      "conclusion": "success",
+      "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38170821554"
+    }
+  ],
+  "tagWorkflows": [
+    {
+      "databaseId": 38171270865,
+      "headSha": "5b21323e050f94953de9ff4683cc12462d753001",
+      "conclusion": "success",
+      "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38171270865"
+    },
+    {
+      "databaseId": 38171270862,
+      "headSha": "5b21323e050f94953de9ff4683cc12462d753001",
+      "conclusion": "success",
+      "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38171270862"
+    }
+  ],
+  "publication": {
+    "url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9",
+    "prerelease": true,
+    "handwrittenNotesExact": true,
+    "tagMustNotMove": true,
+    "assets": [
+      {
+        "name": "knx-mcp-x86_64-linux",
+        "size": 10425824,
+        "sha256": "90363c2e89cfe5bef950523d7fe5ff84ad84fc52d44bbe820c6454ed676fc1b9",
+        "github_digest_matches": true
+      },
+      {
+        "name": "KNXBench_0.1.0-alpha.9_amd64.AppImage",
+        "size": 88402424,
+        "sha256": "bc3c653717719477199257c12db459dc53caed0a73da623e133d3461a51f0f49",
+        "github_digest_matches": true
+      },
+      {
+        "name": "SHA256SUMS",
+        "size": 193,
+        "sha256": "1a6f7d5f0c5428f4e50154dc08433cf0e2a95594b3fc8667d2b448f9dbfa7e19",
+        "github_digest_matches": true
+      }
+    ],
+    "checksumFileVerified": true,
+    "mcpExecuted": "knx-mcp 0.1.0-alpha.9+g5b21323",
+    "appimageExtractionPassed": true,
+    "docker": {
+      "image": "knxbench/knxbench-server:0.1.0-alpha.9",
+      "indexDigest": "sha256:caa5ab31ee23edc35f5af645672defdf2d5b10dc27cf1d432eea0f345e24fd05",
+      "versionAndLatestMatch": true,
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "revision": "5b21323e050f94953de9ff4683cc12462d753001",
+      "serverExecuted": "knx-server 0.1.0-alpha.9+g5b21323",
+      "anonymousPull": true,
+      "httpsAuthSaveReopenPassed": true
+    },
+    "existingUserContainerUnchanged": true
+  },
+  "publishedImageMigration": {
+    "syntheticPublicFixture": true,
+    "sourceSchema": 12,
+    "savedSchema": 13,
+    "openSaveReopenAndBothHistoryStacksPreserved": true,
+    "originalFixtureUnchanged": true,
+    "orderlyStop": {
+      "exit_code": 0,
+      "seconds": 0.442
+    }
+  }
+}

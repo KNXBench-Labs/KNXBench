@@ -1,3 +1,35 @@
+## 2026-10-11 — AP8 collector source publication verified
+
+## 2026-10-11 — Native notes service candidate (AP4 still incomplete)
+
+Foundation `e974624e` passed its source-bound 17 ordinary stages (Rust 4077,
+194 ignored; Web 2738 in 174 files) and 11 separately enabled native-project
+corpus regressions with unchanged original inputs. The application service
+adds private previews and Create/Replace/Move/Remove, exact snapshot/revision
+conflicts, no-op preservation and native working-history persistence before
+live publication. Service acceptance: 13 focused tests, owning app 235 passed /
+33 ignored, strict lint/build and repository/documentation checks. Two registered
+isolated guard mutants fail at the intended runtime assertions; self-review only.
+
+The assembled current-upstream candidate needs fresh combined acceptance,
+including the equivalent whitespace-test escape correction after staged review.
+HTTP, isolated EN/DE editor and help adoption are not implemented yet. Selective
+native-note source mapping remains explicitly refused; destination notes are
+preserved. No whole AP4/FUTURE-03 or ETS compatibility claim. The immutable
+Alpha-9 release remains native13 and does not include this schema14 work.
+[Service contract](contracts/project-note-service.md).
+
+The existing standalone collector commits `e639f206` and `2ac5dfb0` are now
+published normally on its configured private main; exact remote tip and every
+accepted source blob were read back. Matching already-saved owner credentials
+cleared the earlier access-context404 without changing persistent accounts,
+remotes or settings. Actual isolated offline discovery:181 passed,0 failures,
+0 errors,0 skipped, frozen source, active-session self-review. First attempt
+had180 passed/1 skipped due to a missing existing parser fixture path and remains
+unaccepted. [Receipt](evidence/collector-publication-2026-10-11.json) and
+[contract](contracts/statistics-measurement.md). No new telemetry, shared report
+regeneration, dashboard, hardware or blanket TOOLS completion is claimed.
+
 
 ## 2026-10-11 — Native notes Foundation local candidate (AP4 incomplete)
 
@@ -603,6 +635,44 @@ siblings; Repeat/activation/write boundaries remain. Published no-ff merge `2e26
 
 # IMPLEMENTATION_STATUS.md
 
+This is a **newest-first delivery history**, not the live feature inventory.
+Older dates, failures, counts and compatibility milestones remain historical.
+For current source capabilities use [manual implementation status](manual/implementation-status.md);
+for practical boundaries use [known issues](manual/known-issues.md), and for
+formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
+does not erase a broader platform/device limitation or imply a new release.
+
+## 2026-10-11 — Alpha9 published and downloaded artifacts verified
+
+- Tag `v0.1.0-alpha.9` is immutable on `5b21323e`, with published-main source
+  cutoff `0bed9e2a`. All application versions are `0.1.0-alpha.9`; external
+  dependency identities are unchanged. [Release notes](releases/alpha9.md)
+  explicitly exclude unmounted instruction/parameter editors, local-only
+  report/payload/metadata, Functions/Sites and later parallel packages.
+- Source-frozen acceptance:33 actual stage exits0; Rust4048/0/194ignored,
+  frontend2738/0/174files, Chromium302/0/no skips/flakes, tools54;
+  registered private corpus143/143/31targets, six supplementary reference/
+  procedure/matrix tests and seven explicit private regressions. Strict Clippy,
+  builds/types/format, five nonempty explicit-root repository and docs gates pass.
+  Initial harness finalizer rejection is preserved; exact complete21/21 binding
+  path/semantic equality corrected its >25 assumption without product edits or
+  test replay. Private original integrity is per-case hash guards, not an
+  unpersisted whole-run reference-file fingerprint claim. In-session self-review.
+- Exact-source dry runs38170814561/38170821554 and tag publication runs
+  38171270865/38171270862 all successful. AppImage/MCP/SHA256SUMS downloaded
+  again, checksums/GitHub digests exact; MCP build suffix binds the tag. AppImage
+  extracted. Docker version and latest share one amd64/arm64 index; anonymous
+  pull, revision/version, HTTPS authentication and native Save/Reopen pass.
+- Actual published Docker image opens authentic public native12 fixture,
+  explicitly saves native13 and reopens with projected working model and both
+  history-stack availability flags preserved; original unchanged. Own bridge
+  probe stops orderly with exit0. No user-container replacement, root sync,
+  live bus/vendor operation, new ETS semantics, interactive GTK/Orca or Pi claim.
+  [Aggregate source-bound receipt](evidence/release-alpha9-2026-10-11.json).
+  Current-facing README/install/status/known-issues/Docker/MCP references updated;
+  older release and source-measurement sections remain historical.
+
+
 ## 2026-10-10 — Project archive budget: 1024 MiB (local source)
 
 - Owner-requested increase of the cumulative expanded `.knxproj` budget from
@@ -792,13 +862,6 @@ regressions/full47 Python controls pass. No new hardware/whole-ETS claim.
 [Source-bound release evidence](evidence/release-alpha7-2026-10-10.json).
 Publication/assets/registry readback is the next explicit gate, not inferred
 from those dry runs. Both reported issues remain open.
-
-This is a **newest-first delivery history**, not the live feature inventory.
-Older dates, failures, counts and compatibility milestones remain historical.
-For current source capabilities use [manual implementation status](manual/implementation-status.md);
-for practical boundaries use [known issues](manual/known-issues.md), and for
-formal owner dispositions use [the ledger](status/LEDGER.md). A scoped delivery
-does not erase a broader platform/device limitation or imply a new release.
 
 ## 2026-10-09 — Docker uploads and companion return: source fixes
 

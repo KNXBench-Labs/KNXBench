@@ -11,9 +11,24 @@ Every part of KNXBench carries its own version
 `v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
 The CLI, desktop, web frontend, server and `knx-mcp` now carry `0.1.0-alpha.9`;
 library crates keep their own numbers. The public pre-release is
-[`v0.1.0-alpha.9`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9): AppImage, `knx-mcp` and the Docker Hub
-image `knxbench/knxbench-server`, built and smoke-tested by the release workflows. See
-[Installation](04-installation.md).
+[`v0.1.0-alpha.9`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9), published on 11 October 2026: AppImage, `knx-mcp` and the Docker Hub
+image `knxbench/knxbench-server`. See [Installation](04-installation.md).
+
+The current screenshots show that published release, not a moving development
+build. Alpha 9 brings named English/German DPT choices, display-only fallback
+installation labels, clearer login/version and notification details, and better
+import feedback. The device overview and restart-safe project history are also
+available. [Release notes](../../releases/alpha9.md) keep the exact scope together.
+
+**Before upgrading:** close the app and independently back up `.knxdb` files and
+Docker data. Alpha 9 uses native schema **13**; Alpha 8 and earlier refuse upgraded
+files. Returning to an older build requires your pre-upgrade backup. In-file
+versions and Undo are not an independent backup. Update `knx-mcp` together with
+the application.
+
+The release includes foundations for instruction and specialised parameter
+editors, but those new editors are **not mounted in the production workbench**.
+Do not mistake a source component for a new tab in your downloaded app.
 
 **Source documentation and a release asset are different snapshots.** Check the
 running application's version and build commit before expecting a recently added

@@ -20,7 +20,7 @@
   for verified synthetic cases and retained limits. This is a local source package,
   not a release, deployment, native UI or real vendor/archive/bus acceptance.
 
-## 2026-10-11 — DPT dropdown accepted on actual main integration
+## 2026-10-11 — DPT dropdown published on main after merged-source acceptance
 
 Owner explicitly authorized feature commit/no-ff main merge/push. Feature
 `fd5306dd5ede`, actual tested merge `e57e3a09ff34` onto `8505dc96831d` retain
@@ -34,7 +34,9 @@ production-built communication suite23/0/0skipped.
 Build/three type scopes/fmt/strict Clippy/five explicit-root repository gates/docs/
 whitespace pass. Four actual merged-build EN/DE1440/400 frames inspected;
 source hashes/HEAD unchanged. [Publication receipt](evidence/dpt-selection-publication-2026-10-11.json)
-records source binding and the separate remote-readback boundary. Self-review only.
+records source binding and verified normal main publication `ab7db1ae7991`.
+Local/tracking/live refs and feature/source ancestry/owned blobs were read back;
+later closure changes documentation only. Self-review only.
 No ignored/private-corpus sweep, unmocked-server/native/Orca/ETS/hardware claim;
 Alpha.8/live container and shared-root checkout are not replaced/synchronized.
 Original local results below remain historical, not relabelled as merged evidence.

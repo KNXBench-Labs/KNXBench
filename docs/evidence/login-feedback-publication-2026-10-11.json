@@ -138,8 +138,12 @@
     "description": "Incoming DPT publication documentation integrated after frozen runtime gates; both contributions and exact upstream journal suffix retained. Metadata gates repeated."
   },
   "publication": {
-    "status": "accepted for owner-authorized main publication",
-    "remoteReadback": "Separate verification after normal non-force push; see closing publication record."
+    "status": "published on main after normal non-force push and exact remote readback",
+    "verifiedPublishedCommit": "e476626e2eb5a7cfe436c05889abccea3095ee52",
+    "verifiedRemoteMain": "e476626e2eb5a7cfe436c05889abccea3095ee52",
+    "verifiedTrackingMain": "e476626e2eb5a7cfe436c05889abccea3095ee52",
+    "featureAndTestedMergeAreAncestors": true,
+    "closingMetadataCommit": "Subsequent metadata-only closure; exact final HEAD/readback retained in local publication evidence."
   },
   "initialFailure": {
     "kind": "Chromium launcher setup",

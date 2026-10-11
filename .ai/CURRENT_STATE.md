@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 12:14
+- **Completed:** Owner-authorized login/feedback/limits feature5c59f6d2 and no-ff tested merged075b7cc published on main ase476626e2eb5; live/fetched HEAD refs exact, feature/tested-merge ancestry verified. Fresh-main docs0fd7a865 reconciled in cdfd1345 with unchanged accepted runtime. Actual1359-input18-stage merged acceptance all0: Web2665/0/168, Rust3954/0/192ignored, Chromium294/0/0skipped/0flaky, built24/0;26 actual built frames inspected. Workspace Clippy/build/three types/five explicit-root repo/docs/fmt/whitespace pass. Publication receipt records actual observed push, not a deployment.
+- **Pending/Next Steps:** No feature implementation remains. This metadata closure preserves the verified published ancestor; final closure-tip remote readback and only-owned cleanup recorded in local publication archive. No release/live-container/root synchronization requested or performed.
+- **Notes for Codex oder Claude:** Self-review only, no private/ignored corpus, native clipboard/Orca/vendor/ETS/physical bus claim. Initial launch failure and successful full retry remain separate receipts. Root docs/index foreign work preserved; clean integration source remains in login-integration-20261011. Canonical compact evidence .ai/logs/2026-10-11_codex_login-feedback-limits/publication/; historical local/pending entries below are not current publication status.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 12:11
 - **Completed:** Owner-authorized feature5c59f6d2/no-ff tested merged075b7cc accepted on actual mainab7db1ae7991, docs-only fresh main0fd7a8655f17 reconciled ascdfd1345f0ac with unchanged runtime. Frozen1359-input18 stages all0: Web2665/0/168, Rust3954/0/192ignored, full Chromium294/0/0skipped/0flaky, built24/0.26 actual production frames inspected. Build/three type scopes/fmt/workspace strictClippy/five explicit-root repo/docs/whitespace pass. Public source-bound receipt added; inherited upstream journal preserved. Self-review only.
 - **Pending/Next Steps:** Final metadata/disclosure checks, commit explicit acceptance paths, normal HEAD:main push/exact remote readback, publication closure and only-owned cleanup. No deployment/root synchronization.

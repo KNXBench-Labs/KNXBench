@@ -141,3 +141,5 @@ including absent versus explicit empty, without claiming imported bytes changed.
 Own `crates/knx-store/tests/completion_vocabulary.rs` current-writer schema assertion only: compare against published CURRENT_SCHEMA_VERSION, preserving scalar completion/unknown-value checks. No predecessor fixture regenerated.
 
 Own reconstructed-v10 fixture SQL only in `crates/knx-store/tests/project_history.rs`: remove the new instruction tables before reconstructing old schema; preserve every rollback, byte equality and history-admission assertion. Production migration/history behavior unchanged.
+
+Own reconstructed-v9 cleanup in `crates/knx-store/tests/read_only_open.rs`, dropping only new instruction tables before old-layout reconstruction; byte identity/read-only/migration assertions remain intact.

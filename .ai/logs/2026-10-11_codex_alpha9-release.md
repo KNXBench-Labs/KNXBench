@@ -27,3 +27,15 @@ Final source-bound acceptance/publication is recorded separately after execution
 - [Public receipt](../../docs/evidence/release-alpha9-2026-10-11.json) contains
   aggregate-only evidence. Current-facing docs are release-bound, not a claim
   that every later main feature shipped. Existing container and foreign work kept.
+
+## Documentation delivery and hygiene
+
+Current-facing documentation/aggregate evidence was published as `e3378712`
+and read back byte-exact after eight fresh-root docs-only gates. The immutable
+release source is still `5b21323e`; documentation does not rebuild/relabel assets.
+Private evidence was compacted locally with complete selected-member byte
+verification before removal of own targets/stores/downloads/browser temp.
+The remaining closure is metadata-only; clean owned worktrees/branches/scratch
+are retired after its final checks. No other owner's work or running server is
+removed or replaced. The release workflow skill records the general verifier
+and isolated-CLI lessons; it does not admit broader compatibility.

@@ -1,6 +1,7 @@
 /** Settings overlay for theme, motion, UI/product language, and language-pack management. */
 import { emitAchievementEvent } from "./achievementEvents";
 import AchievementSettings from "./AchievementSettings";
+import UpdateSettings from "./UpdateSettings";
 import LegacyPasswordSettings, { type LegacyPasswordAccess } from "./LegacyPasswordSettings";
 import type { AchievementTracker } from "./achievementTracker";
 import { ACCENTS, DENSITIES, type useAppearance } from "./appearance";
@@ -624,6 +625,7 @@ export default function SettingsPanel(props: {
       </section>
       {props.achievementTracker && <AchievementSettings tracker={props.achievementTracker} />}
       {props.legacyPassword && <LegacyPasswordSettings access={props.legacyPassword} />}
+      <UpdateSettings />
       <ServiceControlDebugSetting />
     </Overlay>
   );

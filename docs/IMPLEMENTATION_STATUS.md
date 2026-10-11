@@ -1,4 +1,110 @@
+## 2026-10-11 — GitHub release notifications
+
+## 2026-10-11 — Notes authenticated HTTP adapter candidate
+
+The bounded note adapter supports ordered read, private Create/Replace/Remove/
+Move preview, explicit token-only confirmation and Cancel under the existing
+session guard. Strict typed DTOs preserve literal text and explicit report opt-in.
+Native working/history persistence uses the application service before memory
+publication; no direct SQL or bus operation. API 11 and module 2 focused controls,
+whole owning server 811 passed / 47 ignored, strict Clippy, format and build pass.
+Three registered guard negatives are caught with canonical source restored;
+self-review only. Native reopen recovers both stacks and preserves originals;
+external writer, real SQLite lock and history-budget errors publish no changes.
+[Bounded source evidence](evidence/project-notes-http-2026-10-11.json).
+
+The current-source web integration must be freshly accepted before publication;
+newer unrelated web changes are not covered by the old backend-only receipt.
+Isolated EN/DE notes UI, existing-help adoption, browser/native-restart and
+Session1 host mount remain open. FUTURE-03 is still LATER, not whole AP4 done.
+
+The production workbench checks the official public GitHub release list at startup
+and hourly while visible, comparing against the actual authenticated backend
+version. Newer eligible releases produce one localized actionable toast per
+version/session; About retains the information and offers explicit retry.
+Settings persists automatic-check opt-out. Stable builds exclude prereleases;
+alpha/beta builds include newer prerelease/stable publications. Credential-free
+fixed-origin HTTP, ten-second owner cancellation, 100-record/4MiB bounds,
+acknowledged-settings admission and no-overlap/deduplication stay outside KNX
+Core/project data. No installer, new dependency or schema/protocol change.
+
+Frozen feature working tree based on `c4e799d8`: Web **2794/0/178 files**,
+production build and explicit UI/E2E types pass; **7 new + 20 existing
+production-browser cases** pass with synthetic intercepted requests/loopback-only
+network. Actual public GitHub Chromium CORS read also succeeds. Eight final EN/DE
+400/1440 frames are pixel-equal to inspected frames; release link opens the exact
+synthetic official-tag popup. Five nonempty explicit-root repository gates,
+documentation and whitespace pass. Active-session self-review only; historical
+fixture/header failures remain separate, not retroactively green.
+[Evidence](evidence/release-notifications-2026-10-11.json),
+[ADR-0114](adr/0114-client-release-discovery.md),
+[contract/privacy/limits](contracts/RELEASE_NOTIFICATIONS.md).
+Source publication `55384982c9a38d269e7e68f76a792c757b6aea15` is verified on `main` (exact local/tracking/live tip and package blobs read back).
+This source feature is not in already-published Alpha.9 or deployed containers;
+interactive native WebKitGTK, installer/integrity/migration approval and hardware
+are not certified by these checks.
+
+## 2026-10-11 — Alpha 9 release media and manual/site refresh
+
+Published Alpha 9 frontend and server, not moving main or invented API replies,
+now supply **46 PNGs and three workflow GIFs**. Porcelain/Graphite cover the real
+fictional-project workspace; CRT/LCARS retain the optional-theme gallery.
+The DE/EN site keeps its existing voice and adds device overview, named DPT,
+project-history and message-detail cards with full-size lossless WebP links.
+Manual availability/captions match the release; older website videos stay visibly
+historical. Native13 backups/Alpha8 refusal and unmounted editor foundations are
+explicit, without claiming new hardware or codec compatibility.
+
+Actual scoped acceptance: real-release capture2/0/0skipped; website24/0 and
+documentation12/0; eight Chromium recipes670 checks/0 errors (preview/release,
+DE/EN, mobile/desktop, JS on/off). Frontend build and all five nonempty repository
+policy gates pass. Existing frontend chunk warning remains. In-session self-review;
+no full Rust/private-corpus or native accessibility rerun is claimed.
+[Acceptance](evidence/alpha9-media-2026-10-11.json) ·
+[Provenance and regeneration](assets/README.md) · [Website contract](WEBSITE.md).
+
+## 2026-10-11 — Structure headings stop fleeing the mouse (issue #5)
+
+- Reproduced the reported Ground/building heading clipping in the production
+  browser: generic `button:hover:not(:disabled)` applied `scale(1.05)` despite
+  the less-specific `button:hover` reset. Full-width headings moved into their
+  cards' clipped edges, hiding icons. A scoped `.diagram-heading` hover reset
+  removes magnification/shadow while retaining colour feedback; existing device
+  row styling, selection, keyboard actions and project data remain unchanged.
+- Regression: eight production-built Chromium cases cover EN/DE, Porcelain/
+  Graphite, 400/1440 px, Ground/building/floor and area/line headings. Settled
+  button/icon/text geometry remains identical before/after real hover; icons
+  stay within the row, mouse/keyboard navigation works and no unexpected API
+  calls or project writes occur. All eight hierarchy screenshots were inspected.
+- Verification: all 2,738 Vitest tests across 174 files pass; production build
+  and explicit new E2E typecheck pass; 17 existing hierarchy/device-layout/pane
+  browser regressions pass. The original named magnification assertion failed
+  before the fix. Earlier fixture-scroll/scoping/selector failures and a combined
+  CSS-selector source-pin failure remain historical, not successful acceptance.
+- Run the built regression with `npm run build` followed by
+  `npx playwright test --config playwright.structure.config.ts` in `apps/knx-web`.
+  This source repair is not in the already-published Alpha.9 artifacts. No
+  architecture/domain/API/schema/dependency/protocol change or native WebKitGTK
+  visual acceptance is claimed. Active-session self-review, not independent review.
+
 ## 2026-10-11 — AP8 collector source publication verified
+
+## 2026-10-11 — Notes Foundation/service bounded integration acceptance
+
+Runtime `51c09fa3` passes the 13 focused service tests, workspace Rust 4090 /
+0 failed / 194 ignored, Web 2738 in 174 files, strict Clippy, format and all
+production/fixture/type/binary builds. The first ordinary chain is **not** a
+whole-chain pass: its ledger syntax failure is retained. Documentation-only
+correction `33a19c15` passes eight fresh repository/docs gates and all 11 selected
+native project corpus regressions; original inputs and source remain unchanged.
+The final upstream release closure changes docs only, not that runtime.
+[Source-bound bounded evidence](evidence/project-notes-foundation-service-2026-10-11.json).
+
+Core/native14/diff/report and preview-first service are implemented. HTTP,
+isolated EN/DE notes editor, help adoption and Session1 shell integration remain
+open; FUTURE-03 stays LATER. Native-note source selective mapping is refused with
+explicit unsupported reporting, not silently discarded. Self-review only;
+immutable Alpha9/native13 release is not changed by this future-main package.
 
 ## 2026-10-11 — Native notes service candidate (AP4 still incomplete)
 

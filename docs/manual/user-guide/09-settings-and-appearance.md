@@ -63,6 +63,11 @@ The **Theme** menu is the one place to choose a theme. It lists:
 
 A choice is saved immediately; to go back, pick the previous entry.
 
+![The published Alpha 9 workbench in Graphite, showing the fictional Sample house’s group addresses and Kitchen light properties](../../assets/screenshots/graphite-group-addresses.png)
+
+*Graphite is the ordinary dark workbench, not a different application. The light
+Porcelain views elsewhere in this manual use the same project and controls.*
+
 Neon Grid and Bitcoin DeFi were removed on 2026-10-05. If one of them was your
 saved choice, KNXBench shows System and says under **Theme files** that the saved
 theme is not available; the saved value is left as it was until you pick another.

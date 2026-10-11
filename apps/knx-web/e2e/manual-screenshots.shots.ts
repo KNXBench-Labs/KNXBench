@@ -17,21 +17,33 @@ const target = resolve(
 );
 mkdirSync(target, { recursive: true });
 
-async function shot(page: Page, name: string): Promise<void> {
-  // Let transitions settle; the theme switch animates for 200 ms.
-  await page.waitForTimeout(400);
-  await page.screenshot({ path: `${target}/porcelain-${name}.png` });
-  console.log(`Captured porcelain-${name}.png`);
+async function shot(page: Page, name: string, theme = "porcelain"): Promise<void> {
+  const viewport = page.viewportSize();
+  // Keep the complete history notices and expanded DPT controls in the frame.
+  const tall = ["project-history", "dpt-selection", "message-details"].includes(name);
+  if (tall && viewport) await page.setViewportSize({ ...viewport, height: 1080 });
+  try {
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    // Let finite transitions and newly arriving notifications settle first.
+    await page.waitForTimeout(400);
+    await dismissToasts(page);
+    await page.screenshot({ path: `${target}/${theme}-${name}.png` });
+    console.log(`Captured ${theme}-${name}.png`);
+  } finally {
+    if (tall && viewport) await page.setViewportSize(viewport);
+  }
 }
 
 async function dismissToasts(page: Page): Promise<void> {
   const buttons = page.getByRole("button", { name: "Dismiss" });
-  // Reacquire after every dismissal: a snapshot of nth locators skips rows
-  // when the preceding toast leaves (achievements now animate their exit).
+  // Wait for the clicked node, not a queue count: another real notification
+  // may arrive while this one leaves. Reacquire only after its own removal.
   while (await buttons.count()) {
-    const before = await buttons.count();
-    await buttons.first().click();
-    await expect.poll(() => buttons.count()).toBeLessThan(before);
+    const button = await buttons.first().elementHandle();
+    if (!button) continue;
+    await button.click();
+    await expect.poll(() => button.evaluate((node) => node.isConnected)).toBe(false);
+    await button.dispose();
   }
 }
 
@@ -43,9 +55,91 @@ async function nav(page: Page, name: string): Promise<void> {
   });
 }
 
+async function setTheme(page: Page, theme: string): Promise<void> {
+  await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+  const settings = page.getByRole("dialog");
+  await settings.getByLabel("Theme", { exact: true }).selectOption(theme);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+  await expect(settings.getByRole("status").filter({ hasText: "Theme saved." })).toBeVisible();
+  await settings.focus();
+  await expect(settings).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(settings).toBeHidden();
+  // The next workflow recording must not begin halfway through the old palette.
+  await page.waitForTimeout(400);
+}
+
+async function history(page: Page): Promise<void> {
+  await page.locator("summary", { hasText: "File" }).first().click();
+  await page.getByRole("button", { name: "Project history", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Project history", exact: true })).toBeVisible();
+}
+
+async function captureReleaseDetails(page: Page): Promise<void> {
+  await history(page);
+  const panel = page.getByRole("dialog", { name: "Project history", exact: true });
+  await panel.getByLabel("Version name", { exact: true }).fill("Before the kitchen redesign");
+  await panel.getByRole("button", { name: "Create version", exact: true }).click();
+  await expect(panel.getByText("Before the kitchen redesign", { exact: true })).toBeVisible();
+  await shot(page, "project-history");
+  await panel.getByRole("button", { name: "Close", exact: true }).click();
+  await dismissToasts(page);
+
+  await setTheme(page, "graphite");
+  for (const [view, name] of [["Overview", "dashboard"], ["Devices", "devices"], ["Topology", "topology"]]) {
+    await nav(page, view);
+    await shot(page, name, "graphite");
+  }
+  await page.locator("button.tree-label").filter({ hasText: /^Sample house$/ }).click();
+  await expect(page.locator(".workbench-pane-right").getByRole("textbox", { name: "Name", exact: true })).toBeVisible();
+  await shot(page, "installation-inspector", "graphite");
+
+  await nav(page, "Group addresses");
+  await page.getByRole("button", { name: "0/0/2", exact: true }).first().click();
+  await expect(page.locator(".workbench-pane-right").getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Kitchen light");
+  await shot(page, "group-addresses", "graphite");
+
+  await page.getByRole("button", { name: "1.1.1 Switch actuator ground floor", exact: true }).first().click();
+  const tabs = page.getByRole("tablist", { name: "Switch actuator ground floor" });
+  await tabs.getByRole("tab", { name: "Communication objects", exact: true }).click();
+  await page.locator(".com-object-channel-summary").filter({ hasText: "Channel A" }).click();
+  await page.locator('summary[aria-label="Edit object 0"]').click();
+  const dpt = page.locator(".dpt-field select");
+  await expect(dpt).toBeVisible();
+  await expect(dpt.locator("option").filter({ hasText: "Switch" }).first()).toHaveCount(1);
+  await dpt.scrollIntoViewIfNeeded();
+  await shot(page, "dpt-selection", "graphite");
+  await tabs.getByRole("tab", { name: "Parameters", exact: true }).click();
+  await shot(page, "device-parameters", "graphite");
+
+  await history(page);
+  await expect(panel.getByText("Before the kitchen redesign", { exact: true })).toBeVisible();
+  await shot(page, "project-history", "graphite");
+  await panel.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Log", exact: true }).click();
+  await page.getByLabel("Search session log", { exact: true }).fill("ui:toast:achievement");
+  const message = page.locator('[data-log-key^="ui:"] .log-entry-open').first();
+  await expect(message).toBeVisible();
+  await message.click();
+  const details = page.getByRole("dialog", { name: "Message details", exact: true });
+  await expect(details).toBeVisible();
+  await expect(details.getByRole("button", { name: "Copy all details", exact: true })).toBeVisible();
+  expect(await details.innerText()).not.toMatch(/\/home\/|\/mnt\/|password=/i);
+  await shot(page, "message-details", "graphite");
+  await page.keyboard.press("Escape");
+
+  for (const theme of ["user-modern-retro-green-crt", "lcars"]) {
+    await setTheme(page, theme);
+    await nav(page, "Group addresses");
+    await page.getByRole("button", { name: "0/0/2", exact: true }).first().click();
+    await shot(page, "group-addresses", theme);
+  }
+  await setTheme(page, "porcelain");
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("knx-desktop:theme", "porcelain");
+    if (!localStorage.getItem("knx-desktop:theme")) localStorage.setItem("knx-desktop:theme", "porcelain");
     localStorage.setItem("knx-desktop:ui-language", "en");
   });
 });
@@ -111,7 +205,7 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await shot(page, "buildings");
 
   await nav(page, "Topology");
-  await expect(page.getByText("1.1 · Ground floor")).toBeVisible();
+  await expect(page.getByRole("button", { name: "1.1 · Ground floor", exact: true })).toBeVisible();
   await shot(page, "topology");
 
   await page.getByRole("button", { name: "1.1.1 Switch actuator ground floor" }).first().click();
@@ -124,8 +218,8 @@ test("manual screenshots of the finished application", async ({ page }) => {
     await expect(tabs.getByRole("tab", { name: tab, exact: true })).toHaveAttribute("aria-selected", "true");
   }
   await openTab("Communication objects");
-  await page.getByText("Channel A", { exact: true }).click();
-  await page.getByText("Channel A: Switch", { exact: true }).click();
+  await page.locator(".com-object-channel-summary").filter({ hasText: "Channel A" }).click();
+  await page.locator('summary[aria-label="Edit object 0"]').click();
   await expect(page.getByText("0/0/1").first()).toBeVisible();
   await tabs.evaluate((el) => el.scrollIntoView({ block: "start" }));
   await shot(page, "device-tab-communication-objects");
@@ -141,6 +235,10 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await nav(page, "Group addresses");
   await expect(page.getByText("Living room ceiling light").first()).toBeVisible();
   await shot(page, "group-addresses");
+
+  await nav(page, "Devices");
+  await expect(page.getByRole("heading", { name: "Devices", exact: true })).toBeVisible();
+  await shot(page, "devices");
 
   await nav(page, "Product catalog");
   await expect(page.getByText("Switch actuator 4-fold, DIN rail (1)")).toBeVisible();
@@ -224,6 +322,7 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await save.getByRole("button", { name: "Save", exact: true }).click();
   await expect(save).toBeHidden();
   await expect.poll(async () => (await (await page.request.get("/api/project")).json()).is_modified).toBe(false);
+  await captureReleaseDetails(page);
   await recordManualGif(page, "new-project", async () => {
     await page.locator("summary", { hasText: "File" }).first().click();
     await page.getByRole("button", { name: "New project…", exact: true }).click();
@@ -263,4 +362,9 @@ test("manual screenshot of the sign-in page", async ({ page }) => {
   await page.goto("http://127.0.0.1:4811/");
   await expect(page.getByLabel(/Password/i)).toBeVisible();
   await shot(page, "login");
+  await page.evaluate(() => localStorage.setItem("knx-desktop:theme", "graphite"));
+  await page.reload();
+  await expect(page.getByLabel(/Password/i)).toBeVisible();
+  await expect(page.getByText(/0\.1\.0-alpha\.9/)).toBeVisible();
+  await shot(page, "login", "graphite");
 });

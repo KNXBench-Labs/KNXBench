@@ -1,5 +1,13 @@
 # Roadmap
 
+## GitHub release notification source feature (2026-10-11)
+
+Startup/hourly notification, explicit manual checking and persisted opt-out are
+implemented at the [bounded notification-only scope](contracts/RELEASE_NOTIFICATIONS.md).
+This is not an automatic installer, artifact verifier, new release or running
+container replacement. Native interactive verification and any future updater
+remain separate tasks; no KNX compatibility or schema scope expands.
+
 ## Local source-integrity repair scope (2026-10-10)
 
 The [import integrity contract](IMPORT_INTEGRITY.md) covers the bounded parser/provenance/reporting repairs and scalar completion vocabulary. New device-extension modelling and execution/planner support remain separate research/owner decisions, not automatic follow-ons. Source integration, release and hardware scope are not authorized by local completion.

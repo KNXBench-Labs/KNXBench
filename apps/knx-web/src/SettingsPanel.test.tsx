@@ -158,7 +158,7 @@ describe("SettingsPanel", () => {
     const headings = Array.from(host!.querySelectorAll(".settings-section > h3")).map(
       (heading) => heading.textContent,
     );
-    expect(headings).toEqual(["Appearance", "Language & data", "Autosave", "Bus & diagnostics", "Debug · device control"]);
+    expect(headings).toEqual(["Appearance", "Language & data", "Autosave", "Bus & diagnostics", "Updates", "Debug · device control"]);
     expect(host!.querySelector(".settings-section-debug input[type='checkbox']")).not.toBeNull();
     const gateway = host!.querySelector<HTMLInputElement>(
       '.settings-section-bus input[placeholder="192.0.2.10:3671"]',

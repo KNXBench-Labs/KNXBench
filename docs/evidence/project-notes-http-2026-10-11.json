@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "scope": "authenticated note HTTP adapter; isolated UI/help/shell not delivered",
+  "source_commit": "b41217493145b07490380aa1562261a8817dc252",
+  "base": "51c09fa33a08602281ba67712b8472bc96efa3a0",
+  "code_inputs": {
+    "apps/knx-server/src/lib.rs": "78a4745502331bbea47f054e3779ad5bea6579d9a969f54f9278f7648b6540a8",
+    "apps/knx-server/src/note_routes.rs": "00ed26164d10f7b365e08e1672d2e0f4f685fe8c7ae2e22bc0b3fc51515a3e2e",
+    "apps/knx-server/tests/http_project_notes.rs": "247465966358ad88aef475e2066672ba63635213dffd47d3fb65ed53f3ca1487"
+  },
+  "owning_gates": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-p",
+        "knx-server",
+        "--test",
+        "http_project_notes",
+        "--",
+        "--nocapture"
+      ],
+      "exit": 0,
+      "passed": 11,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-p",
+        "knx-server",
+        "--lib",
+        "note_routes::tests",
+        "--",
+        "--nocapture"
+      ],
+      "exit": 0,
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-p",
+        "knx-server"
+      ],
+      "exit": 0,
+      "passed": 811,
+      "failed": 0,
+      "ignored": 47
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "-p",
+        "knx-server",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit": 0,
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit": 0,
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "-p",
+        "knx-server"
+      ],
+      "exit": 0,
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    }
+  ],
+  "inputs_frozen": true,
+  "guard_controls": {
+    "registered": 3,
+    "caught": 3,
+    "canonical_manifest_restored": true,
+    "first_attempt_restore_anchor_refusal_retained": true
+  },
+  "prerequisite": {
+    "published_foundation_service": "7e4ae3543d18bfa0beef4a46aae6dd0250b9fe60",
+    "new_upstream": "05a53d64a6b76b7b5c6b39e32518db3b12237f44",
+    "backend_unchanged": true,
+    "frontend_changed_requires_fresh_acceptance": true
+  },
+  "review": "active-session self-review, not independent",
+  "supported": [
+    "ordered literal notes, stable typed IDs and documentation opt-in",
+    "private create/replace/remove/move preview, exact token confirmation/cancel",
+    "actual cookie authentication, bounded strict JSON admission",
+    "live context and external native compare-and-write refusal",
+    "native working recovery with both stacks and explicit root Save"
+  ],
+  "limits": [
+    "one pending plan per router across authenticated clients, monotonic TTL300seconds",
+    "native persistence failures including external writer conflicts use sanitized422; live conflicts409",
+    "no UI/shell completion, ETS export or hardware/Secure claim"
+  ]
+}

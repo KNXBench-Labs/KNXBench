@@ -1,6 +1,6 @@
 {
   "schema": "knxbench-media-acceptance/1",
-  "status": "accepted-local-artifacts",
+  "status": "published-and-live",
   "release": "v0.1.0-alpha.9",
   "release_source": "5b21323e050f94953de9ff4683cc12462d753001",
   "image_digest": "sha256:caa5ab31ee23edc35f5af645672defdf2d5b10dc27cf1d432eea0f345e24fd05",
@@ -155,5 +155,30 @@
       "browser_checks": 670,
       "browser_errors": 0
     }
+  },
+  "publication": {
+    "verified_at": "2026-10-12 00:07 CEST",
+    "package_commit": "4161f366e75be70fc67645e7d8c67f17c2942868",
+    "target": "main",
+    "website_workflow_run": 38177695107,
+    "workflow_conclusion": "success",
+    "live_site_files": 38,
+    "live_manifest": "byte-identical to tested release build",
+    "live_file_hash_mismatches": 0,
+    "live_chromium_checks": 178,
+    "page_console_errors": 0,
+    "third_party_requests": 0
+  },
+  "manual_rendering": {
+    "github_gfm_fragments": 6,
+    "public_image_references": 21,
+    "public_image_byte_mismatches": 0,
+    "local_fragment_viewport_cases": 12,
+    "viewport_widths": [
+      400,
+      1000
+    ],
+    "scope": "Actual GitHub GFM API fragments with minimally styled local layout; real verified image bytes. Not pixel-equivalent to the full GitHub UI.",
+    "caption_correction": "Remove embedded pre-release editor evidence from current manual views, retain its historical link, and describe the visible named DPT/source badge accurately. Historical artifact bytes unchanged."
   }
 }

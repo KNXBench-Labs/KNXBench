@@ -1,7 +1,7 @@
 # ADR 0111: Native instruction overlays keep imported text authoritative
 
 Date: 2026-10-11
-Status: Proposed (implementation and acceptance still pending)
+Status: Accepted — native foundation locally verified; application/API/UI acceptance pending
 
 ## Context
 
@@ -14,14 +14,14 @@ device, so selecting the first matching attribute would bind the wrong owner.
 The parsed source's `SourceDevice::other` is owned by the actual source device;
 its source path and exact ETS ID match `DeviceInstance::source`.
 
-The domain has no instruction field. Mutating opaque evidence would falsify
+At proposal time the domain had no instruction field. Mutating opaque evidence would falsify
 original-source provenance. Storing an editor draft only in UI/localStorage
 would lose durable history and break native Save/Reopen. Putting RTF syntax in
 Core would couple an external format to the normalized model.
 ADR0031 deliberately keeps new project notes plain text; it is not a rich-text
 back door and does not authorize broadening those notes.
 
-## Proposed decision
+## Decision
 
 Add a narrowly named, project-owned map of device instruction overrides keyed
 by stable `DeviceId`. An override is a normalized text document with only

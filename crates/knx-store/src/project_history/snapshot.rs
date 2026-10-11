@@ -1,6 +1,6 @@
 //! Exact native snapshot codec and versioned semantic fingerprints.
 
-use super::{HistoryError, MAX_IMAGE_BYTES};
+use super::{HistoryError, MAX_CONTEXT_BYTES, MAX_IMAGE_BYTES};
 use crate::{ManufacturerRef, StoredOpaqueEntry};
 use knx_core::Project;
 use rusqlite::{Connection, MAIN_DB};
@@ -45,22 +45,15 @@ impl NativeSnapshot {
 
     pub fn encode(&self) -> Result<Vec<u8>, HistoryError> {
         let conn = self.memory_store()?;
-        let bytes = conn.serialize(MAIN_DB)?.to_vec();
-        if bytes.len() > MAX_IMAGE_BYTES {
-            return Err(HistoryError::Limit("one native snapshot exceeds 64 MiB"));
-        }
-        Ok(bytes)
+        let bytes = conn.serialize(MAIN_DB)?;
+        super::image_codec::encode(&bytes, MAX_IMAGE_BYTES)
     }
 
     pub(super) fn encode_with_identity(&self) -> Result<(Vec<u8>, String), HistoryError> {
         let conn = self.memory_store()?;
         let identity = semantic_store_hash(&conn)?;
-        let image = conn.serialize(MAIN_DB)?.to_vec();
-        if image.len() > MAX_IMAGE_BYTES {
-            return Err(HistoryError::Limit(
-                "one retained-context image exceeds 64 MiB",
-            ));
-        }
+        let bytes = conn.serialize(MAIN_DB)?;
+        let image = super::image_codec::encode(&bytes, MAX_CONTEXT_BYTES)?;
         Ok((image, identity))
     }
 
@@ -72,15 +65,33 @@ impl NativeSnapshot {
     }
 
     pub fn decode(bytes: &[u8], expected_hash: &str) -> Result<Self, HistoryError> {
-        if bytes.len() > MAX_IMAGE_BYTES {
-            return Err(HistoryError::Limit("one native snapshot exceeds 64 MiB"));
+        Self::decode_with_limit(bytes, expected_hash, MAX_IMAGE_BYTES)
+    }
+
+    pub(super) fn decode_context(bytes: &[u8], expected_hash: &str) -> Result<Self, HistoryError> {
+        Self::decode_with_limit(bytes, expected_hash, MAX_CONTEXT_BYTES)
+    }
+
+    fn decode_with_limit(
+        bytes: &[u8],
+        expected_hash: &str,
+        stored_limit: usize,
+    ) -> Result<Self, HistoryError> {
+        if bytes.len() > stored_limit {
+            return Err(HistoryError::ImageLimit(
+                "encoded native snapshot exceeds its model/context budget",
+            ));
         }
-        if bytes.len() < 100
-            || !bytes.starts_with(b"SQLite format 3\0")
-            || image_hash(bytes) != expected_hash
-        {
+        if image_hash(bytes) != expected_hash {
             return Err(HistoryError::Invalid(
                 "snapshot length, header or SHA-256 mismatch",
+            ));
+        }
+        let decoded = super::image_codec::decode(bytes, stored_limit)?;
+        let bytes = decoded.as_ref();
+        if bytes.len() < 100 || !bytes.starts_with(b"SQLite format 3\0") {
+            return Err(HistoryError::Invalid(
+                "invalid decoded SQLite snapshot header",
             ));
         }
         let mut conn = Connection::open_in_memory()?;

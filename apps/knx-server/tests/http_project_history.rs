@@ -76,6 +76,29 @@ fn binding(view: &Value, confirmed: bool) -> Value {
 }
 
 #[tokio::test]
+async fn retained_context_and_decode_limits_are_exposed_separately_from_model_limit() {
+    let (_dir, _path, _state, app) = fixture().await;
+    let (status, view) = request(&app, "GET", "/api/project/history", Value::Null).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        view["limits"]["maxImageBytes"],
+        knx_store::project_history::MAX_IMAGE_BYTES
+    );
+    assert_eq!(
+        view["limits"]["maxContextBytes"],
+        knx_store::project_history::MAX_CONTEXT_BYTES
+    );
+    assert_eq!(
+        view["limits"]["maxDecodedImageBytes"],
+        knx_store::project_history::MAX_DECODED_IMAGE_BYTES
+    );
+    assert_eq!(
+        view["limits"]["maxDecodedHistoryBytes"],
+        knx_store::project_history::MAX_DECODED_HISTORY_BYTES
+    );
+}
+
+#[tokio::test]
 async fn named_version_restore_preserves_unsaved_pre_restore_state_and_clears_edit_stack() {
     let (_dir, _path, state, app) = fixture().await;
     let before = state.project.lock().unwrap().clone().unwrap();

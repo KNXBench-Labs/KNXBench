@@ -1,0 +1,27 @@
+/* Missing evidence is informational, not an import success or an error count. */
+p.import-evidence-notice {
+  margin: 0.75rem 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--knx-border);
+  border-radius: 0.375rem;
+  color: var(--knx-muted);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.workbench-panel-controls button.import-evidence-notice {
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
+  box-sizing: border-box;
+  color: var(--knx-foreground);
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Theme hover zoom must not push this informational control out of the bar. */
+.workbench-panel-controls button.import-evidence-notice:hover:not(:disabled),
+.workbench-panel-controls button.import-evidence-notice:active {
+  transform: none;
+}

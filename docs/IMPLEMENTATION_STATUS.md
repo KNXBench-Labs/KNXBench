@@ -10,7 +10,8 @@ Test-first timing/phase-transition controls failed before the change, then
 passed. Whole Web Vitest: **2614 passed, 0 failed, 164 files**; TypeScript,
 explicit E2E types and production build pass. Eight built-Chromium intercepted cases passed (four import transitions and
 four existing archive-refusal regressions) (EN/DE, 1440/400, Graphite/Porcelain); all four screenshots
-were inspected. Local source only, not main publication or container deployment.
+were inspected. Feature branch `fix/import-status-20261011` published at
+`df868c7a`; not main integration, release or container deployment.
 No backend/schema/protocol/import-compatibility claim is extended.
 
 ## 2026-10-11 — local collector delivery and scoped measurement contract

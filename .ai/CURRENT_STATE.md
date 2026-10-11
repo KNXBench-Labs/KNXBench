@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 08:31 CEST
+- **Completed:** Owner-requested focused import-banner commit/push delivered on fix/import-status-20261011 atdf868c7a. Local/tracking/live feature refs equal; exact12-path commit, KNXBench author/committer/no coauthor and accepted eight source/test hashes verified. Fresh explicit-root five repository gates/documentation/staged whitespace pass. Existing runtime acceptance2614Web/8built intercepted Chromium remains source-bound, not rerun or double-counted. In-session self-review.
+- **Pending/Next Steps:** No feature implementation or branch-publication work remains. Documentation closure follows on the same branch; main integration, release and container deployment remain separate. Keep owned clean source/build worktree for review and later coordinated merge with UX-feedback; do not clean foreign worktrees.
+- **Notes for Codex oder Claude:** Evidence root ignored .ai/logs/2026-10-11_codex_import-status/. Main not changed by this delivery; root HEAD/index/foreign application/docs retained. Current phase is latest server observation, no heartbeat/ETA/extra protocol/compatibility claim. Own temporary publication target retired after final readback; no subagents/quota/bus/deployment.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 08:30 CEST
 - **Completed:** Owner requested commit/push of accepted import-banner package. Exact eight runtime/test source hashes still match local acceptance; freshly fetched origin/main remains9298242c. Prepared focused feature-branch publication with KNXBench identity; no main integration or deployment.
 - **Pending/Next Steps:** Commit/push fix/import-status-20261011 and verify local/tracking/live refs, committed path set and accepted source bytes. Preserve unrelated root changes and UX-feedback owner branch; main integration remains separate.

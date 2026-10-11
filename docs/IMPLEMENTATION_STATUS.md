@@ -1,16 +1,34 @@
 
 ## 2026-10-11 — native instruction foundation, not the full RTF editor
 
-## 2026-10-11 — Installation instruction integration candidate
+## 2026-10-11 — Bounded installation instruction editing accepted for Session1 handoff
 
-The owned instruction integration worktree assembles native model/storage/history
-with application/HTTP and isolated editor commits. Four additional asynchronous
-component tests characterize late preview/apply, unmount and revision changes;
-scoped RTF tests pass33/0 across three files. The
-[Session1 host contract](contracts/instruction-editor-host.md) specifies
-authoritative identity/refresh and dirty-state handling. Full combined workspace,
-server/web/build/repository and isolated browser/process-restart acceptance is
-still pending; no whole AP2/published-production claim from earlier receipts.
+Native13 device-owned instruction overlays, exact imported-source retention,
+commands/undo/redo, history/migration, selective mapping and native diff are
+assembled with the preview-first application/HTTP service and isolated EN/DE
+editor. Four asynchronous component cases cover late preview/apply, unmount and
+revision changes. [ADR-0112](adr/0112-native-instruction-overlays.md) was renumbered
+to preserve the published large-history codec ADR0111; both features coexist.
+
+Accepted runtime `e0dbd93a4709d9489409f0f685202294ff2ab42d` includes published
+import/history repairs from `43865f58`. All17 stages passed with frozen inputs:
+Web2715/0/172 files, full workspace Rust4026/0/194 explicitly ignored, strict
+workspace Clippy, format, production/isolated-fixture builds, three type scopes,
+source-stamped debug server/CLI/MCP, docs/regressions and all five explicit-root
+repository gates. Real loopback-only Chromium14 checks and13 native checks with
+two actual server restarts passed on the same source. Working recovery, original
+digest/file bytes, both stack lengths, stale pre-restart plan refusal, undo/redo
+and explicit Save/reopen were exercised. EN1440 Graphite and DE400 Porcelain
+frames were actually viewed. [Compact evidence](evidence/instruction-editing-2026-10-11.json).
+
+[Session1 host contract](contracts/instruction-editor-host.md) specifies exact
+snake_case-to-camelCase identity mapping, authoritative refresh and dirty-state
+policy. Shell/navigation integration belongs to Session1 and is not claimed.
+Source interpretation is Schema23 UTF-8/unprefixed XML only; editing supports
+text/paragraphs/bold/italic/underline with explicit unsupported-conversion consent.
+No ETS edited-project exporter, universal compatibility, hardware, release or
+deployment. In-session self-review, not independent approval. This acceptance is
+not itself remote publication; later metadata closure must pass its own gates.
 
 
 Normalized literal/basic-style instruction documents, reversible edit/reset and

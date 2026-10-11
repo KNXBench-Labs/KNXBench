@@ -28,6 +28,17 @@ in the existing Alpha.8 release or running containers.
 [Source publication](../IMPLEMENTATION_STATUS.md#2026-10-11--device-download-layout-published-on-main);
 [initial local acceptance](../IMPLEMENTATION_STATUS.md#2026-10-11--local-device-download-configuration-layout-repair).
 
+## Installation-node navigation (11 October 2026, local source)
+
+Unnamed imported installations now have translated display-only labels with
+stable IDs. Their Explorer labels select Properties with a name editor and an
+explanation; arrows still toggle the subtree. This reuses the existing installation
+rename command and native history/storage, with no new model, schema or bus behavior.
+Local acceptance is recorded in [the focused contract](../contracts/installation-node.md);
+[verified main source publication](../evidence/installation-node-publication-2026-10-11.json)
+supersedes the local-only source boundary, not its historical measurements.
+This is not an Alpha.8 release or live deployment claim.
+
 ## Alpha.8 release boundary
 
 Alpha.8 packages selected-line/device import, schema-23 source/ZIP integrity
@@ -68,6 +79,18 @@ packages the new budget.
 [Verification](../IMPLEMENTATION_STATUS.md#2026-10-10--archive-budgetreadable-refusals-main-integration-accepted)
 · [Import limits](../IMPORT_EXPORT.md).
 
+## Local login, notification details and larger inputs (2026-10-11)
+
+The isolated login/feedback package reuses the KNXBench logo and shows the built
+frontend version before authentication. Toast message actions navigate by exact
+local ID into the separately disclosed browser notification history; server/UI
+messages have raw details, exact clipboard copying and a selected-text fallback.
+Backend JSON export remains v1/server-only. Raw analysis/evidence sources and
+streamed file uploads admit 1024 MiB; contribution expanded inventory also
+admits 1024 MiB. XML/member/manufacturer/selective-source/public-output safety
+budgets are not blanket-raised. This is **local source**, not a released or
+deployed image. [Contract](../contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md).
+
 ## Docker upload and browser return fixes (2026-10-09 source)
 
 The source fixes for GitHub #1/#2 raise the streamed upload file ceiling to
@@ -93,6 +116,23 @@ existing Alpha.7 artifacts. [Workflow](../SELECTIVE_IMPORT.md) ·
 The authorized historical-export harness lacks its real export set; cvexc
 analysis does not activate device comparison/download rules. Native/Orca and
 real ETS/hardware evidence remain unverified.
+
+## Published main source: localized DPT dropdown and field provenance
+
+The 2026-10-11 [display/selection extension](../contracts/dpt-selection.md)
+replaces the CO DPT free-text field with a native dropdown containing 454
+versioned EN/DE names, resolves primary table/filter/search labels by UI language
+and explains provenance directly at the DPT/description heading. Unknown/raw
+aliases and main-only values stay exact options; program defaults stay display-only.
+Ordinary Web2625/0 in166 files, production build/types, complete intercepted
+Chromium252/0 and built Chromium23/0 are verified; native ArrowDown/Enter1/0
+also commits exactly the selected canonical DPT. All browser cases are offline.
+Owner-authorized no-ff main integration is accepted on actual `e57e3a09ff34`:
+Web2648/0, Rust3946/0,
+full Chromium274/0 and built23/0.
+[Source/remote-boundary receipt](../evidence/dpt-selection-publication-2026-10-11.json).
+**Not in Alpha.8 or the live container**; no core/database/API/protocol or
+device/codec compatibility extension. Earlier local counts above are historical.
 
 ## Communication-object table: accepted main-delivery source
 

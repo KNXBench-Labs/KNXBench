@@ -4,6 +4,127 @@
 - **Pending/Next Steps:** Review/document gates and coordinated current-main integration/publication pending. API/editor belongs to separate service/editor worktrees, not foundation closure.
 - **Notes for Codex oder Claude:** Nine-package goal continues; AP1/AP8/AP9 delivered, AP2 incomplete, AP3–AP7 pending. Self-review only; no hardware, private source/keys, subagents/quota, release/deployment. Root/foreign worktrees preserved. Evidence stays in owned data-tooling-editing-20261011 scratch; rejected attempts never restamped or added to totals.
 
+
+- **Timestamp:** 2026-10-11 12:14
+- **Completed:** Owner-authorized login/feedback/limits feature5c59f6d2 and no-ff tested merged075b7cc published on main ase476626e2eb5; live/fetched HEAD refs exact, feature/tested-merge ancestry verified. Fresh-main docs0fd7a865 reconciled in cdfd1345 with unchanged accepted runtime. Actual1359-input18-stage merged acceptance all0: Web2665/0/168, Rust3954/0/192ignored, Chromium294/0/0skipped/0flaky, built24/0;26 actual built frames inspected. Workspace Clippy/build/three types/five explicit-root repo/docs/fmt/whitespace pass. Publication receipt records actual observed push, not a deployment.
+- **Pending/Next Steps:** No feature implementation remains. This metadata closure preserves the verified published ancestor; final closure-tip remote readback and only-owned cleanup recorded in local publication archive. No release/live-container/root synchronization requested or performed.
+- **Notes for Codex oder Claude:** Self-review only, no private/ignored corpus, native clipboard/Orca/vendor/ETS/physical bus claim. Initial launch failure and successful full retry remain separate receipts. Root docs/index foreign work preserved; clean integration source remains in login-integration-20261011. Canonical compact evidence .ai/logs/2026-10-11_codex_login-feedback-limits/publication/; historical local/pending entries below are not current publication status.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 12:11
+- **Completed:** Owner-authorized feature5c59f6d2/no-ff tested merged075b7cc accepted on actual mainab7db1ae7991, docs-only fresh main0fd7a8655f17 reconciled ascdfd1345f0ac with unchanged runtime. Frozen1359-input18 stages all0: Web2665/0/168, Rust3954/0/192ignored, full Chromium294/0/0skipped/0flaky, built24/0.26 actual production frames inspected. Build/three type scopes/fmt/workspace strictClippy/five explicit-root repo/docs/whitespace pass. Public source-bound receipt added; inherited upstream journal preserved. Self-review only.
+- **Pending/Next Steps:** Final metadata/disclosure checks, commit explicit acceptance paths, normal HEAD:main push/exact remote readback, publication closure and only-owned cleanup. No deployment/root synchronization.
+- **Notes for Codex oder Claude:** Original failed launcher attempt proc_09cf766f8cef was Socket path too long, no UI assertions; actual short-temp probe and full retry proc_80b5d18e5369 exit0. Keep both receipts attributed, do not reuse old source test numbers as merged proof. Own lp/lp-20261011/lp2-20261011 and login-integration worktree; preserve foreign root docs/index and historical logs. Canonical local archive .ai/logs/2026-10-11_codex_login-feedback-limits/publication/.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:42
+- **Completed:** Feature5c59f6d2 committed with KNXBench identity; source merged into clean integration/login-feedback-limits-20261011 based on ab7db1ae7991. App/messages/styles automatically merged and reviewed; three additive documentation conflicts preserve both contributions, full upstream handover retained as exact suffix.
+- **Pending/Next Steps:** Commit no-ff merge and run actual merged-source workspace/Web/build/type/browser/Clippy/repository/documentation acceptance; normal push to main only after green and latest-main reconciliation. No deployment.
+- **Notes for Codex oder Claude:** root remains dirty with foreign documentation work, do not stash/reset/commit it. Retain historical local tests as original-source evidence only. Owned integration worker/evidence to follow; self-review, no delegation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:41
+- **Completed:** User explicitly authorized feature commit, merge commit and push. Previously accepted1088 retained runtime inputs byte-verified; exact public38-path package reviewed, no new feature changes. Root contains foreign documentation edits and remains untouched; integration uses separate clean checkout.
+- **Pending/Next Steps:** Commit only owned login/feedback/limits paths using KNXBench identity; merge into freshly fetched main in owned integration checkout, resolve additive contributions, run actual combined-source acceptance, then normal push with exact remote readback. Release/deployment remains outside scope.
+- **Notes for Codex oder Claude:** Historical local acceptance below remains valid for its source only. Reuse compact .ai/logs/2026-10-11_codex_login-feedback-limits evidence, not deleted scratch paths. No delegation; in-session self-review. Preserve unrelated root edits/index and parallel owner work.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:21 CEST
+- **Completed:** Local login/feedback/limits package implemented in fix/login-feedback-limits-20261011, base9298242c. Existing logo and frontend build version; exact local-ID toast navigation; raw server/UI details with exact copy and manual Ctrl+C; separately disclosed1000 UI records, backend-only JSON-v1 preserved. Raw analysis/expanded inventory/streamed upload1024MiB; XML/member/manufacturer/selective/public-output guards retained. Two hover REDs corrected by scoped flat actions. Final Web2629/0/165files, full Chromium268/0/0skipped/0flaky, built24/0, Rust201+290+22+5=518/0, build/E2E types/strictClippy and five nonempty repository/docs/fmt/whitespace gates pass on frozen1090 runtime inputs.26 actual built-only EN/DE wide/narrow dark/light frames inspected. Architecture/ADR/limits/contracts/manual/status synchronized; in-session self-review only.
+- **Pending/Next Steps:** No local feature implementation remains. Source is uncommitted/unpublished at KNXBench.worktrees/login-feedback-limits-20261011. Commit/main integration/push/release/live-container update are separate scope; later integration must reconcile overlapping App/styles/messages/status/ADR against fresh main and gate the combined inputs.
+- **Notes for Codex oder Claude:** Canonical compact evidence .ai/logs/2026-10-11_codex_login-feedback-limits/receipt.json and REPORT.md in shared root; exact configs/reports/manifest and26 production PNGs retained. Earlier fixture-server screenshots overwrote a shared path and were reclassified; isolated built-only capture supersedes them, repeated cases not double-counted. Final workers exited0. Task-only harness/targets/scratch retirement documented in cleanup.json; keep source and built frontend. No bus/vendor/private-corpus/native UI/deployment/GiB-analysis-RSS guarantee. Root application/index/foreign work and all inherited journals retained. UI skill records settled hover specificity and per-stage screenshot paths.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:41 CEST
+- **Completed:** Owner-requested DPT featurefd5306dd/no-ff mergee57e3a09 published normally on main atab7db1ae; exact local/fetched/live refs, feature/merge ancestry, all changed blobs and KNXBench identities/no coauthor verified. Actual merged frozen1878-input19 stages all0: Web2648/0/167, Rust3946/0/192ignored, full Chromium274/0/0skipped, built23/0; build/types/fmt/Clippy/five repo/docs/whitespace pass, four final frames inspected. Public receipt/status now record actual publication; self-review.
+- **Pending/Next Steps:** Documentation-only publication closure gates/commit/push/readback; archive compact accepted evidence and retire only the two owned source worktrees/branches/dp11p scratch after process teardown. No feature implementation remains.
+- **Notes for Codex oder Claude:** Runtime tested sourcee57e3a09, first publicationab7db1ae; later delta docs only. Own dpt-integration-20261011 and dpt-labels-20261011, evidence .ai/logs/2026-10-11_codex_dpt-selection/publication/. No release/deployment/root synchronization/private or ignored corpus/unmocked-server/native/Orca/ETS/hardware claim. Preserve every foreign root file/journal/worktree.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:39 CEST
+- **Completed:** Owner-authorized DPT featurefd5306dd and no-ff main mergee57e3a09 locally accepted on actual upstream8505dc96. Frozen1878-input19 stages all0: Web2648/0/167, Rust3946/0/192ignored, full Chromium274/0/0skipped, built23/0; build/three types/fmt/Clippy/five explicit-root repo/docs/whitespace. Four final merged frames inspected; required identities/no coauthor and upstream app/journal preservation verified. Metadata records original-vs-merge acceptance; no push yet.
+- **Pending/Next Steps:** Final documentation/disclosure gates, normal HEAD:main push/exact remote ref/blob readback, verified closure and only-owned source/build/scratch cleanup.
+- **Notes for Codex oder Claude:** Own dpt-integration-20261011/dp11p; compact root publication archive .ai/logs/2026-10-11_codex_dpt-selection/publication/. Self-review only; no private/ignored corpus execution, unmocked-server/native/Orca/ETS/hardware/release/container/root-sync action. Source manifest frozen during actual gate; later changes docs only. Preserve all foreign work and inherited journals.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:23 CEST
+- **Completed:** Delayed proc_1df803e66763 exit0 reconciled with archived final DPT-selection reports: Web2625/0/166files, full Chromium252/0, focused layout10/0, production-built23/0, no skipped/flaky browser cases.507-input final manifest/hash matches accepted receipt; notification confirms already-counted unchanged-source completion, not a new test run.
+- **Pending/Next Steps:** None for this notification. Local DPT delivery remains complete, uncommitted/unpublished; publication/deployment boundary unchanged.
+- **Notes for Codex oder Claude:** Both delayed DPT workers reconciled individually. Compact evidence .ai/logs/2026-10-11_codex_dpt-selection/. No rerun/code/commit/push/integration/deployment/bus action; preserve foreign publication work and inherited journals.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:22 CEST
+- **Completed:** Delayed proc_cc0b97e24009 exit1 reconciled with archived browser-full-retry.json: historical250/2/0skipped, two legacy whole-line layout assertions at360px. Already corrected and superseded by separately accepted browser-full-closure.json252/0/0skipped/0flaky. No new execution or additional acceptance count.
+- **Pending/Next Steps:** None for this notification. Local DPT selection delivery stays complete, uncommitted/unpublished; publication/deployment boundary unchanged.
+- **Notes for Codex oder Claude:** Canonical compact evidence .ai/logs/2026-10-11_codex_dpt-selection/. No rerun/code/commit/push/integration/deployment/bus action. Preserve installation-node owner's active publication and every inherited handover.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:11 CEST
+- **Completed:** Local DPT dropdown/provenance package closure complete: final five explicit-root repository gates/documentation/all-owned whitespace pass; source507-input manifest and exact evidence copies verified. Accepted Web2625/0/166, full Chromium252/0, built23/0, layout10/0 and keyboard1/0 remain the previously counted actual runs, not new executions. Only owned scratch/browser outputs/temporary configs retired; source, dependencies and production frontend retained.
+- **Pending/Next Steps:** None for local implementation. Source remains uncommitted/unpublished in fix/dpt-labels-20261011 / KNXBench.worktrees/dpt-labels-20261011. Main integration, commit/push, release and live-container update require their separate scope; reconcile overlapping UI work without copying whole files.
+- **Notes for Codex oder Claude:** Canonical compact receipt/507-input manifest/raw reports/four inspected frames/cleanup .ai/logs/2026-10-11_codex_dpt-selection/ in root. Historical timeout250/2/keyboard-setup refusals retained and superseded only by actual accepted final runs. No bus/unmocked-server/native/Orca/ETS/device-codec claim; root application/index/foreign work untouched by this package, inherited handovers preserved. No subagents or quota checks.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:45 CEST
+- **Completed:** Local owner-requested CO DPT dropdown/provenance in fix/dpt-labels-20261011, base9298242c. Versioned454-ID EN/DE display vocabulary; native select, localized table/filter/search, exact unknown/main-only/alias options, display-only program default and field-owned translated source/tooltips. Final Web2625/0/166files, production build/explicit E2E types, full intercepted Chromium252/0/0skipped, built Chromium23/0 and native ArrowDown/Enter1/0; four final frames inspected,507 frontend inputs frozen. Five fresh explicit-root repo gates/docs/whitespace pass; closure metadata/cleanup checks follow. Self-review, no Rust/model/API/DB/dependency/protocol changes.
+- **Pending/Next Steps:** No feature implementation remains. Local/uncommitted/unpublished source and built frontend retained at KNXBench.worktrees/dpt-labels-20261011; commit/main integration/push/release/live container update are separate scope. Reconcile shared Inspector/styles/messages with parallel UX/download-layout/installation work only during authorized integration.
+- **Notes for Codex oder Claude:** Compact evidence/log under .ai/logs/2026-10-11_codex_dpt-selection/. First full run was externally interrupted without verdict; subsequent250/2 legacy whole-line assertions superseded by actual252/0 token-level wrap checks, exactly two facts retained. Keyboard setup cwd refusal preceded corrected1/0. No codec/device/ETS/native/Orca/unmocked-server/hardware acceptance. Preserve root/foreign work and inherited journals; no subagents/quota/bus/deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:49 CEST
+- **Completed:** Installation-node source delivered on main e2e425d8: normal push, exact local/fetched/live equality, feature16e20a59/tested mergef0ce1b80 ancestry and1863 accepted input contents/8 metadata blobs read back. KNXBench authors/committers/no coauthors. Complete actual merge20-stage acceptance remains Web2635/0/165, Rust3946/0/192ignored, full Chromium270/0 plus built6/0, real isolated server/native8, build/types/Clippy/repo/docs. Seven final frames inspected; self-review. Public source receipt/manual/status now record verified publication.
+- **Pending/Next Steps:** Finish documentation-only closure gates/push/readback and retire only owned worktrees/branches/build scratch after compact archival; no application changes remain. No release/container deployment authorized.
+- **Notes for Codex oder Claude:** Root HEAD/index remain unchanged. Parallel manufacturer research updated its own root document during the long gate; corroborated by its10:32 handover, preserved/not restored/not included. Initial readback verifier conflated a symlink blob with followed-file content; corrected target/resolved-content checks pass with no delivered-source mismatch. Runtime basisf0ce1b80, metadatae2e425d8, no relabelled execution. Preserve compact original and publication evidence separately, all inherited journals/foreign work; no subagents/quota/private-original/corpus-sweep/native-Orca/bus action.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:36 CEST
+- **Completed:** Owner-authorized installation-node mergef0ce1b80 accepted on actual frozen1870-file committed source. All20 stages exit0: Web2635/0/165files; Rust3946/0/192ignored/258result blocks; production build/three types/fmt/strict workspace Clippy/fresh server; full Chromium270/0/0skipped + built6/0; real isolated production-browser/native8-check rename/Undo/Redo/refusal/Save/Open; five nonempty repo/docs/whitespace. Six final Properties frames and actual CRT server workbench inspected, self-review. Public source-bound receipt/manual/contract/architecture/limits/status now reflect accepted integration. Fresh main still8b4d249d; no push yet.
+- **Pending/Next Steps:** Finish metadata-only gates and normal main push/exact live/fetched/blob/ancestry readback, then final publication closure/owned archival/cleanup. Runtime source remainsf0ce1b80; documentation changes are separately verified, not relabelled as fresh runtime tests.
+- **Notes for Codex oder Claude:** Feature16e20a59/upstream8b4d249d retained; exact KNXBench identities/no coauthor. Source/live container/root index/foreign docs preserved. Initial npm-cache refusal remains unaccepted historical evidence; corrected proc_781ce284bb68 actually exited0. No release/deployment/bus/private-original/corpus-sweep/native-Orca scope. Canonical ignored publication directory in shared root; preserve original local acceptance and both handover histories.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:13 CEST
+- **Completed:** Owner authorized installation-node commit, merge and main push. Exact accepted20-path feature committed16e20a59 as KNXBench/no coauthor. Owned integration/installation-node-20261011 combines current main8b4d249d and feature; only four additive documentation conflicts, both contributions retained and complete upstream journal is an exact suffix. Published download/import UI fixes remain unchanged.
+- **Pending/Next Steps:** Complete actual merged-source full frontend/Rust/build/type/browser/real-server/native/repository/documentation acceptance before normal main push and exact remote readback. No publication claim yet; retain original local receipt separately.
+- **Notes for Codex oder Claude:** Own integration worktree only; root stays deliberately stale/dirty, HEAD/index/foreign bytes protected. No subagents/quota/release/container replacement/bus actions. Compact publication evidence under shared-root .ai/logs/2026-10-11_codex_installation-node/publication/. Preserve both inherited journals and other owners' work.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:33 CEST
+- **Completed:** Local installation-node delivery in fix/installation-node-20261011, base9298242c. Display-only translated unnamed ID labels; direct label selection/name Properties with explanation; arrow toggle preserved; existing command-backed rename/Undo/Redo/native storage and selected-installation add-device scope reused. Pending/lifetime/snapshot guards plus draft-preservation/refusal/Escape feedback. Named baseline/placement/draft RED controls. Final Web2633/0/165 files/build/three type gates; full Chromium254/0/0 skipped plus built EN/DE1440/400 Graphite/Porcelain/CRT6/0; fresh Core10/0/HTTP2/0/server build; real isolated production-browser/native eight-check rename/Undo/Redo/blank refusal/Save/Open pass. Seven final frames inspected, self-review/static scan. Five nonempty repo gates/docs/whitespace pass; manual/contract/architecture/limits/status updated. Post-runtime source-comment/test-description edits have exact inverse-hash proof and90 rebuilt files byte-equal to tested bundle.
+- **Pending/Next Steps:** None for local functional delivery. Source and built frontend remain uncommitted/unpublished in KNXBench.worktrees/installation-node-20261011. Commit/main integration/push/release/live-container update require separate authorization and coordinated reconciliation of parallel App/Inspector/messages owners.
+- **Notes for Codex oder Claude:** Canonical evidence in the shared root: .ai/logs/2026-10-11_codex_installation-node/receipt.json and cleanup.json; general root log .ai/logs/2026-10-11_codex_installation-node.md. Owned temporary targets/dependencies/probes/scratch are retired; source and built frontend remain. Legacy installation endpoint is not revision-conditional; ignoring a superseded reply does not cancel the server operation. No source-name normalization from display, private original import, native WebKitGTK/Orca/hardware/new schema/dependency/bus action. Root application/index and all foreign work preserved; inherited handover retained. User container unchanged.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 09:21 CEST
 - **Completed:** Owner-requested import status merge/main push delivered at3d6c9d1f; featuredf868c7a and upstream download-layout420d0242 ancestors retained. Actual combined frozen1865-file source passed14 stages: Web2614/0/164files, full intercepted Chromium264/0/0, production-built22/0/0, build/three types/five fresh nonempty repo gates/docs/whitespace. Local/tracking/live main equal; KNXBench identities/no co-author. Four final EN/DE400/1440 frames inspected; phase/note/joke visible below bar. Self-review only.
 - **Pending/Next Steps:** No further import-status implementation/main-merge work remains. This metadata-only closure is separately checked/read back; final owned cleanup is recorded in ignored delivery evidence. Release/container deployment and shared-root synchronization are separate and not performed.

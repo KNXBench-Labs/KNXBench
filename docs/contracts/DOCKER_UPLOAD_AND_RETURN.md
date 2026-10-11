@@ -17,6 +17,14 @@ was disabled without an opener. Neither was a KNX format or domain failure.
   describes a request, not guaranteed foregrounding, and returns no success
   acknowledgment. An enabled control cannot infer successful navigation from it.
 
+## Local size-policy supplement (2026-10-11)
+
+The [login/feedback/size package](LOGIN_FEEDBACK_AND_FILE_LIMITS.md) raises the
+streamed file ceiling to 1024 MiB while retaining the separate 16 KiB envelope,
+no-clobber publication and importer guards. The 256 MiB acceptance below is the
+earlier issue-fix baseline. The local supplement is not release/deployment
+acceptance; existing published images are unchanged.
+
 ## Fix acceptance
 
 - Accept files through 256 MiB, with a separate 16 KiB multipart-envelope

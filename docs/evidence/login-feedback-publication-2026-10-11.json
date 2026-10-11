@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "package": "login-feedback-limits",
+  "date": "2026-10-11",
+  "featureCommit": "5c59f6d29905f80ee3849dd8fb809e078ef3b234",
+  "testedMergeCommit": "d075b7cca880c708972fe011a54f1983db2004af",
+  "testedUpstreamCommit": "ab7db1ae7991ea3af8fee15a5ad9dfd312ad9650",
+  "authorization": "feature commit, merge commit and push to main",
+  "review": "in-session self-review",
+  "acceptance": {
+    "web": {
+      "passed": 2665,
+      "failed": 0,
+      "files": 168
+    },
+    "rust": {
+      "passed": 3954,
+      "failed": 0,
+      "ignored": 192,
+      "resultBlocks": 258
+    },
+    "builtBrowser": {
+      "expected": 24,
+      "unexpected": 0,
+      "skipped": 0,
+      "flaky": 0
+    },
+    "fullBrowser": {
+      "expected": 294,
+      "unexpected": 0,
+      "skipped": 0,
+      "flaky": 0
+    },
+    "stageCount": 18,
+    "stages": [
+      {
+        "name": "web-tests",
+        "exit": 0
+      },
+      {
+        "name": "web-build",
+        "exit": 0
+      },
+      {
+        "name": "theme-types",
+        "exit": 0
+      },
+      {
+        "name": "flow-types",
+        "exit": 0
+      },
+      {
+        "name": "e2e-types",
+        "exit": 0
+      },
+      {
+        "name": "built-browser",
+        "exit": 0
+      },
+      {
+        "name": "intercepted-browser",
+        "exit": 0
+      },
+      {
+        "name": "rust-format",
+        "exit": 0
+      },
+      {
+        "name": "workspace-tests",
+        "exit": 0
+      },
+      {
+        "name": "clippy",
+        "exit": 0
+      },
+      {
+        "name": "xtask-build",
+        "exit": 0
+      },
+      {
+        "name": "check-layering",
+        "exit": 0
+      },
+      {
+        "name": "check-headers",
+        "exit": 0
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0
+      },
+      {
+        "name": "check-ledger",
+        "exit": 0
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0
+      },
+      {
+        "name": "documentation",
+        "exit": 0
+      },
+      {
+        "name": "whitespace",
+        "exit": 0
+      }
+    ],
+    "inputCount": 1359,
+    "inputsFrozen": true,
+    "sourceManifestSha256": "ebf13916993d5b55604b022214ad7681bb31e9dbafdb4bf01ef520ddf84aa55f",
+    "visualFrames": 26,
+    "visualRenderer": "actual Vite production preview; EN/DE, 1440/400, Graphite/Porcelain"
+  },
+  "boundaries": {
+    "privateCorpus": false,
+    "ignoredTests": false,
+    "realBusTraffic": false,
+    "nativeClipboard": false,
+    "release": false,
+    "deployment": false,
+    "sharedRootSynchronization": false
+  },
+  "correlation": "exact retained browser-local toast IDs; no backend text matching",
+  "fileAdmissionBytes": 1073741824,
+  "preservedGuards": [
+    "XML scanning",
+    "individual archive members",
+    "manufacturer and selective imports",
+    "configuration",
+    "reduced public output"
+  ],
+  "logExport": "backend-only version1; UI retention independent and disclosed",
+  "integratedCommit": "cdfd1345f0accd67ee67ffc0e7c27a87d59eb4ea",
+  "freshMainCommit": "0fd7a8655f17ff959c7e505a6da273af57dc9683",
+  "metadataReconciliation": {
+    "runtimeUnchanged": true,
+    "description": "Incoming DPT publication documentation integrated after frozen runtime gates; both contributions and exact upstream journal suffix retained. Metadata gates repeated."
+  },
+  "publication": {
+    "status": "published on main after normal non-force push and exact remote readback",
+    "verifiedPublishedCommit": "e476626e2eb5a7cfe436c05889abccea3095ee52",
+    "verifiedRemoteMain": "e476626e2eb5a7cfe436c05889abccea3095ee52",
+    "verifiedTrackingMain": "e476626e2eb5a7cfe436c05889abccea3095ee52",
+    "featureAndTestedMergeAreAncestors": true,
+    "closingMetadataCommit": "Subsequent metadata-only closure; exact final HEAD/readback retained in local publication evidence."
+  },
+  "initialFailure": {
+    "kind": "Chromium launcher setup",
+    "reason": "Unix-domain socket path too long; zero UI assertions executed",
+    "recovery": "Short task-owned temporary directory; genuine launch probe and entire required acceptance rerun passed",
+    "applicationCodeChanged": false
+  }
+}

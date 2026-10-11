@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "scope": "native notes Foundation and application service; not HTTP/UI/whole AP4",
+  "review": "active-session self-review, not independent",
+  "runtime_head": "51c09fa33a08602281ba67712b8472bc96efa3a0",
+  "runtime_stages": [
+    {
+      "name": "note-service",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "format",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "web",
+      "exit": 0,
+      "valid": true,
+      "passed": 2738,
+      "failed": 0,
+      "pending": 0,
+      "files": 174
+    },
+    {
+      "name": "web-build",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "theme-types",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "flow-types",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "fixture-build",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "rust-workspace",
+      "exit": 0,
+      "valid": true,
+      "passed": 4090,
+      "failed": 0,
+      "ignored": 194,
+      "skip_lines": []
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "binaries",
+      "exit": 0,
+      "valid": true,
+      "versions": {
+        "knx-server": "knx-server 0.1.0-alpha.9+g51c09fa3",
+        "knx": "knx 0.1.0-alpha.9+g51c09fa3",
+        "knx-mcp": "knx-mcp 0.1.0-alpha.9+g51c09fa3"
+      }
+    }
+  ],
+  "focused_notes": 13,
+  "failed_ordinary_chain": {
+    "head": "51c09fa33a08602281ba67712b8472bc96efa3a0",
+    "gate": "check-ledger",
+    "exit": 1,
+    "reason": "owned annotation after table final delimiter",
+    "unstarted": [
+      "check-corpus-gates",
+      "whitespace",
+      "chained corpus"
+    ]
+  },
+  "docs_correction": {
+    "head": "33a19c15998febf571f61163b99ee3353587c12e",
+    "stages": [
+      {
+        "name": "documentation",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "documentation-tests",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-layering",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-headers",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-ledger",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "whitespace",
+        "exit": 0,
+        "valid": true
+      }
+    ],
+    "source_frozen": true,
+    "runtime_identical": true
+  },
+  "selected_native_corpus": {
+    "head": "33a19c15998febf571f61163b99ee3353587c12e",
+    "passed": 11,
+    "failed": 0,
+    "ignored": 0,
+    "original_inputs_unchanged": true,
+    "source_unchanged": true,
+    "scope": "11 existing project/native-store/app/server regressions, not complete product corpus"
+  },
+  "service_guard_mutations": {
+    "registered": 2,
+    "caught": 2,
+    "canonical_never_mutated": true
+  },
+  "final_upstream": {
+    "head": "93283f93702e60af6e8bc2ae3ac60e965d0e513c",
+    "docs_only": true,
+    "runtime_identical": true
+  },
+  "limits": [
+    "native notes source selective mapping explicitly refused; destination notes preserved",
+    "literal text only, report inclusion opt-in",
+    "auth HTTP/isolated UI/help/shell mount pending",
+    "no ETS write/roundtrip or hardware/Secure claim",
+    "immutable Alpha9/native13 release unchanged"
+  ]
+}

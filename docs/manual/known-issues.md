@@ -665,6 +665,16 @@ must not be described as either universally guessed or universally explicit.
 
 ## Language and accessibility
 
+### Structure headings shift on hover — fixed in source after Alpha.9
+
+The Ground/building/floor and topology headings inherited generic button
+magnification, moving text left and clipping icons inside their cards
+([issue #5](https://github.com/KNXBench-Labs/KNXBench/issues/5)). The
+11 October 2026 source fix keeps headings stationary and uses only a colour
+highlight. EN/DE Chromium checks cover light/dark palettes and narrow/wide
+layouts; native WebKitGTK visual verification remains separate. The existing
+Alpha.9 packages are unchanged and do not contain this repair.
+
 ### The interface is English and German; some text is neither
 
 - **Affected:** everyone not reading English.

@@ -1,0 +1,159 @@
+{
+  "schema": "knxbench-media-acceptance/1",
+  "status": "accepted-local-artifacts",
+  "release": "v0.1.0-alpha.9",
+  "release_source": "5b21323e050f94953de9ff4683cc12462d753001",
+  "image_digest": "sha256:caa5ab31ee23edc35f5af645672defdf2d5b10dc27cf1d432eea0f345e24fd05",
+  "capture": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "screenshots": 46,
+    "workflow_gifs": 3,
+    "server": "binary and frontend extracted from the published release image",
+    "network": "isolated loopback-only namespace",
+    "data": "fictional Sample house and Practice house; no live bus",
+    "manifest": "docs/assets/media-manifest.json"
+  },
+  "website_media": {
+    "updated_images": 7,
+    "encoding": "lossless WebP; decoded RGB bytes equal corresponding PNG pixels",
+    "manifest": "website/media.json",
+    "older_videos": "unchanged; visibly labelled as earlier recordings in German and English"
+  },
+  "review": "in-session self-review, not independent approval",
+  "scope": "Release media and documentation/site copy only; no domain, storage, protocol or application UI implementation changed",
+  "excluded": [
+    "native file-dialog or interactive screen-reader acceptance",
+    "KNX hardware, commissioning or manufacturer compatibility certification",
+    "full workspace/corpus regression rerun",
+    "instruction and specialised parameter editor workbench integration"
+  ],
+  "accepted_at": "2026-10-11 23:38 CEST",
+  "tested_source_head": "636d55d30c2c2050bab26c48774a5e92d7b21684",
+  "integration_base": "7e4ae3543d18bfa0beef4a46aae6dd0250b9fe60",
+  "checks": {
+    "website_unit_tests": {
+      "passed": 24,
+      "failed": 0
+    },
+    "documentation_unit_tests": {
+      "passed": 12,
+      "failed": 0
+    },
+    "browser": {
+      "recipes": 8,
+      "checks": 670,
+      "errors": 0,
+      "receipts": [
+        {
+          "label": "preview",
+          "recipe": "verify-browser.js",
+          "passed": true,
+          "count": 66,
+          "errors": 0
+        },
+        {
+          "label": "preview",
+          "recipe": "verify-alpha9.js",
+          "passed": true,
+          "count": 178,
+          "errors": 0
+        },
+        {
+          "label": "preview",
+          "recipe": "verify-imprint.js",
+          "passed": true,
+          "count": 26,
+          "errors": 0
+        },
+        {
+          "label": "preview",
+          "recipe": "verify-headlines.js",
+          "passed": true,
+          "count": 48,
+          "errors": 0
+        },
+        {
+          "label": "preview",
+          "recipe": "verify-default-language.js",
+          "passed": true,
+          "count": 18,
+          "errors": 0
+        },
+        {
+          "label": "preview",
+          "recipe": "verify-demos.js",
+          "passed": true,
+          "count": 134,
+          "errors": 0
+        },
+        {
+          "label": "release",
+          "recipe": "verify-release.js",
+          "passed": true,
+          "count": 22,
+          "errors": 0
+        },
+        {
+          "label": "release",
+          "recipe": "verify-alpha9.js",
+          "passed": true,
+          "count": 178,
+          "errors": 0
+        }
+      ]
+    },
+    "frontend_build": {
+      "exit": 0,
+      "note": "Existing >500 kB chunk warning remains; no performance guarantee."
+    },
+    "repository_gates": {
+      "exit": 0,
+      "names": [
+        "check-anchors",
+        "check-headers",
+        "check-layering",
+        "check-ledger",
+        "check-corpus-gates"
+      ],
+      "note": "Nonempty repository-policy checks; corpus gate scans source, not private corpus execution."
+    },
+    "static_site_builds": {
+      "preview_files": 37,
+      "release_files": 38,
+      "exit": 0
+    }
+  },
+  "binding": {
+    "capture_manifest_sha256": "20c05826eef24655f010280c23bdb661a6cf37d25d5832ec41907b16cc3614b1",
+    "website_media_manifest_sha256": "1508fd963f6cdf5a0a33ec86a254aba213de524464170fa5e499f526fc5291a7",
+    "source_hash_invariant": "All 76 owned inputs remained byte-identical across rebase; later closure edits are documentation metadata only."
+  },
+  "integration_followup": {
+    "accepted_at": "2026-10-11 23:45 CEST",
+    "tested_source_head": "0b3e412c12ab1392ed52bf309f9e17be61c869b8",
+    "incoming": "c4e799d8021d4075e18a8c9baaa1b14f1146c1f0: published structure-heading hover repair; not in the pinned Alpha9 captures",
+    "own_source_and_media": "75 non-receipt package inputs byte-identical to original accepted media candidate; both status entries preserved",
+    "fresh_checks": {
+      "frontend_build_exit": 0,
+      "web_unit_tests": {
+        "passed": 2738,
+        "failed": 0,
+        "files": 174
+      },
+      "website_unit_tests": {
+        "passed": 24,
+        "failed": 0
+      },
+      "documentation_unit_tests": {
+        "passed": 12,
+        "failed": 0
+      },
+      "repository_policy_gates": 5,
+      "browser_recipes": 8,
+      "browser_checks": 670,
+      "browser_errors": 0
+    }
+  }
+}

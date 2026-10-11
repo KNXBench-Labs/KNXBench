@@ -1,40 +1,5 @@
 {
   "schema": "knxbench-website-media/1",
-  "applicationSource": "a642eaf9",
-  "exercisedRecordingScriptSha256": "a5b70959dc8ab5c6b30670500f7f930008063e84a1763ad54ca54e295b317e0e",
-  "portableRecordingDifference": "Only destination-directory literals changed in website/tools/record-app.js; capture fixture/actions are unchanged.",
-  "recordingChecks": {
-    "checks": [
-      "real production workbench renders 15 fictional addresses",
-      "real inspector selects the kitchen light",
-      "actual application filter narrows the demo project",
-      "crt uses the app's real theme",
-      "lcars uses the app's real theme",
-      "no unhandled/external requests escaped the fixture",
-      "no page script errors"
-    ],
-    "count": 7,
-    "requests": [
-      "GET /api/auth/status",
-      "GET /api/achievements",
-      "GET /api/product-languages",
-      "POST /api/bus/discover",
-      "GET /api/settings",
-      "GET /api/version",
-      "POST /api/project/new",
-      "GET /api/settings",
-      "GET /api/settings",
-      "GET /api/settings",
-      "PUT /api/settings",
-      "GET /api/settings",
-      "PUT /api/settings"
-    ],
-    "unexpected": [],
-    "errors": [],
-    "frames": 44,
-    "themeWrites": "synthetic only",
-    "source": "production frontend, fictional API answers; no live KNX server"
-  },
   "assets": {
     "FONT-LICENSES.txt": {
       "sha256": "f805bd44ab9f82058b69bb524ea50439cb4d3f8b92dfbd3785e84d0faee8f927",
@@ -101,18 +66,26 @@
       }
     },
     "crt.webp": {
-      "sha256": "4ea305d097e59843015a9ac102c1dfed3008499e294b5609cb3564b6c1a6bf93",
-      "bytes": 49788,
-      "source": "website/tools/record-app.js",
-      "kind": "actual app optional CRT theme; fictional data",
-      "sourceSha256": "353378dbd0f7150629b5a773f399ded65cd755c50f7b75584d877da5234cc938"
+      "sha256": "49b22cc4cc65823c2ce8a7eafedcfd21e2f42704d4d61c2c235afafcb9f8cef7",
+      "bytes": 83806,
+      "width": 1440,
+      "height": 900,
+      "source": "docs/assets/screenshots/user-modern-retro-green-crt-group-addresses.png",
+      "sourceSha256": "0f61ee9ab2a07d69bdd196b40569258db1e51f7fc60814a954a0250440e608f6",
+      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
+      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
+      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
     },
     "graphite.webp": {
-      "sha256": "92dcf42cbf76cb47f72006f564be5ad23a3ed4ee08cd41bd6a05e594123313ce",
-      "bytes": 42240,
-      "source": "website/tools/record-app.js",
-      "kind": "actual production workbench; 15 fictional group addresses",
-      "sourceSha256": "353378dbd0f7150629b5a773f399ded65cd755c50f7b75584d877da5234cc938"
+      "sha256": "ea3fa10b265a0565d8c788a889e76b6deda08267bed61cdb9dd03a1d629626d1",
+      "bytes": 49576,
+      "width": 1440,
+      "height": 900,
+      "source": "docs/assets/screenshots/graphite-group-addresses.png",
+      "sourceSha256": "8da0889bf478b5a87e72c5d8bc0dca10d5a3ddd66bb27a81d1df9c8dc1ecdc86",
+      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
+      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
+      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
     },
     "group-details-de.vtt": {
       "sha256": "2005ef1a7ab7cae7414565fd9651aeccd188f6dad29ed07669f190d1fd67b227",
@@ -149,11 +122,15 @@
       "bytes": 23664
     },
     "lcars.webp": {
-      "sha256": "686cb0547874c5aa2442980c49538399ca36dce80ff77658da58c8a6cfa18db6",
-      "bytes": 51384,
-      "source": "website/tools/record-app.js",
-      "kind": "actual app optional LCARS theme; fictional data",
-      "sourceSha256": "353378dbd0f7150629b5a773f399ded65cd755c50f7b75584d877da5234cc938"
+      "sha256": "5c93c725328cbc933212d8802d5df2c44deefb02c9dff54cec710a540bcce7d1",
+      "bytes": 57920,
+      "width": 1440,
+      "height": 900,
+      "source": "docs/assets/screenshots/lcars-group-addresses.png",
+      "sourceSha256": "9eb9ff1d7b9caa85e4709199d80fa69f3db8a3bb15f952014a626ce62da52c18",
+      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
+      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
+      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
     },
     "project-work-de.vtt": {
       "sha256": "7d85bd6ee6693e6504d91bb508fe7823168c1dae719bda83302c4c1a545f33fb",
@@ -208,6 +185,104 @@
     "space-grotesk.woff2": {
       "sha256": "685bbbf69fa616df1ef81847c85fc76be097ddfb3468ff2257be54511ab3130f",
       "bytes": 13284
+    },
+    "alpha9-devices.webp": {
+      "sha256": "f91ec18743a9bda44cac030e7bd4656c7905d9eb8ffe22c79e2e47e5d798cfb7",
+      "bytes": 46528,
+      "width": 1440,
+      "height": 900,
+      "source": "docs/assets/screenshots/graphite-devices.png",
+      "sourceSha256": "3569b8078f2056b8a0058b1da87bdab64e3b98594912937d54a442e4f9652914",
+      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
+      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
+      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
+    },
+    "alpha9-dpt.webp": {
+      "sha256": "da4ac86e99e8c097bc1e51bdbf076b6d6924e655f9d87fe28e0542c197c609e5",
+      "bytes": 57140,
+      "width": 1440,
+      "height": 1080,
+      "source": "docs/assets/screenshots/graphite-dpt-selection.png",
+      "sourceSha256": "0919f0079f9eb90058893fb290aa649ced16985c23ff5e04853945fd08ec0243",
+      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
+      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
+      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
+    },
+    "alpha9-history.webp": {
+      "sha256": "6349eef8b54febd795481fe1db265b7c09064cb488e6b04260eac1f94d458d65",
+      "bytes": 56720,
+      "width": 1440,
+      "height": 1080,
+      "source": "docs/assets/screenshots/graphite-project-history.png",
+      "sourceSha256": "fb684e4813d9ef881f1700ec44743e09ae25636591ae631993a074648ce0d387",
+      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
+      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
+      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
+    },
+    "alpha9-message-details.webp": {
+      "sha256": "e6ec3cf673bda26470a485bd74a4cec2337634a0febb1e92855f94437378e423",
+      "bytes": 42328,
+      "width": 1440,
+      "height": 1080,
+      "source": "docs/assets/screenshots/graphite-message-details.png",
+      "sourceSha256": "69eb686a4c2e10f09992cdc2ac6aa69507141f368cc0b1378ca8a2bd8c78e37a",
+      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
+      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
+      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
+    }
+  },
+  "historicalRecording": {
+    "applicationSource": "a642eaf9",
+    "exercisedRecordingScriptSha256": "a5b70959dc8ab5c6b30670500f7f930008063e84a1763ad54ca54e295b317e0e",
+    "portableRecordingDifference": "Only destination-directory literals changed in website/tools/record-app.js; capture fixture/actions are unchanged.",
+    "recordingChecks": {
+      "checks": [
+        "real production workbench renders 15 fictional addresses",
+        "real inspector selects the kitchen light",
+        "actual application filter narrows the demo project",
+        "crt uses the app's real theme",
+        "lcars uses the app's real theme",
+        "no unhandled/external requests escaped the fixture",
+        "no page script errors"
+      ],
+      "count": 7,
+      "requests": [
+        "GET /api/auth/status",
+        "GET /api/achievements",
+        "GET /api/product-languages",
+        "POST /api/bus/discover",
+        "GET /api/settings",
+        "GET /api/version",
+        "POST /api/project/new",
+        "GET /api/settings",
+        "GET /api/settings",
+        "GET /api/settings",
+        "PUT /api/settings",
+        "GET /api/settings",
+        "PUT /api/settings"
+      ],
+      "unexpected": [],
+      "errors": [],
+      "frames": 44,
+      "themeWrites": "synthetic only",
+      "source": "production frontend, fictional API answers; no live KNX server"
+    }
+  },
+  "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
+  "alpha9Capture": {
+    "captured_on": "2026-10-11",
+    "application_release": "v0.1.0-alpha.9",
+    "application_source_commit": "5b21323e050f94953de9ff4683cc12462d753001",
+    "container_digest": "sha256:caa5ab31ee23edc35f5af645672defdf2d5b10dc27cf1d432eea0f345e24fd05",
+    "server_binary_sha256": "ff7e93c6818ce71813d9554e97099732a99b7002ab3ca9f220679233851ba31e",
+    "network": "isolated loopback-only user/network namespace",
+    "data": "fictional Sample house and Practice house; generated product data; no live bus",
+    "capture_spec_sha256": "6f6b6efa76d557774ab269b0c69305260e35ac8e61d57354cf937b2817dc9cf3",
+    "capture_config_sha256": "7a6c0b82f57bbf91b68d5f4eabf5d15266e6afc6d084226c99b6eca1e8bd6807",
+    "capture_result": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
     }
   }
 }

@@ -51,6 +51,7 @@ import { useProductLanguage } from "./productLanguage";
 import type { ProductLanguage } from "./api";
 import { useTranslate } from "./i18n";
 import ToastStack from "./Toast";
+import { useReleaseUpdates } from "./useReleaseUpdates";
 import { pickStartupToast, useToasts } from "./toast";
 import { useAchievements } from "./useAchievements";
 import { useAchievementsEnabled } from "./achievementPreference";
@@ -214,7 +215,8 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     revision: 0,
     retiredServerIncarnations: new Set(),
   });
-  const { toasts, notifications, notificationDroppedCount, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit } = useToasts();
+  const { toasts, notifications, notificationDroppedCount, pushUpdate, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit } = useToasts();
+  const updates = useReleaseUpdates(update => pushUpdate(t("updates.available", { version: update.version }), update.url));
   const [logTarget, setLogTarget] = useState<{ id: number } | null>(null);
   // ADR-0089. Unlocks are announced in the language of the moment they
   // happen; the tracker itself never translates anything.
@@ -1481,7 +1483,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
       {tree && historyOpen && <ProjectHistoryDialog tree={tree} onTreeUpdate={historyChanged} onClose={() => setHistoryOpen(false)} />}
       {helpOpen && <HelpPanel key={helpTopicId} initialTopicId={helpTopicId} onClose={() => setHelpOpen(false)} />}
-      {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {aboutOpen && <AboutDialog updates={updates} onClose={() => setAboutOpen(false)} />}
       {guide.open && <OnboardingGuide stage={guide.open.stage} ctx={ctx} onClose={guide.close} />}
       {achievementsOpen && (
         <AchievementsDialog snapshot={achievements.snapshot} enabled={achievementsEnabled} onClose={() => setAchievementsOpen(false)} />

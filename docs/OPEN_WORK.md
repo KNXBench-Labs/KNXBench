@@ -233,7 +233,7 @@ not erase subsequently delivered functionality.
 - **Comparison/report extensions:** applying/merging diffs, three-way
   comparison and native PDF output remain absent; comparison and browser
   print-to-PDF already exist. These are recorded boundaries, not active work.
-- **Features:** project notes (`FUTURE-03`, ADR-0031; local Core/native14/diff/report and service candidates, combined publication/HTTP/isolated UI still open),
+- **Features:** project notes (`FUTURE-03`, ADR-0031; Core/native14/diff/report and application service implemented; authenticated HTTP/isolated UI/help and full feature delivery still open),
   repetitive-task automation (`FUTURE-02`), a mutation-capable LLM/MCP surface
   (`FUTURE-01`; the read-only MCP server shipped, ADR-0090), dashboard
   drill-down, mobile app, native ports and manufacturer online-catalog

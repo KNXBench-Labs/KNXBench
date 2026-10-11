@@ -147,8 +147,12 @@
   "visualReview": "Four final merged-source EN/DE1440/400 production-built frames directly inspected: native dropdown/source readable and bounded, no toast occlusion; summary table intentionally remains horizontally scrollable.",
   "publication": {
     "authorizedTarget": "main",
-    "remoteReadbackVerified": false,
-    "releaseOrDeployment": false
+    "remoteReadbackVerified": true,
+    "releaseOrDeployment": false,
+    "firstPublicationCommit": "ab7db1ae7991ea3af8fee15a5ad9dfd312ad9650",
+    "featureAndTestedMergeReachable": true,
+    "runtimeDeltaSinceTested": [],
+    "verification": "Normal HEAD:main push followed by exact local/tracking/live ref and changed-blob readback; later closure is documentation only."
   },
   "boundaries": [
     "Unknown/main-only/noncanonical references preserved as exact selected values",

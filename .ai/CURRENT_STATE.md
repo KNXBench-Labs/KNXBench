@@ -1,4 +1,10 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 13:30 CEST
+- **Completed:** Explicit owner Go lifts pause. New feature/instruction-integration-20261011 worktree assembles native066b570d, HTTPdb4bcc24 and editora6c548a6 on fetched main ancestry. Both merge journals preserved; root/predecessor worktrees unchanged. Dependency records exact-equal except root project version; existing node_modules reused without installation.
+- **Pending/Next Steps:** Add isolated asynchronous-editor characterization tests and host contract; freeze actual combined workspace/server/web/build/repository acceptance plus real loopback browser and server-restart/native-history proof. Publish only accepted package, then AP3–AP7.
+- **Notes for Claude:** Exact owned feature/rtf and additive instruction documentation/handover scope only. No shell/navigation/global copy/styles/manifest/private-corpus/hardware/release/deployment/subagents. In-session self-review, not independent approval.
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 09:48
 - **Completed:** Native foundation accepted on exact source in native-instructions-broad-7: owning crates1209/0, strict Clippy/format/docs/whitespace all pass, frozen. Genuine native12 fixtures, reversible commands, selection mapping and native diff preserved. Public bounded evidence and additive model/import/status/ADR documentation drafted. Earlier reconstructed-fixture failures kept rejected.
 - **Pending/Next Steps:** Review/document gates and coordinated current-main integration/publication pending. API/editor belongs to separate service/editor worktrees, not foundation closure.

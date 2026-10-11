@@ -1,5 +1,20 @@
 # Known limitations
 
+
+## Installation instruction editor integration boundary (2026-10-11)
+
+AP2 exposes an isolated feature module and HTTP/application workflow, not a
+workbench navigation mount. [Host handoff](contracts/instruction-editor-host.md).
+The exact-source reader currently admits Schema23 UTF-8 XML1.0 unprefixed
+installation/device originals only. Other encodings/schemas, ambiguous owners,
+fragment-only originals and natively authored devices without retained imported
+source are explicit refusals. They do not lose original bytes. Editing supports
+plain text/Unicode/paragraphs/bold/italic/underline; unsupported conversion needs
+explicit consent and never overwrites the imported original. Native working
+history is recoverable but not implicit Save. There is no edited-override ETS
+export or full ETS compatibility claim. A later combined-source/browser receipt
+does not certify shell integration or hardware.
+
 ## Local installation-node UI boundary (2026-10-11)
 
 [Fresh main-integration acceptance](evidence/installation-node-publication-2026-10-11.json)

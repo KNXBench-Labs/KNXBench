@@ -1,5 +1,19 @@
 # Architecture
 
+
+## Native installation instruction editing (2026-10-11)
+
+[ADR-0111](adr/0111-native-instruction-overlays.md) keeps exact imported
+InstallationHints/XML separate from normalized, native device-owned instruction
+overrides. Pure Core values/commands, versioned Store migration/history,
+source/revision-bound application previews and router-local HTTP plans remain
+separate from the escaped-text isolated editor. The
+[host contract](contracts/instruction-editor-host.md) documents Session1's
+selection/revision/dirty-state integration. No format-specific Core dependency,
+ETS exporter, external resource loading or protocol behavior is introduced.
+Actual combined-source integration acceptance is pending; older individual
+receipts do not certify this assembled candidate or production shell mount.
+
 ## Login and notification detail ownership (2026-10-11 local source)
 
 The [login/feedback/size contract](contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md)

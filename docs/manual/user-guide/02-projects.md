@@ -44,6 +44,23 @@ new command-palette selector. Whole-project replacement import is unchanged.
 [CLI and bounds](../../SELECTIVE_IMPORT.md) ·
 [verification](../../status/2026-10-10-import-expansion-verification.md).
 
+## Import and open progress
+
+Whole-project import and native Open show a banner until the request ends.
+The **Current step** line sits below the bar and reflects the latest phase
+reported by the server, including master-data ingestion, product enrichment,
+passthrough storage and project-tree construction. Counts such as **13 of 251**
+are measured items within one phase, not a percentage of the whole import.
+When a phase has no item total, the bar shuttles and an explicit note explains
+why there is no count; the current step remains visible. A moving bar is not
+proof that the server is making progress, and no ETA or fine-grained activity
+inside an uncounted phase is inferred.
+
+Decorative jokes stay for **4.3 seconds** each (previously 1.8),
+independently of phase updates. The step and joke text are two typographic
+points larger. Reduced-motion settings still suppress rotation; failure
+removes the bar and jokes and retains the last phase and error.
+
 ## Starting a new project
 
 **New project…** opens a wizard. The first step asks for four fields:

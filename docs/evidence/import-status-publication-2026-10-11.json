@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-11",
+  "testedRevision": "3d6c9d1f673a079552ece33682b25023db91274c",
+  "publishedRuntimeRevision": "3d6c9d1f673a079552ece33682b25023db91274c",
+  "featureRevision": "df868c7a",
+  "integratedUpstreamRevision": "420d0242c7f12e184e0db12b2a43f13c2af49b2b",
+  "review": "in-session self-review",
+  "frontend": {
+    "success": true,
+    "numPassedTests": 2614,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "files": 164
+  },
+  "chromium": {
+    "full": {
+      "passed": 264,
+      "failed": 0,
+      "skipped": 0
+    },
+    "productionBuilt": {
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "stages": [
+    {
+      "name": "frontend",
+      "exit": 0
+    },
+    {
+      "name": "production-build",
+      "exit": 0
+    },
+    {
+      "name": "e2e-types",
+      "exit": 0
+    },
+    {
+      "name": "theme-types",
+      "exit": 0
+    },
+    {
+      "name": "flow-types",
+      "exit": 0
+    },
+    {
+      "name": "full-chromium",
+      "exit": 0
+    },
+    {
+      "name": "built-chromium",
+      "exit": 0
+    },
+    {
+      "name": "check-layering",
+      "exit": 0
+    },
+    {
+      "name": "check-headers",
+      "exit": 0
+    },
+    {
+      "name": "check-anchors",
+      "exit": 0
+    },
+    {
+      "name": "check-ledger",
+      "exit": 0
+    },
+    {
+      "name": "check-corpus-gates",
+      "exit": 0
+    },
+    {
+      "name": "documentation",
+      "exit": 0
+    },
+    {
+      "name": "whitespace",
+      "exit": 0
+    }
+  ],
+  "sourceUnchanged": true,
+  "scope": "UI source publication only; latest phase is a server observation, not an activity heartbeat, total percentage or ETA. No backend/protocol/import-compatibility extension or deployment. Later closure edits are metadata only."
+}

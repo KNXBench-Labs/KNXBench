@@ -14,6 +14,73 @@ AP2 remains in progress: validated application write services/API and actual
 isolated editor/browser delivery are separate. No source mutation, ETS export,
 full compatibility claim, hardware or Secure implementation.
 
+## 2026-10-11 — import status published on main
+
+Owner-requested import status feature `df868c7a` is published on `main` as
+`3d6c9d1f`, including the already published download-layout source. Both
+additive status/handover histories and the scoped CSS corrections are retained.
+Actual combined-source acceptance: **2614 Web tests / 164 files**, **264 full
+intercepted Chromium cases**, and **22 production-built Chromium cases**;
+zero failed or skipped. Build, three TypeScript gates, five fresh-root
+repository gates, documentation and whitespace all exit zero. All 1865 tracked
+inputs stayed frozen. Four final EN/DE 400/1440 frames show a readable phase
+below the bar, with the unavailable-total note and humour unclipped.
+Self-review only. Local, fetched and live main refs were read back equal.
+See the [source-bound publication receipt](evidence/import-status-publication-2026-10-11.json).
+No release/container deployment, bus operation or shared-root synchronization.
+Earlier feature-only/local acceptance entries below remain historical.
+
+## 2026-10-11 — local import-banner readability correction
+
+Current server-reported steps now appear below the bar in normal foreground
+colour, with an explicit note when that phase has no item total. Actual counts
+remain phase-local; no percentage, ETA or activity heartbeat is invented.
+Step/joke fonts increase by 2pt and jokes rotate every 4300ms instead of 1800ms.
+Failure, reduced-motion, unknown-phase and load-ownership rules remain intact.
+
+Test-first timing/phase-transition controls failed before the change, then
+passed. Whole Web Vitest: **2614 passed, 0 failed, 164 files**; TypeScript,
+explicit E2E types and production build pass. Eight built-Chromium intercepted cases passed (four import transitions and
+four existing archive-refusal regressions) (EN/DE, 1440/400, Graphite/Porcelain); all four screenshots
+were inspected. Feature branch `fix/import-status-20261011` published at
+`df868c7a`; not main integration, release or container deployment.
+No backend/schema/protocol/import-compatibility claim is extended.
+
+## 2026-10-11 — device-download layout published on main
+
+Owner-authorized feature `0f7be1a3` was merged without fast-forward and pushed
+as `0dae7c93`; fetched and live `main` refs and all accepted runtime/test blobs
+were independently read back. The actual merge passed Vitest 2612/0 in 164
+files, full intercepted Chromium 260/0/0, built-bundle scope/layout Chromium
+14/0/0, production build, explicit new/existing scope-spec TypeScript checks,
+five fresh-root nonempty repository gates, documentation and whitespace.
+All 1863 tracked inputs remained frozen during execution. Self-review only;
+final narrow Porcelain and wide CRT built frames inspected. See the
+[source-bound receipt](evidence/device-download-layout-publication-2026-10-11.json).
+This is source publication only: no new release, deployment or bus action.
+The initial local acceptance below remains historical.
+
+## 2026-10-11 — local device-download configuration layout repair
+
+The download-scope fieldset had no dedicated layout: its labels inherited
+stacked grid layout and radios inherited text-input minimum height. Combined
+with the fieldset's intrinsic minimum width, the configuration could overlap
+the device selector. The reproduced CRT case measured a 241 px radio box.
+
+Scoped CSS now gives the scope its own full-width row, compact 16 px radios
+(including a minimum-height reset), horizontal labels and shrinkable controls.
+Gateway precedes scope in DOM/keyboard order. Download planning, consent,
+protocol behavior and persistent data are unchanged.
+
+Named pre-fix Chromium RED caught the sizing defect. Final production-bundle
+Chromium: 14 passed, 0 failed, 0 skipped (12 EN/DE × 400/1440 px ×
+Graphite/Porcelain/CRT layout and keyboard cases plus two existing scope/plan
+cases). Vitest: 2612 passed, 0 failed across 164 files; production build and
+explicit new-spec TypeScript check passed. Browser APIs were intercepted in a
+loopback-only namespace; no live bus operation or hardware acceptance.
+Self-review only. Local source on `fix/device-download-layout-20261011`, based
+on `9298242c`; uncommitted/unpublished, not included in deployed artifacts.
+
 ## 2026-10-11 — local collector delivery and scoped measurement contract
 
 The standalone ProjectStats generator at its canonical local checkout now

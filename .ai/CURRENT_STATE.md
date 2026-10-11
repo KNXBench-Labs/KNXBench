@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:49 CEST
+- **Completed:** Installation-node source delivered on main e2e425d8: normal push, exact local/fetched/live equality, feature16e20a59/tested mergef0ce1b80 ancestry and1863 accepted input contents/8 metadata blobs read back. KNXBench authors/committers/no coauthors. Complete actual merge20-stage acceptance remains Web2635/0/165, Rust3946/0/192ignored, full Chromium270/0 plus built6/0, real isolated server/native8, build/types/Clippy/repo/docs. Seven final frames inspected; self-review. Public source receipt/manual/status now record verified publication.
+- **Pending/Next Steps:** Finish documentation-only closure gates/push/readback and retire only owned worktrees/branches/build scratch after compact archival; no application changes remain. No release/container deployment authorized.
+- **Notes for Codex oder Claude:** Root HEAD/index remain unchanged. Parallel manufacturer research updated its own root document during the long gate; corroborated by its10:32 handover, preserved/not restored/not included. Initial readback verifier conflated a symlink blob with followed-file content; corrected target/resolved-content checks pass with no delivered-source mismatch. Runtime basisf0ce1b80, metadatae2e425d8, no relabelled execution. Preserve compact original and publication evidence separately, all inherited journals/foreign work; no subagents/quota/private-original/corpus-sweep/native-Orca/bus action.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 10:36 CEST
 - **Completed:** Owner-authorized installation-node mergef0ce1b80 accepted on actual frozen1870-file committed source. All20 stages exit0: Web2635/0/165files; Rust3946/0/192ignored/258result blocks; production build/three types/fmt/strict workspace Clippy/fresh server; full Chromium270/0/0skipped + built6/0; real isolated production-browser/native8-check rename/Undo/Redo/refusal/Save/Open; five nonempty repo/docs/whitespace. Six final Properties frames and actual CRT server workbench inspected, self-review. Public source-bound receipt/manual/contract/architecture/limits/status now reflect accepted integration. Fresh main still8b4d249d; no push yet.
 - **Pending/Next Steps:** Finish metadata-only gates and normal main push/exact live/fetched/blob/ancestry readback, then final publication closure/owned archival/cleanup. Runtime source remainsf0ce1b80; documentation changes are separately verified, not relabelled as fresh runtime tests.

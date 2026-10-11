@@ -140,8 +140,13 @@
     ]
   },
   "publication": {
-    "state": "accepted main integration; remote readback recorded separately after normal push",
+    "state": "verified normal main push and exact local/tracking/live readback",
+    "verifiedPublicationCommit": "e2e425d8dd97ee8830c12e871ae31022b1f54fef",
+    "featureAncestorVerified": true,
+    "testedMergeAncestorVerified": true,
+    "acceptedInputContentsReadBack": 1863,
+    "metadataBlobsReadBack": 8,
     "rootSynchronization": false,
-    "scope": "main source only"
+    "scope": "main source only; later documentation closure preserves runtime inputs"
   }
 }

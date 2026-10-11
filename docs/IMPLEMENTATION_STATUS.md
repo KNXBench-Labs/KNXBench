@@ -1,3 +1,19 @@
+
+## 2026-10-11 — native instruction foundation, not the full RTF editor
+
+Normalized literal/basic-style instruction documents, reversible edit/reset and
+device-delete inverses, additive native13 persistence/history, authentic12
+predecessor migration, audited selective-import remapping and full normalized
+native diff visibility implemented. The source-bound owning-crate run executed
+1209 tests; ignored/unadmitted cases are separately recorded. Strict Clippy,
+formatting, documentation and whitespace passed with frozen inputs. Source
+self-review, not independent approval. Earlier rejected attempts remain rejected;
+reconstructed-old-schema test fixtures were corrected without weakening runtime
+migration or byte-preservation assertions. [Exact evidence](evidence/instruction-native-foundation-2026-10-11.json).
+AP2 remains in progress: validated application write services/API and actual
+isolated editor/browser delivery are separate. No source mutation, ETS export,
+full compatibility claim, hardware or Secure implementation.
+
 ## 2026-10-11 — local collector delivery and scoped measurement contract
 
 The standalone ProjectStats generator at its canonical local checkout now

@@ -1,0 +1,405 @@
+{
+  "date": "2026-10-11",
+  "scope": "native instruction model/storage/commands/selection/diff foundation only",
+  "runtime_source": "0d955321cf2cd0d171f277f085fa30972d6cd5e3",
+  "review": "active-session self-review",
+  "stages": [
+    {
+      "name": "format",
+      "exit": 0,
+      "valid": true,
+      "executed": 0,
+      "ignored": 0,
+      "counts": [],
+      "skip_marker": false
+    },
+    {
+      "name": "owning-crates",
+      "exit": 0,
+      "valid": true,
+      "executed": 1209,
+      "ignored": 37,
+      "counts": [
+        [
+          "84",
+          "0",
+          "0"
+        ],
+        [
+          "4",
+          "0",
+          "1"
+        ],
+        [
+          "7",
+          "0",
+          "0"
+        ],
+        [
+          "4",
+          "0",
+          "0"
+        ],
+        [
+          "9",
+          "0",
+          "0"
+        ],
+        [
+          "7",
+          "0",
+          "0"
+        ],
+        [
+          "6",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "5",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "0",
+          "0",
+          "4"
+        ],
+        [
+          "0",
+          "0",
+          "2"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "2",
+          "0",
+          "0"
+        ],
+        [
+          "5",
+          "0",
+          "0"
+        ],
+        [
+          "3",
+          "0",
+          "1"
+        ],
+        [
+          "3",
+          "0",
+          "0"
+        ],
+        [
+          "4",
+          "0",
+          "3"
+        ],
+        [
+          "7",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "3"
+        ],
+        [
+          "0",
+          "0",
+          "2"
+        ],
+        [
+          "12",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "15",
+          "0",
+          "0"
+        ],
+        [
+          "4",
+          "0",
+          "0"
+        ],
+        [
+          "1",
+          "0",
+          "0"
+        ],
+        [
+          "1",
+          "0",
+          "0"
+        ],
+        [
+          "3",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "2",
+          "0",
+          "1"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "1",
+          "0",
+          "4"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "1",
+          "0",
+          "0"
+        ],
+        [
+          "2",
+          "0",
+          "0"
+        ],
+        [
+          "15",
+          "0",
+          "0"
+        ],
+        [
+          "696",
+          "0",
+          "0"
+        ],
+        [
+          "4",
+          "0",
+          "0"
+        ],
+        [
+          "5",
+          "0",
+          "0"
+        ],
+        [
+          "4",
+          "0",
+          "0"
+        ],
+        [
+          "7",
+          "0",
+          "0"
+        ],
+        [
+          "4",
+          "0",
+          "0"
+        ],
+        [
+          "10",
+          "0",
+          "0"
+        ],
+        [
+          "8",
+          "0",
+          "0"
+        ],
+        [
+          "50",
+          "0",
+          "0"
+        ],
+        [
+          "4",
+          "0",
+          "0"
+        ],
+        [
+          "49",
+          "0",
+          "0"
+        ],
+        [
+          "102",
+          "0",
+          "0"
+        ],
+        [
+          "6",
+          "0",
+          "0"
+        ],
+        [
+          "2",
+          "0",
+          "0"
+        ],
+        [
+          "1",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "1"
+        ],
+        [
+          "7",
+          "0",
+          "0"
+        ],
+        [
+          "6",
+          "0",
+          "0"
+        ],
+        [
+          "19",
+          "0",
+          "0"
+        ],
+        [
+          "9",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "3"
+        ],
+        [
+          "9",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "0",
+          "0",
+          "0"
+        ]
+      ],
+      "skip_marker": false
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "valid": true,
+      "executed": 0,
+      "ignored": 0,
+      "counts": [],
+      "skip_marker": false
+    },
+    {
+      "name": "documentation",
+      "exit": 0,
+      "valid": true,
+      "executed": 0,
+      "ignored": 0,
+      "counts": [],
+      "skip_marker": false
+    },
+    {
+      "name": "whitespace",
+      "exit": 0,
+      "valid": true,
+      "executed": 0,
+      "ignored": 0,
+      "counts": [],
+      "skip_marker": false
+    }
+  ],
+  "inputs_frozen": true,
+  "exclusions": [
+    "application write API and browser editor acceptance",
+    "older embedded-history compatibility beyond the authentic12 predecessor",
+    "ETS export/roundtrip compatibility",
+    "private-corpus or hardware admission"
+  ],
+  "fixtures": {
+    "crates/knx-store/fixtures/project_v12_instruction_history.sqlite": "61e9397f6b6c14805e29b368a50c64a5b0e36ef9057430e9986064576f77d7e1",
+    "crates/knx-store/fixtures/project_v12_instruction_history_device.sqlite": "33dfd0c888a3d6dfa79e035c999fb783551a117fe6c46d90f9b6c65233a7e1ed"
+  }
+}

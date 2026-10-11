@@ -1,5 +1,21 @@
 # Import and export
 
+## Native instruction persistence foundation (2026-10-11)
+
+Native project storage13 persists normalized device instruction overrides
+separately from exact imported logical text and original XML. This is not an
+ETS exporter or broader format compatibility claim. Authentic native12
+predecessor fixtures were created before the migration; exact old image hashes
+and retained contexts remain immutable while admitted images are upgraded only
+in owned memory for normalized reads. Empty instruction collections preserve
+predecessor12 semantic identity; an explicit empty override is present13 state.
+Unknown/future/corrupt/orphan/noncanonical data is refused rather than repaired.
+Selective import explicitly remaps selected overrides and discloses their count;
+existing target instructions remain unchanged. Older embedded-history versions
+are not newly certified. API/browser editing remains outside this foundation's
+[acceptance](evidence/instruction-native-foundation-2026-10-11.json).
+
+
 ## Local source preservation and reporting (2026-10-10)
 
 [IMPORT_INTEGRITY](IMPORT_INTEGRITY.md) adds physical ZIP member lookup, recursive object-node lists, modern unassigned devices, original XML/metadata retention and exact member provenance. Lexical observations include retained subtrees and are not semantic acceptance. Manufacturer diagnostics replay from persisted source evidence; opaque media descriptions are not plugin claims. New completion vocabulary uses native/model12. No ETS exporter or signature/hardware claim; no private measurements in shared docs.

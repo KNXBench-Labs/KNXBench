@@ -137,3 +137,5 @@ Native instruction diff tranche owns only `crates/knx-diff/src/diff.rs`,
 `crates/knx-diff/tests/instructions.rs`. Preserve every unrelated Function/Site
 field and parked foreign source; compare full normalized style/run content,
 including absent versus explicit empty, without claiming imported bytes changed.
+
+Own `crates/knx-store/tests/completion_vocabulary.rs` current-writer schema assertion only: compare against published CURRENT_SCHEMA_VERSION, preserving scalar completion/unknown-value checks. No predecessor fixture regenerated.

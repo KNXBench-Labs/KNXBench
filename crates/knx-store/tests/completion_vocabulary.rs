@@ -20,7 +20,7 @@ fn documented_completion_statuses_roundtrip_without_substitution() {
         assert_eq!(
             conn.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
                 .unwrap(),
-            12
+            knx_store::CURRENT_SCHEMA_VERSION
         );
     }
 }

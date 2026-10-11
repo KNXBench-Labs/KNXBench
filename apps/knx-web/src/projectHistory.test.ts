@@ -7,6 +7,20 @@ import { HISTORY_FIXTURE } from "./projectHistory.fixture";
 function fresh(): Record<string, unknown> { return structuredClone(HISTORY_FIXTURE); }
 
 describe("native history contract", () => {
+  it("retains separately reported context/decoded budgets and preserves legacy omission", () => {
+    const source = structuredClone(HISTORY_FIXTURE);
+    const limits = { ...source.limits, maxContextBytes: 268435456, maxDecodedImageBytes: 536870912, maxDecodedHistoryBytes: 536870912 };
+    expect(admitProjectHistory({...source, limits}).limits).toMatchObject(limits);
+    expect(admitProjectHistory(source).limits).not.toHaveProperty("maxContextBytes");
+    expect(admitProjectHistory(source).limits).not.toHaveProperty("maxDecodedImageBytes");
+    expect(admitProjectHistory(source).limits).not.toHaveProperty("maxDecodedHistoryBytes");
+  });
+  it.each([0, -1, null, "256", Number.MAX_SAFE_INTEGER + 1, Infinity])("refuses malformed added budgets: %s", value => {
+    const source = structuredClone(HISTORY_FIXTURE);
+    for (const field of ["maxContextBytes", "maxDecodedImageBytes", "maxDecodedHistoryBytes"]) {
+      expect(() => admitProjectHistory({...source, limits: {...source.limits, [field]: value}})).toThrow();
+    }
+  });
   it("counts shared retained context once physically, not once per logical version", () => {
     const input = structuredClone(HISTORY_FIXTURE);
     input.totalBytes = 700000;

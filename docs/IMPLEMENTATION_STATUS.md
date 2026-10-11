@@ -1,3 +1,30 @@
+## 2026-10-11 — local import/application lifecycle repair
+
+Large retained source contexts can now enter native editing/history through a
+versioned bounded codec and independent model, shared-context and decoded-image
+budgets. No opaque data is removed to make a write fit. Cumulative decoded
+charge is checked before application-level inflation; SQLite internal blob
+materialization/allocator overhead is not claimed to be limited to prefix size.
+Native open exposes unavailable historical import evidence instead of pretending
+zero counters are a compatibility assessment; current-session warnings survive.
+See [large-image contract](contracts/large-history-images.md),
+[native-evidence contract](contracts/native-import-evidence.md), and the
+[remaining functional matrix](status/2026-10-11-import-application-followups.md).
+
+Frozen combined local acceptance: five owning Rust packages **1917 passed,
+83 ignored**; whole Web **2629 passed / 165 files**; built intercepted Chromium
+**14 passed, no skips/flakes**; owning strict Clippy, server/CLI build, explicit
+E2E types, generated binding equality, five nonempty repository/documentation/
+format/whitespace checks pass. An additional opt-in private application lifecycle
+and a real standalone synthetic restart pass; no source inventory or private
+content is published. Eleven deliberate source mutations were caught at named
+runtime assertions and restored byte-exactly. Self-review only.
+
+This is local source on `fix/import-lifecycle-20261011`, not integrated into
+current main, pushed, released or deployed. Other functional findings remain
+open under the matrix; manufacturer semantics are not invented and no bus or
+vendor extension is executed.
+
 ## 2026-10-11 — import status published on main
 
 Owner-requested import status feature `df868c7a` is published on `main` as

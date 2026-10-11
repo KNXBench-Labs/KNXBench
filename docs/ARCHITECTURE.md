@@ -1,5 +1,14 @@
 # Architecture
 
+## Client release discovery (2026-10-11)
+
+[ADR-0114](adr/0114-client-release-discovery.md) separates a fixed-origin public
+GitHub adapter, pure SemVer admission and session-owned check lifecycle from
+notification/settings/About views. The actual running version and acknowledged
+settings authorize discovery; project/domain/storage/protocol layers stay unchanged.
+No installer, webhook server, credentials or dependencies are introduced.
+[Contract, privacy and bounds](contracts/RELEASE_NOTIFICATIONS.md).
+
 
 ## Native installation instruction editing (2026-10-11)
 

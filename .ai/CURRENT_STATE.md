@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 23:49 CEST
+- **Completed:** Session6c2d7da635e0 GitHub release notification source implemented and accepted on current published note/heading baselinec4e799d8: fullWeb2794/0/178files, production build/types, updateBrowser7/0 + existingLoginToast20/0, thirteen accepted gates. Real public Chromium GitHub CORS200; eight final frames pixel-equal to inspected ones. Default-on startup/hourly visible checks, strict SemVer, authenticated running version, acknowledged opt-out, cancellation/deduplication, actionable nine-second toast and durable About/manual retry. No new dependency/core/schema/installer behavior.
+- **Pending/Next Steps:** Metadata gates, final focused commit and normal source publication/readback/owned cleanup. Not a new packaged release or container deployment; Alpha9 does not contain this feature. Other owners/queues unchanged.
+- **Notes for Codex oder Claude:** Contract docs/contracts/RELEASE_NOTIFICATIONS.md; ADR0114; public evidence docs/evidence/release-notifications-2026-10-11.json. Source self-review only. Prior fixture/header/preview-cwd failures stay historical; unchanged runtime stages reused only after complete source equality. Own worktree release-notification-6c2d7da635e0; no root sync/subagents/quota/private corpus/bus operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 23:38 CEST
 - **Completed:** Alpha9 media/site/manual package accepted locally on integrated source 636d55d30c2c2050bab26c48774a5e92d7b21684. Real published-image capture2/0/0skipped,46PNG/3GIF;7lossless WebPs preserve source pixels. DE/EN feature cards, dark/light media, honest historical-video captions, native13/Alpha8 backup boundary and unmounted-editor limits updated. Static website24/0, docs12/0, eight Chromium recipes670checks/0errors; frontend build and five nonempty repo-policy gates pass. Source self-review only.
 - **Pending/Next Steps:** Publish this accepted docs/media package and verify the existing Pages deployment; no new release/tag, shared-root sync or further feature task. Other owners' Notes/editor/Functions/design work unchanged.

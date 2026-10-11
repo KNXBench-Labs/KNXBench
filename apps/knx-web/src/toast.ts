@@ -14,7 +14,7 @@ import type { LogEntry } from "./api";
 export interface ToastNotification { id: number; entry: LogEntry }
 export const MAX_NOTIFICATION_HISTORY = 1000;
 
-export type ToastKind = "error" | "fun" | "achievement";
+export type ToastKind = "error" | "fun" | "achievement" | "update";
 
 /** What an unlocked achievement's popup shows, already translated (ADR-0089). */
 export interface AchievementPopup {
@@ -35,6 +35,8 @@ export interface ToastEntry {
   serverText: boolean;
   /** Set on an achievement popup; absent on the "+N more" summary. */
   achievement?: AchievementPopup;
+  /** Fixed-origin release action; ordinary toast details keep their existing owner. */
+  releaseUrl?: string;
   /** The toast is playing its exit animation; `finishExit` removes it. */
   leaving?: boolean;
 }
@@ -193,5 +195,12 @@ export function useToasts() {
     }
   }
 
-  return { toasts, notifications: history.entries, notificationDroppedCount: history.dropped, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit };
+  function pushUpdate(message: string, releaseUrl: string) {
+    const id = nextId.current++;
+    remember(id, "update", message, releaseUrl);
+    setToasts(ts => [...ts, { id, kind: "update", message, releaseUrl, serverText: false }]);
+    setTimeout(() => dismiss(id), TOAST_MS);
+  }
+
+  return { pushUpdate, toasts, notifications: history.entries, notificationDroppedCount: history.dropped, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit };
 }

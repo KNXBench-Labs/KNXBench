@@ -173,3 +173,14 @@ it("keeps a standard status toast for nine seconds and gives it the achievement 
   await act(async () => vi.advanceTimersByTime(TOAST_EXIT_FALLBACK_MS));
   expect(toasts!.toasts).toEqual([]);
 });
+
+it("keeps an update actionable for nine seconds and retains its release link in notification history", async () => {
+  vi.useFakeTimers(); await mount();
+  await act(() => toasts!.pushUpdate("KNXBench 0.1.0-alpha.10 is available", "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10"));
+  expect(toasts!.toasts).toMatchObject([{ kind: "update", releaseUrl: "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10", serverText: false }]);
+  expect(toasts!.notifications[0].entry).toMatchObject({ source: "ui:toast:update", severity: "info", detail: "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10" });
+  await act(() => vi.advanceTimersByTime(8999)); expect(toasts!.toasts[0].leaving).toBeFalsy();
+  await act(() => vi.advanceTimersByTime(1)); expect(toasts!.toasts[0].leaving).toBe(true);
+  await act(() => vi.advanceTimersByTime(TOAST_EXIT_FALLBACK_MS)); expect(toasts!.toasts).toEqual([]);
+  expect(toasts!.notifications).toHaveLength(1);
+});

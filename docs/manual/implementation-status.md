@@ -16,6 +16,17 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Release notifications (11 October 2026 source)
+
+The workbench can announce newer GitHub releases at startup and hourly while
+visible, with release details and manual checking in File → About KNXBench.
+Settings → Updates disables automatic checks; no project data is transmitted.
+Stable builds exclude prereleases; alpha/beta builds include newer prereleases.
+No automatic installation or upgrade-compatibility approval is implied. Offline
+and rate-limited checks leave editing usable. This is not in the already-published
+Alpha.9 snapshot. [Contract and privacy](../contracts/RELEASE_NOTIFICATIONS.md),
+[verified source scope](../evidence/release-notifications-2026-10-11.json).
+
 ## Alpha.9 release boundary (11 October 2026)
 
 [`v0.1.0-alpha.9`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9)

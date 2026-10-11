@@ -1,6 +1,18 @@
 
 ## 2026-10-11 — native instruction foundation, not the full RTF editor
 
+## 2026-10-11 — Installation instruction integration candidate
+
+The owned instruction integration worktree assembles native model/storage/history
+with application/HTTP and isolated editor commits. Four additional asynchronous
+component tests characterize late preview/apply, unmount and revision changes;
+scoped RTF tests pass33/0 across three files. The
+[Session1 host contract](contracts/instruction-editor-host.md) specifies
+authoritative identity/refresh and dirty-state handling. Full combined workspace,
+server/web/build/repository and isolated browser/process-restart acceptance is
+still pending; no whole AP2/published-production claim from earlier receipts.
+
+
 Normalized literal/basic-style instruction documents, reversible edit/reset and
 device-delete inverses, additive native13 persistence/history, authentic12
 predecessor migration, audited selective-import remapping and full normalized

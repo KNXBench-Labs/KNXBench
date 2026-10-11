@@ -25,4 +25,38 @@ describe("isolated instruction editor",()=>{
  it("keeps a dirty draft on unrelated revision change and requires deliberate reload",async()=>{const client=fixture({read:vi.fn().mockResolvedValueOnce(source).mockResolvedValue({...source,snapshotRevision:3})});const {root,host}=await mount(client);await edit(host,"unsaved draft");await act(async()=>root.render(<InstructionEditor deviceId={1} context={{...context,snapshotRevision:3}} client={client}/>));expect(host.querySelector("textarea")?.value).toBe("unsaved draft");expect(host.textContent).toContain("changed");expect(client.apply).not.toHaveBeenCalled();await click(host,"Discard draft and reload");expect(host.querySelector("textarea")?.value).toBe("original");});
  it("ignores a late old selection read instead of leaking it into the new device",async()=>{let resolve:(value:InstructionView)=>void=()=>{};const delayed=new Promise<InstructionView>(done=>{resolve=done;});const client=fixture({read:vi.fn().mockReturnValueOnce(delayed).mockResolvedValue({...source,device:2,effectiveDocument:literal("device two")})});const {root,host}=await mount(client);await act(async()=>root.render(<InstructionEditor deviceId={2} context={context} client={client}/>));await act(async()=>resolve(source));expect(host.querySelector("textarea")?.value).toBe("device two");});
  it("offers explicit original reset rather than writing a derived preview back",async()=>{const client=fixture({read:vi.fn().mockResolvedValue({...source,overrideDocument:literal("edited"),effectiveDocument:literal("edited")})});const {host}=await mount(client);await click(host,"Return to imported original");expect(client.preview).toHaveBeenCalledWith(1,context,null,expect.anything());expect(client.apply).not.toHaveBeenCalled();});
+ it("cancels a late preview for the old selection without offering it on the new device",async()=>{
+  let resolve!:(value:Awaited<ReturnType<InstructionClient["preview"]>>)=>void;
+  const delayed=new Promise<Awaited<ReturnType<InstructionClient["preview"]>>>(done=>{resolve=done;});
+  const client=fixture({preview:vi.fn().mockReturnValue(delayed),read:vi.fn().mockResolvedValueOnce(source).mockResolvedValue({...source,device:2,effectiveDocument:literal("device two")})});
+  const {root,host}=await mount(client);await edit(host,"edited");await click(host,"Preview change");
+  await act(async()=>root.render(<InstructionEditor deviceId={2} context={context} client={client}/>));
+  await act(async()=>resolve({token:"late-old-plan",device:1,replacement:literal("edited"),conversionRequired:false,noOp:false,expiresInSeconds:300}));
+  expect(client.cancel).toHaveBeenCalledWith(1,"late-old-plan");expect(host.querySelector("textarea")?.value).toBe("device two");
+  expect(host.textContent).not.toContain("Apply change");expect(client.apply).not.toHaveBeenCalled();
+ });
+ it("cancels a preview that arrives after the component unmounts",async()=>{
+  let resolve!:(value:Awaited<ReturnType<InstructionClient["preview"]>>)=>void;
+  const delayed=new Promise<Awaited<ReturnType<InstructionClient["preview"]>>>(done=>{resolve=done;});
+  const client=fixture({preview:vi.fn().mockReturnValue(delayed)});const {root,host}=await mount(client);
+  await edit(host,"edited");await click(host,"Preview change");await act(async()=>root.unmount());roots=roots.filter(value=>value!==root);
+  await act(async()=>resolve({token:"unmounted-plan",device:1,replacement:literal("edited"),conversionRequired:false,noOp:false,expiresInSeconds:300}));
+  expect(client.cancel).toHaveBeenCalledWith(1,"unmounted-plan");expect(client.apply).not.toHaveBeenCalled();expect(host.textContent).toBe("");
+ });
+ it("revokes a visible preview on revision change while preserving the dirty draft",async()=>{
+  const client=fixture({read:vi.fn().mockResolvedValueOnce(source).mockResolvedValue({...source,snapshotRevision:3})});
+  const {root,host}=await mount(client);await edit(host,"edited");await click(host,"Preview change");
+  await act(async()=>root.render(<InstructionEditor deviceId={1} context={{...context,snapshotRevision:3}} client={client}/>));
+  expect(client.cancel).toHaveBeenCalledWith(1,"synthetic-plan");expect(host.querySelector("textarea")?.value).toBe("edited");
+  expect(host.textContent).not.toContain("Apply change");expect(host.textContent).toContain("changed");expect(client.apply).not.toHaveBeenCalled();
+ });
+ it("does not publish a late apply outcome into a different selection",async()=>{
+  let resolve!:(value:Awaited<ReturnType<InstructionClient["apply"]>>)=>void;
+  const delayed=new Promise<Awaited<ReturnType<InstructionClient["apply"]>>>(done=>{resolve=done;});
+  const client=fixture({apply:vi.fn().mockReturnValue(delayed),read:vi.fn().mockResolvedValueOnce(source).mockResolvedValue({...source,device:2,effectiveDocument:literal("device two")})});
+  const onApplied=vi.fn();const {root,host}=await mount(client,{onApplied});await edit(host,"edited");await click(host,"Preview change");await click(host,"Apply change");
+  await act(async()=>root.render(<InstructionEditor deviceId={2} context={context} client={client} onApplied={onApplied}/>));
+  await act(async()=>resolve({changed:true,nativeGeneration:null,snapshotRevision:3,persistence:"session-only"}));
+  expect(onApplied).not.toHaveBeenCalled();expect(host.querySelector("textarea")?.value).toBe("device two");expect(host.textContent).not.toContain("Apply change");
+ });
 });

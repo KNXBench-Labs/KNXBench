@@ -46,6 +46,17 @@ async function label(text: string) {
 }
 
 describe("ProjectHistoryDialog", () => {
+  it("shows reported source-context and decoded budgets without guessing legacy limits", async () => {
+    let dialog = await render();
+    expect(dialog.querySelector('[data-history-limit="context"]')).toBeNull();
+    expect(dialog.querySelector('[data-history-limit="decoded"]')).toBeNull();
+    api.projectHistory.mockResolvedValue({...view(), limits: {...view().limits, maxContextBytes: 268435456, maxDecodedImageBytes: 536870912, maxDecodedHistoryBytes: 536870912}});
+    await click(en["projectHistory.refresh"]);
+    dialog = document.querySelector(".project-history-panel") as HTMLElement;
+    expect(dialog.querySelector('[data-history-limit="context"]')?.textContent).toBe("Shared source-context limit: 256 MiB stored.");
+    expect(dialog.querySelector('[data-history-limit="decoded"]')?.textContent).toBe("Decoded image limit: 512 MiB per image.");
+    expect(dialog.querySelector('[data-history-limit="total-decoded"]')?.textContent).toBe("Total decoded history limit: 512 MiB; shared context is counted once.");
+  });
   it("shows persistent recovery separately from Save and independent-backup scope", async () => {
     const dialog = await render();
     expect(dialog.textContent).toContain(en["projectHistory.native"]);

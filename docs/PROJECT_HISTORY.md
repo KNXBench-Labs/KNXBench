@@ -7,6 +7,14 @@ Owner request 2026-10-09: HISTORY-01 (undo through restarts) and HISTORY-02
 worktree. This is native engineering-project history, not ETS restore points,
 manufacturer database history, credentials, live telegrams or hardware recovery.
 
+## Large retained contexts (local implementation, 2026-10-11)
+
+[Bounded large-image contract](contracts/large-history-images.md) and
+[ADR-0111](adr/0111-bounded-large-history-images.md) retain source data while
+separating model/context/decoded/aggregate budgets. Legacy SQLite image reads
+remain supported; new compressed images require a compatible reader. This does
+not establish support for every import size or for ETS/device recovery.
+
 ## Contract
 
 1. Once a project has a native save location, successful reversible commands,

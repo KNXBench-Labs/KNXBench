@@ -26,6 +26,13 @@ errors: number,
  */
 warnings: number,
 /**
+ * Whether baseline import diagnostics are available in this session. False
+ * marks unavailable historical import evidence, not a compatibility pass;
+ * counters may still contain current-session findings. Pure projections
+ * omit this; native open does not reimport or recompute.
+ */
+import_report_available?: boolean,
+/**
  * Always `false` straight out of [`build_project_tree`] — this crate
  * never sees a `CommandStack`. The desktop shell overlays the real
  * value from its own `CommandStack` after every command/undo/redo.

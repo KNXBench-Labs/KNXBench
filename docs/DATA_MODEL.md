@@ -1,5 +1,22 @@
 # Data model
 
+## Native instruction overlays, model/storage13 (2026-10-11)
+
+[ADR-0111](adr/0111-native-instruction-overlays.md) introduces
+`Project.instructions: BTreeMap<DeviceId, InstructionDocument>`.
+Documents contain literal UTF-8 runs and only bold/italic/underline flags;
+Core has no RTF, HTML, UI or I/O dependency. Limits are64KiB text and4096
+canonical nonempty runs. Absent override and present empty document differ.
+Set/reset and device deletion/restoration are reversible. Native13 adds strict
+owner/document/run tables; empty overlays retain predecessor12 semantic hash
+identity, not downgrade compatibility. Actual schema12 writer fixtures preserve
+root, working state, both stacks, source context and named versions. Selected
+source overlays map to remapped devices without changing destination overlays;
+normalized styles/text appear in native diff, never as changed source bytes.
+See [scoped evidence](evidence/instruction-native-foundation-2026-10-11.json).
+Application edit API and isolated editor acceptance remain separate and pending.
+
+
 ## Local completion vocabulary, model/native12 (2026-10-10)
 
 [ADR-0107](adr/0107-import-source-integrity.md): CompletionStatus additionally represents FinishedCommissioning, Tested and Locked, as stated in Project Schema23 §1.1.2.6. Native/model12 is a vocabulary-only compatibility barrier; v11→v12 changes no rows or tables. Older readers must not rewrite these values to Undefined. Unknown native values are refused. Source intent is not measured device state. Local/unpublished; parallel unmerged schema work must be reconciled before integration.

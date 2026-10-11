@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:48
+- **Completed:** Native foundation accepted on exact source in native-instructions-broad-7: owning crates1209/0, strict Clippy/format/docs/whitespace all pass, frozen. Genuine native12 fixtures, reversible commands, selection mapping and native diff preserved. Public bounded evidence and additive model/import/status/ADR documentation drafted. Earlier reconstructed-fixture failures kept rejected.
+- **Pending/Next Steps:** Review/document gates and coordinated current-main integration/publication pending. API/editor belongs to separate service/editor worktrees, not foundation closure.
+- **Notes for Codex oder Claude:** Nine-package goal continues; AP1/AP8/AP9 delivered, AP2 incomplete, AP3–AP7 pending. Self-review only; no hardware, private source/keys, subagents/quota, release/deployment. Root/foreign worktrees preserved. Evidence stays in owned data-tooling-editing-20261011 scratch; rejected attempts never restamped or added to totals.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 08:30
 - **Completed:** Native instruction integration refinement: first broad attempt rejected module ordering; next broad attempt exercised application tests and correctly refused selective-import model version. Explicit v13 instruction owner remapping, preserved destination overlays, dangling-owner refusal and preview note added; genuine selective RED1/14 to GREEN15/0. Native comparison genuine RED1/3 to GREEN4/0: full normalized runs/styles, absent versus empty, unchanged source identity. Private application edit-service tranche is separate; its eight focused tests passed but API/browser still pending. Self-review only.
 - **Pending/Next Steps:** Fresh source-bound broad model/store/app/diff/Clippy/doc acceptance; no runtime acceptance carried from rejected attempts. Then validated application/API and isolated editor, public evidence/docs and coordinated integration. Overall nine-package goal is not complete.

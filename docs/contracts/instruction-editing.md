@@ -143,3 +143,5 @@ Own `crates/knx-store/tests/completion_vocabulary.rs` current-writer schema asse
 Own reconstructed-v10 fixture SQL only in `crates/knx-store/tests/project_history.rs`: remove the new instruction tables before reconstructing old schema; preserve every rollback, byte equality and history-admission assertion. Production migration/history behavior unchanged.
 
 Own reconstructed-v9 cleanup in `crates/knx-store/tests/read_only_open.rs`, dropping only new instruction tables before old-layout reconstruction; byte identity/read-only/migration assertions remain intact.
+
+Native foundation closure owns additive DATA_MODEL/IMPORT_EXPORT/IMPLEMENTATION_STATUS entries, ADR0111 status/context and new docs/evidence/instruction-native-foundation-2026-10-11.json. No ledger ID or full-editor status is closed. Existing document bodies remain unchanged except historical wording in the owned ADR.

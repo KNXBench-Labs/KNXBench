@@ -729,7 +729,7 @@ fn diff_devices(
             .get(&d.id)
             .and_then(|bid| left_building_by_id.get(bid))
             .map(|b| building_part_key(b, &left_building_by_id));
-        device_fields(d, line, building)
+        device_fields(d, line, building, project_left.instructions.get(&d.id))
     };
     let device_fields_right = |d: &DeviceInstance| -> DeviceFields {
         let line = line_of_device(d.id, &inst_right.topology);
@@ -737,7 +737,7 @@ fn diff_devices(
             .get(&d.id)
             .and_then(|bid| right_building_by_id.get(bid))
             .map(|b| building_part_key(b, &right_building_by_id));
-        device_fields(d, line, building)
+        device_fields(d, line, building, project_right.instructions.get(&d.id))
     };
 
     // Ruling 2: an added/removed device's `com_objects`/`parameters` are

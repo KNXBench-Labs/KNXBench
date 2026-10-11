@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:51 CEST
+- **Completed:** proc_99a27eeea8c6 exit0 reconciled with statistics-doc-gates-1 receipt: candidate1ad70cc15e6219f08307954e4b2641382d7b3b1f matches clean HEAD, all recorded documentation/regression/fresh-root repository stages valid/exit0, all_passed/inputs_frozen true. Dated generated report still matches its exact SHA-256 receipt. Contract/report locally accepted; no new execution or duplicate tests. Generator2ac5dfb and project report sourceaeb5a386 remain distinct from documentation candidate.
+- **Pending/Next Steps:** Coordinated fresh-main integration/publication remains pending. Collector remote still unavailable; TOOLS physical traffic/timing/outcome/attribution/Shell boundaries remain open, not blanket DONE. AP2 focused original reader10/0+7/0 verified separately; full editing/model/native/history/browser remains. AP9 plans locally accepted, publication pending. Overall goal incomplete.
+- **Notes for Codex oder Claude:** This receipt accepts documentation/data-contract/report snapshot, not new runtime coverage or physical measurements. Only owned handover/task-state reconciliation; no rerun/code/commit/push/release/deployment/bus action. Shared root report/foreign state retained; subsequent metadata edits require checks before publication.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 06:39
 - **Completed:** AP8 actual collector location/invocation and all five original IDs documented, no fabricated ID mapping. Canonical local source2ac5dfb delivered by verified clean fast-forward; real canonical entry point on owned main aeb5a386 produced exact dated report snapshot/receipt (six/six CSS), canonical settings unchanged/cloud disabled. Root generated report has protected preexisting changes, so only new dated snapshot owned. Doc checker/hash and12 regressions pass locally; no whole TOOLS closure or remote publication claim.
 - **Pending/Next Steps:** Stats docs fresh-root gate/integration/publication. AP2 reader10 adapter tests pass and corrected app GREEN queued under shared lease; XML review negatives remain before final reader acceptance. AP9 two plans committedfff503cb, docs12 controls pass, repository gate queued. Full AP2 editor/core/native/history/browser and AP3–AP7 remain. Goal active/incomplete; only shared-gate queue delays execution.

@@ -116,6 +116,6 @@ describe("FLAVOUR_INTERVAL_MS", () => {
   // Slower than the 250 ms poll on purpose: the phase label is the news,
   // and a joke that changes faster than the news competes with it.
   it("is slower than the load poll, so the phase stays the thing being read", () => {
-    expect(FLAVOUR_INTERVAL_MS).toBe(1800);
+    expect(FLAVOUR_INTERVAL_MS).toBe(4300);
   });
 });

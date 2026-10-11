@@ -66,7 +66,6 @@ export default function LoadProgressBanner({ source, snapshot, random = Math.ran
     <section className="load-progress" role="status" aria-live="polite" data-failed={failed ? "true" : undefined}>
       <p className="load-progress-heading">
         <strong>{heading}</strong>
-        <span className="load-progress-phase">{failed ? t("loadProgress.failedDuring", { phase }) : phase}</span>
       </p>
       {!failed && (
         <div
@@ -85,7 +84,7 @@ export default function LoadProgressBanner({ source, snapshot, random = Math.ran
           // exactly what ARIA defines an indeterminate progressbar as.
           aria-valuenow={fraction ? fraction.percent : undefined}
           aria-valuetext={
-            fraction ? t("loadProgress.counted", { completed: fraction.completed, total: fraction.total }) : undefined
+            fraction ? t("loadProgress.counted", { completed: fraction.completed, total: fraction.total }) : t("loadProgress.currentStep", { phase })
           }
         >
           <span
@@ -95,6 +94,10 @@ export default function LoadProgressBanner({ source, snapshot, random = Math.ran
           />
         </div>
       )}
+      <p className="load-progress-phase">
+        {failed ? t("loadProgress.failedDuring", { phase }) : t("loadProgress.currentStep", { phase })}
+      </p>
+      {!failed && !fraction && <p className="load-progress-unmeasured">{t("loadProgress.unmeasured")}</p>}
       {fraction && (
         <p className="load-progress-count" aria-live="off">
           {t("loadProgress.counted", { completed: fraction.completed, total: fraction.total })}
@@ -107,7 +110,7 @@ export default function LoadProgressBanner({ source, snapshot, random = Math.ran
           of this section's polite region even where a reader is pointed
           straight at it — round 1 of the banner already shipped one bug
           that announced itself 38 times, and a line that changes every
-          1 800 ms would be a far louder version of the same mistake. */}
+          4 300 ms would be a far louder version of the same mistake. */}
       {flavour && (
         <p className="load-progress-flavour" aria-hidden="true" aria-live="off">
           {t(flavour)}

@@ -1,3 +1,19 @@
+## 2026-10-11 — local import-banner readability correction
+
+Current server-reported steps now appear below the bar in normal foreground
+colour, with an explicit note when that phase has no item total. Actual counts
+remain phase-local; no percentage, ETA or activity heartbeat is invented.
+Step/joke fonts increase by 2pt and jokes rotate every 4300ms instead of 1800ms.
+Failure, reduced-motion, unknown-phase and load-ownership rules remain intact.
+
+Test-first timing/phase-transition controls failed before the change, then
+passed. Whole Web Vitest: **2614 passed, 0 failed, 164 files**; TypeScript,
+explicit E2E types and production build pass. Eight built-Chromium intercepted cases passed (four import transitions and
+four existing archive-refusal regressions) (EN/DE, 1440/400, Graphite/Porcelain); all four screenshots
+were inspected. Feature branch `fix/import-status-20261011` published at
+`df868c7a`; not main integration, release or container deployment.
+No backend/schema/protocol/import-compatibility claim is extended.
+
 ## 2026-10-11 — local collector delivery and scoped measurement contract
 
 The standalone ProjectStats generator at its canonical local checkout now

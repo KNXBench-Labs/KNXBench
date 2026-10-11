@@ -216,6 +216,17 @@ the clock, not the work. Explicitly forbidden, not merely unused.
 would fight over `AppState.project` and the winner would be whichever
 finished last. `409` instead, and a disabled button so it rarely comes up.
 
+## 2026-10-11 presentation amendment
+
+The current phase is a dedicated foreground-coloured line below the bar,
+not a small muted label beside the filename. Uncounted running phases have
+an explicit no-item-total note and phase-valued `aria-valuetext`; real counts
+and token ownership remain unchanged. Phase and flavour fonts increase by
+2pt. Decorative rotation changes from 1800ms to 4300ms, without delaying phase
+updates or creating measurements. No observer, wire contract, parser, store,
+protocol, dependency or reduced-motion policy changes. The display remains
+the latest server-reported phase, not fine-grained work or a liveness guarantee.
+
 ## Consequences
 
 Easier: any future long operation (export, a product-database install, a

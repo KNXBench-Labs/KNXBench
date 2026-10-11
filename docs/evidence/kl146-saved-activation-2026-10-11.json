@@ -2,8 +2,8 @@
   "package": 8,
   "limitation": "KL-146",
   "date": "2026-10-11",
-  "status": "VERIFIED_DIAGNOSTIC_ONLY_PUBLICATION_PENDING",
-  "candidate_published": false,
+  "status": "DELIVERED_DIAGNOSTIC_ONLY",
+  "candidate_published": true,
   "baseline_revision": "a8d1c68c8d528eba5916abd620aac6ee4027fc17",
   "review": "codex, in-session self-review only; no independent review",
   "focused_verification": {
@@ -27,7 +27,7 @@
   },
   "decision": "Owner explicitly chose read-only diagnostic delivery with KL-146 retained and no parity claim.",
   "production_semantics_changed": false,
-  "broad_or_origin_main_admission_claimed": false,
+  "broad_or_origin_main_admission_claimed": true,
   "compatibility_claim": "none",
   "verified_source_revision": "f045390fdf7b3ff34353eca84769c5daa03489a1",
   "broad_source_admission_claimed": true,
@@ -76,5 +76,14 @@
     "minor": "parent-relative channel spelling and repository-edition formatting corrected",
     "independent": false
   },
-  "first_final_attempt": "fmt-only refusal on5259ba84 archived; workspace-edition formatting fixed; no failed-stage evidence restamped"
+  "first_final_attempt": "fmt-only refusal on5259ba84 archived; workspace-edition formatting fixed; no failed-stage evidence restamped",
+  "publication": {
+    "merge_revision": "70c05fdc58e531e833d91ee18b99b411aa3afb52",
+    "head_tracking_live_equal": true,
+    "outgoing_privacy_clear": true,
+    "exact_target_receipt_read_back": true,
+    "merge_tree_equals_metadata_verified_feature": true,
+    "nonmetadata_bytes_equal_verified_source": true,
+    "followup_changes": "documentation and handover only"
+  }
 }

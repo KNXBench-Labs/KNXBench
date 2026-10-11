@@ -7840,7 +7840,9 @@ replay, all non-desktop Rust3934/0, Web2612/0, build/repo/docs gates, full corpu
 and independent RefId/instance/reconciliation/raw-evidence gates. Missing opt-in
 and missing-file controls refuse. Eight synthetic controls and three compiled
 mutants pin coverage, finding retention, unknowns and failed integrity.
-Publication pending; this accepted source does not lift the limitation.
+Published no-ff merge `70c05fdc58e5`, HEAD/tracking/live equality and exact
+receipt readback verified. Source/metadata-equivalence and outgoing privacy clear.
+This delivered diagnostic does not lift the limitation.
 [Contract](research/schema23-activation-differential.md).
 
 **Update 2026-10-10 (comparison source; no change).** ETS writes its own

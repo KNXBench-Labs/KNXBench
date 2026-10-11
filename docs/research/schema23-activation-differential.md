@@ -1,7 +1,7 @@
 # Schema-23 saved activation: independent differential boundary
 
 Date: 2026-10-11
-Status: owner-approved diagnostic-only source accepted; publication pending
+Status: delivered diagnostic-only on `70c05fdc58e5`; KL-146 retained
 
 ## Primary source
 

@@ -140,6 +140,16 @@
 - **Timestamp:** 2026-10-11 09:48
 - **Completed:** Ten application instruction service tests passed in fresh isolated target. Actual HTTP setup initially used SQLite open for ETS ZIP and failed before feature; corrected to real ETS import. Locked stub baseline registered0/4 with successful setup; exact production source restored. Source-frozen HTTP successor4/0 accepted, covering preview/refusal/undo/redo/native recovery. Three additional contract regressions now added; expanded admission pending.
 - **Pending/Next Steps:** Run expanded HTTP7 and broad app/server checks; preserve no-op/redo, candidate-first native persistence, source/revision binding, exact pending token and cancellation. Full browser editor remains pending.
+
+- **Timestamp:** 2026-10-11 12:48 CEST
+- **Completed:** Isolated RTF editor has retained 29 unit/component passes and 14 real loopback-only browser checks. Owned frontend source headers added; current-header rebuild and combined API/native integration remain pending.
+- **Pending/Next Steps:** Merge accepted native/API, run fresh frontend and server gates, rebuild and re-exercise exact isolated fixture. Handoff shell integration to Session1; AP3–AP7 remain pending.
+- **Notes for Claude:** Preserve all source originals; no resources, HTML execution, automatic writes, global CSS, shared catalogues, shell changes, release or deployment. Review is active-session self-review, not independent approval.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:48
+- **Completed:** Pure canonical instruction document editing genuine RED3/9 to GREEN12/0, TypeScript noEmit passed. UTF-16 surrogate boundaries, existing CR/CRLF preservation, style-preserving edits, canonical coalescing, unknown metadata and UTF-8/run budgets verified. Existing exact dependency graph reused; project-version-only difference recorded. No component or browser claim.
+- **Pending/Next Steps:** Typed source-bound HTTP client and isolated EN/DE component still required, including stale/cancel/conversion paths and actual browser/native flow. Shell/navigation/global CSS/shared catalogues untouched.
 - **Notes for Codex oder Claude:** Nine-package goal continues; AP1/AP8/AP9 delivered, AP2 incomplete, AP3–AP7 pending. Self-review only; no hardware, private source/keys, subagents/quota, release/deployment. Root/foreign worktrees preserved. Evidence stays in owned data-tooling-editing-20261011 scratch; rejected attempts never restamped or added to totals.
 
 ---

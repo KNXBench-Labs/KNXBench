@@ -24,7 +24,9 @@ fn saved_project(path: &Path, name: &str) {
 fn downgrade_to_v9(path: &Path) {
     let conn = knx_store::Connection::open(path).unwrap();
     conn.execute_batch(
-        "DROP TABLE project_history_state;
+        "DROP TABLE instruction_run;
+         DROP TABLE instruction_document;
+         DROP TABLE project_history_state;
          DROP TABLE project_history_stack;
          DROP TABLE project_history_version;
          DROP TABLE project_history_context;

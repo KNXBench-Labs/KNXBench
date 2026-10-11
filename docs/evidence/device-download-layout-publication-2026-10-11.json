@@ -1,0 +1,30 @@
+{
+  "feature": "0f7be1a3507505f23548a2a0e26d48577e8b28e8",
+  "tested_merge": "0dae7c93545683b3c21e753abbba5ce1120e3f73",
+  "verified_source_publication": "0dae7c93545683b3c21e753abbba5ce1120e3f73",
+  "observed_date": "2026-10-11",
+  "publication_target": "origin/main",
+  "live_and_fetched_main_equal": true,
+  "accepted_source_blobs_match": true,
+  "frozen_tracked_files": 1863,
+  "frontend": { "passed": 2612, "failed": 0, "files": 164 },
+  "full_intercepted_chromium": { "passed": 260, "failed": 0, "skipped": 0 },
+  "built_scope_layout_chromium": { "passed": 14, "failed": 0, "skipped": 0 },
+  "layout_matrix": {
+    "languages": ["en", "de"],
+    "widths_px": [400, 1440],
+    "themes": ["graphite", "porcelain", "user-modern-retro-green-crt"]
+  },
+  "additional_gates_passed": [
+    "production frontend build", "new and existing scope-spec TypeScript check",
+    "fresh-root check-layering", "fresh-root check-headers", "fresh-root check-anchors",
+    "fresh-root check-ledger", "fresh-root check-corpus-gates",
+    "documentation targets", "whitespace"
+  ],
+  "review": "source-level self-review; not independent review",
+  "evidence_boundary": "Loopback-only intercepted API browser fixtures, not real KNX hardware.",
+  "excluded": [
+    "new release", "container deployment", "root checkout synchronization",
+    "live bus operations", "new ETS or hardware compatibility", "fresh Rust workspace test execution"
+  ]
+}

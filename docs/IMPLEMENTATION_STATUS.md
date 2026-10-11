@@ -1,3 +1,17 @@
+## 2026-10-11 — device-download layout published on main
+
+Owner-authorized feature `0f7be1a3` was merged without fast-forward and pushed
+as `0dae7c93`; fetched and live `main` refs and all accepted runtime/test blobs
+were independently read back. The actual merge passed Vitest 2612/0 in 164
+files, full intercepted Chromium 260/0/0, built-bundle scope/layout Chromium
+14/0/0, production build, explicit new/existing scope-spec TypeScript checks,
+five fresh-root nonempty repository gates, documentation and whitespace.
+All 1863 tracked inputs remained frozen during execution. Self-review only;
+final narrow Porcelain and wide CRT built frames inspected. See the
+[source-bound receipt](evidence/device-download-layout-publication-2026-10-11.json).
+This is source publication only: no new release, deployment or bus action.
+The initial local acceptance below remains historical.
+
 ## 2026-10-11 — local device-download configuration layout repair
 
 The download-scope fieldset had no dedicated layout: its labels inherited

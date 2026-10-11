@@ -2770,6 +2770,9 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .ga-address { color: var(--knx-accent-tertiary); font-variant-numeric: tabular-nums; }
 .topology-area { margin-bottom: 24px; }
 .diagram-heading { display: flex; gap: 10px; align-items: center; font-weight: 600; width: 100%; }
+/* Full-width headings must not magnify into their cards' clipped edges.
+   Override the generic hover rule; retain the colour highlight. */
+.diagram-heading:hover:not(:disabled) { transform: none; box-shadow: none; }
 .diagram-heading small { color: var(--knx-muted); margin-left: auto; }
 .topology-lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; margin: 15px 0 0 20px; padding: 16px 0 0 20px; border-left: 2px solid var(--knx-border); border-top: 2px solid var(--knx-border); }
 .topology-line, .building-diagram-node { border: 1px solid var(--knx-border); border-radius: 8px; background: var(--knx-surface); overflow: hidden; }

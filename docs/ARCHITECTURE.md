@@ -1,5 +1,17 @@
 # Architecture
 
+## Login and notification detail ownership (2026-10-11 local source)
+
+The [login/feedback/size contract](contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md)
+keeps branding/build identity and bounded UI notification history in the web
+client. Exact browser-local IDs drive toast navigation; no text-based backend
+correlation is invented. The read-only detail view owns clipboard access;
+shared Overlay owns focus trapping and background isolation. Backend JSON log
+export remains v1 and server-only. Contribution raw admission
+is application-owned and shared by HTTP/CLI; multipart envelope/preflight and
+streamed upload publication stay in server adapters. Parser, disclosure and
+per-member budgets remain independent. No domain, storage or protocol change.
+
 ## Local installation-node presentation (2026-10-11)
 
 [Main-integration acceptance](evidence/installation-node-publication-2026-10-11.json)

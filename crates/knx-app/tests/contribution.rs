@@ -2,6 +2,62 @@
 use knx_app::contribution::analyze;
 
 #[test]
+fn analysis_admits_1024_mib_raw_and_inventory_but_keeps_xml_scan_guard() {
+    assert_eq!(knx_app::contribution::MAX_INPUT_BYTES, 1024 * 1024 * 1024);
+}
+
+fn large_xml_archive(members: usize, member_size: usize, compressed: bool) -> Vec<u8> {
+    use std::io::{Cursor, Write};
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let chunk = [b' '; 64 * 1024];
+    for i in 0..members {
+        zip.start_file(
+            format!("member-{i}.xml"),
+            zip::write::SimpleFileOptions::default().compression_method(if compressed {
+                zip::CompressionMethod::Deflated
+            } else {
+                zip::CompressionMethod::Stored
+            }),
+        )
+        .unwrap();
+        for _ in 0..member_size / chunk.len() {
+            zip.write_all(&chunk).unwrap();
+        }
+    }
+    zip.finish().unwrap().into_inner()
+}
+
+#[test]
+fn a_real_33_mib_source_is_analyzed_without_claiming_oversized_xml_was_scanned() {
+    let source = large_xml_archive(1, 33 * 1024 * 1024, false);
+    assert!(source.len() > 32 * 1024 * 1024);
+    let report = analyze(&source, "synthetic.knxprod").unwrap();
+    assert_eq!(report.source_size, source.len());
+    assert_eq!(report.status, "partial");
+    assert_eq!(report.members.len(), 1);
+    assert!(!report.members[0].sample_allowed);
+    assert!(!report.original_allowed);
+    assert!(report
+        .checks
+        .iter()
+        .any(|c| c.name == "typed-import" && c.status == "not-examined"));
+}
+
+#[test]
+fn inventory_above_64_mib_reports_every_member_without_decompression_or_disclosure() {
+    let source = large_xml_archive(3, 24 * 1024 * 1024, true);
+    let report = analyze(&source, "synthetic.knxproj").unwrap();
+    assert_eq!(report.status, "partial");
+    assert_eq!(report.members.len(), 3);
+    assert_eq!(
+        report.members.iter().map(|m| m.size).sum::<u64>(),
+        72 * 1024 * 1024
+    );
+    assert!(report.members.iter().all(|m| !m.sample_allowed));
+    assert!(!report.original_allowed);
+}
+
+#[test]
 fn project_analysis_runs_the_real_import_and_offline_device_preparation() {
     let bytes = knx_testsupport::minimal_knxproj_bytes();
     let analysis = analyze(&bytes, "private-house.knxproj").unwrap();

@@ -337,6 +337,8 @@ describe("one editing workspace", () => {
       "DiagnosticsCompanion.tsx",
       "FsPicker.tsx",
       "HelpTip.tsx",
+      // Raw details add clipboard/UI-only work, not an API or project mutation.
+      "LogEntryDetails.tsx",
       "LogPanel.tsx",
       "Overlay.tsx",
       "TelegramFlowView.tsx",

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 23:15 CEST
+- **Completed:** Notes Foundation/service accepted in bounded layered scope: runtime51c09fa3 focused13/workspace4090/0/194ignored/Web2738/0/174files/strictClippy/build/stamped binaries; corrected docs33a19c15 eight fresh gates and selected native corpus11/0/no skips with unchanged originals. Initial whole chain remains failed at ledger syntax, not relabelled green. Latest release closure 93283f93 is docs-only; incorporated with byte-identical runtime and all journal entries preserved. Public bounded evidence prepared, no HTTP/UI or full AP4 claim.
+- **Pending/Next Steps:** Fresh final metadata privacy/ledger/doc checks, normal main push/exact readback and archive/owned cleanup. HTTP isolated CreateGREEN1 verified; action/cancel tests await actual RED before extension. AP3/AP5/AP6/AP7 and isolated EN/DE notes/help remain open.
+- **Notes for Codex oder Claude:** Runtime and corpus receipts keep original source bindings; final merge changes only docs. Release/native13 tag immutable, future main native14 separate. Shared root/index, private corpus, release owner and HTTP worktree untouched. Active-session self-review only; no shared shell/catalogues, hardware, Secure, vendor/REA, subagents, quota, release or deployment.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 23:09 CEST
 - **Completed:** Integration51c09fa3 runtime subchain green: focused notes13, workspace4090/0/194ignored, Web2738/0/174files, production/fixture/type builds, strict Clippy and stamped server/CLI/MCP. Whole ordinary chain refused at check-ledger: own FUTURE03 annotation was after final table delimiter, making an eighth cell. Source manifest unchanged at refusal; no corpus or publication started. Only equivalent ledger placement corrected, statuses/counts/code unchanged. HTTP missing-route RED1 executes separately (404vs200), Create-only adapter now awaiting GREEN.
 - **Pending/Next Steps:** Fresh metadata/documentation/repository gates on corrected committed snapshot, plus11 selected native corpus tests. Retain runtime proof bound51c09fa3 and compare exact runtime bytes, never relabel failed whole chain green. After coherent bounded acceptance normal main publication/readback; then HTTP CRUD/cancel/auth/conflicts/native lifecycle and isolated EN/DE UI. AP3/AP5/AP6/AP7 remain open.
@@ -13,6 +21,14 @@
 - **Pending/Next Steps:** Commit bounded service, integrate fresh origin/main with Foundation and run combined acceptance plus selected native corpus before normal publication. Then authenticated HTTP CRUD/preview/confirmed apply/cancel, isolated EN/DE UI and existing help reuse. AP3/AP5/AP6/AP7 remain open; no whole AP4 verdict.
 - **Notes for Codex oder Claude:** Exact service ownership unchanged; source receipts and mutation negatives in data-tooling-continuation-20261011. Prior timeout/interrupted controls are not acceptance. Keep foreign release journal and immutable Alpha9 tag/cutoff native13; integrated future main may use14. No root sync/shared shell/global catalog edits, subagents, quota, hardware, Secure, vendor/REA, release or deployment.
 
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 22:41 CEST
+- **Completed:** Alpha9 release task delivered: immutable5b21323e/tag0bf7d8c9 and all published artifacts/registry/native12→13 witness verified. Public release notes include exact-readback artifact addendum. Current-facing docs/public aggregate receipt e3378712 published on main with exact ref/blob readback after eight real fresh-root docs-only gates. Collector docs preserved; source/tag remains the fully accepted13 snapshot, later work excluded. Private compact evidence archived Git-ignored with every selected member byte-equal; task-owned targets/stores/downloads/browser temp retired after zero scoped runtime-process observation. Release workflow skill updated for exact binding census, before-execution fingerprint retention, home-sensitive CLI binding and artifact-specific predecessor upgrade scope.
+- **Pending/Next Steps:** No feature/release implementation remains. Finish this metadata-only closure's docs/whitespace gates and normal readback, then retire only owned clean release/docs worktrees/branches/scratch. Do not retag/rebuild/deploy or resume another owner's work. Independent native/Docker backups remain required before a user upgrade; existing container was not replaced.
+- **Notes for Codex oder Claude:** Public docs/evidence/release-alpha9-2026-10-11.json; ignored root .ai/logs/2026-10-11_codex_alpha9-release/compact-private-evidence.tar.gz and archive-receipt.private.json. Initial >25 finalizer and first isolated-HOME mise-gh setup refusal remain failed separately from corrected acceptance; private integrity is per-case guards, not an unpersisted whole-run reference fingerprint. Root HEAD/index/foreign work untouched except additive shared handover, no bus/vendor/ETS/interactive GTK/Pi/subagents/quota. Tag and public assets must not move; future main schema/features are not this release.
 
 ---
 

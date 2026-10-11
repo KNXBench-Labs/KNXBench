@@ -1,5 +1,22 @@
 ## 2026-10-11 — AP8 collector source publication verified
 
+## 2026-10-11 — Notes Foundation/service bounded integration acceptance
+
+Runtime `51c09fa3` passes the 13 focused service tests, workspace Rust 4090 /
+0 failed / 194 ignored, Web 2738 in 174 files, strict Clippy, format and all
+production/fixture/type/binary builds. The first ordinary chain is **not** a
+whole-chain pass: its ledger syntax failure is retained. Documentation-only
+correction `33a19c15` passes eight fresh repository/docs gates and all 11 selected
+native project corpus regressions; original inputs and source remain unchanged.
+The final upstream release closure changes docs only, not that runtime.
+[Source-bound bounded evidence](evidence/project-notes-foundation-service-2026-10-11.json).
+
+Core/native14/diff/report and preview-first service are implemented. HTTP,
+isolated EN/DE notes editor, help adoption and Session1 shell integration remain
+open; FUTURE-03 stays LATER. Native-note source selective mapping is refused with
+explicit unsupported reporting, not silently discarded. Self-review only;
+immutable Alpha9/native13 release is not changed by this future-main package.
+
 ## 2026-10-11 — Native notes service candidate (AP4 still incomplete)
 
 Foundation `e974624e` passed its source-bound 17 ordinary stages (Rust 4077,

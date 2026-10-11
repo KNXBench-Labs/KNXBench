@@ -20,6 +20,7 @@ stay at the end of this file.
 
 | Section | Where |
 | --- | --- |
+| [2026-10-11 — Saved activation differential contract](research/schema23-activation-differential.md) | KL-146 independent saved-state comparison; original parity unresolved |
 | [2026-10-10 — Public-source offline boundaries](research/schema23-offline-boundaries.md) | KL-170–172 research completed; encoding/payload contracts still missing |
 | [2026-10-10 — Converter-exception declaration census](research/cvexc.md) | Bounded cvexc11/14 observations; no executable policy or verified defaults |
 | [2026-10-09 — Source-bound offline AP1 procedure rules and boundaries](OFFLINE_PROCEDURE_RESOLUTION.md#evidence-and-first-family) | Configuration Procedures v02.01.01 / Schema23 primary inspection; ADR-0098 |

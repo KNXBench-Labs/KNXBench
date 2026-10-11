@@ -2179,6 +2179,7 @@ dependencies = [
  "knx-testsupport",
  "language-tags",
  "pbkdf2",
+ "quick-xml 0.42.0",
  "rcgen",
  "rusqlite",
  "rustls",

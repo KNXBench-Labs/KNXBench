@@ -1,8 +1,9 @@
 # Specialized parameter editors — evidence-first admission (AP3 / PDB-04)
 
-This is research/design, not editor implementation or compatibility acceptance.
-Worktree `parameter-editors-20261011` starts from fetched main `f7a5d8dc`.
-The AP2 assembled candidate stays frozen in its separate worktree.
+This began as research/design on fetched main `f7a5d8dc`. The first read-only
+source-evidence slice is now implemented on published AP2/native13 main; it is
+not editor implementation, PDB-04 completion or compatibility acceptance.
+AP2 was published separately; its earlier source-bound receipts stay historical.
 
 ## Verified source boundary, 2026-10-11
 
@@ -54,6 +55,49 @@ changes. Source retention alone is not a typed value-validation contract.
    bounds, lossless lexical values, rejected changes, dependency effects and
    Save/Reopen. Unknown evidence is not a successful specialized editor.
 
-No runtime changes, database migration, catalogue install or test execution by
-this reconnaissance. PDB-04 remains undelivered; format facts above do not certify
-manufacturer memory-image encoding or live device behavior.
+The initial reconnaissance changed no runtime or database. The subsequent
+read-only helper changes neither schema, normalized/source data, catalogue nor
+project mappings. PDB-04 remains undelivered; neither raw source attributes nor
+these tests certify manufacturer memory-image encoding or live device behavior.
+
+## First implementation slice: exact read-only source evidence
+
+Owned paths before this slice: `crates/knx-productdb/src/parameter_editor.rs`,
+`crates/knx-productdb/src/lib.rs` (one module export),
+`crates/knx-productdb/tests/parameter_editor.rs`, this contract and owned handover.
+No schema/parser/global UI/manifest/shared shell changes. Read metadata from the
+exact program-owned blob and exact parameter-ref/type join, verifying identity
+and model agreement; do not select from aggregate unknown samples or names.
+Read byte length before allocating, then bounded UTF-8 XML with exact supported
+namespace and structural owner, rejecting DTD/ambiguous declarations. Missing,
+oversized, invalid or contradictory evidence is a named fallback; SQLite errors
+remain real errors. Every raw type attribute is retained in the evidence result,
+not reclassified as a validated encoding. Parent hints are separately preserved.
+Source/normalized rows, language overlays and project mappings never change.
+
+The public parameter reconstruction article is accessible anonymously through
+the official Help Center API. A separately requested article returned401; its
+body/title/semantics are not verified here. No account activation/login or
+protected-document bypass attempted.
+Schema23 only proves Time has Number-like values, not duration arithmetic.
+Color Space/Picture RefId/Number Increment are raw evidence until their specific
+use is documented and tested; no manufacturer/name heuristics.
+
+## Initial slice acceptance and limitations
+
+Frozen-input checks:17 synthetic exact-source tests within831 ProductDB passes,
+25 ignored explicitly excluded; strict all-target Clippy/format/docs and five
+explicit-root repository gates passed. Actual close/read-only-reopen preserves
+source evidence and database file bytes. A named source-reference RED established
+that a changed normalized ref must not borrow another valid source type's hints.
+Initial compiler setup refusals remain separate from behavioral REDs.
+
+Only direct program Static declarations in project namespaces20–23 are read.
+Module-instance/definition scope needs separately audited mapping and falls back.
+Limits:8MiB source (length queried before blob allocation),100000 events,64 levels,
+64 attributes per element,4096 bytes per attribute name/value. DTD/non-UTF8/foreign
+root namespaces, duplicate owners/types/refs or mismatched normalized/source
+ref→parameter→type chains do not authorize specialized controls. Qualified raw
+attributes retain their names and must not be mistaken for unqualified hints.
+There is no resource loading, HTML rendering, codec, unit conversion, catalogue
+write, parameter mutation, API DTO or production-shell mount in this slice.

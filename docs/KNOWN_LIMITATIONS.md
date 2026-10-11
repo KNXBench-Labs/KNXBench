@@ -7835,8 +7835,12 @@ extra unscoped refs; unsupported scoped sets remain unadjudicated. Diagnostic
 admission requires coverage, actual evaluation and unchanged input/project, not
 agreement. All findings remain in private boolean evidence, with explicit
 `parity_accepted=false`; no runtime changed and no ETS answer adopted. Owner chose
-read-only delivery; final integrated gates/publication pending. Eight synthetic
-controls cover findings, unknowns and failed integrity independently.
+read-only delivery. Final source `f045390fdf7b` passed complete private diagnostic
+replay, all non-desktop Rust3934/0, Web2612/0, build/repo/docs gates, full corpus
+and independent RefId/instance/reconciliation/raw-evidence gates. Missing opt-in
+and missing-file controls refuse. Eight synthetic controls and three compiled
+mutants pin coverage, finding retention, unknowns and failed integrity.
+Publication pending; this accepted source does not lift the limitation.
 [Contract](research/schema23-activation-differential.md).
 
 **Update 2026-10-10 (comparison source; no change).** ETS writes its own

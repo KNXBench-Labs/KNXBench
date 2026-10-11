@@ -1,7 +1,7 @@
 # Schema-23 saved activation: independent differential boundary
 
 Date: 2026-10-11
-Status: owner-approved diagnostic delivery; final integrated admission pending
+Status: owner-approved diagnostic-only source accepted; publication pending
 
 ## Primary source
 
@@ -57,6 +57,11 @@ not an expansion/inactivity inference. Corrected original comparison completed w
 parity acceptance. Owner then chose read-only diagnostic delivery: successful
 admission requires complete coverage and unchanged input/project, not agreement.
 Findings/unknowns are preserved, with explicit `parity_accepted=false`. Final
-source-bound diagnostic replay pending. Prior harness-budget refusal and interrupted wrapper timeout
+source-bound diagnostic replay passed on `f045390fdf7b`: complete coverage, unchanged
+original/project and preserved differences/unknowns, with no parity acceptance.
+The same source passed full non-desktop Rust/Web/build/repo/corpus and the
+independent RefId, instance-own-value, reconciliation and raw-evidence gates.
+Three compiled assertion mutants were detected and restored before this run.
+Prior harness-budget refusal and interrupted wrapper timeout
 are not accepted evidence. Production semantics and KL-146’s retained boundary are
 unchanged. No ETS/Secure/hardware compatibility or release claim follows.

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:50
+- **Completed:** Package8 complete source-bound admission on f045390fdf7b: Rust3934/0/192 (unchanged native desktop shell excluded), Web2612/0/164, strict Clippy, server/CLI/MCP/Web production builds, tsc, five fresh-root repo gates/docs/diff, full nonempty corpus and explicit saved-activation/RefId/instance-own-values/reconciliation/raw-evidence original positives. Missing opt-in/file refuse. Original/project and tracked manifest unchanged, loopback only; eight synthetics/three assertion mutants. Owner diagnostic-only decision followed, all real object/extra-ref/unknown/scoped findings preserved, parity_accepted=false. Fresh main aeb5a386 ancestor; eight earlier package publication ancestors checked. Receipt/§146/Ledger/OPEN_WORK/status/research now record verified source, publication pending only.
+- **Pending/Next Steps:** Final metadata/five-repo/docs/privacy passed; every nonmetadata tracked byte equals accepted source. Own-branch no-ff publication/readback, doc-only publication+whole-goal closure receipt and exact twelve-ID handover; preserve ignored evidence in root private area and remove only owned worktree/scratch.
+- **Notes for Codex oder Claude:** KL146 still ACCEPTED_BOUNDARY, no runtime change/ETS parity. This is in-session self-review only, not independent review. Earlier fmt-only rejection preserved, not restamped; private receipt accepts actual head. Root and all foreign worktrees untouched. No bus/hardware/vendor execution/release/deployment. Do not mutate accepted source code; final metadata gates and source-equivalence required.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 06:05
 - **Completed:** Complete first final-chain attempt on5259ba84 refused at fmt only: prior standalone rustfmt2024 differs from workspace2021. Only two owned test files normalized by cargo fmt; check now green, no runtime semantics change. Rejected attempt preserved as diagnostic-admission-format-refused, no Rust/Web/corpus/private stages accepted. Owner diagnostic-only decision remains; production unchanged.
 - **Pending/Next Steps:** Commit exact edition-correct test bytes and frozen handover, relaunch full candidate acceptance. Gate includes all Rust packages except unchanged native desktop shell, strict clippy, Web build/tests/tsc, five fresh-root repo gates/docs, full corpus and five opt-in private gates. Then actual receipt/self-review/privacy/fresh-main no-ff push/ref equality/cleanup and whole-goal closure.

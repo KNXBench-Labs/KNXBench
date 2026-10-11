@@ -99,7 +99,9 @@ app/native/product/HTTP focuses and final source `566afbdd` (Rust2400/0/181,
 strict quality/repo/docs, full nonempty corpus/private reconciliation/RefIds);
 delivered/read back `68147ba3` with local/tracking/live ref equality. KL-175/F09
 bounded raw labels delivered/read back `6ef0b2d8`; interpretation stays separate.
-KL-146 evaluator-vs-saved-state comparison remains. KL-170–172 public research package9 is
+KL-146 read-only diagnostic source is accepted on `f045390fdf7b`; differences
+and unsupported scoped sets remain boundaries, not a deferred comparison.
+Publication/whole-goal closure pending. KL-170–172 public research package9 is
 published; implementation limits remain research-bound. Do not reuse old-base
 results for a changed main.
 
@@ -272,7 +274,9 @@ No RTF parsing/rendering/editing claim; that belongs to the separate tooling own
 Own cleanup is recorded in the handover. Package8 KL146 owner selected read-only
 diagnostic delivery with differences retained and no parity claim. Historical
 comparison preserves input/project; diagnostic coverage and agreement now have
-separate contracts. Candidate final integrated gates and publication pending;
+separate contracts. Final source `f045390fdf7b` passes full Rust/Web/build/repo/docs,
+corpus and private diagnostic/RefId/own-values/reconciliation/raw-evidence gates.
+Only publication/whole-goal closure pending;
 KL146 activation differences/unsupported scoped sets remain an ACCEPTED_BOUNDARY,
 not an owner blocker or a producer-semantic fix. Exact per-KL/origin-main final
 closure remains open.

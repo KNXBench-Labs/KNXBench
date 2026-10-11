@@ -20,7 +20,7 @@ use crate::string_table::{Language, StringTable};
 /// 8 belongs to the schema->=21 export path (a concurrent branch at the time
 /// of writing); 9 is `com_object_program_default` (ADR-0012 gap 2,
 /// ADR-0027). Must always equal `knx_store::migration::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: u32 = 12;
+pub const CURRENT_SCHEMA_VERSION: u32 = 13;
 
 /// Synthetic, project-unique id counters. Ids start at 1; 0 is never
 /// allocated, which leaves it free for tests to use as an obviously-fake id.
@@ -234,6 +234,10 @@ pub struct Project {
     pub info: ProjectInfo,
     pub installations: Vec<Installation>,
     pub devices: Devices,
+    /// Native user edits, keyed by stable device ID. Absence uses imported
+    /// instructions; a present empty document explicitly clears the view.
+    /// The original external text remains infrastructure-owned and immutable.
+    pub instructions: std::collections::BTreeMap<DeviceId, crate::instruction::InstructionDocument>,
     pub ids: IdAllocators,
 }
 
@@ -245,6 +249,7 @@ impl Project {
             info: ProjectInfo::default(),
             installations: Vec::new(),
             devices: Devices::new(),
+            instructions: Default::default(),
             ids: IdAllocators::default(),
         }
     }

@@ -88,6 +88,7 @@ impl fmt::Display for RepresentationIssue {
 /// keeps its own error (MODEL-02 repair commands exist for it); every other
 /// finding is reported together as [`StoreError::Unrepresentable`].
 pub(crate) fn check_representable(project: &Project) -> Result<(), StoreError> {
+    crate::instructions::check(project)?;
     check_unambiguous_topology(project)?;
     let mut issues = BTreeSet::new();
     duplicate_ids(project, &mut issues);

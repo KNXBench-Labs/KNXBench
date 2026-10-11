@@ -84,10 +84,12 @@ impl NativeSnapshot {
             ));
         }
         let mut conn = Connection::open_in_memory()?;
-        conn.deserialize_read_exact(MAIN_DB, bytes, bytes.len(), true)?;
-        conn.execute_batch("PRAGMA trusted_schema = OFF; PRAGMA query_only = ON;")?;
+        // All conversion is confined to this owned in-memory database. Original
+        // bytes/hash are verified above; unknown shape must refuse before DDL.
+        conn.deserialize_read_exact(MAIN_DB, bytes, bytes.len(), false)?;
+        conn.execute_batch("PRAGMA trusted_schema = OFF; PRAGMA foreign_keys = ON;")?;
         let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if version != crate::CURRENT_SCHEMA_VERSION {
+        if version != crate::CURRENT_SCHEMA_VERSION && version != 12 {
             return Err(HistoryError::Invalid("unsupported snapshot schema version"));
         }
         let creator: String = conn.query_row(
@@ -118,7 +120,12 @@ impl NativeSnapshot {
                 return Err(HistoryError::Invalid("recursive history snapshot"));
             }
         }
-        check_schema(&conn)?;
+        check_schema_version(&conn, version)?;
+        if version == 12 {
+            crate::migration::migrate(&conn)
+                .map_err(|_| HistoryError::Invalid("predecessor snapshot upgrade refused"))?;
+        }
+        conn.execute_batch("PRAGMA query_only = ON;")?;
         let snapshot = Self::read(&conn)?;
         crate::representable::check_representable(&snapshot.project)?;
         Ok(snapshot)
@@ -132,6 +139,10 @@ pub fn image_hash(bytes: &[u8]) -> String {
 /// Compare with the actual current native migration, never an external-format
 /// guess. Extra data objects/columns cannot silently disappear in a typed image.
 pub(super) fn check_schema(conn: &Connection) -> Result<(), HistoryError> {
+    check_schema_version(conn, crate::CURRENT_SCHEMA_VERSION)
+}
+
+fn check_schema_version(conn: &Connection, version: i64) -> Result<(), HistoryError> {
     type Columns = Vec<(String, String, i64, i64, i64)>;
     type Shape = Vec<(String, String, Columns)>;
     fn shape(conn: &Connection) -> Result<Shape, rusqlite::Error> {
@@ -149,6 +160,11 @@ pub(super) fn check_schema(conn: &Connection) -> Result<(), HistoryError> {
     }
     let expected = crate::open_and_migrate_in_memory()
         .map_err(|_| HistoryError::Invalid("native schema admission initialization failed"))?;
+    if version == 12 {
+        expected.execute_batch("DROP TABLE instruction_run; DROP TABLE instruction_document;")?;
+    } else if version != crate::CURRENT_SCHEMA_VERSION {
+        return Err(HistoryError::Invalid("unsupported native schema shape"));
+    }
     if shape(conn)? != shape(&expected)? {
         return Err(HistoryError::Invalid(
             "unsupported native tables, views, triggers or columns",
@@ -166,7 +182,15 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
     use rusqlite::types::ValueRef;
     let mut hash = Sha256::new();
     hash.update(b"KNXBench semantic native snapshot v1\0");
-    hash.update(knx_core::project::CURRENT_SCHEMA_VERSION.to_be_bytes());
+    // An additive empty overlay must not invalidate authentic schema12
+    // baseline/context fingerprints. A present empty document is NOT absent.
+    let instructions: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM instruction_document)",
+        [],
+        |row| row.get(0),
+    )?;
+    let identity_version: u32 = if instructions { 13 } else { 12 };
+    hash.update(identity_version.to_be_bytes());
     let tables: Vec<String> = conn
         .prepare(
             "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name COLLATE BINARY",
@@ -177,6 +201,8 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
         if name.starts_with("sqlite_")
             || name.starts_with("project_history_")
             || name == "schema_meta"
+            || (!instructions
+                && matches!(name.as_str(), "instruction_document" | "instruction_run"))
         {
             continue;
         }

@@ -1,8 +1,9 @@
 - **Last Agent:** codex
-- **Timestamp:** 2026-10-11 22:46 CEST
-- **Completed:** Foundation e974624e and locally committed note-service dfed9cac integrated with fresh upstream e3378712. All own and foreign journal entries retained verbatim, combined in timestamp order; common upstream base suffix unchanged. Service runtime acceptance is historical source-bound; equivalent blank-title test escape correction awaits the fresh combined gate. No release/tag/root synchronization.
-- **Pending/Next Steps:** Commit integration candidate, run full ordinary workspace/web/build/repository chain and selected original-preserving native corpus regressions on that committed head. Publish only after fresh acceptance. Prepare HTTP/isolated note editor separately while sources are frozen. AP3/AP5/AP6/AP7 remain open.
-- **Notes for Codex oder Claude:** Release owner evidence, version alignment and immutable Alpha9/native13 cutoff retained. Current future main notes schema14 is distinct from that release. Interrupted/no-source-mutation attempts are not acceptance. Active-session self-review only; existing ordered gate leases. No shell/global catalogue takeover, hardware, Secure, vendor/REA, subagents, quota, release or deployment.
+- **Timestamp:** 2026-10-11 23:09 CEST
+- **Completed:** Integration51c09fa3 runtime subchain green: focused notes13, workspace4090/0/194ignored, Web2738/0/174files, production/fixture/type builds, strict Clippy and stamped server/CLI/MCP. Whole ordinary chain refused at check-ledger: own FUTURE03 annotation was after final table delimiter, making an eighth cell. Source manifest unchanged at refusal; no corpus or publication started. Only equivalent ledger placement corrected, statuses/counts/code unchanged. HTTP missing-route RED1 executes separately (404vs200), Create-only adapter now awaiting GREEN.
+- **Pending/Next Steps:** Fresh metadata/documentation/repository gates on corrected committed snapshot, plus11 selected native corpus tests. Retain runtime proof bound51c09fa3 and compare exact runtime bytes, never relabel failed whole chain green. After coherent bounded acceptance normal main publication/readback; then HTTP CRUD/cancel/auth/conflicts/native lifecycle and isolated EN/DE UI. AP3/AP5/AP6/AP7 remain open.
+- **Notes for Codex oder Claude:** Own integration tree only; HTTP sources isolated in note-http-20261011. Ledger syntax error was authoring defect, not a product test failure; check-corpus/whitespace/chained corpus unstarted. Preserve release/private/original data, whole inherited journal and root/index. No shared shell/global catalogues, hardware, Secure, vendor/REA, subagents, quota, release or deployment.
+
 
 ---
 

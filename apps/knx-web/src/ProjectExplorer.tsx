@@ -14,6 +14,7 @@ import type { MultiSelection, Selection } from "./selection";
 import type { ItemClickHandler } from "./multiSelection";
 import { deviceInstallations, nestGroupRanges, owningInstallation, type GroupRangeTreeNode } from "./treeUtils";
 import type { DeviceWizardTarget } from "./deviceWizardPlacement";
+import ImportDiagnosticsNotice from "./ImportDiagnosticsNotice";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 import { writeDraggedGroupAddress } from "./groupAddressDrag";
@@ -1149,6 +1150,7 @@ export default function ProjectExplorer(
           />
         ))}
       </ul>
+      <ImportDiagnosticsNotice available={tree.import_report_available} compact />
       {(tree.errors > 0 || tree.warnings > 0) && (
         <footer>
           {tree.errors > 0 && (

@@ -17,6 +17,38 @@
 - **Notes for Codex oder Claude:** Nine-package goal continues; AP1/AP8/AP9 delivered, AP2 incomplete, AP3–AP7 pending. Self-review only; no hardware, private source/keys, subagents/quota, release/deployment. Root/foreign worktrees preserved. Evidence stays in owned data-tooling-editing-20261011 scratch; rejected attempts never restamped or added to totals.
 
 
+
+- **Timestamp:** 2026-10-11 14:22 CEST
+- **Completed:** Authorized import/application repair4e0e874d and tested no-ff merge481f2cd published normally on main ase27aca526a8a; local/fetched/live refs exact, feature/tested-merge ancestry verified.20 stages all0 on1626 frozen inputs: Rust3964/0/193ignored, Web2680/0/169files, full Chromium302/0 and built14/0; explicit private lifecycle1/0/nine HTTP steps/original unchanged. Self-review; public receipt contains no private source content.
+- **Pending/Next Steps:** No implementation remains in this repair tranche. Closing metadata gates/commit/push/readback and task-only retirement are recorded in the ignored publication archive. Parallel initial-admission/durable-report owners retain their unfinished work; the wider matrix remains open.
+- **Notes for Codex oder Claude:** Runtime source481f2cd9735e, first verified publicatione27aca526a8a; later delta documentation only. Canonical local archive .ai/logs/2026-10-11_codex_import-lifecycle-publication/. Do not reset/synchronize root, feature checkout or other owners' worktrees. No deployment/release/ETS/vendor/bus/general-compatibility claim. Preserve full inherited journal; historical unpublished checkpoints below stay historical.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 14:20 CEST
+- **Completed:** Source-bound merge481f2cd9735e accepted:20 stages all0, workspace Rust3964/0/193ignored, Web2680/0/169files, full Chromium302/0 and production-built14/0, no skips/flakes. Explicit private lifecycle1/0, nine HTTP steps, original unchanged. Generated binding/frozen1626-input equality pass. Production wide EN/DE evidence notice visually readable; narrow top notices/controls only. Self-review. No private content in public metadata.
+- **Pending/Next Steps:** Final additive metadata/disclosure gates, focused acceptance commit, fresh-main reconciliation, normal push/exact readback and closure. Initial-admission and durable-report work stay with parallel owners and outside this publication; remaining matrix open.
+- **Notes for Codex oder Claude:** Own integration branch/worktree and fi13 evidence only; root foreign index/docs remain untouched. Public receipt docs/evidence/import-lifecycle-publication-2026-10-11.json; private archive remains ignored. No deployment/release/ETS/vendor/bus/root synchronization. Preserve complete inherited journal.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 13:40 CEST
+- **Completed:** Owner-authorized commit/merge/push follow-up. Reviewed repair commit 4e0e874d9bf2da2084f0acec70cc610846ebee46 integrated on fetched main in an isolated checkout; additive message/status conflicts resolved and full upstream journal preserved. Parallel initial-admission edits in the feature checkout remain untouched and excluded. No private project content copied into public fixtures/docs.
+- **Pending/Next Steps:** Source-frozen merged acceptance is queued/running as proc_aa5c07ddeed6. The preceding launcher was stopped before any stage to correct the existing browser lease path. Require actual Web/build/types/full Rust/Clippy/repo/docs/full+production browser/private lifecycle receipts, inspect frames, reconcile fresh main and normal push/readback. No push yet; broader Finding matrix and preflight remain open.
+- **Notes for Codex oder Claude:** Own integration/import-lifecycle-20261011 and scratch fi13 only. Do not change gated source or the parallel feature/root. Loopback-only, isolated HOME/XDG/TMP, fixed-order shared leases. Runtime receipt fi13/receipt.private.json remains private; update later result without transferring earlier scope. No deployment, ETS/vendor execution or bus action.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 12:37
+- **Completed:** Combined local import-lifecycle candidate accepted on frozen 1608 public inputs: five owning Rust packages 1917/0/83 ignored, complete Web 2629/0/165 files, built intercepted Chromium 14/0/0 skipped/0 flaky; strict owning Clippy, server/CLI builds, binding equality, five nonempty repository checks, docs/fmt/whitespace all pass. Additional explicit private lifecycle and real standalone synthetic restart pass; original bytes unchanged, model/opaque/manufacturer-reference preservation asserted. Eleven compiled mutants caught at named assertions and source restored byte-exactly. Self-review only.
+- **Pending/Next Steps:** Canonical positive controls and documentation-only final gates passed; focused local commit is next. Remaining functional matrix still open; next independent package is initial native-write admission preflight via existing library service. Fresh main f7a5d8dc advanced independently; later coordinated source integration requires its own acceptance. No merge/push/release/deployment authority inferred.
+- **Notes for Codex oder Claude:** Own worktree/branch only. Evidence remains private profile scratch findings-implementation-20261011; initial compile/header refusals and accepted final run distinct. No private identities/values/fingerprints in public files; root index, foreign research/worktrees and inherited journal preserved. Mutation controls acquire established workspace/alpha/browser leases in that order before source edits. No subagents/quota/vendor execution/hardware. SQLite prefixes do not constitute engine-wide heap/RSS guarantees.
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 12:14
 - **Completed:** Owner-authorized login/feedback/limits feature5c59f6d2 and no-ff tested merged075b7cc published on main ase476626e2eb5; live/fetched HEAD refs exact, feature/tested-merge ancestry verified. Fresh-main docs0fd7a865 reconciled in cdfd1345 with unchanged accepted runtime. Actual1359-input18-stage merged acceptance all0: Web2665/0/168, Rust3954/0/192ignored, Chromium294/0/0skipped/0flaky, built24/0;26 actual built frames inspected. Workspace Clippy/build/three types/five explicit-root repo/docs/fmt/whitespace pass. Publication receipt records actual observed push, not a deployment.
 - **Pending/Next Steps:** No feature implementation remains. This metadata closure preserves the verified published ancestor; final closure-tip remote readback and only-owned cleanup recorded in local publication archive. No release/live-container/root synchronization requested or performed.

@@ -18,7 +18,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Mutex;
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64URL;
@@ -80,6 +80,9 @@ pub struct AppState {
     /// reapplied to every tree rebuilt after a command/undo/redo — edits
     /// don't change what import lost. `(0, 0)` for a `.knxdb` native load.
     pub import_counts: Mutex<(usize, usize)>,
+    /// Published under the project lock with the counters. Native files do not
+    /// persist an ImportReport; their zero counters must not look measured.
+    pub import_report_available: AtomicBool,
     /// Opaque identity for this `AppState` lifetime. It scopes snapshot
     /// revisions and bus-session counters across server restarts, but is not
     /// an authentication token and is never derived from credentials.
@@ -248,6 +251,7 @@ impl AppState {
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             history_generation: Mutex::new(0),
             import_counts: Mutex::new((0, 0)),
+            import_report_available: AtomicBool::new(true),
             server_incarnation: server_incarnation.clone(),
             project_revision: AtomicU64::new(0),
             project_incarnation: AtomicU64::new(0),
@@ -314,6 +318,7 @@ impl Default for AppState {
 /// `apps/knx-cli/src/main.rs`'s `error_count()` draws, since `ImportReport`
 /// keeps both severities in one `errors` Vec.
 fn apply_report_counts(tree: &mut ProjectTree, report: &knx_etsproj::ImportReport) {
+    tree.import_report_available = Some(true);
     let error_count = report
         .errors
         .iter()
@@ -685,7 +690,8 @@ fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, LoadFai
     };
     read.commit()
         .map_err(|e| LoadFailure::from(e.to_string()))?;
-    let tree = knx_projection::build_project_tree(&project);
+    let mut tree = knx_projection::build_project_tree(&project);
+    tree.import_report_available = Some(false);
     Ok((
         tree,
         project,
@@ -727,8 +733,9 @@ fn allocator_repair_log_entry(repair: &knx_store::AllocatorRepair) -> LogEntry {
 
 /// Loads a `.knxdb` file at `path` and projects it, without touching
 /// `state`. No `ImportReport` exists for a native load — nothing was
-/// reinterpreted from an external format — so `tree.errors`/`tree.warnings`
-/// stay at their default zero.
+/// reinterpreted from an external format. Numeric counters remain backward-
+/// compatible placeholders; `import_report_available = false` exposes their
+/// unavailability rather than claiming a new compatibility assessment.
 pub fn open_native_project_impl(path: &Path) -> Result<ProjectTree, String> {
     let progress = detached_progress(crate::load_progress::LoadKind::Open, path);
     let outcome = load_native(path, &progress)
@@ -1964,6 +1971,7 @@ pub(crate) fn tree_with_state(
     let mut tree = knx_projection::build_project_tree(project);
     tree.errors = import_counts.0;
     tree.warnings = import_counts.1;
+    tree.import_report_available = Some(state.import_report_available.load(Ordering::Relaxed));
     tree.can_undo = stack.can_undo();
     tree.can_redo = stack.can_redo();
     tree.is_modified = project_is_modified(project, clean_project);
@@ -2136,6 +2144,11 @@ fn replace_project_state_transaction(
         .lock()
         .expect("state mutex poisoned") = generation;
     *import_counts = replacement_import_counts;
+    // Only native-open replacements carry a store path. Save As sets one
+    // later without replacing the live import evidence. Publish atomically.
+    state
+        .import_report_available
+        .store(replacement_store_path.is_none(), Ordering::Relaxed);
     *store_path = replacement_store_path;
     *clean_project = Some(clean_replacement);
     // `last_saved_at` describes the project on screen, not the session: a

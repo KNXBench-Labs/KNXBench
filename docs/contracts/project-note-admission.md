@@ -91,3 +91,23 @@ UTF8 text. Preserve whitespace/linebreaks; control characters other than tab/CR/
 are explicitly refused. No target guessing or author fabrication. Tests first.
 The authenticity receipt now confirms frozen saved+working native13 fixtures
 from the accepted e0dbd93a writer, including3undo/1redo working state.
+
+## Reversible collection core slice and temporary storage refusal
+
+Exact next edits: core `project.rs`, `command.rs`, existing `note.rs`/`tests/notes.rs`,
+store `project.rs` (default-empty load construction), `representable.rs` (named
+nonpersistable-state refusal) and `tests/notes_admission.rs`, plus own contract
+and handover. No schema bump/native write support in this intermediate local
+slice. Saving notes or nonzero note allocation metadata must explicitly refuse
+before any SQLite write until the versioned storage slice is complete.
+
+Ordered `Project.notes` plus existing allocator's note high-water counter;
+Insert/Remove/Replace/Move note commands supply exact inverses. Insert raises
+the high-water mark, removal/undo never rewinds it; ID exhaustion is explicit.
+For a note-affecting command or a project with notes, apply against a private
+Project candidate then validate remaining note targets/budgets before publishing
+the candidate. Existing command code stays the sole edit machinery; the old
+no-notes non-note command fast path stays unchanged. Batch invokes this same
+policy and explicit note disposition must precede target deletion. Undo order
+restores a removed entity before its notes. A refused delete leaves content,
+originals, allocation counters and history unchanged; no implicit retarget.

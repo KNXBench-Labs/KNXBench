@@ -51,6 +51,33 @@ const flavour = () => host!.querySelector(".load-progress-flavour");
 const rotateByOne = () => 0;
 
 describe("LoadProgressBanner", () => {
+  it("keeps a joke readable for 4.3 seconds, 2.5 seconds longer than before", async () => {
+    vi.useFakeTimers();
+    const root = await render("villa.knxproj", snapshot(), rotateByOne);
+    await act(async () => void vi.advanceTimersByTime(4299));
+    expect(flavour()!.textContent).toBe(enMessages["loadProgress.flavour.02"]);
+    await act(async () => void vi.advanceTimersByTime(1));
+    expect(flavour()!.textContent).toBe(enMessages["loadProgress.flavour.03"]);
+    root.unmount();
+  });
+
+  it("shows the current step below the bar when counted work becomes uncounted", async () => {
+    const root = await render("villa.knxproj", snapshot({ phase: "ingestManufacturerData", completed: 13, total: 251 }));
+    expect(host!.querySelector(".load-progress-count")!.textContent).toBe("13 of 251");
+    for (const phase of ["ingestMasterData", "enrichFromProductDatabase", "persistOpaque", "buildProjectTree"]) {
+      await act(async () => root.render(<LoadProgressBanner source="villa.knxproj" snapshot={snapshot({ phase })} />));
+      const label = host!.querySelector(".load-progress-phase")!;
+      expect(label.textContent).toBe(`Current step: ${enMessages[`loadProgress.phase.${phase}` as keyof typeof enMessages]}`);
+      expect(bar().compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(bar().getAttribute("aria-valuetext")).toBe(label.textContent);
+      expect(bar().hasAttribute("aria-valuenow")).toBe(false);
+      expect(host!.querySelector(".load-progress-count")).toBeNull();
+      expect(host!.querySelector(".load-progress-unmeasured")!.textContent).toBe("No item total is available for this step.");
+    }
+    root.unmount();
+  });
+
+
   it("announces itself politely, so a phase change reaches a screen reader", async () => {
     const root = await render("villa.knxproj", snapshot());
     const region = host!.querySelector('[role="status"]')!;
@@ -141,7 +168,7 @@ describe("LoadProgressBanner", () => {
     expect(flavour()!.textContent).toBe(enMessages["loadProgress.flavour.02"]);
     // The thing the banner exists to say is still on screen, still first.
     const heading = host!.querySelector(".load-progress-heading")!;
-    expect(heading.textContent).toContain(enMessages["loadProgress.phase.parseTopology"]);
+    expect(host!.querySelector(".load-progress-phase")!.textContent).toContain(enMessages["loadProgress.phase.parseTopology"]);
     expect(heading.contains(flavour())).toBe(false);
     root.unmount();
   });

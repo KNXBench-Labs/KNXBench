@@ -4,7 +4,7 @@ Owned branch `feature/data-tooling-editing-20261011`, based on source
 05aaab52 (main-integrated bounded adapter with raw-evidence owner contribution).
 Initial work is design/tests, not permission to rewrite source evidence.
 
-Own new `docs/adr/0111-native-instruction-overlays.md`,
+Own new `docs/adr/0112-native-instruction-overlays.md`,
 `docs/contracts/instruction-editing.md`, `crates/knx-core/src/instruction.rs`
 and its core export, `Project` instruction overlay collection, next ordered
 native migration and frozen predecessor fixture, `knx-store` instruction

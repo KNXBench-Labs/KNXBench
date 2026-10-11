@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:21 CEST
+- **Completed:** Owner-requested import status merge/main push delivered at3d6c9d1f; featuredf868c7a and upstream download-layout420d0242 ancestors retained. Actual combined frozen1865-file source passed14 stages: Web2614/0/164files, full intercepted Chromium264/0/0, production-built22/0/0, build/three types/five fresh nonempty repo gates/docs/whitespace. Local/tracking/live main equal; KNXBench identities/no co-author. Four final EN/DE400/1440 frames inspected; phase/note/joke visible below bar. Self-review only.
+- **Pending/Next Steps:** No further import-status implementation/main-merge work remains. This metadata-only closure is separately checked/read back; final owned cleanup is recorded in ignored delivery evidence. Release/container deployment and shared-root synchronization are separate and not performed.
+- **Notes for Codex oder Claude:** Public receipt docs/evidence/import-status-publication-2026-10-11.json; ignored proof .ai/logs/2026-10-11_codex_import-status/integration/combined/. Runtime acceptance binds3d6c9d1f, not earlier9729fb95; earlier attempts remain historical. Phase means latest server observation, not a heartbeat/ETA or invented count. Preserve concurrent root manufacturer-DLL research and all foreign source/journals; no vendor/hardware/backend compatibility claim.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 08:31 CEST
 - **Completed:** Owner-requested focused import-banner commit/push delivered on fix/import-status-20261011 atdf868c7a. Local/tracking/live feature refs equal; exact12-path commit, KNXBench author/committer/no coauthor and accepted eight source/test hashes verified. Fresh explicit-root five repository gates/documentation/staged whitespace pass. Existing runtime acceptance2614Web/8built intercepted Chromium remains source-bound, not rerun or double-counted. In-session self-review.
 - **Pending/Next Steps:** No feature implementation or branch-publication work remains. Documentation closure follows on the same branch; main integration, release and container deployment remain separate. Keep owned clean source/build worktree for review and later coordinated merge with UX-feedback; do not clean foreign worktrees.

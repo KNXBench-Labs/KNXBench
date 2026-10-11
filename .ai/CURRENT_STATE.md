@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 14:22 CEST
+- **Completed:** Authorized import/application repair4e0e874d and tested no-ff merge481f2cd published normally on main ase27aca526a8a; local/fetched/live refs exact, feature/tested-merge ancestry verified.20 stages all0 on1626 frozen inputs: Rust3964/0/193ignored, Web2680/0/169files, full Chromium302/0 and built14/0; explicit private lifecycle1/0/nine HTTP steps/original unchanged. Self-review; public receipt contains no private source content.
+- **Pending/Next Steps:** No implementation remains in this repair tranche. Closing metadata gates/commit/push/readback and task-only retirement are recorded in the ignored publication archive. Parallel initial-admission/durable-report owners retain their unfinished work; the wider matrix remains open.
+- **Notes for Codex oder Claude:** Runtime source481f2cd9735e, first verified publicatione27aca526a8a; later delta documentation only. Canonical local archive .ai/logs/2026-10-11_codex_import-lifecycle-publication/. Do not reset/synchronize root, feature checkout or other owners' worktrees. No deployment/release/ETS/vendor/bus/general-compatibility claim. Preserve full inherited journal; historical unpublished checkpoints below stay historical.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 14:20 CEST
 - **Completed:** Source-bound merge481f2cd9735e accepted:20 stages all0, workspace Rust3964/0/193ignored, Web2680/0/169files, full Chromium302/0 and production-built14/0, no skips/flakes. Explicit private lifecycle1/0, nine HTTP steps, original unchanged. Generated binding/frozen1626-input equality pass. Production wide EN/DE evidence notice visually readable; narrow top notices/controls only. Self-review. No private content in public metadata.
 - **Pending/Next Steps:** Final additive metadata/disclosure gates, focused acceptance commit, fresh-main reconciliation, normal push/exact readback and closure. Initial-admission and durable-report work stay with parallel owners and outside this publication; remaining matrix open.

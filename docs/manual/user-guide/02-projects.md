@@ -63,7 +63,7 @@ removes the bar and jokes and retains the last phase and error.
 
 ## Installation nodes and their names
 
-**Source integration accepted, 11 October 2026 — not included in Alpha.8.**
+**Source published on main, 11 October 2026 — not included in Alpha.8.**
 [Actual merged-source verification](../../evidence/installation-node-publication-2026-10-11.json).
 An installation
 is the container below **Project** that groups topology, buildings, unassigned

@@ -8,7 +8,7 @@ export interface ProjectVersion {
 export interface ProjectHistory {
   formatVersion: 1; persistence: "native" | "session"; serverIncarnation: string; snapshotRevision: number;
   generation: number; undoSteps: number; redoSteps: number; totalBytes: number;
-  limits: { maxImageBytes: number; maxHistoryBytes: number; maxStackStates: number; maxVersions: number };
+  limits: { maxImageBytes: number; maxContextBytes?: number; maxDecodedImageBytes?: number; maxDecodedHistoryBytes?: number; maxHistoryBytes: number; maxStackStates: number; maxVersions: number };
   versions: ProjectVersion[]; project: ProjectTree;
 }
 export interface ProjectHistoryBinding {
@@ -38,6 +38,9 @@ export function admitProjectHistory(value: unknown): ProjectHistory {
   if (!integer(limits.maxImageBytes, 1) || !integer(limits.maxHistoryBytes, 1)
     || !integer(limits.maxStackStates, 1) || !integer(limits.maxVersions, 1)
     || value.totalBytes > limits.maxHistoryBytes || value.versions.length > limits.maxVersions) fail();
+  if (limits.maxContextBytes !== undefined && !integer(limits.maxContextBytes, 1)) fail();
+  if (limits.maxDecodedImageBytes !== undefined && !integer(limits.maxDecodedImageBytes, 1)) fail();
+  if (limits.maxDecodedHistoryBytes !== undefined && !integer(limits.maxDecodedHistoryBytes, 1)) fail();
   if (value.persistence === "native" && value.undoSteps + value.redoSteps > limits.maxStackStates) fail();
   if (value.persistence === "session" && (value.versions.length || value.totalBytes || value.generation)) fail();
   const project = value.project;
@@ -65,6 +68,9 @@ export function admitProjectHistory(value: unknown): ProjectHistory {
     snapshotRevision: value.snapshotRevision, generation: value.generation, undoSteps: value.undoSteps,
     redoSteps: value.redoSteps, totalBytes: value.totalBytes, versions,
     limits: { maxImageBytes: limits.maxImageBytes, maxHistoryBytes: limits.maxHistoryBytes,
+      ...(limits.maxContextBytes === undefined ? {} : {maxContextBytes: limits.maxContextBytes}),
+      ...(limits.maxDecodedImageBytes === undefined ? {} : {maxDecodedImageBytes: limits.maxDecodedImageBytes}),
+      ...(limits.maxDecodedHistoryBytes === undefined ? {} : {maxDecodedHistoryBytes: limits.maxDecodedHistoryBytes}),
       maxStackStates: limits.maxStackStates, maxVersions: limits.maxVersions }, project: project as unknown as ProjectTree };
 }
 

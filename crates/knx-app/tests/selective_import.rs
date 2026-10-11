@@ -559,3 +559,82 @@ fn retention_note_names_network_endpoints_and_user_names() {
     }
     assert!(plan.preview.retained_source_may_contain_unselected_data);
 }
+
+#[test]
+fn selected_instruction_override_is_remapped_without_losing_existing_edits() {
+    use knx_core::instruction::{InstructionDocument, InstructionRun};
+    let (mut source, mut target, selection) = fixture();
+    let id = DeviceId(selection.devices[0]);
+    let document = InstructionDocument::new(vec![InstructionRun {
+        text: "Source instruction Grüße".into(),
+        style: Default::default(),
+    }])
+    .unwrap();
+    source.project.instructions.insert(id, document.clone());
+    let existing_id = target.project.ids.next_device_id().unwrap();
+    let mut existing = source.project.devices.get(id).unwrap().clone();
+    existing.id = existing_id;
+    existing.address = None;
+    existing.com_objects.clear();
+    existing.binary_data.clear();
+    existing.source = SourceRef {
+        path: "KB-existing".into(),
+        ets_id: "KB-existing".into(),
+    };
+    target.project.devices.insert(existing);
+    target.project.installations[0]
+        .topology
+        .unassigned
+        .push(existing_id);
+    let existing_document = InstructionDocument::new(vec![InstructionRun {
+        text: "Destination instructions must remain".into(),
+        style: Default::default(),
+    }])
+    .unwrap();
+    target
+        .project
+        .instructions
+        .insert(existing_id, existing_document.clone());
+    let before = target.clone();
+    let plan = import::plan(&target, &source, selection).unwrap();
+    let mapped = plan
+        .preview
+        .mappings
+        .iter()
+        .find(|mapping| mapping.kind == "device" && mapping.source == id.0)
+        .unwrap()
+        .target;
+    assert!(
+        plan.preview
+            .notes
+            .iter()
+            .any(|note| note.contains("instruction")),
+        "preview must disclose preserved native instruction edits"
+    );
+    let mut stack = CommandStack::new();
+    import::apply(&mut target, &mut stack, plan).unwrap();
+    assert_eq!(target.project.instructions[&DeviceId(mapped)], document);
+    assert_eq!(target.project.instructions[&existing_id], existing_document);
+    let encoded = target.encode().unwrap();
+    assert_eq!(
+        NativeSnapshot::decode(&encoded, &knx_store::project_history::image_hash(&encoded))
+            .unwrap(),
+        target
+    );
+    stack.undo(&mut target.project).unwrap();
+    assert!(target.project.same_user_content_as(&before.project));
+    assert_eq!(target.project.instructions, before.project.instructions);
+    stack.redo(&mut target.project).unwrap();
+    assert_eq!(target.project.instructions[&DeviceId(mapped)], document);
+}
+#[test]
+fn dangling_source_instruction_owner_is_explicitly_refused() {
+    let (mut source, target, selection) = fixture();
+    source.project.instructions.insert(
+        DeviceId(u32::MAX),
+        knx_core::instruction::InstructionDocument::default(),
+    );
+    assert!(import::plan(&target, &source, selection)
+        .unwrap_err()
+        .contains("instruction"));
+}

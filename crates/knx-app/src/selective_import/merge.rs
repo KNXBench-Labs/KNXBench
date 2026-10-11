@@ -12,14 +12,22 @@ pub(super) fn plan(
     source: &Source,
     selection: Selection,
 ) -> Result<Plan, String> {
-    // This closure enumerates model-v11 references. A model bump needs a new audit,
+    // This closure enumerates model-v13 references, including instruction overrides. A model bump needs a new audit,
     // not accidental acceptance of newly cloned but unremapped entity fields.
     if before.project.schema_version != super::SELECTIVE_MODEL_VERSION
         || source.project.schema_version != super::SELECTIVE_MODEL_VERSION
     {
-        return Err("selective import supports normalized model v11 only; a new model requires an audited dependency mapping".into());
+        return Err("selective import supports normalized model v13 only; a new model requires an audited dependency mapping".into());
     }
     before.encode().map_err(|e| e.to_string())?;
+    if source
+        .project
+        .instructions
+        .keys()
+        .any(|id| source.project.devices.get(*id).is_none())
+    {
+        return Err("source instruction override has no owning device".into());
+    }
     if source.report.error_count() != 0 {
         return Err("source import has mapping/validation errors; repair the source before selective import".into());
     }
@@ -167,7 +175,17 @@ pub(super) fn plan(
             .next_device_id()
             .map_err(|e| e.to_string())?;
         device_map.insert(*old, new);
+        if let Some(instruction) = source.project.instructions.get(old) {
+            after.project.instructions.insert(new, instruction.clone());
+        }
         mappings.push(mapping("device", old.0, new.0, false));
+    }
+    let instruction_count = device_map
+        .keys()
+        .filter(|id| source.project.instructions.contains_key(id))
+        .count();
+    if instruction_count != 0 {
+        notes.push(format!("{instruction_count} selected native instruction override(s) preserved under remapped device identities."));
     }
     let (line_map, building_map) = structure::topology_and_buildings(
         &mut after.project,

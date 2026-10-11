@@ -119,3 +119,21 @@ for normalized reads only. Older readers still refuse native13 files. Do not
 weaken unknown/future/extra/corrupt snapshot refusal or silently rewrite history.
 Regression requires root/working/both stacks/context/named versions and opaque
 bytes before/after actual migration. This policy requires tests before admission.
+
+### Existing-feature integration audit
+
+The broad native attempt correctly hit the selective-import model-version
+barrier. Own exact extension `crates/knx-app/src/selective_import.rs`,
+`crates/knx-app/src/selective_import/merge.rs`, and
+`crates/knx-app/tests/selective_import.rs` to map selected instruction overrides
+to remapped stable device IDs, preserve destination overrides and reject dangling
+source owners. The barrier is advanced only with this explicit mapping/tests,
+not by changing its version number alone. Native diff visibility remains required
+before user API admission. All changes are instruction-field integration only;
+no Functions/Sites behavior borrowed from its preserved old worktree.
+
+Native instruction diff tranche owns only `crates/knx-diff/src/diff.rs`,
+`crates/knx-diff/src/semantic.rs` device projection/field comparisons and new
+`crates/knx-diff/tests/instructions.rs`. Preserve every unrelated Function/Site
+field and parked foreign source; compare full normalized style/run content,
+including absent versus explicit empty, without claiming imported bytes changed.

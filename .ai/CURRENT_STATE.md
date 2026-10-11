@@ -1,4 +1,10 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 15:40 CEST
+- **Completed:** Bounded AP2 native/application/HTTP/isolated editor package published normally on main asbaaad1a6dc1c09acbbc06cdf40b21a1fb8804a2a; local HEAD/fetched/live main exact and committed evidence blob read back. Runtimee0dbd93a4709d9489409f0f685202294ff2ab42d remains byte-identical to accepted17-stage candidate (Web2715/0/172files, Rust4026/0/194ignored);14 actual browser and13 two-process-restart checks, actual frames viewed. Session1 host contract and own ADR112 published. No release/deployment/root synchronization.
+- **Pending/Next Steps:** AP3 specialized parameter editors, AP4 native notes/help, AP5 offline naming recipe, AP6 opt-in confirmed MCP mutations, AP7 verified-source catalogue workflow. AP3/AP5 separate worktrees contain design/reconnaissance only, no implementation credited. Session1 owns shell mount.
+- **Notes for Claude:** Publication readback/private receipts remain in owned scratch until archival. Earlier failures/cancelled waits preserved and never added to pass totals. This closure is metadata only; next work may begin without changing runtime source. Preserve all foreign/root state; no hardware/subagents/quota/release/deploy authority.
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 15:34 CEST
 - **Completed:** Latest-main assembled AP2 runtime e0dbd93a4709d9489409f0f685202294ff2ab42d accepted:17 gates, Web2715/0/172files, Rust4026/0/194ignored, strict Clippy/format/build/types/docs/five explicit-root repo gates. Actual isolated browser14 checks and13 native checks with two real server restarts pass on same frozen source; EN/DE frames viewed. Imported originals/digest/native file bytes, undo/redo and explicit Save/reopen verified. New compact evidence and Session1 host contract updated; own ADR112 avoids published codec ADR111 collision.
 - **Pending/Next Steps:** Metadata/disclosure gates, normal coordinated main push and exact remote readback; no publication claimed yet. Then AP3–AP7. Session1 owns shell mount. AP3/AP5 reconnaissance contracts are separate unimplemented drafts.

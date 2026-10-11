@@ -27,8 +27,10 @@ policy. Shell/navigation integration belongs to Session1 and is not claimed.
 Source interpretation is Schema23 UTF-8/unprefixed XML only; editing supports
 text/paragraphs/bold/italic/underline with explicit unsupported-conversion consent.
 No ETS edited-project exporter, universal compatibility, hardware, release or
-deployment. In-session self-review, not independent approval. This acceptance is
-not itself remote publication; later metadata closure must pass its own gates.
+deployment. In-session self-review, not independent approval. Published normally
+on `main` as `baaad1a6dc1c09acbbc06cdf40b21a1fb8804a2a` after separately accepted
+metadata/disclosure gates; local/tracking/live refs and committed evidence blob
+read back exactly. Runtime/test inputs unchanged by closure metadata.
 
 
 Normalized literal/basic-style instruction documents, reversible edit/reset and

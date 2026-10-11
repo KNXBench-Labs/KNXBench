@@ -1,10 +1,11 @@
 # Project note application editing — exact next-slice ownership
 
-The Foundation candidate `e974624e` has verified local source-bound17-stage
-Core/native14/diff/report/workspace acceptance and11 separately enabled native
-project corpus regressions with unchanged originals. It remains unpublished;
-this service is a separate candidate and does not inherit a whole-feature
-verdict. Accepted ADR31 and [Foundation contract](project-note-admission.md)
+The initial local Foundation candidate `e974624e` has source-bound 17-stage
+Core/native14/diff/report/workspace acceptance and 11 separately enabled native
+project corpus regressions with unchanged originals. That initial observation
+was unpublished. The later assembled Foundation/service evidence is recorded in
+[the bounded integration receipt](../evidence/project-notes-foundation-service-2026-10-11.json);
+it does not certify the missing HTTP/UI or whole feature. Accepted ADR31 and [Foundation contract](project-note-admission.md)
 remain normative.
 
 Own exact next paths before coding: `crates/knx-app/src/note_edit.rs`,

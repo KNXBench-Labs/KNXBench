@@ -13,6 +13,36 @@ activity and Shell structural counts retain explicit unknown boundaries;
 configured collector remote publication remains unavailable. No blanket TOOLS
 completion, dashboard change, account enablement or deployment.
 
+## 2026-10-11 — AP9 hardware prerequisites and plans, no execution
+
+Two independent preparation contracts now exist:
+[Powerline / KL-110](contracts/powerline-readiness.md) and
+[changed-parts download / GAP-T30-04](contracts/incremental-download-readiness.md).
+They record existing source/standard boundaries, unresolved target/transport and
+recovery evidence, phased future tests, stop conditions and operation-specific
+Go requirements. Preparation does not implement or verify either hardware feature.
+Both implementation IDs stay `LATER / RECORDED_SCOPE`; full-download behavior,
+source and public operation guards are unchanged. No hardware discovery,
+connection, live tests, downloads or writes performed.
+
+## 2026-10-11 — KL146 owner-approved diagnostic candidate
+
+Independent source oracle and real import/HTTP/shared-evaluator comparison,
+read-only. Owner selected diagnostic delivery while retaining KL146 and no
+parity claim. Eight synthetic controls cover complete finding-bearing diagnostics
+versus failed integrity and unknown/unadjudicated observations. Historical original
+comparison completed with input/project unchanged and explicit differences.
+Final source `f045390fdf7b` passes complete original diagnostic replay and
+Rust3934/0/192, Web2612/0/164, strict Clippy, production server/CLI/MCP/Web
+builds, TypeScript, five fresh-root repo gates/docs, full corpus and independent
+RefId/instance-own-value/reconciliation/raw-evidence private gates. Explicit
+missing opt-in/file refuse; three assertion mutants detected/restored. Native
+desktop shell unchanged/not exercised. Published no-ff `70c05fdc58e5`, outgoing
+privacy clear, HEAD/tracking/live and exact target receipt verified. Whole scoped
+Schema23 follow-up is closed; see [closure](evidence/private-schema23-review-closure-2026-10-11.json).
+No production semantics changed. See [contract](research/schema23-activation-differential.md)
+and [receipt](evidence/kl146-saved-activation-2026-10-11.json); private details stay local.
+
 ## 2026-10-11 — bounded RTF adapter foundation (AP2 still open)
 
 - `knx-etsproj::rtf` derives bounded literal/basic-style views and writes only

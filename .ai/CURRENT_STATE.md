@@ -1,4 +1,10 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 15:34 CEST
+- **Completed:** Latest-main assembled AP2 runtime e0dbd93a4709d9489409f0f685202294ff2ab42d accepted:17 gates, Web2715/0/172files, Rust4026/0/194ignored, strict Clippy/format/build/types/docs/five explicit-root repo gates. Actual isolated browser14 checks and13 native checks with two real server restarts pass on same frozen source; EN/DE frames viewed. Imported originals/digest/native file bytes, undo/redo and explicit Save/reopen verified. New compact evidence and Session1 host contract updated; own ADR112 avoids published codec ADR111 collision.
+- **Pending/Next Steps:** Metadata/disclosure gates, normal coordinated main push and exact remote readback; no publication claimed yet. Then AP3–AP7. Session1 owns shell mount. AP3/AP5 reconnaissance contracts are separate unimplemented drafts.
+- **Notes for Claude:** Prior failed/source-bound receipts preserved, ignored tests not credited. No private corpus, hardware, source global styles/catalogue/shell edits by this owner, release/deployment/subagents. Root/foreign worktrees untouched; source self-review only.
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 15:15 CEST
 - **Completed:** AP2 assembled e54e2a68 accepted on17 actual gates: Web2700/0/171files, workspace Rust4016/0/193ignored, full Clippy, debug binaries stamped exact source, build/types/docs/five repo gates. Isolated browser14 checks/visual EN1440+DE400 and13 actual-process restart checks accepted on same frozen source. Fresh remote43865f58 published import/history codec repair; integrated no-ff preserving both complete journals. Published ADR0111 collision resolved by renumbering only own instruction ADR to0112; codec ADR untouched.
 - **Pending/Next Steps:** Fresh complete acceptance for actual new merged candidate including codec/native instruction interaction, then metadata/disclosure/publication/readback. Earlier e54e proof not automatically transferred. AP3–AP7 remain open; AP3/AP5 design reconnaissance only.

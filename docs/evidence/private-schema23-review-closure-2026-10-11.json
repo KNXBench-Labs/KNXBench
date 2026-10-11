@@ -1,0 +1,151 @@
+{
+  "scope": "nine private Schema23-review follow-up packages, not whole-product completion",
+  "date": "2026-10-11",
+  "status": "ACCEPTED_SCOPED_FOLLOWUP",
+  "review": "codex, in-session self-review only; no independent review",
+  "packages": [
+    {
+      "package": 1,
+      "ids": [
+        "KL-106"
+      ],
+      "delivery": "DELIVERED_BOUNDED_SCOPE",
+      "main_ancestor_revision": "53b84c9f",
+      "receipt": "docs/evidence/kl106-retained-source-audit-2026-10-10.json"
+    },
+    {
+      "package": 2,
+      "ids": [
+        "KL-8"
+      ],
+      "delivery": "DELIVERED_BOUNDED_SCOPE",
+      "main_ancestor_revision": "8901affa",
+      "receipt": "docs/evidence/kl8-secure-capable-witness-2026-10-10.json"
+    },
+    {
+      "package": 3,
+      "ids": [
+        "KL-68",
+        "PDB-01"
+      ],
+      "delivery": "DELIVERED_BOUNDED_SCOPE",
+      "main_ancestor_revision": "2e264f6c",
+      "receipt": "docs/evidence/kl68-instance-values-2026-10-10.json"
+    },
+    {
+      "package": 4,
+      "ids": [
+        "KL-1"
+      ],
+      "delivery": "DELIVERED_BOUNDED_SCOPE",
+      "main_ancestor_revision": "992032c3",
+      "receipt": "docs/evidence/kl1-source-reconciliation-2026-10-10.json"
+    },
+    {
+      "package": 5,
+      "ids": [
+        "KL-173"
+      ],
+      "delivery": "DELIVERED_BOUNDED_SCOPE",
+      "main_ancestor_revision": "4c38af5b",
+      "receipt": "docs/evidence/kl173-native-evidence-2026-10-10.json"
+    },
+    {
+      "package": 6,
+      "ids": [
+        "KL-174"
+      ],
+      "delivery": "DELIVERED_BOUNDED_SCOPE",
+      "main_ancestor_revision": "566afbdd",
+      "receipt": "docs/evidence/kl174-payload-evidence-2026-10-10.json"
+    },
+    {
+      "package": 7,
+      "ids": [
+        "KL-175"
+      ],
+      "delivery": "DELIVERED_BOUNDED_SCOPE",
+      "main_ancestor_revision": "6ef0b2d8",
+      "receipt": "docs/evidence/kl175-raw-evidence-2026-10-10.json"
+    },
+    {
+      "package": 8,
+      "ids": [
+        "KL-146"
+      ],
+      "delivery": "DELIVERED_DIAGNOSTIC_ONLY",
+      "main_ancestor_revision": "70c05fdc58e531e833d91ee18b99b411aa3afb52",
+      "receipt": "docs/evidence/kl146-saved-activation-2026-10-11.json"
+    },
+    {
+      "package": 9,
+      "ids": [
+        "KL-170",
+        "KL-171",
+        "KL-172"
+      ],
+      "delivery": "DELIVERED_RESEARCH_ONLY",
+      "main_ancestor_revision": "3a303787",
+      "receipt": "docs/evidence/schema23-public-research-2026-10-10.json"
+    }
+  ],
+  "exact_ledger_states": {
+    "KL-1": "ACCEPTED_BOUNDARY",
+    "KL-8": "ACCEPTED_BOUNDARY",
+    "KL-68": "ACCEPTED_BOUNDARY",
+    "KL-106": "ACCEPTED_BOUNDARY",
+    "KL-146": "ACCEPTED_BOUNDARY",
+    "KL-170": "LATER",
+    "KL-171": "LATER",
+    "KL-172": "LATER",
+    "KL-173": "DONE",
+    "KL-174": "ACCEPTED_BOUNDARY",
+    "KL-175": "DONE",
+    "PDB-01": "ACCEPTED_BOUNDARY"
+  },
+  "blocking_review_packages": [],
+  "final_verified_source_revision": "f045390fdf7b3ff34353eca84769c5daa03489a1",
+  "final_package_merge": "70c05fdc58e531e833d91ee18b99b411aa3afb52",
+  "gate_evidence": "docs/evidence/kl146-saved-activation-2026-10-11.json",
+  "final_gate_chain": {
+    "all_required_stages_passed": true,
+    "ordinary_non_desktop_rust_passed": 3934,
+    "ordinary_rust_failed": 0,
+    "web_passed": 2612,
+    "web_failed": 0,
+    "full_nonempty_corpus_passed": true,
+    "five_private_opt_in_gates_passed": true,
+    "missing_opt_in_file_refuse": true,
+    "strict_clippy_and_production_builds_passed": true,
+    "five_fresh_root_repo_and_docs_gates_passed": true,
+    "loopback_only": true,
+    "input_and_project_unchanged": true,
+    "source_manifest_checked_before_and_after": true,
+    "native_desktop_shell_tested": false
+  },
+  "source_equivalence": {
+    "all_nonmetadata_tracked_bytes_match_accepted_source": true,
+    "noff_merge_tree_equals_metadata_verified_feature": true,
+    "closing_edits": "metadata only; final repository/documentation/privacy gates passed",
+    "closing_metadata_repo_docs_privacy_passed": true
+  },
+  "publication": {
+    "package_merge_head_tracking_live_equal": true,
+    "exact_target_receipt_read_back": true,
+    "full_outgoing_private_value_scan_clear": true
+  },
+  "remaining_boundaries": [
+    "KL-1 source reconciliation is not semantic compatibility; retained unknowns and losses remain reported",
+    "KL-8 no Secure activation or hardware proof",
+    "KL-68/PDB-01 own saved instance values read-only; Repeat/activation/writes unsupported",
+    "KL-106 pattern redaction is not anonymity",
+    "KL-146 differences and unknown/scoped sets retained; parity_accepted=false",
+    "KL-170\u2013172 research delivered, no undocumented MI/counter/IP/encoder support",
+    "KL-173 outside-tree overrides evidence, not inferred active objects",
+    "KL-174 role candidates, not certified ETS App support; no vendor execution",
+    "KL-175 marked verbatim evidence, not RTF/ETS authoring certification"
+  ],
+  "private_evidence": "ignored root .ai/logs/private-import-analysis/schema23-review-delivery-2026-10-11; no original-derived identities, counts or fingerprints in this receipt",
+  "hardware_release_deployment_actions": "none",
+  "root_tracked_files_and_foreign_worktrees_unchanged": true
+}

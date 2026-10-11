@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:36 CEST
+- **Completed:** Owner-authorized installation-node mergef0ce1b80 accepted on actual frozen1870-file committed source. All20 stages exit0: Web2635/0/165files; Rust3946/0/192ignored/258result blocks; production build/three types/fmt/strict workspace Clippy/fresh server; full Chromium270/0/0skipped + built6/0; real isolated production-browser/native8-check rename/Undo/Redo/refusal/Save/Open; five nonempty repo/docs/whitespace. Six final Properties frames and actual CRT server workbench inspected, self-review. Public source-bound receipt/manual/contract/architecture/limits/status now reflect accepted integration. Fresh main still8b4d249d; no push yet.
+- **Pending/Next Steps:** Finish metadata-only gates and normal main push/exact live/fetched/blob/ancestry readback, then final publication closure/owned archival/cleanup. Runtime source remainsf0ce1b80; documentation changes are separately verified, not relabelled as fresh runtime tests.
+- **Notes for Codex oder Claude:** Feature16e20a59/upstream8b4d249d retained; exact KNXBench identities/no coauthor. Source/live container/root index/foreign docs preserved. Initial npm-cache refusal remains unaccepted historical evidence; corrected proc_781ce284bb68 actually exited0. No release/deployment/bus/private-original/corpus-sweep/native-Orca scope. Canonical ignored publication directory in shared root; preserve original local acceptance and both handover histories.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 10:13 CEST
 - **Completed:** Owner authorized installation-node commit, merge and main push. Exact accepted20-path feature committed16e20a59 as KNXBench/no coauthor. Owned integration/installation-node-20261011 combines current main8b4d249d and feature; only four additive documentation conflicts, both contributions retained and complete upstream journal is an exact suffix. Published download/import UI fixes remain unchanged.
 - **Pending/Next Steps:** Complete actual merged-source full frontend/Rust/build/type/browser/real-server/native/repository/documentation acceptance before normal main push and exact remote readback. No publication claim yet; retain original local receipt separately.

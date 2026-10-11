@@ -35,7 +35,9 @@ stable IDs. Their Explorer labels select Properties with a name editor and an
 explanation; arrows still toggle the subtree. This reuses the existing installation
 rename command and native history/storage, with no new model, schema or bus behavior.
 Local acceptance is recorded in [the focused contract](../contracts/installation-node.md);
-this is not an Alpha.8 release or live deployment claim.
+[actual main-integration acceptance](../evidence/installation-node-publication-2026-10-11.json)
+supersedes the local-only source boundary, not its historical measurements.
+This is not an Alpha.8 release or live deployment claim.
 
 ## Alpha.8 release boundary
 

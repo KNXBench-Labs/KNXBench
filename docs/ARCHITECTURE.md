@@ -2,6 +2,9 @@
 
 ## Local installation-node presentation (2026-10-11)
 
+[Main-integration acceptance](evidence/installation-node-publication-2026-10-11.json)
+is distinct from the initial local delivery and from release/deployment.
+
 [The installation-node contract](contracts/installation-node.md) keeps translated
 unnamed labels, selection and explanation in the UI. The existing command-backed
 installation rename service remains authoritative for admission, undo/redo and

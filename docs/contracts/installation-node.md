@@ -2,6 +2,11 @@
 
 ## Scope and authority
 
+[Actual main-integration verification](../evidence/installation-node-publication-2026-10-11.json)
+records the owner-authorized no-ff merge and fresh committed-source acceptance.
+It supersedes the initial local-only boundary below; earlier counts remain historical.
+This is not a release, live deployment or broader KNX/ETS compatibility claim.
+
 Local source delivery on 11 October 2026, based on `9298242c`; not a commit,
 release, deployment or fresh ETS import claim. `Installation` and stable
 installation IDs already exist in the domain. `Command::RenameInstallation`,

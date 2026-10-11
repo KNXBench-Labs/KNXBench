@@ -10,7 +10,9 @@ Rust3934/0/192, Web2612/0/164, strict Clippy, production server/CLI/MCP/Web
 builds, TypeScript, five fresh-root repo gates/docs, full corpus and independent
 RefId/instance-own-value/reconciliation/raw-evidence private gates. Explicit
 missing opt-in/file refuse; three assertion mutants detected/restored. Native
-desktop shell unchanged/not exercised. Only publication/whole-goal closure pending.
+desktop shell unchanged/not exercised. Published no-ff `70c05fdc58e5`, outgoing
+privacy clear, HEAD/tracking/live and exact target receipt verified. Whole scoped
+Schema23 follow-up is closed; see [closure](evidence/private-schema23-review-closure-2026-10-11.json).
 No production semantics changed. See [contract](research/schema23-activation-differential.md)
 and [receipt](evidence/kl146-saved-activation-2026-10-11.json); private details stay local.
 

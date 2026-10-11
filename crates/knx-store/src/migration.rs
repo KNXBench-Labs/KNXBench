@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 13;
+pub const CURRENT_SCHEMA_VERSION: i64 = 14;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -626,6 +626,26 @@ fn migrate_v12_to_v13(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v13→v14: native authored plain-text notes, independent from imported instructions.
+fn migrate_v13_to_v14(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch("CREATE TABLE project_note_state (
+        id INTEGER PRIMARY KEY CHECK(id=0),
+        last_id INTEGER NOT NULL CHECK(last_id BETWEEN 0 AND 4294967295)
+    ) STRICT;
+    INSERT INTO project_note_state(id,last_id) VALUES(0,0);
+    CREATE TABLE project_note (
+        id INTEGER PRIMARY KEY CHECK(id BETWEEN 1 AND 4294967295),
+        position INTEGER NOT NULL UNIQUE CHECK(position>=0),
+        target_kind TEXT NOT NULL CHECK(target_kind IN ('project','installation','area','line','buildingPart','device','groupRange','groupAddress','comObject')),
+        target_id INTEGER,
+        title TEXT NOT NULL CHECK(length(CAST(title AS BLOB)) BETWEEN 1 AND 512),
+        body TEXT NOT NULL CHECK(length(CAST(body AS BLOB))<=65536),
+        include_in_documentation INTEGER NOT NULL CHECK(include_in_documentation IN(0,1)),
+        CHECK((target_kind='project' AND target_id IS NULL) OR (target_kind!='project' AND target_id BETWEEN 0 AND 4294967295 AND target_id IS NOT NULL))
+    ) STRICT;")?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// History owns the surrounding transaction so a refused editor write also
@@ -674,6 +694,7 @@ fn migrations() -> Vec<Migration> {
         // for the new documented completion statuses. Rows/history stay exact.
         |_conn| Ok(()),
         migrate_v12_to_v13,
+        migrate_v13_to_v14,
     ]
 }
 
@@ -1406,7 +1427,7 @@ mod tests {
             // file a v7 build would have written for this project.
             conn.execute_batch(
                 "DROP TABLE instruction_run;
-                 DROP TABLE instruction_document;
+                 DROP TABLE instruction_document; DROP TABLE project_note; DROP TABLE project_note_state;
                  DROP TABLE project_history_state;
                  DROP TABLE project_history_stack;
                  DROP TABLE project_history_version;

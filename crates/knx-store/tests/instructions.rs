@@ -145,7 +145,7 @@ fn authentic_v12_root_working_both_stacks_named_version_and_context_survive() {
         migrated
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        13
+        knx_store::CURRENT_SCHEMA_VERSION
     );
 }
 #[test]

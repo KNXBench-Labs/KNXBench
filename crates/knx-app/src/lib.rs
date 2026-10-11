@@ -26,6 +26,7 @@ pub mod individual_address_reset_recovery;
 pub mod instruction_edit;
 pub mod instructions;
 pub mod legacy;
+pub mod note_edit;
 pub mod progress;
 pub mod project_history;
 pub mod project_readiness;

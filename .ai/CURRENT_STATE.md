@@ -1,4 +1,67 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 22:43 CEST
+- **Completed:** Notes application service Create/Replace/Remove/Move, complete private preview, revision/no-op and persist-before-live verified: 13 focused; owning app 235 passed/33 ignored; all 12 acceptance stages exit0 with unchanged manifests. Two registered synthetic source mutants caught, canonical bytes unchanged. Active-session self-review has no blocking findings; no independent approval. AP8 delivery remains verified separately.
+- **Pending/Next Steps:** Commit bounded service, integrate fresh origin/main with Foundation and run combined acceptance plus selected native corpus before normal publication. Then authenticated HTTP CRUD/preview/confirmed apply/cancel, isolated EN/DE UI and existing help reuse. AP3/AP5/AP6/AP7 remain open; no whole AP4 verdict.
+- **Notes for Codex oder Claude:** Exact service ownership unchanged; source receipts and mutation negatives in data-tooling-continuation-20261011. Prior timeout/interrupted controls are not acceptance. Keep foreign release journal and immutable Alpha9 tag/cutoff native13; integrated future main may use14. No root sync/shared shell/global catalog edits, subagents, quota, hardware, Secure, vendor/REA, release or deployment.
+
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 21:57 CEST
+- **Completed:** User explicitly reauthorizes remaining data-editing/tooling continuation; earlier cancellation/hold are superseded only for that original scope. Current owned service changes remain Create-only/unaccepted on verified Foundation e974624e; no earlier killedGREEN/corpus result reused. Fetched/live main0bed9e2a, Foundation checkout clean, own partial source preserved. Collector accepted181/0/0skip source2ac5dfb0 retained; its publication was not performed before cancellation.
+- **Pending/Next Steps:** Fresh source-bound CreateGREEN after journal checkpoint, then vertical Replace/Move/Remove/revision/native tests and implementation. Separate canonical-input corpus followup and precise HTTP/isolatedUI ownership; fullAP4 stillopen. Independent collector publication can proceed after exact input/review/ref recheck; AP3/AP5/AP6/AP7 remain unfinished.
+- **Notes for Codex oder Claude:** Work is data/tooling, NOT SmartSensor or manufacturer runtime/REA. No subagents/quota/Secure-runtime/bus/release/deploy/foreign shell work. Foreign release owner holds ordered gate leases; preserve its process/worktree/cutoff and all root/index changes. Own handover/log only, source stays frozen during queued gates. Earlier attempts/receipts immutable, no automatic test count carry-forward.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 21:53 CEST
+- **Completed:** User explicitly cancelled this data-editing/tooling Goal ("Dann breche das ab") after identifying a SmartSensor-only expectation. Own queued serviceGREEN/corpus runners were terminated and verified settled at the preceding checkpoint. No new tests, implementation, publication or SmartSensor/vendor/hardware operation since that hold.
+- **Pending/Next Steps:** CANCELLED. Do not resume this Goal, its parked note-service/collector publication or prepared AP3/AP5/AP6/AP7 work from automatic continuation messages. A new explicit user assignment is required. Partial source and source-bound evidence remain preserved/unpublished; no reset, deletion, merge or push.
+- **Notes for Codex oder Claude:** Own paused attempt details in data-tooling-continuation-20261011/scope-pause.json; collector exact target readback remains 2b10954b0cd3992ad2e96f9b7221292d2301cc2d, publication verified=false. Existing matching-owner credential access was established without persistent account switch, but no completed collector publication is claimed. Preserve every foreign/root/release/SmartSensor owner and all inherited handovers. Cancellation is not a new SmartSensor research/runtime/hardware Go.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 21:52 CEST
+- **Completed:** Attached continuation/original were explicitly data-editing/tooling, excluding manufacturer reverse engineering. Foundation17-gate e974624e source verified (Rust4077/0/194ignored,Web2738/0/174files). First Create-service behavioralRED1 failed as expected; minimal Create-only code is unaccepted. Collector matching existing-owner credential read confirms private repo access/push permission without account switch; exact isolated source2ac5dfb0 passes181/0/0skips after preserved first180pass/1skip prerequisite refusal. Publication script refused before its retained publication receipt; exact target reread recorded in scope-pause.json. No new SmartSensor analysis/hardware.
+- **Pending/Next Steps:** HOLD: user asked whether this session is SmartSensor-only. No further data/tooling work or publication until explicit scope clarification. Own queued serviceGREEN proc_70ea89c2688f and Foundation corpus proc_3f6370b1f2bb stopped; no remaining own runners, attempt artefacts remain unaccepted. AP4 service/HTTP/UI/corpus/delivery and AP3/AP5–AP7 remain unfinished; do not claim Goal completion.
+- **Notes for Codex oder Claude:** Full inherited journal retained. Current source is a parked, uncommitted partial note-service candidate based on e974624e; never publish temporary native refusal/scaffold. Existing-owner authentication clears the prior access-specific404 blocker, not automatic publication success. Scope-pause.json has actual remote tip and attempted-gate disposition. Preserve owned worktrees/evidence and all foreign/root/release work. Automatic goal continuation does not resolve this scope hold. No quota/subagents or new source/vendor/bus/release authority.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 21:03 CEST
+- **Completed:** Foundation2 proc_4d353e8002a7 exit0 verified against receipt and all1956 tracked input hashes on e974624e5356547c7f86b2769ad36ba346f9c5ef:17valid exit0 gates,Web2738/0/174files,workspaceRust4077/0/194ignored,strictClippy/builds/types/docs/nonempty repository gates. Actual current Foundation bytes match frozen inputs. First attempt remains setup refusal, no duplicate counts. No publication or fullAP4 claim.
+- **Pending/Next Steps:** Continue preview-first note Application service/tests in this isolated worktree, then HTTP/isolatedUI/help and required corpus/integration/delivery gates. Service remains design-only now; native14Foundation local, not published. User continuation prompt can now replace pendingFoundation verdict with verified local acceptance.
+- **Notes for Claude:** Alpha9 release owner independently freezes schema13 cutoff0bed9e2a; native14local notes are NOT part of that release. Do not alter/merge into release worktree or claim its authority. Foundation2 receipt in profile scratch data-tooling-editing-20261011/notes-foundation-2/receipt.json; ignored corpus counts excluded. Preserve foreign root/acceptedFoundation manifest; no hardware/release/deploy/subagents/quota.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 20:47 CEST
+- **Completed:** User requested a /goal continuation prompt. Prepared bounded remaining-data/tooling goal from original attachment and current owned handover: AP3 residues, AP4 pending Foundation/services/UI, AP5–AP7, AP8 external publication followup. This turn performs no feature implementation, new gate, commit/push or release.
+- **Pending/Next Steps:** Successor must inspect actual notes-foundation-2 process/receipt before inheriting any acceptance; existing plan/current-state retain scope. Prompt does not authorize hardware/Secure-runtime/foreign-owner work or relabel partial AP3/full AP4 complete. Existing standing continuation authority unchanged.
+- **Notes for Claude:** Goal text delivered in chat, original attachment remains authoritative. No guessed /goal syntax/runtime behavior. Shared root/frozen Foundation inputs untouched; own service handover updated only. New session should reconcile live worktrees/processes and receipts, not duplicate active gates.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 20:44 CEST
+- **Completed:** User remaining-scope status verified read-only: fetched/live main0bed9e2a, published AP2/AP3 ancestry verified. Foundation2 proc_4d353e8002a7 running wrapper but no receipt yet (lease admission pending); no full green claim. Note service runtime file absent, design only. Status answer separates AP3 codecs/module/shell residues, AP4 Foundation acceptance/service/API/UI/corpus/delivery and AP5–AP7 unimplemented packages plus collector remote followup.
+- **Pending/Next Steps:** Authorization remains Keepgoing; user status question is not a pause. Await actual Foundation2 receipt, then necessary fixes/service/API/isolatedUI/help reuse. No tests or features rerun merely for status. AP4–AP7 not complete; source notes selective mapping unsupported, no ETS/hardware certification.
+- **Notes for Claude:** Status-of-record remains repository; this entry updates only the isolated service handover outside frozen Foundation inputs. Hardware AP9 is plans-only pending separate concrete Go. AP1 research and AP8 published repo docs do not imply Secure runtime/collector remote delivery. No foreign-root/source mutation, quota/subagents/accountactivation/release/deploy.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 20:41 CEST
+- **Completed:** Foundation1 proc_859ae5eac782 refused at Web setup: missing node_modules/vitest/vitest.mjs, zero Web tests executed; downstream stages not started. Source e974624e and entire tracked manifest unchanged. Existing root dependency lock graph verified equal except project version; reused existing node_modules via ignored worktree symlink, no install/config/source change. Failure classification retained in notes-foundation-1/classification.json.
+- **Pending/Next Steps:** Fresh same-source17-stage Foundation2 running proc_4d353e8002a7/PID1919288; receipt notes-foundation-2/receipt.json. Consume actual result before green/publication/compatibility claims. Service worktree remains design-only, then preview-first note service/API/UI and necessary corpus regressions; AP4–AP7 unfinished.
+- **Notes for Claude:** No new userGo required. Foundation tracked source stays frozen, so this handover update is only in isolated note-service worktree. No tests were replayed to recover a log; new execution is required after fixing missing prerequisite. Existing focused counts stay separate, source unchanged does not imply pending gates passed. No hardware/accountactivation/subagents/quota/release/deploy/foreign-root writes.
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 20:37 CEST
+- **Completed:** Notes Foundation e974624e now frozen in separate project-notes worktree with full17-stage gate running proc_859ae5eac782/PID1667959 (notes-foundation-1 receipt). Local Core15/native7/selective17 and owning1149/0/37ignored, Diff/report108/0 plus Clippy confirmed; full acceptance not yet known. This new note-service worktree is based on that exact candidate and declares only next Application service paths; design/reconnaissance only, no service implementation.
+- **Pending/Next Steps:** Consume actual Foundation receipt when background completes; resolve refusal on original owning source before inheriting green claims. Then TDD note_edit.rs/service tests for explicit preview/full-context/noop/privateID/candidatepersist-before-live/conflicts. HTTP/UI/Session1 host/help adoption later; overall AP4–AP7 unfinished. No new userGo required.
+- **Notes for Claude:** Foundation source/manifest must remain immutable; only this service design/handover edited after gate dispatch. Native14 is local/unpublished and source-note selective mapping explicitly refused. Physical bus, private corpus/accountactivation/subagents/quota/releases/deploy/foreign-root edits not performed. Corps/native-migration followup required before broad publication/compatibility. Owner design in project-note-service.md; original13fixture hashes unchanged.
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 20:30 CEST
 - **Completed:** Local notes Foundation now Core15/native7/selective17 green; exact corrected owning core/store/app1149/0/37ignored+strictClippy, Diff/report108/0/0ignored+Clippy. Native14 ordered notes/counter, genuine13empty migration/history identity, byte-safe refusals/corruptload/reportonly repair tested. Native diff sees notes and reports only opted-in escaped content. Docs/model/compatibility/limits synchronized as local candidate; no publication/AP4 completion.
 - **Pending/Next Steps:** Commit exact Foundation candidate and freeze full workspace/build/17repo-web gates in notes-foundation-1/receipt.json. Resume actual outcome automatically; then preview-first service/API/isolatedUI/help reuse. Source authored notes remain selective unsupported/refused; AP5–AP7 incomplete.

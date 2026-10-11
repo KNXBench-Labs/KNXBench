@@ -119,3 +119,16 @@ for normalized reads only. Older readers still refuse native13 files. Do not
 weaken unknown/future/extra/corrupt snapshot refusal or silently rewrite history.
 Regression requires root/working/both stacks/context/named versions and opaque
 bytes before/after actual migration. This policy requires tests before admission.
+
+## Application edit-service tranche ownership
+
+Own branch `feature/instruction-service-20261011` is separate while native
+model source is frozen. Own new `crates/knx-app/src/instruction_edit.rs`,
+`crates/knx-app/tests/instruction_edit.rs`, and its export in
+`crates/knx-app/src/lib.rs`. Use existing original-reader, immutable normalized
+document, core command and native working-history service only. Preview must
+bind full model plus exact source digest and explicit caller-supplied load/revision
+identity; unsupported-source conversion requires affirmative confirmation.
+No-op must preserve absence, source bytes and redo. Persist on private candidates
+before publishing memory state; failed durable save leaves live state untouched.
+No database shortcut, new schema/dependency, UI or hardware operation here.

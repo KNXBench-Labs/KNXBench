@@ -1,3 +1,4 @@
+//! Verifies normalized instruction integrity with synthetic data.
 use knx_core::instruction::*;
 
 fn run(text: &str, bold: bool) -> InstructionRun {

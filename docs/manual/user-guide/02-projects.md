@@ -308,13 +308,18 @@ with `discardChanges: true`).
 
 ## Project history: restart-safe undo and versions
 
-The local source package adds **File → Project history…**, also available through
-the command palette. This is not yet part of the alpha.6 release. Before first
+Alpha 9 includes **File → Project history**, also available through the command
+palette. Before first
 **Save As**, the panel explicitly says history is session-only. For a native-backed
 project, acknowledged reversible edits, Undo and Redo persist immediately. Opening
 that file after a server/app restart restores the working project and both stacks.
 Changes can therefore recover while still marked unsaved: Save/autosave controls
 the clean baseline. Closing without saving does not erase the recovery journal.
+
+![Alpha 9 in Graphite: project history with a named version before the kitchen redesign, one undo step and explicit storage and backup limits](../../assets/screenshots/graphite-project-history.png)
+
+*The fictional Sample house has already been saved to a native file. A version is
+a way back from an edit, not a second copy of that file.*
 
 The panel shows undo/redo counts, image-payload usage and admission limits. Create
 a **named version** before a redesign, independently of autosave; search the list
@@ -331,7 +336,9 @@ stays unchanged. Until the limit is resolved, a native-backed edit can be refuse
 Versions are stored **inside the same `.knxdb`**. They protect against an unwanted
 edit, not file/disk loss: keep independent copies of closed files. They preserve
 project data, opaque source bytes and manufacturer references, not the global
-catalogue, passwords or device/bus state. Older builds cannot open native v11.
+catalogue, passwords or device/bus state. Alpha 9 uses native schema 13; Alpha 8
+and earlier refuse upgraded files. Independently back up closed files before
+upgrading. Downgrading means returning to the pre-upgrade backup, not pressing Undo.
 Browser **Export project…** remains a fresh current-project serialization, not a
 copy of the source file's complete history. See [the detailed contract](../../PROJECT_HISTORY.md).
 

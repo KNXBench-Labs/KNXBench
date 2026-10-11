@@ -1,0 +1,32 @@
+{
+  "schema": "knxbench-media-acceptance/1",
+  "status": "pending-final-browser-and-integration",
+  "release": "v0.1.0-alpha.9",
+  "release_source": "5b21323e050f94953de9ff4683cc12462d753001",
+  "image_digest": "sha256:caa5ab31ee23edc35f5af645672defdf2d5b10dc27cf1d432eea0f345e24fd05",
+  "capture": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "screenshots": 46,
+    "workflow_gifs": 3,
+    "server": "binary and frontend extracted from the published release image",
+    "network": "isolated loopback-only namespace",
+    "data": "fictional Sample house and Practice house; no live bus",
+    "manifest": "docs/assets/media-manifest.json"
+  },
+  "website_media": {
+    "updated_images": 7,
+    "encoding": "lossless WebP; decoded RGB bytes equal corresponding PNG pixels",
+    "manifest": "website/media.json",
+    "older_videos": "unchanged; visibly labelled as earlier recordings in German and English"
+  },
+  "review": "in-session self-review, not independent approval",
+  "scope": "Release media and documentation/site copy only; no domain, storage, protocol or application UI implementation changed",
+  "excluded": [
+    "native file-dialog or interactive screen-reader acceptance",
+    "KNX hardware, commissioning or manufacturer compatibility certification",
+    "full workspace/corpus regression rerun",
+    "instruction and specialised parameter editor workbench integration"
+  ]
+}

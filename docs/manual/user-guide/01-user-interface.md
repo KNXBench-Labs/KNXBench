@@ -103,8 +103,8 @@ opens the project-wide device table. Filter, sort, table scroll and checkbox
 selection survive the editor visit. The existing Properties inspector remains
 on the right. See [Devices and products](05-devices-and-products.md#the-devices-view).
 
-The Devices view is part of `v0.1.0-alpha.6`; the older alpha.5 AppImage does
-not have it.
+The Devices view first shipped with Alpha 6 and is included in Alpha 9; the
+older Alpha 5 AppImage does not have it.
 
 The Bus monitor and the Log replace the workspace entirely while they are open, and
 the properties pane hides itself while they are, because neither of them has a
@@ -117,6 +117,11 @@ message and **Copy all details** copies the full JSON record. You can select
 the read-only text and use Ctrl+C; if clipboard permission is refused, the
 record is selected for manual copying. Escape closes details and returns focus
 to the log row. Text is not interpreted as HTML or changed for copying.
+
+![Alpha 9 in Graphite: message details for a fictional project’s theme-change notification, with raw message and full-record copy controls](../../assets/screenshots/graphite-message-details.png)
+
+*This is a browser notification, not a bus telegram or a server-log export. The
+message really came from changing the theme; no error was invented for the camera.*
 
 The latest 1000 UI notifications are browser-local, independent of popup expiry
 and the server log. Older UI losses are counted; reload ends this history.
@@ -154,8 +159,10 @@ deleted. The chapters that follow say which is which.
 
 One line at the bottom: the installation names of the open project (or just
 "KNXBench" when nothing is open) on the left, and the version on the right. The
-screenshots in this manual were taken from `v0.1.0-alpha.4` and the development
-build after it, which still reports that version.
+current screenshots in this manual were taken from the published
+`v0.1.0-alpha.9` frontend and server. Porcelain is the light theme; Graphite
+shows the same workbench in dark mode. Earlier README videos remain labelled
+as historical recordings in the [media inventory](../../assets/README.md).
 
 ## Resizing
 

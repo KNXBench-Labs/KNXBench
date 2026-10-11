@@ -58,6 +58,8 @@ language-tags = "0.3.2"
 zip.workspace = true
 
 [dev-dependencies]
+# Independent saved-state XML oracle for private activation comparison.
+quick-xml.workspace = true
 http-body-util = "0.1"
 knx-testsupport.workspace = true
 rusqlite.workspace = true

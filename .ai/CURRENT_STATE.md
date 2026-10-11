@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 08:30 CEST
+- **Completed:** Owner requested commit/push of accepted import-banner package. Exact eight runtime/test source hashes still match local acceptance; freshly fetched origin/main remains9298242c. Prepared focused feature-branch publication with KNXBench identity; no main integration or deployment.
+- **Pending/Next Steps:** Commit/push fix/import-status-20261011 and verify local/tracking/live refs, committed path set and accepted source bytes. Preserve unrelated root changes and UX-feedback owner branch; main integration remains separate.
+- **Notes for Codex oder Claude:** Prior acceptance is2614 Web/8 built intercepted Chromium, source-bound and self-reviewed, not new backend/import compatibility evidence. Root ignored evidence .ai/logs/2026-10-11_codex_import-status/. No subagent/quota/bus/container/release scope. Keep all inherited handover entries.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 08:24 CEST
+- **Completed:** Local import-banner correction in fix/import-status-20261011, base9298242c. Latest reported phase now foreground-coloured below bar; explicit no-item-total note/phase aria-valuetext, actual counts unchanged. Step/joke fonts +2pt, joke interval1800→4300ms. Named RED/GREEN timing/transition tests and old-font browser negative control; final Web2614/0/164files, built Chromium8/0, build/E2E types and five fresh-root repo/docs/whitespace gates0. Four final EN/DE1440/400 Graphite/Porcelain frames inspected; self-review. Manual/ADR0023/status updated.
+- **Pending/Next Steps:** Local source complete, uncommitted/unpublished in KNXBench.worktrees/import-status-20261011. Any commit/main integration/push/deployment is separate; preserve coordinated UX feedback branch and serially merge overlapping styles/messages rather than copying whole files. No container replacement performed.
+- **Notes for Codex oder Claude:** Compact ignored evidence .ai/logs/2026-10-11_codex_import-status/receipt.json and screenshots/logs; source/built web retained. Latest phase is not a liveness guarantee or finer activity measurement; no invented counts/ETA, backend/schema/protocol/dependency or real-archive compatibility claim. Root stays stale with foreign edits. No subagents/quota/bus/release/deploy. Own temporary probe/config/build-target scratch retired at closure; inherited journals preserved.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 06:51 CEST
 - **Completed:** proc_99a27eeea8c6 exit0 reconciled with statistics-doc-gates-1 receipt: candidate1ad70cc15e6219f08307954e4b2641382d7b3b1f matches clean HEAD, all recorded documentation/regression/fresh-root repository stages valid/exit0, all_passed/inputs_frozen true. Dated generated report still matches its exact SHA-256 receipt. Contract/report locally accepted; no new execution or duplicate tests. Generator2ac5dfb and project report sourceaeb5a386 remain distinct from documentation candidate.
 - **Pending/Next Steps:** Coordinated fresh-main integration/publication remains pending. Collector remote still unavailable; TOOLS physical traffic/timing/outcome/attribution/Shell boundaries remain open, not blanket DONE. AP2 focused original reader10/0+7/0 verified separately; full editing/model/native/history/browser remains. AP9 plans locally accepted, publication pending. Overall goal incomplete.

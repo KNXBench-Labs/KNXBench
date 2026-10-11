@@ -12,12 +12,12 @@ import type { MessageKey } from "./i18n";
  *
  * Deliberately slower than the 250 ms poll: the phase label is the thing
  * a person is reading, and a joke that changes faster than the news
- * competes with it. At this interval the measured 114 ms release load
- * shows exactly one line and the ~1.2 s debug load shows one or two —
+ * competes with it. Each joke gets 2.5 seconds longer to be read than
+ * the original 1.8-second interval. Short loads still show one line —
  * the list is a reward for slow loads and large projects, not something
  * a normal import will ever cycle through.
  */
-export const FLAVOUR_INTERVAL_MS = 1800;
+export const FLAVOUR_INTERVAL_MS = 4300;
 
 /**
  * Every flavour key, in catalogue order.
@@ -104,7 +104,7 @@ export function shuffleFlavourKeys(random: () => number): MessageKey[] {
 /**
  * Whether the flavour line is allowed to swap itself for the next one.
  *
- * A line of text that changes every 1 800 ms is motion, even though no
+ * A line of text that changes every 4 300 ms is motion, even though no
  * pixel slides, so it answers to the same two switches the banner's
  * shuttle does: the operating system's `prefers-reduced-motion` and the
  * application's own "Motion: off" level. Under either one the banner

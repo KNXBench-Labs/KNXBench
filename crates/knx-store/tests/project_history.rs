@@ -44,6 +44,93 @@ fn opened() -> (
 }
 
 #[test]
+fn large_retained_snapshot_is_exact_without_raising_stored_history_limits() {
+    let mut snapshot = seed();
+    snapshot.opaque[0].bytes = vec![b'x'; 65 * 1024 * 1024];
+    let image = snapshot
+        .encode()
+        .expect("large compressible context must encode");
+    assert!(image.len() <= history::MAX_IMAGE_BYTES);
+    let reopened = NativeSnapshot::decode(&image, &history::image_hash(&image)).unwrap();
+    assert_eq!(reopened.project, snapshot.project);
+    assert_eq!(reopened.manufacturer_refs, snapshot.manufacturer_refs);
+    assert_eq!(reopened.opaque.len(), 1);
+    assert_eq!(
+        reopened.opaque[0].bytes.len(),
+        snapshot.opaque[0].bytes.len()
+    );
+    assert!(reopened.opaque[0].bytes == snapshot.opaque[0].bytes);
+    assert_eq!(reopened.opaque[0].sha256, snapshot.opaque[0].sha256);
+}
+
+#[test]
+fn incompressible_shared_context_uses_its_own_budget_and_is_not_repeated_per_edit() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = knx_store::open_and_migrate(&dir.path().join("large-context.knxdb")).unwrap();
+    let mut snapshot = seed();
+    // Deterministic fictional binary data, intentionally not repeated-text compression.
+    let mut random = 0x5eed_1234_5678_9abc_u64;
+    let mut bytes = vec![0u8; 65 * 1024 * 1024];
+    for chunk in bytes.as_chunks_mut::<8>().0 {
+        random ^= random << 13;
+        random ^= random >> 7;
+        random ^= random << 17;
+        chunk.copy_from_slice(&random.to_le_bytes());
+    }
+    snapshot.opaque[0].bytes = bytes;
+    let generation =
+        history::save_editor(&conn, &snapshot, &CommandStack::new(), None, true).unwrap();
+    let context_bytes: i64 = conn
+        .query_row(
+            "SELECT sum(length(image)) FROM project_history_context",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert!(context_bytes > history::MAX_IMAGE_BYTES as i64);
+    assert!(context_bytes <= history::MAX_CONTEXT_BYTES as i64);
+    let recovered = history::load_editor(&conn).unwrap().unwrap();
+    assert!(
+        recovered.working == snapshot,
+        "large binary context did not recover exactly"
+    );
+    drop(recovered);
+    let mut stack = CommandStack::new();
+    stack
+        .do_command(
+            &mut snapshot.project,
+            Command::SetGroupAddressStyle {
+                style: GroupAddressStyle::Free,
+            },
+        )
+        .unwrap();
+    history::save_editor(&conn, &snapshot, &stack, Some(generation), false).unwrap();
+    let (count, stored_bytes): (i64, i64) = conn
+        .query_row(
+            "SELECT count(*), sum(length(image)) FROM project_history_context",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(count, 1, "ordinary edits must share the retained context");
+    assert_eq!(stored_bytes, context_bytes);
+    let working_bytes: i64 = conn
+        .query_row(
+            "SELECT length(working) FROM project_history_state",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert!(working_bytes <= history::MAX_IMAGE_BYTES as i64);
+    let recovered = history::load_editor(&conn).unwrap().unwrap();
+    assert!(
+        recovered.working == snapshot,
+        "edit changed the retained binary context"
+    );
+    assert_eq!(recovered.undo.len(), 1);
+}
+
+#[test]
 fn native_snapshot_codec_is_exact_and_nonrecursive() {
     let snapshot = seed();
     let image = snapshot.encode().unwrap();
@@ -284,7 +371,7 @@ fn explicit_delete_is_generation_bound_and_removes_only_the_selected_version() {
 #[test]
 fn legacy_history_mutation_migrates_only_with_its_successful_commit() {
     let (dir, conn, before, _generation) = opened();
-    conn.execute_batch("DROP TABLE project_history_stack; DROP TABLE project_history_state; DROP TABLE project_history_version; DROP TABLE project_history_context; ALTER TABLE line DROP COLUMN model_position; PRAGMA user_version = 10;").unwrap();
+    conn.execute_batch("DROP TABLE instruction_run; DROP TABLE instruction_document; DROP TABLE project_history_stack; DROP TABLE project_history_state; DROP TABLE project_history_version; DROP TABLE project_history_context; ALTER TABLE line DROP COLUMN model_position; PRAGMA user_version = 10;").unwrap();
     drop(conn);
     let path = dir.path().join("history.knxdb");
     let original = std::fs::read(&path).unwrap();

@@ -8,7 +8,7 @@ import { admitProjectHistory } from "../src/projectHistory";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 
 async function intercept(page: Page, language: "en" | "de", session = false) {
-  const history = admitProjectHistory(structuredClone(HISTORY_FIXTURE));
+  const history = admitProjectHistory({...structuredClone(HISTORY_FIXTURE), limits: {...HISTORY_FIXTURE.limits, maxContextBytes: 268435456, maxDecodedImageBytes: 536870912, maxDecodedHistoryBytes: 536870912}});
   if (session) { history.persistence = "session"; history.generation = 0; history.versions = []; history.totalBytes = 0; }
   const state = { history, unexpected: [] as string[], writes: [] as { path: string; body: Record<string, unknown> }[] };
   await page.route("**/api/**", (route) => {
@@ -66,6 +66,9 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const state = await intercept(page, language); await openProject(page, language);
     let panel = await openHistory(page, language);
     await expect(panel).toContainText(m["projectHistory.native"]);
+    await expect(panel.locator('[data-history-limit="context"]')).toHaveText(m["projectHistory.contextLimit"].replace("{context}","256"));
+    await expect(panel.locator('[data-history-limit="decoded"]')).toHaveText(m["projectHistory.decodedLimit"].replace("{decoded}","512"));
+    await expect(panel.locator('[data-history-limit="total-decoded"]')).toHaveText(m["projectHistory.decodedHistoryLimit"].replace("{decoded}","512"));
     await expect(panel).toContainText(m["projectHistory.backupCaveat"]);
     await expect(panel.locator("[data-history-stat=undo] dd")).toHaveText("1");
     await panel.getByLabel(m["projectHistory.label"], { exact: true }).fill("Checkpoint for review");

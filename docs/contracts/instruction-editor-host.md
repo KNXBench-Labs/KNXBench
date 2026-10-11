@@ -8,8 +8,14 @@ already exposes this feature. The component is
 
 Mount `InstructionEditor` with the selected stable `deviceId` and authoritative
 `context`: `serverIncarnation`, `projectIncarnation`, `snapshotRevision`.
-These are the existing project snapshot identity fields, not a locally invented
-counter. Optional `language` is `en` or `de`; all feature copy is isolated in
+The existing `ProjectTree` uses **snake_case** names:
+`server_incarnation`, `project_incarnation`, `snapshot_revision`. Map those three
+fields explicitly to this component's camelCase context. Pure/offline projections
+may omit them: do not mount a writable editor with missing identity, and never
+invent a local revision counter. Require a nonempty server identity and safe
+nonnegative integer load/revision values. The isolated fixture obtains these
+fields from the admitted instruction read DTO instead of fabricating a tree.
+ Optional `language` is `en` or `de`; all feature copy is isolated in
 `features/rtf/copy.ts`. Its CSS module uses the existing theme variables without
 modifying global styles or installing new dependencies.
 

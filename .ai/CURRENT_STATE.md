@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 14:20 CEST
+- **Completed:** Source-bound merge481f2cd9735e accepted:20 stages all0, workspace Rust3964/0/193ignored, Web2680/0/169files, full Chromium302/0 and production-built14/0, no skips/flakes. Explicit private lifecycle1/0, nine HTTP steps, original unchanged. Generated binding/frozen1626-input equality pass. Production wide EN/DE evidence notice visually readable; narrow top notices/controls only. Self-review. No private content in public metadata.
+- **Pending/Next Steps:** Final additive metadata/disclosure gates, focused acceptance commit, fresh-main reconciliation, normal push/exact readback and closure. Initial-admission and durable-report work stay with parallel owners and outside this publication; remaining matrix open.
+- **Notes for Codex oder Claude:** Own integration branch/worktree and fi13 evidence only; root foreign index/docs remain untouched. Public receipt docs/evidence/import-lifecycle-publication-2026-10-11.json; private archive remains ignored. No deployment/release/ETS/vendor/bus/root synchronization. Preserve complete inherited journal.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 13:40 CEST
+- **Completed:** Owner-authorized commit/merge/push follow-up. Reviewed repair commit 4e0e874d9bf2da2084f0acec70cc610846ebee46 integrated on fetched main in an isolated checkout; additive message/status conflicts resolved and full upstream journal preserved. Parallel initial-admission edits in the feature checkout remain untouched and excluded. No private project content copied into public fixtures/docs.
+- **Pending/Next Steps:** Source-frozen merged acceptance is queued/running as proc_aa5c07ddeed6. The preceding launcher was stopped before any stage to correct the existing browser lease path. Require actual Web/build/types/full Rust/Clippy/repo/docs/full+production browser/private lifecycle receipts, inspect frames, reconcile fresh main and normal push/readback. No push yet; broader Finding matrix and preflight remain open.
+- **Notes for Codex oder Claude:** Own integration/import-lifecycle-20261011 and scratch fi13 only. Do not change gated source or the parallel feature/root. Loopback-only, isolated HOME/XDG/TMP, fixed-order shared leases. Runtime receipt fi13/receipt.private.json remains private; update later result without transferring earlier scope. No deployment, ETS/vendor execution or bus action.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 12:37
 - **Completed:** Combined local import-lifecycle candidate accepted on frozen 1608 public inputs: five owning Rust packages 1917/0/83 ignored, complete Web 2629/0/165 files, built intercepted Chromium 14/0/0 skipped/0 flaky; strict owning Clippy, server/CLI builds, binding equality, five nonempty repository checks, docs/fmt/whitespace all pass. Additional explicit private lifecycle and real standalone synthetic restart pass; original bytes unchanged, model/opaque/manufacturer-reference preservation asserted. Eleven compiled mutants caught at named assertions and source restored byte-exactly. Self-review only.
 - **Pending/Next Steps:** Canonical positive controls and documentation-only final gates passed; focused local commit is next. Remaining functional matrix still open; next independent package is initial native-write admission preflight via existing library service. Fresh main f7a5d8dc advanced independently; later coordinated source integration requires its own acceptance. No merge/push/release/deployment authority inferred.

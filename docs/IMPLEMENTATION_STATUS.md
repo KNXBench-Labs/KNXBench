@@ -1,4 +1,24 @@
 
+## 2026-10-11 — Native notes Foundation local candidate (AP4 incomplete)
+
+Core typed literal notes, ordered collection/counter/reversible commands,
+private candidate target-delete safety and no-op history semantics are local.
+Strict native14 note/state storage, authentic13saved/working/history admission,
+reported allocator repair and malformed-content refusal are implemented. Focused
+Core15/native7/selective17 tests pass. Owning core/store/app broad1149/0,
+37ignored and strict Clippy passed after exact reconstructed-old-schema
+fixture corrections. Diff/report broad108/0/0ignored and Clippy
+pass; typed note changes visible, private scratch notes excluded and opt-in literal
+report text escaped. Initial report test compile refusals are setup, not RED;
+actual named Diff2/Report1 missing-behavior REDs retained separately.
+
+[ADR31](adr/0031-project-notes-are-a-project-owned-collection.md),
+[scope/migration boundaries](contracts/project-note-admission.md),
+[model](DATA_MODEL.md). Full frozen workspace/build/repository acceptance pending.
+No notes Application/HTTP/editor yet; existing HelpPanel/HelpTip reused later.
+Native schema source is local/unpublished, no whole AP4/FUTURE03/shell completion.
+Source self-review only; no hardware, corpus or ETS compatibility assertion.
+
 ## 2026-10-11 — AP3 optional exact parameter source evidence (not editor completion)
 
 Dedicated ProductDB `parameter_editor::parameter_editor_evidence` resolves an

@@ -11,6 +11,7 @@ mod instructions;
 pub mod manifest;
 pub mod migration;
 pub mod module_instance;
+mod notes;
 pub mod opaque;
 pub mod parameter;
 pub mod project;
@@ -42,6 +43,8 @@ pub use rusqlite::{Connection, Error as SqlError};
 pub enum StoreError {
     History(Box<project_history::HistoryError>),
     Sqlite(rusqlite::Error),
+    /// Native note content, target, ordering or allocator metadata is invalid.
+    NoteIntegrity(String),
     /// `load_project` was called against a database with no `project_info`
     /// row — it was migrated but never saved. Distinct from an empty
     /// project (`Project::new`), which is a valid in-memory value that has
@@ -99,6 +102,9 @@ impl fmt::Display for StoreError {
         match self {
             StoreError::History(e) => write!(f, "{e}"),
             StoreError::Sqlite(e) => write!(f, "{e}"),
+            StoreError::NoteIntegrity(reason) => {
+                write!(f, "native project note integrity refused: {reason}")
+            }
             StoreError::UnknownBuildingPartType(kind) => write!(
                 f,
                 "building_part.kind {kind:?} is not a supported building-space type"

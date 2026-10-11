@@ -638,3 +638,52 @@ fn dangling_source_instruction_owner_is_explicitly_refused() {
         .unwrap_err()
         .contains("instruction"));
 }
+
+#[test]
+fn native14_destination_notes_survive_selection_merge_and_undo() {
+    use knx_core::note::{ProjectNote, ProjectNoteTarget};
+    let (source, mut target, selection) = fixture();
+    let n = ProjectNote::new(
+        ProjectNoteId(9),
+        ProjectNoteTarget::Project,
+        "keep".into(),
+        "literal Grüße🙂".into(),
+    )
+    .unwrap();
+    target.project.notes.push(n.clone());
+    target.project.ids = target.project.ids.clone().with_project_note_count(9);
+    let before = target.clone();
+    let mut stack = CommandStack::new();
+    let plan = import::plan(&target, &source, selection).unwrap();
+    import::apply(&mut target, &mut stack, plan).unwrap();
+    assert_eq!(target.project.notes, [n]);
+    assert_eq!(target.project.ids.peek_project_note(), 9);
+    stack.undo(&mut target.project).unwrap();
+    assert!(target.project.same_user_content_as(&before.project));
+    assert_eq!(target.project.notes, before.project.notes);
+}
+#[test]
+fn native_source_authored_notes_are_explicitly_refused_not_silently_dropped() {
+    use knx_core::note::{ProjectNote, ProjectNoteTarget};
+    let (mut source, target, selection) = fixture();
+    source.project.notes.push(
+        ProjectNote::new(
+            ProjectNoteId(1),
+            ProjectNoteTarget::Project,
+            "source".into(),
+            "must not disappear".into(),
+        )
+        .unwrap(),
+    );
+    source.project.ids = source.project.ids.clone().with_project_note_count(1);
+    let before = target.clone();
+    let error = match import::plan(&target, &source, selection) {
+        Ok(_) => panic!("source notes cannot be discarded"),
+        Err(e) => e,
+    };
+    assert!(
+        error.contains("source project notes require an explicit selection/disposition mapping"),
+        "{error}"
+    );
+    assert_eq!(target, before);
+}

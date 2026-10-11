@@ -113,7 +113,14 @@ impl<K, F: FieldDiff> EntityChange<K, F> {
 /// filesystem, no RNG — the same two `Project` values always produce
 /// `PartialEq`-equal `ProjectDiff`s (design spec §4).
 pub fn diff_projects(left: &Project, right: &Project) -> ProjectDiff {
-    let info_changes = diff_project_info(&left.info, &right.info);
+    let mut info_changes = diff_project_info(&left.info, &right.info);
+    if left.notes != right.notes {
+        info_changes.push(FieldChange {
+            field: "notes",
+            left: format!("{:?}", left.notes),
+            right: format!("{:?}", right.notes),
+        });
+    }
     let installations = diff_installations(left, right);
     ProjectDiff {
         info_changes,

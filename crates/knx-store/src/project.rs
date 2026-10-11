@@ -69,6 +69,8 @@ pub fn set_group_address_style(
 }
 
 const DELETE_ALL_TABLES: &[&str] = &[
+    "project_note",
+    "project_note_state",
     // Child-to-parent order — matches the reverse of the insert order below.
     "instruction_run",
     "instruction_document",
@@ -359,6 +361,7 @@ pub(crate) fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(
     }
 
     crate::instructions::write(tx, project)?;
+    crate::notes::write(tx, project)?;
     Ok(())
 }
 
@@ -496,6 +499,7 @@ fn highest_ids_in_use(project: &Project) -> IdAllocators {
             .map(|p| p.id.0)),
         max(project.devices.module_instances().map(|m| m.id.0)),
     )
+    .with_project_note_count(max(project.notes.iter().map(|n| n.id().0)))
 }
 
 /// Raises `project`'s counters to cover every id it holds — what a
@@ -612,7 +616,7 @@ fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
         });
     }
 
-    Ok(Project {
+    let mut project = Project {
         // Not stored, and deliberately so: the migration chain has already
         // brought this file to `CURRENT_SCHEMA_VERSION` before `load_project`
         // can run, so an older file's version is a fact about the file
@@ -643,7 +647,9 @@ fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
         notes: Vec::new(),
         devices,
         ids,
-    })
+    };
+    crate::notes::load(conn, &mut project)?;
+    Ok(project)
 }
 
 /// Turns `query_row`'s `QueryReturnedNoRows` specifically into

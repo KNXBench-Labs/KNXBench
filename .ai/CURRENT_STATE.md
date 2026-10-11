@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 08:55
+- **Completed:** Owner-authorized download layout source published on main0dae7c93 (feature0f7be1a3), exact fetched/live readback and accepted source/test blobs verified. Actual merge acceptance: Vitest2612/0/164 files, full intercepted Chromium260/0/0, built scope/layout Chromium14/0/0, build/explicit new+existing spec types, five fresh nonempty repo gates/docs/whitespace.1863 tracked files frozen; final DE400 Porcelain/DE1440 CRT frames inspected. Required KNXBench author/committer/no co-author; self-review.
+- **Pending/Next Steps:** None for the requested source publication. Release/container deployment and shared-root synchronization are separate, not authorized by this request.
+- **Notes for Codex oder Claude:** Public receipt docs/evidence/device-download-layout-publication-2026-10-11.json; compact ignored proof .ai/logs/2026-10-11_codex_device-download-layout/. Scope UI-only; bus/model/storage/protocol/dependencies unchanged. Parallel ux-feedback/import-status changes not included. Shared root remains stale/dirty; preserve foreign files/index/worktrees. Initial local acceptance stays historical.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 06:51 CEST
 - **Completed:** proc_99a27eeea8c6 exit0 reconciled with statistics-doc-gates-1 receipt: candidate1ad70cc15e6219f08307954e4b2641382d7b3b1f matches clean HEAD, all recorded documentation/regression/fresh-root repository stages valid/exit0, all_passed/inputs_frozen true. Dated generated report still matches its exact SHA-256 receipt. Contract/report locally accepted; no new execution or duplicate tests. Generator2ac5dfb and project report sourceaeb5a386 remain distinct from documentation candidate.
 - **Pending/Next Steps:** Coordinated fresh-main integration/publication remains pending. Collector remote still unavailable; TOOLS physical traffic/timing/outcome/attribution/Shell boundaries remain open, not blanket DONE. AP2 focused original reader10/0+7/0 verified separately; full editing/model/native/history/browser remains. AP9 plans locally accepted, publication pending. Overall goal incomplete.

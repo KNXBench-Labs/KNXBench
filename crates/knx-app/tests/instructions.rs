@@ -52,7 +52,10 @@ fn correct_device_original_and_digest_are_independent_of_fragment_order() {
     let OriginalInstructions {
         xml_sha256,
         hints: Some(hints),
-    } = view;
+    } = view
+    else {
+        panic!("expected source-backed instructions");
+    };
     assert_eq!(hints.original, "right & Grüße");
     assert_eq!(hints.preview.unwrap().plain_text(), "right & Grüße");
     assert_eq!(xml_sha256, xml(&mut opaque).sha256);
@@ -118,7 +121,10 @@ fn preview_refusal_still_exposes_exact_logical_original() {
     let (project, opaque) = imported(&format!("InstallationHints=\"{value}\""));
     let OriginalInstructions {
         hints: Some(hints), ..
-    } = read(&project, &opaque, target(&project)).unwrap();
+    } = read(&project, &opaque, target(&project)).unwrap()
+    else {
+        panic!("source must remain accessible");
+    };
     assert_eq!(hints.original, value);
     assert_eq!(hints.preview, Err(knx_etsproj::rtf::TextError::Malformed));
 }

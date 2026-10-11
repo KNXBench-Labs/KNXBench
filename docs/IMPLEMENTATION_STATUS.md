@@ -1,3 +1,31 @@
+## 2026-10-11 — installation-node main integration accepted
+
+Owner-authorized feature `16e20a59` is integrated without fast-forward as
+`f0ce1b80` on published-main base `8b4d249d`. Both additive documentation histories
+and the already published import/download UI fixes are retained. Actual committed
+merge-source acceptance: **2635 frontend tests / 165 files**, **3946 Rust workspace
+tests / 0 failed / 192 ignored**, **270 full intercepted Chromium cases** and
+**6 production-built installation cases**, zero browser failures/skips/retries.
+A real isolated production-server/browser/native probe passes **8 checks**,
+including rename, exact unnamed Undo/Redo, blank refusal and native Save/Open
+following browser edits. No real gateway discovery is allowed by the browser probe.
+
+All **20 stages** exit zero: build, three TypeScript configurations, Rust format,
+strict workspace/all-target Clippy, fresh server/xtask builds, five nonempty
+explicit-root repository gates, documentation, whitespace and runtime checks.
+All **1870 tracked inputs** remain frozen; generated binding trailing whitespace
+was checked for semantic equality before restoring exact committed bytes. Six
+final EN/DE wide/narrow Graphite/Porcelain/CRT Properties frames and the actual
+server CRT workbench frame are inspected. Review is in-session self-review.
+
+[Source-bound receipt](evidence/installation-node-publication-2026-10-11.json).
+The initial isolated-HOME npm cache refusal occurred before application tests
+and remains a separately archived setup failure, not an accepted pass.
+This entry records accepted main integration; verified normal-push readback is
+recorded in the subsequent closure entry. No release, deployment, private-original
+import, ignored corpus sweep, native WebKitGTK/Orca or bus/hardware acceptance.
+Earlier local source entries remain historical.
+
 ## 2026-10-11 — import status published on main
 
 Owner-requested import status feature `df868c7a` is published on `main` as

@@ -47,6 +47,46 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:51 CEST
+- **Completed:** proc_99a27eeea8c6 exit0 reconciled with statistics-doc-gates-1 receipt: candidate1ad70cc15e6219f08307954e4b2641382d7b3b1f matches clean HEAD, all recorded documentation/regression/fresh-root repository stages valid/exit0, all_passed/inputs_frozen true. Dated generated report still matches its exact SHA-256 receipt. Contract/report locally accepted; no new execution or duplicate tests. Generator2ac5dfb and project report sourceaeb5a386 remain distinct from documentation candidate.
+- **Pending/Next Steps:** Coordinated fresh-main integration/publication remains pending. Collector remote still unavailable; TOOLS physical traffic/timing/outcome/attribution/Shell boundaries remain open, not blanket DONE. AP2 focused original reader10/0+7/0 verified separately; full editing/model/native/history/browser remains. AP9 plans locally accepted, publication pending. Overall goal incomplete.
+- **Notes for Codex oder Claude:** This receipt accepts documentation/data-contract/report snapshot, not new runtime coverage or physical measurements. Only owned handover/task-state reconciliation; no rerun/code/commit/push/release/deployment/bus action. Shared root report/foreign state retained; subsequent metadata edits require checks before publication.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:39
+- **Completed:** AP8 actual collector location/invocation and all five original IDs documented, no fabricated ID mapping. Canonical local source2ac5dfb delivered by verified clean fast-forward; real canonical entry point on owned main aeb5a386 produced exact dated report snapshot/receipt (six/six CSS), canonical settings unchanged/cloud disabled. Root generated report has protected preexisting changes, so only new dated snapshot owned. Doc checker/hash and12 regressions pass locally; no whole TOOLS closure or remote publication claim.
+- **Pending/Next Steps:** Stats docs fresh-root gate/integration/publication. AP2 reader10 adapter tests pass and corrected app GREEN queued under shared lease; XML review negatives remain before final reader acceptance. AP9 two plans committedfff503cb, docs12 controls pass, repository gate queued. Full AP2 editor/core/native/history/browser and AP3–AP7 remain. Goal active/incomplete; only shared-gate queue delays execution.
+- **Notes for Codex oder Claude:** TOOLS01 source location,02 physical traffic,03 end/outcome/cache,04 attribution,05 CSS/Shell. No scope switches or blanket DONE. No root report/index/shell/foreign source overwrite, cloud opt-in/new accounts/quota/hardware/release/deployment. Generator local repository .ai documents source delivery; remote is unavailable. Actual report source is aeb5a386, not this later docs commit; tests remain bound to2ac5dfb.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 07:22
+- **Completed:** AP9 preparation delivered: source6e23f11e5b035f2ab4e385db9f6e9d9401ac32a3 accepted on actual current-main merge by all docs/12 regressions/five fresh-root repository gates/whitespace with frozen inputs, then pushed HEAD:main and read back HEAD=tracking=live. Exact five owned documentation paths, no runtime source. Two separate Powerline/changed-parts plans include prerequisites, staged later tests and explicit no-go/recovery requirements.
+- **Pending/Next Steps:** No AP9 preparation implementation remains; this doc-only publication journal closure needs checks/readback. Future KL-110/GAP-T30-04 hardware implementation remains LATER and needs separate target-specific Go; not authorized by Goal2. Continue remaining Goal2 packages, full RTF edits/notes/parameter/UI/services/MCP/catalogue/tooling residue.
+- **Notes for Codex oder Claude:** Preparation delivery is not hardware/protocol support; existing full-download fallback untouched. No bus/discovery/live connection/write, vendor execution,subagents/quota,release/deployment. Earlier failed module invocation remains setup refusal, no test pass claimed. Self-review only, original/foreign/root paths retained. Exact accepted receipt in hardware-integrated-gates, compact delivery retained privately.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:50 CEST
+- **Completed:** proc_659ef8f7df13 exit0 reconciled with hardware-doc-gates-1 receipt: candidatefff503cbc88ed51809ba6354b2728b2e9e6d6ccb matches clean current HEAD, all recorded documentation/regression/fresh-root layering/header/anchor/ledger/corpus-gate/whitespace stages valid/exit0, all_passed/inputs_frozen true. Actual logs inspected. Two documentation-only readiness plans locally accepted; no new test execution or duplicate count.
+- **Pending/Next Steps:** Coordinated fresh-main integration and publication still pending; AP9 preparation not yet published. KL-110/GAP-T30-04 remain LATER and require separate target/operation Go for implementation/live evidence. Overall goal incomplete; AP2 reader focused GREEN verified separately, full editable model/native/history/browser and other work remain.
+- **Notes for Codex oder Claude:** This receipt accepts preparation documents only, not protocol/hardware support or new authorization. Only owned handover/task-state reconciliation; no rerun/source edit/commit/push/deployment/release/bus action. Root/foreign source and inherited journals preserved. Later metadata edits need their own checks before publication.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:19
+- **Completed:** AP9 two separate documentation-only readiness/test plans created: Powerline KL-110 and changed-parts GAP-T30-04. Source/ledger/current-standard boundaries inspected, recovery/identity/authorization prerequisites and phased offline/native/later hardware exit criteria/no-go rules recorded. Docs link checker and12 regression tests pass; first unittest module invocation refused before tests and corrected discover path retained separately. No source/protocol/hardware change. AP2 read-only device-original reader has10 adapter controls passing, real app baseline1/6 RED, corrected GREEN queued under shared locks after an unaccepted timeout.
+- **Pending/Next Steps:** AP9 fresh-root docs/anchor/ledger gates, source review and coordinated publication; future hardware IDs remain LATER, not implemented/verified. Resume AP2 after exact reader receipt: core normalized edits/native/history/browser still open. AP3–AP8 residue unchanged. No permission or quota pause.
+- **Notes for Codex oder Claude:** Hardware readiness tree owns three new contract docs plus dated status/handover only; never authorize scans/connections/downloads/protocol implementation by this plan. Foreign workspace gates are running; preserve locks, source and journals. Existing full-download fallback unchanged. AP2 editing tree runtime input frozen for its queued reader gates; no native model/schema mutation yet. Goal incomplete.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 06:58
 - **Completed:** All nine private Schema23 review follow-up packages delivered in their accepted scopes. Final diagnostic-only package8 no-ff merge70c05fdc58e531e833d91ee18b99b411aa3afb52 published; HEAD/tracking/live and exact remote target receipt verified. Sourcef045390fdf7b passed Rust3934/0/192 except unchanged native desktop shell, Web2612/0/164, strict Clippy, server/CLI/MCP/Web builds, tsc, five fresh-root repo/docs/diff, full positive corpus and five private diagnostic/RefId/own-values/reconciliation/raw-evidence gates; explicit missing opt-in/file refusals. Complete source/original/project unchanged; loopback only. Eight synthetics/three compiled mutants detected/restored. Whole-goal requirement/proof/verdict and exact ledger states in docs/evidence/private-schema23-review-closure-2026-10-11.json and .md; all eight earlier package revision ancestors verified. KL-1=ACCEPTED_BOUNDARY; KL-8=ACCEPTED_BOUNDARY; KL-68=ACCEPTED_BOUNDARY; KL-106=ACCEPTED_BOUNDARY; KL-146=ACCEPTED_BOUNDARY; KL-170=LATER; KL-171=LATER; KL-172=LATER; KL-173=DONE; KL-174=ACCEPTED_BOUNDARY; KL-175=DONE; PDB-01=ACCEPTED_BOUNDARY.
 - **Pending/Next Steps:** No review package remains blocked or unimplemented within the agreed delivery scopes. Continue only separately scoped work in docs/OPEN_WORK.md; KL170–172 runtime is still research-bound/LATER, KL146 retained no-parity boundary, KL68/PDB01 read-only values not Repeat/write support. This is not whole-product completion.

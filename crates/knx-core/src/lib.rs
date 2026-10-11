@@ -20,6 +20,7 @@ pub mod installation;
 pub mod instruction;
 pub mod module;
 pub mod names;
+pub mod note;
 pub mod parameter;
 pub mod project;
 pub mod provenance;

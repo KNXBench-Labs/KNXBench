@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 06:50 CEST
+- **Completed:** proc_659ef8f7df13 exit0 reconciled with hardware-doc-gates-1 receipt: candidatefff503cbc88ed51809ba6354b2728b2e9e6d6ccb matches clean current HEAD, all recorded documentation/regression/fresh-root layering/header/anchor/ledger/corpus-gate/whitespace stages valid/exit0, all_passed/inputs_frozen true. Actual logs inspected. Two documentation-only readiness plans locally accepted; no new test execution or duplicate count.
+- **Pending/Next Steps:** Coordinated fresh-main integration and publication still pending; AP9 preparation not yet published. KL-110/GAP-T30-04 remain LATER and require separate target/operation Go for implementation/live evidence. Overall goal incomplete; AP2 reader focused GREEN verified separately, full editable model/native/history/browser and other work remain.
+- **Notes for Codex oder Claude:** This receipt accepts preparation documents only, not protocol/hardware support or new authorization. Only owned handover/task-state reconciliation; no rerun/source edit/commit/push/deployment/release/bus action. Root/foreign source and inherited journals preserved. Later metadata edits need their own checks before publication.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 06:19
 - **Completed:** AP9 two separate documentation-only readiness/test plans created: Powerline KL-110 and changed-parts GAP-T30-04. Source/ledger/current-standard boundaries inspected, recovery/identity/authorization prerequisites and phased offline/native/later hardware exit criteria/no-go rules recorded. Docs link checker and12 regression tests pass; first unittest module invocation refused before tests and corrected discover path retained separately. No source/protocol/hardware change. AP2 read-only device-original reader has10 adapter controls passing, real app baseline1/6 RED, corrected GREEN queued under shared locks after an unaccepted timeout.
 - **Pending/Next Steps:** AP9 fresh-root docs/anchor/ledger gates, source review and coordinated publication; future hardware IDs remain LATER, not implemented/verified. Resume AP2 after exact reader receipt: core normalized edits/native/history/browser still open. AP3–AP8 residue unchanged. No permission or quota pause.

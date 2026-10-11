@@ -1,4 +1,10 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 13:56 CEST
+- **Completed:** Explicit-Go independent AP3 reconnaissance on fetched-main f7a5d8dc; no implementation. Product/schema/parser/HTTP parameter evidence traced. Official KNX Schema23 Value_t pp30–31 retrieved and visually checked; decimal TypeTime confirmed, units/codecs/UI hints not inferred. TypeColor/TypePicture/Slider absent in this specific project PDF only; no universal absence claim. Scoped admission design documented; project Tag/@Color not confused with parameter encoding.
+- **Pending/Next Steps:** Verify exact manufacturer type/UIHint contracts and define owned data-layer/isolated feature paths before implementing specialized editors. PDB-04 remains undelivered. AP2 combined-source acceptance runs in separate worktree; its inputs unchanged.
+- **Notes for Claude:** No private corpus/member login/vendor execution/dependency installation/hardware/source mutation. No color/picture encoding invented; unknown/ambiguous attributes require visible fallback and original retention. Session1 owns shell mount.
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 12:14
 - **Completed:** Owner-authorized login/feedback/limits feature5c59f6d2 and no-ff tested merged075b7cc published on main ase476626e2eb5; live/fetched HEAD refs exact, feature/tested-merge ancestry verified. Fresh-main docs0fd7a865 reconciled in cdfd1345 with unchanged accepted runtime. Actual1359-input18-stage merged acceptance all0: Web2665/0/168, Rust3954/0/192ignored, Chromium294/0/0skipped/0flaky, built24/0;26 actual built frames inspected. Workspace Clippy/build/three types/five explicit-root repo/docs/fmt/whitespace pass. Publication receipt records actual observed push, not a deployment.
 - **Pending/Next Steps:** No feature implementation remains. This metadata closure preserves the verified published ancestor; final closure-tip remote readback and only-owned cleanup recorded in local publication archive. No release/live-container/root synchronization requested or performed.

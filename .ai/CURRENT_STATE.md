@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 10:13 CEST
+- **Completed:** Owner authorized installation-node commit, merge and main push. Exact accepted20-path feature committed16e20a59 as KNXBench/no coauthor. Owned integration/installation-node-20261011 combines current main8b4d249d and feature; only four additive documentation conflicts, both contributions retained and complete upstream journal is an exact suffix. Published download/import UI fixes remain unchanged.
+- **Pending/Next Steps:** Complete actual merged-source full frontend/Rust/build/type/browser/real-server/native/repository/documentation acceptance before normal main push and exact remote readback. No publication claim yet; retain original local receipt separately.
+- **Notes for Codex oder Claude:** Own integration worktree only; root stays deliberately stale/dirty, HEAD/index/foreign bytes protected. No subagents/quota/release/container replacement/bus actions. Compact publication evidence under shared-root .ai/logs/2026-10-11_codex_installation-node/publication/. Preserve both inherited journals and other owners' work.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 09:33 CEST
+- **Completed:** Local installation-node delivery in fix/installation-node-20261011, base9298242c. Display-only translated unnamed ID labels; direct label selection/name Properties with explanation; arrow toggle preserved; existing command-backed rename/Undo/Redo/native storage and selected-installation add-device scope reused. Pending/lifetime/snapshot guards plus draft-preservation/refusal/Escape feedback. Named baseline/placement/draft RED controls. Final Web2633/0/165 files/build/three type gates; full Chromium254/0/0 skipped plus built EN/DE1440/400 Graphite/Porcelain/CRT6/0; fresh Core10/0/HTTP2/0/server build; real isolated production-browser/native eight-check rename/Undo/Redo/blank refusal/Save/Open pass. Seven final frames inspected, self-review/static scan. Five nonempty repo gates/docs/whitespace pass; manual/contract/architecture/limits/status updated. Post-runtime source-comment/test-description edits have exact inverse-hash proof and90 rebuilt files byte-equal to tested bundle.
+- **Pending/Next Steps:** None for local functional delivery. Source and built frontend remain uncommitted/unpublished in KNXBench.worktrees/installation-node-20261011. Commit/main integration/push/release/live-container update require separate authorization and coordinated reconciliation of parallel App/Inspector/messages owners.
+- **Notes for Codex oder Claude:** Canonical evidence in the shared root: .ai/logs/2026-10-11_codex_installation-node/receipt.json and cleanup.json; general root log .ai/logs/2026-10-11_codex_installation-node.md. Owned temporary targets/dependencies/probes/scratch are retired; source and built frontend remain. Legacy installation endpoint is not revision-conditional; ignoring a superseded reply does not cancel the server operation. No source-name normalization from display, private original import, native WebKitGTK/Orca/hardware/new schema/dependency/bus action. Root application/index and all foreign work preserved; inherited handover retained. User container unchanged.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 09:21 CEST
 - **Completed:** Owner-requested import status merge/main push delivered at3d6c9d1f; featuredf868c7a and upstream download-layout420d0242 ancestors retained. Actual combined frozen1865-file source passed14 stages: Web2614/0/164files, full intercepted Chromium264/0/0, production-built22/0/0, build/three types/five fresh nonempty repo gates/docs/whitespace. Local/tracking/live main equal; KNXBench identities/no co-author. Four final EN/DE400/1440 frames inspected; phase/note/joke visible below bar. Self-review only.
 - **Pending/Next Steps:** No further import-status implementation/main-merge work remains. This metadata-only closure is separately checked/read back; final owned cleanup is recorded in ignored delivery evidence. Release/container deployment and shared-root synchronization are separate and not performed.

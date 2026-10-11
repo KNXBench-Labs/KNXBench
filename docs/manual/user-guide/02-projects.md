@@ -61,6 +61,34 @@ independently of phase updates. The step and joke text are two typographic
 points larger. Reduced-motion settings still suppress rotation; failure
 removes the bar and jokes and retains the last phase and error.
 
+## Installation nodes and their names
+
+**Local source update, 11 October 2026 — not included in Alpha.8.** An installation
+is the container below **Project** that groups topology, buildings, unassigned
+devices and group addresses. It is not a device or a line. One project can contain
+several installations, so the nodes must remain separate even when unnamed.
+
+An empty or whitespace-only imported name is displayed as **Unnamed installation
+(ID …)**. This is a translated display label, not a name written into the imported
+project. Named installations keep their original spelling; the ID distinguishes
+unnamed nodes without depending on their order.
+
+Select the installation's **label** in the Project Explorer to open its Properties.
+The explanation and **Name** field appear there, including at narrow window sizes.
+The **arrow** still expands or collapses the subtree. Edit the name and press
+**Enter**, or leave the field, to submit it; **Escape** cancels the draft. Blank new
+names are refused. The existing server admission trims an explicitly submitted
+name; merely viewing an imported name does not trim or change it. A refusal is
+shown beside the field. One rename affects only the selected installation and is
+one undoable action. Use Save/autosave for the native working file as usual.
+
+An unrelated snapshot refresh keeps an unsubmitted draft. Pending writes cannot
+be submitted twice from the same field. A reply arriving after a snapshot/target
+change or unmount is not applied to the replacement view; this does **not** cancel
+an already submitted server operation. The unchanged installation API is not a
+revision-conditional multi-client edit protocol.
+[Behavior and acceptance boundary](../../contracts/installation-node.md).
+
 ## Starting a new project
 
 **New project…** opens a wizard. The first step asks for four fields:

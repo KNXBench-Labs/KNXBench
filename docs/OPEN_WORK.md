@@ -22,6 +22,17 @@ counts below remain historical. What remains is
 and publication follow-up, (3) deferred items with a recorded user decision, and
 (4) later scope that never was an alpha task.
 
+## Bounded AP3 parameter control slice (11 October 2026)
+
+Exact retained source evidence, optional authenticated read-only source HTTP and
+isolated EN/DE decimal Time/integer Slider controls have current source-bound
+acceptance. [Host contract](contracts/parameter-editor-host.md) and
+[receipt](evidence/parameter-editors-2026-10-11.json). Existing validation,
+dependencies, native persistence and write authority remain unchanged.
+Colour/Picture have an explicit unverified-codec original-value fallback; module
+mapping and Session1 shell mount remain open. PDB-04 remains LATER, not DONE.
+No physical device, universal codec, release or deployment claim.
+
 ## Alpha.8 publication boundary
 
 Alpha.8 packages the published selective-import, import-integrity, read-only

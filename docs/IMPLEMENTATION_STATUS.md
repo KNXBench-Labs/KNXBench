@@ -1,4 +1,39 @@
 
+## 2026-10-11 — AP3 optional exact parameter source evidence (not editor completion)
+
+Dedicated ProductDB `parameter_editor::parameter_editor_evidence` resolves an
+exact program-local ParameterRef/parameter/type against its retained source hash.
+Bounded namespace/owner/ref-chain/model checks return raw qualified attributes or
+named unavailability; SQL errors stay errors. No schema migration or mutation.
+Frozen source checks:831 ProductDB passes,25 ignored;17 new synthetic controls,
+strict Clippy/format/docs and all five explicit-root repo gates passed. Native
+ProductDB close/read-only-reopen preserves database bytes and source evidence.
+[Admission and limitations](contracts/parameter-editor-admission.md).
+
+The read-only source prerequisite is followed by own isolated EN/DE controls and
+an authenticated optional HTTP source producer. Time stays a decimal count with
+verbatim uninterpreted units; explicit bounded integer Slider stays draft-only
+until Apply. Unknown metadata and Colour/Picture codecs have visible fallback.
+[Host contract](contracts/parameter-editor-host.md) preserves existing evaluated
+field/write/persistence authority and Session1 shell ownership. Focused controls
+pass21 tests; real HTTP5 includes native Save/Open, undo/redo, refusal without
+mutation and retained source bytes. Earlier isolated browser20 checks were viewed
+EN1440/Graphite and DE400/Porcelain; a later admission guard changed source, so
+that earlier browser receipt stays historical. The new same-source browser
+acceptance below supersedes it, without duplicating counts.
+Frozen candidate `4c3bd83d9806c9a61a12174c2cb6a360c553b21a` now passes all17 gates:
+Web2738/0/174files, workspace Rust4048/0/194ignored, strict workspace Clippy,
+format/production and fixture builds, two other type scopes, source-stamped
+server/CLI/MCP and five explicit-root repository gates. New browser20 checks
+pass on that same candidate; full-page EN/DE frames actually viewed. Earlier
+attempt1 was tool-timeout interrupted during Rust, not a completed gate.
+[Compact evidence](evidence/parameter-editors-2026-10-11.json).
+Published normally as `4a7856b111dc84f7dbc08f4c77c0855b21e6ff6e` after accepted
+metadata gates; HEAD/tracking/live refs and exact evidence blob read back.
+No whole PDB-04, full Colour/Picture codec,
+duration conversion, module mapping, hardware or shell-mount claim.
+Active-session self-review, not independent approval.
+
 ## 2026-10-11 — native instruction foundation, not the full RTF editor
 
 ## 2026-10-11 — Bounded installation instruction editing accepted for Session1 handoff

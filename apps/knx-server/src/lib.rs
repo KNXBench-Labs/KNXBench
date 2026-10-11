@@ -71,6 +71,7 @@ mod instruction_routes;
 mod load_progress;
 pub use load_progress::*;
 mod one_shot_activity;
+mod parameter_editor_routes;
 mod paths;
 mod project_history;
 mod rename_routes;
@@ -178,6 +179,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
     let guarded = Router::new()
         .merge(routes::project_routes())
         .merge(instruction_routes::router(state.clone()))
+        .merge(parameter_editor_routes::router())
         .merge(fs_routes::fs_routes())
         .merge(bus_routes::bus_routes())
         .merge(bus_activity_routes::bus_activity_routes())

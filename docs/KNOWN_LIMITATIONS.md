@@ -9571,3 +9571,17 @@ leading whitespace/BOM/alternative headers and older logs are not reclassified.
 Absence of a marker does not mean plain text. Full retained source, not a clipped
 preview, remains authoritative for preservation/export. No full field catalogue,
 format validation, plain extraction or RTF rendering support. Ledger `KL-175`.
+
+## Bounded AP3 parameter controls (2026-10-11, PDB-04 remains partial)
+
+Own isolated Time uses an unchanged decimal count, never guessed duration/clock
+conversion. Slider admits safe bounded integers with explicit unqualified hint,
+no Increment/unknown transformations or precision loss. Color/Picture show an
+explicit unsupported-codec original view, without rendering/fetching resources.
+Direct Static source evidence is bounded to namespaces20–23; module definitions
+need separate mapping. [Host integration contract](contracts/parameter-editor-host.md).
+The read-only evidence route grants no write authority. Existing legacy parameter
+mutations remain server-validated but not revision-conditional: ignoring a late
+UI reply does not cancel/roll back a sent request. Synthetic component browser
+checks are distinct from actual HTTP/native persistence witnesses. No shared
+production-shell mount or full specialized Color/Picture editor is delivered.

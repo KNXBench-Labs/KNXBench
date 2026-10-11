@@ -21,6 +21,7 @@ pub mod documentation;
 pub mod download_support;
 pub mod import;
 mod import_payload_evidence;
+pub mod instructions;
 pub mod individual_address_programming_recovery;
 pub mod individual_address_reset_recovery;
 pub mod legacy;

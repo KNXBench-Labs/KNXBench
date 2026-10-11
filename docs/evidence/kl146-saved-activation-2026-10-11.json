@@ -1,0 +1,80 @@
+{
+  "package": 8,
+  "limitation": "KL-146",
+  "date": "2026-10-11",
+  "status": "VERIFIED_DIAGNOSTIC_ONLY_PUBLICATION_PENDING",
+  "candidate_published": false,
+  "baseline_revision": "a8d1c68c8d528eba5916abd620aac6ee4027fc17",
+  "review": "codex, in-session self-review only; no independent review",
+  "focused_verification": {
+    "synthetic_passed": 8,
+    "synthetic_failed": 0,
+    "private_explicitly_ignored": 1,
+    "strict_clippy_passed": true,
+    "documentation_passed": true,
+    "whitespace_passed": true
+  },
+  "private_comparison": {
+    "test": "private_saved_activation_compares_every_imported_tree_object_without_rounding_unknown_states",
+    "complete_comparison_observed": true,
+    "input_and_project_unchanged": true,
+    "conclusive_differences_observed": true,
+    "parity_accepted": false,
+    "original_derived_details": "ignored local evidence only",
+    "historical_parity_assertion_exit": 101,
+    "diagnostic_admission": "passed on verified source: complete original replay, read-only input/project and preserved differences/unknowns; no parity acceptance",
+    "missing_opt_in_and_missing_file_refuse": true
+  },
+  "decision": "Owner explicitly chose read-only diagnostic delivery with KL-146 retained and no parity claim.",
+  "production_semantics_changed": false,
+  "broad_or_origin_main_admission_claimed": false,
+  "compatibility_claim": "none",
+  "verified_source_revision": "f045390fdf7b3ff34353eca84769c5daa03489a1",
+  "broad_source_admission_claimed": true,
+  "verification": {
+    "network": "loopback-only",
+    "source_manifest_checked_before_and_after": true,
+    "rust": {
+      "scope": "all workspace packages except unchanged native desktop shell",
+      "passed": 3934,
+      "failed": 0,
+      "ignored": 192
+    },
+    "web": {
+      "passed": 2612,
+      "failed": 0,
+      "files": 164
+    },
+    "strict_clippy": true,
+    "production_builds": "server, CLI, MCP and Web passed",
+    "typescript": true,
+    "five_fresh_root_repo_gates": true,
+    "documentation": true,
+    "whitespace": true,
+    "corpus_nonempty_all_selected_passed": true,
+    "private_positive_gates": [
+      "saved-activation-diagnostic",
+      "schema23-refids",
+      "stored-instance-own-values",
+      "source-reconciliation",
+      "marked-raw-evidence"
+    ],
+    "native_desktop_shell_tested": false
+  },
+  "mutation_controls": {
+    "compiled_controls_detected": 3,
+    "controls": [
+      "erase-finding",
+      "round-unknown",
+      "accept-instance-as-channel"
+    ],
+    "restored_before_final_admission": true
+  },
+  "self_review": {
+    "critical_findings": 0,
+    "important": "device duplicate identity and diagnostic/non-parity separation guarded",
+    "minor": "parent-relative channel spelling and repository-edition formatting corrected",
+    "independent": false
+  },
+  "first_final_attempt": "fmt-only refusal on5259ba84 archived; workspace-edition formatting fixed; no failed-stage evidence restamped"
+}

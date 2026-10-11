@@ -1,3 +1,15 @@
+## 2026-10-11 — AP9 hardware prerequisites and plans, no execution
+
+Two independent preparation contracts now exist:
+[Powerline / KL-110](contracts/powerline-readiness.md) and
+[changed-parts download / GAP-T30-04](contracts/incremental-download-readiness.md).
+They record existing source/standard boundaries, unresolved target/transport and
+recovery evidence, phased future tests, stop conditions and operation-specific
+Go requirements. Preparation does not implement or verify either hardware feature.
+Both implementation IDs stay `LATER / RECORDED_SCOPE`; full-download behavior,
+source and public operation guards are unchanged. No hardware discovery,
+connection, live tests, downloads or writes performed.
+
 ## 2026-10-11 — bounded RTF adapter foundation (AP2 still open)
 
 - `knx-etsproj::rtf` derives bounded literal/basic-style views and writes only

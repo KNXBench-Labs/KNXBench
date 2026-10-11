@@ -41,6 +41,12 @@ commands remain authoritative. View state is transient, not a domain/project sch
 No core/store/product/API/protocol/dependency change. Local delivery is not release
 or deployment.
 
+The [local DPT selection extension](contracts/dpt-selection.md) adds a versioned
+EN/DE display vocabulary independent of product/master text and codec support.
+The UI owns labels and native select options; exact stored references, effective
+program defaults and existing application commands remain authoritative. Field
+provenance is localized at presentation only. No domain/schema/database change.
+
 ## Offline AP1 diagnostics stay outside the execution planner (2026-10-09)
 
 [ADR-0098](adr/0098-offline-ap1-procedure-resolution.md) and the

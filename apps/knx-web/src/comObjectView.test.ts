@@ -60,3 +60,13 @@ it("sorts function, status and channel labels independently of translated status
   expect(view(objects, DEFAULT_FILTERS, "status").objects.map(o => o.id)).toEqual([3, 2, 1]);
   expect(view(objects, DEFAULT_FILTERS, "channel").objects.map(o => o.id)).toEqual([3, 1, 2]);
 });
+
+it("searches localized catalogue names and dotted DPT numbers without rewriting source", () => {
+  const objects = [object(1, { program_dpt: "DPST-17-1" }), object(2, { dpt: "DPST-9-1" })];
+  const before = JSON.stringify(objects);
+  for (const [language, query, expected] of [["de", "szenennummer", 1], ["en", "scene number", 1], ["de", "9.001", 2]] as const) {
+    expect(deriveComObjectView(objects, { ...DEFAULT_FILTERS, query }, { column: null, descending: false }, language, false)
+      .objects.map(o => o.id)).toEqual([expected]);
+  }
+  expect(JSON.stringify(objects)).toBe(before);
+});

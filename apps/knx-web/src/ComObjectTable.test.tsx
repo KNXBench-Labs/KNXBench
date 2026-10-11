@@ -63,7 +63,7 @@ it("preserves the same open editor DOM across filtering, views, sorting and chan
   const v = await render([object(1, { dpt: "DPST-1-1" }), object(2)]);
   await v.click(v.button("All objects"));
   await v.click(v.host.querySelector<HTMLDetailsElement>('[data-object-id="1"] summary')!);
-  const editor = v.host.querySelector<HTMLInputElement>('input[placeholder="DPST-9-1"]')!;
+  const editor = v.host.querySelector<HTMLSelectElement>('.dpt-field select')!;
   await v.set(editor, "DPST-9-2");
   await v.set(v.input("Search communication objects"), "Object 2");
   expect(v.host.textContent).toContain("Editing — outside filter");
@@ -71,7 +71,7 @@ it("preserves the same open editor DOM across filtering, views, sorting and chan
   await v.click(v.button("By channel"));
   const c = { key: "opaque", kind: "Channel" as const, text: "Moved", name: null, number: null, order: 0 };
   await v.rerender([object(1, { dpt: "DPST-1-1", activation: "Active", channel: c }), object(2)]);
-  expect(v.host.querySelector('input[placeholder="DPST-9-1"]')).toBe(editor);
+  expect(v.host.querySelector('.dpt-field select')).toBe(editor);
   expect(editor.value).toBe("DPST-9-2");
   expect(api.setComObjectDpt).not.toHaveBeenCalled();
   await v.cleanup();
@@ -79,7 +79,7 @@ it("preserves the same open editor DOM across filtering, views, sorting and chan
 it("keeps a dirty DPT draft when a refreshed committed DPT changes", async () => {
   const v = await render([object(1, { dpt: "DPST-1-1" })]);
   await v.click(v.button("All objects")); await v.click(v.host.querySelector<HTMLElement>(".com-object-detail summary")!);
-  const input = v.host.querySelector<HTMLInputElement>('input[placeholder="DPST-9-1"]')!;
+  const input = v.host.querySelector<HTMLSelectElement>('.dpt-field select')!;
   await v.set(input, "DPST-9-2"); await v.rerender([object(1, { dpt: "DPST-5-1" })]);
   expect(input.value).toBe("DPST-9-2"); await v.cleanup();
 });
@@ -88,7 +88,7 @@ it("invalidates a removed object instead of publishing its delayed result", asyn
   api.setComObjectDpt.mockImplementationOnce(() => new Promise(r => { resolve = r; }));
   const v = await render([object(1)]); await v.click(v.button("All objects"));
   await v.click(v.host.querySelector<HTMLElement>(".com-object-detail summary")!);
-  const input = v.host.querySelector<HTMLInputElement>('input[placeholder="DPST-9-1"]')!;
+  const input = v.host.querySelector<HTMLSelectElement>('.dpt-field select')!;
   await v.set(input, "DPST-1-1"); await act(async () => input.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
   await v.rerender([]); await act(async () => resolve({ ...tree, is_modified: true }));
   expect(v.applied).not.toHaveBeenCalled(); expect(v.host.querySelector(".com-object-detail")).toBeNull();
@@ -100,8 +100,8 @@ it("keeps pending/refused edits visible and blocks duplicate requests through pr
   api.setComObjectDpt.mockImplementationOnce(() => new Promise((_resolve, r) => { reject = r; }));
   const v = await render([object(1)]); await v.click(v.button("All objects"));
   await v.click(v.host.querySelector<HTMLElement>('[data-object-id="1"] summary')!);
-  const editor = v.host.querySelector<HTMLInputElement>('input[placeholder="DPST-9-1"]')!;
-  await v.set(editor, "bad");
+  const editor = v.host.querySelector<HTMLSelectElement>('.dpt-field select')!;
+  await v.set(editor, "DPST-9-2");
   await act(async () => editor.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
   await v.set(v.input("Search communication objects"), "no match");
   await act(async () => editor.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
@@ -115,7 +115,7 @@ it("drops delayed editor results after switching device", async () => {
   api.setComObjectDpt.mockImplementationOnce(() => new Promise(r => { resolve = r; }));
   const v = await render([object(1)]); await v.click(v.button("All objects"));
   await v.click(v.host.querySelector<HTMLElement>('[data-object-id="1"] summary')!);
-  const editor = v.host.querySelector<HTMLInputElement>('input[placeholder="DPST-9-1"]')!;
+  const editor = v.host.querySelector<HTMLSelectElement>('.dpt-field select')!;
   await v.set(editor, "DPST-1-1"); await act(async () => editor.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
   await v.rerender([object(1)], 10); await act(async () => resolve({ ...tree, is_modified: true }));
   expect(v.applied).not.toHaveBeenCalled(); expect(v.input("Search communication objects").value).toBe("");

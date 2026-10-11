@@ -93,14 +93,26 @@ for (const language of ["en", "de"] as const) {
         language === "de" ? "Programm-Standardwert" : "Program default",
       );
       await expect(programObject.locator(".com-object-effective-dpt")).toContainText("Temperature");
-      const dptLineCounts = await programObject.locator(
-        ".com-object-effective-dpt > .mono, .com-object-effective-dpt > small:not(.com-object-dpt-origin)",
-      ).evaluateAll((elements) => elements.map((element) => {
-        const text = document.createRange();
-        text.selectNodeContents(element);
-        return text.getClientRects().length;
+      const dptFacts = programObject.locator(
+        ".com-object-effective-dpt > small:not(.com-object-dpt-origin)",
+      );
+      await expect(dptFacts).toHaveCount(2); // Exact raw reference and separately labelled master text.
+      const dptTokenLineCounts = await dptFacts.evaluateAll((elements) => elements.flatMap((element) => {
+        const node = element.firstChild;
+        if (!node || node.nodeType !== Node.TEXT_NODE) throw new Error("Missing DPT fact text");
+        const value = node.textContent!;
+        // Labels now contain several words. Natural word wrapping is fine;
+        // splitting an identifier or any word into character fragments is not.
+        return [...value.matchAll(/\S+/g)].map(token => {
+          const range = document.createRange();
+          range.setStart(node, token.index!);
+          range.setEnd(node, token.index! + token[0].length);
+          return range.getClientRects().length;
+        });
       }));
-      expect(dptLineCounts, "DPT code and description must stay readable without character-level wrapping").toEqual([1, 1]);
+      expect(dptTokenLineCounts.length).toBeGreaterThan(0);
+      expect(dptTokenLineCounts.every(count => count === 1),
+        "DPT identifiers and master-text words must not wrap at character level").toBe(true);
 
       await groups.nth(1).locator(".com-object-channel-summary").click();
       await expect(page.locator('[data-object-id="7"]')).toContainText("Switching lights");

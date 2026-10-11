@@ -1,3 +1,28 @@
+## 2026-10-11 — local EN/DE DPT selection and field provenance
+
+Owner-requested UI extension in `fix/dpt-labels-20261011`, base `9298242c`.
+[Contract](contracts/dpt-selection.md): native select instead of free text,
+454 versioned authored EN/DE labels (453 overview IDs plus249.600), primary
+localized table/exact-filter/search labels and field-owned source explanations.
+Imported unknown/main-only/alias references remain exact selected values; empty
+project values do not save program defaults merely by rendering/focusing.
+Existing blur/Enter, application validation and per-object mutation lifetime remain.
+No Rust/API/DTO/model/native/product-database/protocol/dependency changes.
+
+Named UI/search/narrow-width/source-ownership RED controls preceded corrections.
+Final Web2625/0 in166 files, production build/explicit E2E types, built offline
+Chromium23/0/0 skipped and four inspected EN/DE1440/400 frames pass. Complete
+intercepted Chromium252/0/0 skipped, focused layout10/0 and separate built native
+ArrowDown/Enter1/0 pass on final frozen source;507 frontend inputs remain unchanged.
+Five fresh explicit-root repository gates/docs/whitespace pass. First full-browser
+attempt was externally interrupted at420 seconds with no aggregate verdict;
+second run250/2 exposed legacy single-line assertions after master-text prefixes.
+The corrected token-level no-character-wrap assertions keep exactly two facts;
+actual complete rerun252/0 supersedes that failed run. Keyboard probe initially
+refused its preview cwd before case execution; corrected explicit-cwd1/0 accepted.
+Self-review only; no unmocked server, native WebKitGTK/Orca, ETS or hardware claim.
+Local/uncommitted/unpublished; main integration/release/container deployment separate.
+
 ## 2026-10-11 — local collector delivery and scoped measurement contract
 
 The standalone ProjectStats generator at its canonical local checkout now

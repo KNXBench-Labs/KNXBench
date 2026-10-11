@@ -1,3 +1,19 @@
+## 2026-10-11 — import status published on main
+
+Owner-requested import status feature `df868c7a` is published on `main` as
+`3d6c9d1f`, including the already published download-layout source. Both
+additive status/handover histories and the scoped CSS corrections are retained.
+Actual combined-source acceptance: **2614 Web tests / 164 files**, **264 full
+intercepted Chromium cases**, and **22 production-built Chromium cases**;
+zero failed or skipped. Build, three TypeScript gates, five fresh-root
+repository gates, documentation and whitespace all exit zero. All 1865 tracked
+inputs stayed frozen. Four final EN/DE 400/1440 frames show a readable phase
+below the bar, with the unavailable-total note and humour unclipped.
+Self-review only. Local, fetched and live main refs were read back equal.
+See the [source-bound publication receipt](evidence/import-status-publication-2026-10-11.json).
+No release/container deployment, bus operation or shared-root synchronization.
+Earlier feature-only/local acceptance entries below remain historical.
+
 ## 2026-10-11 — local import-banner readability correction
 
 Current server-reported steps now appear below the bar in normal foreground

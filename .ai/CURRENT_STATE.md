@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:41
+- **Completed:** User explicitly authorized feature commit, merge commit and push. Previously accepted1088 retained runtime inputs byte-verified; exact public38-path package reviewed, no new feature changes. Root contains foreign documentation edits and remains untouched; integration uses separate clean checkout.
+- **Pending/Next Steps:** Commit only owned login/feedback/limits paths using KNXBench identity; merge into freshly fetched main in owned integration checkout, resolve additive contributions, run actual combined-source acceptance, then normal push with exact remote readback. Release/deployment remains outside scope.
+- **Notes for Codex oder Claude:** Historical local acceptance below remains valid for its source only. Reuse compact .ai/logs/2026-10-11_codex_login-feedback-limits evidence, not deleted scratch paths. No delegation; in-session self-review. Preserve unrelated root edits/index and parallel owner work.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-11 11:21 CEST
+- **Completed:** Local login/feedback/limits package implemented in fix/login-feedback-limits-20261011, base9298242c. Existing logo and frontend build version; exact local-ID toast navigation; raw server/UI details with exact copy and manual Ctrl+C; separately disclosed1000 UI records, backend-only JSON-v1 preserved. Raw analysis/expanded inventory/streamed upload1024MiB; XML/member/manufacturer/selective/public-output guards retained. Two hover REDs corrected by scoped flat actions. Final Web2629/0/165files, full Chromium268/0/0skipped/0flaky, built24/0, Rust201+290+22+5=518/0, build/E2E types/strictClippy and five nonempty repository/docs/fmt/whitespace gates pass on frozen1090 runtime inputs.26 actual built-only EN/DE wide/narrow dark/light frames inspected. Architecture/ADR/limits/contracts/manual/status synchronized; in-session self-review only.
+- **Pending/Next Steps:** No local feature implementation remains. Source is uncommitted/unpublished at KNXBench.worktrees/login-feedback-limits-20261011. Commit/main integration/push/release/live-container update are separate scope; later integration must reconcile overlapping App/styles/messages/status/ADR against fresh main and gate the combined inputs.
+- **Notes for Codex oder Claude:** Canonical compact evidence .ai/logs/2026-10-11_codex_login-feedback-limits/receipt.json and REPORT.md in shared root; exact configs/reports/manifest and26 production PNGs retained. Earlier fixture-server screenshots overwrote a shared path and were reclassified; isolated built-only capture supersedes them, repeated cases not double-counted. Final workers exited0. Task-only harness/targets/scratch retirement documented in cleanup.json; keep source and built frontend. No bus/vendor/private-corpus/native UI/deployment/GiB-analysis-RSS guarantee. Root application/index/foreign work and all inherited journals retained. UI skill records settled hover specificity and per-stage screenshot paths.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 06:51 CEST
 - **Completed:** proc_99a27eeea8c6 exit0 reconciled with statistics-doc-gates-1 receipt: candidate1ad70cc15e6219f08307954e4b2641382d7b3b1f matches clean HEAD, all recorded documentation/regression/fresh-root repository stages valid/exit0, all_passed/inputs_frozen true. Dated generated report still matches its exact SHA-256 receipt. Contract/report locally accepted; no new execution or duplicate tests. Generator2ac5dfb and project report sourceaeb5a386 remain distinct from documentation candidate.
 - **Pending/Next Steps:** Coordinated fresh-main integration/publication remains pending. Collector remote still unavailable; TOOLS physical traffic/timing/outcome/attribution/Shell boundaries remain open, not blanket DONE. AP2 focused original reader10/0+7/0 verified separately; full editing/model/native/history/browser remains. AP9 plans locally accepted, publication pending. Overall goal incomplete.

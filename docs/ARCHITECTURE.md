@@ -1,5 +1,17 @@
 # Architecture
 
+## Login and notification detail ownership (2026-10-11 local source)
+
+The [login/feedback/size contract](contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md)
+keeps branding/build identity and bounded UI notification history in the web
+client. Exact browser-local IDs drive toast navigation; no text-based backend
+correlation is invented. The read-only detail view owns clipboard access;
+shared Overlay owns focus trapping and background isolation. Backend JSON log
+export remains v1 and server-only. Contribution raw admission
+is application-owned and shared by HTTP/CLI; multipart envelope/preflight and
+streamed upload publication stay in server adapters. Parser, disclosure and
+per-member budgets remain independent. No domain, storage or protocol change.
+
 ## Local import-integrity adapter repair (2026-10-10)
 
 [ADR-0107](adr/0107-import-source-integrity.md) and [the contract](IMPORT_INTEGRITY.md) bind ZIP reads to validated member identity, retain original XML, separate metadata provenance and record parser-owned lexical observations. Application code reuses persisted product diagnostics and baggage classification. Completion vocabulary requires a scalar-only schema12 refusal barrier; no UI/core coupling, new dependency or protocol capability. Local and unpublished; final acceptance remains separately recorded.

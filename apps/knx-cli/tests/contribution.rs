@@ -1,11 +1,64 @@
 //! Regression tests for consented community evidence.
-use std::{fs, process::Command};
+use std::fs;
+use std::io::Write;
+use std::process::Command;
 fn knx(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_knx"))
         .args(args)
         .output()
         .unwrap()
 }
+#[test]
+fn analysis_above_32_mib_is_admitted_and_reports_xml_scan_limit() {
+    let tmp = tempfile::tempdir().unwrap();
+    let input = tmp.path().join("large.knxprod");
+    let mut archive = zip::ZipWriter::new(fs::File::create(&input).unwrap());
+    archive
+        .start_file(
+            "large.xml",
+            zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored),
+        )
+        .unwrap();
+    let chunk = [b' '; 64 * 1024];
+    for _ in 0..33 * 16 {
+        archive.write_all(&chunk).unwrap();
+    }
+    archive.finish().unwrap();
+    assert!(input.metadata().unwrap().len() > 32 * 1024 * 1024);
+    let output = knx(&["contribution", "analyze", input.to_str().unwrap()]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["status"], "partial");
+    assert_eq!(report["members"].as_array().unwrap().len(), 1);
+    assert_eq!(report["members"][0]["sampleAllowed"], false);
+    assert_eq!(report["originalAllowed"], false);
+    assert!(report["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|c| c["name"] == "typed-import" && c["status"] == "not-examined"));
+}
+
+#[test]
+fn sparse_input_above_1024_mib_is_refused_without_reading_or_export() {
+    let tmp = tempfile::tempdir().unwrap();
+    let input = tmp.path().join("oversize.knxprod");
+    fs::File::create(&input)
+        .unwrap()
+        .set_len(knx_app::contribution::MAX_INPUT_BYTES as u64 + 1)
+        .unwrap();
+    let output = knx(&["contribution", "analyze", input.to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("input size limit exceeded"));
+    assert!(output.stdout.is_empty());
+    assert_eq!(fs::read_dir(tmp.path()).unwrap().count(), 1);
+}
+
 #[test]
 fn real_cli_analyzes_offline_and_exports_without_overwriting() {
     let dir = tempfile::tempdir().unwrap();

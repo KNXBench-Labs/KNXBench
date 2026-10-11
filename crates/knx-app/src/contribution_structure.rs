@@ -4,7 +4,7 @@ use quick_xml::{events::Event, name::ResolveResult, NsReader};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub const MAX_EXPANDED_BYTES: u64 = 64 * 1024 * 1024;
+pub const MAX_EXPANDED_BYTES: u64 = 1024 * 1024 * 1024;
 pub const MAX_XML_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_MEMBERS: usize = 4096;
 const MAX_EVENTS: usize = 200_000;
@@ -179,7 +179,7 @@ pub(super) fn inspect(bytes: &[u8], analysis: &mut Analysis) -> Result<bool, Ana
             .is_none_or(|n| n > MAX_EXPANDED_BYTES)
     {
         return Err(AnalysisError::Input(
-            "analysis archive exceeds 4096 members or 64 MiB expanded",
+            "analysis archive exceeds 4096 members or 1024 MiB expanded",
         ));
     }
     if entries.iter().any(|e| {

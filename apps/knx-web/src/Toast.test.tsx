@@ -29,6 +29,22 @@ async function renderStack(
 }
 
 describe("ToastStack", () => {
+  it("opens the exact toast from its message button without triggering dismissal", async () => {
+    const onOpen = vi.fn(), onDismiss = vi.fn();
+    host = document.createElement("div"); document.body.append(host);
+    const root = createRoot(host);
+    await act(() => root.render(<ToastStack toasts={[{ id: 8, kind: "error", message: "Message", serverText: false }]} onDismiss={onDismiss} onOpen={onOpen} />));
+    const open = host.querySelector<HTMLButtonElement>(".toast-open");
+    expect(open).not.toBeNull();
+    await act(() => open!.click());
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith(8);
+    expect(onDismiss).not.toHaveBeenCalled();
+    await act(() => host!.querySelector<HTMLButtonElement>(`[aria-label="${enMessages["toast.dismiss"]}"]`)!.click());
+    expect(onDismiss).toHaveBeenCalledExactlyOnceWith(8);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    await act(() => root.unmount());
+  });
+
   it("shows the messageIsEnglish disclosure on an error toast quoting server text", async () => {
     const root = await renderStack([
       { id: 1, kind: "error", message: "The bus objects: boom", serverText: true },

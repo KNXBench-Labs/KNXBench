@@ -1,6 +1,8 @@
 /** Panel rendering the backend session log, refetched on tree changes and failed operations. */
 // apps/knx-web/src/LogPanel.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import LogEntryDetails from "./LogEntryDetails";
+import type { ToastNotification } from "./toast";
 import * as api from "./api";
 import type { LogEntry } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -37,7 +39,13 @@ const SEVERITY_LABEL_KEYS: Record<Severity, MessageKey> = {
 /// still answers (see `routes.rs`), so this panel is reachable — and still
 /// refetches on every `tree`/`refreshKey` change — with or without one
 /// (KNOWN_LIMITATIONS.md #36, part A).
-export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: number }) {
+const NO_NOTIFICATIONS: ToastNotification[] = [];
+export default function LogPanel(props: {
+  tree: ProjectTree | null; refreshKey: number;
+  notifications?: ToastNotification[]; notificationDroppedCount?: number;
+  notificationTarget?: { id: number } | null;
+  onNotificationTargetHandled?: () => void;
+}) {
   const t = useTranslate();
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +58,30 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
   const [search, setSearch] = useState("");
   const [exportScope, setExportScope] = useState<LogExportScope>("filtered");
   const [exportError, setExportError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<{ key: string; entry: LogEntry } | null>(null);
+  const [targetMissing, setTargetMissing] = useState(false);
+  const list = useRef<HTMLUListElement>(null);
+  const restoreFocus = useRef<HTMLElement | null>(null);
+  const notifications = props.notifications ?? NO_NOTIFICATIONS;
+  const target = props.notificationTarget;
+  useEffect(() => {
+    if (!target) return;
+    const notification = notifications.find(n => n.id === target.id);
+    setTargetMissing(!notification);
+    setSelected(notification ? { key: `ui:${notification.id}`, entry: notification.entry } : null);
+    if (notification) {
+      setSearch("");
+      setFilters({ error: true, warning: true, info: true });
+    }
+    props.onNotificationTargetHandled?.();
+  }, [target]);
+  useEffect(() => {
+    if (!selected) return;
+    const row = [...(list.current?.querySelectorAll<HTMLElement>("[data-log-key]") ?? [])]
+      .find(row => row.dataset.logKey === selected.key);
+    restoreFocus.current = row?.querySelector<HTMLElement>(".log-entry-open") ?? null;
+    row?.scrollIntoView?.({ block: "nearest" });
+  }, [selected, loading]);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,16 +116,24 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
   // Newest first for display; export-all keeps the server's chronological
   // ordering while a filtered export mirrors the current visible order.
   const query = search.trim().toLocaleLowerCase();
-  const visible = [...entries].reverse().filter((entry) =>
+  const rows = [
+    ...entries.map((entry, index) => ({ key: `server:${index}:${JSON.stringify(entry)}`, entry })),
+    ...notifications.map(n => ({ key: `ui:${n.id}`, entry: n.entry })),
+  ].sort((a, b) => (Date.parse(b.entry.timestamp) - Date.parse(a.entry.timestamp)) || b.key.localeCompare(a.key, undefined, { numeric: true }));
+  const allEntries = notifications.length === 0 ? entries : [...rows].reverse().map(row => row.entry);
+  const visibleRows = rows.filter(({ entry }) =>
     filters[entry.severity] &&
-    (!query || [entry.source, formatSettingsDiagnostic(t, entry.diagnostic, entry.message), entry.detail ?? ""]
+    (!query || [entry.source, entry.message, formatSettingsDiagnostic(t, entry.diagnostic, entry.message), entry.location ?? "", entry.detail ?? ""]
       .some((field) => field.toLocaleLowerCase().includes(query))),
   );
+  const visibleServerEntries = visibleRows.filter(row => row.key.startsWith("server:")).map(row => row.entry);
 
   async function exportLog() {
     setExportError(null);
     try {
-      await saveSessionLog(entries, exportScope === "all" ? entries : visible, exportScope);
+      // v1/native validation describes the server run and at most 1000 server records.
+      // Browser notifications have independent retention/loss; copy them from details.
+      await saveSessionLog(entries, exportScope === "all" ? entries : visibleServerEntries, exportScope);
     } catch (e) {
       setExportError(api.errorMessage(e));
     }
@@ -131,7 +171,7 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
         <button type="button" className="log-panel-clear" onClick={() => setSearch("")} disabled={!search}>
           {t("logPanel.clear")}
         </button>
-        <span className="log-panel-count" role="status">{t("logPanel.count", { shown: visible.length, total: entries.length })}</span>
+        <span className="log-panel-count" role="status">{t("logPanel.count", { shown: visibleRows.length, total: allEntries.length })}</span>
         <label className="log-panel-scope">
           {t("logPanel.exportScope")}
           <select className="log-panel-export-scope" value={exportScope} onChange={(event) => setExportScope(event.target.value as LogExportScope)}>
@@ -142,6 +182,17 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
         <button type="button" className="log-panel-export" onClick={exportLog} disabled={loading || error !== null}>{t("logPanel.exportJson")}</button>
       </div>
       <p className="log-panel-hint">{t("logPanel.retention", { count: droppedCount(entries) ?? t("logPanel.unknownCount") })}</p>
+      {(notifications.length > 0 || (props.notificationDroppedCount ?? 0) > 0) && <p className="log-panel-hint">{t("logPanel.uiHistory", { count: props.notificationDroppedCount ?? 0 })}</p>}
+      {targetMissing && <p role="status">{t("logPanel.targetMissing")}</p>}
+      {selected && <LogEntryDetails key={selected.key} entry={selected.entry} restoreFocusRef={restoreFocus} onClose={() => {
+        setSelected(null);
+        // The navigation toast may still be leaving. Restore to its durable row,
+        // after Overlay has released background isolation, not to that transient trigger.
+        queueMicrotask(() => {
+          const row = restoreFocus.current;
+          if (row?.isConnected && !row.closest("[inert]")) row.focus();
+        });
+      }} />}
       {exportError && <span className="field-error" role="alert">{exportError}</span>}
       {/* §66/§67 disclosure (fix round 2, B4): message/location/detail below
           are the server's own text and are never translated — stated here,
@@ -152,19 +203,19 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
       {error && <span className="field-error">{error}</span>}
       {loading ? (
         <p className="log-panel-empty">{t("logPanel.loading")}</p>
-      ) : error ? null : entries.length === 0 ? (
+      ) : error && allEntries.length === 0 ? null : allEntries.length === 0 ? (
         <p className="log-panel-empty">{t("logPanel.emptyNoEntries")}</p>
-      ) : visible.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         <p className="log-panel-empty">{t("logPanel.emptyFiltered")}</p>
       ) : (
-        <ul className="log-panel-list">
-          {visible.map((entry, index) => (
-            <li key={`${entry.timestamp}-${index}`} className={`log-entry log-entry-${entry.severity}`}>
+        <ul className="log-panel-list" ref={list}>
+          {visibleRows.map(({ entry, key }) => (
+            <li key={key} data-log-key={key} className={`log-entry log-entry-${entry.severity}${selected?.key === key ? " log-entry--selected" : ""}`}>
               <span className="log-entry-severity">{t(SEVERITY_LABEL_KEYS[entry.severity])}</span>
               <span className="log-entry-source">{entry.source}</span>
-              <span className="log-entry-message">
+              <button type="button" className="log-entry-message log-entry-open" onClick={() => setSelected({ key, entry })} title={t("logPanel.details")}>
                 {formatSettingsDiagnostic(t, entry.diagnostic, entry.message)}
-              </span>
+              </button>
               {entry.location && <span className="log-entry-location">{entry.location}</span>}
               {entry.source === "import:opaque:raw-text" && <span className="log-entry-raw-label">{t("logPanel.rawRtfLike")}</span>}
               {entry.detail && (entry.source === "import:opaque:raw-text"

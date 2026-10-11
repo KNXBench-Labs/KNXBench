@@ -213,7 +213,8 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     revision: 0,
     retiredServerIncarnations: new Set(),
   });
-  const { toasts, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit } = useToasts();
+  const { toasts, notifications, notificationDroppedCount, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit } = useToasts();
+  const [logTarget, setLogTarget] = useState<{ id: number } | null>(null);
   // ADR-0089. Unlocks are announced in the language of the moment they
   // happen; the tracker itself never translates anything.
   const achievements = useAchievements((definitions) =>
@@ -1251,7 +1252,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   const centerWorkspace = (
     <div className="workbench-center">
       {(monitorMounted || monitorOpen) && <div hidden={!monitorOpen}><BusDiagnosticsPanel active={monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} /></div>}
-      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
+      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>
           <nav className="device-editor-navigation" aria-label={t("workbench.devices")}>
             <button type="button" onClick={backFromDevice}>← {t("devices.back")}</button>
@@ -1418,7 +1419,9 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
         )}
         <span>v{manifestVersion}</span>
       </footer>
-      <ToastStack toasts={toasts} onDismiss={dismiss} onExited={finishExit} />
+      <ToastStack toasts={toasts} onDismiss={dismiss} onExited={finishExit} onOpen={(id) => {
+        setLogTarget({ id }); setLogOpen(true); setMonitorOpen(false); dismiss(id);
+      }} />
       {autosave.secondsRemaining !== null && (
         <div className="autosave-countdown" role="status">
           <span>{t("autosave.countdown", { seconds: autosave.secondsRemaining })}</span>

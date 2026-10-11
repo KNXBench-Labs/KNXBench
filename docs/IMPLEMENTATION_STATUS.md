@@ -1,3 +1,25 @@
+## 2026-10-11 — login identity, actionable notifications and larger source admission
+
+- Login reuses the bundled KNXBench mark and shows the frontend package version
+  without querying an authenticated version endpoint, including expiry/sign-out.
+- Toast actions open the exact browser-local log occurrence. A bounded, disclosed
+  1000-record UI history survives popup dismissal; missing targets are reported.
+- Server/UI log messages open read-only raw details with exact message/full JSON
+  copying, selectable text and manual Ctrl+C fallback. Existing backend-only
+  JSON-v1 export and native/server retention provenance remain unchanged.
+- Analyze/Evidence source admission and streamed upload now allow 1024 MiB;
+  declared inventory totals use the same ceiling. XML/member/manufacturer,
+  selective-import, configuration and reduced-public-output guards remain bounded.
+- Verified Web2629/0 in 165 files, production-built Chromium24/0 and full
+  intercepted Chromium268/0 (no skips/flaky cases), production build, explicit
+  E2E TypeScript and strict Clippy. Scoped Rust application201/0, server-lib290/0,
+  upload/contribution HTTP22/0 and CLI5/0 checks pass. Browser checks are synthetic,
+  loopback-only and include two genuine hover REDs followed by corrected GREENs.
+  Review is in-session self-review, not independent approval.
+- See the [feature and size contract](contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md)
+  for verified synthetic cases and retained limits. This is a local source package,
+  not a release, deployment, native UI or real vendor/archive/bus acceptance.
+
 ## 2026-10-11 — local collector delivery and scoped measurement contract
 
 The standalone ProjectStats generator at its canonical local checkout now

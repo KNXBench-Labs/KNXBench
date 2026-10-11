@@ -1,3 +1,20 @@
+## 2026-10-11 — installation-node source published on main
+
+Normal main push and fresh readback verify publication `e2e425d8`, containing
+feature `16e20a59` and tested no-ff merge `f0ce1b80`. Local integration, fetched
+`origin/main` and the exact live main ref were equal. All **1863 unchanged accepted
+input contents** and **8 metadata blobs** match the delivered source; the Git
+symlink target and its resolved input content are checked separately.
+Required KNXBench identities and absence of co-author trailers are verified.
+
+The actual merged-source **20-stage** acceptance below remains the runtime basis,
+not a fresh execution of this documentation-only closure. Compact original/local
+and publication evidence are retained separately. The shared root remains on its
+older checkout; its HEAD/index were preserved, and a documented concurrent
+owner's research update was neither restored nor included in this package.
+Only owned worktrees/branches/build scratch are eligible for retirement after the
+closure readback. No release, live-container replacement or hardware/bus action.
+
 ## 2026-10-11 — installation-node main integration accepted
 
 Owner-authorized feature `16e20a59` is integrated without fast-forward as

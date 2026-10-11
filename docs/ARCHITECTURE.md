@@ -1,5 +1,31 @@
 # Architecture
 
+## Login and notification detail ownership (2026-10-11 local source)
+
+The [login/feedback/size contract](contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md)
+keeps branding/build identity and bounded UI notification history in the web
+client. Exact browser-local IDs drive toast navigation; no text-based backend
+correlation is invented. The read-only detail view owns clipboard access;
+shared Overlay owns focus trapping and background isolation. Backend JSON log
+export remains v1 and server-only. Contribution raw admission
+is application-owned and shared by HTTP/CLI; multipart envelope/preflight and
+streamed upload publication stay in server adapters. Parser, disclosure and
+per-member budgets remain independent. No domain, storage or protocol change.
+
+## Local installation-node presentation (2026-10-11)
+
+[Main-integration acceptance](evidence/installation-node-publication-2026-10-11.json)
+is distinct from the initial local delivery and from release/deployment.
+
+[The installation-node contract](contracts/installation-node.md) keeps translated
+unnamed labels, selection and explanation in the UI. The existing command-backed
+installation rename service remains authoritative for admission, undo/redo and
+native persistence. Display labels never become imported names; the new UI-only
+selection discriminant is neither a domain ID change nor a schema migration.
+No new dependency, importer rule or protocol behavior. The shared simple name field
+blocks duplicate submissions and ignores superseded replies without claiming that
+server operations were canceled or that the legacy API is revision-conditional.
+
 ## Local import-integrity adapter repair (2026-10-10)
 
 [ADR-0107](adr/0107-import-source-integrity.md) and [the contract](IMPORT_INTEGRITY.md) bind ZIP reads to validated member identity, retain original XML, separate metadata provenance and record parser-owned lexical observations. Application code reuses persisted product diagnostics and baggage classification. Completion vocabulary requires a scalar-only schema12 refusal barrier; no UI/core coupling, new dependency or protocol capability. Local and unpublished; final acceptance remains separately recorded.
@@ -40,6 +66,12 @@ mutation boundary guards duplicate starts and late publication; existing applica
 commands remain authoritative. View state is transient, not a domain/project schema.
 No core/store/product/API/protocol/dependency change. Local delivery is not release
 or deployment.
+
+The [local DPT selection extension](contracts/dpt-selection.md) adds a versioned
+EN/DE display vocabulary independent of product/master text and codec support.
+The UI owns labels and native select options; exact stored references, effective
+program defaults and existing application commands remain authoritative. Field
+provenance is localized at presentation only. No domain/schema/database change.
 
 ## Offline AP1 diagnostics stay outside the execution planner (2026-10-09)
 

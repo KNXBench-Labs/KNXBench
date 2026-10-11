@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "scope": "installation-node main source integration; not a release or deployment",
+  "featureCommit": "16e20a59e2a63813e6c09758cb3769c68ba8887f",
+  "testedMergeCommit": "f0ce1b80c4b638115c2a9f3836f14853f6b8a8ca",
+  "upstreamMain": "8b4d249da981ae0d3437bdf7fb839bdc41a7043e",
+  "trackedInputCount": 1870,
+  "inputsFrozen": true,
+  "stages": [
+    {
+      "name": "npm-ci",
+      "exit": 0
+    },
+    {
+      "name": "frontend-tests",
+      "exit": 0
+    },
+    {
+      "name": "frontend-build",
+      "exit": 0
+    },
+    {
+      "name": "theme-types",
+      "exit": 0
+    },
+    {
+      "name": "flow-types",
+      "exit": 0
+    },
+    {
+      "name": "e2e-types",
+      "exit": 0
+    },
+    {
+      "name": "rust-format",
+      "exit": 0
+    },
+    {
+      "name": "workspace-tests",
+      "exit": 0
+    },
+    {
+      "name": "clippy",
+      "exit": 0
+    },
+    {
+      "name": "server-build",
+      "exit": 0
+    },
+    {
+      "name": "check-layering",
+      "exit": 0
+    },
+    {
+      "name": "check-headers",
+      "exit": 0
+    },
+    {
+      "name": "check-anchors",
+      "exit": 0
+    },
+    {
+      "name": "check-ledger",
+      "exit": 0
+    },
+    {
+      "name": "check-corpus-gates",
+      "exit": 0
+    },
+    {
+      "name": "documentation",
+      "exit": 0
+    },
+    {
+      "name": "whitespace",
+      "exit": 0
+    },
+    {
+      "name": "built-browser",
+      "exit": 0
+    },
+    {
+      "name": "full-browser",
+      "exit": 0
+    },
+    {
+      "name": "real-native-probe",
+      "exit": 0
+    }
+  ],
+  "frontend": {
+    "passed": 2635,
+    "failed": 0,
+    "files": 165
+  },
+  "rustWorkspace": {
+    "passed": 3946,
+    "failed": 0,
+    "ignored": 192,
+    "resultBlocks": 258
+  },
+  "builtChromium": {
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0
+  },
+  "fullChromium": {
+    "passed": 270,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0
+  },
+  "realProductionServerBrowserNativeChecks": 8,
+  "loopbackOnly": true,
+  "generatedWhitespaceRestored": [],
+  "review": "in-session self-review; no independent reviewer",
+  "privateOriginalImport": false,
+  "ignoredCorpusSweep": false,
+  "interactiveNativeOrca": false,
+  "release": false,
+  "liveDeployment": false,
+  "busOperations": false,
+  "initialNpmCacheRefusal": "setup-only failed attempt, archived separately before corrected source-identical retry",
+  "visualInspection": {
+    "propertiesFrames": 6,
+    "realProductionServerWorkbenchFrames": 1,
+    "widths": [
+      400,
+      1440
+    ],
+    "languages": [
+      "en",
+      "de"
+    ],
+    "palettes": [
+      "graphite",
+      "porcelain",
+      "user-modern-retro-green-crt"
+    ]
+  },
+  "publication": {
+    "state": "verified normal main push and exact local/tracking/live readback",
+    "verifiedPublicationCommit": "e2e425d8dd97ee8830c12e871ae31022b1f54fef",
+    "featureAncestorVerified": true,
+    "testedMergeAncestorVerified": true,
+    "acceptedInputContentsReadBack": 1863,
+    "metadataBlobsReadBack": 8,
+    "rootSynchronization": false,
+    "scope": "main source only; later documentation closure preserves runtime inputs"
+  }
+}

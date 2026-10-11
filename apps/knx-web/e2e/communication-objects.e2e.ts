@@ -57,7 +57,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     expect(alignment.every(delta => delta < 1)).toBe(true);
     const editor = panel.locator('[data-object-id="1"] summary');
     await editor.scrollIntoViewIfNeeded(); await editor.focus(); await page.keyboard.press("Enter");
-    await expect(panel.locator('[data-editor-id="1"] input[placeholder="DPST-9-1"]')).toBeVisible();
+    await expect(panel.locator('[data-editor-id="1"] .dpt-field select')).toBeVisible();
     const badgeHeight=await panel.locator('[data-editor-id="1"] .provenance-badge').first().evaluate(n=>n.getBoundingClientRect().height);
     expect(badgeHeight, "provenance badges must not stretch to the flag editor height").toBeLessThan(40);
     if (process.env.KNX_CO_CAPTURE_DIR && theme === (width === 1440 ? "graphite" : "porcelain"))
@@ -73,9 +73,9 @@ test("blur saves exactly once and a refused editor survives filtering and view c
   const panel = page.locator(".com-table-panel");
   await panel.getByRole("button", { name: en["comTable.flat"], exact: true }).click();
   await panel.locator('[data-object-id="1"] summary').click();
-  const editor = panel.locator('[data-editor-id="1"] input[placeholder="DPST-9-1"]');
+  const editor = panel.locator('[data-editor-id="1"] .dpt-field select');
   const before = JSON.stringify(state.tree); state.refuseDpt = true;
-  await editor.fill("invalid");
+  await editor.focus(); await editor.selectOption("DPST-9-2");
   // Focusing the search field triggers the existing input blur-save gesture.
   await panel.getByRole("searchbox").fill("Object 2");
   await expect(panel.locator('[data-editor-id="1"] .field-error')).toHaveText("Fictional refusal");
@@ -91,8 +91,8 @@ test("committed DPT re-evaluates the filter without losing the editing exception
   const panel = page.locator(".com-table-panel");
   await panel.getByRole("combobox", { name: en["comTable.dptFilter"] }).selectOption("family:1");
   await panel.locator('[data-object-id="1"] summary').click();
-  const editor = panel.locator('[data-editor-id="1"] input[placeholder="DPST-9-1"]');
-  await editor.fill("DPST-5-1"); await editor.press("Tab");
+  const editor = panel.locator('[data-editor-id="1"] .dpt-field select');
+  await editor.focus(); await editor.selectOption("DPST-5-1"); await editor.press("Tab");
   await expect(panel.locator('[data-object-id="1"]')).toContainText(en["comTable.editException"]);
   await expect(editor).toHaveValue("DPST-5-1");
   expect(state.requests.filter(r => r === "POST /api/com-object-dpt")).toHaveLength(1);

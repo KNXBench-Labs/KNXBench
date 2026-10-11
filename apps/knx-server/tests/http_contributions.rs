@@ -265,6 +265,23 @@ async fn all_contribution_routes_use_existing_session_guard() {
     }
 }
 
+struct OversizedHintBody;
+impl http_body::Body for OversizedHintBody {
+    type Data = axum::body::Bytes;
+    type Error = std::convert::Infallible;
+    fn size_hint(&self) -> http_body::SizeHint {
+        http_body::SizeHint::with_exact(
+            (knx_app::contribution::MAX_INPUT_BYTES + 16 * 1024 + 1) as u64,
+        )
+    }
+    fn poll_frame(
+        self: std::pin::Pin<&mut Self>,
+        _: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
+        panic!("oversized body must be refused before polling its bytes")
+    }
+}
+
 #[tokio::test]
 async fn analysis_refuses_malformed_and_oversized_input_with_client_errors() {
     let app = knx_server::app(Arc::new(knx_server::AppState::default()), None);
@@ -275,12 +292,91 @@ async fn analysis_refuses_malformed_and_oversized_input_with_client_errors() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     assert_eq!(response.headers()["cache-control"], "no-store");
-    let bytes = vec![0; knx_app::contribution::MAX_INPUT_BYTES + 1];
-    let response = app
-        .oneshot(upload("/api/contributions/analyze", &bytes, None))
+    // Advertised oversized length must be refused before polling or allocation.
+    let request = Request::builder()
+        .method("POST")
+        .uri("/api/contributions/analyze")
+        .header(
+            "content-type",
+            "multipart/form-data; boundary=evidence-boundary",
+        )
+        .header(
+            "content-length",
+            (knx_app::contribution::MAX_INPUT_BYTES + 16 * 1024 + 1).to_string(),
+        )
+        .body(Body::new(OversizedHintBody))
+        .unwrap();
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+}
+
+#[tokio::test]
+async fn input_above_32_mib_reaches_analysis_preview_and_consented_reduced_export() {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    zip.start_file(
+        "large.xml",
+        SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored),
+    )
+    .unwrap();
+    let chunk = [b' '; 64 * 1024];
+    for _ in 0..33 * 16 {
+        zip.write_all(&chunk).unwrap();
+    }
+    let source = zip.finish().unwrap().into_inner();
+    assert!(source.len() > 32 * 1024 * 1024);
+    let state = Arc::new(knx_server::AppState::default());
+    let app = knx_server::app(state.clone(), None);
+    for (uri, options) in [
+        ("/api/contributions/analyze", None),
+        (
+            "/api/contributions/preview",
+            Some(r#"{"audience":"public","sampleIds":[],"consent":false}"#),
+        ),
+        (
+            "/api/contributions/export",
+            Some(r#"{"audience":"public","sampleIds":[],"consent":true}"#),
+        ),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(upload(uri, &source, options))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{uri}");
+        assert_eq!(response.headers()["cache-control"], "no-store");
+        let bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap();
+        if uri.ends_with("analyze") {
+            let report: Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(report["sourceSize"], source.len());
+            assert_eq!(report["status"], "partial");
+            assert_eq!(report["originalAllowed"], false);
+            assert_eq!(report["members"][0]["sampleAllowed"], false);
+        } else if uri.ends_with("export") {
+            let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).unwrap();
+            assert_eq!(zip.len(), 3);
+            assert!(zip.by_name("original/source.knxprod").is_err());
+        }
+    }
+    assert!(state.project.lock().unwrap().is_none());
+    assert!(state.product_db.is_none());
+}
+
+#[tokio::test]
+async fn oversized_options_are_refused_by_the_field_limit_without_state_mutation() {
+    let state = Arc::new(knx_server::AppState::default());
+    let options = " ".repeat(8193);
+    let response = knx_server::app(state.clone(), None)
+        .oneshot(upload(
+            "/api/contributions/preview",
+            &package(),
+            Some(&options),
+        ))
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    assert!(state.project.lock().unwrap().is_none());
 }
 
 #[tokio::test]

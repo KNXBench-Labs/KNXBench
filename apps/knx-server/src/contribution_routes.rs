@@ -1,7 +1,8 @@
 //! Own-instance contribution analysis; no AppState mutation or outbound client.
 use crate::{errors::ApiError, SharedState};
 use axum::{
-    extract::{DefaultBodyLimit, Multipart},
+    extract::{multipart::Field, DefaultBodyLimit, Multipart},
+    response::IntoResponse,
     routing::post,
     Extension, Json, Router,
 };
@@ -9,18 +10,34 @@ use knx_app::contribution::{self, Analysis, AnalysisError};
 use std::sync::Arc;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
+const MAX_FORM_BYTES: usize = contribution::MAX_INPUT_BYTES + 16 * 1024;
+
 pub fn contribution_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/contributions/analyze", post(analyze))
         .route("/api/contributions/export", post(export))
         .route("/api/contributions/preview", post(preview))
-        .layer(DefaultBodyLimit::max(
-            contribution::MAX_INPUT_BYTES + 16 * 1024,
-        ))
+        .layer(DefaultBodyLimit::max(MAX_FORM_BYTES))
         .layer(Extension(Arc::new(Semaphore::new(1))))
         .layer(axum::middleware::from_fn(
             |req: axum::extract::Request, next: axum::middleware::Next| async move {
-                let mut response = next.run(req).await;
+                // A declared oversize is rejectable before receiving/buffering bytes.
+                // Missing or understated lengths still meet the streaming body/field guards.
+                let oversized = req
+                    .headers()
+                    .get(axum::http::header::CONTENT_LENGTH)
+                    .and_then(|value| value.to_str().ok())
+                    .and_then(|value| value.parse::<u64>().ok())
+                    .is_some_and(|length| length > MAX_FORM_BYTES as u64);
+                let mut response = if oversized {
+                    ApiError::with_status(
+                        axum::http::StatusCode::PAYLOAD_TOO_LARGE,
+                        "contribution form exceeds 1024 MiB input plus 16 KiB multipart allowance",
+                    )
+                    .into_response()
+                } else {
+                    next.run(req).await
+                };
                 response.headers_mut().insert(
                     axum::http::header::CACHE_CONTROL,
                     axum::http::HeaderValue::from_static("no-store"),
@@ -29,6 +46,37 @@ pub fn contribution_routes() -> Router<SharedState> {
             },
         ))
 }
+const MAX_OPTIONS_BYTES: usize = 8 * 1024;
+
+fn checked_field_size(current: usize, additional: usize, limit: usize) -> Result<usize, ApiError> {
+    current
+        .checked_add(additional)
+        .filter(|size| *size <= limit)
+        .ok_or_else(|| {
+            ApiError::with_status(
+                axum::http::StatusCode::PAYLOAD_TOO_LARGE,
+                format!("contribution field exceeds its {limit}-byte limit"),
+            )
+        })
+}
+
+/// Bound each field while receiving it; never buffer then clone an entire upload.
+async fn read_field(mut field: Field<'_>, limit: usize) -> Result<Vec<u8>, ApiError> {
+    let mut bytes = Vec::new();
+    while let Some(chunk) = field
+        .chunk()
+        .await
+        .map_err(|e| ApiError::with_status(e.status(), "invalid or oversized contribution field"))?
+    {
+        checked_field_size(bytes.len(), chunk.len(), limit)?;
+        bytes
+            .try_reserve(chunk.len())
+            .map_err(|_| ApiError::internal("contribution input allocation failed"))?;
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(bytes)
+}
+
 async fn source(
     mut form: Multipart,
 ) -> Result<
@@ -50,13 +98,7 @@ async fn source(
             if options.is_some() {
                 return Err(ApiError::bad_request("duplicate options field"));
             }
-            let bytes = field
-                .bytes()
-                .await
-                .map_err(|e| ApiError::with_status(e.status(), "invalid contribution options"))?;
-            if bytes.len() > 8 * 1024 {
-                return Err(ApiError::bad_request("contribution options exceed 8 KiB"));
-            }
+            let bytes = read_field(field, MAX_OPTIONS_BYTES).await?;
             options = Some(
                 serde_json::from_slice(&bytes)
                     .map_err(|_| ApiError::bad_request("invalid contribution options"))?,
@@ -67,16 +109,8 @@ async fn source(
             return Err(ApiError::bad_request("exactly one file field is required"));
         }
         let filename = field.file_name().unwrap_or_default().to_owned();
-        let bytes = field.bytes().await.map_err(|e| {
-            ApiError::with_status(e.status(), "invalid or oversized contribution file")
-        })?;
-        if bytes.len() > contribution::MAX_INPUT_BYTES {
-            return Err(ApiError::with_status(
-                axum::http::StatusCode::PAYLOAD_TOO_LARGE,
-                "contribution file exceeds 32 MiB",
-            ));
-        }
-        result = Some((filename, bytes.to_vec()));
+        let bytes = read_field(field, contribution::MAX_INPUT_BYTES).await?;
+        result = Some((filename, bytes));
     }
     result
         .map(|(filename, bytes)| (filename, bytes, options))
@@ -168,6 +202,23 @@ async fn export(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn field_size_limits_are_inclusive_and_overflow_safe_without_large_allocations() {
+        let limit = knx_app::contribution::MAX_INPUT_BYTES;
+        assert_eq!(limit, 1024 * 1024 * 1024);
+        assert_eq!(
+            super::checked_field_size(limit - 1, 1, limit).unwrap(),
+            limit
+        );
+        assert!(super::checked_field_size(limit, 1, limit).is_err());
+        assert!(super::checked_field_size(usize::MAX, 1, limit).is_err());
+        assert_eq!(
+            super::checked_field_size(0, super::MAX_OPTIONS_BYTES, super::MAX_OPTIONS_BYTES)
+                .unwrap(),
+            8192
+        );
+        assert!(super::checked_field_size(8192, 1, super::MAX_OPTIONS_BYTES).is_err());
+    }
     #[tokio::test]
     async fn worker_limit_refuses_instead_of_queuing_more_analyses() {
         let limit = std::sync::Arc::new(tokio::sync::Semaphore::new(1));

@@ -23,10 +23,10 @@ use crate::errors::ApiError;
 use crate::paths::{is_reserved_entry, resolve_in_data_dir};
 use crate::SharedState;
 
-/// Files up to 256 MiB are streamed into a staging file (GitHub #1).
+/// Files up to 1024 MiB are streamed into a staging file (GitHub #1).
 /// Keep the multipart envelope separately bounded, rather than charging its
 /// headers/boundaries against the advertised file ceiling.
-const MAX_UPLOAD_BYTES: usize = 256 * 1024 * 1024;
+const MAX_UPLOAD_BYTES: usize = 1024 * 1024 * 1024;
 const MULTIPART_OVERHEAD_BYTES: usize = 16 * 1024;
 const DOWNLOAD_CHUNK_BYTES: usize = 64 * 1024;
 
@@ -100,7 +100,7 @@ fn multipart_error(e: axum::extract::multipart::MultipartError) -> ApiError {
 fn upload_too_large() -> ApiError {
     ApiError::with_status(
         axum::http::StatusCode::PAYLOAD_TOO_LARGE,
-        "upload exceeds the 256 MiB file limit or multipart envelope allowance; use a server-mounted file for larger projects",
+        "upload exceeds the 1024 MiB file limit or multipart envelope allowance; use a server-mounted file for larger projects",
     )
 }
 

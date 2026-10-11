@@ -119,8 +119,8 @@ backend. Source originals never belong in public issues or Git history.
 
 ## Limits (independent from normal-import policies)
 
-- Raw input: 1 byte–32 MiB; HTTP multipart overhead allowance 16 KiB; options 8 KiB.
-- Validated inventory: at most 4096 members and 64 MiB total declared expanded bytes.
+- Raw input: 1 byte–1024 MiB (local 2026-10-11 package); HTTP multipart overhead allowance 16 KiB; options 8 KiB.
+- Validated inventory: at most 4096 members and 1024 MiB total declared expanded bytes (local 2026-10-11 package).
 - Structural XML: at most 8 MiB/member, depth 128, 200,000 events, 10,000 distinct
   shapes, 1024-byte individual names/namespaces, 16 KiB ancestor path and 8 MiB
   cumulative shape-copy work. Failure is partial, never measured zero.
@@ -133,6 +133,11 @@ backend. Source originals never belong in public issues or Git history.
 - One active HTTP analysis/preview/export worker per router. Further requests
   receive 429, not an unbounded queue. A cancelled request's blocking worker
   retains its permit until completion. Response bodies use `Cache-Control: no-store`.
+
+The [login/feedback/size contract](contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md)
+records admission boundaries, retained lower safety limits and source/deployment
+separation. Larger raw sources still yield partial coverage when individual XML
+or typed-import guards refuse examination; originals remain withheld then.
 
 These are conservative analysis-policy limits, not measured whole-corpus
 compatibility or a process RSS guarantee. No normal importer budget/schema gate

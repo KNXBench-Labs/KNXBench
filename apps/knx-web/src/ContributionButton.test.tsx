@@ -27,6 +27,24 @@ async function choose(name = "sample.knxprod") {
   Object.defineProperty(input, "files", { configurable: true, value: [new File(["source"], name)] });
   await act(() => input.dispatchEvent(new Event("change", { bubbles: true })));
 }
+it.each([33 * 1024 * 1024, 1024 * 1024 * 1024])("admits a %i-byte source without uploading on selection", async (size) => {
+  await render();
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+  const file = new File(["source"], "sample.knxprod"); Object.defineProperty(file, "size", { value: size });
+  Object.defineProperty(input, "files", { configurable: true, value: [file] });
+  await act(() => input.dispatchEvent(new Event("change", { bubbles: true })));
+  expect(button("Upload & analyze on this instance").disabled).toBe(false);
+  expect(api.analyzeContribution).not.toHaveBeenCalled();
+});
+it.each([0, 1024 * 1024 * 1024 + 1])("refuses a %i-byte source with the actual 1024 MiB limit", async (size) => {
+  await render();
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+  const file = new File(["source"], "sample.knxprod"); Object.defineProperty(file, "size", { value: size });
+  Object.defineProperty(input, "files", { configurable: true, value: [file] });
+  await act(() => input.dispatchEvent(new Event("change", { bubbles: true })));
+  expect(button("Upload & analyze on this instance").disabled).toBe(true);
+  expect(document.querySelector('[role="alert"]')?.textContent).toContain("1024 MiB");
+});
 it("shows local ordered procedure provenance without offering bus execution", async () => {
   const node = (name: string) => ({ namespace: "http://knx.org/xml/project/20", name, attributes: {}, children: [], text: "", byteStart: 10, byteEnd: 20 });
   const source = { source: "program", sha256: "a".repeat(64), namespace: "http://knx.org/xml/project/20" };

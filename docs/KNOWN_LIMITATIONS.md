@@ -1,5 +1,17 @@
 # Known limitations
 
+## Local installation-node UI boundary (2026-10-11)
+
+[Fresh main-integration acceptance](evidence/installation-node-publication-2026-10-11.json)
+supersedes local-only availability, not the operation/compatibility bounds below.
+
+[The focused contract](contracts/installation-node.md) makes unnamed nodes readable
+and selectable with command-backed name editing. This is local source, not an
+Alpha.8 artifact update. The existing installation rename API remains a legacy,
+non-revision-conditional endpoint; ignoring a superseded UI reply does not undo
+or cancel a server operation. No installation create/delete/move capability,
+fresh private ETS import, ETS export or native screen-reader acceptance is added.
+
 ## Alpha.8 release snapshot (2026-10-10)
 
 [Alpha.8 notes](releases/alpha8.md) and the
@@ -62,6 +74,20 @@ rules. [Acceptance and rejected attempts](status/2026-10-10-import-expansion-ver
 are local evidence only; no commit, integration, release or deployment is implied.
 
 ## Communication-object table scope (2026-10-09)
+
+The [local 2026-10-11 DPT selection extension](contracts/dpt-selection.md) names
+454 standard IDs in EN/DE without needing installed master data. This is a
+versioned display vocabulary, **not** additional codec/device support or a
+manufacturer database. Main-only/unknown/imported values remain exact selectable
+values; no subtype/name is invented for them. Additional UI language packs use
+English labels. Raw master-text language/fallback remains separately disclosed;
+these authored labels are not claimed as official KNX translations. Chromium
+checks do not establish native WebKitGTK/Orca, ETS or hardware compatibility.
+The owner-authorized main integration is accepted on `e57e3a09ff34` and
+published at `ab7db1ae7991`; the
+[source/publication receipt](evidence/dpt-selection-publication-2026-10-11.json)
+records the separately verified merged-source and remote-readback evidence. The extension stays
+outside the Alpha.8 release snapshot and existing live container.
 
 The local UI table keeps all object summaries mounted for stable editor identity;
 editing forms mount lazily when first opened. The synthetic 1,000-object measurement
@@ -9291,7 +9317,9 @@ smoke-tested on its build runner only, not on a Raspberry Pi.
 
 ## 169. Browser uploads remain bounded and return navigation reloads the editor
 
-**Limitation.** The source fix for GitHub #1/#2 accepts files up to 256 MiB
+**Local supplement, 2026-10-11.** The [login/feedback/size contract](contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md) raises streamed upload and contribution raw admission to 1024 MiB, with a separate 16 KiB envelope. Contribution expanded inventory also admits 1024 MiB, but XML scans stay at 8 MiB/member, normal project members at 64 MiB, manufacturer raw input at 256 MiB and selective source integration at 64 MiB. Large input admission does not prove complete scanning, compatible import or bounded peak RSS. This source package does not update existing release/container artifacts.
+
+**Limitation.** The original source fix for GitHub #1/#2 accepts files up to 256 MiB
 with a separate 16 KiB multipart-envelope allowance and streams into a staging
 file. Larger HTTP uploads receive 413; a reverse proxy may impose a smaller
 limit. Server-mounted files bypass HTTP admission, not the unchanged importer
@@ -9307,6 +9335,12 @@ main webview; no new real-desktop focus acceptance is claimed.
 
 **Why.** The old 100 MiB request ceiling rejected legitimate larger uploads.
 Browser `Window.focus()` offers no guaranteed foregrounding or acknowledgment.
+The local notification-history/detail supplement is memory-only and capped at
+1000 UI records, independently of the server log. An evicted toast target is
+reported, not matched by text. Clipboard permission is platform-dependent; raw
+JSON can be selected/copied manually. JSON log export stays server-only v1 and
+does not claim to include the UI history. Login version identifies the built
+frontend, not a queried remote server or newest release.
 The [contract](contracts/DOCKER_UPLOAD_AND_RETURN.md) records primary references
 and preserves bounded admission, no-clobber publication and source-bound Flow
 selection independently of explicit return.

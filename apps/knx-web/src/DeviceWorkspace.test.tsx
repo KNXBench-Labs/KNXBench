@@ -266,7 +266,7 @@ it("shows DPT provenance, canonical ids and function text without editing the pr
   expect(rows[2].textContent).toContain("DPST-999-999");
   expect(rows[3].textContent).toContain("—");
   await act(async () => { rows[1].querySelector("summary")!.click(); });
-  expect(host.querySelector<HTMLTableRowElement>('[data-editor-id="2"]')!.querySelector<HTMLInputElement>('input[placeholder="DPST-9-1"]')?.value).toBe("");
+  expect(host.querySelector<HTMLTableRowElement>('[data-editor-id="2"]')!.querySelector<HTMLSelectElement>('.dpt-field select')?.value).toBe("");
   const typed: DeviceDetail["com_objects"][number] = objects[0];
   expect(typed.activation).toBe("Active"); // TS must see the generated contract, not only this fixture.
   expect(typed.program_dpt).toBeNull();

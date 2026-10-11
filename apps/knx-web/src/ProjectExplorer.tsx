@@ -17,6 +17,7 @@ import type { DeviceWizardTarget } from "./deviceWizardPlacement";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 import { writeDraggedGroupAddress } from "./groupAddressDrag";
+import { installationLabel } from "./installationPresentation";
 
 const DEVICE_DRAG_MIME = "application/x-knxbench-device-id";
 
@@ -68,6 +69,7 @@ const RevealCompletionContext = createContext<((generation: number) => void) | u
 
 function TreeNode(props: {
   label: string;
+  description?: string;
   children?: React.ReactNode;
   selected?: boolean;
   onSelect?: (e: React.MouseEvent) => void;
@@ -116,6 +118,7 @@ function TreeNode(props: {
           ref={labelRef}
           type="button"
           className={labelClasses.join(" ")}
+          title={props.description}
           data-crt-surface="tree"
           data-rename-kind={props.renameKind}
           data-rename-id={props.renameId}
@@ -904,10 +907,15 @@ function InstallationItem(
     && installation.group_addresses.some((address) => address.id === requestedSelection.id);
   const groupRangesReveal = requestedSelection?.kind === "group_range"
     && installation.group_ranges.some((range) => range.id === requestedSelection.id);
-  const installationReveals = topologyReveals || buildingsReveal || unassignedReveal
+  const installationReveals = selectionIs(props.revealRequest, "installation", installation.id)
+    || topologyReveals || buildingsReveal || unassignedReveal
     || groupAddressesReveal || groupRangesReveal;
   return (
-    <TreeNode label={installation.name} revealGeneration={revealGeneration(props.revealRequest, installationReveals)}>
+    <TreeNode label={installationLabel(t, installation)}
+      description={`${t("installation.description")} ${t("installation.selectHint")}`}
+      selected={selection?.kind === "installation" && selection.id === installation.id}
+      onSelect={() => onSelect({ kind: "installation", id: installation.id })}
+      revealGeneration={revealGeneration(props.revealRequest, installationReveals)}>
       <TreeNode label={t("explorer.topology")} revealGeneration={revealGeneration(props.revealRequest, topologyReveals)}>
         {installation.topology.map((a) => (
           <AreaItem

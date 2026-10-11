@@ -14,6 +14,147 @@ AP2 remains in progress: validated application write services/API and actual
 isolated editor/browser delivery are separate. No source mutation, ETS export,
 full compatibility claim, hardware or Secure implementation.
 
+## 2026-10-11 — login, notification details and size limits accepted on main integration
+
+Published on main with exact remote readback of `e476626e2eb5`.
+This publication is distinct from release/deployment and shared-root synchronization.
+
+Owner explicitly authorized feature commit, merge commit and push. Feature
+`5c59f6d29905`, tested merge `d075b7cca880` onto `ab7db1ae7991`
+retain the previously integrated installation-node, import-banner and DPT work.
+Fresh-main documentation `0fd7a8655f17` is reconciled in
+`cdfd1345f0ac` without runtime changes; additive conflicts retain both
+contributions and the full upstream handover.
+[Acceptance/publication receipt](evidence/login-feedback-publication-2026-10-11.json)
+separates tested source, metadata reconciliation and remote verification.
+
+Actual source-frozen 18-stage acceptance: Web2665/0 in168 files;
+workspace Rust3954/0/192ignored; complete intercepted Chromium294/0 and
+production-built Chromium24/0, both with zero skips/flaky cases.
+Production build, theme/flow/E2E types, formatter, workspace strict Clippy,
+five explicit-root repository gates, documentation and whitespace pass.
+26 actual merged-production EN/DE1440/400 Graphite/Porcelain frames inspected.
+Review is in-session self-review, not independent approval.
+The initial Chromium socket-path launch failure remains a separate failed
+attempt; short task-owned temp path, actual launch probe and complete rerun
+passed with no application code change. No ignored/private-corpus execution,
+native clipboard/Orca/vendor/ETS/hardware/release/live-container claim.
+Shared root's foreign documentation edits are not staged or synchronized.
+Earlier local acceptance below remains historical evidence of its own source.
+
+## 2026-10-11 — login identity, actionable notifications and larger source admission
+
+- Login reuses the bundled KNXBench mark and shows the frontend package version
+  without querying an authenticated version endpoint, including expiry/sign-out.
+- Toast actions open the exact browser-local log occurrence. A bounded, disclosed
+  1000-record UI history survives popup dismissal; missing targets are reported.
+- Server/UI log messages open read-only raw details with exact message/full JSON
+  copying, selectable text and manual Ctrl+C fallback. Existing backend-only
+  JSON-v1 export and native/server retention provenance remain unchanged.
+- Analyze/Evidence source admission and streamed upload now allow 1024 MiB;
+  declared inventory totals use the same ceiling. XML/member/manufacturer,
+  selective-import, configuration and reduced-public-output guards remain bounded.
+- Verified Web2629/0 in 165 files, production-built Chromium24/0 and full
+  intercepted Chromium268/0 (no skips/flaky cases), production build, explicit
+  E2E TypeScript and strict Clippy. Scoped Rust application201/0, server-lib290/0,
+  upload/contribution HTTP22/0 and CLI5/0 checks pass. Browser checks are synthetic,
+  loopback-only and include two genuine hover REDs followed by corrected GREENs.
+  Review is in-session self-review, not independent approval.
+- See the [feature and size contract](contracts/LOGIN_FEEDBACK_AND_FILE_LIMITS.md)
+  for verified synthetic cases and retained limits. This is a local source package,
+  not a release, deployment, native UI or real vendor/archive/bus acceptance.
+
+## 2026-10-11 — DPT dropdown published on main after merged-source acceptance
+
+Owner explicitly authorized feature commit/no-ff main merge/push. Feature
+`fd5306dd5ede`, actual tested merge `e57e3a09ff34` onto `8505dc96831d` retain
+the published installation-node, download-radio and import-banner packages.
+Two additive documentation conflicts preserve both contributions; UI merges
+were re-reviewed, not copied wholesale. Actual frozen1878-input,19-stage
+acceptance passes: Web2648/0 in167 files,
+Rust3946/0/192ignored,
+complete intercepted Chromium274/0/0skipped,
+production-built communication suite23/0/0skipped.
+Build/three type scopes/fmt/strict Clippy/five explicit-root repository gates/docs/
+whitespace pass. Four actual merged-build EN/DE1440/400 frames inspected;
+source hashes/HEAD unchanged. [Publication receipt](evidence/dpt-selection-publication-2026-10-11.json)
+records source binding and verified normal main publication `ab7db1ae7991`.
+Local/tracking/live refs and feature/source ancestry/owned blobs were read back;
+later closure changes documentation only. Self-review only.
+No ignored/private-corpus sweep, unmocked-server/native/Orca/ETS/hardware claim;
+Alpha.8/live container and shared-root checkout are not replaced/synchronized.
+Original local results below remain historical, not relabelled as merged evidence.
+
+## 2026-10-11 — local EN/DE DPT selection and field provenance
+
+Owner-requested UI extension in `fix/dpt-labels-20261011`, base `9298242c`.
+[Contract](contracts/dpt-selection.md): native select instead of free text,
+454 versioned authored EN/DE labels (453 overview IDs plus249.600), primary
+localized table/exact-filter/search labels and field-owned source explanations.
+Imported unknown/main-only/alias references remain exact selected values; empty
+project values do not save program defaults merely by rendering/focusing.
+Existing blur/Enter, application validation and per-object mutation lifetime remain.
+No Rust/API/DTO/model/native/product-database/protocol/dependency changes.
+
+Named UI/search/narrow-width/source-ownership RED controls preceded corrections.
+Final Web2625/0 in166 files, production build/explicit E2E types, built offline
+Chromium23/0/0 skipped and four inspected EN/DE1440/400 frames pass. Complete
+intercepted Chromium252/0/0 skipped, focused layout10/0 and separate built native
+ArrowDown/Enter1/0 pass on final frozen source;507 frontend inputs remain unchanged.
+Five fresh explicit-root repository gates/docs/whitespace pass. First full-browser
+attempt was externally interrupted at420 seconds with no aggregate verdict;
+second run250/2 exposed legacy single-line assertions after master-text prefixes.
+The corrected token-level no-character-wrap assertions keep exactly two facts;
+actual complete rerun252/0 supersedes that failed run. Keyboard probe initially
+refused its preview cwd before case execution; corrected explicit-cwd1/0 accepted.
+Self-review only; no unmocked server, native WebKitGTK/Orca, ETS or hardware claim.
+Local/uncommitted/unpublished; main integration/release/container deployment separate.
+
+## 2026-10-11 — installation-node source published on main
+
+Normal main push and fresh readback verify publication `e2e425d8`, containing
+feature `16e20a59` and tested no-ff merge `f0ce1b80`. Local integration, fetched
+`origin/main` and the exact live main ref were equal. All **1863 unchanged accepted
+input contents** and **8 metadata blobs** match the delivered source; the Git
+symlink target and its resolved input content are checked separately.
+Required KNXBench identities and absence of co-author trailers are verified.
+
+The actual merged-source **20-stage** acceptance below remains the runtime basis,
+not a fresh execution of this documentation-only closure. Compact original/local
+and publication evidence are retained separately. The shared root remains on its
+older checkout; its HEAD/index were preserved, and a documented concurrent
+owner's research update was neither restored nor included in this package.
+Only owned worktrees/branches/build scratch are eligible for retirement after the
+closure readback. No release, live-container replacement or hardware/bus action.
+
+## 2026-10-11 — installation-node main integration accepted
+
+Owner-authorized feature `16e20a59` is integrated without fast-forward as
+`f0ce1b80` on published-main base `8b4d249d`. Both additive documentation histories
+and the already published import/download UI fixes are retained. Actual committed
+merge-source acceptance: **2635 frontend tests / 165 files**, **3946 Rust workspace
+tests / 0 failed / 192 ignored**, **270 full intercepted Chromium cases** and
+**6 production-built installation cases**, zero browser failures/skips/retries.
+A real isolated production-server/browser/native probe passes **8 checks**,
+including rename, exact unnamed Undo/Redo, blank refusal and native Save/Open
+following browser edits. No real gateway discovery is allowed by the browser probe.
+
+All **20 stages** exit zero: build, three TypeScript configurations, Rust format,
+strict workspace/all-target Clippy, fresh server/xtask builds, five nonempty
+explicit-root repository gates, documentation, whitespace and runtime checks.
+All **1870 tracked inputs** remain frozen; generated binding trailing whitespace
+was checked for semantic equality before restoring exact committed bytes. Six
+final EN/DE wide/narrow Graphite/Porcelain/CRT Properties frames and the actual
+server CRT workbench frame are inspected. Review is in-session self-review.
+
+[Source-bound receipt](evidence/installation-node-publication-2026-10-11.json).
+The initial isolated-HOME npm cache refusal occurred before application tests
+and remains a separately archived setup failure, not an accepted pass.
+This entry records accepted main integration; verified normal-push readback is
+recorded in the subsequent closure entry. No release, deployment, private-original
+import, ignored corpus sweep, native WebKitGTK/Orca or bus/hardware acceptance.
+Earlier local source entries remain historical.
+
 ## 2026-10-11 — import status published on main
 
 Owner-requested import status feature `df868c7a` is published on `main` as
@@ -80,6 +221,41 @@ explicit new-spec TypeScript check passed. Browser APIs were intercepted in a
 loopback-only namespace; no live bus operation or hardware acceptance.
 Self-review only. Local source on `fix/device-download-layout-20261011`, based
 on `9298242c`; uncommitted/unpublished, not included in deployed artifacts.
+
+## 2026-10-11 — local installation nodes get a nameplate and editable Properties
+
+- Owner-requested local UI repair in `fix/installation-node-20261011`, based on
+  `9298242c`. Empty/whitespace-only installation names receive translated,
+  stable-ID display labels; imported names/IDs remain unchanged. Label selection
+  opens explanatory Properties with the existing command-backed name edit;
+  arrows still toggle the subtree. Selected-installation add-device scope remains
+  explicit. [Focused contract](contracts/installation-node.md) and
+  [manual](manual/user-guide/02-projects.md#installation-nodes-and-their-names).
+- Named RED controls precede label/selection/editor, placement and unrelated
+  snapshot draft-preservation repairs. The shared simple name field blocks
+  duplicate pending writes, supports Escape/refusal/blank feedback and ignores
+  superseded replies without pretending the server operation was canceled.
+- Final frontend **2633 passed / 0 failed in 165 files**; production build,
+  theme/flow/explicit E2E type checks pass. Full intercepted Chromium **254/0/0
+  skipped**; six additional production-built EN/DE 1440/400 Graphite/Porcelain/CRT
+  cases pass, with all final frames inspected. Existing Core multi-installation
+  **10/0** and HTTP route **2/0** pass; fresh-target server and xtask build pass.
+- A real production-server/browser probe in a loopback-only namespace passes
+  **eight** checks: exact unnamed Undo, Redo, blank refusal without mutation,
+  scoped name change, native Save/Open, and native reopen after actual browser
+  rename/Undo/Redo. No bus discovery reaches hardware; all storage roots are owned
+  and isolated. Six final Properties frames and the final real CRT workbench are
+  inspected. In-session self-review, not independent approval.
+- Five nonempty explicit-root repository checks, documentation and whitespace
+  pass. After the completed frozen runtime chain, only one source comment and
+  one test description were corrected; final full frontend/build/types reran,
+  and **all 90 built files match the runtime-tested artifact byte-for-byte**.
+  The ignored receipts retain both source manifests and exact equivalence proof.
+- Local/uncommitted/unpublished; no main integration, Alpha.8 replacement,
+  deployment, fresh private ETS import or native WebKitGTK/Orca claim. The legacy
+  installation rename endpoint remains non-revision-conditional, explicitly
+  documented. Source and built frontend remain in the owned worktree; compact
+  evidence stays under `.ai/logs/2026-10-11_codex_installation-node/`.
 
 ## 2026-10-11 — local collector delivery and scoped measurement contract
 

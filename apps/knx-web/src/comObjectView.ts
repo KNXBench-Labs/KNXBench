@@ -2,6 +2,7 @@
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ComObjectChannel } from "./bindings/ComObjectChannel";
 import { groupAddressSpellings } from "./gaNotation";
+import { dptDisplay } from "./dptLabels";
 export type ComSortColumn = "number" | "name" | "function" | "dpt" | "addresses" | "status" | "channel";
 export interface ComFilters { query: string; status: string; link: "all" | "linked" | "unlinked"; dpt: string }
 export interface ComSort { column: ComSortColumn | null; descending: boolean }
@@ -47,6 +48,7 @@ export function deriveComObjectView(objects: ComObjectNode[], filters: ComFilter
   const filtered = objects.filter(o => {
     const channel = evaluatedChannel(o);
     const fields = [String(o.number), o.name, o.function_text, effectiveDpt(o), o.dpt_text,
+      effectiveDpt(o) === null ? null : dptDisplay(effectiveDpt(o), language),
       channel?.text, channel?.name, channel?.number, ...o.links.flatMap(l => [l.name, ...(l.address === null ? [] : groupAddressSpellings(l.address))])];
     const descriptionMatch = !!needle && contains(o.description) && !fields.some(contains);
     if (descriptionMatch) descriptionMatches.add(o.id);

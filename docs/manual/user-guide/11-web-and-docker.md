@@ -147,11 +147,14 @@ Now `./data` on your host is `/data` in the container. Removing the container wi
 
 In the browser build, opening a project that is not already inside `/data` means
 uploading it. In current source, uploads land in `<data dir>/uploads` and accept
-files up to **256 MiB**, with a separate 16 KiB multipart-envelope allowance.
+files up to **1024 MiB** in the local 2026-10-11 source package, with a
+separate 16 KiB multipart-envelope allowance.
 The server streams into a temporary file and publishes only complete uploads;
 a duplicate name is refused rather than overwritten. Oversized requests receive
 HTTP 413 with an explicit limit. **The published alpha.6 image still has the
-100 MiB request ceiling**. Alpha.7 includes the 256 MiB streamed-upload fix.
+100 MiB request ceiling**. Alpha.7/Alpha.8 include the earlier 256 MiB
+streamed-upload fix, not this local 1024 MiB package. No running container is
+replaced by a source edit.
 
 For larger files, place the archive in the mounted data directory and choose it
 with the server file picker. A reverse proxy may impose its own smaller limit.
@@ -299,6 +302,10 @@ published version such as `0.1.0-alpha.8`. For an existing Linux host-network se
 keep `--network host` and `-e KNX_PORT=8484` (or your chosen port) instead of `-p`,
 as explained in [Networking](#networking). Do not change network scope during an
 image update by accidentally copying a different example.
+
+The login page shows the KNXBench logo and the built frontend package version
+before authentication, including after expiry or sign-out. It is not a remote
+server-version query or a promise that a cached frontend is the newest release.
 
 ## Authentication
 

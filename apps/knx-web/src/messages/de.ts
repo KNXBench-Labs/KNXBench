@@ -19,6 +19,8 @@
 import type { MessageKey } from "./en";
 
 export const messages: Record<MessageKey, string> = {
+  "diagnostics.importReportUnavailable": "Historischer Importbericht nicht verfügbar",
+  "diagnostics.nativeImportReportUnavailableExplanation": "Beim nativen Öffnen wird der historische Importbericht nicht wiederhergestellt. Die ETS-Kompatibilität wird nicht erneut geprüft; Nullzähler bedeuten nicht null Probleme. Angezeigte Befunde gehören zur aktuellen Sitzung.",
   "selectiveImport.button": "Ausgewählte Linien/Geräte importieren…",
   "selectiveImport.title": "In das geöffnete Projekt importieren",
   "selectiveImport.intro": "Wähle Geräte oder ganze Linien. Bestehende Geräte und Adressen werden niemals still überschrieben. Es erfolgen keine Bus-Aktionen.",
@@ -112,7 +114,10 @@ export const messages: Record<MessageKey, string> = {
   "projectHistory.clearTitle": "Undo- und Redo-Verlauf leeren?",
   "projectHistory.clearWarning": "Das aktuelle Projekt und alle Projektversionen bleiben erhalten. Frühere Undo-/Redo-Schritte werden endgültig entfernt. Ungespeicherte Änderungen gelten dadurch nicht als gespeichert.",
   "projectHistory.confirmClear": "Undo und Redo leeren",
-  "projectHistory.limits": "Grenzen: {steps} Undo-/Redo-Stände, {versions} Versionen, {image} MiB je gespeichertem Datenabbild und {total} MiB insgesamt. Nichts wird automatisch gekürzt.",
+  "projectHistory.limits": "Grenzen: {steps} Undo-/Redo-Stände, {versions} Versionen, {image} MiB je gespeichertem Modellabbild und {total} MiB insgesamt. Nichts wird automatisch gekürzt.",
+  "projectHistory.contextLimit": "Grenze für geteilten Quellkontext: {context} MiB gespeichert.",
+  "projectHistory.decodedLimit": "Grenze für dekodierte Abbilder: {decoded} MiB je Abbild.",
+  "projectHistory.decodedHistoryLimit": "Grenze für die gesamte dekodierte History: {decoded} MiB; geteilter Kontext zählt einmal.",
   "projectHistory.nearLimit": "Der Verlauf nähert sich einer Grenze. Entferne nicht mehr benötigte Versionen ausdrücklich oder leere Undo/Redo, bevor er voll ist.",
   "projectHistory.selected": "Ausgewählt: {name}",
   "projectHistory.reason.save": "Vorheriger gespeicherter Stand",

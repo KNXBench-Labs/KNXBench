@@ -37,6 +37,13 @@ pub struct ProjectTree {
     /// a later cycle, this is the count that says something is worth
     /// looking at).
     pub warnings: usize,
+    /// Whether baseline import diagnostics are available in this session. False
+    /// marks unavailable historical import evidence, not a compatibility pass;
+    /// counters may still contain current-session findings. Pure projections
+    /// omit this; native open does not reimport or recompute.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub import_report_available: Option<bool>,
     /// Always `false` straight out of [`build_project_tree`] — this crate
     /// never sees a `CommandStack`. The desktop shell overlays the real
     /// value from its own `CommandStack` after every command/undo/redo.
@@ -301,6 +308,7 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
         schema_version: project.schema_version,
         errors: 0,
         warnings: 0,
+        import_report_available: None,
         can_undo: false,
         can_redo: false,
         is_modified: false,

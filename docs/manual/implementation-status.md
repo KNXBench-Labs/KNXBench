@@ -7,7 +7,7 @@ does not exist at all, area by area across the whole application.
 
 The detailed inventory retains its **8 October 2026** source audit and dated
 follow-ups. The current public snapshot is
-[`v0.1.0-alpha.8`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.8),
+[`v0.1.0-alpha.9`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9),
 not a promise that every later source feature is bundled.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
@@ -15,6 +15,19 @@ anything has reached a finish line.
 The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
+
+## Alpha.9 release boundary (11 October 2026)
+
+[`v0.1.0-alpha.9`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9)
+packages frozen source `5b21323e`, including published import/native-history,
+DPT, installation navigation, login/message and download-layout repairs.
+Native/model **schema13** requires independent native/Docker backups; Alpha.8
+and earlier refuse upgraded files. Instruction/parameter components remain
+unmounted production-workbench foundations, not advertised usable editors.
+[Release notes](../releases/alpha9.md) and [artifact verification](../evidence/release-alpha9-2026-10-11.json)
+separate the tag from later `main`, browser fixtures from native UI evidence,
+and preservation from ETS/hardware certification. Later parallel/local packages
+are not included, and existing containers are not automatically replaced.
 
 ## Device-download layout (2026-10-11 local source)
 

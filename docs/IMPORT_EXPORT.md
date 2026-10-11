@@ -1,5 +1,19 @@
 # Import and export
 
+## Alpha9 release persistence boundary (11 October 2026)
+
+[Alpha9](releases/alpha9.md) packages native/model13 and bounded large-history
+repairs from frozen `5b21323e`. Back up native projects and Docker data before
+upgrading: Alpha8 and earlier refuse upgraded files. Exact imported originals
+remain distinct from native instruction overlays; no `.knxproj` exporter or
+new manufacturer/hardware support is introduced. The instruction editor is not
+mounted in the production workbench. [The release receipt](evidence/release-alpha9-2026-10-11.json)
+records fresh local preservation gates and actual published-image predecessor12
+open/save/reopen to13, with projected working content and both history stacks
+available. The original synthetic fixture stayed unchanged; this does not
+convert an old release into a downgrade reader.
+
+
 ## Native instruction persistence foundation (2026-10-11)
 
 Native project storage13 persists normalized device instruction overrides

@@ -15,8 +15,12 @@
   tests, five recipe regressions, five release-workflow and twelve documentation
   checker regressions pass. Five fresh explicit-root repository gates and
   documentation checks pass. No private-corpus, live-bus or new release claim.
-- Container-image build/default-listener/host-network smoke acceptance is
-  a separate follow-up; the existing user container is not replaced.
+- Actual committed-tree Docker build passes. Image metadata uses 8484/tcp;
+  an isolated no-override container answers health on 8484 and stops with exit 0.
+  The real host-network HTTPS smoke passes authentication, native save/reopen
+  and cleanup on a separate test port. Existing user-container identity/start/PID
+  is unchanged. [Source-bound verification](evidence/server-deployment-defaults-2026-10-12.json).
+  Published Alpha.9 is unchanged; no live gateway/ETS/private-corpus run.
 
 ## 2026-10-12 — Bounded offline literal naming recipe
 

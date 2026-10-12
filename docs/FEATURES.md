@@ -1,4 +1,4 @@
-Last updated: 2026-10-10 00:01 CEST
+Last updated: 2026-10-12 13:41 CEST
 
 # KNXBench Features
 
@@ -105,6 +105,7 @@ Last updated: 2026-10-10 00:01 CEST
 | Notifications | Status/errors/achievements | alpha.6 |
 | Achievements | Recorded engineering milestones | alpha.6 |
 | Optional humour | Error/night/holiday messages | alpha.6 |
+| Project notes | Notebook view; review-first edits | Main-only |
 
 ## Implemented — Server and monitoring
 
@@ -157,7 +158,6 @@ Last updated: 2026-10-10 00:01 CEST
 | --- | --- | --- |
 | Site grouping | Several installations | Unscheduled |
 | Selective import | Single lines/devices | Unscheduled |
-| Project notes | Project-local annotations | Unscheduled |
 | Task automation | Macros/templates/scheduling | Unscheduled |
 | Dashboard navigation | Count-to-detail drill-down | Unscheduled |
 | Parameter widgets | Time/colour/picture/slider editors | Unscheduled |

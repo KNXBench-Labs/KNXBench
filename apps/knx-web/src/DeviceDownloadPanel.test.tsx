@@ -133,10 +133,13 @@ function button(label: string, scope: ParentNode = host!): HTMLButtonElement {
   return found;
 }
 
+// Devices are chosen by stable id; tests name them by their address label.
 async function choose(address: string) {
-  const select = host!.querySelector("select")!;
+  const select = host!.querySelector<HTMLSelectElement>("select[data-download-device]")!;
+  const option = [...select.options].find((o) => o.textContent?.startsWith(`${address} — `));
+  if (!option) throw new Error(`no device option for ${address}`);
   await act(async () => {
-    select.value = address;
+    select.value = option.value;
     select.dispatchEvent(new Event("change", { bubbles: true }));
   });
 }
@@ -188,8 +191,8 @@ it("says what a download is, and needs a project", async () => {
 
 it("offers only devices that have an individual address", async () => {
   await render();
-  const options = [...host!.querySelectorAll("option")].map((o) => o.value);
-  expect(options).toEqual(["", "1.1.3", "1.1.67"]);
+  const options = [...host!.querySelectorAll<HTMLOptionElement>("select[data-download-device] option")].map((o) => [o.value, o.textContent]);
+  expect(options).toEqual([["", en["deviceDownload.chooseDevice"]], ["11", "1.1.3 — Actuator"], ["10", "1.1.67 — Push button 2-fold"]]);
 });
 
 it("shows the plan before anything is sent", async () => {

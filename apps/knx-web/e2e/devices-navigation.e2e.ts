@@ -163,7 +163,7 @@ for (const panel of ["download", "address", "checks", "scan"] as const) {
     await page.locator(".diagnostic-navigation").getByRole("button", { name: en["toolbar.busMonitor"], exact: true }).click();
     const labels = { download: en["deviceDownload.title"], address: en["addressProgramming.tab"], checks: en["deviceChecks.tab"], scan: en["lineScan.title"] };
     await page.locator(".bus-diagnostics-tabs").getByRole("button", { name: labels[panel], exact: true }).click();
-    if (panel === "download") await page.locator(".device-download-config select").selectOption("1.1.2");
+    if (panel === "download") await page.locator(".device-download-config select[data-download-device]").selectOption({ label: "1.1.2 — Actuator 1" });
     if (panel === "address") await page.locator('.address-programming-config input[name="address"]').fill("1.1.2");
     const selector = { download: ".device-download-panel .device-link", address: ".address-programming-panel .device-link",
       checks: ".device-checks-readiness .device-link", scan: ".line-scan-results .device-link" }[panel];

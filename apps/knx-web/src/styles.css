@@ -2012,6 +2012,60 @@ main {
   gap: 8px;
 }
 
+/* Gateway choice: the shared search's answer, a manual field and a note on
+   where the value came from. Full width like the scope fieldset. */
+.device-download-gateway {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 8px 12px;
+  align-items: end;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+}
+.device-download-gateway legend { padding-inline: 4px; color: var(--knx-muted); font-size: 12px; }
+.device-download-gateway label { min-width: 0; }
+.device-download-gateway input,
+.device-download-gateway select { box-sizing: border-box; width: 100%; min-width: 0; }
+.device-download-gateway-status,
+.device-download-gateway-note,
+.device-download-gateway .bus-discovery-detail { grid-column: 1 / -1; margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.device-download-gateway-note { color: var(--knx-muted); }
+.device-download-gateway .device-download-search { justify-self: start; }
+.device-download-handoff { grid-column: 1 / -1; margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+
+/* The five steps: compact, the next open step marked, hints only where
+   something is missing or worth knowing. */
+.device-download-guide {
+  padding: 12px 14px;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  min-width: 0;
+}
+.device-download-guide h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 14px; }
+.device-download-guide ol { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.device-download-guide li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  padding: 4px 8px;
+  border-left: 3px solid transparent;
+  min-width: 0;
+}
+.device-download-guide li[aria-current="step"] { border-left-color: var(--knx-accent); }
+.device-download-guide-name { font-weight: 600; overflow-wrap: anywhere; }
+.device-download-guide-state { color: var(--knx-muted); font-size: 12px; white-space: nowrap; }
+.device-download-guide li[data-guide-state="done"] .device-download-guide-state { color: var(--knx-success-color, var(--knx-muted)); }
+.device-download-guide-hint { grid-column: 1 / -1; color: var(--knx-muted); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.device-download-guide-note { margin: 8px 0 0; color: var(--knx-muted); font-size: 12px; }
+
+/* "Download to device…" in the device editor's heading. */
+.device-download-entry { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.device-download-entry small { color: var(--knx-muted); font-size: 12px; }
+
 .device-download-plan,
 .device-download-progress {
   display: grid;

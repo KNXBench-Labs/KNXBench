@@ -16,3 +16,4 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 | [PRODUCT_ZIP_LARGE_PROFILE](PRODUCT_ZIP_LARGE_PROFILE.md) | Measured profile behind the large-package CLI opt-in (KL-151, ADR-0082) |
 | [SERVICE_CONTROL_BACKUP](SERVICE_CONTROL_BACKUP.md) | Property-only service-control backup format |
 | [COMMISSIONING_ACTIVITY_HISTORY](COMMISSIONING_ACTIVITY_HISTORY.md) | Durable commissioning activity history |
+| [RELEASE_NOTIFICATIONS](RELEASE_NOTIFICATIONS.md) | Published GitHub release discovery, semantic version admission, notification-only UX and network/privacy bounds |

@@ -112,6 +112,14 @@ selection to inspect.
 
 Click a toast’s message action to open **Log**, jump to its exact retained
 UI notification and show details. The separate × still only dismisses the toast.
+
+Newer source also has update notifications: **Release details on GitHub** opens
+that release page, while the message action still opens the notification record.
+**File → About KNXBench…** retains update information and offers manual checking;
+**Settings → Updates** controls automatic checks. This is not in the published
+Alpha.9 shown in the screenshots. See
+[Release notifications](09-settings-and-appearance.md#release-notifications-newer-source-not-alpha9).
+
 Click any log message for **Message details**: **Copy message** copies its raw
 message and **Copy all details** copies the full JSON record. You can select
 the read-only text and use Ctrl+C; if clipboard permission is refused, the

@@ -8,6 +8,14 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-12 06:43 CEST
+- **Completed:** Session6c2d7da635e0 owner documentation follow-up: checked existing release-notification docs on fresh maincefb940ef2bc6514b4aa180fa20707dd9e8b5cea; README and Settings reader route had omissions, FAQ falsely denied all update checks. Added bounded source-only README notice, complete Settings usage/privacy/retry instructions, separate UI release-link explanation and docs/contracts hub links; FAQ now covers existing startup discovery/default-on GitHub requests versus no usage telemetry. Existing installation/manual-status/ADR/architecture/limitations/evidence retained. Docs-only acceptance:12checker regressions,265Markdown/3212targets/55images/33chapters,541anchors/five nonempty fresh explicit-root repository gates/whitespace all pass; source self-review only.
+- **Pending/Next Steps:** Scoped reader-documentation repair and docs-only checks complete; delivery requires final normal publication/readback. No runtime or feature work remains in this follow-up. Immutable Alpha9 remains without the feature; no release/deployment is authorized. Other owner queues unchanged.
+- **Notes for Codex oder Claude:** Own docs/update-notification-readers-6c2d7da635e0 fromcefb940ef2bc6514b4aa180fa20707dd9e8b5cea; reader scope README,docs/README,contracts/README,manual Settings/UI/FAQ plus status/handover. Existing functional source55384982/metadata05a53d64 and evidence unchanged. No shared-root sync/staging, quota/subagents/private corpus/KNX/vendor actions. Keep complete inherited journal and preserve all concurrent publications.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-12 05:45
 - **Completed:** Earlier isolated notes leaf already published/read back main5c131140, compact private archive verified/own inactive builds cleaned. AP3 follow-up reads actual public Parameters/release/module bodies: bound type article ends HTTP200 id.knx.org/login HTML, not definition; Color string/object bug boundary and SDK module definition-vs-instance collections do not authorize codecs or independent XML mapping. Current direct Static source join, Color/Picture literal unsupported-codec and module-scope source/tests inspected. Exact docs-only ownership declared; source/DB/model/protocol/shared UI unchanged.
 - **Pending/Next Steps:** Fresh focused ProductDB17/0/no ignores, isolated selector/component21/0/2files and all10 docs/repository stages accepted/frozen at a27c8724, unchanged runtime/source fingerprint verified. Public compact follow-up evidence added; final docs-only successor gates and normal publication/readback/archive pending. PDB04 stays LATER, missing authorized lexical/native/resource type contracts external, module mapping still independent/unresolved. Continue AP5 FUTURE02 offline recipe, AP6 FUTURE01 opt-in MCP writes and AP7 FUTURE05 catalogues; Session1 host remains separate.

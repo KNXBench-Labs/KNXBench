@@ -1064,6 +1064,41 @@ main {
   cursor: pointer;
 }
 
+/* ADR-0118: previewed catalogue update beside the direct install. */
+.catalog-update { display: grid; gap: 0.5rem; margin-bottom: 0.75rem; min-width: 0; }
+.catalog-update .catalog-update-open { margin-bottom: 0; }
+.catalog-update-preview {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-input);
+  background: var(--knx-surface);
+  min-width: 0;
+}
+.catalog-update-preview h2 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+.catalog-update-preview p { margin: 0; }
+.catalog-update-hash code { overflow-wrap: anywhere; word-break: break-all; }
+.catalog-update-programs { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; }
+.catalog-update-programs li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; min-width: 0; }
+.catalog-update-programs code, .catalog-update-program-detail { overflow-wrap: anywhere; color: var(--knx-muted); font-size: 0.85em; }
+.catalog-update-status {
+  padding: 0 0.4rem;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-input);
+  font-size: 0.8em;
+}
+.catalog-update-status--new { border-color: var(--knx-success-color); color: var(--knx-success-color); }
+.catalog-update-status--newVersion { border-color: var(--knx-accent); color: var(--knx-accent); }
+.catalog-update-status--alreadyInstalled { color: var(--knx-muted); }
+.catalog-update-warning { color: var(--knx-warning-color); }
+.catalog-update-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.catalog-backups summary { cursor: pointer; }
+.catalog-backup-list { margin: 0.5rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; }
+.catalog-backup-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.6rem; min-width: 0; }
+.catalog-backup-name { overflow-wrap: anywhere; word-break: break-all; font-size: 0.85em; }
+.catalog-backup-meta { color: var(--knx-muted); font-size: 0.85em; }
+
 .catalog-report {
   font-size: 0.85rem;
   opacity: 0.8;

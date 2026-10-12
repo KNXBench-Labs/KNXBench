@@ -699,6 +699,32 @@ the below-viewport explanation. Review is in-session self-review. Full durable
 report persistence, early write preflight and the remaining functional matrix
 are not claimed complete. No deployment, ETS parity, vendor execution, bus action
 or shared-root synchronization is included.
+## 2026-10-11 — local read-only modeled project information
+
+Application-owned bounded projection of existing ProjectInfo scalars exposes
+ID/name/number, style/completion, stored UTC dates, distinct model/ETS schemas
+and the recorded legacy DPT scalar. It does not decode raw metadata or introduce
+a writer/schema. Null and explicitly empty numbers remain distinct; model status
+is not fresh hardware/permission evidence and stored dates are not last-save time.
+Authenticated no-store GET and explicit source-bound EN/DE Dashboard view retain
+literal text/whitespace, suppress stale replies and disclose privacy/unmodeled
+scope. [Contract](contracts/modeled-project-metadata.md).
+
+Accepted locally on **1933 frozen inputs**: owning CLI/app/server/projection
+Rust **1311 passed / 0 failed / 100 explicitly ignored**;
+whole Web **2723 passed / 0 failed / 180 files**;
+built report/payload regressions **12 passed**, real-server export+metadata
+**8 passed**, both zero failures/skips/flakes. Strict owning Clippy, binaries/
+Web builds, explicit E2E types, five nonempty explicit-root repository checks and
+docs/fmt/whitespace pass. Genuine native Save As/reopen preserves modeled values;
+metadata reads leave actual native file bytes/open project unchanged. Four final
+full-panel EN/DE400/1440 frames assessed: all modeled labels, recorded-state/date/
+privacy caveats and literal script-like name readable, no horizontal clipping.
+Exact/cumulative/UTF-8 boundary controls and direct DOM whitespace fidelity pass.
+Companion pin adds only the pure validator; API/mutation inventories unchanged.
+Earlier pin-order failure remains historical. Source self-review; no private/
+vendor/bus execution, main integration/publication, release or deployment claim.
+
 ## 2026-10-11 — local reviewed native export privacy
 
 The actual web File-menu export now opens a DE/EN cancellation-first privacy

@@ -23,6 +23,10 @@ pub fn project_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/project", get(current_project))
         .route(
+            "/api/project/metadata",
+            get(crate::modeled_metadata_routes::current),
+        )
+        .route(
             "/api/project/payloads",
             get(crate::project_payload_routes::catalogue),
         )

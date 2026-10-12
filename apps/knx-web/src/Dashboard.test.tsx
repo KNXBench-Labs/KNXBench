@@ -35,6 +35,12 @@ describe("native import evidence availability", () => {
     expect(host.textContent).toContain("Show source report catalogue");
     expect(host.querySelectorAll(".source-report-panel button")).toHaveLength(1);
   });
+  it("offers explicit modeled-project inspection without automatically reading private metadata", () => {
+    act(() => root.render(<Dashboard tree={tree()} />));
+    expect(host.textContent).toContain("Show modeled project information");
+    expect(host.querySelectorAll('.project-metadata-panel button')).toHaveLength(1);
+    expect(host.querySelector('.project-metadata-panel dl')).toBeNull();
+  });
   it("offers explicit preserved-payload inspection without a primary report", () => {
     act(() => root.render(<Dashboard tree={{...tree(),import_report_available:false}} />));
     expect(host.textContent).toContain("Show retained payloads");

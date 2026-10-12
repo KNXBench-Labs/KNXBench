@@ -5,6 +5,14 @@ source-evidence slice is now implemented on published AP2/native13 main; it is
 not editor implementation, PDB-04 completion or compatibility acceptance.
 AP2 was published separately; its earlier source-bound receipts stay historical.
 
+## Public contract follow-up, 2026-10-12
+
+[Inspected source/access and module-scope qualification](../research/product-database.md#2026-10-12--ap3-colourpicture-contract-and-module-scope-follow-up)
+records actual public bodies and the bound type-definition login redirect.
+No Color/Picture codec or module mapping is admitted; the explicit fallback and
+existing source/validation/persistence authority remain unchanged. Missing
+authorized type definitions are an external input, not a completed editor.
+
 ## Verified source boundary, 2026-10-11
 
 The KNX Association's Project Schema23 v01.00.00, section1.1.3.19 on printed

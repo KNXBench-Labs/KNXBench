@@ -6,6 +6,48 @@ section index and the sources. Section numbers are global and stable;
 dated entries are newest first. Moved here verbatim from `RESEARCH.md` on
 2026-10-04 (AR14D D4); only relative links changed.
 
+## 2026-10-12 — AP3 colour/picture contract and module-scope follow-up
+
+- **[D]** Fresh anonymous retrieval of the official
+  [Parameters article](https://support.knx.org/hc/en-us/articles/4660580612754-Parameters)
+  binds its “Define Parameter Types” link to
+  [article360000129280](https://support.knx.org/hc/en-us/articles/360000129280).
+  Following that exact link ends at `id.knx.org/login`: HTTP200 is login HTML,
+  not a parameter definition. Its content was inspected, not accepted from the
+  status/title. No login, entitlement bypass or claim about required membership.
+- **[D]** The actually inspected official
+  [ETS6.3.1 release note](https://support.knx.org/hc/en-us/articles/24003597800722-ETS-v6-3-1)
+  distinguishes a Color parameter default represented as a string from a Color
+  object. This is a reported bug boundary, not an XML/native value grammar,
+  colour space/channel-order/range/alpha contract or serialization definition.
+  It supplies no Picture resource/MIME/size/path/value contract either.
+- **[D]** The inspected official
+  [ETS SDK modernization article](https://support.knx.org/hc/en-us/articles/360015340940-How-to-modernize-your-App)
+  distinguishes module definitions from device/module instances. Device-level
+  SDK collections do not aggregate module-owned instances; active module
+  changes may create/dispose their objects. **[A]** This supports requiring
+  actual instance/definition identity, but does not specify KNXBench's XML
+  join, repeated-instance arguments, active-scope mapping or a value codec.
+  Do not copy proprietary SDK collections into the independent domain model.
+- **[V]** Current `knx-productdb::parameter_editor_evidence` reads only exact
+  direct Static program/ref→parameter→type chains in namespaces20–23. Original
+  attributes/source identity stay preserved; module definitions are not treated
+  as another direct Static owner. The existing isolated selector explicitly
+  returns `module-scope` and `unsupported-codec` for Colour/Picture, with literal
+  original values and no colour/file/image resource control. Existing tests
+  cover those refusals, source conflicts and inert malicious-looking text.
+
+**External prerequisite, not completion:** supply an authorized type-definition
+body or public primary equivalent defining Color/Picture lexical and persisted
+values, resource bounds and exact module instance→definition interpretation.
+Discovery/no search hits, parameter names, DPT colour telegrams, browser colour
+controls and retained raw attributes are not substitutes. No independently
+verified codec was received here. PDB-04 remains LATER and its two specialized
+editors remain undelivered; module mapping is separately unresolved, not proved
+impossible by the login gate. Session1 mount, existing generic authority and
+prior Time/integer Slider/native evidence remain unchanged. No release, device,
+manufacturer execution or corpus compatibility claim.
+
 ## 2026-10-10 — Little-endian, UTF-8 fields and stored images remain research-bound
 
 [Public-source review](schema23-offline-boundaries.md) records the inspected

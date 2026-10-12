@@ -326,6 +326,37 @@ Both need an owner decision before removal.
 `web-params-20261012` is the active web-lock holder (package 3) and was not
 inspected.
 
+## Leftover branches and folders (sorted 2026-10-12)
+
+The user asked for these to be sorted as well. All four refs are kept in a
+verified local bundle outside the repository before deletion.
+
+| Item | Finding | Action |
+| --- | --- | --- |
+| `feature/history-20261009` (local) | Ancestor of main | Deleted (`branch -d`) |
+| `design/group-address-studies-aca414` (local) | Its 7 tool files are identical on main; main's `docs/design-studies/group-addresses.md` is the branch's file plus a later owner-decision section | Deleted (fully contained) |
+| `docs/hygiene-audit-20261011` (local) | Unpublished docs audit `2cda0d37` against main `0bed9e2a`; unique, but its corrections encode facts that have since moved again (model v13, "shell mount pending") | Bundled and deleted; stale claims recorded below instead of replaying old text |
+| `test/import-integrity-revalidation-20261010` (remote) | Ancestor of main; no open PR | Deleted with an expected-SHA lease |
+| `KNXBench.worktrees/co-publication-20261009`, `co-stats-20261009` | Empty directories | Removed |
+| `KNXBench.worktrees/xdg` | A single `mise` migration marker from 2026-10-06, no process using it | Copied to the backup, removed |
+
+Two further remote branches, `fix/docker-import-diagnostics-20261009` and
+`fix/import-status-20261011`, are also ancestors of main. They were not in the
+request and are left in place.
+
+**Stale claims still on main.** The hygiene audit corrected these on its own
+branch, but the corrections never reached main. Each one needs a fresh check
+against current source before rewording; the audit's old replacement text is
+not reliable:
+
+| File:line on `9152877c` | Claim | Why it is stale |
+| --- | --- | --- |
+| `KNOWN_LIMITATIONS.md:186` (private schema-23 review) | "The current importer does not yet import that project end to end" | Repaired by the [import-integrity integration](2026-10-10-import-integrity-integration.md) |
+| `KNOWN_LIMITATIONS.md:199` (selective import) | "Only normalized model v12 is admitted" | Native schema has since moved to 14; the admitted model version must be re-read from source |
+| `KNOWN_LIMITATIONS.md:906` (PDB-9) | "the editor does not use them yet (e.g. no slider, no hh:mm:ss duration …)" | Time/slider controls exist ([host contract](../contracts/parameter-editor-host.md)); web package 3 mounts them |
+| `DATA_MODEL.md:44` | "Application edit API and isolated editor acceptance remain separate and pending" | Instruction edit API and editor are published and mounted (web package 2) |
+| `OPEN_WORK.md:90`, `ROADMAP.md:40` | Audit basis "2026-10-08" | Page has been updated continuously since; the date reads as current |
+
 ## Observations
 
 - The ADR index (`docs/adr/README.md`) on main has no rows for 0110–0112. Those

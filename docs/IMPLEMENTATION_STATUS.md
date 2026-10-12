@@ -29,6 +29,38 @@ checks from future opt-in MCP permissions, verified operator/client-associated
 confirmation, actual client and native recovery acceptance. No existing MCP
 capability/read-only default or Core/format/native schema changed.
 
+## 2026-10-12 — Four group-address presentations
+
+The **Group addresses** workspace now offers four read-only presentations of the
+same data: an expandable **tree table** (default), a **column browser**, a semantic
+**address atlas** and a directional **connection matrix**. One controller owns
+search, data-state filter, range scope and a 500-row render window; App remains
+selection/Inspector/command authority, and every view hands its actual visible
+order to the existing shared selection handler. Editing is unchanged.
+
+- Shared model `groupAddressPresentation.ts`: stored GroupRange parent/membership
+  only (never numeric regrouping), stable occurrence keys, iterative cycle
+  detection, retained duplicate/missing/ambiguous/cyclic data reported as
+  findings; ambiguous IDs are visible but not selectable. Linear counting; a
+  10,000-level chain is a regression test.
+- Matrix `groupAddressMatrix.ts`: columns keyed by exact device/object pair,
+  every directional occurrence retained, unknown directions shown as `?`,
+  conflicting object ownership reported. Scope is stated: linked objects only.
+- View preference is an application setting (`groupAddressView`), not project
+  data. Project incarnation/installation changes reset local navigation; updates
+  drop deleted scopes/rows/columns.
+- Measured: a 5,000-address synthetic project took 6–7.5 s per view switch while
+  drawing every row (CDP profile: React commit/DOM); with the render window the
+  production preview switches in about 0.6–1.5 s (measured on one Linux host).
+- Self-review (no independent reviewer). Web 2,859 tests/0 failed in 187 files,
+  build, theme and flow fixture checks, the new production-preview browser gate
+  7/7 (EN/DE, light/dark, 1440/400 px, Three-level/Two-level/Free, 5,000
+  addresses), 32 existing related e2e tests and the loopback-isolated native rename
+  gate 4/4 against an actual built server; repository xtask gates pass. No bus,
+  ETS or private-corpus claim.
+  [Goal record](goals/group-address-four-views.md) ·
+  [Known limitations](KNOWN_LIMITATIONS.md#four-group-address-presentations-2026-10-12).
+
 ## 2026-10-12 — Port 8484 and Linux host-network deployment defaults
 
 - Standalone server fallback and Docker `ENV`/`EXPOSE` now use **8484**;

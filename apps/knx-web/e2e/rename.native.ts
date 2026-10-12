@@ -76,8 +76,10 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const navigation = page.getByRole("navigation", { name: m["workbench.navigation"], exact: true });
     if (!await navigation.isVisible()) await page.locator(".workbench-panel-controls").getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
     await navigation.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
-    await expect(page.locator(".address-table tbody tr")).toHaveCount(105);
-    const gaRow = page.locator(".address-table tbody tr").first();
+    // Range heading rows share the tbody since the tree-table view; count address rows only.
+    const gaRows = page.locator(".address-table tbody tr[data-rename-kind='group_address']");
+    await expect(gaRows).toHaveCount(105);
+    const gaRow = gaRows.first();
     const gaId = Number(await gaRow.getAttribute("data-rename-id"));
     const gaOriginal = await gaRow.locator("td:nth-child(3)").innerText();
     await gaRow.locator("td:nth-child(3)").click({ button: "right" });

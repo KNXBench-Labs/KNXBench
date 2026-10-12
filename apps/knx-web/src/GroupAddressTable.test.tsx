@@ -169,7 +169,7 @@ async function render(props: Parameters<typeof Harness>[0] = {}): Promise<Root> 
 }
 
 function row(address: string): HTMLTableRowElement {
-  const found = [...host!.querySelectorAll<HTMLTableRowElement>("tbody tr")].find((tr) =>
+  const found = [...host!.querySelectorAll<HTMLTableRowElement>("tbody tr[data-rename-kind='group_address']")].find((tr) =>
     tr.querySelector(".mono")?.textContent?.trim() === address,
   );
   if (!found) throw new Error(`no row for ${address}`);
@@ -289,18 +289,18 @@ it("filters rows by address, name and DPT", async () => {
   const root = await render();
   const filter = host!.querySelector<HTMLInputElement>(".address-filter")!;
   await act(async () => type(filter, "1/0/"));
-  expect(host!.querySelectorAll("tbody tr").length).toBe(4);
+  expect(host!.querySelectorAll("tbody tr[data-rename-kind='group_address']").length).toBe(4);
   await act(async () => type(filter, "ghost"));
-  expect([...host!.querySelectorAll("tbody tr")].map((tr) => tr.querySelector(".mono")?.textContent))
+  expect([...host!.querySelectorAll("tbody tr[data-rename-kind='group_address']")].map((tr) => tr.querySelector(".mono")?.textContent))
     .toEqual(["1/0/4"]);
   for (const query of ["Switch", "1.001"]) {
     await act(async () => type(filter, query));
-    expect([...host!.querySelectorAll("tbody tr")].map(tr => tr.querySelector(".mono")?.textContent))
+    expect([...host!.querySelectorAll("tbody tr[data-rename-kind='group_address']")].map(tr => tr.querySelector(".mono")?.textContent))
       .toEqual(["1/0/1", "1/0/2"]);
   }
   await act(async () => type(filter, "DPST-1-1"));
   // Only the two addresses whose linked objects state DPST-1-1 remain.
-  expect([...host!.querySelectorAll("tbody tr")].map((tr) => tr.querySelector(".mono")?.textContent))
+  expect([...host!.querySelectorAll("tbody tr[data-rename-kind='group_address']")].map((tr) => tr.querySelector(".mono")?.textContent))
     .toEqual(["1/0/1", "1/0/2"]);
   await act(async () => root.unmount());
 });
@@ -341,7 +341,7 @@ it("tells an empty filter result apart from a project with no group addresses", 
 
 it("restricts the rows to a scoped range and its nested ranges", async () => {
   const root = await render({ rangeScope: 20 });
-  const visible = [...host!.querySelectorAll("tbody tr")].map((tr) =>
+  const visible = [...host!.querySelectorAll("tbody tr[data-rename-kind='group_address']")].map((tr) =>
     tr.querySelector(".mono")?.textContent?.trim(),
   );
   // 1/0/1 and 1/0/2 sit in the nested "Ground floor" range, 1/0/4 directly

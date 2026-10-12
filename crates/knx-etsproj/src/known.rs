@@ -34,10 +34,24 @@ pub struct KnownSchema {
 pub fn known_schema(version: u32) -> Option<&'static KnownSchema> {
     match version {
         11 => Some(&SCHEMA_11),
+        20 => Some(&SCHEMA_20),
         21 => Some(&SCHEMA_21),
         23 => Some(&SCHEMA_23),
         _ => None,
     }
+}
+
+/// Whether `version` uses the ETS 5.7/ETS6 content model (`Locations/Space`,
+/// unprefixed `RefId`, `Links`, `GroupObjectTree`, `ModuleInstances`):
+/// schema 20 and every later version that has a table.
+pub(crate) fn uses_ets6_content_model(version: u32) -> bool {
+    version >= 20
+}
+
+/// Whether devices sit in a `Segment` below `Line` (schema 21 and later)
+/// rather than directly under `Line` (schemas 11 and 20).
+pub(crate) fn has_segment_level(version: u32) -> bool {
+    version >= 21
 }
 
 /// `DeviceInstance`'s attribute list and the shape of its subtree do not
@@ -751,6 +765,194 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
     ],
 };
 
+/// Schema 20 (ETS 5.7). Measured on three public ETS 5.7.1428 sample
+/// projects (xknxproject's GPL-2.0 test resources, inspected, not copied —
+/// docs/research/project-format.md §3.6): one plain, one ZipCrypto-protected,
+/// one module-based. Schema 20 already has every ETS6 value spelling
+/// (unprefixed `RefId`, `Links`, `true`/`false`, the flat
+/// `GroupObjectTree/@GroupObjectInstances`, `Locations/Space`), but no
+/// `Segment`: `DeviceInstance` sits directly under `Line`, which carries
+/// `MediumTypeRefId` itself. Hence this table is [`SCHEMA_23`] with the
+/// `Segment` level removed (pinned by a test), plus three attributes only
+/// the schema-20 samples showed. Entries the samples did not contain
+/// (`ProjectTraces`, `DeviceInstanceRef`, `BinaryData`, `Security`'s
+/// sequence attributes) are carried over from schema 23 by inference, the
+/// way [`SCHEMA_23`] itself inherits from schema 21. Secure key material
+/// (`ToolKey`, `Key`, `FDSK`, passwords) stays unknown on purpose: retained
+/// as uninterpreted source and reported (KNOWN_LIMITATIONS §8).
+pub const SCHEMA_20: KnownSchema = KnownSchema {
+    version: 20,
+    elements: &[
+        KnownElement {
+            path: "/KNX",
+            attributes: &["CreatedBy", "ToolVersion"],
+        },
+        KnownElement {
+            path: "/KNX/Project",
+            attributes: &["Id"],
+        },
+        KnownElement {
+            path: "/KNX/Project/ProjectInformation",
+            attributes: &[
+                "Name",
+                "GroupAddressStyle",
+                "LastModified",
+                "ProjectStart",
+                "Comment",
+                "LastUsedPuid",
+                "Guid",
+                "ProjectType",
+                "CompletionStatus",
+                "CodePage",
+                "ArchivedVersion",
+            ],
+        },
+        KnownElement {
+            path: "/KNX/Project/ProjectInformation/ProjectTraces",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/ProjectInformation/ProjectTraces/ProjectTrace",
+            attributes: &["Date", "UserName", "Comment"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation",
+            attributes: &["Name", "BCUKey", "DefaultLine", "IPRoutingLatencyTolerance", "CompletionStatus"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area",
+            attributes: &["Id", "Name", "Address", "Puid", "Description", "Comment", "CompletionStatus"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line",
+            // Measured: at schema 20 the medium is on `Line` itself.
+            attributes: &["Id", "Name", "Address", "Puid", "Description", "Comment", "CompletionStatus", "MediumTypeRefId"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance",
+            attributes: DEVICE_INSTANCE_ATTRS_21,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ParameterInstanceRefs",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ParameterInstanceRefs/ParameterInstanceRef",
+            attributes: PARAMETER_INSTANCE_REF_ATTRS,
+        },
+        KnownElement {
+            // Measured (Task 3): six of these in the ETS 6.3.0 reference
+            // project, never transcribed, so every one was classified as an
+            // unknown element and dropped on export. Wrapper form, no
+            // attributes of its own.
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/BinaryData",
+            attributes: &[],
+        },
+        KnownElement {
+            // The leaf form, same element name as its wrapper.
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/BinaryData/BinaryData",
+            attributes: BINARY_DATA_LEAF_ATTRS_21,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ComObjectInstanceRefs",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef",
+            attributes: COM_OBJECT_INSTANCE_REF_ATTRS_21,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ModuleInstances",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ModuleInstances/ModuleInstance",
+            attributes: &["Id", "RefId", "RepeatIndex"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ModuleInstances/ModuleInstance/Arguments",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ModuleInstances/ModuleInstance/Arguments/Argument",
+            attributes: &["RefId", "Value"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/GroupObjectTree",
+            attributes: &["GroupObjectInstances"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/GroupObjectTree/Nodes",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/GroupObjectTree/Nodes/Node",
+            // `Text` measured at schema 20.
+            attributes: &["Type", "RefId", "GroupObjectInstances", "Text"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/Security",
+            attributes: &["SequenceNumber", "SequenceNumberTimestamp"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Locations",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Locations/Space",
+            attributes: &["Id", "Name", "Number", "Type", "DefaultLine", "Puid", "Usage", "Description", "Comment", "CompletionStatus"],
+        },
+        KnownElement {
+            // Measured (Task 3): the ETS 6.3.0 reference project carries 35
+            // of these. Missing from the initial transcription, so every
+            // device-to-room assignment was classified as an unknown
+            // element, retained verbatim and then dropped on export. Same
+            // shape as schema 11's `Buildings/BuildingPart/DeviceInstanceRef`.
+            path: "/KNX/Project/Installations/Installation/Locations/Space/DeviceInstanceRef",
+            attributes: &["RefId"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange",
+            // `Description` measured at schema 20.
+            attributes: &["Id", "Name", "RangeStart", "RangeEnd", "Puid", "Description"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange/GroupAddress",
+            // `Central`/`Unfiltered` measured (Task 3) on the ETS 6.3.0
+            // reference project, spelled `"true"`/`"false"`. Without them
+            // here the parser never takes them, the model defaults both to
+            // `false`, and export writes an actively wrong value back —
+            // worse than leaving the attribute out.
+            attributes: &[
+                "Id",
+                "Name",
+                "Address",
+                "DatapointType",
+                "Description",
+                "Central",
+                "Unfiltered",
+                "Puid",
+            ],
+        },
+    ],
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -771,6 +973,60 @@ mod tests {
     #[test]
     fn an_unknown_schema_version_has_no_table() {
         assert!(known_schema(99).is_none());
+    }
+
+    /// Schema 20 (ETS 5.7) is schema 23's vocabulary without the `Segment`
+    /// level: `DeviceInstance` sits directly under `Line`, and the medium is
+    /// on `Line` (measured, docs/research/project-format.md §3.6).
+    #[test]
+    fn schema_20_is_schema_23_without_the_segment_level() {
+        let s20 = known_schema(20).expect("schema 20 has a table");
+        assert_eq!(s20.version, 20);
+        let expected: Vec<String> = SCHEMA_23
+            .elements
+            .iter()
+            .filter(|e| !e.path.ends_with("/Line/Segment"))
+            .map(|e| e.path.replace("/Line/Segment/", "/Line/"))
+            .collect();
+        let actual: Vec<&str> = s20.elements.iter().map(|e| e.path).collect();
+        assert_eq!(actual, expected);
+        let line = s20
+            .elements
+            .iter()
+            .find(|e| e.path.ends_with("/Topology/Area/Line"))
+            .unwrap();
+        assert!(line.attributes.contains(&"MediumTypeRefId"));
+    }
+
+    /// Secure material stays outside every known table: it is retained as
+    /// uninterpreted source and reported, never modelled (KNOWN_LIMITATIONS
+    /// §8). The schema-20 samples carry all of these.
+    #[test]
+    fn no_known_table_lists_secure_key_material() {
+        let secrets = [
+            "Key",
+            "ToolKey",
+            "FDSK",
+            "IPRoutingBackboneKey",
+            "Password",
+            "PasswordHash",
+            "ProjectPassword",
+            "DeviceAuthenticationCode",
+            "DeviceAuthenticationCodeHash",
+            "DeviceManagementPassword",
+            "DeviceManagementPasswordHash",
+        ];
+        for version in [11, 20, 21, 23] {
+            for element in known_schema(version).unwrap().elements {
+                for secret in secrets {
+                    assert!(
+                        !element.attributes.contains(&secret),
+                        "schema {version} lists {secret} on {}",
+                        element.path
+                    );
+                }
+            }
+        }
     }
 
     #[test]

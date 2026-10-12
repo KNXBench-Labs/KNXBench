@@ -23,7 +23,8 @@ feature/broad/final-browser evidence binds final runtime separately. Self-review
 only; Session1 production host remains open, FUTURE-03 LATER, no whole AP4,
 release/deployment/Tauri/Orca/hardware/ETS/report claim.
 [Host contract](contracts/project-note-editor-host.md) ·
-[Guidance and recovery](contracts/project-note-editor-guidance.md).
+[Guidance and recovery](contracts/project-note-editor-guidance.md) ·
+[Source-bound leaf evidence](evidence/project-notes-editor-leaf-2026-10-12.json).
 
 ## 2026-10-11 — GitHub release notifications
 

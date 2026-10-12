@@ -1,3 +1,32 @@
+## 2026-10-12 — Installation instructions in the device editor; drafts survive Save
+
+The instruction editor is the device editor's sixth tab, **Installation
+instructions** (`DeviceInstructionsPanel.tsx`). It mounts on the tab's first visit
+and then stays hidden, so a draft survives other tabs; the tree identity is mapped by
+the shared `snapshotIdentity.ts`, and an incomplete identity gives a new read-only
+mode of the leaf. Every Apply, no-op included, re-reads the project through the
+workbench's publication; a failed re-read is shown as "applied, reload failed". The
+instructions draft joins the notes draft in App's guard before Open/Import, New
+project, Quit and window close ([host](contracts/instruction-editor-host.md#workbench-host-12-october-2026)).
+
+Found on a real server: Save bumps the snapshot revision, so a dirty notes or
+instructions draft turned into a conflict whose only exit discarded it. Both leaves
+now re-read on a same-project revision change and keep the draft editable when the
+server content is unchanged; a real change still conflicts
+([limits](KNOWN_LIMITATIONS.md#installation-instructions-tab-and-save-proof-drafts-2026-10-12)).
+
+Test-first: read-only mode RED 2/14, host RED 0/7, tab RED 3/24, App guard RED
+without wiring, rebase RED in both leaves, each then GREEN; nine named guard mutants
+caught, sources restored. Gate on frozen `c83a2f26` (merged with `main` `2064fa59`),
+24 stages: 23 green — Web 2998/0 across 199 files, notes 11/11,
+instructions 11/11 and dialogs 14/14 on the production build, Rust 4145/0 with 194
+ignored, Clippy, fmt, bindings, docs and five explicit-root xtask gates. The full
+fixture browser stage had 379 passed and the same 4 pre-existing
+`device-editor-layout.e2e.ts` failures (raw `DPST-9-1`). Loopback-only real-server
+smokes: instructions (UI import of a synthetic RTF project, apply, Undo/Redo, Save As
+with a draft, genuine 409 refusal, restart, reopen) and notes (draft across Save).
+Self-review, not independent. [Evidence](evidence/device-instructions-host-2026-10-12.json).
+
 ## 2026-10-12 — Group-address members, gateway choice, device → download hand-off, step guide
 
 A group address's members (communication-object links, not devices) can be added

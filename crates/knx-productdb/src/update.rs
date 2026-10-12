@@ -359,7 +359,7 @@ pub fn restore_product_db_backup(path: &Path, backup: &Path) -> Result<(), Updat
     let version: i64 = source
         .query_row("PRAGMA user_version", [], |row| row.get(0))
         .map_err(invalid)?;
-    if version < 1 || version > CURRENT_PRODUCTDB_VERSION {
+    if !(1..=CURRENT_PRODUCTDB_VERSION).contains(&version) {
         return Err(UpdateError::InvalidBackup(format!(
             "product database version {version} is not between 1 and {CURRENT_PRODUCTDB_VERSION}"
         )));

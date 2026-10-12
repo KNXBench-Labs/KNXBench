@@ -9767,7 +9767,9 @@ copy is the workaround:
 EGL vendor, not on the reporter's machine or a Fedora/Ubuntu-26.04 class host.
 The CI startup smoke tests run on the build distribution, whose libraries match
 the bundle, so they cannot catch this class of mismatch. The host must now
-provide `libwayland-client.so.0`; every GTK3 desktop installs it. Other bundled
+provide `libwayland-client.so.0`; GTK3 with its Wayland backend (the default on
+major distributions) already depends on it, but a host without it cannot start
+the image. Other bundled
 GLib/GStreamer libraries could, in principle, conflict in the same way on
 future hosts; none has been observed. Ledger `KL-176`.
 

@@ -71,6 +71,18 @@ const AES_RAW_COMPRESSION_METHOD: u16 = 99;
 /// the enclosing `ZipArchive` was built from. `None` if the offset falls
 /// outside `payload` — treated as "not AES" by the caller, same as any
 /// other value that isn't 99.
+/// The container path of a member of a protected project's nested archive:
+/// `name` under `project_part/`, unless it is already there. Real ETS
+/// exports name the members bare (`0.xml`); the result is the path the same
+/// file has in an unprotected project (`P-0001/0.xml`).
+fn rooted_nested_name(project_part: &str, name: &str) -> String {
+    if name.starts_with(&format!("{project_part}/")) {
+        name.to_string()
+    } else {
+        format!("{project_part}/{name}")
+    }
+}
+
 fn raw_compression_method(payload: &[u8], header_start: u64) -> Option<u16> {
     let offset = usize::try_from(header_start).ok()?.checked_add(8)?;
     let bytes = payload.get(offset..offset.checked_add(2)?)?;
@@ -351,7 +363,7 @@ impl Container {
             })?;
             if !entry.is_dir() {
                 declared.push(EntryInfo {
-                    path: entry.name().to_string(),
+                    path: rooted_nested_name(&project_part, entry.name()),
                     size: entry.size(),
                 });
             }
@@ -375,11 +387,14 @@ impl Container {
             if entry.is_dir() {
                 continue;
             }
-            // The nested payload already stores paths rooted the same way
-            // the outer archive would for an unprotected project (e.g.
-            // `P-0001/Project.xml`, not bare `Project.xml`) — matches
-            // both this crate's fixture and real ETS output structure.
-            let entry_path = entry.name().to_string();
+            // Real ETS exports store the project files at the nested
+            // archive's root (`0.xml`, `project.xml`): measured in the
+            // public ETS4, ETS 5.7 and ETS6 protected samples (issue #7).
+            // They are re-rooted under the project part, the path an
+            // unprotected project uses, so everything downstream reads one
+            // layout. A name that is already rooted (`P-0001/0.xml`, the
+            // shape of the synthetic Info-ZIP fixture) is kept as is.
+            let entry_path = rooted_nested_name(&project_part, entry.name());
 
             if container.find(&entry_path).is_some() {
                 return Err(ContainerError::DuplicateEntry { path: entry_path });
@@ -1081,6 +1096,25 @@ mod tests {
     }
 
     #[test]
+    fn nested_member_names_are_rooted_under_the_project_part_once() {
+        assert_eq!(rooted_nested_name("P-0242", "0.xml"), "P-0242/0.xml");
+        assert_eq!(
+            rooted_nested_name("P-0242", "project.xml"),
+            "P-0242/project.xml"
+        );
+        assert_eq!(rooted_nested_name("P-0242", "P-0242/0.xml"), "P-0242/0.xml");
+        assert_eq!(
+            rooted_nested_name("P-0242", "BinaryData/a.dat"),
+            "P-0242/BinaryData/a.dat"
+        );
+        // Another part's prefix is not this part's root.
+        assert_eq!(
+            rooted_nested_name("P-0242", "P-02420/0.xml"),
+            "P-0242/P-02420/0.xml"
+        );
+    }
+
+    #[test]
     fn open_with_password_on_an_unprotected_project_behaves_like_open() {
         // Not-encrypted case: a password-aware open on a plain project
         // must succeed exactly as `Container::open` does, so a caller
@@ -1273,21 +1307,40 @@ mod tests {
 
     #[test]
     fn a_nested_entry_colliding_with_an_outer_path_is_refused_not_shadowed() {
-        // `knx_master.xml` is the realistic collision: the outer archive
-        // carries one and nothing stops a payload from carrying another.
-        let nested = zip_with_entries(&[("knx_master.xml", b"<KNX>nested</KNX>")]);
+        // Nested names are rooted under the project part (real ETS layout,
+        // issue #7), so the collision that matters is a bare nested `0.xml`
+        // meeting an outer `P-0001/0.xml`: one of the two would vanish.
+        let nested = zip_with_entries(&[("0.xml", b"<KNX>nested</KNX>")]);
         let bytes = zip_with_entries(&[
             ("P-0001.signature", b"x"),
-            ("knx_master.xml", b"<KNX>outer</KNX>"),
+            ("P-0001/0.xml", b"<KNX>outer</KNX>"),
             ("P-0001.zip", &nested),
         ]);
         let Err(err) = Container::open_with_password(bytes, "irrelevant") else {
             panic!("a duplicate path must not be accepted: one of the two would vanish");
         };
         assert!(
-            matches!(err, ContainerError::DuplicateEntry { ref path } if path == "knx_master.xml"),
+            matches!(err, ContainerError::DuplicateEntry { ref path } if path == "P-0001/0.xml"),
             "a colliding path must be named, not silently shadowed by whichever copy the \
              lookup happens to prefer. Got: {err:?}"
+        );
+    }
+
+    #[test]
+    fn a_bare_nested_master_file_cannot_shadow_the_outer_one() {
+        // Rooting puts a nested `knx_master.xml` at `P-0001/knx_master.xml`:
+        // both copies stay readable, neither replaces the other.
+        let nested = zip_with_entries(&[("knx_master.xml", b"<KNX>nested</KNX>")]);
+        let bytes = zip_with_entries(&[
+            ("P-0001.signature", b"x"),
+            ("knx_master.xml", b"<KNX>outer</KNX>"),
+            ("P-0001.zip", &nested),
+        ]);
+        let mut c = Container::open_with_password(bytes, "irrelevant").unwrap();
+        assert_eq!(c.read("knx_master.xml").unwrap(), b"<KNX>outer</KNX>");
+        assert_eq!(
+            c.read("P-0001/knx_master.xml").unwrap(),
+            b"<KNX>nested</KNX>"
         );
     }
 }

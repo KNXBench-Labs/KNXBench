@@ -139,18 +139,24 @@ The project identifier is recovered from the `P-*.signature` filename [V]. Signa
 
 Note the filename case difference: ETS4 writes `Project.xml`, ETS5/6 write `project.xml` [V — encoded in `xknxproject/zip/extractor.py`].
 
-### 2.2 Schema versioning [V for 11 and 23, D otherwise]
+### 2.2 Schema versioning [V for 11, 20, 21, 22 and 23; D otherwise]
 
 The schema version is the trailing integer of the default XML namespace, e.g. `http://knx.org/xml/project/11`. It must be read from the file, never assumed.
 
 | Namespace version | ETS generation |
 | --- | --- |
-| 11 | ETS 4.1 / 4.2 **[V]** |
+| 11 | ETS 4.1 / 4.2 **[V]** (4.1.8) |
 | 12 | ETS 4 **[D]** |
 | 13, 14 | ETS 5 up to 5.6 **[D]** |
-| 20 | ETS 5.7 **[D]** |
-| 21, 22 | ETS 6.x, early **[D]** |
+| 20 | ETS 5.7 **[V]** (`ToolVersion` 5.7.1428, three public samples, §3.6) |
+| 21 | ETS 6.0 **[V]** (`ToolVersion` 6.0.5030, the KV demo project, §2.5) |
+| 22 | ETS 6.1 **[V]** (`ToolVersion` 6.1.5686, three public samples, §3.6) |
 | 23 | ETS 6.3.7959.0 **[V]** |
+
+The `ToolVersion` values are read from each sample's `project.xml`
+(2026-10-12). Earlier versions of this table, and several documents that
+copied it, called the schema-21 KV demo an ETS 5.7 project; its own file says
+ETS 6.0.
 
 `xknxproject` reads the namespace from `knx_master.xml` (first or second line, differing between ETS 4.1 and later) [V]. Reading it from `P-*/0.xml` is equally valid for this sample and avoids a dependency on master-data placement [A].
 
@@ -197,6 +203,18 @@ When protected, the archive contains a nested `<P-xxxx>.zip`.
   `<P-xxxx>.zip` with the derived password — remains **unverified in
   practice**. Must be tested against a real ETS6 protected project before
   we claim support for opening one.
+
+**Real protected exports, measured 2026-10-12 (issue #7) [V].** Three public
+protected projects in xknxproject's test resources (GPL-2.0, inspected, not
+copied): ETS4 schema 11 and ETS 5.7 schema 20 with ZipCrypto (password `test`),
+ETS6 schema 23 with AES. All three store their project files **bare** at the
+root of the nested `<P-xxxx>.zip` (`0.xml`, `project.xml`/`Project.xml`), not
+under `P-xxxx/`. KNXBench's ZipCrypto path had been built against a synthetic
+fixture with `P-xxxx/`-rooted names and failed every real export with
+`EntryNotFound("P-xxxx/0.xml")`. Nested names are now rooted under the project
+part; both real ZipCrypto exports decrypt with our own implementation and
+agree with xknxproject (§3.6). The ZipCrypto bullet above is therefore
+verified against two real exports, not only read from xknxproject's source.
 
 ### 2.4 Container differences, ETS4 (schema 11) vs. ETS6 (schema 23) [V]
 
@@ -349,6 +367,55 @@ schema vocabulary and id shapes only, measured read-only.
   KNOWN_LIMITATIONS §174), `AddinData/AddinData` (`AddinId`, `Name`) and
   `ProjectTraces`; `ProjectInformation` carries `ArchivedVersion` and `CodePage`.
 * `Space/@Usage` and `GroupAddress/@Description` appear.
+
+### 3.6 Schema 20 (ETS 5.7) and schema 22 (ETS 6.1), public samples (2026-10-12) [V]
+
+Measured read-only on xknxproject's test resources (GPL-2.0; inspected, not
+copied; checkout `f97db068`): three ETS 5.7.1428 projects at schema 20
+(`xknx_test_project_no_password`, 1 device; `xknx_test_project`, ZipCrypto,
+4 devices and KNX Secure material; `module-definition-test`, 4 module-based
+devices) and three ETS 6.1.5686 projects at schema 22 (`ets6_free`,
+`ets6_two_level`, `testprojekt-ets6-functions`). Element/attribute inventory
+by a namespace-stripping stdlib walk over `0.xml` and `project.xml`.
+
+* **Schema 20 has the ETS6 value spellings.** Unprefixed `RefId`s
+  (`O-40_R-1433`), `ComObjectInstanceRef/@Links` with short `GA-<n>` targets,
+  `true`/`false` booleans, `IsActivityCalculated`, `Puid`, flat
+  `GroupObjectTree/@GroupObjectInstances` as well as `Nodes/Node` trees,
+  `Locations/Space`, `ModuleInstances` with the
+  `MD-<n>_M-<m>_MI-<k>_O-<a>-<b>_R-<c>` object ids of §3.4.
+* **Schema 20 has no `Segment`.** `DeviceInstance` sits directly under
+  `Line`, and `Line` carries `MediumTypeRefId` itself, as at schema 11.
+  This is the one structural difference from the schema-21/23 tables.
+* **Attributes seen only here:** `GroupRange/@Description`,
+  `GroupObjectTree/Nodes/Node/@Text`.
+* **Secure material in a plain XML attribute set** (the protected sample):
+  `GroupAddress/@Key` and `@Security`, `GroupRange/@Security`,
+  `Installation/@IPRoutingBackboneKey`, `DeviceInstance/Security` with
+  `ToolKey`, `DeviceAuthenticationCode(Hash)` and
+  `DeviceManagementPassword(Hash)`, `BusInterfaces/BusInterface` with
+  `Password`/`PasswordHash`, `ProjectInformation/@ProjectPassword` and
+  `ProjectInformation/DeviceCertificates/DeviceCertificate` (`FDSK`,
+  `SerialNumber`). None is modelled; KNOWN_LIMITATIONS §8 applies unchanged.
+* **Nested sub-modules exist in a real project.** One device of
+  `module-definition-test` has objects such as
+  `MD-4_M-15_MI-1_SM-1_M-1_MI-1-1-1_SM-1_O-3-0_R-1`: the `SubModule` id
+  grammar `product-database.md` Q6 found documented for the project side but
+  never saw in the product corpus. 8 objects on that device use it.
+* **Instance DPT lists occur.** `ComObjectInstanceRef/@DatapointType` holds a
+  space-separated list (`DPT-9 DPST-9-1 … DPST-9-31`) once in the protected
+  sample.
+* **Schema 22 samples contain no devices at all** (lines and `Segment`s, group
+  addresses, `Locations` with `Function`/`GroupAddressRef`). They cannot show
+  schema 22's device vocabulary, in particular which `GroupObjectTree` style
+  it uses, so schema 22 still has no table.
+
+Comparison with xknxproject's own expected output (its `stubs/*.json`): the
+three schema-20 projects and the protected ETS4 project agree with KNXBench's
+import on every group address (address and name), every device's individual
+address and every object-to-address link, apart from the reported ids and DPT list named above.
+Test: `crates/knx-etsproj/tests/schema20_import.rs` (opt-in via
+`KNXBENCH_XKNXPROJECT_RESOURCES`).
 
 ---
 

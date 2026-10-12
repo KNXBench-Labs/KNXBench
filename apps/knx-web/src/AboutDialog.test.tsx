@@ -98,3 +98,25 @@ it("closes on Escape and on its own button", async () => {
   await act(async () => close.dispatchEvent(new MouseEvent("click", { bubbles: true })));
   expect(onClose).toHaveBeenCalledTimes(2);
 });
+
+// The compact, centred layout must not cost a single fact: build, licence,
+// the update notice with its link and pre-release warning, both legal
+// sentences and the close button all stay, in reading order.
+it("keeps every section, including the update notice, in reading order", async () => {
+  apiMock.serverVersion.mockResolvedValue({ version: "0.1.0-alpha.9+g1234567" });
+  host = document.createElement("div");
+  document.body.append(host);
+  root = createRoot(host);
+  const updates = { status: "available" as const, check: vi.fn(async () => {}),
+    update: { version: "0.1.0-alpha.10", url: "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10", prerelease: true } };
+  await act(async () => root!.render(<AboutDialog onClose={onClose} updates={updates} />));
+  const panel = host.querySelector<HTMLElement>(".about-dialog")!;
+  const text = panel.textContent ?? "";
+  const order = [en["about.title"], "0.1.0-alpha.9+g1234567", en["about.licenceValue"],
+    en["updates.available"].replace("{version}", "0.1.0-alpha.10"), en["updates.releaseDetails"], en["updates.preview"],
+    en["updates.check"], en["about.independence"], en["about.trademark"], en["about.close"]];
+  const positions = order.map((part) => text.indexOf(part));
+  expect(positions.every((position) => position >= 0), JSON.stringify(positions)).toBe(true);
+  expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+  expect(panel.querySelector(".about-dialog-footer button")?.textContent).toBe(en["about.close"]);
+});

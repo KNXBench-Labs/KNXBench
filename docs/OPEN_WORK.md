@@ -35,6 +35,15 @@ counts below remain historical. What remains is
 and publication follow-up, (3) deferred items with a recorded user decision, and
 (4) later scope that never was an alpha task.
 
+## AP3 missing colour/picture contracts (12 October 2026)
+
+[Fresh primary-source/access and module-scope research](research/product-database.md#2026-10-12--ap3-colourpicture-contract-and-module-scope-follow-up)
+received public referring/release/module articles, but the linked exact type
+definition returns login HTML. Need authorized Color/Picture lexical/native
+value/resource contracts and independently audited module-instance mapping.
+Explicit inert literal fallbacks stay in place; neither a fallback nor this
+research closes PDB-04. Independent AP5/AP6/AP7 continue without gate bypass.
+
 ## Bounded AP3 parameter control slice (11 October 2026)
 
 Exact retained source evidence, optional authenticated read-only source HTTP and

@@ -1,3 +1,13 @@
+## 2026-10-12 — AP3 primary contract qualification, not new editors
+
+[Fresh inspected public evidence](research/product-database.md#2026-10-12--ap3-colourpicture-contract-and-module-scope-follow-up)
+binds the type link and actual login response, release-note Color object/string
+distinction and SDK module definition/instance collections. No value codec or
+XML module join follows. Existing exact-source/literal unsupported-codec and
+module-scope refusals remain unchanged; full PDB-04 stays LATER. Focused
+verification is recorded only after actual source-bound execution; prior broad
+AP3/native/browser receipts retain their original source and scope.
+
 ## 2026-10-12 — Bounded project-note editor leaf candidate
 
 Closed client admission, literal textarea adapter and preview-first editor now

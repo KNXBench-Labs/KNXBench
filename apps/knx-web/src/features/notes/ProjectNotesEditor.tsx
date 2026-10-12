@@ -33,6 +33,8 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
  const editable=(current||rebasing)&&!!onApplied&&!busy;
  const stored=view?.notes.find(note=>note.id===selected);
  const choices=[{target:{kind:"project"} as NoteTarget,label:copy.project},...targetChoices.filter(choice=>choice.target.kind!=="project")];
+ // The review names the action in the UI language; the wire value stays internal.
+ const actionName=(kind:NoteAction["kind"])=>({create:copy.actionCreate,replace:copy.actionReplace,remove:copy.actionRemove,move:copy.actionMove})[kind];
  const targetLabel=(target:NoteTarget)=>choices.find(choice=>noteTargetKey(choice.target)===noteTargetKey(target))?.label??`${copy.lostTarget}: ${noteTargetKey(target)}`;
  function markDirty(value:boolean){dirtyRef.current=value;setDirty(value);dirtyCallback.current?.(value);}
  function revoke(){
@@ -158,10 +160,10 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
     {dirty&&!validNoteDraft(draft)&&<p className={styles.guidance}>{copy.invalid}</p>}
    </div>}
   </div>}
-  {pending&&<section className={styles.review} aria-label={copy.review}><h4>{copy.review}</h4><p>{copy.kind}: {pending.action.kind} · {pending.createdId??pending.previous?.id}</p>
+  {pending&&<section className={styles.review} aria-label={copy.review}><h4>{copy.review}</h4><p>{copy.kind}: {actionName(pending.action.kind)} · {pending.createdId??pending.previous?.id}</p>
    {pending.noOp&&<p>{copy.noop}</p>}
-   <div className={styles.preview}><div><h5>{copy.before}</h5>{pending.previous&&<><p className={styles.literal}>{pending.previous.title}</p><p className={styles.literal}>{pending.previous.body}</p><p>{targetLabel(pending.previous.target)} · {copy.include}: {String(pending.previous.includeInDocumentation)}</p><p>#{pending.previous.position}</p></>}</div>
-    <div><h5>{copy.after}</h5>{reviewAfter&&<><p className={styles.literal}>{reviewAfter.title}</p><p className={styles.literal}>{reviewAfter.body}</p><p>{targetLabel(reviewAfter.target)} · {copy.include}: {String(reviewAfter.includeInDocumentation)}</p></>}{pending.action.kind==="move"&&<p>#{pending.action.position}</p>}</div></div>
+   <div className={styles.preview}><div><h5>{copy.before}</h5>{pending.previous&&<><p className={styles.literal}>{pending.previous.title}</p><p className={styles.literal}>{pending.previous.body}</p><p>{targetLabel(pending.previous.target)} · {copy.include}: {pending.previous.includeInDocumentation?copy.yes:copy.no}</p><p>#{pending.previous.position}</p></>}</div>
+    <div><h5>{copy.after}</h5>{reviewAfter&&<><p className={styles.literal}>{reviewAfter.title}</p><p className={styles.literal}>{reviewAfter.body}</p><p>{targetLabel(reviewAfter.target)} · {copy.include}: {reviewAfter.includeInDocumentation?copy.yes:copy.no}</p></>}{pending.action.kind==="move"&&<p>#{pending.action.position}</p>}</div></div>
    <div className={styles.toolbar}><button type="button" disabled={!writable} onClick={()=>void confirm()}>{copy.confirm}</button><button type="button" disabled={busy} onClick={revoke}>{copy.cancel}</button></div>
   </section>}
  </section>;

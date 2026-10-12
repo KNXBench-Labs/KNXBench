@@ -5,3 +5,5 @@
 .import-report-panel details { margin-block-start: .75rem; }
 .import-report-panel summary { cursor: pointer; }
 .import-report-panel pre { max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
+.source-report-panel select { display: block; width: 100%; max-width: 100%; }
+.source-report-identity { overflow-wrap: anywhere; font-family: monospace; font-size: .8rem; }

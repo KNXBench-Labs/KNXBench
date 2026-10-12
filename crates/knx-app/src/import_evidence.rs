@@ -1,5 +1,7 @@
 //! Versioned historical import evidence interpreted only by the application layer.
 
+pub mod source_reports;
+
 use knx_store::StoredOpaqueEntry;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

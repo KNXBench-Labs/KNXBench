@@ -463,6 +463,14 @@ export const messages = {
   "dashboard.comObjects": "Communication objects",
   "dashboard.importErrors": "Import errors",
   "dashboard.importWarnings": "Import warnings",
+  "dashboard.section.contents": "Project contents",
+  "dashboard.section.import": "Import report",
+  "dashboard.section.file": "Technical details",
+  "dashboard.importState.errors": "Errors recorded — data may be missing or incorrect.",
+  "dashboard.importState.warnings": "Imported with warnings worth a look.",
+  "dashboard.importState.clean": "No import errors or warnings recorded.",
+  "dashboard.importState.unavailable": "Not assessed — no import report is available for this project.",
+  "dashboard.showInLog": "Show in log",
 
   "documentationExport.button": "Export documentation…",
   "documentationExport.summaryNone": "Project documentation exported, no warnings.",
@@ -935,6 +943,20 @@ export const messages = {
   // design — see that field's own comment in `api.ts`).
   "logPanel.title": "Session log",
   "logPanel.eyebrow": "Diagnostics",
+  // The Overview's import counters open this view narrowed to the matching
+  // import-report entries; these lines say what is shown and whether the
+  // log still agrees with the counted number.
+  "logPanel.importScope.title": "Import findings of the current project",
+  "logPanel.importScope.errors.one": "{count} import error",
+  "logPanel.importScope.errors.other": "{count} import errors",
+  "logPanel.importScope.warnings.one": "{count} import warning",
+  "logPanel.importScope.warnings.other": "{count} import warnings",
+  "logPanel.importScope.entries.one": "{count} matching entry",
+  "logPanel.importScope.entries.other": "{count} matching entries",
+  "logPanel.importScope.match": "Showing {findings}, as counted in the project status.",
+  "logPanel.importScope.mismatch": "The project status counts {findings}; this session log holds {entries}.",
+  "logPanel.importScope.none": "The project status counts {findings}, but the session log of this server run holds none of them.",
+  "logPanel.importScope.showAll": "Show all log entries",
   "logPanel.severity.error": "Error",
   "logPanel.severity.warning": "Warning",
   "logPanel.severity.info": "Info",

@@ -1,6 +1,6 @@
 /** Panel rendering the backend session log, refetched on tree changes and failed operations. */
 // apps/knx-web/src/LogPanel.tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import LogEntryDetails from "./LogEntryDetails";
 import type { ToastNotification } from "./toast";
 import * as api from "./api";
@@ -10,6 +10,7 @@ import { useTranslate } from "./i18n";
 import type { MessageKey } from "./messages/en";
 import { formatSettingsDiagnostic } from "./settingsDiagnostic";
 import { droppedCount, saveSessionLog } from "./sessionLogExport";
+import { countImportFindings, isImportFinding, type ImportFindingSeverity } from "./importFindings";
 import type { LogExportScope } from "./sessionLogExport";
 
 type Severity = LogEntry["severity"];
@@ -40,11 +41,21 @@ const SEVERITY_LABEL_KEYS: Record<Severity, MessageKey> = {
 /// refetches on every `tree`/`refreshKey` change — with or without one
 /// (KNOWN_LIMITATIONS.md #36, part A).
 const NO_NOTIFICATIONS: ToastNotification[] = [];
+
+/** A request to show one severity of the current project's import findings.
+ *  The number to compare against is always read from the current `tree`,
+ *  so a project replaced while the log stays open cannot leave a stale one. */
+export interface LogImportFocus {
+  severity: ImportFindingSeverity;
+}
+
 export default function LogPanel(props: {
   tree: ProjectTree | null; refreshKey: number;
   notifications?: ToastNotification[]; notificationDroppedCount?: number;
   notificationTarget?: { id: number } | null;
   onNotificationTargetHandled?: () => void;
+  importFocus?: LogImportFocus | null;
+  onImportFocusHandled?: () => void;
 }) {
   const t = useTranslate();
   const [entries, setEntries] = useState<LogEntry[]>([]);
@@ -60,6 +71,11 @@ export default function LogPanel(props: {
   const [exportError, setExportError] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ key: string; entry: LogEntry } | null>(null);
   const [targetMissing, setTargetMissing] = useState(false);
+  // While set, only import-report entries are listed (severity filters still
+  // apply); the note above the list says so and offers the way back.
+  const [importScope, setImportScope] = useState<LogImportFocus | null>(null);
+  const importScopeRef = useRef<HTMLDivElement>(null);
+  const importScopeTitleId = useId();
   const list = useRef<HTMLUListElement>(null);
   const restoreFocus = useRef<HTMLElement | null>(null);
   const notifications = props.notifications ?? NO_NOTIFICATIONS;
@@ -75,6 +91,21 @@ export default function LogPanel(props: {
     }
     props.onNotificationTargetHandled?.();
   }, [target]);
+  useEffect(() => {
+    const focus = props.importFocus;
+    if (!focus) return;
+    setImportScope(focus);
+    setSelected(null);
+    setTargetMissing(false);
+    setSearch("");
+    setFilters({ error: focus.severity === "error", warning: focus.severity === "warning", info: false });
+    props.onImportFocusHandled?.();
+  }, [props.importFocus]);
+  // The control that asked for this view is gone (the log replaced the
+  // Overview), so keyboard focus moves to the note explaining the view.
+  useEffect(() => {
+    if (importScope) importScopeRef.current?.focus();
+  }, [importScope]);
   useEffect(() => {
     if (!selected) return;
     const row = [...(list.current?.querySelectorAll<HTMLElement>("[data-log-key]") ?? [])]
@@ -123,10 +154,27 @@ export default function LogPanel(props: {
   const allEntries = notifications.length === 0 ? entries : [...rows].reverse().map(row => row.entry);
   const visibleRows = rows.filter(({ entry }) =>
     filters[entry.severity] &&
+    (!importScope || !props.tree || isImportFinding(entry)) &&
     (!query || [entry.source, entry.message, formatSettingsDiagnostic(t, entry.diagnostic, entry.message), entry.location ?? "", entry.detail ?? ""]
       .some((field) => field.toLocaleLowerCase().includes(query))),
   );
   const visibleServerEntries = visibleRows.filter(row => row.key.startsWith("server:")).map(row => row.entry);
+
+  function clearImportScope() {
+    setImportScope(null);
+    setFilters({ error: true, warning: true, info: true });
+  }
+
+  function importScopeMessage(scope: LogImportFocus, tree: ProjectTree): string {
+    const found = countImportFindings(entries, scope.severity);
+    const expected = scope.severity === "error" ? tree.errors : tree.warnings;
+    const findings = scope.severity === "error"
+      ? t("logPanel.importScope.errors", { count: expected })
+      : t("logPanel.importScope.warnings", { count: expected });
+    if (found === expected) return t("logPanel.importScope.match", { findings });
+    if (found === 0) return t("logPanel.importScope.none", { findings });
+    return t("logPanel.importScope.mismatch", { findings, entries: t("logPanel.importScope.entries", { count: found }) });
+  }
 
   async function exportLog() {
     setExportError(null);
@@ -184,6 +232,16 @@ export default function LogPanel(props: {
       <p className="log-panel-hint">{t("logPanel.retention", { count: droppedCount(entries) ?? t("logPanel.unknownCount") })}</p>
       {(notifications.length > 0 || (props.notificationDroppedCount ?? 0) > 0) && <p className="log-panel-hint">{t("logPanel.uiHistory", { count: props.notificationDroppedCount ?? 0 })}</p>}
       {targetMissing && <p role="status">{t("logPanel.targetMissing")}</p>}
+      {importScope && props.tree && (
+        <div className="log-panel-import-scope" role="region" ref={importScopeRef} tabIndex={-1} aria-labelledby={importScopeTitleId}>
+          <div>
+            <strong id={importScopeTitleId}>{t("logPanel.importScope.title")}</strong>
+            {/* A failed fetch is reported below; it is not "none in the log". */}
+            <p role="status">{loading ? t("logPanel.loading") : error ? "" : importScopeMessage(importScope, props.tree)}</p>
+          </div>
+          <button type="button" className="log-panel-import-scope-clear" onClick={clearImportScope}>{t("logPanel.importScope.showAll")}</button>
+        </div>
+      )}
       {selected && <LogEntryDetails key={selected.key} entry={selected.entry} restoreFocusRef={restoreFocus} onClose={() => {
         setSelected(null);
         // The navigation toast may still be leaving. Restore to its durable row,

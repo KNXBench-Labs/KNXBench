@@ -655,7 +655,6 @@ main {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .dashboard-stats,
   .com-object-list li {
     transition: transform var(--knx-transition-duration) var(--knx-motion-easing),
       border-color var(--knx-transition-duration) var(--knx-motion-easing),
@@ -1128,41 +1127,7 @@ main {
   background: color-mix(in srgb, var(--knx-accent) 20%, transparent);
 }
 
-.dashboard {
-  flex: 1 1 60%;
-  min-width: 0;
-}
-
-.dashboard-stats {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.35rem 1rem;
-  margin: 0.75rem 0;
-  background: var(--knx-surface);
-  border: 1px solid var(--knx-border);
-  border-radius: var(--knx-radius-card);
-  padding: 1rem 1.25rem;
-}
-
-.dashboard-stats dt {
-  opacity: 0.8;
-}
-
-.dashboard-stats dd {
-  margin: 0;
-  font-weight: bold;
-}
-
-.dashboard-issues {
-  margin-top: 1.5rem;
-  border-top: 1px solid var(--knx-accent);
-  border-left: 1px solid var(--knx-accent);
-  padding: 0.75rem 1rem;
-}
-
-.dashboard-errors {
-  color: var(--knx-error-color);
-}
+/* The Overview's project status lives in Dashboard.css. */
 
 /* `LogPanel` is a centre-pane view in the workbench shell: `App.tsx`
    swaps it into `.workbench-center`, which is a block box, so the
@@ -1229,6 +1194,30 @@ main {
   color: var(--knx-muted);
   margin: 0.15rem 0 0.5rem;
 }
+
+/* Opened from the Overview's import counters: says which entries are
+   listed, whether they match the counted number, and how to see all. */
+.log-panel-import-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--knx-accent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--knx-accent) 6%, var(--knx-surface));
+}
+.log-panel-import-scope > div { min-width: 0; flex: 1 1 18rem; }
+.log-panel-import-scope p { margin: 0.15rem 0 0; overflow-wrap: anywhere; }
+.log-panel-import-scope-clear {
+  background: var(--knx-surface);
+  color: var(--knx-foreground);
+  border: 1px solid var(--knx-border);
+  box-shadow: none;
+}
+.log-panel-import-scope-clear:hover:not(:disabled) { transform: none; box-shadow: none; }
 
 .log-panel-list {
   list-style: none;

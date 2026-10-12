@@ -44,6 +44,10 @@ pub struct ProjectTree {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub import_report_available: Option<bool>,
+    /// Original findings restored from native evidence, not a current assessment.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub import_report_historical: Option<bool>,
     /// Always `false` straight out of [`build_project_tree`] — this crate
     /// never sees a `CommandStack`. The desktop shell overlays the real
     /// value from its own `CommandStack` after every command/undo/redo.
@@ -309,6 +313,7 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
         errors: 0,
         warnings: 0,
         import_report_available: None,
+        import_report_historical: None,
         can_undo: false,
         can_redo: false,
         is_modified: false,

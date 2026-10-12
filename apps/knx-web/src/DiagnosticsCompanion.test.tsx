@@ -343,6 +343,13 @@ describe("one editing workspace", () => {
     expect(apiCallsIn(dptGraph)).toEqual([]);
     expect(mutatingFetchesIn(dptGraph)).toEqual([]);
     expect(dptGraph.get("dptLabels.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    // Import-evidence admission/export serialization is pure through api.ts.
+    // Its Dashboard panel and explicit report request never enter this window.
+    const importEvidenceGraph = valueImportGraph("importEvidence.ts");
+    expect([...importEvidenceGraph.keys()]).toEqual(["importEvidence.ts"]);
+    expect(apiCallsIn(importEvidenceGraph)).toEqual([]);
+    expect(mutatingFetchesIn(importEvidenceGraph)).toEqual([]);
+    expect(importEvidenceGraph.get("importEvidence.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     // Shipped fun-language catalogues add only static copy and their registry.
     // The API-call and mutation inventories below remain unchanged.
     expect([...graph.keys()].sort()).toEqual([
@@ -388,6 +395,7 @@ describe("one editing workspace", () => {
       "help.ts",
       "i18n.ts",
       "importFindings.ts",
+      "importEvidence.ts",
       "languagePack.ts",
       "liveActivity.ts",
       "localJsonDownload.ts",

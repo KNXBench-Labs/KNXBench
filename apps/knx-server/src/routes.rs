@@ -22,6 +22,10 @@ use crate::SharedState;
 pub fn project_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/project", get(current_project))
+        .route(
+            "/api/project/import-report",
+            get(crate::import_evidence_routes::read),
+        )
         .route("/api/project/import", post(import_project))
         .route(
             "/api/project/import-selection/source",

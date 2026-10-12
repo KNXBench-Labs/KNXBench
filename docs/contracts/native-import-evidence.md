@@ -1,46 +1,96 @@
-# Native import-diagnostic availability
+# Native import-diagnostic availability and durable original reports
 
-Local additive API/UI implementation, 2026-10-11. No native-model migration.
+Local server/application/UI implementation, 2026-10-11. No domain/native-schema migration.
 
-## Meaning
+## Availability and provenance
 
-`ProjectTree.import_report_available` is optional application metadata:
+`ProjectTree.import_report_available` retains its optional application meaning;
+`import_report_historical` additionally marks recorded original findings restored
+from native metadata. Historical findings are not current project compatibility,
+manufacturer calculation execution, signature verification or hardware evidence.
 
-| State | Field | Counter interpretation |
-| --- | --- | --- |
-| Successful external import in the current session | `true` | Original import counts remain available across edit/undo/redo/save |
-| Newly created project | `true` | Known initial zero, not an external ETS compatibility assessment |
-| Native open, including recovery of its working history | `false` | Historical external import findings are unavailable; zero is not a compatibility pass |
-| Pure projection / older response | omitted | Availability not asserted by that producer |
+| State | Available | Historical | Interpretation |
+| --- | --- | --- | --- |
+| External server import in this session | true | false | Original report and import counts, unchanged by ordinary edits |
+| Newly created project | true | false | Known initial zero; no external import or full report exists |
+| Native open with admitted report | true | true | Exact recorded original report and original category-row counters |
+| Legacy/native file without report | false | false | Historical findings unavailable; zero is not a pass |
+| Pure projection / older response | omitted | omitted | Producer asserts neither availability nor provenance |
 
-The native format does not restore a historical `ImportReport`. Native open is
-not a fresh ETS import or a compatibility reassessment. The legacy numeric fields
-remain for API compatibility; nonzero current-session findings must remain
-visible even when the historical report is unavailable. Save As does not erase
-live import evidence; opening the resulting native file in a new session marks
-that evidence unavailable. Failed replacement must not publish a new availability
-state. Availability is published with the replacement project under its lock.
+Failed opening does not replace project, counters, provenance or saved bytes.
+Save As does not turn live original-import evidence into a new assessment.
+Native opening does not reimport source files, execute plug-ins or contact a bus.
 
-## Presentation and verification
+## Durable envelope
 
-- Dashboard, Project Explorer and the workbench status control explicitly expose
-  unavailable evidence in English and German.
-- The status control opens the explanation rather than presenting a guessed
-  warning count. It is keyboard-accessible and does not rely on a tooltip alone.
-- The notice is informational, not a new measured warning/error. Known current
-  counters remain displayed separately.
-- Server lifecycle test covers new/measured state, Save As, native reopen,
-  detached projection, edit, Undo, Save and GET.
-- Dashboard tests cover EN/DE missing history, measured zero, omitted legacy
-  metadata and nonzero current-session warnings alongside missing history.
-- Full-workbench Chromium tests use typed fictional responses with all API
-  requests intercepted, at 400/1440 px and Graphite/Porcelain themes. They check
-  notice activation, explanation/Explorer display, measured-zero absence,
-  overflow and unexpected requests/page errors. This is not real ETS acceptance.
+[ADR-0113](../adr/0113-durable-native-import-evidence.md) defines one primary,
+version-1 application-owned passthrough record. Its reserved kind/identity is not
+an ETS member; similarly named source `File` rows are not interpreted. Scoped
+source reports do not become a primary merged-project report by basename.
 
-## Not implemented
+- Complete original `ImportReport` JSON is captured after server import/enrichment
+  reporting and before replacement. Existing source passthrough and manufacturer
+  manifest data are retained unchanged; the native metadata is one extra row.
+- Envelope and report serialization are bounded to 16 MiB. Failed serialization
+  refuses the project load explicitly rather than truncating the report. Existing
+  native context/history bounds still apply; this is not a peak-RSS guarantee.
+- Reader admits identity, unique primary record, SHA-256, exact envelope version,
+  valid JSON/report shape and recognized severity. Ambiguous interpreted counter
+  keys are refused, even when the stored byte hash matches.
+- Source/historical JSON remains byte-exact through native Save/Open/Edit/Save,
+  restart and Undo/Redo. Counts use the original import units: error-severity rows,
+  warning-severity rows plus unknown/conflict/unsupported **rows**, not distinct
+  losses or occurrence totals. Categories can overlap.
+- Missing evidence is not reconstructed. Invalid/unsupported evidence refuses
+  native opening untouched; it is not silently treated as empty or compatible.
+- Hashes detect corruption, not deliberate forgery. Producer and source metadata
+  remain recorded claims; no independent authenticity is inferred.
 
-Persisting or reconstructing the original full import report, per-finding
-historical provenance and an exhaustive native compatibility recomputation are
-separate work. This change deliberately does not manufacture missing evidence,
-change retained source data, or claim unsupported features became supported.
+## Explicit read and local download
+
+`GET /api/project/import-report` uses the existing authenticated project routes.
+The response includes `available`, `historical`, `server_incarnation`,
+`project_incarnation` and nullable **`report_json`**. The original JSON is a string
+on the wire so browser number conversion cannot alter large integers or unknown
+fields. A client may derive a display object, but exports embed the original text
+verbatim rather than reserializing that derived object.
+
+The Dashboard provides an explicit read action; there is no automatic full-report
+request. Dashboard/Explorer mark restored counters as historical in EN/DE. The
+panel rejects another-project replies and discards late reads after replacement,
+while retaining immutable original evidence across ordinary same-project refreshes.
+
+The JSON preview is explicitly limited to 65,536 characters and may end within a
+value. The **full local download** is not truncated. Original source names,
+attributes, hashes or other private data can occur in a report; the UI warns before
+sharing. No automatic external transmission or anonymization is provided.
+
+## Verification scope
+
+Public witnesses are fictional. App controls cover exact native persistence,
+legacy absence, identity/hash/duplicate/version/shape/severity/budget refusals and
+ambiguous counters. Productive HTTP controls cover import/save/restart/edit/undo/
+redo, full original-text equality, legacy availability, authenticated access and
+byte/state preservation after a corrupt native open.
+
+Client/panel controls cover explicit request ownership, malformed responses,
+source binding, stale responses, same-project refreshes, provenance and large
+integer fidelity. Built-bundle Chromium cases use strict intercepted APIs at
+400/1440 px in EN/DE, independently read the actual downloaded file, retain all
+1,001 fictional records and check overflow, unexpected requests and page errors.
+They are browser evidence, not an ETS or private-project replay.
+
+## Remaining boundaries
+
+- This package captures **primary server imports**. CLI-only imports and source-
+  scoped selective-import reports are not yet guaranteed primary envelopes.
+- Original reports are not fresh merged-project diagnostics. Current-session
+  operational logs remain separately bounded and are not a lifetime audit.
+- Old native files cannot recover findings that were never stored.
+- The storage schema does not need migration for this generic row; older readers
+  can retain it without understanding its provenance. Complete older-reader UI
+  diagnostic behavior is not claimed.
+- Browser local download is tested; an independent native-shell save-dialog
+  workflow is not part of this package.
+- No support status, protocol behavior or device compatibility is promoted merely
+  because a report is stored and readable. Remaining functional matrix stays open.

@@ -44,6 +44,28 @@ new command-palette selector. Whole-project replacement import is unchanged.
 [CLI and bounds](../../SELECTIVE_IMPORT.md) ·
 [verification](../../status/2026-10-10-import-expansion-verification.md).
 
+## Review the complete original import report
+
+**Local source implementation, 11 October 2026 — not a release claim.** In
+**Overview**, choose **Show full import report**. The report is loaded only when
+you request it. **Download full report** saves the complete original JSON locally;
+the expandable preview shows at most 65,536 characters and can end within a value.
+Unknown fields and large numbers remain unchanged in the downloaded report.
+
+After importing through the server and saving a native copy, reopening that copy
+restores the original report and warning counts. **Historical import findings**
+means recorded original findings, not a new compatibility or hardware check.
+Older native files that never stored a report remain explicitly unavailable.
+Changing projects invalidates the panel's old result; ordinary edits do not
+rewrite the original report. A corrupt or unsupported stored report refuses Open
+without replacing the current project.
+
+**Privacy:** a complete report and native copy may contain source names, attributes
+and other confidential data. Review them before sharing; the preview is not
+anonymization. There is no automatic upload. CLI-only and source-scoped selective
+report timelines are not covered by this local implementation.
+[Exact contract and bounds](../../contracts/native-import-evidence.md).
+
 ## Import and open progress
 
 Whole-project import and native Open show a banner until the request ends.

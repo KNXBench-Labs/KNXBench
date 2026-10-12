@@ -1,3 +1,12 @@
+Web lock: taken by claude-web-integration for package 4 (catalogue updates in the web)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 17:21
+- **Completed:** Lock taken only.
+- **Pending/Next Steps:** Package 4 in worktree `web-catalogue-20261012`: HTTP routes for previewed catalogue updates (preview → token, stateless confirm, backup list, restore by listed name) on `knx_productdb::update`, and a web flow beside the catalogue install control. Release in the delivery entry.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released.
+
+---
+
 Web lock: released by claude-web-integration (package 3, checked parameter editors, delivered)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 17:20

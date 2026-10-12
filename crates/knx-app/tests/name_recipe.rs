@@ -1,5 +1,41 @@
 //! Verifies deterministic literal naming, atomic undo and source-bound admission.
 
+#[test]
+fn offline_facade_fingerprint_is_identical_to_the_previous_importer_hash_contract() {
+    let snapshot = state();
+    let revision = revision();
+    let intent = intent();
+    let exact_ids: Vec<u32> = intent.ids.iter().map(|id| id.0).collect();
+    let plan: knx_edit::name_recipe::NameRecipePlan =
+        preview_name_recipe(&snapshot, &revision, intent.clone()).unwrap();
+    let authority = "fixed-synthetic-offline-authority";
+    let legacy_transcript = serde_json::to_vec(&(
+        "literal-ga-name-v1",
+        authority,
+        &revision,
+        snapshot.semantic_hash().unwrap(),
+        exact_ids,
+        &intent.prefix,
+        &intent.suffix,
+        plan.preview(),
+    ))
+    .unwrap();
+    assert_eq!(
+        plan.confirmation_token(authority).unwrap(),
+        knx_etsproj::opaque::sha256_hex(&legacy_transcript),
+    );
+    let facade_intent: knx_edit::name_recipe::NameRecipeIntent = intent;
+    let facade_revision: knx_edit::name_recipe::NameRecipeRevision = revision;
+    let direct =
+        knx_edit::name_recipe::preview_name_recipe(&snapshot, &facade_revision, facade_intent)
+            .unwrap();
+    assert_eq!(direct.preview(), plan.preview());
+    assert_eq!(
+        direct.confirmation_token(authority).unwrap(),
+        plan.confirmation_token(authority).unwrap()
+    );
+}
+
 use knx_app::name_recipe::*;
 use knx_core::{
     CommandStack, CompletionStatus, GroupAddress, GroupAddressEntry, GroupAddressId, Installation,

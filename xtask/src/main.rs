@@ -266,6 +266,11 @@ fn check_layering(root: &Path) -> ExitCode {
         "knx-mcp",
         layering::MCP_FORBIDDEN,
     ));
+    violations.extend(layering::forbidden_reachable(
+        &production,
+        "knx-edit",
+        layering::OFFLINE_EDIT_FORBIDDEN,
+    ));
 
     if violations.is_empty() {
         println!(
@@ -275,13 +280,14 @@ fn check_layering(root: &Path) -> ExitCode {
              none of {:?}; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; \
              knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \
              knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \
-             knx-secure reaches none of {:?}; knx-mcp reaches none of {:?}",
+             knx-secure reaches none of {:?}; knx-mcp reaches none of {:?}; knx-edit reaches none of {:?}",
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::SECURE_FORBIDDEN,
-            layering::MCP_FORBIDDEN
+            layering::MCP_FORBIDDEN,
+            layering::OFFLINE_EDIT_FORBIDDEN
         );
         return ExitCode::SUCCESS;
     }

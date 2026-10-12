@@ -1,5 +1,18 @@
 # Open work after the 0.1 alpha
 
+## AP6 offline service dependency prerequisite (12 October 2026)
+
+[ADR-0115](adr/0115-offline-application-edit-boundary.md) locally separates the
+existing bounded recipe from App's importer/key graph with a compatible App facade
+and strict production dependency/root gates. Focused library/actual CLI/policy and
+three reverting guard proofs pass; fresh20-stage broad acceptance passes on2034
+frozen sources. Fresh integration/full reacceptance and publication remain pending.
+This module split is not MCP write support. Per-alias operator permission,
+verified request/client-associated approval, cancellation/refusal/native restart
+and actual client evidence remain open; read-only defaults/exclusions stay intact.
+AP7 catalogue work, missing AP3 contracts and Session1 host responsibilities remain
+independent, not silently reassigned.
+
 ## Offline literal naming slice (12 October 2026)
 
 The [bounded application/CLI recipe](contracts/offline-name-recipe.md) is implemented

@@ -1979,6 +1979,7 @@ dependencies = [
  "knx-core",
  "knx-csv",
  "knx-diff",
+ "knx-edit",
  "knx-etsproj",
  "knx-productdb",
  "knx-projection",
@@ -2060,6 +2061,16 @@ name = "knx-diff"
 version = "0.1.0-alpha.1"
 dependencies = [
  "knx-core",
+]
+
+[[package]]
+name = "knx-edit"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "knx-core",
+ "knx-store",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

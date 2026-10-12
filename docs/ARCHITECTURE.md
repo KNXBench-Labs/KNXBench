@@ -1,5 +1,17 @@
 # Architecture
 
+## Offline application edit boundary (2026-10-12 local prerequisite)
+
+[ADR-0115](adr/0115-offline-application-edit-boundary.md) places the existing
+bounded naming service in `knx-edit`, below broad `knx-app` orchestration and above
+Core/native Store. App retains a compatibility re-export; there is no second
+planner. Production graph rules prohibit importer/key/bus/HTTP/transport/UI reach,
+including direct and transitive edges and a missing/external policy root. Native
+context, literal preview, one undo and durable-before-live behavior remain the
+[AP5 contract](contracts/offline-name-recipe.md). No schema/wire change or new
+external dependency. This prerequisite does not enable an MCP writer or confer
+operator/client identity or consent; those require separate admission/evidence.
+
 ## Client release discovery (2026-10-11)
 
 [ADR-0114](adr/0114-client-release-discovery.md) separates a fixed-origin public

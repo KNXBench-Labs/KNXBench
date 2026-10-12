@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-12",
+  "scope": "AP6 small offline application dependency prerequisite, not MCP write admission",
+  "base": "9424fe0514db8c9ecbf1f45688635b181c56b8e5",
+  "focused": {
+    "architecture": {
+      "redRuntimeFailed": 1,
+      "greenPassed": 1
+    },
+    "publicPolicy": {
+      "redRuntimeFailed": 1,
+      "greenScopePassed": 13,
+      "laterUnitPassed": 86,
+      "laterIntegrationPassed": 14,
+      "directTransitiveForbiddenCases": 22
+    },
+    "service": {
+      "passed": 13,
+      "failed": 0
+    },
+    "directConsumer": {
+      "passed": 1,
+      "failed": 0
+    },
+    "actualCli": {
+      "passed": 6,
+      "failed": 0
+    },
+    "sourceFrozen": true
+  },
+  "guardNegatives": {
+    "count": 3,
+    "namedRuntimeFailures": true,
+    "canonicalPathsRestored": 2033
+  },
+  "lock": {
+    "newLocalPackage": "knx-edit",
+    "onlyAppEdgeAdded": true,
+    "allExistingExternalResolutionIdentical": true
+  },
+  "review": "active-session self-review, not independent; two gate-discovered minor header findings corrected, current0 open",
+  "broadAcceptance": {
+    "accepted": true,
+    "stages": 20,
+    "sourceCount": 2034,
+    "manifestSha256": "d4189715f5255fdbf66da861168be43e8dbe1122b13c52a4ef455ba47599a662",
+    "sourceFrozen": true,
+    "rust": {
+      "name": "rust-workspace",
+      "exit": 0,
+      "valid": true,
+      "passed": 4126,
+      "failed": 0,
+      "ignored": 194,
+      "skip_lines": []
+    },
+    "web": {
+      "name": "web",
+      "exit": 0,
+      "valid": true,
+      "passed": 2836,
+      "failed": 0,
+      "pending": 0,
+      "files": 182
+    },
+    "buildClippyExplicitRootGatesPassed": true
+  },
+  "publication": null,
+  "pending": [
+    "docs-only current-source closure",
+    "fresh-upstream integrated full acceptance",
+    "normal publication/readback",
+    "separate per-alias/client/operator approval and MCP/native/real-client evidence"
+  ],
+  "notClaimed": [
+    "MCP writes",
+    "identity authorization",
+    "new external dependency",
+    "Core/schema/format/protocol behavior",
+    "vendor/hardware/Secure implementation",
+    "private-corpus compatibility",
+    "UI host",
+    "release/deployment"
+  ],
+  "failedEarlierBroadAttempt": {
+    "runtimeStagesPassed": 15,
+    "headerCeilingFailed": true,
+    "unstartedStages": 4,
+    "overallAccepted": false,
+    "successorSourceNotRestamped": true
+  }
+}

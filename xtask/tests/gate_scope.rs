@@ -52,6 +52,7 @@ fn layering_workspace() -> tempfile::TempDir {
         "knx-report",
         "knx-diff",
         "knx-secure",
+        "knx-edit",
     ] {
         write(
             root.path(),
@@ -65,6 +66,96 @@ fn layering_workspace() -> tempfile::TempDir {
         );
     }
     root
+}
+
+#[test]
+fn layering_refuses_offline_edit_forbidden_dependencies_at_the_public_gate() {
+    for forbidden in [
+        "knx-app",
+        "knx-etsproj",
+        "knx-secure",
+        "knx-net",
+        "knx-server",
+        "axum",
+        "hyper",
+        "reqwest",
+        "tokio",
+        "rmcp",
+        "tauri",
+    ] {
+        for indirect in [false, true] {
+            let root = layering_workspace();
+            if !root
+                .path()
+                .join(format!("crates/{forbidden}/Cargo.toml"))
+                .exists()
+            {
+                write(
+                    root.path(),
+                    &format!("crates/{forbidden}/Cargo.toml"),
+                    &format!(
+                        r#"[package]
+name = "{forbidden}"
+version = "0.0.0"
+edition = "2021"
+"#
+                    ),
+                );
+                write(
+                    root.path(),
+                    &format!("crates/{forbidden}/src/lib.rs"),
+                    "//! Empty metadata fixture; never built or executed.\n",
+                );
+            }
+            let dependency = if indirect {
+                "fixture-bridge"
+            } else {
+                forbidden
+            };
+            if indirect {
+                write(
+                    root.path(),
+                    "crates/fixture-bridge/Cargo.toml",
+                    &format!(
+                        r#"[package]
+name = "fixture-bridge"
+version = "0.0.0"
+edition = "2021"
+[dependencies]
+{forbidden} = {{ path = "../{forbidden}" }}
+"#
+                    ),
+                );
+                write(
+                    root.path(),
+                    "crates/fixture-bridge/src/lib.rs",
+                    "//! Empty metadata bridge.\n",
+                );
+            }
+            write(
+                root.path(),
+                "crates/knx-edit/Cargo.toml",
+                &format!(
+                    r#"[package]
+name = "knx-edit"
+version = "0.0.0"
+edition = "2021"
+[dependencies]
+{dependency} = {{ path = "../{dependency}" }}
+"#
+                ),
+            );
+            let output = run(root.path(), &["check-layering"]);
+            assert!(!output.status.success(), "public gate must refuse offline edit -> {forbidden}, indirect={indirect}; stdout={}", String::from_utf8_lossy(&output.stdout));
+            let stderr = String::from_utf8(output.stderr).unwrap();
+            let path = if indirect {
+                format!("knx-edit -> fixture-bridge -> {forbidden}")
+            } else {
+                format!("knx-edit -> {forbidden}")
+            };
+            assert!(stderr.contains(&format!("layering violation: knx-edit reaches forbidden package {forbidden} via {path}")), "must report the actual nonempty forbidden dependency path, not merely setup failure: {stderr}");
+        }
+    }
 }
 
 #[test]
@@ -101,6 +192,38 @@ fn layering_requires_policy_roots_to_be_workspace_members() {
 }
 
 #[test]
+fn offline_edit_root_cannot_be_replaced_by_an_external_transitive_package() {
+    let root = layering_workspace();
+    fs::create_dir(root.path().join("outside")).unwrap();
+    fs::rename(
+        root.path().join("crates/knx-edit"),
+        root.path().join("outside/knx-edit"),
+    )
+    .unwrap();
+    write(root.path(), "Cargo.toml", "[workspace]\nmembers = [\"xtask\", \"crates/*\"]\nexclude = [\"outside/knx-edit\"]\nresolver = \"2\"\n");
+    write(root.path(), "crates/knx-core/Cargo.toml", "[package]\nname = \"knx-core\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nknx-edit = { path = \"../../outside/knx-edit\" }\n");
+    let metadata = cargo_metadata::MetadataCommand::new()
+        .manifest_path(root.path().join("Cargo.toml"))
+        .exec()
+        .unwrap();
+    let outside = metadata
+        .packages
+        .iter()
+        .find(|package| package.name == "knx-edit")
+        .unwrap();
+    assert!(
+        !metadata.workspace_members.contains(&outside.id),
+        "fixture must actually resolve the offline service outside the workspace"
+    );
+    let output = run(root.path(), &["check-layering"]);
+    assert!(
+        !output.status.success(),
+        "transitive offline package is not the required checked root"
+    );
+    assert!(String::from_utf8_lossy(&output.stderr).contains("missing layering root knx-edit"));
+}
+
+#[test]
 fn layering_checks_a_complete_runtime_fixture_graph() {
     let root = layering_workspace();
     let cwd = tempfile::tempdir().unwrap();
@@ -113,7 +236,9 @@ fn layering_checks_a_complete_runtime_fixture_graph() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert!(String::from_utf8_lossy(&output.stdout).contains("layering scope: 9 resolved packages"));
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("layering scope: 10 resolved packages")
+    );
     write(
         root.path(),
         "outside/rusqlite/Cargo.toml",

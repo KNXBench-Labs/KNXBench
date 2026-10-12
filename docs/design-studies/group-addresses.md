@@ -192,4 +192,3 @@ state. It does not require identical control layouts, but no presentation may
 silently change project data or lose a supported action. The build sequence is
 incremental; it is not a proposal to drop any of the four. Implementation awaits
 separate authorization and then-current shared-surface ownership checks.
-

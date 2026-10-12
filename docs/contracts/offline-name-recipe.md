@@ -5,7 +5,8 @@ actual CLI6/0, Rust4121/0/194 ignored and Web2836/0/182 files, Clippy/builds/non
 repository gates. Separately strengthened service12/0 and five named source
 mutants prove filled undo/redo refusal and independent incarnation protection.
 Current canonical source is restored; fresh final assembly18 passes on strengthened
-inputs. Integration/publication closure pending.
+inputs. Integrated documentation8 also passes with exact accepted runtime/test equality.
+Normal publication/readback remains pending.
 [Evidence](../evidence/offline-name-recipe-2026-10-12.json) keeps scopes separate.
 
 Concrete repetition: explicitly ordered stable GroupAddressIds across existing

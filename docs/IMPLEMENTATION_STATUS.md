@@ -34,6 +34,10 @@ that still expected zero counters after reopening, now updated to ADR-0113. The
 BusAccess/IP configuration" in the [follow-up matrix](status/2026-10-11-import-application-followups.md)
 are on main; showing stored BusAccess/IP data remains open. Self-review, not
 independent. [Evidence](evidence/native-evidence-port-2026-10-12.json).
+Re-gated after merging main's issue #7 import change (`4f482441`): 23/24 again,
+fixture browser 412 plus the same 4 on the first attempt, Rust 4213/0 with 196
+ignored, private corpus 143/143.
+
 ## 2026-10-12 — ETS 5.7 projects import; real protected exports decrypt (issue #7)
 
 The reporter of #6 got `no known-element table for schema version 20` for an

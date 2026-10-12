@@ -27,11 +27,11 @@ from KNXBench's own native `.knxdb` file format, covered separately below.
 | Scheme | ETS version | Status | Evidence |
 | --- | --- | --- | --- |
 | 11 | ETS 4.1.8 | ✅ Implemented | A real reference project (36 devices, 514 group addresses) imports with measured counts and nothing unknown or lost — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
-| 12 | ETS 4 | 🟡 Partial or experimental | Documented in the schema family, no real sample imported yet — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
-| 13, 14 | ETS 5, up to 5.6 | 🟡 Partial or experimental | Same: documented, unverified — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
-| 20 | ETS 5.7 | 🟡 Partial or experimental | A standalone scheme-20 `.knxprod` *product package* installs and is verified; a full scheme-20 `.knxproj` *project* has not been imported — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
-| 21 | ETS 5.7+ | ✅ Implemented | The KNX Association's own demo project imports with zero unknown constructs — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
-| 22 | ETS 6.0–6.2 | 🟡 Partial or experimental | Documented only, no sample — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
+| 12 | ETS 4 | ❌ Refused | Documented in the schema family, no real sample — the import names the schema and stops — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
+| 13, 14 | ETS 5, up to 5.6 | ❌ Refused | Same: documented, no sample — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
+| 20 | ETS 5.7 | 🟡 Partial or experimental | Three public ETS 5.7 sample projects import and agree with an independent reader; objects in nested sub-modules lose their number and module, and are reported — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
+| 21 | ETS 6.0 | ✅ Implemented | The KNX Association's own demo project imports with zero unknown constructs — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
+| 22 | ETS 6.1 | ❌ Refused | Public samples measured, but none contains a device — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
 | 23 | ETS 6.3.7959.0 | 🟡 Partial or experimental | An ETS6 re-export of the schema-11 reference project imports; module-based application programs are inferred from the schema-21 sample, not independently evidenced at schema 23 — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 
 > **Note**

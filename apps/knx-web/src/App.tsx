@@ -72,6 +72,8 @@ import AboutDialog from "./AboutDialog";
 import OnboardingGuide from "./OnboardingGuide";
 import { useOnboardingGuide } from "./useOnboardingGuide";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
+import NotesWorkspace from "./NotesWorkspace";
+import NoteDraftGuardDialog from "./NoteDraftGuardDialog";
 import { canQuit, onWindowCloseRequested, quitApp } from "./quit";
 import type { SessionControls } from "./session";
 import { DEFAULT_HELP_TOPIC_ID, HELP_TOPICS, focusedHelpTopic, opensHelp, requestHelpTopic } from "./help";
@@ -335,8 +337,21 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   const [diagnosticsHeight, setDiagnosticsHeight] = useState<number | null>(null);
   const navBlockRef = useRef<HTMLElement | null>(null);
   const diagnosticsBlockRef = useRef<HTMLElement | null>(null);
-  type WorkspaceView = "overview" | "catalog" | "devices" | "device" | StructureView;
+  type WorkspaceView = "overview" | "catalog" | "devices" | "device" | "notes" | StructureView;
   const [view, setView] = useState<WorkspaceView>("overview");
+  // Project notes (docs/contracts/project-note-editor-host.md). The view
+  // mounts on its first visit and then stays mounted for that project
+  // identity, so workbench navigation never drops a draft and projects that
+  // never open it never read notes. The draft flag guards the ways out of
+  // the project: open/import, new project and quit.
+  const notesIdentity = tree ? `${tree.server_incarnation ?? ""}\u0000${tree.project_incarnation ?? ""}` : null;
+  const [notesMountedFor, setNotesMountedFor] = useState<string | null>(null);
+  const notesDirtyRef = useRef(false);
+  const [noteDraftGuard, setNoteDraftGuard] = useState<{ resume: () => void } | null>(null);
+  const projectExitsRef = useRef<{ load: (path: string, kind: "import" | "open") => Promise<void>; newProject: () => void; quit: () => void } | null>(null);
+  useEffect(() => {
+    if (view === "notes" && notesIdentity !== null) setNotesMountedFor(notesIdentity);
+  }, [view, notesIdentity]);
   const deviceOriginRef = useRef<{ view: WorkspaceView; log: boolean; monitor: boolean; selection: Selection | null } | null>(null);
   const [buildingScope, setBuildingScope] = useState<number | null>(null);
   // The group-address view's counterpart of `buildingScope`: which range
@@ -810,8 +825,42 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   // request only leaves `NewProjectDialog` when the user submits, and the
   // server refuses it outright if that would discard unsaved edits.
   function startNewProject() {
+    if (guardNoteDraft(() => projectExitsRef.current?.newProject())) return;
+    openNewProjectDialog();
+  }
+
+  function openNewProjectDialog() {
     clearErrors();
     setNewProjectOpen(true);
+  }
+
+  // A note draft lives only in the notes editor; leaving the project would
+  // drop it, so these exits ask first. "Discard" resumes through the latest
+  // render's handlers (`projectExitsRef`), never a stale closure.
+  function guardNoteDraft(resume: () => void): boolean {
+    if (!notesDirtyRef.current) return false;
+    setNoteDraftGuard({ resume });
+    return true;
+  }
+
+  function keepNoteDraft() {
+    setNoteDraftGuard(null);
+    openNotes();
+  }
+
+  function discardNoteDraft() {
+    const pending = noteDraftGuard;
+    setNoteDraftGuard(null);
+    pending?.resume();
+  }
+
+  function openNotes() {
+    if (!tree) return;
+    setView("notes");
+    setLogOpen(false);
+    setMonitorOpen(false);
+    // Same stacked-viewport rule as Devices and the catalog.
+    if (window.innerWidth <= 650) setNavigationOpen(false);
   }
 
   // A brand-new project has no `.knxdb` behind it, so `hasStorePath` must
@@ -988,6 +1037,11 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   // decides. The server refuses too, so this check is the courtesy, not
   // the guard.
   async function loadOrAsk(path: string, kind: "import" | "open") {
+    if (guardNoteDraft(() => void projectExitsRef.current?.load(path, kind))) return;
+    await loadOrAskModified(path, kind);
+  }
+
+  async function loadOrAskModified(path: string, kind: "import" | "open") {
     if (tree?.is_modified) {
       setReplaceConfirm({ path, kind });
       return;
@@ -1193,6 +1247,11 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   }
 
   function quitRequested() {
+    if (guardNoteDraft(() => projectExitsRef.current?.quit())) return;
+    quitUnlessModified();
+  }
+
+  function quitUnlessModified() {
     if (tree?.is_modified) {
       setQuitConfirmOpen(true);
       return;
@@ -1206,11 +1265,16 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   // project keeps the window open and shows the same quit-confirm dialog.
   const isModifiedRef = useRef(false);
   isModifiedRef.current = tree?.is_modified ?? false;
+  projectExitsRef.current = { load: loadOrAskModified, newProject: openNewProjectDialog, quit: quitUnlessModified };
   useEffect(() => {
     if (!canQuit()) return;
     let unlisten: (() => void) | null = null;
     let disposed = false;
     void onWindowCloseRequested(() => {
+      if (notesDirtyRef.current) {
+        setNoteDraftGuard({ resume: () => projectExitsRef.current?.quit() });
+        return false;
+      }
       if (!isModifiedRef.current) return true;
       setQuitConfirmOpen(true);
       return false;
@@ -1274,6 +1338,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     openCatalog: () => openCatalog(null),
     openProjectHistory,
     openDevices,
+    openNotes,
     addDevice: () => setDeviceWizard({ target: wizardTargetFor(selection) }),
     openIntroduction: guide.show,
     openAchievements: () => setAchievementsOpen(true),
@@ -1296,7 +1361,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
             ? <DeviceWorkspace key={`${loadKey}:${deviceDetail.id}`} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />
             : <div><p role="status">{t(deviceDetailLoading ? "devices.loadingEditor" : "devices.editorUnavailable")}</p>
               {!deviceDetailLoading && selection?.kind === "device" && <button type="button" onClick={() => void selectEntity(selection)}>{t("devices.retry")}</button>}</div>}
-        </section> : view === "devices" ? null : view === "overview" ? <Dashboard tree={tree} onOpenImportFindings={openImportFindings} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
+        </section> : view === "devices" || view === "notes" ? null : view === "overview" ? <Dashboard tree={tree} onOpenImportFindings={openImportFindings} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
           rangeScope={addressScope} onRangeScope={setAddressScope}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate} onDeleted={resetTree}
           addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
@@ -1328,6 +1393,10 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
         <DevicesWorkspace key={loadKey} tree={tree} active={!logOpen && !monitorOpen && view === "devices"}
           selection={selection} multiSelection={multiSelection} onItemClick={onItemClick} onCatalogue={setNavigationCatalogue} />
       </div>}
+      {tree && notesIdentity !== null && (view === "notes" || notesMountedFor === notesIdentity) && (
+        <NotesWorkspace key={notesIdentity} tree={tree} active={!logOpen && !monitorOpen && view === "notes"}
+          onTreeUpdate={handleTreeUpdate} onDirtyChange={(dirty) => { notesDirtyRef.current = dirty; }} />
+      )}
     </div>
   );
 
@@ -1415,10 +1484,10 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
         {welcomeVisible && centerWorkspace}
         {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={navigationWidth} min={NAVIGATION_PANE.min} max={NAVIGATION_PANE.max} onWidthCommit={(width) => setSetting("navigationPaneWidth", width)}>
           <nav ref={navBlockRef} className="workbench-navigation" aria-label={t("workbench.navigation")} style={{ height: navHeight ?? undefined }}>
-            {(["overview", "buildings", "topology", "devices", "addresses"] as const).map((item) => <button key={item}
-              disabled={item === "devices" && !tree}
+            {(["overview", "buildings", "topology", "devices", "addresses", "notes"] as const).map((item) => <button key={item}
+              disabled={(item === "devices" || item === "notes") && !tree}
               aria-current={!logOpen && !monitorOpen && (view === item || item === "devices" && view === "device") ? "page" : undefined}
-              onClick={() => { if (item === "devices") openDevices(); else { setView(item); setLogOpen(false); setMonitorOpen(false); } }}>
+              onClick={() => { if (item === "devices") openDevices(); else if (item === "notes") openNotes(); else { setView(item); setLogOpen(false); setMonitorOpen(false); } }}>
               <WorkbenchIcon name={item} />{t(`workbench.${item}`)}</button>)}
             <button aria-current={!logOpen && !monitorOpen && view === "catalog" ? "page" : undefined}
               onClick={() => openCatalog(selection?.kind === "line" ? selection.id : null)}><WorkbenchIcon name="catalog" />{t("workbench.catalog")}</button>
@@ -1513,6 +1582,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
           a save that raced a newer edit keeps both this dialog and the
           project open, which is the whole point of asking. "Keep editing"
           stays live during a save: it withdraws the quit, not the save. */}
+      {noteDraftGuard && <NoteDraftGuardDialog onKeep={keepNoteDraft} onDiscard={discardNoteDraft} />}
       {quitConfirmOpen && (
         <UnsavedChangesDialog titleId="quit-confirm-title"
           title={t("quit.title")} message={t("quit.message")} details={[t("quit.hint")]}

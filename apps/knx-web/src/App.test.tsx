@@ -118,6 +118,20 @@ vi.mock("./api", () => ({
 
 vi.mock("./filePicker", () => ({ ...filePickerMock }));
 
+// The notes editor's default HTTP client captures `fetch` when its module
+// loads, before this file's per-test stub exists; replace the factory so
+// the workbench's notes view talks to an in-memory client instead.
+const notesClientMock = vi.hoisted(() => ({
+  read: vi.fn(),
+  preview: vi.fn(),
+  apply: vi.fn(),
+  cancel: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("./features/notes/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./features/notes/client")>()),
+  createNotesClient: () => notesClientMock,
+}));
+
 // T28/F4: `quit.ts` imports this lazily, so only the tests that actually
 // press Quit ever reach it — but the mock has to be declared up here all
 // the same, and a real `getCurrentWindow()` outside the shell throws.
@@ -4008,5 +4022,147 @@ describe("App project-history restore publication", () => {
       expect(host!.querySelector(".devices-count-link")?.textContent).toBe("0");
       expect(apiMock.restoreProjectVersion).toHaveBeenCalledTimes(1);
     } finally { await act(async () => root.unmount()); }
+  });
+});
+
+describe("App — project notes workspace", () => {
+  function notesTree(): ProjectTree {
+    return { ...baseTree(), server_incarnation: "srv-notes", project_incarnation: 2, snapshot_revision: 5 };
+  }
+  function notesView() {
+    return { serverIncarnation: "srv-notes", projectIncarnation: 2, snapshotRevision: 5, persistence: "session-only" as const,
+      notes: [{ id: 1, position: 0, target: { kind: "project" as const }, title: "Commissioning", body: "Check line 1", includeInDocumentation: false }] };
+  }
+  async function openNotesProject() {
+    notesClientMock.read.mockResolvedValue(notesView());
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(notesTree());
+    const root = await renderApp();
+    await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => {});
+    return root;
+  }
+  async function typeTitle(value: string) {
+    const caption = Array.from(host!.querySelectorAll(".notes-workspace label")).find((label) => label.textContent === "Title") as HTMLLabelElement;
+    const field = document.getElementById(caption.htmlFor) as HTMLTextAreaElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(field, value);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
+  function titleValues(): string[] {
+    return Array.from(host!.querySelectorAll<HTMLTextAreaElement>(".notes-workspace textarea")).map((field) => field.value);
+  }
+
+  it("disables the Notes view until a project is open, and reads no notes before it is visited", async () => {
+    const root = await renderApp();
+    expect(findButton(enMessages["workbench.notes"]).disabled).toBe(true);
+    await act(async () => root.unmount());
+    const opened = await openNotesProject();
+    expect(findButton(enMessages["workbench.notes"]).disabled).toBe(false);
+    expect(notesClientMock.read).not.toHaveBeenCalled();
+    expect(host!.querySelector(".notes-workspace")).toBeNull();
+    await act(async () => opened.unmount());
+  });
+
+  it("opens the notebook with the project's identity and keeps a draft across workbench views", async () => {
+    const root = await openNotesProject();
+    await act(async () => findButton(enMessages["workbench.notes"]).click());
+    expect(notesClientMock.read).toHaveBeenCalledOnce();
+    expect(findButton(enMessages["workbench.notes"]).getAttribute("aria-current")).toBe("page");
+    expect(titleValues()).toContain("Commissioning");
+    await typeTitle("Commissioning, round two");
+    await act(async () => findButton(enMessages["workbench.overview"]).click());
+    expect(host!.querySelector<HTMLElement>(".notes-workspace")!.hidden).toBe(true);
+    await act(async () => findButton(enMessages["workbench.notes"]).click());
+    expect(host!.querySelector<HTMLElement>(".notes-workspace")!.hidden).toBe(false);
+    expect(titleValues()).toContain("Commissioning, round two");
+    expect(notesClientMock.read).toHaveBeenCalledOnce();
+    await act(async () => root.unmount());
+  });
+
+  it("asks before opening another project over an unapplied note draft, and keeping it changes nothing", async () => {
+    const root = await openNotesProject();
+    await act(async () => findButton(enMessages["workbench.notes"]).click());
+    await typeTitle("Unapplied thought");
+    apiMock.importProject.mockClear();
+    await act(async () => findButton(enMessages["workbench.overview"]).click());
+    await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => {});
+    expect(document.querySelector(".note-draft-guard")).not.toBeNull();
+    expect(apiMock.importProject).not.toHaveBeenCalled();
+    await act(async () => findButton(enMessages["notes.draftGuard.keep"]).click());
+    expect(document.querySelector(".note-draft-guard")).toBeNull();
+    expect(apiMock.importProject).not.toHaveBeenCalled();
+    expect(host!.querySelector<HTMLElement>(".notes-workspace")!.hidden).toBe(false);
+    expect(titleValues()).toContain("Unapplied thought");
+
+    await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => {});
+    await act(async () => findButton(enMessages["notes.draftGuard.discard"]).click());
+    await act(async () => {});
+    expect(apiMock.importProject).toHaveBeenCalledOnce();
+    await act(async () => root.unmount());
+  });
+
+  it("asks before starting a new project over an unapplied note draft", async () => {
+    const root = await openNotesProject();
+    await act(async () => findButton(enMessages["workbench.notes"]).click());
+    await typeTitle("Unapplied thought");
+    await act(async () => findButton(enMessages["toolbar.newProject"]).click());
+    expect(document.querySelector(".note-draft-guard")).not.toBeNull();
+    expect(document.querySelector(".new-project-dialog, .project-wizard")).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("keeps the desktop window open over an unapplied note draft", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    const root = await openNotesProject();
+    await act(async () => findButton(enMessages["workbench.notes"]).click());
+    await typeTitle("Unapplied thought");
+    let mayClose = true;
+    await act(async () => { mayClose = tauriCloseRequested(); });
+    expect(mayClose).toBe(false);
+    expect(document.querySelector(".note-draft-guard")).not.toBeNull();
+    expect(tauriWindowMock.destroy).not.toHaveBeenCalled();
+    await act(async () => findButton(enMessages["notes.draftGuard.discard"]).click());
+    await act(async () => {});
+    expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
+  });
+
+  it("shows the notes immediately on narrow screens instead of below a full-height navigation", async () => {
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 400 });
+    try {
+      const root = await openNotesProject();
+      await act(async () => findButton(enMessages["workbench.notes"]).click());
+      expect(findButton(enMessages["workbench.navigation"]).getAttribute("aria-expanded")).toBe("false");
+      expect(host!.querySelector<HTMLElement>(".notes-workspace")?.hidden).toBe(false);
+      await act(async () => root.unmount());
+    } finally {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+    }
+  });
+
+  it("forgets the draft state once the project identity changes, even from another view", async () => {
+    const root = await openNotesProject();
+    await act(async () => findButton(enMessages["workbench.notes"]).click());
+    await typeTitle("Unapplied thought");
+    // From Overview the next project's notebook is not mounted, so only the
+    // old workspace's unmount can clear the draft flag.
+    await act(async () => findButton(enMessages["workbench.overview"]).click());
+    await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => {});
+    apiMock.importProject.mockResolvedValue({ ...notesTree(), server_incarnation: "srv-other" });
+    notesClientMock.read.mockResolvedValue({ ...notesView(), serverIncarnation: "srv-other", notes: [] });
+    await act(async () => findButton(enMessages["notes.draftGuard.discard"]).click());
+    await act(async () => {});
+    expect(titleValues()).not.toContain("Unapplied thought");
+    await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => {});
+    expect(document.querySelector(".note-draft-guard")).toBeNull();
+    await act(async () => root.unmount());
   });
 });

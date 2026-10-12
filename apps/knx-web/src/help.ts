@@ -55,7 +55,7 @@ export const HELP_TOPICS = [
   {
     id: "workbench",
     titleKey: "help.topic.workbench.title",
-    bodyKeys: ["help.topic.workbench.p1", "help.topic.workbench.p2", "help.topic.workbench.p3"],
+    bodyKeys: ["help.topic.workbench.p1", "help.topic.workbench.p2", "help.topic.workbench.p3", "help.topic.workbench.p4"],
     standardNote: false,
   },
   {

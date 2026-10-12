@@ -64,5 +64,27 @@ fallbacks after the five-mutation browser run. Those mutations bind the earlier
 source manifest; current feature/broad gates and fresh browser8 bind final source.
 No final-source five-mutation rerun or expiry-frame inspection is claimed.
 [Guidance and limits](project-note-editor-guidance.md) describe the isolated
-component; Session1 authoritative production host/mount remains open. A fixture
-is not production workbench/Tauri/Orca/hardware or ETS compatibility.
+component; the production host is described below. A fixture is not production
+workbench/Tauri/Orca/hardware or ETS compatibility.
+
+## Workbench host (12 October 2026)
+
+`apps/knx-web/src/NotesWorkspace.tsx` mounts the editor as the **Notes** view
+(navigation and command palette, disabled without a project). Pure
+`notesHost.ts` maps `server_incarnation`/`project_incarnation`/`snapshot_revision`
+explicitly to the editor context and refuses incomplete identity (no editor, no
+read). Target choices are installations, areas, lines, building parts, devices,
+group ranges and group addresses by projection domain ID, deduplicated, with
+ambiguous IDs withheld and equal labels disambiguated by `#id`; communication
+objects are not offered because the tree does not project all of them. After a
+confirmed Apply the host re-reads `GET /api/project` through the workbench's own
+snapshot publication; a failed re-read stays "confirmed, refresh failed".
+The view mounts on first visit, stays mounted (hidden) for the same
+server/project incarnation and remounts on identity change, so projects that never
+open it issue no notes request. A dirty draft guards Open/Import, New project,
+Quit and the desktop window close with a two-answer dialog; workbench navigation
+keeps the draft. The leaf additionally scrolls a refusal alert into view and resets
+the global control height on its opt-in checkbox. Evidence: App/host/editor unit
+tests, 11 intercepted production-build Chromium cases (EN/DE, Porcelain/Graphite,
+1440/400) and one loopback-only real-server smoke; see
+[IMPLEMENTATION_STATUS](../IMPLEMENTATION_STATUS.md). Self-review only.

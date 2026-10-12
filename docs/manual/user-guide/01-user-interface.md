@@ -73,6 +73,7 @@ The left pane has three stacked blocks.
 | Topology | Areas, lines and the devices in them |
 | Devices | The project-wide, filterable/sortable device table; a device click opens its central editor |
 | Group addresses | The group-address table |
+| Notes | The project's engineering notebook (newer source, not in Alpha 9) — see [Project notes](#project-notes-newer-source-not-alpha-9) |
 | Product catalog | Opens the catalog overlay, not a view — see [Devices and products](05-devices-and-products.md) |
 
 **The project explorer**, in the middle: the project as a tree — Topology, Buildings,
@@ -165,6 +166,37 @@ server resets the trail. **This is not a complete audit.** Entries may name
 project elements, KNX addresses or local paths; check before sharing the
 file. The desktop build opens an OS save dialog; browser export uses a local
 file download, not the server's Save As directory.
+
+### Project notes (newer source, not Alpha 9)
+
+**Notes** in the navigation pane, or **Notes** in the command palette, opens the
+project's engineering notebook: ordered plain-text notes attached to the project
+or to one of its parts. It needs an open project and is disabled without one.
+This view is newer than the published Alpha 9 and is not in its screenshots.
+
+- The list sits beside the editor. **Find notes** only filters what you see; it
+  never reorders the project's notes.
+- **Title** and **Note text** are literal text. Markup such as `<b>` or `**bold**`
+  stays exactly as typed and is never rendered.
+- **Target** offers the project, its installations, areas, lines, building parts,
+  devices, group ranges and group addresses, identified by their stable IDs. A note
+  whose stored target is not in that list (a communication object, for example)
+  keeps it and shows it as *Stored target not in host catalogue*.
+- **Include in project documentation** stays off unless you tick it.
+- **Preview change** shows the exact before and after; nothing changes until
+  **Confirm change**. Remove and the two Move buttons are previewed the same way,
+  and editing the draft again withdraws the preview.
+- After a confirmed change the workbench reloads the project, so Undo/Redo and the
+  modified state follow the note like any other edit. Applying a note is not saving
+  the file: use Save or Save As as usual.
+- If the server refuses (for example because another client changed the notes after
+  your preview), the alert appears where you clicked, the notes stay as they were
+  and your draft is kept for another try.
+- A draft survives switching to another view. Opening or importing another project,
+  starting a new one or quitting asks first: **Keep editing** returns to the notes,
+  **Discard draft and continue** goes on. A browser reload does not ask.
+
+**Application help** in the notebook opens the help panel's *The window* topic.
 
 ## The properties pane
 

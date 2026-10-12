@@ -780,3 +780,7 @@ a silent cascade. Storage/domain are independent of UI; report inclusion is
 explicit, static help remains application prose. Source-bound full admission and
 Application/HTTP/isolated-editor slices remain pending.
 [Scope](contracts/project-note-admission.md); no published AP4/shell claim.
+Workbench host (2026-10-12): `apps/knx-web` `NotesWorkspace` mounts the leaf;
+pure `notesHost.ts` derives identity and stable-ID targets from the ProjectTree,
+and App keeps drafts across views and guards project exits
+([host](contracts/project-note-editor-host.md#workbench-host-12-october-2026)).

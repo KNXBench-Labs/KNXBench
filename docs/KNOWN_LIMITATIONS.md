@@ -9745,6 +9745,34 @@ Absence of a marker does not mean plain text. Full retained source, not a clippe
 preview, remains authoritative for preservation/export. No full field catalogue,
 format validation, plain extraction or RTF rendering support. Ledger `KL-175`.
 
+## 176. AppImages up to alpha.9 abort on hosts with newer Mesa EGL
+
+**Reported 2026-10-12 (issue #6, Kubuntu 24.04).** `v0.1.0-alpha.9` and
+earlier bundle the build runner's `libwayland-client.so.0`. Where glvnd uses
+Mesa's EGL vendor and that Mesa needs newer libwayland symbols, the vendor
+fails to load and WebKit aborts with `Could not create default EGL display:
+EGL_BAD_PARAMETER. Aborting...`; the window stays empty or the web process
+restarts. The cause was reproduced with the published alpha.9 image on one host
+by pinning glvnd to Mesa, under X11 and Wayland
+([launcher contract](APPIMAGE_LAUNCHER.md#host-provided-libraries-issue-6)).
+
+**Fix in source (2026-10-12).** The library is removed after deployment, and
+the release workflow refuses an image that still contains it. The fix reaches
+users only with the next published AppImage. Until then, preloading the host's
+copy is the workaround:
+`LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libwayland-client.so.0 ./KNXBench_…AppImage`
+(the path varies by distribution; `ldconfig -p | grep wayland-client`).
+
+**Remaining boundary.** Verified on one Arch host with a simulated Mesa-only
+EGL vendor, not on the reporter's machine or a Fedora/Ubuntu-26.04 class host.
+The CI startup smoke tests run on the build distribution, whose libraries match
+the bundle, so they cannot catch this class of mismatch. The host must now
+provide `libwayland-client.so.0`; GTK3 with its Wayland backend (the default on
+major distributions) already depends on it, but a host without it cannot start
+the image. Other bundled
+GLib/GStreamer libraries could, in principle, conflict in the same way on
+future hosts; none has been observed. Ledger `KL-176`.
+
 ## Bounded AP3 parameter controls (2026-10-11, PDB-04 remains partial)
 
 Own isolated Time uses an unchanged decimal count, never guessed duration/clock

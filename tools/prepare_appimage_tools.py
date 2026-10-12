@@ -2,8 +2,10 @@
 
 Tauri CLI 2.11.4 reuses <cargo target_directory>/.tauri when
 bundle.useLocalToolsDir is true. Never patch the user's global tool cache.
-Only the generated AppRun hook's forced X11 line changes; GTK library/resource
-collection stays upstream-owned. See docs/APPIMAGE_LAUNCHER.md.
+Two anchored changes only: the generated AppRun hook's forced X11 line is
+replaced, and the host-library policy is appended after the plugin's final
+step. GTK library/resource collection otherwise stays upstream-owned. See
+docs/APPIMAGE_LAUNCHER.md.
 """
 
 import hashlib
@@ -23,6 +25,8 @@ UPSTREAM_URL = (
     + UPSTREAM_REVISION + "/linuxdeploy-plugin-gtk.sh"
 )
 MAX_PLUGIN_BYTES = 128 * 1024
+# The pinned plugin's last command; the host-library policy must run after it.
+UPSTREAM_FINAL_LINE = "find \"$APPDIR\"/usr/lib* -name 'libwebkit*' -exec sed -i -e \"s|/usr|././|g\" '{}' \\;\n"
 
 
 def patch_plugin(source: str, policy: str) -> str:
@@ -46,6 +50,22 @@ def patch_plugin(source: str, policy: str) -> str:
         raise ValueError("display policy must be nonempty and must not terminate the hook heredoc")
     lines[index] = policy.rstrip("\n") + "\n"
     return "".join(lines)
+
+
+def append_host_library_policy(source: str, policy: str) -> str:
+    """Append after the plugin's last command, which must be the known one."""
+    if not source.endswith(UPSTREAM_FINAL_LINE) or source.count(UPSTREAM_FINAL_LINE) != 1:
+        raise ValueError("unexpected GTK plugin tail; refusing to append the host-library policy")
+    if not policy.strip():
+        raise ValueError("host-library policy must be nonempty")
+    return source + "\n" + policy.rstrip("\n") + "\n"
+
+
+def patch_source(source: str) -> str:
+    """Apply both owned policies to the verified upstream plugin text."""
+    display = (ROOT / "tools/appimage/display-backend.sh").read_text(encoding="utf-8")
+    libraries = (ROOT / "tools/appimage/host-libraries.sh").read_text(encoding="utf-8")
+    return append_host_library_policy(patch_plugin(source, display), libraries)
 
 
 def atomic_write(path: Path, data: bytes, mode: int) -> None:
@@ -72,8 +92,7 @@ def prepare(tools_dir: Path) -> Path:
             source = response.read(MAX_PLUGIN_BYTES + 1)
     if len(source) > MAX_PLUGIN_BYTES or hashlib.sha256(source).hexdigest() != UPSTREAM_SHA256:
         raise ValueError("GTK deploy plugin checksum mismatch; refusing to bundle")
-    policy = (ROOT / "tools/appimage/display-backend.sh").read_text(encoding="utf-8")
-    patched = patch_plugin(source.decode("utf-8"), policy).encode("utf-8")
+    patched = patch_source(source.decode("utf-8")).encode("utf-8")
     if not cached.exists():
         atomic_write(cached, source, 0o600)
     plugin = tools_dir / "linuxdeploy-plugin-gtk.sh"

@@ -58,6 +58,9 @@ jobs:
           NO_STRIP: "1"
         run: APPIMAGE_EXTRACT_AND_RUN=1 cargo tauri build --bundles appimage --ci
 
+      - name: Verify host-provided libraries are not bundled
+        run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage
+
       - name: Validate tagged AppImage
         if: github.event_name == 'push' && github.ref_type == 'tag'
         run: cargo run -p xtask -- check-appimage --tag "$GITHUB_REF_NAME"

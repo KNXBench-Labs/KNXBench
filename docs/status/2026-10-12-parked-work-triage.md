@@ -344,10 +344,10 @@ Two further remote branches, `fix/docker-import-diagnostics-20261009` and
 `fix/import-status-20261011`, are also ancestors of main. They were not in the
 request and are left in place.
 
-**Stale claims still on main.** The hygiene audit corrected these on its own
-branch, but the corrections never reached main. Each one needs a fresh check
-against current source before rewording; the audit's old replacement text is
-not reliable:
+**Stale claims on main.** The hygiene audit corrected these on its own branch,
+but the corrections never reached main. All five were re-checked against current
+source and reworded the same day (not copied from the audit). Line numbers below
+refer to `9152877c`:
 
 | File:line on `9152877c` | Claim | Why it is stale |
 | --- | --- | --- |

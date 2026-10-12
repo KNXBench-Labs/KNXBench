@@ -191,10 +191,15 @@ It meets §125's lifting condition (lifted below) and adds evidence to §1,
 §8 (secure-capable programs), §106 (endpoints in retained source attributes)
 and the PDB-9 boundary (grid layout, value forms).
 
-The current importer does not yet import that project end to end. Archive
-name lookup, `Node`-style object trees and unassigned devices are being
-repaired in a separate import-integrity package; nothing here claims that
-work. Private opt-in gate: `a_second_schema_23_project_resolves_every_object_id_through_the_production_rules` (`crates/knx-etsproj/tests/private_schema23_refids.rs`, `KNXBENCH_PRIVATE_SCHEMA23_PROJECT`). [Receipt](evidence/private-schema23-kl-review-2026-10-10.json).
+**Historical, pre-repair (10 October 2026):** the importer did not yet import
+that project end to end. Archive name lookup, `Node`-style object trees and
+unassigned placement were repaired in the
+[import-integrity integration](status/2026-10-10-import-integrity-integration.md);
+since then the explicit private tests run the production importer on this
+project (for example `crates/knx-app/tests/private_schema23_reconciliation.rs`)
+and are recorded as passing in the
+[review closure receipt](evidence/private-schema23-review-closure-2026-10-11.json).
+That is one private regression input, not general ETS compatibility. Private opt-in gate: `a_second_schema_23_project_resolves_every_object_id_through_the_production_rules` (`crates/knx-etsproj/tests/private_schema23_refids.rs`, `KNXBENCH_PRIVATE_SCHEMA23_PROJECT`). [Receipt](evidence/private-schema23-kl-review-2026-10-10.json).
 
 ## Selective import and evidence boundaries (2026-10-10 source integration)
 
@@ -204,9 +209,13 @@ The [selective importer](SELECTIVE_IMPORT.md) merges devices or complete
 lines into one explicit target installation. No building-only selector, automatic
 address reassignment, conflict overwrite or manufacturer-catalogue installation.
 Existing area/line names may be retained with an explicit preview note; incompatible
-configuration/range/address metadata refuse. Only normalized model v12 is admitted
-(the v11→v12 change is completion vocabulary only, not new entities/references);
-future-model fields require a fresh reference-closure audit. This does not restrict
+configuration/range/address metadata refuse. Both projects must be at the current
+normalized model, v14 (`SELECTIVE_MODEL_VERSION` in
+`crates/knx-app/src/selective_import.rs`); each model step was audited before the
+admission moved: v12 added completion vocabulary only, v13 instruction overlays
+(remapped with their devices), v14 project notes (destination notes are kept; a
+source carrying notes is refused rather than dropped). Future-model fields still
+require a fresh reference-closure audit. This does not restrict
 ETS input schemas beyond the existing complete importer.
 
 The source cap is 64 MiB; native snapshot/history limits remain binding. Complete
@@ -911,8 +920,13 @@ than dropped:
   `DisplayFormat`, `Pattern`, `Encoding`, `AddressType`, `TypeTime/@Unit`,
   `TypeColor/@Space`, `TypePicture/@RefId`/`@HorizontalAlignment` and
   `TypeRawData/@MaxSize` are reported with a sample, not stored in columns:
-  the editor does not use them yet (e.g. no slider, no hh:mm:ss duration
-  input, no colour picker, no picture display).
+  the ordinary parameter rows do not use them. Since 12 October 2026 an
+  opt-in **Checked editor** in the device editor's Parameters tab
+  ([host](contracts/parameter-editor-host.md#workbench-host-12-october-2026))
+  reads the retained source for Time (decimal count, `Unit` shown
+  uninterpreted, no hh:mm:ss conversion) and integer `UIHint="Slider"` Number
+  fields. Colour/Picture get only an unsupported-codec original-value view:
+  no colour picker, no picture display. PDB-04 stays open.
 - **`Color`, `Picture`, `Raw` values** get only a non-empty, XML-safe check;
   the Project Schema documents no value encoding for them.
 - **Not every absent reference is enumerated.** The branches of a `choose`

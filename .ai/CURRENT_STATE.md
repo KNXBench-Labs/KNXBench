@@ -1,3 +1,19 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 19:13
+- **Completed:** Docs-only package.
+  - Fixed the five stale claims from the leftovers sort, each re-checked against source:
+    - KNOWN_LIMITATIONS private schema-23 paragraph: now marked historical and pre-repair;
+    - selective import: admits model v14, with the per-step audit noted;
+    - PDB-9: the Checked editor covers Time and integer Slider; Colour/Picture are a fallback view only, PDB-04 open;
+    - DATA_MODEL: the instruction editor is published and mounted;
+    - OPEN_WORK and ROADMAP: "baseline audit" wording.
+  - Restored `.ai/logs/2026-10-12_claude_parked-work-triage.md`. My `e61158c6` had published it as a single newline because an end-of-file cleanup truncated it before reading. It is rebuilt from `16c5eb84` plus the leftovers section; no other file was affected.
+  - Deleted the merged remote branches `fix/docker-import-diagnostics-20261009` and `fix/import-status-20261011` with an expected-SHA lease. The remote now has `main` only.
+- **Pending/Next Steps:** Unchanged. Owner decision for `offline-naming-20261011` and `data-tooling-stats-20261011`. The ux-feedback adoption follows native-evidence under the web lock.
+- **Notes for Codex oder Claude:** Web lock: held by claude-parked-adoption for package 1 (native-evidence port); not taken or released by this entry. This entry touches KNOWN_LIMITATIONS, DATA_MODEL, OPEN_WORK and ROADMAP in a few lines only; if the native-evidence merge meets them, keep both sides. The private schema-23 tests were cited from their receipt, not re-run. No hardware, release, deployment, subagents or quota checks.
+
+---
+
 Web lock: taken by claude-parked-adoption for package 1 (native-evidence port)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 19:01

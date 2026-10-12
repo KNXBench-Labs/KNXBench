@@ -37,7 +37,8 @@ policy. This does not reopen commissioning or authorize real-bus actions.
 Formal per-ID dispositions remain only in [LEDGER](status/LEDGER.md).
 
 **Open work:** everything not yet done, deferred or later scope is listed in
-[OPEN_WORK](OPEN_WORK.md) (audit 2026-10-08). The three alpha goals are
+[OPEN_WORK](OPEN_WORK.md) (baseline audit 2026-10-08, kept current by dated
+sections). The three alpha goals are
 finished; they were removed from the tree on 2026-10-08
 ([where to find them](history/REMOVED_DOCS.md)).
 

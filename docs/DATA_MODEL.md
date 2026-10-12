@@ -41,7 +41,10 @@ root, working state, both stacks, source context and named versions. Selected
 source overlays map to remapped devices without changing destination overlays;
 normalized styles/text appear in native diff, never as changed source bytes.
 See [scoped evidence](evidence/instruction-native-foundation-2026-10-11.json).
-Application edit API and isolated editor acceptance remain separate and pending.
+The application edit API and isolated editor were published later
+([combined-source evidence](evidence/instruction-editing-2026-10-11.json)) and,
+on 12 October 2026, mounted as the device editor's **Installation instructions**
+tab ([host](contracts/instruction-editor-host.md#workbench-host-12-october-2026)).
 
 
 ## Local completion vocabulary, model/native12 (2026-10-10)

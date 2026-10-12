@@ -66,11 +66,8 @@
     },
     "buildClippyExplicitRootGatesPassed": true
   },
-  "publication": null,
+  "publication": "normal push of this docs closure on top of d6127583; tip readback recorded in .ai/CURRENT_STATE.md",
   "pending": [
-    "docs-only current-source closure",
-    "fresh-upstream integrated full acceptance",
-    "normal publication/readback",
     "separate per-alias/client/operator approval and MCP/native/real-client evidence"
   ],
   "notClaimed": [
@@ -89,5 +86,29 @@
     "unstartedStages": 4,
     "overallAccepted": false,
     "successorSourceNotRestamped": true
+  },
+  "integratedAcceptance": {
+    "accepted": true,
+    "mergeCommit": "d612758396301ce6b0f4223e89db1f2fa65d0dec",
+    "packageCommit": "1d8e42cf",
+    "upstream": "fe09a41a13c3ba8c4d8d20fad212525ff8fcba5c",
+    "stages": 22,
+    "sourceFrozen": true,
+    "rust": {
+      "passed": 4129,
+      "failed": 0,
+      "ignored": 194
+    },
+    "web": {
+      "passed": 2841,
+      "failed": 0,
+      "files": 182
+    },
+    "inheritedServerRegressions": {
+      "serverDeploymentDefaults": 5,
+      "dockerReleaseWorkflow": 5
+    },
+    "buildClippyExplicitRootGatesPassed": true,
+    "review": "active-session self-review, not independent"
   }
 }

@@ -164,6 +164,20 @@ non-revision-conditional endpoint; ignoring a superseded UI reply does not undo
 or cancel a server operation. No installation create/delete/move capability,
 fresh private ETS import, ETS export or native screen-reader acceptance is added.
 
+### Local modeled project information boundary (2026-10-11)
+
+[Read-only metadata inspection](contracts/modeled-project-metadata.md) shows only
+existing normalized ProjectInfo values; it does not close MODEL-07 or add an
+editor for Guid/version/copyright/contract/task/trace/usage/address fields.
+Dates are stored UTC model values, not last-successful-save bookkeeping or raw
+source spelling. Recorded completion is not new hardware verification or write
+authority. Null versus empty remains exact. A cumulative 64-KiB model-text bound
+refuses the entire view rather than truncating; model/retained bytes are not
+removed. No automatic source parsing, clipboard sharing or network/bus action.
+Final local gates pass; integration/publication remains separate.
+No ledger status is promoted by this read-only scalar view.
+
+
 ### Local native-export privacy boundary (2026-10-11)
 
 [The reviewed native export dialog](contracts/native-export-privacy.md) warns that

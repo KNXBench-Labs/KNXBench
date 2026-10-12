@@ -1,0 +1,6 @@
+/** Read-only modeled fields wrap literally without changing stored values. */
+.project-metadata-panel { margin-block: 1rem; min-width: 0; }
+.project-metadata-panel dl { margin-block: .75rem; }
+.project-metadata-panel dl > div { margin-block-end: .75rem; }
+.project-metadata-panel dt { font-weight: 600; }
+.project-metadata-panel dd { margin-inline-start: 0; white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -360,6 +360,11 @@ describe("one editing workspace", () => {
     expect(apiCallsIn(payloadGraph)).toEqual([]);
     expect(mutatingFetchesIn(payloadGraph)).toEqual([]);
     expect(payloadGraph.get("projectPayloads.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    const metadataGraph = valueImportGraph("projectMetadata.ts");
+    expect([...metadataGraph.keys()]).toEqual(["projectMetadata.ts"]);
+    expect(apiCallsIn(metadataGraph)).toEqual([]);
+    expect(mutatingFetchesIn(metadataGraph)).toEqual([]);
+    expect(metadataGraph.get("projectMetadata.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     // Shipped fun-language catalogues add only static copy and their registry.
     // The API-call and mutation inventories below remain unchanged.
     expect([...graph.keys()].sort()).toEqual([
@@ -415,6 +420,7 @@ describe("one editing workspace", () => {
       "messages/tlh.ts",
       "modalIsolation.ts",
       "projectHistory.ts",
+      "projectMetadata.ts",
       "projectPayloads.ts",
       "session.ts",
       "sessionLogExport.ts",

@@ -3,6 +3,7 @@
 //! function names and argument shapes the components already called, so
 //! swapping the import at each call site is the only change there.
 import type { ProjectTree } from "./bindings/ProjectTree";
+import {admitProjectMetadata,type ProjectMetadataView} from "./projectMetadata";
 import {admitProjectPayloads,payloadDownloadPath,type ProjectPayloadCatalogue} from "./projectPayloads";
 import { admitImportEvidence, type ImportEvidence } from "./importEvidence";
 import {admitSourceReportCatalogue,admitSourceReportEvidence,isSourceReportId,type SourceReportCatalogue,type SourceReportEvidence} from "./sourceReports";
@@ -81,6 +82,11 @@ export async function getSourceReportCatalogue(): Promise<SourceReportCatalogue>
 export async function getSourceReport(id: string): Promise<SourceReportEvidence> {
   if (!isSourceReportId(id)) throw new Error("Invalid source report selector");
   return admitSourceReportEvidence(await request<unknown>(`/api/project/source-reports/${id}`),id);
+}
+
+/** Read currently modeled project metadata, not original-source or hardware reanalysis. */
+export async function getProjectMetadata():Promise<ProjectMetadataView> {
+  return admitProjectMetadata(await request<unknown>("/api/project/metadata"));
 }
 
 /** Explicit retained payload list; no automatic download or extension execution. */

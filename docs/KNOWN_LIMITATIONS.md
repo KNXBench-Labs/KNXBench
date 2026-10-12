@@ -1,5 +1,17 @@
 # Known limitations
 
+## Project-status import links and unsaved-changes dialogs (2026-10-12)
+
+The Overview's **Show in log** links open the existing session log narrowed to
+`import:*` entries of the chosen severity; there is no separate stored report
+view. That log lives only for the current server run and keeps at most 1000
+entries, so after a restart, a native `.knxdb` open (no historical report) or a
+very large import it can hold fewer findings than counted. The log then states
+both numbers instead of pretending they match. A zero count is deliberately not a
+link. The desktop **Quit** dialog shares the component, labels and protection
+tested here, but was not exercised in a native WebKitGTK window; browser evidence
+covers the identical Open/Import and New-project variants.
+
 ## Offline service boundary is not MCP authorization (2026-10-12)
 
 [ADR-0115](adr/0115-offline-application-edit-boundary.md)'s small offline application

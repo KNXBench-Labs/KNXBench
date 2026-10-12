@@ -1,3 +1,41 @@
+## 2026-10-12 — Labelled unsaved-changes dialogs, compact About, actionable project status
+
+- **Root cause of the "unlabelled" middle button:** every dialog button inherits
+  the global accent fill and `--knx-on-accent` text; the destructive answer only
+  swapped its *text* to warning ink, leaving e.g. dark amber on violet. The Quit
+  and Open/Import dialogs now share `UnsavedChangesDialog` with explicit
+  secondary/danger/primary roles (also applied to the New-project conflict), and
+  the first answer says **Keep editing** instead of **Cancel** (EN/DE).
+- **Protection gap closed:** Open/Import "Save and open" had no attempt guard,
+  so withdrawing the decision (Keep editing/Escape) while the save ran still
+  opened the other project after a successful save. It now follows the Quit
+  rule. Failed saves, a cancelled Save-As picker and a save that raced a newer
+  edit keep the project, as before; all are pinned by regressions.
+- Unsaved-changes and About panels size to their content with responsive caps;
+  About text and Close are centred, the update notice/link/pre-release warning
+  and both legal sentences are retained, long version strings wrap.
+- Overview › Project status: three labelled cards (contents, import report,
+  technical details), aligned tabular values, a worded overall import state
+  (errors / warnings / clean / *not assessed*). Non-zero import counts open the
+  existing session log narrowed to the matching `import:*` severity, report
+  match or mismatch with the counted number, and offer **Show all log entries**.
+  Zero is plain text; missing reports keep the existing explicit note. No count,
+  note or raw log text is dropped. See
+  [limits](KNOWN_LIMITATIONS.md#project-status-import-links-and-unsaved-changes-dialogs-2026-10-12).
+- Verification (frozen candidate, inputs unchanged during the gate, self-review
+  only): build, `tsc`, flow-study/theme/new dialogs typed-fixture checks pass;
+  Vitest **2877 passed / 0 failed in 184 files**; new production-build
+  Playwright config **14/14**, its spec repeated x3 on the fixture server
+  **42/42**; layering, headers, anchors, ledger and corpus-gate checks and
+  `git diff --check` pass. The full fixture-server Chromium suite ran
+  **331 passed / 4 failed**: all four are `device-editor-layout.e2e.ts`
+  expecting the raw `DPST-9-1` text, and fail identically on untouched
+  `origin/main` fe09a41a (4 failed / 6 passed), i.e. a pre-existing conflict
+  with the name-first DPT display, outside this package. A first gate attempt
+  was stopped after two pin-test failures (Log panel import graph, class-name
+  scan); both were fixed before the complete rerun. EN/DE light/dark
+  wide/narrow screenshots were inspected; native WebKitGTK was not run.
+
 ## 2026-10-12 — Offline application boundary, local AP6 prerequisite
 
 The existing bounded naming implementation now has one home in `knx-edit`;

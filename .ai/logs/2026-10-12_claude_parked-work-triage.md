@@ -70,3 +70,36 @@ Results:
 - `docs/adr/README.md` on main has no rows for 0110–0112. Left to the owning
   tracks.
 - About 5 GB freed on the project drive; the build targets are mostly shared.
+
+## Owner decisions applied (2026-10-12 17:13)
+
+The user's decisions were "functions: wip, lifecycle: archive, AP4: drop, drop
+both, delete branches". "Drop both" means audit-findings and
+native-import-diagnostics, as in the proposed template. `offline-naming` and
+`data-tooling-stats` were not decided and were left alone.
+
+- **Backups.** The four retired worktrees were backed up into the same local
+  prune backup: HEAD and branch, diff, untracked and ignored tars, sha256 sums.
+  The manifest now has 198 files and verifies.
+- **functions-sites.**
+  - Committed the whole residue as `wip(functions)` `1154b72f` with the KNXBench
+    identity. All 91 files are byte-equal to the backup.
+  - No home or corpus paths appear in the added lines.
+  - The worktree was removed. The local branch is kept and not pushed.
+- **Worktrees removed:** import-lifecycle, audit-findings,
+  native-import-diagnostics.
+  - The removal of native-import-diagnostics was interrupted by a 60 s tool
+    timeout. Of the 787 files left behind, 777 were HEAD blobs and 10 were in
+    the backup. Finished with `shutil.rmtree` and `git worktree prune`.
+- **Branches.** Deleted 24 local branches, one per retired worktree (21 + 3).
+  Each was checked as an ancestor of `origin/main` and deleted with
+  `update-ref -d <ref> <sha>`. The list is in `deleted-branches.txt` in the
+  backup, and every SHA is still reachable from main.
+- **Left alone:**
+  - the remote branch `test/import-integrity-revalidation-20261010`;
+  - the local branches without a worktree:
+    - `design/group-address-studies-aca414` and `docs/hygiene-audit-20261011`,
+      one unmerged commit each;
+    - `feature/history-20261009`, already on main;
+  - the non-worktree directories `co-publication-20261009`,
+    `co-stats-20261009` and `xdg` under `KNXBench.worktrees/`.

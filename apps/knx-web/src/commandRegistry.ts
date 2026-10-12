@@ -20,6 +20,8 @@ export interface CommandContext {
   openCatalog: () => void;
   openProjectHistory: () => void;
   openDevices: () => void;
+  /** The project notes workspace (needs an open project). */
+  openNotes: () => void;
   /** ADR-0093: the add-device wizard, aimed at the selected line or building part. */
   addDevice: () => void;
   openIntroduction: () => void;
@@ -170,6 +172,12 @@ export const COMMANDS: PaletteCommand[] = [
     labelKey: "workbench.devices",
     isEnabled: (ctx) => ctx.tree !== null,
     run: (ctx) => ctx.openDevices(),
+  },
+  {
+    id: "open-notes",
+    labelKey: "workbench.notes",
+    isEnabled: (ctx) => ctx.tree !== null,
+    run: (ctx) => ctx.openNotes(),
   },
   {
     id: "add-device",

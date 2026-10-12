@@ -1736,6 +1736,19 @@ export const messages = {
   "workbench.topology": "Topology",
   "workbench.addresses": "Group addresses",
   "workbench.catalog": "Product catalog",
+  "workbench.notes": "Notes",
+  "notes.target.installation": "Installation",
+  "notes.target.area": "Area",
+  "notes.target.line": "Line",
+  "notes.target.buildingPart": "Building part",
+  "notes.target.device": "Device",
+  "notes.target.groupRange": "Group range",
+  "notes.target.groupAddress": "Group address",
+  "notes.identityUnavailable": "Notes need a project opened on this server with a complete project identity. This view has none, so nothing is read or changed here.",
+  "notes.draftGuard.title": "Discard the note draft?",
+  "notes.draftGuard.message": "A note draft has not been reviewed and applied yet. It exists only in this window and is lost if you continue.",
+  "notes.draftGuard.keep": "Keep editing",
+  "notes.draftGuard.discard": "Discard draft and continue",
   "workbench.device": "Device",
   "workbench.unassigned": "Unassigned",
   "workbench.emptyStructure": "No entries yet. Add structure here or in the project tree.",
@@ -2166,6 +2179,8 @@ export const messages = {
     "The four views are Overview, Buildings, Topology and Group addresses. Overview summarises the project and shows what the last import complained about. Buildings and Topology are two different orders over the same devices. Group addresses is the table of addresses and their links.",
   "help.topic.workbench.p3":
     "Both side panes collapse with the buttons above them and resize by dragging their inner edge. The product catalog opens from the navigation pane and adds devices from an installed manufacturer database.",
+  "help.topic.workbench.p4":
+    "Notes, also in the navigation pane, is the project's engineering notebook: plain-text notes attached to the project or to one of its parts. Every change is reviewed first and applied only after you confirm it. Applying a note is not the same as saving the project file.",
 
   "help.topic.buildings.title": "Buildings, floors and rooms",
   "help.topic.buildings.p1":

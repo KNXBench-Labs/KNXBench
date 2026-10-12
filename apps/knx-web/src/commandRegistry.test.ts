@@ -45,6 +45,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openCatalog: () => {},
     openProjectHistory: () => {},
     openDevices: () => {},
+    openNotes: () => {},
     addDevice: () => {},
     openIntroduction: () => {},
     openAchievements: () => {},
@@ -85,6 +86,17 @@ describe("command enablement", () => {
     expect(command!.isEnabled(noopCtx())).toBe(false);
     let opened = false;
     const ctx = { ...noopCtx({ tree: fakeTree(false, false) }), openDevices: () => { opened = true; } };
+    expect(command!.isEnabled(ctx)).toBe(true);
+    command!.run(ctx);
+    expect(opened).toBe(true);
+  });
+
+  it("offers the Notes view only with an open project and invokes its navigation callback", () => {
+    const command = COMMANDS.find((entry) => entry.id === "open-notes");
+    expect(command, "Notes must remain reachable with the navigation collapsed").toBeDefined();
+    expect(command!.isEnabled(noopCtx())).toBe(false);
+    let opened = false;
+    const ctx = { ...noopCtx({ tree: fakeTree(false, false) }), openNotes: () => { opened = true; } };
     expect(command!.isEnabled(ctx)).toBe(true);
     command!.run(ctx);
     expect(opened).toBe(true);
@@ -133,7 +145,7 @@ describe("command enablement", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
       "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "project-history", "search",
       "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
-      "open-catalog", "open-devices", "add-device", "show-introduction", "open-achievements", "open-help",
+      "open-catalog", "open-devices", "open-notes", "add-device", "show-introduction", "open-achievements", "open-help",
     ]);
     expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
   });
@@ -192,6 +204,7 @@ describe("command enablement", () => {
       openCatalog: () => opened.push("catalog"),
       openProjectHistory: () => {},
       openDevices: () => {},
+      openNotes: () => {},
       addDevice: () => opened.push("add-device"),
       openIntroduction: () => opened.push("introduction"),
     });

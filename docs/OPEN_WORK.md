@@ -1,5 +1,13 @@
 # Open work after the 0.1 alpha
 
+## AppImage EGL abort, issue #6 (12 October 2026)
+
+Fixed in source: the AppImage no longer bundles `libwayland-client`
+([contract](APPIMAGE_LAUNCHER.md#host-provided-libraries-issue-6), KL §176). Open:
+publish the next AppImage, have the reporter confirm on Kubuntu 24.04 (details
+requested on the issue), and consider a startup smoke on a newer-Mesa
+distribution (CI's build-distribution smokes cannot catch this mismatch).
+
 ## Checked parameter editors in the device editor (12 October 2026)
 
 Time/Number/Colour/Picture rows offer a **Checked editor**

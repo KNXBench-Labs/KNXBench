@@ -1,6 +1,6 @@
 /** Isolated preview-first notebook; authenticated services own all mutations. */
 import { useEffect, useId, useRef, useState } from "react";
-import { createNotesClient, sameNotesContext, sameNoteDraft, validNoteDraft, noteTargetKey, type NotesApplied, type NotesClient, type NotesContext, type NoteTarget, type NotesView, type NoteDraft, type NoteAction, type NotePreview } from "./client";
+import { createNotesClient, sameNotesContext, sameNoteDraft, validNoteDraft, noteTargetKey, type NotesApplied, type NotesClient, type NotesContext, type NoteTarget, type NotesView, type NoteView, type NoteDraft, type NoteAction, type NotePreview } from "./client";
 import { applyTextareaEdit, textareaText } from "./text";
 import { noteCopy } from "./copy";
 import HelpTip from "../../HelpTip";
@@ -11,6 +11,11 @@ export type ProjectNotesEditorProps=Readonly<{context:NotesContext;language?:"en
 const defaultClient=createNotesClient();
 const emptyDraft=():NoteDraft=>({target:{kind:"project"},title:"",body:"",includeInDocumentation:false});
 type SwitchIntent={kind:"select";id:number}|{kind:"new"}|{kind:"reload"};
+/** Same ordered notes with the same stored fields (identity and persistence aside). */
+function sameNoteList(a:readonly NoteView[],b:readonly NoteView[]):boolean{
+ const fields=(note:NoteView)=>[note.id,note.position,noteTargetKey(note.target),note.title,note.body,note.includeInDocumentation];
+ return JSON.stringify(a.map(fields))===JSON.stringify(b.map(fields));
+}
 export function ProjectNotesEditor({context,client=defaultClient,language="en",targetChoices=[],onApplied,onDirtyChange}:ProjectNotesEditorProps){
  const id=useId();const copy=noteCopy[language];
  const [view,setView]=useState<NotesView|null>(null);const [draft,setDraft]=useState<NoteDraft|null>(null);
@@ -22,6 +27,10 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
  const dirtyCallback=useRef(onDirtyChange);dirtyCallback.current=onDirtyChange;
  const current=view!==null&&sameNotesContext(view,context)&&!stale;
  const writable=current&&!!onApplied&&!busy;
+ // While a dirty draft is re-based onto a new revision, typing continues;
+ // only review/apply wait for the server's answer.
+ const [rebasing,setRebasing]=useState(false);const rebasingRef=useRef(false);
+ const editable=(current||rebasing)&&!!onApplied&&!busy;
  const stored=view?.notes.find(note=>note.id===selected);
  const choices=[{target:{kind:"project"} as NoteTarget,label:copy.project},...targetChoices.filter(choice=>choice.target.kind!=="project")];
  const targetLabel=(target:NoteTarget)=>choices.find(choice=>noteTargetKey(choice.target)===noteTargetKey(target))?.label??`${copy.lostTarget}: ${noteTargetKey(target)}`;
@@ -45,9 +54,27 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
   }catch(reason){if(!controller.signal.aborted&&generation===sequence.current){setError(reason instanceof Error?reason.message:copy.changed);setStale(true);}}
   finally{if(generation===sequence.current)setBusy(false);}
  }
+ // A dirty draft survives a same-project revision change (Save bumps the
+ // revision too): re-read, and keep the draft only if the notes themselves
+ // are unchanged on the server; otherwise it stays as a stale comparison copy.
+ async function rebase(before:NotesView){
+  const generation=++sequence.current;request.current?.abort();const controller=new AbortController();request.current=controller;
+  const owner={context,client};currentOwner.current=owner;revoke();setBusy(false);setError(null);setNotice(null);
+  rebasingRef.current=true;setRebasing(true);
+  let kept=false;
+  try{
+   const value=await client.read(controller.signal);
+   if(controller.signal.aborted||generation!==sequence.current)return;
+   kept=sameNotesContext(value,owner.context)&&sameNoteList(before.notes,value.notes);
+   if(kept){setView(value);setStale(false);}
+  }catch{if(controller.signal.aborted||generation!==sequence.current)return;}
+  finally{if(generation===sequence.current){rebasingRef.current=false;setRebasing(false);}}
+  if(!kept){setStale(true);setError(copy.changed);}
+ }
  useEffect(()=>{
   currentOwner.current={context,client};
-  if(dirtyRef.current){sequence.current++;request.current?.abort();revoke();setBusy(false);setStale(true);setError(copy.changed);}
+  if(dirtyRef.current&&view&&view.serverIncarnation===context.serverIncarnation&&view.projectIncarnation===context.projectIncarnation&&!stale)void rebase(view);
+  else if(dirtyRef.current){sequence.current++;request.current?.abort();revoke();setBusy(false);setStale(true);setError(copy.changed);}
   else void load();
   return()=>{sequence.current++;request.current?.abort();const old=pendingRef.current;pendingRef.current=null;if(old)void client.cancel(old.token).catch(()=>undefined);};
   // Identity, not freshly allocated host objects, owns this editing lifetime.
@@ -62,7 +89,7 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
   return()=>clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
  },[pending,copy.expired]);
- function edit(next:NoteDraft){if(!writable)return;sequence.current++;request.current?.abort();revoke();setDraft(next);setError(null);setNotice(null);markDirty(stored?!sameNoteDraft(stored,next):true);}
+ function edit(next:NoteDraft){if(!editable)return;if(!rebasingRef.current){sequence.current++;request.current?.abort();}revoke();setDraft(next);setError(null);setNotice(null);markDirty(stored?!sameNoteDraft(stored,next):true);}
  function performSwitch(next:SwitchIntent){
   revoke();setIntent(null);setError(null);setNotice(null);
   if(next.kind==="reload"){markDirty(false);void load();return;}
@@ -115,13 +142,13 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
     {!view.notes.length&&<p>{copy.empty}</p>}
    </nav>
    {draft&&<div className={styles.form}>
-    <label htmlFor={`${id}-title`}>{copy.title}</label><textarea id={`${id}-title`} value={textareaText(draft.title)} readOnly={!writable} onChange={event=>edit({...draft,title:applyTextareaEdit(draft.title,event.target.value)})}/>
-    <label htmlFor={`${id}-body`}>{copy.body}</label><textarea className={styles.body} id={`${id}-body`} value={textareaText(draft.body)} readOnly={!writable} onChange={event=>edit({...draft,body:applyTextareaEdit(draft.body,event.target.value)})}/>
-    <label htmlFor={`${id}-target`}>{copy.target}</label>{draft.target.kind==="groupRange"&&<HelpTip labelKey="help.tip.groupRange.label" textKey="help.tip.groupRange.text" topicId="groupRanges"/>}<select id={`${id}-target`} value={noteTargetKey(draft.target)} disabled={!writable} onChange={event=>{const choice=choices.find(entry=>noteTargetKey(entry.target)===event.target.value);if(choice)edit({...draft,target:choice.target});}}>
+    <label htmlFor={`${id}-title`}>{copy.title}</label><textarea id={`${id}-title`} value={textareaText(draft.title)} readOnly={!editable} onChange={event=>edit({...draft,title:applyTextareaEdit(draft.title,event.target.value)})}/>
+    <label htmlFor={`${id}-body`}>{copy.body}</label><textarea className={styles.body} id={`${id}-body`} value={textareaText(draft.body)} readOnly={!editable} onChange={event=>edit({...draft,body:applyTextareaEdit(draft.body,event.target.value)})}/>
+    <label htmlFor={`${id}-target`}>{copy.target}</label>{draft.target.kind==="groupRange"&&<HelpTip labelKey="help.tip.groupRange.label" textKey="help.tip.groupRange.text" topicId="groupRanges"/>}<select id={`${id}-target`} value={noteTargetKey(draft.target)} disabled={!editable} onChange={event=>{const choice=choices.find(entry=>noteTargetKey(entry.target)===event.target.value);if(choice)edit({...draft,target:choice.target});}}>
      {!choices.some(choice=>noteTargetKey(choice.target)===noteTargetKey(draft.target))&&<option value={noteTargetKey(draft.target)}>{targetLabel(draft.target)}</option>}
      {choices.map(choice=><option key={noteTargetKey(choice.target)} value={noteTargetKey(choice.target)}>{choice.label}</option>)}
     </select>
-    <label className={styles.check}><input type="checkbox" checked={draft.includeInDocumentation} disabled={!writable} onChange={event=>edit({...draft,includeInDocumentation:event.target.checked})}/>{copy.include}</label>
+    <label className={styles.check}><input type="checkbox" checked={draft.includeInDocumentation} disabled={!editable} onChange={event=>edit({...draft,includeInDocumentation:event.target.checked})}/>{copy.include}</label>
     <div className={styles.toolbar}>
      <button type="button" disabled={!writable||!dirty||!validNoteDraft(draft)} onClick={()=>void preview(selected===null?{kind:"create",position:view.notes.length,draft}:{kind:"replace",id:selected,draft})}>{copy.preview}</button>
      {stored&&<><button type="button" disabled={!writable||dirty} onClick={()=>void preview({kind:"remove",id:stored.id})}>{copy.remove}</button>

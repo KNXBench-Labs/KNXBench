@@ -341,15 +341,18 @@ assumed** — including never inferred from a filename or a ZIP entry layout.
 
 | Namespace version | ETS generation | Evidence |
 | --- | --- | --- |
-| 11 | ETS 4.1 / 4.2 | **[V]** |
-| 12 | ETS 4 | **[D]** |
-| 13, 14 | ETS 5 up to 5.6 | **[D]** |
-| 20 | ETS 5.7 | **[D]** |
-| 21, 22, 23 … | ETS 6.x | **[D]** |
+| 11 | ETS 4.1 / 4.2 | **[V]** imported |
+| 12 | ETS 4 | **[D]** refused |
+| 13, 14 | ETS 5 up to 5.6 | **[D]** refused |
+| 20 | ETS 5.7 | **[V]** imported (public samples, RESEARCH project-format §3.6) |
+| 21 | ETS 6.0 | **[V]** imported |
+| 22 | ETS 6.1 | **[V]** seen, refused (samples without devices) |
+| 23 | ETS 6.3 | **[V]** imported |
 
-Only version 11 has been seen. Everything else in this table is documentation
-we have not confirmed, and the tolerant parser is what turns that gap into a
-report instead of a failure.
+A version without a known-element table is refused with a message that names
+it and the supported versions (`ImportFailure::NoKnownSchemaTable`); within a
+supported version, the tolerant parser turns unmeasured constructs into report
+entries instead of failures.
 
 The version is read from `P-*/0.xml` rather than from `knx_master.xml`, which
 avoids a dependency on where master data sits [A]. `xknxproject` reads it from

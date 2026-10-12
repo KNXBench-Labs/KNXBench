@@ -65,6 +65,16 @@ pub(crate) fn device_v21(device_ets_id: &str) -> String {
     format!("{INSTALLATION}/Topology/Area/Line/Segment/DeviceInstance[@Id='{device_ets_id}']")
 }
 
+/// A device on a line, at its schema's own path: inside `Segment` at schema
+/// 21 and later, directly under `Line` at schemas 11 and 20.
+pub(crate) fn line_device(schema_version: u32, device_ets_id: &str) -> String {
+    if crate::known::has_segment_level(schema_version) {
+        device_v21(device_ets_id)
+    } else {
+        device_v11(device_ets_id)
+    }
+}
+
 /// A device on no line at all. Same element, different branch of the
 /// topology, so a different path — and the same at both schema versions,
 /// since `UnassignedDevices` has no `Segment` under it.

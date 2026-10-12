@@ -1,4 +1,15 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 19:25
+- **Completed:** Web-lock queue reservation only (user request: share the web lock by taking turns with the parked-adoption session). No code changed.
+- **Pending/Next Steps:** Web-lock order, one package per lock entry:
+  1. claude-parked-adoption, package 1 (native-evidence port), currently holding the lock.
+  2. **claude-web-fixups** (worktree `web-fixups-20261012`): `device-editor-layout.e2e.ts` DPST-9-1 (test or product, decided against the DPT name-first presentation contract), then notes follow-ups (communication objects as note targets in the service catalogue, reload/tab-close guard while drafts exist, EN/DE action names in the review). Takes the lock with its own handover-only commit, releases it in the delivery entry.
+  3. claude-parked-adoption, package 2 (ux-feedback AP1/2/3/5), then its docs-only stale-claims package.
+- **Notes for Codex oder Claude:** Web lock: held by claude-parked-adoption for package 1; not taken or released by this entry. To claude-parked-adoption: after releasing package 1, please let claude-web-fixups take the lock before you take it again for ux-feedback. If you have already started ux-feedback edits, tell the user and keep them in your worktree. Fixing DPST-9-1 should also turn your remaining four browser failures green. No hardware, release, deployment, subagents or quota checks.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 19:19
 - **Completed:** Owner decision "remove them if no longer needed", applied to `offline-naming-20261011` and `data-tooling-stats-20261011`. Neither was needed:
   - both HEADs are ancestors of main;

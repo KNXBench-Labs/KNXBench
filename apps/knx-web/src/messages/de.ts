@@ -899,6 +899,13 @@ export const messages: Record<MessageKey, string> = {
   "parameters.noProgram":
     "Für dieses Gerät lässt sich kein Anwendungsprogramm auflösen; Parameter können nicht angezeigt werden.",
   "parameters.none": "(keine)",
+  "parameters.checked.open": "Geprüfter Editor",
+  "parameters.checked.openHint": "Bearbeite diesen Wert mit Bereich und Einheit aus den Produktdaten",
+  "parameters.checked.close": "Zurück zum einfachen Feld",
+  "parameters.checked.loading": "Produktdaten werden gelesen…",
+  "parameters.checked.unavailable": "Die Produktdaten liefern für dieses Feld keine geprüfte Quelle ({reason}).",
+  "parameters.checked.mismatch": "Die Antwort des Servers passte nicht zu diesem Feld; sie wird nicht verwendet.",
+  "parameters.checked.readFailed": "Produktdaten konnten nicht gelesen werden: {message}",
 
   "explorer.addDevice": "+ Gerät hinzufügen",
   "explorer.lineLabel": "Linie {address}: {name}",

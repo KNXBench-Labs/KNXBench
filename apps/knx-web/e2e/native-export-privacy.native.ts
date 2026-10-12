@@ -37,6 +37,9 @@ for(const language of ["en","de"] as const)for(const width of [400,1440]){
   const dialog=page.getByRole("dialog",{name:m["nativeExport.title"],exact:true});
   await expect(dialog).toBeVisible();await expect(dialog).toContainText(m["nativeExport.privacy"]);await expect(dialog).toContainText(m["nativeExport.scope"]);
   await expect(dialog.getByRole("button",{name:m["nativeExport.cancel"],exact:true})).toBeFocused();expect(await links()).toEqual([]);
+  // Cancel loses nothing, so it stays quiet next to the primary download (main's dialog convention).
+  const fill=(name:string)=>dialog.getByRole("button",{name,exact:true}).evaluate(el=>{const style=getComputedStyle(el);return `${style.backgroundColor} ${style.backgroundImage}`;});
+  expect(await fill(m["nativeExport.cancel"])).not.toBe(await fill(m["nativeExport.download"]));
   await dialog.getByRole("button",{name:m["nativeExport.cancel"],exact:true}).click();await expect(dialog).toBeHidden();expect(await links()).toEqual([]);
   await summary.click();await page.getByRole("button",{name:m["toolbar.exportProject"],exact:true}).click();await expect(dialog).toBeVisible();
   const box=await dialog.boundingBox();expect(box).not.toBeNull();expect(box!.x).toBeGreaterThanOrEqual(0);expect(box!.x+box!.width).toBeLessThanOrEqual(width+1);

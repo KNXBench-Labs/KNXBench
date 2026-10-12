@@ -40,7 +40,7 @@ function Harness(props: { input?: InstallationNode; context?: string }) {
   const tree: ProjectTree = { schema_version: 1, errors: 0, warnings: 0, can_undo: false,
     can_redo: false, is_modified: false, group_address_style: "ThreeLevel", installations: [input] };
   const shared = useMultiSelection(tree, setSelection);
-  return <><GroupAddressTable installation={input} selection={selection}
+  return <><GroupAddressTable installation={input} tree={tree} selection={selection}
     multiSelection={shared.multiSelection} onItemClick={shared.onItemClick}
     onTreeUpdate={() => {}} rangeScope={null} projectContextKey={props.context} />
     <output data-selection>{selection?.id ?? "none"}</output>

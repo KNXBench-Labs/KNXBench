@@ -2820,6 +2820,24 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .address-links-panel { margin-top: 24px; }
 .address-links-panel h2 { font-size: 16px; margin: 0 0 8px; }
 .address-links-panel small { color: var(--knx-muted); }
+.address-links-panel h3 { font-size: 14px; margin: 0 0 6px; }
+/* Space before the address's own Delete, so it does not read as a member action. */
+.ga-members-compact { margin: 12px 0 18px; }
+/* Members as a list in the narrow Inspector: device, object · direction, Unlink. */
+.ga-members { display: grid; gap: 6px; margin: 0 0 8px; padding: 0; list-style: none; }
+.ga-member { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; min-width: 0; }
+.ga-member-device, .ga-member-object { grid-column: 1; min-width: 0; overflow-wrap: anywhere; }
+.ga-member-object { font-size: 12px; color: var(--knx-muted); }
+.ga-member-unlink { grid-column: 2; grid-row: 1 / span 2; }
+/* Adding a member: device → object → direction, one column of labelled selects. */
+.ga-member-add { margin-top: 10px; min-width: 0; }
+.ga-member-form { display: grid; gap: 8px; max-width: 42rem; padding: 10px 12px; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); }
+.ga-member-form label { display: grid; gap: 4px; min-width: 0; color: var(--knx-muted); font-size: 12px; }
+.ga-member-form select { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; }
+.ga-member-form p { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.ga-member-rule, .ga-member-dpt { color: var(--knx-muted); }
+.ga-member-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ga-member-added { margin: 6px 0 0; font-size: 12px; }
 .inspector-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 16px; }
 .inspector-facts dt { color: var(--knx-muted); }
 .inspector-facts dd { margin: 0; }

@@ -1,3 +1,21 @@
+## 2026-10-12 — Opt-in MCP literal rename writer (AP6)
+
+`knx-mcp --allow-name-recipe <alias>` adds `preview_name_recipe` and
+`apply_name_recipe` for that alias only ([ADR-0116](adr/0116-opt-in-mcp-name-recipe-writer.md),
+[contract](contracts/mcp-name-recipe-writer.md)). Apply checks the preview token,
+asks the user through one form elicitation, re-plans after the answer and writes
+the native working history through `knx-edit` compare-and-save; the saved root is
+never written. Without the flag the eight read-only tools are unchanged.
+
+Test-first on frozen sources: the real-binary stdio suite failed 7/8 before the
+flag existed (the no-flag baseline passed), then all 35 `knx-mcp` tests pass
+(8 writer, 27 existing). Four named source mutants (approval bypass, opt-in
+bypass, first token check removed, tools listed without the flag) each fail
+their test, and sources were restored byte-for-byte. Lockfile change: two
+edges (`knx-mcp`→`knx-edit`, `rmcp`→`url`), no new package. Self-review, not
+independent. Not tested with a third-party MCP client; no bus, release or
+deployment change. [Evidence](evidence/mcp-name-recipe-writer-2026-10-12.json).
+
 ## 2026-10-12 — Connection matrix object inventory
 
 The group-address **connection matrix** can now show a device's *unlinked*

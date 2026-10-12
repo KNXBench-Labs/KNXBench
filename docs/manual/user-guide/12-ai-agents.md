@@ -5,8 +5,10 @@
 **Goal:** ask an AI client read-only questions about saved project files.
 **Prerequisites:** a built `knx-mcp`, an MCP-capable client and authorised saved files.
 **Expected result:** answers from the saved snapshot, not the unsaved open editor.
-**Watch out:** the adapter is experimental, does not access the bus and does not
-apply changes. Read and preview any suggested CSV yourself before importing it.
+**Watch out:** the adapter is experimental and never accesses the bus. It
+changes nothing unless you start it with `--allow-name-recipe` for a project;
+then it can only rename group addresses, and only after you approve each
+change. Read and preview any suggested CSV yourself before importing it.
 
 KNXBench can answer an AI agent's questions about your saved projects. The
 `knx-mcp` program speaks the [Model Context Protocol](https://modelcontextprotocol.io)
@@ -22,10 +24,10 @@ similar) can look things up in a project instead of guessing:
 
 > **Note**
 >
-> This is **experimental** and **read-only**. `knx-mcp` cannot change a
-> project, cannot write any file and cannot reach the KNX bus: the program
-> is not even linked against the bus code. The tool names and answers may
-> still change during the alpha.
+> This is **experimental** and **read-only by default**. Without
+> `--allow-name-recipe`, `knx-mcp` cannot change a project or write any
+> file. It never reaches the KNX bus: the program is not even linked against
+> the bus code. The tool names and answers may still change during the alpha.
 
 **Alpha.8 upgrade:** use the matching `knx-mcp-x86_64-linux` binary for
 schema12 native projects. Old MCP builds may refuse the new store schema.
@@ -50,6 +52,35 @@ KNXBench UI or with `knx ga-import file.knxdb file.csv --dry-run` and then
 without `--dry-run`. Deletions and re-addressing need the confirmation token
 the dry run prints. See [Working with group addresses](04-group-addresses.md)
 and [The command line](10-command-line.md).
+
+## Letting the agent rename group addresses (opt-in)
+
+You can allow one kind of change: adding a literal prefix or suffix to the
+names of chosen group addresses ("put `EG ` in front of these twelve
+names"). It is off unless you name the project on the command line:
+
+```bash
+knx-mcp --project home=/path/to/home.knxdb --allow-name-recipe home
+```
+
+The agent then gets two more tools. `preview_name_recipe` shows every old and
+new name. `apply_name_recipe` asks **you** in a confirmation form of your MCP
+client; only *Approve* changes anything. Declining, cancelling or closing the
+form changes nothing, and so does any change to the project in the meantime:
+the agent must preview again.
+
+- Your client must support MCP *elicitation* forms. Without them every apply
+  is refused.
+- The renames go to the project's undo history, not to the saved file. Open
+  the project in KNXBench to review them, undo them or save them. Until you
+  save, the agent's read tools still show the old names.
+- `knx-mcp` cannot tell whether a person or an auto-approving client
+  answered the form. Allow renames only with a client that shows you its
+  forms.
+- Nothing else can be changed this way: no new or deleted addresses, links,
+  devices or parameters, and never the bus. The rules are in
+  [ADR-0116](../../adr/0116-opt-in-mcp-name-recipe-writer.md) and the
+  [writer contract](../../contracts/mcp-name-recipe-writer.md).
 
 ## Your data and the model
 

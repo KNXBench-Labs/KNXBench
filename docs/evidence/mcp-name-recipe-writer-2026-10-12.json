@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-12",
+  "scope": "AP6 opt-in MCP literal group-address rename writer (ADR-0116)",
+  "packageCommit": "4b2968c3",
+  "red": {
+    "suite": "apps/knx-mcp/tests/name_recipe_writer.rs",
+    "counts": [
+      {
+        "passed": 1,
+        "failed": 7,
+        "ignored": 0
+      }
+    ],
+    "inputsFrozen": true,
+    "cause": "binary rejected the unknown --allow-name-recipe flag at startup"
+  },
+  "green": {
+    "command": "cargo test -p knx-mcp",
+    "passed": 35,
+    "failed": 0,
+    "inputsFrozen": true
+  },
+  "mutants": [
+    {
+      "label": "approval-bypass",
+      "test": "decline_cancel_disapproval_and_a_missing_capability_never_write",
+      "killed": true
+    },
+    {
+      "label": "opt-in-bypass",
+      "test": "only_enabled_aliases_accept_previews_or_writes",
+      "killed": true
+    },
+    {
+      "label": "first-token-check-removed",
+      "test": "stale_tokens_and_changes_during_confirmation_are_refused",
+      "killed": true
+    },
+    {
+      "label": "listed-without-flag",
+      "test": "without_the_launch_flag_the_writer_is_absent_and_refused",
+      "killed": true
+    }
+  ],
+  "mutantSourcesRestored": true,
+  "lockfile": [
+    "knx-mcp -> knx-edit",
+    "rmcp -> url (already resolved)"
+  ],
+  "broadAcceptance": null,
+  "review": "active-session self-review, not independent",
+  "notClaimed": [
+    "human-vs-auto-accepting client distinction",
+    "third-party MCP client acceptance",
+    "any other MCP mutation",
+    "HTTP transport",
+    "bus or hardware access",
+    "release/deployment"
+  ]
+}

@@ -12,23 +12,25 @@ link. The desktop **Quit** dialog shares the component, labels and protection
 tested here, but was not exercised in a native WebKitGTK window; browser evidence
 covers the identical Open/Import and New-project variants.
 
-## Offline service boundary is not MCP authorization (2026-10-12)
+## MCP renames rely on the client's confirmation form (2026-10-12)
 
-[ADR-0115](adr/0115-offline-application-edit-boundary.md)'s small offline application
-crate excludes App/import/key/bus/HTTP/transport/UI production dependencies and
-preserves the existing naming API through a facade. It grants no write right.
-Current MCP remains read-only; per-alias startup scope, independently established
-operator/client association, explicit approval/cancel/expiry/conflict and native
-persistence/recovery are a separate pending contract. A deterministic fingerprint,
-self-reported client name, connection/session ID or a form response alone is not
-verified user identity or a new authorization system. No compatibility/release/
-deployment/private-corpus/real-client claim follows from dependency extraction.
+[ADR-0115](adr/0115-offline-application-edit-boundary.md)'s offline crate grants no
+write right by itself. [ADR-0116](adr/0116-opt-in-mcp-name-recipe-writer.md) adds
+exactly one: literal group-address renames for aliases the operator enables with
+`--allow-name-recipe`, each approved through an MCP form elicitation. KNXBench
+cannot tell whether a person or an auto-accepting client answered that form; the
+launch flag is the operator's delegation, not verified identity. Client name and
+session ID are never used. Renames land in the native working history, so read
+tools keep showing the saved names until the user saves in KNXBench. Tested with
+the real binary and a scripted stdio client only, not with a third-party MCP
+client. No other MCP mutation, HTTP transport or bus access exists.
 
 ## Offline naming recipe boundary (2026-10-12)
 
 The [bounded literal recipe](contracts/offline-name-recipe.md) changes only names
 of explicitly ordered existing GroupAddressIds. No interpolation, regex, target
-inference, macro registry, UI/MCP writer, new format or bus operation is added.
+inference, macro registry, UI writer, new format or bus operation is added; the
+only MCP writer is the opt-in ADR-0116 surface above.
 Native working history is not root Save; reopen through the existing editor to
 Undo/Redo, and Save explicitly when desired. Concurrent generation/working-hash
 conflicts require re-preview. A failed or lost output after a durable commit is

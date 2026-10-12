@@ -1,5 +1,17 @@
 # Open work after the 0.1 alpha
 
+## AP6 opt-in MCP rename writer (12 October 2026)
+
+[ADR-0116](adr/0116-opt-in-mcp-name-recipe-writer.md): `knx-mcp
+--allow-name-recipe <alias>` adds preview/apply tools for literal
+group-address renames with one user-approved form elicitation per apply,
+re-check after the answer and native working-history persistence. Real-binary
+stdio tests cover opt-in, annotations, approve/decline/cancel/disapprove,
+missing capability, stale token, concurrent change during confirmation,
+invalid input, persistence failure and reopen. Open: proof that a human (not
+an auto-accepting client) answered, any further MCP mutation, and an
+acceptance run with a real third-party MCP client.
+
 ## AP6 offline service dependency prerequisite (12 October 2026)
 
 [ADR-0115](adr/0115-offline-application-edit-boundary.md) locally separates the
@@ -8,9 +20,7 @@ and strict production dependency/root gates. Focused library/actual CLI/policy a
 three reverting guard proofs pass; fresh20-stage broad acceptance passes on2034
 frozen sources. Fresh-upstream merge `d6127583` passes22 frozen stages (Rust4129/0,
 Web2841/0, both server-default suites5/5); this closure publishes it normally.
-This module split is not MCP write support. Per-alias operator permission,
-verified request/client-associated approval, cancellation/refusal/native restart
-and actual client evidence remain open; read-only defaults/exclusions stay intact.
+The module split itself grants no MCP write; the opt-in writer above builds on it.
 AP7 catalogue work, missing AP3 contracts and Session1 host responsibilities remain
 independent, not silently reassigned.
 

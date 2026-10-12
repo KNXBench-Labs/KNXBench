@@ -289,9 +289,10 @@ below is on the remote or merged:
 | Initial native-write preflight | Never-compiled draft from `import-lifecycle-20261011` | Archived as a local patch; to be built fresh. Worktree and branch removed |
 | `audit-findings-20261011`, `native-import-diagnostics-20261011` | Superseded / already on main | Dropped. Worktrees and branches removed |
 
-Two further worktrees hold residue that still needs an owner decision:
-`offline-naming-20261011` (an unaccepted device-naming design draft) and
-`data-tooling-stats-20261011` (a stale, unpublished ProjectStats refresh).
+The two other leftover worktrees, `offline-naming-20261011` and
+`data-tooling-stats-20261011`, were removed by owner decision after a backup.
+The unaccepted numbered device-naming draft (FUTURE-02) survives only in the
+local prune backup; see the triage note.
 
 - **Community evidence** (File → Analyze support gaps…) is in the repository,
   and its intake lives here (ADR-0091). The interim

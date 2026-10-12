@@ -55,7 +55,12 @@
 //!   refused by name.
 //! - **Byte order.** A program whose `Options/@ParameterByteOrder` is
 //!   anything but `BigEndian` is refused: numbers are written high octet
-//!   first (`knx_core::commissioning::parameter_image`).
+//!   first (`knx_core::commissioning::parameter_image`). Corpus evidence
+//!   points at whole-octet numbers low octet first for `LittleEndian`, but no
+//!   source defines it and no device has confirmed it (KL-170,
+//!   docs/research/parameter-byte-order.md). [`crate::byte_order_probe`]
+//!   reads what an ETS-programmed device holds instead (ADR-0119); nothing it
+//!   finds reaches this module.
 //! - **Priority.** `[A]` *Project Schema23* lists `Low`, `High` and `Alert`
 //!   (§1.1.2.4), and *Resources* lists `System`, `Urgent`, `Normal` and
 //!   `Low` (§4.18.3.1.2.1). No PDF maps one set onto the other, so only an
@@ -90,7 +95,10 @@ use crate::code::{
     load_program_code, AbsoluteSegment, CodeError, MemoryPlacement, ParameterPlacement,
     ProgramCode, TablePlacement,
 };
-use crate::dynamic::{evaluate, load_program_trees, resolve_values, Diagnostic, ScopedDiagnostic};
+use crate::dynamic::{
+    evaluate, load_program_trees, resolve_values, Activation, Diagnostic, ScopedDiagnostic,
+    ValueMap,
+};
 use crate::inference::Inference;
 use crate::ProductDbError;
 
@@ -379,45 +387,7 @@ pub fn build_download_image(
     for (parameter_ref, value) in &request.values {
         types.value(parameter_ref, value)?;
     }
-    let supplied = request.values.clone().into_iter().collect();
-    let values = resolve_values(conn, program_id, &supplied)?;
-    let activation = evaluate(&load_program_trees(conn, program_id)?, &values);
-    let mut undecided = Vec::new();
-    for scoped in &activation.diagnostics {
-        match &scoped.diagnostic {
-            Diagnostic::NoBranchMatched {
-                param_ref: Some(param_ref),
-                observed_value,
-                ..
-            } if scoped.scope.is_none() => {
-                // Nothing is active under a legal value no `when` covers;
-                // an illegal one is refused here.
-                types.value(param_ref, observed_value)?;
-            }
-            // A `Rename`/`ParameterBlockRename` leaf only retitles a
-            // `ParameterBlock` (corpus: 326 of them, every one an empty
-            // leaf under a `when` naming a `ParameterBlock`). The image
-            // holds no titles, so the walk leaving it unrecognized decides
-            // nothing here. Anything *below* one is still named by its own
-            // `RefBelowSkippedNode` and still refuses the image.
-            Diagnostic::UnrecognizedNode { kind, .. }
-                if kind == "Rename" || kind == "ParameterBlockRename" => {}
-            _ => undecided.push(scoped.clone()),
-        }
-    }
-    if !undecided.is_empty() {
-        return Err(ImageError::Evaluation(undecided));
-    }
-    if let Some(active) = activation
-        .parameter_refs
-        .iter()
-        .chain(&activation.com_object_refs)
-        .find(|active| active.scope.is_some())
-    {
-        return Err(ImageError::Unsupported {
-            what: format!("{}: a module instance", active.ref_id),
-        });
-    }
+    let (values, activation) = activate(conn, request, &types)?;
 
     let mut images: Vec<(&AbsoluteSegment, ParameterImage)> = code
         .segments
@@ -606,6 +576,60 @@ pub fn build_download_image(
     })
 }
 
+/// The parameters and objects `request`'s values activate, and every value
+/// resolved: the evaluation half of the module documentation, shared with
+/// [`crate::byte_order_probe`], which reads what an image would write.
+///
+/// A legal value no `when` covers activates nothing; every other evaluation
+/// diagnostic, and every module instance, refuses.
+pub(crate) fn activate(
+    conn: &Connection,
+    request: &ImageRequest,
+    types: &ParameterTypes,
+) -> Result<(ValueMap, Activation), ImageError> {
+    let program_id = request.program_id.as_str();
+    let supplied = request.values.clone().into_iter().collect();
+    let values = resolve_values(conn, program_id, &supplied)?;
+    let activation = evaluate(&load_program_trees(conn, program_id)?, &values);
+    let mut undecided = Vec::new();
+    for scoped in &activation.diagnostics {
+        match &scoped.diagnostic {
+            Diagnostic::NoBranchMatched {
+                param_ref: Some(param_ref),
+                observed_value,
+                ..
+            } if scoped.scope.is_none() => {
+                // Nothing is active under a legal value no `when` covers;
+                // an illegal one is refused here.
+                types.value(param_ref, observed_value)?;
+            }
+            // A `Rename`/`ParameterBlockRename` leaf only retitles a
+            // `ParameterBlock` (corpus: 326 of them, every one an empty
+            // leaf under a `when` naming a `ParameterBlock`). The image
+            // holds no titles, so the walk leaving it unrecognized decides
+            // nothing here. Anything *below* one is still named by its own
+            // `RefBelowSkippedNode` and still refuses the image.
+            Diagnostic::UnrecognizedNode { kind, .. }
+                if kind == "Rename" || kind == "ParameterBlockRename" => {}
+            _ => undecided.push(scoped.clone()),
+        }
+    }
+    if !undecided.is_empty() {
+        return Err(ImageError::Evaluation(undecided));
+    }
+    if let Some(active) = activation
+        .parameter_refs
+        .iter()
+        .chain(&activation.com_object_refs)
+        .find(|active| active.scope.is_some())
+    {
+        return Err(ImageError::Unsupported {
+            what: format!("{}: a module instance", active.ref_id),
+        });
+    }
+    Ok((values, activation))
+}
+
 /// `[A]` (ADR-0086, RESEARCH §19.12) The parameters not written because a
 /// later member of their union holds the bits they share, and the
 /// inference that says so for each.
@@ -615,7 +639,7 @@ pub fn build_download_image(
 /// whose bits overlap a member already kept is superseded. A member whose
 /// placement or size cannot be read is left to the write loop, which
 /// refuses it by name.
-fn superseded_union_members(
+pub(crate) fn superseded_union_members(
     active: &[crate::dynamic::ActiveRef],
     types: &ParameterTypes,
     code: &ProgramCode,
@@ -714,7 +738,7 @@ fn overlap_or(
 }
 
 /// The segment and field a parameter's placement puts it at.
-fn field_of<'a>(
+pub(crate) fn field_of<'a>(
     parameter: &str,
     placement: &'a ParameterPlacement,
     size_in_bit: u32,
@@ -958,7 +982,7 @@ fn object_size_bits(size: &str) -> Option<u32> {
 
 /// A value as it goes into memory.
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Encoded {
+pub(crate) enum Encoded {
     /// A number, written by width ([`ParameterImage::write`]).
     Number(u64),
     /// A text, written as `octets` ([`ParameterImage::write_octets`]).
@@ -983,7 +1007,7 @@ struct RefType {
 }
 
 /// The program's parameter refs and their types, loaded once.
-struct ParameterTypes {
+pub(crate) struct ParameterTypes {
     refs: BTreeMap<String, RefType>,
     enums: BTreeMap<String, BTreeSet<String>>,
     /// `Options/@TextParameterEncoding`, if declared.
@@ -1041,7 +1065,11 @@ impl TextEncoding {
 }
 
 impl ParameterTypes {
-    fn load(conn: &Connection, program_id: &str, code: &ProgramCode) -> Result<Self, ImageError> {
+    pub(crate) fn load(
+        conn: &Connection,
+        program_id: &str,
+        code: &ProgramCode,
+    ) -> Result<Self, ImageError> {
         let mut stmt = conn.prepare(
             "SELECT pr.id, p.id, pt.kind, pt.size_in_bit, pt.base, pt.number_type,
                     pt.min_inclusive, pt.max_inclusive, pt.id
@@ -1095,12 +1123,12 @@ impl ParameterTypes {
             })
     }
 
-    fn parameter_of(&self, parameter_ref: &str) -> Result<&str, ImageError> {
+    pub(crate) fn parameter_of(&self, parameter_ref: &str) -> Result<&str, ImageError> {
         Ok(self.get(parameter_ref)?.parameter.as_str())
     }
 
     /// The field width: 1 to 64 bits for a number, whole octets for a text.
-    fn size(&self, parameter_ref: &str) -> Result<u32, ImageError> {
+    pub(crate) fn size(&self, parameter_ref: &str) -> Result<u32, ImageError> {
         let found = self.get(parameter_ref)?;
         let text = found.kind.as_deref() == Some("Text");
         found
@@ -1120,7 +1148,7 @@ impl ParameterTypes {
 
     /// The value `raw` stands for, if the ref's type allows it (module
     /// documentation, *Values*). Every other type is refused by name.
-    fn value(&self, parameter_ref: &str, raw: &str) -> Result<Encoded, ImageError> {
+    pub(crate) fn value(&self, parameter_ref: &str, raw: &str) -> Result<Encoded, ImageError> {
         let found = self.get(parameter_ref)?;
         let invalid = |cause: String| ImageError::Value {
             parameter_ref: parameter_ref.to_string(),

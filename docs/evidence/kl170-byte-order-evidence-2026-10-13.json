@@ -1,0 +1,517 @@
+{
+ "date": "2026-10-13",
+ "item": "KL-170",
+ "scope": "evidence review and read-only probe; no encoder or download change",
+ "adr": "ADR-0119",
+ "research": "docs/research/parameter-byte-order.md",
+ "method": {
+  "baseImageComparison": "per unique program file: every placed TypeNumber/TypeRestriction parameter with whole-octet width >= 16 bits, bit offset 0 and an integer default; base-image octets at its placement (union members at union placement plus own offsets) compared with the default in both orders; values whose octets read the same both ways not counted",
+  "privacy": "aggregate counts by public manufacturer id, declared order, mask and outcome; public application ids only for re-declared pairs; nothing from the private sample but aggregates"
+ },
+ "sources": {
+  "knxStandardCorpus": {
+   "pdfs": 179,
+   "definingClause": null,
+   "related": "03_08_03 Management v01.07.03, section 2.2, printed p. 6: KNXnet/IP device download parameter values big endian; scoped to KNXnet/IP devices, does not define the product-file attribute"
+  },
+  "schemaCopies": [
+   "knx_project_20 XSD copy (Blizzard26/knxTools b8bd908f): ParameterByteOrder optional, default BigEndian",
+   "xknx-editor generated schema-23 model (08908490): default BIG_ENDIAN"
+  ],
+  "implementations": [
+   "xknx-editor encode.py e3a2216e (GPL-2.0, behaviour only): reverse octets of whole-octet numeric fields >= 2 octets; sub-octet, text and BinaryValue unchanged; no source cited, no device test",
+   "koolenex knx-tables.ts ef18ed37 / notes a560776c (MIT): same rule for byte-aligned whole-octet fields; hardware captures only for big-endian manufacturers"
+  ],
+  "notObtainable": [
+   "official XSD",
+   "ETS SDK API documentation",
+   "KNX MT help",
+   "pre-ETS4 .vd* table layout (all local samples password-protected; no password guessed)"
+  ]
+ },
+ "corpora": {
+  "local": {
+   "root": "OriginalData/ProductDatabases",
+   "archives": 114,
+   "uniquePrograms": 525,
+   "byOrder": {
+    "BigEndian": 90,
+    "LittleEndian": 3,
+    "undeclared": 432
+   },
+   "redeclaredPairs": 0
+  },
+  "publicVendorDownloads": {
+   "description": "knxprod-crawler download of 2026-10-03 (docs/PRODUCT_DATABASE_CORPUS.md), outside the repository",
+   "archives": 853,
+   "uniquePrograms": 3341,
+   "byOrder": {
+    "LittleEndian": 590,
+    "undeclared": 1740,
+    "BigEndian": 1011
+   },
+   "littleEndianByManufacturer": {
+    "M-0001": 2,
+    "M-0002": 474,
+    "M-0006": 5,
+    "M-0007": 101,
+    "M-0009": 8
+   },
+   "littleEndianByMask": {
+    "MV-07B0": 111,
+    "MV-0701": 479
+   },
+   "littleEndianDeclared": {
+    "fields": {
+     "lowOctetFirst": 40657,
+     "highOctetFirst": 4,
+     "neither": 56252
+    },
+    "programs": {
+     "programs": 590,
+     "lowFirstOnly": 370,
+     "highFirstOnly": 2,
+     "mixed": 0,
+     "noSignal": 218
+    },
+    "highFirstPrograms": "2 Siemens MV-07B0 programs of one family (16-bit check constant, 32-bit channel allocation)"
+   },
+   "controlAbbBuschJaeger0701": {
+    "LittleEndian": {
+     "fields": {
+      "lowOctetFirst": 3810,
+      "highOctetFirst": 0,
+      "neither": 36709
+     },
+     "programs": {
+      "programs": 468,
+      "lowFirstOnly": 275,
+      "highFirstOnly": 0,
+      "mixed": 0,
+      "noSignal": 193
+     }
+    },
+    "BigEndian": {
+     "fields": {
+      "lowOctetFirst": 3634,
+      "highOctetFirst": 95,
+      "neither": 23096
+     },
+     "programs": {
+      "programs": 418,
+      "lowFirstOnly": 211,
+      "highFirstOnly": 26,
+      "mixed": 1,
+      "noSignal": 180
+     }
+    },
+    "undeclared": {
+     "fields": {
+      "lowOctetFirst": 604,
+      "highOctetFirst": 18,
+      "neither": 8040
+     },
+     "programs": {
+      "programs": 137,
+      "lowFirstOnly": 53,
+      "highFirstOnly": 18,
+      "mixed": 0,
+      "noSignal": 66
+     }
+    }
+   },
+   "controlMdt": {
+    "programs": 218,
+    "lowFirstOnly": 5,
+    "highFirstOnly": 94,
+    "mixed": 3,
+    "noSignal": 116
+   },
+   "redeclaredPairs": {
+    "count": 32,
+    "identicalSegmentDataAndPlacements": 32,
+    "byManufacturer": {
+     "M-0002": 30,
+     "M-0007": 2
+    },
+    "pairs": [
+     {
+      "bigEndian": [
+       "M-0002_A-A012-17-91D7"
+      ],
+      "littleEndian": [
+       "M-0002_A-A012-17-8FEB"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A019-11-3D9C"
+      ],
+      "littleEndian": [
+       "M-0002_A-A019-11-BA1B"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A03D-12-B812"
+      ],
+      "littleEndian": [
+       "M-0002_A-A03D-12-ECAE"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A04A-35-4D66"
+      ],
+      "littleEndian": [
+       "M-0002_A-A04A-35-5391"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A04C-13-1A64",
+       "M-0002_A-A04C-13-3093"
+      ],
+      "littleEndian": [
+       "M-0002_A-A04C-13-0D6B"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A04D-13-01BD",
+       "M-0002_A-A04D-13-0E6D"
+      ],
+      "littleEndian": [
+       "M-0002_A-A04D-13-C337"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A04E-13-0C35",
+       "M-0002_A-A04E-13-17B4"
+      ],
+      "littleEndian": [
+       "M-0002_A-A04E-13-B753"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A04F-13-7999",
+       "M-0002_A-A04F-13-8B78"
+      ],
+      "littleEndian": [
+       "M-0002_A-A04F-13-99E0"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A053-26-B4E0"
+      ],
+      "littleEndian": [
+       "M-0002_A-A053-26-A2A4"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A060-14-4F57"
+      ],
+      "littleEndian": [
+       "M-0002_A-A060-14-06F8"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A061-14-BE27"
+      ],
+      "littleEndian": [
+       "M-0002_A-A061-14-F8BA"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A062-14-ADD6"
+      ],
+      "littleEndian": [
+       "M-0002_A-A062-14-8A99"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A064-14-64C8"
+      ],
+      "littleEndian": [
+       "M-0002_A-A064-14-83B7"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A065-14-03E8"
+      ],
+      "littleEndian": [
+       "M-0002_A-A065-14-B9C7"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A066-14-D567"
+      ],
+      "littleEndian": [
+       "M-0002_A-A066-14-550B"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A067-14-ED14"
+      ],
+      "littleEndian": [
+       "M-0002_A-A067-14-4357"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A072-13-5E6F"
+      ],
+      "littleEndian": [
+       "M-0002_A-A072-13-D504"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A074-20-BEDC"
+      ],
+      "littleEndian": [
+       "M-0002_A-A074-20-C1A3"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A075-20-6075"
+      ],
+      "littleEndian": [
+       "M-0002_A-A075-20-4647"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A077-14-2E89"
+      ],
+      "littleEndian": [
+       "M-0002_A-A077-14-4D41"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A078-14-DFEE"
+      ],
+      "littleEndian": [
+       "M-0002_A-A078-14-FD8F"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A079-14-2EFD"
+      ],
+      "littleEndian": [
+       "M-0002_A-A079-14-20B6"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A07D-10-97D9"
+      ],
+      "littleEndian": [
+       "M-0002_A-A07D-10-674D"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A07E-10-3EC3",
+       "M-0002_A-A07E-10-5EC2"
+      ],
+      "littleEndian": [
+       "M-0002_A-A07E-10-A55A"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A087-11-2899"
+      ],
+      "littleEndian": [
+       "M-0002_A-A087-11-2888"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A08F-13-133D"
+      ],
+      "littleEndian": [
+       "M-0002_A-A08F-13-879B"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A090-13-622E"
+      ],
+      "littleEndian": [
+       "M-0002_A-A090-13-A734"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A091-11-5D1F"
+      ],
+      "littleEndian": [
+       "M-0002_A-A091-11-49F8"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A092-11-17C9"
+      ],
+      "littleEndian": [
+       "M-0002_A-A092-11-313C"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0002_A-A093-11-49A2"
+      ],
+      "littleEndian": [
+       "M-0002_A-A093-11-1E0D"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0007_A-A08F-10-8349-O0002"
+      ],
+      "littleEndian": [
+       "M-0007_A-A08F-10-C879-O0002"
+      ]
+     },
+     {
+      "bigEndian": [
+       "M-0007_A-A090-10-BDF8-O0002"
+      ],
+      "littleEndian": [
+       "M-0007_A-A090-10-7044-O0002"
+      ]
+     }
+    ]
+   }
+  },
+  "privateSchema23Sample": {
+   "selectedBy": "environment variable KNXBENCH_PRIVATE_SCHEMA23_PROJECT; aggregates only",
+   "embeddedPrograms": 32,
+   "littleEndianPrograms": 12,
+   "littleEndianMask": "MV-0701",
+   "manufacturersWithLittleEndian": 2,
+   "devicesOnLittleEndianPrograms": 54,
+   "thoseWithParametersLoaded": 54,
+   "thoseWithLoadedImage": 0,
+   "baseImagesDiscriminating": false,
+   "addInData": "vendor ETS-app state, semantics unverified (KL-174); not used"
+  }
+ },
+ "probePlanning": {
+  "publicDefaults": {
+   "packages": 40,
+   "littleEndian0701Programs": 42,
+   "planned": 36,
+   "withDiscriminatingFields": 19,
+   "refused": 6,
+   "refusedBecause": "choose controlled by TypeRestriction Base=BinaryValue with no covering when (shared activation, same as the image builder)",
+   "maxOctetsPerDevice": 202
+  },
+  "privateProjectValues": {
+   "devices": 54,
+   "planned": 54,
+   "withDiscriminatingFields": 24,
+   "discriminatingFields": 124,
+   "maxPerDevice": 7,
+   "controls": 2268,
+   "maxOctetsPerDevice": 78,
+   "maxRunsPerDevice": 29,
+   "notRead": {
+    "placedByProperty": 729,
+    "text": 25,
+    "eitherOrder": 32,
+    "conflictingReferences": 16,
+    "typeTime": 8,
+    "nonAsciiTextWithoutEncoding": 2
+   },
+   "devicesWithActivePropertyPlacements": 11,
+   "runs": 2,
+   "runsIdentical": true
+  },
+  "abandoned": "one 159 MiB public package in a debug build was stopped after 26 minutes without a result; nothing is claimed from it",
+  "method": "throwaway #[ignore] tests outside the commit (archived as .rs.keep in scratch), production import and plan_probe paths, no bus"
+ },
+ "tests": {
+  "new": [
+   "knx-core byte_order_evidence: 8 unit tests (orders, wider fields, palindromes, single-octet controls, unaligned not classified, malformed input, verdict, covered octets)",
+   "knx-productdb byte_order_probe: 9 tests (LittleEndian planned not refused, every skip named, agreeing refs once, image still refuses LittleEndian, non-memory mask refused, run merging, bound prefix, plan + classifier end to end, segment above 16 bits named without overflow)",
+   "knx-net memory_download: 4 probe-read tests (exact runs no writes, other device refused before any read, protected memory, short answer)",
+   "knx-app device_download: probe device lookup (none, several, no program)",
+   "knx-cli device_byte_order_probe: 6 simulator tests (low-first, high-first, disagreeing values flagged, failed read, nothing to read, arguments)"
+  ],
+  "mutations": {
+   "applied": 9,
+   "killedByAssertion": 9,
+   "names": [
+    "swap-orders",
+    "controls-always-agree",
+    "classify-unaligned",
+    "keep-overlaps",
+    "keep-superseded",
+    "bound-not-prefix",
+    "skip-identity-check",
+    "no-short-read-check",
+    "cli-hide-caution"
+   ],
+   "note": "no-short-read-check first survived (no test anywhere covered a short memory answer); the simulator knob short_memory_answers and the_probe_read_refuses_a_short_answer were added, then it died"
+  }
+ },
+ "gates": {
+  "fmt_exit": "0",
+  "clippy_exit": "0",
+  "test_exit": "0",
+  "test_passed": "4229",
+  "test_failed": "0",
+  "test_ignored": "196",
+  "xtask_check-layering_exit": "0",
+  "xtask_check-headers_exit": "0",
+  "xtask_check-anchors_exit": "0",
+  "xtask_check-ledger_exit": "0",
+  "xtask_check-corpus-gates_exit": "0",
+  "docs_exit": "0",
+  "diffcheck_exit": "0",
+  "inputs_frozen": "1",
+  "excluded": "knx-desktop (build script needs the built web bundle; crate unchanged)",
+  "privateCorpus": "143/143 in 31 targets (tools/run_corpus_tests.py, OriginalData linked into the worktree)"
+ },
+ "boundaries": [
+  "No LittleEndian encoder or download; KL-170 stays LATER",
+  "No bus traffic, hardware, server, web or MCP change",
+  "Probe output is evidence for one ETS-programmed device, not a write rule",
+  "No private names, values or program ids published"
+ ],
+ "review": {
+  "mode": "in-session whole-feature pass before the frozen gate",
+  "findings": [
+   {
+    "severity": "IMPORTANT",
+    "what": "the planner did not apply the download plan's 16-bit segment rule, and segment.address + offset overflowed u32 for a malformed segment address (debug panic)",
+    "fix": "fields in a segment above 16 bits are skipped with the download plan's own refusal text before any address arithmetic",
+    "proof": "a_segment_a_download_cannot_address_is_named_not_read failed first with \"attempt to add with overflow\", passes after the fix"
+   },
+   {
+    "severity": "MINOR",
+    "what": "the report printed the declared order Debug-quoted",
+    "fix": "printed plainly; CLI test asserts the plain line"
+   }
+  ],
+  "accepted": [
+   "project opened with open_existing_and_migrate like every other CLI command, device compare included; \"read only\" refers to the device"
+  ]
+ }
+}

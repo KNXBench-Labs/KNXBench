@@ -440,7 +440,7 @@ fn parse_mask(text: &str) -> Option<MaskVersion> {
 }
 
 /// `M-0083_A-…` → `0083h`.
-fn manufacturer_of(program_id: &str) -> Result<u16, DownloadPlanError> {
+pub(crate) fn manufacturer_of(program_id: &str) -> Result<u16, DownloadPlanError> {
     program_id
         .strip_prefix("M-")
         .and_then(|rest| rest.split('_').next())

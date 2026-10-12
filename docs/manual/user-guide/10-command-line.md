@@ -601,10 +601,41 @@ rules (plan first, a device-specific phrase, a backup before any write):
 | --- | --- |
 | `knx device readiness` | Offline: for every project device, whether a download is verified, untested, unsupported, excluded or has no address. Sends nothing |
 | `knx device compare` | Read only: reads what a download would write and lists every difference from the project |
+| `knx device byte-order-probe` | Read only: for a device ETS programmed, says whether it holds its multi-octet parameter values high or low octet first (see below) |
 | `knx device restore` | Writes a backup file back through the same load procedure, after backing up the current state |
 | `knx device find-serial` | Read only: which address has a serial number, or which serial number a device has |
 | `knx device service-control` | Reads, and after a backup changes, the Individual Address Write Enable bit |
 | `knx device reset-address`, `knx device address-by-serial` | Plan only today: confirmed writes are refused before a tunnel opens, like `program-address` below |
+
+### `knx device byte-order-probe` — help settle a little-endian device
+
+```bash
+knx device byte-order-probe 1.1.12 --project house.knxdb --gateway 192.0.2.1:3671
+```
+
+Some application programs declare `ParameterByteOrder="LittleEndian"`. KNXBench
+cannot download those yet: no published source says exactly how such a program lays
+out its values, and guessing would write wrong values into a device
+([known limitations §170](../../KNOWN_LIMITATIONS.md#170-little-endian-parameter-byte-order-is-refused-for-download-images)).
+A device that ETS has already programmed can answer the question, and this command
+asks it, **without writing anything**:
+
+- It plans the device exactly like a download, from the project's values, and reads
+  only the octets of its multi-octet number parameters plus some one-octet
+  parameters as controls (at most 4096 octets). No access key, no write path, no
+  load state touched.
+- For every multi-octet field it prints the project value, what the device holds and
+  whether that is **high octet first**, **low octet first** or **neither**. The
+  one-octet controls say whether the device holds this project's values at all.
+- Every parameter it does not read is listed with the reason (a text, a value that
+  reads the same both ways, a field across an octet boundary, …).
+
+It only means something for a device that ETS last programmed **with this project's
+values**: many "neither" fields or disagreeing controls mean the device holds a
+different configuration. The answer changes nothing KNXBench writes; it is evidence
+for lifting the limitation, so please share the output (it contains your device's
+parameter values) with the KNXBench maintainers if you are happy to. Exit 0: read and
+reported; 1: not probed (wrong device, read-protected memory, nothing to read).
 
 ### `knx device program-address` — give a device its individual address
 

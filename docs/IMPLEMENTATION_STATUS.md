@@ -1,3 +1,29 @@
+## 2026-10-13 — KL-170: byte-order evidence review and a read-only probe
+
+- **Research** ([parameter byte order](research/parameter-byte-order.md)): the
+  179-PDF KNX corpus, two schema derivations, two independent implementations,
+  3,341 public product programs and the private schema-23 sample. No source
+  defines `LittleEndian` per type; undeclared means `BigEndian` by schema
+  default. Base images of 370 LittleEndian programs hold whole-octet defaults
+  low octet first, and 32 layouts were re-declared BigEndian → LittleEndian
+  unchanged, but BigEndian-declared and undeclared ABB/Busch-Jaeger `0701h`
+  programs show the same pattern, so files cannot show what ETS writes.
+  [Receipt](evidence/kl170-byte-order-evidence-2026-10-13.json).
+- **Probe** ([ADR-0119](adr/0119-read-only-byte-order-probe.md)):
+  `knx device byte-order-probe` plans like a download
+  (`knx_productdb::byte_order_probe`, sharing the extracted `image::activate`),
+  reads only the fields' octets through a read-only session
+  (`knx_net` `read_memory_runs`, sharing the extracted `check_identity` and
+  `read_region` of the compare path) and classifies each field
+  (`knx_core::commissioning::byte_order_evidence`). Decode-only; no encoder or
+  download change. Planned offline for 54 private devices (all plan, 24 with
+  discriminating fields, at most 78 octets) and 42 public programs (36 plan).
+- **Boundary unchanged:** LittleEndian downloads stay refused (KL-170, LATER).
+  Newly disclosed: the related risk for BigEndian/undeclared ABB/Busch-Jaeger
+  programs, and that 11 of the 54 private LittleEndian devices are blocked by
+  `Property` placements as well. No hardware, bus, server, web or MCP change.
+- Gate on the frozen candidate (inputs frozen): fmt, clippy `-D warnings`, Rust 4229/0/196 (passed/failed/ignored), the five xtask checks and the documentation check; private corpus 143/143 (31 targets); 9/9 hand mutants killed; private probe planning reproduced twice. Review: the planner now applies the download plan's 16-bit segment rule (an overflow on malformed segment addresses, regression test first). `knx-desktop` excluded locally (needs the built web bundle; unchanged).
+
 ## 2026-10-12 — Alpha 10 published and downloaded artifacts verified
 
 - Tag `v0.1.0-alpha.10` (object `b39ea6a3`) is on `73420e13`; main cutoff `4a0294b8`

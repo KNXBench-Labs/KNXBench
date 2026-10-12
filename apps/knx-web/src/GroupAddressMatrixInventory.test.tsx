@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { InstallationNode } from "./bindings/InstallationNode";
+import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
@@ -47,8 +48,10 @@ const installation: InstallationNode = {
     { id: 31, name: "Beta", address: "1/0/2", range: null, dpts: [], links: [] },
   ],
 };
+const treeOf = (input: InstallationNode) => ({ schema_version: 1, errors: 0, warnings: 0, can_undo: false, can_redo: false,
+  is_modified: false, group_address_style: "ThreeLevel", installations: [input] }) as ProjectTree;
 function render(input: InstallationNode, context = "server:a") {
-  return act(async () => root.render(<GroupAddressTable installation={input} selection={null} multiSelection={null}
+  return act(async () => root.render(<GroupAddressTable installation={input} tree={treeOf(input)} selection={null} multiSelection={null}
     onItemClick={() => {}} onTreeUpdate={() => {}} rangeScope={null} projectContextKey={context} />));
 }
 async function openMatrix() {

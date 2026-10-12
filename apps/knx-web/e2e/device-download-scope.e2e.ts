@@ -58,7 +58,8 @@ async function open(page: Page) {
   await page.getByRole("dialog", { name: "Project created" }).getByRole("button", { name: "Done" }).click();
   await page.getByRole("navigation", { name: "Bus monitor" }).getByRole("button", { name: "Bus monitor" }).first().click();
   await page.getByRole("button", { name: "Download to device", exact: true }).click();
-  await page.getByRole("combobox").filter({ hasText: "1.1.67" }).selectOption("1.1.67");
+  // Devices are chosen by stable id; the label carries the address.
+  await page.locator("select[data-download-device]").selectOption({ label: "1.1.67 — Push button 2-fold" });
   return { planBodies, writes };
 }
 

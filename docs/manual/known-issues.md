@@ -64,6 +64,18 @@ The version number is not a promise that anything is finished.
   is no missing line to invent. Review other diagnostics independently; an
   error-bearing `.knxproj` is refused as input to project comparison.
 
+### ETS 5.7 projects: small evidence, and nested sub-modules are skipped
+
+- **Affected:** projects saved by ETS 5.7 (project schema 20).
+- **Limitation:** they import since 12 October 2026, checked against three
+  small public sample projects only. Communication objects inside nested
+  sub-modules keep their group-address links but lose their object number
+  and module; each is listed as an import error.
+  ETS 4 schema 12, ETS 5 up to 5.6 and ETS 6.1 projects are still refused.
+- **Workaround:** read the import report. For a refused ETS 6.1 project,
+  re-exporting from ETS 6.3 gives a supported file.
+- **Details:** [§177](../KNOWN_LIMITATIONS.md#177-ets-57-projects-schema-20-rest-on-three-public-samples-sub-module-object-ids-are-not-decoded)
+
 ### Everything KNXBench knows about `.knxproj` comes from a small corpus
 
 - **Affected:** import of any project not resembling the ones this project has

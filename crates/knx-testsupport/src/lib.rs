@@ -147,6 +147,15 @@ pub fn zipcrypto_minimal_knxproj_bytes() -> Vec<u8> {
     include_bytes!("../fixtures/zipcrypto-minimal.knxproj").to_vec()
 }
 
+/// The same protected project with the nested entries named the way real
+/// ETS exports name them: bare `0.xml` and `Project.xml` at the nested
+/// archive's root, not under `P-0001/` (measured in public ETS4, ETS 5.7
+/// and ETS6 protected exports, issue #7). Same password; built with
+/// Info-ZIP, commands in `fixtures/README.md`.
+pub fn zipcrypto_flat_knxproj_bytes() -> Vec<u8> {
+    include_bytes!("../fixtures/zipcrypto-flat.knxproj").to_vec()
+}
+
 /// Writes [`zipcrypto_minimal_knxproj_bytes`] into `dir` and returns its path.
 pub fn write_zipcrypto_minimal_knxproj(dir: &Path) -> PathBuf {
     let path = dir.join("protected.knxproj");

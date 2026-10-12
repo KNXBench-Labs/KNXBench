@@ -97,6 +97,23 @@ pub const MCP_FORBIDDEN: &[&str] = &[
     "reqwest",
 ];
 
+/// The offline application service must remain independent of the broad App
+/// importer/key graph, hardware, network adapters, async transport and UI
+/// (ADR-0115). Check normal/build edges; private test fixtures are not shipped.
+pub const OFFLINE_EDIT_FORBIDDEN: &[&str] = &[
+    "knx-app",
+    "knx-etsproj",
+    "knx-secure",
+    "knx-net",
+    "knx-server",
+    "axum",
+    "hyper",
+    "reqwest",
+    "tokio",
+    "rmcp",
+    "tauri",
+];
+
 /// Build the resolved dependency graph of the whole workspace, including
 /// transitive third-party dependencies.
 pub fn workspace_graph(root: &std::path::Path) -> Result<DepGraph, String> {
@@ -148,6 +165,7 @@ fn build_graph(root: &std::path::Path, include_dev: bool) -> Result<DepGraph, St
 
     for root in [
         "knx-core",
+        "knx-edit",
         "knx-etsproj",
         "knx-productdb",
         "knx-projection",
@@ -207,6 +225,36 @@ mod tests {
         ]);
         let found = forbidden_reachable(&g, "knx-core", &["quick-xml"]);
         assert_eq!(found[0].path, vec!["knx-core", "fancy-parser", "quick-xml"]);
+    }
+
+    #[test]
+    fn offline_edit_has_no_application_archive_key_bus_transport_or_ui_graph() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap();
+        let g = workspace_production_graph(root).unwrap();
+        assert!(
+            g.edges.get("knx-edit").is_some_and(|deps| !deps.is_empty()),
+            "offline application root knx-edit must actually exist with dependencies"
+        );
+        let forbidden = [
+            "knx-app",
+            "knx-etsproj",
+            "knx-secure",
+            "knx-net",
+            "knx-server",
+            "axum",
+            "hyper",
+            "reqwest",
+            "tokio",
+            "rmcp",
+            "tauri",
+        ];
+        let found = forbidden_reachable(&g, "knx-edit", &forbidden);
+        assert!(
+            found.is_empty(),
+            "forbidden offline service dependencies: {found:?}"
+        );
     }
 
     #[test]

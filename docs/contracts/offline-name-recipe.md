@@ -11,6 +11,12 @@ tracking and live source refs match and14 owned blobs match committed bytes.
 No release/deployment or broader automation completion follows.
 [Evidence](../evidence/offline-name-recipe-2026-10-12.json) keeps scopes separate.
 
+The AP6 dependency prerequisite moves the sole service into `knx-edit` with
+`knx-app::name_recipe` as a type-identical public compatibility facade; see
+[ADR-0115](../adr/0115-offline-application-edit-boundary.md). Fingerprint bytes and
+all existing CLI semantics remain unchanged, checked separately on the moved
+source. This is not an MCP permission or mutation capability.
+
 Concrete repetition: explicitly ordered stable GroupAddressIds across existing
 installations receive exact `prefix + existing_name + suffix`. No interpolation,
 regex, address target query, implicit selection expansion, normalization or

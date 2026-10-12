@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 knx-core.workspace = true
+knx-edit.workspace = true
 knx-etsproj.workspace = true
 knx-productdb.workspace = true
 knx-report.workspace = true

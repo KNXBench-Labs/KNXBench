@@ -402,6 +402,15 @@ to owner `later`. Routes naming removed goal files are kept as history.
   listed in section 2. After the owner's decisions the same day, four more
   worktrees went (functions kept as a local WIP branch), and the 24 local
   branches of all retired worktrees were deleted after an ancestor-of-main check.
+  The remaining leftovers (three local branches, one merged remote branch, three
+  stray folders) were sorted too; see the
+  [triage note](status/2026-10-12-parked-work-triage.md#leftover-branches-and-folders-sorted-2026-10-12).
+- **Stale documentation claims:** five places on main still describe superseded
+  states (importer end-to-end failure, model v12 admission, missing time/slider
+  controls, pending instruction editor, the 2026-10-08 audit date). They are
+  listed with file and line in the
+  [triage note](status/2026-10-12-parked-work-triage.md#leftover-branches-and-folders-sorted-2026-10-12);
+  each needs a fresh check against source before it is reworded.
 
 
 ### Schema23 review — scoped follow-up closed

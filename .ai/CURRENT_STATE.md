@@ -1,3 +1,13 @@
+Web lock: released by claude-web-fixups (DPST-9-1 layout-test fix, delivered)
+Alpha 10 prerequisite delivered: web-fixups
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 22:25
+- **Completed:** `device-editor-layout.e2e.ts` DPST-9-1 fixed on the test side (`cdfae412`, status `4ada01fb`): the product already follows the name-first DPT contract (`Name (main.sub)`, exact reference in the tooltip), the test still demanded the raw `DPST-9-1`/`DPST-1-1` inline. It now asserts label, tooltip, no inline `DPST`, labelled master text and the no-character-wrap guard; a raw-reference product mutant fails it by name. Product code unchanged. Gate on `cdfae412`: build, tsc for all 12 tsconfigs, Vitest 3164/0 (222 files), **full fixture Chromium 416/0**, production-preview devices 13/13, layout spec ×3 30/30, five xtask checks, inputs frozen. Docs: DPT contract follow-up note, IMPLEMENTATION_STATUS.
+- **Pending/Next Steps:** Pause for the Alpha 10 freeze. Afterwards (fresh origin/main, after parked-adoption's ux-feedback package per the queue, own lock entry): notes follow-ups. The service part is done locally on `feature/notes-followups-20261012` (`cc291b78`): `knx_app::note_targets` catalogue incl. communication objects, filtered by `ProjectNoteTarget::validate`, served by `GET /api/project/notes/targets` with the notes read's snapshot identity (4 service + 13/13 notes HTTP tests). Still open: web host consumes that catalogue instead of `notesHost.ts`'s tree walk, a beforeunload guard while note/instruction drafts exist, EN/DE action names (and yes/no) in the review, manual and docs.
+- **Notes for Codex oder Claude:** Self-review only. The notes branch is unpushed and was not part of this gate. The release browser gate should now be 0 failures on the fixture suite. No hardware, release, deployment, subagents or quota checks.
+
+---
+
 Web lock: taken by claude-web-fixups (DPST-9-1 layout-test fix, Alpha 10 prerequisite)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 22:09

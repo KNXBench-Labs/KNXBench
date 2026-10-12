@@ -48,7 +48,28 @@
     "knx-mcp -> knx-edit",
     "rmcp -> url (already resolved)"
   ],
-  "broadAcceptance": null,
+  "broadAcceptance": {
+    "accepted": true,
+    "head": "20b99890e2c2ff48a75a0e6c5c5772e0c4a0d607",
+    "stages": 23,
+    "sourceFrozen": true,
+    "mcp": {
+      "passed": 35,
+      "failed": 0
+    },
+    "rust": {
+      "passed": 4138,
+      "failed": 0,
+      "ignored": 194
+    },
+    "web": {
+      "passed": 2906,
+      "failed": 0,
+      "files": 191
+    },
+    "buildClippyBinariesExplicitRootGatesPassed": true,
+    "mergedWithMain": "65d8227f"
+  },
   "review": "active-session self-review, not independent",
   "notClaimed": [
     "human-vs-auto-accepting client distinction",

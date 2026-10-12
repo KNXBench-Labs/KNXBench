@@ -23,6 +23,8 @@ import "./groupAddressWorkspace.css";
 
 export default function GroupAddressTable(props: {
   installation: InstallationNode; selection: Selection | null; multiSelection: MultiSelection | null;
+  /** The whole project: adding members follows the core's cross-installation link rule. */
+  tree: ProjectTree;
   onItemClick: ItemClickHandler; onTreeUpdate: (tree: ProjectTree) => void;
   rangeScope: number | null;
   projectContextKey?: string;
@@ -115,6 +117,6 @@ export default function GroupAddressTable(props: {
     {view === "columns" ? <GroupAddressColumns {...shared} /> : view === "atlas" ? <GroupAddressAtlas {...shared} /> : view === "matrix" ? <GroupAddressMatrix {...shared}
       matrix={matrix} inventory={inventory} columnKeys={columnKeys} onColumns={setColumnKeys} columnQuery={columnQuery} onColumnQuery={setColumnQuery} /> : <GroupAddressTreeTable {...shared}
       collapsed={collapsed} onToggle={toggle} includeEmpty={query.trim() === "" && filter === "all" && validScope === null && externalScope === null} />}
-    {selected && <GroupAddressLinks ga={selected} onTreeUpdate={onTreeUpdate} />}
+    {selected && <GroupAddressLinks ga={selected} tree={props.tree} onTreeUpdate={onTreeUpdate} />}
   </div>;
 }

@@ -1,3 +1,32 @@
+## 2026-10-12 — Group-address members, gateway choice, device → download hand-off, step guide
+
+A group address's members (communication-object links, not devices) can be added
+from the address: **Add member…** in the shared links panel of all four views and in
+Properties walks device → object → direction through the existing
+`POST /api/group-links`. The picker mirrors `Command::LinkComObject`'s per-installation
+rule (MODEL-01 / ADR-0070) through the one shared `linkableGroupAddresses`; the
+package brief's and an old Inspector comment's "`installations[0]` only" premise was
+stale and is corrected. Duplicates are refused before sending, server refusals shown
+unchanged, **Send + receive** is one batch and one undo step.
+
+The **Download to device** tab now takes its gateway from the shared start-up
+interface search (one answer filled in only while nothing was chosen or typed,
+several offered by name/endpoint/interface address, typed values never replaced,
+preferred ≠ found), the device editor's **Download to device…** opens it with that
+device selected by stable id in the same project (navigation only; refused while a
+plan, a running/connecting or an unknown download is in the way), and a five-step
+list names what is missing from checks the panel and server already make
+([limits](KNOWN_LIMITATIONS.md#group-address-members-and-download-preparation-2026-10-12)).
+
+Evidence on frozen candidate `47a604ba` (gated on top of the notes package `114b0097`; the published commits differ only by docs):
+Vitest 2983/0 in 198 files; production-preview Chromium gate 19/19 (EN/DE,
+light/dark, 1440/400, screenshots inspected); HTTP `http_group_members` 2/0 and
+`http_edit_routes` 26/0; 14 named mutants killed, sources restored; tsc for every
+config, build, Clippy (`knx-server --tests`), fmt, five explicit-root gates, docs
+check. Full fixture Chromium suite 368/4: the four are the known `device-editor-layout` DPT-label failures, identical on untouched `main`. Synthetic fixtures only: no gateway, device or bus was
+contacted. Self-review, not independent.
+[Evidence](evidence/ga-members-download-2026-10-12.json).
+
 ## 2026-10-12 — Project notes in the workbench (Session 1 host)
 
 The project notes editor is mounted as the **Notes** workbench view (navigation

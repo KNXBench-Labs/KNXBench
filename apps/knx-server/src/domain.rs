@@ -372,7 +372,8 @@ fn import_and_project(
     // a later `open_project` can carry them into `state` (see `AppState::opaque`'s
     // doc comment for why this matters).
     let mut opaque = knx_store::load_opaque(&conn)?;
-    opaque.push(knx_app::import_evidence::encode(&imported.report).map_err(AppError::Evidence)?);
+    knx_app::import_evidence::capture_primary(&mut opaque, &imported.report)
+        .map_err(AppError::Evidence)?;
     let manufacturer_refs = knx_store::load_manufacturer_refs(&conn)?;
     Ok((
         tree,

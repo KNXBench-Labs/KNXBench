@@ -130,5 +130,135 @@
     "one pending plan per router across authenticated clients, monotonic TTL300seconds",
     "native persistence failures including external writer conflicts use sanitized422; live conflicts409",
     "no UI/shell completion, ETS export or hardware/Secure claim"
-  ]
+  ],
+  "combined_acceptance": {
+    "head": "ddf88f86430c433df4723cbb7b177d5dd6734da5",
+    "stages": [
+      {
+        "name": "note-http",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "note-unit",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "format",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "web",
+        "exit": 0,
+        "valid": true,
+        "passed": 2794,
+        "failed": 0,
+        "pending": 0,
+        "files": 178
+      },
+      {
+        "name": "web-build",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "theme-types",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "flow-types",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "fixture-build",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "rust-workspace",
+        "exit": 0,
+        "valid": true,
+        "passed": 4103,
+        "failed": 0,
+        "ignored": 194,
+        "skip_lines": []
+      },
+      {
+        "name": "clippy",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "binaries",
+        "exit": 0,
+        "valid": true,
+        "versions": {
+          "knx-server": "knx-server 0.1.0-alpha.9+gddf88f86",
+          "knx": "knx 0.1.0-alpha.9+gddf88f86",
+          "knx-mcp": "knx-mcp 0.1.0-alpha.9+gddf88f86"
+        }
+      },
+      {
+        "name": "documentation",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "documentation-tests",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-layering",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-headers",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-ledger",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "whitespace",
+        "exit": 0,
+        "valid": true
+      }
+    ],
+    "accepted": true,
+    "inputs_frozen": true,
+    "scope": "notes authenticated HTTP adapter plus current published web source; not isolated note UI/help or whole AP4"
+  },
+  "selected_native_corpus": {
+    "head": "ddf88f86430c433df4723cbb7b177d5dd6734da5",
+    "passed": 11,
+    "failed": 0,
+    "ignored": 0,
+    "original_inputs_unchanged": true,
+    "source_unchanged": true,
+    "scope": "11 existing native-project regressions, not complete product corpus"
+  },
+  "final_upstream": {
+    "head": "23f7c7a33b5c19736f76f51d67499e508e274dc1",
+    "docs_only": true,
+    "runtime_identical": true
+  }
 }

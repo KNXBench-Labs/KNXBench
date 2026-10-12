@@ -8,6 +8,30 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-12 00:25 CEST
+- **Completed:** Notes authenticated HTTP current-web integrationddf88f86 passes all19 actual frozen gates: HTTP11/unit2, workspace4103/0/194ignored, Web2794/0/178files, strict Clippy, format, all builds/types, stamped server/CLI/MCP, docs and five nonempty repository checks. Selected native corpus11/0/no skips passes on same source with unchanged originals. Late upstream 23f7c7a3 changes docs only, incorporated without runtime change and all journal entries preserved. Three source guard negatives and source self-review retained; no independent verdict. UI client has genuine named readRED1 separately, no UI acceptance yet.
+- **Pending/Next Steps:** Fresh final metadata gates, normal main HTTP publication/exact ref/blob readback and compact archive/cleanup. Continue isolated EN/DE note client/text/editor/help/browser/native-restart in note-ui worktree; AP3/AP5/AP6/AP7 remain open. No full AP4/shell or release/deploy claim.
+- **Notes for Codex oder Claude:** Runtime receipt remains boundddf88f86; final merge is docs-only, no source acceptance restamping. Initial docs-only upstream assumption was correctly rejected before merge because web had changed; complete fresh source chain now covers those changes. Other owners' release/media/default-on notifications, shared root/index, private corpus and immutable Alpha9/native13 tag preserved. Use isolated note fixture, not ordinary App with unaccounted external startup fetch. No bus/Secure/vendor/REA/subagents/quota.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-12 00:07 CEST
+- **Completed:** Alpha9 media/site/manual package published on main4161f366 and existing Website workflow38177695107 completed successfully. Real release capture46PNG/3GIF,7pixel-identical lossless WebPs; light/dark and four DE/EN feature cards retain existing voice. Live38inventoried HTTPS files/manifest byte-identical to tested build; live Chromium178checks/0errors/0foreign requests. Static24, docs12, Web2738/174files and eight local browser recipes670checks pass. Six actual GitHub GFM fragments,21public image/GIF byte checks and12local fragment/viewport cases pass. Caption-only correction retains earlier evidence as link, not current inline screenshot.
+- **Pending/Next Steps:** No feature/website work remains for this scoped request. Finish exact final metadata remote readback and owned archive/cleanup only; all other owners' implementation/design queues unchanged. Do not retag, replace user container, synchronize shared root or start an unrelated package.
+- **Notes for Codex oder Claude:** Session478dc6a8327f. Source/metadata proof in docs/evidence/alpha9-media-2026-10-11.json; capture stays pinned to released5b21323e/imagecaa5ab31, not newer main. Source-heading repair and both status contributions preserved; runtime/media unchanged by final prose corrections. GFM preview is minimally styled locally, not pixel-equivalent full GitHub UI. Source self-review only; no full Rust/private-corpus/hardware/native accessibility certification. Shared root preserved; archive/cleanup remains pending at this dated metadata checkpoint. Existing frontend chunk warning remains.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-12 00:02 CEST
+- **Completed:** Note HTTP local featureb4121749 accepted on frozen inputs: API11/module2, whole server811/0/47ignored, strict Clippy/format/build and three named guard negatives with restored complete manifest. Published Foundation/service7e4ae354 ancestry verified. Fresh upstream 05a53d64 adds other owners' web release notifications/heading/media, so docs-only preflight correctly refused; incoming backend/source dependencies unchanged. All foreign/own journal entries and published web source preserved in integration.
+- **Pending/Next Steps:** Commit assembled candidate and run fresh combined Web/tests/build/types, owning server gates, source-stamped binaries and repository/docs checks. No earlier whole-runtime receipt is transferred to changed web source. Normal HTTP publication/readback only after acceptance; isolated EN/DE notes/help/browser/native restart proof and AP3/AP5/AP6/AP7 still open.
+- **Notes for Codex oder Claude:** Do not edit shared App/styles/catalogues/Toast/release notifications owned by other session. Next notes UI lives only features/notes with explicit host contract; existing HelpPanel and relevant HelpTip mechanisms reused. New release notifications are default-on in production; use a genuinely isolated fixture/network namespace for offline note proofs, not a browser that starts ordinary App without request accounting. Preserve root/index/private corpus/release native13 tag; active-session self-review, no bus/Secure/vendor/REA/subagents/quota/release/deploy.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-11 23:55 CEST
 - **Completed:** Bounded note HTTP adapter source passes six frozen owning gates: 11 HTTP tests, 2 route module controls, whole server811/0/47ignored, strict serverClippy, format and build. Three registered guard mutants caught with byte-exact restored full manifest; actual first restoration ambiguity remains recorded. Real cookie, strict typed/size admission, consent/cancel/replay/context/no-op, native working recovery/both stacks/rootSave and actual SQLite lock/history-budget/concurrent-writer refusals covered. Self-review only; no independent verdict. Foundation/service7e4ae354 already published.
 - **Pending/Next Steps:** Focused HTTP commit, merge current published prerequisite docs/ledger without runtime change, fresh metadata/repository/stamped-binary gates and normal push/readback. Then isolated notes EN/DE client/editor/help, real browser and native restart proof. AP3/AP5/AP6/AP7 still open; no whole AP4 or shell mount claim.

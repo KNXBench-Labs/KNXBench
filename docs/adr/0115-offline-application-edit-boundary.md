@@ -1,7 +1,7 @@
 # ADR 0115: Offline application services without the importer or key graph
 
 Date: 2026-10-12
-Status: Accepted; local20-stage acceptance, upstream integration/publication pending
+Status: Accepted; local20-stage and integrated22-stage (`d6127583`) acceptance; published
 Scope: AP6 prerequisite only
 
 ## Verified context

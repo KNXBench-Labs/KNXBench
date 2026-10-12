@@ -20,7 +20,10 @@ ignored, Web2836/0 across182 files, production binaries/identity, Clippy/builds,
 docs/regressions and five nonempty explicit-root repository gates. Two authored
 module-header separators corrected without raising the ceiling; earlier failed
 assembly15 valid/header refusal/four unstarted stages remains separate.
-Fresh upstream integration/full reacceptance and normal publication are pending.
+Integrated merge `d6127583` (package `1d8e42cf` plus upstream `fe09a41a`) passes a
+fresh22-stage frozen acceptance: Rust4129/0 with194 ignored, Web2841/0 across182
+files, upstream server-default and Docker-workflow regressions5/5 each, binaries,
+Clippy, docs and five explicit-root gates. This docs closure publishes it normally.
 [Scoped evidence](evidence/offline-edit-boundary-2026-10-12.json) separates these
 checks from future opt-in MCP permissions, verified operator/client-associated
 confirmation, actual client and native recovery acceptance. No existing MCP

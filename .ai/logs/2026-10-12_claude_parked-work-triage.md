@@ -154,3 +154,20 @@ The remote branches `fix/docker-import-diagnostics-20261009` (`af1055e9`) and
 `fix/import-status-20261011` (`30f054b3`) were both ancestors of main with no
 open PR. They were deleted with an expected-SHA lease. The remote now has
 `main` only.
+
+## Last two worktrees removed (2026-10-12 19:19)
+
+The user's decision: "Wenn sie nicht mehr benötigt werden dann weg" (if they
+are no longer needed, remove them). Both were checked and neither is needed:
+
+| Item | Finding |
+| --- | --- |
+| offline-naming | HEAD `f7a5d8dc` is an ancestor of main. Residue: handover copy plus the untracked `docs/contracts/offline-naming-recipe.md` device-naming draft, not on main or linked |
+| data-tooling-stats | Detached `cdff5b56`, an ancestor. Residue: an 11 October ProjectStats refresh, newer than main's 10 October one but stale, plus the `.projectstats` cache (the root has its own) |
+
+- Backed up both to `KNXBench.backups/2026-10-12-worktree-prune/`. The manifest
+  now has 214 files and verifies.
+- Removed both worktrees after re-checking HEAD, status and process cwd.
+- Deleted `feature/offline-naming-20261011` with an ancestor check and
+  `update-ref -d` with the expected SHA. `branch -d` refused because it compares
+  against the root checkout's stale HEAD.

@@ -147,6 +147,48 @@ fn source_file_lookalikes_and_scoped_reports_are_preserved_without_primary_inter
 }
 
 #[test]
+fn primary_capture_appends_one_record_and_refuses_duplicate_without_changing_entries() {
+    let mut entries = vec![knx_store::StoredOpaqueEntry {
+        source_path: "fictional.txt".into(),
+        xpath: String::new(),
+        kind: "File".into(),
+        name: "fictional.txt".into(),
+        bytes: b"exact original".to_vec(),
+        sha256: "fictional identity".into(),
+    }];
+    let source = entries.clone();
+    import_evidence::capture_primary(&mut entries, &report()).unwrap();
+    assert_eq!(
+        entries.len(),
+        source.len() + 1,
+        "primary evidence was not attached"
+    );
+    assert_eq!(&entries[..source.len()], source.as_slice());
+    assert_eq!(
+        import_evidence::read(&entries)
+            .unwrap()
+            .unwrap()
+            .report_json,
+        report().to_json()
+    );
+    let admitted = entries.clone();
+    assert!(
+        import_evidence::capture_primary(&mut entries, &report()).is_err(),
+        "duplicate primary capture accepted"
+    );
+    assert_eq!(entries, admitted, "duplicate refusal changed evidence");
+}
+
+#[test]
+fn refused_primary_capture_preserves_all_original_entries() {
+    let mut entries = vec![];
+    let mut oversized = report();
+    oversized.source.file_name = "x".repeat(import_evidence::MAX_EVIDENCE_BYTES);
+    assert!(import_evidence::capture_primary(&mut entries, &oversized).is_err());
+    assert!(entries.is_empty());
+}
+
+#[test]
 fn absent_legacy_evidence_is_unavailable_not_a_measured_zero() {
     assert!(import_evidence::read(&[]).unwrap().is_none());
 }

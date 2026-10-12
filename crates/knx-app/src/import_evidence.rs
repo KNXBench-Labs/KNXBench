@@ -97,6 +97,21 @@ pub fn encode(report: &knx_etsproj::ImportReport) -> Result<StoredOpaqueEntry, S
     Ok(entry)
 }
 
+/// Attach primary historical evidence before any destination is opened.
+pub fn capture_primary(
+    entries: &mut Vec<StoredOpaqueEntry>,
+    report: &knx_etsproj::ImportReport,
+) -> Result<(), String> {
+    if contains_primary(entries) {
+        return Err(
+            "primary import evidence already attached; explicit replacement required".into(),
+        );
+    }
+    let entry = encode(report)?;
+    entries.push(entry);
+    Ok(())
+}
+
 /// Identity lookup only; callers must admit the envelope with `read` first.
 pub fn contains_primary(entries: &[StoredOpaqueEntry]) -> bool {
     entries

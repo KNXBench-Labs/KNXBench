@@ -89,7 +89,8 @@ later the same day (section above); FUTURE-03 remains LATER, not whole AP4. AP3/
 remainders and hardware/ETS/report compatibility are not closed by this leaf.
 
 
-**Audit:** 2026-10-08, against `origin/main` `608a204b`. This page is the one
+**Baseline audit:** 2026-10-08, against `origin/main` `608a204b`; the dated
+sections on this page were added since, the newest on 12 October 2026. This page is the one
 place that answers "what is not done?". It replaces the three finished alpha
 goals (removed 2026-10-08, see [REMOVED_DOCS](history/REMOVED_DOCS.md)). It does not change any
 status by itself: per-ID status stays in the [ledger](status/LEDGER.md),
@@ -288,9 +289,10 @@ below is on the remote or merged:
 | Initial native-write preflight | Never-compiled draft from `import-lifecycle-20261011` | Archived as a local patch; to be built fresh. Worktree and branch removed |
 | `audit-findings-20261011`, `native-import-diagnostics-20261011` | Superseded / already on main | Dropped. Worktrees and branches removed |
 
-Two further worktrees hold residue that still needs an owner decision:
-`offline-naming-20261011` (an unaccepted device-naming design draft) and
-`data-tooling-stats-20261011` (a stale, unpublished ProjectStats refresh).
+The two other leftover worktrees, `offline-naming-20261011` and
+`data-tooling-stats-20261011`, were removed by owner decision after a backup.
+The unaccepted numbered device-naming draft (FUTURE-02) survives only in the
+local prune backup; see the triage note.
 
 - **Community evidence** (File → Analyze support gaps…) is in the repository,
   and its intake lives here (ADR-0091). The interim
@@ -407,12 +409,10 @@ to owner `later`. Routes naming removed goal files are kept as history.
   The remaining leftovers (three local branches, one merged remote branch, three
   stray folders) were sorted too; see the
   [triage note](status/2026-10-12-parked-work-triage.md#leftover-branches-and-folders-sorted-2026-10-12).
-- **Stale documentation claims:** five places on main still describe superseded
-  states (importer end-to-end failure, model v12 admission, missing time/slider
-  controls, pending instruction editor, the 2026-10-08 audit date). They are
-  listed with file and line in the
-  [triage note](status/2026-10-12-parked-work-triage.md#leftover-branches-and-folders-sorted-2026-10-12);
-  each needs a fresh check against source before it is reworded.
+- **Stale documentation claims (fixed 12 October 2026):** the five superseded
+  statements listed in the
+  [triage note](status/2026-10-12-parked-work-triage.md#leftover-branches-and-folders-sorted-2026-10-12)
+  were re-checked against source and reworded.
 
 
 ### Schema23 review — scoped follow-up closed

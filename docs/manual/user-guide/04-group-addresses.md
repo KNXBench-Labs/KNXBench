@@ -56,9 +56,11 @@ with or without project links.
 
 ### Four presentations of the same addresses
 
-**Source builds after Alpha 9 only.** The published Alpha 9 image and the
-screenshots in this manual still show the single flat table described above; the
-four presentations arrive with the next release.
+**Source builds after Alpha 9 only.** The published Alpha 9 image still shows the
+single flat table described above; the four presentations arrive with the next
+release. The four screenshots in this section come from such a source build (the
+status bar still reads `v0.1.0-alpha.9` because the version number only moves at
+release time); every other screenshot in this manual is Alpha 9.
 
 The **Presentation** select switches between four views. They all show the same
 addresses, the same search, filter and range scope, and the same selection: select
@@ -71,6 +73,23 @@ the properties pane and the existing commands; no view edits on its own.
 | **Column browser** | Drilling down range by range, one column per level, with the addresses of the chosen range below. |
 | **Address atlas** | Cards for ranges and addresses with counts, DPT and number of project links. It is navigation through stored ranges, not a map of the physical topology. |
 | **Connection matrix** | Group addresses against the communication objects linked to them. `S` is a projected Send link, `R` a projected Receive link (German UI: `S`/`E`), `?` an unknown direction (exact value in the cell details), `—` no projected link. |
+
+![Source build after Alpha 9, Porcelain: the tree table groups the fictional Sample house by its stored ranges Lighting, Switching, Status and Blinds; Status is collapsed and shows its count, and the selected Kitchen light 0/0/2 is highlighted and open in Properties](../../assets/screenshots/porcelain-ga-view-tree.png)
+
+*Tree table, the default. Range headings fold away; the count stays visible.*
+
+![Source build after Alpha 9, Porcelain: the column browser with a Range column listing Lighting, Blinds and Heating, a Lighting column listing Switching and Status, the breadcrumb All ranges / Switching, and the four Switching addresses below with Kitchen light still selected](../../assets/screenshots/porcelain-ga-view-columns.png)
+
+*Column browser: one column per range level. The selection came along from the tree.*
+
+![Source build after Alpha 9, Porcelain: the address atlas in the Switching range showing four address cards with DPT Switch (1.001) and their project link counts; the Kitchen light card is outlined as selected, with the Links panel below](../../assets/screenshots/porcelain-ga-view-atlas.png)
+
+*Address atlas: the same scope as cards. It is stored-range navigation, not a floor plan.*
+
+![Source build after Alpha 9, Porcelain: the connection matrix with its linked-objects-only scope note and S/R/?/— legend, a folded chooser reading 6 of 21 linked-object columns selected (maximum 12), and a grid where Kitchen light 0/0/2 has an R cell under Switch actuator ground floor, Channel B](../../assets/screenshots/porcelain-ga-view-matrix.png)
+
+*Connection matrix: who sends and who receives, as planned in the project. The dashes
+are "no link", not "silence on the bus".*
 
 The grouping always follows the ranges stored in the project; KNXBench never
 invents main or middle groups from address numbers, so a Free-style or two-level

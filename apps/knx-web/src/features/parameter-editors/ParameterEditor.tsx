@@ -38,7 +38,15 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
   const latestRevision = useRef(revision);
   const inFlight = useRef(false);
   const id = useId();
-  useEffect(() => { latestRevision.current = revision; }, [revision]);
+  // Saving the project bumps the revision without touching this field. A
+  // revision change with an identical field and no write in flight therefore
+  // moves the draft onto the new revision; any field change still blocks Apply.
+  const fieldSignature = JSON.stringify([field.kind, field.value, field.min, field.max, field.editable, field.writeEtsId, field.access]);
+  const loadedSignature = useRef(fieldSignature);
+  useEffect(() => {
+    latestRevision.current = revision;
+    if (revision !== loadedRevision && !inFlight.current && !accepted && fieldSignature === loadedSignature.current) setLoadedRevision(revision);
+  }, [revision, loadedRevision, accepted, fieldSignature]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const stale = loadedRevision !== revision || baseline !== field.value;
   const restricted = !field.editable || field.writeEtsId === null || field.access === "Read" || field.access === "None";
@@ -87,7 +95,7 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
     </div>
     <div className={styles.actions}>
       <button type="button" disabled={pending || accepted || stale || restricted || unchanged || issue !== null} onClick={() => { void apply(); }}>{pending ? copy.busy : copy.apply}</button>
-      <button type="button" disabled={pending} onClick={() => { setDraft(field.value ?? ""); setBaseline(field.value); setLoadedRevision(revision); setFailure(null); setAccepted(false); }}>{copy.reset}</button>
+      <button type="button" disabled={pending} onClick={() => { setDraft(field.value ?? ""); setBaseline(field.value); setLoadedRevision(revision); loadedSignature.current = fieldSignature; setFailure(null); setAccepted(false); }}>{copy.reset}</button>
     </div>
   </section>;
 }

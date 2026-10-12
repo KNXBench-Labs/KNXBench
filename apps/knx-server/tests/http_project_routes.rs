@@ -147,6 +147,7 @@ async fn importing_then_saving_as_then_reopening_round_trips() {
         .await
         .unwrap();
     assert_eq!(import_response.status(), StatusCode::OK);
+    let imported = body_json(import_response).await;
 
     let save_response = app
         .clone()
@@ -179,8 +180,12 @@ async fn importing_then_saving_as_then_reopening_round_trips() {
         .unwrap();
     assert_eq!(reopen_response.status(), StatusCode::OK);
     let tree = body_json(reopen_response).await;
-    assert_eq!(tree["errors"], 0);
-    assert_eq!(tree["warnings"], 0);
+    // ADR-0113: a native file keeps the original import report, so reopening
+    // restores its counts as historical findings instead of reporting zero.
+    assert_eq!(tree["errors"], imported["errors"]);
+    assert_eq!(tree["warnings"], imported["warnings"]);
+    assert_eq!(tree["import_report_available"], true);
+    assert_eq!(tree["import_report_historical"], true);
 }
 
 fn post(uri: &str, body: Value) -> Request<Body> {

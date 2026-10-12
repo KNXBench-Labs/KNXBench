@@ -1,6 +1,6 @@
 /** Switches the bus workspace between monitor, scan, checks, download, address and Debug tools. */
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FlowModel } from "./flowModel";
 import type { FlowTarget } from "./flowNavigation";
 import AddressProgrammingPanel from "./AddressProgrammingPanel";
@@ -13,6 +13,7 @@ import LineScanPanel from "./LineScanPanel";
 import ServiceControlPanel from "./ServiceControlPanel";
 import { useTranslate } from "./i18n";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { DownloadHandoff } from "./downloadHandoff";
 
 export default function BusDiagnosticsPanel({
   project,
@@ -20,15 +21,31 @@ export default function BusDiagnosticsPanel({
   projectScope,
   onFlowNavigate,
   active = true,
+  downloadHandoff = null,
 }: {
   project: ProjectTree | null;
   active?: boolean;
   onTreeUpdate: (tree: ProjectTree) => void | Promise<void>;
   projectScope?: string;
   onFlowNavigate?: (model: FlowModel, target: FlowTarget) => Promise<boolean>;
+  /** "Download to device…" from the device views: opens the download tab for it. */
+  downloadHandoff?: DownloadHandoff | null;
 }) {
   const t = useTranslate();
   const [tab, setTab] = useState<"monitor" | "scan" | "checks" | "download" | "address" | "service" | "live" | "history">("monitor");
+  // Each click is one request: it opens the download tab and is handed to the
+  // panel until answered, so a later tab switch cannot replay it.
+  const [pendingHandoff, setPendingHandoff] = useState<DownloadHandoff | null>(null);
+  const seenNonce = useRef<number | null>(null);
+  useEffect(() => {
+    if (downloadHandoff === null || seenNonce.current === downloadHandoff.nonce) return;
+    seenNonce.current = downloadHandoff.nonce;
+    setTab("download");
+    setPendingHandoff(downloadHandoff);
+  }, [downloadHandoff]);
+  const handoffHandled = useCallback((nonce: number) => {
+    setPendingHandoff((current) => current?.nonce === nonce ? null : current);
+  }, []);
   return (
     <section className="bus-diagnostics-panel">
       <nav className="bus-diagnostics-tabs" aria-label={t("lineScan.diagnosticsTabs")}>
@@ -44,7 +61,7 @@ export default function BusDiagnosticsPanel({
       <div hidden={tab !== "monitor"}><BusMonitorPanel active={active && tab === "monitor"} projectOpen={project !== null} project={project} projectScope={projectScope} onFlowNavigate={onFlowNavigate} /></div>
       {tab === "scan" && <LineScanPanel projectOpen={project !== null} projectRevision={project} onTreeUpdate={onTreeUpdate} />}
       {tab === "checks" && <DeviceInspectionPanel project={project} />}
-      {tab === "download" && <DeviceDownloadPanel project={project} />}
+      {tab === "download" && <DeviceDownloadPanel project={project} handoff={pendingHandoff} onHandoffHandled={handoffHandled} />}
       {tab === "address" && <AddressProgrammingPanel project={project} />}
       {tab === "service" && <ServiceControlPanel projectOpen={project !== null} projectRevision={project} />}
       {tab === "live" && <BusActivityLive />}

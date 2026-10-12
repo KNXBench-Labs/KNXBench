@@ -15,6 +15,7 @@ use knx_core::commissioning::partial_memory_download::{
     derive_partial_plan, PartialDownloadParts, PartialPlanError,
 };
 use knx_core::{DeviceId, IndividualAddress, Project};
+use knx_productdb::byte_order_probe::{plan_probe, ProbeError, ProbePlan};
 use knx_productdb::code::load_program_code;
 use knx_productdb::download_plan::{
     check_program_kind, plan_memory_download_with_inferences, DownloadPlanError,
@@ -127,22 +128,7 @@ pub fn prepare_device_download(
     project: &Project,
     target: IndividualAddress,
 ) -> Result<PreparedDownload, PrepareError> {
-    let mut matches: Vec<&knx_core::DeviceInstance> = project
-        .devices
-        .iter()
-        .filter(|device| device.address == Some(target))
-        .collect();
-    matches.sort_by_key(|device| device.id.0);
-    let device = match matches.as_slice() {
-        [] => return Err(PrepareError::NoDeviceAt(target)),
-        [one] => *one,
-        several => {
-            return Err(PrepareError::SeveralDevicesAt {
-                address: target,
-                devices: several.iter().map(|device| device.id.0).collect(),
-            })
-        }
-    };
+    let device = device_at(project, target)?;
     let request =
         image_request_for_device(conn, project, device.id).map_err(PrepareError::Request)?;
     // A program no download translates is refused for that reason, not for
@@ -165,6 +151,63 @@ pub fn prepare_device_download(
         inferences,
         partial: None,
     })
+}
+
+/// The one project device at `target`; none and several are refused.
+fn device_at(
+    project: &Project,
+    target: IndividualAddress,
+) -> Result<&knx_core::DeviceInstance, PrepareError> {
+    let mut matches: Vec<&knx_core::DeviceInstance> = project
+        .devices
+        .iter()
+        .filter(|device| device.address == Some(target))
+        .collect();
+    matches.sort_by_key(|device| device.id.0);
+    match matches.as_slice() {
+        [] => Err(PrepareError::NoDeviceAt(target)),
+        [one] => Ok(*one),
+        several => Err(PrepareError::SeveralDevicesAt {
+            address: target,
+            devices: several.iter().map(|device| device.id.0).collect(),
+        }),
+    }
+}
+
+/// Why no byte-order probe was planned.
+#[derive(Debug)]
+pub enum ProbePrepareError {
+    /// No single project device, or no request for it.
+    Device(PrepareError),
+    /// The program cannot be probed.
+    Probe(ProbeError),
+}
+
+impl std::error::Error for ProbePrepareError {}
+
+impl fmt::Display for ProbePrepareError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Device(error) => write!(f, "{error}"),
+            Self::Probe(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+/// Plans the byte-order probe of the one project device at `target`
+/// (KL-170, ADR-0119): the device and request a download would take, read
+/// rather than built into an image, so that a program declaring
+/// `ParameterByteOrder="LittleEndian"` can be probed although it cannot be
+/// downloaded.
+pub fn prepare_byte_order_probe(
+    conn: &Connection,
+    project: &Project,
+    target: IndividualAddress,
+) -> Result<ProbePlan, ProbePrepareError> {
+    let device = device_at(project, target).map_err(ProbePrepareError::Device)?;
+    let request = image_request_for_device(conn, project, device.id)
+        .map_err(|error| ProbePrepareError::Device(PrepareError::Request(error)))?;
+    plan_probe(conn, &request).map_err(ProbePrepareError::Probe)
 }
 
 #[cfg(test)]
@@ -235,6 +278,31 @@ mod tests {
             prepare_device_download(&conn, &project, address("1.1.67")),
             Err(PrepareError::Request(DeviceRequestError::Project(
                 ProjectRequestError::NoProgram(DeviceId(1))
+            )))
+        ));
+    }
+
+    #[test]
+    fn the_probe_finds_its_device_the_way_a_download_does() {
+        let (_dir, conn) = products();
+        let mut project = Project::new(Language("en".into()));
+        project.devices.insert(device(7, Some("1.1.67")));
+        project.devices.insert(device(3, Some("1.1.67")));
+        project.devices.insert(device(4, Some("1.1.68")));
+        assert!(matches!(
+            prepare_byte_order_probe(&conn, &project, address("1.1.1")),
+            Err(ProbePrepareError::Device(PrepareError::NoDeviceAt(_)))
+        ));
+        match prepare_byte_order_probe(&conn, &project, address("1.1.67")) {
+            Err(ProbePrepareError::Device(PrepareError::SeveralDevicesAt { devices, .. })) => {
+                assert_eq!(devices, vec![3, 7])
+            }
+            other => panic!("{other:?}"),
+        }
+        assert!(matches!(
+            prepare_byte_order_probe(&conn, &project, address("1.1.68")),
+            Err(ProbePrepareError::Device(PrepareError::Request(
+                DeviceRequestError::Project(ProjectRequestError::NoProgram(DeviceId(4)))
             )))
         ));
     }

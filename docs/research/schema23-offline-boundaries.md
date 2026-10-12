@@ -25,6 +25,10 @@ RFC text was retrieved directly from the RFC Editor during this pass.
 
 ## KL-170: little-endian parameter images
 
+> **Superseded 2026-10-13** by the wider [parameter byte order review](parameter-byte-order.md):
+> local KNX corpus, schema copies, two implementations, a 3,341-program public corpus
+> and a read-only device probe (ADR-0119). The negative result below still holds.
+
 **Result: specification gap remains.** No inspected public source in this pass
 establishes KNX manufacturer `ParameterByteOrder` placement for signed/unsigned
 integers, floats, sub-octet fields, unions or fields crossing octet boundaries.

@@ -689,26 +689,7 @@ async fn read_after_connect<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     plan: &MemoryDownloadPlan,
 ) -> Result<DeviceBackup, ReadBackError> {
-    let found = session
-        .read_mask_version()
-        .await
-        .map_err(ReadBackError::Session)?;
-    if found != plan.mask {
-        return Err(ReadBackError::MaskMismatch {
-            expected: plan.mask,
-            found,
-        });
-    }
-    let manufacturer = session
-        .read_manufacturer_id()
-        .await
-        .map_err(ReadBackError::Session)?;
-    if manufacturer != plan.manufacturer {
-        return Err(ReadBackError::ManufacturerMismatch {
-            expected: plan.manufacturer,
-            found: manufacturer,
-        });
-    }
+    check_identity(session, plan.mask, plan.manufacturer).await?;
     let limit = session
         .write_limit(None)
         .await
@@ -731,6 +712,112 @@ async fn read_after_connect<T: ManagementTransport>(
 }
 
 /// Reads what `plan` is about to overwrite, `limit` octets at a time.
+/// Checks that the connected device is the one expected, mask first: the
+/// identity step every download takes before its first write (`[D]` CP
+/// §3.9.2.2.2), and every read-only session before its first memory read.
+async fn check_identity<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    mask: MaskVersion,
+    manufacturer: u16,
+) -> Result<(), ReadBackError> {
+    let found = session
+        .read_mask_version()
+        .await
+        .map_err(ReadBackError::Session)?;
+    if found != mask {
+        return Err(ReadBackError::MaskMismatch {
+            expected: mask,
+            found,
+        });
+    }
+    let found = session
+        .read_manufacturer_id()
+        .await
+        .map_err(ReadBackError::Session)?;
+    if found != manufacturer {
+        return Err(ReadBackError::ManufacturerMismatch {
+            expected: manufacturer,
+            found,
+        });
+    }
+    Ok(())
+}
+
+/// Reads `length` octets from `address` in reads of at most `limit`, and
+/// refuses a read that answers fewer octets than it asked for. Returns only
+/// [`ReadBackError::Session`] and [`ReadBackError::ShortRead`].
+async fn read_region<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    address: u32,
+    length: usize,
+    limit: WriteLimit,
+) -> Result<Vec<u8>, ReadBackError> {
+    let mut octets = Vec::with_capacity(length);
+    while octets.len() < length {
+        let from = address + octets.len() as u32;
+        let asked = usize::from(limit.max_octets()).min(length - octets.len()) as u8;
+        let got = session
+            .read_memory(from, asked)
+            .await
+            .map_err(ReadBackError::Session)?;
+        if got.len() != usize::from(asked) {
+            return Err(ReadBackError::ShortRead {
+                address: from,
+                asked,
+                got: got.len(),
+            });
+        }
+        octets.extend_from_slice(&got);
+    }
+    Ok(octets)
+}
+
+/// Reads the memory `runs` (address, length) of `target`, and nothing else,
+/// after checking that it is a `mask` device of `manufacturer`: the
+/// byte-order probe's read (ADR-0119).
+///
+/// The session is [`ManagementSession::read_only`] with no access key
+/// (`AuthorisationPlan::Skip`), exactly like [`compare_with_plan`]: no write
+/// path exists, no Verify Mode write is sent on connect, and a device that
+/// protects its memory at the free level refuses the read. No load state is
+/// read or changed. Connect, identity, read size, the runs in order,
+/// disconnect; a mismatch stops before the first memory read.
+pub async fn read_memory_runs<T: ManagementTransport>(
+    transport: &T,
+    target: ContactableAddress,
+    timing: SessionTiming,
+    mask: MaskVersion,
+    manufacturer: u16,
+    runs: &[(u32, usize)],
+) -> Result<Vec<(u32, Vec<u8>)>, ReadBackError> {
+    let mut session =
+        ManagementSession::read_only(transport, target.address(), AuthorisationPlan::Skip, timing)
+            .map_err(ReadBackError::Session)?;
+    session.adopt_mask(mask);
+    session.connect().await.map_err(ReadBackError::Session)?;
+    let result = read_runs_after_connect(&mut session, mask, manufacturer, runs).await;
+    session.disconnect().await;
+    result
+}
+
+async fn read_runs_after_connect<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    mask: MaskVersion,
+    manufacturer: u16,
+    runs: &[(u32, usize)],
+) -> Result<Vec<(u32, Vec<u8>)>, ReadBackError> {
+    check_identity(session, mask, manufacturer).await?;
+    let limit = session
+        .write_limit(None)
+        .await
+        .map_err(ReadBackError::Session)?;
+    let mut read = Vec::with_capacity(runs.len());
+    for &(address, length) in runs {
+        read.push((address, read_region(session, address, length, limit).await?));
+    }
+    Ok(read)
+}
+
 async fn take_backup<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     plan: &MemoryDownloadPlan,
@@ -745,20 +832,21 @@ async fn take_backup<T: ManagementTransport>(
     }
     let mut regions = Vec::new();
     for (address, length) in written_regions(plan) {
-        let mut octets = Vec::with_capacity(length);
-        while octets.len() < length {
-            let from = u32::from(address) + octets.len() as u32;
-            let asked = usize::from(limit.max_octets()).min(length - octets.len()) as u8;
-            let got = session.read_memory(from, asked).await.map_err(at)?;
-            if got.len() != usize::from(asked) {
-                return Err(MemoryDownloadError::BackupShortRead {
-                    address: from,
+        let octets = read_region(session, u32::from(address), length, limit)
+            .await
+            .map_err(|error| match error {
+                ReadBackError::Session(error) => at(error),
+                ReadBackError::ShortRead {
+                    address,
                     asked,
-                    got: got.len(),
-                });
-            }
-            octets.extend_from_slice(&got);
-        }
+                    got,
+                } => MemoryDownloadError::BackupShortRead {
+                    address,
+                    asked,
+                    got,
+                },
+                other => unreachable!("read_region returns only read errors, not {other}"),
+            })?;
         regions.push(BackupRegion { address, octets });
     }
     Ok(DeviceBackup {
@@ -2608,5 +2696,148 @@ mod tests {
         );
         assert!(error.to_string().contains("nothing was written"), "{error}");
         assert!(memory_reads(&other_mask).is_empty());
+    }
+
+    // ------------------------------------------------------------ probe read
+
+    #[tokio::test]
+    async fn the_probe_read_reads_exactly_the_runs_and_writes_nothing() {
+        let device = old_device();
+        let before = device.memory(0x4000, 30);
+        let read = read_memory_runs(
+            &device,
+            contactable(&device),
+            fast(),
+            MaskVersion(0x0701),
+            MANUFACTURER,
+            &[(0x4001, 2), (0x4003, 27)],
+        )
+        .await
+        .expect("read");
+        assert_eq!(
+            read,
+            vec![
+                (0x4001, vec![0x11, 0x43]),
+                (0x4003, (100..127).collect::<Vec<u8>>()),
+            ]
+        );
+        // Every octet asked for, in order, chunked by the read size, and no
+        // other memory.
+        let reads = memory_reads(&device);
+        let mut covered = Vec::new();
+        for (address, number) in &reads {
+            covered.extend(*address..*address + u32::from(*number));
+        }
+        assert_eq!(
+            covered,
+            (0x4001..0x4003).chain(0x4003..0x401E).collect::<Vec<_>>()
+        );
+        assert!(reads.len() > 2, "27 octets take more than one read");
+        assert_eq!(writes_of_any_kind(&device), vec![], "read only");
+        assert_eq!(device.memory(0x4000, 30), before);
+        assert_eq!(device.seen().last(), Some(&Seen::Disconnect));
+    }
+
+    #[tokio::test]
+    async fn the_probe_read_refuses_another_device_before_any_memory_read() {
+        let device = old_device();
+        let error = read_memory_runs(
+            &device,
+            contactable(&device),
+            fast(),
+            MaskVersion(0x0705),
+            MANUFACTURER,
+            &[(0x4001, 2)],
+        )
+        .await
+        .expect_err("refused");
+        assert!(
+            matches!(error, ReadBackError::MaskMismatch { .. }),
+            "{error}"
+        );
+        let error = read_memory_runs(
+            &device,
+            contactable(&device),
+            fast(),
+            MaskVersion(0x0701),
+            0x0002,
+            &[(0x4001, 2)],
+        )
+        .await
+        .expect_err("refused");
+        assert!(
+            matches!(
+                error,
+                ReadBackError::ManufacturerMismatch {
+                    expected: 0x0002,
+                    found: MANUFACTURER
+                }
+            ),
+            "{error}"
+        );
+        assert!(memory_reads(&device).is_empty());
+        assert_eq!(writes_of_any_kind(&device), vec![], "read only");
+        assert_eq!(device.seen().last(), Some(&Seen::Disconnect));
+    }
+
+    #[tokio::test]
+    async fn the_probe_read_refuses_memory_the_device_protects() {
+        // A device that protects 9000h at the free level answers the read
+        // with no data: an error, never an empty run to classify.
+        let device = device(SimulatorConfig {
+            protected_memory: Some((0x9000, 0x9100)),
+            ..SimulatorConfig::default()
+        });
+        let error = read_memory_runs(
+            &device,
+            contactable(&device),
+            fast(),
+            MaskVersion(0x0701),
+            MANUFACTURER,
+            &[(0x9000, 2)],
+        )
+        .await
+        .expect_err("refused");
+        assert!(
+            matches!(
+                error,
+                ReadBackError::Session(_) | ReadBackError::ShortRead { .. }
+            ),
+            "{error}"
+        );
+        assert_eq!(writes_of_any_kind(&device), vec![], "read only");
+        assert_eq!(device.seen().last(), Some(&Seen::Disconnect));
+    }
+
+    #[tokio::test]
+    async fn the_probe_read_refuses_a_short_answer() {
+        let device = device(SimulatorConfig {
+            short_memory_answers: true,
+            ..SimulatorConfig::default()
+        });
+        device.preset_memory(0x4001, &[0x11, 0x43]);
+        let error = read_memory_runs(
+            &device,
+            contactable(&device),
+            fast(),
+            MaskVersion(0x0701),
+            MANUFACTURER,
+            &[(0x4001, 2)],
+        )
+        .await
+        .expect_err("refused");
+        assert!(
+            matches!(
+                error,
+                ReadBackError::ShortRead {
+                    address: 0x4001,
+                    asked: 2,
+                    got: 1
+                }
+            ),
+            "{error}"
+        );
+        assert_eq!(writes_of_any_kind(&device), vec![], "read only");
+        assert_eq!(device.seen().last(), Some(&Seen::Disconnect));
     }
 }

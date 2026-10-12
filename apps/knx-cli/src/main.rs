@@ -11,6 +11,7 @@ mod activity_history_paths;
 mod catalog_update;
 mod contribution;
 mod device_address;
+mod device_byte_order_probe;
 mod device_compare;
 mod device_download;
 mod device_readiness;
@@ -124,6 +125,13 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         every octet run where the device and the project differ. It sends no\n\
      \x20         access key and has no write path; a read-protected device says so.\n\
      \x20         Exit 0: the device holds the plan; 2: it differs; 1: not compared.)\n\
+     \x20     knx device byte-order-probe <area.line.device> --project <path.knxdb>\n\
+     \x20                  [--product-db <path>] --gateway <host:port>\n\
+     \x20         (READ ONLY, KL-170: for a device ETS programmed with this project, reads\n\
+     \x20         only its multi-octet parameter fields and one-octet controls and says\n\
+     \x20         whether it holds the values high or low octet first. Works for any declared\n\
+     \x20         ParameterByteOrder, LittleEndian included; changes nothing a download writes.\n\
+     \x20         Exit 0: read and reported; 1: not probed.)\n\
      \x20     knx device restore <backup.json> [--product-db <path>] [--key-file <path>]\n\
      \x20                  [--activity-history <path>]\n\
      \x20         (activity history: required for confirmed writes; metadata, not recovery)\n\
@@ -2114,6 +2122,7 @@ fn run_device(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("download") => run_device_download(&args[1..]),
         Some("compare") => run_device_compare(&args[1..]),
+        Some("byte-order-probe") => run_device_byte_order_probe(&args[1..]),
         Some("readiness") => run_device_readiness(&args[1..]),
         Some("program-address") => run_device_program_address(&args[1..]),
         Some("reset-address") => run_device_reset_address(&args[1..]),
@@ -2433,6 +2442,98 @@ fn run_device_readiness(args: &[String]) -> ExitCode {
     let rows = knx_app::project_readiness::project_readiness(&products, &project, &evidence);
     print!("{}", device_readiness::format_readiness(&rows));
     ExitCode::SUCCESS
+}
+
+/// `knx device byte-order-probe`: which octet order a device ETS programmed
+/// holds its parameter values in, read only (KL-170, ADR-0119).
+fn run_device_byte_order_probe(args: &[String]) -> ExitCode {
+    let parsed = match device_byte_order_probe::parse_probe_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let target = match parsed
+        .target
+        .parse::<knx_core::IndividualAddress>()
+        .map_err(|e| format!("invalid device address {}: {e}", parsed.target))
+        .and_then(|address| knx_core::ContactableAddress::new(address).map_err(|e| e.to_string()))
+    {
+        Ok(target) => target,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    if !Path::new(&parsed.project).exists() {
+        eprintln!("project not found: {}", parsed.project);
+        return ExitCode::FAILURE;
+    }
+    let project = match knx_store::open_existing_and_migrate(Path::new(&parsed.project))
+        .map_err(|e| e.to_string())
+        .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
+    {
+        Ok(project) => project,
+        Err(e) => {
+            eprintln!("could not read project {}: {e}", parsed.project);
+            return ExitCode::FAILURE;
+        }
+    };
+    let products = match open_products_db(parsed.product_db.as_deref()) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let plan = match knx_app::device_download::prepare_byte_order_probe(
+        &products,
+        &project,
+        target.address(),
+    ) {
+        Ok(plan) => plan,
+        Err(e) => {
+            eprintln!("nothing to probe for device {}: {e}", target.address());
+            return ExitCode::FAILURE;
+        }
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let gateway = parsed.gateway;
+    runtime.block_on(async {
+        use knx_net::BusConnection;
+        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+            Ok(tunnel) => tunnel,
+            Err(e) => {
+                eprintln!("could not connect to {gateway}: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let probed = device_byte_order_probe::probe(
+            &tunnel,
+            target,
+            knx_net::SessionTiming::default(),
+            &plan,
+            &mut std::io::stdout(),
+        )
+        .await;
+        if let Err(e) = tunnel.disconnect().await {
+            eprintln!("tunnel disconnect: {e}");
+        }
+        match probed {
+            device_byte_order_probe::Probed::Read(_) => ExitCode::SUCCESS,
+            device_byte_order_probe::Probed::Failed => ExitCode::FAILURE,
+        }
+    })
 }
 
 /// `knx device compare`: what `knx device download` would change, read

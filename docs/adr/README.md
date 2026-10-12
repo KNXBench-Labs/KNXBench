@@ -102,3 +102,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0116](0116-opt-in-mcp-name-recipe-writer.md) | Opt-in, human-confirmed MCP writer for literal group-address names | Accepted implementation decision | 2026-10-12 |
 | [0117](0117-previewed-recoverable-catalogue-updates.md) | Previewed, recoverable catalogue updates from manufacturer files | Accepted implementation decision | 2026-10-12 |
 | [0118](0118-catalogue-updates-through-the-web-server.md) | Catalogue updates through the web server | Accepted | 2026-10-12 |
+| [0119](0119-read-only-byte-order-probe.md) | A read-only byte-order probe, never an encoder | Accepted implementation decision | 2026-10-13 |

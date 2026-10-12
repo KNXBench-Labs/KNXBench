@@ -23,7 +23,8 @@
 //! enumerations do not allow (docs/RESEARCH.md §19.1).
 //! A caller must refuse an application that declares another order. This
 //! module has no little-endian mode, because no source says how a bit
-//! offset combines with it.
+//! offset combines with it (KL-170, docs/research/parameter-byte-order.md);
+//! [`super::byte_order_evidence`] only reads which order a device holds.
 //!
 //! Supported fields are 1 to 64 bits at a bit offset of 0–7, laid out as
 //! the definition above states: the value's most significant bit sits

@@ -166,6 +166,19 @@ rows stay LATER: per-type endian placement, KNX UTF-8 capacity/termination and
 the loaded-image binary format still lack an admitted contract. Existing
 refusals/source retention remain unchanged; no hardware follow-up authorized.
 
+## KL-170 evidence and probe (13 October 2026)
+
+[Parameter byte order](research/parameter-byte-order.md) found no defining
+source but strong corpus evidence for whole-octet numbers low octet first,
+undermined by the same pattern in BigEndian-declared and undeclared programs.
+`knx device byte-order-probe` ([ADR-0119](adr/0119-read-only-byte-order-probe.md))
+reads an ETS-programmed device without writing. **Open:** probe output from
+ETS-programmed LittleEndian devices (none available to the project; issue #10's
+reporter has one); then a reviewed, observation-limited encoder change. **Owner
+decision open:** whether untested downloads of BigEndian/undeclared ABB and
+Busch-Jaeger `0701h` programs whose base images look little-endian should carry
+a named warning ([§170 related risk](KNOWN_LIMITATIONS.md#170-little-endian-parameter-byte-order-is-refused-for-download-images)).
+
 ## How this was checked
 
 - Historical goal checkboxes, counted before removal: `alpha-release-goal.md` 93

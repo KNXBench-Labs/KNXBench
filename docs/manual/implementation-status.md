@@ -29,6 +29,16 @@ download capability or compatibility claim
 ([limits](../KNOWN_LIMITATIONS.md#group-address-members-and-download-preparation-2026-10-12)).
 This is newer than the published Alpha.9 package, not a deployed update.
 
+## Installation instructions in the device editor (12 October 2026 source)
+
+The device editor's **Installation instructions** tab shows the hints a device
+brought from an imported ETS project and lets you replace them with formatted text
+through a preview and an explicit Apply; the imported original is kept. Drafts of
+notes and instructions now survive saving the project
+([how to use it](user-guide/05-devices-and-products.md#installation-instructions-newer-source-not-alpha-9),
+[limits](../KNOWN_LIMITATIONS.md#installation-instructions-tab-and-save-proof-drafts-2026-10-12)).
+This is newer than the published Alpha.9 package, not a deployed update.
+
 ## Project notes in the workbench (12 October 2026 source)
 
 The **Notes** view opens the project's engineering notebook: literal plain-text
@@ -78,7 +88,8 @@ packages frozen source `5b21323e`, including published import/native-history,
 DPT, installation navigation, login/message and download-layout repairs.
 Native/model **schema13** requires independent native/Docker backups; Alpha.8
 and earlier refuse upgraded files. Instruction/parameter components remain
-unmounted production-workbench foundations, not advertised usable editors.
+unmounted production-workbench foundations, not advertised usable editors
+(the instruction editor was mounted in later source, see above).
 [Release notes](../releases/alpha9.md) and [artifact verification](../evidence/release-alpha9-2026-10-11.json)
 separate the tag from later `main`, browser fixtures from native UI evidence,
 and preservation from ETS/hardware certification. Later parallel/local packages

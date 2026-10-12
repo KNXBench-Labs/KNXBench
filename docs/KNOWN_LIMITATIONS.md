@@ -1,5 +1,21 @@
 # Known limitations
 
+## Installation instructions tab and Save-proof drafts (2026-10-12)
+
+- The **Installation instructions** tab hosts the existing editor; its source and
+  editing limits are unchanged (section *Installation instruction editor integration
+  boundary* below).
+- Saving the project bumps the snapshot revision. Notes and instruction drafts now
+  survive that when their server content is unchanged; any real change (another
+  client, Undo/Redo) still turns the draft into a comparison copy that must be
+  discarded before a new preview. While the re-read runs, review and apply wait
+  briefly; the notes editor also pauses typing for that moment.
+- The unapplied-draft guard covers Open/Import, New project, Quit and the desktop
+  window close; a browser reload or closed tab still drops a draft without asking.
+- Evidence is Chromium (intercepted production build and loopback-only real-server
+  smokes). No native WebKitGTK window, Orca session, hardware, release or deployment
+  is claimed.
+
 ## Project notes workbench host (2026-10-12)
 
 The **Notes** view hosts the notes editor with the open tree's real identity
@@ -100,8 +116,8 @@ runtime certification. The feature is not in the published Alpha.9 snapshot.
 
 ## Installation instruction editor integration boundary (2026-10-11)
 
-AP2 exposes an isolated feature module and HTTP/application workflow, not a
-workbench navigation mount. [Host handoff](contracts/instruction-editor-host.md).
+AP2 exposes a feature module and HTTP/application workflow; the device-editor tab
+was added later (section *Installation instructions tab* above). [Host handoff](contracts/instruction-editor-host.md).
 The exact-source reader currently admits Schema23 UTF-8 XML1.0 unprefixed
 installation/device originals only. Other encodings/schemas, ambiguous owners,
 fragment-only originals and natively authored devices without retained imported

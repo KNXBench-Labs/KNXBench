@@ -1,4 +1,4 @@
-Last updated: 2026-10-12 13:41 CEST
+Last updated: 2026-10-12 15:38 CEST
 
 # KNXBench Features
 
@@ -107,6 +107,7 @@ Last updated: 2026-10-12 13:41 CEST
 | Achievements | Recorded engineering milestones | alpha.6 |
 | Optional humour | Error/night/holiday messages | alpha.6 |
 | Project notes | Notebook view; review-first edits | Main-only |
+| Installation instructions | Device tab; imported hints, review-first | Main-only |
 
 ## Implemented — Server and monitoring
 

@@ -192,7 +192,9 @@ This view is newer than the published Alpha 9 and is not in its screenshots.
 - If the server refuses (for example because another client changed the notes after
   your preview), the alert appears where you clicked, the notes stay as they were
   and your draft is kept for another try.
-- A draft survives switching to another view. Opening or importing another project,
+- A draft survives switching to another view and saving the project. If the notes
+  really changed on the server meanwhile, the draft is kept for comparison and the
+  notebook asks you to discard it and reload. Opening or importing another project,
   starting a new one or quitting asks first: **Keep editing** returns to the notes,
   **Discard draft and continue** goes on. A browser reload does not ask.
 

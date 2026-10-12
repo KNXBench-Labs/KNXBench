@@ -35,8 +35,9 @@ host's existing Save policy separately; the isolated component never issues it.
 A successful server commit with failed host refresh is not a failed mutation.
 An unknown transport/response outcome is not a rollback and must not be silently
 retried. Reload authoritative state before further editing; keep the draft for
-comparison. Same-project revision changes retain the dirty draft but invalidate
-review. Project/server changes cannot inherit old preview authority or responses.
+comparison. Same-project revision changes invalidate review; the draft stays editable when
+the notes are unchanged (for example after Save) and becomes a comparison copy when
+they changed. Project/server changes cannot inherit old preview authority or responses.
 
 ## Help, keyboard and limits
 

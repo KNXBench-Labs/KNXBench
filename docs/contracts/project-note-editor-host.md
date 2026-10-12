@@ -23,8 +23,10 @@ including CR/LF spelling, through a pure editor text adapter. Filtering/selectio
 never mutates source order. Switching notes/new draft requires explicit discard
 of an existing dirty draft. Draft edits revoke plans; no implicit apply on close.
 
-Same-project revision changes retain a dirty draft but invalidate preview and
-require deliberate reload. Project/server change and unmount cannot inherit late
+Same-project revision changes invalidate preview and re-read. If the ordered
+notes are unchanged, a dirty draft moves onto the new revision and stays editable
+(Save bumps the revision); otherwise it is retained and requires deliberate reload
+(amended 2026-10-12). Project/server change and unmount cannot inherit late
 read/preview/apply responses; stale previews are cancelled. Client cancellation
 cannot retract a request already committed by the server. Successful mutation
 and failed host refresh are separate outcomes; unknown transport/response outcome

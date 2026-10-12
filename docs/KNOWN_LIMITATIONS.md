@@ -1062,7 +1062,7 @@ extensions and project metadata can remain uninterpreted while their original
 source bytes are retained. Native persistence is verified, not an ETS export
 roundtrip (the historical schema-21 writer was withdrawn by ADR-0028).
 
-**Remaining boundary.** Schemas 12/13/14/20/22 still need independent source
+**Remaining boundary.** Schemas 12/13/14/22 still need independent source
 and format evidence (§6); wider schema-21/23 feature and manufacturer coverage
 still needs further independent samples. KL-1 remains `ACCEPTED_BOUNDARY` for
 that residual coverage, but the independent schema-23 import/reconciliation
@@ -1817,10 +1817,10 @@ load-procedure execution, RF/coupler behavior, or access-policy enforcement.
 Note the scope: this is about standalone `.knxprod` *product packages*
 (`knx products ingest`, `POST /api/catalog/install`,
 `CatalogBrowser.tsx`'s install picker). Full `.knxproj` *project* import
-still only has evidenced coverage at schema 11/21/23 (see
-[COMPATIBILITY.md](COMPATIBILITY.md) §2/§3) — a `.knxproj` at schema 20 is
-still an "expected but unverified" claim, not the same thing as this row's
-now-verified scheme-20 `.knxprod` package support.
+has evidenced coverage at schema 11/20/21/23 (see
+[COMPATIBILITY.md](COMPATIBILITY.md) §2/§3); schema-20 project import rests on
+three public ETS 5.7 samples since 2026-10-12 (§177), separately from this
+row's scheme-20 `.knxprod` package support.
 
 **Cause.** `.knxprod` is the same XML family as `.knxproj` (both root at
 `knx_master.xml`, `http://knx.org/xml/project/{scheme}`, per *Project
@@ -2094,10 +2094,12 @@ through blames the user's perfectly correct password instead.
 
 **Lifted when.**
 
-* ZipCrypto decryption's remaining gap — verification against a real
-  ETS4/ETS5 protected export — is lifted when such a sample becomes
-  available and the unknown-construct/reconciliation report comes back
-  clean against it.
+* ZipCrypto decryption against a real export: **lifted 2026-10-12** for
+  the public ETS4 and ETS 5.7 protected samples (xknxproject test
+  resources), which decrypt and agree with xknxproject. Before that, every
+  real protected export failed: real ETS writes the nested members bare
+  (`0.xml`), the synthetic fixture had `P-0001/0.xml`. Nested names are now
+  rooted under the project part (§177).
 * AES container decryption is lifted when the `aes-crypto` feature is
   enabled, the decryption path is implemented the same way ZipCrypto's
   was, and a real password-protected ETS6 project is available to verify
@@ -9772,6 +9774,41 @@ major distributions) already depends on it, but a host without it cannot start
 the image. Other bundled
 GLib/GStreamer libraries could, in principle, conflict in the same way on
 future hosts; none has been observed. Ledger `KL-176`.
+
+## 177. ETS 5.7 projects (schema 20) rest on three public samples; sub-module object ids are not decoded
+
+**Reported 2026-10-12 (issue #7, from #6).** An ETS 5.7.4 project was refused
+with `no known-element table for schema version 20`: schema 20 had no table.
+
+**Change.** Schema 20 imports with the schema-23 element table minus the
+`Segment` level (devices directly under `Line`, medium on `Line`), measured on
+three public ETS 5.7.1428 projects (research project-format §3.6). The import
+report carries an `unsupported` entry naming that evidence boundary. A version
+still without a table is refused with a message that names it and the
+supported versions. Real ZipCrypto exports name nested members bare
+(`0.xml`); they are rooted under the project part, which made the first real
+protected ETS4/ETS5 files importable at all (§13).
+
+**Remaining boundary.**
+
+* Evidence is three small public projects. Entries they did not contain
+  (`ProjectTraces`, `DeviceInstanceRef`, `BinaryData`, `UnassignedDevices`)
+  are inherited from schema 23 by inference. Medium attributes other than
+  `MediumTypeRefId` on a schema-20 `Line` (`DomainAddress`, `MulticastTTL`
+  and the like, unmeasured) are reported and retained, not modelled.
+* **Nested sub-module object ids are not decoded.** `RefId`s with `SM-`
+  segments (`MD-4_M-15_MI-1_SM-1_M-1_MI-1-1-1_SM-1_O-3-0_R-1`) are reported
+  as `MalformedRefId` errors. The object is still imported with its links,
+  flags and verbatim `RefId`, but with object number 0 and no module
+  instance. Seen on one device of one public sample (8 objects). Not
+  schema-20 specific: the `SubModule` grammar is project-side ETS vocabulary
+  (product-database Q6) that no part of KNXBench implements yet.
+* Secure material in the XML (`ToolKey`, `Key`, `FDSK`, passwords) is retained
+  as uninterpreted source and reported, never modelled (§8).
+* Schema 22 (ETS 6.1) stays refused: its public samples contain no device.
+* Not verified on the reporter's project or any larger ETS 5.7 installation.
+
+Ledger `KL-177`.
 
 ## Bounded AP3 parameter controls (2026-10-11, PDB-04 remains partial)
 

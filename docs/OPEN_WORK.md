@@ -1,5 +1,13 @@
 # Open work after the 0.1 alpha
 
+## ETS 5.7 project import, issue #7 (12 October 2026)
+
+Schema 20 imports and real ZipCrypto exports decrypt
+([KL §177](KNOWN_LIMITATIONS.md#177-ets-57-projects-schema-20-rest-on-three-public-samples-sub-module-object-ids-are-not-decoded)).
+Open: the reporter's own project (asked on #6/#7), nested sub-module object ids
+(`SM-`, reported with number 0; needs the project-side `SubModule` grammar),
+schema 22 (needs an ETS 6.1 sample with devices), and the next release.
+
 ## AppImage EGL abort, issue #6 (12 October 2026)
 
 Fixed in source: the AppImage no longer bundles `libwayland-client`
@@ -353,7 +361,8 @@ not erase subsequently delivered functionality.
   neither replaces the missing authorized revision exports. Dedicated
   time/colour/picture/slider parameter editors from Type attributes and UIHints
   (`PDB-04`); independent `.knxproj` samples for untested schemas
-  (12/13/14/20/22) and an AES-protected ETS6 sample.
+  (12/13/14/22; schema 20 rests on public samples, KL §177) and an
+  AES-protected ETS6 sample.
 - **Comparison/report extensions:** applying/merging diffs, three-way
   comparison and native PDF output remain absent; comparison and browser
   print-to-PDF already exist. These are recorded boundaries, not active work.

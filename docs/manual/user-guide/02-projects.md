@@ -207,13 +207,13 @@ seriously:
 | Schema | ETS generation | Status |
 | --- | --- | --- |
 | 11 | ETS 4 | Reading verified against a real project, with counts pinned by tests |
-| 21 | ETS 5.7 | Reading and writing verified, including a round-trip back to an equal model |
-| 23 | ETS 6.3 | Reading verified against one real project; no round-trip claim |
-| 12, 13, 14, 20, 22 | ETS 4 to ETS 6 | Accepted by the importer, but no real sample has been imported and reconciled |
+| 20 | ETS 5.7 | Reading verified against three small public sample projects; objects in nested sub-modules lose their number and module, and are reported |
+| 21 | ETS 6.0 | Reading verified against a real project, including a save and reopen back to an equal model |
+| 23 | ETS 6.3 | Reading verified against real projects; no round-trip claim |
+| 12, 13, 14, 22 | ETS 4, ETS 5 up to 5.6, ETS 6.1 | Refused with a message that names the schema; no sample with devices has been measured |
 
-"Accepted" in the last row means the importer will try, and will report what it did not
-understand. It does not mean anyone has checked the result against a real file of that
-schema. The full evidence table, test names included, is in
+A refused file is not damaged: KNXBench does not guess at a format it has not measured.
+If you have ETS 6.3, re-exporting the project from it gives schema 23. The full evidence table, test names included, is in
 [Compatibility](../../COMPATIBILITY.md).
 
 > **Note**

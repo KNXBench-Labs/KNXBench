@@ -3,6 +3,7 @@
 //! function names and argument shapes the components already called, so
 //! swapping the import at each call site is the only change there.
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { admitImportEvidence, type ImportEvidence } from "./importEvidence";
 import { admitProjectHistory, historyBinding, type ProjectHistory } from "./projectHistory";
 import type { SettingsDiagnostic } from "./settingsStore";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
@@ -64,6 +65,11 @@ export function noteRefusal(path: string, status: number): void {
 /** One read-only catalogue batch for the complete open project. */
 export async function deviceCatalog(language?: string | null): Promise<DeviceCatalog> {
   return admitDeviceCatalog(await request(`/api/devices${language ? `?language=${encodeURIComponent(language)}` : ""}`));
+}
+
+/** Explicit authenticated read of the complete original import report. */
+export async function getImportEvidence(): Promise<ImportEvidence> {
+  return admitImportEvidence(await request<unknown>("/api/project/import-report"));
 }
 
 /** Read complete native history metadata, never silently admit a partial page. */

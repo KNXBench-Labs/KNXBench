@@ -40,6 +40,7 @@ pub enum AppError {
     Store(knx_store::MigrationError),
     Sql(SqlError),
     ProductDb(knx_productdb::ProductDbError),
+    Evidence(String),
 }
 
 impl std::fmt::Display for AppError {
@@ -49,6 +50,7 @@ impl std::fmt::Display for AppError {
             AppError::Store(e) => write!(f, "{e}"),
             AppError::Sql(e) => write!(f, "{e}"),
             AppError::ProductDb(e) => write!(f, "{e}"),
+            AppError::Evidence(e) => write!(f, "{e}"),
         }
     }
 }

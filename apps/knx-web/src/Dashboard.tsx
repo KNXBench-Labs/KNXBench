@@ -14,6 +14,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import { computeStats } from "./dashboardStats";
 import ImportDiagnosticsNotice from "./ImportDiagnosticsNotice";
 import { importReportState, type ImportFindingSeverity } from "./importFindings";
+import ImportEvidencePanel from "./ImportEvidencePanel";
 import { useTranslate } from "./i18n";
 import type { MessageKey } from "./messages/en";
 import { useDeviceNavigation } from "./DeviceLink";
@@ -99,7 +100,8 @@ export default function Dashboard(props: {
               {findingValue("warning", tree.warnings, "dashboard-import-warnings-label")}
             </Row>
           </dl>
-          <ImportDiagnosticsNotice available={tree.import_report_available} />
+          <ImportDiagnosticsNotice available={tree.import_report_available} historical={tree.import_report_historical} />
+          <ImportEvidencePanel tree={tree} />
         </section>
 
         <section className="dashboard-section dashboard-file" aria-labelledby="dashboard-file-heading">

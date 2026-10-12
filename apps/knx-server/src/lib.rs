@@ -60,6 +60,7 @@ mod address_programming_routes;
 mod bus_activity_routes;
 mod debug_report_routes;
 mod domain;
+mod import_evidence_routes;
 mod serial_address_routes;
 mod service_control_routes;
 pub use domain::*;

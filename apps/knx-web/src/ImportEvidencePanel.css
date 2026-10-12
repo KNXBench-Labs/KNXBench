@@ -1,0 +1,7 @@
+/* Source-bound historical evidence preview, never a substitute for the full report. */
+.import-report-panel { margin-block: 1rem; min-width: 0; }
+.import-report-panel button { max-width: 100%; white-space: normal; }
+.import-report-panel p { overflow-wrap: anywhere; }
+.import-report-panel details { margin-block-start: .75rem; }
+.import-report-panel summary { cursor: pointer; }
+.import-report-panel pre { max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }

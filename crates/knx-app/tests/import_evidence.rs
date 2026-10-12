@@ -1,0 +1,152 @@
+//! Historical report evidence must survive native saves without inventing reassessment.
+
+use knx_app::import_evidence;
+use knx_etsproj::report::{EntityCounts, ImportError, Severity, SourceInfo, UnsupportedFeature};
+use knx_etsproj::ImportReport;
+
+fn report() -> ImportReport {
+    ImportReport {
+        source: SourceInfo {
+            file_name: "fictional.knxproj".into(),
+            file_size: 17,
+            schema_version: 23,
+            namespace: "http://knx.org/xml/project/23".into(),
+            created_by: None,
+            tool_version: None,
+            namespace_disagreement: None,
+        },
+        source_observations: None,
+        counts: EntityCounts { rows: vec![] },
+        unknown: vec![],
+        opaque: vec![],
+        inferred: vec![],
+        conflicts: vec![],
+        unsupported: vec![UnsupportedFeature {
+            what: "fictional feature".into(),
+            consequence: "retained, not editable".into(),
+        }],
+        errors: vec![ImportError {
+            source_path: None,
+            stage: "map",
+            severity: Severity::Warning,
+            xpath: "/fictional".into(),
+            detail: "fictional warning".into(),
+        }],
+    }
+}
+
+#[test]
+fn native_evidence_roundtrips_full_report_and_counts_separately_from_current_findings() {
+    let input = report();
+    let entry = import_evidence::encode(&input).unwrap();
+    let mut opaque = vec![entry];
+    let restored = import_evidence::read(&opaque)
+        .unwrap()
+        .expect("historical report missing");
+    assert_eq!(restored.report, serde_json::to_value(&input).unwrap());
+    assert_eq!(restored.report_json, input.to_json());
+    assert_eq!(restored.counts(), (0, 2));
+    let conn = knx_store::open_and_migrate_in_memory().unwrap();
+    knx_store::insert_opaque(&conn, &opaque).unwrap();
+    opaque = knx_store::load_opaque(&conn).unwrap();
+    assert_eq!(
+        import_evidence::read(&opaque).unwrap().unwrap().report,
+        restored.report
+    );
+}
+
+fn replace_envelope(
+    entry: &mut knx_store::StoredOpaqueEntry,
+    change: impl FnOnce(&mut serde_json::Value),
+) {
+    let mut envelope: serde_json::Value = serde_json::from_slice(&entry.bytes).unwrap();
+    change(&mut envelope);
+    entry.bytes = serde_json::to_vec(&envelope).unwrap();
+    entry.sha256 = knx_store::project_history::image_hash(&entry.bytes);
+}
+
+#[test]
+fn corrupt_duplicate_future_and_malformed_records_are_refused_without_mutation() {
+    let entry = import_evidence::encode(&report()).unwrap();
+    let mut variants = Vec::new();
+    let mut corrupt = entry.clone();
+    corrupt.bytes[0] ^= 1;
+    variants.push(vec![corrupt]);
+    let mut bad_version = entry.clone();
+    replace_envelope(&mut bad_version, |v| v["version"] = serde_json::json!(2));
+    variants.push(vec![bad_version]);
+    let mut bad_shape = entry.clone();
+    replace_envelope(&mut bad_shape, |v| {
+        v["report_json"] = serde_json::json!("{}")
+    });
+    variants.push(vec![bad_shape]);
+    let mut bad_severity = entry.clone();
+    replace_envelope(&mut bad_severity, |v| {
+        let mut payload: serde_json::Value =
+            serde_json::from_str(v["report_json"].as_str().unwrap()).unwrap();
+        payload["errors"][0]["severity"] = serde_json::json!("invented");
+        v["report_json"] = serde_json::json!(serde_json::to_string(&payload).unwrap());
+    });
+    variants.push(vec![bad_severity]);
+    let mut bad_identity = entry.clone();
+    bad_identity.name = "other.json".into();
+    variants.push(vec![bad_identity]);
+    variants.push(vec![entry.clone(), entry]);
+    for entries in variants {
+        let original = entries.clone();
+        assert!(
+            import_evidence::read(&entries).is_err(),
+            "bad primary evidence admitted"
+        );
+        assert_eq!(entries, original);
+    }
+}
+
+#[test]
+fn ambiguous_counter_keys_are_refused_even_with_a_matching_payload_hash() {
+    let mut entry = import_evidence::encode(&report()).unwrap();
+    replace_envelope(&mut entry, |envelope| {
+        let raw = envelope["report_json"].as_str().unwrap();
+        envelope["report_json"] = serde_json::json!(raw.replace(
+            "\"severity\":\"warning\"",
+            "\"severity\":\"error\",\"severity\":\"warning\""
+        ));
+    });
+    assert!(
+        import_evidence::read(&[entry]).is_err(),
+        "ambiguous historical severity accepted"
+    );
+}
+
+#[test]
+fn report_budget_is_enforced_at_encoding_and_before_decoding() {
+    let mut input = report();
+    input.source.file_name = "x".repeat(import_evidence::MAX_EVIDENCE_BYTES);
+    assert!(
+        import_evidence::encode(&input).is_err(),
+        "oversized report encoded"
+    );
+    let mut entry = import_evidence::encode(&report()).unwrap();
+    entry.bytes = vec![b'x'; import_evidence::MAX_EVIDENCE_BYTES + 1];
+    assert!(
+        import_evidence::read(&[entry]).is_err(),
+        "oversized metadata decoded"
+    );
+}
+
+#[test]
+fn source_file_lookalikes_and_scoped_reports_are_preserved_without_primary_interpretation() {
+    let mut lookalike = import_evidence::encode(&report()).unwrap();
+    lookalike.kind = "File".into();
+    let mut scoped = import_evidence::encode(&report()).unwrap();
+    scoped.source_path = "selection/source/native/import-report.json".into();
+    let entries = vec![lookalike, scoped];
+    let original = entries.clone();
+    assert!(import_evidence::read(&entries).unwrap().is_none());
+    assert_eq!(entries, original);
+}
+
+#[test]
+fn absent_legacy_evidence_is_unavailable_not_a_measured_zero() {
+    assert!(import_evidence::read(&[]).unwrap().is_none());
+}

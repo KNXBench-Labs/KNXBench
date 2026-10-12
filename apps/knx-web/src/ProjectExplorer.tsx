@@ -1150,7 +1150,7 @@ export default function ProjectExplorer(
           />
         ))}
       </ul>
-      <ImportDiagnosticsNotice available={tree.import_report_available} compact />
+      <ImportDiagnosticsNotice available={tree.import_report_available} historical={tree.import_report_historical} compact />
       {(tree.errors > 0 || tree.warnings > 0) && (
         <footer>
           {tree.errors > 0 && (

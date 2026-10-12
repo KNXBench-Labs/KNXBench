@@ -83,6 +83,7 @@ pub struct AppState {
     /// Published under the project lock with the counters. Native files do not
     /// persist an ImportReport; their zero counters must not look measured.
     pub import_report_available: AtomicBool,
+    pub import_report_historical: AtomicBool,
     /// Opaque identity for this `AppState` lifetime. It scopes snapshot
     /// revisions and bus-session counters across server restarts, but is not
     /// an authentication token and is never derived from credentials.
@@ -252,6 +253,7 @@ impl AppState {
             history_generation: Mutex::new(0),
             import_counts: Mutex::new((0, 0)),
             import_report_available: AtomicBool::new(true),
+            import_report_historical: AtomicBool::new(false),
             server_incarnation: server_incarnation.clone(),
             project_revision: AtomicU64::new(0),
             project_incarnation: AtomicU64::new(0),
@@ -369,7 +371,8 @@ fn import_and_project(
     // which is dropped at the end of this function — read them out now so
     // a later `open_project` can carry them into `state` (see `AppState::opaque`'s
     // doc comment for why this matters).
-    let opaque = knx_store::load_opaque(&conn)?;
+    let mut opaque = knx_store::load_opaque(&conn)?;
+    opaque.push(knx_app::import_evidence::encode(&imported.report).map_err(AppError::Evidence)?);
     let manufacturer_refs = knx_store::load_manufacturer_refs(&conn)?;
     Ok((
         tree,
@@ -527,6 +530,7 @@ fn load_failure_kind(error: &AppError) -> Option<&'static str> {
             | ImportFailure::UnsupportedLegacyFormat { .. }
             | ImportFailure::NoKnownSchemaTable { .. },
         ) => Some(PROJECT_NOT_IMPORTABLE),
+        AppError::Evidence(_) => Some(PROJECT_NOT_IMPORTABLE),
         _ => None,
     }
 }
@@ -691,7 +695,15 @@ fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, LoadFai
     read.commit()
         .map_err(|e| LoadFailure::from(e.to_string()))?;
     let mut tree = knx_projection::build_project_tree(&project);
-    tree.import_report_available = Some(false);
+    let evidence = knx_app::import_evidence::read(&opaque).map_err(|message| LoadFailure {
+        message,
+        kind: Some(PROJECT_NOT_OPENABLE),
+    })?;
+    tree.import_report_available = Some(evidence.is_some());
+    tree.import_report_historical = Some(evidence.is_some());
+    if let Some(evidence) = evidence {
+        (tree.errors, tree.warnings) = evidence.counts();
+    }
     Ok((
         tree,
         project,
@@ -761,29 +773,30 @@ pub fn open_native_project(
         return Err(unsaved_changes_refusal(state, "open"));
     }
     let loaded = load_native(path, progress);
-    let (_tree, project, (opaque, manufacturer_refs), allocator_repair, recovered) = match loaded {
-        Ok(v) => v,
-        Err(failure) => {
-            state
-                .session_log
-                .lock()
-                .expect("state mutex poisoned")
-                .push(LogEntry {
-                    timestamp: session_log::now(),
-                    severity: Severity::Error,
-                    source: "open".to_string(),
-                    message: failure.message.clone(),
-                    location: None,
-                    diagnostic: None,
-                    detail: None,
-                });
-            return Err(failure);
-        }
-    };
+    let (loaded_tree, project, (opaque, manufacturer_refs), allocator_repair, recovered) =
+        match loaded {
+            Ok(v) => v,
+            Err(failure) => {
+                state
+                    .session_log
+                    .lock()
+                    .expect("state mutex poisoned")
+                    .push(LogEntry {
+                        timestamp: session_log::now(),
+                        severity: Severity::Error,
+                        source: "open".to_string(),
+                        message: failure.message.clone(),
+                        location: None,
+                        diagnostic: None,
+                        detail: None,
+                    });
+                return Err(failure);
+            }
+        };
     let tree = replace_unless_unsaved_with_history(
         state,
         project,
-        (0, 0),
+        (loaded_tree.errors, loaded_tree.warnings),
         Some(path.to_path_buf()),
         opaque,
         manufacturer_refs,
@@ -1972,6 +1985,7 @@ pub(crate) fn tree_with_state(
     tree.errors = import_counts.0;
     tree.warnings = import_counts.1;
     tree.import_report_available = Some(state.import_report_available.load(Ordering::Relaxed));
+    tree.import_report_historical = Some(state.import_report_historical.load(Ordering::Relaxed));
     tree.can_undo = stack.can_undo();
     tree.can_redo = stack.can_redo();
     tree.is_modified = project_is_modified(project, clean_project);
@@ -2146,9 +2160,16 @@ fn replace_project_state_transaction(
     *import_counts = replacement_import_counts;
     // Only native-open replacements carry a store path. Save As sets one
     // later without replacing the live import evidence. Publish atomically.
+    // Native load admitted the complete envelope before reaching publication.
+    let restored_report = replacement_store_path.is_some()
+        && knx_app::import_evidence::contains_primary(&replacement_opaque);
     state
-        .import_report_available
-        .store(replacement_store_path.is_none(), Ordering::Relaxed);
+        .import_report_historical
+        .store(restored_report, Ordering::Relaxed);
+    state.import_report_available.store(
+        replacement_store_path.is_none() || restored_report,
+        Ordering::Relaxed,
+    );
     *store_path = replacement_store_path;
     *clean_project = Some(clean_replacement);
     // `last_saved_at` describes the project on screen, not the session: a

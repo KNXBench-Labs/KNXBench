@@ -164,6 +164,20 @@ non-revision-conditional endpoint; ignoring a superseded UI reply does not undo
 or cancel a server operation. No installation create/delete/move capability,
 fresh private ETS import, ETS export or native screen-reader acceptance is added.
 
+### Local durable import-report boundary (2026-10-11)
+
+Primary server imports now retain the complete original report in native files
+([contract](contracts/native-import-evidence.md), [ADR-0113](adr/0113-durable-native-import-evidence.md)).
+This does not reconstruct reports absent from old files, capture every CLI or
+selective-import timeline, recompute current compatibility, verify signatures or
+prove hardware support. Envelope/report serialization has a 16-MiB bound;
+excessive or corrupt/unsupported evidence is refused explicitly, never truncated
+into a successful report. Native saves and complete local JSON downloads can
+contain private source data; the bounded preview is not anonymization. Final
+owning acceptance/integration remains separate; existing ledger statuses are not
+promoted by report persistence.
+
+
 ## Alpha.8 release snapshot (2026-10-10)
 
 [Alpha.8 notes](releases/alpha8.md) and the

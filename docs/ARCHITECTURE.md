@@ -95,6 +95,20 @@ No new dependency, importer rule or protocol behavior. The shared simple name fi
 blocks duplicate submissions and ignores superseded replies without claiming that
 server operations were canceled or that the legacy API is revision-conditional.
 
+## Durable original import evidence (2026-10-11 local source)
+
+[ADR-0113](adr/0113-durable-native-import-evidence.md) keeps a complete, bounded
+original report in an application-owned native passthrough envelope. `knx-app`
+interprets it; the store and KNX Core gain no format dependency or schema bump.
+Native opening restores historical counters without a compatibility reassessment.
+The authenticated explicit read returns original JSON text so browser download
+preserves number precision and unknown content. EN/DE UI exposes historical
+provenance, a bounded preview and a complete privacy-disclosed local download.
+Legacy absence and unsupported/corrupt evidence stay distinct; see
+[the contract](contracts/native-import-evidence.md). Scoped verification and later
+integration/publication are separate; CLI/selective timelines remain follow-ups.
+
+
 ## Local import-integrity adapter repair (2026-10-10)
 
 [ADR-0107](adr/0107-import-source-integrity.md) and [the contract](IMPORT_INTEGRITY.md) bind ZIP reads to validated member identity, retain original XML, separate metadata provenance and record parser-owned lexical observations. Application code reuses persisted product diagnostics and baggage classification. Completion vocabulary requires a scalar-only schema12 refusal barrier; no UI/core coupling, new dependency or protocol capability. Local and unpublished; final acceptance remains separately recorded.

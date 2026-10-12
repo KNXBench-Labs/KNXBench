@@ -22,6 +22,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         history_generation: Default::default(),
         import_counts: Default::default(),
         import_report_available: std::sync::atomic::AtomicBool::new(true),
+        import_report_historical: std::sync::atomic::AtomicBool::new(false),
         server_incarnation: "rename-test".into(),
         project_revision: Default::default(),
         project_incarnation: Default::default(),

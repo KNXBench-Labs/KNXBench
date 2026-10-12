@@ -699,6 +699,36 @@ the below-viewport explanation. Review is in-session self-review. Full durable
 report persistence, early write preflight and the remaining functional matrix
 are not claimed complete. No deployment, ETS parity, vendor execution, bus action
 or shared-root synchronization is included.
+## 2026-10-11 — local durable original import evidence
+
+Primary server imports now carry a version-1 application-owned native report
+record. Exact original JSON, category-row counters and historical provenance
+survive native save/open/restart/edit/undo/redo. Legacy absence remains explicitly
+unavailable; corrupt, duplicate, future, oversized or ambiguous evidence is
+refused without replacing the current project. No domain/store schema change,
+manufacturer execution, bus action, external transmission or new compatibility
+claim. See [ADR-0113](adr/0113-durable-native-import-evidence.md) and the
+[native report contract](contracts/native-import-evidence.md).
+
+The authenticated explicit report read, source-bound EN/DE Dashboard panel,
+bounded preview and complete local download are implemented. Raw JSON text is
+preserved rather than reserialized through browser floating-point numbers.
+Local acceptance: owning `knx-app`, `knx-server`, `knx-projection` suites
+**1040 passed / 0 failed / 80 explicitly ignored**;
+whole Web **2651 passed / 0 failed / 168 files**;
+production-built intercepted Chromium **4 passed / 0 failed / 0 skipped**.
+Owning strict Clippy, server/Web builds, explicit new+existing E2E types, generated
+binding equivalence (trailing whitespace normalized), five nonempty explicit-root
+repository checks, docs/fmt/whitespace pass. Four final EN/DE400/1440 production
+frames inspected; real downloads retain all1,001 synthetic rows. Final continuation
+reused byte-identical Rust inputs and reran Web/build/browser after whitespace-only
+binding correction; failed attempts remain historical, not retroactively green.
+Source self-review and disclosure scan only, not independent approval.
+
+No private corpus/hardware/vendor execution, main integration, push, release or
+deployment is accepted by this package. CLI/selective report timelines,
+native-shell save dialogs and unavailable legacy findings remain outside this
+package. The functional Finding matrix is still open.
 
 ## 2026-10-11 — local import/application lifecycle repair
 

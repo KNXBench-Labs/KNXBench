@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 20:05
+- **Completed:** GitHub issue #6 (AppImage crash on Kubuntu 24.04, `Could not create default EGL display: EGL_BAD_PARAMETER`), session 4ebf700ff2d7, branch `fix/issue6-appimage-egl` in `KNXBench.worktrees/issue6-appimage-egl`. Root cause: alpha.9 bundles the runner's `libwayland-client`; newer Mesa EGL vendors need newer symbols and fail to load, so WebKit aborts under X11 and Wayland alike. Fix: `tools/appimage/host-libraries.sh` appended (anchored) to the pinned GTK plugin removes it after deployment; `tools/appimage/check-host-libraries.sh` guards the release workflow, and `xtask check-appimage` requires that step. Evidence: published alpha.9 reproduces the reporter's exact lines with glvnd pinned to Mesa; CI dispatch run 38286151360 green, and its artifact (SHA-256 450215a1…eeaa7) shows no abort in the same A/B. Docs: APPIMAGE_LAUNCHER, KL §176, ledger KL-176, troubleshooting, manual known issues, IMPLEMENTATION_STATUS, OPEN_WORK. English comment posted on #6 asking for hardware/session/package versions and an `LD_PRELOAD` workaround test.
+- **Pending/Next Steps:** Fix reaches users with the next AppImage release (none cut by this entry). Wait for the reporter's answer on #6; close only after their confirmation or a release. Optional: a startup smoke on a newer-Mesa distribution container.
+- **Notes for Codex oder Claude:** Packaging only; no domain/web/server code touched, so the web lock was not needed. The issue is EGL-vendor dependent: on the NVIDIA host the unchanged image does NOT abort unless `__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json`. Broadway never reaches EGL and is useless as a repro. Only `libwayland-client` is removed; WebKit links `libwayland-server` directly.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 19:25
 - **Completed:** Web-lock queue reservation only (user request: share the web lock by taking turns with the parked-adoption session). No code changed.
 - **Pending/Next Steps:** Web-lock order, one package per lock entry:

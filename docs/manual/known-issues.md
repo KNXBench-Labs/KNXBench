@@ -591,6 +591,17 @@ must not be described as either universally guessed or universally explicit.
 - **Details:** [§158](../KNOWN_LIMITATIONS.md#158-the-appimage-starts-only-with-an-x-server)
   and [launcher contract](../APPIMAGE_LAUNCHER.md).
 
+### AppImages up to alpha.9 can stay empty on newer Mesa drivers
+
+- **Affected:** `v0.1.0-alpha.9` and earlier AppImages on systems whose Mesa
+  EGL driver needs a newer `libwayland-client` (reported on Kubuntu 24.04).
+- **Limitation:** the bundled library shadows the system's; WebKit aborts with
+  `Could not create default EGL display: EGL_BAD_PARAMETER`.
+- **Workaround:** preload the system library as shown in
+  [Troubleshooting](reference/03-troubleshooting.md#the-appimage-window-stays-empty-could-not-create-default-egl-display).
+  The source fix ships with the next AppImage.
+- **Details:** [§176](../KNOWN_LIMITATIONS.md#176-appimages-up-to-alpha9-abort-on-hosts-with-newer-mesa-egl).
+
 ### The desktop shell has no login, on purpose
 
 - **Affected:** nothing you can do about it, but worth knowing.

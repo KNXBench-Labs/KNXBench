@@ -312,6 +312,29 @@ that source check is not a new native test of the downloaded image. If
 neither display is reachable, the new launcher still cannot create a window.
 Broader compositor/GPU compatibility is not guaranteed.
 
+## The AppImage window stays empty: "Could not create default EGL display"
+
+**You see:** the window opens empty or the program ends, and the terminal shows
+`Could not create default EGL display: EGL_BAD_PARAMETER. Aborting...`, often
+followed by `web process terminated (Crashed)`.
+
+**Why:** AppImages up to and including `v0.1.0-alpha.9` carry their own copy of
+`libwayland-client`. Newer Mesa graphics drivers need a newer copy, cannot load
+next to the old one, and WebKit cannot draw anything. Switching between X11
+and Wayland does not help
+([known limitation §176](../../KNOWN_LIMITATIONS.md#176-appimages-up-to-alpha9-abort-on-hosts-with-newer-mesa-egl)).
+
+**Do this:** make the AppImage use your system's library instead:
+
+```sh
+ldconfig -p | grep libwayland-client.so.0     # find the path on your system
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libwayland-client.so.0 ./KNXBench_0.1.0-alpha.9_amd64.AppImage
+```
+
+On Arch and Fedora the path is usually `/usr/lib/libwayland-client.so.0` or
+`/usr/lib64/libwayland-client.so.0`. AppImages built after this fix no longer
+bundle the library and need no workaround.
+
 ## `cargo tauri dev` fails because the frontend was never installed
 
 **You see:** `cargo tauri dev`, run from `apps/knx-desktop`, fails during its automatic

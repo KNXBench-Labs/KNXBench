@@ -27,6 +27,10 @@ order to the existing shared selection handler. Editing is unchanged.
   addresses), 32 existing related e2e tests and the loopback-isolated native rename
   gate 4/4 against an actual built server; repository xtask gates pass. No bus,
   ETS or private-corpus claim.
+- Manual chapter 04 carries four real screenshots of the views (fictional Sample
+  house, real server, offline namespace, source build after Alpha 9), captured by
+  their own spec so the pinned Alpha 9 set is untouched;
+  [provenance](evidence/group-address-views-manual-2026-10-12.json).
   [Goal record](goals/group-address-four-views.md) ·
   [Known limitations](KNOWN_LIMITATIONS.md#four-group-address-presentations-2026-10-12).
 

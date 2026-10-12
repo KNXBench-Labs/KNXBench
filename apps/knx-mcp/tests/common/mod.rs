@@ -357,6 +357,7 @@ fn product_db_from(dir: &Path, program: &str) -> PathBuf {
 /// A workspace over `projects` and, optionally, a product database.
 pub fn workspace(projects: &[(&str, &Path)], products: Option<&Path>) -> Workspace {
     Workspace::open(&Config {
+        name_recipe: Vec::new(),
         projects: projects
             .iter()
             .map(|(alias, path)| ProjectArg {

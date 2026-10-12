@@ -42,11 +42,17 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    let renames = ws.name_recipe_aliases();
     eprintln!(
-        "{}: serving {} project(s) read-only over stdio ({}); product database: {}",
+        "{}: serving {} project(s) over stdio ({}); literal renames: {}; product database: {}",
         version_line(),
         ws.aliases().len(),
         ws.aliases().join(", "),
+        if renames.is_empty() {
+            "none (read-only)".to_string()
+        } else {
+            renames.join(", ")
+        },
         if ws.products().is_some() {
             "read-only"
         } else {

@@ -6,12 +6,13 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 publish = false
-description = "Read-only MCP server over saved KNXBench project files (ADR-0090)"
+description = "MCP server over saved KNXBench project files: read-only by default, opt-in literal renames (ADR-0090, ADR-0116)"
 
 [dependencies]
 knx-core.workspace = true
 knx-csv.workspace = true
 knx-diff.workspace = true
+knx-edit.workspace = true
 knx-productdb.workspace = true
 knx-projection.workspace = true
 knx-store.workspace = true

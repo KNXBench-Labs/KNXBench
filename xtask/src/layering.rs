@@ -88,6 +88,7 @@ pub const SECURE_FORBIDDEN: &[&str] = &["knx-core", "serde"];
 /// [`workspace_production_graph`]: what the shipped binary links, not what
 /// some dependency's own tests import.
 pub const MCP_FORBIDDEN: &[&str] = &[
+    "knx-app",
     "knx-net",
     "knx-server",
     "knx-secure",

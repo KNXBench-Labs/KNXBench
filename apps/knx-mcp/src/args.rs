@@ -10,17 +10,25 @@ use std::path::PathBuf;
 pub const USAGE: &str = "\
 usage: knx-mcp --project <alias>=<path.knxdb> [--project <alias>=<path.knxdb> ...]
                [--product-db <path> | --no-product-db]
+               [--allow-name-recipe <alias> ...]
        knx-mcp --help | --version
 
-Serves the named KNXBench project files read-only to an MCP client over
-stdio. Files are never written: an older project or product database is
-migrated in memory only. No bus access, no network listener.
+Serves the named KNXBench project files to an MCP client over stdio,
+read-only unless --allow-name-recipe says otherwise. An older project or
+product database is migrated in memory only. No bus access, no network
+listener.
 
   --project <alias>=<path>  a saved .knxdb project; repeatable. The alias
                             (1-32 of A-Z a-z 0-9 _ -) is how tools name it.
   --product-db <path>       product database to explain parameters with;
                             default: the installed one, when present.
-  --no-product-db           use no product database at all.";
+  --no-product-db           use no product database at all.
+  --allow-name-recipe <alias>
+                            let this project take literal group-address
+                            renames (prefix/suffix), each one approved by
+                            the user in a confirmation form of the MCP
+                            client; repeatable. Renames go to the project's
+                            undo history, never to the saved file (ADR-0116).";
 
 /// Longest accepted alias, in bytes.
 pub const MAX_ALIAS_LEN: usize = 32;
@@ -48,6 +56,8 @@ pub enum ProductDbChoice {
 pub struct Config {
     pub projects: Vec<ProjectArg>,
     pub product_db: ProductDbChoice,
+    /// Aliases enabled for literal renames (ADR-0116); empty means read-only.
+    pub name_recipe: Vec<String>,
 }
 
 /// What the command line asks for.
@@ -62,6 +72,7 @@ pub enum Invocation {
 pub fn parse(args: &[String]) -> Result<Invocation, String> {
     let mut projects: Vec<ProjectArg> = Vec::new();
     let mut product_db: Option<ProductDbChoice> = None;
+    let mut name_recipe: Vec<String> = Vec::new();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -91,15 +102,35 @@ pub fn parse(args: &[String]) -> Result<Invocation, String> {
                 product_db = Some(ProductDbChoice::Disabled);
                 i += 1;
             }
+            "--allow-name-recipe" => {
+                let alias = args
+                    .get(i + 1)
+                    .ok_or("--allow-name-recipe needs a project alias")?;
+                validate_alias(alias)?;
+                if name_recipe.contains(alias) {
+                    return Err(format!("--allow-name-recipe {alias:?} is given twice"));
+                }
+                name_recipe.push(alias.clone());
+                i += 2;
+            }
             other => return Err(format!("unknown argument: {other}")),
         }
     }
     if projects.is_empty() {
         return Err("at least one --project <alias>=<path> is required".into());
     }
+    if let Some(alias) = name_recipe
+        .iter()
+        .find(|alias| !projects.iter().any(|p| &p.alias == *alias))
+    {
+        return Err(format!(
+            "--allow-name-recipe {alias:?} names no --project alias"
+        ));
+    }
     Ok(Invocation::Serve(Config {
         projects,
         product_db: product_db.unwrap_or(ProductDbChoice::Default),
+        name_recipe,
     }))
 }
 
@@ -215,6 +246,40 @@ mod tests {
             parse(&args(&["--project", &long])).is_err(),
             "alias too long"
         );
+    }
+
+    #[test]
+    fn name_recipe_is_opt_in_per_configured_alias() {
+        let Ok(Invocation::Serve(plain)) = parse(&args(&["--project", "a=x"])) else {
+            panic!("expected Serve");
+        };
+        assert!(plain.name_recipe.is_empty(), "read-only by default");
+        let Ok(Invocation::Serve(enabled)) = parse(&args(&[
+            "--project",
+            "a=x",
+            "--project",
+            "b=y",
+            "--allow-name-recipe",
+            "b",
+        ])) else {
+            panic!("expected Serve");
+        };
+        assert_eq!(enabled.name_recipe, vec!["b".to_string()]);
+        for refused in [
+            &["--project", "a=x", "--allow-name-recipe"][..],
+            &["--project", "a=x", "--allow-name-recipe", "z"],
+            &[
+                "--project",
+                "a=x",
+                "--allow-name-recipe",
+                "a",
+                "--allow-name-recipe",
+                "a",
+            ],
+            &["--project", "a=x", "--allow-name-recipe", "../a"],
+        ] {
+            assert!(parse(&args(refused)).is_err(), "{refused:?}");
+        }
     }
 
     #[test]

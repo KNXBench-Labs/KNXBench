@@ -2099,6 +2099,7 @@ dependencies = [
  "knx-core",
  "knx-csv",
  "knx-diff",
+ "knx-edit",
  "knx-productdb",
  "knx-projection",
  "knx-store",
@@ -3273,6 +3274,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+ "url",
  "uuid",
 ]
 

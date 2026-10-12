@@ -17,6 +17,8 @@
 .editor textarea { resize:vertical; min-height:44px; }
 .body { min-height:220px !important; font-family:ui-monospace,monospace !important; font-size:.9rem !important; line-height:1.55; }
 .check { display:flex; align-items:start; gap:9px; line-height:1.5; }
+/* The global control min-height/padding would stretch the box below its text line. */
+.check input[type="checkbox"] { flex:none; min-height:0; padding:0; margin:.2em 0 0; }
 .toolbar { display:flex; gap:8px; flex-wrap:wrap; }
 .review { border:1px solid var(--knx-accent); border-radius:8px; padding:14px; margin-top:16px; }
 .review h4 { margin-top:0; }

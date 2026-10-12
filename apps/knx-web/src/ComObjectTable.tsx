@@ -48,8 +48,7 @@ function ObjectRow({ com, flat, hidden, matches, open, descriptionMatch, editor,
         {descriptionMatch && <small className="com-description-match">{t("comTable.descriptionMatch", { value: com.description ?? "" })}</small>}
         {!matches && open && <small className="com-edit-exception">{t("comTable.editException")}</small>}</td>
       <td>{com.function_text || "—"}</td>
-      <td className="com-object-effective-dpt"><span>{dptDisplay(dpt, language)}</span>
-        {dpt !== null && dptDisplay(dpt, language) !== dpt && <small className="mono">{dpt}</small>}
+      <td className="com-object-effective-dpt" title={dpt ?? undefined}><span>{dptDisplay(dpt, language)}</span>
         {com.dpt === null && com.program_dpt !== null && <small className="com-object-dpt-origin">{t("inspector.programDefault")}</small>}
         {com.dpt_text && <small>{t("dpt.masterText", { value: com.dpt_text })}</small>}
         {productLanguage !== null && fellBack(com.dpt_text, com.dpt_text_language) && <LanguageFallbackBadge selected={productLanguage} source={null} />}</td>

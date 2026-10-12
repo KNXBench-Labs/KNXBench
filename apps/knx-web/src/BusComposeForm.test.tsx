@@ -69,6 +69,7 @@ async function renderForm(
 }
 
 function setInputValue(selector: string, value: string) {
+  if (selector === ".bus-compose-dpt") { setSelectValue(selector, value); return; }
   const input = host!.querySelector<HTMLInputElement>(selector)!;
   const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
   setter.call(input, value);
@@ -109,6 +110,35 @@ afterEach(() => {
 });
 
 describe("BusComposeForm", () => {
+  it("offers named DPT choices without exposing technical IDs or sending on focus", async () => {
+    const root = await renderForm("1/2/3", { kind: "single", dpt: "DPST-1-1" });
+    try {
+      const select = host!.querySelector<HTMLSelectElement>("select.bus-compose-dpt");
+      expect(select).not.toBeNull();
+      expect(host!.querySelector("input.bus-compose-dpt")).toBeNull();
+      expect(select!.value).toBe("DPST-1-1");
+      expect(select!.selectedOptions[0].textContent).toBe("Switch (1.001)");
+      expect(select!.querySelector('option[value="DPST-9-1"]')?.textContent).toBe("Temperature (9.001)");
+      expect(select!.textContent).not.toContain("DPST-");
+      await act(async () => { select!.focus(); select!.blur(); });
+      expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  for (const [raw, label] of [["DPST-09-001", "Temperature (9.001)"], ["DPT-9", "9.*"], ["DPST-999-1", "999.001"], ["vendor:opaque", "vendor:opaque"]]) {
+    it(`retains the exact prefilled reference ${raw} in its dropdown`, async () => {
+      const root = await renderForm("1/2/3", { kind: "single", dpt: raw });
+      try {
+        const select = host!.querySelector<HTMLSelectElement>("select.bus-compose-dpt");
+        expect(select).not.toBeNull();
+        expect(select!.value).toBe(raw);
+        expect(select!.selectedOptions[0].textContent).toContain(label);
+        await act(async () => setInputValue(".bus-compose-value", "1"));
+        await clickSend();
+        expect(apiMock.writeBusValue).toHaveBeenCalledWith("1/2/3", raw, "1", null);
+      } finally { await act(async () => root.unmount()); }
+    });
+  }
   it("sends using the prefilled single-DPT resolution when the DPT field is left as-is", async () => {
     await renderForm("1/2/3", { kind: "single", dpt: "DPST-1-1" });
     await act(async () => {
@@ -125,7 +155,7 @@ describe("BusComposeForm", () => {
     );
   });
 
-  it("an explicit DPT typed in the field wins over the prefilled resolution", async () => {
+  it("an explicitly selected DPT wins over the prefilled resolution", async () => {
     await renderForm("1/2/3", { kind: "single", dpt: "DPST-1-1" });
     await act(async () => {
       setInputValue(".bus-compose-dpt", "DPST-5-1");
@@ -164,7 +194,7 @@ describe("BusComposeForm", () => {
 
     expect(apiMock.writeBusValue).not.toHaveBeenCalled();
     expect(host!.querySelector(".bus-compose-error")!.textContent).toBe(
-      "No DPT resolved for this group address — enter one explicitly.",
+      "No DPT resolved for this group address — choose one explicitly.",
     );
   });
 
@@ -178,7 +208,7 @@ describe("BusComposeForm", () => {
 
     expect(apiMock.writeBusValue).not.toHaveBeenCalled();
     expect(host!.querySelector(".bus-compose-error")!.textContent).toBe(
-      "Conflicting DPTs for this group address: DPST-1-1, DPST-5-1 — enter one explicitly.",
+      "Conflicting DPTs for this group address: Switch (1.001), Scaling (0–100%) (5.001) — choose one explicitly.",
     );
   });
 
@@ -320,7 +350,7 @@ describe("BusComposeForm", () => {
 
   it("shows no hint when a project is open", async () => {
     await renderForm("", { kind: "unknown" }, true);
-    expect(host!.querySelector(".bus-compose-hint")).toBeNull();
+    expect(host!.querySelector(".bus-compose-hint:not(#bus-compose-dpt-hint)")).toBeNull();
   });
 
   it("disables every field and explains why for a closed session, and Send issues no request", async () => {

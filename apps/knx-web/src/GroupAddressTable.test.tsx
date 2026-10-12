@@ -207,7 +207,7 @@ it("shows each address with its range path, resolved DPT and link directions", a
   // checkbox, address, name, range, DPT, links
   expect(cells[2]).toBe("Ceiling light");
   expect(cells[3]).toBe("Lighting / Ground floor");
-  expect(cells[4]).toBe("DPST-1-1");
+  expect(cells[4]).toBe("Switch (1.001)");
   expect(cells[5]).toBe("1 sending · 1 receiving");
   const unlinked = [...row("1/0/3").querySelectorAll("td")].map((td) => td.textContent?.trim());
   expect(unlinked[3]).toBe("(no range)");
@@ -219,8 +219,8 @@ it("shows each address with its range path, resolved DPT and link directions", a
 it("reports a DPT conflict between linked objects instead of settling it", async () => {
   const root = await render();
   const dpt = row("1/0/2").querySelectorAll("td")[4];
-  expect(dpt?.textContent).toContain("DPST-1-1");
-  expect(dpt?.textContent).toContain("DPST-5-1");
+  expect(dpt?.textContent).toContain("Switch (1.001)");
+  expect(dpt?.textContent).toContain("Scaling (0–100%) (5.001)");
   expect(dpt?.textContent).toContain("conflicting");
   expect(dpt?.className).toContain("dpt-conflict");
   await act(async () => root.unmount());
@@ -293,6 +293,11 @@ it("filters rows by address, name and DPT", async () => {
   await act(async () => type(filter, "ghost"));
   expect([...host!.querySelectorAll("tbody tr")].map((tr) => tr.querySelector(".mono")?.textContent))
     .toEqual(["1/0/4"]);
+  for (const query of ["Switch", "1.001"]) {
+    await act(async () => type(filter, query));
+    expect([...host!.querySelectorAll("tbody tr")].map(tr => tr.querySelector(".mono")?.textContent))
+      .toEqual(["1/0/1", "1/0/2"]);
+  }
   await act(async () => type(filter, "DPST-1-1"));
   // Only the two addresses whose linked objects state DPST-1-1 remain.
   expect([...host!.querySelectorAll("tbody tr")].map((tr) => tr.querySelector(".mono")?.textContent))

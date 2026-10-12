@@ -41,11 +41,11 @@ export default function SourceReportPanel(props:{tree:ProjectTree}) {
     } finally {pending.current=false;if(mounted.current)setBusy(false);}
   }
   const record=catalogue?.records.find(row=>row.id===selected);
-  return <section className="import-report-panel source-report-panel">
+  return <div className="import-report-panel source-report-panel">
     <button type="button" disabled={busy} onClick={()=>void request("catalogue")}>{t("sourceReports.show")}</button>
     {error&&<p role="alert">{error}</p>}
     {catalogue&&<div>
-      <h3>{t("sourceReports.title")}</h3>
+      <h4>{t("sourceReports.title")}</h4>
       <p>{t("sourceReports.explanation")}</p>
       {catalogue.records.length===0?<p>{t("sourceReports.empty")}</p>:<>
         <label>{t("sourceReports.select")} <select value={selected} disabled={busy} onChange={event=>{
@@ -70,5 +70,5 @@ export default function SourceReportPanel(props:{tree:ProjectTree}) {
         <pre>{evidence.report_json.slice(0,REPORT_PREVIEW_CHARACTERS)}</pre>
       </details>
     </div>}
-  </section>;
+  </div>;
 }

@@ -16,6 +16,7 @@ it("reads only deliberately and renders source text literally with readonly/prov
  mocked.read.mockResolvedValue(view());act(()=>root.render(<ProjectMetadataPanel tree={tree()}/>));expect(mocked.read).not.toHaveBeenCalled();
  await act(async()=>readButton().click());expect(host.textContent).toContain(view().metadata.name);expect(host.querySelector("script")).toBeNull();
  expect(host.textContent).toContain("not a new hardware check");expect(host.textContent).toContain("not the last successful Save");expect(host.textContent).toContain("Explicitly empty");expect(host.textContent).toContain("Not recorded");
+ expect(host.querySelector("section,h3")).toBeNull();expect(host.querySelector("h4")?.textContent).toBe("Modeled project information (read-only)");
  expect(host.querySelectorAll("input,textarea")).toHaveLength(0);
 });
 it("does not normalize absent project numbers into explicit emptiness",async()=>{

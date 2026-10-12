@@ -18,6 +18,7 @@ it("reads nothing automatically, discloses private/executable data and saves onl
  mocked.list.mockResolvedValue(list());const blob=new Blob([new Uint8Array([1,2,3])]);mocked.read.mockResolvedValue(blob);
  act(()=>root.render(<ProjectPayloadPanel tree={tree()}/>));expect(mocked.list).not.toHaveBeenCalled();
  await act(async()=>button("Show retained payloads").click());expect(host.textContent).toContain("private or executable data");
+ expect(host.querySelector("section,h3")).toBeNull();expect(host.querySelector("h4")).not.toBeNull();
  expect(host.textContent).toContain(list().records[0].source_path);expect(mocked.read).not.toHaveBeenCalled();
  await act(async()=>button("Download selected payload").click());expect(mocked.download).toHaveBeenCalledWith(blob,"retained-payload.bin");
  expect(host.querySelector("iframe")).toBeNull();expect(host.querySelector("script")).toBeNull();

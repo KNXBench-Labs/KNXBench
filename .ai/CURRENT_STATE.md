@@ -1,3 +1,12 @@
+Web lock: released by claude-web-integration (package 3, checked parameter editors, delivered)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 17:20
+- **Completed:** Package 3 delivered: opt-in **Checked editor** for Time/Number/Colour/Picture rows in the Parameters tab (source evidence verified per field against device/ref/program/snapshot, writes only via `setParameterValue`, host publishes every completed write, panel no longer blanks on revision refresh). Leaf: rebase across Save, settle on applied value, clean editor follows Undo (real-smoke finding). Gate on frozen `9a8f7e58`: 24/25 green (Web 3034/0/202 files, parameters 11/11, notes 11/11, instructions 11/11, dialogs 14/14, Rust /mnt/daten-i/Sourcecode/KNXBench.worktrees/web-params-20261012/.ai/CURRENT_STATE.md/0/194 ignored, Clippy, docs, five xtask); full fixture browser 390 passed + the same 4 pre-existing `device-editor-layout.e2e.ts` DPST-9-1 failures. Loopback real-server smoke (synthetic product with retained source) green. Docs: manual ch. 05, implementation-status, parameter-editor-host contract (host section + amendment), OPEN_WORK, KNOWN_LIMITATIONS, FEATURES, ARCHITECTURE, LEDGER PDB-04 note, IMPLEMENTATION_STATUS, evidence JSON, log `.ai/logs/2026-10-12_claude_web-parameter-editors.md`.
+- **Pending/Next Steps:** Package 4 (catalogue updates in the web) takes the web lock next: server routes for upload preview → token, confirm (stateless re-upload, `apply_package_update`), backup listing and restore by listed name only, all under the product-DB mutex; reopen/re-migrate the server connection after restore; UI beside the install control in `CatalogBrowser.tsx`.
+- **Notes for Codex oder Claude:** Self-review only. PDB-04 stays LATER (module mapping, Colour/Picture codecs). The existing `/api/catalog/install` installs without preview/backup; package 4 must not silently change it. The four `device-editor-layout.e2e.ts` failures still belong to the DPT-presentation owner. No hardware, bus writes, release or deployment.
+
+---
+
 Web lock: taken by claude-web-integration for package 3 (time and integer-slider parameter editors)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 16:13

@@ -63,6 +63,7 @@ mod domain;
 mod import_evidence_routes;
 mod modeled_metadata_routes;
 mod project_payload_routes;
+mod recorded_device_state_routes;
 mod serial_address_routes;
 mod service_control_routes;
 mod source_import_report_routes;

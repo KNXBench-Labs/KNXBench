@@ -1,0 +1,9 @@
+.recorded-device-state-panel {border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem;min-width:0;}
+.recorded-device-state-panel p {font-size:.85rem;line-height:1.5;overflow-wrap:anywhere;}
+.recorded-device-state-panel dl {margin:.6rem 0;}
+.recorded-device-state-panel dl>div {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.5rem;padding:.35rem 0;}
+.recorded-device-state-panel dd {margin:0;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0;}
+.recorded-device-state-panel dt {font-size:.8rem;color:var(--text-secondary);overflow-wrap:anywhere;}
+.recorded-device-state-panel ul {list-style:none;padding:0;}
+.recorded-device-state-panel li {border-top:1px solid var(--border);padding:.35rem 0;}
+.recorded-device-state-panel h4 {margin:.25rem 0;font-size:.85rem;}

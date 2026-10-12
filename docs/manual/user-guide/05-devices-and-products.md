@@ -447,6 +447,33 @@ Evaluation notices are no longer printed above the editor or repeated inside
 sections. Manufacturer-declared Access Read/None fields are in their own tab.
 Actual rejected edits still show their reason next to the edited field.
 
+#### Checked editor (newer source, not Alpha 9)
+
+Time, number, colour and picture fields have a **Checked editor** button under the
+field. It is newer than the published Alpha 9 and is not in its screenshots. It
+reads the parameter's type straight from the imported product data and only offers
+what that data proves:
+
+- **Time** values are a decimal count, exactly as stored (`0010` stays `0010`). The
+  declared unit, such as `Seconds`, is shown as written; KNXBench does not convert
+  it into a clock or duration.
+- **Number** fields the manufacturer marked as a slider get a slider next to the
+  input. Moving it only changes your draft.
+- **Colour** and **picture** values are shown unchanged with a note that their
+  format is not verified. There is no colour picker, no image, and nothing is
+  fetched.
+- When the product data gives no checked source, the editor says why and shows the
+  original value; the plain field remains available.
+
+**Apply value** writes through the same path as the plain field, so validation,
+Undo/Redo and Save are unchanged. A refused value keeps your draft and shows the
+reason. Saving the project keeps a draft; if the value really changed (Undo,
+another client), the editor keeps your draft for comparison until you choose
+**Discard draft and reload**. Without a draft, it simply follows the project.
+**Back to the plain field** closes it. The button is not offered without a complete
+project identity or in **Manufacturer fields**; module sections show a note instead
+of an editor.
+
 ### Diagnostics
 
 Next to **Product data**, **Diagnostics** counts informational notes separately

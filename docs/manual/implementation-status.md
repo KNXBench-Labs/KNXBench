@@ -29,6 +29,16 @@ download capability or compatibility claim
 ([limits](../KNOWN_LIMITATIONS.md#group-address-members-and-download-preparation-2026-10-12)).
 This is newer than the published Alpha.9 package, not a deployed update.
 
+## Checked parameter editors (12 October 2026 source)
+
+Time, number, colour and picture parameters have an opt-in **Checked editor** that
+reads the type from the imported product data: time values as an exact decimal
+count with their declared unit, sliders where the manufacturer declared one, and
+colour/picture values unchanged with a note
+([how to use it](user-guide/05-devices-and-products.md#checked-editor-newer-source-not-alpha-9),
+[limits](../KNOWN_LIMITATIONS.md#checked-parameter-editors-in-the-device-editor-2026-10-12)).
+This is newer than the published Alpha.9 package, not a deployed update.
+
 ## Installation instructions in the device editor (12 October 2026 source)
 
 The device editor's **Installation instructions** tab shows the hints a device

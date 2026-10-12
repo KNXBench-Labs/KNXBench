@@ -84,7 +84,11 @@ package does not introduce an unmeasured cache or bulk-query abstraction.
   picker or image editor. Full PDB-04 remains open for verified value contracts.
 - Read/None access, missing write authority, invalid drafts and no-ops cannot
   invoke Apply. Revision changes preserve the draft but block Apply until an
-  explicit discard/reload. Selection/source changes reset the isolated editor;
+  explicit discard/reload when the field changed; with an identical field (Save
+  bumps the revision) the draft moves onto the new revision, a draft equal to the
+  new authoritative value settles, and an editor without a draft follows the
+  project. A revision that arrives during the editor's own write is never adopted
+  (amended 2026-10-12). Selection/source changes reset the isolated editor;
   late outcomes are not republished into the new context.
 
 ## Evidence scopes
@@ -99,3 +103,28 @@ callbacks are synthetic, so it is **not** full browser-to-native integration,
 production shell, physical device, ETS reimport, Orca or WebKitGTK certification.
 Final exact-source receipt is recorded separately; intermediate counts do not
 certify a changed assembled candidate.
+
+## Workbench host (12 October 2026)
+
+The device editor's **Parameters** tab offers a **Checked editor** button under
+Time/Number/Color/Picture rows when the tree carries a complete identity
+(`snapshotContextFromTree`) and the panel has a program; not in
+**Manufacturer fields** or **Diagnostics**. `ParameterSourceEditor.tsx` replaces the
+row (never nesting controls in its `<label>`), reads the source per opened field,
+and `parameterSourceHost.ts` admits only a well-formed answer for the same device,
+reference, panel program and snapshot; other answers are "malformed"/"mismatch" and
+the leaf gets no source. The source is re-read on each new revision while the
+previous answer stays on screen, so the leaf (keyed on selection, reference,
+program, source digest and scope) keeps its draft. `selectionKey` is
+server/project/device/scope; `revision` is server/project/snapshot.
+
+Writes use only `setParameterValue`. The host publishes the returned panel and tree
+inside `onApply`, so a write that finishes after the editor closed or after another
+revision arrived is still published (item 6); the leaf's `onApplied` is then a
+notification only. `useDeviceParameters` no longer blanks the panel on a pure
+revision refresh, only on another device or product language, so an open editor
+survives Save/Apply/Undo. Evidence: unit tests with named mutants, 11 intercepted
+production-build Chromium cases and a loopback-only real-server smoke importing a
+synthetic product with retained source; see
+[IMPLEMENTATION_STATUS](../IMPLEMENTATION_STATUS.md). Self-review only. Module
+mapping, verified Color/Picture codecs and PDB-04 remain open.

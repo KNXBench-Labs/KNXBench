@@ -1,5 +1,8 @@
 # Modeled project metadata — read-only inspection
 
+> On main since 2026-10-12 (port of the parked branch; fresh gate in the
+> [evidence](../evidence/native-evidence-port-2026-10-12.json)). Local acceptance figures below are historical.
+
 Local implementation contract, 2026-10-11. No domain/store schema migration,
 new source parser, project metadata writer or complete MODEL-07 claim.
 Accepted locally on 1933 frozen inputs: owning Rust1311/0/100 ignored,

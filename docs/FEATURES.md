@@ -1,4 +1,4 @@
-Last updated: 2026-10-12 17:40 CEST
+Last updated: 2026-10-12 21:23 CEST
 
 # KNXBench Features
 
@@ -83,6 +83,10 @@ Last updated: 2026-10-12 17:40 CEST
 | Support-gap analysis | Read-only; disclosure preview | alpha.6 |
 | Evidence ZIP | Consented export; manual submission | alpha.6 |
 | Offline AP1 diagnostics | Unresolved steps; no execution | Main-only |
+| Original import report | Kept in native files; local download | Main-only |
+| Source-report catalogue | Selective-import reports; read-only | Main-only |
+| Retained payloads | Read-only list; inert downloads | Main-only |
+| Native export review | Privacy notice; reviewed snapshot | Main-only |
 | Offline demos | Home/residential/office practice projects | alpha.6 |
 
 ## Implemented — Workbench
@@ -110,6 +114,8 @@ Last updated: 2026-10-12 17:40 CEST
 | Installation instructions | Device tab; imported hints, review-first | Main-only |
 | Checked parameter editor | Time count, integer slider; source-checked | Main-only |
 | Catalogue update with preview | Backup before install; restore listed backups | Main-only |
+| Project information | Modeled facts; read-only | Main-only |
+| Recorded device state | Load belief; read-only, no bus | Main-only |
 
 ## Implemented — Server and monitoring
 

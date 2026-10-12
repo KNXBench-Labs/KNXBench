@@ -27,6 +27,7 @@ pub mod procedure_resolution;
 pub mod query;
 pub mod report;
 pub mod source_diagnostics;
+pub mod update;
 pub use source_diagnostics::{source_diagnostics, SourceDiagnostic};
 pub mod xml;
 
@@ -60,3 +61,7 @@ pub use parse::master::{ingest_master_data, MasterIngest};
 /// Re-exported so callers name the connection type through this crate
 /// rather than depending on `rusqlite` directly.
 pub use rusqlite::Connection;
+pub use update::{
+    apply_package_update, preview_package_update, restore_product_db_backup, AppliedUpdate,
+    InstalledVersion, ProgramUpdate, ProgramUpdateStatus, UpdateError, UpdatePreview,
+};

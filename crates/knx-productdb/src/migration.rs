@@ -2572,6 +2572,35 @@ pub fn open_read_only(path: &Path) -> Result<ReadOnlyProductDb, ProductDbError> 
     })
 }
 
+/// A writable in-memory copy of the product database at `path`, migrated to
+/// `CURRENT_PRODUCTDB_VERSION`; an empty database when the file does not
+/// exist yet. The file is read with SQLite's online backup API and never
+/// written, so a caller can rehearse an install on the copy (ADR-0117).
+pub(crate) fn writable_memory_copy(path: &Path) -> Result<Connection, ProductDbError> {
+    use rusqlite::OpenFlags;
+    let mut memory = Connection::open_in_memory()?;
+    if path.exists() {
+        let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
+        let file = Connection::open_with_flags(path, flags)?;
+        file.busy_timeout(READ_ONLY_BUSY_TIMEOUT)?;
+        let found: i64 = file.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+        if found > CURRENT_PRODUCTDB_VERSION {
+            return Err(ProductDbError::FutureVersion {
+                found,
+                supported: CURRENT_PRODUCTDB_VERSION,
+            });
+        }
+        let backup = rusqlite::backup::Backup::new(&file, &mut memory)?;
+        backup.run_to_completion(i32::MAX, std::time::Duration::from_millis(20), None)?;
+    }
+    memory.pragma_update(None, "foreign_keys", "ON")?;
+    let found: i64 = memory.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if found < CURRENT_PRODUCTDB_VERSION {
+        migrate_from(&memory, found)?;
+    }
+    Ok(memory)
+}
+
 /// `$XDG_DATA_HOME/knx/products.sqlite`, falling back to
 /// `$HOME/.local/share/knx/products.sqlite`. `None` when neither variable
 /// is set, which the caller reports rather than guessing a location.

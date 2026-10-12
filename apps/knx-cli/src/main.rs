@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 mod activity_history_paths;
+mod catalog_update;
 mod contribution;
 mod device_address;
 mod device_compare;
@@ -43,6 +44,8 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         (offline evidence, no installation or upload; export never overwrites)\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
      \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>] [--allow-large-package]\n\
+     \x20     knx products update <file.knxprod> [--product-db <path>] [--allow-large-package] [--confirm <token>]\n\
+     \x20     knx products restore <backup.sqlite> [--product-db <path>]\n\
      \x20     knx products inspect-legacy <file.vd3|file.vd4|file.vd5|file.pr5>\n\
      \x20                  [--password-stdin | --password-file <path>]\n\
      \x20         (reads a legacy ETS3-era EX-IM file and summarises it; writes nothing.\n\
@@ -1337,6 +1340,8 @@ fn run_products(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("list") => run_products_list(&args[1..]),
         Some("ingest") => run_products_ingest(&args[1..]),
+        Some("update") => catalog_update::run_update(&args[1..]),
+        Some("restore") => catalog_update::run_restore(&args[1..]),
         Some("show") => run_products_show(&args[1..]),
         Some("verify") => run_products_verify(&args[1..]),
         Some("identity") => run_products_identity(&args[1..]),

@@ -42,11 +42,23 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
   // revision change with an identical field and no write in flight therefore
   // moves the draft onto the new revision; any field change still blocks Apply.
   const fieldSignature = JSON.stringify([field.kind, field.value, field.min, field.max, field.editable, field.writeEtsId, field.access]);
+  // When the authoritative value equals the draft (typically the refresh after
+  // our own Apply), nothing can be lost: the editor settles onto it. A revision
+  // that arrived while a write was in flight is never adopted silently.
   const loadedSignature = useRef(fieldSignature);
+  const blockedRevision = useRef<string | null>(null);
+  const [settled, setSettled] = useState(false);
   useEffect(() => {
     latestRevision.current = revision;
-    if (revision !== loadedRevision && !inFlight.current && !accepted && fieldSignature === loadedSignature.current) setLoadedRevision(revision);
-  }, [revision, loadedRevision, accepted, fieldSignature]);
+    if (inFlight.current) { if (revision !== loadedRevision) blockedRevision.current = revision; return; }
+    if (revision === blockedRevision.current) return;
+    if (field.value !== null && draft === field.value && (baseline !== field.value || revision !== loadedRevision)) {
+      setBaseline(field.value); setLoadedRevision(revision); loadedSignature.current = fieldSignature;
+      if (accepted) { setAccepted(false); setSettled(true); }
+      return;
+    }
+    if (revision !== loadedRevision && !accepted && fieldSignature === loadedSignature.current) setLoadedRevision(revision);
+  }, [revision, loadedRevision, accepted, fieldSignature, draft, baseline, field.value]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const stale = loadedRevision !== revision || baseline !== field.value;
   const restricted = !field.editable || field.writeEtsId === null || field.access === "Read" || field.access === "None";
@@ -81,21 +93,22 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
     {plan.kind === "time-count" && <p id={`${id}-count`} className={styles.caption}>{copy.count} <span>{plan.unit ?? copy.unspecified}</span></p>}
     <input id={id} type="text" inputMode="numeric" className={styles.input} value={draft}
       disabled={restricted || pending || accepted} aria-invalid={!unchanged && issue !== null}
-      aria-describedby={`${id}-status`} onChange={event => { setDraft(event.target.value); setFailure(null); }} />
+      aria-describedby={`${id}-status`} onChange={event => { setDraft(event.target.value); setFailure(null); setSettled(false); }} />
     {plan.kind === "integer-slider" && <input type="range" className={styles.slider} aria-label={`${props.label}: ${copy.slider}`}
       min={plan.min} max={plan.max} step={plan.step} value={issue === null ? Number(draft) : Number(field.value)}
       disabled={restricted || pending || accepted || stale || issue !== null}
-      onChange={event => { setDraft(event.target.value); setFailure(null); }} />}
+      onChange={event => { setDraft(event.target.value); setFailure(null); setSettled(false); }} />}
     <div id={`${id}-status`} className={styles.messages}>
       {restricted && <p className={styles.notice}>{copy.restricted}</p>}
       {stale && <p role="status" className={styles.notice}>{copy.stale}</p>}
       {!unchanged && issue !== null && <p role="alert" className={styles.error}>{copy[issue]}</p>}
       {failure !== null && <p role="alert" className={styles.error}>{failure}</p>}
       {accepted && <p role="status">{copy.applied}</p>}
+      {settled && <p role="status">{copy.settled}</p>}
     </div>
     <div className={styles.actions}>
       <button type="button" disabled={pending || accepted || stale || restricted || unchanged || issue !== null} onClick={() => { void apply(); }}>{pending ? copy.busy : copy.apply}</button>
-      <button type="button" disabled={pending} onClick={() => { setDraft(field.value ?? ""); setBaseline(field.value); setLoadedRevision(revision); loadedSignature.current = fieldSignature; setFailure(null); setAccepted(false); }}>{copy.reset}</button>
+      <button type="button" disabled={pending} onClick={() => { setDraft(field.value ?? ""); setBaseline(field.value); setLoadedRevision(revision); loadedSignature.current = fieldSignature; blockedRevision.current = null; setFailure(null); setAccepted(false); setSettled(false); }}>{copy.reset}</button>
     </div>
   </section>;
 }

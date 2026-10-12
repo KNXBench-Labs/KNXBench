@@ -76,7 +76,7 @@ cargo build -p knx-server
 cargo run -p knx-server
 ```
 
-Unset, it listens on port `8080`, serves only the API (no frontend), and stores projects in
+Unset, it listens on port `8484`, serves only the API (no frontend), and stores projects in
 your system's temporary directory. That is fine for a quick look and wrong for anything you
 want to keep. See [Environment variables](#environment-variables) below.
 
@@ -120,7 +120,15 @@ npm run dev --prefix apps/knx-web
 The dev server listens on port `1420` with `strictPort` set, and proxies `/api` to
 `http://127.0.0.1:4777`. That port is the `DEV_PORT` constant in
 `apps/knx-server/src/lib.rs`, and the Vite config and the desktop shell both refer to it —
-it is source, not deployment configuration, so there is nothing to configure.
+it is source, not deployment configuration. For browser-only frontend development,
+start the standalone API explicitly on that port:
+
+```bash
+KNX_PORT=4777 cargo run -p knx-server
+```
+
+The normal standalone default is 8484; the Tauri development shell continues to
+choose 4777 itself and release desktop builds keep an ephemeral loopback port.
 
 For a production bundle:
 
@@ -196,13 +204,15 @@ docker build -t knxbench-server -f apps/knx-server/Dockerfile .
 
 Three stages: a `node:22-alpine` stage builds the frontend, a `rust:1.98-slim` stage builds
 `knx-server`, and a `debian:bookworm-slim` runtime stage carries the two results. The
-runtime image sets `KNX_STATIC_DIR=/app/frontend`, `KNX_DATA_DIR=/data` and `KNX_PORT=8080`,
-declares `VOLUME /data`, and exposes `8080`.
+runtime image sets `KNX_STATIC_DIR=/app/frontend`, `KNX_DATA_DIR=/data` and `KNX_PORT=8484`,
+declares `VOLUME /data`, and exposes `8484`.
 
 Pass `KNX_BUILD_SHA` as a build argument if you want `--version` to name the commit; a
 Docker build has no git history to ask.
 
-How to run it — including why a published port needs a password to work at all — is in
+The Linux default run recipe uses `--network host`, no `-p` mapping, and port 8484.
+Host networking is selected when creating the container, not by the Dockerfile.
+How to run it — including authenticated LAN access versus local-only loopback — is in
 [Web and Docker deployment](../user-guide/11-web-and-docker.md).
 
 Release tags (`v*`) build this image in `.github/workflows/docker-release.yml`: one
@@ -257,7 +267,10 @@ apps/knx-server/scripts/smoke-test.sh
 ```
 
 `KNXBENCH_IMAGE=<image>` tests an existing image instead of building one (the release
-workflow does this), and `KNXBENCH_SMOKE_PORT` moves the host port away from `18080`.
+workflow does this). The smoke test mirrors host-network deployment, explicitly
+setting `KNX_PORT` to a separate test port (`18080`, overridden with
+`KNXBENCH_SMOKE_PORT`) so it does not replace or compete with a server on 8484.
+It checks project/API behavior, not live gateway discovery or bus communication.
 It can also import a real ETS project through the running image, if you have one to point
 it at:
 
@@ -276,7 +289,7 @@ ones — `apps/knx-server/src/main.rs` is the only place.
 
 | Variable | Meaning | Default |
 | --- | --- | --- |
-| `KNX_PORT` | Listening port | `8080` |
+| `KNX_PORT` | Listening port | `8484` |
 | `KNX_DATA_DIR` | Where projects are stored; created at startup if missing | the system temporary directory |
 | `KNX_STATIC_DIR` | Directory of the built frontend; unset means API only | unset |
 | `KNX_AUTH_PASSWORD_HASH` | The credential, as printed by `knx-server --hash-password` | unset |
@@ -290,8 +303,8 @@ ones — `apps/knx-server/src/main.rs` is the only place.
 
 With no credential configured, the server binds `127.0.0.1` instead of `0.0.0.0` and says
 so on startup (ADR-0026). That is a deliberate refusal to serve an unauthenticated API to
-the network, and it is why a container with no password cannot be reached through a
-published port.
+the network. In host mode a no-password container is reachable only from the
+host loopback; in bridge mode it cannot be reached through a published port.
 
 The frontend asks `GET /api/auth/status` before it renders anything: no password required
 means the workbench appears directly, which is what the Tauri shell relies on; a password

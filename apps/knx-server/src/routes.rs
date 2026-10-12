@@ -248,7 +248,7 @@ struct CatalogInstallFactsDto {
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-struct CatalogInstallReportDto {
+pub(crate) struct CatalogInstallReportDto {
     sha256: String,
     scheme: u32,
     skipped: bool,
@@ -587,26 +587,29 @@ async fn install_catalog_package(
             .map(CatalogInstallReportDto::from)
             .map(Json)
             .map_err(|error| match error {
-                // A legacy product database has its own import route; the
-                // `kind` lets the client offer it (ADR-0094, L3).
-                domain::CatalogInstallError::BadRequest(
-                    error @ knx_productdb::PackageError::LegacyExIm {
-                        kind: knx_productdb::legacy::LegacyMemberKind::ProductDatabase,
-                        ..
-                    },
-                ) => ApiError::refused("legacyProductDatabase", error.to_string()),
-                domain::CatalogInstallError::BadRequest(
-                    error @ knx_productdb::PackageError::UnsupportedLegacyFormat { .. },
-                ) if is_legacy_product_extension(&error) => {
-                    ApiError::refused("legacyProductDatabase", error.to_string())
-                }
-                domain::CatalogInstallError::BadRequest(error) => {
-                    ApiError::bad_request(error.to_string())
-                }
+                domain::CatalogInstallError::BadRequest(error) => package_refusal(error),
                 domain::CatalogInstallError::Internal(error) => ApiError::internal(error),
             });
     }
     Err(ApiError::bad_request("no file field in catalog install"))
+}
+
+/// A refused package upload: a legacy product database has its own import
+/// route, and the `kind` lets the client offer it (ADR-0094, L3). Shared by
+/// `/api/catalog/install` and the previewed update routes (ADR-0118).
+pub(crate) fn package_refusal(error: knx_productdb::PackageError) -> ApiError {
+    match error {
+        error @ knx_productdb::PackageError::LegacyExIm {
+            kind: knx_productdb::legacy::LegacyMemberKind::ProductDatabase,
+            ..
+        } => ApiError::refused("legacyProductDatabase", error.to_string()),
+        error @ knx_productdb::PackageError::UnsupportedLegacyFormat { .. }
+            if is_legacy_product_extension(&error) =>
+        {
+            ApiError::refused("legacyProductDatabase", error.to_string())
+        }
+        error => ApiError::bad_request(error.to_string()),
+    }
 }
 
 /// `.vd3`/`.vd4`/`.vd5` are product databases; `.pr*` are project exports.

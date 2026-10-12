@@ -262,6 +262,11 @@ pub struct SimulatorConfig {
     /// something, which is §14 item 4's whole point. A device that quietly
     /// stored something else is the failure the read-back exists to catch.
     pub corrupt_memory_writes: bool,
+    /// Answer every memory read of two or more octets with one octet fewer
+    /// than asked. Not a documented device behaviour and not claimed to be
+    /// one: it proves that a reader refuses a short answer instead of
+    /// comparing or classifying fewer octets than it asked for.
+    pub short_memory_answers: bool,
     /// The octet at `0060h`, the programming-mode byte.
     ///
     /// This is also what `NM_IndividualAddress_Write` step 2 and step 3
@@ -642,6 +647,7 @@ impl Default for SimulatorConfig {
             write_requires_level: 15,
             protected_memory: None,
             corrupt_memory_writes: false,
+            short_memory_answers: false,
             programming_mode: false,
             other_programming_mode_devices: Vec::new(),
             other_programming_mode_devices_ignore_restart: false,
@@ -2387,7 +2393,12 @@ impl SimulatedDevice {
             return vec![self.load_state(index).octet()];
         }
         let state = self.lock();
-        (0..u32::from(number))
+        let answered = if self.config.short_memory_answers && number > 1 {
+            number - 1
+        } else {
+            number
+        };
+        (0..u32::from(answered))
             .map(|offset| state.memory.get(&(address + offset)).copied().unwrap_or(0))
             .collect()
     }

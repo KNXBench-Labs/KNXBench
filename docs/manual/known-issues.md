@@ -360,6 +360,25 @@ is the remaining copy defect.
 - **Details:** [§7 commissioning](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked),
   [Downloading to a device](user-guide/07-bus-and-interfaces.md#downloading-to-a-device)
 
+### Devices whose program is "little-endian" cannot be downloaded
+
+- **Affected:** devices whose application program declares
+  `ParameterByteOrder="LittleEndian"` (in the public product files KNXBench has
+  seen, mostly ABB and Busch-Jaeger, some Hager and Berker programs). Readiness
+  marks them unsupported; planning a download says why.
+- **Limitation:** no published source defines how such a program stores its
+  values. Product files strongly suggest "numbers low octet first", but the same
+  pattern also shows up in programs of the same manufacturers that declare
+  big-endian, so the files alone cannot say what ETS writes, and no device has
+  been checked. KNXBench refuses rather than guesses.
+- **Consequence:** configure these devices with another tool for now. Import,
+  display and parameter editing are unaffected.
+- **Workaround:** none for the download. If you have such a device that ETS
+  programmed, `knx device byte-order-probe` can read (never write) which order it
+  holds; that output is the evidence needed to lift the limitation.
+- **Details:** [§170](../KNOWN_LIMITATIONS.md#170-little-endian-parameter-byte-order-is-refused-for-download-images),
+  [the probe](user-guide/10-command-line.md#knx-device-byte-order-probe--help-settle-a-little-endian-device)
+
 ### Stopping the server is not a safe cancellation of a device write
 
 - **Affected:** server/container shutdown during commissioning.

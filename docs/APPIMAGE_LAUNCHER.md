@@ -38,6 +38,60 @@ No unpack/source/re-run workaround is needed in an AppImage built with this
 contract. Older released images still need the
 [old-image workaround](manual/reference/03-troubleshooting.md#the-appimage-stops-with-failed-to-initialize-gtk).
 
+## Host-provided libraries (issue #6)
+
+`libwayland-client.so.0` is **not** bundled; the host provides it. Images up to
+and including `v0.1.0-alpha.9` shipped the build runner's copy (Ubuntu 24.04,
+libwayland 1.22). Newer Mesa EGL vendor libraries import symbols it lacks
+(`wl_display_create_queue_with_name`, `wl_fixes_interface`), so glvnd cannot
+load Mesa, no EGL display can be created, and the WebKit web process aborts
+with `Could not create default EGL display: EGL_BAD_PARAMETER. Aborting...`.
+This happens under X11 and Wayland alike, before WebKit reads its renderer
+variables, so the DMABUF default above does not help. The AppImage community
+excludelist carries the same exclusion (AppImageCommunity/pkg2appimage#559;
+upstream report tauri-apps/tauri#15665).
+
+`tools/appimage/host-libraries.sh` is appended to the end of the pinned GTK
+plugin and deletes `libwayland-client.so*` from the AppDir. linuxdeploy runs
+input plugins after its dependency copy and copies nothing afterwards except
+icons, desktop files and root files (checked in linuxdeploy `659c9db`
+`src/main.cpp`), so the deletion reaches the packed image. The append refuses
+a pinned plugin whose final command is not the known WebKit path patch. The
+other `libwayland-*` libraries stay bundled: `libwebkit2gtk-4.1.so.0` links
+`libwayland-server` directly, and only the client library was shown to
+conflict.
+
+`tools/appimage/check-host-libraries.sh <AppImage>` extracts an image, checks a
+positive control (`usr/lib/libwebkit2gtk-4.1.so.0`) and fails if any
+`libwayland-client.so*` is present. The release workflow runs it right after
+bundling, and `xtask check-appimage` requires that workflow step.
+
+**Evidence, 2026-10-12, one Arch/Omarchy host (NVIDIA RTX, Mesa 26.2.2,
+libwayland 1.26).** The published alpha.9 AppImage (checksum verified) was
+started from its extracted AppDir with isolated HOME/XDG directories. glvnd was
+pinned to Mesa with
+`__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json`,
+standing in for an Intel/AMD-only host. Unchanged, it printed the reporter's
+exact abort line under X11 (Xwayland) and native Wayland. With only
+`usr/lib/libwayland-client.so.0` removed, both stayed up for the full 12-second
+window without the abort. With the NVIDIA vendor available, the unchanged image
+did not abort on this host: the failure depends on the EGL vendor actually
+used. A ctypes `eglGetDisplay(EGL_DEFAULT_DISPLAY)` probe gave the same
+red/green split; `LD_DEBUG=libs` showed the undefined-symbol load failures.
+
+The fix was then built by the release workflow itself: `workflow_dispatch` run
+`38286151360` on `fix/issue6-appimage-egl` (commit `09229157`) was green,
+including the new guard ("no libwayland-client"), `check-appimage`, and the
+Xvfb and Weston startup smokes. Its artifact (88,603,128 bytes, SHA-256
+`450215a1c6724407714a2456ecffddd8c9943d28af132910565a88c68afeeaa7`) still
+bundles `libwayland-{cursor,egl,server}` and the display policy. On the same
+host with glvnd pinned to Mesa, it printed no abort and no crash line under
+X11 or Wayland, while a control rerun of the published alpha.9 printed two
+aborts and `web process terminated (Crashed); recovery: Reload`. A
+live-process count does not discriminate here (the recovery respawns the web
+process), and no screenshot was taken. The reporter's own machine
+(Kubuntu 24.04) has not been tested; details were requested in issue #6.
+
 ## Reproducible build integration
 
 Tauri CLI **2.11.4**, the version pinned by the release workflow, runs
@@ -99,7 +153,12 @@ python3 -m unittest tools.tests.test_appimage_launcher -v
 The suite exercises session hints, backend ordering, X11 defaults, wildcard
 selection, user overrides (including an empty renderer value), repeated
 sourcing, heredoc guards, verified/bounded downloads, offline repeat preparation,
-corrupt-cache refusal, executable mode and Cargo metadata routing.
+corrupt-cache refusal, executable mode and Cargo metadata routing. It also
+covers the host-library policy (removal, retained sibling libraries, idempotence,
+missing-AppDir refusal) and the anchored append. With
+`KNXBENCH_GTK_PLUGIN_SOURCE` pointing at the pinned upstream plugin, an
+additional test applies both patches to the real file and syntax-checks the
+result.
 
 The release workflow runs these tests before bundling and has separate startup
 checks under Xvfb and native headless Weston. Each startup check requires the

@@ -48,7 +48,8 @@ merged-project historical report from a source report.
 - The reserved kind avoids matching arbitrary ETS files with a similar basename.
   Hashes provide corruption detection, not authenticity against deliberate native
   file alteration. Historical provenance names a recorded claim, not an oracle.
-- This initial package serves the server import/native path. CLI-only older saves
-  and source-scoped selective reports remain explicitly outside its acceptance.
+- Server import and CLI `import --store` reuse the application capture helper.
+  Older CLI-only files and source-scoped selective timelines remain explicitly
+  outside primary-report restoration; no missing evidence is manufactured.
 - Any later dedicated table/migration must preserve these envelopes and retain
   unavailable/unsupported distinctions, not silently drop them.

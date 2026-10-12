@@ -699,6 +699,25 @@ the below-viewport explanation. Review is in-session self-review. Full durable
 report persistence, early write preflight and the remaining functional matrix
 are not claimed complete. No deployment, ETS parity, vendor execution, bus action
 or shared-root synchronization is included.
+## 2026-10-11 — local CLI original-report capture follow-up
+
+The actual CLI `import --store` now captures the final original report before
+opening the native destination, through the same application helper as the
+server. Source passthrough and `ImportedProject.opaque_entries` remain source-only;
+native report metadata does not silently inflate the CLI count. Explicit replace
+consent is unchanged, repeated imports write one primary report, and encoder or
+duplicate refusal leaves the supplied source entries untouched. No new schema,
+parser or dependency. Actual CLI synthetic RED/GREEN covers with/without product
+database, exact report-output/native equality, replacement refusal preservation
+and explicit replacement without duplicate metadata. Complete owning CLI/app/
+server/projection acceptance: **1286 passed / 0 failed / 100 explicitly
+ignored**, strict owning Clippy, CLI/server builds, five nonempty explicit-root
+repository checks, docs/fmt/whitespace pass on frozen **1891 inputs**.
+Self-review only; no new frontend execution or private corpus/hardware evidence
+credited. Focused local commit follows; integration/publication remains separate.
+Source-scoped selective timelines remain a separate boundary; no current
+compatibility or hardware reassessment is claimed.
+
 ## 2026-10-11 — local durable original import evidence
 
 Primary server imports now carry a version-1 application-owned native report

@@ -319,8 +319,12 @@ fn write_imported_store(
     path: &Path,
     staged: &knx_store::Connection,
     project: &knx_core::Project,
+    report: &knx_etsproj::ImportReport,
 ) -> Result<(), String> {
-    let opaque = knx_store::load_opaque(staged).map_err(|e| e.to_string())?;
+    let mut opaque = knx_store::load_opaque(staged).map_err(|e| e.to_string())?;
+    // Capture final enriched findings before touching the destination. The
+    // source-only ImportedProject counter is not increased by native metadata.
+    knx_app::import_evidence::capture_primary(&mut opaque, report)?;
     let refs = knx_store::load_manufacturer_refs(staged).map_err(|e| e.to_string())?;
     let conn = knx_store::open_and_migrate(path).map_err(|e| e.to_string())?;
     knx_store::save_project_with_passthrough(&conn, project, &opaque, &refs)
@@ -456,7 +460,9 @@ fn run_import(args: &[String]) -> ExitCode {
 
     // Only now does the `--store` file come into play.
     if let Some(store) = &parsed.store {
-        if let Err(e) = write_imported_store(Path::new(store), &conn, &imported.project) {
+        if let Err(e) =
+            write_imported_store(Path::new(store), &conn, &imported.project, &imported.report)
+        {
             eprintln!("failed to save project to store {store}: {e}");
             return ExitCode::FAILURE;
         }

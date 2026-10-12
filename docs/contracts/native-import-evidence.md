@@ -1,6 +1,6 @@
 # Native import-diagnostic availability and durable original reports
 
-Local server/application/UI implementation, 2026-10-11. No domain/native-schema migration.
+Local server/CLI/application/UI implementation, 2026-10-11. No domain/native-schema migration.
 
 ## Availability and provenance
 
@@ -28,7 +28,7 @@ version-1 application-owned passthrough record. Its reserved kind/identity is no
 an ETS member; similarly named source `File` rows are not interpreted. Scoped
 source reports do not become a primary merged-project report by basename.
 
-- Complete original `ImportReport` JSON is captured after server import/enrichment
+- Complete original `ImportReport` JSON is captured after server/CLI import/enrichment
   reporting and before replacement. Existing source passthrough and manufacturer
   manifest data are retained unchanged; the native metadata is one extra row.
 - Envelope and report serialization are bounded to 16 MiB. Failed serialization
@@ -82,8 +82,11 @@ They are browser evidence, not an ETS or private-project replay.
 
 ## Remaining boundaries
 
-- This package captures **primary server imports**. CLI-only imports and source-
-  scoped selective-import reports are not yet guaranteed primary envelopes.
+- This package captures **primary server imports and CLI `import --store`**.
+  Source-scoped selective-import reports and library-only reads do not become a
+  primary destination report. CLI stdout retains the source-only opaque count;
+  the added native report record is separate metadata. No output file is opened
+  before report capture succeeds. Existing `--replace` consent remains required.
 - Original reports are not fresh merged-project diagnostics. Current-session
   operational logs remain separately bounded and are not a lifetime audit.
 - Old native files cannot recover findings that were never stored.

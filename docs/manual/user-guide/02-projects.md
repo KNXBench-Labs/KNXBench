@@ -62,8 +62,9 @@ without replacing the current project.
 
 **Privacy:** a complete report and native copy may contain source names, attributes
 and other confidential data. Review them before sharing; the preview is not
-anonymization. There is no automatic upload. CLI-only and source-scoped selective
-report timelines are not covered by this local implementation.
+anonymization. There is no automatic upload. CLI `import --store` now captures
+the same original report; earlier CLI files without it remain unavailable.
+Source-scoped selective reports are not a primary destination timeline.
 [Exact contract and bounds](../../contracts/native-import-evidence.md).
 
 ## Import and open progress

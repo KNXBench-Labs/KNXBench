@@ -36,7 +36,8 @@ import ImportDiagnosticsNotice from "./ImportDiagnosticsNotice";
 import DevicesWorkspace from "./DevicesWorkspace";
 import type { DeviceCatalog } from "./deviceList";
 import { DeviceNavigationProvider } from "./DeviceLink";
-import LogPanel from "./LogPanel";
+import LogPanel, { type LogImportFocus } from "./LogPanel";
+import type { ImportFindingSeverity } from "./importFindings";
 import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
 import { publishProjectContext, rebasePublishedSessionContext } from "./busContext";
 import { ensureBusDiscovery } from "./busDiscovery";
@@ -70,7 +71,7 @@ import HelpPanel from "./HelpPanel";
 import AboutDialog from "./AboutDialog";
 import OnboardingGuide from "./OnboardingGuide";
 import { useOnboardingGuide } from "./useOnboardingGuide";
-import Overlay from "./Overlay";
+import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { canQuit, onWindowCloseRequested, quitApp } from "./quit";
 import type { SessionControls } from "./session";
 import { DEFAULT_HELP_TOPIC_ID, HELP_TOPICS, focusedHelpTopic, opensHelp, requestHelpTopic } from "./help";
@@ -204,6 +205,9 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   // this dialog's explicit button.
   const [replaceConfirm, setReplaceConfirm] = useState<{ path: string; kind: "import" | "open" } | null>(null);
   const [replaceSaving, setReplaceSaving] = useState(false);
+  // Bumped whenever the pending replacement is decided or withdrawn, so a
+  // late save-first result can tell it no longer speaks for the user.
+  const replaceAttemptRef = useRef(0);
   const loadDiscardRef = useRef(false);
   // Modern responses are ordered within an opaque server lifetime. The set
   // of retired lifetimes prevents a delayed reply from switching the UI back
@@ -295,6 +299,8 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   const [searchOpen, setSearchOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  // Set by the Overview's import counters; `LogPanel` consumes it once.
+  const [logImportFocus, setLogImportFocus] = useState<LogImportFocus | null>(null);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [monitorMounted, setMonitorMounted] = useState(false);
   useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
@@ -1007,21 +1013,33 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   async function replaceDiscard() {
     if (!replaceConfirm) return;
     const { path, kind } = replaceConfirm;
+    replaceAttemptRef.current += 1;
     setReplaceConfirm(null);
     await startLoad(path, kind, true);
   }
 
-  // Opens only after a save that left the project clean; anything else
-  // keeps the dialog, so nothing is replaced on a guess.
+  // Withdraws the pending replacement, including one whose save-first is
+  // still on the wire: that save may finish, but the other project is
+  // then not opened behind the user's back (same rule as the quit dialog).
+  function dismissReplaceConfirm() {
+    replaceAttemptRef.current += 1;
+    setReplaceConfirm(null);
+  }
+
+  // Opens only after a save that left the project clean *and* was not
+  // withdrawn meanwhile; anything else keeps the project, so nothing is
+  // replaced on a guess.
   async function replaceSaveFirst() {
     if (!replaceConfirm || replaceSaving) return;
     const { path, kind } = replaceConfirm;
+    const attempt = ++replaceAttemptRef.current;
     setReplaceSaving(true);
     try {
       if (!(await saveProject())) return;
     } finally {
       setReplaceSaving(false);
     }
+    if (replaceAttemptRef.current !== attempt) return;
     setReplaceConfirm(null);
     await startLoad(path, kind, false);
   }
@@ -1165,6 +1183,15 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     setQuitConfirmOpen(false);
   }
 
+  // The Overview's import counters open the existing session log, narrowed
+  // to the matching import-report entries of the project on screen.
+  function openImportFindings(severity: ImportFindingSeverity) {
+    if (!tree) return;
+    setMonitorOpen(false);
+    setLogImportFocus({ severity });
+    setLogOpen(true);
+  }
+
   function quitRequested() {
     if (tree?.is_modified) {
       setQuitConfirmOpen(true);
@@ -1259,7 +1286,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   const centerWorkspace = (
     <div className="workbench-center">
       {(monitorMounted || monitorOpen) && <div hidden={!monitorOpen}><BusDiagnosticsPanel active={monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} /></div>}
-      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
+      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} importFocus={logImportFocus} onImportFocusHandled={() => setLogImportFocus(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>
           <nav className="device-editor-navigation" aria-label={t("workbench.devices")}>
             <button type="button" onClick={backFromDevice}>← {t("devices.back")}</button>
@@ -1269,7 +1296,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
             ? <DeviceWorkspace key={`${loadKey}:${deviceDetail.id}`} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />
             : <div><p role="status">{t(deviceDetailLoading ? "devices.loadingEditor" : "devices.editorUnavailable")}</p>
               {!deviceDetailLoading && selection?.kind === "device" && <button type="button" onClick={() => void selectEntity(selection)}>{t("devices.retry")}</button>}</div>}
-        </section> : view === "devices" ? null : view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
+        </section> : view === "devices" ? null : view === "overview" ? <Dashboard tree={tree} onOpenImportFindings={openImportFindings} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
           rangeScope={addressScope} onRangeScope={setAddressScope}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate} onDeleted={resetTree}
           addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
@@ -1463,19 +1490,12 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
           }} />
       )}
       {replaceConfirm && (
-        <Overlay labelledBy="replace-confirm-title" className="quit-confirm replace-confirm" onClose={() => setReplaceConfirm(null)}>
-          <h2 id="replace-confirm-title">{t("replace.title")}</h2>
-          <p>{t("replace.message")}</p>
-          <p className="quit-confirm-hint">{t("replace.target", { file: fileNameOf(replaceConfirm.path) })}</p>
-          {/* Cancel first, as in the quit dialog: the safe answer gets focus. */}
-          <footer className="quit-confirm-footer">
-            <button type="button" onClick={() => setReplaceConfirm(null)}>{t("replace.cancel")}</button>
-            <button type="button" className="quit-confirm-discard" disabled={replaceSaving} onClick={() => void replaceDiscard()}>{t("replace.discard")}</button>
-            <button type="button" className="primary-action quit-confirm-save" disabled={replaceSaving} onClick={() => void replaceSaveFirst()}>
-              {replaceSaving ? t("quit.saving") : t("replace.save")}
-            </button>
-          </footer>
-        </Overlay>
+        <UnsavedChangesDialog titleId="replace-confirm-title" variantClassName="replace-confirm"
+          title={t("replace.title")} message={t("replace.message")}
+          details={[t("replace.target", { file: fileNameOf(replaceConfirm.path) }), t("replace.hint")]}
+          keepLabel={t("replace.cancel")} discardLabel={t("replace.discard")}
+          saveLabel={t("replace.save")} savingLabel={t("quit.saving")} saving={replaceSaving}
+          onKeep={dismissReplaceConfirm} onDiscard={() => void replaceDiscard()} onSave={() => void replaceSaveFirst()} />
       )}
       {tree && searchOpen && (
         <Search tree={tree} onSelect={selectSearchResult} onClose={() => setSearchOpen(false)} />
@@ -1488,27 +1508,17 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
       {achievementsOpen && (
         <AchievementsDialog snapshot={achievements.snapshot} enabled={achievementsEnabled} onClose={() => setAchievementsOpen(false)} />
       )}
+      {/* "Save and quit" quits only on `saveProject()`'s `true` — saved
+          *and* clean. A failed save (toast), a cancelled Save-As picker or
+          a save that raced a newer edit keeps both this dialog and the
+          project open, which is the whole point of asking. "Keep editing"
+          stays live during a save: it withdraws the quit, not the save. */}
       {quitConfirmOpen && (
-        <Overlay labelledBy="quit-confirm-title" className="quit-confirm" onClose={dismissQuitConfirm}>
-          <h2 id="quit-confirm-title">{t("quit.title")}</h2>
-          <p>{t("quit.message")}</p>
-          <p className="quit-confirm-hint">{t("quit.hint")}</p>
-          {/* Cancel comes first so `Overlay`'s initial focus lands on it:
-              the safe answer is the one already under the finger. "Save
-              and quit" quits only on `saveProject()`'s `true` — saved *and*
-              clean. A failed save (toast), a cancelled Save-As picker or a
-              save that raced a newer edit keeps both this dialog and the
-              project open, which is the whole point of asking. */}
-          <footer className="quit-confirm-footer">
-            {/* Cancel stays live during a save: it withdraws the quit, not
-                the save, which finishes (or fails) and leaves the app open. */}
-            <button type="button" onClick={dismissQuitConfirm}>{t("quit.cancel")}</button>
-            <button type="button" className="quit-confirm-discard" disabled={quitSaving} onClick={() => void quitApp()}>{t("quit.discard")}</button>
-            <button type="button" className="primary-action quit-confirm-save" disabled={quitSaving} onClick={() => void saveAndQuit()}>
-              {quitSaving ? t("quit.saving") : t("quit.save")}
-            </button>
-          </footer>
-        </Overlay>
+        <UnsavedChangesDialog titleId="quit-confirm-title"
+          title={t("quit.title")} message={t("quit.message")} details={[t("quit.hint")]}
+          keepLabel={t("quit.cancel")} discardLabel={t("quit.discard")}
+          saveLabel={t("quit.save")} savingLabel={t("quit.saving")} saving={quitSaving}
+          onKeep={dismissQuitConfirm} onDiscard={() => void quitApp()} onSave={() => void saveAndQuit()} />
       )}
       {settingsOpen && (
         <SettingsPanel

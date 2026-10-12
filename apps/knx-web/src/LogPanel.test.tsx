@@ -410,3 +410,81 @@ it("labels raw RTF-like previews without interpreting control words or HTML", as
   expect(host?.querySelector(".log-entry-raw-text input, .log-entry-raw-text textarea")).toBeNull();
   await act(async () => root.unmount());
 });
+
+describe("LogPanel — import findings opened from the project status", () => {
+  const importLog = () => [
+    entry({ severity: "warning", source: "import:unknown", message: "unknown element A" }),
+    entry({ severity: "warning", source: "import:conflict", message: "conflict B" }),
+    entry({ severity: "error", source: "import:parse", message: "lost C" }),
+    entry({ severity: "info", source: "import:opaque", message: "opaque D" }),
+    entry({ severity: "warning", source: "csv-import:problem", message: "csv E" }),
+    entry({ severity: "info", source: "import", message: "imported F" }),
+  ];
+  const listed = () => [...host!.querySelectorAll(".log-entry-message")].map((n) => n.textContent);
+  const note = () => host!.querySelector<HTMLElement>(".log-panel-import-scope");
+
+  async function focusOn(severity: "error" | "warning", expected: number, onHandled = vi.fn()) {
+    apiMock.getSessionLog.mockResolvedValue(importLog());
+    const tree = { ...baseTree(), [severity === "error" ? "errors" : "warnings"]: expected };
+    const root = await renderPanel(tree);
+    await act(async () => root.render(<LogPanel tree={tree} refreshKey={0} importFocus={{ severity }} onImportFocusHandled={onHandled} />));
+    return root;
+  }
+
+  it("lists exactly the counted import warnings and says they match", async () => {
+    const handled = vi.fn();
+    const root = await focusOn("warning", 2, handled);
+    expect(handled).toHaveBeenCalledTimes(1);
+    expect(listed().sort()).toEqual(["conflict B", "unknown element A"]);
+    expect(note()?.getAttribute("role")).toBe("region");
+    expect(note()?.textContent).toContain(enMessages["logPanel.importScope.title"]);
+    expect(note()?.querySelector('[role="status"]')?.textContent).toBe("Showing 2 import warnings, as counted in the project status.");
+    expect(document.activeElement).toBe(note());
+    await act(async () => root.unmount());
+  });
+
+  it("lists import errors for the error counter", async () => {
+    const root = await focusOn("error", 1);
+    expect(listed()).toEqual(["lost C"]);
+    expect(note()?.querySelector('[role="status"]')?.textContent).toBe("Showing 1 import error, as counted in the project status.");
+    await act(async () => root.unmount());
+  });
+
+  it("says so when the log holds fewer findings than counted", async () => {
+    const root = await focusOn("warning", 5);
+    expect(note()?.querySelector('[role="status"]')?.textContent)
+      .toBe("The project status counts 5 import warnings; this session log holds 2 matching entries.");
+    await act(async () => root.unmount());
+  });
+
+  it("says so when the log holds none of the counted findings", async () => {
+    apiMock.getSessionLog.mockResolvedValue([entry({ source: "open", message: "opened project" })]);
+    const tree = { ...baseTree(), warnings: 3 };
+    const root = await renderPanel(tree);
+    await act(async () => root.render(<LogPanel tree={tree} refreshKey={0} importFocus={{ severity: "warning" }} />));
+    expect(note()?.querySelector('[role="status"]')?.textContent)
+      .toBe("The project status counts 3 import warnings, but the session log of this server run holds none of them.");
+    expect(listed()).toEqual([]);
+    await act(async () => root.unmount());
+  });
+
+  it("compares against the project on screen, not the one that was clicked", async () => {
+    const root = await focusOn("warning", 2);
+    // Another project replaces the first while the scoped log stays open.
+    apiMock.getSessionLog.mockResolvedValue([entry({ severity: "warning", source: "import:unknown", message: "new project warning" })]);
+    await act(async () => root.render(<LogPanel tree={{ ...baseTree(), warnings: 1 }} refreshKey={0} />));
+    expect(listed()).toEqual(["new project warning"]);
+    expect(note()?.querySelector('[role="status"]')?.textContent).toBe("Showing 1 import warning, as counted in the project status.");
+    await act(async () => root.unmount());
+  });
+
+  it("returns to every entry and severity on request", async () => {
+    const root = await focusOn("warning", 2);
+    const showAll = [...note()!.querySelectorAll("button")].find((b) => b.textContent === enMessages["logPanel.importScope.showAll"])!;
+    await act(async () => showAll.click());
+    expect(note()).toBeNull();
+    expect(listed()).toHaveLength(6);
+    expect([...host!.querySelectorAll<HTMLInputElement>(".log-panel-filter input")].map((i) => i.checked)).toEqual([true, true, true]);
+    await act(async () => root.unmount());
+  });
+});

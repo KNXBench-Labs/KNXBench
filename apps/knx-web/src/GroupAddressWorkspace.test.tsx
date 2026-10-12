@@ -121,7 +121,7 @@ it("selects a matrix relationship with separate projected directions and explici
   expect(cell.title).toContain("Send"); expect(cell.title).toContain("Receive"); expect(cell.title).toContain("Future");
   expect(cell.textContent).toContain("S"); expect(cell.textContent).toContain("R"); expect(cell.textContent).toContain("?");
   expect(host.querySelector('[data-ga-absence="address:31:0|device:1:object:10"]')!.textContent).toBe("—");
-  expect(host.textContent).toContain("Linked objects only");
+  expect(host.querySelector("[data-ga-matrix-scope]")!.textContent).toContain("Columns: communication objects with project links");
   await click(cell);
   expect(host.querySelector("[data-selection]")!.textContent).toBe("30");
   const column = host.querySelector<HTMLInputElement>('[data-ga-column="device:1:object:10"]')!;

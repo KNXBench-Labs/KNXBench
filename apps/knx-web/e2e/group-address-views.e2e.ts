@@ -4,6 +4,9 @@ import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { GroupAddressNode } from "../src/bindings/GroupAddressNode";
 import type { GroupRangeNode } from "../src/bindings/GroupRangeNode";
+import type { DeviceNode } from "../src/bindings/DeviceNode";
+import type { DeviceDetail } from "../src/bindings/DeviceDetail";
+import type { ComObjectNode } from "../src/bindings/ComObjectNode";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
@@ -17,6 +20,20 @@ const range = (id: number, parent: number | null, name: string, start = "1/0/0",
   ({ id, parent, name, start, end });
 const ga = (id: number, address: string, name: string, rangeId: number | null, extra: Partial<GroupAddressNode> = {}): GroupAddressNode =>
   ({ id, address, name, range: rangeId, dpts: [], links: [], ...extra });
+const device = (id: number, count: number): DeviceNode =>
+  ({ id, name: `Fictional device ${id}`, address: `1.1.${id}`, description: null, com_object_count: count });
+const comObject = (id: number): ComObjectNode => ({
+  id, number: id % 100, name: `Object ${id}`, dpt: null, dpt_layer: null, description: null, description_layer: null,
+  is_active: true, read: false, write: true, transmit: false, update: false, communication: true, read_on_init: false,
+  links: [], activation: "NotEvaluated", channel: null, program_dpt: null, dpt_text: null, function_text: null,
+});
+// Canonical device-detail replies: device 1 also owns object 14, which nothing links to.
+const deviceDetails: Record<number, DeviceDetail> = {
+  1: { id: 1, name: "Fictional device 1", description: null, address: "1.1.1", com_objects: [10, 12, 14].map(comObject),
+    product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" } },
+};
+const fill = (template: string, values: Record<string, string | number>) =>
+  template.replace(/\{(\w+)\}/g, (_, name: string) => String(values[name]));
 
 // The projection already delivers addresses in the project's style.
 function standardTree(style = "ThreeLevel"): ProjectTree {
@@ -27,7 +44,9 @@ function standardTree(style = "ThreeLevel"): ProjectTree {
   };
   return { schema_version: 13, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
     group_address_style: style, server_incarnation: "ga-browser", project_incarnation: 1, snapshot_revision: 1,
-    installations: [{ id: 1, name: "Fictional house", topology: [], buildings: [], unassigned: [],
+    installations: [{ id: 1, name: "Fictional house", buildings: [], unassigned: [],
+      topology: [{ id: 5, name: "Fictional area", address: 1, lines: [{ id: 6, name: "Fictional line", address: 1,
+        devices: [device(1, 3), device(2, 2), device(3, 1), device(4, 2)] }] }],
       group_ranges: [range(20, null, "Lighting"), range(21, 20, "Ground floor"), range(22, null, "")],
       group_addresses: [
         ga(30, a("1/0/1", "2049"), "Kitchen ceiling", 21, { dpts: ["DPST-1-1"], links: [link(1, 10, "Send"), link(2, 11, "Receive")] }),
@@ -51,6 +70,11 @@ async function intercept(page: Page, language: Language, theme: string, initial:
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
+    else if (/^\/api\/device\/\d+$/.test(path) && method === "GET") {
+      const id = Number(path.split("/").pop());
+      if (deviceDetails[id]) body = deviceDetails[id];
+      else { status = 500; body = { error: `fictional device ${id} read failed` }; }
+    }
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
     else { state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "strict group-address fixture only" }; }
     return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
@@ -131,6 +155,29 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(both).toContainText(m["gaWorkspace.symbol.send"]);
     await expect(workspace.locator('[data-ga-cell="address:32:0|device:3:object:13"]')).toContainText("?");
     await expect(workspace.locator('[data-ga-absence="address:33:0|device:1:object:10"]')).toHaveText("—");
+    // Object inventory: nothing is read until asked; an explicit canonical read adds unlinked
+    // objects as offered (not chosen) columns, and an unavailable device stays visibly reported.
+    const status = workspace.locator("[data-ga-inventory-status]");
+    await expect(status).toHaveText(fill(m["gaWorkspace.inventoryStatus"], { loaded: 0, total: 4, notLoaded: 4, loading: 0, failed: 0 }));
+    expect(state.requests.filter(r => r.startsWith("GET /api/device/"))).toEqual([]);
+    await expect(workspace.locator('[data-ga-column="device:1:object:14"]')).toHaveCount(0);
+    // A device's state and its action stay together on one row, at every width.
+    const row = workspace.locator('[data-ga-inventory-device="2"]');
+    const [stateBox, buttonBox] = [await row.locator(".ga-inventory-state").boundingBox(), await row.locator("[data-ga-load-objects]").boundingBox()];
+    expect(Math.abs((stateBox!.y + stateBox!.height / 2) - (buttonBox!.y + buttonBox!.height / 2)), "state and action share a row").toBeLessThan(4);
+    await workspace.locator('[data-ga-load-objects="1"]').click();
+    await expect(workspace.locator('[data-ga-inventory-device="1"]')).toHaveAttribute("data-ga-inventory-state", "loaded");
+    await expect(workspace.locator("[data-ga-matrix-scope]")).toHaveText(m["gaWorkspace.matrixScopeLoaded"]);
+    const unlinked = workspace.locator('[data-ga-column="device:1:object:14"]');
+    await expect(unlinked).not.toBeChecked();
+    await unlinked.check();
+    await expect(workspace.locator('[data-ga-absence="address:30:0|device:1:object:14"]')).toHaveText("—");
+    await expect(workspace.locator(".ga-matrix-table thead [data-ga-unlinked]")).toHaveText(m["gaWorkspace.unlinkedObject"]);
+    await workspace.locator('[data-ga-load-objects="4"]').click();
+    await expect(workspace.locator('[data-ga-inventory-device="4"]')).toHaveAttribute("data-ga-inventory-state", "failed");
+    await expect(workspace.locator('[data-ga-inventory-device="4"]')).toContainText("fictional device 4 read failed");
+    await expect(status).toHaveText(fill(m["gaWorkspace.inventoryStatus"], { loaded: 1, total: 4, notLoaded: 2, loading: 0, failed: 1 }));
+    expect(state.requests.filter(r => r.startsWith("GET /api/device/"))).toEqual(["GET /api/device/1", "GET /api/device/4"]);
     await capture(page, `matrix-${language}-${width}`);
     await workspace.locator('[data-ga-cell="address:31:0|device:2:object:12"]').click();
     await chooseView(page, "tree");

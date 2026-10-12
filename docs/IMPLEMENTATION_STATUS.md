@@ -1,3 +1,80 @@
+## 2026-10-12 — Connection matrix object inventory
+
+The group-address **connection matrix** can now show a device's *unlinked*
+communication objects. Under **Device object lists** in the column chooser, each
+device has a **Load objects** action that reads its object list through the
+canonical device-detail endpoint (`GET /api/device/{id}`, same product language
+as the Inspector). Nothing is read until asked; no UI object model, no invented
+objects.
+
+- `groupAddressMatrix.ts` admits inventory columns only from current loaded
+  device details, keeps linked columns first, flags `linked`, reports linked
+  objects missing from a loaded list and counts ownership conflicts across links
+  and inventories. Scope is `linked-objects` or `linked-and-loaded`.
+- `groupAddressObjectInventory.ts` binds every reply to request generation,
+  snapshot, language and project: outdated replies are ignored, loaded devices are
+  re-read after updates (chosen columns survive the refresh), a project switch
+  forgets everything; failures and wrong-device replies are unavailable with Retry.
+- UI: scope note "linked plus loaded devices", a status line (loaded / not loaded
+  / loading / unavailable), "No project links" markers. The 12-column limit and
+  explicit selection are unchanged; loaded objects are offered, never
+  auto-selected.
+- Self-review. RED first (11 failing), five guard mutations caught. On the
+  rebased tree (main 333b2abd): Web **2,906 passed / 0 failed in 191 files**,
+  typecheck, typed e2e spec, build, production-preview browser gate 7/7 in a
+  loopback-only namespace (EN/DE, light/dark, 1440/400 px, intercepted good and
+  failing reads; 5,000-address switches 0.59–1.37 s, unchanged) plus a named
+  narrow-layout negative control (run before the rebase); docs checker and its
+  12 regressions, four xtask gates in a fresh target directory.
+  Native rename gate not rerun: no table-row selectors changed.
+- Manual chapter 04 text and the matrix screenshot updated (real debug server,
+  fictional Sample house, offline namespace, reproduced byte-identically after
+  the rebase; the other three shots were kept);
+  [provenance](evidence/group-address-views-manual-2026-10-12.json).
+  Feedback on issue #4 is still pending, so the derived numeric tree and
+  virtualization stay parked ([goal record](goals/group-address-four-views.md#follow-ups-after-the-first-publication-2026-10-12)).
+
+## 2026-10-12 — Labelled unsaved-changes dialogs, compact About, actionable project status
+
+- **Root cause of the "unlabelled" middle button:** every dialog button inherits
+  the global accent fill and `--knx-on-accent` text; the destructive answer only
+  swapped its *text* to warning ink, leaving e.g. dark amber on violet. The Quit
+  and Open/Import dialogs now share `UnsavedChangesDialog` with explicit
+  secondary/danger/primary roles (also applied to the New-project conflict), and
+  the first answer says **Keep editing** instead of **Cancel** (EN/DE).
+- **Protection gap closed:** Open/Import "Save and open" had no attempt guard,
+  so withdrawing the decision (Keep editing/Escape) while the save ran still
+  opened the other project after a successful save. It now follows the Quit
+  rule. Failed saves, a cancelled Save-As picker and a save that raced a newer
+  edit keep the project, as before; all are pinned by regressions.
+- Unsaved-changes and About panels size to their content with responsive caps;
+  About text and Close are centred, the update notice/link/pre-release warning
+  and both legal sentences are retained, long version strings wrap.
+- Overview › Project status: three labelled cards (contents, import report,
+  technical details), aligned tabular values, a worded overall import state
+  (errors / warnings / clean / *not assessed*). Non-zero import counts open the
+  existing session log narrowed to the matching `import:*` severity, report
+  match or mismatch with the counted number, and offer **Show all log entries**.
+  Zero is plain text; missing reports keep the existing explicit note. No count,
+  note or raw log text is dropped. See
+  [limits](KNOWN_LIMITATIONS.md#project-status-import-links-and-unsaved-changes-dialogs-2026-10-12).
+- Verification on the rebased candidate `0c13c962` (on top of the group-address
+  four views; inputs frozen during the gate; self-review only): build, `tsc`,
+  flow-study/theme/new dialogs typed-fixture checks pass; Vitest **2895 passed /
+  0 failed in 189 files**; new production-build Playwright config **14/14**,
+  the group-address config **7/7**, the new spec repeated x3 on the fixture
+  server **42/42**; layering, headers, anchors, ledger and corpus-gate checks
+  and `git diff --check` pass. The full fixture-server Chromium suite ran
+  **338 passed / 4 failed**: all four are `device-editor-layout.e2e.ts`
+  expecting the raw `DPST-9-1` text, and fail identically on untouched
+  `origin/main` fe09a41a (4 failed / 6 passed), i.e. a pre-existing conflict
+  with the name-first DPT display, outside this package. Earlier attempts (a
+  stopped first gate with two pin-test failures, fixed; a pre-rebase gate with
+  the same four pre-existing failures) are superseded by this run. A final rebase
+  onto the AP6 offline-edit commits changed no web file (proved byte-identical);
+  the repository gates were rerun there with a fresh target and pass. EN/DE
+  light/dark wide/narrow screenshots were inspected; native WebKitGTK was not run.
+
 ## 2026-10-12 — Offline application boundary, local AP6 prerequisite
 
 The existing bounded naming implementation now has one home in `knx-edit`;
@@ -58,6 +135,10 @@ order to the existing shared selection handler. Editing is unchanged.
   addresses), 32 existing related e2e tests and the loopback-isolated native rename
   gate 4/4 against an actual built server; repository xtask gates pass. No bus,
   ETS or private-corpus claim.
+- Manual chapter 04 carries four real screenshots of the views (fictional Sample
+  house, real server, offline namespace, source build after Alpha 9), captured by
+  their own spec so the pinned Alpha 9 set is untouched;
+  [provenance](evidence/group-address-views-manual-2026-10-12.json).
   [Goal record](goals/group-address-four-views.md) ·
   [Known limitations](KNOWN_LIMITATIONS.md#four-group-address-presentations-2026-10-12).
 

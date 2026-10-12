@@ -328,6 +328,14 @@ describe("one editing workspace", () => {
     for (const module of ["DeviceLink.tsx", "deviceList.ts", "treeUtils.ts"]) {
       expect(graph.get(module)).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     }
+    // The project-status import links add `importFindings.ts` through the
+    // Log panel: pure source/severity matching over already-fetched entries.
+    // It has no value imports, calls no API and mutates nothing.
+    const findingsGraph = valueImportGraph("importFindings.ts");
+    expect([...findingsGraph.keys()]).toEqual(["importFindings.ts"]);
+    expect(apiCallsIn(findingsGraph)).toEqual([]);
+    expect(mutatingFetchesIn(findingsGraph)).toEqual([]);
+    expect(findingsGraph.get("importFindings.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     const dptGraph = valueImportGraph("dptLabels.ts");
     expect([...dptGraph.keys()]).toEqual(["dptLabels.ts"]);
     expect(apiCallsIn(dptGraph)).toEqual([]);
@@ -377,6 +385,7 @@ describe("one editing workspace", () => {
       "gatewayPreference.ts",
       "help.ts",
       "i18n.ts",
+      "importFindings.ts",
       "languagePack.ts",
       "liveActivity.ts",
       "localJsonDownload.ts",

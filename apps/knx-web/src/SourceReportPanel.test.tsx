@@ -27,6 +27,7 @@ it("requests no bodies automatically, then reads only the explicitly selected so
   await loadCatalogue();expect(mocked.report).not.toHaveBeenCalled();
   await act(async()=>button("Read selected source report").click());
   expect(mocked.report).toHaveBeenCalledWith(id);expect(host.textContent).toContain("not merged-project compatibility");
+  expect(host.querySelector("section,h3")).toBeNull();expect(host.querySelector("h4")?.textContent).toBe("Recorded source-specific import reports");
   expect(host.querySelector('.source-report-panel [role="note"]')?.textContent).toBe("Report recorded");
   expect(host.textContent).toContain("private source data");
   await act(async()=>button("Download source report").click());

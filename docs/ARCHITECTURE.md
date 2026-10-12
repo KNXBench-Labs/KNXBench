@@ -1,5 +1,14 @@
 # Architecture
 
+## Previewed catalogue updates (2026-10-12)
+
+[ADR-0117](adr/0117-previewed-recoverable-catalogue-updates.md) adds
+`knx_productdb::update` in the product-database layer: a preview installs a
+user-supplied `.knxprod` into an in-memory copy (online backup plus the shared
+migration path) and classifies each application program; adoption re-checks a
+token, writes a backup and runs the existing transactional install; restore
+copies a validated backup back. The CLI is a thin surface. No network code.
+
 ## Opt-in MCP literal rename writer (2026-10-12)
 
 [ADR-0116](adr/0116-opt-in-mcp-name-recipe-writer.md) lets `knx-mcp` offer one

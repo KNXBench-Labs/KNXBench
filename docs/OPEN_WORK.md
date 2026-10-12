@@ -1,5 +1,14 @@
 # Open work after the 0.1 alpha
 
+## AP7 catalogue updates (12 October 2026)
+
+`knx products update` previews a manufacturer `.knxprod` against the installed
+catalogue, installs it only with the preview token after a backup, and `knx
+products restore` reverts ([ADR-0117](adr/0117-previewed-recoverable-catalogue-updates.md)).
+Open: a web UI for the same flow (Session 1 surface), any automatic update
+source (none is documented for third-party tools), and moving a device to a
+newer application version.
+
 ## AP6 opt-in MCP rename writer (12 October 2026)
 
 [ADR-0116](adr/0116-opt-in-mcp-name-recipe-writer.md): `knx-mcp

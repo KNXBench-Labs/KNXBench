@@ -1,3 +1,20 @@
+## 2026-10-12 — Previewed, recoverable catalogue updates (AP7)
+
+`knx products update <file.knxprod>` previews a manufacturer file against an
+in-memory copy of the product database and classifies every application
+program as new, newVersion (listing installed versions) or alreadyInstalled;
+`--confirm <token>` re-checks, writes a backup and installs; `knx products
+restore` copies a validated backup back ([ADR-0117](adr/0117-previewed-recoverable-catalogue-updates.md),
+[contract](contracts/catalogue-update.md)). Sources were checked first: the KNX
+Online Catalog is ETS-internal and manufacturer-managed with no documented
+third-party interface, so only user-supplied files are used.
+
+Test-first on frozen sources: product-DB suite RED 0/4 (unimplemented) then
+4/4; CLI RED (usage text) then 1/1. Four named mutants (preview writing the
+live file, token bypass, skipped backup, broken version classification) each
+fail their test, sources restored. Self-review, not independent.
+[Evidence](evidence/catalogue-update-2026-10-12.json).
+
 ## 2026-10-12 — Opt-in MCP literal rename writer (AP6)
 
 `knx-mcp --allow-name-recipe <alias>` adds `preview_name_recipe` and

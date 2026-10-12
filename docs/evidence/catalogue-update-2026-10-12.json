@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-12",
+  "scope": "AP7 previewed, recoverable catalogue updates (ADR-0117)",
+  "packageCommit": "27490eba",
+  "sources": {
+    "360020682760": {
+      "url": "https://support.knx.org/hc/en-us/articles/360020682760-Online-Catalog",
+      "updatedAt": "2026-09-16T10:08:52Z",
+      "bodySha256": "eaf60bdb5102fe0a95d2f28986b505b241bd4bf24f3bd48a8a450ebd6554d1e5"
+    },
+    "360022205039": {
+      "url": "https://support.knx.org/hc/en-us/articles/360022205039-Import-Add-products",
+      "updatedAt": "2026-10-10T08:49:18Z",
+      "bodySha256": "f2644004d27ba630e42ba19779b38bc06976e0ddb656ef658da786977c5390d1"
+    }
+  },
+  "productDb": {
+    "red": [
+      {
+        "passed": 0,
+        "failed": 4,
+        "ignored": 0
+      }
+    ],
+    "green": [
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      }
+    ],
+    "inputsFrozen": true
+  },
+  "cli": {
+    "red": [
+      {
+        "passed": 0,
+        "failed": 1,
+        "ignored": 0
+      }
+    ],
+    "redCause": "unknown products subcommand printed usage",
+    "green": [
+      {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  "mutants": [
+    {
+      "label": "preview-writes-live-file",
+      "test": "preview_reports_new_and_newer_programs_without_touching_the_file",
+      "killed": true
+    },
+    {
+      "label": "token-check-bypassed",
+      "test": "adoption_needs_the_current_token_and_keeps_existing_bindings",
+      "killed": true
+    },
+    {
+      "label": "backup-skipped",
+      "test": "adoption_needs_the_current_token_and_keeps_existing_bindings",
+      "killed": true
+    },
+    {
+      "label": "version-classification-broken",
+      "test": "preview_reports_new_and_newer_programs_without_touching_the_file",
+      "killed": true
+    }
+  ],
+  "mutantSourcesRestored": true,
+  "broadAcceptance": null,
+  "review": "active-session self-review, not independent",
+  "notClaimed": [
+    "Online Catalog access",
+    "web UI",
+    "device application upgrade",
+    "private-corpus run",
+    "release/deployment"
+  ]
+}

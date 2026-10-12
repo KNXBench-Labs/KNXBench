@@ -105,6 +105,8 @@ function mutatingFetchesIn(graph: Map<string, string>): string[] {
     for (const match of source.matchAll(/fetch\(\s*["`]([^"`]+)["`]\s*,\s*\{([^}]*)\}/g)) {
       if (/method\s*:\s*["'](?!GET)/.test(match[2])) targets.add(match[1]);
     }
+    // `api.ts`'s multipart helper always POSTs, so each of its call sites counts.
+    for (const match of source.matchAll(/postForm\(\s*["`]([^"`]+)["`]/g)) targets.add(match[1]);
   }
   return [...targets];
 }
@@ -425,12 +427,15 @@ describe("one editing workspace", () => {
       "writeBusValue",
     ]);
 
-    // `api.ts`'s own uploader and `FsPicker`'s. Both are project-mutating
-    // and both are unreachable from this window: the first is the body of
-    // `installCatalog`, absent from the list above; the second is reached
-    // only through the picker paths named earlier.
+    // `api.ts`'s own uploads (`postForm`) and `FsPicker`'s. All are POSTs
+    // and none is reachable from this window: the catalogue install and the
+    // previewed catalogue update (ADR-0118) are bodies of exports absent from
+    // the list above; the fs upload is reached only through the picker paths
+    // named earlier.
     expect(mutatingFetchesIn(graph).sort()).toEqual([
       "/api/catalog/install",
+      "/api/catalog/update/apply",
+      "/api/catalog/update/preview",
       "/api/fs/upload",
     ]);
   });

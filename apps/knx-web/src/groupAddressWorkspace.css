@@ -1,0 +1,43 @@
+/** Scoped group-address workspace geometry over the existing KNX theme tokens. */
+.ga-workspace { min-width: 0; }
+.ga-workspace .address-table-toolbar { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
+.ga-workspace .address-table-toolbar label { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+.ga-workspace .address-filter { flex: 1 1 14rem; min-width: 0; }
+.ga-workspace select { max-width: 100%; }
+.ga-workspace button:hover:not(:disabled) { transform: none; box-shadow: none; }
+.ga-workspace .ga-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: .75rem 0; }
+.ga-workspace .ga-breadcrumb span { color: var(--knx-muted); overflow-wrap: anywhere; }
+.ga-workspace .ga-range-row td { background: var(--knx-surface); font-weight: 600; }
+.ga-workspace .ga-range-row button { background: transparent; color: var(--knx-foreground); border: 0; box-shadow: none; text-align: start; }
+.ga-workspace .ga-range-row small { color: var(--knx-muted); }
+.ga-workspace .ga-column-path { display: flex; gap: .75rem; overflow-x: auto; padding-bottom: .5rem; }
+.ga-workspace .ga-column { flex: 0 0 13rem; max-height: 22rem; overflow-y: auto; background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); padding: .75rem; }
+.ga-workspace .ga-column h3 { font-size: .9rem; margin: 0 0 .6rem; overflow-wrap: anywhere; }
+.ga-workspace .ga-column ul { list-style: none; padding: 0; margin: 0; }
+.ga-workspace .ga-column button { display: flex; justify-content: space-between; gap: .75rem; width: 100%; text-align: start; background: transparent; color: var(--knx-foreground); box-shadow: none; border-color: transparent; }
+.ga-workspace .ga-column button strong { overflow-wrap: anywhere; }
+.ga-workspace .ga-column button[aria-pressed="true"] { border-color: var(--knx-accent); background: color-mix(in srgb, var(--knx-accent) 10%, var(--knx-surface)); }
+.ga-workspace .ga-issues { border: 1px solid var(--knx-border); border-left: 3px solid var(--knx-warning-color); margin: .75rem 0; padding: .6rem; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .ga-workspace .address-table-toolbar { align-items: stretch; }
+  .ga-workspace .address-table-toolbar label { flex: 1 1 10rem; }
+}
+
+.ga-workspace .ga-evidence-note { color: var(--knx-muted); font-size: .85rem; }
+.ga-workspace .ga-atlas-ranges, .ga-workspace .ga-atlas-addresses { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr)); gap: .75rem; list-style: none; padding: 0; }
+.ga-workspace .ga-atlas-ranges button, .ga-workspace .ga-atlas-addresses button { display: flex; flex-direction: column; align-items: stretch; gap: .45rem; width: 100%; height: 100%; text-align: start; color: var(--knx-foreground); background: var(--knx-surface); box-shadow: none; border: 1px solid var(--knx-border); padding: 1rem; overflow-wrap: anywhere; }
+.ga-workspace .ga-atlas-ranges small, .ga-workspace .ga-atlas-addresses small { color: var(--knx-muted); }
+.ga-workspace .ga-atlas-selected button { border-color: var(--knx-accent); outline: 1px solid var(--knx-accent); }
+.ga-workspace .ga-atlas-addresses li { position: relative; }
+.ga-workspace .ga-card-check { position: absolute; top: .4rem; right: .5rem; }
+.ga-workspace .ga-card-check input { min-height: 0; width: 1rem; height: 1rem; }
+
+.ga-workspace .ga-column-picker { margin: .75rem 0; border: 1px solid var(--knx-border); padding: .75rem; }
+.ga-workspace .ga-column-picker summary { margin-bottom: .6rem; }
+.ga-workspace .ga-column-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: .5rem; max-height: 10rem; overflow-y: auto; margin-top: .5rem; }
+.ga-workspace .ga-column-choices label { display: flex; align-items: start; gap: .4rem; font-size: .85rem; overflow-wrap: anywhere; }
+.ga-workspace .ga-column-choices input { min-height: 0; width: 1rem; height: 1rem; flex-shrink: 0; }
+.ga-workspace .ga-column-choices small, .ga-workspace .ga-matrix-table small { display: block; color: var(--knx-muted); font-size: .7rem; }
+.ga-workspace .ga-matrix-table th { min-width: 8rem; max-width: 14rem; overflow-wrap: anywhere; }
+.ga-workspace .ga-matrix-cell { display: flex; gap: .3rem; justify-content: center; width: 100%; color: var(--knx-foreground); background: var(--knx-surface); border: 1px solid var(--knx-border); box-shadow: none; }
+.ga-workspace .ga-window { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; color: var(--knx-muted); margin: .75rem 0; }

@@ -1,284 +1,116 @@
-/** Group-address table with range context, resolved DPT and linked com objects per direction. */
-import { useMemo, useState } from "react";
-import * as api from "./api";
+/** Shared group-address workspace controller; renderers never own project edits. */
+import { useEffect, useMemo, useState } from "react";
 import type { InstallationNode } from "./bindings/InstallationNode";
-import type { GroupAddressNode } from "./bindings/GroupAddressNode";
-import type { GroupAddressLinkNode } from "./bindings/GroupAddressLinkNode";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { MultiSelection, Selection } from "./selection";
 import type { ItemClickHandler } from "./multiSelection";
-import {
-  directionLabel,
-  dptText,
-  hasDptConflict,
-  linkDirectionCounts,
-  rangePath,
-  rangeWithDescendants,
-} from "./groupAddressView";
-import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
 import { useTranslate } from "./i18n";
 import { useUiLanguage } from "./uiLanguage";
 import { dptDisplay } from "./dptLabels";
+import { buildGroupAddressPresentation, selectGroupAddressRows, type GroupAddressPresentationFilter } from "./groupAddressPresentation";
+import { GROUP_ADDRESS_VIEWS, useGroupAddressView, type GroupAddressPresentationView } from "./groupAddressViewPreference";
+import { groupAddressGroupLabel, type GroupAddressWorkspaceViewProps } from "./groupAddressWorkspaceView";
+import GroupAddressTreeTable from "./GroupAddressTreeTable";
+import GroupAddressColumns from "./GroupAddressColumns";
+import GroupAddressAtlas from "./GroupAddressAtlas";
+import GroupAddressMatrix from "./GroupAddressMatrix";
+import { buildGroupAddressMatrix } from "./groupAddressMatrix";
+import GroupAddressLinks from "./GroupAddressLinks";
 import HelpTip from "./HelpTip";
-import DeviceLink from "./DeviceLink";
-
-// The real address table the workbench's group-address view was missing:
-// the tree branch already carried ranges, DPTs and link directions, while
-// the workspace showed a two-column address/name list (stage 4 brief,
-// item 1). Range context, the resolved DPT and the linked communication
-// objects all come straight from `GroupAddressNode` — extended in
-// `knx-projection` for this view rather than reconstructed here out of
-// per-device detail requests, since which objects reference an address is
-// a question about the project, not about the screen.
-//
-// Multi-select goes through the shared `useMultiSelection` handler, the
-// same one `ProjectExplorer` uses, so the single `BulkActionToolbar` in
-// `App` acts on whatever was last selected in either view. Nothing about
-// the command set is restated here.
-
-// A checkbox toggle is a ctrl-click in everything but name: it adds or
-// removes exactly one id and leaves the rest of the selection alone. The
-// shared handler takes the few `MouseEvent` fields it reads as a
-// structural type precisely so this synthetic one needs no cast.
-const CHECKBOX_CLICK = {
-  shiftKey: false,
-  ctrlKey: true,
-  metaKey: false,
-  preventDefault: () => {},
-};
-
-function LinkRow(props: {
-  ga: GroupAddressNode;
-  link: GroupAddressLinkNode;
-  onTreeUpdate: (tree: ProjectTree) => void;
-}) {
-  const { ga, link, onTreeUpdate } = props;
-  const formatGa = useGroupAddressFormat();
-  const t = useTranslate();
-  const [error, setError] = useState<string | null>(null);
-
-  // `Command::UnlinkComObject` carries no `installations[0]`-only
-  // restriction (see `Inspector.tsx`'s `GroupLinkRow`, which calls the
-  // same command from the communication object's side), so this is offered
-  // for every address. Linking from this side is not: choosing a
-  // communication object needs a device/object picker that does not exist
-  // yet, and the Inspector's existing `NewGroupLinkRow` remains the one
-  // place a link is created.
-  async function unlink() {
-    setError(null);
-    try {
-      onTreeUpdate(await api.unlinkComObject(link.com_object_id, ga.id, link.direction));
-    } catch (e) {
-      setError(api.errorMessage(e));
-    }
-  }
-
-  return (
-    <tr>
-      <td>
-        <DeviceLink deviceId={link.device_id}>{link.device_name ?? t("addressTable.unknownDevice", { id: link.device_id })}</DeviceLink>
-        {link.device_address && <small className="mono"> {link.device_address}</small>}
-      </td>
-      <td>
-        {link.com_object_name ?? t("addressTable.unnamedObject")}
-        <small className="mono"> #{link.com_object_number}</small>
-      </td>
-      <td>{directionLabel(t, link.direction)}</td>
-      <td>
-        <button
-          onClick={unlink}
-          aria-label={t("addressTable.unlinkFrom", {
-            object: link.com_object_name ?? `#${link.com_object_number}`,
-            address: formatGa(ga.address),
-          })}
-        >
-          {t("inspector.unlink")}
-        </button>
-        {error && <span className="field-error">{error}</span>}
-      </td>
-    </tr>
-  );
-}
+import { GROUP_ADDRESS_WINDOW } from "./GroupAddressWindowNotice";
+import "./groupAddressWorkspace.css";
 
 export default function GroupAddressTable(props: {
-  installation: InstallationNode;
-  selection: Selection | null;
-  multiSelection: MultiSelection | null;
-  onItemClick: ItemClickHandler;
-  onTreeUpdate: (tree: ProjectTree) => void;
-  // The range the view is scoped to, owned by `App` alongside
-  // `buildingScope` — set when a range is selected anywhere, so the tree,
-  // the breadcrumb and this table always agree on the scope.
+  installation: InstallationNode; selection: Selection | null; multiSelection: MultiSelection | null;
+  onItemClick: ItemClickHandler; onTreeUpdate: (tree: ProjectTree) => void;
   rangeScope: number | null;
+  projectContextKey?: string;
 }) {
   const { installation, selection, multiSelection, onItemClick, onTreeUpdate, rangeScope } = props;
-  const t = useTranslate();
-  const [language] = useUiLanguage();
-  const formatGa = useGroupAddressFormat();
+  const t = useTranslate(); const [language] = useUiLanguage();
+  const [view, setView] = useGroupAddressView();
   const [query, setQuery] = useState("");
-
-  const scopedIds = useMemo(
-    () => (rangeScope === null ? null : rangeWithDescendants(installation.group_ranges, rangeScope)),
-    [installation.group_ranges, rangeScope],
-  );
-
-  const needle = query.trim().toLowerCase();
-  const rows = installation.group_addresses.filter((ga) => {
-    if (scopedIds && (ga.range === null || !scopedIds.has(ga.range))) return false;
-    if (needle === "") return true;
-    return (
-      // Both notations, always: the filter must not depend on which one
-      // is on screen (`gaNotation.ts`'s `groupAddressSpellings`).
-      groupAddressMatches(ga.address, needle) ||
-      ga.name.toLowerCase().includes(needle) ||
-      ga.dpts.some((dpt) => dpt.toLowerCase().includes(needle) || dptDisplay(dpt, language).toLowerCase().includes(needle))
-    );
+  const [filter, setFilter] = useState<GroupAddressPresentationFilter>("all");
+  const [scope, setScope] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const index = useMemo(() => buildGroupAddressPresentation(installation), [installation]);
+  const matrix = useMemo(() => buildGroupAddressMatrix(index), [index]);
+  const [columnKeys, setColumnKeys] = useState<Set<string> | null>(null);
+  const [columnQuery, setColumnQuery] = useState("");
+  const [limit, setLimit] = useState(GROUP_ADDRESS_WINDOW);
+  useEffect(() => {
+    setQuery(""); setFilter("all"); setScope(null); setCollapsed(new Set());
+    setColumnKeys(null); setColumnQuery("");
+  }, [props.projectContextKey, installation.id]);
+  useEffect(() => {
+    const present = new Set(matrix.columns.map(column => column.key));
+    setColumnKeys(previous => {
+      if (previous === null) return previous;
+      const next = new Set([...previous].filter(key => present.has(key)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [matrix]);
+  const validScope = scope !== null && index.groups.has(scope) ? scope : null;
+  useEffect(() => {
+    if (scope !== validScope) setScope(validScope);
+    setCollapsed(previous => {
+      const next = new Set([...previous].filter(key => index.groups.has(key)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [index, scope, validScope]);
+  useEffect(() => { setScope(null); }, [rangeScope]);
+  // A new result set starts from a bounded window again; selection is unaffected.
+  useEffect(() => { setLimit(GROUP_ADDRESS_WINDOW); }, [query, filter, scope, rangeScope, view]);
+  const externalGroups = [...index.groups.values()].filter(group => group.range?.id === rangeScope);
+  const externalScope = rangeScope !== null && externalGroups.length === 1 ? externalGroups[0].key : null;
+  const baseResult = selectGroupAddressRows(index, { query, filter, scope: externalScope }, dpt => dptDisplay(dpt, language));
+  const baseRows = baseResult.rows;
+  const allowed = new Set(baseRows.map(row => row.key));
+  const rows = selectGroupAddressRows(index, { query, filter, scope: validScope }, dpt => dptDisplay(dpt, language)).rows.filter(row => allowed.has(row.key));
+  const selectedRows = index.rows.filter(row => selection?.kind === "group_address" && row.node.id === selection.id);
+  const selected = selectedRows.length === 1 ? selectedRows[0].node : null;
+  const shared: GroupAddressWorkspaceViewProps = { installation, index, rows, baseRows, scope: validScope,
+    onScope: setScope, selection, multiSelection, onItemClick, limit, onLimit: setLimit };
+  const toggle = (key: string) => setCollapsed(previous => {
+    const next = new Set(previous); if (next.has(key)) next.delete(key); else next.add(key); return next;
   });
-  // A shift-click range spans the rows the user can actually see, never
-  // the hidden ones a filter or a range scope just removed.
-  const visibleOrder = rows.map((ga) => ga.id);
-
-  const selected =
-    selection?.kind === "group_address"
-      ? (installation.group_addresses.find((ga) => ga.id === selection.id) ?? null)
-      : null;
-
-  function checked(ga: GroupAddressNode): boolean {
-    return multiSelection?.kind === "group_address" && multiSelection.ids.has(ga.id);
-  }
-
-  return (
-    <div className="address-table-view">
-      <div className="address-table-toolbar">
-        <input
-          type="search"
-          className="address-filter"
-          aria-label={t("addressTable.filterLabel")}
-          placeholder={t("addressTable.filterPlaceholder")}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <HelpTip labelKey="help.tip.addressTable.label" textKey="help.tip.addressTable.text" topicId="groupAddresses" />
-      </div>
-      <div className="workspace-table-wrap">
-        <table className="workspace-table address-table">
-          <thead>
-            <tr>
-              <th className="address-table-check">
-                <span className="sr-only">{t("addressTable.selectColumn")}</span>
-              </th>
-              <th>{t("workbench.address")}</th>
-              <th>{t("workbench.name")}</th>
-              <th>{t("addressTable.range")} <HelpTip labelKey="help.tip.groupRange.label" textKey="help.tip.groupRange.text" topicId="groupRanges" /></th>
-              <th>{t("addressTable.dpt")}</th>
-              <th>{t("addressTable.links")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((ga) => {
-              const counts = linkDirectionCounts(ga);
-              const path = rangePath(installation.group_ranges, ga.range);
-              return (
-                <tr
-                  key={ga.id}
-                  data-rename-kind="group_address" data-rename-id={ga.id}
-                  data-crt-surface="row"
-                  aria-selected={selection?.kind === "group_address" && selection.id === ga.id}
-                  className={checked(ga) ? "row-multi-selected" : undefined}
-                >
-                  <td className="address-table-check">
-                    <input
-                      type="checkbox"
-                      checked={checked(ga)}
-                      aria-label={`${formatGa(ga.address)} ${ga.name}`}
-                      onChange={() =>
-                        onItemClick(
-                          CHECKBOX_CLICK,
-                          "group_address",
-                          ga.id,
-                          { kind: "group_address", id: ga.id },
-                          visibleOrder,
-                        )
-                      }
-                    />
-                  </td>
-                  <td className="mono ga-address">
-                    <button
-                      className="table-select"
-                      data-crt-activate=""
-                      onClick={(e) =>
-                        onItemClick(
-                          e,
-                          "group_address",
-                          ga.id,
-                          { kind: "group_address", id: ga.id },
-                          visibleOrder,
-                        )
-                      }
-                    >
-                      {formatGa(ga.address)}
-                    </button>
-                  </td>
-                  <td>{ga.name}</td>
-                  <td>{path ?? t("addressTable.noRange")}</td>
-                  <td className={hasDptConflict(ga) ? "mono dpt-conflict" : "mono"}>
-                    {dptText(t, ga, language)}
-                    {hasDptConflict(ga) && (
-                      <small className="dpt-conflict-note"> {t("addressTable.dptConflict")}</small>
-                    )}
-                  </td>
-                  <td>
-                    {counts.total === 0
-                      ? t("addressTable.noLinks")
-                      : t("addressTable.linkCounts", {
-                          senders: counts.senders,
-                          receivers: counts.receivers,
-                        })}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {rows.length === 0 && (
-          <p role="status">
-            {installation.group_addresses.length === 0
-              ? t("workbench.emptyStructure")
-              : t("addressTable.noMatches")}
-          </p>
-        )}
-      </div>
-      {selected && (
-        <section className="address-links-panel" aria-label={t("addressTable.links")}>
-          <h2>{t("addressTable.linksFor", { address: formatGa(selected.address) })}</h2>
-          {selected.links.length === 0 ? (
-            <p role="status">{t("addressTable.noLinksYet")}</p>
-          ) : (
-            <table className="workspace-table">
-              <thead>
-                <tr>
-                  <th>{t("addressTable.participant")}</th>
-                  <th>{t("addressTable.function")}</th>
-                  <th>{t("addressTable.direction")}</th>
-                  <th>
-                    <span className="sr-only">{t("inspector.unlink")}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {selected.links.map((link) => (
-                  <LinkRow
-                    key={`${link.com_object_id}-${link.direction}`}
-                    ga={selected}
-                    link={link}
-                    onTreeUpdate={onTreeUpdate}
-                  />
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      )}
+  return <div className="address-table-view ga-workspace" onKeyDown={e => {
+    if (!(e.target instanceof HTMLButtonElement) || !e.target.hasAttribute("data-ga-nav")) return;
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+    e.preventDefault(); e.stopPropagation();
+    const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>("button[data-ga-nav]:not(:disabled)")];
+    const position = buttons.indexOf(e.target);
+    const target = buttons[e.key === "Home" ? 0 : e.key === "End" ? buttons.length - 1 : Math.max(0, Math.min(buttons.length - 1, position + (e.key === "ArrowDown" ? 1 : -1)))];
+    target?.focus();
+    if (e.shiftKey && target?.hasAttribute("data-ga-select")) {
+      const id = Number(target.dataset.gaSelect);
+      const order = [...e.currentTarget.querySelectorAll<HTMLButtonElement>("button[data-ga-select]:not(:disabled)")].map(button => Number(button.dataset.gaSelect));
+      onItemClick(e, "group_address", id, { kind: "group_address", id }, order);
+    }
+  }}>
+    <div className="address-table-toolbar">
+      <input type="search" className="address-filter" aria-label={t("addressTable.filterLabel")}
+        placeholder={t("addressTable.filterPlaceholder")} value={query} onChange={e => setQuery(e.target.value)} />
+      <label>{t("gaWorkspace.presentation")}<select data-ga-view value={view}
+        onChange={e => setView(e.target.value as GroupAddressPresentationView)}>
+        {GROUP_ADDRESS_VIEWS.map(choice => <option key={choice} value={choice}>{t(`gaWorkspace.view.${choice}`)}</option>)}
+      </select></label>
+      <label>{t("gaWorkspace.filter")}<select value={filter} onChange={e => setFilter(e.target.value as GroupAddressPresentationFilter)}>
+        {(["all", "untyped", "conflict", "linked", "unlinked"] as const).map(choice => <option key={choice} value={choice}>{t(`gaWorkspace.filter.${choice}`)}</option>)}
+      </select></label>
+      <HelpTip labelKey="help.tip.addressTable.label" textKey="help.tip.addressTable.text" topicId="groupAddresses" />
     </div>
-  );
+    <nav className="ga-breadcrumb" aria-label={t("addressTable.range")}>
+      {validScope && <button type="button" onClick={() => setScope(null)}>{t("gaWorkspace.all")}</button>}
+      <span data-ga-current-scope aria-current="location">{validScope ? groupAddressGroupLabel(t, index.groups.get(validScope)!) : t("gaWorkspace.all")}</span>
+    </nav>
+    {index.issues.length > 0 && <details className="ga-issues"><summary>{t("gaWorkspace.problems", { count: index.issues.length })}</summary>
+      <ul>{index.issues.map((issue, i) => <li key={i}>{t(`gaWorkspace.issue.${issue.code}`)} · {issue.key} → #{issue.reference}</li>)}</ul>
+    </details>}
+    {rangeScope !== null && externalGroups.length !== 1 && <p role="status">{t("gaWorkspace.scopeUnavailable")}</p>}
+    {view === "columns" ? <GroupAddressColumns {...shared} /> : view === "atlas" ? <GroupAddressAtlas {...shared} /> : view === "matrix" ? <GroupAddressMatrix {...shared}
+      matrix={matrix} columnKeys={columnKeys} onColumns={setColumnKeys} columnQuery={columnQuery} onColumnQuery={setColumnQuery} /> : <GroupAddressTreeTable {...shared}
+      collapsed={collapsed} onToggle={toggle} includeEmpty={query.trim() === "" && filter === "all" && validScope === null && externalScope === null} />}
+    {selected && <GroupAddressLinks ga={selected} onTreeUpdate={onTreeUpdate} />}
+  </div>;
 }

@@ -52,6 +52,7 @@ Last updated: 2026-10-10 00:01 CEST
 | Device names | Properties/F2; name-only edits | Main-only |
 | Group addresses | Create/delete; validation | alpha.6 |
 | Group-address names | Properties/F2; name-only edits | Main-only |
+| Group-address presentations | Tree table, column browser, address atlas, linked-object matrix; shared selection | Main-only |
 | Address styles | Free/two-level/three-level | alpha.6 |
 | Group ranges | Structural editing | alpha.6 |
 | Communication objects | Values/provenance inspection | alpha.6 |

@@ -10,7 +10,8 @@ debug device-control switches are not appearance preferences or hardware permiss
 
 KNXBench's settings are grouped into **Appearance**, **Language & data**,
 **Autosave**, **Bus & diagnostics**, and a separate **Debug · device control**
-section.
+section. The current source also adds **Updates**; that section is not in the
+already-published Alpha.9 builds.
 Ordinary changes apply without a Save button or restart. The Debug switch is
 shown as enabled only after the server persists and reads it back.
 
@@ -334,6 +335,54 @@ confirmation, not a permission: the device-specific phrases stay required.
 
 Settings also shows translated diagnostics when an older settings record was
 migrated or adopted, a newer file was refused, or a damaged file was set aside.
+
+## Release notifications (newer source, not Alpha.9)
+
+**Goal:** see when a newer KNXBench release is available and choose whether
+checks happen automatically. No project or bus connection is required; release
+checking needs internet access and a usable settings record from the server.
+This feature is in current source, not the already-published Alpha.9 AppImage
+or Docker image.
+
+1. Open **Settings** from the gear button or the command palette.
+2. In **Updates**, choose **Automatically check for new releases**. It is on
+   by default; turn it off to stop future automatic checks. The preference is
+   stored in the server's settings record, not in your project.
+3. To check deliberately, open **File → About KNXBench…** and press
+   **Check for updates**. Manual checking remains available with automatic
+   checking off, provided the settings record is usable.
+
+**Expected result:** a newer eligible version produces an informational toast
+in the bottom-right corner with **Release details on GitHub**. The popup lasts
+nine seconds; × dismisses it sooner. Each version is announced once per
+workbench session. The release link opens that version's official GitHub page;
+the separate message action opens the retained notification details as usual.
+The About dialog keeps the observed release information after the popup expires.
+
+Automatic checking runs after startup settings have loaded, then at most hourly
+while the workbench is visible. Returning to a visible window can run a due check,
+not one on every focus. Alpha/beta/release-candidate builds consider newer
+prereleases and stable releases; stable builds exclude prereleases. The check
+compares semantic versions against the running backend, not the frontend bundle.
+
+**Privacy:** your browser or desktop webview contacts GitHub directly. GitHub
+receives its public IP address and ordinary HTTP/browser metadata; no KNX project,
+login credential or installed product information is sent. Disabling checks
+cannot retract a request already sent. The setting is shared by clients using
+the same server record.
+
+**If a check fails:** offline operation, GitHub rate limits or an unknown running
+version do not block engineering. About reports **Update check unavailable**, not
+that your build is up-to-date. A previously observed release link can remain
+visible beside that status. Refused/unacknowledged settings do not authorize an
+external check. No request is made while the application is closed.
+
+This is a release notification, not an installer, download verifier or assurance
+that an upgrade can read every project. Read the release notes and keep independent
+backups before replacing the AppImage or Docker image. Follow the
+[installation guide](../getting-started/04-installation.md#release-notifications-newer-source-not-alpha9)
+and [Docker update procedure](11-web-and-docker.md#updating-a-docker-hub-installation).
+[Detailed bounds and evidence](../../contracts/RELEASE_NOTIFICATIONS.md).
 
 ## Where settings are stored
 

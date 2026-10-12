@@ -96,11 +96,23 @@ the corresponding source. See [`LICENSE`](../../../LICENSE) in the repository ro
 
 **Does KNXBench send anything over the network on its own?**
 
-Only what you tell it to: talking to a KNX gateway you configured, and — if you build the
-web/Docker server — serving the HTTP API you deployed it as. There is no telemetry,
-analytics, or update check anywhere in the code. The debug-report feature builds a
-redacted diagnostic bundle locally, on request, and does not send it anywhere; what you do
-with the resulting file is up to you.
+Yes. The workbench can discover KNXnet/IP gateways during startup. The current
+source also checks public GitHub releases after startup settings load and hourly
+while visible, unless **Settings → Updates → Automatically check for new releases**
+is off. This release-check feature is not in the already-published Alpha.9 builds.
+**File → About KNXBench… → Check for updates** is a separate explicit check.
+
+For release checking, GitHub receives the client's public IP address and ordinary
+HTTP/browser metadata, not project data, login credentials or installed product
+information. No release is downloaded or installed automatically, and a failed
+check does not block editing. See
+[Release notifications and privacy](../user-guide/09-settings-and-appearance.md#release-notifications-newer-source-not-alpha9).
+
+There is no usage analytics/telemetry feature. Debug reports and support-gap
+exports are prepared locally on request; they are not automatically transmitted.
+The server serves its deployed HTTP API, and explicitly started bus operations
+contact the chosen gateway. Automatic discovery is not permission to write to a
+device.
 
 **Who builds KNXBench?**
 

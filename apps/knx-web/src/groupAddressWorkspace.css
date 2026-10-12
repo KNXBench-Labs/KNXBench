@@ -41,3 +41,12 @@
 .ga-workspace .ga-matrix-table th { min-width: 8rem; max-width: 14rem; overflow-wrap: anywhere; }
 .ga-workspace .ga-matrix-cell { display: flex; gap: .3rem; justify-content: center; width: 100%; color: var(--knx-foreground); background: var(--knx-surface); border: 1px solid var(--knx-border); box-shadow: none; }
 .ga-workspace .ga-window { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; color: var(--knx-muted); margin: .75rem 0; }
+.ga-workspace .ga-inventory-devices { margin-top: .75rem; border-top: 1px solid var(--knx-border); padding-top: .5rem; }
+.ga-workspace .ga-inventory-devices ul { list-style: none; padding: 0; margin: .25rem 0 0; max-height: 10rem; overflow-y: auto; display: grid; gap: .35rem; }
+.ga-workspace .ga-inventory-devices li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .85rem; overflow-wrap: anywhere; padding-bottom: .35rem; border-bottom: 1px solid var(--knx-border); }
+.ga-workspace .ga-inventory-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; margin-inline-start: auto; }
+.ga-workspace .ga-inventory-devices li > span:first-child { flex: 1 1 12rem; min-width: 0; }
+.ga-workspace .ga-inventory-devices small { display: block; color: var(--knx-muted); font-size: .7rem; }
+.ga-workspace .ga-inventory-state { color: var(--knx-muted); }
+.ga-workspace [data-ga-inventory-state="failed"] .ga-inventory-state { color: var(--knx-error-color); }
+.ga-workspace .ga-inventory-devices button { min-height: 0; padding: .2rem .6rem; }

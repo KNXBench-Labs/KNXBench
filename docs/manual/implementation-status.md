@@ -16,6 +16,17 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Clearer dialogs and an actionable project status (12 October 2026 source)
+
+The unsaved-changes dialogs (Quit, Open/Import, New project) label all three
+answers by what they do — **Keep editing**, **Discard …**, **Save and …** — with
+explicit colours in every palette and a content-sized panel. A save-first that you
+withdraw while it runs no longer opens the other project afterwards. About is a
+compact, centred card that keeps version, licence, update notice and legal text.
+The Overview's project status uses three labelled cards; non-zero import counts open
+the matching session-log entries ([limits](../KNOWN_LIMITATIONS.md#project-status-import-links-and-unsaved-changes-dialogs-2026-10-12)).
+This is newer than the published Alpha.9 package, not a deployed update.
+
 ## Name-first DPTs and monitor selection (12 October 2026 source)
 
 Current source reuses the 454-ID EN/DE display vocabulary for **Name (main.sub)**

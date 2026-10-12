@@ -279,6 +279,13 @@ with "Socket path too long", point `TMPDIR` at a short directory. Read every cha
 picture before committing it, and update the alt text and the sentence around it in the
 same change.
 
+The four group-address presentation screenshots are newer than the pinned Alpha 9
+set, so they have their own spec and config. Same build, same namespace, only the
+config name differs: `npx playwright test -c playwright.manual-group-addresses.config.ts`.
+Their provenance lives in
+[`docs/evidence/group-address-views-manual-2026-10-12.json`](../../evidence/group-address-views-manual-2026-10-12.json),
+not in the Alpha 9 media manifest.
+
 ## What to expect
 
 One maintainer, evenings and weekends, a project in its `0.1.0-alpha` series with a public

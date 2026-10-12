@@ -56,6 +56,12 @@ with or without project links.
 
 ### Four presentations of the same addresses
 
+**Source builds after Alpha 9 only.** The published Alpha 9 image still shows the
+single flat table described above; the four presentations arrive with the next
+release. The four screenshots in this section come from such a source build (the
+status bar still reads `v0.1.0-alpha.9` because the version number only moves at
+release time); every other screenshot in this manual is Alpha 9.
+
 The **Presentation** select switches between four views. They all show the same
 addresses, the same search, filter and range scope, and the same selection: select
 an address in one view, switch, and it is still selected. Editing always happens in
@@ -66,7 +72,25 @@ the properties pane and the existing commands; no view edits on its own.
 | **Tree table** (default) | The table above, grouped by the stored group ranges. Click a range heading to collapse it; Shift+click selects only rows you can see. |
 | **Column browser** | Drilling down range by range, one column per level, with the addresses of the chosen range below. |
 | **Address atlas** | Cards for ranges and addresses with counts, DPT and number of project links. It is navigation through stored ranges, not a map of the physical topology. |
-| **Connection matrix** | Group addresses against the communication objects linked to them. `S` is a projected Send link, `R` a projected Receive link (German UI: `S`/`E`), `?` an unknown direction (exact value in the cell details), `—` no projected link. |
+| **Connection matrix** | Group addresses against communication objects: the ones linked to them, plus every object of the devices whose object list you load. `S` is a projected Send link, `R` a projected Receive link (German UI: `S`/`E`), `?` an unknown direction (exact value in the cell details), `—` no projected link. |
+
+![Source build after Alpha 9, Porcelain: the tree table groups the fictional Sample house by its stored ranges Lighting, Switching, Status and Blinds; Status is collapsed and shows its count, and the selected Kitchen light 0/0/2 is highlighted and open in Properties](../../assets/screenshots/porcelain-ga-view-tree.png)
+
+*Tree table, the default. Range headings fold away; the count stays visible.*
+
+![Source build after Alpha 9, Porcelain: the column browser with a Range column listing Lighting, Blinds and Heating, a Lighting column listing Switching and Status, the breadcrumb All ranges / Switching, and the four Switching addresses below with Kitchen light still selected](../../assets/screenshots/porcelain-ga-view-columns.png)
+
+*Column browser: one column per range level. The selection came along from the tree.*
+
+![Source build after Alpha 9, Porcelain: the address atlas in the Switching range showing four address cards with DPT Switch (1.001) and their project link counts; the Kitchen light card is outlined as selected, with the Links panel below](../../assets/screenshots/porcelain-ga-view-atlas.png)
+
+*Address atlas: the same scope as cards. It is stored-range navigation, not a floor plan.*
+
+![Source build after Alpha 9, Porcelain: the connection matrix with its scope note for linked objects plus loaded devices, the S/R/?/— legend, the status line Object lists: 1 of 8 devices with objects loaded · 7 not loaded · 0 loading · 0 unavailable, a folded chooser reading 3 of 23 object columns selected (maximum 12), and a grid with two linked columns (Living room ceiling light 0/0/1 has R under Switch actuator ground floor, Channel A and S under Push button living room) and a third column, Switch actuator ground floor, Channel D: Switch #6, marked No project links with dashes all the way down](../../assets/screenshots/porcelain-ga-view-matrix.png)
+
+*Connection matrix: who sends and who receives, as planned in the project. The third
+column comes from loading the actuator's object list: Channel D is not linked
+anywhere yet. The dashes are "no link", not "silence on the bus".*
 
 The grouping always follows the ranges stored in the project; KNXBench never
 invents main or middle groups from address numbers, so a Free-style or two-level
@@ -76,10 +100,19 @@ and addresses whose range no longer exists appear under **Unresolved membership*
 counted in a **presentation findings** note. Addresses whose ID is ambiguous are
 visible but cannot be selected for editing.
 
-The matrix only knows objects that are linked to at least one group address — it
-says so above the grid. An object without links is not listed, and an empty cell
-means "no link in the project", never "no traffic on the bus". Pick up to 12
-object columns with the column chooser.
+Out of the box, the matrix shows the objects that are linked to at least one group
+address, and the note above the grid says so. To see a device's unlinked objects
+too, open the column chooser and press **Load objects** next to the device under
+**Device object lists**. KNXBench then reads that device's object list (the same
+read the device view uses) and offers all of its objects as columns; the ones
+without links are marked **No project links**. Nothing is read until you ask, and
+loading only *offers* columns: you still pick up to 12 yourself. A status line
+counts the devices whose object list is loaded, not loaded, loading or
+unavailable. If a read fails, the device shows **Unavailable** with the reason and
+a **Retry** button; it is never quietly treated as "no objects". After any change
+to the project, loaded devices are read again, and opening another project
+forgets them. An empty cell means "no link in the project", never "no traffic on
+the bus".
 
 Large projects draw 500 matching addresses at first, with **Show 500 more** and
 **Show all** below the list; the rest is loaded, just not drawn yet.

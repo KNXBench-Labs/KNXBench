@@ -1,5 +1,17 @@
 # Known limitations
 
+## Project-status import links and unsaved-changes dialogs (2026-10-12)
+
+The Overview's **Show in log** links open the existing session log narrowed to
+`import:*` entries of the chosen severity; there is no separate stored report
+view. That log lives only for the current server run and keeps at most 1000
+entries, so after a restart, a native `.knxdb` open (no historical report) or a
+very large import it can hold fewer findings than counted. The log then states
+both numbers instead of pretending they match. A zero count is deliberately not a
+link. The desktop **Quit** dialog shares the component, labels and protection
+tested here, but was not exercised in a native WebKitGTK window; browser evidence
+covers the identical Open/Import and New-project variants.
+
 ## Offline service boundary is not MCP authorization (2026-10-12)
 
 [ADR-0115](adr/0115-offline-application-edit-boundary.md)'s small offline application
@@ -9678,14 +9690,25 @@ focused synthetic witness, not universal ETS/corpus/hardware certification.
 
 ## Four group-address presentations (2026-10-12)
 
-The connection matrix only knows communication objects that are linked to at
-least one group address (reverse links in the project projection). Unlinked
-objects are not listed, and an empty cell means "no project link", never "no bus
-traffic". Admitting a complete object inventory needs the canonical device
-detail/catalogue reads and is not done. At most 12 object columns are shown at a
-time. The atlas is stored-range navigation, not a topology or floor-plan map; there
+The connection matrix lists communication objects that are linked to at least
+one group address (reverse links in the project projection), plus every object
+of the devices whose object list the user explicitly loads through the canonical
+device-detail read (`GET /api/device/{id}`). Devices that are not loaded
+contribute only their linked objects, so the matrix is not a whole-project object
+inventory unless every device has been loaded; the UI states this scope and
+counts loaded, not loaded, loading and unavailable devices. There is no "load all
+devices" bulk action. Loaded lists are re-read after every project update (one
+request per loaded device) and forgotten on a project switch; a failed read, or a
+reply that names a different device, is shown as unavailable and never treated as
+absence. A linked object missing from its device's loaded list is reported, not
+hidden. An empty cell means "no project link", never "no bus traffic". At most 12
+object columns are shown at a time, chosen explicitly; loaded objects are offered,
+never auto-selected. The atlas is stored-range navigation, not a topology or
+floor-plan map; there
 is no geometric zoom/pan, live bus overlay, layout persistence or direct matrix
 editing. Large lists draw 500 rows at a time (explicit "show more/all"); this is
 a render window, not virtualization, and "show all" on very large projects is
 correspondingly slow. Keyboard arrow navigation covers the view's navigable
-buttons; no full accessibility certification is claimed.
+buttons; no full accessibility certification is claimed. Grouping follows stored
+ranges only: a project without stored ranges stays flat (no derived 2-/3-level
+tree from address numbers; parked until feedback asks for it).

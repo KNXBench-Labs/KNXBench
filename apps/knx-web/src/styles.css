@@ -655,7 +655,6 @@ main {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .dashboard-stats,
   .com-object-list li {
     transition: transform var(--knx-transition-duration) var(--knx-motion-easing),
       border-color var(--knx-transition-duration) var(--knx-motion-easing),
@@ -1128,41 +1127,7 @@ main {
   background: color-mix(in srgb, var(--knx-accent) 20%, transparent);
 }
 
-.dashboard {
-  flex: 1 1 60%;
-  min-width: 0;
-}
-
-.dashboard-stats {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.35rem 1rem;
-  margin: 0.75rem 0;
-  background: var(--knx-surface);
-  border: 1px solid var(--knx-border);
-  border-radius: var(--knx-radius-card);
-  padding: 1rem 1.25rem;
-}
-
-.dashboard-stats dt {
-  opacity: 0.8;
-}
-
-.dashboard-stats dd {
-  margin: 0;
-  font-weight: bold;
-}
-
-.dashboard-issues {
-  margin-top: 1.5rem;
-  border-top: 1px solid var(--knx-accent);
-  border-left: 1px solid var(--knx-accent);
-  padding: 0.75rem 1rem;
-}
-
-.dashboard-errors {
-  color: var(--knx-error-color);
-}
+/* The Overview's project status lives in Dashboard.css. */
 
 /* `LogPanel` is a centre-pane view in the workbench shell: `App.tsx`
    swaps it into `.workbench-center`, which is a block box, so the
@@ -1229,6 +1194,30 @@ main {
   color: var(--knx-muted);
   margin: 0.15rem 0 0.5rem;
 }
+
+/* Opened from the Overview's import counters: says which entries are
+   listed, whether they match the counted number, and how to see all. */
+.log-panel-import-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--knx-accent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--knx-accent) 6%, var(--knx-surface));
+}
+.log-panel-import-scope > div { min-width: 0; flex: 1 1 18rem; }
+.log-panel-import-scope p { margin: 0.15rem 0 0; overflow-wrap: anywhere; }
+.log-panel-import-scope-clear {
+  background: var(--knx-surface);
+  color: var(--knx-foreground);
+  border: 1px solid var(--knx-border);
+  box-shadow: none;
+}
+.log-panel-import-scope-clear:hover:not(:disabled) { transform: none; box-shadow: none; }
 
 .log-panel-list {
   list-style: none;
@@ -3213,14 +3202,32 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 /* T28/F5 — About. Two checkable facts in a definition list, then the two
    sentences this project is obliged to keep saying out loud. Narrower than
    the help panel and taller than nothing: it is a card, not a document. */
-.search-panel.about-dialog { width: min(34rem, 92vw); padding: 1rem 1.15rem; }
-.about-dialog h2 { margin: 0 0 12px; font-size: 20px; }
-.about-dialog-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 0 0 16px; }
+/* About: a short, centred card. `align-self` stops the stretching overlay
+   flexbox from pulling it to the 70vh cap; the height bound below lets a
+   long update notice or translation scroll instead of being cut off. */
+.search-panel.about-dialog {
+  align-self: flex-start;
+  width: fit-content;
+  min-width: min(20rem, calc(100vw / var(--app-ui-scale, 1) - 2rem));
+  max-width: min(32rem, calc(100vw / var(--app-ui-scale, 1) - 2rem));
+  max-height: calc(100dvh / var(--app-ui-scale, 1) - 10vh - 1rem);
+  padding: 1.25rem 1.5rem 1rem;
+  text-align: center;
+}
+.about-dialog h2 { margin: 0 0 14px; font-size: 20px; }
+.about-dialog-facts { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 2px; margin: 0 0 14px; }
 .about-dialog-facts dt { color: var(--knx-muted); font-size: 12px; }
-.about-dialog-facts dd { margin: 0; font-size: 13px; }
+.about-dialog-facts dd { margin: 0 0 8px; font-size: 13px; max-width: 100%; }
+.about-dialog-facts dd:last-child { margin-bottom: 0; }
 .about-dialog-version { font-family: var(--knx-font-mono); overflow-wrap: anywhere; }
-.about-dialog p { margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--knx-muted); max-width: 60ch; }
-.about-dialog-footer { display: flex; justify-content: flex-end; margin-top: 14px; border-top: 1px solid var(--knx-border); padding-top: 12px; }
+.about-dialog p { margin: 0 auto 8px; font-size: 13px; line-height: 1.55; color: var(--knx-muted); max-width: 46ch; overflow-wrap: anywhere; }
+.about-dialog .release-update-panel { margin: 0 0 14px; padding: 10px 0 2px; border-block: 1px solid var(--knx-border); overflow-wrap: anywhere; }
+.about-dialog .release-update-panel p { color: var(--knx-foreground); }
+.about-dialog .release-update-panel a { display: inline-block; margin: 0 0 8px; color: var(--knx-accent); }
+.about-dialog .release-update-panel button { background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); box-shadow: none; }
+.about-dialog button:hover:not(:disabled) { transform: none; }
+.about-dialog-footer { display: flex; justify-content: center; margin-top: 14px; border-top: 1px solid var(--knx-border); padding-top: 12px; }
+.about-dialog-footer button { min-width: 8rem; }
 .search-panel.programming-consent-dialog { width: min(36rem, 92vw); padding: 1rem 1.15rem; }
 .programming-consent-dialog h2 { margin: 0 0 12px; font-size: 20px; }
 .programming-consent-target { font-weight: 600; }
@@ -3270,12 +3277,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 /* T28/F4 — the question asked before unsaved work goes in the bin. The
    discarding button is coloured as the warning it is; Cancel stays plain
    and comes first, which is also where the focus lands. */
-.search-panel.quit-confirm { width: min(30rem, 92vw); padding: 1rem 1.15rem; }
-.quit-confirm h2 { margin: 0 0 10px; font-size: 18px; }
-.quit-confirm p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; }
-.quit-confirm-hint { color: var(--knx-muted); }
-.quit-confirm-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
-.quit-confirm-discard { color: var(--knx-warning-color) !important; }
+/* The unsaved-changes dialog styles live in UnsavedChangesDialog.css. */
 
 /* Debug-report content uses the shared resizable dialog's initial dimensions;
    this width remains the fallback if the shell is ever rendered without an

@@ -237,8 +237,9 @@ importer meets falls into one of these buckets:
 
 You see the result in three places:
 
-1. **The Overview**, where import errors and warnings appear as counts alongside the
-   project's other numbers.
+1. **The Overview**, where import errors and warnings appear as counts in the
+   *Import report* card. In newer source a non-zero count has a **Show in log** link
+   that opens the Log narrowed to exactly those import entries.
 2. **The Import: N errors · M warnings button** in the strip under the header, which
    takes you there.
 3. **The Log**, which carries one entry per finding: one per import error, one per
@@ -291,13 +292,15 @@ separate: saving keeps that history but clears the modified state; undoing edits
 to the baseline is also clean. A failed save does not clear the modified state.
 
 In the desktop build, quitting with a modified project asks first, and offers
-**Cancel**, **Quit without saving** or **Save and quit**. In the web build there is no
+**Keep editing**, **Quit without saving** or **Save and quit**. In the web build there is no
 Quit item — a browser tab cannot close itself — so nothing intercepts a closed tab.
 
 Opening or importing another project while the current one has unsaved edits asks the
-same way (since 2026-10-06): **Cancel**, **Discard changes and open** or **Save and
-open**. "Save and open" opens the other project only after a save that left the current
-one clean; the server refuses the replacement too, so a script calling the API cannot
+same way (since 2026-10-06): **Keep editing**, **Discard changes and open** or **Save
+and open**. (Before 2026-10-12 the first answer was labelled **Cancel**, and the middle
+one could render without a readable label.) "Save and open" opens the other project
+only after a save that left the current one clean, and only if you did not withdraw
+the decision with **Keep editing** or Escape while the save was running; the server refuses the replacement too, so a script calling the API cannot
 discard edits by accident either (`409`, kind `projectUnsavedChanges`, until it resends
 with `discardChanges: true`).
 

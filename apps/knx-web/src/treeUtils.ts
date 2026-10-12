@@ -31,18 +31,25 @@ export function flattenBuildingParts(
 // search index lists it once.
 export function collectDevices(tree: ProjectTree): Map<number, DeviceNode> {
   const devices = new Map<number, DeviceNode>();
+  for (const inst of tree.installations) collectInstallationDevices(inst, devices);
+  return devices;
+}
+
+/** The same deduplicated walk as `collectDevices`, for one installation. */
+export function collectInstallationDevices(
+  inst: InstallationNode,
+  devices = new Map<number, DeviceNode>(),
+): Map<number, DeviceNode> {
   const addAll = (list: DeviceNode[]) => {
     for (const d of list) devices.set(d.id, d);
   };
-  for (const inst of tree.installations) {
-    for (const area of inst.topology) {
-      for (const line of area.lines) addAll(line.devices);
-    }
-    for (const { node } of flattenBuildingParts(inst.buildings, [])) {
-      addAll(node.devices);
-    }
-    addAll(inst.unassigned);
+  for (const area of inst.topology) {
+    for (const line of area.lines) addAll(line.devices);
   }
+  for (const { node } of flattenBuildingParts(inst.buildings, [])) {
+    addAll(node.devices);
+  }
+  addAll(inst.unassigned);
   return devices;
 }
 

@@ -40,6 +40,21 @@ None of the six branches exists on the remote. Committed work uses the
 | `audit-findings-20261011` | HEAD on main; uncommitted residue | 13 files, +757/−27 | 7 on main, 6 superseded by main | 4 add/add + 1 content | **Drop** |
 | `native-import-diagnostics-20261011` | HEAD on main; uncommitted residue | 14 files, +323/−4 | 10 on main, 4 present on main in rewritten form | 1 add/add + 3 content | **Drop** |
 
+## Owner decisions (2026-10-12)
+
+Recorded the same day; do not reopen without a new decision.
+
+| Package | Decision | Carried out |
+| --- | --- | --- |
+| native-evidence | Adopt (unchanged recommendation) | Waits for the web lock |
+| ux-feedback | Adopt AP1/2/3/5, **drop AP4** | Waits for the web lock; AP4 is left out at adoption |
+| functions-sites | **Keep as WIP** | Whole residue committed as `wip(functions)` `1154b72f` on local branch `feature/functions-sites-20261009` (91 files, each byte-checked against the backup; unreviewed, unpushed). Worktree removed |
+| import-lifecycle | **Archive** | Preflight residue kept as a patch in the local prune backup. Worktree and branch removed |
+| audit-findings, native-import-diagnostics | **Drop** | Worktrees and branches removed after backup |
+
+The local branches of all 24 retired worktrees were deleted afterwards. Each SHA
+was checked as an ancestor of `origin/main` and deleted with an expected-SHA guard.
+
 ## native-evidence-20261011
 
 **Delivers.** Seven locally committed slices on the import-lifecycle commit

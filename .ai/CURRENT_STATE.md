@@ -1,4 +1,19 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 17:13
+- **Completed:** Applied the owner decisions from the parked-work triage. Docs-only package; no app code changed.
+  - **functions-sites:** kept as a local WIP: `wip(functions)` `1154b72f` on `feature/functions-sites-20261009`, 91 files byte-checked against the backup, unreviewed and unpushed. Worktree removed.
+  - **import-lifecycle:** archived as a patch in the local prune backup.
+  - **audit-findings and native-import-diagnostics:** dropped.
+  - **ux-feedback AP4:** dropped by user decision.
+  - The three retired worktrees are removed, each backed up first in `KNXBench.backups/2026-10-12-worktree-prune/`.
+  - The 24 local branches of all retired worktrees are deleted, each checked as an ancestor of main and deleted with an expected-SHA guard.
+  - The decisions are recorded in the triage note and OPEN_WORK §2/§5. Log section appended.
+- **Pending/Next Steps:** After the web-integration session finishes packages 3 and 4, adopt native-evidence first, then ux-feedback (AP1/2/3/5, renumber its ADR-0112), each under the web lock with a full gate. Still undecided: `offline-naming-20261011` and `data-tooling-stats-20261011`.
+- **Notes for Codex oder Claude:** Web lock: held by claude-web-integration for package 3; not taken or released by this entry. Do not merge or push `feature/functions-sites-20261009` as is: schema 12 versus main's 14, and the last acceptance failed. Left alone: the remote branch `test/import-integrity-revalidation-20261010`, local `design/group-address-studies-aca414` and `docs/hygiene-audit-20261011` (one unmerged commit each), and the root checkout. No hardware, release, deployment, subagents or quota checks.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 17:07
 - **Completed:** Hermes skill slimming (profile `knxbench`, outside the repo) plus one docs-only repo package. Twelve oversized self-learned skills now have a short core SKILL.md and verbatim `references/` topic files (repository-delivery 99.8k → 16.3k chars; all twelve checked: 0 original items missing). New `docs/DEVELOPER_PITFALLS.md` collects verified repository traps (CI check list, xtask runtime root since `dea70329`, header width 100/`ABSENT_CEILING`, `.ai/` staging, numbered-doc collisions, corpus symlinks, schema constants, web inventory guards); linked from `docs/README.md` and `docs/VERIFICATION.md`. Log: `.ai/logs/2026-10-12_claude_skill-slimming.md`.
 - **Pending/Next Steps:** None for this package. Skills now say: new lessons go into `references/` with one line in SKILL.md; repo-wide facts go into `docs/DEVELOPER_PITFALLS.md`.

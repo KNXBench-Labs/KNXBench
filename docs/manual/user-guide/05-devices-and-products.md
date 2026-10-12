@@ -541,4 +541,35 @@ The language of product texts follows the **Product data language** setting, sep
 from the interface language. See
 [Settings, themes and languages](09-settings-and-appearance.md).
 
+### Installation instructions (newer source, not Alpha 9)
+
+The sixth tab, **Installation instructions**, shows the installation hints a device
+brought along from an imported ETS project, and lets you replace them with your own
+text. It is newer than the published Alpha 9 and is not in its screenshots.
+
+- The imported original is kept as it came in. **Imported original is preserved**
+  or **Native override** above the text says which of the two you are looking at.
+- Editing covers plain text with paragraphs and **Bold**, **Italic** and
+  **Underline**; select text and use the buttons. **Rendered preview** shows the
+  result. Markup such as `<script>` is only text and never runs, and nothing is
+  fetched from links or embedded resources.
+- **Preview change** shows the change; **Apply change** applies it. If the original
+  used formatting KNXBench cannot show, Apply asks you to agree to the supported
+  subset first; the original stays retained either way.
+- **Return to imported original** removes your override.
+- After Apply the workbench reloads the project, so Undo/Redo and the modified state
+  follow the edit. Applying is not saving the file: use Save or Save As.
+- Saving the project does not disturb a draft. If the instructions really changed on
+  the server in the meantime (another client, Undo), the editor keeps your draft for
+  comparison and asks you to discard it and reload before a new preview.
+- If the server refuses the change, its message appears in the tab, nothing changes
+  and your draft stays.
+- Without a complete project identity the tab is read-only and says so.
+- A draft survives switching tabs. Opening or importing another project, starting a
+  new one or quitting asks first, the same as for a [project-notes
+  draft](01-user-interface.md#project-notes-newer-source-not-alpha-9).
+
+Only instructions from an imported ETS project are supported; a device created in
+KNXBench, or one whose original cannot be read, says so instead of offering an editor.
+
 [Manual index](../README.md) · Next: [A complete configuration workflow](06-configuration-workflow.md) →

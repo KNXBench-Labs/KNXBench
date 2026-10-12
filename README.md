@@ -217,6 +217,15 @@ All the details: [Installation](docs/manual/getting-started/04-installation.md).
 [your first project](docs/manual/getting-started/06-first-start.md#tutorial-create-save-and-reopen-your-first-project)
 — no KNX hardware or ETS file needed.
 
+### Release notifications (newer source, not Alpha.9)
+
+The current source checks GitHub at startup and hourly while the workbench is
+visible. A newer eligible release gets a toast with its release-notes link;
+**File → About KNXBench** keeps the information and offers **Check for updates**.
+**Settings → Updates** turns automatic checks off. Nothing is downloaded or
+installed for you. [How it works and what GitHub receives](docs/manual/user-guide/09-settings-and-appearance.md#release-notifications-newer-source-not-alpha9).
+The already-published Alpha.9 AppImage and Docker image do not include this feature.
+
 ## Project status
 
 **Alpha — and we mean it.** The current pre-release is

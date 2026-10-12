@@ -1,3 +1,22 @@
+## 2026-10-12 — Release notification reader documentation completed
+
+The README now points to the source-only notification feature and its manual
+workflow. Settings documents default-on checks, persisted opt-out, the explicit
+About check, nine-second/session-deduplicated notices, GitHub client-IP metadata
+and unavailable-state behavior. The UI chapter explains the release action
+separately from message details; FAQ removes its obsolete claim that update
+checking does not exist. Documentation and contract hubs link the canonical
+[guide](manual/user-guide/09-settings-and-appearance.md#release-notifications-newer-source-not-alpha9)
+and [contract](contracts/RELEASE_NOTIFICATIONS.md). Existing installation/status,
+architecture/ADR/limitation/evidence updates remain intact.
+
+This follow-up changes documentation only, not notification behavior. Alpha.9
+is still explicitly excluded; no release/deployment, screenshots, private corpus
+or hardware work. Twelve documentation-checker regressions, local file/image/
+chapter navigation, heading anchors, five fresh explicit-root repository gates
+and whitespace pass. Self-reviewed against current release-check source; prior
+functional acceptance retains its own source binding, not a new runtime run.
+
 ## 2026-10-12 — AP3 primary contract qualification, not new editors
 
 [Fresh inspected public evidence](research/product-database.md#2026-10-12--ap3-colourpicture-contract-and-module-scope-follow-up)

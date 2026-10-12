@@ -3649,6 +3649,88 @@ describe("App — unsaved edits before opening another project", () => {
     expect(apiMock.importProject.mock.calls[1].slice(2)).toEqual(["s3cret", true]);
     root.unmount();
   });
+
+  // The shared dialog's labels are the catalogue's, in this order, so the
+  // middle answer can never again render without words.
+  it("labels all three answers with what they actually do", async () => {
+    const root = await openDirtyProject();
+    const labels = Array.from(dialog()!.querySelectorAll("footer button")).map((b) => b.textContent);
+    expect(labels).toEqual([enMessages["replace.cancel"], enMessages["replace.discard"], enMessages["replace.save"]]);
+    expect(dialog()!.textContent).toContain(enMessages["replace.hint"]);
+    root.unmount();
+  });
+
+  it("keeps the project and opens nothing when the save-first fails", async () => {
+    const root = await openDirtyProject();
+    apiMock.saveProject.mockRejectedValueOnce(new Error("disk full"));
+    await click(enMessages["replace.save"]);
+    expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
+    expect(apiMock.importProject).not.toHaveBeenCalled();
+    expect(dialog()).not.toBeNull();
+    root.unmount();
+  });
+
+  it("keeps the project and opens nothing when the save raced a newer edit", async () => {
+    const root = await openDirtyProject();
+    apiMock.saveProject.mockResolvedValueOnce(undefined);
+    apiMock.currentProject.mockResolvedValueOnce(treeAt({ ...baseTree(), is_modified: true }, 2));
+    await click(enMessages["replace.save"]);
+    expect(apiMock.importProject).not.toHaveBeenCalled();
+    expect(dialog()).not.toBeNull();
+    root.unmount();
+  });
+
+  it("keeps the project and opens nothing when the Save-As picker is cancelled", async () => {
+    apiMock.importProject.mockReset();
+    apiMock.saveProjectAs.mockClear();
+    filePickerMock.pickSavePath.mockClear();
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/first.knxproj");
+    // An imported project has no .knxdb yet, so "save first" asks where.
+    apiMock.importProject.mockResolvedValueOnce(treeAt({ ...baseTree(), is_modified: true }, 1));
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/other.knxproj");
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+    expect(dialog()).not.toBeNull();
+    filePickerMock.pickSavePath.mockResolvedValueOnce(null);
+    await click(enMessages["replace.save"]);
+    expect(filePickerMock.pickSavePath).toHaveBeenCalled();
+    expect(apiMock.saveProjectAs).not.toHaveBeenCalled();
+    expect(apiMock.importProject).toHaveBeenCalledTimes(1);
+    expect(dialog()).not.toBeNull();
+    root.unmount();
+  });
+
+  // A decision withdrawn while its save is still on the wire stays
+  // withdrawn: the save may land, the other project must not open.
+  for (const withdraw of ["keep-editing button", "Escape"] as const) {
+    it(`does not open the other project after a save-first withdrawn by ${withdraw}`, async () => {
+      const root = await openDirtyProject();
+      let finishSave!: () => void;
+      apiMock.saveProject.mockImplementationOnce(() => new Promise<void>((resolve) => { finishSave = resolve; }));
+      apiMock.currentProject.mockResolvedValueOnce(treeAt({ ...baseTree(), is_modified: false }, 2));
+      await click(enMessages["replace.save"]);
+      expect(dialog()!.querySelector<HTMLButtonElement>(".quit-confirm-save")!.textContent).toBe(enMessages["quit.saving"]);
+      if (withdraw === "Escape") {
+        await act(async () => {
+          dialog()!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        });
+      } else {
+        await click(enMessages["replace.cancel"]);
+      }
+      expect(dialog()).toBeNull();
+      await act(async () => finishSave());
+      await act(async () => {});
+      expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
+      expect(apiMock.importProject).not.toHaveBeenCalled();
+      root.unmount();
+    });
+  }
 });
 
 describe("App — the first-run guide on request (ADR-0084)", () => {

@@ -3270,12 +3270,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 /* T28/F4 — the question asked before unsaved work goes in the bin. The
    discarding button is coloured as the warning it is; Cancel stays plain
    and comes first, which is also where the focus lands. */
-.search-panel.quit-confirm { width: min(30rem, 92vw); padding: 1rem 1.15rem; }
-.quit-confirm h2 { margin: 0 0 10px; font-size: 18px; }
-.quit-confirm p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; }
-.quit-confirm-hint { color: var(--knx-muted); }
-.quit-confirm-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
-.quit-confirm-discard { color: var(--knx-warning-color) !important; }
+/* The unsaved-changes dialog styles live in UnsavedChangesDialog.css. */
 
 /* Debug-report content uses the shared resizable dialog's initial dimensions;
    this width remains the fallback if the shell is ever rendered without an

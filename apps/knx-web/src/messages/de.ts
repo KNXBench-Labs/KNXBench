@@ -2097,14 +2097,15 @@ export const messages: Record<MessageKey, string> = {
     "Dieses Projekt hat Änderungen, die noch in keiner Datei stehen. Wer jetzt beendet, wirft sie weg.",
   "quit.hint":
     "„Speichern und beenden“ speichert zuerst und beendet nur, wenn das geklappt hat.",
-  "quit.cancel": "Abbrechen",
+  "quit.cancel": "Weiter bearbeiten",
   "quit.discard": "Ohne Speichern beenden",
   "quit.saving": "Speichert…",
   "quit.save": "Speichern und beenden",
   "replace.title": "Nicht gespeicherte Änderungen",
   "replace.message": "Das geöffnete Projekt hat nicht gespeicherte Änderungen. Ein anderes Projekt zu öffnen ersetzt es.",
   "replace.target": "Als Nächstes: {file}",
-  "replace.cancel": "Abbrechen",
+  "replace.hint": "„Speichern und öffnen“ speichert zuerst und öffnet das andere Projekt nur, wenn das geklappt hat.",
+  "replace.cancel": "Weiter bearbeiten",
   "replace.discard": "Änderungen verwerfen und öffnen",
   "replace.save": "Speichern und öffnen",
 

@@ -100,6 +100,20 @@ values (`parameterLimit`/`parameterOffset`) separately; `total` and
    `valid` is true. Done when you hand the user the CSV, the counts and every
    `destructiveChanges` entry, with the apply steps from `howToApply`.
 
+## Renaming group addresses (only when enabled)
+
+`preview_name_recipe` and `apply_name_recipe` exist only when the user
+started `knx-mcp` with `--allow-name-recipe <alias>`. They add a literal
+prefix or suffix to chosen group-address names.
+
+1. Call `preview_name_recipe` and show the user every changed row.
+2. Call `apply_name_recipe` only for a rename the user asked for, quoting the
+   preview's arguments and `confirmationToken` exactly.
+3. The user approves or declines in a form their client shows. Never answer
+   that form yourself and never retry a declined apply without a new request.
+4. Tell the user the renames are in KNXBench's undo history and need a Save
+   there; until then the read tools still show the saved names.
+
 ## Hard Rules
 
 - Never run these `knx` CLI commands: `device ...`, `bus write`, `scan`,

@@ -1,0 +1,58 @@
+{
+  "scope": "Standalone source server and Linux Docker run/update defaults; no release or deployment",
+  "date": "2026-10-12",
+  "source_commit": "6a0f8f5066e9a44cb114e82fe54d9129c2515bbf",
+  "self_review": true,
+  "default_port": 8484,
+  "linux_recipe_network": "host",
+  "desktop_private_ports_changed": false,
+  "rust_server": {
+    "passed": 814,
+    "failed": 0,
+    "ignored": 47
+  },
+  "startup_health_tests": {
+    "passed": 3,
+    "network": "isolated loopback-only namespace",
+    "cases": [
+      "unset port",
+      "explicit override",
+      "empty/invalid/out-of-range fallback"
+    ]
+  },
+  "configuration_regressions": 5,
+  "docker_release_workflow_regressions": 5,
+  "documentation_checker_regressions": 12,
+  "strict_clippy_build_fmt": "passed",
+  "repository_gates": {
+    "explicit_root": true,
+    "layering_packages": 478,
+    "header_files": 910,
+    "anchors": 546,
+    "ledger_rows": 197,
+    "corpus_gate_sources": 559,
+    "all_passed": true
+  },
+  "docker": {
+    "image_id": "sha256:1e27d0e80e271b818990743a8429dfeac63a4ed904d3aeba470f1f29b980a8f1",
+    "published": false,
+    "built_from_committed_source": true,
+    "image_env": "KNX_PORT=8484",
+    "expose": "8484/tcp",
+    "actual_default_listener_health": "HTTP 200 ok, no KNX_PORT override",
+    "default_probe_network": "none",
+    "default_probe_stop_exit": 0,
+    "host_smoke": {
+      "https_health": "passed",
+      "unauthenticated_api": "401",
+      "authenticated_api": "200",
+      "new_save_reopen": "passed",
+      "real_ets_project_import": "not exercised",
+      "live_bus": "not exercised",
+      "port": "separate configurable test port"
+    }
+  },
+  "live_user_container_recreated": false,
+  "published_alpha9_changed": false,
+  "private_corpus_exercised": false
+}

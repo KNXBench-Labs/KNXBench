@@ -155,7 +155,8 @@ choose your own password, and run it from the directory where you want to keep y
 
 ```bash
 docker pull knxbench/knxbench-server:latest
-docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
+docker run -d --name knxbench --network host \
+  -e KNX_PORT=8484 \
   -e KNX_AUTH_PASSWORD='pick something long and boring' \
   -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
@@ -169,12 +170,16 @@ specific release, use `knxbench/knxbench-server:0.1.0-alpha.9` in both commands
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
 
 Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
-The compilation coffee break is now optional.
+The compilation coffee break is now optional. The source server and new source-built
+images default to port **8484**. The explicit `KNX_PORT=8484` in downloaded-image
+recipes also supports Alpha.9 and older images, whose internal default was different.
 
 With a password set, the server speaks HTTPS with a self-signed certificate, so the
 browser warns once: compare the fingerprint in `docker logs knxbench` before you accept
-it. It is one shared password, made for a LAN or VPN, not for the open internet. Talking
-to a real bus from the container needs host networking — see
+it. It is one shared password, made for a LAN or VPN, not for the open internet.
+The Linux default uses host networking: **with a password, port 8484 listens on all
+host interfaces**, not only localhost. Restrict access to a trusted LAN/VPN with
+your firewall. `-p` is not used in host mode — see
 [Web and Docker deployment](docs/manual/user-guide/11-web-and-docker.md), which also has
 the [Docker Hub update](docs/manual/user-guide/11-web-and-docker.md#updating-a-docker-hub-installation)
 recipe. For a lasting setup, prefer a [password hash](docs/manual/user-guide/11-web-and-docker.md#setting-a-password)

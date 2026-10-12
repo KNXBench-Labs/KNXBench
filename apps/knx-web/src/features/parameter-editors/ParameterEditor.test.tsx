@@ -76,6 +76,26 @@ describe("isolated parameter editor", () => {
     expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("12"); await click(host, "Apply value"); expect(props.onApply).not.toHaveBeenCalled();
     await click(host, "Discard draft and reload"); expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("20");
   });
+  it("moves a draft onto a new revision when the field itself is unchanged (Save bumps the revision)", async () => {
+    const { host, props, root } = await mount(); await edit(host, "12");
+    await act(async () => root.render(<ParameterEditor {...props} revision="server1/snapshot2" />));
+    expect(host.textContent).not.toContain("draft is retained");
+    expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("12");
+    await click(host, "Apply value"); expect(props.onApply).toHaveBeenCalledWith("PR", "12");
+  });
+  it("still blocks a draft when the field changed together with the revision", async () => {
+    const { host, props, root } = await mount(); await edit(host, "12");
+    await act(async () => root.render(<ParameterEditor {...props} revision="server1/snapshot2" field={{ ...base.field, access: "ReadWrite", editable: true, value: "0011" }} />));
+    expect(host.textContent).toContain("draft is retained");
+    await click(host, "Apply value"); expect(props.onApply).not.toHaveBeenCalled();
+  });
+  it("blocks a draft when only the declared range changed with the revision", async () => {
+    const { host, props, root } = await mount(); await edit(host, "12");
+    const source = { ...base.source!, attributes: { ...base.source!.attributes, minInclusive: "1" } };
+    await act(async () => root.render(<ParameterEditor {...props} revision="server1/snapshot2" source={source} field={{ ...base.field, min: "1" }} />));
+    expect(host.textContent).toContain("draft is retained");
+    await click(host, "Apply value"); expect(props.onApply).not.toHaveBeenCalled();
+  });
   it("ignores a late result after selection change", async () => {
     let settle!: (value: { tree: string }) => void; const onApply = vi.fn().mockReturnValue(new Promise(done => { settle = done; }));
     const { host, props, root } = await mount({ onApply }); await edit(host, "12"); await click(host, "Apply value");

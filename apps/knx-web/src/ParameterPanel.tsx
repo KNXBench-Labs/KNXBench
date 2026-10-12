@@ -15,6 +15,9 @@ import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge } from "./languageFallback";
 import { groupParameterDiagnostics, isManufacturerRestricted } from "./parameterPresentation";
 import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
+import type { SnapshotContext } from "./snapshotIdentity";
+import ParameterSourceEditor from "./ParameterSourceEditor";
+import { isSourceEditorCandidate } from "./parameterSourceHost";
 
 // T18 slice 3, task 4 (design docs/superpowers/specs/2026-09-11-parameter-editor-design.md).
 // Fetches `GET /api/device/{id}/parameters` on every device selection —
@@ -102,10 +105,13 @@ function ParameterFieldRow(props: {
   sourceLanguage: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
   onValueApplied: (tree: ProjectTree) => void;
+  /** Present when the checked editor may be offered for this row. */
+  checked: CheckedEditorContext | null;
 }) {
-  const { field, moduleScoped, deviceId, language, sourceLanguage, onUpdated, onValueApplied } = props;
+  const { field, moduleScoped, deviceId, language, sourceLanguage, onUpdated, onValueApplied, checked } = props;
   const t = useTranslate();
   const [value, setValue] = useState(field.value ?? "");
+  const [checkedOpen, setCheckedOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Belt-and-braces on purpose (see `api.ts`'s `writeEtsId` doc comment):
   // the server's contract makes the two conditions exact opposites of
@@ -159,7 +165,18 @@ function ParameterFieldRow(props: {
     return <ParameterLabelRow field={field} language={language} sourceLanguage={sourceLanguage} />;
   }
 
-  return (
+  // The checked editor brings its own label and controls, so it replaces the
+  // row instead of nesting interactive elements inside this `<label>`.
+  const offerChecked = checked !== null && isSourceEditorCandidate(field.kind);
+  if (offerChecked && checkedOpen) {
+    return <div className="inspector-field parameter-field parameter-field-checked" data-ets-id={field.etsId}>
+      <ParameterSourceEditor deviceId={deviceId} field={field} scope={checked.scope} programId={checked.programId}
+        snapshot={checked.snapshot} language={language} label={label}
+        onUpdated={onUpdated} onValueApplied={onValueApplied} onClose={() => setCheckedOpen(false)} />
+    </div>;
+  }
+
+  return <>
     <label className="inspector-field parameter-field" data-ets-id={field.etsId}>
       {label}
       {field.access && <span className="provenance-badge">{field.access}</span>}
@@ -214,7 +231,16 @@ function ParameterFieldRow(props: {
       )}
       {error && <span className="field-error">{error}</span>}
     </label>
-  );
+    {offerChecked && <button type="button" className="parameter-checked-open" data-checked-for={field.etsId}
+      title={t("parameters.checked.openHint")} onClick={() => setCheckedOpen(true)}>{t("parameters.checked.open")}</button>}
+  </>;
+}
+
+/** What a row needs to offer the checked editor; absent without identity or program. */
+interface CheckedEditorContext {
+  programId: string;
+  snapshot: SnapshotContext;
+  scope: ModuleScope | null;
 }
 
 // AR10: one line naming how many fields show the program's own text
@@ -291,8 +317,10 @@ function ParameterSectionView(props: {
   sourceLanguage: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
   onValueApplied: (tree: ProjectTree) => void;
+  checked: Omit<CheckedEditorContext, "scope"> | null;
 }) {
   const { section, deviceId, language, sourceLanguage, onUpdated, onValueApplied } = props;
+  const checked = props.checked === null ? null : { ...props.checked, scope: section.scope };
   const t = useTranslate();
   const fields = section.fields;
   return (
@@ -309,6 +337,7 @@ function ParameterSectionView(props: {
             sourceLanguage={sourceLanguage}
             onUpdated={onUpdated}
             onValueApplied={onValueApplied}
+            checked={checked}
           />
         ))}
       </div>
@@ -393,6 +422,8 @@ type ParameterPanelProps = {
   // that instead.
   onValueApplied: (tree: ProjectTree) => void;
   view?: ParameterView;
+  /** Complete project identity for the checked editor; `null`/absent offers none. */
+  snapshot?: SnapshotContext | null;
 };
 
 /** One read model shared by the editor and both inspection-only tabs. */
@@ -406,15 +437,25 @@ export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) 
   // change re-fetches through this same effect and races the same way a
   // device change always has, so it needs no guard of its own.
   const requestIdRef = useRef(0);
+  // Only another device or product language blanks the panel. A new revision
+  // (Save, Apply, Undo) keeps the current rows mounted until the new answer
+  // lands, so an open editor and its draft survive it.
+  const shownRef = useRef<string | null>(null);
 
   useEffect(() => {
-    setPanel(null);
-    setLoadError(null);
+    const shown = JSON.stringify([deviceId, language]);
+    if (shownRef.current !== shown) {
+      shownRef.current = shown;
+      setPanel(null);
+      setLoadError(null);
+    }
     const requestId = ++requestIdRef.current;
     api
       .deviceParameters(deviceId, language)
       .then((p) => {
         if (requestId !== requestIdRef.current) return;
+        // A refresh can follow a failed one now that the panel is not blanked.
+        setLoadError(null);
         setPanel(p);
       })
       .catch((e) => {
@@ -492,6 +533,8 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
           sourceLanguage={panel.sourceLanguage}
           onUpdated={setPanel}
           onValueApplied={onValueApplied}
+          checked={view === "parameters" && props.snapshot && panel.programId !== null
+            ? { programId: panel.programId, snapshot: props.snapshot } : null}
         />
       ))}
     </div>

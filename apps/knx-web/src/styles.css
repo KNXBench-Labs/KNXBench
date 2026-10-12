@@ -737,6 +737,34 @@ main {
   font-style: italic;
 }
 
+/* Explicit entry to the source-checked editor; sits under its row and never
+   inside the row's <label>. */
+.parameter-checked-open {
+  display: block;
+  margin: -0.4rem 0 0.9rem;
+  font-size: 0.85em;
+}
+.parameter-checked-editor { display: grid; gap: 0.5rem; justify-items: start; min-width: 0; }
+.parameter-checked-editor > section { justify-self: stretch; }
+/* Quiet like the editor's own buttons: entering or leaving the checked editor
+   must not outshout its Apply. */
+.parameter-checked-open,
+.parameter-checked-close {
+  max-width: 100%;
+  padding: 6px 12px;
+  color: var(--knx-foreground);
+  background: var(--knx-bg);
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-button);
+  box-shadow: none;
+}
+.parameter-checked-open:hover:not(:disabled),
+.parameter-checked-close:hover:not(:disabled) { box-shadow: none; border-color: var(--knx-accent); }
+.parameter-checked-open:focus-visible,
+.parameter-checked-close:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
+/* The access badge is a label, not a full-width bar, in the flex row. */
+.parameter-field > .provenance-badge { align-self: flex-start; }
+
 /* KL §128: a TypeNone row is a heading/label or an empty spacer, no input. */
 .parameter-label-row {
   margin: 0.75rem 0 0.25rem;

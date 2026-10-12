@@ -195,5 +195,22 @@
     "note": "first run on 58617446: 136/143; two oracle targets lacked project_dump.json in the worktree, http_project_routes still expected the pre-ADR-0113 zero counters after reopen (updated in c465f58b)"
   },
   "visual_review": "Overview with all panels open in EN/DE x Porcelain/Graphite x 1440/400 against the real server, plus the 12 real-server spec frames (metadata, device state, export dialog); inspected directly",
-  "limitations": "see KNOWN_LIMITATIONS 'Ported native import evidence (2026-10-12)'; stored BusAccess/IP display remains open"
+  "limitations": "see KNOWN_LIMITATIONS 'Ported native import evidence (2026-10-12)'; stored BusAccess/IP display remains open",
+  "merged_regate": {
+    "candidate": "4f482441c427dc2127437f51afccce659a71f678",
+    "reason": "main gained the issue #7 importer change (knx-etsproj) after the first accepted gate",
+    "stages": 24,
+    "stages_green": 23,
+    "web_vitest": "3164/0 in 222 files",
+    "browser_native_evidence": "12/0",
+    "browser_fixtures": "412 passed + the 4 known device-editor-layout DPST-9-1 failures (first attempt)",
+    "rust": {
+      "passed": 4213,
+      "failed": 0,
+      "ignored": 196
+    },
+    "private_corpus": "143/143 in 31 targets",
+    "frozen_after": "unchanged",
+    "later_delta": "44bc16da (handover-only freeze entry)"
+  }
 }

@@ -106,9 +106,12 @@ impl std::fmt::Display for ImportFailure {
                 f,
                 "legacy ETS filename extension .{extension} is unsupported; legacy import is not implemented"
             ),
-            ImportFailure::NoKnownSchemaTable { version } => {
-                write!(f, "no known-element table for schema version {version}")
-            }
+            ImportFailure::NoKnownSchemaTable { version } => write!(
+                f,
+                "this project was saved in ETS project schema {version}, which KNXBench \
+                 cannot import yet; supported are schemas 11 (ETS4), 20 (ETS 5.7), \
+                 21 and 23 (ETS6)"
+            ),
         }
     }
 }
@@ -276,7 +279,7 @@ fn import_knxproj_bytes_inner(
     // not a variant of `parse_installation`. Schema 11 keeps its original
     // parser untouched, per the plan's Global Constraints.
     observer.stage(ImportStage::ParseTopology);
-    let mut parsed = if detected.version.0 >= 21 {
+    let mut parsed = if known::uses_ets6_content_model(detected.version.0) {
         parse::parse_installation_v21(&topology_bytes, &topology_path, schema)
     } else {
         parse_installation(&topology_bytes, &topology_path, schema)
@@ -371,7 +374,8 @@ fn import_knxproj_bytes_inner(
         for area in &installation.areas {
             for line in &area.lines {
                 for device in &line.devices {
-                    let device_xpath = xpath::device_v21(&device.id);
+                    let device_xpath =
+                        xpath::line_device(parsed.document.schema_version, &device.id);
                     if let Some(raw) = &device.module_instances_raw {
                         let mut r = raw.clone();
                         r.xpath = format!("{device_xpath}/ModuleInstances");

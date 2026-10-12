@@ -84,6 +84,19 @@ export async function openProject(page: Page, language: "en" | "de") {
   await page.getByRole("dialog", { name: m["newProject.title"], exact: true }).getByRole("button", { name: m["newProject.create"], exact: true }).click();
   await page.getByRole("dialog", { name: m["projectWizard.done.title"], exact: true }).getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
 }
+/**
+ * Dismisses every notification, however many there are. A snapshot of `.all()`
+ * locators is nth-based and loses track once two are shown (e.g. a late-night
+ * humour toast after 23:00). A dismissed toast stays in the DOM while its exit
+ * animation runs (`.toast--leaving`, moving and inert), so only toasts that are
+ * not leaving are clicked, front-most first.
+ */
+export async function dismissToasts(page: Page, language: "en" | "de") {
+  const m = language === "en" ? en : de;
+  const buttons = page.locator(".toast:not(.toast--leaving)").getByRole("button", { name: m["toast.dismiss"], exact: true });
+  for (let round = 0; round < 20 && await buttons.count() > 0; round++) await buttons.first().click();
+  await expect(buttons).toHaveCount(0);
+}
 export async function openList(page: Page, language: "en" | "de") {
   const m = language === "en" ? en : de;
   await page.keyboard.press("Control+Shift+P");

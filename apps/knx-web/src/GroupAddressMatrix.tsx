@@ -1,43 +1,54 @@
 /** Read-only projected link matrix with explicit bounded object-column choice. */
 import type { GroupAddressWorkspaceViewProps } from "./groupAddressWorkspaceView";
-import type { GroupAddressMatrixIndex } from "./groupAddressMatrix";
+import type { GroupAddressMatrixColumn, GroupAddressMatrixIndex } from "./groupAddressMatrix";
+import type { GroupAddressObjectInventory } from "./groupAddressObjectInventory";
 import { useTranslate } from "./i18n";
 import { useGroupAddressFormat } from "./gaNotation";
 import GroupAddressWindowNotice from "./GroupAddressWindowNotice";
+import GroupAddressObjectInventoryList from "./GroupAddressObjectInventoryList";
 
 const MAX_COLUMNS = 12;
+const DEFAULT_COLUMNS = 6;
 export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps & {
-  matrix: GroupAddressMatrixIndex; columnKeys: ReadonlySet<string> | null;
+  matrix: GroupAddressMatrixIndex; inventory: GroupAddressObjectInventory; columnKeys: ReadonlySet<string> | null;
   onColumns: (keys: Set<string>) => void; columnQuery: string; onColumnQuery: (query: string) => void;
 }) {
   const t = useTranslate(); const formatGa = useGroupAddressFormat();
-  const selected = props.columnKeys ?? new Set(props.matrix.columns.slice(0, 6).map(column => column.key));
+  // The default never picks an unlinked object: those columns are chosen explicitly.
+  const selected = props.columnKeys ?? new Set(props.matrix.columns.filter(column => column.linked).slice(0, DEFAULT_COLUMNS).map(column => column.key));
   const columns = props.matrix.columns.filter(column => selected.has(column.key));
   const needle = props.columnQuery.trim().toLowerCase();
-  const choices = props.matrix.columns.filter(({ key, link }) =>
-    [key, link.device_name ?? "", link.device_address ?? "", link.com_object_name ?? "", String(link.com_object_number)].some(value => value.toLowerCase().includes(needle)),
+  const choices = props.matrix.columns.filter(column =>
+    [column.key, column.deviceName ?? "", column.deviceAddress ?? "", column.objectName ?? "", String(column.objectNumber)].some(value => value.toLowerCase().includes(needle)),
   );
+  const deviceLabel = (column: GroupAddressMatrixColumn) => column.deviceName ?? t("addressTable.unknownDevice", { id: column.deviceId });
+  const objectLabel = (column: GroupAddressMatrixColumn) => `${column.objectName ?? t("addressTable.unnamedObject")} #${column.objectNumber}`;
   const rows = Number.isFinite(props.limit) ? props.rows.slice(0, props.limit) : props.rows;
   const visibleOrder = rows.filter(row => row.selectable).map(row => row.node.id);
   return <section data-ga-matrix className="ga-matrix" aria-label={t("gaWorkspace.view.matrix")}>
-    <p className="ga-evidence-note">{t("gaWorkspace.matrixScope")}</p>
+    <p className="ga-evidence-note" data-ga-matrix-scope>{t(props.matrix.scope === "linked-and-loaded" ? "gaWorkspace.matrixScopeLoaded" : "gaWorkspace.matrixScope")}</p>
     <p className="ga-evidence-note">{t("gaWorkspace.matrixLegend")}</p>
+    <p role="status" data-ga-inventory-status>{t("gaWorkspace.inventoryStatus", { ...props.inventory.summary })}</p>
     {props.matrix.ambiguousObjectIds.length > 0 && <p role="status">{t("gaWorkspace.objectOwnerConflict", { ids: props.matrix.ambiguousObjectIds.join(", ") })}</p>}
+    {props.matrix.missingFromInventory.length > 0 && <p role="status" data-ga-inventory-mismatch>{t("gaWorkspace.inventoryMismatch", { keys: props.matrix.missingFromInventory.join(", ") })}</p>}
     <details className="ga-column-picker" open>
       <summary>{t("gaWorkspace.columnScope", { selected: columns.length, total: props.matrix.columns.length, limit: MAX_COLUMNS })}</summary>
       <input type="search" aria-label={t("gaWorkspace.objectFilter")} placeholder={t("gaWorkspace.objectFilter")} value={props.columnQuery} onChange={e => props.onColumnQuery(e.target.value)} />
-      <div className="ga-column-choices">{choices.map(({ key, link }) => <label key={key}>
-        <input type="checkbox" data-ga-column={key} checked={selected.has(key)} disabled={!selected.has(key) && columns.length >= MAX_COLUMNS}
-          onChange={() => { const next = new Set(columns.map(column => column.key)); if (next.has(key)) next.delete(key); else next.add(key); props.onColumns(next); }} />
-        <span>{link.device_name ?? t("addressTable.unknownDevice", { id: link.device_id })} · {link.device_address ?? t("gaWorkspace.noDeviceAddress")}
-          <small>{link.com_object_name ?? t("addressTable.unnamedObject")} #{link.com_object_number} · {key}</small></span>
+      <div className="ga-column-choices">{choices.map(column => <label key={column.key}>
+        <input type="checkbox" data-ga-column={column.key} checked={selected.has(column.key)} disabled={!selected.has(column.key) && columns.length >= MAX_COLUMNS}
+          onChange={() => { const next = new Set(columns.map(c => c.key)); if (next.has(column.key)) next.delete(column.key); else next.add(column.key); props.onColumns(next); }} />
+        <span>{deviceLabel(column)} · {column.deviceAddress ?? t("gaWorkspace.noDeviceAddress")}
+          <small>{objectLabel(column)} · {column.key}</small>
+          {!column.linked && <small data-ga-unlinked>{t("gaWorkspace.unlinkedObject")}</small>}</span>
       </label>)}</div>
+      <GroupAddressObjectInventoryList inventory={props.inventory} query={needle} />
     </details>
     <div className="workspace-table-wrap"><table className="workspace-table ga-matrix-table">
       <thead><tr><th>{t("addressTable.selectColumn")}</th><th>{t("workbench.address")}</th><th>{t("workbench.name")}</th>
-        {columns.map(({ key, link }) => <th key={key} scope="col">
-          <span>{link.device_name ?? t("addressTable.unknownDevice", { id: link.device_id })}</span>
-          <small>{link.com_object_name ?? t("addressTable.unnamedObject")} #{link.com_object_number}</small><small>{key}</small>
+        {columns.map(column => <th key={column.key} scope="col">
+          <span>{deviceLabel(column)}</span>
+          <small>{objectLabel(column)}</small><small>{column.key}</small>
+          {!column.linked && <small data-ga-unlinked>{t("gaWorkspace.unlinkedObject")}</small>}
         </th>)}
       </tr></thead>
       <tbody>{rows.map(row => {

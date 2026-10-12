@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
-import { intercept, openProject } from "./communication-fixture";
+import { dismissToasts, intercept, openProject } from "./communication-fixture";
 
 for (const language of ["en", "de"] as const) {
   for (const width of [1440, 400]) {
@@ -13,9 +13,7 @@ for (const language of ["en", "de"] as const) {
         await page.setViewportSize({ width, height: 900 });
         const state = await intercept(page, language, 8, theme);
         await openProject(page, language);
-        for (const dismiss of await page.getByRole("button", { name: messages["toast.dismiss"], exact: true }).all()) {
-          await dismiss.click();
-        }
+        await dismissToasts(page, language);
         await page.keyboard.press("Control+Shift+P");
         await page.getByRole("combobox").fill(messages["toolbar.busMonitor"]);
         await page.getByRole("combobox").press("Enter");

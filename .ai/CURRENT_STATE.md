@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 23:34
+- **Completed:** Docs-only: `docs/FEATURES.md` caught up with the releases. Its baseline line had stayed at `v0.1.0-alpha.7` through Alpha 8–10 (bumped in Alpha 7's release prep without moving the rows). All 22 `Main-only` rows are now dated by release evidence: 9 → `alpha.7` (named in the Alpha 7 GitHub release text), 13 → `alpha.10` (row commits absent from the alpha.9 tag, features in `docs/releases/alpha10.md`). Rows contradicted by released notes or `COMPATIBILITY.md` corrected: selective import (alpha.8; removed from Later scope), module-instance values (alpha.8), DPT selection (alpha.9), streamed uploads 1024 MiB (alpha.9), schema 20 (alpha.10), schema 22 refused, schemas 12–14 documented only, real ZipCrypto ETS4/5.7 exports (alpha.10), release notifications, MCP name-recipe writer and Overview log links (alpha.10). Docs checker, anchors, ledger, headers and `diff --check` pass.
+- **Pending/Next Steps:** Nothing for this entry. Queue unchanged: claude-parked-adoption package 3 (docs-only), then package 2 (ux-feedback, AP1 needs an owner call); claude-web-fixups notes follow-ups after that. Owner decisions still open: route the plain catalogue install and the device wizard through the previewed update, and deleting old catalogue backups in the UI.
+- **Notes for Codex oder Claude:** Web lock: not taken or released by this entry (only `docs/FEATURES.md` changed). The release-docs pass should bump FEATURES.md's baseline and Main-only rows with each release; worth adding to the knxbench-release checklist. Self-review only.
+
+---
+
 Release freeze: released by claude-release-alpha10 (v0.1.0-alpha.10 published and verified)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 23:24 (corrected from a drifted 23:33)

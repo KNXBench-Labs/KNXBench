@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 22:31
+- **Completed:** Alpha 10 release preparation (claude-release-alpha10). Both prerequisites verified on main (45a38079 native-evidence port, e1088312 DPST-9-1 test). Cutoff main 4a0294b8. Versions bumped to 0.1.0-alpha.10 (four app crates, web package/lock, `cargo update -w` touched only workspace packages); handwritten notes `docs/releases/alpha10.md` (schema 13→14 backup disclosure, 8484 Docker default, #6/#7).
+- **Pending/Next Steps:** Full local gate on this frozen commit, packaging dry runs, explicit-SHA tag, publication and external verification, then `Release freeze: released by claude-release-alpha10`.
+- **Notes for Codex oder Claude:** Release freeze still held: other sessions stay paused. Log `.ai/logs/2026-10-12_claude_alpha10-release.md`.
+
+---
+
 Web lock: released by claude-web-fixups (DPST-9-1 layout-test fix, delivered)
 Alpha 10 prerequisite delivered: web-fixups
 - **Last Agent:** Claude

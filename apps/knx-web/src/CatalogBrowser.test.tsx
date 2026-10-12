@@ -24,6 +24,11 @@ const apiMock = vi.hoisted(() => ({
   installLegacyProductDatabase: vi.fn(),
   createDevice: vi.fn(),
   currentProject: vi.fn(),
+  catalogBackups: vi.fn().mockResolvedValue({ backups: [] }),
+  previewCatalogUpdate: vi.fn(),
+  applyCatalogUpdate: vi.fn(),
+  restoreCatalogBackup: vi.fn(),
+  isCatalogueUpdateStale: () => false,
 }));
 
 vi.mock("./api", () => ({
@@ -147,6 +152,16 @@ describe("CatalogBrowser", () => {
     const { root } = await renderBrowser();
     expect(host!.querySelector<HTMLInputElement>('input[type="file"]')!.accept)
       .toBe(".knxprod,.vd3,.vd4,.vd5,application/zip");
+    root.unmount();
+  });
+
+  it("offers the previewed update after the direct install, which stays unchanged", async () => {
+    const { root } = await renderBrowser();
+    const inputs = Array.from(host!.querySelectorAll<HTMLInputElement>('input[type="file"]'));
+    expect(inputs.map((input) => input.accept)).toEqual([".knxprod,.vd3,.vd4,.vd5,application/zip", ".knxprod,application/zip"]);
+    expect(inputs[1].closest("label")?.textContent).toContain("Update with preview…");
+    // Backups are read only when their list is opened, not on every catalogue mount.
+    expect(apiMock.catalogBackups).not.toHaveBeenCalled();
     root.unmount();
   });
 

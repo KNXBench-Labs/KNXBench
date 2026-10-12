@@ -682,6 +682,50 @@ describe("api", () => {
     expect(report.facts).toEqual(fixture.facts);
   });
 
+  it("previews a catalogue update by posting the package as multipart data", async () => {
+    mockFetchOnce({ applied: false, preview: { token: "t-1", programs: [] } });
+    const file = new File(["package"], "vendor.knxprod", { type: "application/zip" });
+    const answer = await api.previewCatalogUpdate(file);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/catalog/update/preview");
+    expect(init.method).toBe("POST");
+    expect((init.body as FormData).get("file")).toBe(file);
+    expect((init.body as FormData).get("token")).toBeNull();
+    expect(answer.preview.token).toBe("t-1");
+  });
+
+  it("applies a catalogue update with the same file and the preview's token", async () => {
+    mockFetchOnce({ applied: true, backup: "products.sqlite.backup-1-abcdefabcdef.sqlite" });
+    const file = new File(["package"], "vendor.knxprod");
+    const answer = await api.applyCatalogUpdate(file, "t-1");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/catalog/update/apply");
+    expect(init.method).toBe("POST");
+    expect((init.body as FormData).get("file")).toBe(file);
+    expect((init.body as FormData).get("token")).toBe("t-1");
+    expect(answer.backup).toBe("products.sqlite.backup-1-abcdefabcdef.sqlite");
+  });
+
+  it("lists catalogue backups and restores one by name", async () => {
+    mockFetchOnce({ backups: [{ name: "b", bytes: 3, modifiedUnixSeconds: 9 }] });
+    expect((await api.catalogBackups()).backups[0].name).toBe("b");
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe("/api/catalog/backups");
+    mockFetchOnce({ restored: "b" });
+    await api.restoreCatalogBackup("b");
+    // `mockFetchOnce` installs a fresh mock, so this is its first call.
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/catalog/restore");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ name: "b" });
+  });
+
+  it("recognises only a 409 catalogueUpdateStale as a stale catalogue update", () => {
+    expect(api.isCatalogueUpdateStale({ status: 409, body: { kind: "catalogueUpdateStale" } })).toBe(true);
+    expect(api.isCatalogueUpdateStale({ status: 409, body: { kind: "catalogPreviewStale" } })).toBe(false);
+    expect(api.isCatalogueUpdateStale({ status: 400, body: { kind: "catalogueUpdateStale" } })).toBe(false);
+    expect(api.isCatalogueUpdateStale(null)).toBe(false);
+  });
+
   it("deleteDevice issues a DELETE to /api/devices/:id", async () => {
     mockFetchOnce({ installations: [] });
     await api.deleteDevice(12);
@@ -891,6 +935,12 @@ describe("api", () => {
     await expect(api.installProductPackage(new File([], "p.knxprod"))).rejects.toThrow(
       "authentication required",
     );
+    expect(sessionExpired).toHaveBeenCalledTimes(1);
+  });
+
+  it("publishes a session expiry from the catalogue update upload too", async () => {
+    mockFetchOnce({ error: "authentication required" }, false, 401);
+    await expect(api.previewCatalogUpdate(new File([], "p.knxprod"))).rejects.toThrow("authentication required");
     expect(sessionExpired).toHaveBeenCalledTimes(1);
   });
 });

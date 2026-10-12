@@ -1,9 +1,52 @@
 Web lock: released by claude-web-integration (package 3, checked parameter editors, delivered)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 17:20
-- **Completed:** Package 3 delivered: opt-in **Checked editor** for Time/Number/Colour/Picture rows in the Parameters tab (source evidence verified per field against device/ref/program/snapshot, writes only via `setParameterValue`, host publishes every completed write, panel no longer blanks on revision refresh). Leaf: rebase across Save, settle on applied value, clean editor follows Undo (real-smoke finding). Gate on frozen `9a8f7e58`: 24/25 green (Web 3034/0/202 files, parameters 11/11, notes 11/11, instructions 11/11, dialogs 14/14, Rust <old-sources>/KNXBench.worktrees/web-params-20261012/.ai/CURRENT_STATE.md/0/194 ignored, Clippy, docs, five xtask); full fixture browser 390 passed + the same 4 pre-existing `device-editor-layout.e2e.ts` DPST-9-1 failures. Loopback real-server smoke (synthetic product with retained source) green. Docs: manual ch. 05, implementation-status, parameter-editor-host contract (host section + amendment), OPEN_WORK, KNOWN_LIMITATIONS, FEATURES, ARCHITECTURE, LEDGER PDB-04 note, IMPLEMENTATION_STATUS, evidence JSON, log `.ai/logs/2026-10-12_claude_web-parameter-editors.md`.
+- **Completed:** Package 3 delivered: opt-in **Checked editor** for Time/Number/Colour/Picture rows in the Parameters tab (source evidence verified per field against device/ref/program/snapshot, writes only via `setParameterValue`, host publishes every completed write, panel no longer blanks on revision refresh). Leaf: rebase across Save, settle on applied value, clean editor follows Undo (real-smoke finding). Gate on frozen `9a8f7e58`: 24/25 green (Web 3034/0/202 files, parameters 11/11, notes 11/11, instructions 11/11, dialogs 14/14, Rust 4145/0 with 194 ignored, Clippy, docs, five xtask); full fixture browser 390 passed + the same 4 pre-existing `device-editor-layout.e2e.ts` DPST-9-1 failures. Loopback real-server smoke (synthetic product with retained source) green. Docs: manual ch. 05, implementation-status, parameter-editor-host contract (host section + amendment), OPEN_WORK, KNOWN_LIMITATIONS, FEATURES, ARCHITECTURE, LEDGER PDB-04 note, IMPLEMENTATION_STATUS, evidence JSON, log `.ai/logs/2026-10-12_claude_web-parameter-editors.md`.
 - **Pending/Next Steps:** Package 4 (catalogue updates in the web) takes the web lock next: server routes for upload preview → token, confirm (stateless re-upload, `apply_package_update`), backup listing and restore by listed name only, all under the product-DB mutex; reopen/re-migrate the server connection after restore; UI beside the install control in `CatalogBrowser.tsx`.
 - **Notes for Codex oder Claude:** Self-review only. PDB-04 stays LATER (module mapping, Colour/Picture codecs). The existing `/api/catalog/install` installs without preview/backup; package 4 must not silently change it. The four `device-editor-layout.e2e.ts` failures still belong to the DPT-presentation owner. No hardware, bus writes, release or deployment.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 17:13
+- **Completed:** Applied the owner decisions from the parked-work triage. Docs-only package; no app code changed.
+  - **functions-sites:** kept as a local WIP: `wip(functions)` `1154b72f` on `feature/functions-sites-20261009`, 91 files byte-checked against the backup, unreviewed and unpushed. Worktree removed.
+  - **import-lifecycle:** archived as a patch in the local prune backup.
+  - **audit-findings and native-import-diagnostics:** dropped.
+  - **ux-feedback AP4:** dropped by user decision.
+  - The three retired worktrees are removed, each backed up first in `KNXBench.backups/2026-10-12-worktree-prune/`.
+  - The 24 local branches of all retired worktrees are deleted, each checked as an ancestor of main and deleted with an expected-SHA guard.
+  - The decisions are recorded in the triage note and OPEN_WORK §2/§5. Log section appended.
+- **Pending/Next Steps:** After the web-integration session finishes packages 3 and 4, adopt native-evidence first, then ux-feedback (AP1/2/3/5, renumber its ADR-0112), each under the web lock with a full gate. Still undecided: `offline-naming-20261011` and `data-tooling-stats-20261011`.
+- **Notes for Codex oder Claude:** Web lock: held by claude-web-integration for package 3; not taken or released by this entry. Do not merge or push `feature/functions-sites-20261009` as is: schema 12 versus main's 14, and the last acceptance failed. Left alone: the remote branch `test/import-integrity-revalidation-20261010`, local `design/group-address-studies-aca414` and `docs/hygiene-audit-20261011` (one unmerged commit each), and the root checkout. No hardware, release, deployment, subagents or quota checks.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 17:07
+- **Completed:** Hermes skill slimming (profile `knxbench`, outside the repo) plus one docs-only repo package. Twelve oversized self-learned skills now have a short core SKILL.md and verbatim `references/` topic files (repository-delivery 99.8k → 16.3k chars; all twelve checked: 0 original items missing). New `docs/DEVELOPER_PITFALLS.md` collects verified repository traps (CI check list, xtask runtime root since `dea70329`, header width 100/`ABSENT_CEILING`, `.ai/` staging, numbered-doc collisions, corpus symlinks, schema constants, web inventory guards); linked from `docs/README.md` and `docs/VERIFICATION.md`. Log: `.ai/logs/2026-10-12_claude_skill-slimming.md`.
+- **Pending/Next Steps:** None for this package. Skills now say: new lessons go into `references/` with one line in SKILL.md; repo-wide facts go into `docs/DEVELOPER_PITFALLS.md`.
+- **Notes for Codex oder Claude:** Docs-only; no source, tests or web files touched. Gates: documentation checker 275 files/0 errors, unittest OK, check-anchors 575 links, `git diff --check` clean. The "stale xtask binary" warning is historical since `dea70329`; CI does not build the web app before `cargo test --workspace`.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 16:51
+- **Completed:** Repo hygiene and parked-work triage. This is a docs-only package with no `apps/knx-web` edits.
+  - Removed 21 linked worktrees whose HEAD is an ancestor of `origin/main` `5a33e95c` and whose residue was empty, only the handover copy, tool scratch or ignored logs. Each one was re-checked for HEAD, status and process cwd right before removal.
+  - The residue (diff, untracked and ignored tars, sha256 manifest) is backed up locally in `KNXBench.backups/2026-10-12-worktree-prune/` and in the profile scratch. It is not in Git.
+  - Wrote `docs/status/2026-10-12-parked-work-triage.md` for the six kept packages: file-by-file main check, `merge-tree` conflict maps, acceptance and recommendations.
+  - OPEN_WORK §1 gains the web-integration and GA-feedback rows. §2 now notes that docs-refresh was published (`696f25b6`) and lists the parked packages. §5 records the prune; `devnav-ro` is gone.
+  - Log: `.ai/logs/2026-10-12_claude_parked-work-triage.md`.
+- **Pending/Next Steps:** Owner decisions per the triage:
+  - native-evidence: adopt, as its own web-lock integration package;
+  - ux-feedback: adopt AP1/2/3/5 and drop AP4; ADR-0112 must be renumbered;
+  - functions-sites: ask (schema 12 vs main 14, attempt 4 failed);
+  - import-lifecycle: ask (never-compiled preflight residue);
+  - audit-findings and native-import-diagnostics: drop.
+
+  `offline-naming-20261011` and `data-tooling-stats-20261011` also need a decision. Local branches of removed worktrees were not deleted.
+- **Notes for Codex oder Claude:** Web lock: held by claude-web-integration for package 3; not taken or released by this entry. `web-params-20261012`, the root checkout and the six kept worktrees were not modified; their snapshots used a temporary index only. `docs/adr/README.md` lacks rows for 0110–0112 (left to the owning tracks). No hardware, release, deployment, subagents or quota checks.
 
 ---
 

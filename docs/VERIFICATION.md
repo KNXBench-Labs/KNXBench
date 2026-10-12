@@ -11,6 +11,9 @@ cargo run -p xtask -- check-corpus-gates
 cargo run -p xtask -- check-layering
 ```
 
+Known traps around these gates (header width, disk space, staging the handover,
+corpus links) are collected in [Developer pitfalls](DEVELOPER_PITFALLS.md).
+
 From another working directory, select the candidate explicitly **before the
 task name**:
 

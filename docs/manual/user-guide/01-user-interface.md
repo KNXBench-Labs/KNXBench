@@ -68,7 +68,7 @@ The left pane has three stacked blocks.
 
 | Button | What it shows |
 | --- | --- |
-| Overview | Project status: counts of everything, plus import errors and warnings |
+| Overview | Project status: project contents, the import report and technical details |
 | Buildings | The building structure as cards, with the devices placed in each part |
 | Topology | Areas, lines and the devices in them |
 | Devices | The project-wide, filterable/sortable device table; a device click opens its central editor |
@@ -92,6 +92,17 @@ left](../../assets/screenshots/porcelain-dashboard.png)
 The Overview of the fictional sample project the manual's screenshots use: 1 area,
 2 lines, 8 devices, 15 group addresses, 8 building parts, 39 communication objects.
 The tree on the left shows the same project, opened at its first line.
+
+Newer source (after Alpha.9, so not yet in this screenshot) groups the same numbers
+into three cards: **Project contents**, **Import report** and **Technical details**.
+The import card states the overall result in words — errors recorded, imported with
+warnings, nothing recorded, or *not assessed* when no import report is available —
+and every count stays visible, zeros included. A non-zero error or warning count
+carries **Show in log**: it opens the [Log](#the-workspace) showing only that
+severity's import-report entries, says whether the log still holds as many as were
+counted, and offers **Show all log entries** to return. Keyboard users reach it with
+Tab and open it with Enter; focus moves to the explanation above the list. A zero is
+plain text, because there is nothing to show.
 
 ## The workspace
 

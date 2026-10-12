@@ -61,6 +61,16 @@ inventories remain unchanged. Build and explicit browser-fixture typing pass.
 Self-review, not an independent review. No live bus, native WebKitGTK/Orca, new
 codec, full ETS claim, release or running-container deployment is implied.
 
+**Follow-up (2026-10-12, evening):** `device-editor-layout.e2e.ts` still expected
+the raw `DPST-9-1` / `DPST-1-1` inline and a separate raw-reference line, so its
+four cases (EN/DE × 360/1440 px) had been red since the name-first change. The
+product matched this amendment; the test was wrong. It now asserts the name-first
+label (`Temperature (9.001)` / `Temperatur (9.001)`, `Switch (1.001)` /
+`Schalten (1.001)`), the exact reference in the cell tooltip, no `DPST` in the
+visible cell, the separately labelled master text, and the existing
+no-character-level-wrapping check. Reverting the cell to the raw reference fails
+it by name.
+
 The following section retains the original selection scope and evidence;
 this amendment supersedes its number-first and always-inline-reference UI.
 

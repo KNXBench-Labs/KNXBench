@@ -1,8 +1,8 @@
 {
   "captured_on": "2026-10-12",
   "application_release": null,
-  "application_source_commit": "a81e75893eb41c57e3947f9e35a4dd55e1ac4b1d",
-  "source_note": "Debug knx-server and production frontend built from main at the recorded commit (after Alpha 9); the status bar shows v0.1.0-alpha.9 because the version moves only at release. Real server APIs and UI actions; no mocked API successes. Separate from docs/assets/media-manifest.json, whose set is pinned to the published Alpha 9 image.",
+  "application_source_commit": "80aba05cbe02848fb3854c1b8ea77cdca7deb410",
+  "source_note": "Debug knx-server and production frontend built from the recorded commit (after Alpha 9); the status bar shows v0.1.0-alpha.9 because the version moves only at release. Real server APIs and UI actions; no mocked API successes. Separate from docs/assets/media-manifest.json, whose set is pinned to the published Alpha 9 image.",
   "network": "isolated loopback-only user/network namespace",
   "data": "fictional Sample house from tools/manual_sample_project.py; no live bus",
   "viewport": {
@@ -13,14 +13,14 @@
   "theme": "porcelain",
   "ui_language": "en",
   "capture_spec": "apps/knx-web/e2e/manual-group-address-views.shots.ts",
-  "capture_spec_sha256": "97584c2cd7b5a874c88f0ef94a7c886476190b6506968071a89e2d4621ede402",
+  "capture_spec_sha256": "0cb8b3bb3197b7c66a7f0b110d9f252ea7eb0b18a51ecb556bb9c83411c9d716",
   "capture_config": "apps/knx-web/playwright.manual-group-addresses.config.ts",
   "capture_config_sha256": "e5c96004f0673f129ed1e974b144b89a25919b7dc7dc53120ca7336a2037c54d",
   "capture_result": {
     "passed": 1,
     "failed": 0,
     "skipped": 0,
-    "note": "Rerun with the final config reproduced all four PNGs byte-identically."
+    "note": "Recaptured 2026-10-12 for the matrix object inventory. At the recorded commit (feature rebased onto main 333b2abd) the matrix, columns and atlas PNGs reproduce byte-identically, as did two earlier runs before the rebase. Only the matrix image changed versus the capture at a81e7589 (the spec now loads one device object list and adds one unlinked column). The tree PNG is kept from the earlier capture: at the recorded commit it differs in 5 anti-aliased pixels at the filter field corner by at most 2 colour levels, which is not a visible change."
   },
   "assets": [
     {
@@ -51,9 +51,17 @@
       "path": "screenshots/porcelain-ga-view-matrix.png",
       "width": 1440,
       "height": 900,
-      "bytes": 150653,
-      "sha256": "e19d1e596b2f51e89cea36503a5a58cf0d2c1aed207f80d3d539787e7f1a48dd",
+      "bytes": 163320,
+      "sha256": "cc461dad054ae57ea68bb8b3f5c77d95588876f63ea0446bcd1e2829973853db",
       "kind": "real-app-screenshot"
+    }
+  ],
+  "superseded_assets": [
+    {
+      "path": "screenshots/porcelain-ga-view-matrix.png",
+      "sha256": "e19d1e596b2f51e89cea36503a5a58cf0d2c1aed207f80d3d539787e7f1a48dd",
+      "application_source_commit": "a81e75893eb41c57e3947f9e35a4dd55e1ac4b1d",
+      "reason": "matrix gained the explicit device object-list load; scope note and status line changed"
     }
   ]
 }

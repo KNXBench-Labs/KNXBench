@@ -43,8 +43,9 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
   // moves the draft onto the new revision; any field change still blocks Apply.
   const fieldSignature = JSON.stringify([field.kind, field.value, field.min, field.max, field.editable, field.writeEtsId, field.access]);
   // When the authoritative value equals the draft (typically the refresh after
-  // our own Apply), nothing can be lost: the editor settles onto it. A revision
-  // that arrived while a write was in flight is never adopted silently.
+  // our own Apply), nothing can be lost: the editor settles onto it. A clean
+  // editor follows the project. A revision that arrived while a write was in
+  // flight is never adopted silently.
   const loadedSignature = useRef(fieldSignature);
   const blockedRevision = useRef<string | null>(null);
   const [settled, setSettled] = useState(false);
@@ -55,6 +56,12 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
     if (field.value !== null && draft === field.value && (baseline !== field.value || revision !== loadedRevision)) {
       setBaseline(field.value); setLoadedRevision(revision); loadedSignature.current = fieldSignature;
       if (accepted) { setAccepted(false); setSettled(true); }
+      return;
+    }
+    // Without a draft there is nothing to protect: follow the project (Undo/Redo, another client).
+    if (!accepted && draft === (baseline ?? "") && (baseline !== field.value || revision !== loadedRevision)) {
+      setDraft(field.value ?? ""); setBaseline(field.value); setLoadedRevision(revision); loadedSignature.current = fieldSignature;
+      setSettled(false); setFailure(null);
       return;
     }
     if (revision !== loadedRevision && !accepted && fieldSignature === loadedSignature.current) setLoadedRevision(revision);

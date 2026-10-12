@@ -1,7 +1,9 @@
 //! Password-protected `.knxproj` import through the library entry points (AR08, KL-13).
 
 use knx_etsproj::{ContainerError, ImportFailure, ProjectPassword};
-use knx_testsupport::{zipcrypto_minimal_knxproj_bytes, ZIPCRYPTO_MINIMAL_PASSWORD};
+use knx_testsupport::{
+    zipcrypto_flat_knxproj_bytes, zipcrypto_minimal_knxproj_bytes, ZIPCRYPTO_MINIMAL_PASSWORD,
+};
 
 fn import(password: Option<&ProjectPassword>) -> Result<knx_etsproj::ImportOutcome, ImportFailure> {
     knx_etsproj::import_knxproj_bytes_with(
@@ -117,4 +119,26 @@ fn a_decrypted_import_reports_that_the_protection_is_not_preserved() {
         .unsupported
         .iter()
         .any(|u| u.what.contains("password protection")));
+}
+
+/// Real ETS exports store bare `0.xml`/`Project.xml` inside the nested
+/// archive (issue #7). They import exactly like the `P-0001/`-rooted layout,
+/// at the same project paths.
+#[test]
+fn the_real_ets_nested_layout_with_bare_names_imports() {
+    let password = ProjectPassword::new(ZIPCRYPTO_MINIMAL_PASSWORD);
+    let outcome = knx_etsproj::import_knxproj_bytes_with(
+        zipcrypto_flat_knxproj_bytes(),
+        "protected-flat.knxproj",
+        Some(&password),
+        &(),
+    )
+    .expect("the real nested layout imports with its password");
+    assert_eq!(outcome.project.info.name, "Minimal");
+    assert_eq!(outcome.project.devices.iter().count(), 1);
+    let rooted = import(Some(&password)).unwrap();
+    assert_eq!(
+        outcome.project, rooted.project,
+        "both layouts give one model"
+    );
 }

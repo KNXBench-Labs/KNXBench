@@ -79,10 +79,10 @@ describe("notes editor ownership and recovery",()=>{
   await click(host,"Keep editing");expect(Array.from(host.querySelectorAll("textarea")).some(field=>field.value==="retained draft")).toBe(true);
   await click(host,"New note");await click(host,"Discard draft");expect(Array.from(host.querySelectorAll("textarea"))[0].value).toBe("");expect(client.apply).not.toHaveBeenCalled();
  });
- it("retains a dirty draft but revokes a preview on same-project revision changes",async()=>{
-  const client=fixture();const callback=vi.fn();const {root,host}=await mount(client,{onApplied:callback});await edit(host,"Title","retained draft");await click(host,"Preview change");
+ it("retains a dirty draft but revokes a preview on same-project revision changes that altered the notes",async()=>{
+  const client=fixture({read:vi.fn().mockResolvedValueOnce(source).mockResolvedValue({...source,snapshotRevision:3,notes:[{...source.notes[0],title:"changed elsewhere"}]})});const callback=vi.fn();const {root,host}=await mount(client,{onApplied:callback});await edit(host,"Title","retained draft");await click(host,"Preview change");
   await act(async()=>root.render(<ProjectNotesEditor context={{...context,snapshotRevision:3}} client={client} onApplied={callback}/>));
-  expect(client.cancel).toHaveBeenCalledWith("synthetic-plan");expect(client.read).toHaveBeenCalledOnce();expect(host.textContent).toContain("Your draft is retained");
+  expect(client.cancel).toHaveBeenCalledWith("synthetic-plan");expect(client.read).toHaveBeenCalledTimes(2);expect(host.textContent).toContain("Your draft is retained");
   expect(Array.from(host.querySelectorAll("textarea")).some(field=>field.value==="retained draft")).toBe(true);expect(client.apply).not.toHaveBeenCalled();
   expect(Array.from(host.querySelectorAll("button")).some(button=>button.textContent==="Confirm change")).toBe(false);
  });
@@ -171,5 +171,23 @@ describe("refusal visibility",()=>{
    expect(alert?.textContent).toBe("The note could not be persisted.");
    expect(scrolled).toContain(alert);
   }finally{HTMLElement.prototype.scrollIntoView=original;}
+ });
+});
+describe("revision changes that leave the notes alone",()=>{
+ it("moves a dirty draft onto the new revision instead of forcing a discard (e.g. after Save)",async()=>{
+  const client=fixture({read:vi.fn().mockResolvedValueOnce(source).mockResolvedValue({...source,snapshotRevision:3,persistence:"native-working-history"})});const callback=vi.fn();
+  const {root,host}=await mount(client,{onApplied:callback});await edit(host,"Title","kept draft");
+  await act(async()=>root.render(<ProjectNotesEditor context={{...context,snapshotRevision:3}} client={client} onApplied={callback}/>));
+  expect(client.read).toHaveBeenCalledTimes(2);
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+  expect(Array.from(host.querySelectorAll("textarea")).some(field=>field.value==="kept draft"&&!field.readOnly)).toBe(true);
+  await click(host,"Preview change");
+  expect(client.preview).toHaveBeenCalledWith({...context,snapshotRevision:3},expect.objectContaining({kind:"replace",id:1}),expect.anything());
+ });
+ it("still treats a lagging reply from the old revision as a change",async()=>{
+  const client=fixture();const callback=vi.fn();
+  const {root,host}=await mount(client,{onApplied:callback});await edit(host,"Title","kept draft");
+  await act(async()=>root.render(<ProjectNotesEditor context={{...context,snapshotRevision:3}} client={client} onApplied={callback}/>));
+  expect(host.textContent).toContain("Your draft is retained");expect(client.preview).not.toHaveBeenCalled();
  });
 });

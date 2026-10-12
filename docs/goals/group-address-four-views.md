@@ -42,6 +42,13 @@ No subagents or quota checks. Reviews are explicitly self-reviews.
 
 ## Follow-ups after the first publication (2026-10-12)
 
+**Members editing (separate package B, 2026-10-12).** Adding members (device →
+communication object → direction) in the shared links panel of all four views and in
+Properties was delivered by a separate package that reuses `api.linkComObject`, the
+core's MODEL-01 link rule and the GA6 inventory reads; see
+[KNOWN_LIMITATIONS](../KNOWN_LIMITATIONS.md#group-address-members-and-download-preparation-2026-10-12).
+It does not touch GA7/GA8, which stay parked as described below.
+
 **Feedback status.** Issue
 [#4](https://github.com/KNXBench-Labs/KNXBench/issues/4) was asked for short
 feedback (tree fit, numeric fallback for projects without stored ranges, use of the

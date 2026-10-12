@@ -161,7 +161,7 @@ export default function StructureWorkspace(props: {
         </CreateDisclosure>}
         <GroupAddressTable key={`${tree.server_incarnation ?? "offline"}:${tree.project_incarnation ?? "unbound"}:${installation.id}`}
           projectContextKey={`${tree.server_incarnation ?? "offline"}:${tree.project_incarnation ?? "unbound"}`}
-          installation={installation} selection={selection}
+          installation={installation} tree={tree} selection={selection}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={onTreeUpdate}
           rangeScope={props.rangeScope ?? null} />
       </>}

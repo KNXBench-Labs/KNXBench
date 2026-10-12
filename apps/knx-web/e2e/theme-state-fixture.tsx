@@ -16,7 +16,7 @@ export default function RepresentativeThemeStates() {
   return <section aria-label="Representative engineering states">
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 360px)", gap: "16px" }}>
       <section className="workspace" aria-label="Representative address table">
-        <GroupAddressTable installation={stateTree.installations[0]} selection={selection}
+        <GroupAddressTable installation={stateTree.installations[0]} tree={stateTree} selection={selection}
           multiSelection={null} rangeScope={null} onItemClick={(_event, _kind, _id, selected) => setSelection(selected)}
           onTreeUpdate={() => { throw new Error("Unexpected fixture domain mutation"); }} />
       </section>

@@ -11,7 +11,15 @@ import * as api from "./api";
 import DeviceLink from "./DeviceLink";
 import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
-import { useTranslate } from "./i18n";
+import { searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
+import {
+  gatewayNote, gatewayOptionLabel, initialGatewayChoice, isFound, pickedGateway, typedGateway, withDiscoveryDefault,
+  type GatewayChoice,
+} from "./downloadGateway";
+import { resolveHandoff, type DownloadActivity, type DownloadHandoff, type HandoffOutcome } from "./downloadHandoff";
+import { currentGuideStep, downloadGuide, type GuideMissing, type GuideStepId } from "./downloadGuide";
+import HelpTip from "./HelpTip";
+import { useTranslate, type MessageKey } from "./i18n";
 import { collectDevices } from "./treeUtils";
 import { useProgrammingConsent } from "./useProgrammingConsent";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -37,11 +45,29 @@ function octetsText(octets: number[]): string {
   return octets.map((octet) => hex(octet, 2)).join(" ");
 }
 
+const GUIDE_STEPS: Record<GuideStepId, MessageKey> = {
+  device: "deviceDownload.guide.step.device",
+  gateway: "deviceDownload.guide.step.gateway",
+  scope: "deviceDownload.guide.step.scope",
+  plan: "deviceDownload.guide.step.plan",
+  confirm: "deviceDownload.guide.step.confirm",
+};
+const GUIDE_MISSING: Record<GuideMissing, MessageKey> = {
+  device: "deviceDownload.guide.missing.device",
+  gateway: "deviceDownload.guide.missing.gateway",
+  plan: "deviceDownload.guide.missing.plan",
+  acknowledgement: "deviceDownload.guide.missing.acknowledgement",
+};
+
 interface DeviceDownloadPanelProps {
   project: ProjectTree | null;
+  /** A "Download to device…" request from the device views, by stable id. */
+  handoff?: DownloadHandoff | null;
+  /** Called once per request after it was resolved, whatever the outcome. */
+  onHandoffHandled?: (nonce: number) => void;
 }
 
-export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProps) {
+export default function DeviceDownloadPanel({ project, handoff = null, onHandoffHandled }: DeviceDownloadPanelProps) {
   const t = useTranslate();
   const consent = useProgrammingConsent();
   const devices = useMemo(
@@ -53,12 +79,18 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
             .sort((a, b) => (a.address ?? "").localeCompare(b.address ?? "", undefined, { numeric: true })),
     [project],
   );
-  const [address, setAddress] = useState("");
+  // The device is chosen by stable id; its address is read from the
+  // current project, never kept as a possibly outdated copy.
+  const [deviceId, setDeviceId] = useState<number | null>(null);
+  const selectedDevice = devices.find((device) => device.id === deviceId) ?? null;
+  const address = selectedDevice?.address ?? "";
   const [scope, setScope] = useState<DownloadScope>("complete");
   // The scope the shown plan was asked for: its texts must not follow a
   // later radio change (the plan itself is dropped on change anyway).
   const [planScope, setPlanScope] = useState<DownloadScope>("complete");
-  const [gateway, setGateway] = useState(loadPreferredGateway);
+  const discovery = useBusDiscovery();
+  const [gatewayChoice, setGatewayChoice] = useState<GatewayChoice>(() => initialGatewayChoice(loadPreferredGateway()));
+  const gateway = gatewayChoice.value;
   const [plan, setPlan] = useState<api.DeviceDownloadPlan | null>(null);
   const [untestedAcknowledgement, setUntestedAcknowledgement] = useState("");
   const [planning, setPlanning] = useState(false);
@@ -66,6 +98,11 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
   const [status, setStatus] = useState<api.DeviceDownloadStatusResponse | null>(null);
   const [events, setEvents] = useState<api.DeviceDownloadEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // What the last status read said. Until one answers, a running download
+  // cannot be ruled out and a device hand-off waits; `connecting` is a 409
+  // (a start is opening its tunnel), `unknown` any other failed read.
+  const [statusCheck, setStatusCheck] = useState<"checking" | "checked" | "connecting" | "unknown">("checking");
+  const [handoffOutcome, setHandoffOutcome] = useState<HandoffOutcome | null>(null);
   const sinceRef = useRef(0);
   const pollInFlightRef = useRef(false);
   const downloadIdRef = useRef<number | null>(null);
@@ -77,8 +114,59 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
     setUntestedAcknowledgement("");
   }, [project]);
 
+  // A device that left the project or lost its address cannot stay chosen.
+  useEffect(() => {
+    if (deviceId !== null && selectedDevice === null) setDeviceId(null);
+  }, [deviceId, selectedDevice]);
+
   const running = status?.status.state === "running";
   const locked = planning || starting || running;
+
+  function dropPlan() {
+    setPlan(null);
+    setUntestedAcknowledgement("");
+  }
+
+  // Device, gateway and scope changes discard a shown plan, like a project edit.
+  function chooseGateway(next: GatewayChoice) {
+    if (next.value !== gatewayChoice.value) dropPlan();
+    setGatewayChoice(next);
+  }
+
+  // Exactly one interface answered and no gateway was chosen or typed: use
+  // it. Never while a plan is shown or a download is busy, and never over a
+  // user's choice (`withDiscoveryDefault` only fills an empty `none`).
+  useEffect(() => {
+    if (locked || plan !== null) return;
+    setGatewayChoice((current) => withDiscoveryDefault(current, discovery));
+  }, [discovery, locked, plan]);
+
+  // A hand-off only selects. It waits for the first status read, never
+  // switches devices while a plan is prepared or a download runs, and is
+  // answered exactly once per click.
+  const handledRef = useRef<number | null>(null);
+  const recheckedRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (handoff === null || handledRef.current === handoff.nonce || statusCheck === "checking") return;
+    // An uncertain answer gets one fresh status read (a server read, no bus
+    // access) before this request is answered.
+    if ((statusCheck === "unknown" || statusCheck === "connecting") && recheckedRef.current !== handoff.nonce) {
+      recheckedRef.current = handoff.nonce;
+      setStatusCheck("checking");
+      void poll();
+      return;
+    }
+    handledRef.current = handoff.nonce;
+    const activity: DownloadActivity = locked || statusCheck === "connecting" ? "busy"
+      : statusCheck === "unknown" ? "unknown" : "idle";
+    const outcome = resolveHandoff(handoff, project, activity);
+    if (outcome.kind === "selected" && outcome.deviceId !== deviceId) {
+      setDeviceId(outcome.deviceId);
+      dropPlan();
+    }
+    setHandoffOutcome(outcome);
+    onHandoffHandled?.(handoff.nonce);
+  }, [handoff, statusCheck, locked, project, deviceId, onHandoffHandled]);
 
   // ADR-0089: verified means every block was read back unchanged
   // (`written: "yes"`) and the restart was not left unconfirmed; reported
@@ -95,6 +183,7 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
     downloadIdRef.current = next.downloadId;
     sinceRef.current = next.nextSince;
     setStatus(next);
+    setStatusCheck("checked");
     if (next.events.length > 0) setEvents((current) => [...current, ...next.events]);
   }
 
@@ -107,6 +196,7 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
       // 409: a start is connecting right now; the next poll sees it.
       const code = api.errorStatus(reason);
       if (code !== 404 && code !== 409) setError(api.errorMessage(reason));
+      setStatusCheck(code === 404 ? "checked" : code === 409 ? "connecting" : "unknown");
     } finally {
       pollInFlightRef.current = false;
     }
@@ -172,6 +262,10 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
     }
   }
 
+  const guide = downloadGuide({ deviceSelected: selectedDevice !== null, gateway, plan, acknowledgement: untestedAcknowledgement });
+  const currentStep = currentGuideStep(guide);
+  const note = gatewayNote(gatewayChoice, discovery);
+
   const stepsStarted = events.filter((event) => event.kind === "stepStarted").length;
   const blocks = events.filter(
     (event): event is Extract<api.DeviceDownloadEvent, { kind: "dataWritten" }> => event.kind === "dataWritten",
@@ -193,25 +287,90 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
         <p>{t("deviceDownload.explainer")}</p>
       </header>
 
+      {project !== null && (
+        <section className="device-download-guide" aria-label={t("deviceDownload.guide.title")}>
+          <h3>{t("deviceDownload.guide.title")}
+            <HelpTip labelKey="help.tip.deviceDownload.label" textKey="help.tip.deviceDownload.text" topicId="limits" /></h3>
+          <ol>
+            {guide.map((step) => (
+              <li key={step.id} data-guide-step={step.id} data-guide-state={step.state}
+                aria-current={step.id === currentStep ? "step" : undefined}>
+                <span className="device-download-guide-name">{t(GUIDE_STEPS[step.id])}</span>
+                <span className="device-download-guide-state">{t(`deviceDownload.guide.state.${step.state}` as const)}</span>
+                {step.id === "scope" && <span className="device-download-guide-hint">{t("deviceDownload.guide.scope", { scope: t(`deviceDownload.scope.${scope}` as const) })}</span>}
+                {step.id === "plan" && plan !== null && <span className="device-download-guide-hint">
+                  {t(plan.support.level === "verified" ? "deviceDownload.guide.planReady.verified" : "deviceDownload.guide.planReady.untested")}</span>}
+                {step.id === "confirm" && plan !== null && <span className="device-download-guide-hint">{t("deviceDownload.guide.onStart")}</span>}
+                {/* A blocked step only says so; its reason is the earlier open step's hint. */}
+                {step.state === "open" && step.missing.map((missing) => (
+                  <span key={missing} className="device-download-guide-hint">{t(GUIDE_MISSING[missing])}</span>
+                ))}
+              </li>
+            ))}
+          </ol>
+          <p className="device-download-guide-note">{t("deviceDownload.guide.discards")}</p>
+        </section>
+      )}
+
       {project === null ? (
         <p>{t("deviceDownload.projectRequired")}</p>
       ) : (
         <form className="device-download-config" onSubmit={(event) => event.preventDefault()}>
           <label>
             {t("deviceDownload.device")}
-            <select value={address} disabled={locked} onChange={(event) => { setAddress(event.target.value); setPlan(null); setUntestedAcknowledgement(""); }}>
+            <select data-download-device value={deviceId ?? ""} disabled={locked}
+              onChange={(event) => { setDeviceId(event.target.value === "" ? null : Number(event.target.value)); dropPlan(); setHandoffOutcome(null); }}>
               <option value="">{t("deviceDownload.chooseDevice")}</option>
               {devices.map((device) => (
-                <option key={device.id} value={device.address ?? ""}>
+                <option key={device.id} value={device.id}>
                   {device.address} — {device.name}
                 </option>
               ))}
             </select>
           </label>
-          <label>
-            {t("deviceDownload.gateway")}
-            <input value={gateway} disabled={locked} onChange={(event) => setGateway(event.target.value)} placeholder="192.0.2.10:3671" />
-          </label>
+          {handoffOutcome && (
+            <p className={handoffOutcome.kind === "selected" ? "device-download-handoff" : "device-download-handoff form-warning"}
+              role="status" data-handoff={handoffOutcome.kind}>
+              {handoffOutcome.kind === "selected"
+                ? t("deviceDownload.handoff.selected", { address: handoffOutcome.address, name: handoffOutcome.name })
+                : handoffOutcome.kind === "noAddress"
+                  ? t("deviceDownload.handoff.noAddress", { name: handoffOutcome.name })
+                  : t(`deviceDownload.handoff.${handoffOutcome.kind}` as const)}
+            </p>
+          )}
+          <fieldset className="device-download-gateway">
+            <legend>{t("deviceDownload.gatewayLegend")}</legend>
+            <p className="device-download-gateway-status" role="status" aria-live="polite">
+              {discovery.phase === "idle" ? t("deviceDownload.gatewaySearch.idle")
+                : discovery.phase === "searching" ? t("deviceDownload.gatewaySearch.searching")
+                  : discovery.phase === "failed" ? t("deviceDownload.gatewaySearch.failed")
+                    : discovery.interfaces.length === 0 ? t("deviceDownload.gatewaySearch.none")
+                      : t("deviceDownload.gatewaySearch.found", { count: discovery.interfaces.length })}
+            </p>
+            {discovery.phase === "failed" && discovery.error && <p className="bus-discovery-detail">{discovery.error}</p>}
+            <label>
+              {t("deviceDownload.gateway")}
+              <input data-download-gateway value={gateway} disabled={locked}
+                onChange={(event) => chooseGateway(typedGateway(event.target.value))} placeholder="192.0.2.10:3671" />
+            </label>
+            {discovery.interfaces.length > 0 && (
+              <label>
+                {t("deviceDownload.gatewayFound")}
+                <select data-download-gateway-found value={isFound(gateway, discovery.interfaces) ? gateway.trim() : ""} disabled={locked}
+                  onChange={(event) => { if (event.target.value !== "") chooseGateway(pickedGateway(event.target.value)); }}>
+                  <option value="">{t("deviceDownload.gatewayChooseFound")}</option>
+                  {discovery.interfaces.map((iface, index) => (
+                    <option key={`${iface.controlEndpoint}-${index}`} value={iface.controlEndpoint}>{gatewayOptionLabel(iface)}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {note && <p className="device-download-gateway-note" data-gateway-note={note}>{t(`deviceDownload.gatewayNote.${note}` as const)}</p>}
+            <button type="button" className="device-download-search" disabled={locked || discovery.phase === "searching"}
+              onClick={() => void searchBusInterfaces()}>
+              {t("deviceDownload.gatewaySearchAgain")}
+            </button>
+          </fieldset>
           <fieldset className="device-download-scope">
             <legend>{t("deviceDownload.scope.legend")}</legend>
             {SCOPES.map((option) => (
@@ -223,14 +382,14 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
             ))}
           </fieldset>
           <div className="device-download-actions">
-            <button disabled={locked || address === ""} onClick={() => void preparePlan()}>
+            <button type="button" disabled={locked || address === ""} onClick={() => void preparePlan()}>
               {t("deviceDownload.preparePlan")}
             </button>
           </div>
         </form>
       )}
 
-      {address && <p><DeviceLink address={address.trim()}>{t("devices.openEditor")}</DeviceLink></p>}
+      {selectedDevice && <p><DeviceLink deviceId={selectedDevice.id}>{t("devices.openEditor")}</DeviceLink></p>}
       {error && <p className="form-error" role="alert">{error}</p>}
 
       {plan && (

@@ -150,6 +150,7 @@ function Harness(props: {
       )}
       <GroupAddressTable
         installation={inst}
+        tree={{ ...tree, installations: [inst] }}
         selection={selection}
         multiSelection={multiSelection}
         onItemClick={onItemClick}

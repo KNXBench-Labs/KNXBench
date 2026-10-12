@@ -78,10 +78,20 @@ export interface GroupAddressObjectInventory {
  * project update or language change, and a project switch forgets everything.
  */
 export function useGroupAddressObjectInventory(installation: InstallationNode, projectKey: string): GroupAddressObjectInventory {
-  const [language] = useProductLanguage();
   const devices = useMemo(() => [...collectInstallationDevices(installation).values()], [installation]);
+  return useDeviceObjectInventory(devices, installation, projectKey);
+}
+
+/**
+ * The same explicit, snapshot-bound reads for any device list — the
+ * group-address member picker uses it for the devices the link rule admits.
+ * `snapshot` is the project data the list was derived from: a new snapshot
+ * makes loaded entries outdated, so they are re-read rather than shown.
+ */
+export function useDeviceObjectInventory(devices: DeviceNode[], snapshot: object, projectKey: string): GroupAddressObjectInventory {
+  const [language] = useProductLanguage();
   // A fresh identity per snapshot, language and project: the staleness token.
-  const source = useMemo(() => ({}), [installation, language, projectKey]);
+  const source = useMemo(() => ({}), [snapshot, language, projectKey]);
   const [entries, setEntries] = useState<ReadonlyMap<number, ObjectInventoryEntry>>(() => new Map());
   const entriesRef = useRef(entries); entriesRef.current = entries;
   const live = useRef({ source, language, projectKey, mounted: true, generations: new Map<number, number>() });

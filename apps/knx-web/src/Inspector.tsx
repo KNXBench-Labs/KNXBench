@@ -27,7 +27,9 @@ import { installationLabel } from "./installationPresentation";
 import { ParameterPanelContent, useDeviceParameters } from "./ParameterPanel";
 import HelpTip from "./HelpTip";
 import RenameNameField from "./RenameNameField";
-import DeviceLink from "./DeviceLink";
+import { linkableGroupAddresses } from "./groupAddressMembers";
+import GroupAddressLinks from "./GroupAddressLinks";
+import OpenDownloadButton from "./OpenDownloadButton";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { useProductLanguage } from "./productLanguage";
 import DeviceInstructionsPanel from "./DeviceInstructionsPanel";
@@ -430,11 +432,11 @@ function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: Projec
 }
 
 // One existing `GroupLink`, with an Unlink button. `Command::UnlinkComObject`
-// carries no `installations[0]`-only restriction the way Link/create/delete
+// carries no installation restriction the way Link (and create/delete)
 // commands do (it removes whatever link already exists on the comm object,
 // regardless of which installation the linked address lives in), so Unlink
-// is always offered — unlike `NewGroupLinkRow`'s Link, which is gated by
-// the picker only ever listing the first installation's addresses.
+// is always offered — unlike `NewGroupLinkRow`'s Link, whose picker lists
+// only the addresses `linkableGroupAddresses` admits (MODEL-01 / ADR-0070).
 function GroupLinkRow(props: {
   com: ComObjectNode;
   link: GroupLinkNode;
@@ -473,10 +475,12 @@ function GroupLinkRow(props: {
 }
 
 // The create counterpart of `GroupLinkRow` — same inline-row shape as
-// `NewGroupAddressRow`/`NewGroupRangeRow`. `groupAddresses` is always the
-// first installation's list: `Command::LinkComObject` only ever validates
-// the target address against `installations[0]` (command.rs), the same
-// constraint every other create affordance in this file already honors.
+// `NewGroupAddressRow`/`NewGroupRangeRow`. `groupAddresses` is
+// `linkableGroupAddresses(tree, device)`: `Command::LinkComObject` refuses a
+// link across installations (MODEL-01 / ADR-0070, command.rs), so only the
+// device's own installation's addresses — or all, for an unplaced device —
+// are offered. `GroupAddressLinks` adds members from the address side with
+// the same rule (`groupAddressMembers.ts`).
 function NewGroupLinkRow(props: {
   com: ComObjectNode;
   groupAddresses: GroupAddressNode[];
@@ -871,18 +875,6 @@ function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddre
   </div>;
 }
 
-// MODEL-01 / ADR-0070, mirroring `Command::LinkComObject`: a device placed
-// in one installation links only to that installation's group addresses; a
-// device placed nowhere may link to any; one placed in two is refused.
-function linkableGroupAddresses(tree: ProjectTree, deviceId: number): GroupAddressNode[] {
-  const owner = deviceInstallation(tree, deviceId);
-  if (owner) return owner.group_addresses;
-  const placed = tree.installations.some((installation) =>
-    installation.unassigned.some((device) => device.id === deviceId)
-    || installation.topology.some((area) => area.lines.some((line) => line.devices.some((device) => device.id === deviceId))));
-  return placed ? [] : tree.installations.flatMap((installation) => installation.group_addresses);
-}
-
 export function DeviceWorkspace(props: {
   detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void;
   /** An unapplied installation-instructions draft exists (or no longer does). */
@@ -905,7 +897,8 @@ export function DeviceWorkspace(props: {
   const [instructionsOpened, setInstructionsOpened] = useState(false);
   useEffect(() => { if (tab === instructionsTab) setInstructionsOpened(true); }, [tab, instructionsTab]);
   return <section className="device-workspace">
-    <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div></header>
+    <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div>
+      <OpenDownloadButton deviceId={detail.id} address={detail.address} /></header>
     <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
     <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
@@ -1176,12 +1169,7 @@ function GroupAddressInspector(props: {
           {t(DPT_OUTCOME_KEYS[ga.dpt_detail.outcome])}
         </p>
       )}
-      {ga.links.length > 0 && <ul className="ga-linked-devices" aria-label={t("workbench.devices")}>
-        {[...new Map(ga.links.map((link) => [link.device_id, link])).values()].map((link) => <li key={link.device_id}>
-          <DeviceLink deviceId={link.device_id}>{link.device_name ?? t("addressTable.unknownDevice", { id: link.device_id })}</DeviceLink>
-          {link.device_address && <small className="mono"> {link.device_address}</small>}
-        </li>)}
-      </ul>}
+      <GroupAddressLinks ga={ga} tree={props.tree} onTreeUpdate={props.onApplied} variant="list" />
       {canDelete ? (
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (

@@ -9,7 +9,7 @@ import type { DeviceNode } from "./bindings/DeviceNode";
 import type { NotesContext, NoteTarget } from "./features/notes/client";
 import { noteTargetKey } from "./features/notes/client";
 import type { NoteTargetChoice } from "./features/notes/ProjectNotesEditor";
-import { hasRenameContext } from "./rename";
+import { snapshotContextFromTree } from "./snapshotIdentity";
 
 type EntityKind = Exclude<NoteTarget["kind"], "project" | "comObject">;
 export type NoteTargetKindLabels = Readonly<Record<EntityKind, string>>;
@@ -24,12 +24,7 @@ const MAX_INSTALLATION_ID = 255;
 
 /** `null` unless the tree carries a complete server/project/revision identity. */
 export function notesContextFromTree(tree: ProjectTree): NotesContext | null {
-  if (!hasRenameContext(tree)) return null;
-  return {
-    serverIncarnation: tree.server_incarnation!,
-    projectIncarnation: tree.project_incarnation!,
-    snapshotRevision: tree.snapshot_revision!,
-  };
+  return snapshotContextFromTree(tree);
 }
 
 interface Candidate { target: NoteTarget; text: string }

@@ -225,11 +225,11 @@ test("en 1440: opening another project over a note draft asks first; keeping it 
   await page.getByRole("combobox").fill(m["toolbar.openProject"]);
   await page.getByRole("option").filter({ hasText: m["toolbar.openProject"] }).click();
   await page.getByRole("button", { name: "other-fictional.knxproj", exact: true }).click();
-  const guard = page.getByRole("dialog", { name: m["notes.draftGuard.title"], exact: true });
+  const guard = page.getByRole("dialog", { name: m["draftGuard.title"], exact: true });
   await expect(guard).toBeVisible();
-  await expect(guard.getByRole("button", { name: m["notes.draftGuard.keep"], exact: true })).toBeFocused();
+  await expect(guard.getByRole("button", { name: m["draftGuard.keep"], exact: true })).toBeFocused();
   await capture(page, "draft-guard-en-1440");
-  await guard.getByRole("button", { name: m["notes.draftGuard.keep"], exact: true }).click();
+  await guard.getByRole("button", { name: m["draftGuard.keep"], exact: true }).click();
   await expect(guard).toHaveCount(0);
   await expect(editor.getByLabel("Title", { exact: true })).toHaveValue("Unapplied thought");
   expect(f.applied).toBe(0);

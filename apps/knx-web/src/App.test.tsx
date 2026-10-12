@@ -127,6 +127,16 @@ const notesClientMock = vi.hoisted(() => ({
   apply: vi.fn(),
   cancel: vi.fn().mockResolvedValue(undefined),
 }));
+const instructionClientMock = vi.hoisted(() => ({
+  read: vi.fn(() => new Promise(() => {})),
+  preview: vi.fn(),
+  apply: vi.fn(),
+  cancel: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("./features/rtf/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./features/rtf/client")>()),
+  createInstructionClient: () => instructionClientMock,
+}));
 vi.mock("./features/notes/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./features/notes/client")>()),
   createNotesClient: () => notesClientMock,
@@ -4091,7 +4101,7 @@ describe("App — project notes workspace", () => {
     await act(async () => {});
     expect(document.querySelector(".note-draft-guard")).not.toBeNull();
     expect(apiMock.importProject).not.toHaveBeenCalled();
-    await act(async () => findButton(enMessages["notes.draftGuard.keep"]).click());
+    await act(async () => findButton(enMessages["draftGuard.keep"]).click());
     expect(document.querySelector(".note-draft-guard")).toBeNull();
     expect(apiMock.importProject).not.toHaveBeenCalled();
     expect(host!.querySelector<HTMLElement>(".notes-workspace")!.hidden).toBe(false);
@@ -4099,7 +4109,7 @@ describe("App — project notes workspace", () => {
 
     await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await act(async () => {});
-    await act(async () => findButton(enMessages["notes.draftGuard.discard"]).click());
+    await act(async () => findButton(enMessages["draftGuard.discard"]).click());
     await act(async () => {});
     expect(apiMock.importProject).toHaveBeenCalledOnce();
     await act(async () => root.unmount());
@@ -4125,7 +4135,7 @@ describe("App — project notes workspace", () => {
     expect(mayClose).toBe(false);
     expect(document.querySelector(".note-draft-guard")).not.toBeNull();
     expect(tauriWindowMock.destroy).not.toHaveBeenCalled();
-    await act(async () => findButton(enMessages["notes.draftGuard.discard"]).click());
+    await act(async () => findButton(enMessages["draftGuard.discard"]).click());
     await act(async () => {});
     expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
     await act(async () => root.unmount());
@@ -4157,12 +4167,50 @@ describe("App — project notes workspace", () => {
     await act(async () => {});
     apiMock.importProject.mockResolvedValue({ ...notesTree(), server_incarnation: "srv-other" });
     notesClientMock.read.mockResolvedValue({ ...notesView(), serverIncarnation: "srv-other", notes: [] });
-    await act(async () => findButton(enMessages["notes.draftGuard.discard"]).click());
+    await act(async () => findButton(enMessages["draftGuard.discard"]).click());
     await act(async () => {});
     expect(titleValues()).not.toContain("Unapplied thought");
     await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await act(async () => {});
     expect(document.querySelector(".note-draft-guard")).toBeNull();
     await act(async () => root.unmount());
+  });
+});
+
+describe("App — unapplied installation-instructions draft", () => {
+  it("asks before opening another project, and keeping the draft changes nothing", async () => {
+    const tree = { ...treeWithDevice(), server_incarnation: "srv-ins", project_incarnation: 1, snapshot_revision: 3 };
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxproj");
+    apiMock.importProject.mockResolvedValue(tree);
+    apiMock.deviceDetail.mockReset();
+    apiMock.deviceDetail.mockResolvedValue(deviceDetailFixture());
+    instructionClientMock.read.mockImplementation(() => Promise.resolve({ serverIncarnation: "srv-ins", projectIncarnation: 1, snapshotRevision: 3,
+      device: 42, originalXmlSha256: "c".repeat(64), originalPresent: true, originalBytes: 4, originalFormat: "plain", unsupported: [],
+      previewError: null, effectiveDocument: { runs: [{ text: "Hint", style: { bold: false, italic: false, underline: false } }] },
+      overrideDocument: null, persistence: "session-only" }));
+    const root = await renderApp();
+    try {
+      await act(async () => findButton("Open project…").click());
+      await act(async () => treeLabel("Device D").click());
+      await act(async () => findButton(enMessages["deviceInstructions.tab"]).click());
+      const field = host!.querySelector<HTMLTextAreaElement>(".device-instructions textarea")!;
+      expect(field.value).toBe("Hint");
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(field, "Hint, revised");
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      apiMock.importProject.mockClear();
+      await act(async () => findButton("Open project…").click());
+      await act(async () => {});
+      expect(document.querySelector(".note-draft-guard")).not.toBeNull();
+      expect(apiMock.importProject).not.toHaveBeenCalled();
+      await act(async () => findButton(enMessages["draftGuard.keep"]).click());
+      expect(document.querySelector(".note-draft-guard")).toBeNull();
+      expect(host!.querySelector<HTMLTextAreaElement>(".device-instructions textarea")!.value).toBe("Hint, revised");
+      expect(apiMock.importProject).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+      instructionClientMock.read.mockImplementation(() => new Promise(() => {}));
+    }
   });
 });

@@ -1,3 +1,31 @@
+## 2026-10-12 — Catalogue updates with a preview in the web
+
+The catalogue view gains **Update with preview…** next to the unchanged direct install
+([ADR-0118](adr/0118-catalogue-updates-through-the-web-server.md)). New routes wrap
+`knx_productdb::update`: `POST /api/catalog/update/preview` and `/apply` (stateless,
+the same file plus the preview's token; 409 `catalogueUpdateStale` installs
+nothing), `GET /api/catalog/backups` (names of regular files matching the backup
+pattern next to the product database, newest first, never a path) and
+`POST /api/catalog/restore` (only a listed name; 422 `invalidBackup` keeps the live
+file; the shared connection is reopened and migrated afterwards). All hold the
+product-database mutex. The UI says nothing is installed until **Back up and
+install**, names the backup, reads backups only when their list is opened, and asks
+before a restore with keeping the catalogue as the focused default
+([contract](contracts/catalogue-update.md#web-routes-adr-0118)).
+
+Test-first: server routes RED 9/10 against a stub, `api.ts` RED 5/5, panel RED 12/12,
+lazy backups RED 3, each then GREEN; 16 named guard mutants caught (three server
+survivors first exposed test gaps, which were closed). The companion window's
+mutating-fetch census now counts `postForm` call sites. Gate on frozen `eb15b38d`,
+26 stages: 25 green — Web 3056/0 across 204 files, catalogue 10/10, notes,
+instructions and parameters 11/11 each and dialogs 14/14 on the production build,
+Rust 4155/0 with 194 ignored, Clippy, fmt, bindings, docs and five explicit-root
+xtask gates; the full fixture browser stage had 400 passed and the same 4
+pre-existing `device-editor-layout.e2e.ts` failures (raw `DPST-9-1`). Loopback-only
+real-server smoke with synthetic packages, checked against the SQLite file: two
+updates, a genuine stale apply, restore by name, Escape, restart. Self-review, not
+independent. [Evidence](evidence/catalogue-update-web-2026-10-12.json).
+
 ## 2026-10-12 — Checked parameter editors in the device editor
 
 Time/Number/Colour/Picture rows in the Parameters tab offer an opt-in **Checked

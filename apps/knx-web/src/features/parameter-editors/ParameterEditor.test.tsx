@@ -117,6 +117,20 @@ describe("isolated parameter editor", () => {
     expect(host.textContent).toContain("draft is retained");
     await click(host, "Apply value"); expect(onApply).toHaveBeenCalledTimes(1);
   });
+  it("follows a changed authoritative value when there is no draft", async () => {
+    const { host, props, root } = await mount();
+    await act(async () => root.render(<ParameterEditor {...props} revision="server1/snapshot2" field={{ ...base.field, value: "20" }} />));
+    expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("20");
+    expect(host.textContent).not.toContain("draft is retained");
+  });
+  it("follows Undo after a settled Apply instead of holding the applied value", async () => {
+    const { host, props, root } = await mount(); await edit(host, "12"); await click(host, "Apply value");
+    await act(async () => root.render(<ParameterEditor {...props} revision="server1/snapshot2" field={{ ...base.field, value: "12" }} />));
+    await act(async () => root.render(<ParameterEditor {...props} revision="server1/snapshot3" field={{ ...base.field, value: "0010" }} />));
+    expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("0010");
+    expect(host.textContent).not.toContain("draft is retained");
+    expect(host.textContent).not.toContain("Applied. The field shows");
+  });
   it("ignores a late result after selection change", async () => {
     let settle!: (value: { tree: string }) => void; const onApply = vi.fn().mockReturnValue(new Promise(done => { settle = done; }));
     const { host, props, root } = await mount({ onApply }); await edit(host, "12"); await click(host, "Apply value");

@@ -1,0 +1,347 @@
+{
+  "schema": 1,
+  "date": "2026-10-12",
+  "scope": "isolated preview-first project notes editor leaf; source delivery, not production host or whole AP4",
+  "candidate": "89d9888c7964102990598c06313f47a7190d0ddb",
+  "feature_commit": "d286699902eb4a73a4f8c450836bd858c244be02",
+  "http_runtime": "ddf88f86430c433df4723cbb7b177d5dd6734da5",
+  "source_hashes": {
+    "apps/knx-web/src/features/notes/ProjectNotesEditor.test.tsx": "1ddfe0ce35f492a98affd363397dbe26bd2546c1fbe23ae9022dc55bd79b3e8d",
+    "apps/knx-web/src/features/notes/ProjectNotesEditor.tsx": "74de4c0564efdb656f0788ceadc274f5e103dfde460293da1efdb0f54b09cba0",
+    "apps/knx-web/src/features/notes/build-fixture.mjs": "22667f7d441265a0a4c7a392e7d0f0bdcca1ba8797aafb34fb44b1bc5acac7a1",
+    "apps/knx-web/src/features/notes/client.test.ts": "1aacded96a718342ee6528e5b2fa8b218052f96a1295ea4a777a5f95b55ce408",
+    "apps/knx-web/src/features/notes/client.ts": "d3926f4e30c27e5374f73ff06b8002aa8704bd89ebb7ab155eb149fc45d9032d",
+    "apps/knx-web/src/features/notes/copy.test.ts": "2ac319dd1761769272caa522e9a458598c1217ea2a1ef8f84b4397caa17aac7a",
+    "apps/knx-web/src/features/notes/copy.ts": "91f6a842f606a4b94214175444d7f694a980a794f5caa98d8786a79095be2e85",
+    "apps/knx-web/src/features/notes/editor.module.css": "705e77131d4e62b44e3bf7874a5b6190c0d7688657ac3ea3fea3c4a967164112",
+    "apps/knx-web/src/features/notes/fixture.html": "0a293bb441f2ee925adba2bb498c87d970410d8f6a18386e4dc1f2c1b1aff1dd",
+    "apps/knx-web/src/features/notes/fixture.tsx": "b14f355869f177c989adba323a5831225c255c2547afece53be778fadf852f1c",
+    "apps/knx-web/src/features/notes/text.test.ts": "577c02370701ff68ca5b56e8cc8c1ebcb7b097400b259a9f2508c71ed9a4b966",
+    "apps/knx-web/src/features/notes/text.ts": "f43cc0eed39bd8b944a8596c577f14d54e426519990457ab0339b185fd1a6bda",
+    "apps/knx-web/src/features/notes/tsconfig.fixture.json": "2db8cbf078af090aa7fbf9dbdb5f96d0049b4bb7954f461b0a263959d406a988"
+  },
+  "review_kind": "active-session source self-review, not independent",
+  "owner_acceptance": {
+    "stages": [
+      {
+        "name": "note-feature",
+        "exit": 0,
+        "valid": true,
+        "passed": 40,
+        "failed": 0,
+        "pending": 0,
+        "files": 4
+      },
+      {
+        "name": "note-fixture-types",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "note-fixture-build",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "note-http",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "note-unit",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "format",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "web",
+        "exit": 0,
+        "valid": true,
+        "passed": 2836,
+        "failed": 0,
+        "pending": 0,
+        "files": 182
+      },
+      {
+        "name": "web-build",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "theme-types",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "flow-types",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "fixture-build",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "rust-workspace",
+        "exit": 0,
+        "valid": true,
+        "passed": 4103,
+        "failed": 0,
+        "ignored": 194,
+        "skip_lines": []
+      },
+      {
+        "name": "clippy",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "binaries",
+        "exit": 0,
+        "valid": true,
+        "versions": {
+          "knx-server": "knx-server 0.1.0-alpha.9+gddf88f86430c433df4723cbb7b177d5dd6734da5",
+          "knx": "knx 0.1.0-alpha.9+gddf88f86430c433df4723cbb7b177d5dd6734da5",
+          "knx-mcp": "knx-mcp 0.1.0-alpha.9+gddf88f86430c433df4723cbb7b177d5dd6734da5"
+        }
+      },
+      {
+        "name": "documentation",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "documentation-tests",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-layering",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-headers",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-ledger",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "whitespace",
+        "exit": 0,
+        "valid": true
+      }
+    ],
+    "source_frozen": true,
+    "runtime_equivalence_to_candidate": true
+  },
+  "integrated_documentation": {
+    "head": "89d9888c7964102990598c06313f47a7190d0ddb",
+    "stages": [
+      {
+        "name": "documentation",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "documentation-tests",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-layering",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-headers",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-ledger",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "whitespace",
+        "exit": 0,
+        "valid": true
+      }
+    ],
+    "source_frozen": true
+  },
+  "guard_mutations": [
+    {
+      "label": "double-apply",
+      "exit": 1,
+      "failed": 1,
+      "assertions": [
+        "notes editor ownership and recovery prevents a second apply before a same-turn first apply is resolved"
+      ]
+    },
+    {
+      "label": "private-preview",
+      "exit": 1,
+      "failed": 1,
+      "assertions": [
+        "notes editing gestures previews exact removal instead of deleting on the first gesture"
+      ]
+    },
+    {
+      "label": "literal-text",
+      "exit": 1,
+      "failed": 1,
+      "assertions": [
+        "literal note text adapter presents CRLF and CR as textarea line breaks without changing the model"
+      ]
+    }
+  ],
+  "canonical_source_restored": true,
+  "final_read_help_visual_matrix": {
+    "accepted": true,
+    "exact_cases": 8,
+    "source_manifest": "note-ui-browser-owner-5/source-manifest.json",
+    "input_frozen": true,
+    "images": [
+      {
+        "file": "de-graphite-400.png",
+        "sha256": "b0d3fbc2f53b178bc90e512abf5214785dcd66f984c27a368c5ce877ef494fd0",
+        "pixel_equal_to_previously_inspected_frame": true,
+        "size": [
+          400,
+          1174
+        ]
+      },
+      {
+        "file": "de-graphite-1440.png",
+        "sha256": "cafeb82568c4c359262648162b9b296a87a03a39cb2ca703b64fc2e663796610",
+        "pixel_equal_to_previously_inspected_frame": true,
+        "size": [
+          1440,
+          1100
+        ]
+      },
+      {
+        "file": "de-porcelain-400.png",
+        "sha256": "4065e6730143033161b3105c77518ddf3efecbb17c0174d2b0a94daa36561904",
+        "pixel_equal_to_previously_inspected_frame": true,
+        "size": [
+          400,
+          1174
+        ]
+      },
+      {
+        "file": "de-porcelain-1440.png",
+        "sha256": "b593d4955fc342d3061b5d04864a30a9608b97df6a8e7b9ce67378f129a39578",
+        "pixel_equal_to_previously_inspected_frame": true,
+        "size": [
+          1440,
+          1100
+        ]
+      },
+      {
+        "file": "en-graphite-400.png",
+        "sha256": "8345c7d9f8c0db9987514f9b6dfa95369a71bc358754782878ce77880148de6b",
+        "pixel_equal_to_previously_inspected_frame": true,
+        "size": [
+          400,
+          1129
+        ]
+      },
+      {
+        "file": "en-graphite-1440.png",
+        "sha256": "5f56e39d83c2ea4333de5ecaae836b01c2521b628f34c099c32f54d50ef4b9d7",
+        "pixel_equal_to_previously_inspected_frame": true,
+        "size": [
+          1440,
+          1100
+        ]
+      },
+      {
+        "file": "en-porcelain-400.png",
+        "sha256": "77bbb4f12488719641891f08fea61535eadc9124d9ed2456e4c311f11dfb1285",
+        "pixel_equal_to_previously_inspected_frame": true,
+        "size": [
+          400,
+          1129
+        ]
+      },
+      {
+        "file": "en-porcelain-1440.png",
+        "sha256": "c0957d2a80f43b302f151c1f430c846f76f9def671dabb41efc519835328cc6a",
+        "pixel_equal_to_previously_inspected_frame": true,
+        "size": [
+          1440,
+          1100
+        ]
+      }
+    ],
+    "pixel_equivalence": "New source-built full rasters byte-decoded RGBA pixel-equal to all8 frames actually inspected for run2. Removed fallback colours did not alter resolved current KNX theme rendering; corrected expired German text is covered by copy/unit not an expiry screenshot.",
+    "unexpected_requests": [],
+    "hover_all_none": true,
+    "scope": "Actual built isolated read/help/layout/hover matrix only; not whole production host, expiry display or native-mutation rerun"
+  },
+  "earlier_native_mutations": {
+    "source_frozen": true,
+    "head": "ddf88f86430c433df4723cbb7b177d5dd6734da5",
+    "ui_mutations": 5,
+    "ui_scope": "EN Graphite1440 real create/replace/move/remove/doc inclusion, literal body unchanged and private draft/preview",
+    "working_restart_undo_redo": true,
+    "non_note_context_digest_table_count": 24,
+    "explicit_root_save_sql_readback": true,
+    "saved_root_restarted_in_followup": true,
+    "recovery_history_preserved": true,
+    "retained_source_tables_byte_exact": true,
+    "replayed_mutations": false,
+    "all_owned_listeners_closed": true,
+    "partial_attempt_3_retained": true,
+    "accepted": true,
+    "scope": "Qualified actual UI mutation/working-recovery and saved-root restart chain; initial third-run parser failure remains failed, follow-up completed only unstarted read/restart with no write replay. No production shell/Tauri/hardware/ETS claim"
+  },
+  "native_source_qualification": "Earlier five mutations and read-only saved-root follow-up bind their original source; current-only German expiry copy correction, CSS literal fallback removal and copy regression test are covered separately by final owner/matrix gates. Original third-run JSON parser error remains partial, not whole acceptance.",
+  "limitations": [
+    "Session1 production mount/authoritative target choices/revision/dirty/refresh ownership open",
+    "FUTURE-03 remains LATER; AP3/AP5/AP6/AP7 outstanding",
+    "No whole-shell/F1/Orca/Tauri/hardware/ETS/secure-runtime/report/release acceptance",
+    "Self-review is not independent review; final read/help images are not fresh mutation or expiry-frame proof"
+  ],
+  "private_receipt_sha256": {
+    "note-ui-owner-2/receipt.json": "3b20cbd5a8ede23975c2201c5cc27e1f6451c3846d15b01c72b255a45ed2a075",
+    "note-ui-owner-2/source-manifest.json": "8f01fa71de21dd432f5ce5bef27e33d0863eff3331a3c1d5e21496e9c7341bee",
+    "note-ui-integrated-docs-1/receipt.json": "4cac2bba46af662d9dd0112fd17d6d0378437ad203eaa034a15098a2c66cc194",
+    "note-ui-guard-negatives-1/receipt.json": "36f26f81c260acc169911908aadd8e59273062c2139ee9753fb0128df33fb7f5",
+    "note-ui-real-browser-5/receipt.json": "a48241664820410699acdd4401a0df47fa52e62ad7905b13bc4b8f0f008ee351",
+    "note-ui-native-qualified-4.json": "6d131915b1f4e863be2c181076c947f9a4b586a1f667db49bf5b185933f48ed9",
+    "note-ui-journal-merge-preservation.json": "c02e9ba60283b663ffbfd963d5cdfc0417620b6fdc564d59fac2b685c08e63e6"
+  }
+}

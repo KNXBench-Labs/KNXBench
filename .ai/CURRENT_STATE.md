@@ -1,3 +1,12 @@
+Web lock: released by claude-web-integration (package 4, catalogue updates in the web, delivered)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 18:17
+- **Completed:** Package 4 delivered, which completes the four-package web integration (notes, installation instructions, checked parameter editors, catalogue updates). ADR-0118: `/api/catalog/update/preview|apply`, `/api/catalog/backups`, `/api/catalog/restore` over `knx_productdb::update` (mutex held, stateless token apply, listed-name restore, reopen after restore); catalogue view **Update with preview…** with backup naming, stale path, lazily read backup list and ask-first restore. Gate on frozen `eb15b38d`: 25/26 green (Web 3056/0/204 files, catalogue 10/10, notes/instructions/parameters 11/11, dialogs 14/14, Rust 4155/0 with 194 ignored, Clippy, docs, five xtask); full fixture browser 400 passed + the same 4 pre-existing `device-editor-layout.e2e.ts` DPST-9-1 failures. Real-server smoke with synthetic packages green against the SQLite file. Docs: ADR-0118 + README row, catalogue-update contract, manual ch. 05/10, implementation-status, OPEN_WORK, KNOWN_LIMITATIONS, FEATURES, ARCHITECTURE, IMPLEMENTATION_STATUS, evidence JSON, log `.ai/logs/2026-10-12_claude_web-catalogue-updates.md`.
+- **Pending/Next Steps:** Web integration track is done. Per the parked-work triage: native-evidence next, then ux-feedback (AP1/2/3/5, renumber its ADR), each under the web lock. Candidate follow-ups: retire the direct install in favour of the previewed one (needs its own decision), delete old backups from the UI, the 4 `device-editor-layout.e2e.ts` DPST-9-1 failures (DPT-presentation owner).
+- **Notes for Codex oder Claude:** Self-review only. The direct `/api/catalog/install` and the device wizard still install without preview/backup (ADR-0118 §7). Backups are never deleted by KNXBench. No hardware, bus writes, release or deployment.
+
+---
+
 Web lock: taken by claude-web-integration for package 4 (catalogue updates in the web)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 17:21

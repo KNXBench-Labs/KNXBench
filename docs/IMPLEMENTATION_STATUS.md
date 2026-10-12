@@ -1,3 +1,29 @@
+## 2026-10-12 — Checked parameter editors in the device editor
+
+Time/Number/Colour/Picture rows in the Parameters tab offer an opt-in **Checked
+editor** (`ParameterSourceEditor.tsx`). It reads the parameter's source evidence
+per opened field; `parameterSourceHost.ts` admits only a well-formed answer for the
+same device, reference, panel program and snapshot. Writes go only through
+`setParameterValue`, and the host publishes every completed write itself, so closing
+the editor mid-write loses nothing. The parameter panel no longer blanks on a pure
+revision refresh, so an open editor survives Save, Apply and Undo
+([host](contracts/parameter-editor-host.md#workbench-host-12-october-2026)).
+
+Leaf rules added test-first: a draft moves across a revision change when the field
+is unchanged, settles when the server carries exactly the applied value, and a clean
+editor follows the project (the last was found by the real-server smoke on Undo).
+18 named guard mutants caught, sources restored. Gate on frozen `9a8f7e58`, 25
+stages: 24 green — Web 3034/0 across 202 files, parameters 11/11, notes
+11/11, instructions 11/11 and dialogs 14/14 on the production build, Rust 4145/0 with
+194 ignored, Clippy, fmt, bindings, docs and five explicit-root xtask gates; the full
+fixture browser stage had 390 passed and the same 4 pre-existing
+`device-editor-layout.e2e.ts` failures (raw `DPST-9-1`). Loopback-only real-server
+smoke: UI import of a synthetic product with retained source, Apply, Undo/Redo, a
+draft across Save As, slider draft-only, Save, restart and reopen. Module mapping,
+verified Colour/Picture codecs and PDB-04 remain open
+([limits](KNOWN_LIMITATIONS.md#checked-parameter-editors-in-the-device-editor-2026-10-12)).
+Self-review, not independent. [Evidence](evidence/parameter-editor-host-2026-10-12.json).
+
 ## 2026-10-12 — Installation instructions in the device editor; drafts survive Save
 
 The instruction editor is the device editor's sixth tab, **Installation

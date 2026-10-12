@@ -921,6 +921,13 @@ export const messages = {
   "parameters.noProgram":
     "This device has no resolvable application program; parameters cannot be shown.",
   "parameters.none": "(none)",
+  "parameters.checked.open": "Checked editor",
+  "parameters.checked.openHint": "Edit this value with the range and unit declared in the product data",
+  "parameters.checked.close": "Back to the plain field",
+  "parameters.checked.loading": "Reading the product data…",
+  "parameters.checked.unavailable": "The product data gives no checked source for this field ({reason}).",
+  "parameters.checked.mismatch": "The server's answer did not match this field; it is not used.",
+  "parameters.checked.readFailed": "Could not read the product data: {message}",
 
   // `ProjectExplorer.tsx`.
   "explorer.addDevice": "+ Add device",

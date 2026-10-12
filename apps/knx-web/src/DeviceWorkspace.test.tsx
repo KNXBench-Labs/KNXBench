@@ -628,3 +628,18 @@ it("mounts the installation instructions only once their tab is opened, and repo
   expect(onInstructionDraftChange).toHaveBeenLastCalledWith(false);
   host.remove();
 });
+
+it("offers the checked parameter editor only with the tree's complete identity", async () => {
+  const timeField = { ...committableField(), etsId: "PT1", kind: "Time", min: "0", max: "60" };
+  const answer = { programId: "PROG-1", sourceLanguage: null, sections: [{ scope: null, fields: [timeField] }], stale: [], diagnostics: [], tree: null };
+  const count = (host: Element) => [...host.querySelectorAll("button")].filter((b) => b.textContent === "Checked editor").length;
+  for (const [candidate, expected] of [[tree, 0], [{ ...tree, server_incarnation: "srv-w", project_incarnation: 1, snapshot_revision: 3 }, 1]] as const) {
+    api.deviceParameters.mockResolvedValueOnce(answer);
+    const host = document.createElement("div"); document.body.append(host);
+    const root = createRoot(host);
+    await act(async () => root.render(<DeviceWorkspace detail={detail()} tree={candidate} onApplied={() => {}} />));
+    expect(count(host.querySelector('[id="device-panel-9-1"]')!)).toBe(expected);
+    expect(count(host.querySelector('[id="device-panel-9-4"]')!)).toBe(0);
+    await act(async () => root.unmount()); host.remove();
+  }
+});

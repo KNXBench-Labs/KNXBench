@@ -2150,6 +2150,16 @@ export function deviceParameters(
   return request(`/api/device/${deviceId}/parameters${languageQuery(language)}`);
 }
 
+/**
+ * Read-only source evidence for one parameter reference
+ * (`docs/contracts/parameter-editor-host.md`). Returned as `unknown` on
+ * purpose: `parameterSourceHost.ts` checks the shape and the identity
+ * before any of it may reach an editor.
+ */
+export function parameterEditorSource(deviceId: number, etsId: string): Promise<unknown> {
+  return request(`/api/device/${deviceId}/parameter-editor-source?etsId=${encodeURIComponent(etsId)}`);
+}
+
 export function setParameterValue(
   deviceId: number,
   etsId: string,

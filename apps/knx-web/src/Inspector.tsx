@@ -54,6 +54,7 @@ import {
   findLine,
   flattenBuildingParts,
 } from "./treeUtils";
+import { snapshotContextFromTree } from "./snapshotIdentity";
 
 // `BuildingNode.kind` is the raw `BuildingPartType` discriminant from the
 // server ("Building", "Floor", … — see `bindings/BuildingNode.ts`'s own
@@ -935,7 +936,7 @@ export function DeviceWorkspace(props: {
           can_redo: false, is_modified: true }` overlay assembled from a tree this component
           happened to be holding. `onApplied` takes exactly that shape, so
           it wires straight through, the same as every field above it. */}
-      <ParameterPanelContent deviceId={detail.id} state={parameterState} onValueApplied={onApplied} />
+      <ParameterPanelContent deviceId={detail.id} state={parameterState} onValueApplied={onApplied} snapshot={snapshotContextFromTree(tree)} />
     </div>
     {/* Hidden, not unmounted — the same shape as the parameter panel above,
         whose fetch is keyed to its mount and must not restart on every tab

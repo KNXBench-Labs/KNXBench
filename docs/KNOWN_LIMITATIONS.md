@@ -1,5 +1,23 @@
 # Known limitations
 
+## Project notes workbench host (2026-10-12)
+
+The **Notes** view hosts the notes editor with the open tree's real identity
+([host](contracts/project-note-editor-host.md#workbench-host-12-october-2026)).
+
+- Communication objects are not offered as new targets, because the project tree
+  does not project every object. Stored object targets stay unchanged and are
+  labelled as not in the host catalogue.
+- An ID that the projection shows with two different identities is withheld from
+  the target list rather than guessed.
+- The draft guard covers Open/Import, New project, Quit and the desktop window's
+  close button. A browser reload or a closed tab drops an unapplied draft without
+  asking (the workbench has no such guard for project edits either).
+- The review names the raw action (`create`, `replace`, `remove`, `move`).
+- Evidence is Chromium: an intercepted production build and one loopback-only
+  real-server smoke. No native WebKitGTK window, Orca session, hardware, release or
+  deployment is claimed. FUTURE-03 stays LATER.
+
 ## Catalogue updates come only from files you supply (2026-10-12)
 
 KNXBench never queries the KNX Online Catalog: no documented interface or
@@ -55,7 +73,7 @@ The [bounded notes leaf](contracts/project-note-editor-host.md) provides ordered
 literal notes, private preview, confirmed Create/Replace/Remove/Move and explicit
 documentation opt-in, not a production workbench mount. Host target catalogue,
 real incarnation/revision, dirtiness policy and authoritative post-Apply refresh
-remain required. Native working history is not implicit root Save. Unknown
+remain required (delivered for the workbench later that day, section above). Native working history is not implicit root Save. Unknown
 transport outcome requires reload, not automatic retry or assumed rollback.
 Existing workbench help/GroupRange tip are reused; no shared help catalogue edit.
 Final built eight-frame read/help/layout/hover evidence and earlier actual five

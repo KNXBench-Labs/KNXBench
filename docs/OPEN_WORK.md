@@ -1,5 +1,15 @@
 # Open work after the 0.1 alpha
 
+## Project notes in the workbench (12 October 2026)
+
+The notes editor is mounted as the **Notes** workbench view
+([host](contracts/project-note-editor-host.md#workbench-host-12-october-2026)):
+real tree identity, stable-ID target catalogue, refresh after Apply, drafts kept
+across views and guarded on Open/Import/New/Quit. Open: communication objects as
+offered targets (the tree does not project all of them), a reload/tab-close guard,
+native WebKitGTK/Orca checks, localized action names in the review, and
+FUTURE-03 as a whole (still LATER).
+
 ## AP7 catalogue updates (12 October 2026)
 
 `knx products update` previews a manufacturer `.knxprod` against the installed
@@ -43,7 +53,7 @@ closure documentation8 passes; source package publication/readback on main
 `f70183f0` is verified. It does
 not deliver a macro VM/registry, generated selection, MCP/LLM writes or bus rights.
 Broader FUTURE-02, AP6 permission/confirmation and AP7 catalogue work remain separate;
-Session1 project-note host and missing AP3 value/module contracts remain open.
+missing AP3 value/module contracts remain open (the project-note host followed later, see above).
 
 
 ## Bounded project-note editor leaf (12 October 2026)
@@ -54,8 +64,8 @@ full owner22-stage, built browser8 and source-guard-negative acceptance. Five
 real confirmed browser mutations and native working/root recovery are separately
 source-bound; an empty Save-success parser error remains honestly partial and its
 missing saved-root restart was completed read-only, with no replay.
-Production Session1 mount/authoritative host catalogue and navigation refresh
-remain open; FUTURE-03 remains LATER, not whole AP4. AP3/AP5/AP6/AP7 data-tooling
+The production mount, host catalogue and navigation refresh were delivered
+later the same day (section above); FUTURE-03 remains LATER, not whole AP4. AP3/AP5/AP6/AP7 data-tooling
 remainders and hardware/ETS/report compatibility are not closed by this leaf.
 
 

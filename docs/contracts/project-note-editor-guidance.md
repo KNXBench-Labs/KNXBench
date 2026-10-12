@@ -1,8 +1,8 @@
 # Project notes: bounded editor guidance
 
-Availability: implemented isolated notes component and fixture, not yet mounted
-in the production workbench. No Alpha/release/container/native availability is
-implied. The authoritative host contract is
+Availability: mounted as the workbench **Notes** view in source newer than
+Alpha 9 ([host](project-note-editor-host.md#workbench-host-12-october-2026)). No
+Alpha/release/container/native availability is implied. The authoritative host contract is
 [project-note-editor-host.md](project-note-editor-host.md); authenticated writes
 remain [server-authorized](project-note-http.md).
 
@@ -49,8 +49,8 @@ existing informal German voice and current KNX theme tokens without literal
 fallback colours or inherited button hover scaling.
 
 The host supplies real incarnation/revision and allowed stable-ID targets, handles
-navigation dirtiness and refreshes authoritative state after Apply. Until that
-host is wired, this leaf is not a general production notes workflow or whole AP4.
+navigation dirtiness and refreshes authoritative state after Apply; the workbench
+host does this since 12 October 2026. That is still not whole AP4 or FUTURE-03.
 No KNX bus communication, device programming, ETS export/report rendering,
 manufacturer database edit, new permission system or dependency is implemented
 by the component.

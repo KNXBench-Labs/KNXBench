@@ -16,6 +16,16 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Project notes in the workbench (12 October 2026 source)
+
+The **Notes** view opens the project's engineering notebook: literal plain-text
+notes on the project or one of its parts, changed only through a reviewed preview
+and an explicit confirmation, with Undo/Redo and the usual Save. Drafts survive
+view switches; leaving the project with a draft asks first
+([how to use it](user-guide/01-user-interface.md#project-notes-newer-source-not-alpha-9),
+[limits](../KNOWN_LIMITATIONS.md#project-notes-workbench-host-2026-10-12)).
+This is newer than the published Alpha.9 package, not a deployed update.
+
 ## Clearer dialogs and an actionable project status (12 October 2026 source)
 
 The unsaved-changes dialogs (Quit, Open/Import, New project) label all three

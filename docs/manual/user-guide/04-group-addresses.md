@@ -56,6 +56,10 @@ with or without project links.
 
 ### Four presentations of the same addresses
 
+**Source builds after Alpha 9 only.** The published Alpha 9 image and the
+screenshots in this manual still show the single flat table described above; the
+four presentations arrive with the next release.
+
 The **Presentation** select switches between four views. They all show the same
 addresses, the same search, filter and range scope, and the same selection: select
 an address in one view, switch, and it is still selected. Editing always happens in

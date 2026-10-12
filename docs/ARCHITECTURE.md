@@ -787,3 +787,6 @@ and App keeps drafts across views and guards project exits
 The instruction editor follows the same pattern as a device-editor tab
 (`DeviceInstructionsPanel`, shared `snapshotIdentity.ts`;
 [host](contracts/instruction-editor-host.md#workbench-host-12-october-2026)).
+Parameter rows host the bounded parameter editor on request
+(`ParameterSourceEditor`, with source verification in `parameterSourceHost.ts`;
+[host](contracts/parameter-editor-host.md#workbench-host-12-october-2026)).

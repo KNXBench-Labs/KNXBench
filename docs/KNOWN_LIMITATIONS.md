@@ -1,5 +1,21 @@
 # Known limitations
 
+## Checked parameter editors in the device editor (2026-10-12)
+
+- The **Checked editor** is opt-in per field and offers only what the bounded leaf
+  admits (section *Bounded AP3 parameter controls* below): decimal Time counts,
+  explicit integer sliders, and an unconverted original for Colour/Picture.
+  Module sections always fall back; PDB-04 stays LATER.
+- Writes still use the legacy, not revision-conditional parameter route. Ignoring a
+  late reply does not cancel a sent write; the host publishes every completed
+  write instead.
+- The source is read once per opened field and revision; no bulk query or cache.
+- A refresh no longer blanks the parameter rows for the same device and product
+  language, so the previous values stay visible for the moment the new answer takes.
+- Evidence is Chromium (intercepted production build and a loopback-only
+  real-server smoke with a synthetic product). No physical device, ETS reimport,
+  native WebKitGTK window, Orca session, release or deployment is claimed.
+
 ## Installation instructions tab and Save-proof drafts (2026-10-12)
 
 - The **Installation instructions** tab hosts the existing editor; its source and
@@ -9718,8 +9734,9 @@ need separate mapping. [Host integration contract](contracts/parameter-editor-ho
 The read-only evidence route grants no write authority. Existing legacy parameter
 mutations remain server-validated but not revision-conditional: ignoring a late
 UI reply does not cancel/roll back a sent request. Synthetic component browser
-checks are distinct from actual HTTP/native persistence witnesses. No shared
-production-shell mount or full specialized Color/Picture editor is delivered.
+checks are distinct from actual HTTP/native persistence witnesses. No full
+specialized Color/Picture editor is delivered; the workbench mount came later
+(section *Checked parameter editors* above).
 
 ## Native notes Foundation candidate (2026-10-11, AP4 not delivered yet)
 

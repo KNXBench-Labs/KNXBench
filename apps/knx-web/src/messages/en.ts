@@ -758,6 +758,7 @@ export const messages = {
   // `{action}` slot takes — carrying their own verb (`is`/`are`) so the
   // base sentence never has to conjugate around how many verbs it's naming.
   "inspector.restrictedAction.delete": "Delete is",
+  "inspector.restrictedAction.addMembers": "Adding members is",
   "inspector.restrictedAction.renameAndDelete": "Rename and Delete are",
   "inspector.restrictedAction.renameMoveAndDelete": "Rename, Move and Delete are",
   "inspector.restrictedToOneInstallation": "{action} only available for {entity} that belong to exactly one installation.",
@@ -1825,6 +1826,27 @@ export const messages = {
   // the link is still shown rather than dropped (see `GroupAddressLinkNode`).
   "addressTable.unknownDevice": "Unknown device #{id}",
   "addressTable.unnamedObject": "Unnamed object",
+  // Adding a member (`GroupAddressMemberAdd.tsx`): a member is one
+  // communication object's link, chosen device → object → direction.
+  "addressTable.members.add": "Add member…",
+  "addressTable.members.addTitle": "Add a member to {address}",
+  "addressTable.members.installationRule": "Only devices of this address's installation, and devices placed in no installation, can be added — the same rule as linking from the device.",
+  "addressTable.members.noCandidates": "No device in this project can be linked to this address.",
+  "addressTable.members.device": "Device",
+  "addressTable.members.chooseDevice": "(choose a device)",
+  "addressTable.members.noAddress": "no individual address",
+  "addressTable.members.loadingObjects": "Loading communication objects…",
+  "addressTable.members.objectsFailed": "Communication objects could not be loaded: {message}",
+  "addressTable.members.noObjects": "This device has no communication objects.",
+  "addressTable.members.object": "Communication object",
+  "addressTable.members.chooseObject": "(choose a communication object)",
+  "addressTable.members.alreadyLinked": "already linked: {directions}",
+  "addressTable.members.dptPair": "Datapoint type — object: {object}; address: {address}",
+  "addressTable.members.direction": "Direction",
+  "addressTable.members.duplicate": "This object already links to this address in this direction.",
+  "addressTable.members.submit": "Add member",
+  "addressTable.members.close": "Close",
+  "addressTable.members.added": "Added {object} ({direction}). Undo takes it back in one step.",
 
   // T16, the device product identity block in the workspace's third tab
   // (`DeviceIdentity` in `Inspector.tsx`). The four `resolution.*` words

@@ -27,6 +27,7 @@ import { matchEntries } from "./searchMatch";
 import type { SearchEntry } from "./treeUtils";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { InstallationNode } from "./bindings/InstallationNode";
+import type { ProjectTree } from "./bindings/ProjectTree";
 import { resetSettingsForTests } from "./settingsStore";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -143,6 +144,8 @@ function renderTable(): HTMLDivElement {
   return mount(
     <GroupAddressTable
       installation={installation()}
+      tree={{ schema_version: 1, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
+        group_address_style: "ThreeLevel", installations: [installation()] } as ProjectTree}
       selection={null}
       multiSelection={null}
       onItemClick={() => {}}

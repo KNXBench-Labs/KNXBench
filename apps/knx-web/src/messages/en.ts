@@ -1745,10 +1745,10 @@ export const messages = {
   "notes.target.groupRange": "Group range",
   "notes.target.groupAddress": "Group address",
   "notes.identityUnavailable": "Notes need a project opened on this server with a complete project identity. This view has none, so nothing is read or changed here.",
-  "notes.draftGuard.title": "Discard the note draft?",
-  "notes.draftGuard.message": "A note draft has not been reviewed and applied yet. It exists only in this window and is lost if you continue.",
-  "notes.draftGuard.keep": "Keep editing",
-  "notes.draftGuard.discard": "Discard draft and continue",
+  "draftGuard.title": "Discard the unapplied draft?",
+  "draftGuard.message": "A draft of project notes or installation instructions has not been reviewed and applied yet. It exists only in this window and is lost if you continue.",
+  "draftGuard.keep": "Keep editing",
+  "draftGuard.discard": "Discard draft and continue",
   "workbench.device": "Device",
   "workbench.unassigned": "Unassigned",
   "workbench.emptyStructure": "No entries yet. Add structure here or in the project tree.",
@@ -1840,6 +1840,8 @@ export const messages = {
   // a strip of three, while `deviceIdentity.title` labels the section itself
   // and `deviceIdentity.more` labels the disclosure inside it.
   "deviceIdentity.tab": "Product data",
+  "deviceInstructions.tab": "Installation instructions",
+  "deviceInstructions.refreshFailed": "The change was applied, but reloading the project failed: {reason}. Reload the project before you change anything else; do not apply it again.",
   "deviceIdentity.productRef": "Product reference",
   "deviceIdentity.programRef": "Application program reference",
   "deviceIdentity.refNotStated": "not stated in the project",

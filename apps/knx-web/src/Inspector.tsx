@@ -30,6 +30,7 @@ import RenameNameField from "./RenameNameField";
 import DeviceLink from "./DeviceLink";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { useProductLanguage } from "./productLanguage";
+import DeviceInstructionsPanel from "./DeviceInstructionsPanel";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useGroupAddressFormat } from "./gaNotation";
 import {
@@ -884,6 +885,8 @@ function linkableGroupAddresses(tree: ProjectTree, deviceId: number): GroupAddre
 
 export function DeviceWorkspace(props: {
   detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void;
+  /** An unapplied installation-instructions draft exists (or no longer does). */
+  onInstructionDraftChange?: (dirty: boolean) => void;
 }) {
   const { detail, tree, onApplied } = props;
   const groupAddresses = linkableGroupAddresses(tree, detail.id);
@@ -895,7 +898,12 @@ export function DeviceWorkspace(props: {
   // tabs" three times over (it also hardcoded `End` and treated both arrow
   // keys as the same key, which a left-arrow-only test could never catch).
   const tabs = [t("inspector.communicationObjects"), t("workbench.parameters"), t("deviceIdentity.tab"),
-    t("parameters.diagnosticsTab"), t("parameters.restrictedTab")];
+    t("parameters.diagnosticsTab"), t("parameters.restrictedTab"), t("deviceInstructions.tab")];
+  // The instructions editor reads on mount, so it mounts on the tab's first
+  // visit and then stays (hidden) so its draft survives other tabs.
+  const instructionsTab = tabs.length - 1;
+  const [instructionsOpened, setInstructionsOpened] = useState(false);
+  useEffect(() => { if (tab === instructionsTab) setInstructionsOpened(true); }, [tab, instructionsTab]);
   return <section className="device-workspace">
     <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div></header>
     <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
@@ -947,6 +955,10 @@ export function DeviceWorkspace(props: {
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-4`} aria-labelledby={`device-tab-${detail.id}-4`} hidden={tab !== 4} tabIndex={0}>
       <ParameterPanelContent deviceId={detail.id} state={parameterState} view="restricted" onValueApplied={onApplied} />
+    </div>
+    <div role="tabpanel" id={`device-panel-${detail.id}-${instructionsTab}`} aria-labelledby={`device-tab-${detail.id}-${instructionsTab}`} hidden={tab !== instructionsTab} tabIndex={0}>
+      {(instructionsOpened || tab === instructionsTab) && <DeviceInstructionsPanel deviceId={detail.id} tree={tree}
+        onApplied={onApplied} onDirtyChange={props.onInstructionDraftChange} />}
     </div>
   </section>;
 }

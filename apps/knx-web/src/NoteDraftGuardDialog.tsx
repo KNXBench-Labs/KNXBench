@@ -11,14 +11,14 @@ export default function NoteDraftGuardDialog({ onKeep, onDiscard }: { onKeep: ()
   const t = useTranslate();
   return (
     <Overlay labelledBy="note-draft-guard-title" className="quit-confirm unsaved-changes-dialog note-draft-guard" onClose={onKeep}>
-      <h2 id="note-draft-guard-title">{t("notes.draftGuard.title")}</h2>
-      <p>{t("notes.draftGuard.message")}</p>
+      <h2 id="note-draft-guard-title">{t("draftGuard.title")}</h2>
+      <p>{t("draftGuard.message")}</p>
       <footer className="quit-confirm-footer unsaved-changes-actions">
         <button type="button" className="dialog-action dialog-action--secondary" onClick={onKeep}>
-          {t("notes.draftGuard.keep")}
+          {t("draftGuard.keep")}
         </button>
         <button type="button" className="dialog-action dialog-action--danger" onClick={onDiscard}>
-          {t("notes.draftGuard.discard")}
+          {t("draftGuard.discard")}
         </button>
       </footer>
     </Overlay>

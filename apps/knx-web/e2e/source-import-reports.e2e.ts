@@ -56,7 +56,8 @@ for (const language of ["en","de"] as const) for (const width of [400,1440]) {
     const contents=JSON.parse(await readFile(path!,"utf8"));
     expect(contents.report).toEqual(report);expect(contents.scope).toBe("selectiveSource");expect(contents.id).toBe(id);
     expect(contents.report.unknown).toHaveLength(1001);expect(reportReads).toBe(1);
-    await expect(page.locator('.dashboard-issues dd')).toHaveText(["7"]);
+    // Main's Import card always lists both counts: 0 errors, 7 historical warnings.
+    await expect(page.locator('.dashboard-issues .dashboard-value')).toHaveText(["0", "7"]);
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
     if(process.env.KNX_EVIDENCE_CAPTURE_DIR)await page.screenshot({path:join(process.env.KNX_EVIDENCE_CAPTURE_DIR,`source-report-${language}-${width}.png`)});

@@ -62,7 +62,8 @@ for (const language of ["en","de"] as const) for (const width of [400,1440]) {
     expect(reads).toBe(2);
     expect(await page.evaluate(()=>Object.hasOwn(window,"FOREIGN_PAYLOAD_EXECUTED"))).toBe(false);
     await expect(panel).toContainText(m["payloads.role.ets-app-named-candidate"]);
-    await expect(page.locator('.dashboard-issues dd')).toHaveText(["7"]);
+    // Main's Import card always lists both counts: 0 errors, 7 historical warnings.
+    await expect(page.locator('.dashboard-issues .dashboard-value')).toHaveText(["0", "7"]);
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
     if(process.env.KNX_EVIDENCE_CAPTURE_DIR)await page.screenshot({path:join(process.env.KNX_EVIDENCE_CAPTURE_DIR,`payload-${language}-${width}.png`)});

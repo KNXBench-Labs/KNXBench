@@ -7,7 +7,7 @@ uses a private validated application plan, one Core Batch/undo step and confirme
 native working-history persistence, not an automation interpreter. No generated
 selection, UI/MCP writer, root Save, bus capability or release follows. Broader
 macros and the separately approved AP6/AP7 remain distinct later work; final source
-assembly18 stages have passed; integration/publication closure remains pending in the [evidence](evidence/offline-name-recipe-2026-10-12.json).
+assembly18 and integrated documentation8 stages have passed; normal publication/readback remains pending in the [evidence](evidence/offline-name-recipe-2026-10-12.json).
 
 
 ## GitHub release notification source feature (2026-10-11)

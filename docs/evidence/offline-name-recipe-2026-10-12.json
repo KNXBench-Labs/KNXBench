@@ -51,7 +51,7 @@
     "canonicalRestored": true
   },
   "review": "In-session source/security self-review, not independent",
-  "pending": "Integration/final documentation gates, normal publication and remote readback; final assembled candidate is actually accepted",
+  "pending": "Normal publication, exact remote/source/blob readback and closure archive; assembled and integrated documentation gates actually accepted",
   "limitations": [
     "Explicit IDs only; max256 selections/4096 bytes per affix/1MiB combined before-after text",
     "Native working history, never implicit root Save; no-op neither writes nor consumes redo",
@@ -168,5 +168,54 @@
       }
     ],
     "sourceManifestSha256": "146b69d25dd82cef97408fa58750eada57db0b6c19464ed4f195a8a22b0f3a10"
+  },
+  "codeCommit": "4015038f4cfed44c057ae5c3fc25a9c677993ffd",
+  "integratedDocs": {
+    "head": "1b312dda1ce77d844130a5965ca4c426b6b8f57d",
+    "accepted": true,
+    "stages": [
+      {
+        "name": "documentation",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "documentation-tests",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-layering",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-headers",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-ledger",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "whitespace",
+        "exit": 0,
+        "valid": true
+      }
+    ],
+    "inputsFrozen": true,
+    "acceptedOwnerRuntimeAndTestsEqual": true
   }
 }

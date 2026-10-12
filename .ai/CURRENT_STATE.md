@@ -7,6 +7,14 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-12 08:26 CEST
+- **Completed:** Standalone default port8484, Docker ENV/EXPOSE8484, Linux host-network run/update/Hub/manual recipes and explicit old-image KNX_PORT8484; source commit 6a0f8f5066e9a44cb114e82fe54d9129c2515bbf. Server814/0/47ignored, strict Clippy/build/fmt, isolated actual runtime3/0, recipe5/0/workflow5/0/docs12/0/five nonempty root gates. Actual committed-tree Docker image default8484 health/stop0 and host-network HTTPS/auth/native-save/reopen smoke pass. Architecture/limits/ADR/status synchronized; self-review, no compatibility expansion.
+- **Pending/Next Steps:** No feature implementation remains. Publication/cleanup belongs to this scoped delivery; a future release or user-container replacement is separate. Already published Alpha.9 keeps its original defaults; explicit KNX_PORT8484 supports it now. Other owners/queues unchanged.
+- **Notes for Codex oder Claude:** Desktop dev4777/ephemeral ports, auth/TLS, KNX3671 and Core/storage unchanged. Default host-mode password listener reaches all host interfaces; firewall warning mandatory. Dockerfile cannot enforce network mode, recipes select it. Root HEAD/index/foreign work remain untouched. Source-bound evidence docs/evidence/server-deployment-defaults-2026-10-12.json; preserve inherited journal and other owners.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-12 07:55
 - **Completed:** AP5 bounded offline naming source package now normally published on main f70183f0cc4939d9a147bbea39d3f1883e04f8d6; actual local/tracking/live equality and14 committed-source blob readbacks verified. Code4015038f, additive docs merge1b312dda and scoped metadata source preserved. Frozen final18-stage owner2 passes app12/CLI6/Rust4121-0-194ignored/Web2836-0-182/Clippy/builds/repo gates; final integrated and publication docs8 accepted, exact runtime/test bytes unchanged. Five named runtime guard negatives/canonical restoration and honest self-review (two coverage gaps fixed in tests) retained. Working history/one undo/literal context/refusal claims remain bounded, broader FUTURE02 unchanged. Public docs now carry actual publication instead of stale pending statements.
 - **Pending/Next Steps:** Publish only this closure metadata after fresh8 docs gates and exact normal readback; compact private source/evidence/archive membership verification and own inactive scratch cleanup. Then advance AP6: narrow offline service boundary avoiding knx-app Secure/key graph, explicit per-alias startup permission and client/operator-associated human-confirmation flow over inspected pinned SDK, fail closed when unavailable. AP7 next; Session1 hosts and missing AP3 value/module contracts stay separate.

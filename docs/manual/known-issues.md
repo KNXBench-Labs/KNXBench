@@ -493,15 +493,17 @@ must not be described as either universally guessed or universally explicit.
 - **Affected:** running the container.
 - **Limitation:** measured against the real image. Without a credential the
   server binds the container's own loopback, so a published port
-  (`-p 8484:8080`) cannot reach it — the connection is refused. This is the
+  cannot reach it — the connection is refused. This is the
   server's deliberate refusal to expose an unguarded API, not a bug.
 - **Consequence:** the published-port form only works with a password
-  configured. With one, it works: build, `-p 8484:8080`, `KNX_AUTH_PASSWORD`,
+  configured. With one, the earlier bridge-image check worked: build, publish the
+  listener port, set `KNX_AUTH_PASSWORD`,
   sign in, API answers `200` — evidenced by the earlier image run, not repeated
   by this audit. Current authenticated builds default to HTTPS; follow the
   [certificate/start recipe](user-guide/11-web-and-docker.md#https).
-- **Workaround:** set `KNX_AUTH_PASSWORD_HASH` (or `KNX_AUTH_PASSWORD`), or on
-  Linux run the credential-less form on the host network instead:
+- **Default recipes:** Linux host networking on port 8484 avoids the bridge.
+  A password exposes the authenticated listener on all host interfaces; use
+  a firewall for trusted LAN/VPN access. For a local-only credential-less server:
   `docker run -d --name knxbench --network host -e KNX_PORT=8484 -v "$(pwd)/data:/data" knxbench-server`.
   That form is reachable from that machine only, which is also why it is safe
   without a password.

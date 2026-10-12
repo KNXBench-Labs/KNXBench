@@ -12,6 +12,8 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY = ROOT / "tools/appimage/display-backend.sh"
+HOST_LIBRARIES = ROOT / "tools/appimage/host-libraries.sh"
+WEBKIT_TAIL = "find \"$APPDIR\"/usr/lib* -name 'libwebkit*' -exec sed -i -e \"s|/usr|././|g\" '{}' \\;\n"
 
 
 class DisplayPolicyTests(unittest.TestCase):
@@ -102,7 +104,7 @@ class PluginPreparationTests(unittest.TestCase):
 
     def test_cached_plugin_is_verified_and_preparation_is_idempotent(self):
         preparer = self.load_preparer()
-        source = b'cat > "$HOOKFILE" <<\\EOF\nexport GDK_BACKEND=x11\nEOF\n'
+        source = b'cat > "$HOOKFILE" <<\\EOF\nexport GDK_BACKEND=x11\nEOF\n' + WEBKIT_TAIL.encode()
         with tempfile.TemporaryDirectory(prefix="appimage-test-") as directory:
             tools = Path(directory)
             (tools / "knxbench-gtk-upstream.sh").write_bytes(source)
@@ -114,6 +116,7 @@ class PluginPreparationTests(unittest.TestCase):
             self.assertEqual(plugin.stat().st_mode & 0o777, 0o700)
             self.assertIn(POLICY.read_bytes(), first)
             self.assertNotIn(b"export GDK_BACKEND=x11\nEOF", first)
+            self.assertTrue(first.endswith(HOST_LIBRARIES.read_bytes()))
             self.assertEqual((tools / "knxbench-gtk-upstream.sh").read_bytes(), source)
             self.assertEqual(sorted(path.name for path in tools.iterdir()),
                              ["knxbench-gtk-upstream.sh", "linuxdeploy-plugin-gtk.sh"])
@@ -172,6 +175,89 @@ class PluginPreparationTests(unittest.TestCase):
             preparer.patch_plugin(upstream, policy),
             'prefix\ncat > "$HOOKFILE" <<\\EOF\n' + policy + 'suffix\nEOF\n',
         )
+
+
+class HostLibraryPolicyTests(unittest.TestCase):
+    """Issue #6: the host must provide libwayland-client, not the AppImage."""
+
+    def run_policy(self, appdir):
+        self.assertTrue(HOST_LIBRARIES.is_file(), "AppImage has no host-library policy yet")
+        return subprocess.run(
+            ["/bin/bash", "-eu", "-c", '. "$1"', "test-policy", str(HOST_LIBRARIES)],
+            env=dict(os.environ, APPDIR=str(appdir)), capture_output=True, text=True, check=True,
+        )
+
+    def make_appdir(self, directory, names):
+        lib = Path(directory) / "usr/lib"
+        lib.mkdir(parents=True)
+        for name in names:
+            (lib / name).write_bytes(b"elf")
+        return Path(directory)
+
+    def test_bundled_wayland_client_is_removed_and_reported(self):
+        with tempfile.TemporaryDirectory(prefix="appimage-test-") as directory:
+            appdir = self.make_appdir(directory, ["libwayland-client.so.0", "libwebkit2gtk-4.1.so.0"])
+            (appdir / "usr/lib/libwayland-client.so").symlink_to("libwayland-client.so.0")
+            result = self.run_policy(appdir)
+            self.assertEqual(sorted(p.name for p in (appdir / "usr/lib").iterdir()),
+                             ["libwebkit2gtk-4.1.so.0"])
+            self.assertIn("libwayland-client.so.0", result.stdout)
+
+    def test_other_wayland_libraries_stay_bundled(self):
+        # WebKitGTK links libwayland-server directly; only the client library
+        # conflicts with the host's Mesa EGL vendor (pkg2appimage excludelist).
+        kept = ["libwayland-cursor.so.0", "libwayland-egl.so.1", "libwayland-server.so.0"]
+        with tempfile.TemporaryDirectory(prefix="appimage-test-") as directory:
+            appdir = self.make_appdir(directory, kept + ["libwayland-client.so.0"])
+            self.run_policy(appdir)
+            self.assertEqual(sorted(p.name for p in (appdir / "usr/lib").iterdir()), kept)
+
+    def test_policy_is_idempotent_when_nothing_is_bundled(self):
+        with tempfile.TemporaryDirectory(prefix="appimage-test-") as directory:
+            appdir = self.make_appdir(directory, ["libwebkit2gtk-4.1.so.0"])
+            self.run_policy(appdir)
+            self.run_policy(appdir)
+            self.assertEqual([p.name for p in (appdir / "usr/lib").iterdir()], ["libwebkit2gtk-4.1.so.0"])
+
+    def test_missing_appdir_is_refused(self):
+        with tempfile.TemporaryDirectory(prefix="appimage-test-") as directory:
+            with self.assertRaises(subprocess.CalledProcessError):
+                self.run_policy(Path(directory) / "absent")
+
+
+class HostLibraryAppendTests(unittest.TestCase):
+    def load_preparer(self):
+        spec = importlib.util.spec_from_file_location("prepare_appimage_tools", ROOT / "tools/prepare_appimage_tools.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_policy_is_appended_after_the_final_webkit_patch(self):
+        preparer = self.load_preparer()
+        source = "prefix\n" + WEBKIT_TAIL
+        self.assertEqual(preparer.append_host_library_policy(source, "policy\n"), source + "\npolicy\n")
+
+    def test_changed_upstream_tail_is_refused(self):
+        preparer = self.load_preparer()
+        for source in ("prefix\n", WEBKIT_TAIL + "exit 0\n", WEBKIT_TAIL + WEBKIT_TAIL):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, "tail"):
+                preparer.append_host_library_policy(source, "policy\n")
+
+    def test_empty_policy_is_refused(self):
+        preparer = self.load_preparer()
+        with self.assertRaisesRegex(ValueError, "policy"):
+            preparer.append_host_library_policy(WEBKIT_TAIL, "\n")
+
+    def test_pinned_upstream_plugin_accepts_both_patches(self):
+        cached = os.environ.get("KNXBENCH_GTK_PLUGIN_SOURCE")
+        if not cached:
+            self.skipTest("set KNXBENCH_GTK_PLUGIN_SOURCE to the pinned upstream plugin to run")
+        preparer = self.load_preparer()
+        source = Path(cached).read_bytes()
+        self.assertEqual(hashlib.sha256(source).hexdigest(), preparer.UPSTREAM_SHA256)
+        patched = preparer.patch_source(source.decode("utf-8"))
+        self.assertTrue(patched.endswith(HOST_LIBRARIES.read_text()))
+        subprocess.run(["/bin/bash", "-n", "-c", patched], check=True)
 
 
 class PackagingContractTests(unittest.TestCase):

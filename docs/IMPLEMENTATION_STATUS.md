@@ -1,3 +1,20 @@
+## 2026-10-12 — Device-editor layout test follows the name-first DPT contract (Alpha 10 prerequisite)
+
+`device-editor-layout.e2e.ts` had been red on all four EN/DE × 360/1440 px
+cases since the name-first DPT presentation landed: it still expected the raw
+`DPST-9-1`/`DPST-1-1` inline plus a separate raw-reference line. The
+[DPT contract](contracts/dpt-selection.md#name-first-monitor-and-address-extension-2026-10-12-source)
+says known references show as `Name (main.sub)` with the exact reference only in
+the tooltip, and the product does exactly that, so the test was wrong and the
+product is unchanged. The test now asserts the name-first label, the tooltip
+reference, no `DPST` in the visible cell, the labelled master text and the
+existing no-character-wrap guard; reverting the cell to the raw reference fails
+it by name. Gate on `cdfae412` (rebased on `f6c23bbe`): build, `tsc` for
+`tsconfig.json` and all eleven `tsconfig.*.json`, Vitest 3164/0 in 222 files,
+**full fixture Chromium 416 passed / 0 failed**, production-preview devices
+config 13/13, the layout spec ×3 30/30, five xtask checks, `diff --check`,
+inputs frozen. Self-review only.
+
 ## 2026-10-12 — Native import evidence ported onto main
 
 The parked `fix/native-evidence-20261011` branch (`b76ee907`) is on main: its seven

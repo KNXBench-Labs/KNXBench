@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 17:07
+- **Completed:** Hermes skill slimming (profile `knxbench`, outside the repo) plus one docs-only repo package. Twelve oversized self-learned skills now have a short core SKILL.md and verbatim `references/` topic files (repository-delivery 99.8k → 16.3k chars; all twelve checked: 0 original items missing). New `docs/DEVELOPER_PITFALLS.md` collects verified repository traps (CI check list, xtask runtime root since `dea70329`, header width 100/`ABSENT_CEILING`, `.ai/` staging, numbered-doc collisions, corpus symlinks, schema constants, web inventory guards); linked from `docs/README.md` and `docs/VERIFICATION.md`. Log: `.ai/logs/2026-10-12_claude_skill-slimming.md`.
+- **Pending/Next Steps:** None for this package. Skills now say: new lessons go into `references/` with one line in SKILL.md; repo-wide facts go into `docs/DEVELOPER_PITFALLS.md`.
+- **Notes for Codex oder Claude:** Docs-only; no source, tests or web files touched. Gates: documentation checker 275 files/0 errors, unittest OK, check-anchors 575 links, `git diff --check` clean. The "stale xtask binary" warning is historical since `dea70329`; CI does not build the web app before `cargo test --workspace`.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 16:51
 - **Completed:** Repo hygiene and parked-work triage. This is a docs-only package with no `apps/knx-web` edits.
   - Removed 21 linked worktrees whose HEAD is an ancestor of `origin/main` `5a33e95c` and whose residue was empty, only the handover copy, tool scratch or ignored logs. Each one was re-checked for HEAD, status and process cwd right before removal.

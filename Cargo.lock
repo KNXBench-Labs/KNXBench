@@ -2004,7 +2004,7 @@ dependencies = [
 
 [[package]]
 name = "knx-cli"
-version = "0.1.0-alpha.9"
+version = "0.1.0-alpha.10"
 dependencies = [
  "chrono",
  "knx-app",
@@ -2043,7 +2043,7 @@ dependencies = [
 
 [[package]]
 name = "knx-desktop"
-version = "0.1.0-alpha.9"
+version = "0.1.0-alpha.10"
 dependencies = [
  "axum",
  "knx-server",
@@ -2092,7 +2092,7 @@ dependencies = [
 
 [[package]]
 name = "knx-mcp"
-version = "0.1.0-alpha.9"
+version = "0.1.0-alpha.10"
 dependencies = [
  "chrono",
  "knx-build-stamp",
@@ -2169,7 +2169,7 @@ dependencies = [
 
 [[package]]
 name = "knx-server"
-version = "0.1.0-alpha.9"
+version = "0.1.0-alpha.10"
 dependencies = [
  "axum",
  "base64 0.22.1",

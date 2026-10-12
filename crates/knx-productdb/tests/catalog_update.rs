@@ -168,7 +168,7 @@ fn adoption_needs_the_current_token_and_keeps_existing_bindings() {
     .unwrap();
     assert_eq!(applied.preview, preview);
     assert!(applied.backup.exists());
-    assert_eq!(std::fs::read(&applied.backup).unwrap().len() > 0, true);
+    assert!(!std::fs::read(&applied.backup).unwrap().is_empty());
     assert_eq!(
         program_ids(&path),
         vec![

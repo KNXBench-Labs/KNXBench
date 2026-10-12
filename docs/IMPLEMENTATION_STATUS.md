@@ -699,6 +699,33 @@ the below-viewport explanation. Review is in-session self-review. Full durable
 report persistence, early write preflight and the remaining functional matrix
 are not claimed complete. No deployment, ETS parity, vendor execution, bus action
 or shared-root synchronization is included.
+## 2026-10-11 — local selective-source report access
+
+The application reuses existing SelectiveImportReport rows as a separately
+bounded source catalogue/read service; it does not duplicate retention or invent
+a merged-project report. Exact identities, future kinds, duplicates, budgets,
+hashes and parsed counters are admitted completely. Missing reports remain
+explicitly unavailable. Authenticated HTTP replies bind server/load/revision;
+EN/DE Dashboard selection, original text preview and complete local download stay
+separate from primary counts. Source names/availability appear outside the native
+selector so narrow display does not hide their meaning. Existing primary-report
+UI wording now correctly describes absent evidence in this particular native
+file, not all native readers. No schema/domain/protocol/dependency changes.
+
+Accepted locally on frozen **1901 inputs**: owning CLI/app/server/projection
+Rust **1293 passed / 0 failed / 100 explicitly ignored**;
+whole Web **2671 passed / 0 failed / 171 files**;
+production-built primary+source Chromium **8 passed / 0 failed / 0 skipped**.
+Strict owning Clippy, binaries/Web builds, explicit E2E types, five nonempty
+explicit-root repository checks and docs/fmt/whitespace pass. Four final source
+frames and representative primary regression frames inspected: source name and
+availability readable outside the selector, no horizontal clipping, separate
+primary/source counters and privacy/download explanation visible. Actual downloads
+retain all1,001 synthetic rows; source reports remain separate after native history.
+Source self-review only. Initial broad primary-selector failures remain historical;
+corrected fixtures do not weaken assertions. No private corpus, vendor code,
+hardware, release/deployment or main integration/publication acceptance.
+
 ## 2026-10-11 — local CLI original-report capture follow-up
 
 The actual CLI `import --store` now captures the final original report before

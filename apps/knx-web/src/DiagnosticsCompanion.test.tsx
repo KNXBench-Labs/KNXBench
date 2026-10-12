@@ -350,6 +350,11 @@ describe("one editing workspace", () => {
     expect(apiCallsIn(importEvidenceGraph)).toEqual([]);
     expect(mutatingFetchesIn(importEvidenceGraph)).toEqual([]);
     expect(importEvidenceGraph.get("importEvidence.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    const sourceReportsGraph = valueImportGraph("sourceReports.ts");
+    expect([...sourceReportsGraph.keys()].sort()).toEqual(["importEvidence.ts", "sourceReports.ts"]);
+    expect(apiCallsIn(sourceReportsGraph)).toEqual([]);
+    expect(mutatingFetchesIn(sourceReportsGraph)).toEqual([]);
+    expect(sourceReportsGraph.get("sourceReports.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     // Shipped fun-language catalogues add only static copy and their registry.
     // The API-call and mutation inventories below remain unchanged.
     expect([...graph.keys()].sort()).toEqual([
@@ -409,6 +414,7 @@ describe("one editing workspace", () => {
       "sessionLogExport.ts",
       "settingsDiagnostic.ts",
       "settingsStore.ts",
+      "sourceReports.ts",
       "treeUtils.ts",
       "uiLanguage.ts",
     ]);

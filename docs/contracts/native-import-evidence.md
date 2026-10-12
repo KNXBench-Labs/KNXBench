@@ -65,6 +65,38 @@ value. The **full local download** is not truncated. Original source names,
 attributes, hashes or other private data can occur in a report; the UI warns before
 sharing. No automatic external transmission or anonymization is provided.
 
+## Retained selective-source report catalogue
+
+Existing selective import already stores the raw original source report at
+`imports/<exact lowercase SHA-256 scope>/import-report.json`, kind
+`SelectiveImportReport`. This implementation **reuses those rows** rather than
+recapturing, reimporting or executing the source. A source report is not a primary
+report or an assessment of the merged project. Primary counters remain unchanged.
+
+`GET /api/project/source-reports` returns an explicit authenticated catalogue
+without full report bodies. `GET /api/project/source-reports/{id}` returns the
+selected original JSON text, labelled `scope: selectiveSource`. Both responses
+carry server, successful-load and current snapshot-revision identity. No client
+supplies arbitrary filesystem paths; malformed IDs are refused without repair.
+
+The service bounds the catalogue to 256 source scopes, each report to 16 MiB and
+aggregate report bytes to 64 MiB before parsing. Identity/path/duplicate/future-
+kind/hash/JSON/counter corruption refuses the whole catalogue, never a partial
+successful list. A retained source archive without report has explicit
+`unavailable` status and nullable counters, not measured zero. Recorded source
+scopes are namespace claims; no archive signature/authenticity is verified.
+
+The Dashboard's **Show source report catalogue** action makes no automatic
+request. Select a source, then **Read selected source report**. Full source name,
+exact scope ID, record availability, source-only counts and privacy disclosure
+are visible separately from the primary original report. Read results are
+invalidated on replacement/revision change; no late response is published. The
+same explicit preview budget is reused, and the complete local download embeds
+original JSON text without browser-number conversion. Neither preview nor native
+storage anonymizes source data. Failed catalogue/read requests do not mutate
+project, primary findings or sources. Source records remain in retained context
+through the existing selective/native-history path; undo is not source erasure.
+
 ## Verification scope
 
 Public witnesses are fictional. App controls cover exact native persistence,

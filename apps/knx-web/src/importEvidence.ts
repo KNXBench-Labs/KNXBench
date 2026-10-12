@@ -1,4 +1,6 @@
 /** Validate source-bound historical evidence without treating it as current compatibility. */
+export const REPORT_PREVIEW_CHARACTERS = 65536;
+
 export interface ImportEvidence {
   available: boolean;
   historical: boolean;

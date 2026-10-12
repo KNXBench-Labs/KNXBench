@@ -23,6 +23,14 @@ pub fn project_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/project", get(current_project))
         .route(
+            "/api/project/source-reports",
+            get(crate::source_import_report_routes::catalogue),
+        )
+        .route(
+            "/api/project/source-reports/{id}",
+            get(crate::source_import_report_routes::read),
+        )
+        .route(
             "/api/project/import-report",
             get(crate::import_evidence_routes::read),
         )

@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/knx-core",
     "crates/knx-app",
+    "crates/knx-edit",
     "crates/knx-store",
     "crates/knx-etsproj",
     "crates/knx-productdb",
@@ -30,6 +31,7 @@ rust-version = "1.98.0"
 [workspace.dependencies]
 knx-core = { path = "crates/knx-core" }
 knx-app = { path = "crates/knx-app" }
+knx-edit = { path = "crates/knx-edit" }
 knx-store = { path = "crates/knx-store" }
 knx-etsproj = { path = "crates/knx-etsproj" }
 knx-productdb = { path = "crates/knx-productdb" }

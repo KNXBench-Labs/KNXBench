@@ -1,5 +1,17 @@
 # Known limitations
 
+## Offline service boundary is not MCP authorization (2026-10-12)
+
+[ADR-0115](adr/0115-offline-application-edit-boundary.md)'s small offline application
+crate excludes App/import/key/bus/HTTP/transport/UI production dependencies and
+preserves the existing naming API through a facade. It grants no write right.
+Current MCP remains read-only; per-alias startup scope, independently established
+operator/client association, explicit approval/cancel/expiry/conflict and native
+persistence/recovery are a separate pending contract. A deterministic fingerprint,
+self-reported client name, connection/session ID or a form response alone is not
+verified user identity or a new authorization system. No compatibility/release/
+deployment/private-corpus/real-client claim follows from dependency extraction.
+
 ## Offline naming recipe boundary (2026-10-12)
 
 The [bounded literal recipe](contracts/offline-name-recipe.md) changes only names

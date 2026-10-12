@@ -1,3 +1,31 @@
+## 2026-10-12 — Offline application boundary, local AP6 prerequisite
+
+The existing bounded naming implementation now has one home in `knx-edit`;
+`knx-app::name_recipe` remains a type-identical public re-export. The sole service
+expression change replaces importer SHA-256 with the already identical native
+Store hash helper. Lock resolution adds only a local package/App edge, preserving
+every external version, checksum and dependency. [ADR-0115](adr/0115-offline-application-edit-boundary.md).
+
+Focused frozen proofs: actual missing-root runtime RED then architecture1/0;
+actual public-gate missing-policy runtime RED then full gate13/0; later policy
+controls86 unit/14 integration all pass, including22 forbidden direct/transitive
+cases and an external transitive root refusal. Service13/0, direct consumer1/0
+and unchanged actual CLI6/0 pass on one snapshot. Three named source guard negatives
+(fingerprint/public policy/workspace-root) fail at runtime and canonical2033-path
+manifest restores exactly. Historical escaping pre-test refusal and stale fixture
+count12/1 remain separate failed attempts, not acceptance.
+
+Fresh complete20-stage assembly passes on2034 frozen sources: Rust4126/0 with194
+ignored, Web2836/0 across182 files, production binaries/identity, Clippy/builds,
+docs/regressions and five nonempty explicit-root repository gates. Two authored
+module-header separators corrected without raising the ceiling; earlier failed
+assembly15 valid/header refusal/four unstarted stages remains separate.
+Fresh upstream integration/full reacceptance and normal publication are pending.
+[Scoped evidence](evidence/offline-edit-boundary-2026-10-12.json) separates these
+checks from future opt-in MCP permissions, verified operator/client-associated
+confirmation, actual client and native recovery acceptance. No existing MCP
+capability/read-only default or Core/format/native schema changed.
+
 ## 2026-10-12 — Bounded offline literal naming recipe
 
 Explicitly selected stable group-address IDs receive exact prefix + original name

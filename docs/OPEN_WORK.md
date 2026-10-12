@@ -6,7 +6,8 @@
 existing bounded recipe from App's importer/key graph with a compatible App facade
 and strict production dependency/root gates. Focused library/actual CLI/policy and
 three reverting guard proofs pass; fresh20-stage broad acceptance passes on2034
-frozen sources. Fresh integration/full reacceptance and publication remain pending.
+frozen sources. Fresh-upstream merge `d6127583` passes22 frozen stages (Rust4129/0,
+Web2841/0, both server-default suites5/5); this closure publishes it normally.
 This module split is not MCP write support. Per-alias operator permission,
 verified request/client-associated approval, cancellation/refusal/native restart
 and actual client evidence remain open; read-only defaults/exclusions stay intact.

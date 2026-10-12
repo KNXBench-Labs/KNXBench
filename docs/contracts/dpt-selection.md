@@ -1,4 +1,69 @@
-# Communication-object DPT selection and provenance
+# DPT presentation, selection and provenance
+
+## Name-first monitor and address extension (2026-10-12 source)
+
+The shared display vocabulary now presents **Name (main.sub)**, for example
+`Switch (1.001)` / `Schalten (1.001)` and `Temperature (9.001)` /
+`Temperatur (9.001)`. Communication-object tables, selectors and exact filters,
+group-address table/Inspector declarations and linked types, and the monitor
+telegram table/details use the same presenter. Group-address search accepts
+the visible name/number as well as the original reference. Conflicts remain
+conflicts; their known references are named, never reduced to one winning type.
+
+The monitor compose form now uses a native DPT select over the existing 454-ID
+EN/DE vocabulary. A decoded row prefills its exact reference; selecting another
+type only changes the send draft. Focus, blur and selection do not send a
+telegram or edit the project. The automatic option reuses existing group-address
+resolution; absent/conflicting/unknown resolution and closed/stale/unverified
+session guards retain their existing authority. Only an explicit **Send** uses
+the unchanged API. The server still validates encoding support; the vocabulary
+is not a codec/device-compatibility list.
+
+Known `DPST-...` identifiers are no longer inline in object summaries. The
+exact original reference remains available in a tooltip and the object editor’s
+closed-by-default **Technical reference / Technische Referenz** disclosure.
+Main-only references display a family (`9.*`), not a guessed subtype. Unlisted
+numeric subtypes display their dotted number without an invented name; opaque
+or malformed values remain verbatim. Extra select options preserve exact
+unknown and noncanonical values, including `DPST-09-001`, without turning them
+into a reset or normalized write. Raw error text and exported capture data remain
+unchanged. No domain/API/parser/project/product schema or dependency changes.
+
+### Notation evidence and why the old IDs appeared
+
+The existing Core [`DptRef`](../../crates/knx-core/src/dpt/mod.rs) already stores
+`main: u16` and optional `sub: u16`; it is not a UI string domain model. Its
+`Display` implementation emits the interchange reference `DPST-<main>-<sub>`
+or `DPT-<main>`, which existing API/import/export callers use. The previous
+monitor and group-address views rendered that technical representation directly.
+That source-level leak explains the old UI; it is not evidence that an alternate
+KNX standard was intended, nor justification for exposing XML-style identifiers
+to an engineer. The original author’s undocumented intent is not inferred.
+
+The primary [KNX Datapoint Type explanation](https://support.knx.org/hc/en-us/articles/115001133744-Datapoint-Type)
+explicitly specifies `X.YYY` notation (main type and subtype). The already audited
+v02.02.01 inventory above remains this vocabulary’s version; the support article
+is notation evidence, not a replacement inventory or new support claim.
+Keep at least three subtype digits and retain actual four-digit IDs; do not
+format the identifier as a floating-point number.
+
+### Verification
+
+Named pre-change failures cover name-first vocabulary, the missing monitor
+select, inline raw IDs, unresolved/conflict guidance, and an actual narrow
+select overflow (471 px into a form with 332 px available). Final full Web suite:
+2,841 passed / 0 failed across 182 files. Eight production-built, strictly
+intercepted Chromium cases cover EN/DE, Graphite/Porcelain and 400/1440 px,
+exact send payloads/zero incidental sends, alias preservation, closed/reachable
+technical disclosure and bounded controls. All eight retained frames inspected.
+The source graph guard admits only the pure label module; API/mutation
+inventories remain unchanged. Build and explicit browser-fixture typing pass.
+Self-review, not an independent review. No live bus, native WebKitGTK/Orca, new
+codec, full ETS claim, release or running-container deployment is implied.
+
+The following section retains the original selection scope and evidence;
+this amendment supersedes its number-first and always-inline-reference UI.
+
 
 ## Scope
 

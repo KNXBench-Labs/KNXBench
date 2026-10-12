@@ -289,7 +289,16 @@ value encoded against an out-of-date datapoint type is a value you did not inten
 send.
 
 Clicking a row in the telegram table prefills the form's destination with that row's
-address. It does not send anything.
+address and, for a decoded value, its DPT. It does not send anything.
+
+In the 12 October 2026 source update (not the published Alpha.9 package), **DPT**
+is a dropdown, not a free-text field. Choose a name such as **Temperature (9.001)**
+(**Temperatur (9.001)** in German), or choose **Use the group address’s DPT**
+for automatic resolution. Unknown/main-only/imported references remain selectable
+as their exact values. Selection changes only the draft; only **Send** transmits.
+A named option is not proof of encoding support or device compatibility: the server
+still validates the value/type before sending. Telegram decoded values use the
+same name-first labels. [Scope and preservation](../../contracts/dpt-selection.md).
 
 ## The session log and the diagnostics window
 

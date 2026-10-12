@@ -140,3 +140,26 @@ The image itself is unchanged: same Dockerfile, same runtime contract
   the overview; publication preflight refuses oversized input.
 - Not done: image signing (cosign), scheduled rebuilds for base-image
   security updates. Each would be its own decision.
+
+## 2026-10-12 amendment — Linux deployment defaults
+
+At the owner's request, the standalone server fallback, Docker image environment
+and exposed port are now **8484**. Linux run/update recipes choose
+`--network host` without port publication. The host-network smoke test uses an
+explicit separate port (18080 by default) rather than competing with a live 8484
+service. Authentication, TLS and data-directory contracts are unchanged.
+
+Host networking is a container-creation option; no Dockerfile setting can force
+it on a bare `docker run`. Compose users choose `network_mode: host`, without
+`ports:`. With a password the listener is reachable on all host interfaces, so
+the reader guides explicitly require trusted LAN/VPN/firewall scoping.
+Without a password, the existing bind rule keeps it on host loopback.
+Docker's [host-driver documentation](https://docs.docker.com/engine/network/drivers/host/)
+confirms shared network namespace and ignored port mappings; the
+[Compose service reference](https://docs.docker.com/reference/compose-file/services/#network_mode)
+defines the corresponding configuration. Both were inspected on 2026-10-12.
+
+This is a source change, not a republished Alpha.9 or live-container replacement.
+Downloaded-image recipes keep explicit `-e KNX_PORT=8484` so older published
+images use the same port. Desktop private/dev listener selection is unchanged.
+See the [deployment guide](../manual/user-guide/11-web-and-docker.md#networking).

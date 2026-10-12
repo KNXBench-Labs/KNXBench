@@ -29,6 +29,8 @@ import { splitGatewayEndpoint, validateGatewayFields } from "./gatewayEndpoint";
 import { loadPreferredGateway } from "./gatewayPreference";
 import HelpTip from "./HelpTip";
 import { useSettingsState } from "./settingsStore";
+import { useUiLanguage } from "./uiLanguage";
+import { dptDisplay } from "./dptLabels";
 
 // The identity of the one session this panel can ever be attached to
 // (`AppState.bus_session` holds at most one — D3/D6). Deliberately not
@@ -77,9 +79,11 @@ function defaultServiceFilters(): ServiceFilters {
   return { GroupValueRead: true, GroupValueResponse: true, GroupValueWrite: true, Other: true };
 }
 
-function decodedSummary(row: BusTelegramRow): string {
+function decodedSummary(row: BusTelegramRow, language: string): string {
   if (!row.decoded) return "—";
-  return row.decoded.dpt ? `${row.decoded.dpt}: ${row.decoded.text}` : row.decoded.text;
+  if (row.decoded.kind === "conflict" && row.decoded.text.startsWith(CONFLICT_TEXT_PREFIX))
+    return CONFLICT_TEXT_PREFIX + conflictNames(row.decoded.text).split(", ").map(raw => dptDisplay(raw, language)).join(", ");
+  return row.decoded.dpt ? `${dptDisplay(row.decoded.dpt, language)}: ${row.decoded.text}` : row.decoded.text;
 }
 
 function controlPriorityLabel(t: Translate, priority: string): string {
@@ -183,6 +187,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
 }) {
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
+  const [language] = useUiLanguage();
   const settingsState = useSettingsState();
   const [gatewayFields, setGatewayFields] = useState(() => splitGatewayEndpoint(loadPreferredGateway()));
   const gatewayValidation = validateGatewayFields(gatewayFields);
@@ -1130,7 +1135,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
                     <td>{row.rawPayload ?? "—"}</td>
                     <td className={row.decoded ? `bus-monitor-decoded-${row.decoded.kind}` : undefined}>
                       {decodeKey && <span className="bus-monitor-decode-state">{t(decodeKey)}</span>}
-                      {decodedSummary(row)}
+                      {decodedSummary(row, language)}
                     </td>
                   </tr>
                 );
@@ -1152,7 +1157,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
                 {decodeStateKey(selectedTelegram.decoded) && (
                   <span className="bus-monitor-decode-state">{t(decodeStateKey(selectedTelegram.decoded)!)}</span>
                 )}
-                {decodedSummary(selectedTelegram)}
+                {decodedSummary(selectedTelegram, language)}
                 {selectedTelegram.decoded?.error && <p className="field-error">{selectedTelegram.decoded.error}</p>}
               </dd>
               <dt>{t("busMonitor.column.payload")}</dt><dd className="mono">{selectedTelegram.rawPayload ?? "—"}</dd>

@@ -90,7 +90,8 @@ folder. Choose your own password instead of the example:
 
 ```bash
 docker pull knxbench/knxbench-server:latest
-docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
+docker run -d --name knxbench --network host \
+  -e KNX_PORT=8484 \
   -e KNX_AUTH_PASSWORD='pick something long and boring' \
   -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
@@ -103,6 +104,8 @@ compare the browser's certificate fingerprint with the one in
 **Choose your update policy:** `latest` follows published releases, including
 alpha pre-releases; it does not track `main`. Use
 `knxbench/knxbench-server:0.1.0-alpha.9` in both commands to pin that release.
+The source server and source-built images now default to 8484. Keeping
+`-e KNX_PORT=8484` also makes the commands work with Alpha.9 and older images.
 Images start at `0.1.0-alpha.6` (9 October 2026); see
 [Ready-made image from Docker Hub](../user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)
 for the tag policy and platform limits.
@@ -111,8 +114,10 @@ for the tag policy and platform limits.
 live in the host's `data/` directory and survive container replacement.
 **New project…** works without an ETS file. Continue to [First start](06-first-start.md).
 
-The example publishes the port on host loopback, for this machine only. For
-remote access, authentication hashes, trusted certificates, host networking,
+The Linux default uses **host networking**. With a password, the server listens
+on **all host interfaces on port 8484**, not only localhost. Restrict access to
+your trusted LAN/VPN with a firewall; no `-p` mapping is used. For
+remote access, authentication hashes, trusted certificates, networking,
 configuration variables and troubleshooting, use the canonical
 [Web and Docker deployment](../user-guide/11-web-and-docker.md) guide.
 
@@ -127,9 +132,9 @@ configuration variables and troubleshooting, use the canonical
 | Symptom | Check |
 | --- | --- |
 | Name `knxbench` already exists | Use `docker ps -a`; do not delete an unfamiliar container or its data |
-| Port 8484 is occupied | Choose another **host** port in `-p`; open that port in the browser |
+| Port 8484 is occupied | Set `-e KNX_PORT=8485` (or another free port); open that port in the browser |
 | An HTTP health check fails | This authenticated setup speaks **HTTPS**; follow [HTTPS](../user-guide/11-web-and-docker.md#https) for certificate-aware checks |
-| No gateway is discovered | The Docker bridge does not carry KNX multicast; [networking](../user-guide/11-web-and-docker.md#networking) explains the separate bus setup |
+| No gateway is discovered | Confirm `--network host`, the host network/firewall and gateway; [networking](../user-guide/11-web-and-docker.md#networking) explains bridge limitations |
 | Refreshing loses the current edits | Save to `.knxdb`; a running server's memory is not a backup |
 
 Do not run a second container with `--name knxbench` to change networking.
@@ -178,7 +183,7 @@ KNX_DATA_DIR="$PWD/data" KNX_STATIC_DIR="$PWD/apps/knx-web/dist" \
   cargo run --locked -p knx-server
 ```
 
-**Expected result:** the startup line names `http://127.0.0.1:8080`. Open that
+**Expected result:** the startup line names `http://127.0.0.1:8484`. Open that
 address. This no-password variant binds loopback only; it is not a remote-access
 recipe. Setting an authentication password changes the default to HTTPS.
 

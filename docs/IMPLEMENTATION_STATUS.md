@@ -5,8 +5,10 @@ binds the type link and actual login response, release-note Color object/string
 distinction and SDK module definition/instance collections. No value codec or
 XML module join follows. Existing exact-source/literal unsupported-codec and
 module-scope refusals remain unchanged; full PDB-04 stays LATER. Focused
-verification is recorded only after actual source-bound execution; prior broad
-AP3/native/browser receipts retain their original source and scope.
+verification passed21 isolated selector/component tests across2 files and17
+exact-source ProductDB tests, no failures/ignores; all10 candidate stages passed
+on frozen inputs. [Bounded follow-up receipt](evidence/parameter-contract-followup-2026-10-12.json).
+Prior broad AP3/native/browser receipts retain their original source and scope.
 
 ## 2026-10-12 — Bounded project-note editor leaf candidate
 

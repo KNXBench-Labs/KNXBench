@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "date": "2026-10-12",
+  "candidate": "a27c8724341c08b12b1678ff05a398ccb16da6a7",
+  "baseline": "5c131140f5f957fb5c2e9d4b20c62fdd580457c9",
+  "scope": "AP3 actual public primary contract and module-scope qualification; unchanged inert fallbacks, no new Color/Picture editor or module mapping",
+  "sources": [
+    {
+      "label": "parameters-api",
+      "requested_url": "https://support.knx.org/api/v2/help_center/en-us/articles/4660580612754.json",
+      "final_url": "https://support.knx.org/api/v2/help_center/en-us/articles/4660580612754.json",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body_sha256": "2b65df901673662af3e06e0e3fdb407a0d09e77af2585bce877c0eb04dae73f5",
+      "body_bytes": 2519,
+      "bounded_complete_body": true
+    },
+    {
+      "label": "bound-types-article",
+      "requested_url": "https://support.knx.org/hc/en-us/articles/360000129280",
+      "final_url": "https://id.knx.org/login",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "body_sha256": "dd97f68ed608ea2271538aa845054e89b6fd787f728dcd4bf5457b11a34bf2d9",
+      "body_bytes": 8177,
+      "bounded_complete_body": true
+    },
+    {
+      "label": "release-api",
+      "requested_url": "https://support.knx.org/api/v2/help_center/en-us/articles/24003597800722.json",
+      "final_url": "https://support.knx.org/api/v2/help_center/en-us/articles/24003597800722.json",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body_sha256": "d4067f7ee60c6c2ec1797b7d9fabba2b1cb307a451cf2836075e9b97bbc85ff9",
+      "body_bytes": 6263,
+      "bounded_complete_body": true
+    }
+  ],
+  "module_source": {
+    "url": "https://support.knx.org/api/v2/help_center/en-us/articles/360015340940.json",
+    "final_url": "https://support.knx.org/api/v2/help_center/en-us/articles/360015340940.json",
+    "status": 200,
+    "title": "How to modernize your App",
+    "article_id": 360015340940,
+    "updated_at": "2026-09-01T13:59:51Z",
+    "body_sha256": "7817024febd9de8e3fae0606a54c3ae88d4682107ede6d6bc5ff11cc840afcaf",
+    "readable_article": true
+  },
+  "source_qualification": {
+    "referring_link_bound_to_article360000129280": true,
+    "http200_types_redirect_is_inspected_login_html": true,
+    "type_definition_not_received": true,
+    "release_Color_object_string_bug_not_codec": true,
+    "SDK_module_collections_distinction_not_XML_or_value_contract": true,
+    "no_entitlement_or_membership_inferred": true
+  },
+  "gates": [
+    {
+      "name": "parameter-ui",
+      "exit": 0,
+      "valid": true,
+      "passed": 21,
+      "failed": 0,
+      "pending": 0,
+      "files": 2
+    },
+    {
+      "name": "exact-source-productdb",
+      "exit": 0,
+      "valid": true,
+      "passed": 17,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "documentation",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "documentation-tests",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-layering",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-headers",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-anchors",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-ledger",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "check-corpus-gates",
+      "exit": 0,
+      "valid": true
+    },
+    {
+      "name": "whitespace",
+      "exit": 0,
+      "valid": true
+    }
+  ],
+  "inputs_frozen": true,
+  "runtime_unchanged": true,
+  "source_manifest_sha256": "128b4b0a2476346bee825675957001118971909c66448217a8f1d2a938034286",
+  "ledger": "PDB-04 stays LATER; specialized colour/picture editors not delivered",
+  "external_input": "Authorized defining type content or public primary equivalent covering lexical/native/picture resources; separately audited module mapping still needed",
+  "review": "active-session source/docs self-review, not independent",
+  "not_claimed": [
+    "fresh broad/AP3 native/browser rerun",
+    "full PDB04",
+    "generic module mapping",
+    "colour/channel/picture codec",
+    "login bypass",
+    "manufacturer execution or hardware",
+    "release/deployment"
+  ]
+}

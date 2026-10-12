@@ -1,5 +1,18 @@
 # Architecture
 
+## Opt-in MCP literal rename writer (2026-10-12)
+
+[ADR-0116](adr/0116-opt-in-mcp-name-recipe-writer.md) lets `knx-mcp` offer one
+mutation for aliases the operator names with `--allow-name-recipe`:
+`preview_name_recipe` and `apply_name_recipe` call the `knx-edit` recipe that
+the CLI already uses. Each apply needs the preview token, one form elicitation
+answered `approve: true`, and an unchanged file after the answer; it writes
+the native working history by compare-and-save and never the saved root.
+The elicitation is awaited in the tool-call task because the SDK binds it to
+the originating request; plan and apply run on the blocking pool around it.
+`knx-mcp` gains `knx-edit`, the layering gate also forbids `knx-app`, and
+`rmcp` gains its `elicitation` feature. [Contract](contracts/mcp-name-recipe-writer.md).
+
 ## Offline application edit boundary (2026-10-12 local prerequisite)
 
 [ADR-0115](adr/0115-offline-application-edit-boundary.md) places the existing

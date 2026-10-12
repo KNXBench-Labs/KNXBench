@@ -184,3 +184,12 @@ adapter still links no server, bus or key code.
   `NotInDatabase`, confirmed `NoDatabase`), as the server does. The first
   release passed the placeholder `NoDatabase` through even when the product
   database resolved the device; a client test surfaced it.
+
+## 2026-10-12 amendment
+
+[ADR-0116](0116-opt-in-mcp-name-recipe-writer.md) adds one opt-in exception:
+with `--allow-name-recipe <alias>` the server also offers literal
+group-address renames for that alias, each approved by the user in a form
+elicitation and written to the native working history through `knx-edit`.
+Without the flag the eight read-only tools and every statement above are
+unchanged. The layering gate now also forbids `knx-app` for `knx-mcp`.

@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-12",
+  "scope": "Group-address members from the address side; download gateway choice, device hand-off, step guide",
+  "candidate": "47a604ba68f63087fc56b63d8c7ea9cbc047c9ec",
+  "candidateBase": "114b0097 (project notes package, not yet on main at gate time)",
+  "codeCommits": [
+    "bd1db5de",
+    "2bc0d311",
+    "47a604ba"
+  ],
+  "vitest": {
+    "files": 198,
+    "passed": 2983,
+    "failed": 0
+  },
+  "productionBrowserGate": {
+    "config": "apps/knx-web/playwright.ga-members-download.config.ts",
+    "passed": 19,
+    "failed": 0,
+    "matrix": "EN/DE x porcelain/graphite x 1440/400 plus four focused cases",
+    "screenshots": 41,
+    "inspected": true,
+    "networkNamespace": true
+  },
+  "fullFixtureSuite": {
+    "passed": 368,
+    "failed": 4,
+    "failures": "device-editor-layout.e2e.ts expects DPST-9-1 (4 cases); reproduced identically on untouched origin/main b9e72d54; pre-existing since fe09a41a"
+  },
+  "server": {
+    "http_group_members": {
+      "passed": 2,
+      "failed": 0
+    },
+    "http_edit_routes": {
+      "passed": 26,
+      "failed": 0
+    },
+    "clippy": "knx-server --tests -D warnings clean",
+    "fmt": "clean"
+  },
+  "mutants": [
+    {
+      "label": "late-reply-generation",
+      "killed": true,
+      "failingTests": 1
+    },
+    {
+      "label": "duplicate-gate",
+      "killed": true,
+      "failingTests": 1
+    },
+    {
+      "label": "pending-guard",
+      "killed": true,
+      "failingTests": 1
+    },
+    {
+      "label": "ambiguous-gate",
+      "killed": true,
+      "failingTests": 2
+    },
+    {
+      "label": "candidate-rule",
+      "killed": true,
+      "failingTests": 3
+    },
+    {
+      "label": "discovery-overwrites-user",
+      "killed": true,
+      "failingTests": 4
+    },
+    {
+      "label": "preferred-claimed-found",
+      "killed": true,
+      "failingTests": 2
+    },
+    {
+      "label": "handoff-ignores-running",
+      "killed": true,
+      "failingTests": 1
+    },
+    {
+      "label": "handoff-does-not-wait",
+      "killed": true,
+      "failingTests": 2
+    },
+    {
+      "label": "handoff-ignores-context",
+      "killed": true,
+      "failingTests": 2
+    },
+    {
+      "label": "gateway-change-keeps-plan",
+      "killed": true,
+      "failingTests": 1
+    },
+    {
+      "label": "repeat-click-ignored",
+      "killed": true,
+      "failingTests": 1
+    },
+    {
+      "label": "handoff-replayed-after-tab-switch",
+      "killed": true,
+      "failingTests": 1
+    },
+    {
+      "label": "no-address-offered",
+      "killed": true,
+      "failingTests": 1
+    }
+  ],
+  "mutantSourcesRestored": true,
+  "gates": [
+    "tsc every tsconfig",
+    "vite build",
+    "check-layering",
+    "check-headers",
+    "check-anchors",
+    "check-ledger",
+    "check-corpus-gates",
+    "check_documentation.py",
+    "git diff --check"
+  ],
+  "hardware": "none: synthetic fixtures only, no gateway, device or bus contacted",
+  "review": "self-review, not independent"
+}

@@ -9,6 +9,7 @@ import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { Selection } from "./selection";
 import ProjectExplorer from "./ProjectExplorer";
 import ProjectHistoryDialog from "./ProjectHistoryDialog";
+import NativeExportDialog from "./NativeExportDialog";
 import RenameWorkbench from "./RenameWorkbench";
 import { useCrtInteractions } from "./useCrtInteractions";
 import { requestCrtActivation } from "./crtInteractions";
@@ -314,6 +315,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [nativeExportReviewed, setNativeExportReviewed] = useState<ProjectTree | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpTopicId, setHelpTopicId] = useState<HelpTopicId>(DEFAULT_HELP_TOPIC_ID);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -1190,10 +1192,9 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   }
 
   function exportProject() {
-    const anchor = document.createElement("a");
-    anchor.href = "/api/project/download";
-    anchor.download = "project.knxdb";
-    anchor.click();
+    const current = treeRef.current;
+    if (!current || loading) return;
+    setNativeExportReviewed(current);
   }
 
   async function undo() {
@@ -1593,6 +1594,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
       )}
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
       {tree && historyOpen && <ProjectHistoryDialog tree={tree} onTreeUpdate={historyChanged} onClose={() => setHistoryOpen(false)} />}
+      {nativeExportReviewed && <NativeExportDialog reviewed={nativeExportReviewed} current={tree} onClose={() => setNativeExportReviewed(null)} />}
       {helpOpen && <HelpPanel key={helpTopicId} initialTopicId={helpTopicId} onClose={() => setHelpOpen(false)} />}
       {aboutOpen && <AboutDialog updates={updates} onClose={() => setAboutOpen(false)} />}
       {guide.open && <OnboardingGuide stage={guide.open.stage} ctx={ctx} onClose={guide.close} />}

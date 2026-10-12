@@ -164,6 +164,18 @@ non-revision-conditional endpoint; ignoring a superseded UI reply does not undo
 or cancel a server operation. No installation create/delete/move capability,
 fresh private ETS import, ETS export or native screen-reader acceptance is added.
 
+### Local native-export privacy boundary (2026-10-11)
+
+[The reviewed native export dialog](contracts/native-export-privacy.md) warns that
+original/private retained content survives visible renames and compression. It
+is consent and snapshot binding, not anonymization or encrypted export. Query-free
+authenticated direct clients remain possible; only the web confirmation requires
+a complete reviewed binding. A server-side stale conflict fails the browser
+transfer and requires fresh review, not automatic retry. Existing native-shell
+Save As, report/payload downloads and wider export limits remain separate.
+No ledger ID or ETS-return-path limitation is closed by this privacy warning.
+
+
 ### Local retained-payload access boundary (2026-10-11)
 
 [Retained project payload catalogue](contracts/project-payload-catalogue.md)

@@ -1,0 +1,5 @@
+/** Native-export consent stays readable within the existing modal shell. */
+.search-panel.native-export-dialog { width: min(42rem, calc(100vw - 2rem)); align-self: flex-start; overflow-wrap: anywhere; }
+.native-export-dialog p { line-height: 1.5; }
+.native-export-dialog .native-export-privacy { font-weight: 600; }
+.native-export-dialog footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; margin-block-start: 1rem; }

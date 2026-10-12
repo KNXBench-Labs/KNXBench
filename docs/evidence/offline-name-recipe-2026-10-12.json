@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "scope": "Bounded literal stable-ID group-address naming application service and offline CLI; not a macro VM, MCP write surface, UI mount, bus action or release",
+  "testedBase": "cefb940ef2bc6514b4aa180fa20707dd9e8b5cea",
+  "runtimeAndTestSourceSha256": {
+    "crates/knx-app/src/name_recipe.rs": "8e35f3f7b81bdd27261d1677c7d7ae7fb8d75652c312a8a5763a19cce78e089e",
+    "crates/knx-app/src/lib.rs": "4cd26776cfd28726ff20292551e1e4711625549770092aa84d1c568cd1b075b1",
+    "crates/knx-app/tests/name_recipe.rs": "79d650126aece378397444ca5308e36a6859dc6b3648fe02275ec04655ec964d",
+    "apps/knx-cli/src/name_recipe.rs": "30683efa4363b6dc7295896b436c0d20ce8966777df5318a9e9919b50c587045",
+    "apps/knx-cli/src/main.rs": "76336bc696fc5c1be10d2d5258746e06bad6cea1eb12b4e077c3f8a8fbcccf93",
+    "apps/knx-cli/tests/name_recipe_cli.rs": "19b610acd6b6ef79790a1c83e8639f0bc5fdf221a178fdbb57f466f0316e8ae8"
+  },
+  "originalAssembledSnapshot": {
+    "accepted": true,
+    "stages": 18,
+    "sourceScope": "Before test-only review strengthening; receipt is not restamped",
+    "rust": {
+      "name": "rust-workspace",
+      "exit": 0,
+      "valid": true,
+      "passed": 4121,
+      "failed": 0,
+      "ignored": 194
+    },
+    "web": {
+      "name": "web",
+      "exit": 0,
+      "valid": true,
+      "passed": 2836,
+      "failed": 0,
+      "pending": 0,
+      "files": 182
+    }
+  },
+  "strengthenedServiceTests": {
+    "passed": 12,
+    "failed": 0,
+    "ignored": 0,
+    "inputsFrozen": true
+  },
+  "guardNegatives": {
+    "accepted": true,
+    "count": 5,
+    "namedRuntimeFailures": [
+      "cli-confirmation",
+      "complete-context",
+      "durable-before-live",
+      "no-implicit-root-save",
+      "independent-incarnation"
+    ],
+    "canonicalRestored": true
+  },
+  "review": "In-session source/security self-review, not independent",
+  "pending": "Integration/final documentation gates, normal publication and remote readback; final assembled candidate is actually accepted",
+  "limitations": [
+    "Explicit IDs only; max256 selections/4096 bytes per affix/1MiB combined before-after text",
+    "Native working history, never implicit root Save; no-op neither writes nor consumes redo",
+    "Deterministic confirmation fingerprint is a consistency guard, not a secret or identity system",
+    "No schema/dependency/UI/parser/protocol/corpus/ETS/hardware compatibility expansion"
+  ],
+  "finalAssembledCandidate": {
+    "accepted": true,
+    "inputsFrozen": true,
+    "stageCount": 18,
+    "stages": [
+      {
+        "name": "name-service",
+        "exit": 0,
+        "valid": true,
+        "passed": 12,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "name": "name-cli",
+        "exit": 0,
+        "valid": true,
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "name": "format",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "web",
+        "exit": 0,
+        "valid": true,
+        "passed": 2836,
+        "failed": 0,
+        "pending": 0,
+        "files": 182
+      },
+      {
+        "name": "web-build",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "theme-types",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "flow-types",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "rust-workspace",
+        "exit": 0,
+        "valid": true,
+        "passed": 4121,
+        "failed": 0,
+        "ignored": 194
+      },
+      {
+        "name": "clippy",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "binaries",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "documentation",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "documentation-tests",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-layering",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-headers",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-ledger",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0,
+        "valid": true
+      },
+      {
+        "name": "whitespace",
+        "exit": 0,
+        "valid": true
+      }
+    ],
+    "sourceManifestSha256": "146b69d25dd82cef97408fa58750eada57db0b6c19464ed4f195a8a22b0f3a10"
+  }
+}

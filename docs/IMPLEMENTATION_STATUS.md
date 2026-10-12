@@ -1,3 +1,23 @@
+## 2026-10-12 — Bounded offline literal naming recipe
+
+Explicitly selected stable group-address IDs receive exact prefix + original name
++ suffix through a private typed application plan and validated Core Batch. The
+[contract](contracts/offline-name-recipe.md) describes complete snapshot/revision
+binding, exact ordered before/after, cancellation by discarding the plan, one undo
+step and durable native compare-and-save before live publication. CLI preview is
+read-only; matching exact intent/target/native generation confirmation is required.
+No-op preserves redo/file bytes; older/foreign/missing stores are never adopted.
+
+Original assembled18 stages passed (Rust4121/0/194 ignored, Web2836/0/182 files,
+Clippy/builds/repository gates) on their frozen snapshot. Test-only self-review
+follow-up separately passes12 service tests with genuinely nonempty undo/redo
+image preservation and independent changed-incarnation coverage; five named
+source guard negatives fail at runtime, canonical source exactly restored.
+[Evidence](evidence/offline-name-recipe-2026-10-12.json) retains those distinct inputs;
+fresh final assembled18 stages now also pass on the strengthened frozen candidate;
+publication/integration closure remains pending. No independent
+review, macro VM, MCP write, UI mount, root Save, hardware or release is claimed.
+
 ## 2026-10-12 — AP3 primary contract qualification, not new editors
 
 [Fresh inspected public evidence](research/product-database.md#2026-10-12--ap3-colourpicture-contract-and-module-scope-follow-up)

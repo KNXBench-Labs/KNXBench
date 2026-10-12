@@ -1,5 +1,15 @@
 # Roadmap
 
+## Small offline literal naming source slice (2026-10-12)
+
+[Explicit group-address prefix/suffix naming](contracts/offline-name-recipe.md)
+uses a private validated application plan, one Core Batch/undo step and confirmed
+native working-history persistence, not an automation interpreter. No generated
+selection, UI/MCP writer, root Save, bus capability or release follows. Broader
+macros and the separately approved AP6/AP7 remain distinct later work; final source
+assembly18 stages have passed; integration/publication closure remains pending in the [evidence](evidence/offline-name-recipe-2026-10-12.json).
+
+
 ## GitHub release notification source feature (2026-10-11)
 
 Startup/hourly notification, explicit manual checking and persisted opt-out are

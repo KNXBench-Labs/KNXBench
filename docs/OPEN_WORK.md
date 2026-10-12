@@ -1,5 +1,17 @@
 # Open work after the 0.1 alpha
 
+## Offline literal naming slice (12 October 2026)
+
+The [bounded application/CLI recipe](contracts/offline-name-recipe.md) is implemented
+and has original assembled acceptance plus strengthened native-refusal/incarnation
+controls. [Current evidence](evidence/offline-name-recipe-2026-10-12.json) separates
+those source snapshots; final assembled18 stages now pass, integration/publication
+closure remains pending. It does
+not deliver a macro VM/registry, generated selection, MCP/LLM writes or bus rights.
+Broader FUTURE-02, AP6 permission/confirmation and AP7 catalogue work remain separate;
+Session1 project-note host and missing AP3 value/module contracts remain open.
+
+
 ## Bounded project-note editor leaf (12 October 2026)
 
 The [isolated component](contracts/project-note-editor-host.md) and

@@ -1,5 +1,19 @@
 # Known limitations
 
+## Offline naming recipe boundary (2026-10-12)
+
+The [bounded literal recipe](contracts/offline-name-recipe.md) changes only names
+of explicitly ordered existing GroupAddressIds. No interpolation, regex, target
+inference, macro registry, UI/MCP writer, new format or bus operation is added.
+Native working history is not root Save; reopen through the existing editor to
+Undo/Redo, and Save explicitly when desired. Concurrent generation/working-hash
+conflicts require re-preview. A failed or lost output after a durable commit is
+not evidence of rollback: inspect/reopen rather than automatically retrying.
+The deterministic CLI fingerprint binds canonical target, exact intent, semantic
+native context and history generation; it is not an authentication capability.
+The broader FUTURE-02 scope remains in the ledger, not closed by this small case.
+
+
 ## Project notes editor integration boundary (2026-10-12)
 
 The [bounded notes leaf](contracts/project-note-editor-host.md) provides ordered

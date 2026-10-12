@@ -96,6 +96,33 @@ package was new or already installed, which scheme it used, and how many members
 unknown entries and conflicts it contained. The catalog list refreshes immediately
 afterwards.
 
+### Updating with a preview (newer source, not Alpha 9)
+
+Got a newer `.knxprod` from a manufacturer? **Update with preview…**, under the install
+picker, checks it first. It is newer than the published Alpha 9 and is not in its
+screenshots; the command-line equivalent is
+[`knx products update`](10-command-line.md#knx-products-update--check-a-newer-product-file-before-installing-it).
+
+- The preview says **Nothing is installed yet.** and lists each application program
+  in the file as **New**, **New version** (with the versions you already have) or
+  **Already installed**, plus the package's SHA-256, how many products and links it
+  adds, and any ID conflicts.
+- **Back up and install** first saves a copy of your whole product catalogue next
+  to it, then installs. The message names that backup file.
+- If anything changed in between (another install, another window), nothing is
+  installed and **Preview again** checks the same file afresh.
+- Your projects keep the exact program versions they were built with; a new version
+  is added beside the old one and no device is switched to it.
+
+Open **Catalogue backups** to see the backups, newest first, with size and date.
+**Restore…** asks before it does anything: **Keep the current catalogue** is the
+default, and **Restore backup** returns the catalogue to that state, removing what
+was installed after it. Devices in your projects keep their references; one whose
+program is not in the backup shows no parameters until the program is installed
+again. KNXBench does not delete backups; remove old ones from the product database's
+folder yourself. The plain **Install product database** picker still installs
+directly, without a preview or backup.
+
 ### Old ETS3 product databases (`.vd3`, `.vd4`, `.vd5`)
 
 The same file picker also takes an old ETS3-era product database. Most of these

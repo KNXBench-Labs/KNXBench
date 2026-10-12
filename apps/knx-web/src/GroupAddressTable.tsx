@@ -15,6 +15,7 @@ import GroupAddressColumns from "./GroupAddressColumns";
 import GroupAddressAtlas from "./GroupAddressAtlas";
 import GroupAddressMatrix from "./GroupAddressMatrix";
 import { buildGroupAddressMatrix } from "./groupAddressMatrix";
+import { useGroupAddressObjectInventory } from "./groupAddressObjectInventory";
 import GroupAddressLinks from "./GroupAddressLinks";
 import HelpTip from "./HelpTip";
 import { GROUP_ADDRESS_WINDOW } from "./GroupAddressWindowNotice";
@@ -34,7 +35,8 @@ export default function GroupAddressTable(props: {
   const [scope, setScope] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const index = useMemo(() => buildGroupAddressPresentation(installation), [installation]);
-  const matrix = useMemo(() => buildGroupAddressMatrix(index), [index]);
+  const inventory = useGroupAddressObjectInventory(installation, `${props.projectContextKey ?? ""}:${installation.id}`);
+  const matrix = useMemo(() => buildGroupAddressMatrix(index, inventory.current), [index, inventory.current]);
   const [columnKeys, setColumnKeys] = useState<Set<string> | null>(null);
   const [columnQuery, setColumnQuery] = useState("");
   const [limit, setLimit] = useState(GROUP_ADDRESS_WINDOW);
@@ -44,12 +46,14 @@ export default function GroupAddressTable(props: {
   }, [props.projectContextKey, installation.id]);
   useEffect(() => {
     const present = new Set(matrix.columns.map(column => column.key));
+    // A device being re-read keeps its chosen columns until its reply settles.
+    for (const key of inventory.pendingKeys) present.add(key);
     setColumnKeys(previous => {
       if (previous === null) return previous;
       const next = new Set([...previous].filter(key => present.has(key)));
       return next.size === previous.size ? previous : next;
     });
-  }, [matrix]);
+  }, [matrix, inventory.pendingKeys]);
   const validScope = scope !== null && index.groups.has(scope) ? scope : null;
   useEffect(() => {
     if (scope !== validScope) setScope(validScope);
@@ -109,7 +113,7 @@ export default function GroupAddressTable(props: {
     </details>}
     {rangeScope !== null && externalGroups.length !== 1 && <p role="status">{t("gaWorkspace.scopeUnavailable")}</p>}
     {view === "columns" ? <GroupAddressColumns {...shared} /> : view === "atlas" ? <GroupAddressAtlas {...shared} /> : view === "matrix" ? <GroupAddressMatrix {...shared}
-      matrix={matrix} columnKeys={columnKeys} onColumns={setColumnKeys} columnQuery={columnQuery} onColumnQuery={setColumnQuery} /> : <GroupAddressTreeTable {...shared}
+      matrix={matrix} inventory={inventory} columnKeys={columnKeys} onColumns={setColumnKeys} columnQuery={columnQuery} onColumnQuery={setColumnQuery} /> : <GroupAddressTreeTable {...shared}
       collapsed={collapsed} onToggle={toggle} includeEmpty={query.trim() === "" && filter === "all" && validScope === null && externalScope === null} />}
     {selected && <GroupAddressLinks ga={selected} onTreeUpdate={onTreeUpdate} />}
   </div>;

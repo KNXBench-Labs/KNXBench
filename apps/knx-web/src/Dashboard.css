@@ -1,0 +1,119 @@
+/* Overview › Project status: labelled section cards with aligned rows.
+   Values sit right-aligned in tabular figures so counts line up; every
+   status has a text label and a shape, never colour alone. */
+.dashboard {
+  flex: 1 1 60%;
+  min-width: 0;
+  max-width: 72rem;
+}
+
+.dashboard-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  align-items: start;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.dashboard-section {
+  min-width: 0;
+  padding: 0.9rem 1.1rem 0.75rem;
+  background: var(--knx-surface);
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+}
+
+.dashboard-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--knx-muted);
+}
+
+.dashboard-stats { margin: 0; }
+
+.dashboard-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--knx-border) 70%, transparent);
+}
+.dashboard-row:last-child { border-bottom: 0; }
+.dashboard-row dt { color: var(--knx-muted); overflow-wrap: anywhere; }
+.dashboard-row dd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin: 0;
+  text-align: right;
+}
+
+.dashboard-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+.dashboard-value-note { font-size: 12px; color: var(--knx-muted); }
+
+/* Link-like buttons keep their digits on the same right edge as plain
+   values: the padding that gives them a hit area is pulled back out. */
+.dashboard-row dd > button {
+  min-height: 0;
+  margin-inline-end: -6px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.dashboard-row dd > button:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface));
+  border-color: var(--knx-border);
+}
+
+.dashboard-finding-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  background: transparent;
+  color: var(--knx-foreground);
+  font-weight: inherit;
+}
+.dashboard-finding-action {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--knx-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dashboard-finding-link--error .dashboard-value { color: var(--knx-error-color); }
+.dashboard-finding-link--warning .dashboard-value { color: var(--knx-warning-color); }
+
+.dashboard-import-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0 0 0.35rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--knx-border);
+  border-radius: 6px;
+  line-height: 1.45;
+}
+.dashboard-import-state-mark {
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-top: 0.38em;
+  border-radius: 50%;
+  background: var(--knx-muted);
+}
+.dashboard-import-state--errors { border-color: var(--knx-error-color); background: color-mix(in srgb, var(--knx-error-color) 7%, var(--knx-surface)); }
+.dashboard-import-state--errors .dashboard-import-state-mark { background: var(--knx-error-color); border-radius: 2px; }
+.dashboard-import-state--warnings { border-color: var(--knx-warning-color); background: color-mix(in srgb, var(--knx-warning-color) 7%, var(--knx-surface)); }
+.dashboard-import-state--warnings .dashboard-import-state-mark { background: var(--knx-warning-color); clip-path: polygon(50% 0, 100% 100%, 0 100%); border-radius: 0; }
+.dashboard-import-state--clean .dashboard-import-state-mark { background: var(--knx-success-color); }
+.dashboard-import-state--unavailable { border-style: dashed; color: var(--knx-muted); }
+.dashboard-import-state--unavailable .dashboard-import-state-mark { background: transparent; border: 2px solid var(--knx-muted); }
+
+.dashboard-import p.import-evidence-notice { margin: 0.5rem 0 0.25rem; }

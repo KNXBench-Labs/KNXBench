@@ -99,6 +99,12 @@ async fn full_import_report_and_historical_counts_survive_save_restart_edit_undo
     assert_eq!(reopened["errors"], imported["errors"]);
     assert_eq!(reopened["import_report_available"], true);
     assert_eq!(reopened["import_report_historical"], true);
+    // The display-only open projects the same restored provenance and counts.
+    let display =
+        serde_json::to_value(knx_server::open_native_project_impl(&native).unwrap()).unwrap();
+    assert_eq!(display["import_report_available"], true);
+    assert_eq!(display["import_report_historical"], true);
+    assert_eq!(display["warnings"], imported["warnings"]);
     assert_eq!(*state.opaque.lock().unwrap(), exact_opaque);
     for (path, body) in [
         (

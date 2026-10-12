@@ -19,7 +19,7 @@ a second Info-ZIP fixture with the real layout pins it.
 Test-first: the schema-20 table tests and the nested-layout test failed for the
 expected reason before the fixes; for the import behaviour, reverting each of
 10 source changes (mutants) fails a named test.
-`knx-etsproj` 247 passed, 0 failed. Opt-in comparison with xknxproject's expected
+Gate on `70c7a2d8`: workspace 4169 passed, 0 failed, 196 ignored; `knx-etsproj` corpus and private tests 58/0; store reference 3/0; Clippy, fmt, five xtask gates, tools 67, docs. Opt-in comparison with xknxproject's expected
 output: the three ETS 5.7 projects and the protected ETS4 project agree on every
 group address, device address and object link; reported: 8 sub-module object ids
 not decoded (one device, number 0, links kept), one instance DPT list kept

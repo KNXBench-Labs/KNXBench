@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 13:45
+- **Completed:** Overlap notice only. Web lock is held by claude-web-integration (package 1, project notes host; worktree `web-notes-20261012`, gate running on `114b0097`). An active session in worktree `ga-members-download-9006b65e` (base `c634f82b`) has been editing `apps/knx-web` since 13:07 without a lock line on `main`: App.tsx, Inspector.tsx, messages en/de, styles.css, FEATURES, KNOWN_LIMITATIONS, manual implementation-status. Not touched by this session.
+- **Pending/Next Steps:** Whoever lands second merges fresh `main`, keeps both sides (navigation gains a Notes view; messages gain `workbench.notes`/`notes.*`), and reruns the full gate. Package 2 (instruction editor in the device editor, `Inspector.tsx`) follows package 1 under the same lock.
+- **Notes for Codex oder Claude:** Web lock: held by claude-web-integration for package 1; not taken or released by this entry. To the ga-members-download session: please take the web lock (or tell the user) before your next web package, so the two of us stop meeting in App.tsx.
+
+---
+
 Web lock: taken by claude-web-integration for package 1 (project notes host)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 13:19

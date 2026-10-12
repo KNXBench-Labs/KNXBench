@@ -1,3 +1,39 @@
+## 2026-10-12 — Connection matrix object inventory
+
+The group-address **connection matrix** can now show a device's *unlinked*
+communication objects. Under **Device object lists** in the column chooser, each
+device has a **Load objects** action that reads its object list through the
+canonical device-detail endpoint (`GET /api/device/{id}`, same product language
+as the Inspector). Nothing is read until asked; no UI object model, no invented
+objects.
+
+- `groupAddressMatrix.ts` admits inventory columns only from current loaded
+  device details, keeps linked columns first, flags `linked`, reports linked
+  objects missing from a loaded list and counts ownership conflicts across links
+  and inventories. Scope is `linked-objects` or `linked-and-loaded`.
+- `groupAddressObjectInventory.ts` binds every reply to request generation,
+  snapshot, language and project: outdated replies are ignored, loaded devices are
+  re-read after updates (chosen columns survive the refresh), a project switch
+  forgets everything; failures and wrong-device replies are unavailable with Retry.
+- UI: scope note "linked plus loaded devices", a status line (loaded / not loaded
+  / loading / unavailable), "No project links" markers. The 12-column limit and
+  explicit selection are unchanged; loaded objects are offered, never
+  auto-selected.
+- Self-review. RED first (11 failing), five guard mutations caught. On the
+  rebased tree (main 333b2abd): Web **2,906 passed / 0 failed in 191 files**,
+  typecheck, typed e2e spec, build, production-preview browser gate 7/7 in a
+  loopback-only namespace (EN/DE, light/dark, 1440/400 px, intercepted good and
+  failing reads; 5,000-address switches 0.59–1.37 s, unchanged) plus a named
+  narrow-layout negative control (run before the rebase); docs checker and its
+  12 regressions, four xtask gates in a fresh target directory.
+  Native rename gate not rerun: no table-row selectors changed.
+- Manual chapter 04 text and the matrix screenshot updated (real debug server,
+  fictional Sample house, offline namespace, reproduced byte-identically after
+  the rebase; the other three shots were kept);
+  [provenance](evidence/group-address-views-manual-2026-10-12.json).
+  Feedback on issue #4 is still pending, so the derived numeric tree and
+  virtualization stay parked ([goal record](goals/group-address-four-views.md#follow-ups-after-the-first-publication-2026-10-12)).
+
 ## 2026-10-12 — Labelled unsaved-changes dialogs, compact About, actionable project status
 
 - **Root cause of the "unlabelled" middle button:** every dialog button inherits

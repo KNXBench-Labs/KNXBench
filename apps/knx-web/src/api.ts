@@ -4,6 +4,7 @@
 //! swapping the import at each call site is the only change there.
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { admitImportEvidence, type ImportEvidence } from "./importEvidence";
+import {admitSourceReportCatalogue,admitSourceReportEvidence,isSourceReportId,type SourceReportCatalogue,type SourceReportEvidence} from "./sourceReports";
 import { admitProjectHistory, historyBinding, type ProjectHistory } from "./projectHistory";
 import type { SettingsDiagnostic } from "./settingsStore";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
@@ -70,6 +71,15 @@ export async function deviceCatalog(language?: string | null): Promise<DeviceCat
 /** Explicit authenticated read of the complete original import report. */
 export async function getImportEvidence(): Promise<ImportEvidence> {
   return admitImportEvidence(await request<unknown>("/api/project/import-report"));
+}
+
+/** Explicit read of summaries for retained source reports, not merged compatibility. */
+export async function getSourceReportCatalogue(): Promise<SourceReportCatalogue> {
+  return admitSourceReportCatalogue(await request<unknown>("/api/project/source-reports"));
+}
+export async function getSourceReport(id: string): Promise<SourceReportEvidence> {
+  if (!isSourceReportId(id)) throw new Error("Invalid source report selector");
+  return admitSourceReportEvidence(await request<unknown>(`/api/project/source-reports/${id}`),id);
 }
 
 /** Read complete native history metadata, never silently admit a partial page. */

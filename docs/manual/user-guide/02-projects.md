@@ -65,6 +65,14 @@ and other confidential data. Review them before sharing; the preview is not
 anonymization. There is no automatic upload. CLI `import --store` now captures
 the same original report; earlier CLI files without it remain unavailable.
 Source-scoped selective reports are not a primary destination timeline.
+
+**Show source report catalogue** separately lists retained reports from selective
+imports. Select the source and choose **Read selected source report** before
+**Download source report**. The source's full recorded name, scope identity and
+availability are shown outside the selector; source counts do not replace the
+main project's counts. An archive with no stored report says **Report unavailable**,
+not zero issues. Changing/revising the project invalidates an old read. Full
+local downloads can contain confidential data; review them before sharing.
 [Exact contract and bounds](../../contracts/native-import-evidence.md).
 
 ## Import and open progress

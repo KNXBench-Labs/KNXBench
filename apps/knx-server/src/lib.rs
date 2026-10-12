@@ -63,6 +63,7 @@ mod domain;
 mod import_evidence_routes;
 mod serial_address_routes;
 mod service_control_routes;
+mod source_import_report_routes;
 pub use domain::*;
 
 mod errors;

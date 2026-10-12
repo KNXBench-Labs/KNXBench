@@ -15,6 +15,7 @@ import { computeStats } from "./dashboardStats";
 import ImportDiagnosticsNotice from "./ImportDiagnosticsNotice";
 import { importReportState, type ImportFindingSeverity } from "./importFindings";
 import ImportEvidencePanel from "./ImportEvidencePanel";
+import SourceReportPanel from "./SourceReportPanel";
 import { useTranslate } from "./i18n";
 import type { MessageKey } from "./messages/en";
 import { useDeviceNavigation } from "./DeviceLink";
@@ -102,6 +103,7 @@ export default function Dashboard(props: {
           </dl>
           <ImportDiagnosticsNotice available={tree.import_report_available} historical={tree.import_report_historical} />
           <ImportEvidencePanel tree={tree} />
+          <SourceReportPanel tree={tree} />
         </section>
 
         <section className="dashboard-section dashboard-file" aria-labelledby="dashboard-file-heading">

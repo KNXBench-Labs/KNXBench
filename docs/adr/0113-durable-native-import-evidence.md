@@ -37,6 +37,18 @@ verification or new hardware observation. The complete report remains unchanged
 through edit/save/restart/undo/redo. Selective import does not invent a complete
 merged-project historical report from a source report.
 
+## Source-scoped access extension
+
+Reuse the existing selective importer raw-report rows, without a second parser
+or an additional primary envelope. Add a bounded explicit catalogue and selected
+read; require literal scope/kind/path identity and full admission before returning
+any summary. An archive without report is unavailable, not a zero-result report.
+Server/load/revision-bound replies and separate source labels preserve the
+primary report's meaning and counters. Complete original JSON text is exported
+verbatim with privacy disclosure; no archive authenticity is inferred. Per-report,
+aggregate-byte and scope-count bounds apply before parsing. Native snapshots
+already preserve these rows, so this extension adds no model or store schema.
+
 ## Consequences
 
 - Existing snapshot history preserves the new metadata without new snapshot

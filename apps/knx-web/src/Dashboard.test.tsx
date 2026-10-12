@@ -30,6 +30,11 @@ describe("native import evidence availability", () => {
     expect(host.textContent).toContain("not reassessed");
     expect(host.querySelector('.dashboard-issues')?.textContent).toContain("2");
   });
+  it("offers explicit source-report access even when primary historical evidence is unavailable", () => {
+    act(() => root.render(<Dashboard tree={{...tree(),import_report_available:false}} />));
+    expect(host.textContent).toContain("Show source report catalogue");
+    expect(host.querySelectorAll(".source-report-panel button")).toHaveLength(1);
+  });
   it("does not label a measured zero as unavailable", () => {
     act(() => root.render(<Dashboard tree={{...tree(),import_report_available:true}} />));
     expect(host.querySelector('[role="note"]')).toBeNull();

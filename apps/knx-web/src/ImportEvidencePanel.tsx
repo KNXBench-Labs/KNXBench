@@ -1,13 +1,11 @@
 /** Explicit local access to the full source-bound historical import report. */
 import { useEffect, useRef, useState } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import { serializeImportEvidence, type ImportEvidence } from "./importEvidence";
+import { serializeImportEvidence, REPORT_PREVIEW_CHARACTERS, type ImportEvidence } from "./importEvidence";
 import * as api from "./api";
 import { useTranslate } from "./i18n";
 import { downloadLocalJson } from "./localJsonDownload";
 import "./ImportEvidencePanel.css";
-
-const PREVIEW_CHARACTERS = 65536;
 
 export default function ImportEvidencePanel(props: { tree: ProjectTree }) {
   const t = useTranslate();
@@ -60,8 +58,8 @@ export default function ImportEvidencePanel(props: { tree: ProjectTree }) {
       <p>{t("importEvidence.privacy")}</p>
       <button type="button" onClick={() => downloadLocalJson(serializeImportEvidence(evidence), "import-report.json")}>{t("importEvidence.download")}</button>
       <details><summary>{t("importEvidence.preview")}</summary>
-        <p>{t("importEvidence.previewLimit", {count:PREVIEW_CHARACTERS})}</p>
-        <pre>{serialized.slice(0, PREVIEW_CHARACTERS)}</pre>
+        <p>{t("importEvidence.previewLimit", {count:REPORT_PREVIEW_CHARACTERS})}</p>
+        <pre>{serialized.slice(0, REPORT_PREVIEW_CHARACTERS)}</pre>
       </details>
     </div>}
   </section>;

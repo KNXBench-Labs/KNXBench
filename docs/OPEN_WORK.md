@@ -240,6 +240,8 @@ execution limits remain research/follow-up work, not wider runtime support.
 | --- | --- | --- | --- |
 | Legacy ETS3 product databases (`.vd3`–`.vd5`) | L1 inspection, L2 import/secret withholding, L3 web upload/password handling, the VD5 installer layout with measured bounds and L4 download plans from `s19_block` are on `main` | A first live legacy download (needs the maintainer's device go; none has run). Map atomic types 3 (`string`) and 5 (`long enum`) once ETS's conversion is compared (the `.vd5` has 1,515 such parameters; candidate oracle `SIEMENS_KNX_PDB_Nov_2016_ETS4.knxprod`). Merged legacy procedures (`07B0h`) stay refused. | [ADR-0094](adr/0094-legacy-exim-product-files.md), [VD4 import](VD4_PRODUCT_DATABASE_IMPORT.md), KL §128 |
 | Website / published Evolution Story | Edition `2026-10-08.4` is approved and deployed with the site; first publication is complete | HTTP→HTTPS (301) and remote IPv6 HTTPS (four probes, 200/TLS valid) verified on 2026-10-09; Pages Node-24 actions and demo links deployed/verified; owner's privacy review and optional WebKit evidence remain separate | [story/](../story/README.md), [WEBSITE](WEBSITE.md), ADR-0068/0095 |
+| Web integration of finished leaves | Packages 1 (project notes) and 2 (installation instructions) delivered on 12 October; package 3 (time/integer-slider parameter editors) holds the web lock in worktree `web-params-20261012` (checked 2026-10-12) | Package 4: catalogue updates in the web. Colour/Picture keep the visible fallback; PDB-04 stays LATER | Web-lock lines in `.ai/CURRENT_STATE.md`, [parameter host](contracts/parameter-editor-host.md), [catalogue updates](contracts/catalogue-update.md) |
+| Group-address views follow-up | Waiting for the reporter's feedback on issue #4 | Derived numeric 2-/3-level tree (GA7, ADR first) only if asked for; virtualization (GA8) only on request or a failing measurement | [goal record](goals/group-address-four-views.md) |
 
 **Commissioning refusal buckets are an evidence backlog, not a running track.**
 The recorded house/corpus snapshot and module-placement, `placed by Property`,
@@ -258,12 +260,28 @@ reconstructions / 6 source-limit unavailable from 75 selected real candidates;
 no expanded real sequence, complete plan or new live support. Normal main publication is owner-authorized and tracked in the delivery receipt;
 later semantic materialization is not implicitly authorized. Existing commissioning ledger dispositions are unchanged.
 
-The root's two formerly parked packages are delivered. The separate
-**documentation refresh and ideas/roadmap audit** remain local in
-`KNXBench.worktrees/docs-refresh-20261008`, now based on `608a204b`: revised
-README/manual, real media, documentation checker and this reconciliation.
-Their review/commit/publication remains a delivery step, not a missing app
-feature. No commit or push is performed by this audit.
+The root's two formerly parked packages are delivered. The **documentation
+refresh and ideas/roadmap audit** were published as `696f25b6` (8 October); the
+`docs-refresh-20261008` worktree no longer exists.
+
+**Parked worktrees (checked 2026-10-12 against `5a33e95c`).** Six packages are
+kept on the owner's instruction; none is on the remote, none is merged. The
+[parked-work triage](status/2026-10-12-parked-work-triage.md) has the
+file-by-file main check, the `merge-tree` conflict maps and the reasoning:
+
+| Worktree | What it holds | Recommendation |
+| --- | --- | --- |
+| `native-evidence-20261011` | 7 locally accepted commits: durable native import reports (ADR-0113), CLI/source-report/payload catalogues, export-privacy consent, read-only project metadata and recorded device state; 10 conflicts | Adopt as one web-lock integration package |
+| `ux-feedback-20261010` | 13 locally accepted commits, UX AP1–AP5; ADR-0112 number collides with main; AP4 overlaps main's Project status cards; 10 conflicts | Adopt AP1/2/3/5, drop AP4 (owner confirms) |
+| `functions-sites-20261009` | Uncommitted KNX Functions (`MODEL-07`) on schema 12 (main is at 14); acceptance attempt 4 failed; 23 conflicts | Ask user (lean: preserve as WIP, restart later) |
+| `import-lifecycle-20261011` | Committed part on main; uncommitted, never-compiled initial native-write preflight | Ask user (lean: archive, restart fresh) |
+| `audit-findings-20261011` | Residue is an older large-history-image candidate; main has a later version | Drop |
+| `native-import-diagnostics-20261011` | Residue is fully on main (import-status `3d6c9d1f`) | Drop |
+
+Two further worktrees hold residue that needs an owner decision:
+`offline-naming-20261011` (an unaccepted device-naming design draft) and
+`data-tooling-stats-20261011` (a stale, unpublished ProjectStats refresh).
+No commit, merge or deletion of these is performed by the triage.
 
 - **Community evidence** (File → Analyze support gaps…) is in the repository,
   and its intake lives here (ADR-0091). The interim
@@ -368,8 +386,13 @@ to owner `later`. Routes naming removed goal files are kept as history.
   intake repository is already retired. Private mailbox verification and the
   owner's retention decision for the private pre-launch rollback repository
   remain separate; this audit performs neither action.
-- **Stale worktree:** `$TMPDIR/devnav-ro` (read-only interview scratch) can go
-  once the devices-navigation interview ends.
+- **Worktree prune (12 October 2026):** 21 linked worktrees whose HEAD was an
+  ancestor of `origin/main` `5a33e95c` were removed. Their only residue was a
+  handover copy, tool scratch or ignored logs. That residue (diff, untracked and
+  ignored work files, sha256 manifest) is backed up locally outside the
+  repository. Local branches were left in place. The read-only interview
+  scratch `$TMPDIR/devnav-ro` no longer exists. Remaining parked worktrees are
+  listed in section 2.
 
 
 ### Schema23 review — scoped follow-up closed

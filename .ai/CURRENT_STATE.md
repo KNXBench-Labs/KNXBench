@@ -1,3 +1,23 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 16:51
+- **Completed:** Repo hygiene and parked-work triage. This is a docs-only package with no `apps/knx-web` edits.
+  - Removed 21 linked worktrees whose HEAD is an ancestor of `origin/main` `5a33e95c` and whose residue was empty, only the handover copy, tool scratch or ignored logs. Each one was re-checked for HEAD, status and process cwd right before removal.
+  - The residue (diff, untracked and ignored tars, sha256 manifest) is backed up locally in `KNXBench.backups/2026-10-12-worktree-prune/` and in the profile scratch. It is not in Git.
+  - Wrote `docs/status/2026-10-12-parked-work-triage.md` for the six kept packages: file-by-file main check, `merge-tree` conflict maps, acceptance and recommendations.
+  - OPEN_WORK §1 gains the web-integration and GA-feedback rows. §2 now notes that docs-refresh was published (`696f25b6`) and lists the parked packages. §5 records the prune; `devnav-ro` is gone.
+  - Log: `.ai/logs/2026-10-12_claude_parked-work-triage.md`.
+- **Pending/Next Steps:** Owner decisions per the triage:
+  - native-evidence: adopt, as its own web-lock integration package;
+  - ux-feedback: adopt AP1/2/3/5 and drop AP4; ADR-0112 must be renumbered;
+  - functions-sites: ask (schema 12 vs main 14, attempt 4 failed);
+  - import-lifecycle: ask (never-compiled preflight residue);
+  - audit-findings and native-import-diagnostics: drop.
+
+  `offline-naming-20261011` and `data-tooling-stats-20261011` also need a decision. Local branches of removed worktrees were not deleted.
+- **Notes for Codex oder Claude:** Web lock: held by claude-web-integration for package 3; not taken or released by this entry. `web-params-20261012`, the root checkout and the six kept worktrees were not modified; their snapshots used a temporary index only. `docs/adr/README.md` lacks rows for 0110–0112 (left to the owning tracks). No hardware, release, deployment, subagents or quota checks.
+
+---
+
 Web lock: taken by claude-web-integration for package 3 (time and integer-slider parameter editors)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 16:13

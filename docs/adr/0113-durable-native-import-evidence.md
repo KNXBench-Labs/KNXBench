@@ -1,6 +1,6 @@
 # ADR-0113 — Durable historical import evidence in native passthrough
 
-- Status: Accepted and implemented locally; source integration/publication separate
+- Status: Accepted; implemented and integrated on main 2026-10-12 (port of the parked branch, [evidence](../evidence/native-evidence-port-2026-10-12.json))
 - Date: 2026-10-11
 
 ## Context

@@ -54,6 +54,11 @@ already found lying in the grass.
   worktree borrows the corpus through a symlink, which `OriginalData/` alone
   would not match. A fresh worktree has no corpus, so corpus-backed tests take
   their skip path there; link the corpus before trusting a green run.
+- **The xknxproject oracle is a second corpus input.** `project_dump.json`
+  (gitignored, at the workspace root) feeds `oracle_xknxproject` and
+  `golden_reference_products`; without it they panic instead of skipping. Link
+  it into a worktree together with `OriginalData/` before
+  `tools/run_corpus_tests.py`.
 - **`walk_corpus_files` skips symlinks** (`crates/knx-testsupport/src/lib.rs`)
   and panics on unreadable directories. A symlink farm therefore measures as an
   empty corpus; copy files into a scratch directory and point

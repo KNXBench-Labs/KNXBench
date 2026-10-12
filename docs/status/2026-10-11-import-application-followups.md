@@ -37,6 +37,7 @@ and nine successful HTTP steps. Evidence remains private; the
 contains only generic acceptance and scope information. Published on main as
 `e27aca526a8a`, verified by exact fetched/live readback; no deployment or
 release. Earlier local results above remain historical.
+
 ## Fresh upstream coordination (2026-10-11)
 
 Read-only reconciliation against upstream `2ff5d51312bf` confirms the large
@@ -72,21 +73,28 @@ current failure or acceptance. Stored BusAccess/IP configuration, additional mod
 layout/calculation semantics, tasks/traces, commissioning and ETS return-path
 support are not closed by a read-only state view. No hardware/foreign-code go.
 
+## Main integration (2026-10-12)
+
+The seven local commits were ported onto main with a fresh full gate
+([evidence](../evidence/native-evidence-port-2026-10-12.json)). The rows below now say "on main" where that applies; the
+earlier local figures stay in the history above. Stored BusAccess/IP display is
+still open.
+
 ## Remaining functional work — not completion claims
 
 | Area | Required next implementation/evidence | Existing boundary / coordination |
 | --- | --- | --- |
 | Early import write-capability preflight | Report model/context/history limits before the first write, without dropping data or turning a budget refusal into a compatibility result | New codec does not cover every admitted archive size |
-| Full historical import diagnostics | Primary server report capture/native restoration/explicit complete local download accepted locally (ADR-0113): owning Rust1040/0, Web2651/0, built Browser4/0; later integration separate. CLI `import --store` capture also accepted locally: actual CLI controls and owning Rust1286/0/100ignored, strictClippy/build/repo/docs; selective-source catalogue/read UI accepted locally: Rust1293/0, Web2671/0, builtBrowser8/0; source counts remain separate; old absent evidence cannot be reconstructed | Original reports are not current compatibility recomputation; no native schema migration needed for the dedicated passthrough kind |
+| Full historical import diagnostics | **On main (2026-10-12 port).** Primary server and CLI `import --store` capture, native restoration and complete local download (ADR-0113); selective-source catalogue and read UI. Source counts stay separate; reports absent from older files cannot be reconstructed. [Evidence](../evidence/native-evidence-port-2026-10-12.json) | Original reports are not current compatibility recomputation; no native schema migration needed for the dedicated passthrough kind |
 | Calculation, validation, activity, Repeat/module-instance editing | Verified grammar/semantics, active/inactive/unknown provenance and atomic writer tests | PDB-02, KL-68, KL-170; do not execute arbitrary manufacturer scripts or guess values |
 | Dynamic labels, formatting and manufacturer layout/help | Verified references, localized context and scoped controls; generic public regression witnesses | PDB-01/04/05/06, KL-171; preserved media does not prove executable help/plug-in support |
-| Project metadata, usage, additional addresses, segments | [Existing modeled ProjectInfo read-only view](../contracts/modeled-project-metadata.md) accepted locally: Rust1311/0, Web2723/0, built12/0 and real-native8/0; additional typed fields, commands/native migrations and full Inspector writers remain open | MODEL-05/07, KL-172; coordinate with existing Functions/Sites owner, no competing schema bump |
-| Stored BusAccess/IP configuration and loaded-state provenance | [Recorded loaded-state view](../contracts/recorded-device-state.md) accepted locally; persisted belief/null report/date/native-refusal meaning explicit. Stored BusAccess/IP display and all writers remain open | Never auto-connect to foreign stored endpoints or declare imported flags newly verified |
+| Project metadata, usage, additional addresses, segments | [Existing modeled ProjectInfo read-only view](../contracts/modeled-project-metadata.md) on main (2026-10-12 port); additional typed fields, commands/native migrations and full Inspector writers remain open | MODEL-05/07, KL-172; coordinate with existing Functions/Sites owner, no competing schema bump |
+| Stored BusAccess/IP configuration and loaded-state provenance | [Recorded loaded-state view](../contracts/recorded-device-state.md) on main (2026-10-12 port): persisted belief, null report, dates and native refusal stay explicit. **Stored BusAccess/IP display and all writers remain open** | Never auto-connect to foreign stored endpoints or declare imported flags newly verified |
 | Tasks, imported traces and archive metadata | Dedicated application concepts, distinct from KNXBench Undo/versions | Archive metadata alone does not establish a recoverable ETS snapshot |
-| Attachments and extensions | [Read-only retained-payload catalogue](../contracts/project-payload-catalogue.md) and explicit inert downloads accepted locally: Rust1303/0, Web2689/0, builtBrowser12/0 and additional opt-in private production/native equality. Preview/replacement provenance remain separate | Preserved `.etsapp`/DLL/script bytes are not an execution capability; FUTURE-03 |
+| Attachments and extensions | [Read-only retained-payload catalogue](../contracts/project-payload-catalogue.md) and explicit inert downloads on main (2026-10-12 port). Preview/replacement provenance remain separate | Preserved `.etsapp`/DLL/script bytes are not an execution capability; FUTURE-03 |
 | Installation instructions | Reuse the original reader and normalized editable-document service once accepted | Existing instruction-service owner has API/native work in progress; do not duplicate it |
 | Device planning and commissioning | Evidence-bound image/parameter/configuration support, explicit untested/unsupported reasons and later target-specific hardware acceptance | PDB-02/05/08 and KL-173/174; no blanket hardware go |
-| Export privacy and ETS return path | [Explicit native-export privacy review](../contracts/native-export-privacy.md) and reviewed snapshot binding accepted locally: Rust1305/0, Web2703/0, built12/0 plus actual-server native4/0; separately researched/verified interchange writer remains open | Compression is not anonymization; KL-6 is not closed |
+| Export privacy and ETS return path | [Explicit native-export privacy review](../contracts/native-export-privacy.md) and reviewed snapshot binding on main (2026-10-12 port); separately researched/verified interchange writer remains open | Compression is not anonymization; KL-6 is not closed |
 
 No ledger ID is reclassified merely because it appears in this matrix. Accepted
 boundaries and LATER entries remain distinct from verified implementation.

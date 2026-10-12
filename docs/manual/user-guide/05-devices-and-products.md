@@ -626,4 +626,14 @@ text. It is newer than the published Alpha 9 and is not in its screenshots.
 Only instructions from an imported ETS project are supported; a device created in
 KNXBench, or one whose original cannot be read, says so instead of offering an editor.
 
+### Recorded device state (newer source, not Alpha 9)
+
+In the Properties Inspector of a device, **Show recorded device state** lists what
+the project believes about the device's loaded parts (individual address,
+application program, parameters, communication part, medium configuration) next to
+any report the model still holds. It never contacts the device. *No report
+retained* does not mean "not loaded"; recorded dates are project metadata, not the
+last successful download. Stored BusAccess/IP settings are not shown.
+[Contract](../../contracts/recorded-device-state.md).
+
 [Manual index](../README.md) · Next: [A complete configuration workflow](06-configuration-workflow.md) →

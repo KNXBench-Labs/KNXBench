@@ -2,12 +2,13 @@
 //!
 //! The catalogue reads the domain model directly (no display projection, which
 //! is the UI layer's job) and keeps only targets the domain itself accepts
-//! ([`ProjectNoteTarget::validate`]): a choice the user can pick is a choice
+//! ([`ProjectNoteTarget::validate`], with the same counting done in one pass
+//! for installation-scoped kinds): a choice the user can pick is a choice
 //! Apply will not refuse as missing or ambiguous. Labels are locale-neutral
 //! parts (addresses, names, object numbers) formatted the way the workbench
 //! shows them; the UI adds its own translated kind word. The project target is
 //! not listed; the editor always offers it.
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use knx_core::{
     note::ProjectNoteTarget, BuildingPart, BuildingPartId, DeviceInstance, Installation, Project,
@@ -112,13 +113,55 @@ pub fn note_target_catalogue(project: &Project) -> Vec<NoteTargetOption> {
             });
         }
     }
+    let occurrences = occurrences(project);
     let mut seen = BTreeSet::new();
     kinds
         .into_iter()
         .flatten()
         .filter(|option| seen.insert(option.target))
-        .filter(|option| option.target.validate(project).is_ok())
+        .filter(|option| match occurrences.get(&option.target) {
+            Some(count) => *count == 1,
+            // Devices and objects are keyed maps: validate is a lookup there.
+            None => option.target.validate(project).is_ok(),
+        })
         .collect()
+}
+
+/// How often each installation-scoped ID occurs, counted over exactly the
+/// collections [`ProjectNoteTarget::validate`] scans, in one pass. Calling
+/// `validate` per offered entry instead scans those collections once per
+/// entry: 20 000 group addresses took 266 ms (release build) under the
+/// server's project lock. `tests/note_targets.rs` pins that every offered
+/// entry still passes `validate`.
+fn occurrences(project: &Project) -> BTreeMap<ProjectNoteTarget, usize> {
+    let mut counts = BTreeMap::new();
+    let mut count = |target| *counts.entry(target).or_insert(0) += 1;
+    for installation in &project.installations {
+        count(ProjectNoteTarget::Installation(installation.id));
+        installation
+            .topology
+            .areas
+            .iter()
+            .for_each(|v| count(ProjectNoteTarget::Area(v.id)));
+        installation
+            .topology
+            .lines
+            .iter()
+            .for_each(|v| count(ProjectNoteTarget::Line(v.id)));
+        installation
+            .buildings
+            .iter()
+            .for_each(|v| count(ProjectNoteTarget::BuildingPart(v.id)));
+        installation
+            .group_ranges
+            .iter()
+            .for_each(|v| count(ProjectNoteTarget::GroupRange(v.id)));
+        installation
+            .group_addresses
+            .iter()
+            .for_each(|v| count(ProjectNoteTarget::GroupAddress(v.id)));
+    }
+    counts
 }
 
 fn entry<const N: usize>(target: ProjectNoteTarget, parts: [&str; N]) -> NoteTargetOption {
@@ -142,7 +185,8 @@ fn present<const N: usize>(parts: [&str; N]) -> Vec<String> {
 /// order, so a broken hierarchy hides nothing.
 fn pre_order(installation: &Installation) -> Vec<&BuildingPart> {
     let parts = &installation.buildings;
-    let find = |id: BuildingPartId| parts.iter().find(|part| part.id == id);
+    let by_id: BTreeMap<BuildingPartId, &BuildingPart> = parts.iter().map(|p| (p.id, p)).collect();
+    let find = |id: BuildingPartId| by_id.get(&id).copied();
     let mut visited = BTreeSet::new();
     let mut ordered = Vec::new();
     let mut stack: Vec<&BuildingPart> = parts.iter().filter(|p| p.parent.is_none()).rev().collect();

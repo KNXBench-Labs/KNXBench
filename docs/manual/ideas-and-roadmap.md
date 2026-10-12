@@ -27,8 +27,8 @@ covers source `608a204b`; the released AppImage is a separate snapshot.
 The full inventory is [Implementation status](implementation-status.md), with
 finer-grained format detail in
 [Supported and unsupported](reference/02-supported-and-unsupported.md). In
-one paragraph: KNXBench imports real ETS project samples at schemas 11, 21
-and 23, with schema-23 module evidence still bounded (and, since 2026-09-20,
+one paragraph: KNXBench imports real ETS project samples at schemas 11, 20,
+21 and 23, with schema-23 module evidence still bounded (and, since 2026-09-20,
 writes none — [ADR-0028](../adr/0028-no-knxproj-export.md)), preserves opaque data
 where technically possible and reports unsupported data, stores projects in
 its own SQLite format with undo during the open session, ingests product

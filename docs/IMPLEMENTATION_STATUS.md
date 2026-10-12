@@ -1,3 +1,33 @@
+## 2026-10-12 — ETS 5.7 projects import; real protected exports decrypt (issue #7)
+
+The reporter of #6 got `no known-element table for schema version 20` for an
+ETS 5.7.4 project. Measured three public ETS 5.7.1428 projects (xknxproject test
+resources, GPL-2.0, inspected, not vendored): schema 20 already uses every ETS6
+spelling but has no `Segment` level. `SCHEMA_20` is the schema-23 table minus
+`Segment` plus three measured attributes (pinned by a test); two predicates in
+`known.rs` (`uses_ets6_content_model`, `has_segment_level`) replace the `>= 21`
+checks in parser choice, mapper, validator and the device keys, which now use
+the file's real path. The report names the evidence boundary, and a refused
+version is now named together with the supported ones.
+
+The protected sample exposed a separate bug: real ETS4/ETS5 exports store bare
+`0.xml`/`project.xml` inside the nested archive; KNXBench expected
+`P-xxxx/0.xml` (its synthetic fixture's layout), so every real protected file
+failed with `EntryNotFound`. Nested names are now rooted under the project part;
+a second Info-ZIP fixture with the real layout pins it.
+
+Test-first: the schema-20 table tests and the nested-layout test failed for the
+expected reason before the fixes; for the import behaviour, reverting each of
+10 source changes (mutants) fails a named test.
+`knx-etsproj` 247 passed, 0 failed. Opt-in comparison with xknxproject's expected
+output: the three ETS 5.7 projects and the protected ETS4 project agree on every
+group address, device address and object link; reported: 8 sub-module object ids
+not decoded (one device, number 0, links kept), one instance DPT list kept
+verbatim. Evidence is
+public samples only; the reporter's project is untested (KL §177, research
+project-format §3.6). Several documents called the schema-21 KV demo an ETS 5.7
+project; its own file says ETS 6.0.5030, corrected.
+
 ## 2026-10-12 — AppImage no longer ships libwayland-client (issue #6)
 
 The alpha.9 AppImage aborted on Kubuntu 24.04 with `Could not create default EGL

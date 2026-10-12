@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "date": "2026-10-12",
+  "scope": "workbench host for the project notes editor (Notes view); web UI integration only, no server/core change",
+  "base": "d7df85c62f665762bc73d882497c06fc54d48fb1",
+  "gated_candidate": "114b0097e23e5834028fe88d446ba3b5fe911101",
+  "commits": {
+    "leaf_fixes": "f96c0ac5",
+    "host": "0c7d3486",
+    "docs": "114b0097"
+  },
+  "source_hashes": {
+    "apps/knx-web/e2e/notes-workspace.e2e.ts": "40c7078f74c9377a2940b0ae76597f48bc43cefde569b8b97026870e527fa1a1",
+    "apps/knx-web/playwright.notes.config.ts": "ce3f692a6046a1e35cd4a99cb919a4c1c61fb3ca01e1ff71c7825d9d09974f08",
+    "apps/knx-web/src/App.test.tsx": "7a769dbcddcf16ab1ced8afa09a11a4181f5465034455686914d5cc163c2b720",
+    "apps/knx-web/src/App.tsx": "c2ffd14cff22b44ff780aae991dc8c50e6e458c5825f6001d2b7f70d9282a44e",
+    "apps/knx-web/src/CommandPalette.test.tsx": "bcfe5fad4158d83e2d7f0c7930b38aa7fe13b384a0706ca4e8dbe5ba4b7465a1",
+    "apps/knx-web/src/NoteDraftGuardDialog.tsx": "fa9e4a8aa652366ee265dcbd1c9fd9b80a815212aadaa35910fa0943cb8245b6",
+    "apps/knx-web/src/NotesWorkspace.test.tsx": "8c7ef7c22eadb1dc23b964220e38086862cf2be55c542fdd86ec8c666af8cd3f",
+    "apps/knx-web/src/NotesWorkspace.tsx": "75d7c39b7bb373a11c1d1ea6f29f815d3fb963242a05ef8487bc9df7ac412b87",
+    "apps/knx-web/src/OnboardingGuide.test.tsx": "8f78fef921ceae2eb362069f4aec8e065fa6101c201b6d32603e455780efcfe6",
+    "apps/knx-web/src/WorkbenchIcon.tsx": "6cb1b6594da355780de9f1c3cdf6867fb270dfe42bcc4e69b2d14be6e10a970c",
+    "apps/knx-web/src/commandRegistry.test.ts": "f449ecd78172a574e7fe5b7f5c16a1850d5d49d54b41bae389621a951ce5f116",
+    "apps/knx-web/src/commandRegistry.ts": "c94d8db309249491a173ed7ca99008586f7e99ba736d62ded597c2f670837b6f",
+    "apps/knx-web/src/features/notes/ProjectNotesEditor.test.tsx": "c5dd133c98a84823467e4ff4c19f35964e447d2440d183548cf69ce0da7798c7",
+    "apps/knx-web/src/features/notes/ProjectNotesEditor.tsx": "b03b6123efbdbf17013f20feb47ecd4d2d425e975b0b907f162712eaf9006b20",
+    "apps/knx-web/src/features/notes/editor.module.css": "8ed08f873654de6824ab6153f2f413fc76fab3d4184c2816abcddf74506bea7d",
+    "apps/knx-web/src/help.ts": "6b1719e417e6a4ee7a0340935a0bc928d344afeb6b614278df6d1ba4580795e2",
+    "apps/knx-web/src/messages/de.ts": "5d4dd1c43153eef4bca40679cc7798ac02726eda5dc951b240d9611605a3b1ee",
+    "apps/knx-web/src/messages/en.ts": "d9edaf37ea712375ad72b60dc98c66b063395c9fa12e63860a98a392c0ca94b6",
+    "apps/knx-web/src/notesHost.test.ts": "f0f3babfecdce76e823451081a547fd661ff3b40d193e75e3b7d9bace061da55",
+    "apps/knx-web/src/notesHost.ts": "a5c5411203cae0ec7f5d6504d8a2fd4ac246b9ed611eeda583c045934c79c06a",
+    "apps/knx-web/src/onboardingGuide.test.ts": "e7ecab2e2d1c49e87440b26db71f7b119cccfa34ede4bb84020603689da47077",
+    "apps/knx-web/tsconfig.notes-fixtures.json": "2be7a66d2ccc418f420adda60158a126ae20fa428a4ed33066aee1cad35767e0"
+  },
+  "review_kind": "in-session self-review, not independent",
+  "test_first": {
+    "notesHost.test.ts": "RED 6 failed/4 passed against a compiling stub, then 10/10",
+    "NotesWorkspace.test.tsx": "RED 0/6 against a null-rendering stub, then 6/6",
+    "App.test.tsx project notes workspace": "RED 0/6 before wiring, then 7/7 (narrow-screen test added RED then GREEN)",
+    "ProjectNotesEditor.test.tsx refusal visibility": "RED 1 failed against the original leaf, then 22/22",
+    "notes-workspace.e2e.ts checkbox geometry": "RED (32px box) then GREEN after scoped CSS reset",
+    "notes-workspace.e2e.ts alert in viewport": "RED at 400px then GREEN after scrollIntoView"
+  },
+  "guard_mutations": [
+    {
+      "guard": "Open/Import note-draft guard",
+      "caught_by": "App.test.tsx asks before opening another project"
+    },
+    {
+      "guard": "incomplete identity refusal",
+      "caught_by": "notesHost.test.ts refuses incomplete identity"
+    },
+    {
+      "guard": "workspace unmount clean report",
+      "caught_by": "App.test.tsx forgets the draft state ... even from another view (test sharpened after the first version let the mutant survive)"
+    },
+    {
+      "guard": "ambiguous-ID exclusion",
+      "caught_by": "notesHost.test.ts two different identities"
+    },
+    {
+      "guard": "desktop window-close draft guard",
+      "caught_by": "App.test.tsx keeps the desktop window open"
+    }
+  ],
+  "canonical_source_restored": true,
+  "gate": {
+    "runner": "frozen-source chain under knx-workspace-gates.lock + knxbench-alpha-gate.lock (browser stages also under knxbench-browser-fixture.lock, loopback-only namespace)",
+    "stages_green": 21,
+    "stages_failed": 1,
+    "web_vitest": {
+      "passed": 2931,
+      "failed": 0,
+      "files": 193
+    },
+    "browser_notes": "11/11 production build (EN/DE, Porcelain/Graphite, 1440/400, stale and persistence refusals, draft guard)",
+    "browser_dialogs": "14/14 production build",
+    "browser_fixtures": {
+      "passed": 349,
+      "failed": 4,
+      "failures": "device-editor-layout.e2e.ts x4 expecting raw DPST-9-1; reproduced identically (4 failed/6 passed) on untouched base d7df85c6; pre-existing, owned by DPT presentation"
+    },
+    "rust": {
+      "passed": 4143,
+      "failed": 0,
+      "ignored": 194
+    },
+    "clippy": "pass",
+    "fmt": "pass",
+    "bindings": "unchanged",
+    "docs": "checker pass + 12 unit tests",
+    "xtask_explicit_root": [
+      "check-layering",
+      "check-headers 956/155 ceiling 155",
+      "check-anchors 560 links/273 files",
+      "check-ledger 197 rows",
+      "check-corpus-gates"
+    ],
+    "frozen_after": "HEAD and index manifest unchanged"
+  },
+  "real_server_smoke": {
+    "isolation": "user+network namespace with only lo; HOME/XDG_*/KNX_DATA_DIR in task scratch; debug knx-server built from the base Rust sources, production dist from the candidate",
+    "setup": "empty project created over HTTP; every notes/undo/redo/save/open action through the UI",
+    "checks": [
+      "notes view opened with no notes",
+      "preview does not mutate",
+      "server has the literal note",
+      "workbench identity followed the apply",
+      "undo removes the note on the server",
+      "redo restores the note on the server",
+      "saved file exists",
+      "refused apply changes nothing",
+      "refused draft is retained",
+      "reopened file keeps both notes in order with literal text",
+      "no page errors"
+    ],
+    "all_ok": true,
+    "refusal": "another client's newer preview superseded ours: Apply returned 409, notes and snapshot revision unchanged, draft retained",
+    "reopen": "server stopped and restarted, saved .knxdb reopened via the Welcome card: both notes in order with literal body, persistence native-working-history"
+  },
+  "visual_review": "EN/DE Porcelain/Graphite 1440/400 frames inspected directly (open, review, applied, guard dialog, refusals, reopened)",
+  "limitations": "see KNOWN_LIMITATIONS 'Project notes workbench host (2026-10-12)'"
+}

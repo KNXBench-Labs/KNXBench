@@ -1,4 +1,16 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 19:19
+- **Completed:** Owner decision "remove them if no longer needed", applied to `offline-naming-20261011` and `data-tooling-stats-20261011`. Neither was needed:
+  - both HEADs are ancestors of main;
+  - the residue was a handover copy, an unaccepted device-naming draft, and a stale stats refresh plus its cache.
+
+  Both are backed up to `KNXBench.backups/2026-10-12-worktree-prune/` and removed. Branch `feature/offline-naming-20261011` deleted with an ancestor check. Triage note, OPEN_WORK §2 and log updated.
+- **Pending/Next Steps:** No housekeeping item is left. The remaining worktrees are the active native-evidence adoption (`native-evidence-port-20261012` plus its source `native-evidence-20261011`) and `ux-feedback-20261010`, which is next under the web lock. The local branch `feature/functions-sites-20261009` stays as a WIP.
+- **Notes for Codex oder Claude:** Web lock: held by claude-parked-adoption for package 1 (native-evidence port); not taken or released by this entry. The FUTURE-02 device-naming draft exists only in the local backup (`offline-naming-20261011/untracked.tar`), not in Git. No hardware, release, deployment, subagents or quota checks.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 19:13
 - **Completed:** Docs-only package.
   - Fixed the five stale claims from the leftovers sort, each re-checked against source:

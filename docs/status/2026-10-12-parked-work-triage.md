@@ -321,7 +321,19 @@ These worktrees were kept because their residue goes beyond the handover:
   `docs/ProjectStats.md` refresh (2131 vs 2077 measured commits). It is stale
   by now, because the stats get regenerated on demand.
 
-Both need an owner decision before removal.
+**Owner decision (2026-10-12):** remove them if they are no longer needed.
+Neither was: both HEADs are ancestors of main, and no process used them. Both
+were backed up to the local prune backup and removed, and the branch
+`feature/offline-naming-20261011` was deleted.
+
+- **Device-naming draft.** It is not on main and nothing links to it. It survives
+  only as `offline-naming-20261011/untracked.tar` in
+  `KNXBench.backups/2026-10-12-worktree-prune/`. A future FUTURE-02
+  device-naming goal can start from it; it is a design candidate, not an
+  accepted contract.
+- **Stats refresh.** It was dropped, not published. Main's `docs/ProjectStats.md`
+  (10 October) is regenerated on request, and a fresh run supersedes the
+  11 October numbers.
 
 `web-params-20261012` is the active web-lock holder (package 3) and was not
 inspected.

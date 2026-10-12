@@ -32,6 +32,7 @@ below are the engineering record behind it, not extra reading before your first 
 - [Status ledger](status/LEDGER.md): the status of record for tracked work.
 - [Implementation log](IMPLEMENTATION_STATUS.md): dated changes and actual gate results.
 - [Known limitations](KNOWN_LIMITATIONS.md): detailed behaviour boundaries, including history.
+- [Developer pitfalls](DEVELOPER_PITFALLS.md): repository traps around gates, handover, corpus and schema work.
 
 ## Help keep the documentation honest
 

@@ -22,19 +22,22 @@
   Zero is plain text; missing reports keep the existing explicit note. No count,
   note or raw log text is dropped. See
   [limits](KNOWN_LIMITATIONS.md#project-status-import-links-and-unsaved-changes-dialogs-2026-10-12).
-- Verification (frozen candidate, inputs unchanged during the gate, self-review
-  only): build, `tsc`, flow-study/theme/new dialogs typed-fixture checks pass;
-  Vitest **2877 passed / 0 failed in 184 files**; new production-build
-  Playwright config **14/14**, its spec repeated x3 on the fixture server
-  **42/42**; layering, headers, anchors, ledger and corpus-gate checks and
-  `git diff --check` pass. The full fixture-server Chromium suite ran
-  **331 passed / 4 failed**: all four are `device-editor-layout.e2e.ts`
+- Verification on the rebased candidate `0c13c962` (on top of the group-address
+  four views; inputs frozen during the gate; self-review only): build, `tsc`,
+  flow-study/theme/new dialogs typed-fixture checks pass; Vitest **2895 passed /
+  0 failed in 189 files**; new production-build Playwright config **14/14**,
+  the group-address config **7/7**, the new spec repeated x3 on the fixture
+  server **42/42**; layering, headers, anchors, ledger and corpus-gate checks
+  and `git diff --check` pass. The full fixture-server Chromium suite ran
+  **338 passed / 4 failed**: all four are `device-editor-layout.e2e.ts`
   expecting the raw `DPST-9-1` text, and fail identically on untouched
   `origin/main` fe09a41a (4 failed / 6 passed), i.e. a pre-existing conflict
-  with the name-first DPT display, outside this package. A first gate attempt
-  was stopped after two pin-test failures (Log panel import graph, class-name
-  scan); both were fixed before the complete rerun. EN/DE light/dark
-  wide/narrow screenshots were inspected; native WebKitGTK was not run.
+  with the name-first DPT display, outside this package. Earlier attempts (a
+  stopped first gate with two pin-test failures, fixed; a pre-rebase gate with
+  the same four pre-existing failures) are superseded by this run. A final rebase
+  onto the AP6 offline-edit commits changed no web file (proved byte-identical);
+  the repository gates were rerun there with a fresh target and pass. EN/DE
+  light/dark wide/narrow screenshots were inspected; native WebKitGTK was not run.
 
 ## 2026-10-12 — Offline application boundary, local AP6 prerequisite
 

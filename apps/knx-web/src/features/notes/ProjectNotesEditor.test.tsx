@@ -159,3 +159,17 @@ describe("notes editor expiry/help/read-only boundaries",()=>{
   await act(async()=>next.root.unmount());roots=roots.filter(entry=>entry!==next.root);await act(async()=>resolve(source));expect(next.host.textContent).toBe("");
  });
 });
+describe("refusal visibility",()=>{
+ it("brings a refused Apply's alert into view instead of leaving it above the viewport",async()=>{
+  const scrolled:Element[]=[];const original=HTMLElement.prototype.scrollIntoView;
+  HTMLElement.prototype.scrollIntoView=function(this:HTMLElement){scrolled.push(this);};
+  try{
+   const refusal=Object.assign(new Error("The note could not be persisted."),{status:422,kind:"notePersistenceFailed"});
+   const client=fixture({apply:vi.fn().mockRejectedValue(refusal)});const {host}=await mount(client);
+   await edit(host,"Title","changed");await click(host,"Preview change");await click(host,"Confirm change");
+   const alert=host.querySelector('[role="alert"]');
+   expect(alert?.textContent).toBe("The note could not be persisted.");
+   expect(scrolled).toContain(alert);
+  }finally{HTMLElement.prototype.scrollIntoView=original;}
+ });
+});

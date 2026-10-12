@@ -62,15 +62,6 @@ pub const MAX_ARCHIVE_UNCOMPRESSED: u64 = 1024 * 1024 * 1024;
 /// review).
 const AES_RAW_COMPRESSION_METHOD: u16 = 99;
 
-/// Reads the raw on-disk compression-method field (APPNOTE §4.4.5,
-/// local-file-header offset 8, a `u16` little-endian) straight out of
-/// `payload`, bypassing `zip`'s own parsed [`CompressionMethod`], which a
-/// WinZip AES extra field (0x9901) overwrites with the real underlying
-/// method the instant `zip` parses it. `header_start` is
-/// [`zip::read::ZipFile::header_start`]; `payload` must be the exact bytes
-/// the enclosing `ZipArchive` was built from. `None` if the offset falls
-/// outside `payload` — treated as "not AES" by the caller, same as any
-/// other value that isn't 99.
 /// The container path of a member of a protected project's nested archive:
 /// `name` under `project_part/`, unless it is already there. Real ETS
 /// exports name the members bare (`0.xml`); the result is the path the same
@@ -83,6 +74,15 @@ fn rooted_nested_name(project_part: &str, name: &str) -> String {
     }
 }
 
+/// Reads the raw on-disk compression-method field (APPNOTE §4.4.5,
+/// local-file-header offset 8, a `u16` little-endian) straight out of
+/// `payload`, bypassing `zip`'s own parsed [`CompressionMethod`], which a
+/// WinZip AES extra field (0x9901) overwrites with the real underlying
+/// method the instant `zip` parses it. `header_start` is
+/// [`zip::read::ZipFile::header_start`]; `payload` must be the exact bytes
+/// the enclosing `ZipArchive` was built from. `None` if the offset falls
+/// outside `payload` — treated as "not AES" by the caller, same as any
+/// other value that isn't 99.
 fn raw_compression_method(payload: &[u8], header_start: u64) -> Option<u16> {
     let offset = usize::try_from(header_start).ok()?.checked_add(8)?;
     let bytes = payload.get(offset..offset.checked_add(2)?)?;

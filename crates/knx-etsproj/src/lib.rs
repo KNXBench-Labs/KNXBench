@@ -272,8 +272,8 @@ fn import_knxproj_bytes_inner(
         version: detected.version.0,
     })?;
 
-    // Schema ≥21 replaced `0.xml`'s shape enough (`Segment`, module
-    // references, `GroupObjectTree`) that Task 6's tolerant schema-11 parser
+    // Schema ≥20 replaced `0.xml`'s shape enough (module references,
+    // `GroupObjectTree`, `Locations`; `Segment` from 21) that Task 6's tolerant schema-11 parser
     // cannot walk it meaningfully — `parse_installation_v21` is its own
     // tolerant walker over the schema-≥21 known-element table (Task 6/7),
     // not a variant of `parse_installation`. Schema 11 keeps its original

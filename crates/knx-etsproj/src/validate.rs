@@ -221,7 +221,7 @@ pub fn validate(document: &SourceDocument) -> ValidationOutput {
     let mut group_addresses = Vec::new();
 
     // Schema 11 nests the building tree as `Buildings/BuildingPart`,
-    // schema ≥21 as `Locations/Space` — the same entity under two names,
+    // schema ≥20 as `Locations/Space` — the same entity under two names,
     // so only the path spelling changes, never the walk.
     let (buildings_container, buildings_element) =
         if crate::known::uses_ets6_content_model(document.schema_version) {

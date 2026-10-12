@@ -36,11 +36,11 @@ export default function ProjectPayloadPanel(props:{tree:ProjectTree}) {
   finally{pending.current=false;if(mounted.current)setBusy(false);}
  }
  const selected=catalogue?.records.find(row=>row.id===id);
- return <section className="import-report-panel project-payload-panel">
+ return <div className="import-report-panel project-payload-panel">
   <button type="button" disabled={busy} onClick={()=>void action("list")}>{t("payloads.show")}</button>
   {error&&<p role="alert">{error}</p>}
   {catalogue&&<div>
-   <h3>{t("payloads.title")}</h3><p>{t("payloads.explanation")}</p><p>{t("payloads.privacy")}</p>
+   <h4>{t("payloads.title")}</h4><p>{t("payloads.explanation")}</p><p>{t("payloads.privacy")}</p>
    {catalogue.records.length===0?<p>{t("payloads.empty")}</p>:<>
     <label>{t("payloads.select")} <select disabled={busy} value={id??""} onChange={event=>{
       if(pending.current)return;const value=Number(event.target.value);if(catalogue.records.some(row=>row.id===value))setId(value);
@@ -55,5 +55,5 @@ export default function ProjectPayloadPanel(props:{tree:ProjectTree}) {
     </>}
    </>}
   </div>}
- </section>;
+ </div>;
 }

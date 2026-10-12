@@ -31,11 +31,11 @@ export default function ProjectMetadataPanel(props:{tree:ProjectTree}) {
   ["projectMetadata.modified",text(info.last_modified)],["projectMetadata.start",text(info.project_start)],
   ["projectMetadata.modelVersion",info.model_schema_version],["projectMetadata.etsVersion",info.ets_schema_version],["projectMetadata.unlifted",info.unlifted_group_address_dpt_declarations],
  ]:[];
- return <section className="project-metadata-panel">
+ return <div className="project-metadata-panel">
   <button type="button" disabled={busy} onClick={()=>void read()}>{t("projectMetadata.show")}</button>
   {error&&<p role="alert">{error}</p>}
-  {info&&<div><h3>{t("projectMetadata.title")}</h3><p>{t("projectMetadata.explanation")}</p><p>{t("projectMetadata.dates")}</p><p>{t("projectMetadata.privacy")}</p>
+  {info&&<div><h4>{t("projectMetadata.title")}</h4><p>{t("projectMetadata.explanation")}</p><p>{t("projectMetadata.dates")}</p><p>{t("projectMetadata.privacy")}</p>
    <dl>{rows.map(([label,value])=><div key={label}><dt>{t(label)}</dt><dd><bdi dir="auto">{value}</bdi></dd></div>)}</dl>
   </div>}
- </section>;
+ </div>;
 }

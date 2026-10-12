@@ -48,12 +48,12 @@ export default function ImportEvidencePanel(props: { tree: ProjectTree }) {
   }
   if (props.tree.import_report_available !== true) return null;
   const serialized = evidence?.report_json ?? "";
-  return <section className="import-report-panel">
+  return <div className="import-report-panel">
     <button type="button" onClick={() => void load()} disabled={loading}>{t("importEvidence.show")}</button>
     {error && <p role="alert">{error}</p>}
     {evidence && !evidence.available && <p role="note">{t("importEvidence.absent")}</p>}
     {evidence?.available && <div>
-      <h3>{t(evidence.historical ? "importEvidence.historical" : "importEvidence.current")}</h3>
+      <h4>{t(evidence.historical ? "importEvidence.historical" : "importEvidence.current")}</h4>
       <p>{t("importEvidence.explanation")}</p>
       <p>{t("importEvidence.privacy")}</p>
       <button type="button" onClick={() => downloadLocalJson(serializeImportEvidence(evidence), "import-report.json")}>{t("importEvidence.download")}</button>
@@ -62,5 +62,5 @@ export default function ImportEvidencePanel(props: { tree: ProjectTree }) {
         <pre>{serialized.slice(0, REPORT_PREVIEW_CHARACTERS)}</pre>
       </details>
     </div>}
-  </section>;
+  </div>;
 }

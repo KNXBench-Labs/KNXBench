@@ -34,6 +34,8 @@ it("makes no automatic request and preserves the full report in explicit local d
   await load();
   expect(host.textContent).toContain("Historical import findings");
   expect(host.textContent).toContain("not reassessed");
+  // Nested inside the Overview's labelled Import card: no own section, an h4 title.
+  expect(host.querySelector("section,h3")).toBeNull();expect(host.querySelector("h4")?.textContent).toBe("Historical import findings");
   await act(async()=>button("Download full report").click());
   expect(JSON.parse(mocks.download.mock.calls[0][0]).report).toEqual(evidence().report);
   expect(host.textContent).toContain("private source data");

@@ -63,7 +63,7 @@ companion does not become another editing window. See the
 
 ![Alpha 9 in Graphite: the filterable Devices overview with fictional products, individual addresses, KNX-line placement and the selected device’s properties](../../assets/screenshots/graphite-devices.png)
 
-The Devices view first shipped with Alpha 6 and remains in Alpha 9. The older
+The Devices view first shipped with Alpha 6 and remains in every later release. The older
 Alpha 5 AppImage does not include it.
 
 ## The product catalog
@@ -96,10 +96,10 @@ package was new or already installed, which scheme it used, and how many members
 unknown entries and conflicts it contained. The catalog list refreshes immediately
 afterwards.
 
-### Updating with a preview (newer source, not Alpha 9)
+### Updating with a preview (since Alpha 10)
 
 Got a newer `.knxprod` from a manufacturer? **Update with preview…**, under the install
-picker, checks it first. It is newer than the published Alpha 9 and is not in its
+picker, checks it first. It ships since Alpha 10 and is not in the Alpha 9
 screenshots; the command-line equivalent is
 [`knx products update`](10-command-line.md#knx-products-update--check-a-newer-product-file-before-installing-it).
 
@@ -474,10 +474,10 @@ Evaluation notices are no longer printed above the editor or repeated inside
 sections. Manufacturer-declared Access Read/None fields are in their own tab.
 Actual rejected edits still show their reason next to the edited field.
 
-#### Checked editor (newer source, not Alpha 9)
+#### Checked editor (since Alpha 10)
 
 Time, number, colour and picture fields have a **Checked editor** button under the
-field. It is newer than the published Alpha 9 and is not in its screenshots. It
+field. It ships since Alpha 10 and is not in the Alpha 9 screenshots. It
 reads the parameter's type straight from the imported product data and only offers
 what that data proves:
 
@@ -595,11 +595,11 @@ The language of product texts follows the **Product data language** setting, sep
 from the interface language. See
 [Settings, themes and languages](09-settings-and-appearance.md).
 
-### Installation instructions (newer source, not Alpha 9)
+### Installation instructions (since Alpha 10)
 
 The sixth tab, **Installation instructions**, shows the installation hints a device
 brought along from an imported ETS project, and lets you replace them with your own
-text. It is newer than the published Alpha 9 and is not in its screenshots.
+text. It ships since Alpha 10 and is not in the Alpha 9 screenshots.
 
 - The imported original is kept as it came in. **Imported original is preserved**
   or **Native override** above the text says which of the two you are looking at.
@@ -621,12 +621,12 @@ text. It is newer than the published Alpha 9 and is not in its screenshots.
 - Without a complete project identity the tab is read-only and says so.
 - A draft survives switching tabs. Opening or importing another project, starting a
   new one or quitting asks first, the same as for a [project-notes
-  draft](01-user-interface.md#project-notes-newer-source-not-alpha-9).
+  draft](01-user-interface.md#project-notes-since-alpha-10).
 
 Only instructions from an imported ETS project are supported; a device created in
 KNXBench, or one whose original cannot be read, says so instead of offering an editor.
 
-### Recorded device state (newer source, not Alpha 9)
+### Recorded device state (since Alpha 10)
 
 In the Properties Inspector of a device, **Show recorded device state** lists what
 the project believes about the device's loaded parts (individual address,

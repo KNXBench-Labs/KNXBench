@@ -46,7 +46,7 @@ new command-palette selector. Whole-project replacement import is unchanged.
 
 ## Review the complete original import report
 
-**Newer than Alpha.9: needs a source build of main (12 October 2026).** In
+**Since Alpha.10.** In
 **Overview**, choose **Show full import report**. The report is loaded only when
 you request it. **Download full report** saves the complete original JSON locally;
 the expandable preview shows at most 65,536 characters and can end within a value.
@@ -77,7 +77,7 @@ local downloads can contain confidential data; review them before sharing.
 
 ## Retained payloads, project information and native export
 
-**Newer than Alpha.9: needs a source build of main (12 October 2026).**
+**Since Alpha.10.**
 **Show retained payloads** in the Overview's Import report card lists attachments
 and extension files that the import kept byte for byte (for example from
 `UserFiles` or an add-in). Nothing is opened, rendered or run. Pick one and choose
@@ -291,7 +291,7 @@ importer meets falls into one of these buckets:
 You see the result in three places:
 
 1. **The Overview**, where import errors and warnings appear as counts in the
-   *Import report* card. In newer source a non-zero count has a **Show in log** link
+   *Import report* card. Since Alpha 10 a non-zero count has a **Show in log** link
    that opens the Log narrowed to exactly those import entries.
 2. **The Import: N errors · M warnings button** in the strip under the header, which
    takes you there.
@@ -392,7 +392,7 @@ stays unchanged. Until the limit is resolved, a native-backed edit can be refuse
 Versions are stored **inside the same `.knxdb`**. They protect against an unwanted
 edit, not file/disk loss: keep independent copies of closed files. They preserve
 project data, opaque source bytes and manufacturer references, not the global
-catalogue, passwords or device/bus state. Alpha 9 uses native schema 13; Alpha 8
+catalogue, passwords or device/bus state. Alpha 10 uses native schema 14; Alpha 9
 and earlier refuse upgraded files. Independently back up closed files before
 upgrading. Downgrading means returning to the pre-upgrade backup, not pressing Undo.
 Browser **Export project…** remains a fresh current-project serialization, not a

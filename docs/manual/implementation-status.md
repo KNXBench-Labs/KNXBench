@@ -7,7 +7,7 @@ does not exist at all, area by area across the whole application.
 
 The detailed inventory retains its **8 October 2026** source audit and dated
 follow-ups. The current public snapshot is
-[`v0.1.0-alpha.9`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9),
+[`v0.1.0-alpha.10`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10),
 not a promise that every later source feature is bundled.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
@@ -26,8 +26,7 @@ download; the Properties Inspector shows a device's recorded load state. All of 
 read-only and contacts no device
 ([how to use it](user-guide/02-projects.md#review-the-complete-original-import-report),
 [limits](../KNOWN_LIMITATIONS.md#ported-native-import-evidence-2026-10-12)). Stored
-BusAccess/IP settings are not shown yet. This is newer than the published Alpha.9
-package, not a deployed update.
+BusAccess/IP settings are not shown yet. Included in Alpha.10.
 
 ## Group-address members and download preparation (12 October 2026 source)
 
@@ -40,17 +39,16 @@ name and endpoint, typed addresses kept), the device editor opens it with that d
 preselected, and a five-step list names what is still missing. No new protocol,
 download capability or compatibility claim
 ([limits](../KNOWN_LIMITATIONS.md#group-address-members-and-download-preparation-2026-10-12)).
-This is newer than the published Alpha.9 package, not a deployed update.
+Included in Alpha.10.
 
 ## Catalogue updates with a preview (12 October 2026 source)
 
 The catalogue's **Update with preview…** shows what a newer `.knxprod` would add or
 change before anything is installed, backs up the product catalogue before
 installing, and lists backups you can restore after confirming
-([how to use it](user-guide/05-devices-and-products.md#updating-with-a-preview-newer-source-not-alpha-9),
+([how to use it](user-guide/05-devices-and-products.md#updating-with-a-preview-since-alpha-10),
 [limits](../KNOWN_LIMITATIONS.md#catalogue-updates-come-only-from-files-you-supply-2026-10-12)).
-There is still no online catalogue: you bring the file. This is newer than the
-published Alpha.9 package, not a deployed update.
+There is still no online catalogue: you bring the file. Included in Alpha.10.
 
 ## Checked parameter editors (12 October 2026 source)
 
@@ -58,9 +56,9 @@ Time, number, colour and picture parameters have an opt-in **Checked editor** th
 reads the type from the imported product data: time values as an exact decimal
 count with their declared unit, sliders where the manufacturer declared one, and
 colour/picture values unchanged with a note
-([how to use it](user-guide/05-devices-and-products.md#checked-editor-newer-source-not-alpha-9),
+([how to use it](user-guide/05-devices-and-products.md#checked-editor-since-alpha-10),
 [limits](../KNOWN_LIMITATIONS.md#checked-parameter-editors-in-the-device-editor-2026-10-12)).
-This is newer than the published Alpha.9 package, not a deployed update.
+Included in Alpha.10.
 
 ## Installation instructions in the device editor (12 October 2026 source)
 
@@ -68,9 +66,9 @@ The device editor's **Installation instructions** tab shows the hints a device
 brought from an imported ETS project and lets you replace them with formatted text
 through a preview and an explicit Apply; the imported original is kept. Drafts of
 notes and instructions now survive saving the project
-([how to use it](user-guide/05-devices-and-products.md#installation-instructions-newer-source-not-alpha-9),
+([how to use it](user-guide/05-devices-and-products.md#installation-instructions-since-alpha-10),
 [limits](../KNOWN_LIMITATIONS.md#installation-instructions-tab-and-save-proof-drafts-2026-10-12)).
-This is newer than the published Alpha.9 package, not a deployed update.
+Included in Alpha.10.
 
 ## Project notes in the workbench (12 October 2026 source)
 
@@ -78,9 +76,9 @@ The **Notes** view opens the project's engineering notebook: literal plain-text
 notes on the project or one of its parts, changed only through a reviewed preview
 and an explicit confirmation, with Undo/Redo and the usual Save. Drafts survive
 view switches; leaving the project with a draft asks first
-([how to use it](user-guide/01-user-interface.md#project-notes-newer-source-not-alpha-9),
+([how to use it](user-guide/01-user-interface.md#project-notes-since-alpha-10),
 [limits](../KNOWN_LIMITATIONS.md#project-notes-workbench-host-2026-10-12)).
-This is newer than the published Alpha.9 package, not a deployed update.
+Included in Alpha.10.
 
 ## Clearer dialogs and an actionable project status (12 October 2026 source)
 
@@ -91,7 +89,7 @@ withdraw while it runs no longer opens the other project afterwards. About is a
 compact, centred card that keeps version, licence, update notice and legal text.
 The Overview's project status uses three labelled cards; non-zero import counts open
 the matching session-log entries ([limits](../KNOWN_LIMITATIONS.md#project-status-import-links-and-unsaved-changes-dialogs-2026-10-12)).
-This is newer than the published Alpha.9 package, not a deployed update.
+Included in Alpha.10.
 
 ## Name-first DPTs and monitor selection (12 October 2026 source)
 
@@ -99,8 +97,7 @@ Current source reuses the 454-ID EN/DE display vocabulary for **Name (main.sub)*
 in object and group-address views and monitor decoded values. The monitor send
 form now offers named DPT choices, with exact current aliases/unknowns retained
 and no send on selection. Raw object references are disclosed on demand; domain,
-API, project files and codec support are unchanged. This is newer than the
-published Alpha.9 package, not a deployed update.
+API, project files and codec support are unchanged. Included in Alpha.10.
 [Preservation and verification](../contracts/dpt-selection.md).
 
 ## Release notifications (11 October 2026 source)
@@ -110,9 +107,18 @@ visible, with release details and manual checking in File → About KNXBench.
 Settings → Updates disables automatic checks; no project data is transmitted.
 Stable builds exclude prereleases; alpha/beta builds include newer prereleases.
 No automatic installation or upgrade-compatibility approval is implied. Offline
-and rate-limited checks leave editing usable. This is not in the already-published
-Alpha.9 snapshot. [Contract and privacy](../contracts/RELEASE_NOTIFICATIONS.md),
+and rate-limited checks leave editing usable. Included in Alpha.10; Alpha.9 does not have it. [Contract and privacy](../contracts/RELEASE_NOTIFICATIONS.md),
 [verified source scope](../evidence/release-notifications-2026-10-11.json).
+
+## Alpha.10 release boundary (12 October 2026)
+
+[`v0.1.0-alpha.10`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10)
+packages frozen source `73420e13` (main cutoff `4a0294b8`): everything above marked
+"Included in Alpha.10", plus the Mesa AppImage fix (#6) and ETS 5.7 import (#7).
+Native/model **schema 14** requires independent native/Docker backups; Alpha.9 and
+earlier refuse upgraded files. Functions/Sites, the remaining UX-feedback package
+and colour/picture parameter editors are not included.
+[Release notes](../releases/alpha10.md) · [artifact verification](../evidence/release-alpha10-2026-10-12.json).
 
 ## Alpha.9 release boundary (11 October 2026)
 

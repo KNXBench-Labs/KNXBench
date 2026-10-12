@@ -293,7 +293,7 @@ send.
 Clicking a row in the telegram table prefills the form's destination with that row's
 address and, for a decoded value, its DPT. It does not send anything.
 
-In the 12 October 2026 source update (not the published Alpha.9 package), **DPT**
+Since Alpha.10, **DPT**
 is a dropdown, not a free-text field. Choose a name such as **Temperature (9.001)**
 (**Temperatur (9.001)** in German), or choose **Use the group address’s DPT**
 for automatic resolution. Unknown/main-only/imported references remain selectable
@@ -371,7 +371,7 @@ changes, the project does not. Saving or exporting a project file is something e
 1. Open the project that contains the device, then **Bus monitor** in the navigation
    sidebar and its **Download to device** tab (German: **In Gerät laden**), beside the
    monitor and the line scan. Only devices that have an individual address are offered.
-   In current source (newer than Alpha 9) the device editor also has **Download to
+   Since Alpha 10 the device editor also has **Download to
    device…**: it opens this tab with exactly that device selected — by its stable id in
    the open project — and does nothing else: no plan, no download, no connection. A
    device without an individual address shows the button disabled with the reason. While

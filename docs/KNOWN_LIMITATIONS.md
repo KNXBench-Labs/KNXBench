@@ -9843,10 +9843,12 @@ restarts. The cause was reproduced with the published alpha.9 image on one host
 by pinning glvnd to Mesa, under X11 and Wayland
 ([launcher contract](APPIMAGE_LAUNCHER.md#host-provided-libraries-issue-6)).
 
-**Fix in source (2026-10-12).** The library is removed after deployment, and
-the release workflow refuses an image that still contains it. The fix reaches
-users only with the next published AppImage. Until then, preloading the host's
-copy is the workaround:
+**Fix in source (2026-10-12), shipped in `v0.1.0-alpha.10`.** The library is
+removed after deployment, and the release workflow refuses an image that still
+contains it. The downloaded alpha.10 AppImage contains no `libwayland-client` and
+kept running with glvnd pinned to Mesa EGL on the same host
+([receipt](evidence/release-alpha10-2026-10-12.json)). For alpha.9 and earlier,
+preloading the host's copy is the workaround:
 `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libwayland-client.so.0 ./KNXBench_…AppImage`
 (the path varies by distribution; `ldconfig -p | grep wayland-client`).
 

@@ -10,8 +10,8 @@ debug device-control switches are not appearance preferences or hardware permiss
 
 KNXBench's settings are grouped into **Appearance**, **Language & data**,
 **Autosave**, **Bus & diagnostics**, and a separate **Debug · device control**
-section. The current source also adds **Updates**; that section is not in the
-already-published Alpha.9 builds.
+section. Since Alpha.10 there is also **Updates**; Alpha.9 and older builds do not
+have that section.
 Ordinary changes apply without a Save button or restart. The Debug switch is
 shown as enabled only after the server persists and reads it back.
 
@@ -336,13 +336,13 @@ confirmation, not a permission: the device-specific phrases stay required.
 Settings also shows translated diagnostics when an older settings record was
 migrated or adopted, a newer file was refused, or a damaged file was set aside.
 
-## Release notifications (newer source, not Alpha.9)
+## Release notifications (since Alpha 10)
 
 **Goal:** see when a newer KNXBench release is available and choose whether
 checks happen automatically. No project or bus connection is required; release
 checking needs internet access and a usable settings record from the server.
-This feature is in current source, not the already-published Alpha.9 AppImage
-or Docker image.
+This feature ships since Alpha.10; the Alpha.9 and older AppImages and Docker
+images do not have it.
 
 1. Open **Settings** from the gear button or the command palette.
 2. In **Updates**, choose **Automatically check for new releases**. It is on
@@ -380,7 +380,7 @@ external check. No request is made while the application is closed.
 This is a release notification, not an installer, download verifier or assurance
 that an upgrade can read every project. Read the release notes and keep independent
 backups before replacing the AppImage or Docker image. Follow the
-[installation guide](../getting-started/04-installation.md#release-notifications-newer-source-not-alpha9)
+[installation guide](../getting-started/04-installation.md#release-notifications-since-alpha-10)
 and [Docker update procedure](11-web-and-docker.md#updating-a-docker-hub-installation).
 [Detailed bounds and evidence](../../contracts/RELEASE_NOTIFICATIONS.md).
 

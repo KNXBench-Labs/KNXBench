@@ -14,7 +14,7 @@ below are the engineering record behind it, not extra reading before your first 
 | Everyday editing workflows | [User guide](manual/README.md#user-guide), especially the [complete example](manual/user-guide/06-configuration-workflow.md) |
 | English offline projects to explore | [Three community demos](../demos/README.md) — local review candidate; [scope and verification](COMMUNITY_DEMO_PROJECTS.md) |
 | Configuration or a broken setup | [Web and Docker](manual/user-guide/11-web-and-docker.md), [Settings](manual/user-guide/09-settings-and-appearance.md), [Troubleshooting](manual/reference/03-troubleshooting.md) |
-| Release notifications and automatic-check privacy (newer source, not Alpha.9) | [Settings guide](manual/user-guide/09-settings-and-appearance.md#release-notifications-newer-source-not-alpha9), [feature contract](contracts/RELEASE_NOTIFICATIONS.md) |
+| Release notifications and automatic-check privacy (since Alpha 10) | [Settings guide](manual/user-guide/09-settings-and-appearance.md#release-notifications-since-alpha-10), [feature contract](contracts/RELEASE_NOTIFICATIONS.md) |
 | Supported features and honest boundaries | [User-facing status](manual/implementation-status.md), [Known issues](manual/known-issues.md), [Compatibility](COMPATIBILITY.md) |
 | Were the status and issue claims checked? | [Known-issues/status source and evidence audit](status/2026-10-08-known-issues-status-audit.md) |
 | Future work, not promises | [Ideas and roadmap](manual/ideas-and-roadmap.md), [Open work](OPEN_WORK.md), [Roadmap](ROADMAP.md) |

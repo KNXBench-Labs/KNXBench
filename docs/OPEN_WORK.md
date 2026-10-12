@@ -395,6 +395,10 @@ to owner `later`. Routes naming removed goal files are kept as history.
 
 ## 5. Repository chores
 
+- **Alpha10 publication** (12 October 2026): tag `v0.1.0-alpha.10` on `73420e13`,
+  downloaded AppImage/MCP/Docker verification complete. Native/model 14 requires
+  pre-upgrade backups. Open: confirmation from the #6 and #7 reporters on their own
+  machines/projects. [Release scope](releases/alpha10.md) · [Receipt](evidence/release-alpha10-2026-10-12.json).
 - **Alpha9 publication** (11 October 2026): frozen tag `v0.1.0-alpha.9` and
   downloaded AppImage/MCP/Docker verification are complete. Native/model13
   requires pre-upgrade native/Docker backups. Unmounted editors and later local

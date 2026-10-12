@@ -10,3 +10,14 @@
   corrected before commit: notes' "include in documentation" is a stored flag only (no export
   reads it); catalogue updates are CLI + web catalogue, not a separate desktop feature.
 - Native schema 13 -> 14 (project notes tables, e974624e); backup/refusal disclosure in notes.
+- Gate 1 on a5903841 (29 stages, inputs frozen): all green except three harness/doc findings:
+  check-appimage --tag (needs artifact; covered by tag workflow), diff --check (trailing blank
+  line in docs/design-studies/group-addresses.md, fixed in 73420e13), corpus 137/143 because
+  project_dump.json was not linked (both affected targets rerun 5/5 + 5/5 on 73420e13).
+- Dry runs 38304346494 / 38304349304 green on a5903841; tag workflows 38309517272 / 38309517206
+  green on 73420e13. Tag object b39ea6a3. Release created with github-notes (relative links ->
+  blob/v0.1.0-alpha.10, all 8 targets checked).
+- External: assets re-downloaded, checksums + digests equal; knx-mcp version; AppImage extracted,
+  no libwayland-client; Mesa-pinned startup survived 12 s. Docker version == latest digest,
+  both platforms, revision label, anonymous pull + smoke test; user container identity unchanged.
+- Docs pass in docs/alpha10-release-20261012 worktree; freeze released in the same commit.

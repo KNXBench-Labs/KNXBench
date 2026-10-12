@@ -1,3 +1,26 @@
+## 2026-10-12 — Alpha 10 published and downloaded artifacts verified
+
+- Tag `v0.1.0-alpha.10` (object `b39ea6a3`) is on `73420e13`; main cutoff `4a0294b8`
+  after both freeze prerequisites landed (native-evidence port `45a38079`, DPST-9-1
+  layout test `e1088312`). All application versions are `0.1.0-alpha.10`; external
+  dependencies unchanged. [Release notes](releases/alpha10.md) carry #6 (AppImage
+  EGL) and #7 (ETS 5.7 / schema 20) and disclose the native schema 13→14 barrier.
+- Frozen gate, 29 stages: Rust 4213/0/196 ignored, Vitest 3164/0 in 222 files,
+  fixture Chromium 416/0, `tsc` for all 12 configs, strict Clippy, fmt, build,
+  five xtask gates, 67 tool tests, documentation; private corpus 143/143 in 31
+  targets (loopback only). Three harness mistakes are recorded rather than hidden:
+  `check-appimage --tag` needs an artifact (covered by the tagged workflow),
+  `diff --check` found one trailing blank line (fixed in the tagged commit), and the
+  first corpus run lacked the `project_dump.json` oracle link (6 tests in 2 targets
+  stopped at their guard; both targets rerun 5/5 and 5/5).
+- Dry runs and tag workflows green. Downloaded assets match `SHA256SUMS` and GitHub
+  digests; `knx-mcp` reports `0.1.0-alpha.10+g73420e1`; the extracted AppImage no
+  longer contains `libwayland-client` and kept running with glvnd pinned to Mesa
+  EGL. Docker `0.1.0-alpha.10` = `latest` (same index digest), amd64+arm64,
+  revision label `73420e13`, anonymous pull plus smoke test pass; the running user
+  container was not replaced. Self-review only.
+  [Receipt](evidence/release-alpha10-2026-10-12.json).
+
 ## 2026-10-12 — Device-editor layout test follows the name-first DPT contract (Alpha 10 prerequisite)
 
 `device-editor-layout.e2e.ts` had been red on all four EN/DE × 360/1440 px
@@ -489,7 +512,7 @@ About check, nine-second/session-deduplicated notices, GitHub client-IP metadata
 and unavailable-state behavior. The UI chapter explains the release action
 separately from message details; FAQ removes its obsolete claim that update
 checking does not exist. Documentation and contract hubs link the canonical
-[guide](manual/user-guide/09-settings-and-appearance.md#release-notifications-newer-source-not-alpha9)
+[guide](manual/user-guide/09-settings-and-appearance.md#release-notifications-since-alpha-10)
 and [contract](contracts/RELEASE_NOTIFICATIONS.md). Existing installation/status,
 architecture/ADR/limitation/evidence updates remain intact.
 

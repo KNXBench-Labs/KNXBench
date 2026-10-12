@@ -1,3 +1,12 @@
+Release freeze: released by claude-release-alpha10 (v0.1.0-alpha.10 published and verified)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 23:33
+- **Completed:** Alpha 10 is out: https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10 (pre-release). Tag object b39ea6a3 on 73420e13 (main cutoff 4a0294b8 + version bump a5903841 + one-blank-line docs fix). Frozen 29-stage gate: Rust 4213/0/196, Vitest 3164/0 (222 files), fixture Chromium 416/0, 12 tsc configs, clippy/fmt, five xtask gates, 67 tool tests, docs; corpus 143/143 (31 targets, loopback). Dry runs and tag workflows green. Assets re-downloaded: SHA256SUMS + GitHub digests match, knx-mcp `0.1.0-alpha.10+g73420e1`, AppImage has no libwayland-client and survives Mesa-pinned EGL startup. Docker 0.1.0-alpha.10 == latest (sha256:95f5e0ff…), amd64+arm64, revision 73420e13, anonymous pull + smoke pass; user container untouched. Docs pass: README, manual (status, installation, known issues, troubleshooting, FAQ, Docker, settings, UI, devices, GA, projects, bus, DPT), IMPLEMENTATION_STATUS, OPEN_WORK, KL §176, receipt `docs/evidence/release-alpha10-2026-10-12.json`.
+- **Pending/Next Steps:** **All paused sessions may resume now** from fresh origin/main (rebase before merging). Web-lock queue continues as before: claude-parked-adoption package 3 (docs-only), then package 2 (ux-feedback, own lock entry; AP1 needs an owner call); claude-web-fixups' notes follow-ups after that. Release owner: post "fixed in v0.1.0-alpha.10" on #6 and #7 and ask the reporters to confirm.
+- **Notes for Codex oder Claude:** The release branch `release/alpha10-20261012` is fully on main (fast-forward) and can be deleted. Native schema is 14; Alpha 9 refuses upgraded files. Harness lessons: link both `OriginalData` and `project_dump.json` into a release worktree; `check-appimage --tag` needs an artifact. Log `.ai/logs/2026-10-12_claude_alpha10-release.md`. No hardware, deployment, subagents or quota checks.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 22:31
 - **Completed:** Alpha 10 release preparation (claude-release-alpha10). Both prerequisites verified on main (45a38079 native-evidence port, e1088312 DPST-9-1 test). Cutoff main 4a0294b8. Versions bumped to 0.1.0-alpha.10 (four app crates, web package/lock, `cargo update -w` touched only workspace packages); handwritten notes `docs/releases/alpha10.md` (schema 13→14 backup disclosure, 8484 Docker default, #6/#7).

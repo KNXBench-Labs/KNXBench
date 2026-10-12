@@ -4,7 +4,7 @@
 
 **Goal:** create a group address, link communication objects and check its type.
 **Prerequisites:** an open project and a device with communication objects for linking.
-**Expected result:** the table shows the address and its send/receive links.
+**Expected result:** the table (or one of the other three presentations) shows the address and its send/receive links.
 **Watch out:** a linked address cannot be deleted; resolve DPT conflicts before using
 it for a typed bus write. CSV moves and deletes need explicit preview confirmation.
 
@@ -51,6 +51,40 @@ sentence saying which of them applies. See
 **The filter field** above the table matches the address, the name and the DPT, case
 insensitively. It filters as you type, and selecting a range in the tree scopes the
 table to that range and everything nested under it, with a back link to the full list.
+The **Filter** select next to it narrows by data state: no known DPT, DPT conflicts,
+with or without project links.
+
+### Four presentations of the same addresses
+
+The **Presentation** select switches between four views. They all show the same
+addresses, the same search, filter and range scope, and the same selection: select
+an address in one view, switch, and it is still selected. Editing always happens in
+the properties pane and the existing commands; no view edits on its own.
+
+| Presentation | Best for |
+| --- | --- |
+| **Tree table** (default) | The table above, grouped by the stored group ranges. Click a range heading to collapse it; Shift+click selects only rows you can see. |
+| **Column browser** | Drilling down range by range, one column per level, with the addresses of the chosen range below. |
+| **Address atlas** | Cards for ranges and addresses with counts, DPT and number of project links. It is navigation through stored ranges, not a map of the physical topology. |
+| **Connection matrix** | Group addresses against the communication objects linked to them. `S` is a projected Send link, `R` a projected Receive link (German UI: `S`/`E`), `?` an unknown direction (exact value in the cell details), `—` no projected link. |
+
+The grouping always follows the ranges stored in the project; KNXBench never
+invents main or middle groups from address numbers, so a Free-style or two-level
+project looks exactly as it is stored. Data that does not fit cleanly is kept and
+shown, not dropped: duplicate IDs, a range whose parent is missing or circular,
+and addresses whose range no longer exists appear under **Unresolved membership**,
+counted in a **presentation findings** note. Addresses whose ID is ambiguous are
+visible but cannot be selected for editing.
+
+The matrix only knows objects that are linked to at least one group address — it
+says so above the grid. An object without links is not listed, and an empty cell
+means "no link in the project", never "no traffic on the bus". Pick up to 12
+object columns with the column chooser.
+
+Large projects draw 500 matching addresses at first, with **Show 500 more** and
+**Show all** below the list; the rest is loaded, just not drawn yet.
+The chosen presentation is remembered as an application setting, not in the
+project, and switching projects resets search, filter and range scope.
 
 Selecting a row shows a **Links** panel underneath the table: one line per linked
 communication object, with its device, the object's name and number, the direction,

@@ -159,7 +159,9 @@ export default function StructureWorkspace(props: {
           label={t("structure.addRangeIn", { name: rangeParent.name })}>
           <NewGroupRangeRow parentId={rangeParent.id} onCreated={onTreeUpdate} />
         </CreateDisclosure>}
-        <GroupAddressTable installation={installation} selection={selection}
+        <GroupAddressTable key={`${tree.server_incarnation ?? "offline"}:${tree.project_incarnation ?? "unbound"}:${installation.id}`}
+          projectContextKey={`${tree.server_incarnation ?? "offline"}:${tree.project_incarnation ?? "unbound"}`}
+          installation={installation} selection={selection}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={onTreeUpdate}
           rangeScope={props.rangeScope ?? null} />
       </>}

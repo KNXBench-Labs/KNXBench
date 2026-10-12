@@ -6,6 +6,14 @@
 
 ---
 
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 11:03 CEST
+- **Completed:** Session 5f9107fd0635: four production group-address presentations in the Group addresses workspace — expandable tree table (default), column browser, semantic address atlas, linked-object connection matrix — on one shared read-only model (`groupAddressPresentation.ts`, `groupAddressMatrix.ts`) and one controller (`GroupAddressTable.tsx`: query, data-state filter, range scope, 500-row render window, arrow-key navigation). Stored ranges only (no numeric regrouping); duplicates/missing/ambiguous/cyclic data retained and reported; ambiguous IDs not selectable. View preference is an app setting (`groupAddressView`); project incarnation resets local navigation; updates prune stale scope/rows/columns. Integrated after the DPT owner's publish fe09a41a (ff-only). Web 2859/0/187 files, build, theme/flow fixture checks, production-preview browser gate 7/7 (EN/DE, light/dark, 1440/400, Three/Two/Free, 5,000-address timing 0.6–1.5 s vs 6–7.5 s unwindowed), 32 related existing e2e, loopback-isolated native rename 4/4 against an actual built server, four xtask gates. Manual chapter 04, FEATURES, IMPLEMENTATION_STATUS, KNOWN_LIMITATIONS, goal record updated. Self-review only.
+- **Pending/Next Steps:** None for this goal after publication. Possible follow-ups: admit unlinked objects into the matrix via canonical device-detail/catalogue reads (stated as a limitation, not done); true virtualization if "show all" on huge projects matters; refresh `porcelain-group-addresses.png` manual screenshot (still shows the old flat table, caption remains accurate for the tree-table default).
+- **Notes for Codex oder Claude:** `rename.native.ts` now counts `tbody tr[data-rename-kind='group_address']` because range heading rows share the tbody. Design study files (`docs/design-studies/group-addresses.md`, `tools/design-studies/group-addresses/*`) are committed as exact copies of the root's untracked originals — the root checkout holds identical untracked copies that a later pull there will meet. The study is inspiration only, not a DTO/fixture. No bus/release/deployment/user-container actions, no subagents.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-12 10:06
 - **Completed:** AP6 prerequisite owner-2 fully accepted:20 actual valid zero-exit stages and2034 inputs frozen, App13/direct1/policy100/actualCLI6/Rust4126-0-194ignored/Web2836-0-182/Clippy/binary identity/build/docs and nonempty explicit-root gates. Two module-doc separator-only corrections confirmed; ceiling155 unchanged. Earlier owner-1 remains16-stage overallfailed (15valid/header refusal/four unstarted), initial dependency preflight0 stages and individual RED/GREEN/mutants retained. Public evidence/architecture/status reflects scoped actual acceptance, no MCP mutation/identity/client grant. Fresh upstreamfe09a41a carries server/UI runtime work; docs-only integration reuse is prohibited.

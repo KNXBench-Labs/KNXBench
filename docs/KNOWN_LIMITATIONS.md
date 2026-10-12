@@ -9675,3 +9675,17 @@ source notes until explicit selection/disposition mapping exists. Native14 has
 no downgrade promise; original13readonly fixtures/history preservation is a
 focused synthetic witness, not universal ETS/corpus/hardware certification.
 [Admission](contracts/project-note-admission.md).
+
+## Four group-address presentations (2026-10-12)
+
+The connection matrix only knows communication objects that are linked to at
+least one group address (reverse links in the project projection). Unlinked
+objects are not listed, and an empty cell means "no project link", never "no bus
+traffic". Admitting a complete object inventory needs the canonical device
+detail/catalogue reads and is not done. At most 12 object columns are shown at a
+time. The atlas is stored-range navigation, not a topology or floor-plan map; there
+is no geometric zoom/pan, live bus overlay, layout persistence or direct matrix
+editing. Large lists draw 500 rows at a time (explicit "show more/all"); this is
+a render window, not virtualization, and "show all" on very large projects is
+correspondingly slow. Keyboard arrow navigation covers the view's navigable
+buttons; no full accessibility certification is claimed.

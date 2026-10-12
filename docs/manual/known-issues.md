@@ -30,13 +30,13 @@ design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
 This is the source-level `0.1.0-alpha` series, checked on **8 October 2026**.
-The [public Alpha.9 pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9)
-(AppImage, `knx-mcp`, Docker Hub image) packages import/native-history and
-DPT/navigation/login/layout repairs after Alpha.8. The instruction/parameter
-components are not mounted production editors in this release.
-[Release notes](../releases/alpha9.md) preserve the exact frozen scope.
-Independently back up native projects and Docker data before upgrading: schema13
-is refused by Alpha.8 and earlier, and rollback needs the pre-upgrade backup.
+The [public Alpha.10 pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10)
+(AppImage, `knx-mcp`, Docker Hub image) adds project notes, four group-address
+views, catalogue updates with preview, the checked parameter editors and the
+import-evidence views, and fixes the Mesa AppImage crash (#6) and ETS 5.7 import (#7).
+[Release notes](../releases/alpha10.md) preserve the exact frozen scope.
+Independently back up native projects and Docker data before upgrading: schema 14
+is refused by Alpha.9 and earlier, and rollback needs the pre-upgrade backup.
 The version number is not a promise that anything is finished.
 
 > A long list of known issues is what happens when a project writes its
@@ -603,7 +603,7 @@ must not be described as either universally guessed or universally explicit.
 - **Details:** [§158](../KNOWN_LIMITATIONS.md#158-the-appimage-starts-only-with-an-x-server)
   and [launcher contract](../APPIMAGE_LAUNCHER.md).
 
-### AppImages up to alpha.9 can stay empty on newer Mesa drivers
+### AppImages up to alpha.9 can stay empty on newer Mesa drivers — fixed in alpha.10
 
 - **Affected:** `v0.1.0-alpha.9` and earlier AppImages on systems whose Mesa
   EGL driver needs a newer `libwayland-client` (reported on Kubuntu 24.04).
@@ -611,7 +611,8 @@ must not be described as either universally guessed or universally explicit.
   `Could not create default EGL display: EGL_BAD_PARAMETER`.
 - **Workaround:** preload the system library as shown in
   [Troubleshooting](reference/03-troubleshooting.md#the-appimage-window-stays-empty-could-not-create-default-egl-display).
-  The source fix ships with the next AppImage.
+  Or update: `v0.1.0-alpha.10` no longer bundles the library
+  ([issue #6](https://github.com/KNXBench-Labs/KNXBench/issues/6)).
 - **Details:** [§176](../KNOWN_LIMITATIONS.md#176-appimages-up-to-alpha9-abort-on-hosts-with-newer-mesa-egl).
 
 ### The desktop shell has no login, on purpose
@@ -690,15 +691,15 @@ must not be described as either universally guessed or universally explicit.
 
 ## Language and accessibility
 
-### Structure headings shift on hover — fixed in source after Alpha.9
+### Structure headings shift on hover — fixed in Alpha.10
 
 The Ground/building/floor and topology headings inherited generic button
 magnification, moving text left and clipping icons inside their cards
 ([issue #5](https://github.com/KNXBench-Labs/KNXBench/issues/5)). The
 11 October 2026 source fix keeps headings stationary and uses only a colour
 highlight. EN/DE Chromium checks cover light/dark palettes and narrow/wide
-layouts; native WebKitGTK visual verification remains separate. The existing
-Alpha.9 packages are unchanged and do not contain this repair.
+layouts; native WebKitGTK visual verification remains separate. Alpha.10 contains
+the repair; Alpha.9 packages do not.
 
 ### The interface is English and German; some text is neither
 

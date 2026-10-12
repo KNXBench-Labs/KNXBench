@@ -18,16 +18,16 @@ Docker Desktop networking is not a verified substitute for Linux host networking
 ## a) Linux AppImage
 
 The current public pre-release is
-[`v0.1.0-alpha.9`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9) .
-Download **both** `KNXBench_0.1.0-alpha.9_amd64.AppImage` and `SHA256SUMS` from
+[`v0.1.0-alpha.10`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10) .
+Download **both** `KNXBench_0.1.0-alpha.10_amd64.AppImage` and `SHA256SUMS` from
 that release page into the same directory.
 
 From that directory:
 
 ```bash
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.9_amd64.AppImage
-./KNXBench_0.1.0-alpha.9_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.10_amd64.AppImage
+./KNXBench_0.1.0-alpha.10_amd64.AppImage
 ```
 
 `SHA256SUMS` also lists the `knx-mcp` binary; `--ignore-missing` checks only the
@@ -52,18 +52,18 @@ The [launcher contract](../../APPIMAGE_LAUNCHER.md) records the tested boundary.
 older data directory. Keep the old files and open/copy them deliberately; see
 [known limitation §161](../../KNOWN_LIMITATIONS.md#161-alpha5-does-not-pick-up-the-alpha4-data-folder).
 
-**Alpha.9 native-store upgrade:** close the app and independently back up native
-projects and Docker data before upgrading. Native/model schema 13 adds native
-instruction overlay tables separately from imported originals. Alpha.8 and earlier
-refuse upgraded files; returning to them requires the pre-upgrade backup. In-file
+**Alpha.10 native-store upgrade:** close the app and independently back up native
+projects and Docker data before upgrading. Native/model schema 14 adds the
+project-note tables; existing data is not rewritten. Alpha.9 and earlier refuse
+upgraded files; returning to them requires the pre-upgrade backup. In-file
 history is not a disaster backup. Update `knx-mcp` too.
-[Release scope and migration](../../releases/alpha9.md#upgrade-independent-backups-first).
+[Release scope and migration](../../releases/alpha10.md#upgrade-independent-backups-first).
 
 **Update:** close KNXBench, download and verify the replacement AppImage, then
 start it. There is no auto-updater. **Remove:** delete the AppImage. Project data
 lives separately and is not removed with it. Keep independent project backups.
 
-## Release notifications (newer source, not Alpha.9)
+## Release notifications (since Alpha 10)
 
 The workbench checks GitHub after startup and hourly while visible. A newer
 eligible release appears as a nine-second informational toast with a link to its
@@ -75,8 +75,8 @@ project data or login/product information. Offline/rate-limited checks do not
 block editing. No release is automatically downloaded or installed.
 
 Read the release notes and independently back up project/data files before
-replacing an AppImage or Docker image. This is a source feature, not retroactively
-part of the already published Alpha.9. [Detailed scope and privacy](../../contracts/RELEASE_NOTIFICATIONS.md).
+replacing an AppImage or Docker image. Alpha.10 is the first release with this
+check; Alpha.9 and older do not announce updates. [Detailed scope and privacy](../../contracts/RELEASE_NOTIFICATIONS.md).
 
 ## b) Docker / web
 
@@ -103,7 +103,7 @@ compare the browser's certificate fingerprint with the one in
 
 **Choose your update policy:** `latest` follows published releases, including
 alpha pre-releases; it does not track `main`. Use
-`knxbench/knxbench-server:0.1.0-alpha.9` in both commands to pin that release.
+`knxbench/knxbench-server:0.1.0-alpha.10` in both commands to pin that release.
 The source server and source-built images now default to 8484. Keeping
 `-e KNX_PORT=8484` also makes the commands work with Alpha.9 and older images.
 Images start at `0.1.0-alpha.6` (9 October 2026); see

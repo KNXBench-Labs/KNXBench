@@ -56,11 +56,10 @@ with or without project links.
 
 ### Four presentations of the same addresses
 
-**Source builds after Alpha 9 only.** The published Alpha 9 image still shows the
-single flat table described above; the four presentations arrive with the next
-release. The four screenshots in this section come from such a source build (the
-status bar still reads `v0.1.0-alpha.9` because the version number only moves at
-release time); every other screenshot in this manual is Alpha 9.
+**Since Alpha 10.** Alpha 9 and older show only the single flat table described
+above. The four screenshots in this section come from a source build made before
+the Alpha 10 version bump (so their status bar still reads `v0.1.0-alpha.9`);
+every other screenshot in this manual is Alpha 9.
 
 The **Presentation** select switches between four views. They all show the same
 addresses, the same search, filter and range scope, and the same selection: select
@@ -186,8 +185,8 @@ From the device:
 4. In the link row, pick a group address, pick **Send** or **Receive**, and click
    **Link**.
 
-From the group address (current source, newer than Alpha 9 — the screenshots in this
-manual still show the released Alpha 9):
+From the group address (since Alpha 10 — the screenshots in this manual still show
+Alpha 9):
 
 1. Select the address in any of the four presentations, or open it in Properties.
 2. Click **Add member…** (German: **Teilnehmer hinzufügen…**).

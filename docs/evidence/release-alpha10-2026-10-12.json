@@ -1,0 +1,150 @@
+{
+  "version": "0.1.0-alpha.10",
+  "status": "published-and-externally-verified",
+  "recordedAt": "2026-10-12",
+  "source": {
+    "tagCommit": "73420e13557393336ce45ae80bcf6ad0126490e8",
+    "tagObject": "b39ea6a31aa6ddf31fcc6a99f7449dd51c24772d",
+    "cutoffMain": "4a0294b8",
+    "gatedCandidate": "a5903841d472acd54b43ca9f1fa9d769edeb9ff2",
+    "candidateToTagDiff": "docs/design-studies/group-addresses.md: one trailing blank line removed (found by the gate's diff --check)",
+    "prerequisites": {
+      "nativeEvidencePort": "45a38079",
+      "dpst91LayoutTest": "e1088312"
+    },
+    "externalDependenciesChanged": false,
+    "laterParallelWorkExcluded": true
+  },
+  "applicationGate": {
+    "stages": 29,
+    "inputsFrozen": true,
+    "rust": {
+      "passed": 4213,
+      "failed": 0,
+      "ignored": 196
+    },
+    "frontend": {
+      "passed": 3164,
+      "failed": 0,
+      "files": 222
+    },
+    "chromiumFixtures": {
+      "passed": 416,
+      "failed": 0
+    },
+    "typescriptConfigs": 12,
+    "pythonToolTests": 67,
+    "strictClippyFormatBuild": true,
+    "repositoryGates": {
+      "layering": "479 resolved packages",
+      "headers": "1049 with header, 155 without (ceiling 155)",
+      "anchors": "603 links / 282 files",
+      "corpusGates": "593 Rust files",
+      "ledger": "199 rows"
+    },
+    "documentation": "282 Markdown files, 3420 local targets, 0 errors",
+    "harnessCorrections": [
+      "check-appimage --tag needs a built artifact and cannot run in a source gate; versions verified equal locally (4 crates, web package and lock) and by the tagged workflow's artifact check",
+      "diff --check v0.1.0-alpha.9..candidate found one trailing blank line; fixed in 73420e13, docs/anchor/diff checks rerun green",
+      "corpus run: project_dump.json oracle was not linked into the release worktree, so 6 tests in 2 targets stopped at their guard; both targets rerun with the oracle linked on 73420e13: 5/5 and 5/5"
+    ]
+  },
+  "corpus": {
+    "selected": 143,
+    "targets": 31,
+    "passed": 143,
+    "firstRunPassed": 137,
+    "rerunTargets": [
+      "knx-etsproj oracle_xknxproject",
+      "knx-productdb golden_reference_products"
+    ],
+    "networkInterfaces": [
+      "lo"
+    ],
+    "rawPrivateDataPublished": false
+  },
+  "dryRuns": [
+    {
+      "databaseId": 38304346494,
+      "workflow": "Linux AppImage",
+      "headSha": "a5903841",
+      "conclusion": "success"
+    },
+    {
+      "databaseId": 38304349304,
+      "workflow": "Docker release",
+      "headSha": "a5903841",
+      "conclusion": "success",
+      "publish": "skipped on dispatch"
+    }
+  ],
+  "tagWorkflows": [
+    {
+      "databaseId": 38309517272,
+      "workflow": "Linux AppImage",
+      "headSha": "73420e13",
+      "conclusion": "success"
+    },
+    {
+      "databaseId": 38309517206,
+      "workflow": "Docker release",
+      "headSha": "73420e13",
+      "conclusion": "success"
+    }
+  ],
+  "publication": {
+    "url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10",
+    "prerelease": true,
+    "handwrittenNotes": "docs/releases/alpha10.md",
+    "assets": [
+      {
+        "name": "KNXBench_0.1.0-alpha.10_amd64.AppImage",
+        "size": 88701432,
+        "sha256": "ffa3f17d7c1bacf68f92c17f1f50cd7d3c4e38d443e7fc251511192a764ba17a",
+        "github_digest_matches": true
+      },
+      {
+        "name": "knx-mcp-x86_64-linux",
+        "size": 12143336,
+        "sha256": "8940932effa459672a1fd7de0e9067457120f2dfff318620a4e49d91b82fd34e",
+        "github_digest_matches": true
+      },
+      {
+        "name": "SHA256SUMS",
+        "size": 194,
+        "sha256": "0ce3a29d91797134da29e009fa275014ee3409f70978627ef3b94bf376b413fd",
+        "github_digest_matches": true
+      }
+    ],
+    "checksumFileVerified": true,
+    "mcpExecuted": "knx-mcp 0.1.0-alpha.10+g73420e1",
+    "appimage": {
+      "extracted": true,
+      "bundlesLibwaylandClient": false,
+      "mesaEglPinnedStartup": "running after 12 s, 0 EGL_BAD/abort lines (one NVIDIA Arch host, glvnd pinned to 50_mesa.json)"
+    },
+    "docker": {
+      "image": "knxbench/knxbench-server:0.1.0-alpha.10",
+      "indexDigest": "sha256:95f5e0ff7a9568f636a64fa6e31446ac5fa9660bbab92a3e5ffe9e811910007a",
+      "latestDigestEqual": true,
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "revisionLabel": "73420e13557393336ce45ae80bcf6ad0126490e8",
+      "versionLabel": "v0.1.0-alpha.10",
+      "anonymousPull": true,
+      "versionOutput": "knx-server 0.1.0-alpha.10+g73420e1",
+      "smokeTest": "passed (HTTPS health, auth refusal, native save/reopen)",
+      "userContainerUnchanged": true
+    }
+  },
+  "review": "self-review only",
+  "exclusions": [
+    "Functions/Sites and the ux-feedback package",
+    "Colour/picture parameter editors",
+    "No ETS export, signing, full ETS semantics or hardware/download certification",
+    "Schema 22 (ETS 6.1) unmeasured; reporter's own ETS 5.7 project untested",
+    "No replacement of existing user containers or stores"
+  ]
+}

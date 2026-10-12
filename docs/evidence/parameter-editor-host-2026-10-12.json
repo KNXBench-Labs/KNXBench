@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "date": "2026-10-12",
+  "scope": "workbench host for the bounded parameter editor (opt-in Checked editor in the Parameters tab), source verification, leaf draft rules; web UI only",
+  "base": "origin/main 5a33e95c (lock commit; main unchanged at freeze)",
+  "gated_candidate": "9a8f7e58a6ffdf8f9d675aa0f178e6594b533a7e",
+  "source_hashes": {
+    "apps/knx-web/e2e/parameter-editors.e2e.ts": "128985e96288f316ab89fe3bb3ec700861ba3ae42af85608996182b54162444c",
+    "apps/knx-web/playwright.parameters.config.ts": "caac520711ab8112e00c27a14613e08687aec7f4e425d37918b3a9fb18a216bf",
+    "apps/knx-web/src/DeviceWorkspace.test.tsx": "1b9e75c7bcab9ddc070af321667adc189175cf36265fb8c19f9a69ea6e74fb1f",
+    "apps/knx-web/src/Inspector.tsx": "887217b451e36235d8f594f5212caed7b4a5178be9de25f9f28c288a400c0373",
+    "apps/knx-web/src/ParameterPanel.checked.test.tsx": "1630491d61104fd33d687a370dc5e9a1bf04136f9ca272d22709811969896eea",
+    "apps/knx-web/src/ParameterPanel.tsx": "6c89f735e9b6cc84f22b260442f4caa6070466a30ab596170eaa7b36339b2d8b",
+    "apps/knx-web/src/ParameterSourceEditor.test.tsx": "afadaa353b09b26425f8f48edbc78da8ca27a4ff77512c21fab1ec3da572b314",
+    "apps/knx-web/src/ParameterSourceEditor.tsx": "756659ad32ab73fe7a09ea66db80b121443ca2fe1dd2fa2caf262812e5bc6541",
+    "apps/knx-web/src/api.ts": "c6f9c01b98301815e7770f34a256232da650f285c483fade1989e70e9ff753fd",
+    "apps/knx-web/src/features/parameter-editors/ParameterEditor.test.tsx": "83dd654ea394617829dab63a1deab657a829ab70e089d51959e1a97042addf0f",
+    "apps/knx-web/src/features/parameter-editors/ParameterEditor.tsx": "e32a8797336d9e9139dae8222ec7545f063f93e607fd40cc0f51ee0dda15b4fd",
+    "apps/knx-web/src/features/parameter-editors/copy.ts": "d16739e9fa2109a219ae339c3b4f07c7ceb9fcb0416b06775e969195a44f4242",
+    "apps/knx-web/src/messages/de.ts": "db3c9e8041c0941e31bfde59aa7a1f7cca1ca1d365b2b8086d1145403d6dbde7",
+    "apps/knx-web/src/messages/en.ts": "adc0565910fefc917dcddc246b21a0390de81c7f992ef63a3601aef6f46e77d1",
+    "apps/knx-web/src/parameterSourceHost.test.ts": "0e41e1ba49dc116f9006aa36518ef1e24d0981ed82b237c5b77c4fe9dc366449",
+    "apps/knx-web/src/parameterSourceHost.ts": "99644955319efc01b05c8610156573768e1ab64f4a641c4b295d5305227080a6",
+    "apps/knx-web/src/styles.css": "013ffbfaa0a88d157f7c77308fc3ee1582293e9136a96a76a0d44a99d0f4bdb1",
+    "apps/knx-web/tsconfig.parameters-fixtures.json": "4d8b179ab4d652e0ec11dc8813c101219d1f11556a6f803bb8f5bd4e0f8825be"
+  },
+  "review_kind": "in-session self-review, not independent",
+  "findings": [
+    "Save bumps the snapshot revision; the leaf blocked any draft on every revision change (same rule fixed for notes/instructions in package 2).",
+    "After a successful Apply the authoritative refresh changed value and revision, leaving the editor in a reload-me state although it showed exactly the applied value.",
+    "Real-server smoke: after a settled Apply, Undo made a clean editor keep the applied value as a stale conflict.",
+    "useDeviceParameters blanked the whole panel on every tree change, which would unmount an open editor (and its draft) on Save/Apply/Undo."
+  ],
+  "test_first": {
+    "parameterSourceHost": "RED 8/9 against a stub then 9/9",
+    "leaf rebase": "RED 1 then GREEN",
+    "leaf settle": "RED 1 then GREEN",
+    "leaf clean-follow": "RED 2 then GREEN",
+    "ParameterSourceEditor": "RED 0/10 against a null stub then 10/10",
+    "row wiring + refresh": "RED 6/8 then 9/9 (one test added later)",
+    "DeviceWorkspace identity": "RED then GREEN"
+  },
+  "guard_mutations": [
+    "leaf: signature check",
+    "leaf: in-flight check",
+    "leaf: rebase removed",
+    "leaf: settle removed",
+    "leaf: blocked revision ignored",
+    "leaf: in-flight block not recorded",
+    "leaf: follow removed",
+    "leaf: follow ignores dirty draft",
+    "host: late answer accepted",
+    "host: publish moved to onApplied",
+    "host: no refetch on revision",
+    "row: identity guard",
+    "row: view guard",
+    "row: candidate kinds",
+    "hook: always blank",
+    "hook: never blank",
+    "hook: error not cleared",
+    "row: scope dropped"
+  ],
+  "guard_mutations_caught": "18/18",
+  "canonical_source_restored": true,
+  "gate": {
+    "stages_green": 24,
+    "stages_failed": 1,
+    "web_vitest": {
+      "passed": 3034,
+      "failed": 0,
+      "files": 202
+    },
+    "browser_parameters": "11/11 (EN/DE, Porcelain/Graphite, 1440/400: time count apply + settle, slider draft-only; DE400 colour fallback; EN1440 server refusal; no identity)",
+    "browser_notes": "11/11",
+    "browser_instructions": "11/11",
+    "browser_dialogs": "14/14",
+    "browser_fixtures": {
+      "passed": 390,
+      "failed": 4,
+      "failures": "device-editor-layout.e2e.ts x4 expecting raw DPST-9-1; same as untouched base d7df85c6"
+    },
+    "rust": {
+      "passed": 4145,
+      "failed": 0,
+      "ignored": 194
+    },
+    "clippy": "pass",
+    "fmt": "pass",
+    "bindings": "unchanged (whitespace churn restored)",
+    "docs": "checker pass + unit tests",
+    "xtask_explicit_root": [
+      "check-layering",
+      "check-headers",
+      "check-anchors",
+      "check-ledger",
+      "check-corpus-gates"
+    ],
+    "frozen_after": "HEAD and index manifest unchanged"
+  },
+  "real_server_smoke": {
+    "isolation": "user+network namespace with only lo; HOME/XDG_*/KNX_DATA_DIR in task scratch",
+    "input": "synthetic fictional schema-23 .knxproj embedding a schema-20 product (TypeTime Unit=Seconds, TypeNumber UIHint=Slider), imported through the UI",
+    "checks": [
+      "server declares source evidence for the time parameter",
+      "checked editor offered for both rows",
+      "time count shows the exact stored lexeme and the declared unit",
+      "apply writes through the existing parameter route",
+      "undo restores the original value in server and editor",
+      "redo re-applies it",
+      "saved file exists",
+      "a parameter draft typed before Save survives it",
+      "the surviving draft applies",
+      "slider changes only the draft",
+      "closing returns the plain field with the stored value",
+      "reopened file keeps the applied value",
+      "no page errors",
+      "no other external requests"
+    ],
+    "all_ok": true,
+    "note": "two app release-check requests to api.github.com were observed and failed inside the namespace; they belong to the app's release check, not the editor"
+  },
+  "visual_review": "EN/DE Porcelain/Graphite 1440/400 frames and real-server frames inspected directly; host buttons made quiet and the access badge compact after review",
+  "limitations": "see KNOWN_LIMITATIONS 'Checked parameter editors in the device editor (2026-10-12)'"
+}

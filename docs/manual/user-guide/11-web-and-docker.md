@@ -4,7 +4,7 @@
 
 **Goal:** run a persistent, authenticated browser workbench with the right network scope.
 **Prerequisites:** Docker and a chosen persistent data directory for the container
-path; a checkout only if you build from source. Start with the loopback-only example in [Installation](../getting-started/04-installation.md#b-docker--web).
+path; a checkout only if you build from source. Start with the Linux host-network example in [Installation](../getting-started/04-installation.md#b-docker--web).
 **Expected result:** a reachable welcome/login page and saved projects that survive restart.
 **Watch out:** match HTTP/HTTPS to startup output; preserve data and stop hardware
 writes before an update. One shared password is not multi-user access control.
@@ -33,13 +33,13 @@ meant for container health checks, and `GET /api/version`, which reports the bui
 When it starts, it prints the address it is listening on:
 
 ```text
-knx-server listening on https://0.0.0.0:8080
+knx-server listening on https://0.0.0.0:8484
 ```
 
 Read that line. Neither the scheme nor the address is decoration: the address says
 whether the server is reachable from the network at all (see
 [Authentication](#authentication)), and the scheme whether it speaks HTTPS (see
-[HTTPS](#https)). A server without a password says `http://127.0.0.1:8080`.
+[HTTPS](#https)). A server without a password says `http://127.0.0.1:8484`.
 
 ## Configuration
 
@@ -47,7 +47,7 @@ Environment variables, and nothing else. There is no configuration file. The cor
 
 | Variable | Meaning | Default |
 | --- | --- | --- |
-| `KNX_PORT` | The port to listen on | `8080` |
+| `KNX_PORT` | The port to listen on | `8484` |
 | `KNX_DATA_DIR` | Where projects live | The system temporary directory |
 | `KNX_STATIC_DIR` | Where the built frontend is served from | Unset: no frontend, API only |
 | `KNX_AUTH_PASSWORD_HASH` | The login credential, as a hash | Unset |
@@ -70,7 +70,11 @@ expecting a user interface.
 The image is built from `apps/knx-server/Dockerfile`, in three stages: Node builds the
 frontend, Rust builds the server, and a slim Debian image carries just those two
 artifacts. It sets `KNX_STATIC_DIR=/app/frontend`, `KNX_DATA_DIR=/data` and
-`KNX_PORT=8080`, exposes `8080`, and declares `/data` as a volume.
+`KNX_PORT=8484`, exposes `8484`, and declares `/data` as a volume.
+The Linux default run/update recipes use `--network host`; the Dockerfile cannot
+choose a runtime network mode. Explicit `-e KNX_PORT=8484` keeps these recipes
+compatible with Alpha.9 and older published images, which predate this source
+default. Existing containers and released images do not change automatically.
 
 ### Ready-made image from Docker Hub
 
@@ -82,7 +86,8 @@ it and publishes it as
 
 ```bash
 docker pull knxbench/knxbench-server:latest
-docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
+docker run -d --name knxbench --network host \
+  -e KNX_PORT=8484 \
   -e KNX_AUTH_PASSWORD='pick something long and boring' \
   -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
@@ -135,7 +140,8 @@ container — but an anonymous volume is easy to lose track of and easy to delet
 accident. Mount a directory you chose yourself:
 
 ```bash
-docker run -d --name knxbench -p 8484:8080 \
+docker run -d --name knxbench --network host \
+  -e KNX_PORT=8484 \
   -e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH" \
   -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
@@ -196,11 +202,20 @@ and no commit.
 
 ### Networking
 
-The container's default bridge network supports project work and ordinary
-HTTP. It does not reach the bus: a tunnel to a manually entered gateway gets
+**Linux deployment default: `--network host`, port 8484, no `-p` mapping.**
+With a password the HTTPS listener binds all host interfaces. Restrict it to your
+trusted LAN/VPN with a firewall; host mode removes Docker's network isolation.
+Without a password it binds host loopback only and remains local. Docker itself
+still chooses bridge mode if you omit `--network host`; image metadata cannot
+override that. In Compose, use `network_mode: host` and omit `ports:`.
+
+An explicitly chosen bridge network supports project work and ordinary
+HTTP with a password and `-p 127.0.0.1:8484:8484` (also set `KNX_PORT=8484`
+for older images). It is not the default recipe. A tunnel to a manually entered gateway gets
 no answer, because the server tells the gateway its private container address
 ([§155](../../KNOWN_LIMITATIONS.md#155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer)).
-Use `--network host` for bus work, or set `KNX_TUNNEL_ROUTE_BACK=1` to make
+Keep `--network host` for bus work. If you deliberately choose bridge mode,
+set `KNX_TUNNEL_ROUTE_BACK=1` to make
 the server ask the gateway to answer the packet's source instead (KNXnet/IP
 Route Back); that gets a tunnel through the bridge if the gateway supports it.
 Discovery fails on the bridge either way: the CLI
@@ -211,8 +226,10 @@ the LAN, so either call returns an empty result when its process is inside the
 bridge. See [The command line](10-command-line.md) and
 [KNOWN_LIMITATIONS.md §79](../../KNOWN_LIMITATIONS.md#79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry).
 
-On Linux, start the server with `--network host` and set `KNX_PORT` to the
-host port you want; `-p` has no effect in host mode.
+On Linux, start the server with `--network host`. Port 8484 is the source
+default; use `-e KNX_PORT=8485` (or another free port) to override it and update
+your browser/health-check URL. `-p` has no effect in host mode. The desktop
+shell's private ephemeral port and fixed development port 4777 are unchanged.
 
 ### Stopping
 
@@ -237,6 +254,8 @@ no write to a device is in progress
 
 ### Updating in one go
 
+Save the project, independently back up `data/`, and finish any device write first.
+Preserve your existing password, mount, host name, restart policy and TLS settings.
 Run this from your KNXBench checkout. It pulls the latest source, builds a new
 image with its commit stamped in, replaces the container, and waits for the
 health check — with host networking, so the bus monitor keeps working:
@@ -245,7 +264,8 @@ health check — with host networking, so the bus monitor keeps working:
 git pull --ff-only \
   && docker build -t knxbench-server -f apps/knx-server/Dockerfile . \
        --build-arg KNX_BUILD_SHA=$(git rev-parse --short HEAD) \
-  && { docker stop knxbench >/dev/null 2>&1; docker rm knxbench >/dev/null 2>&1 || true; } \
+  && docker stop knxbench \
+  && docker rm knxbench \
   && docker run -d --name knxbench --network host \
        -e KNX_PORT=8484 \
        -e KNX_AUTH_PASSWORD='pick something long and boring' \
@@ -275,7 +295,7 @@ git pull --ff-only \
 
 ### Updating a Docker Hub installation
 
-For the loopback-only quick start above, run this from the **same data directory**.
+For the Linux host-network quick start above, run this from the **same data directory**.
 Save the project, back up `data/`, and make sure no device write is running first.
 Use the same password as before; if you changed ports, mounts, restart policy,
 host name, TLS or other settings, preserve those options too. A pull does not
@@ -285,7 +305,8 @@ update a running container by itself.
 docker pull knxbench/knxbench-server:latest \
   && docker stop knxbench \
   && docker rm knxbench \
-  && docker run -d --name knxbench -p 127.0.0.1:8484:8080 \
+  && docker run -d --name knxbench --network host \
+       -e KNX_PORT=8484 \
        -e KNX_AUTH_PASSWORD='pick something long and boring' \
        -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
@@ -298,10 +319,11 @@ stopping fails, the service remains stopped until you correct it; this is not an
 automatic rollback.
 
 To choose a fixed release, replace `latest` in **both** image references with a
-published version such as `0.1.0-alpha.9`. For an existing Linux host-network setup,
-keep `--network host` and `-e KNX_PORT=8484` (or your chosen port) instead of `-p`,
-as explained in [Networking](#networking). Do not change network scope during an
-image update by accidentally copying a different example.
+published version such as `0.1.0-alpha.9`. The Linux default keeps
+`--network host` and `-e KNX_PORT=8484` (or your chosen port), as explained in
+[Networking](#networking). If migrating an older bridge deployment to host mode,
+review the firewall first: the authenticated listener becomes reachable on all
+host interfaces instead of only the published loopback address.
 
 The login page shows the KNXBench logo and the built frontend package version
 before authentication, including after expiry or sign-out. It is not a remote
@@ -344,9 +366,10 @@ filesystem browser to anyone who can reach the port. Set KNX_AUTH_PASSWORD_HASH 
 `knx-server --hash-password`) to listen on the network.
 ```
 
-Inside a container, that means `-p 8484:8080` publishes a port with nothing listening
-behind it and the health check fails. This is the intended failure, not a bug to work
-around.
+With the default `--network host`, this is the host's loopback: the unauthenticated
+server is reachable at `http://127.0.0.1:8484` from this machine only. In explicitly
+chosen bridge mode, the container's own loopback is not reachable through `-p`;
+that refusal is intentional. Set a password for LAN access, never weaken the bind rule.
 
 ### Setting a password
 
@@ -362,7 +385,8 @@ It prints a single line beginning `$pbkdf2-sha256$i=600000$`. Put that in
 
 ```bash
 KNX_AUTH_PASSWORD_HASH="$(docker run --rm -i knxbench/knxbench-server:latest --hash-password <<<'your password')"
-docker run -d --name knxbench -p 8484:8080 \
+docker run -d --name knxbench --network host \
+  -e KNX_PORT=8484 \
   -e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH" \
   -v "$(pwd)/data:/data" knxbench/knxbench-server:latest
 ```
@@ -503,8 +527,10 @@ KNX_STATIC_DIR=apps/knx-web/dist \
 cargo run -p knx-server
 ```
 
-For frontend development the two halves run separately: `cargo run -p knx-server`
-listens on port `4777`, and Vite's dev server on port `1420` proxies `/api` to it. See
+For frontend development the two halves run separately:
+`KNX_PORT=4777 cargo run -p knx-server` explicitly selects the development API port,
+and Vite's dev server on port `1420` proxies `/api` to it. Without that override,
+the standalone server listens on 8484. See
 [Building from source](../development/02-building-from-source.md).
 
 ## Checking that it works

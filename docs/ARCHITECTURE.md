@@ -1,5 +1,15 @@
 # Architecture
 
+## Standalone deployment defaults (2026-10-12)
+
+The standalone server and source-built Docker image default to port **8484**.
+Linux run/update recipes use `--network host`, selected at container creation,
+not by image metadata. With authentication the listener binds all host interfaces;
+without it, host loopback only. Core/application/storage/protocol behavior is
+unchanged; desktop development port 4777 and release ephemeral ports stay private.
+[Deployment guide](manual/user-guide/11-web-and-docker.md#networking) and
+[ADR-0097 amendment](adr/0097-docker-hub-release-image.md#2026-10-12-amendment--linux-deployment-defaults).
+
 ## Client release discovery (2026-10-11)
 
 [ADR-0114](adr/0114-client-release-discovery.md) separates a fixed-origin public

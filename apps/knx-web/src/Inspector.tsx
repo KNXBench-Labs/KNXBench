@@ -347,14 +347,17 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
         <option value="">{com.program_dpt === null ? t("dpt.noProjectValue")
           : t("dpt.programDefaultOption", { value: dptDisplay(com.program_dpt, language) })}</option>
         {retainedDptOptions(com.dpt ?? "", value).map(raw => <option key={raw} value={raw}>
-          {dptEntry(raw) ? t("dpt.retainedOption", { value: dptDisplay(raw, language), raw })
-            : t("dpt.unlistedOption", { value: raw })}
+          {dptEntry(raw) ? dptDisplay(raw, language)
+            : t("dpt.unlistedOption", { value: dptDisplay(raw, language) })}
         </option>)}
         {DPT_OPTIONS.map(entry => <option key={entry.id} value={entry.id}>
           {dptDisplay(entry.id, language)}
         </option>)}
       </select>
-      {com.dpt !== null && <small className="dpt-reference mono">{t("dpt.reference", { value: com.dpt })}</small>}
+      {com.dpt !== null && <details className="dpt-reference">
+        <summary>{t("dpt.technicalReference")}</summary>
+        <small className="mono">{t("dpt.reference", { value: com.dpt })}</small>
+      </details>}
       <small id={`com-dpt-hint-${com.id}`} className="inspector-description">{t("dpt.selectionHint")}</small>
       {error && <span className="field-error">{error}</span>}
     </label>
@@ -1112,6 +1115,7 @@ function GroupAddressInspector(props: {
 }) {
   const { ga, canDelete, onDeleted } = props;
   const t = useTranslate();
+  const [language] = useUiLanguage();
   const formatGa = useGroupAddressFormat();
   const [error, setError] = useState<string | null>(null);
 
@@ -1135,16 +1139,16 @@ function GroupAddressInspector(props: {
       <dl className="inspector-facts">
         <dt>{t("addressTable.dpt")}</dt>
         <dd className={hasDptConflict(ga) ? "mono dpt-conflict" : "mono"}>
-          {dptText(t, ga)}
+          {dptText(t, ga, language)}
           {hasDptConflict(ga) && <small> {t("addressTable.dptConflict")}</small>}
         </dd>
         {ga.dpt_detail && (
           <>
             <dt>{t("gaType.declared")}</dt>
-            <dd className="mono">{declaredDptText(t, ga.dpt_detail.declared)}</dd>
+            <dd title={ga.dpt_detail.declared.text ?? undefined}>{declaredDptText(t, ga.dpt_detail.declared, language)}</dd>
             <dt>{t("gaType.linked")}</dt>
             <dd className="mono">
-              {ga.dpt_detail.linked.length === 0 ? t("addressTable.noDpt") : ga.dpt_detail.linked.join(" · ")}
+              {ga.dpt_detail.linked.length === 0 ? t("addressTable.noDpt") : ga.dpt_detail.linked.map(raw => dptDisplay(raw, language)).join(" · ")}
             </dd>
           </>
         )}
@@ -1189,10 +1193,10 @@ const DPT_OUTCOME_KEYS: Record<GroupAddressDptOutcome, MessageKey> = {
 
 // The address's own `DatapointType` exactly as stored (ADR-0078): an absent,
 // empty or unreadable declaration is named as such, never shown as a type.
-function declaredDptText(t: Translate, declared: DeclaredDptNode): string {
+function declaredDptText(t: Translate, declared: DeclaredDptNode, language: string): string {
   switch (declared.state) {
     case "Value":
-      return declared.text ?? "";
+      return dptDisplay(declared.text, language);
     case "Malformed":
       return t("gaType.declaredMalformed", { text: declared.text ?? "" });
     case "Empty":

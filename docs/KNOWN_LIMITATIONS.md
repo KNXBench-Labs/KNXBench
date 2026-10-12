@@ -132,6 +132,17 @@ It neither verifies signatures nor activates comparison/reconstruction/download
 rules. [Acceptance and rejected attempts](status/2026-10-10-import-expansion-verification.md)
 are local evidence only; no commit, integration, release or deployment is implied.
 
+## Name-first DPT presentation (2026-10-12 source)
+
+The [presentation extension](contracts/dpt-selection.md) names known types and
+replaces the monitor DPT free text with a bounded native select. Main-only types
+remain families; unknown types have no invented names. Raw error/export/API data
+retain technical identifiers, and existing stored references are never migrated
+by display. Dropdown membership does not establish codec/device support. Eight
+intercepted built-browser cases are not live-bus, native-accessibility or full
+ETS verification. This source change is not in the published Alpha.9 package
+or an automatic update to running containers.
+
 ## Communication-object table scope (2026-10-09)
 
 The [local 2026-10-11 DPT selection extension](contracts/dpt-selection.md) names

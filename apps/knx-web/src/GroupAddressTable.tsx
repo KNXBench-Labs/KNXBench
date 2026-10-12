@@ -17,6 +17,8 @@ import {
 } from "./groupAddressView";
 import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
 import { useTranslate } from "./i18n";
+import { useUiLanguage } from "./uiLanguage";
+import { dptDisplay } from "./dptLabels";
 import HelpTip from "./HelpTip";
 import DeviceLink from "./DeviceLink";
 
@@ -111,6 +113,7 @@ export default function GroupAddressTable(props: {
 }) {
   const { installation, selection, multiSelection, onItemClick, onTreeUpdate, rangeScope } = props;
   const t = useTranslate();
+  const [language] = useUiLanguage();
   const formatGa = useGroupAddressFormat();
   const [query, setQuery] = useState("");
 
@@ -128,7 +131,7 @@ export default function GroupAddressTable(props: {
       // is on screen (`gaNotation.ts`'s `groupAddressSpellings`).
       groupAddressMatches(ga.address, needle) ||
       ga.name.toLowerCase().includes(needle) ||
-      ga.dpts.some((dpt) => dpt.toLowerCase().includes(needle))
+      ga.dpts.some((dpt) => dpt.toLowerCase().includes(needle) || dptDisplay(dpt, language).toLowerCase().includes(needle))
     );
   });
   // A shift-click range spans the rows the user can actually see, never
@@ -219,7 +222,7 @@ export default function GroupAddressTable(props: {
                   <td>{ga.name}</td>
                   <td>{path ?? t("addressTable.noRange")}</td>
                   <td className={hasDptConflict(ga) ? "mono dpt-conflict" : "mono"}>
-                    {dptText(t, ga)}
+                    {dptText(t, ga, language)}
                     {hasDptConflict(ga) && (
                       <small className="dpt-conflict-note"> {t("addressTable.dptConflict")}</small>
                     )}

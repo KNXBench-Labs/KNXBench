@@ -825,6 +825,22 @@ siblings; Repeat/activation/write boundaries remain. Published no-ff merge `2e26
 
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-12 — Named DPTs and bus-monitor dropdown
+
+- Shared EN/DE presentation is **Name (main.sub)** across object, group-address
+  and monitor decoded views. Exact API/stored IDs, unknown values, subtype zero
+  and four-digit subtype numbers remain intact. Raw object IDs are on demand.
+- Monitor compose DPT is a native select; row prefill preserves aliases, automatic
+  resolution and stale/closed/unverified guards remain authoritative. Choosing
+  an option neither edits the project nor sends. Encoding support remains server-owned.
+- Named RED failures, then Web 2,841/0 (182 files), production build/explicit fixture
+  typing and eight EN/DE 400/1440 production-browser checks pass; all eight frames
+  inspected. Earlier fixture version/startup failures retained separately.
+- [Contract, primary notation evidence and boundaries](contracts/dpt-selection.md).
+  Source self-review only; no schema/parser/dependency/codec changes, live bus,
+  native UI/full ETS acceptance, release or container deployment.
+
+
 This is a **newest-first delivery history**, not the live feature inventory.
 Older dates, failures, counts and compatibility milestones remain historical.
 For current source capabilities use [manual implementation status](manual/implementation-status.md);

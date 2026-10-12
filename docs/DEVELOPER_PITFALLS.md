@@ -32,6 +32,12 @@ already found lying in the grass.
   `cmd | tail -1; echo $?` the status belongs to `tail`. Redirect to a log and
   read the gate's own exit line.
 
+- **Do not run `cargo test` as namespace root.** Under
+  `unshare --user --map-root-user`, `knx-mcp`'s
+  `a_persistence_failure_after_approval_leaves_the_file_unchanged` refuses its
+  precondition (root ignores file modes) and fails. Run the Rust suite with
+  `--offline` outside that wrapper; keep the wrapper for browser suites.
+
 ## Handover and Git
 
 - **`.ai/` is ignored, but `.ai/CURRENT_STATE.md` is tracked.** A plain
@@ -90,6 +96,12 @@ already found lying in the grass.
   `GET /api/bus/monitor/telegrams`.** The bus monitor panel polls it
   (`pollBusTelegrams` in `apps/knx-web/src/api.ts`; server route in
   `apps/knx-server/src/bus_routes.rs`).
+- **Browser specs see the wall clock.** After 23:00 local time the app may show a
+  late-night humour toast next to the usual ones. Dismiss notifications with
+  `dismissToasts` from `e2e/communication-fixture.ts` (front-most first, until none
+  are left), not with a snapshot of `.all()` locators: those are nth-based and lose
+  track once two are visible. Reproduce a time-of-day failure by running the spec
+  with a shifted `TZ` (e.g. `TZ=Asia/Tokyo`).
 - **Motion settings live in `data-motion-level`** (set by
   `apps/knx-web/src/motion.ts`), not `data-motion`; assert the attribute the
   app actually sets.

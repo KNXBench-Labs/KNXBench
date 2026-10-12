@@ -33,9 +33,11 @@ FUTURE-03 as a whole (still LATER).
 `knx products update` previews a manufacturer `.knxprod` against the installed
 catalogue, installs it only with the preview token after a backup, and `knx
 products restore` reverts ([ADR-0117](adr/0117-previewed-recoverable-catalogue-updates.md)).
-Open: a web UI for the same flow (Session 1 surface), any automatic update
-source (none is documented for third-party tools), and moving a device to a
-newer application version.
+The web catalogue has the same flow since 12 October
+([ADR-0118](adr/0118-catalogue-updates-through-the-web-server.md)). Open: any
+automatic update source (none is documented for third-party tools), moving a
+device to a newer application version, deleting old backups from the UI, and
+retiring the direct install in favour of the previewed one.
 
 ## AP6 opt-in MCP rename writer (12 October 2026)
 
@@ -249,7 +251,7 @@ execution limits remain research/follow-up work, not wider runtime support.
 | --- | --- | --- | --- |
 | Legacy ETS3 product databases (`.vd3`–`.vd5`) | L1 inspection, L2 import/secret withholding, L3 web upload/password handling, the VD5 installer layout with measured bounds and L4 download plans from `s19_block` are on `main` | A first live legacy download (needs the maintainer's device go; none has run). Map atomic types 3 (`string`) and 5 (`long enum`) once ETS's conversion is compared (the `.vd5` has 1,515 such parameters; candidate oracle `SIEMENS_KNX_PDB_Nov_2016_ETS4.knxprod`). Merged legacy procedures (`07B0h`) stay refused. | [ADR-0094](adr/0094-legacy-exim-product-files.md), [VD4 import](VD4_PRODUCT_DATABASE_IMPORT.md), KL §128 |
 | Website / published Evolution Story | Edition `2026-10-08.4` is approved and deployed with the site; first publication is complete | HTTP→HTTPS (301) and remote IPv6 HTTPS (four probes, 200/TLS valid) verified on 2026-10-09; Pages Node-24 actions and demo links deployed/verified; owner's privacy review and optional WebKit evidence remain separate | [story/](../story/README.md), [WEBSITE](WEBSITE.md), ADR-0068/0095 |
-| Web integration of finished leaves | Packages 1 (project notes) and 2 (installation instructions) delivered on 12 October; package 3 (time/integer-slider parameter editors) holds the web lock in worktree `web-params-20261012` (checked 2026-10-12) | Package 4: catalogue updates in the web. Colour/Picture keep the visible fallback; PDB-04 stays LATER | Web-lock lines in `.ai/CURRENT_STATE.md`, [parameter host](contracts/parameter-editor-host.md), [catalogue updates](contracts/catalogue-update.md) |
+| Web integration of finished leaves | All four packages delivered on 12 October: project notes, installation instructions, checked parameter editors, catalogue updates with backup/restore | None for this track. Colour/Picture keep the visible fallback; PDB-04 stays LATER | Web-lock lines in `.ai/CURRENT_STATE.md`, [parameter host](contracts/parameter-editor-host.md), [catalogue updates](contracts/catalogue-update.md) |
 | Group-address views follow-up | Waiting for the reporter's feedback on issue #4 | Derived numeric 2-/3-level tree (GA7, ADR first) only if asked for; virtualization (GA8) only on request or a failing measurement | [goal record](goals/group-address-four-views.md) |
 
 **Commissioning refusal buckets are an evidence backlog, not a running track.**

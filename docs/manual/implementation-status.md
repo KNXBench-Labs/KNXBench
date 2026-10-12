@@ -29,6 +29,16 @@ download capability or compatibility claim
 ([limits](../KNOWN_LIMITATIONS.md#group-address-members-and-download-preparation-2026-10-12)).
 This is newer than the published Alpha.9 package, not a deployed update.
 
+## Catalogue updates with a preview (12 October 2026 source)
+
+The catalogue's **Update with preview…** shows what a newer `.knxprod` would add or
+change before anything is installed, backs up the product catalogue before
+installing, and lists backups you can restore after confirming
+([how to use it](user-guide/05-devices-and-products.md#updating-with-a-preview-newer-source-not-alpha-9),
+[limits](../KNOWN_LIMITATIONS.md#catalogue-updates-come-only-from-files-you-supply-2026-10-12)).
+There is still no online catalogue: you bring the file. This is newer than the
+published Alpha.9 package, not a deployed update.
+
 ## Checked parameter editors (12 October 2026 source)
 
 Time, number, colour and picture parameters have an opt-in **Checked editor** that

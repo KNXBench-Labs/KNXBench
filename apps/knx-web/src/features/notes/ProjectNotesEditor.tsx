@@ -53,6 +53,9 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
   // Identity, not freshly allocated host objects, owns this editing lifetime.
   // eslint-disable-next-line react-hooks/exhaustive-deps
  },[client,context.serverIncarnation,context.projectIncarnation,context.snapshotRevision]);
+ // A refusal must be visible where the user acted, not above a narrow viewport.
+ const alertRef=useRef<HTMLParagraphElement|null>(null);
+ useEffect(()=>{if(error)alertRef.current?.scrollIntoView?.({block:"nearest"});},[error]);
  useEffect(()=>{
   if(!pending)return;
   const timer=setTimeout(()=>{if(pendingRef.current?.token===pending.token){revoke();setNotice(copy.expired);}},pending.expiresInSeconds*1000);
@@ -102,7 +105,7 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
   <p className={styles.guidance}>{copy.guidance}</p>
   {view&&<p className={styles.guidance}>{view.persistence==="session-only"?copy.session:copy.native}</p>}
   {!onApplied&&<p className={styles.notice}>{copy.readonly}</p>}
-  {!view&&!error&&<p role="status">{copy.loading}</p>}{error&&<p className={styles.notice} role="alert">{error}</p>}{notice&&<p className={styles.notice} role="status">{notice}</p>}
+  {!view&&!error&&<p role="status">{copy.loading}</p>}{error&&<p ref={alertRef} className={styles.notice} role="alert">{error}</p>}{notice&&<p className={styles.notice} role="status">{notice}</p>}
   {intent&&<div className={styles.notice} role="alert"><p>{copy.discardPrompt}</p><div className={styles.toolbar}><button type="button" onClick={()=>performSwitch(intent)}>{copy.discard}</button><button type="button" onClick={()=>setIntent(null)}>{copy.keep}</button></div></div>}
   {view&&<div className={styles.layout}>
    <nav className={styles.list} aria-label={copy.heading}>

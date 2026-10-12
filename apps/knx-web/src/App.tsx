@@ -36,7 +36,8 @@ import ImportDiagnosticsNotice from "./ImportDiagnosticsNotice";
 import DevicesWorkspace from "./DevicesWorkspace";
 import type { DeviceCatalog } from "./deviceList";
 import { DeviceNavigationProvider } from "./DeviceLink";
-import LogPanel from "./LogPanel";
+import LogPanel, { type LogImportFocus } from "./LogPanel";
+import type { ImportFindingSeverity } from "./importFindings";
 import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
 import { publishProjectContext, rebasePublishedSessionContext } from "./busContext";
 import { ensureBusDiscovery } from "./busDiscovery";
@@ -298,6 +299,8 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   const [searchOpen, setSearchOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  // Set by the Overview's import counters; `LogPanel` consumes it once.
+  const [logImportFocus, setLogImportFocus] = useState<LogImportFocus | null>(null);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [monitorMounted, setMonitorMounted] = useState(false);
   useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
@@ -1180,6 +1183,15 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     setQuitConfirmOpen(false);
   }
 
+  // The Overview's import counters open the existing session log, narrowed
+  // to the matching import-report entries of the project on screen.
+  function openImportFindings(severity: ImportFindingSeverity) {
+    if (!tree) return;
+    setMonitorOpen(false);
+    setLogImportFocus({ severity });
+    setLogOpen(true);
+  }
+
   function quitRequested() {
     if (tree?.is_modified) {
       setQuitConfirmOpen(true);
@@ -1274,7 +1286,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   const centerWorkspace = (
     <div className="workbench-center">
       {(monitorMounted || monitorOpen) && <div hidden={!monitorOpen}><BusDiagnosticsPanel active={monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} /></div>}
-      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
+      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} importFocus={logImportFocus} onImportFocusHandled={() => setLogImportFocus(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>
           <nav className="device-editor-navigation" aria-label={t("workbench.devices")}>
             <button type="button" onClick={backFromDevice}>← {t("devices.back")}</button>
@@ -1284,7 +1296,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
             ? <DeviceWorkspace key={`${loadKey}:${deviceDetail.id}`} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />
             : <div><p role="status">{t(deviceDetailLoading ? "devices.loadingEditor" : "devices.editorUnavailable")}</p>
               {!deviceDetailLoading && selection?.kind === "device" && <button type="button" onClick={() => void selectEntity(selection)}>{t("devices.retry")}</button>}</div>}
-        </section> : view === "devices" ? null : view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
+        </section> : view === "devices" ? null : view === "overview" ? <Dashboard tree={tree} onOpenImportFindings={openImportFindings} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
           rangeScope={addressScope} onRangeScope={setAddressScope}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate} onDeleted={resetTree}
           addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}

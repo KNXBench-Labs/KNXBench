@@ -628,6 +628,40 @@ describe("App — drag-and-drop announcement", () => {
 });
 
 describe("App — Log tab reachability (KNOWN_LIMITATIONS.md #36, part A)", () => {
+  it("opens the matching import warnings from the project status, then the whole log again", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue({ ...baseTree(), warnings: 2, import_report_available: true });
+    apiMock.getSessionLog.mockResolvedValue([
+      entry({ severity: "warning", source: "import:unknown", message: "unknown element" }),
+      entry({ severity: "warning", source: "import:unsupported", message: "unsupported thing" }),
+      entry({ severity: "info", source: "import", message: "imported project" }),
+    ]);
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+    const link = host!.querySelector<HTMLButtonElement>(".dashboard .dashboard-finding-link--warning")!;
+    expect(link.textContent).toBe(`${enMessages["dashboard.showInLog"]}2`);
+    await act(async () => link.click());
+    await act(async () => {});
+    expect(host!.querySelector(".dashboard")).toBeNull();
+    const scope = host!.querySelector<HTMLElement>(".log-panel .log-panel-import-scope")!;
+    expect(scope.textContent).toContain("Showing 2 import warnings, as counted in the project status.");
+    expect(document.activeElement).toBe(scope);
+    const listed = () => [...host!.querySelectorAll(".log-entry-message")].map((n) => n.textContent).sort();
+    expect(listed()).toEqual(["unknown element", "unsupported thing"]);
+    // The narrowing was a one-off request: leaving and reopening the Log
+    // shows every entry again.
+    await act(async () => findButton("Log").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => findButton("Log").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => {});
+    expect(host!.querySelector(".log-panel-import-scope")).toBeNull();
+    // Server entries plus this session's own "Loaded …" notification.
+    expect(listed()).toEqual(["Loaded project.knxproj.", "imported project", "unknown element", "unsupported thing"]);
+    root.unmount();
+  });
+
   it("is reachable with no project open: the Log button is enabled and clicking it renders the panel", async () => {
     apiMock.getSessionLog.mockResolvedValue([
       entry({ message: "a failed import with nothing open" }),

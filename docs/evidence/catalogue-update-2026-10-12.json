@@ -72,7 +72,26 @@
     }
   ],
   "mutantSourcesRestored": true,
-  "broadAcceptance": null,
+  "broadAcceptance": {
+    "accepted": true,
+    "head": "b8297523cc5d2070a6d77ef2023953e93e53b4ea",
+    "stages": 25,
+    "sourceFrozen": true,
+    "catalogUpdate": 4,
+    "catalogUpdateCli": 1,
+    "mcp": 35,
+    "rust": {
+      "passed": 4143,
+      "failed": 0,
+      "ignored": 194
+    },
+    "web": {
+      "passed": 2906,
+      "failed": 0,
+      "files": 191
+    },
+    "buildClippyBinariesExplicitRootGatesPassed": true
+  },
   "review": "active-session self-review, not independent",
   "notClaimed": [
     "Online Catalog access",
@@ -80,5 +99,12 @@
     "device application upgrade",
     "private-corpus run",
     "release/deployment"
-  ]
+  ],
+  "failedEarlierAttempt": {
+    "name": "owner-1",
+    "validStages": 14,
+    "failedAt": "clippy (manual_range_contains in update.rs, bool_assert_comparison/len_zero in the test)",
+    "fix": "lint-only commit; behaviour unchanged",
+    "unstartedStages": 11
+  }
 }

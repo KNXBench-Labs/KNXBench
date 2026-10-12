@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { carriesGroupAddress, readDraggedGroupAddress } from "./groupAddressDrag";
 import * as api from "./api";
+import RecordedDeviceStatePanel from "./RecordedDeviceStatePanel";
 import { emitAchievementEvent } from "./achievementEvents";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
@@ -1101,6 +1102,7 @@ function DeviceInspector(props: {
       <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <BuildingPartMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceDescriptionField detail={detail} onApplied={onApplied} />
+      <RecordedDeviceStatePanel tree={tree} deviceId={detail.id} />
       {!props.propertiesOnly && <DeviceWorkspace detail={detail} tree={tree} onApplied={onApplied} />}
     </div>
   );

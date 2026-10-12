@@ -3,6 +3,20 @@
 use knx_core::Project;
 use serde::Serialize;
 pub const MAX_TEXT_BYTES: usize = 64 * 1024;
+pub(crate) fn completion_name(
+    completion: knx_core::commissioning::CompletionStatus,
+) -> &'static str {
+    match completion {
+        knx_core::commissioning::CompletionStatus::Undefined => "Undefined",
+        knx_core::commissioning::CompletionStatus::Editing => "Editing",
+        knx_core::commissioning::CompletionStatus::FinishedDesign => "FinishedDesign",
+        knx_core::commissioning::CompletionStatus::FinishedCommissioning => "FinishedCommissioning",
+        knx_core::commissioning::CompletionStatus::Tested => "Tested",
+        knx_core::commissioning::CompletionStatus::Locked => "Locked",
+        knx_core::commissioning::CompletionStatus::Accepted => "Accepted",
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct ProjectMetadata {
     pub view_version: u32,
@@ -35,15 +49,7 @@ pub fn project(project: &Project) -> Result<ProjectMetadata, String> {
         knx_core::address::GroupAddressStyle::TwoLevel => "TwoLevel",
         knx_core::address::GroupAddressStyle::ThreeLevel => "ThreeLevel",
     };
-    let completion = match info.completion {
-        knx_core::commissioning::CompletionStatus::Undefined => "Undefined",
-        knx_core::commissioning::CompletionStatus::Editing => "Editing",
-        knx_core::commissioning::CompletionStatus::FinishedDesign => "FinishedDesign",
-        knx_core::commissioning::CompletionStatus::FinishedCommissioning => "FinishedCommissioning",
-        knx_core::commissioning::CompletionStatus::Tested => "Tested",
-        knx_core::commissioning::CompletionStatus::Locked => "Locked",
-        knx_core::commissioning::CompletionStatus::Accepted => "Accepted",
-    };
+    let completion = completion_name(info.completion);
     Ok(ProjectMetadata {
         view_version: 1,
         scope: "normalizedProject",

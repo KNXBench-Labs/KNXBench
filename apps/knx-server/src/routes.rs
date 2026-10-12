@@ -27,6 +27,10 @@ pub fn project_routes() -> Router<SharedState> {
             get(crate::modeled_metadata_routes::current),
         )
         .route(
+            "/api/devices/{id}/recorded-state",
+            get(crate::recorded_device_state_routes::current),
+        )
+        .route(
             "/api/project/payloads",
             get(crate::project_payload_routes::catalogue),
         )

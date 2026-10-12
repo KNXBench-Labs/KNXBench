@@ -35,6 +35,7 @@ pub mod project_history;
 pub mod project_payloads;
 pub mod project_readiness;
 pub mod project_seed;
+pub mod recorded_device_state;
 pub mod selective_import;
 pub mod serial_address_recovery;
 pub mod serial_number;

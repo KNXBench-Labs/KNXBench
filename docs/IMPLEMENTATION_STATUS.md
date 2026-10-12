@@ -699,6 +699,38 @@ the below-viewport explanation. Review is in-session self-review. Full durable
 report persistence, early write preflight and the remaining functional matrix
 are not claimed complete. No deployment, ETS parity, vendor execution, bus action
 or shared-root synchronization is included.
+## 2026-10-11 — read-only recorded device state accepted locally
+
+Pure existing-model projection and authenticated no-store read route separate
+five persisted project-belief flags from nullable model-held reports. Actual
+Device Properties Inspector mounts EN/DE literal read-only labels, recorded
+completion/date/privacy/observation-lifetime caveats and exact device/server/load/
+revision binding. Hung old reads cannot block new targets or clear their busy
+state. No writer/parser/schema/bus/product behavior is added.
+[Contract](contracts/recorded-device-state.md).
+
+Accepted on **1944 frozen inputs**: owning Rust **1315 passed / 0 failed /
+100 explicitly ignored**; whole Web **2737 passed / 0 failed / 183 files**;
+built report/payload regressions **12 passed**, actual-native export/project/device
+cases **12 passed**, zero failures/skips/flakes. All16stages including strict
+Clippy/build/types/five nonempty explicit-root repo/doc/fmt/whitespace pass.
+Actual SaveAs refuses unpersistable model reports without mutation/destination;
+explicit test-only forget then preserves project intent/dates on native reopen.
+Actual read leaves native bytes and open project unchanged. Supplemental actual
+scroll **4 passed** with **32 raw captures**, four derived sheets assessed: exact
+literal name, recorded dates/scope and all five belief/report groups readable;
+original element-only frames clip at scroll ancestor, not complete proof. The
+supplement was rerun against an immutable exact final accepted binary; all four
+final sheets byte-equal the inspected sheets. Earlier different-binary scroll
+proof remains separate rather than being adopted as final-binary evidence.
+
+Companion inventory adds only the pure validator; API/mutation guards unchanged.
+Initial fixture/header failures remain historical. Source self-review only.
+Fresh preflight ownership/current declarations reconciled read-only; sole-owner/
+frozen acceptance and integration remain outside this package. Full Finding
+matrix, private/vendor/hardware behavior, native13/main integration/publication,
+release and deployment are not established.
+
 ## 2026-10-11 — local read-only modeled project information
 
 Application-owned bounded projection of existing ProjectInfo scalars exposes

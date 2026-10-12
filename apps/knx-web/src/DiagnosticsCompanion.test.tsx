@@ -422,6 +422,7 @@ describe("one editing workspace", () => {
       "projectHistory.ts",
       "projectMetadata.ts",
       "projectPayloads.ts",
+      "recordedDeviceState.ts", // Pure admission only; no IO, writer or device query.
       "session.ts",
       "sessionLogExport.ts",
       "settingsDiagnostic.ts",

@@ -17,6 +17,7 @@ const apiMock = vi.hoisted(() => ({
     stale: [],
     diagnostics: [],
   }),
+  getRecordedDeviceState: vi.fn(),
   moveDeviceToLine: vi.fn(),
   moveLineToArea: vi.fn(),
   moveDeviceToBuildingPart: vi.fn(),
@@ -610,6 +611,17 @@ function deviceDetail(): DeviceDetail {
     product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" },
   };
 }
+
+it("mounts the explicit recorded-state read in the selected device Inspector", async()=>{
+ const tree={...deviceMoveTree(),server_incarnation:"fictional",project_incarnation:1,snapshot_revision:2};
+ const value={server_incarnation:"fictional",project_incarnation:1,snapshot_revision:2,state:{view_version:1,scope:"recordedDeviceModel",device_id:42,name:"Fictional retained state",completion:"Tested",broken:false,last_modified:null,last_download:null,parts:["IndividualAddress","ApplicationProgram","Parameters","CommunicationPart","MediumConfig"].map(part=>({part,intended_loaded:true,reported:null}))}};
+ apiMock.getRecordedDeviceState.mockResolvedValue(value);
+ await renderInspector({kind:"device",id:42},tree,deviceDetail());
+ const panel=host!.querySelector(".recorded-device-state-panel");expect(panel).not.toBeNull();expect(apiMock.getRecordedDeviceState).not.toHaveBeenCalled();
+ await act(async()=>panel!.querySelector<HTMLButtonElement>("button")!.click());
+ expect(apiMock.getRecordedDeviceState).toHaveBeenCalledExactlyOnceWith(42);
+ expect(panel!.textContent).toContain("Fictional retained state");expect(panel!.querySelectorAll("input,textarea")).toHaveLength(0);
+});
 
 function detailWithComObject(links: DeviceDetail["com_objects"][number]["links"] = []): DeviceDetail {
   return { ...deviceDetail(), com_objects: [{

@@ -4,6 +4,7 @@
 //! swapping the import at each call site is the only change there.
 import type { ProjectTree } from "./bindings/ProjectTree";
 import {admitProjectMetadata,type ProjectMetadataView} from "./projectMetadata";
+import {admitRecordedDeviceState,type RecordedDeviceStateView} from "./recordedDeviceState";
 import {admitProjectPayloads,payloadDownloadPath,type ProjectPayloadCatalogue} from "./projectPayloads";
 import { admitImportEvidence, type ImportEvidence } from "./importEvidence";
 import {admitSourceReportCatalogue,admitSourceReportEvidence,isSourceReportId,type SourceReportCatalogue,type SourceReportEvidence} from "./sourceReports";
@@ -85,6 +86,12 @@ export async function getSourceReport(id: string): Promise<SourceReportEvidence>
 }
 
 /** Read currently modeled project metadata, not original-source or hardware reanalysis. */
+export async function getRecordedDeviceState(id:number):Promise<RecordedDeviceStateView> {
+ if(!Number.isSafeInteger(id)||id<0||id>4294967295)throw new Error("Invalid device ID");
+ const value=admitRecordedDeviceState(await request<unknown>(`/api/devices/${id}/recorded-state`));
+ if(value.state.device_id!==id)throw new Error("Recorded device response does not match requested ID");
+ return value;
+}
 export async function getProjectMetadata():Promise<ProjectMetadataView> {
   return admitProjectMetadata(await request<unknown>("/api/project/metadata"));
 }

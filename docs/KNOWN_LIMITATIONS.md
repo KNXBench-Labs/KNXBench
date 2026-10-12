@@ -164,6 +164,20 @@ non-revision-conditional endpoint; ignoring a superseded UI reply does not undo
 or cancel a server operation. No installation create/delete/move capability,
 fresh private ETS import, ETS export or native screen-reader acceptance is added.
 
+### Recorded device state view boundary (2026-10-11)
+
+[Read-only recorded state](contracts/recorded-device-state.md) is locally accepted. Persisted project flags and optional model-held reports
+are separate; absence is not unloaded or never queried. Reports lack observation
+timestamps here, may be stale and are not restored by native reopening. The
+existing exact-native journal refuses SaveAs snapshots containing retained session
+reports rather than silently losing them; inspection does not clear this state.
+An explicit test-only session reset permits the separate intent/date roundtrip. No fresh
+hardware check, programmable image, authority or stored-endpoint connection is
+established. Future native13, historical observation storage and write workflows
+remain separate. Early native admission still depends on another owner's
+reconciliation/acceptance; no full matrix or ledger completion is inferred.
+
+
 ### Local modeled project information boundary (2026-10-11)
 
 [Read-only metadata inspection](contracts/modeled-project-metadata.md) shows only

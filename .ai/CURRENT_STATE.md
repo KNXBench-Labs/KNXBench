@@ -1,3 +1,12 @@
+Web lock: taken by claude-web-integration for package 2 (installation instructions editor host)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 14:18
+- **Completed:** Lock taken only.
+- **Pending/Next Steps:** Package 2 in worktree `web-instructions-20261012`: mount `InstructionEditor` in the device editor (writable only with complete tree identity, otherwise read-only), refresh after Apply, draft-aware project exits. Release in the delivery entry.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released. The `ga-members-download-9006b65e` session (no lock line) also edits Inspector.tsx; expect a merge there.
+
+---
+
 Web lock: released by claude-web-integration (package 1, project notes host, delivered)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 14:17

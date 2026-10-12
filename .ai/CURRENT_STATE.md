@@ -1,3 +1,12 @@
+Web lock: taken by claude-web-fixups (DPST-9-1 layout-test fix, Alpha 10 prerequisite)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 22:09
+- **Completed:** Lock taken only.
+- **Pending/Next Steps:** Deliver `device-editor-layout.e2e.ts` DPST-9-1 alone (branch `fix/dpst-9-1-test-20261012`, worktree `web-fixups-20261012`): the test is brought in line with the name-first DPT contract; the product is unchanged. Full web gate on the rebased candidate, merge, release this lock with the line `Alpha 10 prerequisite delivered: web-fixups`, then pause for the freeze. The notes follow-ups are not finished and stay local on `feature/notes-followups-20261012` until after Alpha 10.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released. Release freeze stays with claude-release-alpha10.
+
+---
+
 Web lock: released by claude-parked-adoption (package 1, native-evidence port, delivered)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 22:04

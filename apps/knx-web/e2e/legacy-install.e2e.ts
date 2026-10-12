@@ -132,7 +132,9 @@ test("en 1440px: the catalog sends a renamed legacy database on to the legacy in
   await expect(wizard).toHaveCount(0);
   await page.getByRole("button", { name: l.catalog, exact: true }).first().click();
   const catalog = page.getByRole("region", { name: l.catalogTitle });
-  await catalog.locator('input[type="file"]').setInputFiles({
+  // The direct install is the picker that accepts legacy databases; the
+  // previewed update beside it takes packages only.
+  await catalog.locator('input[type="file"][accept*=".vd3"]').setInputFiles({
     name: "renamed.knxprod", mimeType: "application/zip", buffer: Buffer.from("PK\u0003\u0004fixture"),
   });
   const dialog = page.getByRole("dialog", { name: "Password for renamed.knxprod" });

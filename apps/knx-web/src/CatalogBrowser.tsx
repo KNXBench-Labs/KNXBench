@@ -15,6 +15,7 @@ import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useTranslate } from "./i18n";
 import { useActiveOptionScroll } from "./useActiveOptionScroll";
 import { describeCreationDiagnostic, newRequestId } from "./CatalogInstallReport";
+import CatalogUpdatePanel from "./CatalogUpdatePanel";
 import ProductInstallControl from "./ProductInstallControl";
 
 // T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog workspace. Feeds T1's
@@ -255,6 +256,7 @@ export default function CatalogBrowser(props: {
       </header>
       <ProductInstallControl className="catalog-install" label={t("catalog.installLabel")}
         onInstalled={reloadAfterInstall} />
+      <CatalogUpdatePanel onInstalled={reloadAfterInstall} />
       <select value={manufacturer} onChange={(e) => changeManufacturer(e.target.value)}>
         <option value="">{t("catalog.allManufacturers")}</option>
         {manufacturers.map((m) => (

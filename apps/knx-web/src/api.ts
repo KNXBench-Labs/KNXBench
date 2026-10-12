@@ -796,13 +796,57 @@ export function logout(): Promise<{ authenticated: boolean }> {
 export async function installProductPackage(file: File): Promise<CatalogInstallReport> {
   const form = new FormData();
   form.append("file", file);
-  const response = await fetch("/api/catalog/install", { method: "POST", body: form });
+  return postForm("/api/catalog/install", form);
+}
+
+/** A multipart POST: FormData sets its own boundary, so it bypasses `request()`'s JSON header. */
+async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const response = await fetch(path, { method: "POST", body: form });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    noteRefusal("/api/catalog/install", response.status);
+    noteRefusal(path, response.status);
     throw requestError(response.status, body?.error ?? `${response.status} ${response.statusText}`, body);
   }
-  return response.json() as Promise<CatalogInstallReport>;
+  return response.json() as Promise<T>;
+}
+
+// ADR-0118 / docs/contracts/catalogue-update.md: previewed, backed-up
+// catalogue updates. The server keeps no upload: apply sends the same file
+// again with the preview's token.
+export interface CatalogueProgramUpdate {
+  id: string; manufacturerId: string; name: string | null; applicationNumber: string | null; applicationVersion: string | null;
+  status: "new" | "newVersion" | "alreadyInstalled";
+  installedVersions: { id: string; applicationVersion: string | null }[];
+}
+export interface CatalogueUpdatePreview {
+  sourceName: string; packageSha256: string; packageAlreadyInstalled: boolean; programs: CatalogueProgramUpdate[];
+  productsAdded: number; hardware2programsAdded: number; idConflicts: number; catalogueFingerprint: string; token: string;
+}
+export interface CatalogueUpdatePreviewAnswer { applied: false; preview: CatalogueUpdatePreview }
+export interface CatalogueUpdateApplied { applied: true; preview: CatalogueUpdatePreview; backup: string; report: CatalogInstallReport }
+export interface CatalogueBackup { name: string; bytes: number; modifiedUnixSeconds: number }
+export async function previewCatalogUpdate(file: File): Promise<CatalogueUpdatePreviewAnswer> {
+  const form = new FormData();
+  form.append("file", file);
+  return postForm("/api/catalog/update/preview", form);
+}
+export async function applyCatalogUpdate(file: File, token: string): Promise<CatalogueUpdateApplied> {
+  const form = new FormData();
+  form.append("token", token);
+  form.append("file", file);
+  return postForm("/api/catalog/update/apply", form);
+}
+export function catalogBackups(): Promise<{ backups: CatalogueBackup[] }> {
+  return request("/api/catalog/backups");
+}
+/** Restores a backup the server listed; the server accepts no other name. */
+export function restoreCatalogBackup(name: string): Promise<{ restored: string }> {
+  return request("/api/catalog/restore", { method: "POST", body: JSON.stringify({ name }) });
+}
+/** The catalogue or the file changed since the preview: preview again. */
+export function isCatalogueUpdateStale(e: unknown): boolean {
+  const error = e as { status?: unknown; body?: { kind?: unknown } } | null;
+  return error?.status === 409 && error.body?.kind === "catalogueUpdateStale";
 }
 
 /** ADR-0094 (L3): what importing a legacy ETS3 product database (`.vd3`–`.vd5`) did. */

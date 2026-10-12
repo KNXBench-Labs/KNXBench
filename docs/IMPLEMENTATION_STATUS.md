@@ -1,3 +1,25 @@
+## 2026-10-12 — AppImage no longer ships libwayland-client (issue #6)
+
+The alpha.9 AppImage aborted on Kubuntu 24.04 with `Could not create default EGL
+display: EGL_BAD_PARAMETER`. Root cause: the bundled `libwayland-client` from the
+build runner shadows the host's, and newer Mesa EGL vendors need symbols it lacks,
+so no EGL display can be created under X11 or Wayland. The pinned GTK deploy
+plugin now ends with `tools/appimage/host-libraries.sh`, which removes that one
+library after deployment; the append is anchored to the plugin's known final
+command. `tools/appimage/check-host-libraries.sh` (with a positive control) runs
+in the release workflow, and `xtask check-appimage` requires that step.
+
+Test-first: 10 launcher tests RED, then GREEN (27 total; one opt-in test applies
+both patches to the real pinned plugin), xtask appimage 22/22 after two expected
+fixture REDs. The guard fails on the published alpha.9. The release workflow,
+dispatched on the branch (run `38286151360`), was green end to end. Its artifact
+passed a local A/B with glvnd pinned to Mesa: no abort under X11 and Wayland,
+where the published alpha.9 reproduces the reporter's exact lines. One host,
+simulated Mesa-only vendor; the reporter's machine is untested
+([contract](APPIMAGE_LAUNCHER.md#host-provided-libraries-issue-6), KL §176).
+Users get the fix with the next AppImage; until then `LD_PRELOAD` of the host
+library is the documented workaround.
+
 ## 2026-10-12 — Catalogue updates with a preview in the web
 
 The catalogue view gains **Update with preview…** next to the unchanged direct install

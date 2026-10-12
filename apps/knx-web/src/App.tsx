@@ -342,11 +342,12 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   // Project notes (docs/contracts/project-note-editor-host.md). The view
   // mounts on its first visit and then stays mounted for that project
   // identity, so workbench navigation never drops a draft and projects that
-  // never open it never read notes. The draft flag guards the ways out of
-  // the project: open/import, new project and quit.
+  // never open it never read notes. The draft flags (notes, and the device
+  // editor's installation instructions) guard the ways out of the project:
+  // open/import, new project and quit.
   const notesIdentity = tree ? `${tree.server_incarnation ?? ""}\u0000${tree.project_incarnation ?? ""}` : null;
   const [notesMountedFor, setNotesMountedFor] = useState<string | null>(null);
-  const notesDirtyRef = useRef(false);
+  const draftsRef = useRef({ notes: false, instructions: false });
   const [noteDraftGuard, setNoteDraftGuard] = useState<{ resume: () => void } | null>(null);
   const projectExitsRef = useRef<{ load: (path: string, kind: "import" | "open") => Promise<void>; newProject: () => void; quit: () => void } | null>(null);
   useEffect(() => {
@@ -834,18 +835,24 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     setNewProjectOpen(true);
   }
 
-  // A note draft lives only in the notes editor; leaving the project would
-  // drop it, so these exits ask first. "Discard" resumes through the latest
+  // Unapplied drafts live only in their editors; leaving the project would
+  // drop them, so these exits ask first. "Discard" resumes through the latest
   // render's handlers (`projectExitsRef`), never a stale closure.
+  function hasUnappliedDraft(): boolean {
+    return draftsRef.current.notes || draftsRef.current.instructions;
+  }
+
   function guardNoteDraft(resume: () => void): boolean {
-    if (!notesDirtyRef.current) return false;
+    if (!hasUnappliedDraft()) return false;
     setNoteDraftGuard({ resume });
     return true;
   }
 
+  // An instructions draft only exists while its device editor is on screen,
+  // so keeping it means staying put; a notes-only draft returns to Notes.
   function keepNoteDraft() {
     setNoteDraftGuard(null);
-    openNotes();
+    if (draftsRef.current.notes && !draftsRef.current.instructions) openNotes();
   }
 
   function discardNoteDraft() {
@@ -1271,7 +1278,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     let unlisten: (() => void) | null = null;
     let disposed = false;
     void onWindowCloseRequested(() => {
-      if (notesDirtyRef.current) {
+      if (draftsRef.current.notes || draftsRef.current.instructions) {
         setNoteDraftGuard({ resume: () => projectExitsRef.current?.quit() });
         return false;
       }
@@ -1358,7 +1365,8 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
             <button type="button" onClick={openDevices}>{t("devices.all")}</button>
           </nav>
           {selection?.kind === "device" && deviceDetail?.id === selection.id
-            ? <DeviceWorkspace key={`${loadKey}:${deviceDetail.id}`} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />
+            ? <DeviceWorkspace key={`${loadKey}:${deviceDetail.id}`} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate}
+              onInstructionDraftChange={(dirty) => { draftsRef.current.instructions = dirty; }} />
             : <div><p role="status">{t(deviceDetailLoading ? "devices.loadingEditor" : "devices.editorUnavailable")}</p>
               {!deviceDetailLoading && selection?.kind === "device" && <button type="button" onClick={() => void selectEntity(selection)}>{t("devices.retry")}</button>}</div>}
         </section> : view === "devices" || view === "notes" ? null : view === "overview" ? <Dashboard tree={tree} onOpenImportFindings={openImportFindings} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
@@ -1395,7 +1403,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
       </div>}
       {tree && notesIdentity !== null && (view === "notes" || notesMountedFor === notesIdentity) && (
         <NotesWorkspace key={notesIdentity} tree={tree} active={!logOpen && !monitorOpen && view === "notes"}
-          onTreeUpdate={handleTreeUpdate} onDirtyChange={(dirty) => { notesDirtyRef.current = dirty; }} />
+          onTreeUpdate={handleTreeUpdate} onDirtyChange={(dirty) => { draftsRef.current.notes = dirty; }} />
       )}
     </div>
   );

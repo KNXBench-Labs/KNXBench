@@ -1,3 +1,33 @@
+## 2026-10-12 — Project notes in the workbench (Session 1 host)
+
+The project notes editor is mounted as the **Notes** workbench view (navigation
+pane and command palette; disabled without a project). `notesHost.ts` maps the
+tree's `server_incarnation`/`project_incarnation`/`snapshot_revision` explicitly
+to the editor context and refuses incomplete identity; targets are the
+projection's installations, areas, lines, building parts, devices, group ranges
+and group addresses by domain ID, with ambiguous IDs withheld. A confirmed Apply
+re-reads the project through the workbench's own publication, so Undo/Redo and the
+modified state follow. The view mounts on first visit and stays mounted for that
+project identity; a dirty draft asks before Open/Import, New project, Quit and the
+desktop window close. Two leaf fixes came out of the browser review: a refusal
+alert now scrolls into view on narrow screens, and the opt-in checkbox no longer
+inherits the global control height ([host](contracts/project-note-editor-host.md#workbench-host-12-october-2026),
+[limits](KNOWN_LIMITATIONS.md#project-notes-workbench-host-2026-10-12)).
+
+Test-first: host module RED 6/10 then 10/10, workspace RED 0/6 then 6/6, App RED
+0/6 then 7/7, leaf refusal visibility RED then GREEN, two browser geometry
+assertions RED then GREEN. Five named guard mutants are each caught (one only after
+sharpening its test), sources restored. Gate on frozen `114b0097`, 22 stages: 21
+green — Web 2931/0 across 193 files, notes browser 11/11 and dialogs 14/14 on the
+production build, Rust 4143/0 with 194 ignored, Clippy, fmt, bindings, docs checker
+and five explicit-root xtask gates. The full fixture browser stage failed with
+349 passed and 4 failed; all four are `device-editor-layout.e2e.ts` expecting raw
+`DPST-9-1` and fail identically on the untouched base `d7df85c6` (pre-existing,
+DPT-presentation owner). An unmocked loopback-only smoke against a real server
+covered create, Undo/Redo, Save As, a genuine 409 refusal that changed nothing,
+Save, server restart and reopen. Self-review, not independent.
+[Evidence](evidence/project-notes-workbench-host-2026-10-12.json).
+
 ## 2026-10-12 — Previewed, recoverable catalogue updates (AP7)
 
 `knx products update <file.knxprod>` previews a manufacturer file against an

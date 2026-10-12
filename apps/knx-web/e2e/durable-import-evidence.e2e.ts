@@ -38,7 +38,7 @@ for (const language of ["en","de"] as const) for (const width of [400,1440]) {
     });
     await page.goto("/?view=editor");
     await page.locator(".workbench-navigation").getByRole("button",{name:m["workbench.overview"],exact:true}).click();
-    const panel=page.locator(".import-report-panel:not(.source-report-panel)");
+    const panel=page.locator("section.import-report-panel").filter({has:page.getByRole("button",{name:m["importEvidence.show"],exact:true})});
     await expect(panel).toBeVisible();expect(reportReads).toBe(0);
     await expect(page.locator('.dashboard [role="note"]')).toContainText(m["importEvidence.explanation"]);
     await expect(page.locator('.project-explorer [role="note"]')).toContainText(m["importEvidence.historical"]);

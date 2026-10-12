@@ -3,6 +3,7 @@
 //! function names and argument shapes the components already called, so
 //! swapping the import at each call site is the only change there.
 import type { ProjectTree } from "./bindings/ProjectTree";
+import {admitProjectPayloads,payloadDownloadPath,type ProjectPayloadCatalogue} from "./projectPayloads";
 import { admitImportEvidence, type ImportEvidence } from "./importEvidence";
 import {admitSourceReportCatalogue,admitSourceReportEvidence,isSourceReportId,type SourceReportCatalogue,type SourceReportEvidence} from "./sourceReports";
 import { admitProjectHistory, historyBinding, type ProjectHistory } from "./projectHistory";
@@ -80,6 +81,25 @@ export async function getSourceReportCatalogue(): Promise<SourceReportCatalogue>
 export async function getSourceReport(id: string): Promise<SourceReportEvidence> {
   if (!isSourceReportId(id)) throw new Error("Invalid source report selector");
   return admitSourceReportEvidence(await request<unknown>(`/api/project/source-reports/${id}`),id);
+}
+
+/** Explicit retained payload list; no automatic download or extension execution. */
+export async function getProjectPayloads():Promise<ProjectPayloadCatalogue> {
+  return admitProjectPayloads(await request<unknown>("/api/project/payloads"));
+}
+export async function getProjectPayload(catalogue:ProjectPayloadCatalogue,id:number):Promise<Blob> {
+  const path=payloadDownloadPath(catalogue,id);const expected=catalogue.records.find(row=>row.id===id)!;
+  const response=await fetch(path,{cache:"no-store"});
+  if(!response.ok) {
+    const body=await response.json().catch(()=>null);noteRefusal(path,response.status);
+    throw requestError(response.status,body?.error??`${response.status} ${response.statusText}`,body);
+  }
+  const length=response.headers.get("content-length");
+  if(response.headers.get("content-type")!=="application/octet-stream"||length===null||!/^\d+$/.test(length)||Number(length)!==expected.bytes) {
+    await response.body?.cancel();throw new Error("Malformed retained payload download");
+  }
+  const blob=await response.blob();if(blob.size!==expected.bytes)throw new Error("Incomplete retained payload download");
+  return blob;
 }
 
 /** Read complete native history metadata, never silently admit a partial page. */

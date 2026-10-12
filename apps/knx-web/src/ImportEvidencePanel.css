@@ -7,3 +7,7 @@
 .import-report-panel pre { max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
 .source-report-panel select { display: block; width: 100%; max-width: 100%; }
 .source-report-identity { overflow-wrap: anywhere; font-family: monospace; font-size: .8rem; }
+.project-payload-panel select { display: block; width: 100%; max-width: 100%; }
+.project-payload-panel .payload-path, .project-payload-panel dd { overflow-wrap: anywhere; }
+.project-payload-panel dl { margin-block: .75rem; }
+.project-payload-panel dd { margin-inline-start: 0; margin-block-end: .5rem; }

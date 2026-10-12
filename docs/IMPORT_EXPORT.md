@@ -28,6 +28,16 @@ Selective import explicitly remaps selected overrides and discloses their count;
 existing target instructions remain unchanged. Older embedded-history versions
 are not newly certified. API/browser editing remains outside this foundation's
 [acceptance](evidence/instruction-native-foundation-2026-10-11.json).
+## Local retained project payload access (2026-10-11)
+
+[Read-only catalogue and explicit downloads](contracts/project-payload-catalogue.md)
+expose preserved project attachment/add-in bytes without rendering or execution.
+Numeric catalogue selectors are bound to the current server/project/revision;
+source paths never select filesystem destinations. Verified selected bytes stream
+as inert local attachments. Catalogue metadata/count and 64-MiB download budgets
+refuse explicitly, not by discarding source context. Manufacturer product-database
+baggage remains separate. This is neither an attachment writer, ETS-App runtime,
+trusted-content verifier nor anonymized project export.
 
 
 ## Local source preservation and reporting (2026-10-10)

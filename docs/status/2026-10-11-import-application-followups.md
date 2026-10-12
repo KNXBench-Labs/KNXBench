@@ -37,6 +37,16 @@ and nine successful HTTP steps. Evidence remains private; the
 contains only generic acceptance and scope information. Published on main as
 `e27aca526a8a`, verified by exact fetched/live readback; no deployment or
 release. Earlier local results above remain historical.
+## Fresh upstream coordination (2026-10-11)
+
+Read-only reconciliation against upstream `2ff5d51312bf` confirms the large
+history repair is integrated via `e27aca526a8a`, not a current waiting dependency.
+The separately owned instruction foundation/service/isolated editor is published
+as `baaad1a6dc1c`; normal shell mounting remains outside that owner's acceptance.
+Initial native admission is not present on that inspected upstream and remains
+in the other owner's dirty checkout; no takeover or acceptance is inferred.
+Functions/Sites and specialized editors are protected parallel work. Own report/
+CLI/source/payload commits remain local; no later-native13 integration is claimed.
 
 ## Remaining functional work — not completion claims
 
@@ -49,7 +59,7 @@ release. Earlier local results above remain historical.
 | Project metadata, usage, additional addresses, segments | Independent typed model, command/native migration and Inspector contracts | MODEL-05/07, KL-172; coordinate with existing Functions/Sites owner, no competing schema bump |
 | Stored BusAccess/IP configuration and loaded-state provenance | Explicit imported versus runtime/hardware observation; safe read-only display before any writer | Never auto-connect to foreign stored endpoints or declare imported flags newly verified |
 | Tasks, imported traces and archive metadata | Dedicated application concepts, distinct from KNXBench Undo/versions | Archive metadata alone does not establish a recoverable ETS snapshot |
-| Attachments and extensions | Bounded content catalogue, safe preview/download and replacement provenance | Preserved `.etsapp`/DLL/script bytes are not an execution capability; FUTURE-03 |
+| Attachments and extensions | [Read-only retained-payload catalogue](../contracts/project-payload-catalogue.md) and explicit inert downloads accepted locally: Rust1303/0, Web2689/0, builtBrowser12/0 and additional opt-in private production/native equality. Preview/replacement provenance remain separate | Preserved `.etsapp`/DLL/script bytes are not an execution capability; FUTURE-03 |
 | Installation instructions | Reuse the original reader and normalized editable-document service once accepted | Existing instruction-service owner has API/native work in progress; do not duplicate it |
 | Device planning and commissioning | Evidence-bound image/parameter/configuration support, explicit untested/unsupported reasons and later target-specific hardware acceptance | PDB-02/05/08 and KL-173/174; no blanket hardware go |
 | Export privacy and ETS return path | Disclose that native files retain source material; separately researched/verified interchange writer | Compression is not anonymization; KL-6 is not closed |

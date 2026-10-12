@@ -164,6 +164,21 @@ non-revision-conditional endpoint; ignoring a superseded UI reply does not undo
 or cancel a server operation. No installation create/delete/move capability,
 fresh private ETS import, ETS export or native screen-reader acceptance is added.
 
+### Local retained-payload access boundary (2026-10-11)
+
+[Retained project payload catalogue](contracts/project-payload-catalogue.md)
+provides read-only labels and explicit inert local downloads, not attachment
+editing or ETS-App support. Scope is complete bytes actually in native opaque
+context; shared product-database assets remain separate. Up to 10,000 records
+and 4 MiB cumulative path/kind/hash text are catalogued without partial success;
+selected downloads over 64 MiB or with a hash mismatch refuse while bytes remain
+retained. Leading-byte classes and path roles are not full validation, signature
+verification or authenticity. Downloads can contain foreign private/executable
+data. No rendering, extraction, execution, replacement or privacy scrubbing.
+Final local acceptance passes; integration/publication remains separate.
+No ledger IDs are promoted by this bounded payload reader.
+
+
 ### Local durable import-report boundary (2026-10-11)
 
 Primary server imports now retain the complete original report in native files

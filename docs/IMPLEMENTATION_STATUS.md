@@ -699,6 +699,38 @@ the below-viewport explanation. Review is in-session self-review. Full durable
 report persistence, early write preflight and the remaining functional matrix
 are not claimed complete. No deployment, ETS parity, vendor execution, bus action
 or shared-root synchronization is included.
+## 2026-10-11 — local retained-payload catalogue and inert download
+
+Application-owned read-only catalogue of retained UserFiles/AddinData,
+ETS-app-named candidates and native opaque Baggage rows is implemented.
+Exact source paths are labels, not filesystem destinations. The authenticated
+explicit download verifies bytes against their stored SHA-256, binds server/
+load/revision and streams a fixed inert attachment with no-store/nosniff/CSP.
+No previews, execution, extraction, replacement writer or schema change.
+Product-database baggage stays separate. Whole-catalogue count/text budgets
+refuse rather than silently truncate; oversized payloads remain listed/retained.
+EN/DE Dashboard offers deliberate reads and local saves with privacy/executable
+warnings, stale response suppression and source/status labels outside the select.
+[Contract](contracts/project-payload-catalogue.md).
+
+Accepted locally on 1913 frozen inputs: owning CLI/app/server/projection
+Rust **1303 passed / 0 failed / 100 explicitly ignored**;
+whole Web **2689 passed / 0 failed / 175 files**;
+production-built payload/source/primary Chromium **12 passed / 0 failed / 0 skipped**.
+Strict owning Clippy, binaries/Web builds, explicit E2E types, five nonempty
+explicit-root repository checks and docs/fmt/whitespace pass. Four final EN/DE
+400/1440 payload frames inspected: role/path outside selector, privacy and
+size/hash/download visible without horizontal clipping; primary counts separate.
+An additional opt-in private actual-production probe verifies import, admitted
+byte downloads, Save As/reopen, complete catalogue/native payload equality and
+original-report preservation; original unchanged. No private values/inventories
+are published. Earlier probe-readiness/ordinary-Save mistakes are harness errors,
+not native acceptance; corrected new attempt independently passes. Unsupported
+server help startup is excluded from acceptance and recorded locally.
+Initial primary browser selector failures remain historical; corrected selectors
+identify the panel by its exact action, not by an ever-growing exclusion list.
+Source self-review only; no manufacturer/hardware execution or publication.
+
 ## 2026-10-11 — local selective-source report access
 
 The application reuses existing SelectiveImportReport rows as a separately

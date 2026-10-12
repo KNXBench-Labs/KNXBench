@@ -1,3 +1,22 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 18:11
+- **Completed:** Sorted the repository leftovers. Docs-only package.
+  - **Deleted:**
+    - local `feature/history-20261009` (merged);
+    - local `design/group-address-studies-aca414` (fully contained in main);
+    - local `docs/hygiene-audit-20261011` (unique unpublished audit `2cda0d37`, bundled first);
+    - remote `test/import-integrity-revalidation-20261010` (merged, no PR);
+    - three stray folders under `KNXBench.worktrees/` (two empty, one `mise` marker).
+  - Everything is kept in a verified bundle and copy in `KNXBench.backups/2026-10-12-branch-leftovers/`.
+  - The triage note gains a leftovers section listing five stale doc claims still on main. OPEN_WORK §5 links it. Log appended.
+- **Pending/Next Steps:**
+  - Fix the five stale claims (KNOWN_LIMITATIONS:186/199/906, DATA_MODEL:44, the OPEN_WORK/ROADMAP audit date), each re-checked against current source. Don't copy the old audit text.
+  - Owner decision still open for `offline-naming-20261011` and `data-tooling-stats-20261011`.
+  - Remote `fix/docker-import-diagnostics-20261009` and `fix/import-status-20261011` are merged and could go on request.
+- **Notes for Codex oder Claude:** Web lock: not taken or released by this entry (newest line: catalogue package 4, worktree `web-catalogue-20261012`, untouched). Restore a bundled ref with `git fetch <backup>/leftovers.bundle refs/heads/<b>:refs/heads/<b>`. No hardware, release, deployment, subagents or quota checks.
+
+---
+
 Web lock: taken by claude-web-integration for package 4 (catalogue updates in the web)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 17:21

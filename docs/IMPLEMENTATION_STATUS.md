@@ -699,6 +699,35 @@ the below-viewport explanation. Review is in-session self-review. Full durable
 report persistence, early write preflight and the remaining functional matrix
 are not claimed complete. No deployment, ETS parity, vendor execution, bus action
 or shared-root synchronization is included.
+## 2026-10-11 — local reviewed native export privacy
+
+The actual web File-menu export now opens a DE/EN cancellation-first privacy
+confirmation, not an immediate download. It discloses retained original/private
+content and distinguishes current native snapshot from anonymization, complete
+backup and ETS export. Reviewed server/load/revision binding accompanies the
+explicit streamed download; stale/partial/unknown bindings refuse under the
+existing project lock. Legacy query-free authenticated reads remain supported.
+Fixed native attachment/no-store/nosniff headers; no schema/storage/source scrub.
+[Contract](contracts/native-export-privacy.md).
+
+Accepted locally on 1921 frozen inputs: owning CLI/app/server/projection
+Rust **1305 passed / 0 failed / 100 explicitly ignored**;
+whole Web **2703 passed / 0 failed / 177 files**;
+built report/payload regressions **12 passed**, plus actual-production native
+export **4 passed**, both zero failures/skips/flakes. Strict owning Clippy,
+binaries/Web builds, explicit E2E types, five nonempty explicit-root repository
+checks and docs/fmt/whitespace pass. Genuine browser-downloaded SQLite retains
+fictional original attachment bytes and the open project tree stays unchanged.
+Four final actual-server EN/DE400/1440 frames inspected: privacy/anonymization/
+backup/ETS distinctions and Cancel/download controls readable without clipping
+or occlusion; local content-fit removes measured search-list stretching.
+Initial native-browser request-event instrumentation missed Chromium-managed
+downloads; actual-link observation retains the real file/backend assertions.
+Measured excessive stretch has separate RED/GREEN, local styling only. Earlier
+instrumentation/layout/lint failures stay historical, not retroactively green.
+Source self-review only. No private source replay, main integration/publication,
+vendor or bus action; preferences and discovery are explicitly intercepted.
+
 ## 2026-10-11 — local retained-payload catalogue and inert download
 
 Application-owned read-only catalogue of retained UserFiles/AddinData,

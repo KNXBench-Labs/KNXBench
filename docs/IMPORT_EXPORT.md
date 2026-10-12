@@ -28,6 +28,17 @@ Selective import explicitly remaps selected overrides and discloses their count;
 existing target instructions remain unchanged. Older embedded-history versions
 are not newly certified. API/browser editing remains outside this foundation's
 [acceptance](evidence/instruction-native-foundation-2026-10-11.json).
+## Local reviewed native export (2026-10-11)
+
+[Native export privacy](contracts/native-export-privacy.md) adds cancellation-first
+DE/EN consent before the File-menu download. Native snapshots can include original
+private source, reports and attachment/extension data; renamed labels/compression
+are not anonymization. Current server/load/revision binding refuses stale exports,
+while existing direct query-free reads remain supported. Actual streaming and
+source preservation are unchanged. This is not a scrubber, complete independent
+backup, edited `.knxproj` writer or new hardware/signature support.
+
+
 ## Local retained project payload access (2026-10-11)
 
 [Read-only catalogue and explicit downloads](contracts/project-payload-catalogue.md)

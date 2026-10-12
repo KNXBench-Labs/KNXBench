@@ -1509,7 +1509,7 @@ describe("App — browser project export", () => {
     expect(deMessages["toolbar.exportProject"]).not.toBe(deMessages["toolbar.saveAs"]);
   });
 
-  it("shows a localized export command, disables it without a project, and uses native navigation", async () => {
+  it("requires privacy review before the current-bound native navigation", async () => {
     let anchor: HTMLAnchorElement | undefined;
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
       anchor = this;
@@ -1520,7 +1520,7 @@ describe("App — browser project export", () => {
     expect(exportButton.disabled).toBe(true);
 
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
-    apiMock.importProject.mockResolvedValue(baseTree());
+    apiMock.importProject.mockResolvedValue({...baseTree(),server_incarnation:"fictional-export-server",project_incarnation:1,snapshot_revision:2});
     await act(async () => {
       findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
@@ -1529,7 +1529,13 @@ describe("App — browser project export", () => {
     await act(async () => {
       exportButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(anchor?.href).toMatch(/\/api\/project\/download$/);
+    expect(click).not.toHaveBeenCalled();
+    expect(host!.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(host!.textContent).toContain("not anonymized");
+    await act(async () => findButton("Download native project").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(anchor?.pathname).toBe("/api/project/download");
+    expect(new URL(anchor!.href).searchParams.get("serverIncarnation")).toBe("fictional-export-server");
+    expect(new URL(anchor!.href).searchParams.get("snapshotRevision")).toBe("2");
     expect(anchor?.download).toBe("project.knxdb");
 
     click.mockRestore();

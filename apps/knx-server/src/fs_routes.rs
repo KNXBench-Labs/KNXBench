@@ -5,12 +5,12 @@
 use std::io::Write;
 use std::path::Path;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{atomic::Ordering, Arc};
 use std::task::{Context, Poll};
 
 use axum::body::{Body, Bytes, HttpBody};
 use axum::extract::{DefaultBodyLimit, Multipart, Query, State};
-use axum::http::{header, HeaderValue, Request};
+use axum::http::{header, HeaderValue, Request, StatusCode};
 use axum::response::Response;
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -155,15 +155,48 @@ async fn upload(
     Err(ApiError::bad_request("no file field in upload"))
 }
 
-/// Always serializes the current in-memory project fresh into a temp
-/// `.knxdb` and streams that — regardless of whether it was ever saved to
-/// `store_path` before, so "download" always reflects the latest edits.
-async fn download(State(state): State<SharedState>) -> Result<Response, ApiError> {
+/// Optional complete review binding; absence supports existing direct clients.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ExportBinding {
+    server_incarnation: Option<String>,
+    project_incarnation: Option<u64>,
+    snapshot_revision: Option<u64>,
+}
+
+async fn download(
+    State(state): State<SharedState>,
+    Query(binding): Query<ExportBinding>,
+) -> Result<Response, ApiError> {
+    let reviewed = match (
+        binding.server_incarnation,
+        binding.project_incarnation,
+        binding.snapshot_revision,
+    ) {
+        (None, None, None) => None, // Existing direct clients retain their explicit unbound read.
+        (Some(server), Some(project), Some(revision)) => Some((server, project, revision)),
+        _ => {
+            return Err(ApiError::bad_request(
+                "native export binding must be complete",
+            ))
+        }
+    };
     let tmp = {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project
             .as_ref()
             .ok_or_else(|| ApiError::bad_request("no project open"))?;
+        if let Some((server, incarnation, revision)) = reviewed {
+            if server != state.server_incarnation
+                || incarnation != state.project_incarnation.load(Ordering::Relaxed)
+                || revision != state.project_revision.load(Ordering::Relaxed)
+            {
+                return Err(ApiError::with_status(
+                    StatusCode::CONFLICT,
+                    "reviewed native export snapshot is stale; review it again",
+                ));
+            }
+        }
         let opaque = state.opaque.lock().expect("state mutex poisoned");
         let manufacturer_refs = state
             .manufacturer_refs
@@ -175,7 +208,19 @@ async fn download(State(state): State<SharedState>) -> Result<Response, ApiError
             .map_err(ApiError::internal)?;
         tmp.into_temp_path()
     };
-    stream_temp_file(tmp, DOWNLOAD_CHUNK_BYTES).await
+    let mut response = stream_temp_file(tmp, DOWNLOAD_CHUNK_BYTES).await?;
+    response.headers_mut().insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_static("attachment; filename=\"project.knxdb\""),
+    );
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    response.headers_mut().insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    Ok(response)
 }
 
 /// Own the path in the body itself: HTTP may discard response extensions

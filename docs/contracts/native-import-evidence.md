@@ -1,5 +1,8 @@
 # Native import-diagnostic availability and durable original reports
 
+> On main since 2026-10-12 (port of the parked branch; fresh gate in the
+> [evidence](../evidence/native-evidence-port-2026-10-12.json)). Local acceptance figures below are historical.
+
 Local server/CLI/application/UI implementation, 2026-10-11. No domain/native-schema migration.
 
 ## Availability and provenance

@@ -46,7 +46,7 @@ new command-palette selector. Whole-project replacement import is unchanged.
 
 ## Review the complete original import report
 
-**Local source implementation, 11 October 2026 — not a release claim.** In
+**Newer than Alpha.9: needs a source build of main (12 October 2026).** In
 **Overview**, choose **Show full import report**. The report is loaded only when
 you request it. **Download full report** saves the complete original JSON locally;
 the expandable preview shows at most 65,536 characters and can end within a value.
@@ -74,6 +74,28 @@ main project's counts. An archive with no stored report says **Report unavailabl
 not zero issues. Changing/revising the project invalidates an old read. Full
 local downloads can contain confidential data; review them before sharing.
 [Exact contract and bounds](../../contracts/native-import-evidence.md).
+
+## Retained payloads, project information and native export
+
+**Newer than Alpha.9: needs a source build of main (12 October 2026).**
+**Show retained payloads** in the Overview's Import report card lists attachments
+and extension files that the import kept byte for byte (for example from
+`UserFiles` or an add-in). Nothing is opened, rendered or run. Pick one and choose
+**Download selected payload** to save the exact bytes locally; a payload over the
+server's download limit stays listed but cannot be downloaded here.
+
+**Show modeled project information** in the Technical details card lists the
+project facts KNXBench holds — identifier, name, number, group-address structure,
+recorded completion, stored dates and schema versions — read-only. *Not recorded*
+and *Explicitly empty* are different answers.
+
+**File › Export project…** now asks first: the native `.knxdb` can contain original
+imported data, attachments and import reports, and it is not anonymized.
+**Cancel** has the focus. The download is bound to the project state you reviewed;
+if the project changes in between, review the export again.
+[Payloads](../../contracts/project-payload-catalogue.md) ·
+[project information](../../contracts/modeled-project-metadata.md) ·
+[export privacy](../../contracts/native-export-privacy.md).
 
 ## Import and open progress
 

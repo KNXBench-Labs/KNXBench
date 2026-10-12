@@ -1,5 +1,11 @@
 # Import and export
 
+## Native import evidence on main (12 October 2026)
+
+The 2026-10-11 sections below on durable import reports, the reviewed native export
+and retained project payloads are integrated on main ([evidence](evidence/native-evidence-port-2026-10-12.json)). Native files
+keep the complete original import report; nothing is reconstructed for older files.
+
 ## Alpha9 release persistence boundary (11 October 2026)
 
 [Alpha9](releases/alpha9.md) packages native/model13 and bounded large-history
@@ -28,6 +34,7 @@ Selective import explicitly remaps selected overrides and discloses their count;
 existing target instructions remain unchanged. Older embedded-history versions
 are not newly certified. API/browser editing remains outside this foundation's
 [acceptance](evidence/instruction-native-foundation-2026-10-11.json).
+
 ## Local reviewed native export (2026-10-11)
 
 [Native export privacy](contracts/native-export-privacy.md) adds cancellation-first

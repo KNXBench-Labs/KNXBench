@@ -1,5 +1,8 @@
 # Read-only retained project payload catalogue
 
+> On main since 2026-10-12 (port of the parked branch; fresh gate in the
+> [evidence](../evidence/native-evidence-port-2026-10-12.json)). Local acceptance figures below are historical.
+
 Local implementation contract, 2026-10-11. No domain/schema migration.
 Accepted locally on frozen sources: owning Rust1303/0/100 ignored, whole
 Web2689/0/175 files, built Chromium12/0/0 skipped, strict quality/build/type/

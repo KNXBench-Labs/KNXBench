@@ -1,5 +1,15 @@
 # Architecture
 
+## Native import evidence on main (2026-10-12)
+
+The ADR-0113 work further down, written as "local source", is integrated. `knx-app`
+owns the evidence envelope (`import_evidence`, `import_evidence::source_reports`),
+the payload catalogue (`project_payloads`) and two read-only projections
+(`modeled_metadata`, `recorded_device_state`). `knx-server` adds seven GET routes
+inside the session-guarded router and an optional snapshot binding on
+`/api/project/download`. Store, Core and Model are unchanged (no schema bump). The
+web panels live inside the Overview's existing cards and the Properties Inspector.
+
 ## Previewed catalogue updates (2026-10-12)
 
 [ADR-0117](adr/0117-previewed-recoverable-catalogue-updates.md) adds

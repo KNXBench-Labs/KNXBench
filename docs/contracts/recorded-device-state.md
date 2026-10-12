@@ -1,5 +1,8 @@
 # Recorded device state — read-only model inspection
 
+> On main since 2026-10-12 (port of the parked branch; fresh gate in the
+> [evidence](../evidence/native-evidence-port-2026-10-12.json)). Local acceptance figures below are historical.
+
 Implementation contract, 2026-10-11. Accepted locally on1944frozen inputs: owningRust1315/0/100ignored,
 wholeWeb2737/0/183files, built regressions12/0 and real-native12/0, zero
 skips/flakes. Sixteen quality/build/type/repository/doc stages pass. Additional

@@ -1,5 +1,8 @@
 # Reviewed native export and retained-source privacy
 
+> On main since 2026-10-12 (port of the parked branch; fresh gate in the
+> [evidence](../evidence/native-evidence-port-2026-10-12.json)). Local acceptance figures below are historical.
+
 Local implementation contract, 2026-10-11. No domain/schema migration.
 Accepted locally on 1921 frozen inputs: owning Rust1305/0/100 ignored,
 whole Web2703/0/177 files, built regressions12/0 and actual-server native4/0;

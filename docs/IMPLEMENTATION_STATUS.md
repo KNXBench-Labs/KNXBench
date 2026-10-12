@@ -1,3 +1,40 @@
+## 2026-10-12 — Native import evidence ported onto main
+
+The parked `fix/native-evidence-20261011` branch (`b76ee907`) is on main: its seven
+commits were ported onto fresh main with their 10 conflicts resolved additively, plus
+seven integration commits. Server imports and `knx import --store` keep the complete
+original import report in the native file ([ADR-0113](adr/0113-durable-native-import-evidence.md));
+reopening shows **Historical import findings** with the original counts. The Overview's
+Import card adds the full report, the source-report catalogue of selective imports and
+the retained-payload catalogue with inert downloads; the Technical details card shows
+modeled project information read-only; **Export project…** asks before a native
+download and binds it to the reviewed snapshot; the Properties Inspector shows a
+device's recorded load state read-only. No schema bump, no bus access.
+
+Integration: main's Overview labels every section, so the ported panels became plain
+blocks with `h4` titles inside main's cards (project information sits in Technical
+details); main's newer `http_group_members` fixture gained the new flag; the three
+real-server specs got a runner (`tools/verify_native_evidence.py`,
+`playwright.native-evidence.config.ts`, fictional schema-23 projects); the export
+dialog's Cancel is quiet, as in the catalogue update. Test-first: panel structure RED
+5 then GREEN, quiet Cancel RED 4/12 then 12/12. Mutants: 12 UI guards caught (one
+further mutant was equivalent); 8 Rust guards caught, two only after closing the test
+gaps they exposed (a parseable envelope with a stale SHA-256; the display-only open's
+historical flag). Gate on frozen `43341712`, 24 stages: 23 green — Web
+3164/0 across 222 files, native evidence 12/0 against a real server, notes,
+instructions and parameters 11/11 each, catalogue 10/10 and dialogs 14/14 on the
+production build, Rust 4201/0 with 194 ignored, Clippy, fmt, bindings, docs and five
+explicit-root xtask gates; the full fixture browser stage had 412 passed and the
+same 4 pre-existing `device-editor-layout.e2e.ts` failures (raw `DPST-9-1`) on a rerun
+of the same frozen candidate (the first attempt also hit two 30 s click timeouts in the
+untouched `device-download-scope.e2e.ts` at load ~15; 6/6 in isolation). Private
+corpus 143/143 (`tools/run_corpus_tests.py`); its first run caught a reference test
+that still expected zero counters after reopening, now updated to ADR-0113. The
+"Full historical import diagnostics" row and the loaded-state half of "Stored
+BusAccess/IP configuration" in the [follow-up matrix](status/2026-10-11-import-application-followups.md)
+are on main; showing stored BusAccess/IP data remains open. Self-review, not
+independent. [Evidence](evidence/native-evidence-port-2026-10-12.json).
+
 ## 2026-10-12 — AppImage no longer ships libwayland-client (issue #6)
 
 The alpha.9 AppImage aborted on Kubuntu 24.04 with `Could not create default EGL

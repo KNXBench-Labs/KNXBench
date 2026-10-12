@@ -670,6 +670,7 @@ Browsers click tirelessly, but intercepted answers are still intercepted answers
 | **[Telegram Flow behavior and navigation](../apps/knx-web/e2e/flow-navigation.e2e.ts)** | Checks Flow layouts, value expiry and navigation preserve exact context without sending bus writes. | Browser — intercepted API |
 | **[Synthetic Flow study browser](../apps/knx-web/e2e/flow-study.e2e.ts)** | Checks an isolated synthetic map supports keyboard interaction, freezing and motion-free value updates. | Browser — synthetic study |
 | **[Native naming and reopen acceptance](../apps/knx-web/e2e/rename.native.ts)** | Checks built browser and server naming survive conflicts and native reopen on synthetic data. | Explicit browser + built server |
+| **[Native evidence acceptance](../apps/knx-web/e2e/recorded-device-state.native.ts)** | Checks export privacy, modeled project information and recorded device state in the built browser against a real server on fictional data, read-only. | Explicit browser + built server |
 
 <details>
 <summary>Source modules for this category</summary>
@@ -744,7 +745,7 @@ These checks guard the workshop, not the bus.
 - **Docker release workflow contract:** [test_docker_release_workflow.py](../tools/tests/test_docker_release_workflow.py)
 - **Read-only conversion-exception analysis:** [test_analyze_cvexc.py](../tools/tests/test_analyze_cvexc.py)
 - **Container smoke acceptance:** [smoke-test.sh](../apps/knx-server/scripts/smoke-test.sh)
-- **Built-server naming and fictional-demo checks:** [verify_community_demos.js](../tools/verify_community_demos.js) · [verify_name_editing.py](../tools/verify_name_editing.py)
+- **Built-server naming and fictional-demo checks:** [verify_community_demos.js](../tools/verify_community_demos.js) · [verify_name_editing.py](../tools/verify_name_editing.py) · [verify_native_evidence.py](../tools/verify_native_evidence.py)
 
 </details>
 

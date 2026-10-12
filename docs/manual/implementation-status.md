@@ -16,6 +16,19 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Original import reports, retained payloads and read-only project facts (12 October 2026 source)
+
+Native files keep the complete original import report, so a reopened project shows
+**Historical import findings** with the original counts instead of "unavailable".
+The Overview also lists retained attachments and extension files (inert downloads)
+and the modeled project information; **Export project…** asks before a native
+download; the Properties Inspector shows a device's recorded load state. All of it is
+read-only and contacts no device
+([how to use it](user-guide/02-projects.md#review-the-complete-original-import-report),
+[limits](../KNOWN_LIMITATIONS.md#ported-native-import-evidence-2026-10-12)). Stored
+BusAccess/IP settings are not shown yet. This is newer than the published Alpha.9
+package, not a deployed update.
+
 ## Group-address members and download preparation (12 October 2026 source)
 
 A group address's members — communication-object links, not devices — can now be
@@ -316,7 +329,7 @@ gives five, with the measured counts behind them.
 | `.knxproj` at schema 11 (ETS4) and schema 21 | ✅ Implemented | Measured counts on real files — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
 | `.knxproj` at schema 23 | 🟡 Bounded evidence | Reference/private-original import and native `.knxdb` roundtrip/source reconciliation are evidenced; retained-uninterpreted information is not full module semantics. No ETS export roundtrip — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
 | `.knxproj` at schemas 12–14, 20, 22 | 🟡 Unverified sample coverage | Parser-family admission is not verification against real project files at those schemas — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
-| Import report with errors, warnings, unsupported constructs and conflicts | ✅ Implemented | Also available as JSON from the command line |
+| Import report with errors, warnings, unsupported constructs and conflicts | ✅ Implemented | Also available as JSON from the command line; since the 12 October source the complete original report is kept in native files |
 | Preserving opaque source data and reporting unsupported constructs | ✅ Implemented | See the import report and [data-integrity contract](../IMPORT_EXPORT.md); retained bytes do not imply editable semantics |
 | ZipCrypto-protected projects (ETS4/ETS5) | 🟡 Partial or experimental | Implemented and tested against synthetic fixtures only |
 | AES-protected projects (ETS6) | ❌ Not implemented | Refused by name — [§13](../KNOWN_LIMITATIONS.md#13-password-protected-projects-zipcrypto-ets4ets5-is-decrypted-aes-ets6-is-still-refused) |

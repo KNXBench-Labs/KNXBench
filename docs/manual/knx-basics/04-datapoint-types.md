@@ -30,10 +30,15 @@ it down to specifically "Switch." A handful of everyday examples:
 
 > **Note**
 >
-> KNXBench's own reference notation for a datapoint type internally looks like
-> `DPST-1-1` (or `DPT-1` when only the main type, no subtype, is known) — not the dotted
-> `1.001` form used above and in most product literature. Both name the same thing; if
-> you see `DPST-9-1` somewhere in KNXBench, that's `9.001`.
+> Current source shows names first: **Switch (1.001)** or **Schalten (1.001)**,
+> following the UI language. The monitor, group-address views and object editor
+> share this presentation. A main-only reference is shown as a family, such as
+> `9.*`; an unlisted subtype has its number but no invented name.
+> Technical references such as `DPST-9-1` remain in interchange/API data and
+> diagnostics, not the normal named display. In the object editor, expand
+> **Technical reference** if you need the exact stored identifier.
+> This source update is newer than the published Alpha.9 package.
+> [Presentation and preservation contract](../../contracts/dpt-selection.md).
 
 ## What happens when two devices disagree
 

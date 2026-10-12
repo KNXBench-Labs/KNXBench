@@ -17,6 +17,8 @@ import * as api from "./api";
 import type { BusWriteResponse, DptInputFormat } from "./api";
 import { useTranslate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
+import { useUiLanguage } from "./uiLanguage";
+import { DPT_OPTIONS, dptDisplay, retainedDptOptions } from "./dptLabels";
 
 /// What the parent (`BusMonitorPanel.tsx`) knows about this destination's
 /// DPT resolution *at the moment it was prefilled* — mirrors
@@ -99,6 +101,7 @@ export default function BusComposeForm({
   contextUnverified = false,
 }: BusComposeFormProps) {
   const t = useTranslate();
+  const [language] = useUiLanguage();
   const formatGa = useGroupAddressFormat();
   const [destination, setDestination] = useState(initialDestination);
   const [dpt, setDpt] = useState(initialResolution.kind === "single" ? initialResolution.dpt : "");
@@ -167,7 +170,7 @@ export default function BusComposeForm({
           setSendError(t("busCompose.noDptResolvedMessage"));
           return; // Rejected client-side — `fetch` is never called.
         case "conflict":
-          setSendError(t("busCompose.conflictingDptsMessage", { names: resolution.names }));
+          setSendError(t("busCompose.conflictingDptsMessage", { names: resolution.names.split(", ").map(raw => dptDisplay(raw, language)).join(", ") }));
           return; // Rejected client-side — `fetch` is never called.
         case "unknown":
           // No local basis to accept or reject — defer to the server's own
@@ -254,17 +257,22 @@ export default function BusComposeForm({
             aria-describedby={disabledReason}
           />
         </label>
-        <label>
+        <label className="bus-compose-dpt-field">
           {t("busCompose.dptLabel")}
-          <input
-            type="text"
+          <select
             className="bus-compose-dpt"
-            placeholder="DPST-1-1"
             value={dpt}
             onChange={(e) => setDpt(e.target.value)}
             disabled={sessionClosed || contextStale || contextUnverified}
-            aria-describedby={disabledReason}
-          />
+            aria-describedby={[disabledReason, "bus-compose-dpt-hint"].filter(Boolean).join(" ")}
+          >
+            <option value="">{t("busCompose.dptAutomatic")}</option>
+            {retainedDptOptions(initialResolution.kind === "single" ? initialResolution.dpt : "", dpt)
+              .map(raw => <option key={raw} value={raw} title={raw}>{dptDisplay(raw, language)}</option>)}
+            {DPT_OPTIONS.map(entry => <option key={entry.id} value={entry.id}>
+              {dptDisplay(entry.id, language)}
+            </option>)}
+          </select>
         </label>
         <label>
           {t("busCompose.valueLabel")}
@@ -304,6 +312,7 @@ export default function BusComposeForm({
           {t("busCompose.send")}
         </button>
       </div>
+      <p id="bus-compose-dpt-hint" className="bus-compose-hint">{t("busCompose.dptSelectionHint")}</p>
       {sendError && <span className="field-error bus-compose-error">{sendError}</span>}
       {sent && (
         <p className="bus-compose-sent">

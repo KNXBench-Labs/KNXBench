@@ -54,7 +54,8 @@ export KNX_AUTH_PASSWORD
 
 docker run -d --name knxbench \
   --restart unless-stopped \
-  -p 127.0.0.1:8484:8080 \
+  --network host \
+  -e KNX_PORT=8484 \
   -e KNX_AUTH_PASSWORD \
   -v knxbench-data:/data \
   knxbench/knxbench-server:latest
@@ -75,10 +76,15 @@ startup output:
 docker logs knxbench
 ```
 
-The example publishes the port on your host's loopback interface only. There is
-**one shared password**, not per-user access control. Use a trusted LAN or VPN;
-**do not expose this server directly to the public internet**. No password is not
-a shortcut: the server then binds to loopback inside the container.
+The Linux default uses **host networking**. With a password, the server listens
+on **all host interfaces on port 8484**, not only localhost. Restrict access to
+your trusted LAN/VPN with a firewall. There is **one shared password**, not
+per-user access control; **do not expose this server directly to the internet**.
+Without a password, it stays on the host's loopback interface.
+
+The source server and new source-built images default to 8484. The explicit
+`KNX_PORT=8484` also supports Alpha.9 and older published images. Dockerfiles
+cannot select runtime networking; keep `--network host` when creating the container.
 
 ## Tags and platforms
 
@@ -101,7 +107,7 @@ particularly for live-bus networking.
 | --- | --- |
 | `KNX_AUTH_PASSWORD` | Shared login password; enables HTTPS |
 | `KNX_AUTH_PASSWORD_HASH` | Alternative hashed credential; see the manual for creation and precedence |
-| `KNX_PORT` | Server port inside the container; default `8080` |
+| `KNX_PORT` | Listener port (also the host port in host mode); source default `8484`, explicitly set for older releases |
 | `KNX_DATA_DIR` | Persistent data directory; image default `/data` |
 | `/data` | Mount a named volume or chosen host directory here |
 
@@ -112,10 +118,10 @@ Never remove your data volume as part of a routine update.
 ## Talking to a real KNX bus
 
 Project editing needs no hardware. Discovery and normal tunnelling to a real
-KNXnet/IP gateway need **host networking on Linux**. Replace the quick-start
-container with one using `--network host` and `-e KNX_PORT=8484`; omit `-p`, which
-has no effect in host mode. **Host mode exposes the authenticated listener on the
-host's network interfaces**: restrict access to your trusted LAN/VPN with a firewall.
+KNXnet/IP gateway use **host networking on Linux**, already selected by the
+quick start. Keep `--network host`; there is no `-p` mapping. To change the
+listener port, change `KNX_PORT` and the browser URL together. Host mode gives
+the container access to the host network; it is not network isolation.
 
 Docker's default bridge does not carry discovery multicast onto the LAN. For a
 manually entered gateway, `KNX_TUNNEL_ROUTE_BACK=1` can allow tunnelling through

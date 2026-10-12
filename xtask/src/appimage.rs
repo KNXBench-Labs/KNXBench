@@ -92,6 +92,10 @@ fn read_json(path: &Path) -> Result<Value, String> {
         .map_err(|error| format!("cannot parse {}: {error}", path.display()))
 }
 
+/// Issue #6: the built image must not ship libwayland-client.
+const HOST_LIBRARY_CHECK: &str =
+    "tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage";
+
 fn verify_workflow(root: &Path) -> Result<(), String> {
     let path = root.join(".github/workflows/linux-appimage.yml");
     let source = fs::read_to_string(&path)
@@ -126,6 +130,15 @@ fn verify_workflow(root: &Path) -> Result<(), String> {
                 .is_some_and(|run| run.trim_end().ends_with(smoke_contract))
     }) {
         return Err("Linux AppImage smoke test must accept only timeout status 124".to_string());
+    }
+
+    if !steps.iter().any(|step| {
+        step["name"].as_str() == Some("Verify host-provided libraries are not bundled")
+            && step["run"].as_str().map(str::trim) == Some(HOST_LIBRARY_CHECK)
+    }) {
+        return Err(format!(
+            "Linux AppImage workflow must run `{HOST_LIBRARY_CHECK}`"
+        ));
     }
 
     let repository_context_error =
@@ -344,10 +357,46 @@ mod tests {
 
         fs::write(
             workflow,
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n        run: cargo tauri build\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{ github.repository }}\n",
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n        run: cargo tauri build\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }\n      - name: Verify host-provided libraries are not bundled\n        run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{ github.repository }}\n",
         )
         .unwrap();
         assert!(verify_workflow(dir.path()).is_ok());
+    }
+
+    fn host_library_fixture(check_step: &str) -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        let workflow_dir = dir.path().join(".github/workflows");
+        fs::create_dir_all(&workflow_dir).unwrap();
+        fs::write(
+            workflow_dir.join("linux-appimage.yml"),
+            format!("jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || {{ cat appimage-startup.log; exit 1; }}\n{check_step}  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{{{ github.repository }}}}\n"),
+        )
+        .unwrap();
+        dir
+    }
+
+    #[test]
+    fn release_workflow_requires_the_host_library_check() {
+        let expected = format!("Linux AppImage workflow must run `{HOST_LIBRARY_CHECK}`");
+        for step in [
+            "",
+            "      - name: Verify host-provided libraries are not bundled\n        run: echo skipped\n",
+            "      - name: Something else\n        run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage\n",
+            "      - name: Verify host-provided libraries are not bundled\n        run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage || true\n",
+        ] {
+            let dir = host_library_fixture(step);
+            assert_eq!(verify_workflow(dir.path()).unwrap_err(), expected, "{step}");
+        }
+        let dir = host_library_fixture(
+            "      - name: Verify host-provided libraries are not bundled\n        run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage\n",
+        );
+        assert!(verify_workflow(dir.path()).is_ok());
+    }
+
+    #[test]
+    fn repository_workflow_satisfies_the_appimage_contract() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        verify_workflow(root).unwrap();
     }
 
     #[test]
@@ -391,7 +440,7 @@ mod tests {
         fs::create_dir_all(&workflow_dir).unwrap();
         fs::write(
             workflow_dir.join("linux-appimage.yml"),
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_TOKEN: ${{ github.token }}\n        run: gh release view \"$GITHUB_REF_NAME\"\n",
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }\n      - name: Verify host-provided libraries are not bundled\n        run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_TOKEN: ${{ github.token }}\n        run: gh release view \"$GITHUB_REF_NAME\"\n",
         )
         .unwrap();
 

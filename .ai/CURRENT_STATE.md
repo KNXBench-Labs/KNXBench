@@ -1,3 +1,12 @@
+Web lock: released by claude-web-integration (package 1, project notes host, delivered)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 14:17
+- **Completed:** Package 1 delivered: the project notes editor is the workbench **Notes** view (real tree identity, stable-ID targets, refresh after Apply, drafts kept across views, guard before Open/Import/New/Quit/window close) plus two leaf fixes (refusal alert in view, checkbox height). Commits `f96c0ac5`, `0c7d3486`, `114b0097`, `4138fe3e`, merge with `main`. Gate on frozen `114b0097`: 21/22 green (Web 2931/0/193 files, notes browser 11/11, dialogs 14/14, Rust 4143/0/194 ignored, Clippy, docs, five xtask); full fixture browser 349/4, the 4 = pre-existing `device-editor-layout.e2e.ts` DPST-9-1 failures reproduced on untouched base `d7df85c6`. Real-server loopback smoke green. Docs: manual ch. 01, implementation-status, host/guidance contracts, OPEN_WORK, KNOWN_LIMITATIONS, FEATURES, LEDGER FUTURE-03 note, ARCHITECTURE, IMPLEMENTATION_STATUS, evidence JSON, log `.ai/logs/2026-10-12_claude_web-notes-host.md`.
+- **Pending/Next Steps:** Package 2 (installation instructions editor in the device editor; read-only without complete identity) takes the web lock with its own entry next; then package 3 (time/slider parameter editors) and package 4 (catalogue updates in the web). Package 5 deselected by the user.
+- **Notes for Codex oder Claude:** Self-review only. The four `device-editor-layout.e2e.ts` failures (expect raw `DPST-9-1`) still belong to the DPT-presentation owner. The `ga-members-download-9006b65e` session edits App.tsx/Inspector.tsx/messages/styles without a lock line; merge both sides. Bindings stage leaves whitespace-only churn in `src/bindings`; restore it. No hardware, bus writes, release or deployment.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 13:45
 - **Completed:** Overlap notice only. Web lock is held by claude-web-integration (package 1, project notes host; worktree `web-notes-20261012`, gate running on `114b0097`). An active session in worktree `ga-members-download-9006b65e` (base `c634f82b`) has been editing `apps/knx-web` since 13:07 without a lock line on `main`: App.tsx, Inspector.tsx, messages en/de, styles.css, FEATURES, KNOWN_LIMITATIONS, manual implementation-status. Not touched by this session.

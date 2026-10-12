@@ -31,6 +31,7 @@ pub mod name_recipe;
 pub mod note_edit;
 pub mod progress;
 pub mod project_history;
+pub mod project_payloads;
 pub mod project_readiness;
 pub mod project_seed;
 pub mod selective_import;

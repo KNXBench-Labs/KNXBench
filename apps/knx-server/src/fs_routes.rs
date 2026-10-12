@@ -206,7 +206,7 @@ impl HttpBody for TemporaryFileBody {
     }
 }
 
-async fn stream_temp_file(
+pub(crate) async fn stream_temp_file(
     tmp: tempfile::TempPath,
     chunk_bytes: usize,
 ) -> Result<Response, ApiError> {

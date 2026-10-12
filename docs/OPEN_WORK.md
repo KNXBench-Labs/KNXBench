@@ -264,24 +264,22 @@ The root's two formerly parked packages are delivered. The **documentation
 refresh and ideas/roadmap audit** were published as `696f25b6` (8 October); the
 `docs-refresh-20261008` worktree no longer exists.
 
-**Parked worktrees (checked 2026-10-12 against `5a33e95c`).** Six packages are
-kept on the owner's instruction; none is on the remote, none is merged. The
+**Parked work (triaged 2026-10-12; owner decisions the same day).** The
 [parked-work triage](status/2026-10-12-parked-work-triage.md) has the
-file-by-file main check, the `merge-tree` conflict maps and the reasoning:
+file-by-file main check, the `merge-tree` conflict maps and the decisions. Nothing
+below is on the remote or merged:
 
-| Worktree | What it holds | Recommendation |
+| Package | What it holds | Owner decision |
 | --- | --- | --- |
-| `native-evidence-20261011` | 7 locally accepted commits: durable native import reports (ADR-0113), CLI/source-report/payload catalogues, export-privacy consent, read-only project metadata and recorded device state; 10 conflicts | Adopt as one web-lock integration package |
-| `ux-feedback-20261010` | 13 locally accepted commits, UX AP1–AP5; ADR-0112 number collides with main; AP4 overlaps main's Project status cards; 10 conflicts | Adopt AP1/2/3/5, drop AP4 (owner confirms) |
-| `functions-sites-20261009` | Uncommitted KNX Functions (`MODEL-07`) on schema 12 (main is at 14); acceptance attempt 4 failed; 23 conflicts | Ask user (lean: preserve as WIP, restart later) |
-| `import-lifecycle-20261011` | Committed part on main; uncommitted, never-compiled initial native-write preflight | Ask user (lean: archive, restart fresh) |
-| `audit-findings-20261011` | Residue is an older large-history-image candidate; main has a later version | Drop |
-| `native-import-diagnostics-20261011` | Residue is fully on main (import-status `3d6c9d1f`) | Drop |
+| `native-evidence-20261011` (worktree) | 7 locally accepted commits: durable native import reports (ADR-0113), CLI/source-report/payload catalogues, export-privacy consent, read-only project metadata and recorded device state; 10 conflicts | Adopt as one web-lock integration package |
+| `ux-feedback-20261010` (worktree) | 13 locally accepted commits, UX AP1–AP5; ADR-0112 number collides with main; 10 conflicts | Adopt AP1/2/3/5; **AP4 dropped** (main's Project status cards cover it) |
+| `feature/functions-sites-20261009` (local branch only) | KNX Functions (`MODEL-07`) as one unreviewed `wip(functions)` commit `1154b72f` on schema 12 (main is at 14); acceptance attempt 4 failed | Kept as WIP; a later MODEL-07 goal restarts from it on the current schema |
+| Initial native-write preflight | Never-compiled draft from `import-lifecycle-20261011` | Archived as a local patch; to be built fresh. Worktree and branch removed |
+| `audit-findings-20261011`, `native-import-diagnostics-20261011` | Superseded / already on main | Dropped. Worktrees and branches removed |
 
-Two further worktrees hold residue that needs an owner decision:
+Two further worktrees hold residue that still needs an owner decision:
 `offline-naming-20261011` (an unaccepted device-naming design draft) and
 `data-tooling-stats-20261011` (a stale, unpublished ProjectStats refresh).
-No commit, merge or deletion of these is performed by the triage.
 
 - **Community evidence** (File → Analyze support gaps…) is in the repository,
   and its intake lives here (ADR-0091). The interim
@@ -392,7 +390,9 @@ to owner `later`. Routes naming removed goal files are kept as history.
   ignored work files, sha256 manifest) is backed up locally outside the
   repository. Local branches were left in place. The read-only interview
   scratch `$TMPDIR/devnav-ro` no longer exists. Remaining parked worktrees are
-  listed in section 2.
+  listed in section 2. After the owner's decisions the same day, four more
+  worktrees went (functions kept as a local WIP branch), and the 24 local
+  branches of all retired worktrees were deleted after an ancestor-of-main check.
 
 
 ### Schema23 review — scoped follow-up closed

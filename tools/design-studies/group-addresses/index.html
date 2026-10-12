@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; font-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>KNXBench · Gruppenadress-Labor</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23185ca5'/%3E%3Ctext x='8' y='24' fill='white' font-size='24' font-family='sans-serif'%3EK%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script src="model.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">K</span><strong>KNXBench</strong><span class="lab-tag">Labor</span></div>
+    <span class="project-title">Musterhaus Lindenweg <span>Fiktives Projekt</span></span>
+    <button id="theme" class="quiet" aria-label="Farbschema wechseln">Dunkelmodus</button>
+  </header>
+  <div class="study-notice"><span class="notice-dot" aria-hidden="true"></span><strong>Designstudie</strong> · Keine Projektdaten, keine Busverbindung, keine Bearbeitung. Alle Ansichten zeigen dieselben 36 fiktiven Adressen.</div>
+  <div class="shell">
+    <aside class="explorer" aria-label="Stabiler Project Explorer">
+      <h2>Project Explorer</h2>
+      <div class="explorer-project">⌂ Musterhaus Lindenweg</div>
+      <div class="explorer-muted">Gebäude</div><div class="explorer-muted">Topologie</div>
+      <div class="explorer-active">Gruppenadressen <span>36</span></div>
+      <nav id="explorer-ranges" aria-label="Gruppenbereiche"></nav>
+      <div class="explorer-foot">Der Explorer bleibt in allen vier Ansichten unverändert.<br><br>Bereich wählen: gemeinsamer Filter.<br>Adresse wählen: gemeinsamer Inspector.</div>
+    </aside>
+    <main class="workbench">
+      <div class="workspace-heading"><div><p class="subtitle">Vier Wege durch dasselbe Projekt</p><h1>Gruppenadressen</h1></div>
+        <label class="notation-label">Adressdarstellung<select id="notation"><option value="three">3-Level · 1/0/1</option><option value="two">2-Level · 1/1</option></select></label>
+      </div>
+      <div class="view-switch" role="group" aria-label="Darstellung wählen">
+        <button data-view="tree" aria-pressed="true"><span aria-hidden="true">▤</span> Baumtabelle</button>
+        <button data-view="columns" aria-pressed="false"><span aria-hidden="true">▥</span> Spaltenbrowser</button>
+        <button data-view="atlas" aria-pressed="false"><span aria-hidden="true">▦</span> Adressatlas</button>
+        <button data-view="matrix" aria-pressed="false"><span aria-hidden="true">⊞</span> Verknüpfungsmatrix</button>
+      </div>
+      <div class="concept-strip"><div><strong id="concept-title"></strong><p id="concept-description"></p></div><span id="concept-badge"></span></div>
+      <div class="toolbar">
+        <label class="search-label"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Name, Adresse, Bereich oder DPT suchen …" aria-label="Gruppenadressen suchen"></label>
+        <label class="filter-label"><span class="sr-only">Prüffilter</span><select id="filter" aria-label="Prüffilter"><option value="all">Alle Zustände</option><option value="conflict">DPT-Konflikte</option><option value="unknown">DPT unbekannt</option><option value="unlinked">Ohne Verknüpfung (bekannt)</option></select></label>
+        <button id="reset" class="quiet">Filter zurücksetzen</button>
+      </div>
+      <div class="context-bar"><nav id="breadcrumbs" aria-label="Aktueller Adressbereich"></nav><span id="result-count" role="status" aria-live="polite"></span></div>
+      <div id="selection-status" class="selection-status" hidden></div>
+      <section class="canvas" aria-label="Gruppenadress-Arbeitsfläche"><h2 id="workspace-title" class="sr-only" tabindex="-1">Gruppenadressen</h2><div id="workspace"></div></section>
+      <footer class="workspace-footer"><span id="view-hint"></span><button id="tasks-toggle" class="quiet" aria-expanded="false" aria-controls="tasks">Vergleichsaufgaben</button></footer>
+      <section id="tasks" class="tasks" hidden><h2>Probiere dieselben Aufgaben in jeder Ansicht</h2><ol><li>Finde <strong>Küche · Licht schalten</strong> und wechsle die Ansicht. Bleibt die Auswahl verständlich?</li><li>Vergleiche Lichtstatus und Helligkeit im Wohnzimmer.</li><li>Finde den DPT-Konflikt und die Adresse mit unbekannten Verknüpfungen.</li><li>Wechsle auf 2-Level. Die Adresse 1/0/1 wird zu 1/1, ihre Identität bleibt gleich.</li></ol><p>Was geht schneller? Wo verlierst du den Kontext? Welche Ansicht würdest du im Alltag wählen?</p></section>
+    </main>
+    <aside class="inspector" aria-label="Gemeinsamer Eigenschaften-Inspector"><div class="inspector-header"><h2>Eigenschaften</h2><span>Nur lesen</span></div><div id="inspector"></div></aside>
+  </div>
+  <noscript>Für die klickbaren Studien muss JavaScript aktiviert sein. Die Seite verwendet keine externen Dienste.</noscript>
+</body>
+</html>

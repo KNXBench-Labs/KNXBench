@@ -1,5 +1,28 @@
 # Research — Manufacturer and product data
 
+## 2026-10-12 — Catalogue update sources
+
+Read on 2026-10-12 through the public Zendesk Help Center API, because the
+HTML pages refuse non-browser clients (HTTP 403):
+
+- [Online Catalog](https://support.knx.org/hc/en-us/articles/360020682760-Online-Catalog) (article updated 2026-09-16T10:08:52Z, body
+  SHA-256 `eaf60bdb5102fe0a…`): a service KNX Association provides
+  free of charge to search online for KNX products on a KNX-hosted server;
+  the products are *exclusively managed by the respective KNX manufacturers*;
+  ETS checks for manufacturer updates automatically at a configurable
+  interval or via *Update now*.
+- [Import/Add products](https://support.knx.org/hc/en-us/articles/360022205039-Import-Add-products) (updated 2026-10-10T08:49:18Z, body
+  SHA-256 `f2644004d27ba630…`): product data is obtained *from within
+  ETS via the Online Catalog* or *from device manufacturers as individual
+  files*; `.knxprod` is the XML format since ETS4, `.vd?` the older ones.
+
+Not found: any documented public interface, endpoint or licence that lets a
+third-party tool query or download the Online Catalog. Manufacturer download
+pages (for example MDT's ETS product data list) publish individual `.knxprod`
+files with a version column. Consequence, [ADR-0117](../adr/0117-previewed-recoverable-catalogue-updates.md):
+KNXBench updates its catalogue only from files the user supplies and never
+contacts the Online Catalog.
+
 The manufacturer data model, legacy VD/PR files and product-scheme admission. Part of [RESEARCH](../RESEARCH.md), which holds the evidence
 tags (**[V]** verified here, **[D]** documented, **[A]** assumption), the
 section index and the sources. Section numbers are global and stable;

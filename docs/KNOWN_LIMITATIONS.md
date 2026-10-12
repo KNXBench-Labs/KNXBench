@@ -1,5 +1,14 @@
 # Known limitations
 
+## Catalogue updates come only from files you supply (2026-10-12)
+
+KNXBench never queries the KNX Online Catalog: no documented interface or
+terms for third-party tools were found ([research](research/product-database.md)).
+`knx products update` works on `.knxprod` files you download yourself and has
+no web UI yet. Programs whose ID already exists from another file are counted
+as ID conflicts but not listed per program. The backup is a full copy of the
+product database and is not deleted automatically. Restore is the CLI only.
+
 ## Project-status import links and unsaved-changes dialogs (2026-10-12)
 
 The Overview's **Show in log** links open the existing session log narrowed to

@@ -1609,6 +1609,19 @@ export const messages: Record<MessageKey, string> = {
   "workbench.topology": "Topologie",
   "workbench.addresses": "Gruppenadressen",
   "workbench.catalog": "Produktkatalog",
+  "workbench.notes": "Notizen",
+  "notes.target.installation": "Installation",
+  "notes.target.area": "Bereich",
+  "notes.target.line": "Linie",
+  "notes.target.buildingPart": "Gebäudeteil",
+  "notes.target.device": "Gerät",
+  "notes.target.groupRange": "Gruppenbereich",
+  "notes.target.groupAddress": "Gruppenadresse",
+  "notes.identityUnavailable": "Notizen brauchen ein auf diesem Server geöffnetes Projekt mit vollständiger Projektidentität. Diese Ansicht hat keine, deshalb wird hier nichts gelesen oder geändert.",
+  "notes.draftGuard.title": "Notizentwurf verwerfen?",
+  "notes.draftGuard.message": "Ein Notizentwurf ist noch nicht geprüft und übernommen. Er existiert nur in diesem Fenster und geht verloren, wenn du weitermachst.",
+  "notes.draftGuard.keep": "Weiter bearbeiten",
+  "notes.draftGuard.discard": "Entwurf verwerfen und weiter",
   "workbench.device": "Gerät",
   "workbench.unassigned": "Nicht zugeordnet",
   "workbench.emptyStructure": "Noch keine Einträge. Struktur hier oder im Projektbaum anlegen.",
@@ -2016,6 +2029,8 @@ export const messages: Record<MessageKey, string> = {
     "Die vier Ansichten sind Übersicht, Gebäude, Topologie und Gruppenadressen. Die Übersicht fasst das Projekt zusammen und zeigt, was der letzte Import bemängelt hat. Gebäude und Topologie sind zwei Ordnungen über denselben Geräten. Gruppenadressen ist die Tabelle der Adressen samt ihren Verknüpfungen.",
   "help.topic.workbench.p3":
     "Beide Seitenbereiche lassen sich über die Schaltflächen darüber einklappen und an ihrer inneren Kante in der Breite ziehen. Der Produktkatalog öffnet sich aus der Navigation und fügt Geräte aus einer installierten Herstellerdatenbank ein.",
+  "help.topic.workbench.p4":
+    "Notizen, ebenfalls in der Navigation, ist das technische Notizbuch des Projekts: Klartextnotizen zum Projekt oder zu einem seiner Teile. Jede Änderung prüfst du zuerst, übernommen wird sie erst nach deiner Bestätigung. Eine Notiz zu übernehmen ist nicht dasselbe wie die Projektdatei zu speichern.",
 
   "help.topic.buildings.title": "Gebäude, Geschosse und Räume",
   "help.topic.buildings.p1":

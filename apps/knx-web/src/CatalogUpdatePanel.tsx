@@ -130,9 +130,9 @@ export default function CatalogUpdatePanel(props: { onInstalled: () => void | Pr
       <p className="inspector-description">{t("catalogUpdate.bindings")}</p>
       {phase.error !== null && <p className="field-error" role="alert">{t("catalogUpdate.error", { message: phase.error })}</p>}
       <div className="catalog-update-actions">
-        <button type="button" className="dialog-action dialog-action--primary" disabled={phase.applying} onClick={() => { void apply(); }}>
+        <button type="button" disabled={phase.applying} onClick={() => { void apply(); }}>
           {phase.applying ? t("catalogUpdate.applying") : t("catalogUpdate.apply")}</button>
-        <button type="button" className="dialog-action dialog-action--secondary" disabled={phase.applying}
+        <button type="button" className="catalog-update-cancel" disabled={phase.applying}
           onClick={() => setPhase({ kind: "idle" })}>{t("catalogUpdate.cancel")}</button>
       </div>
     </div>}

@@ -1093,6 +1093,14 @@ main {
 .catalog-update-status--alreadyInstalled { color: var(--knx-muted); }
 .catalog-update-warning { color: var(--knx-warning-color); }
 .catalog-update-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+/* Cancel loses nothing, so it stays quiet next to the install. */
+.catalog-update-actions .catalog-update-cancel {
+  color: var(--knx-foreground);
+  background: var(--knx-bg);
+  border: 1px solid var(--knx-border);
+  box-shadow: none;
+}
+.catalog-update-actions .catalog-update-cancel:hover:not(:disabled) { box-shadow: none; border-color: var(--knx-accent); }
 .catalog-backups summary { cursor: pointer; }
 .catalog-backup-list { margin: 0.5rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; }
 .catalog-backup-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.6rem; min-width: 0; }

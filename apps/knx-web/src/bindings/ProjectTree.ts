@@ -33,6 +33,10 @@ warnings: number,
  */
 import_report_available?: boolean,
 /**
+ * Original findings restored from native evidence, not a current assessment.
+ */
+import_report_historical?: boolean,
+/**
  * Always `false` straight out of [`build_project_tree`] — this crate
  * never sees a `CommandStack`. The desktop shell overlays the real
  * value from its own `CommandStack` after every command/undo/redo.

@@ -36,6 +36,7 @@ fn private_instances_read_their_own_stored_values() {
     )
     .unwrap_or_else(|error| match error {
         knx_app::import::AppError::Import(_) => panic!("private project parser refused import"),
+        knx_app::import::AppError::Evidence(_) => panic!("private import evidence refused"),
         knx_app::import::AppError::ProductDb(_) => {
             panic!("private product ingestion refused import")
         }

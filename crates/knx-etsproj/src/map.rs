@@ -163,7 +163,7 @@ fn map_with_ids(
     source_path: &str,
     mut ids: IdAllocators,
 ) -> Result<MapOutput, IdAllocationError> {
-    if document.schema_version >= 21 {
+    if crate::known::uses_ets6_content_model(document.schema_version) {
         return map_v21(document, source_path, ids);
     }
 
@@ -241,6 +241,7 @@ fn map_v21(
         let short_group_addresses = short_group_address_ids(installation, &tables);
         let (mapped, installation_retained) = map_installation_v21(
             installation,
+            document.schema_version,
             source_path,
             &tables,
             &short_group_addresses,
@@ -846,6 +847,7 @@ fn map_com_object(
 #[allow(clippy::too_many_arguments)]
 fn map_installation_v21(
     installation: &SourceInstallation,
+    schema_version: u32,
     source_path: &str,
     tables: &IdTables,
     short_group_addresses: &IdTable<GroupAddressId>,
@@ -917,7 +919,7 @@ fn map_installation_v21(
                     ids,
                     devices,
                     &mut parameters,
-                    &crate::xpath::device_v21(&device.id),
+                    &crate::xpath::line_device(schema_version, &device.id),
                     problems,
                     counts,
                 )?;

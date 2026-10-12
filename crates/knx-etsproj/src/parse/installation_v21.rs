@@ -161,7 +161,7 @@ const SELF_RECURSIVE: &[&str] = &["GroupRange", "BuildingPart", "Space"];
 /// Collapses consecutive duplicate segments for [`SELF_RECURSIVE`] elements
 /// so a recursive element's path matches the single entry the
 /// known-element table registers for it, however deep the nesting.
-fn collapsed(stack: &[String]) -> String {
+fn collapsed(stack: &[String], schema_version: u32) -> String {
     let mut out: Vec<&str> = Vec::with_capacity(stack.len());
     for seg in stack {
         if out.last() == Some(&seg.as_str()) && SELF_RECURSIVE.contains(&seg.as_str()) {
@@ -170,11 +170,14 @@ fn collapsed(stack: &[String]) -> String {
         out.push(seg);
     }
     let path = format!("/{}", out.join("/"));
-    // Both placements use DeviceInstance_t (Schema23 §1.2.4.6).
-    let path = path.replace(
-        "/Topology/UnassignedDevices/DeviceInstance",
-        "/Topology/Area/Line/Segment/DeviceInstance",
-    );
+    // Both placements use DeviceInstance_t (Schema23 §1.2.4.6); the
+    // line-side path has a `Segment` level only from schema 21 on.
+    let line_device = if crate::known::has_segment_level(schema_version) {
+        "/Topology/Area/Line/Segment/DeviceInstance"
+    } else {
+        "/Topology/Area/Line/DeviceInstance"
+    };
+    let path = path.replace("/Topology/UnassignedDevices/DeviceInstance", line_device);
     // Node_t recursively contains Nodes (§1.2.5.21–23). Match only that
     // exact structural vocabulary; the reported/captured path stays uncollapsed.
     if let Some((prefix, suffix)) = path.split_once("/GroupObjectTree/") {
@@ -359,7 +362,7 @@ fn open_element<'a>(
 
     path_stack.push(local.clone());
     let xpath = real_path(path_stack);
-    let matching_path = collapsed(path_stack);
+    let matching_path = collapsed(path_stack, schema.version);
     path_stack.pop();
 
     let known = known_attributes(schema, &matching_path);

@@ -281,6 +281,19 @@ pub fn build(
                 .to_string(),
         });
     }
+    // Schema 20 (ETS 5.7) is read with the ETS6 rules minus `Segment`. Its
+    // evidence is three public sample projects and nothing else, so the
+    // report says so instead of letting a clean import imply more.
+    if detected.version.0 == 20 {
+        unsupported.push(UnsupportedFeature {
+            what: "ETS 5.7 project format (schema 20)".to_string(),
+            consequence: "read with the ETS6 (schema 21/23) rules without the Segment \
+                          level; evidenced against three public ETS 5.7 sample projects \
+                          only, not against a broad range of real installations — see \
+                          KNOWN_LIMITATIONS.md §177"
+                .to_string(),
+        });
+    }
 
     let mut errors: Vec<ImportError> = Vec::new();
     for p in &validation.errors {

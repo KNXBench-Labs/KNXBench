@@ -13,8 +13,11 @@ flag existed (the no-flag baseline passed), then all 35 `knx-mcp` tests pass
 bypass, first token check removed, tools listed without the flag) each fail
 their test, and sources were restored byte-for-byte. Lockfile change: two
 edges (`knx-mcp`→`knx-edit`, `rmcp`→`url`), no new package. Self-review, not
-independent. Not tested with a third-party MCP client; no bus, release or
-deployment change. [Evidence](evidence/mcp-name-recipe-writer-2026-10-12.json).
+independent. Fresh 23-stage owner acceptance on the merge with `main` `65d8227f`
+passes on frozen sources: `knx-mcp` 35/0, Rust 4138/0 with 194 ignored, Web
+2906/0 across 191 files, Clippy, binaries, docs and five explicit-root gates.
+Not tested with a third-party MCP client; no bus, release or deployment change.
+[Evidence](evidence/mcp-name-recipe-writer-2026-10-12.json).
 
 ## 2026-10-12 — Connection matrix object inventory
 

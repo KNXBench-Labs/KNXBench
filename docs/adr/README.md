@@ -97,3 +97,5 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0096](0096-devices-navigation-and-catalogue-batch.md) | Devices navigation and a snapshot-bound catalogue batch | Accepted implementation decision; local delivery/publication separate | 2026-10-08 |
 | [0097](0097-docker-hub-release-image.md) | Release tags publish a multi-arch server image to Docker Hub | Accepted (first publication needs credentials and the next tag) | 2026-10-09 |
 | [0114](0114-client-release-discovery.md) | Client release discovery is notification-only | Accepted implementation decision | 2026-10-11 |
+| [0115](0115-offline-application-edit-boundary.md) | Offline application edits live in `knx-edit`, below App | Accepted implementation decision | 2026-10-12 |
+| [0116](0116-opt-in-mcp-name-recipe-writer.md) | Opt-in, human-confirmed MCP writer for literal group-address names | Accepted implementation decision | 2026-10-12 |

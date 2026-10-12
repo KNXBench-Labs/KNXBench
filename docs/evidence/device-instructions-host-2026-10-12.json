@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "date": "2026-10-12",
+  "scope": "device-editor host for the installation instructions editor, read-only mode, and Save-proof drafts in the notes and instructions leaves; web UI only",
+  "base": "origin/main 2064fa59 (merged)",
+  "gated_candidate": "c83a2f268d225db1a54545ddc0c4d7b1f87d5bdc",
+  "source_hashes": {
+    "apps/knx-web/e2e/device-instructions.e2e.ts": "3cca619e5e40465d784cb987b13b900d16bd6fbf3037dd905193e98899bf0cea",
+    "apps/knx-web/e2e/notes-workspace.e2e.ts": "45b902e6a8f5b07fc476c6e8af97047a3f400ca1dfe148765acaaadc18df39bb",
+    "apps/knx-web/playwright.instructions.config.ts": "2672e1e709326cc8d8beaf17ce974767c606cf1a836d2e141c448897acbfb298",
+    "apps/knx-web/src/App.test.tsx": "c157ce7a9a404b9f94150386218ee67ee03909d466704918077396bf0de9b84f",
+    "apps/knx-web/src/App.tsx": "6214585e6ea0cad5d1765df4c17d54532383a9d91f03e486ed681ea359788cf4",
+    "apps/knx-web/src/DeviceInstructionsPanel.test.tsx": "043e339c8685bddf391ccc3b1e69495ca4774f06f279c354a367849dbc192224",
+    "apps/knx-web/src/DeviceInstructionsPanel.tsx": "ea611bbeb8b162b5f17f50e073d30faf4c61f9c768aaf267c8993fb989db995b",
+    "apps/knx-web/src/DeviceWorkspace.test.tsx": "ae4b9b8d29806aabd72f802c8478d15c19466b7e668a571bcb8287835362528e",
+    "apps/knx-web/src/Inspector.tsx": "be1483c793aebf7f8162a3162eba5d487bceec0a939510241b5ae62125d133de",
+    "apps/knx-web/src/NoteDraftGuardDialog.tsx": "82a528e87c539ed371989842ddc7340562f5400328d4af3cc6022fbecff92e85",
+    "apps/knx-web/src/features/notes/ProjectNotesEditor.test.tsx": "299be491c321c3495c3a0882448cae29ef89b91b05f52612bc1a5ae63e26d2f4",
+    "apps/knx-web/src/features/notes/ProjectNotesEditor.tsx": "cf8377b1e9a1445a7343d168705ef94e7e9a2b0b38cb9e976e8b9c12fb14de1c",
+    "apps/knx-web/src/features/rtf/InstructionEditor.test.tsx": "12111f852014553be071e159b130c94b086e427b27c83ed7007b1a2e589f64b8",
+    "apps/knx-web/src/features/rtf/InstructionEditor.tsx": "7f92f9a153e26a68a889c46a68494b6f3a33ee451f8941fbd17e8c56fc8bc129",
+    "apps/knx-web/src/features/rtf/copy.ts": "1f5e821c9a21e3de0b5e52432401d95933fb57a5cff6f9c65edf520c7ceef187",
+    "apps/knx-web/src/messages/de.ts": "1f3a9504ff4575d7179268e250649b20760f88c12acdee2bfb3d7c7132a509b8",
+    "apps/knx-web/src/messages/en.ts": "1a0f4349c83c46c8f01017ba13898ff7e587d2fd2fd70be3ded19209e539d76e",
+    "apps/knx-web/src/notesHost.ts": "b4a10f8abc88baaf702a2f585d53d21993a3411b0283b80820f388c5fcef1446",
+    "apps/knx-web/src/snapshotIdentity.ts": "0594d9607d0176be19fecf35cc6570eb3aa478db3fe7ef8b84b03cf8a268b800",
+    "apps/knx-web/tsconfig.instructions-fixtures.json": "8fd70e25b7d1d2f6e292b3aacc3ef4f482e884601ae8e03f78e38799e5a30641"
+  },
+  "review_kind": "in-session self-review, not independent",
+  "finding": "Save bumps snapshot_revision (observed 4 -> 5 on a real server); a dirty notes/instructions draft then became a conflict whose only exit discarded it. Fixed: re-read and rebase when the server content is unchanged; still conflict when it changed.",
+  "test_first": {
+    "InstructionEditor read-only": "RED 2/14 then GREEN",
+    "DeviceInstructionsPanel": "RED 0/7 against a null stub then 7/7",
+    "DeviceWorkspace tab": "RED 3/24 then 24/24 (tab pins updated)",
+    "App instructions draft guard": "RED with wiring removed, GREEN with it",
+    "rebase (both leaves)": "RED 4 failing then GREEN; one existing instructions test kept its guarantees with the conflict assertion replaced"
+  },
+  "guard_mutations": [
+    "leaf read-only edit guard",
+    "leaf read-only hides actions",
+    "host incomplete identity",
+    "host refresh after apply",
+    "host unmount clean report",
+    "lazy tab mount",
+    "notes rebase content check",
+    "notes rebase context check",
+    "instructions rebase content check"
+  ],
+  "guard_mutations_caught": "9/9",
+  "canonical_source_restored": true,
+  "gate": {
+    "stages_green": 23,
+    "stages_failed": 1,
+    "web_vitest": {
+      "passed": 2998,
+      "failed": 0,
+      "files": 199
+    },
+    "browser_notes": "11/11",
+    "browser_instructions": "11/11 (EN/DE, Porcelain/Graphite, 1440/400, stale and persistence refusals, read-only)",
+    "browser_dialogs": "14/14",
+    "browser_fixtures": {
+      "passed": 379,
+      "failed": 4,
+      "failures": "device-editor-layout.e2e.ts x4 expecting raw DPST-9-1; same as untouched base d7df85c6"
+    },
+    "rust": {
+      "passed": 4145,
+      "failed": 0,
+      "ignored": 194
+    },
+    "clippy": "pass",
+    "fmt": "pass",
+    "bindings": "unchanged (whitespace churn restored)",
+    "docs": "checker pass + 12 unit tests",
+    "xtask_explicit_root": [
+      "check-layering",
+      "headers ok: 975 files with a well-formed header, 155 without one (ceiling 155), 42 generated files skipped",
+      "anchors ok: 572 links checked across 273 markdown files, none dead",
+      "check-ledger",
+      "check-corpus-gates"
+    ],
+    "frozen_after": "HEAD and index manifest unchanged"
+  },
+  "real_server_smokes": {
+    "isolation": "user+network namespace with only lo; HOME/XDG_*/KNX_DATA_DIR in task scratch",
+    "instructions": {
+      "input": "synthetic fictional Schema23 .knxproj with RTF InstallationHints, imported through the UI",
+      "checks": [
+        "imported RTF hints shown as literal text",
+        "bold run rendered",
+        "preview does not mutate",
+        "server holds the override, original preserved",
+        "workbench identity followed the apply",
+        "undo returns to the imported original in the UI",
+        "redo restores the override in the UI",
+        "saved file exists",
+        "a draft typed before Save survives it",
+        "refused apply changes nothing",
+        "refused draft is retained",
+        "project still clean after the refusal",
+        "reopened file keeps the override and the original",
+        "no page errors"
+      ],
+      "all_ok": true
+    },
+    "notes": {
+      "checks": [
+        "notes view opened with no notes",
+        "preview does not mutate",
+        "server has the literal note",
+        "workbench identity followed the apply",
+        "undo removes the note on the server",
+        "redo restores the note on the server",
+        "saved file exists",
+        "a note draft typed before Save survives it",
+        "refused apply changes nothing",
+        "refused draft is retained",
+        "reopened file keeps both notes in order with literal text",
+        "no page errors"
+      ],
+      "all_ok": true
+    }
+  },
+  "visual_review": "EN/DE Porcelain/Graphite 1440/400 frames inspected directly on the merged UI",
+  "limitations": "see KNOWN_LIMITATIONS 'Installation instructions tab and Save-proof drafts (2026-10-12)'"
+}

@@ -72,6 +72,11 @@ fn corrupt_duplicate_future_and_malformed_records_are_refused_without_mutation()
     let mut corrupt = entry.clone();
     corrupt.bytes[0] ^= 1;
     variants.push(vec![corrupt]);
+    // A parseable envelope whose recorded hash no longer matches: only the
+    // SHA-256 check can refuse it (flipping byte 0 already breaks the JSON).
+    let mut stale_hash = entry.clone();
+    stale_hash.sha256 = "0".repeat(64);
+    variants.push(vec![stale_hash]);
     let mut bad_version = entry.clone();
     replace_envelope(&mut bad_version, |v| v["version"] = serde_json::json!(2));
     variants.push(vec![bad_version]);

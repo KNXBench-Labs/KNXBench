@@ -60,8 +60,8 @@ recreate.
 
 ## What the server needs from the network
 
-The web/Docker server is a plain HTTP service. It needs its port reachable
-from wherever your browser runs — `8484` in the examples in
+The web/Docker server speaks HTTPS by default when a password is configured.
+It needs its port reachable from wherever your browser runs — `8484` by default in
 [Installation](04-installation.md), or whatever you choose to set `KNX_PORT`
 to. It needs no other inbound network access. Which interface it binds depends
 on one thing only: with a password configured it listens on `0.0.0.0`, without
@@ -93,7 +93,9 @@ KNXnet/IP Route Back.
 
 > **Tip**
 >
-> The verified recommendation is Linux Docker Engine with `--network host`.
+> The default recipes use Linux Docker Engine with `--network host` (no `-p`).
+> With a password the listener is reachable on all host interfaces; restrict it
+> to a trusted LAN/VPN with your firewall. Without a password it stays on host loopback.
 > Docker Desktop 4.34 and later has an opt-in host-networking feature, but
 > KNXBench has not verified that layer for multicast discovery. Linux-first
 > remains the supported boundary.

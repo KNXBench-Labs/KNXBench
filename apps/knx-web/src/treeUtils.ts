@@ -29,6 +29,12 @@ export function flattenBuildingParts(
 // building — the same id, same fields, since both come from one
 // `build_device_node` call in knx-projection. Deduplicated by id so the
 // search index lists it once.
+/** The running server process and project load a snapshot belongs to — not
+ * its revision: edits keep the key, opening or replacing a project changes it. */
+export function projectContextKey(tree: ProjectTree): string {
+  return `${tree.server_incarnation ?? "offline"}/${tree.project_incarnation ?? "unbound"}`;
+}
+
 export function collectDevices(tree: ProjectTree): Map<number, DeviceNode> {
   const devices = new Map<number, DeviceNode>();
   for (const inst of tree.installations) collectInstallationDevices(inst, devices);

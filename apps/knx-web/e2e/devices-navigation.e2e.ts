@@ -132,11 +132,12 @@ for (const language of ["en", "de"] as const) {
     const state = await intercept(page, language); await openProject(page, language);
     await page.getByRole("navigation", { name: m["workbench.navigation"], exact: true }).getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
     await page.locator(".address-table .table-select").first().click();
-    await expect(page.locator(".ga-linked-devices .device-link")).toHaveCount(1);
-    await page.locator(".address-links-panel .device-link").click();
+    // The Inspector lists the address's members (one link here), like the table.
+    await expect(page.locator(".inspector .ga-members .device-link")).toHaveCount(1);
+    await page.locator(".ga-workspace .address-links-panel .device-link").click();
     await expect(page.locator(".device-workspace h2")).toHaveText("Actuator 1");
     await page.locator(".device-editor-navigation button").first().click();
-    await page.locator(".ga-linked-devices .device-link").click();
+    await page.locator(".inspector .ga-members .device-link").click();
     await expect(page.locator(".device-workspace h2")).toHaveText("Actuator 1");
     expect(state.unexpected).toEqual([]);
   });

@@ -2254,6 +2254,17 @@ into the list at all.
 <a id="22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback--resolved-2026-09-20"></a>
 ## 22. One shared server password, no per-user rights or internet-security claim
 
+**Deployment-default update (2026-10-12, newer source).** The standalone
+server and source-built image default to port 8484. Linux run/update recipes
+now choose host networking, not loopback-only bridge publication. With a
+password the authenticated listener is reachable on all host interfaces;
+restrict access to a trusted LAN/VPN with a firewall. Without a password,
+it remains host-loopback-only. Dockerfiles cannot select network mode;
+`--network host` is required at container creation and `-p` has no effect
+there. Published Alpha.9/older images retain their original defaults, so
+downloaded-image recipes explicitly set `KNX_PORT=8484`. Existing containers
+are not automatically recreated. [Current networking guide](manual/user-guide/11-web-and-docker.md#networking).
+
 **Resolved 2026-09-20** ([ADR-0026](adr/0026-server-authentication-or-loopback.md)).
 The heading and the anchor above are kept so existing links still resolve;
 what follows is what is true now, including the parts of the old

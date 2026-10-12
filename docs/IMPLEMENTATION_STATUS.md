@@ -1,3 +1,23 @@
+## 2026-10-12 — Port 8484 and Linux host-network deployment defaults
+
+- Standalone server fallback and Docker `ENV`/`EXPOSE` now use **8484**;
+  explicit valid ports and invalid-value fallback behavior are preserved.
+- README, Docker Hub description, installation, run/update/authentication
+  recipes and troubleshooting consistently choose `--network host`, no `-p`.
+  Explicit `KNX_PORT=8484` also supports older published images. The smoke test
+  uses host networking on its own configurable test port, not the live 8484 service.
+- Authenticated host-mode access binds all host interfaces; firewall/LAN/VPN
+  scope and local-only no-password behavior are explained. Desktop/private dev
+  listener selection is unchanged. See the [deployment guide](manual/user-guide/11-web-and-docker.md#networking)
+  and [ADR amendment](adr/0097-docker-hub-release-image.md#2026-10-12-amendment--linux-deployment-defaults).
+- Source self-review; server tests **814 passed / 0 failed / 47 ignored**,
+  strict server Clippy/build/fmt, three actual isolated-binary startup/health
+  tests, five recipe regressions, five release-workflow and twelve documentation
+  checker regressions pass. Five fresh explicit-root repository gates and
+  documentation checks pass. No private-corpus, live-bus or new release claim.
+- Container-image build/default-listener/host-network smoke acceptance is
+  a separate follow-up; the existing user container is not replaced.
+
 ## 2026-10-12 — Bounded offline literal naming recipe
 
 Explicitly selected stable group-address IDs receive exact prefix + original name

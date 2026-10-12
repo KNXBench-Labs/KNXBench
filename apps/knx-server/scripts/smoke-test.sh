@@ -7,7 +7,7 @@
 #
 #   KNXBENCH_IMAGE              test this image instead of building one
 #                               (the Docker release workflow passes its build)
-#   KNXBENCH_SMOKE_PORT         host port to publish (default 18080)
+#   KNXBENCH_SMOKE_PORT         host-network listener port (default 18080)
 #   KNXBENCH_REFERENCE_PROJECT  optional .knxproj to import as a last step
 set -euo pipefail
 
@@ -31,8 +31,8 @@ version="$(docker run --rm "$image" --version)"
 test -n "$version" || { echo "--version printed nothing" >&2; exit 1; }
 echo "image reports: $version"
 
-# ADR-0026: without a password the server binds 127.0.0.1 inside its own
-# network namespace, so -p would publish a port nothing listens on. The
+# Mirror the Linux host-network recipe, on a separate port rather than 8484.
+# A password enables HTTPS and the authenticated API (ADR-0026/0088). The
 # hash is produced by the image itself, which also smoke-tests
 # --hash-password; the password never reaches an argument vector.
 smoke_password="smoke test password"
@@ -51,7 +51,10 @@ data_dir="$(mktemp -d)"
 jar="$(mktemp)"
 cid=""
 cleanup() {
-  if [[ -n "$cid" ]]; then docker rm -f "$cid" >/dev/null 2>&1 || true; fi
+  if [[ -n "$cid" ]]; then
+    docker stop "$cid" >/dev/null 2>&1 || true
+    docker rm "$cid" >/dev/null 2>&1 || true
+  fi
   docker run --rm --entrypoint /bin/chown -v "$data_dir:/data" "$image" \
     -R "$(id -u):$(id -g)" /data >/dev/null 2>&1 || true
   rm -rf "$data_dir" "$jar"
@@ -63,7 +66,7 @@ if [[ -n "$reference_project" ]]; then
   cp "$reference_project" "$data_dir/$reference_name"
 fi
 
-cid=$(docker run -d -p "127.0.0.1:${port}:8080" \
+cid=$(docker run -d --network host -e KNX_PORT="$port" \
   -e KNX_AUTH_PASSWORD_HASH="$auth_hash" \
   -v "$data_dir:/data" "$image")
 

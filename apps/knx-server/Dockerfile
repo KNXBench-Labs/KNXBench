@@ -24,12 +24,13 @@ COPY --from=backend /src/target/release/knx-server /usr/local/bin/knx-server
 COPY --from=frontend /src/dist /app/frontend
 ENV KNX_STATIC_DIR=/app/frontend
 ENV KNX_DATA_DIR=/data
-ENV KNX_PORT=8080
+ENV KNX_PORT=8484
 VOLUME /data
-EXPOSE 8080
-# `POST /api/bus/discover` sends KNXnet/IP multicast. Docker's default bridge
-# does not carry that request onto the LAN, so run this image with
-# `--network host` on Linux for any bus work. Through the bridge a tunnel gets
+EXPOSE 8484
+# Linux default run recipe: docker run --network host ... (no -p).
+# Network mode is selected at container creation, not by the Dockerfile.
+# `POST /api/bus/discover` sends KNXnet/IP multicast, which Docker's bridge
+# does not carry onto the LAN. Through the bridge a tunnel gets
 # no answer either, because the gateway replies to the private container
 # address, unless KNX_TUNNEL_ROUTE_BACK=1 asks it to answer the packet's
 # source. See docs/KNOWN_LIMITATIONS.md #79 and #155.

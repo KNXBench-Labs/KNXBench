@@ -12,7 +12,11 @@ third-party interface, so only user-supplied files are used.
 Test-first on frozen sources: product-DB suite RED 0/4 (unimplemented) then
 4/4; CLI RED (usage text) then 1/1. Four named mutants (preview writing the
 live file, token bypass, skipped backup, broken version classification) each
-fail their test, sources restored. Self-review, not independent.
+fail their test, sources restored. A first full gate stopped at Clippy (two
+style lints); after a lint-only fix the fresh 25-stage owner gate passes on
+frozen sources: catalogue 4/0 and CLI 1/0, Rust 4143/0 with
+194 ignored, Web 2906/0 across 191 files, Clippy, binaries, docs and five
+explicit-root gates. Self-review, not independent.
 [Evidence](evidence/catalogue-update-2026-10-12.json).
 
 ## 2026-10-12 — Opt-in MCP literal rename writer (AP6)

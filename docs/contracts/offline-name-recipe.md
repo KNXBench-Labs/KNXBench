@@ -6,7 +6,9 @@ repository gates. Separately strengthened service12/0 and five named source
 mutants prove filled undo/redo refusal and independent incarnation protection.
 Current canonical source is restored; fresh final assembly18 passes on strengthened
 inputs. Integrated documentation8 also passes with exact accepted runtime/test equality.
-Normal publication/readback remains pending.
+Source package normal publication/readback on main `f70183f0` is verified: local,
+tracking and live source refs match and14 owned blobs match committed bytes.
+No release/deployment or broader automation completion follows.
 [Evidence](../evidence/offline-name-recipe-2026-10-12.json) keeps scopes separate.
 
 Concrete repetition: explicitly ordered stable GroupAddressIds across existing

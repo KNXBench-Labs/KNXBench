@@ -51,7 +51,7 @@
     "canonicalRestored": true
   },
   "review": "In-session source/security self-review, not independent",
-  "pending": "Normal publication, exact remote/source/blob readback and closure archive; assembled and integrated documentation gates actually accepted",
+  "pending": null,
   "limitations": [
     "Explicit IDs only; max256 selections/4096 bytes per affix/1MiB combined before-after text",
     "Native working history, never implicit root Save; no-op neither writes nor consumes redo",
@@ -217,5 +217,13 @@
     ],
     "inputsFrozen": true,
     "acceptedOwnerRuntimeAndTestsEqual": true
+  },
+  "publication": {
+    "sourcePackageCommit": "f70183f0cc4939d9a147bbea39d3f1883e04f8d6",
+    "target": "refs/heads/main",
+    "localTrackingLiveEqualAtReadback": true,
+    "ownedBlobReadbackCount": 14,
+    "normalPush": true,
+    "rootNotSynchronized": true
   }
 }

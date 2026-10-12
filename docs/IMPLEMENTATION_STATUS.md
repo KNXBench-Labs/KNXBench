@@ -16,7 +16,8 @@ source guard negatives fail at runtime, canonical source exactly restored.
 [Evidence](evidence/offline-name-recipe-2026-10-12.json) retains those distinct inputs;
 fresh final assembled18 stages now also pass on the strengthened frozen candidate;
 integrated documentation8 also passes with unchanged accepted runtime/test blobs;
-normal publication/readback remains pending. No independent
+source package published and exactly read back on main `f70183f0` (14 owned blobs);
+this is not a release or whole FUTURE-02 completion. No independent
 review, macro VM, MCP write, UI mount, root Save, hardware or release is claimed.
 
 ## 2026-10-12 — Release notification reader documentation completed

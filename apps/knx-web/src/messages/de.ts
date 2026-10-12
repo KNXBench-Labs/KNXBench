@@ -525,7 +525,7 @@ export const messages: Record<MessageKey, string> = {
   "nativeExport.title": "Natives Projekt lokal exportieren",
   "nativeExport.contents": "Die native Datei kann ursprüngliche Importdaten, private Projekteinstellungen, Anhänge, Erweiterungsdateien, Quellmetadaten und ursprüngliche Importberichte enthalten.",
   "nativeExport.privacy": "Diese Datei ist nicht anonymisiert. Das Umbenennen sichtbarer Bezeichnungen oder Komprimieren entfernt keine erhaltenen Originaldaten. Prüfe den Inhalt vor dem Teilen.",
-  "nativeExport.scope": "Sie enthält das aktuelle Projektabbild, keine vollständige Sicherung der Versionshistorie oder der gemeinsamen Herstellerdatenbank. Sie ist kein ETS-.knxproj-Export.",
+  "nativeExport.scope": "Sie enthält das aktuelle Projektabbild, keine vollständige Sicherung der Versionshistorie oder der gemeinsamen Herstellerdatenbank. Sie ist kein .knxproj-Export für ETS.",
   "nativeExport.local": "Der Download bleibt lokal; KNXBench veröffentlicht oder überträgt ihn nicht automatisch. Der Export speichert weder das geöffnete Projekt noch verändert er dessen Originalquelle.",
   "nativeExport.changed": "Das geprüfte Projektabbild hat sich geändert oder seine Identität ist nicht verfügbar. Brich ab, aktualisiere das Projekt und prüfe den Export erneut.",
   "nativeExport.cancel": "Abbrechen",

@@ -3,3 +3,11 @@
 .native-export-dialog p { line-height: 1.5; }
 .native-export-dialog .native-export-privacy { font-weight: 600; }
 .native-export-dialog footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; margin-block-start: 1rem; }
+/* Cancel loses nothing, so it stays quiet next to the download (as in the catalogue update). */
+.native-export-dialog footer .native-export-cancel {
+  color: var(--knx-foreground);
+  background: var(--knx-bg);
+  border: 1px solid var(--knx-border);
+  box-shadow: none;
+}
+.native-export-dialog footer .native-export-cancel:hover:not(:disabled) { box-shadow: none; border-color: var(--knx-accent); }

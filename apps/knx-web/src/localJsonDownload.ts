@@ -1,6 +1,11 @@
 /** Deliver a JSON snapshot to the user's browser without a server-side path. */
 export function downloadLocalJson(contents: string, filename: string): void {
-  const url = URL.createObjectURL(new Blob([contents], { type: "application/json;charset=utf-8" }));
+  downloadLocalBlob(new Blob([contents], { type: "application/json;charset=utf-8" }), filename);
+}
+
+/** Deliver inert bytes through the existing local browser download mechanism. */
+export function downloadLocalBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;

@@ -9633,40 +9633,63 @@ compatibility or hardware support is implied by upload/navigation acceptance.
 
 ## 170. Little-endian parameter byte order is refused for download images
 
-**Public-source research completed 2026-10-10; boundary unchanged.**
-[Inspected sources and missing contract](research/schema23-offline-boundaries.md)
-record the public evidence for KL-170. No sufficient manufacturer encoding or
-loaded-payload contract was found in the inspected sources; no runtime change,
-private payload decoding, byte swap or hardware action follows. The negative
-finding is scoped to this search, not a claim that a specification cannot exist.
+**Evidence review 2026-10-13; boundary unchanged, read-only probe added.**
+[Parameter byte order](research/parameter-byte-order.md) extends the
+[2026-10-10 public-source pass](research/schema23-offline-boundaries.md) with
+the local KNX specification corpus, schema copies, two independent
+implementations, 3,341 public product programs and the private schema-23
+sample. Still no source defines `LittleEndian` per parameter type. Base images
+of 370 LittleEndian programs hold whole-octet defaults low octet first (one
+Siemens System B family the other way), and one manufacturer re-declared 32
+unchanged layouts from `BigEndian` to `LittleEndian`. But the same
+manufacturers' BigEndian-declared and undeclared programs show the same
+low-octet-first base images, so product files cannot tell what ETS writes.
+[ADR-0119](adr/0119-read-only-byte-order-probe.md) adds
+`knx device byte-order-probe`: it reads (never writes) an ETS-programmed
+device and reports per field whether it holds the project's values high or
+low octet first. No encoder change follows from it.
 
 **Limitation.** `knx_productdb::image::build_download_image` refuses every
 program whose `Options/@ParameterByteOrder` is anything but `BigEndian`
 (`ParameterByteOrder "LittleEndian": numbers are written high octet first`). An
-undeclared byte order is treated as big-endian. Offline readiness marks such
-devices `unsupported` (`image-structure`). Until this entry the boundary lived
-only in the module comment of `crates/knx-productdb/src/image.rs`.
+undeclared byte order is treated as big-endian, the schema's default value
+(two independent schema derivations, research above). Offline readiness marks
+such devices `unsupported` (`image-structure`). Until this entry the boundary
+lived only in the module comment of `crates/knx-productdb/src/image.rs`.
 
 **Prevalence.** Local product corpus (`OriginalData/ProductDatabases`, 114
 archives, 525 unique application-program files by content hash, measured
-2026-10-10): `LittleEndian` 3, `BigEndian` 90, undeclared 432. In a privately
-supplied schema-23 project it causes most of the offline-readiness refusals,
-so a real installation can be hit far more often than the product corpus
-suggests.
+2026-10-10 and again 2026-10-13): `LittleEndian` 3, `BigEndian` 90, undeclared
+432. Public vendor downloads (853 archives, 3,341 unique programs): 590
+`LittleEndian` (ABB 474, Busch-Jaeger 101, Hager 8, Berker 5, Siemens 2; 479 on
+mask `0701h`). Private schema-23 sample: 12 of 32 programs, used by 54 devices,
+most of its offline refusals, so a real installation can be hit far more often
+than the local corpus suggests.
 
 **Cause.** The image encoder writes multi-octet numbers high octet first
 (`knx_core::commissioning::parameter_image`). No source available here defines
 little-endian placement per parameter type (integers, floats, bit-offset
-unions, fields that cross octet boundaries); the application-program XSD is
-not available (`IMPORT-06`).
+unions, fields that cross octet boundaries); the application-program XSD and
+the ETS SDK documentation are not available (`IMPORT-06`).
 
-**Impact.** No offline image, compare plan or download for such programs.
-Import, display and parameter editing are unaffected.
+**Related risk (not a refusal).** The base images of 211 BigEndian-declared
+and 53 undeclared ABB/Busch-Jaeger `0701h` programs hold their defaults low
+octet first, against 26 and 18 high octet first. KNXBench plans those
+programs high octet first, as declared, and they are untested downloads
+(`--accept-untested`). If ETS honours their declaration, nothing is wrong; if
+those devices actually read low octet first, an untested download would write
+wrong multi-octet values. The probe answers this for any such device too.
 
-**Lifted when.** A documented source defines the placement per type, exact
-signed/unsigned/float/multi-octet/boundary tests pin it, and preferably a
-read-back of one real device (under the existing hardware rules) confirms it.
-Swapping octets on suspicion is not a fix. Ledger `KL-170`.
+**Impact.** No offline image, compare plan or download for little-endian
+programs. Import, display and parameter editing are unaffected.
+
+**Lifted when.** Probe output from at least one ETS-programmed device per
+affected manufacturer, with the device's project imported unchanged, shows
+every discriminating field low octet first and the controls agreeing; then a
+reviewed encoder change limited to what was observed (whole-octet numbers)
+with exact signed/unsigned/multi-octet/boundary tests, keeping fields across
+octet boundaries, floats, texts and negative values refused until observed
+as well. Swapping octets on suspicion is not a fix. Ledger `KL-170`.
 
 ## 171. UTF-8 text-parameter encoding is refused for download images
 

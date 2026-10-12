@@ -22,6 +22,7 @@ stay at the end of this file.
 
 | Section | Where |
 | --- | --- |
+| [2026-10-13 — Parameter byte order (KL-170)](research/parameter-byte-order.md) | No defining source; base images low-octet-first but not proof; read-only probe ADR-0119 |
 | [2026-10-12 — AP3 colour/picture contract and module scope](research/product-database.md#2026-10-12--ap3-colourpicture-contract-and-module-scope-follow-up) | Missing value contracts; safe fallback is not PDB-04 completion |
 | [2026-10-11 — Saved activation differential contract](research/schema23-activation-differential.md) | KL-146 independent saved-state comparison; original parity unresolved |
 | [2026-10-10 — Public-source offline boundaries](research/schema23-offline-boundaries.md) | KL-170–172 research completed; encoding/payload contracts still missing |

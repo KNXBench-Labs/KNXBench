@@ -308,6 +308,7 @@ A pretty parameter label is not permission to write it.
 | **[Evaluation budgets and text amplification](../crates/knx-productdb/src/dynamic/evaluate/text_projection_tests.rs)** | Checks repeated traversal and copied labels consume bounded budgets before unsafe evaluation proceeds. | Rust / offline or loopback |
 | **[Offline program code and image requests](../crates/knx-productdb/src/code.rs)** | Checks code segments, masks and requested configurations preserve byte boundaries and explicit refusal conditions. | Rust; explicit private cases¹ |
 | **[Read-only AP1 procedure resolution](../crates/knx-app/tests/procedure_resolution_corpus.rs)** | Checks retained procedure fragments resolve in order while omissions and cycles remain explicit diagnostics. | Rust; explicit private cases¹ |
+| **[Byte-order probe planning](../crates/knx-productdb/src/byte_order_probe.rs)** | Checks probes read only what downloads would write, naming every skipped field. | Rust / offline or loopback |
 
 <details>
 <summary>Source modules for this category</summary>
@@ -318,6 +319,7 @@ A pretty parameter label is not permission to write it.
 - **Evaluation budgets and text amplification:** [text_projection_tests.rs](../crates/knx-productdb/src/dynamic/evaluate/text_projection_tests.rs) · [work_budget_tests.rs](../crates/knx-productdb/src/dynamic/evaluate/work_budget_tests.rs) · [tests/dynamic_scalar_copy/mod.rs](../crates/knx-productdb/tests/dynamic_scalar_copy/mod.rs)
 - **Offline program code and image requests:** [code.rs](../crates/knx-productdb/src/code.rs) · [download_plan.rs](../crates/knx-productdb/src/download_plan.rs) · [image.rs](../crates/knx-productdb/src/image.rs) · [image_request.rs](../crates/knx-productdb/src/image_request.rs) · [program_code.rs](../crates/knx-productdb/tests/program_code.rs)
 - **Read-only AP1 procedure resolution:** [procedure_resolution_corpus.rs](../crates/knx-app/tests/procedure_resolution_corpus.rs) · [xml.rs](../crates/knx-productdb/src/procedure_resolution/xml.rs) · [procedure_resolution.rs](../crates/knx-productdb/tests/procedure_resolution.rs)
+- **Byte-order probe planning:** [byte_order_probe.rs](../crates/knx-productdb/src/byte_order_probe.rs) · [byte_order_evidence.rs](../crates/knx-core/src/commissioning/byte_order_evidence.rs)
 
 </details>
 
@@ -451,7 +453,7 @@ The terminal gets the same rules, minus the mouse.
 <summary>Source modules for this category</summary>
 
 - **Address, serial and reset arguments:** [device_address.rs](../apps/knx-cli/src/device_address.rs) · [device_reset_address.rs](../apps/knx-cli/src/device_reset_address.rs) · [device_serial.rs](../apps/knx-cli/src/device_serial.rs) · [cli_address_programming_recovery.rs](../apps/knx-cli/tests/cli_address_programming_recovery.rs) · [cli_address_reset_recovery.rs](../apps/knx-cli/tests/cli_address_reset_recovery.rs)
-- **Download, comparison and readiness commands:** [device_compare.rs](../apps/knx-cli/src/device_compare.rs) · [device_download.rs](../apps/knx-cli/src/device_download.rs) · [device_readiness.rs](../apps/knx-cli/src/device_readiness.rs) · [device_service_control.rs](../apps/knx-cli/src/device_service_control.rs)
+- **Download, comparison and readiness commands:** [device_compare.rs](../apps/knx-cli/src/device_compare.rs) · [device_byte_order_probe.rs](../apps/knx-cli/src/device_byte_order_probe.rs) · [device_download.rs](../apps/knx-cli/src/device_download.rs) · [device_readiness.rs](../apps/knx-cli/src/device_readiness.rs) · [device_service_control.rs](../apps/knx-cli/src/device_service_control.rs)
 - **Durable command activity admission:** [cli_activity_history.rs](../apps/knx-cli/tests/cli_activity_history.rs) · [cli_compare_activity.rs](../apps/knx-cli/tests/cli_compare_activity.rs) · [cli_read_activity.rs](../apps/knx-cli/tests/cli_read_activity.rs)
 - **Bus values, notation and scans:** [scan.rs](../apps/knx-cli/src/scan.rs) · [cli_bus_address_style.rs](../apps/knx-cli/tests/cli_bus_address_style.rs) · [cli_bus_dpt.rs](../apps/knx-cli/tests/cli_bus_dpt.rs)
 - **Project and legacy imports:** [cli_import.rs](../apps/knx-cli/tests/cli_import.rs) · [cli_legacy_import.rs](../apps/knx-cli/tests/cli_legacy_import.rs)

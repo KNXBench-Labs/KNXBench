@@ -1,5 +1,18 @@
 # Open work after the 0.1 alpha
 
+## Bounded project-note editor leaf (12 October 2026)
+
+The [isolated component](contracts/project-note-editor-host.md) and
+[guidance](contracts/project-note-editor-guidance.md) have actual feature40,
+full owner22-stage, built browser8 and source-guard-negative acceptance. Five
+real confirmed browser mutations and native working/root recovery are separately
+source-bound; an empty Save-success parser error remains honestly partial and its
+missing saved-root restart was completed read-only, with no replay.
+Production Session1 mount/authoritative host catalogue and navigation refresh
+remain open; FUTURE-03 remains LATER, not whole AP4. AP3/AP5/AP6/AP7 data-tooling
+remainders and hardware/ETS/report compatibility are not closed by this leaf.
+
+
 **Audit:** 2026-10-08, against `origin/main` `608a204b`. This page is the one
 place that answers "what is not done?". It replaces the three finished alpha
 goals (removed 2026-10-08, see [REMOVED_DOCS](history/REMOVED_DOCS.md)). It does not change any

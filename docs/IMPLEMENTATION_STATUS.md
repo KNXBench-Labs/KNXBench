@@ -1,3 +1,30 @@
+## 2026-10-12 — Bounded project-note editor leaf candidate
+
+Closed client admission, literal textarea adapter and preview-first editor now
+support Create/Replace/Remove/Move, explicit documentation opt-in, dirty-draft
+consent, context/expiry/read-only ownership and existing-help adoption. Local
+EN/DE copy, KNX theme-token scoped CSS and typed isolated fixture add no shared
+App/navigation/catalogue/style edits or dependencies.
+
+Actual current runtime: feature40/0/4 files and full owner22 stages, whole web
+2836/0/182 files, inherited HTTP/core/Rust/Clippy, production/fixture builds and
+nonempty explicit-root repository checks. Three named source mutants fail as
+expected; canonical source restored. Fresh final built browser8 matches EN/DE,
+Graphite/Porcelain,400/1440 without overflow/unexpected requests/hover scale;
+new full RGBA rasters equal all eight individually inspected prior frames.
+
+Five actual confirmed UI mutations and working-history restart/Undo/Redo preserve
+literal bodies and non-note/retained context. Root Save returned empty success;
+the original harness JSON parse failure is retained as partial, not made green.
+SQL readback and a separate read-only copied saved-root restart prove recovered
+payload and history without replaying mutations/Save. Only expiry-copy Du address
+and literal CSS fallbacks changed since that mutation-source receipt; current
+feature/broad/final-browser evidence binds final runtime separately. Self-review
+only; Session1 production host remains open, FUTURE-03 LATER, no whole AP4,
+release/deployment/Tauri/Orca/hardware/ETS/report claim.
+[Host contract](contracts/project-note-editor-host.md) ·
+[Guidance and recovery](contracts/project-note-editor-guidance.md).
+
 ## 2026-10-11 — GitHub release notifications
 
 ## 2026-10-11 — Notes authenticated HTTP adapter candidate

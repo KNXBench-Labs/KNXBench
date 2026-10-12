@@ -1,4 +1,4 @@
-//! The element dispatch for schema ≥21's `0.xml`: the same small state
+//! The element dispatch for schema ≥20's `0.xml` (schema 20 lacks only `Segment`): the same small state
 //! machine as [`super::installation::parse_installation`] (schema 11), kept
 //! as a textually separate sibling per ADR-0014 rather than shared, since the
 //! two schemas' content models diverge enough (`Segment` interposed between

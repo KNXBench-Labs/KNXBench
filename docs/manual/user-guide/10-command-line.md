@@ -237,6 +237,31 @@ a `.knxproj` it prints:
 > legacy `.vd2` product data is not supported, and the installer says so rather than
 > half-importing it. See [Known issues](../known-issues.md).
 
+### `knx products update` — check a newer product file before installing it
+
+Got a newer `.knxprod` from a manufacturer's download page? Preview first:
+
+```bash
+knx products update Dimmer_V17.knxprod
+```
+
+The JSON lists each application program in the file as `new`, `newVersion`
+(with the versions you already have) or `alreadyInstalled`. Nothing is
+written. To install, repeat the command with `--confirm <token>` using the
+`token` from the preview. KNXBench first saves a backup of your product
+database next to it and prints the matching `knx products restore` command.
+If anything changed in between, the token no longer fits and you preview
+again. Your projects keep using the exact program versions they were built
+with; a new version is added beside the old one.
+
+### `knx products restore` — go back to a backup
+
+```bash
+knx products restore ~/.local/share/knx/products.sqlite.backup-1760263200-1a2b3c4d5e6f.sqlite
+```
+
+Only a valid KNXBench product database is accepted.
+
 ### `knx products inspect-legacy`
 
 ```bash

@@ -99,3 +99,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0114](0114-client-release-discovery.md) | Client release discovery is notification-only | Accepted implementation decision | 2026-10-11 |
 | [0115](0115-offline-application-edit-boundary.md) | Offline application edits live in `knx-edit`, below App | Accepted implementation decision | 2026-10-12 |
 | [0116](0116-opt-in-mcp-name-recipe-writer.md) | Opt-in, human-confirmed MCP writer for literal group-address names | Accepted implementation decision | 2026-10-12 |
+| [0117](0117-previewed-recoverable-catalogue-updates.md) | Previewed, recoverable catalogue updates from manufacturer files | Accepted implementation decision | 2026-10-12 |

@@ -784,3 +784,6 @@ Workbench host (2026-10-12): `apps/knx-web` `NotesWorkspace` mounts the leaf;
 pure `notesHost.ts` derives identity and stable-ID targets from the ProjectTree,
 and App keeps drafts across views and guards project exits
 ([host](contracts/project-note-editor-host.md#workbench-host-12-october-2026)).
+The instruction editor follows the same pattern as a device-editor tab
+(`DeviceInstructionsPanel`, shared `snapshotIdentity.ts`;
+[host](contracts/instruction-editor-host.md#workbench-host-12-october-2026)).

@@ -15,6 +15,7 @@ may omit them: do not mount a writable editor with missing identity, and never
 invent a local revision counter. Require a nonempty server identity and safe
 nonnegative integer load/revision values. The isolated fixture obtains these
 fields from the admitted instruction read DTO instead of fabricating a tree.
+ `context: null` mounts a read-only view (it reads, never previews or applies).
  Optional `language` is `en` or `de`; all feature copy is isolated in
 `features/rtf/copy.ts`. Its CSS module uses the existing theme variables without
 modifying global styles or installing new dependencies.
@@ -30,8 +31,12 @@ another explicitly compatible adapter, not an alternate persistence policy.
   native root. Integrate it into the shell's existing navigation policy; do not
   auto-apply on selection/navigation/close. If switching selection is allowed,
   that switch intentionally discards the old component-local draft.
-- A revision change for the same dirty device retains the draft but revokes its
-  preview and requires deliberate discard/reload. A different device/project or
+- A revision change for the same dirty device revokes its preview and re-reads.
+  If the device's instruction content (source digest, override, effective document,
+  unsupported list) is unchanged, the draft moves onto the new revision and stays
+  editable; otherwise it is retained for comparison and requires deliberate
+  discard/reload. Saving the project bumps the revision, so this keeps Save from
+  destroying drafts (amended 2026-10-12). A different device/project or
   server never inherits another selection's draft or late response.
 - A confirmed request already sent to the server is not undone by unmounting.
   Late completion must not publish callbacks into a different selection. Refresh
@@ -93,5 +98,19 @@ is recorded separately from earlier source-bound native, HTTP and UI receipts. T
 real HTTP/native implementation with synthetic input in a loopback-only network
 namespace; it is not a production shell integration, deployment, physical bus
 operation or general format compatibility test. Self-review is in-session, not
-independent approval. Session1 owns the eventual Inspector/tab/navigation mount
-and shared catalogue integration.
+independent approval.
+
+## Workbench host (12 October 2026)
+
+`apps/knx-web/src/DeviceInstructionsPanel.tsx` mounts the editor as the sixth device
+editor tab, **Installation instructions**. It mounts on the tab's first visit and
+then stays (hidden), so a draft survives other tabs. `snapshotIdentity.ts` maps the
+tree identity explicitly; incomplete identity gives the read-only view. After every
+Apply (no-op included) the host re-reads `GET /api/project` through the workbench's
+own snapshot publication; because the editor does not await that callback, a failed
+re-read is shown by the host as "applied, reload failed". The draft flag joins the
+notes draft in App's guard before Open/Import, New project, Quit and window close.
+Evidence: unit tests, 11 intercepted production-build Chromium cases (EN/DE,
+Porcelain/Graphite, 1440/400, stale and persistence refusals, read-only) and a
+loopback-only real-server smoke with a synthetic RTF project; see
+[IMPLEMENTATION_STATUS](../IMPLEMENTATION_STATUS.md). Self-review only.

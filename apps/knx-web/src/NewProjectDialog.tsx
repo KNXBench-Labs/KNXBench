@@ -20,6 +20,7 @@ import ProjectWizardTopology from "./ProjectWizardTopology";
 import ProjectWizardBuilding from "./ProjectWizardBuilding";
 import ProjectWizardGroups from "./ProjectWizardGroups";
 import ProjectWizardReview from "./ProjectWizardReview";
+import "./UnsavedChangesDialog.css";
 
 // Wire values, in the order a user is most likely to want them: the ETS
 // default first, the rest after. `newProject.style.<value>` is the label
@@ -445,19 +446,19 @@ export default function NewProjectDialog(props: {
               translated explanation rather than dropped — it names the
               two ways out (save first, or resend discarding). */}
           <p className="new-project-conflict-detail">{conflict}</p>
-          <div className="new-project-actions">
-            <button type="button" onClick={dismiss}>
+          <div className="new-project-actions unsaved-changes-actions">
+            <button type="button" className="dialog-action dialog-action--secondary" onClick={dismiss}>
               {t("newProject.conflictKeep")}
             </button>
             {/* `!canSubmit`, not `busy`: the fields stay editable while the
                 prompt is up, so a name blanked here would make `submit()`
                 return silently and the button would do nothing at all. */}
-            <button type="button" disabled={!canSubmit} onClick={() => void submit(true)}>
+            <button type="button" className="dialog-action dialog-action--danger" disabled={!canSubmit} onClick={() => void submit(true)}>
               {busy ? t("newProject.creating") : t("newProject.conflictDiscard")}
             </button>
             <button
               type="button"
-              className="primary-action new-project-save-and-create"
+              className="dialog-action dialog-action--primary primary-action new-project-save-and-create"
               disabled={!canSubmit}
               onClick={() => void submit(false, true)}
             >

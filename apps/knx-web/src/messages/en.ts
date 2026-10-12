@@ -2251,7 +2251,7 @@ export const messages = {
     "This project has edits that are in no file yet. Quitting now throws them away.",
   "quit.hint":
     "“Save and quit” saves first and quits only if that worked.",
-  "quit.cancel": "Cancel",
+  "quit.cancel": "Keep editing",
   "quit.discard": "Quit without saving",
   "quit.saving": "Saving…",
   "quit.save": "Save and quit",
@@ -2259,7 +2259,8 @@ export const messages = {
   "replace.title": "Unsaved changes",
   "replace.message": "The open project has changes that are not saved. Opening another project replaces it.",
   "replace.target": "Next: {file}",
-  "replace.cancel": "Cancel",
+  "replace.hint": "“Save and open” saves first and opens the other project only if that worked.",
+  "replace.cancel": "Keep editing",
   "replace.discard": "Discard changes and open",
   "replace.save": "Save and open",
 

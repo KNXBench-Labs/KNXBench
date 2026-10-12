@@ -196,6 +196,10 @@ fn offers_only_what_the_domain_would_accept_as_a_note_target() {
     // A second installation reusing area/line id 1 makes that id ambiguous.
     project.devices.insert(device(2, "Second", &[]));
     project.installations.push(installation(1, 1, &[2]));
+    // So does a group address id reused in the second installation.
+    let mut duplicate = project.installations[0].group_addresses[0].clone();
+    duplicate.name = "Elsewhere".into();
+    project.installations[1].group_addresses.push(duplicate);
     let catalogue = note_target_catalogue(&project);
     for entry in &catalogue {
         assert_eq!(
@@ -208,6 +212,8 @@ fn offers_only_what_the_domain_would_accept_as_a_note_target() {
     let offered = |target: Target| catalogue.iter().any(|entry| entry.target == target);
     assert!(!offered(Target::Area(AreaId(1))));
     assert!(!offered(Target::Line(LineId(1))));
+    assert!(!offered(Target::GroupAddress(GroupAddressId(1))));
+    assert!(offered(Target::GroupRange(GroupRangeId(1))));
     assert!(offered(Target::Installation(InstallationId(1))));
     assert!(offered(Target::Device(DeviceId(2))));
     assert!(
@@ -270,4 +276,37 @@ fn devices_read_by_address_and_foreign_or_orphaned_entries_are_handled_honestly(
     assert_eq!(objects[0].parts, ["1", "Switch"]);
     let parts = of_kind(|target| matches!(target, Target::BuildingPart(_)));
     assert_eq!(parts.last().unwrap().parts, ["Lost room"]);
+}
+
+#[test]
+fn deeply_nested_building_parts_are_walked_without_recursion_limits() {
+    let mut project = project();
+    let parts = &mut project.installations[0].buildings;
+    parts.clear();
+    for id in 1000..=5000u32 {
+        parts.push(BuildingPart {
+            id: BuildingPartId(id),
+            source: source(),
+            name: format!("Level {id}"),
+            number: None,
+            kind: BuildingPartType::Floor,
+            default_line: None,
+            completion: CompletionStatus::FinishedDesign,
+            children: if id < 5000 {
+                vec![BuildingPartId(id + 1)]
+            } else {
+                vec![]
+            },
+            devices: vec![],
+            parent: (id > 1000).then(|| BuildingPartId(id - 1)),
+        });
+    }
+    let offered: Vec<_> = note_target_catalogue(&project)
+        .into_iter()
+        .filter_map(|entry| match entry.target {
+            Target::BuildingPart(id) => Some(id.0),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(offered, (1000..=5000).collect::<Vec<_>>());
 }

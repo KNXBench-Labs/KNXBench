@@ -58,6 +58,7 @@ Last updated: 2026-10-12 13:41 CEST
 | Communication objects | Values/provenance inspection | alpha.6 |
 | Object editing | DPT/description; six flags | alpha.6 |
 | Object links | Directional group-address connections | alpha.6 |
+| Group-address members | Add from the address (device → object → direction) in all four views and Properties; same link rule | Main-only |
 | Object table | Channels/search/filter/sort | Main-only |
 | Parameters | Validated edits; dynamic evaluation | alpha.6 |
 | Parameter tabs | Editor/diagnostics/manufacturer fields | alpha.6 |
@@ -142,6 +143,7 @@ Last updated: 2026-10-12 13:41 CEST
 | Group-value writes | Limited live/gateway evidence | alpha.6 |
 | Line scan | Diagnostics; bounded identification | alpha.6 |
 | Device downloads | Restricted programs/devices; confirmed operations | alpha.6 |
+| Download preparation | Gateway choice from the shared search; device-editor hand-off; step guide | Main-only |
 | Read-only device verification | Limited hardware evidence | alpha.6 |
 | MCP integration | Saved files; eight read tools | alpha.6 |
 | Accessibility | Full screen-reader validation missing | alpha.6 |

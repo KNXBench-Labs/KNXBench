@@ -37,7 +37,9 @@ knx bus discover
 
 The graphical bus monitor offers the same server-side discovery call as its
 **Search** button next to the gateway fields (it also runs once by itself when
-the application starts). The CLI remains useful for terminal diagnostics.
+the application starts). The **Download to device** tab reads the same result rather
+than searching on its own (see [Downloading to a device](#downloading-to-a-device)).
+The CLI remains useful for terminal diagnostics.
 Line scan still requires a known control endpoint to be entered manually.
 
 > **Note**
@@ -369,8 +371,26 @@ changes, the project does not. Saving or exporting a project file is something e
 1. Open the project that contains the device, then **Bus monitor** in the navigation
    sidebar and its **Download to device** tab (German: **In Gerät laden**), beside the
    monitor and the line scan. Only devices that have an individual address are offered.
+   In current source (newer than Alpha 9) the device editor also has **Download to
+   device…**: it opens this tab with exactly that device selected — by its stable id in
+   the open project — and does nothing else: no plan, no download, no connection. A
+   device without an individual address shows the button disabled with the reason. While
+   a plan is being prepared or a download runs, the selection is not switched; if the
+   tab cannot tell whether a download is running, it says so and leaves the choice to
+   you.
 2. Choose the device, **What to write** and the gateway, then **Show what would be
-   written**. *What to write* is **Complete download** (the default), or a partial
+   written**. A short **Steps** list at the top of the tab (current source) shows which
+   of the five steps — device, gateway, scope, plan, confirm and start — are done and
+   names what is missing; the **?** next to it leads to *What this does not do*. For the
+   gateway, the tab uses the interface search that already ran at start-up: exactly one
+   answer is filled in if you have not chosen or typed anything; several answers appear
+   in **Found gateways** by name, endpoint and interface address; a typed address always
+   works and is never replaced by a later search result. A preferred gateway from
+   Settings is used as the starting value and labelled as such — it is called *found*
+   only if the search returned it. A gateway chosen from a search that the latest
+   search no longer lists stays selected and is marked. **Search again** runs the same
+   search on request. Changing the device, the gateway or **What to write** discards a
+   shown plan. *What to write* is **Complete download** (the default), or a partial
    download (KNX Configuration Procedures §3.9.2.4) of **Parameters only**, **Group
    addresses only** or **Parameters and group addresses**. A partial plan says which
    parts it does not write and lists every application write it skips (only absolute

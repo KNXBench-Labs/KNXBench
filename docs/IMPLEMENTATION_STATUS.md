@@ -15,7 +15,8 @@ image preservation and independent changed-incarnation coverage; five named
 source guard negatives fail at runtime, canonical source exactly restored.
 [Evidence](evidence/offline-name-recipe-2026-10-12.json) retains those distinct inputs;
 fresh final assembled18 stages now also pass on the strengthened frozen candidate;
-publication/integration closure remains pending. No independent
+integrated documentation8 also passes with unchanged accepted runtime/test blobs;
+normal publication/readback remains pending. No independent
 review, macro VM, MCP write, UI mount, root Save, hardware or release is claimed.
 
 ## 2026-10-12 — Release notification reader documentation completed

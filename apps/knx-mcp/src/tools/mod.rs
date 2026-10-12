@@ -1,11 +1,13 @@
-//! The eight read-only tools as plain functions over a [`Workspace`].
+//! The eight read-only tools and the opt-in rename tools over a [`Workspace`].
 //!
 //! Every tool returns one JSON envelope ([`envelope`]) or an error message.
-//! Nothing here writes a file, opens a network connection or reaches the
-//! bus; `knx-mcp` cannot even link the crates that could (ADR-0090,
-//! `cargo xtask check-layering`).
+//! Only [`name_recipe`] writes, and only the native working history of an
+//! alias enabled at launch (ADR-0116). Nothing opens a network connection or
+//! reaches the bus; `knx-mcp` cannot even link the crates that could
+//! (ADR-0090, `cargo xtask check-layering`).
 
 mod device;
+pub mod name_recipe;
 mod project;
 
 pub use device::{explain_parameter, get_device, get_group_address, DeviceView, VISIBILITY_VALUES};

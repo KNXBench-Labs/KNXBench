@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "date": "2026-10-12",
+  "scope": "web routes and catalogue-view UI for previewed, backed-up catalogue updates and restores (ADR-0118); the direct install route is unchanged",
+  "base": "origin/main 9152877c (lock commit; main unchanged at freeze)",
+  "gated_candidate": "eb15b38d718cd1ca0ca7b2986bab06eb174cdeca",
+  "source_hashes": {
+    "apps/knx-server/src/catalogue_update_routes.rs": "6c627e9761b4be6d4cdbe2b0cf8b333f83f081079a153258cd44e7cec5db177a",
+    "apps/knx-server/src/errors.rs": "c62f2c7bd2d7141d818077dc99778572fe50eb4b075802f78ccb236d292e5fa8",
+    "apps/knx-server/src/lib.rs": "176f1ae5497cde42f5c90983496052d2bdde805ee58178f00a8bdf44fcf3c94b",
+    "apps/knx-server/src/routes.rs": "54b4378c15bd728509b90b7017bbfe1d7ee604103d15cdf99684a9fc73f0d5db",
+    "apps/knx-server/tests/http_catalogue_update.rs": "bc1f4f891dcb03e4f1d96c7d484148cd6e8c5cc2a52dec3fc666b16d0963e11d",
+    "apps/knx-web/e2e/catalogue-update.e2e.ts": "7d72db2024cc5162596e520505f4ead64b9596192d6850e86e102cdbcf85b14e",
+    "apps/knx-web/e2e/legacy-install.e2e.ts": "091b0b0efaaebe2c96831481381969e3ed46c72ec2ea4eca45cb2cb640be3272",
+    "apps/knx-web/playwright.catalogue.config.ts": "7b76b1e3c73b5b92ce8e99d80c25be2fa81acc8ef12a715cec7a1c3ac004970b",
+    "apps/knx-web/src/CatalogBrowser.test.tsx": "d0e79d48d29e5dd0bcce06a64a6862adc9c90f9af96c29dfe15818f1093c6101",
+    "apps/knx-web/src/CatalogBrowser.tsx": "ed15ff94cea0f2ff1bb11584bcfd87901abf23d338eadde8c1f12d7ceae1cea3",
+    "apps/knx-web/src/CatalogUpdatePanel.test.tsx": "f9d2b2f7e930d2775c3f0ab6f3163bdacbe3d25cc02612ea7f8d4fdfc7629ca4",
+    "apps/knx-web/src/CatalogUpdatePanel.tsx": "8fca6dfaa26178aabd44784862ee5cb2d5b2914509915bccf4fc72a26f86910e",
+    "apps/knx-web/src/DiagnosticsCompanion.test.tsx": "fd07a437308cdf41aecad87311f272659da3f47f16c42f0e2140cfee41b14aa9",
+    "apps/knx-web/src/api.test.ts": "1bde7fdde4151175bc8a72a7fe35815c6f5a72f4ab9f0a0112f60d91032fa11c",
+    "apps/knx-web/src/api.ts": "1a5458c20914de5fe277dd702ef88c9d2f25ce37589262fa485f4e3ed4397b51",
+    "apps/knx-web/src/catalogueUpdate.test.ts": "8ee3a1117120a26c3af64f14ab0ebbf959bbcb78ba864644d7104a0a15b4cac3",
+    "apps/knx-web/src/catalogueUpdate.ts": "e0c2ef2c0ea159b168522daf4b5a2617b904e2d3bb8689bb29e2886c76967ebb",
+    "apps/knx-web/src/messages/de.ts": "a3f962527a6f7198a5c9a237ece4cbe143b374618690bb18c45504afebaecf07",
+    "apps/knx-web/src/messages/en.ts": "cbc63213c14ed337511e66b972941cf713558c609e3fa50d1677db45837c2796",
+    "apps/knx-web/src/styles.css": "23c5aac3f27282cb88d59560a588095e0bbbad65a2637bfa789b7cd00b3da70c",
+    "apps/knx-web/tsconfig.catalogue-fixtures.json": "cca004b06c6dec673a5a3159fbfae3530b9262e5660f28bbfff01667487fa748"
+  },
+  "review_kind": "in-session self-review, not independent",
+  "decisions": "ADR-0118: stateless token-checked apply; product-DB mutex for preview/apply/restore; backups by listed name only (regular files, exact name pattern); connection reopened after restore; backups read only when their list is opened",
+  "findings": [
+    "CatalogBrowser is mounted for every session: an eager backup read would have added a request to every page load and broken ~20 strict browser fixtures; backups now load when the list is opened.",
+    "Refactoring the multipart upload into postForm hid /api/catalog/install from the companion window's mutating-fetch census; the census now counts postForm call sites and pins both update uploads."
+  ],
+  "test_first": {
+    "server routes": "RED 9/10 against a 501 stub (auth test already green) then 10/10",
+    "api.ts wire": "RED 5/5 then GREEN",
+    "CatalogUpdatePanel": "RED 12/12 against a null stub then GREEN; lazy backups RED 3 then GREEN",
+    "CatalogBrowser placement": "RED then GREEN",
+    "companion census": "guard proven red by hiding one upload path"
+  },
+  "guard_mutations": {
+    "server": [
+      "listing check bypassed",
+      "hash shape ignored",
+      "links listed",
+      "empty token accepted",
+      "no reopen after restore",
+      "stale token not a conflict",
+      "unsorted backups"
+    ],
+    "ui": [
+      "restore without asking",
+      "danger focused first (order + focus)",
+      "no double-submit guard",
+      "token dropped",
+      "stale treated as refusal",
+      "no reload after restore",
+      "backups read on mount",
+      "refresh even if never opened",
+      "re-read on every toggle"
+    ],
+    "caught": "16/16 (three server survivors first exposed test gaps, closed and re-run caught)"
+  },
+  "canonical_source_restored": true,
+  "gate": {
+    "stages_green": 25,
+    "stages_failed": 1,
+    "web_vitest": {
+      "passed": 3056,
+      "failed": 0,
+      "files": 204
+    },
+    "browser_catalogue": "10/10 (EN/DE, Porcelain/Graphite, 1440/400: preview, back up and install, backups, ask-first restore with Escape; EN1440 stale; DE400 refused restore)",
+    "browser_notes": "11/11",
+    "browser_instructions": "11/11",
+    "browser_parameters": "11/11",
+    "browser_dialogs": "14/14",
+    "browser_fixtures": {
+      "passed": 400,
+      "failed": 4,
+      "failures": "device-editor-layout.e2e.ts x4 expecting raw DPST-9-1; same as untouched base d7df85c6"
+    },
+    "rust": {
+      "passed": 4155,
+      "failed": 0,
+      "ignored": 194
+    },
+    "clippy": "pass",
+    "fmt": "pass",
+    "bindings": "unchanged (whitespace churn restored)",
+    "docs": "checker pass + unit tests",
+    "xtask_explicit_root": [
+      "check-layering",
+      "check-headers",
+      "check-anchors",
+      "check-ledger",
+      "check-corpus-gates"
+    ],
+    "frozen_after": "HEAD and index manifest unchanged"
+  },
+  "real_server_smoke": {
+    "isolation": "user+network namespace with only lo; HOME/XDG_*/KNX_DATA_DIR in task scratch; product DB at the isolated XDG_DATA_HOME/knx/products.sqlite",
+    "input": "synthetic fictional .knxprod packages built per run",
+    "checks": [
+      "first preview says New and installs nothing",
+      "first update installed with a backup",
+      "second preview names the new version and the installed one",
+      "second update kept the old program beside the new one",
+      "a stale preview installed nothing",
+      "the fresh preview installs",
+      "backups are listed newest first by name time",
+      "Escape restores nothing",
+      "restore brings back exactly the catalogue before the v17 update",
+      "after a restart the restored catalogue and all backups remain",
+      "after a restart a preview compares against the restored catalogue",
+      "no page errors",
+      "no other external requests"
+    ],
+    "all_ok": true,
+    "note": "verified against the SQLite file itself; two app release-check requests to api.github.com were observed and failed inside the namespace; they are not part of the catalogue flow"
+  },
+  "visual_review": "EN/DE Porcelain/Graphite 1440/400 frames and real-server frames inspected directly; Cancel made quiet and Preview again content-width after review",
+  "limitations": "see KNOWN_LIMITATIONS 'Catalogue updates come only from files you supply (2026-10-12)'"
+}

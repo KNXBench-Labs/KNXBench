@@ -41,6 +41,8 @@ import type { ImportFindingSeverity } from "./importFindings";
 import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
 import { publishProjectContext, rebasePublishedSessionContext } from "./busContext";
 import { ensureBusDiscovery } from "./busDiscovery";
+import { downloadHandoff as buildDownloadHandoff, type DownloadHandoff } from "./downloadHandoff";
+import { DownloadNavigationProvider } from "./OpenDownloadButton";
 import { openCompanionWindow } from "./diagnosticsWindow";
 import { resolveFlowNavigation, type FlowTarget } from "./flowNavigation";
 import type { FlowModel } from "./flowModel";
@@ -305,6 +307,10 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   const [logImportFocus, setLogImportFocus] = useState<LogImportFocus | null>(null);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [monitorMounted, setMonitorMounted] = useState(false);
+  // "Download to device…" requests; each click gets a new nonce so a repeat
+  // on the same device acts again. Navigation only: nothing plans or sends.
+  const [downloadHandoff, setDownloadHandoff] = useState<DownloadHandoff | null>(null);
+  const downloadNonceRef = useRef(0);
   useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -670,6 +676,13 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
         setDeviceDetail(null);
       }
     }
+  }
+
+  function openDownload(deviceId: number) {
+    const current = treeRef.current;
+    if (!current) return;
+    setDownloadHandoff(buildDownloadHandoff(current, deviceId, ++downloadNonceRef.current));
+    setLogOpen(false); setMonitorOpen(true);
   }
 
   function openDevices() {
@@ -1350,7 +1363,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   const welcomeVisible = !tree && !logOpen && !monitorOpen && view !== "catalog";
   const centerWorkspace = (
     <div className="workbench-center">
-      {(monitorMounted || monitorOpen) && <div hidden={!monitorOpen}><BusDiagnosticsPanel active={monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} /></div>}
+      {(monitorMounted || monitorOpen) && <div hidden={!monitorOpen}><BusDiagnosticsPanel active={monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} /></div>}
       {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} importFocus={logImportFocus} onImportFocusHandled={() => setLogImportFocus(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>
           <nav className="device-editor-navigation" aria-label={t("workbench.devices")}>
@@ -1403,6 +1416,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   return (
     <RenameWorkbench tree={tree} scope={loadKey} onApplied={handleTreeUpdate}>
     <DeviceNavigationProvider tree={tree} catalogue={navigationCatalogue} onOpen={(id) => void selectEntity({ kind: "device", id })} onList={openDevices}>
+    <DownloadNavigationProvider onOpen={openDownload}>
     <main ref={workbenchRef} className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
       <header className="workbench-toolbar">
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><img className="workbench-logo" src={brandMark} width="44" height="34" alt="" draggable={false} /><strong>KNXBench</strong></a>
@@ -1616,6 +1630,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
         />
       )}
     </main>
+    </DownloadNavigationProvider>
     </DeviceNavigationProvider>
     </RenameWorkbench>
   );

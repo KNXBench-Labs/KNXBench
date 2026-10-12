@@ -29,6 +29,7 @@ import HelpTip from "./HelpTip";
 import RenameNameField from "./RenameNameField";
 import { linkableGroupAddresses } from "./groupAddressMembers";
 import GroupAddressLinks from "./GroupAddressLinks";
+import OpenDownloadButton from "./OpenDownloadButton";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
@@ -888,7 +889,8 @@ export function DeviceWorkspace(props: {
   const tabs = [t("inspector.communicationObjects"), t("workbench.parameters"), t("deviceIdentity.tab"),
     t("parameters.diagnosticsTab"), t("parameters.restrictedTab")];
   return <section className="device-workspace">
-    <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div></header>
+    <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div>
+      <OpenDownloadButton deviceId={detail.id} address={detail.address} /></header>
     <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
     <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;

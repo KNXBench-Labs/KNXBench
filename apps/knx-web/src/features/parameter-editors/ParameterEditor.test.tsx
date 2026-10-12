@@ -96,6 +96,27 @@ describe("isolated parameter editor", () => {
     expect(host.textContent).toContain("draft is retained");
     await click(host, "Apply value"); expect(props.onApply).not.toHaveBeenCalled();
   });
+  it("settles when the authoritative refresh carries exactly the applied value", async () => {
+    const { host, props, root } = await mount(); await edit(host, "12"); await click(host, "Apply value");
+    expect(props.onApplied).toHaveBeenCalledTimes(1);
+    await act(async () => root.render(<ParameterEditor {...props} revision="server1/snapshot2" field={{ ...base.field, value: "12" }} />));
+    expect(host.textContent).not.toContain("draft is retained");
+    expect(host.textContent).toContain("Applied. The field shows the project's value.");
+    const input = host.querySelector<HTMLInputElement>('input[type="text"]')!;
+    expect(input.value).toBe("12"); expect(input.disabled).toBe(false);
+    await edit(host, "13"); expect(host.textContent).not.toContain("Applied. The field shows");
+    await click(host, "Apply value"); expect(props.onApply).toHaveBeenLastCalledWith("PR", "13");
+  });
+  it("never rebases onto a revision that arrived while its own write was in flight", async () => {
+    let settle!: (value: { tree: string }) => void;
+    const onApply = vi.fn().mockReturnValue(new Promise(done => { settle = done; }));
+    const { host, props, root } = await mount({ onApply }); await edit(host, "12"); await click(host, "Apply value");
+    await act(async () => root.render(<ParameterEditor {...props} onApply={onApply} revision="server1/snapshot2" />));
+    await act(async () => settle({ tree: "old" }));
+    await edit(host, "14");
+    expect(host.textContent).toContain("draft is retained");
+    await click(host, "Apply value"); expect(onApply).toHaveBeenCalledTimes(1);
+  });
   it("ignores a late result after selection change", async () => {
     let settle!: (value: { tree: string }) => void; const onApply = vi.fn().mockReturnValue(new Promise(done => { settle = done; }));
     const { host, props, root } = await mount({ onApply }); await edit(host, "12"); await click(host, "Apply value");

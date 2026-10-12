@@ -17,6 +17,7 @@ export const parameterEditorCopy = {
       "module-scope": "This module scope has no verified source mapping for specialized controls.",
     },
     failed: "The service refused the edit.", original: "Unchanged original value", absent: "No value is present.",
+    settled: "Applied. The field shows the project's value.",
   },
   de: {
     count: "Dezimaler Zähler; keine Zeitumrechnung. Deklarierte Einheit (uninterpretiert):",
@@ -35,5 +36,6 @@ export const parameterEditorCopy = {
       "module-scope": "Für diesen Modulkontext gibt es keine verifizierte Quellzuordnung für Spezialsteuerungen.",
     },
     failed: "Der Dienst hat die Änderung abgelehnt.", original: "Unveränderter Originalwert", absent: "Kein Wert vorhanden.",
+    settled: "Übernommen. Das Feld zeigt den Wert aus dem Projekt.",
   },
 } as const;

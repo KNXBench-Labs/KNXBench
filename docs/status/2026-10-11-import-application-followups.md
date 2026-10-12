@@ -62,7 +62,7 @@ CLI/source/payload commits remain local; no later-native13 integration is claime
 | Attachments and extensions | [Read-only retained-payload catalogue](../contracts/project-payload-catalogue.md) and explicit inert downloads accepted locally: Rust1303/0, Web2689/0, builtBrowser12/0 and additional opt-in private production/native equality. Preview/replacement provenance remain separate | Preserved `.etsapp`/DLL/script bytes are not an execution capability; FUTURE-03 |
 | Installation instructions | Reuse the original reader and normalized editable-document service once accepted | Existing instruction-service owner has API/native work in progress; do not duplicate it |
 | Device planning and commissioning | Evidence-bound image/parameter/configuration support, explicit untested/unsupported reasons and later target-specific hardware acceptance | PDB-02/05/08 and KL-173/174; no blanket hardware go |
-| Export privacy and ETS return path | Disclose that native files retain source material; separately researched/verified interchange writer | Compression is not anonymization; KL-6 is not closed |
+| Export privacy and ETS return path | [Explicit native-export privacy review](../contracts/native-export-privacy.md) and reviewed snapshot binding accepted locally: Rust1305/0, Web2703/0, built12/0 plus actual-server native4/0; separately researched/verified interchange writer remains open | Compression is not anonymization; KL-6 is not closed |
 
 No ledger ID is reclassified merely because it appears in this matrix. Accepted
 boundaries and LATER entries remain distinct from verified implementation.

@@ -81,6 +81,8 @@ pub struct ProductDb {
 /// Every configured project plus the product database.
 pub struct Workspace {
     slots: Vec<Slot>,
+    /// Aliases enabled for literal renames at launch (ADR-0116).
+    name_recipe: Vec<String>,
     products: Option<ProductDb>,
     /// Why there is no product database, or `None` when there is one.
     products_absent: Option<String>,
@@ -103,6 +105,7 @@ impl Workspace {
         let (products, products_absent) = open_products(&config.product_db)?;
         Ok(Self {
             slots,
+            name_recipe: config.name_recipe.clone(),
             products,
             products_absent,
         })
@@ -139,6 +142,26 @@ impl Workspace {
         let fresh = Arc::new(load(alias, &slot.path)?);
         *cached = Some(Arc::clone(&fresh));
         Ok(fresh)
+    }
+
+    /// Aliases the operator enabled for literal renames, in launch order.
+    pub fn name_recipe_aliases(&self) -> Vec<&str> {
+        self.name_recipe.iter().map(String::as_str).collect()
+    }
+
+    /// The file behind `alias`, only when it was enabled for literal renames.
+    pub fn name_recipe_path(&self, alias: &str) -> Result<&Path, String> {
+        if !self.name_recipe.iter().any(|enabled| enabled == alias) {
+            return Err(format!(
+                "project {alias:?} is not enabled for renames; the operator starts knx-mcp \
+                 with --allow-name-recipe <alias> to allow them. Nothing was changed"
+            ));
+        }
+        self.slots
+            .iter()
+            .find(|slot| slot.alias == alias)
+            .map(|slot| slot.path.as_path())
+            .ok_or_else(|| format!("unknown project {alias:?}"))
     }
 
     pub fn products(&self) -> Option<&ProductDb> {

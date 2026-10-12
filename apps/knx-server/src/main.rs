@@ -22,10 +22,7 @@ async fn main() {
     // stop` ends in SIGKILL (exit 137).
     let stop = knx_server::GracefulStop::install()
         .unwrap_or_else(|e| panic!("failed to install the signal handlers: {e}"));
-    let port: u16 = std::env::var("KNX_PORT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(8080);
+    let port = listening_port(std::env::var("KNX_PORT").ok().as_deref());
     let static_dir = std::env::var("KNX_STATIC_DIR").ok().map(PathBuf::from);
     let data_dir = std::env::var("KNX_DATA_DIR")
         .map(PathBuf::from)
@@ -163,6 +160,12 @@ async fn main() {
     }
 }
 
+/// The standalone listener port. Keep invalid-value fallback and explicit port
+/// overrides (including zero for an ephemeral listener) unchanged.
+fn listening_port(value: Option<&str>) -> u16 {
+    value.and_then(|s| s.parse().ok()).unwrap_or(8484)
+}
+
 /// An environment variable, with an empty value read as unset.
 fn non_empty_env(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.trim().is_empty())
@@ -243,7 +246,26 @@ fn flag_from_value(value: Option<&str>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{flag_from_value, tunnel_return_path};
+    use super::{flag_from_value, listening_port, tunnel_return_path};
+
+    #[test]
+    fn standalone_listener_defaults_to_8484() {
+        assert_eq!(listening_port(None), 8484);
+    }
+
+    #[test]
+    fn explicit_listener_ports_are_preserved() {
+        for port in [0, 8484, 18984, u16::MAX] {
+            assert_eq!(listening_port(Some(&port.to_string())), port);
+        }
+    }
+
+    #[test]
+    fn invalid_listener_ports_keep_the_default_fallback() {
+        for value in ["", "invalid", "-1", "65536", " 8484 "] {
+            assert_eq!(listening_port(Some(value)), 8484);
+        }
+    }
 
     #[test]
     fn route_back_is_opt_in_and_reads_like_every_other_flag() {

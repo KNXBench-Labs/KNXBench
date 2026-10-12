@@ -735,8 +735,8 @@ describe("Inspector — group address type detail", () => {
       outcome: "DeclaredDiffersFromLinked",
     }, ["DPST-9-1"]));
     expect(facts()).toEqual(expect.arrayContaining([
-      ["Declared on the address", "DPST-9-1"],
-      ["Linked objects state", "DPST-9-4"],
+      ["Declared on the address", "Temperature (9.001)"],
+      ["Linked objects state", "Illuminance (9.004)"],
     ]));
     expect(host!.querySelector(".dpt-outcome")?.textContent).toBe(
       "The declaration applies. A linked object states another type of the same size.");

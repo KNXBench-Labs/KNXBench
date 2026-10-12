@@ -2,6 +2,7 @@
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { MessageKey, Translate } from "./i18n";
+import { dptDisplay } from "./dptLabels";
 
 // `GroupLinkNode.direction`/`GroupAddressLinkNode.direction`/
 // `NewGroupLinkRow`'s own `direction` state are `"Send"`/`"Receive"` wire
@@ -53,12 +54,10 @@ export function linkDirectionCounts(ga: GroupAddressNode): LinkDirectionCounts {
 // between linked objects, reported here and never settled by picking a
 // winner — same rule `knx_core::resolve_group_address_dpt` applies.
 //
-// Entries are `DptRef`'s `Display` text (`"DPST-1-1"`, `"DPT-1"`); the
-// dotted `"1.001"` form nothing in this repository produces is not
-// invented here either.
-export function dptText(t: Translate, ga: GroupAddressNode): string {
+// References remain wire values; only their visible labels are localized.
+export function dptText(t: Translate, ga: GroupAddressNode, language = "en"): string {
   if (ga.dpts.length === 0) return t("addressTable.noDpt");
-  return ga.dpts.join(" · ");
+  return ga.dpts.map(dpt => dptDisplay(dpt, language)).join(" · ");
 }
 
 export function hasDptConflict(ga: GroupAddressNode): boolean {

@@ -3023,6 +3023,8 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .bus-compose-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
 .bus-compose-fields label { display: flex; flex-direction: column; gap: 5px; }
 .bus-compose-input-format { min-width: 210px; }
+.bus-compose-fields .bus-compose-dpt-field { width: min(30rem, 100%); min-width: 0; }
+.bus-compose-dpt { width: 100%; min-width: 0; }
 .bus-monitor-filters { margin: 18px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 @media (max-width: 1350px) {
   .monitor-data { grid-template-columns: minmax(0, 1fr); }

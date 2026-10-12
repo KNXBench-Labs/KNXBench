@@ -1561,11 +1561,14 @@ export const messages = {
   "busCompose.noProjectHint":
     "No project open — no DPT resolves automatically here; type one explicitly.",
   "busCompose.sessionClosedMessage": "This session is closed — sending is disabled.",
-  "busCompose.noDptResolvedMessage": "No DPT resolved for this group address — enter one explicitly.",
+  "busCompose.noDptResolvedMessage": "No DPT resolved for this group address — choose one explicitly.",
   "busCompose.conflictingDptsMessage":
-    "Conflicting DPTs for this group address: {names} — enter one explicitly.",
+    "Conflicting DPTs for this group address: {names} — choose one explicitly.",
   "busCompose.destinationLabel": "Destination",
+  "dpt.technicalReference": "Technical reference",
   "busCompose.dptLabel": "DPT",
+  "busCompose.dptAutomatic": "Use the group address’s DPT",
+  "busCompose.dptSelectionHint": "Choose a datapoint type by name. The server checks encoding support before sending; a listed type does not prove device compatibility.",
   "busCompose.valueLabel": "Value",
   "busCompose.inputFormatLabel": "Input format",
   "busCompose.inputFormatAuto": "Auto (legacy compatibility)",

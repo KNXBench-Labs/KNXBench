@@ -23,6 +23,15 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-12 09:04 CEST
+- **Completed:** Session2caeff138d06 Published/read-back source05189634: reviewed DPT source4929e924 integrated with published server defaultsf0de988b into90699d5e; actual clean committed acceptance all11stages pass with2031frozen inputs. Web2841/0/182files, eight production-built intercepted EN-DE400/1440 cases, build/explicit typing, five nonempty root repo gates, docs/whitespace and five inherited server-default regression tests. Final8frame hashes: seven equal earlier inspected frames, remaining final ENwide frame inspected directly. Names first, exact aliases/unknown/family refs retained; object raw refs on demand; monitor native DPT select with unchanged API/storage/codec/context/send guards. Docs and primary KNX notation source synchronized; self-review, no bus/vendor actions.
+- **Pending/Next Steps:** None for implementation/publication: source05189634 is normally published on main and local/tracking/live equality verified. Task-owned evidence archival/cleanup is the only remaining housekeeping. Source is newer than immutable Alpha9 and existing running containers. No release/deployment/native WebKitGTK/Orca/full ETS claim.
+- **Notes for Codex oder Claude:** Earlier integration attempt was NOT accepted: chained shell masked a handover merge refusal; whitespace gate caught three markers. Both exact owner prefixes/common inherited journal preserved, actual merge committed and entire11-stage chain rerun green. Earlier RED/layout/fixture/startup failures remain separate. Do not copy raw API IDs back into normal labels or infer codec support from catalogue membership. Root source/index/foreign owners never synchronized; preserve all their queues. Own evidence remains ignored, no force-add/subagents/quota/live hardware.
+
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-12 08:53
 - **Completed:** AP6 offline prerequisite architecture missing-root runtime RED0/1 then source-frozen GREEN1/0. Existing243-line recipe moved once to knx-edit, only fingerprint helper expression replaced by existing equivalent Store SHA256; App public re-export unchanged. Resolved lock adds only one local crate and App edge, all external resolutions/checksums/deps identical. Actual public gate missing-policy runtime RED0/1 then production rule+nonempty workspace root; full gate successor13/0 includes22 direct/transitive metadata-only forbidden classes. Prior syntax/format refusal before runner and stale exact fixture-count full12/1 kept separate; neither accepted. Characterization test for exact legacy fingerprint/type identity and a direct independent consumer added next, not yet run.
 - **Pending/Next Steps:** Run actual moved service13/CLI6/direct consumer controls; private hash/gate negative controls, production graph and broad workspace/build/Clippy/docs gates on frozen current source; self-review and focused publication. No MCP write admission yet, request/client-associated approval and all native refusal/recovery tests later AP6. AP7 and missing AP3/Session1 hosts still pending.
@@ -35,6 +44,14 @@
 - **Completed:** AP6 prerequisite tree created from fresh main9424fe05 after recovered transient DNS fetch failure. Root AP5 source/closure/readback/archive164 members and own cleanup already verified; no replay. Existing App Cargo/service, Store lowercase SHA-256 helper, ADR0090, resolved-graph implementation and ownership contract inspected. ADR0115 declares a small offline application boundary and unchanged App compatibility export; no runtime implementation/admission yet.
 - **Pending/Next Steps:** Real missing-boundary architecture RED before service extraction; narrow knx-edit move and exact hash/API/behavior/production-graph evidence, then full gates/review/docs/publication. Actual opt-in MCP client-associated approval is later in AP6, not granted by this module split; AP7 and missing AP3/Session1 hosts remain separate.
 - **Notes for Codex oder Claude:** Exact18 owner paths in private ownership.json; no shared root/index/foreign/UI/Core/schema/format/protocol edits, no vendor/hardware/Secure execution, new third-party dependency, subagent or quota. Previous public journal suffix preserved. Read-only MCP/forbidden graph unchanged; no approval/actor identity inferred from model arguments or elicitation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-12 08:26 CEST
+- **Completed:** Standalone default port8484, Docker ENV/EXPOSE8484, Linux host-network run/update/Hub/manual recipes and explicit old-image KNX_PORT8484; source commit 6a0f8f5066e9a44cb114e82fe54d9129c2515bbf. Server814/0/47ignored, strict Clippy/build/fmt, isolated actual runtime3/0, recipe5/0/workflow5/0/docs12/0/five nonempty root gates. Actual committed-tree Docker image default8484 health/stop0 and host-network HTTPS/auth/native-save/reopen smoke pass. Architecture/limits/ADR/status synchronized; self-review, no compatibility expansion.
+- **Pending/Next Steps:** No feature implementation remains. Publication/cleanup belongs to this scoped delivery; a future release or user-container replacement is separate. Already published Alpha.9 keeps its original defaults; explicit KNX_PORT8484 supports it now. Other owners/queues unchanged.
+- **Notes for Codex oder Claude:** Desktop dev4777/ephemeral ports, auth/TLS, KNX3671 and Core/storage unchanged. Default host-mode password listener reaches all host interfaces; firewall warning mandatory. Dockerfile cannot enforce network mode, recipes select it. Root HEAD/index/foreign work remain untouched. Source-bound evidence docs/evidence/server-deployment-defaults-2026-10-12.json; preserve inherited journal and other owners.
 
 ---
 

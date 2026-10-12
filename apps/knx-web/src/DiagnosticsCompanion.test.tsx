@@ -328,6 +328,11 @@ describe("one editing workspace", () => {
     for (const module of ["DeviceLink.tsx", "deviceList.ts", "treeUtils.ts"]) {
       expect(graph.get(module)).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     }
+    const dptGraph = valueImportGraph("dptLabels.ts");
+    expect([...dptGraph.keys()]).toEqual(["dptLabels.ts"]);
+    expect(apiCallsIn(dptGraph)).toEqual([]);
+    expect(mutatingFetchesIn(dptGraph)).toEqual([]);
+    expect(dptGraph.get("dptLabels.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     // Shipped fun-language catalogues add only static copy and their registry.
     // The API-call and mutation inventories below remain unchanged.
     expect([...graph.keys()].sort()).toEqual([
@@ -353,6 +358,7 @@ describe("one editing workspace", () => {
       "canonicalJson.ts",
       "deviceList.ts",
       "diagnosticsWindow.ts",
+      "dptLabels.ts",
       "filePicker.ts",
       "flowAnimator.ts",
       "flowChannel.ts",

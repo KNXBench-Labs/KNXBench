@@ -50,7 +50,7 @@ variable table.
 **You see:** `knx-server` exits immediately with a message that includes `failed to bind`
 and an operating-system error about the address already being in use.
 
-**Why:** `KNX_PORT` defaults to `8080`, and `knx-server` binds it exclusively — it does
+**Why:** `KNX_PORT` defaults to `8484`, and `knx-server` binds it exclusively — it does
 not share a port with anything else, including a previous copy of itself that never shut
 down cleanly.
 
@@ -209,7 +209,7 @@ and the rest of your network at all, so the request goes nowhere and the symptom
 identical to "no gateway found."
 
 **Do this:** if you're running `knx bus discover` inside a container of your own on
-Linux, add `--network host` and try again — that puts the request on the real network
+Linux, confirm the default `--network host` option is present — that puts the request on the real network
 interface, the same as running the CLI outside a container. This applies both
 to the `knx` CLI and to the bus monitor's interface **Search** in the
 `knxbench-server` web UI, because both use the same multicast discovery

@@ -21,13 +21,18 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
     const panel = page.locator(".com-table-panel");
     await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
-    await expect(panel.locator('[data-object-id="1"] .com-object-effective-dpt')).toContainText(`17.001 – ${scene}`);
+    await expect(panel.locator('[data-object-id="1"] .com-object-effective-dpt')).toContainText(`${scene} (17.001)`);
     await panel.locator('[data-object-id="1"] summary').click();
     const field = panel.locator('[data-editor-id="1"] .dpt-field');
     const select = field.getByRole("combobox", { name: "DPT", exact: true });
     await expect(field.locator("input")).toHaveCount(0);
     await expect(select).toHaveValue("DPST-17-1");
-    expect(await select.locator('option[value="DPST-9-1"]').textContent()).toBe(`9.001 – ${temperature}`);
+    await expect(field.locator(".dpt-reference")).not.toHaveAttribute("open", "");
+    await expect(field.locator(".dpt-reference small")).not.toBeVisible();
+    await field.locator(".dpt-reference summary").click();
+    await expect(field.locator(".dpt-reference small")).toContainText("DPST-17-1");
+    await field.locator(".dpt-reference summary").click();
+    expect(await select.locator('option[value="DPST-9-1"]').textContent()).toBe(`${temperature} (9.001)`);
     await expect(field.locator(".provenance-badge")).toHaveText(m["valueSource.label"].replace("{source}", m["valueSource.program"]));
     const boxes = await field.evaluate(node => {
       const select = node.querySelector("select")!.getBoundingClientRect();
@@ -43,7 +48,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(JSON.stringify(state.tree)).toBe(before);
     if (process.env.KNX_DPT_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DPT_CAPTURE_DIR, `dpt-${language}-${width}.png`) });
     await select.focus(); await select.selectOption("DPST-9-1"); await select.press("Tab");
-    await expect(panel.locator('[data-object-id="1"] .com-object-effective-dpt')).toContainText(`9.001 – ${temperature}`);
+    await expect(panel.locator('[data-object-id="1"] .com-object-effective-dpt')).toContainText(`${temperature} (9.001)`);
     expect(state.objects[0].dpt).toBe("DPST-9-1");
     expect(state.requests.filter(r => r === "POST /api/com-object-dpt")).toHaveLength(1);
     await panel.locator('[data-object-id="2"] summary').click();

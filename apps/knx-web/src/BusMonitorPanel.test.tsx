@@ -104,7 +104,8 @@ it("opens full telegram details from the keyboard without sending a value", asyn
   expect(details).not.toBeNull();
   expect(details.textContent).toContain("Example light");
   expect(details.textContent).toContain("0x01 (6-bit)");
-  expect(details.textContent).toContain("DPST-1-1");
+  expect(details.textContent).toContain("Switch (1.001)");
+  expect(details.textContent).not.toContain("DPST-");
   expect(apiMock.writeBusValue).not.toHaveBeenCalled();
   await act(async () => root.unmount());
 });
@@ -556,7 +557,7 @@ describe("BusMonitorPanel", () => {
     const states = Array.from(host!.querySelectorAll(".bus-monitor-decode-state"), (node) => node.textContent);
     expect(states).toEqual(["No DPT assigned", "Conflicting DPTs", "Unsupported DPT", "Decode failed"]);
     expect(host!.querySelectorAll(".bus-monitor-decoded-error")).toHaveLength(2);
-    expect(host!.textContent).toContain("DPST-40-1");
+    expect(host!.textContent).toContain("40.001");
     expect(host!.textContent).toContain("wrong payload length");
   });
 

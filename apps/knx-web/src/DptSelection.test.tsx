@@ -31,13 +31,15 @@ for (const [language, temperature, scene, source] of [["en", "Temperature", "Sce
       const field = v.host.querySelector<HTMLElement>(".dpt-field")!;
       expect(field, "DPT has its own field-local context").not.toBeNull();
       expect(field.querySelector("input")).toBeNull();
+      expect(v.host.querySelector(".com-object-effective-dpt")?.textContent).not.toContain("DPST-");
+      expect(field.querySelector<HTMLDetailsElement>(".dpt-reference")?.open).toBe(false);
       const select = field.querySelector<HTMLSelectElement>("select")!;
       expect(select).not.toBeNull(); expect(select.value).toBe("DPST-9-1");
-      expect(select.querySelector('[value="DPST-9-1"]')?.textContent).toBe(`9.001 – ${temperature}`);
-      expect(select.querySelector('[value="DPST-17-1"]')?.textContent).toBe(`17.001 – ${scene}`);
+      expect(select.querySelector('[value="DPST-9-1"]')?.textContent).toBe(`${temperature} (9.001)`);
+      expect(select.querySelector('[value="DPST-17-1"]')?.textContent).toBe(`${scene} (17.001)`);
       expect(field.querySelector(".provenance-badge")?.textContent).toBe(source);
       expect(field.querySelector(".provenance-badge")?.getAttribute("title")).toBeTruthy();
-      expect(v.host.querySelector(".com-object-effective-dpt")?.textContent).toContain(`9.001 – ${temperature}`);
+      expect(v.host.querySelector(".com-object-effective-dpt")?.textContent).toContain(`${temperature} (9.001)`);
       expect(api.setComObjectDpt).not.toHaveBeenCalled();
     } finally { await v.cleanup(); }
   });
@@ -61,7 +63,7 @@ it("keeps a program default display-only and offers explicit reset to that defau
   try {
     const select = v.host.querySelector<HTMLSelectElement>(".dpt-field select")!;
     expect(select).not.toBeNull(); expect(select.value).toBe("");
-    expect(select.selectedOptions[0].textContent).toContain("9.001 – Temperature");
+    expect(select.selectedOptions[0].textContent).toContain("Temperature (9.001)");
     await act(async () => select.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
     expect(api.setComObjectDpt).not.toHaveBeenCalled();
   } finally { await v.cleanup(); }

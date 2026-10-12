@@ -16,6 +16,16 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Name-first DPTs and monitor selection (12 October 2026 source)
+
+Current source reuses the 454-ID EN/DE display vocabulary for **Name (main.sub)**
+in object and group-address views and monitor decoded values. The monitor send
+form now offers named DPT choices, with exact current aliases/unknowns retained
+and no send on selection. Raw object references are disclosed on demand; domain,
+API, project files and codec support are unchanged. This is newer than the
+published Alpha.9 package, not a deployed update.
+[Preservation and verification](../contracts/dpt-selection.md).
+
 ## Release notifications (11 October 2026 source)
 
 The workbench can announce newer GitHub releases at startup and hourly while

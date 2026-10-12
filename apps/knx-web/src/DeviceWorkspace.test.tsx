@@ -258,12 +258,13 @@ it("shows DPT provenance, canonical ids and function text without editing the pr
   await act(async () => { host.querySelector<HTMLButtonElement>(".com-object-channel-summary")!.click(); });
   const rows = [...host.querySelectorAll<HTMLTableRowElement>("tr[data-object-id]")];
   expect(rows[0].textContent).toContain("Toggle relay");
-  expect(rows[0].textContent).toContain("DPST-1-1");
+  expect(rows[0].textContent).toContain("Switch (1.001)");
+  expect(rows[0].querySelector(".com-object-effective-dpt")?.getAttribute("title")).toBe("DPST-1-1");
   expect(rows[0].textContent).toContain("Switch state");
   expect(rows[1].textContent).toContain("Program default");
-  expect(rows[1].textContent).toContain("DPST-9-1");
+  expect(rows[1].textContent).toContain("Temperature (9.001)");
   expect(rows[1].textContent).toContain("Temperature");
-  expect(rows[2].textContent).toContain("DPST-999-999");
+  expect(rows[2].textContent).toContain("999.999");
   expect(rows[3].textContent).toContain("—");
   await act(async () => { rows[1].querySelector("summary")!.click(); });
   expect(host.querySelector<HTMLTableRowElement>('[data-editor-id="2"]')!.querySelector<HTMLSelectElement>('.dpt-field select')?.value).toBe("");

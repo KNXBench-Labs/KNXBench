@@ -1450,11 +1450,14 @@ export const messages: Record<MessageKey, string> = {
   "busCompose.noProjectHint":
     "Kein Projekt geöffnet — hier wird kein DPT automatisch aufgelöst; einen explizit eingeben.",
   "busCompose.sessionClosedMessage": "Diese Sitzung ist geschlossen — Senden ist deaktiviert.",
-  "busCompose.noDptResolvedMessage": "Für diese Gruppenadresse konnte kein DPT aufgelöst werden — einen explizit eingeben.",
+  "busCompose.noDptResolvedMessage": "Für diese Gruppenadresse konnte kein DPT aufgelöst werden — wähle einen explizit aus.",
   "busCompose.conflictingDptsMessage":
-    "Widersprüchliche DPTs für diese Gruppenadresse: {names} — einen explizit eingeben.",
+    "Widersprüchliche DPTs für diese Gruppenadresse: {names} — wähle einen explizit aus.",
   "busCompose.destinationLabel": "Ziel",
+  "dpt.technicalReference": "Technische Referenz",
   "busCompose.dptLabel": "DPT",
+  "busCompose.dptAutomatic": "DPT der Gruppenadresse verwenden",
+  "busCompose.dptSelectionHint": "Wähle den Datenpunkttyp nach Namen. Der Server prüft vor dem Senden die Kodierungsunterstützung; ein gelisteter Typ belegt keine Gerätekompatibilität.",
   "busCompose.valueLabel": "Wert",
   "busCompose.inputFormatLabel": "Eingabeformat",
   "busCompose.inputFormatAuto": "Automatisch (Legacy-Kompatibilität)",

@@ -26,6 +26,30 @@ checks from future opt-in MCP permissions, verified operator/client-associated
 confirmation, actual client and native recovery acceptance. No existing MCP
 capability/read-only default or Core/format/native schema changed.
 
+## 2026-10-12 — Port 8484 and Linux host-network deployment defaults
+
+- Standalone server fallback and Docker `ENV`/`EXPOSE` now use **8484**;
+  explicit valid ports and invalid-value fallback behavior are preserved.
+- README, Docker Hub description, installation, run/update/authentication
+  recipes and troubleshooting consistently choose `--network host`, no `-p`.
+  Explicit `KNX_PORT=8484` also supports older published images. The smoke test
+  uses host networking on its own configurable test port, not the live 8484 service.
+- Authenticated host-mode access binds all host interfaces; firewall/LAN/VPN
+  scope and local-only no-password behavior are explained. Desktop/private dev
+  listener selection is unchanged. See the [deployment guide](manual/user-guide/11-web-and-docker.md#networking)
+  and [ADR amendment](adr/0097-docker-hub-release-image.md#2026-10-12-amendment--linux-deployment-defaults).
+- Source self-review; server tests **814 passed / 0 failed / 47 ignored**,
+  strict server Clippy/build/fmt, three actual isolated-binary startup/health
+  tests, five recipe regressions, five release-workflow and twelve documentation
+  checker regressions pass. Five fresh explicit-root repository gates and
+  documentation checks pass. No private-corpus, live-bus or new release claim.
+- Actual committed-tree Docker build passes. Image metadata uses 8484/tcp;
+  an isolated no-override container answers health on 8484 and stops with exit 0.
+  The real host-network HTTPS smoke passes authentication, native save/reopen
+  and cleanup on a separate test port. Existing user-container identity/start/PID
+  is unchanged. [Source-bound verification](evidence/server-deployment-defaults-2026-10-12.json).
+  Published Alpha.9 is unchanged; no live gateway/ETS/private-corpus run.
+
 ## 2026-10-12 — Bounded offline literal naming recipe
 
 Explicitly selected stable group-address IDs receive exact prefix + original name
@@ -852,6 +876,22 @@ Read-only own raw values remain separate from Dynamic inputs, defaults and
 siblings; Repeat/activation/write boundaries remain. Published no-ff merge `2e264f6cc6ec`, HEAD/tracking/live equal. [Evidence](evidence/kl68-instance-values-2026-10-10.json).
 
 # IMPLEMENTATION_STATUS.md
+
+## 2026-10-12 — Named DPTs and bus-monitor dropdown
+
+- Shared EN/DE presentation is **Name (main.sub)** across object, group-address
+  and monitor decoded views. Exact API/stored IDs, unknown values, subtype zero
+  and four-digit subtype numbers remain intact. Raw object IDs are on demand.
+- Monitor compose DPT is a native select; row prefill preserves aliases, automatic
+  resolution and stale/closed/unverified guards remain authoritative. Choosing
+  an option neither edits the project nor sends. Encoding support remains server-owned.
+- Named RED failures, then Web 2,841/0 (182 files), production build/explicit fixture
+  typing and eight EN/DE 400/1440 production-browser checks pass; all eight frames
+  inspected. Earlier fixture version/startup failures retained separately.
+- [Contract, primary notation evidence and boundaries](contracts/dpt-selection.md).
+  Source self-review only; no schema/parser/dependency/codec changes, live bus,
+  native UI/full ETS acceptance, release or container deployment.
+
 
 This is a **newest-first delivery history**, not the live feature inventory.
 Older dates, failures, counts and compatibility milestones remain historical.

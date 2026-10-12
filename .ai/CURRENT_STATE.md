@@ -1,3 +1,12 @@
+Web lock: taken by claude-web-integration for package 1 (project notes host)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 13:19
+- **Completed:** Lock taken only. Goal "fertige Einzelfunktionen in die Web-Oberfläche einbauen" (Session 1 role): packages 1 notes host, 2 instruction editor, 3 time/slider parameter editors, 4 catalogue updates in the web, one at a time; package 5 (MCP rename acceptance) deselected by the user.
+- **Pending/Next Steps:** Package 1 in worktree `web-notes-20261012`: mount `ProjectNotesEditor` in the workbench with real tree identity, target catalogue, refresh after Apply and draft-aware navigation. Release in the delivery entry.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 13:00
 - **Completed:** Data-editing/tooling goal (session 6b3120b9a529) closed for its own scope. Published today on `main`: ADR-0115 offline edit boundary (`3b7df24a`), ADR-0116 opt-in human-confirmed MCP rename writer (`3170b556`), ADR-0117 previewed/recoverable catalogue updates (`d847fee7`, `owner-2` 25/25 after a lint-only fix of the failed `owner-1`). Each tip read back local/tracking/live; code blobs equal the gated heads; worktrees, branches and build targets removed, receipts kept in scratch. Earlier packages AP2, AP4 (notes service, HTTP, editor leaf), AP5 and AP8 were already on `main`.

@@ -1,3 +1,12 @@
+Web lock: taken by claude-web-integration for package 3 (time and integer-slider parameter editors)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 16:13
+- **Completed:** Lock taken only.
+- **Pending/Next Steps:** Package 3 in worktree `web-params-20261012`: mount the bounded `ParameterEditor` for Number/Time fields on explicit request, typed client for `/api/device/{id}/parameter-editor-source`, writes only through the existing `setParameterValue`; Colour/Picture keep the visible fallback; PDB-04 stays open. Release in the delivery entry.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released.
+
+---
+
 Web lock: released by claude-web-integration (package 2, installation instructions host, delivered)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 16:12

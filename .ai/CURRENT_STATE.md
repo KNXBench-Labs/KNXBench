@@ -1,3 +1,12 @@
+Web lock: taken by claude-parked-adoption for package 1 (native-evidence port)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-12 19:01
+- **Completed:** Lock taken only.
+- **Pending/Next Steps:** Package 1 in worktree `native-evidence-port-20261012`: port the seven commits of the parked `fix/native-evidence-20261011` (`b76ee907`, ADR-0113 stays 0113) onto fresh main, resolve the 10 content conflicts additively, re-run everything, full gate. Then package 2 (ux-feedback AP1/2/3/5, AP4 dropped) under its own lock entry, then the docs-only stale-claims package. Release in the delivery entry.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released. The parked worktrees stay untouched.
+
+---
+
 Web lock: released by claude-web-integration (package 4, catalogue updates in the web, delivered)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-12 18:17

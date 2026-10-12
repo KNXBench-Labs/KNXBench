@@ -88,15 +88,26 @@ for (const language of ["en", "de"] as const) {
       await expect(groups.nth(0).locator("button")).toHaveAttribute("aria-expanded", "true");
       const programObject = page.locator('[data-object-id="8"]');
       await programObject.locator("summary").click();
-      await expect(programObject.locator(".com-object-effective-dpt")).toContainText("DPST-9-1");
+      // Name-first DPT presentation (docs/contracts/dpt-selection.md, 2026-10-12
+      // amendment): the cell shows "Name (main.sub)"; the exact reference lives
+      // in the tooltip, never inline.
+      const programDpt = programObject.locator(".com-object-effective-dpt");
+      await expect(programDpt.locator(":scope > span")).toHaveText(
+        language === "de" ? "Temperatur (9.001)" : "Temperature (9.001)",
+      );
+      await expect(programDpt).toHaveAttribute("title", "DPST-9-1");
+      await expect(programDpt).not.toContainText("DPST");
       await expect(programObject.locator(".com-object-dpt-origin")).toContainText(
         language === "de" ? "Programm-Standardwert" : "Program default",
       );
-      await expect(programObject.locator(".com-object-effective-dpt")).toContainText("Temperature");
-      const dptFacts = programObject.locator(
-        ".com-object-effective-dpt > small:not(.com-object-dpt-origin)",
+      // The program's own master text stays separately labelled, untranslated.
+      await expect(programDpt.locator(":scope > small:not(.com-object-dpt-origin)")).toHaveText(
+        language === "de" ? "Stammdaten: Temperature" : "Master data: Temperature",
       );
-      await expect(dptFacts).toHaveCount(2); // Exact raw reference and separately labelled master text.
+      const dptFacts = programObject.locator(
+        ".com-object-effective-dpt > span, .com-object-effective-dpt > small:not(.com-object-dpt-origin)",
+      );
+      await expect(dptFacts).toHaveCount(2); // Name-first label and separately labelled master text.
       const dptTokenLineCounts = await dptFacts.evaluateAll((elements) => elements.flatMap((element) => {
         const node = element.firstChild;
         if (!node || node.nodeType !== Node.TEXT_NODE) throw new Error("Missing DPT fact text");
@@ -112,11 +123,15 @@ for (const language of ["en", "de"] as const) {
       }));
       expect(dptTokenLineCounts.length).toBeGreaterThan(0);
       expect(dptTokenLineCounts.every(count => count === 1),
-        "DPT identifiers and master-text words must not wrap at character level").toBe(true);
+        "DPT labels and master-text words must not wrap at character level").toBe(true);
 
       await groups.nth(1).locator(".com-object-channel-summary").click();
       await expect(page.locator('[data-object-id="7"]')).toContainText("Switching lights");
-      await expect(page.locator('[data-object-id="7"] .com-object-effective-dpt')).toContainText("DPST-1-1");
+      const switchDpt = page.locator('[data-object-id="7"] .com-object-effective-dpt');
+      await expect(switchDpt.locator(":scope > span")).toHaveText(
+        language === "de" ? "Schalten (1.001)" : "Switch (1.001)",
+      );
+      await expect(switchDpt).toHaveAttribute("title", "DPST-1-1");
       await groups.nth(2).locator(".com-object-channel-summary").click();
       await expect(page.locator("tr[data-object-id][data-activation='Inactive']:visible")).toHaveCount(1);
       await expect(page.locator("tr[data-object-id][data-activation='Undetermined']:visible")).toHaveCount(1);

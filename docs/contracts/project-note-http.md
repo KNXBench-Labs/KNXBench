@@ -11,7 +11,7 @@ existing application service rather than writing SQL or inventing commands.
 
 ## Wire and authority
 
-All four routes sit under the existing authenticated API guard. Disabled-auth
+All five routes sit under the existing authenticated API guard. Disabled-auth
 in-process desktop uses the existing explicit local policy; these routes do not
 introduce another account or permission system.
 
@@ -31,6 +31,13 @@ introduce another account or permission system.
   mandatory. Failed consent retains the plan; success consumes it, including
   no-op. Apply returns changed, native generation, actual revision and mode.
 - `POST /api/project/notes/cancel`: exact token; discards only that plan.
+- `GET /api/project/notes/targets` (added 2026-10-12): read-only catalogue of
+  entities a note may be attached to, from `knx_app::note_targets`, as
+  `{targets:[{target,owner,parts}], serverIncarnation, projectIncarnation,
+  snapshotRevision}`. `target` uses the same typed `{kind,id}` grammar (never
+  `project`); `parts`/`owner` are locale-neutral label parts (address/number, name;
+  `owner` only for communication objects). Only targets that `ProjectNoteTarget`
+  validation accepts are listed. Without an open project: 400, like the read.
 
 One router-local pending plan, 300-second monotonic TTL, 24 random token bytes;
 newer valid preview replaces an older one even from another authenticated client.

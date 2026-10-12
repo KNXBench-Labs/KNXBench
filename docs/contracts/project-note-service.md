@@ -65,3 +65,14 @@ and service receipts remain bound to their original source. Staged whitespace
 inspection subsequently rejected a multiline blank-title test literal; its
 equivalent tab/newline escape spelling is the sole post-acceptance test delta
 and requires a fresh focused run in the combined acceptance.
+
+## Target catalogue (12 October 2026)
+
+`knx_app::note_targets::note_target_catalogue` lists the entities a note may be
+attached to: installations, areas, lines, building parts, devices, communication
+objects, group ranges and group addresses, once per stable ID, never the project
+itself. It reads the domain model directly and keeps only targets that
+`ProjectNoteTarget::validate` accepts (an ID occurring twice in its kind is
+withheld). Labels are locale-neutral parts; the UI adds the kind word. Read-only:
+it neither changes the project nor touches note IDs or history. Pinned by
+`crates/knx-app/tests/note_targets.rs`; served by `GET /api/project/notes/targets`.

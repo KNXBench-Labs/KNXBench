@@ -1078,6 +1078,7 @@ main {
 }
 .catalog-update-preview h2 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
 .catalog-update-preview p { margin: 0; }
+.catalog-update-preview > button { justify-self: start; }
 .catalog-update-hash code { overflow-wrap: anywhere; word-break: break-all; }
 .catalog-update-programs { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; }
 .catalog-update-programs li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; min-width: 0; }

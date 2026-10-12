@@ -48,15 +48,16 @@ All behind the existing authentication; JSON is camelCase; errors are the usual
 - `POST /api/catalog/update/preview` — multipart, one file field (as
   `/api/catalog/install`). 200: `{applied:false, preview}` where `preview` is the
   `UpdatePreview` above. Package refusals are 400 (a legacy product database is
-  kind `legacyProductDatabase`, as for install); no product database is 503 kind
-  `noProductDatabase`; database failures are 500. The database file is unchanged.
+  422 kind `legacyProductDatabase`, as for install); no product database is 503 on
+  every route below; database failures are 500. The database file is unchanged.
 - `POST /api/catalog/update/apply` — multipart: the same file field plus a text
   field `token`. 200: `{applied:true, preview, backup, report}`; `backup` is the
   backup's file name only and `report` the install report of `/api/catalog/install`.
   A token that no longer matches is 409 kind `catalogueUpdateStale` and nothing
   is written; a missing token is 400.
 - `GET /api/catalog/backups` — 200: `{backups:[{name, bytes, modifiedUnixSeconds}]}`,
-  newest first, only names of the form
+  newest first by the time in the name (then the attempt suffix), only regular
+  files (no links) with names of the form
   `<database file name>.backup-<seconds>-<12 hex>[-<n>].sqlite` in the database's
   directory. Never a path.
 - `POST /api/catalog/restore` — JSON `{name}`. The name must be in a fresh
@@ -68,6 +69,7 @@ Preview, apply and restore hold the product-database mutex for their duration.
 
 ## Evidence
 
-`crates/knx-productdb/tests/catalog_update.rs` and
-`apps/knx-cli/tests/catalog_update_cli.rs`;
+`crates/knx-productdb/tests/catalog_update.rs`,
+`apps/knx-cli/tests/catalog_update_cli.rs` and, for the web routes,
+`apps/knx-server/tests/http_catalogue_update.rs`;
 [evidence record](../evidence/catalogue-update-2026-10-12.json).

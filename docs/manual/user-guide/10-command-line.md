@@ -252,7 +252,9 @@ written. To install, repeat the command with `--confirm <token>` using the
 database next to it and prints the matching `knx products restore` command.
 If anything changed in between, the token no longer fits and you preview
 again. Your projects keep using the exact program versions they were built
-with; a new version is added beside the old one.
+with; a new version is added beside the old one. The web catalogue offers the
+same check as **Update with preview…**
+([Devices and products](05-devices-and-products.md#updating-with-a-preview-newer-source-not-alpha-9)).
 
 ### `knx products restore` — go back to a backup
 

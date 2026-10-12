@@ -787,6 +787,10 @@ and App keeps drafts across views and guards project exits
 The instruction editor follows the same pattern as a device-editor tab
 (`DeviceInstructionsPanel`, shared `snapshotIdentity.ts`;
 [host](contracts/instruction-editor-host.md#workbench-host-12-october-2026)).
+The catalogue view's previewed update and restore go through
+`catalogue_update_routes.rs`, which only wraps `knx_productdb::update` under the
+product-database mutex
+([ADR-0118](adr/0118-catalogue-updates-through-the-web-server.md)).
 Parameter rows host the bounded parameter editor on request
 (`ParameterSourceEditor`, with source verification in `parameterSourceHost.ts`;
 [host](contracts/parameter-editor-host.md#workbench-host-12-october-2026)).

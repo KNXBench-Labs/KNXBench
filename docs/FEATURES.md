@@ -1,4 +1,4 @@
-Last updated: 2026-10-12 16:44 CEST
+Last updated: 2026-10-12 17:40 CEST
 
 # KNXBench Features
 
@@ -109,6 +109,7 @@ Last updated: 2026-10-12 16:44 CEST
 | Project notes | Notebook view; review-first edits | Main-only |
 | Installation instructions | Device tab; imported hints, review-first | Main-only |
 | Checked parameter editor | Time count, integer slider; source-checked | Main-only |
+| Catalogue update with preview | Backup before install; restore listed backups | Main-only |
 
 ## Implemented — Server and monitoring
 

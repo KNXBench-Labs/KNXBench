@@ -16,6 +16,19 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Group-address members and download preparation (12 October 2026 source)
+
+A group address's members — communication-object links, not devices — can now be
+added from the address: **Add member…** in all four presentations and in Properties,
+choosing device, object and direction, with the existing link rule, duplicate check,
+server refusals and one undo step per add. The **Download to device** tab chooses its
+gateway from the start-up interface search (one answer filled in, several offered by
+name and endpoint, typed addresses kept), the device editor opens it with that device
+preselected, and a five-step list names what is still missing. No new protocol,
+download capability or compatibility claim
+([limits](../KNOWN_LIMITATIONS.md#group-address-members-and-download-preparation-2026-10-12)).
+This is newer than the published Alpha.9 package, not a deployed update.
+
 ## Project notes in the workbench (12 October 2026 source)
 
 The **Notes** view opens the project's engineering notebook: literal plain-text

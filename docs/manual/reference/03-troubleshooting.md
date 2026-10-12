@@ -332,8 +332,8 @@ LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libwayland-client.so.0 ./KNXBench_0.1.0-alp
 ```
 
 On Arch and Fedora the path is usually `/usr/lib/libwayland-client.so.0` or
-`/usr/lib64/libwayland-client.so.0`. AppImages built after this fix no longer
-bundle the library and need no workaround.
+`/usr/lib64/libwayland-client.so.0`. Alpha.10 and later AppImages no longer
+bundle the library and need no workaround: updating is the simpler fix.
 
 ## `cargo tauri dev` fails because the frontend was never installed
 

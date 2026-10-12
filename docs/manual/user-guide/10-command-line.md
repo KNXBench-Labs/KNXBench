@@ -254,7 +254,7 @@ If anything changed in between, the token no longer fits and you preview
 again. Your projects keep using the exact program versions they were built
 with; a new version is added beside the old one. The web catalogue offers the
 same check as **Update with preview…**
-([Devices and products](05-devices-and-products.md#updating-with-a-preview-newer-source-not-alpha-9)).
+([Devices and products](05-devices-and-products.md#updating-with-a-preview-since-alpha-10)).
 
 ### `knx products restore` — go back to a backup
 

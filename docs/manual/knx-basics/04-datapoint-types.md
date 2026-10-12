@@ -37,7 +37,7 @@ it down to specifically "Switch." A handful of everyday examples:
 > Technical references such as `DPST-9-1` remain in interchange/API data and
 > diagnostics, not the normal named display. In the object editor, expand
 > **Technical reference** if you need the exact stored identifier.
-> This source update is newer than the published Alpha.9 package.
+> Since Alpha.10.
 > [Presentation and preservation contract](../../contracts/dpt-selection.md).
 
 ## What happens when two devices disagree

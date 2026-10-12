@@ -73,7 +73,7 @@ The left pane has three stacked blocks.
 | Topology | Areas, lines and the devices in them |
 | Devices | The project-wide, filterable/sortable device table; a device click opens its central editor |
 | Group addresses | The group-address table |
-| Notes | The project's engineering notebook (newer source, not in Alpha 9) — see [Project notes](#project-notes-newer-source-not-alpha-9) |
+| Notes | The project's engineering notebook (since Alpha 10) — see [Project notes](#project-notes-since-alpha-10) |
 | Product catalog | Opens the catalog overlay, not a view — see [Devices and products](05-devices-and-products.md) |
 
 **The project explorer**, in the middle: the project as a tree — Topology, Buildings,
@@ -94,7 +94,7 @@ The Overview of the fictional sample project the manual's screenshots use: 1 are
 2 lines, 8 devices, 15 group addresses, 8 building parts, 39 communication objects.
 The tree on the left shows the same project, opened at its first line.
 
-Newer source (after Alpha.9, so not yet in this screenshot) groups the same numbers
+Alpha 10 (newer than this Alpha 9 screenshot) groups the same numbers
 into three cards: **Project contents**, **Import report** and **Technical details**.
 The import card states the overall result in words — errors recorded, imported with
 warnings, nothing recorded, or *not assessed* when no import report is available —
@@ -115,7 +115,7 @@ opens the project-wide device table. Filter, sort, table scroll and checkbox
 selection survive the editor visit. The existing Properties inspector remains
 on the right. See [Devices and products](05-devices-and-products.md#the-devices-view).
 
-The Devices view first shipped with Alpha 6 and is included in Alpha 9; the
+The Devices view first shipped with Alpha 6 and is included in every later release; the
 older Alpha 5 AppImage does not have it.
 
 The Bus monitor and the Log replace the workspace entirely while they are open, and
@@ -125,12 +125,12 @@ selection to inspect.
 Click a toast’s message action to open **Log**, jump to its exact retained
 UI notification and show details. The separate × still only dismisses the toast.
 
-Newer source also has update notifications: **Release details on GitHub** opens
+Alpha 10 also has update notifications: **Release details on GitHub** opens
 that release page, while the message action still opens the notification record.
 **File → About KNXBench…** retains update information and offers manual checking;
-**Settings → Updates** controls automatic checks. This is not in the published
+**Settings → Updates** controls automatic checks. This is newer than the
 Alpha.9 shown in the screenshots. See
-[Release notifications](09-settings-and-appearance.md#release-notifications-newer-source-not-alpha9).
+[Release notifications](09-settings-and-appearance.md#release-notifications-since-alpha-10).
 
 Click any log message for **Message details**: **Copy message** copies its raw
 message and **Copy all details** copies the full JSON record. You can select
@@ -167,12 +167,12 @@ project elements, KNX addresses or local paths; check before sharing the
 file. The desktop build opens an OS save dialog; browser export uses a local
 file download, not the server's Save As directory.
 
-### Project notes (newer source, not Alpha 9)
+### Project notes (since Alpha 10)
 
 **Notes** in the navigation pane, or **Notes** in the command palette, opens the
 project's engineering notebook: ordered plain-text notes attached to the project
 or to one of its parts. It needs an open project and is disabled without one.
-This view is newer than the published Alpha 9 and is not in its screenshots.
+This view ships since Alpha 10 and is not in the Alpha 9 screenshots.
 
 - The list sits beside the editor. **Find notes** only filters what you see; it
   never reorders the project's notes.
@@ -213,7 +213,7 @@ deleted. The chapters that follow say which is which.
 One line at the bottom: the installation names of the open project (or just
 "KNXBench" when nothing is open) on the left, and the version on the right. The
 current screenshots in this manual were taken from the published
-`v0.1.0-alpha.9` frontend and server. Porcelain is the light theme; Graphite
+`v0.1.0-alpha.9` frontend and server (Alpha 10 views are marked where they differ). Porcelain is the light theme; Graphite
 shows the same workbench in dark mode. Earlier README videos remain labelled
 as historical recordings in the [media inventory](../../assets/README.md).
 

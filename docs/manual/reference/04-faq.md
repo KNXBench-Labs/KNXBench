@@ -81,7 +81,7 @@ exists," not certification by the KNX Association.
 **What does "alpha" mean for this project specifically?**
 
 Version `0.1.0-alpha` (each component counts its own `alpha.N`), with a public
-`v0.1.0-alpha.9` pre-release. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
+`v0.1.0-alpha.10` pre-release. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
 known limitations, several classified critical, and writing to a real device is verified
 only for narrowly recorded device/application cases. See
 [Project status](../getting-started/03-project-status.md) for the evidence boundaries and what
@@ -99,14 +99,14 @@ the corresponding source. See [`LICENSE`](../../../LICENSE) in the repository ro
 Yes. The workbench can discover KNXnet/IP gateways during startup. The current
 source also checks public GitHub releases after startup settings load and hourly
 while visible, unless **Settings → Updates → Automatically check for new releases**
-is off. This release-check feature is not in the already-published Alpha.9 builds.
+is off. This release check is included since Alpha.10; Alpha.9 and older builds do not have it.
 **File → About KNXBench… → Check for updates** is a separate explicit check.
 
 For release checking, GitHub receives the client's public IP address and ordinary
 HTTP/browser metadata, not project data, login credentials or installed product
 information. No release is downloaded or installed automatically, and a failed
 check does not block editing. See
-[Release notifications and privacy](../user-guide/09-settings-and-appearance.md#release-notifications-newer-source-not-alpha9).
+[Release notifications and privacy](../user-guide/09-settings-and-appearance.md#release-notifications-since-alpha-10).
 
 There is no usage analytics/telemetry feature. Debug reports and support-gap
 exports are prepared locally on request; they are not automatically transmitted.

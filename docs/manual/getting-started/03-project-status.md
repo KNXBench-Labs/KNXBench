@@ -9,26 +9,29 @@ Read this chapter before you trust KNXBench with a project you care about.
 Every part of KNXBench carries its own version
 ([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). Since the
 `v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
-The CLI, desktop, web frontend, server and `knx-mcp` now carry `0.1.0-alpha.9`;
+The CLI, desktop, web frontend, server and `knx-mcp` now carry `0.1.0-alpha.10`;
 library crates keep their own numbers. The public pre-release is
-[`v0.1.0-alpha.9`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.9), published on 11 October 2026: AppImage, `knx-mcp` and the Docker Hub
+[`v0.1.0-alpha.10`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10), published on 12 October 2026: AppImage, `knx-mcp` and the Docker Hub
 image `knxbench/knxbench-server`. See [Installation](04-installation.md).
 
-The current screenshots show that published release, not a moving development
-build. Alpha 9 brings named English/German DPT choices, display-only fallback
-installation labels, clearer login/version and notification details, and better
-import feedback. The device overview and restart-safe project history are also
-available. [Release notes](../../releases/alpha9.md) keep the exact scope together.
+Alpha 10 fixes the AppImage crash on newer Mesa drivers
+([#6](https://github.com/KNXBench-Labs/KNXBench/issues/6)) and imports ETS 5.7
+projects ([#7](https://github.com/KNXBench-Labs/KNXBench/issues/7)). It adds
+project notes, four group-address views with member editing, the installation
+instructions tab, checked time/slider parameter editors, catalogue updates with a
+preview and backup, import evidence that survives saving, and release
+notifications. [Release notes](../../releases/alpha10.md) keep the exact scope
+together. Most screenshots in this manual still show Alpha 9; newer views are
+marked where they differ.
 
 **Before upgrading:** close the app and independently back up `.knxdb` files and
-Docker data. Alpha 9 uses native schema **13**; Alpha 8 and earlier refuse upgraded
+Docker data. Alpha 10 uses native schema **14**; Alpha 9 and earlier refuse upgraded
 files. Returning to an older build requires your pre-upgrade backup. In-file
 versions and Undo are not an independent backup. Update `knx-mcp` together with
 the application.
 
-The release includes foundations for instruction and specialised parameter
-editors, but those new editors are **not mounted in the production workbench**.
-Do not mistake a source component for a new tab in your downloaded app.
+Colour and picture parameters still use the plain fallback field, and the
+Functions/Sites work is not part of this release.
 
 **Source documentation and a release asset are different snapshots.** Check the
 running application's version and build commit before expecting a recently added

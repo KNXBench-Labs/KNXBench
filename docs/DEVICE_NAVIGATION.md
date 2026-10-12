@@ -110,6 +110,13 @@ form. The existing monitor stays mounted and continues polling while hidden; Bac
 restores it without reconnecting or stopping capture. Opening a device is not an
 instruction to scan, compare, download, program an address or write a telegram.
 
+The opposite direction exists once (2026-10-12): the device editor's **Download to
+device…** opens the bus workspace's download tab with this device preselected by id in
+the current project. It never plans, starts a download or connects, is disabled with a
+reason for a device without an individual address, and does not switch a busy download
+tab. Like the other links it is a workbench-only provider (`OpenDownloadButton`); the
+diagnostic companion does not offer it.
+
 The independent diagnostic companion mounts no editing-navigation provider: these
 new generic source links remain passive there, and its existing exact API/mutation
 inventory stays unchanged. Existing guarded Flow/main-window navigation remains intact.

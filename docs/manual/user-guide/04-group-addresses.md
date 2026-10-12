@@ -121,7 +121,8 @@ project, and switching projects resets search, filter and range scope.
 
 Selecting a row shows a **Links** panel underneath the table: one line per linked
 communication object, with its device, the object's name and number, the direction,
-and an Unlink button.
+and an Unlink button. Properties shows the same members as a compact list. Both
+offer **Add member…** (see [Linking a communication object](#linking-a-communication-object)).
 
 ## Renaming an individual group address
 
@@ -174,7 +175,10 @@ See [Projects](02-projects.md).
 
 ## Linking a communication object
 
-Links are created from the device side, not from the table:
+A group address's *members* are communication-object links, not whole devices: an
+object linked in both directions is two members. Links can be created from either side.
+
+From the device:
 
 1. Select the device.
 2. In the device panel, open the **Communication objects** tab.
@@ -182,8 +186,24 @@ Links are created from the device side, not from the table:
 4. In the link row, pick a group address, pick **Send** or **Receive**, and click
    **Link**.
 
-Unlinking works from either side — the link row on the communication object, or the
-Links panel under the selected group address.
+From the group address (current source, newer than Alpha 9 — the screenshots in this
+manual still show the released Alpha 9):
+
+1. Select the address in any of the four presentations, or open it in Properties.
+2. Click **Add member…** (German: **Teilnehmer hinzufügen…**).
+3. Choose the **Device**. Only devices the link rule admits are listed: those of the
+   address's own installation and devices placed in no installation. Choosing a device
+   reads its communication objects; a failed read says so and offers **Retry**.
+4. Choose the **Communication object** (objects already linked to this address say in
+   which direction) and the **Direction**: **Send**, **Receive** or **Send + receive (one
+   action)**.
+5. Click **Add member**. A link that already exists in that direction is refused before
+   anything is sent; the server's own refusal is shown unchanged. Each add is one undo
+   step — **Send + receive** included.
+
+An address that occurs in more than one installation cannot get new members; the panel
+says so instead of offering the picker. Unlinking works from either side — the link row
+on the communication object, or **Unlink** next to the member.
 
 The direction is part of the link, not of the address: one object may hold both a send
 and a receive link to the same address, and the **Links** column then counts it once
@@ -192,9 +212,9 @@ communication object tab, including the six flags.
 
 > **Note**
 >
-> There is no way to start a link from the group-address table, because choosing a
-> communication object there would need a device-and-object picker that does not exist
-> yet. Start from the device.
+> The datapoint types of object and address are shown side by side while you choose;
+> whether they conflict is decided by the existing check and appears with the address's
+> DPT after linking. Nothing is linked automatically.
 
 ## The group-address style
 

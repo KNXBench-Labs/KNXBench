@@ -96,6 +96,15 @@ test("manual screenshots of the four group-address presentations", async ({ page
   await view(page, "matrix");
   await expect(workspace.locator("[data-ga-matrix]")).toBeVisible();
   await expect(workspace.locator("[data-ga-cell]").first()).toBeVisible();
+  // Load one device's object list through the real device-detail read, keep two
+  // linked columns and add its first unlinked object so all three fit in frame.
+  const ground = workspace.locator("[data-ga-inventory-device]").filter({ hasText: "Switch actuator ground floor" });
+  await ground.locator("[data-ga-load-objects]").click();
+  await expect(ground).toHaveAttribute("data-ga-inventory-state", "loaded");
+  const checked = workspace.locator("[data-ga-column]:checked");
+  while ((await checked.count()) > 2) await checked.last().uncheck();
+  await workspace.locator(".ga-column-choices label").filter({ has: page.locator("[data-ga-unlinked]") }).first().locator("input").check();
+  await expect(workspace.locator(".ga-matrix-table thead [data-ga-unlinked]")).toHaveCount(1);
   // Fold the column chooser (open by default) so the grid itself is in frame.
   await workspace.locator(".ga-column-picker summary").click();
   await shot(page, "ga-view-matrix");

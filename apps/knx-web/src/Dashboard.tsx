@@ -17,6 +17,7 @@ import { importReportState, type ImportFindingSeverity } from "./importFindings"
 import ImportEvidencePanel from "./ImportEvidencePanel";
 import SourceReportPanel from "./SourceReportPanel";
 import ProjectPayloadPanel from "./ProjectPayloadPanel";
+import ProjectMetadataPanel from "./ProjectMetadataPanel";
 import { useTranslate } from "./i18n";
 import type { MessageKey } from "./messages/en";
 import { useDeviceNavigation } from "./DeviceLink";
@@ -113,6 +114,7 @@ export default function Dashboard(props: {
           <dl className="dashboard-stats">
             <Row label={t("dashboard.schemaVersion")}><span className="dashboard-value">{tree.schema_version}</span></Row>
           </dl>
+          <ProjectMetadataPanel tree={tree} />
         </section>
       </div>
     </div>

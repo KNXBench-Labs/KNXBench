@@ -77,6 +77,7 @@ mod fs_routes;
 mod instruction_routes;
 mod load_progress;
 mod name_recipe_routes;
+mod log_text;
 mod note_routes;
 pub use load_progress::*;
 mod catalogue_update_routes;

@@ -3003,6 +3003,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .structure-new-menu-content { position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; min-width: 260px;
   max-width: min(24rem, calc(100vw - 20px)); max-height: 70dvh; overflow: auto; background: var(--knx-surface);
   border: 1px solid var(--knx-border); border-radius: 8px; box-shadow: 0 12px 32px var(--knx-overlay-shadow); padding: 8px; }
+.structure-new-menu-content[data-align="start"] { right: auto; left: 0; }
 .structure-new-group + .structure-new-group { border-top: 1px solid var(--knx-border); margin-top: 6px; padding-top: 6px; }
 .structure-new-group-heading { margin: 4px 6px; font-size: 0.8rem; font-weight: 600; color: var(--knx-muted); overflow-wrap: anywhere; }
 .structure-new-group > button { display: block; width: 100%; margin: 3px 0; text-align: start; overflow-wrap: anywhere; }

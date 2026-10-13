@@ -26,7 +26,7 @@ blocked (named missing evidence) or excluded; nothing else is added.
 | B4 | Instructions for natively created devices (no invented original) | planned |
 | B5 | Catalogue backup deletion; web direct `.knxprod` install routed to preview/apply | planned |
 | B6 | KL-164 idempotent achievement increments | delivered (W42 entry) |
-| B7 | Naming recipe UI over the existing `knx-edit` service | planned |
+| B7 | Naming recipe UI over the existing `knx-edit` service | delivered (W42 entry) |
 | B8 | EN/DE report texts, KL-13/KL-29/KL-43 summaries, TOOLS-01–05 provenance, optional FUTURE-08 | planned |
 | B9 | Issue #14: hover `transform` reset app-wide (`button:hover:not(:disabled)`), FsPicker geometry regression | delivered (W42 entry) |
 | B10 | Issue #11: group-address tree starts collapsed (`expanded` set), Expand/Collapse all, selection ancestors and filter matches open, per-project view state in localStorage | delivered (W42 entry) |

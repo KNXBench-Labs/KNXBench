@@ -8,10 +8,6 @@ import { messages as de } from "../src/messages/de";
 const data = process.env.KNX_RENAME_NATIVE_DATA!;
 const demo = process.env.KNX_RENAME_NATIVE_DEMO!;
 if (!data || !demo || process.env.KNX_RENAME_ISOLATED !== "1") throw new Error("Run only through the isolated verification runner.");
-async function palette(page: Page, name: string) {
-  await page.keyboard.press("Control+Shift+P"); await page.getByRole("combobox").fill(name);
-  await page.getByRole("combobox").press("Enter");
-}
 async function openCopy(page: Page, m: typeof en | typeof de) {
   await page.getByRole("button", { name: m["workbench.openNativeTitle"], exact: true }).click();
   await page.getByRole("dialog", { name: m["fsPicker.open"], exact: true }).getByRole("button", { name: "functions-demo.knxdb", exact: true }).click();

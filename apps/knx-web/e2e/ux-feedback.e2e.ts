@@ -1,4 +1,4 @@
-/** Unread error cards stay, pause under the pointer; Explorer counts open log findings. */
+/** Error cards stay and pause; Explorer counts open findings; motion categories apply. */
 // Ported from the Codex ux-feedback branch (AP1, 219e4c3e) and narrowed to what
 // main lacked: main already keeps every notification in the session log.
 import { expect, test } from "@playwright/test";
@@ -33,6 +33,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
         return ok({ schemaVersion: 1, conditionalPatchVersion: 1, status: "ok", settings });
       }
       if (path === "/api/version") return ok({ version: "0.1.0-alpha.10" });
+      if (path === "/api/legacy-password") return ok({ available: true, remembered: false, problem: null });
       if (path === "/api/project" && method === "GET") return imports ? ok(tree)
         : route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"no project"}' });
       if (path === "/api/bus/discover") return ok({ interfaces: [] });
@@ -56,6 +57,32 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("lang", language);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await page.locator(".workbench-toolbar").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
+    for (const [category, value] of [["toasts", "off"], ["achievements", "subtle"], ["flow", "off"]]) {
+      await page.locator(`[data-motion-category="${category}"]`).selectOption(value);
+    }
+    await expect.poll(() => settings.motionToasts).toBe("off");
+    await expect.poll(() => settings.motionAchievements).toBe("subtle");
+    await expect.poll(() => settings.motionFlow).toBe("off");
+    await page.locator('[data-motion-category="flow"]').focus(); await page.keyboard.press("Escape");
+    await expect(page.locator(".settings-panel")).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-motion-toasts", "off");
+    await expect(page.locator("html")).toHaveAttribute("data-motion-achievements", "subtle");
+    await expect(page.locator("html")).toHaveAttribute("data-motion-flow", "off");
+    await page.locator(".workbench-toolbar").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
+    await expect(page.locator('[data-motion-category="achievements"]')).toHaveValue("subtle");
+    const globalMotion = page.getByRole("combobox", { name: m["settings.motionLevel"], exact: true });
+    await globalMotion.selectOption("off");
+    await expect(page.locator("html")).toHaveAttribute("data-motion-achievements", "off");
+    await globalMotion.selectOption("standard");
+    await expect(page.locator("html")).toHaveAttribute("data-motion-achievements", "subtle");
+    if (SHOTS) {
+      await page.locator(".motion-category-settings").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${SHOTS}/motion-${language}-${width}.png` });
+    }
+    await globalMotion.focus(); await page.keyboard.press("Escape");
+    await expect(page.locator(".settings-panel")).toHaveCount(0);
     async function importProject() {
       await page.keyboard.press("Control+Shift+P");
       await page.getByRole("combobox").fill(m["toolbar.openProject"]);
@@ -63,6 +90,10 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       await page.getByRole("button", { name: "synthetic.knxproj", exact: true }).click();
     }
     await importProject();
+    // KL-43 in the real stylesheet: Toasts=Off leaves the global Standard
+    // level for everything else, but this card's entry runs for zero time.
+    const duration = (selector: string) => page.locator(selector).first().evaluate((node) => getComputedStyle(node).animationDuration);
+    expect(await duration(".toast--fun")).toBe("0s");
 
     // The Explorer lives in the navigation pane, which narrow layouts collapse.
     for (const severity of ["error", "warning"] as const) {
@@ -76,12 +107,20 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     }
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/explorer-findings-${language}-${width}.png` });
 
+    // Toasts=Subtle caps the card's entry at the Subtle duration.
+    await page.locator(".workbench-toolbar").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
+    await page.locator('[data-motion-category="toasts"]').selectOption("subtle");
+    await expect.poll(() => settings.motionToasts).toBe("subtle");
+    await page.locator('[data-motion-category="toasts"]').focus(); await page.keyboard.press("Escape");
+    await expect(page.locator(".settings-panel")).toHaveCount(0);
+
     // Two refusals: the second card no longer replaces the first.
     await importProject(); await importProject();
     const cards = page.locator(".toast--error:not(.toast--leaving)");
     await expect(cards).toHaveCount(2);
     await expect(cards.nth(0)).toContainText("Raw refused import 2:");
     await expect(cards.nth(1)).toContainText("Raw refused import 3:");
+    expect(await duration(".toast--error")).toBe("0.12s");
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/two-errors-${language}-${width}.png` });
 
     // The pointer holds one card; the other runs out on its own clock.

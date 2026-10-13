@@ -2,6 +2,7 @@
 import { emitAchievementEvent } from "./achievementEvents";
 import AchievementSettings from "./AchievementSettings";
 import UpdateSettings from "./UpdateSettings";
+import MotionCategorySettings from "./MotionCategorySettings";
 import LegacyPasswordSettings, { type LegacyPasswordAccess } from "./LegacyPasswordSettings";
 import type { AchievementTracker } from "./achievementTracker";
 import { ACCENTS, DENSITIES, type useAppearance } from "./appearance";
@@ -460,6 +461,7 @@ export default function SettingsPanel(props: {
           ))}
         </select>
       </label>
+      <MotionCategorySettings />
       </section>
       <section className="settings-section">
         <h3>{t("settings.section.languageData")}</h3>

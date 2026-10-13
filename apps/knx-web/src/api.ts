@@ -1817,8 +1817,13 @@ export interface DeviceDownloadPlan {
   steps: string[];
   /** The phrase `start` demands; names this device and this scope. */
   confirmationPhrase: string;
-  support: { level: "verified" | "untested"; evidence: string | null };
+  /** `inferences`: the rules the plan rests on where the documents are
+   * silent (ADR-0086), each `rule: detail (reference)`. */
+  support: { level: "verified" | "untested"; evidence: string | null; inferences: string[] };
   untestedAcknowledgement: string | null;
+  /** What to know before writing that does not stop the write (ADR-0120),
+   * each `rule: detail (reference)`. */
+  warnings: string[];
   /** `true` for a CP §3.9.2.4 partial download (KL-142). */
   partial: boolean;
   /** Application writes the partial download does not make, as `[address, octets]`. */
@@ -1972,6 +1977,52 @@ export function pollDeviceDownload(
 ): Promise<DeviceDownloadStatusResponse> {
   const expected = downloadId === undefined ? "" : `&downloadId=${downloadId}`;
   return request(`/api/device-download/status?since=${since}${expected}`);
+}
+
+/** A tester's report of one download (ADR-0121, format 1). No project or
+ * device name and no address; the parameter values written are included. */
+export interface DeviceDownloadReport {
+  kind: "knxbench-download-report";
+  format: number;
+  knxbenchVersion: string;
+  program: {
+    id: string;
+    name: string | null;
+    applicationVersion: string | null;
+    sourceSha256: string | null;
+    manufacturer: string;
+    mask: string;
+  };
+  scope: "complete" | "partial-parameters" | "partial-group-addresses" | "partial-both";
+  support: "verified" | "untested";
+  inferences: string[];
+  warnings: string[];
+  plan: { steps: number; dataOctets: number; groupLinks: number };
+  outcome: {
+    completed: boolean;
+    written: "yes" | "no" | "partially";
+    restart: "acknowledged" | "notInPlan" | "unconfirmed" | null;
+    stoppedInStep: number | null;
+  } | null;
+  parameterValues: Record<string, string>;
+}
+
+/** `GET /api/device-download/report`: the report and the ways to send it. */
+export interface DeviceDownloadReportResponse {
+  report: DeviceDownloadReport;
+  fileName: string;
+  /** Short text for an issue or a mail; the values stay in the file. */
+  summary: string;
+  /** The download-report issue form with program, version and outcome filled in. */
+  issueUrl: string;
+  /** A mail to issue@knxbench.com with the summary as body. */
+  mailto: string;
+}
+
+/** The report of the last download once it and its cleanup ended: 404 when
+ * there is none or it was replaced, 409 while it is still finishing. */
+export function getDeviceDownloadReport(downloadId: number): Promise<DeviceDownloadReportResponse> {
+  return request(`/api/device-download/report?downloadId=${downloadId}`);
 }
 
 // ---- Programming an individual address (MP §2.3 on the button loop; ADR-0046) ----

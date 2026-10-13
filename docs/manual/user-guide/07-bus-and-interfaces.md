@@ -420,6 +420,18 @@ There is no stop button: stopping between steps would leave the device in an und
 state. The server cannot tell a person from a script; like the command, it only checks
 that the request names the device it was shown.
 
+### Helping to verify a device
+
+A download is **verified** only for application programs someone has downloaded on
+real hardware and reported; today that is one program. After an *untested* download
+you can report how it went, so that the program can be marked verified for everyone.
+The server already builds the report after every download
+(`GET /api/device-download/report`); the tab does not offer it yet, so for now use the
+command line's `--report`
+([step by step](10-command-line.md#helping-to-verify-a-device)). The report holds the
+parameter values written but no project or device name and no address; send it by the
+**Download report** issue form or to **issue@knxbench.com** (not public).
+
 ## Programming an individual address
 
 This gives *one* device its individual address: whichever device has its programming

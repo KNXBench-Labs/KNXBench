@@ -84,71 +84,120 @@ pub struct LogEntry {
 
 /// Maximum number of [`LogEntry`] items [`SessionLog`] ever holds at once,
 /// including the synthetic drop-notice entry once the cap has been
-/// exceeded (see [`SessionLog::push`]). Not derived from any measured
-/// resource limit — a generous ceiling for a single in-memory, per-process,
-/// never-persisted session log, chosen to keep `GET /api/log` cheap to
-/// re-fetch and re-serialize even across a very long session.
-const MAX_ENTRIES: usize = 1000;
+/// exceeded (see [`SessionLog::push`]). Raised from 1000 after issue #7,
+/// where one import alone produced thousands of entries. Not derived from a
+/// resource limit: a generous ceiling for a single in-memory, per-process,
+/// never-persisted log; `GET /api/log` cost at this size is recorded in the
+/// KL-036 dossier.
+pub(crate) const MAX_ENTRIES: usize = 16_000;
+
+/// Real entries removed for exceeding [`MAX_ENTRIES`], per severity.
+#[derive(Debug, Default, Clone, Copy)]
+struct Dropped {
+    info: usize,
+    warning: usize,
+    error: usize,
+}
+
+impl Dropped {
+    fn total(self) -> usize {
+        self.info + self.warning + self.error
+    }
+
+    fn count(&mut self, severity: Severity) {
+        match severity {
+            Severity::Info => self.info += 1,
+            Severity::Warning => self.warning += 1,
+            Severity::Error => self.error += 1,
+        }
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct SessionLog {
     entries: Vec<LogEntry>,
-    /// Running count of real entries dropped for exceeding [`MAX_ENTRIES`].
-    /// Zero means the synthetic drop-notice entry does not exist yet.
-    /// Cleared by [`SessionLog::reset`] along with everything else.
-    dropped: usize,
+    /// Real entries dropped for exceeding [`MAX_ENTRIES`]. A zero total
+    /// means the synthetic drop-notice entry does not exist yet. Cleared by
+    /// [`SessionLog::reset`] along with everything else.
+    dropped: Dropped,
 }
 
 impl SessionLog {
     pub fn reset(&mut self) {
         self.entries.clear();
-        self.dropped = 0;
+        self.dropped = Dropped::default();
     }
 
     /// Appends `entry`, then enforces [`MAX_ENTRIES`].
     ///
-    /// Below the cap this is a plain append. `dropped` counts real entries
-    /// actually removed, not calls that overflowed, because those are not
-    /// the same number: the push that first exceeds the cap removes *two*
-    /// real entries in one call — the oldest one (which is what "at the
-    /// cap" always means) and a second one to make room for the synthetic
-    /// `Severity::Warning`/`source: "log"` entry that gets pinned at index
-    /// 0 from that point on, naming how many real entries have been
-    /// dropped so far. So `dropped` jumps by 2 on that first overflowing
-    /// push. Every following push while still over capacity removes
-    /// exactly one more real entry (index 1, since index 0 is the pinned
-    /// synthetic entry), so `dropped` grows by 1 from there on, and
-    /// refreshes the synthetic entry's message in place — it is never
-    /// itself dropped, duplicated, or counted against `dropped`. The
-    /// number the synthetic entry reports is therefore always exactly how
-    /// many real entries are actually gone, not a rougher proxy for it.
+    /// Below the cap this is a plain append. Above it, real entries are
+    /// removed least severe first (every info before any warning, every
+    /// warning before any error) and oldest first within a severity, so
+    /// routine lines can never push an import's errors out (#7). The first
+    /// overflowing push removes *two* real entries: one for the overflow
+    /// and one to make room for the synthetic `Severity::Warning`/`source:
+    /// "log"` entry pinned at index 0 from then on. Every later overflow
+    /// removes one and refreshes that entry in place; it is never itself
+    /// dropped, duplicated or counted. Its message therefore always names
+    /// exactly how many real entries are gone, and of which severity.
     pub fn push(&mut self, entry: LogEntry) {
         self.entries.push(entry);
         if self.entries.len() <= MAX_ENTRIES {
             return;
         }
-        if self.dropped == 0 {
-            self.dropped += 2;
-            self.entries.remove(0);
-            self.entries.remove(0);
+        let first_overflow = self.dropped.total() == 0;
+        let removals = if first_overflow { 2 } else { 1 };
+        for _ in 0..removals {
+            let skip = usize::from(!first_overflow);
+            let victim = self.least_valuable(skip);
+            let removed = self.entries.remove(victim);
+            self.dropped.count(removed.severity);
+        }
+        if first_overflow {
             self.entries.insert(0, self.synthetic_drop_notice());
         } else {
-            self.dropped += 1;
-            self.entries.remove(1);
             self.entries[0] = self.synthetic_drop_notice();
         }
     }
 
+    /// Index of the oldest entry of the lowest severity present, ignoring
+    /// the first `skip` entries (the pinned drop notice).
+    fn least_valuable(&self, skip: usize) -> usize {
+        let mut oldest_warning = None;
+        let mut oldest_error = None;
+        for (index, entry) in self.entries.iter().enumerate().skip(skip) {
+            match entry.severity {
+                Severity::Info => return index,
+                Severity::Warning => {
+                    oldest_warning.get_or_insert(index);
+                }
+                Severity::Error => {
+                    oldest_error.get_or_insert(index);
+                }
+            }
+        }
+        oldest_warning
+            .or(oldest_error)
+            .expect("an over-full log holds at least one real entry")
+    }
+
     fn synthetic_drop_notice(&self) -> LogEntry {
-        // `dropped` is 0 (no synthetic entry yet) or >= 2 (see `push`) —
-        // it is never 1, so "entries" is always grammatically correct here.
+        // The total is 0 (no synthetic entry yet) or >= 2 (see `push`), so
+        // "entries" is always grammatically correct here. The leading
+        // sentence is what the web client parses; keep it stable.
+        let Dropped {
+            info,
+            warning,
+            error,
+        } = self.dropped;
         LogEntry {
             timestamp: now(),
             severity: Severity::Warning,
             source: "log".to_string(),
             message: format!(
-                "{} log entries dropped after exceeding the {MAX_ENTRIES}-entry session log cap",
-                self.dropped
+                "{} log entries dropped after exceeding the {MAX_ENTRIES}-entry session log cap \
+                 ({info} info, {warning} warning, {error} error; least severe and oldest first)",
+                self.dropped.total()
             ),
             location: None,
             diagnostic: None,
@@ -178,9 +227,10 @@ pub fn now() -> String {
 /// deliberately not mapped here — a residual for a later round, not
 /// silently dropped (see `docs/KNOWN_LIMITATIONS.md`/`IMPLEMENTATION_STATUS.md`).
 ///
-/// Mostly one entry per finding. Two repetitive kinds are grouped (#7):
-/// opaque entries sharing kind and reason, and per-file retained-payload
-/// notices sharing one wording. A group of one keeps the single-entry
+/// Mostly one entry per finding. Three repetitive kinds are grouped (#7):
+/// opaque entries sharing kind and reason, per-file retained-payload notices
+/// sharing one wording, and unknown constructs in manufacturer data sharing
+/// kind and name (`knx_app::import_findings`). A group of one keeps the single-entry
 /// shape; a larger group is one entry whose `detail` lists every member,
 /// one per line. The import report itself is never grouped.
 pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
@@ -219,18 +269,39 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
         });
     }
 
-    for unknown in &report.unknown {
+    // Unknown constructs in the project stay individual. The same unknown
+    // attribute/element across many manufacturer application files is one
+    // entry per (kind, name), its detail listing every file and path (#7).
+    for unknown in report.unknown.iter().filter(|u| unknown_group(u).is_none()) {
+        entries.push(unknown_entry(unknown));
+    }
+    let unknown_groups = grouped(
+        report.unknown.iter().filter(|u| unknown_group(u).is_some()),
+        |u| unknown_group(u).expect("filtered to grouped rows"),
+    );
+    for ((kind, name), members) in unknown_groups {
+        if let [only] = members.as_slice() {
+            entries.push(unknown_entry(only));
+            continue;
+        }
+        let files: std::collections::BTreeSet<_> =
+            members.iter().map(|u| u.source_path.as_str()).collect();
+        let occurrences: u64 = members.iter().map(|u| u64::from(u.occurrences)).sum();
         entries.push(LogEntry {
             timestamp: now(),
             severity: Severity::Warning,
             source: "import:unknown".to_string(),
             message: format!(
-                "unknown {:?} '{}' seen {} time(s) in {}",
-                unknown.kind, unknown.name, unknown.occurrences, unknown.source_path
+                "unknown {kind} '{name}' in manufacturer data: {} places in {} files, \
+                 {occurrences} occurrence(s); samples in the import report",
+                members.len(),
+                files.len()
             ),
-            location: Some(unknown.xpath.clone()),
+            location: None,
             diagnostic: None,
-            detail: unknown.sample.clone(),
+            detail: Some(member_list(members.iter().map(|u| {
+                format!("{} {} — {}×", u.source_path, u.xpath, u.occurrences)
+            }))),
         });
     }
 
@@ -345,6 +416,29 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
     }
 
     entries
+}
+
+fn unknown_group(unknown: &knx_etsproj::UnknownConstruct) -> Option<(&str, &str)> {
+    knx_app::import_findings::manufacturer_unknown_group(
+        &unknown.source_path,
+        knx_app::import_findings::unknown_kind_name(unknown.kind),
+        &unknown.name,
+    )
+}
+
+fn unknown_entry(unknown: &knx_etsproj::UnknownConstruct) -> LogEntry {
+    LogEntry {
+        timestamp: now(),
+        severity: Severity::Warning,
+        source: "import:unknown".to_string(),
+        message: format!(
+            "unknown {:?} '{}' seen {} time(s) in {}",
+            unknown.kind, unknown.name, unknown.occurrences, unknown.source_path
+        ),
+        location: Some(unknown.xpath.clone()),
+        diagnostic: None,
+        detail: unknown.sample.clone(),
+    }
 }
 
 fn opaque_entry(opaque: &knx_etsproj::report::OpaqueSummary) -> LogEntry {
@@ -750,6 +844,57 @@ mod tests {
         assert_eq!(counts(&report), (1, 1));
     }
 
+    fn unknown(source_path: &str, name: &str, occurrences: u32) -> knx_etsproj::UnknownConstruct {
+        knx_etsproj::UnknownConstruct {
+            source_path: source_path.into(),
+            xpath: format!("/KNX/ManufacturerData/{name}"),
+            kind: knx_etsproj::UnknownKind::Attribute,
+            name: name.into(),
+            occurrences,
+            sample: Some("sample".into()),
+        }
+    }
+
+    #[test]
+    fn manufacturer_unknowns_are_grouped_by_kind_and_name_project_ones_stay_single() {
+        // Issue #7 with a product database: thousands of unknown attributes
+        // from application programs, one entry per path, drowned the rest.
+        let report = report_with(
+            vec![],
+            vec![
+                unknown("M-0083/M-0083_A-01.xml", "Name", 53),
+                unknown("P-0512/project.xml", "ProjectId", 1),
+                unknown("M-0001/M-0001_A-02.xml", "Name", 87),
+                unknown("M-0083/M-0083_A-01.xml", "Id", 4),
+                unknown("M-0083/M-0083_A-03.xml", "Name", 1),
+            ],
+            vec![],
+            vec![],
+            vec![],
+        );
+        let entries = from_import_report(&report);
+        let messages: Vec<_> = entries.iter().map(|e| e.message.as_str()).collect();
+        assert_eq!(
+            messages,
+            [
+                "unknown Attribute 'ProjectId' seen 1 time(s) in P-0512/project.xml",
+                "unknown Attribute 'Name' in manufacturer data: 3 places in 3 files, \
+                 141 occurrence(s); samples in the import report",
+                "unknown Attribute 'Id' seen 4 time(s) in M-0083/M-0083_A-01.xml",
+            ]
+        );
+        assert_eq!(
+            entries[1].detail.as_deref(),
+            Some(
+                "M-0083/M-0083_A-01.xml /KNX/ManufacturerData/Name — 53×\n\
+                 M-0001/M-0001_A-02.xml /KNX/ManufacturerData/Name — 87×\n\
+                 M-0083/M-0083_A-03.xml /KNX/ManufacturerData/Name — 1×"
+            )
+        );
+        assert_eq!(entries[2].detail.as_deref(), Some("sample"));
+        assert_eq!(counts(&report), (0, 3));
+    }
+
     #[test]
     fn raw_text_candidates_and_other_unsupported_rows_are_never_grouped() {
         let preview = |path: &str| knx_etsproj::report::OpaqueSummary {
@@ -938,6 +1083,67 @@ mod tests {
                  total pushes ({total})"
             );
         }
+    }
+
+    #[test]
+    fn a_full_log_drops_info_before_warnings_and_warnings_before_errors() {
+        // Issue #7 follow-up: age alone used to decide, so a burst of
+        // routine lines could push the import's errors out of the log.
+        let with = |severity, n: usize| LogEntry {
+            severity,
+            ..numbered_entry(n)
+        };
+        let mut log = SessionLog::default();
+        log.push(with(Severity::Error, 0));
+        log.push(with(Severity::Warning, 1));
+        for n in 2..MAX_ENTRIES {
+            log.push(with(Severity::Info, n));
+        }
+        // Over the cap by 10: infos 2..=12 go (11: ten plus room for the notice).
+        for n in MAX_ENTRIES..MAX_ENTRIES + 10 {
+            log.push(with(Severity::Warning, n));
+        }
+        let messages: Vec<_> = log.entries().iter().map(|e| e.message.clone()).collect();
+        assert_eq!(log.entries().len(), MAX_ENTRIES);
+        assert!(messages.contains(&"entry 0".into()) && messages.contains(&"entry 1".into()));
+        assert!(!messages.contains(&"entry 12".into()) && messages.contains(&"entry 13".into()));
+        assert_eq!(
+            log.entries()[0].message,
+            format!(
+                "11 log entries dropped after exceeding the {MAX_ENTRIES}-entry session log cap \
+                 (11 info, 0 warning, 0 error; least severe and oldest first)"
+            )
+        );
+
+        // With no info left, the oldest warning goes, never the error.
+        let mut log = SessionLog::default();
+        log.push(with(Severity::Error, 0));
+        for n in 1..=MAX_ENTRIES + 1 {
+            log.push(with(Severity::Warning, n));
+        }
+        let messages: Vec<_> = log.entries().iter().map(|e| e.message.clone()).collect();
+        assert!(messages.contains(&"entry 0".into()));
+        assert!(!messages.contains(&"entry 1".into()) && !messages.contains(&"entry 3".into()));
+        assert!(messages.contains(&"entry 4".into()));
+        assert!(log.entries()[0]
+            .message
+            .contains("(0 info, 3 warning, 0 error;"));
+    }
+
+    #[test]
+    fn errors_alone_are_dropped_oldest_first_and_counted() {
+        let mut log = SessionLog::default();
+        for n in 0..MAX_ENTRIES + 3 {
+            log.push(LogEntry {
+                severity: Severity::Error,
+                ..numbered_entry(n)
+            });
+        }
+        let entries = log.entries();
+        assert_eq!(entries.len(), MAX_ENTRIES);
+        assert!(entries[0].message.starts_with("4 log entries dropped"));
+        assert!(entries[0].message.contains("(0 info, 0 warning, 4 error;"));
+        assert_eq!(entries[1].message, "entry 4");
     }
 
     #[test]

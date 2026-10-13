@@ -261,3 +261,30 @@ fn unsupported_rows_without_text_count_once_and_ambiguous_text_is_refused() {
         "ambiguous historical unsupported text accepted"
     );
 }
+
+#[test]
+fn reopened_counts_group_manufacturer_unknowns_like_a_fresh_import() {
+    let mut input = report();
+    for (path, name) in [
+        ("M-0083/M-0083_A-01.xml", "Name"),
+        ("M-0001/M-0001_A-02.xml", "Name"),
+        ("M-0083/M-0083_A-01.xml", "Id"),
+        ("P-0512/project.xml", "ProjectId"),
+    ] {
+        input.unknown.push(knx_etsproj::UnknownConstruct {
+            source_path: path.into(),
+            xpath: "/x".into(),
+            kind: knx_etsproj::UnknownKind::Attribute,
+            name: name.into(),
+            occurrences: 2,
+            sample: None,
+        });
+    }
+    // Name group + Id group + project row + the fixture's two other warnings.
+    assert_eq!(knx_app::import_finding_counts(&input), (0, 5));
+    let entry = import_evidence::encode(&input).unwrap();
+    assert_eq!(
+        import_evidence::read(&[entry]).unwrap().unwrap().counts(),
+        (0, 5)
+    );
+}

@@ -265,7 +265,11 @@ mod session_log_export_tests {
         let path = directory.path().join("session-log.json");
         std::fs::write(&path, "previous").unwrap();
         assert!(write_session_log(&path, "not json").is_err());
-        assert!(write_session_log(&path, &"x".repeat(16 * 1024 * 1024 + 1)).is_err());
+        assert!(write_session_log(&path, &"x".repeat(64 * 1024 * 1024 + 1)).is_err());
+        // The previous cap's documents are refused, not silently relabelled.
+        let old_cap =
+            r#"{"format":"knxbench-session-log","version":1,"capacity":1000,"entries":[]}"#;
+        assert!(write_session_log(&path, old_cap).is_err());
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "previous");
     }
 
@@ -274,9 +278,31 @@ mod session_log_export_tests {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("session-log.json");
         let content =
-            r#"{"format":"knxbench-session-log","version":1,"capacity":1000,"entries":[]}"#;
+            r#"{"format":"knxbench-session-log","version":1,"capacity":16000,"entries":[]}"#;
         write_session_log(&path, content).unwrap();
         assert_eq!(std::fs::read_to_string(path).unwrap(), content);
+    }
+
+    #[test]
+    fn accepts_a_full_16000_entry_log_above_the_old_16_mib_limit() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("session-log.json");
+        let entry = serde_json::json!({"timestamp": "2026-10-13T18:00:00Z", "severity": "warning",
+            "source": "import:unsupported", "message": "m", "location": null, "detail": "d".repeat(1100)});
+        let document = serde_json::json!({"format": "knxbench-session-log", "version": 1,
+            "capacity": 16000, "entries": vec![entry; 16000]});
+        let content = serde_json::to_string_pretty(&document).unwrap();
+        assert!(content.len() > 16 * 1024 * 1024);
+        write_session_log(&path, &content).unwrap();
+        let mut over = document;
+        over["entries"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({}));
+        assert!(
+            write_session_log(&path, &over.to_string()).is_err(),
+            "16001 entries"
+        );
     }
 }
 

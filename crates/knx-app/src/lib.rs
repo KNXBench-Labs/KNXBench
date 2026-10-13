@@ -22,6 +22,7 @@ pub mod download_report;
 pub mod download_support;
 pub mod import;
 pub mod import_evidence;
+pub mod import_findings;
 mod import_payload_evidence;
 pub mod individual_address_programming_recovery;
 pub mod individual_address_reset_recovery;
@@ -48,5 +49,5 @@ pub use import::{
     import_ets_project_with, import_ets_project_with_password, AppError, ImportOptions,
     ImportedProject,
 };
-pub use import_payload_evidence::{import_finding_counts, retained_payload_label};
+pub use import_findings::{import_finding_counts, retained_payload_label};
 pub use progress::{LoadObserver, LoadStage};

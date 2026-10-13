@@ -32,48 +32,6 @@ pub fn retained_payload_label<'a>(what: &str, consequence: &'a str) -> Option<&'
         .filter(|rest| *rest == GENERIC_NOTICE)
 }
 
-/// How many warnings an unsupported-capability list contributes: one per
-/// ordinary row, one per distinct [`retained_payload_label`].
-pub(crate) fn unsupported_warning_rows<'a>(
-    rows: impl IntoIterator<Item = (&'a str, &'a str)>,
-) -> usize {
-    let mut labels = std::collections::BTreeSet::new();
-    let mut other = 0usize;
-    for (what, consequence) in rows {
-        match retained_payload_label(what, consequence) {
-            Some(label) => {
-                labels.insert(label);
-            }
-            None => other += 1,
-        }
-    }
-    other + labels.len()
-}
-
-/// `(errors, warnings)` of an import report, the one counting rule for the
-/// project status of a fresh import and of a reopened project's historical
-/// report alike: genuine `Severity::Error` rows are errors; warning-severity
-/// rows, unknown constructs, datapoint-type conflicts and unsupported
-/// capabilities are warnings, with per-file retained-payload notices
-/// counted once per shared wording (#7). The server's session log groups
-/// the same way, so its import scope shows exactly this many rows.
-pub fn import_finding_counts(report: &ImportReport) -> (usize, usize) {
-    let errors = report
-        .errors
-        .iter()
-        .filter(|e| e.severity == knx_etsproj::report::Severity::Error)
-        .count();
-    let unsupported = unsupported_warning_rows(
-        report
-            .unsupported
-            .iter()
-            .map(|row| (row.what.as_str(), row.consequence.as_str())),
-    );
-    let warnings =
-        report.errors.len() - errors + report.unknown.len() + report.conflicts.len() + unsupported;
-    (errors, warnings)
-}
-
 pub(crate) fn annotate(
     report: &mut ImportReport,
     opaque: &[OpaqueEntry],

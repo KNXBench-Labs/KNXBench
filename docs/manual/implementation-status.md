@@ -60,6 +60,16 @@ colour/picture values unchanged with a note
 [limits](../KNOWN_LIMITATIONS.md#checked-parameter-editors-in-the-device-editor-2026-10-12)).
 Included in Alpha.10.
 
+## Notes follow-ups (12 October 2026 source, after Alpha 10)
+
+Notes can now be attached to communication objects; the target list comes from the
+server and offers only targets a note can really use. In a browser, reloading or
+closing the tab with an unapplied note or instruction draft asks first, and the
+note review names its action in your language
+([how to use it](user-guide/01-user-interface.md#project-notes-since-alpha-10),
+[limits](../KNOWN_LIMITATIONS.md#project-notes-workbench-host-2026-10-12)).
+Needs a source build after Alpha 10.
+
 ## Installation instructions in the device editor (12 October 2026 source)
 
 The device editor's **Installation instructions** tab shows the hints a device

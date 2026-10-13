@@ -142,7 +142,8 @@ breakdown of what falls into which bucket.
 
 **Do this:** click that button, or open the Overview, where the same counts appear
 alongside the project's other numbers. The session **Log** carries one entry per
-finding, in English regardless of your interface language, written to be pasted straight
+finding (repetitive retained-file notices are grouped into one entry listing every
+file), in English regardless of your interface language, written to be pasted straight
 into a bug report. An error does not necessarily mean the import failed outright — a
 single reported error can coexist with a project that opens and is otherwise usable; read
 the entry's text before assuming the whole file is unusable.

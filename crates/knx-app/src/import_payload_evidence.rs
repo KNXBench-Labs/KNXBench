@@ -7,6 +7,73 @@ use knx_etsproj::opaque::{ManufacturerFile, OpaqueEntry, OpaqueKind};
 use knx_etsproj::report::UnsupportedFeature;
 use knx_etsproj::ImportReport;
 
+/// Ends every per-file content-evidence notice [`annotate_member`] writes.
+const RETAINED_SUFFIX: &str =
+    "retained byte-exact, uninterpreted; not rendered or executed; contents not unpacked";
+/// The parser's generic per-file notice, after its `"{path}: "` prefix.
+const GENERIC_NOTICE: &str = "opaque manufacturer payload; preserved, not interpreted or executed";
+
+/// The shared, path-free wording of a per-file "retained payload" notice
+/// (an unsupported-capability row's `what`/`consequence`), or `None` for
+/// every other unsupported-capability row.
+///
+/// Presentation layers (the session log) group these notices by this
+/// label so one project with hundreds of retained manufacturer files does
+/// not turn into hundreds of identical lines; the report itself keeps one
+/// row per file. Recognition lives next to the writer so the two cannot
+/// drift apart silently (a unit test pins both).
+pub fn retained_payload_label<'a>(what: &str, consequence: &'a str) -> Option<&'a str> {
+    if consequence.ends_with(RETAINED_SUFFIX) {
+        return Some(consequence);
+    }
+    consequence
+        .strip_prefix(what)
+        .and_then(|rest| rest.strip_prefix(": "))
+        .filter(|rest| *rest == GENERIC_NOTICE)
+}
+
+/// How many warnings an unsupported-capability list contributes: one per
+/// ordinary row, one per distinct [`retained_payload_label`].
+pub(crate) fn unsupported_warning_rows<'a>(
+    rows: impl IntoIterator<Item = (&'a str, &'a str)>,
+) -> usize {
+    let mut labels = std::collections::BTreeSet::new();
+    let mut other = 0usize;
+    for (what, consequence) in rows {
+        match retained_payload_label(what, consequence) {
+            Some(label) => {
+                labels.insert(label);
+            }
+            None => other += 1,
+        }
+    }
+    other + labels.len()
+}
+
+/// `(errors, warnings)` of an import report, the one counting rule for the
+/// project status of a fresh import and of a reopened project's historical
+/// report alike: genuine `Severity::Error` rows are errors; warning-severity
+/// rows, unknown constructs, datapoint-type conflicts and unsupported
+/// capabilities are warnings, with per-file retained-payload notices
+/// counted once per shared wording (#7). The server's session log groups
+/// the same way, so its import scope shows exactly this many rows.
+pub fn import_finding_counts(report: &ImportReport) -> (usize, usize) {
+    let errors = report
+        .errors
+        .iter()
+        .filter(|e| e.severity == knx_etsproj::report::Severity::Error)
+        .count();
+    let unsupported = unsupported_warning_rows(
+        report
+            .unsupported
+            .iter()
+            .map(|row| (row.what.as_str(), row.consequence.as_str())),
+    );
+    let warnings =
+        report.errors.len() - errors + report.unknown.len() + report.conflicts.len() + unsupported;
+    (errors, warnings)
+}
+
 pub(crate) fn annotate(
     report: &mut ImportReport,
     opaque: &[OpaqueEntry],
@@ -41,9 +108,7 @@ fn annotate_member(report: &mut ImportReport, path: &str, bytes: &[u8], kind: Op
         "project"
     };
     let class = knx_productdb::sniff_media(bytes).as_str();
-    reason.push_str(&format!(
-        "{owner} payload ({class}); retained byte-exact, uninterpreted; not rendered or executed; contents not unpacked"
-    ));
+    reason.push_str(&format!("{owner} payload ({class}); {RETAINED_SUFFIX}"));
     for summary in &mut report.opaque {
         if summary.source_path == path && summary.xpath.is_empty() {
             summary.reason.clone_from(&reason);
@@ -51,8 +116,7 @@ fn annotate_member(report: &mut ImportReport, path: &str, bytes: &[u8], kind: Op
     }
     // Replace only the parser's generic opaque-payload notice. Other
     // same-member capability/validation diagnostics remain independent.
-    let generic =
-        format!("{path}: opaque manufacturer payload; preserved, not interpreted or executed");
+    let generic = format!("{path}: {GENERIC_NOTICE}");
     let mut matched = false;
     for feature in &mut report.unsupported {
         if feature.what == path {
@@ -75,6 +139,69 @@ fn annotate_member(report: &mut ImportReport, path: &str, bytes: &[u8], kind: Op
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const PROJECT_XML: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-TEST"><Installations><Installation InstallationId="0"><Topology/><GroupAddresses/></Installation></Installations></Project></KNX>"#;
+
+    #[test]
+    fn both_writers_of_per_file_payload_notices_are_recognised_and_nothing_else() {
+        let baggage = "M-0008/Baggages/help.zip";
+        let outcome = knx_etsproj::import_knxproj_bytes(
+            knx_testsupport::zip_with_entries(&[
+                ("P-TEST.signature", b""),
+                ("P-TEST/0.xml", PROJECT_XML),
+                ("P-TEST/project.xml", PROJECT_XML),
+                (baggage, b"PK\x05\x06synthetic"),
+            ]),
+            "synthetic.knxproj",
+        )
+        .unwrap();
+        let mut report = outcome.report;
+        // The parser's own wording, before content evidence replaces it.
+        let generic = report
+            .unsupported
+            .iter()
+            .find(|row| row.what == baggage)
+            .expect("the parser names every baggage file");
+        assert_eq!(
+            retained_payload_label(&generic.what, &generic.consequence),
+            Some(GENERIC_NOTICE)
+        );
+
+        annotate(&mut report, &outcome.opaque, &outcome.manufacturer);
+        let annotated = report
+            .unsupported
+            .iter()
+            .find(|row| row.what == baggage)
+            .unwrap();
+        assert_eq!(
+            retained_payload_label(&annotated.what, &annotated.consequence),
+            Some("manufacturer payload (zip); retained byte-exact, uninterpreted; not rendered or executed; contents not unpacked")
+        );
+        for row in report.unsupported.iter().filter(|row| row.what != baggage) {
+            assert_eq!(
+                retained_payload_label(&row.what, &row.consequence),
+                None,
+                "{row:?}"
+            );
+        }
+        let foreign = UnsupportedFeature {
+            what: baggage.into(),
+            consequence: "synthetic independent capability refusal".into(),
+        };
+        assert_eq!(
+            retained_payload_label(&foreign.what, &foreign.consequence),
+            None
+        );
+        // The generic wording only counts for its own path.
+        let misattributed = UnsupportedFeature {
+            what: "other".into(),
+            consequence: format!("{baggage}: {GENERIC_NOTICE}"),
+        };
+        assert_eq!(
+            retained_payload_label(&misattributed.what, &misattributed.consequence),
+            None
+        );
+    }
 
     #[test]
     fn independent_capability_diagnostics_are_not_replaced_by_content_evidence() {

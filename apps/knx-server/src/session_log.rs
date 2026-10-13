@@ -177,6 +177,12 @@ pub fn now() -> String {
 /// `report.inferred` and `SourceInfo::namespace_disagreement` are
 /// deliberately not mapped here — a residual for a later round, not
 /// silently dropped (see `docs/KNOWN_LIMITATIONS.md`/`IMPLEMENTATION_STATUS.md`).
+///
+/// Mostly one entry per finding. Two repetitive kinds are grouped (#7):
+/// opaque entries sharing kind and reason, and per-file retained-payload
+/// notices sharing one wording. A group of one keeps the single-entry
+/// shape; a larger group is one entry whose `detail` lists every member,
+/// one per line. The import report itself is never grouped.
 pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
     let mut entries = Vec::new();
 
@@ -228,16 +234,50 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
         });
     }
 
-    for opaque in &report.opaque {
+    // Opaque entries are grouped by (kind, reason): a project with hundreds
+    // of retained icons, help archives or attributes would otherwise push
+    // everything else out of the capped log (#7). A one-member group keeps
+    // its original single-entry shape; a larger one becomes one entry whose
+    // detail still lists every member with its size and hash, so the log
+    // loses nothing. Raw-text candidates are always individual.
+    let opaque_groups = grouped(
+        report
+            .opaque
+            .iter()
+            .filter(|o| o.raw_text_preview.is_none()),
+        |opaque| (opaque.kind.as_str(), opaque.reason.as_str()),
+    );
+    for ((kind, reason), members) in &opaque_groups {
+        if let [opaque] = members.as_slice() {
+            entries.push(opaque_entry(opaque));
+            continue;
+        }
         entries.push(LogEntry {
             timestamp: now(),
             severity: Severity::Info,
             source: "import:opaque".to_string(),
-            message: format!("{} preserved opaque: {}", opaque.kind, opaque.reason),
-            location: Some(opaque.source_path.clone()),
+            message: format!(
+                "{} {kind} entries preserved opaque: {reason}",
+                members.len()
+            ),
+            location: None,
             diagnostic: None,
-            detail: Some(format!("{} bytes, sha256 {}", opaque.size, opaque.sha256)),
+            detail: Some(member_list(members.iter().map(|opaque| {
+                let place = if opaque.xpath.is_empty() {
+                    opaque.source_path.clone()
+                } else {
+                    format!("{} {}", opaque.source_path, opaque.xpath)
+                };
+                format!("{place} — {} bytes, sha256 {}", opaque.size, opaque.sha256)
+            }))),
         });
+    }
+    for opaque in report
+        .opaque
+        .iter()
+        .filter(|o| o.raw_text_preview.is_some())
+    {
+        entries.push(opaque_entry(opaque));
         if let Some(preview) = &opaque.raw_text_preview {
             entries.push(LogEntry {
                 timestamp: now(),
@@ -271,19 +311,91 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
         });
     }
 
-    for unsupported in &report.unsupported {
+    // Per-file "retained payload" notices share one wording per media class
+    // (`knx_app::retained_payload_label`). They are grouped like the opaque
+    // entries above; every other unsupported capability stays its own entry.
+    for unsupported in report
+        .unsupported
+        .iter()
+        .filter(|u| payload_label(u).is_none())
+    {
+        entries.push(unsupported_entry(unsupported));
+    }
+    let payload_groups = grouped(
+        report
+            .unsupported
+            .iter()
+            .filter(|u| payload_label(u).is_some()),
+        |u| payload_label(u).expect("filtered to labelled rows"),
+    );
+    for (label, rows) in payload_groups {
+        if let [only] = rows.as_slice() {
+            entries.push(unsupported_entry(only));
+            continue;
+        }
         entries.push(LogEntry {
             timestamp: now(),
             severity: Severity::Warning,
             source: "import:unsupported".to_string(),
-            message: format!("{}: {}", unsupported.what, unsupported.consequence),
+            message: format!("{} retained files: {label}", rows.len()),
             location: None,
             diagnostic: None,
-            detail: None,
+            detail: Some(member_list(rows.iter().map(|row| row.what.clone()))),
         });
     }
 
     entries
+}
+
+fn opaque_entry(opaque: &knx_etsproj::report::OpaqueSummary) -> LogEntry {
+    LogEntry {
+        timestamp: now(),
+        severity: Severity::Info,
+        source: "import:opaque".to_string(),
+        message: format!("{} preserved opaque: {}", opaque.kind, opaque.reason),
+        location: Some(opaque.source_path.clone()),
+        diagnostic: None,
+        detail: Some(format!("{} bytes, sha256 {}", opaque.size, opaque.sha256)),
+    }
+}
+
+fn unsupported_entry(unsupported: &knx_etsproj::report::UnsupportedFeature) -> LogEntry {
+    LogEntry {
+        timestamp: now(),
+        severity: Severity::Warning,
+        source: "import:unsupported".to_string(),
+        message: format!("{}: {}", unsupported.what, unsupported.consequence),
+        location: None,
+        diagnostic: None,
+        detail: None,
+    }
+}
+
+fn payload_label(unsupported: &knx_etsproj::report::UnsupportedFeature) -> Option<&str> {
+    knx_app::retained_payload_label(&unsupported.what, &unsupported.consequence)
+}
+
+/// Groups `items` by `key`, groups and members both in first-seen order.
+fn grouped<'a, T, K: Ord + Copy>(
+    items: impl Iterator<Item = &'a T>,
+    key: impl Fn(&'a T) -> K,
+) -> Vec<(K, Vec<&'a T>)> {
+    let mut index = std::collections::BTreeMap::new();
+    let mut groups: Vec<(K, Vec<&'a T>)> = Vec::new();
+    for item in items {
+        let k = key(item);
+        let slot = *index.entry(k).or_insert_with(|| {
+            groups.push((k, Vec::new()));
+            groups.len() - 1
+        });
+        groups[slot].1.push(item);
+    }
+    groups
+}
+
+/// One member per line, in report order — the grouped entry's lossless part.
+fn member_list(members: impl Iterator<Item = String>) -> String {
+    members.collect::<Vec<_>>().join("\n")
 }
 
 /// Converts one `CsvImportReport` (T12 — CSV group-address import,
@@ -480,6 +592,201 @@ mod tests {
         assert_eq!(entries[5].severity, Severity::Warning);
         assert_eq!(entries[5].source, "import:unsupported");
         assert_eq!(entries[5].message, "some.dll: not executed");
+        assert_eq!(counts(&report), (1, 4));
+    }
+
+    /// The status-count rule, asserted equal to what the projection shows.
+    fn counts(report: &knx_etsproj::ImportReport) -> (usize, usize) {
+        let entries = from_import_report(report);
+        let shown = |severity| entries.iter().filter(|e| e.severity == severity).count();
+        let rule = knx_app::import_finding_counts(report);
+        assert_eq!(
+            (shown(Severity::Error), shown(Severity::Warning)),
+            rule,
+            "the project status and the Log's import scope must count the same rows"
+        );
+        rule
+    }
+
+    const PNG_NOTICE: &str = "manufacturer payload (png); retained byte-exact, uninterpreted; not rendered or executed; contents not unpacked";
+    const ZIP_NOTICE: &str = "manufacturer payload (zip); retained byte-exact, uninterpreted; not rendered or executed; contents not unpacked";
+
+    fn payload_notice(path: &str, notice: &str) -> knx_etsproj::report::UnsupportedFeature {
+        knx_etsproj::report::UnsupportedFeature {
+            what: path.into(),
+            consequence: notice.into(),
+        }
+    }
+
+    fn baggage(path: &str, reason: &str) -> knx_etsproj::report::OpaqueSummary {
+        knx_etsproj::report::OpaqueSummary {
+            source_path: path.into(),
+            xpath: String::new(),
+            kind: "Baggage".into(),
+            name: String::new(),
+            size: 7,
+            sha256: format!("sha-{path}"),
+            reason: reason.into(),
+            raw_text_preview: None,
+        }
+    }
+
+    fn import_error() -> knx_etsproj::report::ImportError {
+        knx_etsproj::report::ImportError {
+            source_path: None,
+            stage: "validate",
+            severity: knx_etsproj::report::Severity::Error,
+            xpath: "/a".into(),
+            detail: "bad thing".into(),
+        }
+    }
+
+    #[test]
+    fn retained_payload_notices_are_grouped_per_wording_without_losing_a_path() {
+        let report = report_with(
+            vec![],
+            vec![],
+            vec![
+                baggage("M-0001/Baggages/a.png", PNG_NOTICE),
+                baggage("M-0001/Baggages/b.png", PNG_NOTICE),
+                baggage("M-0001/Baggages/c.zip", ZIP_NOTICE),
+            ],
+            vec![],
+            vec![
+                payload_notice("M-0001/Baggages/a.png", PNG_NOTICE),
+                knx_etsproj::report::UnsupportedFeature {
+                    what: "ETS 5.7 project format (schema 20)".into(),
+                    consequence: "evidenced against three samples".into(),
+                },
+                payload_notice("M-0001/Baggages/b.png", PNG_NOTICE),
+                payload_notice("M-0001/Baggages/c.zip", ZIP_NOTICE),
+                payload_notice("M-0001/Baggages/d.png", PNG_NOTICE),
+            ],
+        );
+        let entries = from_import_report(&report);
+        let rows: Vec<_> = entries
+            .iter()
+            .map(|e| (e.severity, e.source.as_str(), e.message.as_str()))
+            .collect();
+        assert_eq!(
+            rows,
+            vec![
+                (
+                    Severity::Info,
+                    "import:opaque",
+                    &*format!("2 Baggage entries preserved opaque: {PNG_NOTICE}")
+                ),
+                (
+                    Severity::Info,
+                    "import:opaque",
+                    &*format!("Baggage preserved opaque: {ZIP_NOTICE}")
+                ),
+                (
+                    Severity::Warning,
+                    "import:unsupported",
+                    "ETS 5.7 project format (schema 20): evidenced against three samples"
+                ),
+                (
+                    Severity::Warning,
+                    "import:unsupported",
+                    &*format!("3 retained files: {PNG_NOTICE}")
+                ),
+                (
+                    Severity::Warning,
+                    "import:unsupported",
+                    &*format!("M-0001/Baggages/c.zip: {ZIP_NOTICE}")
+                ),
+            ]
+        );
+        assert_eq!(
+            entries[0].detail.as_deref(),
+            Some(
+                "M-0001/Baggages/a.png — 7 bytes, sha256 sha-M-0001/Baggages/a.png\n\
+                 M-0001/Baggages/b.png — 7 bytes, sha256 sha-M-0001/Baggages/b.png"
+            )
+        );
+        // A group of one keeps exactly the pre-grouping shape.
+        assert_eq!(
+            entries[1].location.as_deref(),
+            Some("M-0001/Baggages/c.zip")
+        );
+        assert_eq!(
+            entries[3].detail.as_deref(),
+            Some("M-0001/Baggages/a.png\nM-0001/Baggages/b.png\nM-0001/Baggages/d.png")
+        );
+        assert_eq!(entries[4].detail, None);
+        assert_eq!(counts(&report), (0, 3));
+    }
+
+    #[test]
+    fn import_errors_survive_a_project_with_thousands_of_retained_files() {
+        // Issue #7: ~1400 retained manufacturer files produced one opaque and
+        // one unsupported entry each, the 1000-entry cap evicted the oldest,
+        // and the genuine findings (written first) were the ones lost.
+        let paths: Vec<String> = (0..1500)
+            .map(|n| format!("M-0001/Baggages/{n}.png"))
+            .collect();
+        let report = report_with(
+            vec![import_error()],
+            vec![],
+            paths.iter().map(|p| baggage(p, PNG_NOTICE)).collect(),
+            vec![],
+            paths
+                .iter()
+                .map(|p| payload_notice(p, PNG_NOTICE))
+                .collect(),
+        );
+        let mut log = SessionLog::default();
+        for entry in from_import_report(&report) {
+            log.push(entry);
+        }
+        let entries = log.entries();
+        assert_eq!(entries.len(), 3);
+        assert!(entries.iter().all(|e| e.source != "log"), "nothing evicted");
+        assert_eq!(entries[0].message, "bad thing");
+        let grouped = entries[2].detail.as_deref().unwrap();
+        assert_eq!(grouped.lines().count(), 1500);
+        assert!(paths.iter().zip(grouped.lines()).all(|(p, line)| p == line));
+        assert_eq!(counts(&report), (1, 1));
+    }
+
+    #[test]
+    fn raw_text_candidates_and_other_unsupported_rows_are_never_grouped() {
+        let preview = |path: &str| knx_etsproj::report::OpaqueSummary {
+            raw_text_preview: Some(knx_etsproj::report::RawTextPreview {
+                format: "rtf-like",
+                value: "{\\rtf1}".into(),
+                truncated: false,
+            }),
+            xpath: "/x/@Text".into(),
+            kind: "RetainedAttribute".into(),
+            ..baggage(path, "same reason")
+        };
+        let same = |n: u8| knx_etsproj::report::UnsupportedFeature {
+            what: format!("additional project part P-{n}"),
+            consequence: "kept but not imported".into(),
+        };
+        let report = report_with(
+            vec![],
+            vec![],
+            vec![preview("P-1/0.xml"), preview("P-1/0.xml")],
+            vec![],
+            vec![same(1), same(2)],
+        );
+        let entries = from_import_report(&report);
+        let sources: Vec<_> = entries.iter().map(|e| e.source.as_str()).collect();
+        assert_eq!(
+            sources,
+            [
+                "import:opaque",
+                "import:opaque:raw-text",
+                "import:opaque",
+                "import:opaque:raw-text",
+                "import:unsupported",
+                "import:unsupported",
+            ]
+        );
+        assert_eq!(counts(&report), (0, 2));
     }
 
     #[test]

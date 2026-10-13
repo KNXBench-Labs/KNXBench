@@ -54,3 +54,39 @@ not checked.
 **Lifted when.** Per-user records exist, or counters move to an additive
 merge with request ids.
 <!-- END retained catalogue record -->
+
+## Update 2026-10-13: steps add up (Goal B6)
+
+The "lifted when" condition for the lost step is met: `count` rules now
+send their "one more" as an additive `increments` entry under a client
+`requestId` instead of an absolute value, and the server adds it up.
+Two windows that both saw 5 end at 7. The ids of the last 1,024 applied
+batches are kept in `achievements.json` (`appliedRequests`), so a
+duplicated, retried or reordered batch counts once, also after a server
+restart. A batch whose answer was lost is retried unchanged under its
+first id, before and never mixed with newer steps. A failed write applies
+nothing; its retry counts once. Every answer is reconciled in the window:
+a counter that reached its goal through another window unlocks there,
+and a `distinct` total is recomputed from its markers. Unlocks, thresholds
+and steps stay maxima (they were never lossy).
+
+**Still true.** One shared record per server, counting only in the UI,
+hidden entries readable in the open-source catalogue, English server
+messages, and `fly-on-the-wire` counting up to twice as fast with two
+editor windows on the same monitor session (each window's minutes are
+real steps now, which they were before as well).
+
+**Bounds.** A batch replayed after 1,024 newer ones would count again; real
+retries happen within seconds. A reset moves the old file aside with its
+log, so the new record starts with an empty one. An older build keeps
+`appliedRequests` verbatim but merges `progress` as a maximum and refuses
+`increments` (unknown field), so a newer window talking to an older
+server records nothing until it is updated. The file stays schema 1.
+
+Evidence: `apps/knx-server/src/achievements.rs` unit tests (two windows,
+duplicate/reordered batches, bounded log across a reload, saturation,
+validation, damaged log quarantined), `tests/http_achievements.rs`
+(twenty concurrent windows, duplicate/retry/reorder across a restart, a
+failed write and its retry, reset), and Vitest for rules and tracker
+(steps as increments, two trackers on one fake server, lost answer retried
+under the same id, reconcile on load, reset forgets a pending retry).

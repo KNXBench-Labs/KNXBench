@@ -169,7 +169,9 @@ async function openAddresses(page: Page, m: Catalogue) {
   await page.getByRole("navigation", { name: m["workbench.navigation"], exact: true }).getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
   await expect(page.locator(".ga-workspace").first()).toBeVisible();
   // Issue #11: address lists start closed; this case works on rows, so open them like a user.
-  await page.locator("[data-ga-expand-all]").click();
+  // Issue #11: every installation's tree opens compact; open each one.
+  await expect(page.locator("[data-ga-expand-all]").first()).toBeVisible();
+  for (const button of await page.locator("[data-ga-expand-all]").all()) await button.click();
 }
 
 async function openDeviceEditor(page: Page, m: Catalogue, name: string) {

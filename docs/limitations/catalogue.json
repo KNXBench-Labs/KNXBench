@@ -2468,6 +2468,20 @@
       ]
     },
     {
+      "key": "KL-182",
+      "number": 182,
+      "title": "Desktop silent downloads",
+      "topic": "Platform, deployment and security",
+      "summary": "AppImages up to alpha.11 save in-app downloads silently into Downloads, replacing same-named files; fixed in source with a save dialog. Web and Docker unaffected.",
+      "file": "KL-182-desktop-silent-downloads.md",
+      "ledger_ids": [
+        "KL-182"
+      ],
+      "anchors": [
+        "182-appimages-up-to-alpha11-save-in-app-downloads-silently-into-downloads-and-replace-same-named-files"
+      ]
+    },
+    {
       "key": "KL-107",
       "number": 107,
       "title": "Extension API scope",

@@ -1,3 +1,12 @@
+Web lock: taken by claude-parked-adoption for package 2 (ux-feedback port)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 07:11
+- **Completed:** Lock taken only (owner instruction 2026-10-13: adopt the parked Codex packages one at a time under the web lock, ux-feedback first, then native-evidence).
+- **Pending/Next Steps:** Port `feature/ux-feedback-20261010` (`88a776c2`, 13 Codex commits) in worktree `ux-feedback-port-20261013` onto fresh main: AP2 (bounded Flow image export), AP3/KL-43 (per-category motion; ADR renumbered from the next free number), AP5 (achievement milestones), and the parts of AP1 that main does not already have (main's 1000-entry notification history and clickable overview warnings stay; owner rule: leave out anything already on main). AP4 stays dropped (owner decision 2026-10-12). Every test rerun from scratch, full gate, docs/ledger/limitations, push, release this lock. Then native-evidence-20261011 under a new lock entry (package 1 already ported its seven commits; only a residue check remains).
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released. The parked worktrees stay untouched. claude-issues-8-9-10 is next in the queue after this package.
+
+---
+
 Web lock: released by claude-web-fixups (notes follow-ups, delivered)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 06:44

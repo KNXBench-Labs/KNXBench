@@ -76,6 +76,7 @@ mod flow;
 mod fs_routes;
 mod instruction_routes;
 mod load_progress;
+mod name_recipe_routes;
 mod note_routes;
 pub use load_progress::*;
 mod catalogue_update_routes;
@@ -190,6 +191,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
     let guarded = Router::new()
         .merge(routes::project_routes())
         .merge(instruction_routes::router(state.clone()))
+        .merge(name_recipe_routes::router(state.clone()))
         .merge(note_routes::router(state.clone()))
         .merge(function_routes::router())
         .merge(parameter_editor_routes::router())

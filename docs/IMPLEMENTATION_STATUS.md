@@ -1,3 +1,42 @@
+## 2026-10-13 — ADR-0121 part B: the download tab asks testers for a word, and explains how
+
+The device download tab carries the tester verification flow the owner asked for
+("everything in the device download tab, with a simple explanation and a step-by-step
+guide; report via issue or mail"); part A (reports from CLI and server, issue form,
+review procedure) landed earlier the same day
+([log](../.ai/logs/2026-10-13_claude_kl170-tester-verification.md)).
+
+- **Before the write.** A plan's `warnings` (ADR-0120) are shown in a **Before you
+  write** box: known rules (`base-image-low-octet-first`, `base-image-order-unchecked`)
+  in plain EN/DE words with the server text under *Technical details*; an unknown rule
+  is shown as sent, never dropped. `support.inferences` (ADR-0086) are listed under
+  **Assumptions this plan rests on**. Untested plans get a one-line hint that a report
+  would help. Pure logic in `downloadVerification.ts`.
+- **After the download** (finished or failed, never while running): **Help verify this
+  device** with the five steps, **Create report** (reads `GET /api/device-download/report`
+  only on request; 409 → "still finishing, try again", 404 → the server's reason), a local
+  checklist derived from the report (group addresses and status when links were written,
+  parameters, multi-octet values after a byte-order warning, a running device when the
+  restart was unconfirmed; none for a failed run), the privacy note, **Save report**
+  (the report JSON as returned), **Open issue form** (server URL, new tab, `noopener`)
+  and **Send by mail** (`mailto:` issue@knxbench.com). Nothing is sent automatically.
+- **Docs.** User guide 07 (step by step), known issues, KNOWN_LIMITATIONS §170 (heading
+  unchanged, ledger stays `LATER`), ADR-0120/0121 consequences, contract, FEATURES,
+  OPEN_WORK, TEST_CATALOGUE, manual implementation status, warning evidence boundary.
+- **Tests.** `downloadVerification.test.ts`; six panel tests (warnings/inferences in plain
+  words, hint only when untested, nothing while running, on-request report with checklist,
+  links and saved file, 409 then failed-run report, 404 reason); browser spec
+  `device-download-verification.e2e.ts` (EN/DE × 1440/400: texts, links, saved file equal
+  to the report, geometry, no write besides start). Seven hand mutants killed
+  (no-multi-octet, checklist-on-failed, fetch-on-mount, raw-known-warning,
+  verify-while-running, mail-without-noopener, 409-as-error).
+- **Gate** (branch, inputs frozen): build, 13/13 tsconfigs, Vitest 235 files green,
+  Chromium 476/477, preview GA-members/download 19/19, docs, five xtask checks,
+  `diff --check`. The one red, `onboarding-guide.e2e.ts` "first alpha start" (counts
+  `/api/version` reads, saw 4 for 2), is flaky on clean `origin/main` `798f6bba` too:
+  9 of 20 runs red there, 4 of 20 on the branch; not touched here. Merge gate:
+  GATES_PLACEHOLDER.
+
 ## 2026-10-13 — Issues #8, #9, #10: a picker that listens, trees that indent, a gateway that says who has it
 
 Three GitHub issues from one tester (thengsty), one package under the web lock

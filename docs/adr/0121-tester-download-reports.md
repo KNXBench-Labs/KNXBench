@@ -62,9 +62,13 @@ mailbox, for tester reports only), with the parameter values included.
 
 ## Consequences
 
-- CLI and server produce reports now. The device download tab's
-  step-by-step guidance, checklist and buttons (part B) need the web lock and
-  follow the queued download-panel work for issue #10.
+- CLI and server produce reports (part A). Part B, the device download
+  tab: a hint on untested plans, the plan's warnings (plain words for known
+  rules) and inferences, and after every ended download **Help verify this
+  device** with the steps, a checklist derived from the report (scope, links,
+  warnings, restart), the privacy note, **Save report**, **Open issue form**
+  and **Send by mail**. The report is fetched only on **Create report**; a
+  409 asks to try again.
 - The issue form's field ids are a contract with `issue_url()`; a test reads
   the form and fails when they drift.
 - `verified_downloads.json` stays maintainer-owned and versioned with the

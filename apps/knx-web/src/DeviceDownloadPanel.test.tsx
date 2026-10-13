@@ -10,7 +10,10 @@ const apiMock = vi.hoisted(() => ({
   startDeviceDownload: vi.fn(),
   pollDeviceDownload: vi.fn(),
   serverVersion: vi.fn(),
+  getDeviceDownloadReport: vi.fn(),
 }));
+const savedReports = vi.hoisted(() => vi.fn());
+vi.mock("./localJsonDownload", () => ({ downloadLocalJson: savedReports }));
 
 vi.mock("./api", () => ({
   ...apiMock,
@@ -83,9 +86,38 @@ const PLAN = {
   dataOctets: 1416,
   steps: ["connect", "check the mask", "write 4003h"],
   confirmationPhrase: "I confirm download to 1.1.67",
-  support: { level: "verified", evidence: "MDT, 2026-09-29; docs/RESEARCH.md §19.8" },
+  support: { level: "verified", evidence: "MDT, 2026-09-29; docs/RESEARCH.md §19.8", inferences: [] },
   untestedAcknowledgement: null,
+  warnings: [],
 };
+
+const LOW_FIRST = "base-image-low-octet-first: the program declares no ParameterByteOrder … (KNOWN_LIMITATIONS §170, ADR-0120)";
+
+const REPORT = {
+  report: {
+    kind: "knxbench-download-report",
+    format: 1,
+    knxbenchVersion: "0.1.0-alpha.10+gabc",
+    program: { id: "M-0083_A-0027-15-0BAC", name: "Taster Plus", applicationVersion: "15", sourceSha256: "ab".repeat(32), manufacturer: "0083", mask: "0701" },
+    scope: "complete",
+    support: "untested",
+    inferences: [],
+    warnings: [LOW_FIRST],
+    plan: { steps: 3, dataOctets: 1416, groupLinks: 1 },
+    outcome: { completed: true, written: "yes", restart: "acknowledged", stoppedInStep: null },
+    parameterValues: { "P-1_R-1": "300" },
+  },
+  fileName: "knxbench-download-report-M-0083_A-0027-15-0BAC.json",
+  summary: "KNXBench download report (format 1)\nProgram: M-0083_A-0027-15-0BAC",
+  issueUrl: "https://github.com/KNXBench-Labs/KNXBench/issues/new?template=download-report.yml&program=M-0083_A-0027-15-0BAC",
+  mailto: "mailto:issue@knxbench.com?subject=KNXBench%20download%20report",
+};
+
+function conflict(): Error {
+  const error = new Error("the download has not ended yet") as Error & { status: number };
+  error.status = 409;
+  return error;
+}
 
 function notFound(): Error {
   const error = new Error("no download to a device yet") as Error & { status: number };
@@ -171,6 +203,8 @@ beforeEach(() => {
   apiMock.planDeviceDownload.mockReset().mockResolvedValue(PLAN);
   apiMock.startDeviceDownload.mockReset().mockResolvedValue({ downloadId: 7 });
   apiMock.serverVersion.mockReset().mockResolvedValue({ version: "0.1.0-alpha.1" });
+  apiMock.getDeviceDownloadReport.mockReset().mockResolvedValue(REPORT);
+  savedReports.mockReset();
 });
 
 afterEach(async () => {
@@ -347,7 +381,7 @@ it("sends the phrase the server named, never one it builds itself", async () => 
 it("warns on an untested plan and requires a separate exact acknowledgement", async () => {
   apiMock.planDeviceDownload.mockResolvedValueOnce({
     ...PLAN,
-    support: { level: "untested", evidence: null },
+    support: { level: "untested", evidence: null, inferences: [] },
     untestedAcknowledgement: "I accept an untested download to 1.1.67",
   });
   await render();
@@ -533,4 +567,120 @@ it("does not report a download whose restart was not confirmed, or one that fail
   if (root) await act(async () => root!.unmount());
   host?.remove();
   expect(await achievementEventsFor({ state: "running" })).toEqual([]);
+});
+
+it("names the plan's warnings in plain words and lists its assumptions, before anything is sent", async () => {
+  apiMock.planDeviceDownload.mockResolvedValue({
+    ...PLAN,
+    warnings: [LOW_FIRST, "a-future-rule: something new"],
+    support: { ...PLAN.support, inferences: ["union-later-member: UP-33_R-33 is written last (RESEARCH §19.20)"] },
+  });
+  await render();
+  await showPlan();
+  const warnings = host!.querySelector(".device-download-warnings")!;
+  expect(warnings.textContent).toContain(en["deviceDownload.warnings.intro"]);
+  expect([...warnings.querySelectorAll("li[data-plan-warning]")].map((li) => li.getAttribute("data-plan-warning")))
+    .toEqual(["base-image-low-octet-first", "a-future-rule"]);
+  expect(warnings.querySelector('[data-plan-warning="base-image-low-octet-first"]')!.textContent)
+    .toBe(en["deviceDownload.warning.baseImageLowOctetFirst"]);
+  expect(warnings.querySelector('[data-plan-warning="a-future-rule"]')!.textContent).toBe("a-future-rule: something new");
+  expect(warnings.querySelector("details")!.textContent).toContain("KNOWN_LIMITATIONS §170, ADR-0120");
+  const inferences = host!.querySelector(".device-download-inferences")!;
+  expect(inferences.textContent).toContain("union-later-member: UP-33_R-33 is written last");
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it("shows neither box for a plan without warnings or assumptions, and the help hint only when untested", async () => {
+  await render();
+  await showPlan();
+  expect(host!.querySelector(".device-download-warnings")).toBeNull();
+  expect(host!.querySelector(".device-download-inferences")).toBeNull();
+  expect(host!.querySelector("[data-verify-hint]")).toBeNull();
+  apiMock.planDeviceDownload.mockResolvedValue({
+    ...PLAN,
+    support: { level: "untested", evidence: null, inferences: [] },
+    untestedAcknowledgement: "I accept an untested download to 1.1.67",
+  });
+  await act(async () => button(en["deviceDownload.preparePlan"]).click());
+  await flush();
+  expect(host!.querySelector("[data-verify-hint]")!.textContent).toBe(en["deviceDownload.verify.planHint"]);
+});
+
+it("offers no report while a download runs", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(response({ state: "running" }, [], 0));
+  await render();
+  expect(host!.querySelector(".device-download-progress")).not.toBeNull();
+  expect(host!.querySelector(".device-download-verify")).toBeNull();
+});
+
+it("after a download, explains the steps and creates the report only on request, with a checklist and both ways to send it", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response({ state: "finished", written: "yes", restart: "acknowledged", restartNote: null }, [], 0),
+  );
+  await render();
+  const verify = host!.querySelector(".device-download-verify")!;
+  expect(verify.textContent).toContain(en["deviceDownload.verify.intro.untested"]);
+  expect([...verify.querySelectorAll(".device-download-verify-steps li")].map((li) => li.textContent)).toEqual([
+    en["deviceDownload.verify.step.check"], en["deviceDownload.verify.step.create"], en["deviceDownload.verify.step.save"],
+    en["deviceDownload.verify.step.send"], en["deviceDownload.verify.step.review"],
+  ]);
+  expect(apiMock.getDeviceDownloadReport).not.toHaveBeenCalled();
+
+  await act(async () => button(en["deviceDownload.verify.create"], verify).click());
+  await flush();
+  expect(apiMock.getDeviceDownloadReport).toHaveBeenCalledWith(7);
+  expect([...verify.querySelectorAll("[data-check]")].map((label) => label.getAttribute("data-check")))
+    .toEqual(["groupAddresses", "status", "parameters", "multiOctet"]);
+  const box = verify.querySelector<HTMLInputElement>('[data-check="multiOctet"] input')!;
+  await act(async () => box.click());
+  expect(box.checked).toBe(true);
+  expect(verify.textContent).toContain(en["deviceDownload.verify.privacy"]);
+
+  const issue = verify.querySelector<HTMLAnchorElement>("a[data-verify-issue]")!;
+  expect(issue.getAttribute("href")).toBe(REPORT.issueUrl);
+  expect(issue.getAttribute("target")).toBe("_blank");
+  expect(issue.getAttribute("rel")).toBe("noopener noreferrer");
+  expect(verify.querySelector("a[data-verify-mail]")!.getAttribute("href")).toBe(REPORT.mailto);
+  expect(verify.querySelector(".device-download-verify-summary")!.textContent).toBe(REPORT.summary);
+
+  await act(async () => button(en["deviceDownload.verify.save"], verify).click());
+  expect(savedReports).toHaveBeenCalledTimes(1);
+  const [contents, name] = savedReports.mock.calls[0] as [string, string];
+  expect(name).toBe(REPORT.fileName);
+  expect(JSON.parse(contents)).toEqual(REPORT.report);
+  expect(contents.endsWith("\n")).toBe(true);
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it("asks to try again while the run is still finishing, and asks to report a failed run too", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response({ state: "failed", written: "partially", stoppedInStep: 12, error: "connection lost" }, [], 0),
+  );
+  apiMock.getDeviceDownloadReport.mockReset().mockRejectedValueOnce(conflict()).mockResolvedValueOnce({
+    ...REPORT,
+    report: { ...REPORT.report, outcome: { completed: false, written: "partially", restart: null, stoppedInStep: 12 } },
+  });
+  await render();
+  const verify = host!.querySelector(".device-download-verify")!;
+  expect(verify.textContent).toContain(en["deviceDownload.verify.intro.failed"]);
+  expect(verify.textContent).not.toContain(en["deviceDownload.verify.step.check"]);
+  await act(async () => button(en["deviceDownload.verify.create"], verify).click());
+  await flush();
+  expect(verify.textContent).toContain(en["deviceDownload.verify.stillFinishing"]);
+  await act(async () => button(en["deviceDownload.verify.create"], verify).click());
+  await flush();
+  expect(verify.querySelector(".device-download-verify-checklist")).toBeNull();
+  expect(verify.querySelector("a[data-verify-issue]")).not.toBeNull();
+});
+
+it("says why no report is available", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response({ state: "finished", written: "yes", restart: "acknowledged", restartNote: null }, [], 0),
+  );
+  apiMock.getDeviceDownloadReport.mockReset().mockRejectedValue(new Error("download 7 has been replaced"));
+  await render();
+  const verify = host!.querySelector(".device-download-verify")!;
+  await act(async () => button(en["deviceDownload.verify.create"], verify).click());
+  await flush();
+  expect(verify.querySelector('[role="alert"]')!.textContent).toBe("No report available: download 7 has been replaced");
 });

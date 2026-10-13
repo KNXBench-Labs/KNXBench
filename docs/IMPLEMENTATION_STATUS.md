@@ -21,7 +21,7 @@
 - **Boundary unchanged:** LittleEndian downloads stay refused (KL-170, LATER).
   Newly disclosed: the related risk for BigEndian/undeclared ABB/Busch-Jaeger
   programs, and that 11 of the 54 private LittleEndian devices are blocked by
-  `Property` placements as well. No hardware, bus, server, web or MCP change.
+  `Property` placements as well (none of them has a discriminating field). No hardware, bus, server, web or MCP change.
 - Gate on the frozen candidate (inputs frozen): fmt, clippy `-D warnings`, Rust 4229/0/196 (passed/failed/ignored), the five xtask checks and the documentation check; private corpus 143/143 (31 targets); 9/9 hand mutants killed; private probe planning reproduced twice. Review: the planner now applies the download plan's 16-bit segment rule (an overflow on malformed segment addresses, regression test first). `knx-desktop` excluded locally (needs the built web bundle; unchanged).
 
 ## 2026-10-12 — Alpha 10 published and downloaded artifacts verified

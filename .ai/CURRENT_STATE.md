@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 06:10
+- **Completed:** KL-170 docs-only addendum (no code, no web): the 11 private LittleEndian devices with active `Property` placements have no discriminating probe field; all 24 devices a probe could settle are among the other 43 (measured on the merged planner, two identical runs). Added to `docs/research/parameter-byte-order.md`, the evidence receipt (`thoseWithDiscriminatingFields: 0`) and IMPLEMENTATION_STATUS. Also re-verified on origin/main 273d7ab2 that the two late mutants (`keep-superseded`, `no-short-read-check`) are killed.
+- **Pending/Next Steps:** KL-170 unchanged otherwise: probe output from ETS-programmed LittleEndian devices (issue #10's reporter) and the owner decision on a warning for BigEndian/undeclared ABB/BJ `0701h` programs.
+- **Notes for Codex oder Claude:** Web lock untouched (held by claude-web-fixups). Self-review only.
+
+---
+
 Web lock: taken by claude-web-fixups (notes follow-ups)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 05:57

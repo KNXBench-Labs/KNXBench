@@ -149,7 +149,10 @@ The probe planner (`plan_probe`, ADR-0119) was run offline, without a bus:
 
 The `Property` count matters beyond the probe: the image builder refuses
 `Property` placements whatever the byte order, so lifting KL-170 alone would
-not make those 11 devices downloadable. Both runs gave identical counts.
+not make those 11 devices downloadable. None of the 11 has a discriminating
+field either: all 24 devices a probe could settle are among the other 43, so a
+probe answer for the manufacturer would not by itself cover those 11. Both
+runs gave identical counts.
 
 ## What would lift KL-170
 

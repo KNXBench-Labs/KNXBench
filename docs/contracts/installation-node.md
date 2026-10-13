@@ -47,6 +47,9 @@ rename endpoint; multi-client/server-side conflicts are not newly guarded here.
 **Amended 2026-10-13 (Goal A2):** the same endpoint now also accepts that
 binding ([revision-bound writes](revision-bound-writes.md)); the Properties
 editor adopts it in Goal B1.
+**Amended 2026-10-13 (Goal B1a):** adopted. Both installation name fields use
+the shared revision-bound `RenameNameField`; a stale name keeps the draft and
+offers **Refresh state**; a refused name keeps the draft instead of reverting.
 Browser execution is Chromium, not an interactive native WebKitGTK/Orca session.
 Source-like unnamed fixtures and a real native project are exercised; no private
 original archive is imported or changed by this UI delivery. Save/Open acceptance

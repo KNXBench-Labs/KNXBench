@@ -138,10 +138,13 @@ shown beside the field. One rename affects only the selected installation and is
 one undoable action. Use Save/autosave for the native working file as usual.
 
 An unrelated snapshot refresh keeps an unsubmitted draft. Pending writes cannot
-be submitted twice from the same field. A reply arriving after a snapshot/target
+be submitted twice from the same field. A reply arriving after a project/target
 change or unmount is not applied to the replacement view; this does **not** cancel
-an already submitted server operation. The unchanged installation API is not a
-revision-conditional multi-client edit protocol.
+an already submitted server operation. *(Source build after Alpha 11.)* The
+rename is bound to the project state and the name you saw: if someone renamed
+the installation elsewhere in the meantime, nothing is applied, your draft stays,
+and **Refresh state** loads the current name before you apply again. A refused
+name also keeps your draft.
 [Behavior and acceptance boundary](../../contracts/installation-node.md).
 
 ## Starting a new project

@@ -36,6 +36,11 @@ updates supersede them; they are not new work assignments.
   waited for; a second signal after the grace is still seen; environment
   parsing; admission), with synthetic sessions on controllable tasks. No real
   gateway, device or container was stopped.
+- **Web wording (Goal B1a, same day).** The workbench shows the `503
+  serverStopping` refusal as "The server is stopping. Nothing was started and
+  nothing was sent to the bus." in English and German instead of a bus error,
+  and never retries it (`gatewayRefusal.ts`, `gatewayRefusal.test.ts`). No
+  native desktop window was exercised.
 
 <!-- BEGIN retained catalogue record -->
 

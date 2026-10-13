@@ -28,7 +28,7 @@ fn session(
     }
 }
 
-fn synthetic_report() -> DownloadReport {
+pub(super) fn synthetic_report() -> DownloadReport {
     use knx_app::download_report::*;
     DownloadReport {
         kind: REPORT_KIND,

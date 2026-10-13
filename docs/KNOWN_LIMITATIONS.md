@@ -1439,7 +1439,7 @@ Alpha.5 changed the identifier without automatic alpha.4 data migration. Copy pr
 ### 163. Server shutdown and active writes
 
 **Ledger status:** Not separately tracked.
-Shutdown bounds request cleanup but does not wait for download/address-programming workers. Process termination can interrupt hardware work.
+A stop refuses new bus jobs and waits a bounded, configurable time for a running download/address programming; a write still running when that ends, or under SIGKILL, is cut mid-way.
 [Details and history](limitations/KL-163-server-shutdown-and-active-writes.md)
 
 <a id="catalogue-kl-168"></a>

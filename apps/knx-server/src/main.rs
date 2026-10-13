@@ -22,6 +22,11 @@ async fn main() {
     // stop` ends in SIGKILL (exit 137).
     let stop = knx_server::GracefulStop::install()
         .unwrap_or_else(|e| panic!("failed to install the signal handlers: {e}"));
+    // Read before listening: a typo refuses the start instead of surfacing
+    // only when a stop has to wait for a device write (Goal A3, KL-163).
+    let write_wait =
+        knx_server::write_wait_from_env(std::env::var("KNX_STOP_WRITE_WAIT_SECS").ok().as_deref())
+            .unwrap_or_else(|e| panic!("{e}"));
     let port = listening_port(std::env::var("KNX_PORT").ok().as_deref());
     let static_dir = std::env::var("KNX_STATIC_DIR").ok().map(PathBuf::from);
     let data_dir = std::env::var("KNX_DATA_DIR")
@@ -101,6 +106,15 @@ async fn main() {
         app_state.connector = Box::new(knx_server::RealConnector::new(return_path));
     }
     let state = Arc::new(app_state);
+    // From the first signal on, no route opens a new tunnel.
+    {
+        let state = Arc::clone(&state);
+        let requested = stop.requested();
+        tokio::spawn(async move {
+            requested.await;
+            state.stop_admission.close();
+        });
+    }
     let app = knx_server::app_with_auth(Arc::clone(&state), static_dir, auth_config);
 
     // Never `0.0.0.0` without a password, and never silently: the address
@@ -150,13 +164,68 @@ async fn main() {
             knx_server::BUS_RELEASE_TIMEOUT.as_secs()
         );
     }
+    let drain = knx_server::drain_device_writes(&state, write_wait, stop.second_signal()).await;
+    report_write_drain(&drain, write_wait);
+    let write_cut_short = matches!(
+        drain.end,
+        knx_server::WriteWaitEnd::TimedOut | knx_server::WriteWaitEnd::SecondSignal
+    );
     eprintln!("knx-server: stopped");
-    if end != knx_server::ServeEnd::Drained {
+    if end != knx_server::ServeEnd::Drained || write_cut_short {
         // Something is still running. Returning from `main` would drop the
         // Tokio runtime, and that waits for every `spawn_blocking` task
         // without a limit, which is exactly the hang this path exists to
         // avoid.
         std::process::exit(0);
+    }
+}
+
+/// Says what the stop did about device writes. A write that is cut short is
+/// named with its device, because the device may be left partly written.
+fn report_write_drain(drain: &knx_server::WriteDrain, limit: std::time::Duration) {
+    if drain.programming_wait_stopped {
+        eprintln!(
+            "knx-server: address programming was still waiting for its button; \
+             stopped it, nothing was written"
+        );
+    }
+    let mut running = Vec::new();
+    if let Some(device) = drain.download {
+        running.push(format!("the download to {device}"));
+    }
+    if let Some(device) = drain.programming_writing {
+        running.push(format!("the address programming of {device}"));
+    }
+    if running.is_empty() {
+        if drain.programming_wait_stopped
+            && matches!(
+                drain.end,
+                knx_server::WriteWaitEnd::TimedOut | knx_server::WriteWaitEnd::SecondSignal
+            )
+        {
+            eprintln!(
+                "knx-server: the stopped address programming had not ended yet; \
+                 it had written nothing"
+            );
+        }
+        return;
+    }
+    let running = running.join(" and ");
+    match drain.end {
+        knx_server::WriteWaitEnd::NothingRunning => {}
+        knx_server::WriteWaitEnd::Finished => {
+            eprintln!("knx-server: {running} ended before the stop")
+        }
+        knx_server::WriteWaitEnd::TimedOut => eprintln!(
+            "knx-server: {running} was still running after {}s and ends with the process; \
+             the device may be partly written, check it before relying on it \
+             (raise KNX_STOP_WRITE_WAIT_SECS and Docker's stop timeout to wait longer)",
+            limit.as_secs()
+        ),
+        knx_server::WriteWaitEnd::SecondSignal => eprintln!(
+            "knx-server: second signal: {running} ends with the process; \
+             the device may be partly written, check it before relying on it"
+        ),
     }
 }
 

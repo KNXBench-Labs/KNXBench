@@ -105,6 +105,8 @@ async fn write(
     State(state): State<SharedState>,
     Json(body): Json<WriteRequest>,
 ) -> Result<Json<WriteResponse>, ApiError> {
+    // Goal A3: no new tunnel once a stop has begun (KL-163).
+    state.stop_admission.admit()?;
     let gateway: SocketAddrV4 = body
         .gateway
         .parse()
@@ -221,6 +223,8 @@ async fn find(
     State(state): State<SharedState>,
     Query(query): Query<FindQuery>,
 ) -> Result<Json<FindResponse>, ApiError> {
+    // Goal A3: no new tunnel once a stop has begun (KL-163).
+    state.stop_admission.admit()?;
     let gateway: SocketAddrV4 = query
         .gateway
         .parse()

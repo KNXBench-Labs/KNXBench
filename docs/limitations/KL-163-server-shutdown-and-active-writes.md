@@ -6,6 +6,37 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-10-13 (Goal A3): no new jobs, a bounded wait for running writes
+
+- **Admission.** From the first signal on, every route that would open a
+  tunnel refuses with `503 serverStopping` and sends nothing: device download,
+  address programming (button and serial), monitor, line scan, device
+  compare, service control (`StopAdmission`, checked first in each handler;
+  `apps/knx-server/tests/http_stop_admission.rs` covers all nine requests).
+  Group-address writes through an existing monitor session and the
+  discovery search open no new tunnel and are not refused.
+- **Bounded drain.** After the bus release the server waits for a download
+  or address programming that is already running, up to
+  `KNX_STOP_WRITE_WAIT_SECS` (default 120 s, `0` = no wait, at most 3600; an
+  invalid value refuses the start). It never cancels a running write: an
+  address programming that still waits for its button is stopped through its
+  existing *Stop* (nothing written); one that has begun MP §2.3 and every
+  download are only waited for. A second signal — during the 5-second grace or
+  later — ends the wait at once.
+- **Remaining boundary.** A write still running when the wait ends (limit,
+  second signal, SIGKILL, `docker rm -f`) ends mid-way exactly as before; the
+  server log names the device. No safe device-side abort exists and none is
+  invented. Docker's own stop timeout (10 s default) must exceed the server's
+  wait, e.g. `docker stop -t 130`; otherwise Docker kills first. Unsaved
+  project changes are unaffected by this package.
+- Evidence: unit tests in `apps/knx-server/src/graceful_stop.rs` (paused clock:
+  nothing running → no wait; a download ending after 30 s is waited for; the
+  wait times out at its limit without cancelling; a second signal ends it; a
+  zero wait; a waiting address programming is stopped; a writing one is only
+  waited for; a second signal after the grace is still seen; environment
+  parsing; admission), with synthetic sessions on controllable tasks. No real
+  gateway, device or container was stopped.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 163. Stopping the server does not wait for a device download or address programming

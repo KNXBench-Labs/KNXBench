@@ -154,6 +154,8 @@ type TunnelReservation<'a> = (
 );
 
 async fn reserve_tunnel(state: &SharedState) -> Result<TunnelReservation<'_>, ApiError> {
+    // Goal A3: no new tunnel once a stop has begun (KL-163).
+    state.stop_admission.admit()?;
     let programming = state.address_programming.lock().await;
     if let Some(holder) = crate::tunnel_holder::download_holder(state) {
         return Err(crate::tunnel_holder::gateway_busy(

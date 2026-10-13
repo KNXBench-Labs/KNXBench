@@ -137,8 +137,12 @@ that a physical gateway is reachable.
 4. Run the new image with the **same volume, password and network settings**.
 
 An image pull alone does not update a running container. Normal `docker stop`
-allows an orderly server exit and tunnel disconnect; it does **not** wait for
-an active device download or address programming to finish.
+allows an orderly server exit and tunnel disconnect and refuses new bus jobs.
+While a device download or address programming is running, the server waits for
+it up to `KNX_STOP_WRITE_WAIT_SECS` (default 120 s), but Docker kills it after
+its own timeout (10 s by default), so use `docker stop -t 130 knxbench` (or a
+Compose `stop_grace_period`) if a write may be running. A write cut short by a
+timeout, a second signal or a kill may leave the device partly written.
 
 ## Limits, help and licence
 

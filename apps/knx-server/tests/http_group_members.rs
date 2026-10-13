@@ -133,6 +133,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         achievements_lock: Default::default(),
         catalog_requests: Default::default(),
         legacy_password: None,
+        stop_admission: Default::default(),
     };
     let mut project = Project::new(Language("en".into()));
     project.installations.push(installation(

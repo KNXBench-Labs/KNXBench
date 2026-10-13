@@ -210,6 +210,9 @@ pub struct AppState {
     /// [`Self::with_user_product_db`] sets it (`$XDG_CONFIG_HOME/knx/…`),
     /// so a test never reads or writes the developer's own.
     pub legacy_password: Option<knx_app::legacy::RememberedPassword>,
+    /// Closed by the first stop signal: from then on no route opens a new
+    /// tunnel (Goal A3, KL-163). See `graceful_stop`.
+    pub stop_admission: crate::StopAdmission,
 }
 
 impl AppState {
@@ -286,6 +289,7 @@ impl AppState {
             achievements_lock: Mutex::new(()),
             catalog_requests: Mutex::new(Default::default()),
             legacy_password: None,
+            stop_admission: Default::default(),
         }
     }
 }

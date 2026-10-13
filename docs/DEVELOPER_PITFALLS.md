@@ -38,6 +38,16 @@ already found lying in the grass.
   precondition (root ignores file modes) and fails. Run the Rust suite with
   `--offline` outside that wrapper; keep the wrapper for browser suites.
 
+- **Never share one `CARGO_TARGET_DIR` between worktrees for a gate.** Cargo
+  can reuse another worktree's artifacts when sources look unchanged,
+  including that worktree's baked `CARGO_MANIFEST_DIR` and build stamp.
+  Seen 2026-10-13: corpus tests reported "OriginalData not present" in a
+  worktree that had it, because the baked root was another worktree. Give
+  every gate its own fresh target directory and delete it afterwards.
+- **A new Rust file's header is one sentence on line 1** (`//! … .`, then
+  an empty `//!`). A two-line opening paragraph counts as no header, and the
+  ADR-0018 ratchet fails the gate (seen 2026-10-13 with twelve new files).
+
 ## Handover and Git
 
 - **`.ai/` is ignored, but `.ai/CURRENT_STATE.md` is tracked.** A plain

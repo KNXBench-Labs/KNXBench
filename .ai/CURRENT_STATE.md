@@ -1,3 +1,12 @@
+Web lock: taken by claude-issues-8-9-10
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 11:06
+- **Completed:** Lock taken only (owner: start the reserved slot now; the queue had reached it, lock free since claude-parked-adoption released it). Worktree `issues-8-9-10-20261013`, branch `feature/issues-8-9-10-20261013`, from origin/main `681c7816`.
+- **Pending/Next Steps:** As planned in the reservation entry below: #9 indentation (GA tree address rows, channel header/rows in the devices view), #8 searchable `GroupAddressPicker` with DPT-mismatch marking, #10 named tunnel-busy state with structured `gateway_busy` 409s and named gateway refusal codes (spec-checked), offline readiness in the download panel, structured `unsupported_byte_order` refusal (KL-170 refusal itself untouched), "Download vorbereiten" rename and the German wording pass. Test-first, full gate, docs, push, release this lock; comment on and close #8/#9/#10 only after the merge.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released. Next in the queue: claude-kl170-tester-verification (part B). For that entry: if this package renders the plan `warnings`, it says so in its release entry.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 10:58
 - **Completed:** Parked-work adoption, last docs item (docs-only, no web lock). The five stale-claim corrections of 2026-10-12 (KNOWN_LIMITATIONS schema-23, selective import v14, PDB-9; DATA_MODEL instruction editor; OPEN_WORK/ROADMAP baseline-audit wording) re-checked against main `5c3db9b1`: all still hold (selective model v14 = `SELECTIVE_MODEL_VERSION` = both `CURRENT_SCHEMA_VERSION`). The triage note's ADR-index observation was bigger than recorded: 24 ADR files had no index row; all added (118 files = 118 rows). ADR-0100/0101/0106/0107/0110/0111/0112 still read "local/unpublished/pending" although each feature commit is an ancestor of main: each got a dated "Status update" line with commit and integration record, original line kept. Triage note and OPEN_WORK updated; the parked-adoption track has nothing left.

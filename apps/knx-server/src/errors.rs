@@ -52,6 +52,10 @@ pub struct ApiError {
     /// A stable machine-readable reason the client acts on (see
     /// [`ApiError::refused`]); `None` for the plain `{ error }` body.
     kind: Option<&'static str>,
+    /// Further structured fields next to `error` and `kind`, e.g. the
+    /// `holder` of a busy gateway (issue #10). Only with a `kind`.
+    /// Boxed: most errors carry none, and `ApiError` stays small.
+    details: Option<Box<serde_json::Map<String, serde_json::Value>>>,
 }
 
 #[derive(Debug)]
@@ -68,6 +72,7 @@ impl ApiError {
             message: message.into(),
             validation: None,
             kind: None,
+            details: None,
         }
     }
 
@@ -77,6 +82,7 @@ impl ApiError {
             message: message.into(),
             validation: None,
             kind: None,
+            details: None,
         }
     }
 
@@ -91,6 +97,7 @@ impl ApiError {
             message: message.into(),
             validation: None,
             kind: None,
+            details: None,
         }
     }
 
@@ -103,6 +110,7 @@ impl ApiError {
             message: message.into(),
             validation: None,
             kind: Some(kind),
+            details: None,
         }
     }
 
@@ -114,6 +122,7 @@ impl ApiError {
             message: message.into(),
             validation: None,
             kind: Some(kind),
+            details: None,
         }
     }
 
@@ -126,6 +135,25 @@ impl ApiError {
             message: message.into(),
             validation: None,
             kind: Some(kind),
+            details: None,
+        }
+    }
+
+    /// Any status with a stable `kind` and further structured fields the
+    /// client words itself (issue #10's `holder`, `gatewayStatus`). The
+    /// fields sit beside `error` and `kind`; `error` stays the readable text.
+    pub fn with_details(
+        status: StatusCode,
+        kind: &'static str,
+        message: impl Into<String>,
+        details: serde_json::Map<String, serde_json::Value>,
+    ) -> Self {
+        Self {
+            status,
+            message: message.into(),
+            validation: None,
+            kind: Some(kind),
+            details: Some(Box::new(details)),
         }
     }
 
@@ -146,6 +174,7 @@ impl ApiError {
                 example,
             }),
             kind: None,
+            details: None,
         }
     }
 }
@@ -165,11 +194,12 @@ impl IntoResponse for ApiError {
             )
                 .into_response(),
             None => match self.kind {
-                Some(kind) => (
-                    self.status,
-                    Json(json!({ "error": self.message, "kind": kind })),
-                )
-                    .into_response(),
+                Some(kind) => {
+                    let mut body = self.details.map(|details| *details).unwrap_or_default();
+                    body.insert("error".into(), self.message.into());
+                    body.insert("kind".into(), kind.into());
+                    (self.status, Json(serde_json::Value::Object(body))).into_response()
+                }
                 None => (self.status, Json(json!({ "error": self.message }))).into_response(),
             },
         }

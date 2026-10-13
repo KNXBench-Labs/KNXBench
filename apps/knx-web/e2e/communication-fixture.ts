@@ -69,6 +69,8 @@ export async function intercept(page: Page, language: "en" | "de", count = 8, th
       nextSince: 1, completedCount: 1, totalCount: 1, omittedAddresses: [], excludedAddresses: [],
       results: [{ address: "1.1.2", outcome: { kind: "occupied", maskVersion: 1793 } }] };
     else if (path === "/api/bus/scan/comparison" && method === "GET") body = { unexpected: [], missing: [], excludedInProject: [] };
+    // Read-only: the download page's gateway hint (issue #10); nothing holds the gateway here.
+    else if (path === "/api/bus/activity" && method === "GET") body = { serverIncarnation: "fixture", coverage: "partial", historyState: "disabled", sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: [], untracked: [] };
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
     else {
       state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "strict devices fixture only" };

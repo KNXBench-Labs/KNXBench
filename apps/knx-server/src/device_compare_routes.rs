@@ -30,7 +30,6 @@ use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::ContactableAddress;
 use knx_net::commissioning::memory_download::compare_with_plan;
 
-use crate::bus_scan::LineScanStatus;
 use crate::device_download::TunnelTransport;
 use crate::device_download_routes::{parse_target, prepare, PartialDto};
 use crate::errors::ApiError;
@@ -91,10 +90,6 @@ struct CompareResponse {
     changes: Vec<ChangeDto>,
 }
 
-fn conflict(message: impl Into<String>) -> ApiError {
-    ApiError::with_status(StatusCode::CONFLICT, message)
-}
-
 async fn compare(
     State(state): State<SharedState>,
     Json(body): Json<CompareRequest>,
@@ -111,32 +106,39 @@ async fn compare(
     let prepared = prepare(&state, target, partial)?;
 
     let Ok(programming) = state.address_programming.try_lock() else {
-        return Err(conflict(
+        return Err(crate::tunnel_holder::gateway_busy(
+            crate::tunnel_holder::TunnelHolder::Connecting {
+                session: "managementOperation",
+            },
             "the gateway is in use by an individual-address programming",
         ));
     };
-    if crate::device_download_routes::download_in_progress(&state) {
-        return Err(conflict(
+    if let Some(holder) = crate::tunnel_holder::download_holder(&state) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a download to a device is running: the gateway serves one tunnel",
         ));
     }
-    if programming.as_ref().is_some_and(|p| p.is_active()) {
-        return Err(conflict(
+    if let Some(holder) = programming
+        .as_ref()
+        .and_then(crate::tunnel_holder::programming_holder_of)
+    {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "an individual-address programming is running: the gateway serves one tunnel",
         ));
     }
     let monitor = state.bus_session.lock().await;
-    if monitor.is_some() {
-        return Err(conflict(
+    if let Some(existing) = monitor.as_ref() {
+        return Err(crate::tunnel_holder::gateway_busy(
+            crate::tunnel_holder::monitor_holder_of(existing),
             "stop the bus monitor first: the gateway serves one tunnel",
         ));
     }
     let scan = state.line_scan_session.lock().await;
-    if matches!(
-        scan.as_ref().map(|scan| scan.status()),
-        Some(LineScanStatus::Running)
-    ) {
-        return Err(conflict(
+    if let Some(holder) = scan.as_ref().and_then(crate::tunnel_holder::scan_holder_of) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a line scan is running: the gateway serves one tunnel",
         ));
     }
@@ -150,10 +152,7 @@ async fn compare(
         Ok(tunnel) => tunnel,
         Err(e) => {
             activity.finish("failed");
-            return Err(ApiError::with_status(
-                StatusCode::BAD_GATEWAY,
-                e.to_string(),
-            ));
+            return Err(crate::tunnel_holder::gateway_connect_failed(gateway, &e));
         }
     };
     let compared = compare_with_plan(

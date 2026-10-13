@@ -11,6 +11,11 @@ const apiMock = vi.hoisted(() => ({
   pollDeviceDownload: vi.fn(),
   discoverBusInterfaces: vi.fn(),
   serverVersion: vi.fn(),
+  busActivity: vi.fn(),
+  getDeviceReadiness: vi.fn(),
+  stopBusMonitor: vi.fn(),
+  cancelLineScan: vi.fn(),
+  stopAddressProgramming: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -70,6 +75,11 @@ function running(): DeviceDownloadStatusResponse {
     status: { state: "running" }, nextSince: 1, events: [], backupFile: null };
 }
 
+function activity(sessions: unknown[], busyLocks: string[] = []) {
+  return { serverIncarnation: "srv", coverage: "partial", historyState: "disabled", sessions, oneShot: [],
+    oneShotDropped: 0, busyLocks, untracked: [] };
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void; let reject!: (error: unknown) => void;
   const promise = new Promise<T>((ok, fail) => { resolve = ok; reject = fail; });
@@ -118,6 +128,11 @@ beforeEach(() => {
   apiMock.startDeviceDownload.mockReset();
   apiMock.discoverBusInterfaces.mockReset();
   apiMock.serverVersion.mockReset().mockResolvedValue({ version: "0.1.0-alpha.1" });
+  apiMock.busActivity.mockReset().mockResolvedValue(activity([]));
+  apiMock.getDeviceReadiness.mockReset().mockResolvedValue({ devices: [], counts: {} });
+  apiMock.stopBusMonitor.mockReset().mockResolvedValue({ sessionId: 6, telegramCount: 0 });
+  apiMock.cancelLineScan.mockReset();
+  apiMock.stopAddressProgramming.mockReset();
   host = document.createElement("div"); document.body.appendChild(host); root = createRoot(host);
 });
 
@@ -303,4 +318,86 @@ it("walks the five steps from the actual state and names what is missing", async
   expect(state("confirm")).toBe("open");
   expect(text('[data-guide-step="confirm"]')).toContain(en["deviceDownload.guide.onStart"]);
   expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+// Issue #10: the download page says up front what holds the gateway.
+it("names a connected bus monitor before anything is prepared, and stops it on request", async () => {
+  apiMock.busActivity.mockResolvedValue(activity([{ kind: "busMonitor", id: 6, gateway: "192.0.2.221:3671", state: "active" }]));
+  await render();
+  expect(text(".device-download-holder [role=status]")).toBe(
+    "The gateway is busy: the bus monitor is connected to 192.0.2.221:3671. Stop the bus monitor first.",
+  );
+  apiMock.busActivity.mockResolvedValue(activity([]));
+  await act(async () => button(en["deviceDownload.holder.stopMonitor"])!.click());
+  await flush();
+  expect(apiMock.stopBusMonitor).toHaveBeenCalledTimes(1);
+  expect(host.querySelector(".device-download-holder")).toBeNull();
+  // No gateway was entered yet: the monitor's, which worked, is kept.
+  expect(gatewayInput().value).toBe("192.0.2.221:3671");
+});
+
+it("offers the monitor's gateway as a suggestion and never overwrites a typed one by itself", async () => {
+  apiMock.busActivity.mockResolvedValue(activity([{ kind: "busMonitor", id: 6, gateway: "192.0.2.221:3671", state: "active" }]));
+  await render();
+  await type("192.0.2.40:3671");
+  const use = en["deviceDownload.holder.useMonitorGateway"].replace("{gateway}", "192.0.2.221:3671");
+  expect(gatewayInput().value).toBe("192.0.2.40:3671");
+  await act(async () => button(use)!.click());
+  expect(gatewayInput().value).toBe("192.0.2.221:3671");
+  expect(button(use)).toBeUndefined();
+});
+
+it("names a running line scan with its progress and cancels it by its id", async () => {
+  apiMock.busActivity.mockResolvedValue(activity([{ kind: "lineScan", id: 4, state: "running", probed: 37, total: 120 }]));
+  apiMock.cancelLineScan.mockResolvedValue({});
+  await render();
+  expect(text(".device-download-holder [role=status]")).toContain("(37/120 addresses probed)");
+  await act(async () => button(en["deviceDownload.holder.cancelScan"])!.click());
+  await flush();
+  expect(apiMock.cancelLineScan).toHaveBeenCalledWith(4);
+});
+
+it("shows nothing when the activity cannot be read: the start's own refusal stays", async () => {
+  apiMock.busActivity.mockRejectedValue(status(500));
+  await render();
+  expect(host.querySelector(".device-download-holder")).toBeNull();
+});
+
+it("says a typed address is used directly when the search found nothing", async () => {
+  await render();
+  await discover([]);
+  await type("192.0.2.221:3671");
+  expect(text(".device-download-gateway-status")).toBe(
+    "No gateway answered the search. The address you entered will be used directly.",
+  );
+});
+
+it("marks a device KNXBench cannot program yet, with the reason, before anything is prepared", async () => {
+  apiMock.getDeviceReadiness.mockResolvedValue({ counts: {}, devices: [
+    { address: "1.1.67", name: "Push button 2-fold", programRef: "p", readiness: "unsupported", category: "byte-order",
+      detail: "memory image: not supported for a download: ParameterByteOrder", steps: null, octets: null },
+    { address: "1.1.3", name: "Actuator", programRef: "p", readiness: "untested", category: null, detail: null, steps: 1, octets: 1 },
+  ] });
+  await render();
+  const labels = [...deviceSelect().options].map((option) => option.textContent);
+  expect(labels).toContain("1.1.67 — Push button 2-fold (cannot be programmed yet)");
+  expect(labels).toContain("1.1.3 — Actuator");
+  await setSelect(deviceSelect(), "10");
+  expect(text(".device-download-readiness")).toBe(
+    "KNXBench cannot program this device yet: its application program stores values in little-endian byte order, "
+    + "which KNXBench does not write yet. Preparing a download will be refused; nothing is written.",
+  );
+});
+
+it("names the prepare step plainly and says nothing is written yet", async () => {
+  await render();
+  expect(button("Prepare download")).toBeDefined();
+  expect(text(".device-download-actions")).toContain("Nothing is written yet");
+});
+
+it("says readiness could not be checked instead of marking nothing silently", async () => {
+  apiMock.getDeviceReadiness.mockResolvedValue([]);
+  await render();
+  expect(text(".device-download-readiness-unavailable")).toContain("Readiness could not be checked offline");
+  expect([...deviceSelect().options].map((option) => option.textContent)).toContain("1.1.67 — Push button 2-fold");
 });

@@ -739,7 +739,7 @@ mod tests {
         let values = [("P-C_R-1", "258"), ("P-C_R-2", "258")];
         assert!(matches!(
             crate::image::build_download_image(&conn, &request(&values)),
-            Err(ImageError::Unsupported { what }) if what.contains("ParameterByteOrder")
+            Err(ImageError::UnsupportedByteOrder { order }) if order == "LittleEndian"
         ));
         let (_dir, conn) = db(PROGRAM);
         let plan = plan_probe(&conn, &request(&values)).expect("plans");

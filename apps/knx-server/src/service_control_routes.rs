@@ -39,7 +39,6 @@ use knx_net::commissioning::service_control::{
     read_service_control, set_individual_address_write_enable, ServiceControl, ServiceControlError,
 };
 
-use crate::bus_scan::LineScanStatus;
 use crate::device_download::TunnelTransport;
 use crate::errors::ApiError;
 use crate::one_shot_activity::WriteOutcome;
@@ -53,10 +52,6 @@ pub const DEBUG_SETTING_KEY: &str = "debugIndividualAddressWriteEnable";
 
 pub fn service_control_routes() -> Router<SharedState> {
     Router::new().route("/api/device/service-control", get(read).post(write))
-}
-
-fn conflict(message: impl Into<String>) -> ApiError {
-    ApiError::with_status(StatusCode::CONFLICT, message)
 }
 
 /// Whether the settings file says `true` for [`DEBUG_SETTING_KEY`].
@@ -160,26 +155,32 @@ type TunnelReservation<'a> = (
 
 async fn reserve_tunnel(state: &SharedState) -> Result<TunnelReservation<'_>, ApiError> {
     let programming = state.address_programming.lock().await;
-    if crate::device_download_routes::download_in_progress(state) {
-        return Err(conflict(
+    if let Some(holder) = crate::tunnel_holder::download_holder(state) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a download to a device is running: the gateway serves one tunnel",
         ));
     }
-    if programming.as_ref().is_some_and(|p| p.is_active()) {
-        return Err(conflict("an individual-address programming is running"));
+    if let Some(holder) = programming
+        .as_ref()
+        .and_then(crate::tunnel_holder::programming_holder_of)
+    {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
+            "an individual-address programming is running",
+        ));
     }
     let monitor = state.bus_session.lock().await;
-    if monitor.is_some() {
-        return Err(conflict(
+    if let Some(existing) = monitor.as_ref() {
+        return Err(crate::tunnel_holder::gateway_busy(
+            crate::tunnel_holder::monitor_holder_of(existing),
             "stop the bus monitor first: the gateway serves one tunnel",
         ));
     }
     let scan = state.line_scan_session.lock().await;
-    if matches!(
-        scan.as_ref().map(|scan| scan.status()),
-        Some(LineScanStatus::Running)
-    ) {
-        return Err(conflict(
+    if let Some(holder) = scan.as_ref().and_then(crate::tunnel_holder::scan_holder_of) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a line scan is running: the gateway serves one tunnel",
         ));
     }
@@ -202,10 +203,7 @@ async fn read(
         Ok(connected) => connected,
         Err(e) => {
             activity.finish("failed");
-            return Err(ApiError::with_status(
-                StatusCode::BAD_GATEWAY,
-                e.to_string(),
-            ));
+            return Err(crate::tunnel_holder::gateway_connect_failed(gateway, &e));
         }
     };
     let tunnel = TunnelTransport(connected.as_ref());
@@ -279,10 +277,7 @@ async fn write(
         Ok(connected) => connected,
         Err(e) => {
             activity.finish(WriteOutcome::NotSent);
-            return Err(ApiError::with_status(
-                StatusCode::BAD_GATEWAY,
-                e.to_string(),
-            ));
+            return Err(crate::tunnel_holder::gateway_connect_failed(gateway, &e));
         }
     };
     let tunnel = TunnelTransport(connected.as_ref());

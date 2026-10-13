@@ -1,7 +1,7 @@
 /** Production-only, offline communication-table browser acceptance configuration. */
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
-  testDir: "./e2e", testMatch: ["communication-objects.e2e.ts", "group-address-picker.e2e.ts"], fullyParallel: false, workers: 1, retries: 0,
+  testDir: "./e2e", testMatch: ["communication-objects.e2e.ts", "group-address-picker.e2e.ts", "gateway-refusal.e2e.ts"], fullyParallel: false, workers: 1, retries: 0,
   outputDir: "../../target/playwright/communication-objects", reporter: "line",
   use: { baseURL: "http://127.0.0.1:4173", locale: "en-US", trace: "retain-on-failure",
     launchOptions: { executablePath: "/usr/bin/chromium" } },

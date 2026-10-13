@@ -1,4 +1,4 @@
-/** Product file picker shared by catalog and device wizard: packages (previewed) and legacy databases. */
+/** Product file picker for catalogue and device wizard: packages previewed, legacy imported. */
 import { useState } from "react";
 import * as api from "./api";
 import type { LegacyInstallReport } from "./api";

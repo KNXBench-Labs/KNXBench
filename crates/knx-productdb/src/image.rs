@@ -226,6 +226,13 @@ pub enum ImageError {
     UnknownProgram(String),
     /// The `Dynamic` evaluation could not decide everything.
     Evaluation(Vec<ScopedDiagnostic>),
+    /// The program declares a `ParameterByteOrder` other than `BigEndian`;
+    /// this module writes numbers high octet first only (KL-170). Its own
+    /// variant so a client can explain it instead of quoting this text.
+    UnsupportedByteOrder {
+        /// The declared order, verbatim (e.g. `LittleEndian`).
+        order: String,
+    },
     /// A product structure this module does not write.
     Unsupported {
         /// What it is, naming the parameter, object or segment.
@@ -318,6 +325,11 @@ impl fmt::Display for ImageError {
                 diagnostics.len(),
                 diagnostics.first().map(|d| &d.diagnostic)
             ),
+            ImageError::UnsupportedByteOrder { order } => write!(
+                f,
+                "not supported for a download: ParameterByteOrder {order:?}: numbers are written \
+                 high octet first"
+            ),
             ImageError::Unsupported { what } => write!(f, "not supported for a download: {what}"),
             ImageError::Value {
                 parameter_ref,
@@ -376,8 +388,8 @@ pub fn build_download_image(
         .get("ParameterByteOrder")
         .filter(|order| *order != "BigEndian")
     {
-        return Err(ImageError::Unsupported {
-            what: format!("ParameterByteOrder {order:?}: numbers are written high octet first"),
+        return Err(ImageError::UnsupportedByteOrder {
+            order: order.clone(),
         });
     }
     let types = ParameterTypes::load(conn, program_id, &code)?;
@@ -2203,9 +2215,16 @@ mod tests {
             r#"<Options TextParameterEncoding="iso-8859-15" ParameterByteOrder="LittleEndian" />"#,
         );
         let error = build(&xml, &[], vec![]).unwrap_err();
+        // Typed since issue #10, so a client can explain it; the text is
+        // unchanged for the CLI and logs.
         assert!(
-            matches!(&error, ImageError::Unsupported { what } if what.contains("ParameterByteOrder")),
+            matches!(&error, ImageError::UnsupportedByteOrder { order } if order == "LittleEndian"),
             "{error}"
+        );
+        assert_eq!(
+            error.to_string(),
+            "not supported for a download: ParameterByteOrder \"LittleEndian\": numbers are written \
+             high octet first"
         );
         let big = kinds_program(
             r#"<Options TextParameterEncoding="iso-8859-15" ParameterByteOrder="BigEndian" />"#,

@@ -205,7 +205,10 @@ async fn start_opens_a_session_and_returns_session_id_and_assigned_address() {
     assert_eq!(activity["sessions"][0]["kind"], "busMonitor");
     assert_eq!(activity["sessions"][0]["id"], 1);
     assert_eq!(activity["sessions"][0]["state"], "active");
-    assert!(activity["sessions"][0].get("gateway").is_none());
+    // Since issue #10 the snapshot names the monitor's gateway (the one this
+    // client asked for), so a gateway field elsewhere can offer it; the
+    // durable history still records none (ADR-0055 follow-up, ADR-0064).
+    assert_eq!(activity["sessions"][0]["gateway"], "192.0.2.10:3671");
 
     let response = call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await;
     assert_eq!(response.status(), StatusCode::OK);

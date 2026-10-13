@@ -24,6 +24,35 @@ fn session(
             backup_file: Mutex::new(None),
         }),
         task: Some(task),
+        report: synthetic_report(),
+    }
+}
+
+fn synthetic_report() -> DownloadReport {
+    use knx_app::download_report::*;
+    DownloadReport {
+        kind: REPORT_KIND,
+        format: REPORT_FORMAT,
+        knxbench_version: "test".into(),
+        program: ReportedProgram {
+            id: "M-0083_A-0001-01-0000".into(),
+            name: None,
+            application_version: None,
+            source_sha256: None,
+            manufacturer: "0083".into(),
+            mask: "0701".into(),
+        },
+        scope: "complete",
+        support: "untested",
+        inferences: vec![],
+        warnings: vec![],
+        plan: ReportedPlan {
+            steps: 3,
+            data_octets: 1,
+            group_links: 0,
+        },
+        outcome: None,
+        parameter_values: Default::default(),
     }
 }
 
@@ -168,4 +197,49 @@ async fn a_worker_returning_without_a_terminal_result_is_not_success() {
         }
     ));
     assert!(!session.is_running());
+}
+
+#[tokio::test]
+async fn a_report_exists_only_once_the_run_and_its_cleanup_have_ended() {
+    let release = Arc::new(Notify::new());
+    let waiter = Arc::clone(&release);
+    let task = tokio::spawn(async move { waiter.notified().await });
+    let mut session = session(task, finished(), Some(2));
+    assert_eq!(session.report(), None, "cleanup still runs");
+    release.notify_one();
+    session.join().await;
+    let report = session.report().expect("ended");
+    assert_eq!(
+        report.outcome,
+        Some(ReportedOutcome::completed(
+            Written::Yes,
+            Restart::Unconfirmed
+        ))
+    );
+    assert_eq!(report.program.id, "M-0083_A-0001-01-0000");
+}
+
+#[tokio::test]
+async fn a_stopped_run_reports_where_it_stopped_and_what_it_wrote() {
+    let task = tokio::spawn(async { panic!("synthetic failure") });
+    let mut session = session(task, DownloadStatus::Running, Some(2));
+    session.join().await;
+    let outcome = session
+        .report()
+        .expect("ended")
+        .outcome
+        .expect("an outcome");
+    assert!(!outcome.completed);
+    assert_eq!(outcome.stopped_in_step, Some(3));
+    assert_eq!(outcome.restart, None);
+    assert_eq!(outcome.written, session_written(&session));
+}
+
+fn session_written(session: &DeviceDownloadSession) -> Written {
+    match session.status() {
+        DownloadStatus::Failed { written, .. } | DownloadStatus::Finished { written, .. } => {
+            written
+        }
+        DownloadStatus::Running => panic!("still running"),
+    }
 }

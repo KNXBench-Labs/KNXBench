@@ -2000,6 +2000,38 @@ async fn a_verified_download_says_so_and_keeps_a_backup_first() {
     assert!(backup < first_write, "{events:?}");
     assert_eq!(events[backup]["octets"], 1416);
 
+    // The tester's report (ADR-0121): the program, scope, outcome and values,
+    // never the address or the device.
+    let (code, body) = send(&h.app, get("/api/device-download/report")).await;
+    assert_eq!(code, StatusCode::OK, "{body}");
+    let report = &body["report"];
+    assert_eq!(report["kind"], "knxbench-download-report");
+    assert_eq!(report["program"]["id"], plan["programId"]);
+    assert_eq!(report["program"]["mask"], "0701");
+    assert_eq!(report["scope"], "complete");
+    assert_eq!(report["support"], "verified");
+    assert_eq!(report["outcome"]["completed"], true);
+    assert_eq!(report["outcome"]["written"], "yes");
+    assert_eq!(report["plan"]["dataOctets"], plan["dataOctets"]);
+    assert_eq!(
+        report["parameterValues"].as_object().unwrap().len(),
+        plan["parameterValues"].as_u64().unwrap() as usize
+    );
+    assert!(report["program"]["sourceSha256"].as_str().unwrap().len() == 64);
+    let text = body.to_string();
+    assert!(!text.contains("1.1.67"), "no address anywhere: {text}");
+    assert!(
+        !text.contains(plan["deviceName"].as_str().unwrap()),
+        "no device name"
+    );
+    assert!(body["issueUrl"].as_str().unwrap().starts_with(
+        "https://github.com/KNXBench-Labs/KNXBench/issues/new?template=download-report.yml"
+    ));
+    assert!(body["mailto"]
+        .as_str()
+        .unwrap()
+        .starts_with("mailto:issue@knxbench.com?"));
+
     let (_, status) = send(&h.app, get("/api/device-download/status")).await;
     let file = status["backupFile"]
         .as_str()

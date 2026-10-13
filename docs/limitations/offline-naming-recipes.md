@@ -22,3 +22,12 @@ The deterministic CLI fingerprint binds canonical target, exact intent, semantic
 native context and history generation; it is not an authentication capability.
 The broader FUTURE-02 scope remains in the ledger, not closed by this small case.
 <!-- END retained catalogue record -->
+
+## Update 2026-10-13: a web dialog (Goal B7)
+
+"No … UI writer" above is superseded: the web app offers the same literal
+recipe as **Rename…** for a group-address selection, through server routes bound
+to the live snapshot ([contract](../contracts/offline-name-recipe.md#web-consumer-goal-b7-13-october-2026)).
+Everything else in the boundary stands: explicit ids only, no interpolation,
+regex, target inference, macro registry or bus operation, and the broader
+FUTURE-02 scope stays in the ledger.

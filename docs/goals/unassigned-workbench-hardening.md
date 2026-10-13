@@ -30,11 +30,11 @@ blocked (named missing evidence) or excluded; nothing else is added.
 | B8 | EN/DE report texts, KL-13/KL-29/KL-43 summaries, TOOLS-01–05 provenance, optional FUTURE-08 | planned |
 | B9 | Issue #14: hover `transform` reset app-wide (`button:hover:not(:disabled)`), FsPicker geometry regression | delivered (W42 entry) |
 | B10 | Issue #11: group-address tree starts collapsed (`expanded` set), Expand/Collapse all, selection ancestors and filter matches open, per-project view state in localStorage | delivered (W42 entry) |
-| B11 | Issue #13: Log time column, even rows, one `Export…` button with scope in its dialog, plain link/unlink messages | next — `log-16k` landed (merge `beca550a`); builds on its `LogPanel`/`sessionLogExport` |
+| B11 | Issue #13: Log time column, even rows, one `Export…` button with scope in its dialog, plain link/unlink messages | delivered (W42 entry) |
 | B12 | Issues #12 + #15: one `+ New` menu per header reusing existing forms (structure, topology, group addresses incl. a **Group address** entry with range preselection, grouped per installation); fix the three stale "first installation only" manual sentences | delivered (W42 entry) |
 | B13 | Issue #16: collapsing a communication-object channel hides its child rows/editors while drafts, pending requests and results survive reopening ([triage](../status/2026-10-13-issue-16-triage.md)); contract + ADR-0102 update | delivered (W42 entry) |
 | B14 | Issue #17: evidence-gated positional/default text resolution in the product/application projection; raw, provenance and user names preserved; no unverified UI regex ([triage](../status/2026-10-13-issues-17-18-triage.md)) | planned — evidence first |
-| B15 | Issue #18: the requested device is visible as context at once; visible status/readiness wait; planning/start gates and active-download target protection kept; status and readiness latency measured separately ([triage](../status/2026-10-13-issues-17-18-triage.md)) | planned |
+| B15 | Issue #18: the requested device is visible as context at once; visible status/readiness wait; planning/start gates and active-download target protection kept; status and readiness latency measured separately ([triage](../status/2026-10-13-issues-17-18-triage.md)) | delivered (W42 entry) |
 | B16 | About: Hall of Fame from the bundled `docs/community/hall-of-fame.json` (participants, counters, English titles, medals, timestamp, link to the live board); no background GitHub request, no second scoring logic ([contract](../contracts/community-recognition.md)) | planned |
 
 B9–B12 were added on 13 October at the owner's request (triage `59b1ef8d0f72`, handover 22:10);

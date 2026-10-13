@@ -19,7 +19,7 @@ blocked (named missing evidence) or excluded; nothing else is added.
 
 | Package | Scope of record | State |
 | --- | --- | --- |
-| B1a | Revision-bound parameter writes + installation renames in the web client (A2); `serverStopping` worded (A3) | in progress |
+| B1a | Revision-bound parameter writes + installation renames in the web client (A2); `serverStopping` worded (A3) | delivered (gate and merge in the W42 entry) |
 | B1b | Functions in the workbench over A4's API (read, create/update/move/delete, members, undo/redo/save/reopen); no Site UI (ADR-0125 blocked) | planned |
 | B2 | Desktop webview reload/navigation guard for notes/instruction drafts; native/Orca/Firefox only as actually run | planned |
 | B3 | Read-only stored BusAccess/IP view, redacted endpoints, no connect | planned |

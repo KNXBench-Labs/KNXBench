@@ -78,6 +78,57 @@ downgraded to an unbound one.
   body automatically.
 - Installation rename: send the name the user typed; the server trims it.
 
+## Web consumer (Goal B1a, 13 October 2026)
+
+The web workbench sends only bound requests on these two routes:
+
+- **Parameters.** `useDeviceParameters` keeps every panel together with the
+  snapshot it was read under (the tree current when the read was issued, or
+  the write's own returned tree). A row binds to that snapshot and to the
+  field's `value` as received (`null` included); the checked editor's
+  `onApply` does the same. A row without a complete snapshot is read-only
+  with a caption, so no unbound write is sent.
+- **Conflict.** `409 parameterWriteConflict` keeps the draft in the field,
+  says that nothing was written, and reloads tree and panel
+  (`GET /api/project`, published like any tree). Blur or Enter never resend;
+  **Apply my value** is enabled only once a newer panel arrived and sends
+  the new binding and the new value; **Discard my value** returns to it. A
+  failed reload is named. Every other refusal (`400`, `422`, another `409`
+  kind) keeps the previous behaviour: revert and show the server's reason.
+  The checked editor keeps its draft and turns stale (its existing notice).
+- **Late replies.** A write's returned panel is shown only while the same
+  device and product language are displayed; its tree still goes to the
+  owner, whose snapshot-lifetime guard orders trees.
+- **Installations.** Both installation name fields use the shared
+  `RenameNameField` (kind `installation`): bound to the shown tree and the
+  name exactly as shown; `409 renameConflict` keeps the draft and offers
+  **Refresh state**, never a resend.
+- **Stop admission (A3).** `503 serverStopping` from a tunnel route is worded
+  as "the server is stopping; nothing was started and nothing was sent"
+  (`gatewayRefusal.ts`), not as a bus error, and is not retried.
+
+**Consequence, by design:** a write sent while a panel re-read for an
+unrelated change (e.g. Save) is still in flight carries the older revision
+and is refused as a conflict; the user then confirms with **Apply my value**.
+Safe but occasionally one click more. The server still accepts unbound
+requests for other callers; refusing them is a separate owner decision.
+
+Evidence: `ParameterPanel.binding.test.tsx` (10 cases),
+`ParameterSourceEditor.test.tsx`, `Inspector.test.tsx`, `api.test.ts`,
+`gatewayRefusal.test.ts`; production-build Chromium
+`parameter-editors.e2e.ts` (fixture checks the binding like the server; a
+value changed by another client, EN/DE, 1440/400) and fixture-server
+`installations.e2e.ts`/`installation-node.e2e.ts`. Ten of eleven mutants
+fail named tests; the eleventh is equivalent (documented in the delivery
+entry). Real server: `tools/verify_name_editing.py` (loopback-only
+namespace, `knx-server` built from this tree, production frontend) also
+renames the installation through Properties, lets a second HTTP client
+rename it with a valid binding, and checks the real `409` → draft kept →
+**Refresh state** → apply, then Save, reopen and undo counts; 4/4 (EN/DE ×
+1440/400). Not covered: a native WebKitGTK window, a parameter conflict on a
+real server (the demo has no installed product data, so its panels have no
+editable fields), two real browser windows.
+
 ## Evidence
 
 `apps/knx-server/tests/http_revision_bound_writes.rs`: two clients on one

@@ -270,7 +270,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     // Leaving the view and coming back (a fresh component) restores the same open groups.
     const nav = page.getByRole("navigation", { name: m["workbench.navigation"], exact: true });
     if (!(await nav.isVisible())) await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
-    await nav.getByRole("button", { name: m["workbench.devices"], exact: true }).click();
+    // Topology renders from the tree alone; the device list would load more than this fixture serves.
+    await nav.getByRole("button", { name: m["workbench.topology"], exact: true }).click();
     await expect(page.locator(".ga-workspace")).toHaveCount(0);
     if (!(await nav.isVisible())) await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
     await nav.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();

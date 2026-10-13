@@ -8,18 +8,34 @@
 // left to whoever next tidies up the message file.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const apiMock = vi.hoisted(() => ({ serverVersion: vi.fn() }));
 vi.mock("./api", () => ({ ...apiMock }));
+// B16: each test chooses the bundled Hall of Fame it ships with.
+const bundled = vi.hoisted(() => ({ result: null as unknown }));
+vi.mock("./bundledHallOfFame", () => ({ get BUNDLED_HALL_OF_FAME() { return bundled.result; } }));
 
 import AboutDialog from "./AboutDialog";
+import { HALL_OF_FAME_BOARD_URL, parseHallOfFame } from "./hallOfFame";
 import { messages as en } from "./messages/en";
 import { messages as de } from "./messages/de";
 
 let host: HTMLDivElement | undefined;
 let root: Root | undefined;
 const onClose = vi.fn();
+
+const board = (contributors: unknown[]) => parseHallOfFame(JSON.stringify({
+  schema_version: 1, repository: "KNXBench-Labs/KNXBench", generated_at: "2026-10-13T21:14:07Z",
+  policy: {}, ranks: [], resolution_awards: {}, contributors,
+}));
+const person = (login: string, position: number, xp: number, title: string, medals: string[] = []) =>
+  ({ login, issues: 15, replies: 12, resolutions: 8, xp, rank: { minimum_xp: 0, title }, medals, position });
+
+beforeEach(() => {
+  bundled.result = board([person("thengsty", 1, 167, "Parameter Poltergeist Hunter", ["Golden Bus Probe"]),
+    person("hagbardZ", 2, 31, "Bus Bug Scout")]);
+});
 
 afterEach(async () => {
   if (root) await act(async () => root!.unmount());
@@ -119,4 +135,61 @@ it("keeps every section, including the update notice, in reading order", async (
   expect(positions.every((position) => position >= 0), JSON.stringify(positions)).toBe(true);
   expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   expect(panel.querySelector(".about-dialog-footer button")?.textContent).toBe(en["about.close"]);
+});
+
+// B16: the community board as bundled with this build — shown, never scored, never fetched.
+it("shows every participant of the bundled Hall of Fame exactly as generated", async () => {
+  apiMock.serverVersion.mockResolvedValue({ version: "0.1.0-alpha.1" });
+  const fetchSpy = vi.spyOn(globalThis, "fetch");
+  const panel = await mount();
+  const section = panel.querySelector<HTMLElement>("[data-hall-of-fame]")!;
+  const rows = [...section.querySelectorAll<HTMLElement>("[data-hall-of-fame-entry]")];
+  expect(rows.map((row) => row.dataset.hallOfFameEntry)).toEqual(["thengsty", "hagbardZ"]);
+  // The list numbers itself from the generator's positions; About computes none.
+  expect(rows.map((row) => row.getAttribute("value"))).toEqual(["1", "2"]);
+  expect(rows[0].textContent).toContain("Parameter Poltergeist Hunter");
+  expect(rows[0].textContent).toContain("167 XP");
+  expect(rows[0].textContent).toContain("Golden Bus Probe");
+  expect(rows[0].textContent).toContain(en["about.hallOfFame.counters"]
+    .replace("{issues}", "15").replace("{replies}", "12").replace("{resolutions}", "8"));
+  const profile = rows[0].querySelector<HTMLAnchorElement>("a")!;
+  expect([profile.href, profile.target, profile.rel]).toEqual(["https://github.com/thengsty", "_blank", "noopener noreferrer"]);
+  // Bundled, dated, and honest about it; the live board is one link away.
+  expect(section.querySelector("time")?.getAttribute("datetime")).toBe("2026-10-13T21:14:07Z");
+  expect(section.textContent).toContain(en["about.hallOfFame.notLive"]);
+  expect(section.querySelector<HTMLAnchorElement>("[data-hall-of-fame-board]")?.href).toBe(HALL_OF_FAME_BOARD_URL);
+  expect(fetchSpy).not.toHaveBeenCalled();
+  fetchSpy.mockRestore();
+});
+
+it("shows a hostile handle as plain text and links it nowhere", async () => {
+  bundled.result = board([person("<img src=x onerror=alert(1)>", 1, 5, "Telegram Trainee")]);
+  apiMock.serverVersion.mockResolvedValue({ version: "0.1.0-alpha.1" });
+  const panel = await mount();
+  const row = panel.querySelector<HTMLElement>("[data-hall-of-fame-entry]")!;
+  expect(row.textContent).toContain("<img src=x onerror=alert(1)>");
+  expect(row.querySelector("img, a")).toBeNull();
+});
+
+it("says so when the bundled board cannot be read, and still links the live one", async () => {
+  bundled.result = parseHallOfFame("{ not json");
+  apiMock.serverVersion.mockResolvedValue({ version: "0.1.0-alpha.1" });
+  const panel = await mount();
+  const section = panel.querySelector<HTMLElement>("[data-hall-of-fame]")!;
+  expect(section.textContent).toContain(en["about.hallOfFame.unavailable"]);
+  expect(section.querySelector("[data-hall-of-fame-entry]")).toBeNull();
+  expect(section.querySelector<HTMLAnchorElement>("[data-hall-of-fame-board]")?.href).toBe(HALL_OF_FAME_BOARD_URL);
+});
+
+it("says so when nobody is on the board yet", async () => {
+  bundled.result = board([]);
+  apiMock.serverVersion.mockResolvedValue({ version: "0.1.0-alpha.1" });
+  const panel = await mount();
+  expect(panel.querySelector("[data-hall-of-fame]")?.textContent).toContain(en["about.hallOfFame.empty"]);
+});
+
+it("keeps the thank-you a thank-you in German too", () => {
+  expect(de["about.hallOfFame.intro"]).toMatch(/Dankeschön/);
+  expect(de["about.hallOfFame.intro"]).toMatch(/keine Bewertung/);
+  expect(en["about.hallOfFame.intro"]).toMatch(/not a (rating|measure)/);
 });

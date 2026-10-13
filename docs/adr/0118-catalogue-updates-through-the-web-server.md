@@ -64,3 +64,23 @@ connection behind a mutex.
 - **Route `/api/catalog/install` through the update path.** Rejected for now: it
   would change an existing, tested behaviour (and the device wizard) without the
   user asking; a later decision can retire the direct install.
+
+## Amendment 2026-10-14 (Goal B5): the web previews every install and can delete backups
+
+Point 7 and the last consequence are superseded for the web. The later decision this
+ADR left open is taken: the product picker in the catalogue and the device wizard
+previews every `.knxprod` and installs it only with the preview's token, so each web
+install is backed up; `.vd3`–`.vd5` and a preview refusal of kind
+`legacyProductDatabase` go to the legacy installer as before. The catalogue's second
+picker (**Update with preview…**) is gone, its preview moved into
+`CatalogPackageUpdate`. `POST /api/catalog/install` stays, unchanged, for scripts and
+older web builds; nothing removes or redirects it.
+
+Backups can be deleted: `POST /api/catalog/backups/delete` needs an explicit
+confirmation, a name from a fresh listing and the opaque `identity` that listing gave
+the file (device, inode, size, nanosecond mtime). The server checks it against the
+listing and again with `symlink_metadata` right before `remove_file`, under the
+product-database mutex; a replaced file is kept (409). The browser still never names
+a path. Remaining race: a file swapped between that last check and the removal
+would be removed in its place; both happen inside the server's own directory under
+the mutex, and a link in that slot is removed as a link, never followed.

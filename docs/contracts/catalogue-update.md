@@ -55,17 +55,32 @@ All behind the existing authentication; JSON is camelCase; errors are the usual
   backup's file name only and `report` the install report of `/api/catalog/install`.
   A token that no longer matches is 409 kind `catalogueUpdateStale` and nothing
   is written; a missing token is 400.
-- `GET /api/catalog/backups` — 200: `{backups:[{name, bytes, modifiedUnixSeconds}]}`,
+- `GET /api/catalog/backups` — 200: `{backups:[{name, bytes, modifiedUnixSeconds, identity}]}`,
   newest first by the time in the name (then the attempt suffix), only regular
   files (no links) with names of the form
   `<database file name>.backup-<seconds>-<12 hex>[-<n>].sqlite` in the database's
-  directory. Never a path.
+  directory. Never a path. `identity` (since Goal B5) is opaque: 32 hex digits of
+  a SHA-256 over the file's device, inode, size and nanosecond modification time,
+  so it changes when the name is given to another file.
 - `POST /api/catalog/restore` — JSON `{name}`. The name must be in a fresh
   listing (no separators, no other file): otherwise 400 kind `unknownBackup`.
   An unusable backup is 422 kind `invalidBackup` and the live file stays. 200:
   `{restored:name}`; the server then reopens and migrates its connection.
 
-Preview, apply and restore hold the product-database mutex for their duration.
+- `POST /api/catalog/backups/delete` (Goal B5) — JSON `{name, identity, confirmed}`.
+  Without `confirmed: true` 400 kind `confirmationRequired`; a name not in a fresh
+  listing (links, other files, separators) 400 kind `unknownBackup`; an identity
+  that no longer matches, checked against the listing and again without following
+  a link right before removal, 409 kind `catalogueBackupChanged` and the file stays.
+  A failed removal is 500 ("the backup could not be deleted: …") and the backup
+  stays listed. 200: `{deleted:name}`. The live database is never touched.
+
+Preview, apply, restore and delete hold the product-database mutex for their duration.
+
+**Web use (Goal B5).** The web installs every `.knxprod` through preview and apply
+(catalogue and device wizard); a preview refusal of kind `legacyProductDatabase`
+sends the file to `/api/catalog/install-legacy`. `/api/catalog/install` is no longer
+called by the web and stays unchanged for compatibility.
 
 ## Evidence
 

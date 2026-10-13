@@ -265,10 +265,20 @@ pub enum MappingDiagnostic {
     OrphanTranslation { column_id: String, rows: usize },
     /// An access level other than 0/1/2; the parameter is mapped `None`.
     UnknownAccessLevel { parameter: String, level: String },
-    /// An atomic type other than 0/1/2/4; its parameters are not mapped.
+    /// An atomic type other than 0–5; its parameters are not mapped.
     UnknownAtomicType {
         parameter_type: String,
         atomic_type: String,
+    },
+    /// A `long enum` (atomic type 5) type's `BINARY_VALUE`s: ETS4 writes
+    /// them as `Enumeration/@BinaryValue`, which the product database does
+    /// not model. They stay in the stored payload. `inconsistent` counts
+    /// values that are not hex, or whose length disagrees with
+    /// `BINARY_VALUE_LENGTH` or the type's size.
+    BinaryValuesNotModeled {
+        parameter_type: String,
+        values: usize,
+        inconsistent: usize,
     },
     /// A value that should name a row of another table and names none.
     DanglingReference {
@@ -324,6 +334,7 @@ impl MappingDiagnostic {
             Self::OrphanTranslation { .. } => "orphan-translation",
             Self::UnknownAccessLevel { .. } => "unknown-access-level",
             Self::UnknownAtomicType { .. } => "unknown-atomic-type",
+            Self::BinaryValuesNotModeled { .. } => "binary-values-not-modeled",
             Self::DanglingReference { .. } => "dangling-reference",
             Self::OverlappingMemory { .. } => "overlapping-memory",
             Self::ValueOnPageParent { .. } => "value-on-page-parent",
@@ -358,6 +369,12 @@ impl std::fmt::Display for MappingDiagnostic {
             Self::UnknownAtomicType { parameter_type, atomic_type } => write!(
                 f,
                 "parameter type {parameter_type} has unknown atomic type {atomic_type}; its parameters were not mapped"
+            ),
+            Self::BinaryValuesNotModeled { parameter_type, values, inconsistent } => write!(
+                f,
+                "parameter type {parameter_type}: {values} binary enumeration values \
+                 ({inconsistent} inconsistent with their length or the type's size) are kept \
+                 in the stored payload only; the product database does not model them"
             ),
             Self::DanglingReference { table, column, value } => {
                 write!(f, "{table}.{column} = {value} names no row")

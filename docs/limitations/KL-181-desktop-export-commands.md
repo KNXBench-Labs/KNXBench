@@ -43,10 +43,18 @@ file and no desktop command is involved.
   branch as the report (a release build words it `Command … not allowed by ACL`,
   a debug build gives a longer diagnosis); removing the two grants turns it red
   again.
-- **Boundary.** The test runs Tauri's mock runtime, not a native WebKitGTK
-  window, and does not open the save dialog. The fix reaches users with the
-  next AppImage. Until then the Docker image in a browser exports both files as
-  ordinary downloads.
+- **Native-window check, 13 October 2026.** Release build of `6ba1590a` in a
+  real window (GTK X11 backend, isolated home directory), served from
+  `http://127.0.0.1:<port>` like the AppImage: *Export log (JSON)…* opened the
+  native save dialog, and *Save* wrote `session-log.json` (mode 0600, `capacity`
+  16000, all 62 server entries). No ACL refusal. The import's *Open File*
+  dialog worked as well.
+- **Boundary.** The automated test runs Tauri's mock runtime. *Export capture* in
+  the bus monitor was not driven by hand: it appears only with recorded rows,
+  which need a live tunnel to the owner's gateway (one tunnel at a time); it
+  relies on the same grant, which the test covers. The Wayland backend was not
+  checked by hand. The fix reaches users with the next AppImage. Until then the
+  Docker image in a browser exports both files as ordinary downloads.
 
 Ledger `KL-181`.
 <!-- END retained catalogue record -->

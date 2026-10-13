@@ -20,7 +20,9 @@ Open: the reporter's log or report (the Docker image exports it today), to see w
 genuine findings remain. AppImage downloads now ask where to save instead of
 silently replacing files in Downloads
 ([KL §182](KNOWN_LIMITATIONS.md#182-appimages-up-to-alpha11-save-in-app-downloads-silently-into-downloads-and-replace-same-named-files));
-a native-window check of the dialog is still open.
+a by-hand check in a real window (X11, 13 October) confirmed the save dialog
+for the report download (Cancel and Save) and the log export (Save); the
+Wayland backend and the bus-monitor capture export were not driven.
 With a product database most of the warnings were unknown attributes in
 manufacturer application files; those are grouped too, and the Log now keeps
 16000 entries, dropping the least important first

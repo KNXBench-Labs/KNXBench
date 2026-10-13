@@ -95,6 +95,20 @@ already found lying in the grass.
   count.** Convert such statements to named columns when a migration adds
   columns.
 
+## Desktop app
+
+- **An unpackaged release `knx-desktop` finds its UI only below a folder named
+  `target`.** Tauri resolves the bundled `frontend` resource next to the
+  binary only when the binary sits in `target/<profile>/` (or
+  `target/<triple>/<profile>/`) beside a `.cargo-lock`. Anywhere else, including
+  a `CARGO_TARGET_DIR` like `.target-xyz/release`, it looks in
+  `/usr/lib/<app>/frontend`, the embedded server answers every page with 404,
+  and the window stays blank while `/api/version` works. That looks like a
+  WebKit or compositor problem but is not. For a manual check, copy the binary,
+  its `frontend` folder and an empty `.cargo-lock` into `<dir>/target/release/`.
+  On Hyprland a window started with `GDK_BACKEND=x11` is visible to the
+  computer-use driver; its GTK dialogs need foreground keyboard input.
+
 ## Web app
 
 - **Two tests pin the diagnostics companion's dependencies.**

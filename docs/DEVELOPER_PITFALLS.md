@@ -111,6 +111,13 @@ already found lying in the grass.
 
 ## Web app
 
+- **A file bundled from outside `apps/knx-web` needs three allow-lists.** The
+  Vite dev server, the browser-fixture server (`vite.fixtures.config.ts` replaces
+  `server` wholesale) and Vitest's `happy-dom` environment refuse a module outside
+  the app root (`Denied ID …`; the `node` environment does not check, so a unit
+  test can pass while `App.test.tsx` fails to load). Add the directory to
+  `devFileAccess` in `vite.config.ts`; all three use it. A production build reads
+  it anyway, which is why only dev and tests notice.
 - **Two tests pin the diagnostics companion's dependencies.**
   `apps/knx-web/src/DiagnosticsCompanion.test.tsx` pins its transitive imports,
   and `apps/knx-web/src/diagnosticShell.test.ts` scans literal hyphenated ids as

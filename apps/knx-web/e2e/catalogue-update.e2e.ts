@@ -1,4 +1,4 @@
-/** Built catalogue view: previewed update, backup and ask-first restore, intercepted API. */
+/** Built catalogue view: previewed install, backup, ask-first restore and delete, intercepted API. */
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -30,7 +30,9 @@ interface Fixture {
   previews: number;
   applies: { token: boolean }[];
   restores: string[];
-  backups: { name: string; bytes: number; modifiedUnixSeconds: number }[];
+  deletes: { name: string; identity: string; confirmed: boolean }[];
+  directInstalls: number;
+  backups: { name: string; bytes: number; modifiedUnixSeconds: number; identity: string }[];
   applyMode: "ok" | "stale";
   restoreMode: "ok" | "invalid";
 }
@@ -45,8 +47,8 @@ const report = { sha256: preview.packageSha256, scheme: 20, skipped: false, memb
   translations: { program: 0, catalog: 0, hardware: 0, master: 0 }, droppedDatapointTypes: 0, facts: null };
 
 async function fixture(page: Page, language: Language, theme: string, width: number): Promise<Fixture> {
-  const f: Fixture = { unexpected: [], previews: 0, applies: [], restores: [], applyMode: "ok", restoreMode: "ok",
-    backups: [{ name: "products.sqlite.backup-1750000000-cd34cd34cd34.sqlite", bytes: 3 * 1024 * 1024, modifiedUnixSeconds: 1750000000 }] };
+  const f: Fixture = { unexpected: [], previews: 0, applies: [], restores: [], deletes: [], directInstalls: 0, applyMode: "ok", restoreMode: "ok",
+    backups: [{ name: "products.sqlite.backup-1750000000-cd34cd34cd34.sqlite", bytes: 3 * 1024 * 1024, modifiedUnixSeconds: 1750000000, identity: "id-older" }] };
   await page.setViewportSize({ width, height: 900 });
   await page.route("https://api.github.com/**", (route) => { f.unexpected.push(route.request().url()); return route.abort(); });
   await page.route("**/api/**", (route) => {
@@ -74,10 +76,18 @@ async function fixture(page: Page, language: Language, theme: string, width: num
       const form = route.request().postDataBuffer()?.toString("latin1") ?? "";
       f.applies.push({ token: form.includes("fixture-token") });
       if (f.applyMode === "stale") return refuse(409, "catalogueUpdateStale", "the product database or the package changed since the preview; preview again");
-      f.backups.unshift({ name: BACKUP, bytes: 3 * 1024 * 1024, modifiedUnixSeconds: 1760270400 });
+      f.backups.unshift({ name: BACKUP, bytes: 3 * 1024 * 1024, modifiedUnixSeconds: 1760270400, identity: "id-newest" });
       return ok({ applied: true, preview, backup: BACKUP, report });
     }
     if (path === "/api/catalog/backups" && method === "GET") return ok({ backups: f.backups });
+    if (path === "/api/catalog/backups/delete" && method === "POST") {
+      const body = route.request().postDataJSON() as { name: string; identity: string; confirmed: boolean };
+      f.deletes.push(body);
+      f.backups = f.backups.filter((backup) => !(backup.name === body.name && backup.identity === body.identity));
+      return ok({ deleted: body.name });
+    }
+    // Goal B5: the web never installs directly any more.
+    if (path === "/api/catalog/install") { f.directInstalls += 1; return refuse(410, "strict", "direct install is not used by the web"); }
     if (path === "/api/catalog/restore" && method === "POST") {
       const name = route.request().postDataJSON().name as string;
       if (f.restoreMode === "invalid") return refuse(422, "invalidBackup", "not a usable product database backup: integrity check: page 7 is never used");
@@ -101,8 +111,9 @@ async function openCatalogue(page: Page, m: Catalogue) {
   return catalogue;
 }
 async function choosePackage(catalogue: ReturnType<Page["locator"]>) {
-  // The previewed update is the picker that takes packages only.
-  await catalogue.locator('input[type="file"]:not([accept*=".vd3"])').setInputFiles({
+  // Since Goal B5 the catalogue has one product picker, and it previews packages.
+  await expect(catalogue.locator('input[type="file"]')).toHaveCount(1);
+  await catalogue.locator('input[type="file"]').setInputFiles({
     name: "fictional-dimmer-v2.knxprod", mimeType: "application/zip", buffer: Buffer.from("PK\u0003\u0004fixture"),
   });
 }
@@ -121,7 +132,7 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     page.on("pageerror", (error) => errors.push(error.message));
     const f = await fixture(page, language, theme, width);
     const catalogue = await openCatalogue(page, m);
-    await expect(catalogue.getByText(m["catalogUpdate.open"], { exact: true })).toBeVisible();
+    await expect(catalogue.getByText(m["catalog.installLabel"], { exact: true })).toBeVisible();
     await choosePackage(catalogue);
     const shown = catalogue.getByRole("region", { name: m["catalogUpdate.heading"].replace("{name}", preview.sourceName) });
     await expect(shown).toContainText(m["catalogUpdate.nothingYet"]);
@@ -162,6 +173,24 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await dialog.getByRole("button", { name: m["catalogUpdate.restore.confirm"], exact: true }).click();
     await expect(catalogue).toContainText(m["catalogUpdate.restore.done"].replace("{name}", BACKUP));
     expect(f.restores).toEqual([BACKUP]);
+
+    // Goal B5: delete the older backup, after asking, with exactly the listed identity.
+    const older = catalogue.locator(".catalog-backup-list li").filter({ hasText: "products.sqlite.backup-1750000000-cd34cd34cd34.sqlite" });
+    await older.getByRole("button", { name: m["catalogUpdate.backups.delete"], exact: true }).click();
+    const ask = page.getByRole("dialog", { name: m["catalogUpdate.delete.title"] });
+    await expect(ask).toContainText("products.sqlite.backup-1750000000-cd34cd34cd34.sqlite");
+    await expect(ask.getByRole("button", { name: m["catalogUpdate.delete.keep"], exact: true })).toBeFocused();
+    const askBox = (await ask.boundingBox())!;
+    expect(askBox.x).toBeGreaterThanOrEqual(0);
+    expect(askBox.x + askBox.width).toBeLessThanOrEqual(width);
+    await capture(page, `${tag}-5-delete-ask`);
+    await ask.getByRole("button", { name: m["catalogUpdate.delete.confirm"], exact: true }).click();
+    await expect(catalogue).toContainText(m["catalogUpdate.delete.done"].replace("{name}", "products.sqlite.backup-1750000000-cd34cd34cd34.sqlite"));
+    await expect(names).toHaveText([BACKUP]);
+    expect(f.deletes).toEqual([{ name: "products.sqlite.backup-1750000000-cd34cd34cd34.sqlite", identity: "id-older", confirmed: true }]);
+    await noHorizontalOverflow(page);
+    await capture(page, `${tag}-6-deleted`);
+    expect(f.directInstalls).toBe(0);
     expect(f.unexpected).toEqual([]);
     expect(errors).toEqual([]);
   });

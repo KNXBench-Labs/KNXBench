@@ -367,6 +367,10 @@ describe("one editing workspace", () => {
     expect(metadataGraph.get("projectMetadata.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     // Shipped fun-language catalogues add only static copy and their registry.
     // The API-call and mutation inventories below remain unchanged.
+    //
+    // #13 adds `LogExportDialog.tsx`: the Log's one Export… button opens it.
+    // It holds the scope choice and calls the Log's existing local-file export
+    // (`sessionLogExport.ts`, already here); no fetch, no project state.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -377,6 +381,7 @@ describe("one editing workspace", () => {
       "HelpTip.tsx",
       // Raw details add clipboard/UI-only work, not an API or project mutation.
       "LogEntryDetails.tsx",
+      "LogExportDialog.tsx",
       "LogPanel.tsx",
       "Overlay.tsx",
       "TelegramFlowView.tsx",

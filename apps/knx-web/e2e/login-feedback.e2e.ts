@@ -107,9 +107,11 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     expect(box!.y).toBeGreaterThanOrEqual(0); expect(box!.y + box!.height).toBeLessThanOrEqual(900);
     await capture(page, `backend-details-${id}`);
     await page.keyboard.press("Escape");
-    await page.locator(".log-panel-export-scope").selectOption("all");
-    const downloading = page.waitForEvent("download");
+    // #13: one small Export… button; the scope is chosen in its dialog.
     await page.locator(".log-panel-export").click();
+    await page.locator('.log-export-panel input[value="all"]').check();
+    const downloading = page.waitForEvent("download");
+    await page.locator(".log-export-confirm").click();
     const download = await downloading;
     expect(download.suggestedFilename()).toBe("session-log.json");
     const path = await download.path(); expect(path).not.toBeNull();

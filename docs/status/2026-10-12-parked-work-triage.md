@@ -47,7 +47,7 @@ Recorded the same day; do not reopen without a new decision.
 | Package | Decision | Carried out |
 | --- | --- | --- |
 | native-evidence | Adopt (unchanged recommendation) | Waits for the web lock |
-| ux-feedback | Adopt AP1/2/3/5, **drop AP4** | Waits for the web lock; AP4 is left out at adoption |
+| ux-feedback | Adopt AP1/2/3/5, **drop AP4** | Ported 2026-10-13 ([evidence](../evidence/ux-feedback-port-2026-10-13.json)): AP2/3/5 whole, AP1 without what main already had (archive, Dashboard links, row timestamp); ADR-0122; AP4 left out |
 | functions-sites | **Keep as WIP** | Whole residue committed as `wip(functions)` `1154b72f` on local branch `feature/functions-sites-20261009` (91 files, each byte-checked against the backup; unreviewed, unpushed). Worktree removed |
 | import-lifecycle | **Archive** | Preflight residue kept as a patch in the local prune backup. Worktree and branch removed |
 | audit-findings, native-import-diagnostics | **Drop** | Worktrees and branches removed after backup |

@@ -3274,9 +3274,12 @@ any `transition:`/`animation:` declaration sits outside a
 
 What remains limited, on purpose:
 
-- **No per-category control.** One duration and one easing curve apply to
-  the whole application. A user who wants the Group Monitor's new-row
-  highlight still but the hover transitions live has no way to say so.
+- **Per-category control covers three surfaces only (since 2026-10-13).**
+  Toasts, Achievements and Flow have their own reduction-only setting
+  ([ADR-0122](adr/0122-category-motion-preferences.md)); everything else
+  (the Group Monitor's new-row highlight, hover transitions, dialogs) still
+  follows the one global level and easing. A category can never raise the
+  global level or override the OS preference.
 - **The guard reads `styles.css` only.** An inline `style={{ transition:
   ... }}` in a component, a second CSS file, or a stylesheet inside a
   future dependency would all escape it entirely.
@@ -10022,3 +10025,25 @@ connecting download, and re-reads an uncertain status once before refusing. The 
 guide reflects checks the panel and server actually make; it is not a compatibility
 or programming-mode statement. Covered by synthetic unit, HTTP and production-build
 Chromium fixtures only — no real gateway, device or bus was contacted.
+
+## Ported UX feedback (2026-10-13)
+
+What the [ux-feedback port](IMPLEMENTATION_STATUS.md#2026-10-13--parked-ux-feedback-ported-steady-toasts-flow-images-motion-per-category)
+deliberately does not do:
+
+- **Toast queue.** Three cards on screen, 100 waiting. Beyond that the oldest
+  waiting card is not shown (a counted note says so); the session log keeps every
+  notification (1000 entries, browser session only). Pauses (pointer, focus, hidden
+  tab) hold the card's own clock only; they do not delay the operation behind it.
+  Error cards no longer vanish on a selection or the next import; save, undo/redo
+  and a new project still clear them, as before.
+- **Flow images.** The selected Flow viewport only (no sidebar, Inspector, log or
+  earlier history). GIF clips are 1–30 s at 10 frames/s, scaled to at most
+  640×360 (≤ 5 s), 480×270 (≤ 15 s) or 320×180 px, with a fixed 3-3-2 palette, so
+  colours are approximate. A clip whose frames cannot be taken on time is refused,
+  never thinned out; on a slow or busy machine pick a shorter clip or retry. The
+  file contains the names, addresses and values on screen; the dialog asks first.
+  Checked in Chromium only.
+- **Motion categories** apply to toasts, achievement popups and the Flow view;
+  see §43.
+- **Native desktop.** None of this was exercised in the native WebKitGTK window.

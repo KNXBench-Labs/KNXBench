@@ -144,6 +144,12 @@ different questions.
 - **Subtle** — reduced.
 - **Standard** — the full set. The default.
 
+**Motion by category** (newer than Alpha.10, source builds only) sets toast
+notifications, achievement popups and the telegram Flow separately. Each starts at
+*Inherit* (follow the motion level) and can only go down: *At most subtle* or *Off*.
+A category never brings back motion that the level, or your desktop, turned off;
+switch the level back on and each category returns to its own choice.
+
 > **Tip**
 >
 > If your desktop is set to reduce motion, KNXBench obeys it regardless of what these
@@ -247,9 +253,18 @@ Long messages wrap to fit a narrow window. Toasts are temporary notifications,
 not a persistent message history. Their disappearance does not change the
 operation's result or clear an unsaved-project marker.
 
+Newer than Alpha.10 (source builds only): at most three cards are on screen, and a
+note counts the ones waiting; a card's nine seconds start only when it is shown. A
+card holds still while the pointer is on it, while it has keyboard focus and while
+the window is hidden. A new error no longer replaces an unread one, and selecting
+something or starting the next import leaves error cards alone. Every card, shown or
+not, is in the [session log](01-user-interface.md#the-workspace).
+
 ## Achievements
 
-KNXBench awards 38 achievements for milestones in your work: a first
+KNXBench awards 38 achievements (42 in source builds newer than Alpha.10, which add
+*Save-point regular*, *Palette resident*, *Room atlas* and *Address librarian*)
+for milestones in your work: a first
 project, a lossless ETS import, named group addresses, a completed line
 scan, a verified download, and a few hidden ones. When one
 unlocks, a popup appears in the bottom-right corner for nine seconds and

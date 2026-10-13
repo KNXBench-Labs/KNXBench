@@ -105,3 +105,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0119](0119-read-only-byte-order-probe.md) | A read-only byte-order probe, never an encoder | Accepted implementation decision | 2026-10-13 |
 | [0120](0120-base-image-byte-order-warning.md) | A named warning when a big-endian program's base image looks little-endian | Accepted implementation decision | 2026-10-13 |
 | [0121](0121-tester-download-reports.md) | Tester download reports, and a maintainer review before "verified" | Accepted implementation decision | 2026-10-13 |
+| [0122](0122-category-motion-preferences.md) | Reduction-only motion preferences per category (Toasts, Achievements, Flow) | Accepted (on main 2026-10-13; written by Codex as local 0109/0112) | 2026-10-10 |

@@ -16,6 +16,17 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Steadier notifications, Flow images and motion per category (13 October 2026 source)
+
+Error cards stay until you have seen them, hold still under the pointer and no longer
+replace each other; the Explorer's import counts open the matching Log entries. The
+Flow view saves a PNG or a GIF clip of up to 30 seconds after asking; toasts,
+achievements and the Flow each get their own motion setting that can only reduce
+motion; four more achievements. Newer than Alpha.10
+([notifications](user-guide/09-settings-and-appearance.md#toast-notifications),
+[Flow images](user-guide/07-bus-and-interfaces.md#saving-the-flow-as-an-image-newer-than-alpha10),
+[limits](../KNOWN_LIMITATIONS.md#ported-ux-feedback-2026-10-13)).
+
 ## Original import reports, retained payloads and read-only project facts (12 October 2026 source)
 
 Native files keep the complete original import report, so a reopened project shows

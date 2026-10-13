@@ -1,6 +1,10 @@
 # Selected-view image export — researched contract (AP2)
 
-Candidate design, not yet accepted or published. Researched 2026-10-10.
+Researched and implemented 2026-10-10/11 by Codex (`feature/ux-feedback-20261010`);
+**accepted on main 2026-10-13** with the [ux-feedback port](../evidence/ux-feedback-port-2026-10-13.json).
+The evidence sections below are the branch's own records. On main, the browser
+specs step a paused page clock for the GIF frame schedule (rasterization and
+encoding stay real), and unit tests pin the `tooSlow` refusal from both sides.
 
 ## Evidence before implementation
 

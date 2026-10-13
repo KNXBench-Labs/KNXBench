@@ -1,5 +1,8 @@
 # Achievement overview presentation (AP5)
 
+Written by Codex (`feature/ux-feedback-20261010`); on main since 2026-10-13
+([port evidence](../evidence/ux-feedback-port-2026-10-13.json)).
+
 Four additive IDs use existing events/evaluator/storage; original38 catalogue
 entries remain unchanged. Palette invocations are not command successes,
 autosaves count as successful saves, room/name thresholds are observed counts,

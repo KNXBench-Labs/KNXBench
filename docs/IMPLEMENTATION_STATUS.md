@@ -1,3 +1,49 @@
+## 2026-10-13 — Parked UX feedback ported: steady toasts, Flow images, motion per category
+
+Package 2 of the parked-work adoption: the Codex branch `feature/ux-feedback-20261010`
+(13 commits, AP1–AP5) ported onto main; the original worktree was only read. Codex
+wrote the features; this port adapted, fixed and re-tested them
+([log](../.ai/logs/2026-10-13_claude_ux-feedback-port.md),
+[evidence](evidence/ux-feedback-port-2026-10-13.json)).
+
+- **Toasts (AP1, only what main lacked).** At most three cards on screen; a card's
+  nine seconds run only while it is visible and nothing pauses it (pointer, focus
+  inside, hidden tab). Waiting cards are counted; beyond 100 the oldest waiting card
+  retires, counted, and the session log keeps it. A new error no longer replaces an
+  unread one, and neither a selection nor the next import clears error cards. The
+  Explorer's import error/warning counts open the Log narrowed to those findings.
+  Main's 1000-entry notification history, per-card open-in-log action and Overview
+  links already covered the branch's separate "Recent errors" archive, so that stayed
+  out.
+- **Motion per category (AP3, KL-43, [ADR-0122](adr/0122-category-motion-preferences.md)).**
+  Toasts, Achievements and Flow each inherit the global motion level and can only
+  reduce it; global Off and the OS reduced-motion preference always win.
+- **Flow images (AP2, [contract](contracts/flow-image-export.md)).** With consent, a
+  PNG snapshot or a 1–30 s GIF clip (10 frames/s) of the selected Flow viewport,
+  encoded in the browser; cancel, visible refusals, never a partial file. The camera
+  glides between views and stops while dragging or with Flow motion off.
+- **Achievements (AP5).** Four milestones (42 in total) and three new error jokes;
+  on narrow screens tier and date sit under the description.
+- **AP4** (inventory cards) stays dropped (owner decision 2026-10-12).
+
+Found and fixed on the way: the branch's queue overflow could retire cards that were
+about to be shown (burst before the effect); under React StrictMode the queue lost the
+clock of a toast pushed in the first effect pass (App's startup toast never left and
+could not be dismissed); the scrolling stack clipped card shadows; the GIF browser
+spec failed on a loaded host because the capture correctly refuses clips it cannot
+time (`tooSlow`, which had no test). The spec now steps a paused page clock frame by
+frame with real rasterization, and two unit tests pin the guard. KL-43's browser test
+reads the computed card animation duration (Toasts Off 0 s, Subtle 0.12 s), not just
+an attribute. 17 mutants, each failing by name.
+
+Gate on frozen `97219b58` (rebased on `9e1c1574`): build, `tsc` for all 13
+tsconfigs, Vitest 3242/0 in 230 files, **full fixture Chromium 433/0**,
+18 production-preview/intercepted configs 215/0 (ux-feedback 52, dialogs 14, notes 12, instructions 11, parameters 11, catalogue 10, communication 19, devices 13, group addresses 7, members/download 19, structure 8, updates 7, address-unavailable 4, device checks 4, issue 9 10, monitor control 6, service control 4, site 4), the five ported/touched specs ×3 102/102, fmt, Clippy, Rust
+4269/0 (197 ignored), real-server native evidence 12/12 and naming
+4/4, tools 67 (1 skipped), five xtask checks, inputs frozen; private corpus 144/144
+in 31 targets.
+Self-review only; native WebKitGTK not exercised.
+
 ## 2026-10-13 — Tester download reports (part A of the verification flow)
 
 - **Owner request** ([ADR-0121](adr/0121-tester-download-reports.md),

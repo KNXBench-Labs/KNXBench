@@ -1272,7 +1272,7 @@ main {
   margin: 0.75rem 0;
 }
 
-.log-panel-search, .log-panel-scope {
+.log-panel-search {
   display: grid;
   gap: 0.3rem;
   min-width: min(100%, 12rem);
@@ -1289,10 +1289,6 @@ main {
 
 .log-panel-clear, .log-panel-export {
   align-self: flex-end;
-}
-
-.log-panel-export-scope {
-  min-width: min(100%, 12rem);
 }
 
 .log-panel-filter {
@@ -1340,26 +1336,79 @@ main {
 }
 .log-panel-import-scope-clear:hover:not(:disabled) { transform: none; box-shadow: none; }
 
+/* #13: one table-like list with real columns (time · level · source ·
+   message) and rows of one line each; everything long is cut to the row
+   and shown whole in the details dialog. The container query keeps two
+   even lines per row when the list is narrow. */
+.log-panel-table {
+  container-type: inline-size;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  background: var(--knx-surface);
+  overflow: hidden;
+}
+
+.log-panel-columns,
+.log-entry {
+  display: grid;
+  grid-template-columns: 8.75rem 5.5rem minmax(6rem, 11rem) minmax(0, 1fr);
+  column-gap: 0.75rem;
+  align-items: baseline;
+  padding: var(--knx-cell-padding);
+}
+
+.log-panel-columns {
+  color: var(--knx-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--knx-border);
+}
+
 .log-panel-list {
   list-style: none;
-  padding-left: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
 }
 
 .log-entry {
+  line-height: 1.5;
+  border-bottom: 1px solid var(--knx-border);
+}
+.log-entry:last-child { border-bottom: 0; }
+.log-entry:nth-child(even) { background: color-mix(in srgb, var(--knx-foreground) 4%, var(--knx-surface)); }
+
+.log-entry-time {
+  color: var(--knx-muted);
+  font-family: var(--knx-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.log-entry-time,
+.log-entry-severity,
+.log-entry-source {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.log-entry-text {
   display: flex;
-  flex-wrap: wrap;
+  align-items: baseline;
   gap: 0.5rem;
-  padding: var(--knx-cell-padding);
-  background: var(--knx-surface);
-  border: 1px solid var(--knx-border);
-  border-radius: var(--knx-radius-card);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+@container (max-width: 40rem) {
+  .log-panel-columns { display: none; }
+  .log-entry { grid-template-columns: auto auto minmax(0, 1fr); row-gap: 0.15rem; }
+  .log-entry-text { grid-column: 1 / -1; }
 }
 
 .log-entry--selected { outline: 2px solid var(--knx-accent); outline-offset: -2px; }
-.log-entry .log-entry-open { min-width: 0; max-width: 100%; margin: 0; padding: 0; border: 0; box-shadow: none; background: transparent; color: var(--knx-foreground); text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.log-entry .log-entry-open { flex: 0 1 auto; min-width: 0; max-width: 100%; margin: 0; padding: 0; border: 0; box-shadow: none; background: transparent; color: var(--knx-foreground); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: text; }
 .log-entry .log-entry-open:hover { text-decoration: underline; transform: none; box-shadow: none; }
 .log-detail-panel { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; }
 .log-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -1392,21 +1441,31 @@ main {
 .log-entry-detail {
   color: var(--knx-muted);
   font-style: italic;
-  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
-
-/* Grouped findings list one file per line (#7); keep the lines. */
-.log-entry-detail { white-space: pre-wrap; overflow-wrap: anywhere; }
-.log-entry-detail-more { display: block; font-style: normal; }
+.log-entry-location { flex: 0 1 auto; max-width: 40%; }
+.log-entry-text .log-entry-detail { display: flex; flex: 1 1 0; gap: 0.35rem; }
+.log-entry-detail-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.log-entry-detail-more { flex: none; font-style: normal; }
 .log-panel-more { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--knx-muted); }
 .log-panel-show-more { white-space: nowrap; }
+.log-export-panel { width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 20px; box-sizing: border-box; }
+.log-export-panel h2 { margin-top: 0; }
+.log-export-scope { display: grid; gap: 8px; margin: 0 0 8px; padding: 10px 12px; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); }
+.log-export-scope label { display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
+.log-export-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 
+/* ADR-0110: the raw preview keeps its literal, visible block under the row. */
 .log-entry-raw-label {
-  width: 100%;
+  grid-column: 1 / -1;
   font-weight: 600;
 }
 
-.log-entry-raw-text {
+.log-entry .log-entry-raw-text {
+  grid-column: 1 / -1;
   margin: 0;
   min-width: 0;
   max-width: 100%;

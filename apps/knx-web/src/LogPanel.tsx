@@ -2,6 +2,8 @@
 // apps/knx-web/src/LogPanel.tsx
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import LogEntryDetails from "./LogEntryDetails";
+import LogExportDialog from "./LogExportDialog";
+import { useUiLanguage } from "./uiLanguage";
 import type { ToastNotification } from "./toast";
 import * as api from "./api";
 import type { LogEntry } from "./api";
@@ -12,7 +14,7 @@ import { formatSettingsDiagnostic } from "./settingsDiagnostic";
 import { droppedCount, saveSessionLog } from "./sessionLogExport";
 import { countImportFindings, isImportFinding, type ImportFindingSeverity } from "./importFindings";
 import type { LogExportScope } from "./sessionLogExport";
-import { LOG_RENDER_STEP, detailPreview, newestFirst, notificationRows, serverRows } from "./logRows";
+import { LOG_RENDER_STEP, detailPreview, formatLogTime, newestFirst, notificationRows, serverRows } from "./logRows";
 
 type Severity = LogEntry["severity"];
 
@@ -59,6 +61,7 @@ export default function LogPanel(props: {
   onImportFocusHandled?: () => void;
 }) {
   const t = useTranslate();
+  const [language] = useUiLanguage();
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,8 +71,7 @@ export default function LogPanel(props: {
     info: true,
   });
   const [search, setSearch] = useState("");
-  const [exportScope, setExportScope] = useState<LogExportScope>("filtered");
-  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [selected, setSelected] = useState<{ key: string; entry: LogEntry } | null>(null);
   const [targetMissing, setTargetMissing] = useState(false);
   // While set, only import-report entries are listed (severity filters still
@@ -186,16 +188,17 @@ export default function LogPanel(props: {
     return t("logPanel.importScope.mismatch", { findings, entries: t("logPanel.importScope.entries", { count: found }) });
   }
 
-  async function exportLog() {
-    setExportError(null);
+  async function exportLog(scope: LogExportScope) {
     try {
-      // v1/native validation describes the server run and at most 1000 server records.
+      // v1/native validation describes the server run and its retained server records.
       // Browser notifications have independent retention/loss; copy them from details.
-      await saveSessionLog(entries, exportScope === "all" ? entries : visibleServerEntries, exportScope);
+      await saveSessionLog(entries, scope === "all" ? entries : visibleServerEntries, scope);
     } catch (e) {
-      setExportError(api.errorMessage(e));
+      throw new Error(api.errorMessage(e));
     }
   }
+  // One clock per render: "today" is the reader's local day.
+  const now = new Date();
 
   return (
     <div className="log-panel">
@@ -230,15 +233,11 @@ export default function LogPanel(props: {
           {t("logPanel.clear")}
         </button>
         <span className="log-panel-count" role="status">{t("logPanel.count", { shown: visibleRows.length, total: allEntries.length })}</span>
-        <label className="log-panel-scope">
-          {t("logPanel.exportScope")}
-          <select className="log-panel-export-scope" value={exportScope} onChange={(event) => setExportScope(event.target.value as LogExportScope)}>
-            <option value="filtered">{t("logPanel.exportFiltered")}</option>
-            <option value="all">{t("logPanel.exportAll")}</option>
-          </select>
-        </label>
-        <button type="button" className="log-panel-export" onClick={exportLog} disabled={loading || error !== null}>{t("logPanel.exportJson")}</button>
+        {/* #13: one small button; the scope is chosen in its dialog. */}
+        <button type="button" className="log-panel-export" onClick={() => setExportOpen(true)} disabled={loading || error !== null}>{t("logPanel.export")}</button>
       </div>
+      {exportOpen && <LogExportDialog filteredCount={visibleServerEntries.length} allCount={entries.length}
+        disabled={loading || error !== null} onExport={exportLog} onClose={() => setExportOpen(false)} />}
       <p className="log-panel-hint">{t("logPanel.retention", { count: droppedCount(entries) ?? t("logPanel.unknownCount") })}</p>
       {(notifications.length > 0 || (props.notificationDroppedCount ?? 0) > 0) && <p className="log-panel-hint">{t("logPanel.uiHistory", { count: props.notificationDroppedCount ?? 0 })}</p>}
       {targetMissing && <p role="status">{t("logPanel.targetMissing")}</p>}
@@ -261,7 +260,6 @@ export default function LogPanel(props: {
           if (row?.isConnected && !row.closest("[inert]")) row.focus();
         });
       }} />}
-      {exportError && <span className="field-error" role="alert">{exportError}</span>}
       {/* §66/§67 disclosure (fix round 2, B4): message/location/detail below
           are the server's own text and are never translated — stated here,
           where the reader actually meets them, not just in
@@ -277,22 +275,35 @@ export default function LogPanel(props: {
         <p className="log-panel-empty">{t("logPanel.emptyFiltered")}</p>
       ) : (
         <>
+        {/* #13: real columns. The header is visual; each row still reads in order. */}
+        <div className="log-panel-table">
+        <div className="log-panel-columns" aria-hidden="true">
+          <span>{t("logPanel.column.time")}</span><span>{t("logPanel.column.level")}</span>
+          <span>{t("logPanel.column.source")}</span><span>{t("logPanel.column.message")}</span>
+        </div>
         <ul className="log-panel-list" ref={list}>
-          {shownRows.map(({ entry, key }) => (
+          {shownRows.map(({ entry, key, time }) => {
+            const shown = formatLogTime(time, language, now);
+            return (
             <li key={key} data-log-key={key} className={`log-entry log-entry-${entry.severity}${selected?.key === key ? " log-entry--selected" : ""}`}>
+              <time className="log-entry-time" dateTime={shown === null ? undefined : entry.timestamp} title={entry.timestamp}>{shown ?? "—"}</time>
               <span className="log-entry-severity">{t(SEVERITY_LABEL_KEYS[entry.severity])}</span>
-              <span className="log-entry-source">{entry.source}</span>
-              <button type="button" className="log-entry-message log-entry-open" onClick={() => setSelected({ key, entry })} title={t("logPanel.details")}>
-                {formatSettingsDiagnostic(t, entry.diagnostic, entry.message)}
-              </button>
-              {entry.location && <span className="log-entry-location">{entry.location}</span>}
+              <span className="log-entry-source" title={entry.source}>{entry.source}</span>
+              <span className="log-entry-text">
+                <button type="button" className="log-entry-message log-entry-open" onClick={() => setSelected({ key, entry })} title={t("logPanel.details")}>
+                  {formatSettingsDiagnostic(t, entry.diagnostic, entry.message)}
+                </button>
+                {entry.location && <span className="log-entry-location">{entry.location}</span>}
+                {entry.detail && entry.source !== "import:opaque:raw-text" && <LogDetailPreview detail={entry.detail} />}
+              </span>
+              {/* ADR-0110: a raw RTF-like preview stays literal and visible, so this row is taller on purpose. */}
               {entry.source === "import:opaque:raw-text" && <span className="log-entry-raw-label">{t("logPanel.rawRtfLike")}</span>}
-              {entry.detail && (entry.source === "import:opaque:raw-text"
-                ? <pre className="log-entry-detail log-entry-raw-text">{entry.detail}</pre>
-                : <LogDetailPreview detail={entry.detail} />)}
+              {entry.detail && entry.source === "import:opaque:raw-text" && <pre className="log-entry-detail log-entry-raw-text">{entry.detail}</pre>}
             </li>
-          ))}
+            );
+          })}
         </ul>
+        </div>
         {remainingRows > 0 && (
           <p className="log-panel-more">
             {t("logPanel.renderLimit", { shown: shownRows.length, total: visibleRows.length })}{" "}
@@ -307,12 +318,13 @@ export default function LogPanel(props: {
   );
 }
 
-/** A multi-line detail (e.g. a grouped list of retained files) shows its first lines here. */
+/** A detail shows its first line here, cut to the row; the dialog shows all of it. */
 function LogDetailPreview({ detail }: { detail: string }) {
   const t = useTranslate();
   const { text, hiddenLines } = detailPreview(detail);
+  // The text is cut to the row; the "more lines" note never is.
   return <span className="log-entry-detail">
-    {text}
+    <span className="log-entry-detail-text">{text}</span>
     {hiddenLines > 0 && <span className="log-entry-detail-more">{t("logPanel.detailMoreLines", { count: hiddenLines })}</span>}
   </span>;
 }

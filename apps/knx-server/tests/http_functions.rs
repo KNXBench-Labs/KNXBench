@@ -188,6 +188,18 @@ async fn a_bound_client_creates_fills_moves_and_removes_a_function() {
     let function = &read(&state).await["functions"][0];
     assert_eq!(function["location"]["name"], "Kitchen");
     assert_eq!(function["completion"], "Editing");
+    // Goal B1b: provenance is the model's source id, verbatim.
+    assert_eq!(function["sourceId"], "KB-Function-1");
+    let member_sources: Vec<_> = function["members"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|m| m["sourceId"].clone())
+        .collect();
+    assert_eq!(
+        member_sources,
+        [json!("KB-FunctionMember-2"), json!("KB-FunctionMember-1")]
+    );
     let members: Vec<_> = function["members"]
         .as_array()
         .unwrap()

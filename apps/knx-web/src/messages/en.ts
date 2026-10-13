@@ -2612,6 +2612,7 @@ export const messages = {
   "about.trademark": "ETS is a trademark of the KNX Association.",
   "about.close": "Close",
   "about.hallOfFame.title": "Community Hall of Fame",
+  "about.hallOfFame.titleCount": "Community Hall of Fame ({count})",
   "about.hallOfFame.intro": "Everyone outside the team who reported or discussed an issue on GitHub. Titles and medals are a thank-you, not a rating of anyone's skill.",
   "about.hallOfFame.asOf": "Bundled with this build, as of",
   "about.hallOfFame.notLive": "This is not a live count.",

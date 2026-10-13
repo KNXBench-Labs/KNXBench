@@ -44,7 +44,12 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.getByRole("button", { name: m["toolbar.about"], exact: true }).click();
     const dialog = page.getByRole("dialog", { name: m["about.title"], exact: true });
     const section = dialog.locator("[data-hall-of-fame]");
-    await expect(section.getByRole("heading", { name: m["about.hallOfFame.title"], exact: true })).toBeVisible();
+    // Closed at first, so About stays compact; one click shows everyone.
+    const summary = section.locator("summary");
+    await expect(summary).toHaveText(m["about.hallOfFame.titleCount"].replace("{count}", String(bundled.contributors.length)));
+    await expect(section).not.toHaveAttribute("open", "");
+    await summary.click();
+    await expect(section).toHaveAttribute("open", "");
     const rows = section.locator("[data-hall-of-fame-entry]");
     await expect(rows).toHaveCount(bundled.contributors.length);
     for (const [index, person] of bundled.contributors.entries()) {

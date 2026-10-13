@@ -321,8 +321,9 @@ They are covered in [Devices and products](05-devices-and-products.md) and
 [Projects](02-projects.md).
 
 **About KNXBench** shows version and license information. *(Source build after
-Alpha 11:)* below it, the **Community Hall of Fame** thanks everyone outside the
-team who reported or discussed an issue on GitHub: every participant with
+Alpha 11:)* below it, **Community Hall of Fame (N)** opens to thank everyone
+outside the team who reported or discussed an issue on GitHub (it starts closed so
+About stays compact): every participant with
 position, XP, English title, medals and counters, exactly as the repository's
 generator published them. It is the snapshot bundled with your build, dated, and
 says so; **Live board on GitHub** opens the current one. KNXBench sends no request

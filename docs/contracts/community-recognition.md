@@ -94,7 +94,9 @@ medals. Any malformed or duplicate (case-insensitive) contributor refuses the
 whole snapshot, so About never shows part of a board; it then says the bundled
 board could not be read and still links the live one. Order, positions (as the
 `<ol>` item values, so equal XP keeps an equal number), XP, titles and medals are
-the generator's; About computes none of them. Titles and medals stay English in
+the generator's; About computes none of them. The section is a disclosure,
+closed by default and counting the participants in its summary, so About keeps the
+compact size `dialogs-overview.e2e.ts` pins. Titles and medals stay English in
 every UI language. Handles are React text; only a handle matching GitHub's
 grammar (1–39 letters, digits, single inner hyphens) links to
 `https://github.com/<handle>`, and the live-board link is built from the

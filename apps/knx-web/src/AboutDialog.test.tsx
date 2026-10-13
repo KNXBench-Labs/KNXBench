@@ -142,7 +142,10 @@ it("shows every participant of the bundled Hall of Fame exactly as generated", a
   apiMock.serverVersion.mockResolvedValue({ version: "0.1.0-alpha.1" });
   const fetchSpy = vi.spyOn(globalThis, "fetch");
   const panel = await mount();
-  const section = panel.querySelector<HTMLElement>("[data-hall-of-fame]")!;
+  const section = panel.querySelector<HTMLDetailsElement>("[data-hall-of-fame]")!;
+  // Closed by default so About stays compact; the summary counts everyone.
+  expect(section.open).toBe(false);
+  expect(section.querySelector("summary")?.textContent).toBe(en["about.hallOfFame.titleCount"].replace("{count}", "2"));
   const rows = [...section.querySelectorAll<HTMLElement>("[data-hall-of-fame-entry]")];
   expect(rows.map((row) => row.dataset.hallOfFameEntry)).toEqual(["thengsty", "hagbardZ"]);
   // The list numbers itself from the generator's positions; About computes none.

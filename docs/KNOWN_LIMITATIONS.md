@@ -1474,6 +1474,14 @@ The alpha.9-and-earlier libwayland failure has a scoped launcher fix. One-host r
 AppImages up to alpha.11 refuse saving the session log and monitor captures; fixed in source, ships with the next AppImage. Web and Docker unaffected.
 [Details and history](limitations/KL-181-desktop-export-commands.md)
 
+<a id="catalogue-kl-182"></a>
+<a id="182-appimages-up-to-alpha11-save-in-app-downloads-silently-into-downloads-and-replace-same-named-files"></a>
+### 182. Desktop silent downloads
+
+**Ledger status:** `DONE` ([KL-182](status/LEDGER.md#post-snapshot-ids)).
+AppImages up to alpha.11 save in-app downloads silently into Downloads, replacing same-named files; fixed in source with a save dialog. Web and Docker unaffected.
+[Details and history](limitations/KL-182-desktop-silent-downloads.md)
+
 ## Integrations and community
 
 <a id="catalogue-kl-107"></a>

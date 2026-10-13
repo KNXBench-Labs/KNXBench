@@ -20,6 +20,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--issue-7-follow-up-desktop-downloads-ask-before-they-land"></a>
+- [2026-10-13 — Issue #7 follow-up: desktop downloads ask before they land](history/implementation/2026-W42.md#2026-10-13--issue-7-follow-up-desktop-downloads-ask-before-they-land)
 <a id="2026-10-13--issue-7-retained-files-stop-drowning-the-import-findings"></a>
 - [2026-10-13 — Issue #7: retained files stop drowning the import findings](history/implementation/2026-W42.md#2026-10-13--issue-7-retained-files-stop-drowning-the-import-findings)
 <a id="2026-10-13--issue-7-the-appimage-may-save-its-own-logs-again"></a>

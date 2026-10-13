@@ -537,7 +537,9 @@ These are tests. Each one fails the build.
    the UI has no path of its own to `knx-app`, `knx-store` or `knx-etsproj`.
    The desktop-only exceptions are OS save-dialog commands for local
    session-log and bus-monitor JSON snapshots (the bounded-file boundary
-   established in ADR-0047). They write dialog-selected files and cannot
+   established in ADR-0047), and the shell's WebView download handler, which
+   stages every in-app download privately and lets the OS save dialog choose
+   its destination (KL-182). They write dialog-selected files and cannot
    mutate project or KNX state. Originally this rule was stated as "only through Tauri commands into `knx-app`" when
    `apps/knx-desktop` was the only deployment target (Session 5); the
    web/Docker deployment target moved domain requests to the HTTP API.

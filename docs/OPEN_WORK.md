@@ -17,7 +17,10 @@ per retained manufacturer file (`Baggages/…`); the Log now groups those notice
 entry listing every file) and counts them once
 ([delivery](IMPLEMENTATION_STATUS.md#2026-10-13--issue-7-retained-files-stop-drowning-the-import-findings)).
 Open: the reporter's log or report (the Docker image exports it today), to see which
-genuine findings remain.
+genuine findings remain. AppImage downloads now ask where to save instead of
+silently replacing files in Downloads
+([KL §182](KNOWN_LIMITATIONS.md#182-appimages-up-to-alpha11-save-in-app-downloads-silently-into-downloads-and-replace-same-named-files));
+a native-window check of the dialog is still open.
 
 ## AppImage EGL abort, issue #6 (12 October 2026)
 

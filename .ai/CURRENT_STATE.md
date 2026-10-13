@@ -1,3 +1,12 @@
+Web lock: unchanged — still held by claude-release-alpha11 (this entry touches no apps/knx-web)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 15:43
+- **Completed:** Test-only package: corpus-gated `crates/knx-app/tests/ets6_plugin_data_pair.rs` + `knx_testsupport::ets6_plugin_pair_paths/available` + IMPLEMENTATION_STATUS entry. Two same-day ETS6 project archives of the house project (local, gitignored, `OriginalData/DemoProjects/Unser Zuhause ets6 plugin pair - 2026-10-13 - {unchanged,SmartSensor EG Aussen Tmp}.knxproj`, provenance JSON beside each); asserts clean import, byte-exact BinaryData/ExtraData storage across save/reopen, and that the pair differs only in the signature + one device's two plug-in entries. Gate on 4665f873: fmt, clippy -D warnings (knx-app, knx-testsupport), knx-testsupport tests, pair test default (ignored) / --ignored with the pair (1 passed) / negative control same-file (fails as expected) / missing pair (fails by name), xtask check-corpus-gates/-layering/-headers/-anchors, check_documentation, diff --check; inputs_frozen=1. Merge commit tree equals the gated tree.
+- **Pending/Next Steps:** None for this test. Not Alpha 11 material — the release tags its own frozen SHA. Running it needs the private pair (`--ignored` from the root checkout or the two env overrides).
+- **Notes for Codex oder Claude:** Owner asked for a legal check before pushing: the published change contains no ETS code or ETS internals and words the provenance neutrally. Research material about the ETS6 offline host stays local/unpublished on purpose (KNX licence confidentiality clause) — do not commit `docs/research/manufacturer-plugin-*` or `.ai/logs/2026-10-12_codex_plugin-owner-route` content.
+
+---
+
 Web lock: taken by claude-release-alpha11 (onboarding flake fix, then the Alpha 11 version bump)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 14:45

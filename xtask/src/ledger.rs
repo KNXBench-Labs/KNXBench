@@ -263,14 +263,14 @@ fn kl_number(id: &str) -> Option<&str> {
     (!digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())).then_some(digits)
 }
 
-/// Numbers of the `## N…` / `## §N…` headings of the limitations file.
+/// Numbers of level-2/3 `N…` / `§N…` headings in the limitations index.
 fn limitation_numbers(root: &Path) -> Result<Vec<String>, String> {
     let path = root.join(LIMITATIONS);
     let text =
         fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     Ok(text
         .lines()
-        .filter_map(|l| l.strip_prefix("## "))
+        .filter_map(|l| l.strip_prefix("## ").or_else(|| l.strip_prefix("### ")))
         .map(|h| h.trim_start_matches('§'))
         .map(|h| {
             h.chars()
@@ -483,6 +483,23 @@ mod tests {
                 .any(|m| m.contains("stale count line") && m.contains("TODO=179, DONE=1")),
             "{found:?}"
         );
+    }
+
+    #[test]
+    fn a_grouped_limitations_index_keeps_ledger_number_checks() {
+        let dir = repo(&ledger(
+            &snapshot_rows(SNAPSHOT_ROWS),
+            &[
+                row("KL-1", "P1", "alpha", "DONE"),
+                row("KL-130-GATE", "P3", "alpha", "DONE"),
+            ],
+        ));
+        write(
+            dir.path(),
+            "docs/KNOWN_LIMITATIONS.md",
+            "# Known limitations\n\n## Import\n\n### 1. Sample\n\n## Tooling\n\n### §130 Gate\n",
+        );
+        assert_eq!(messages(dir.path()), Vec::<String>::new());
     }
 
     #[test]

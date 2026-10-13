@@ -1,0 +1,98 @@
+# Bounded commissioning support
+
+[Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-007)
+
+This dossier preserves the technical detail and dated history. Earlier
+headings, failures and lifting conditions are historical where later
+updates supersede them; they are not new work assignments.
+
+<!-- BEGIN retained catalogue record -->
+
+<a id="7-commissioning-and-device-download-are-required-but-blocked"></a>
+## 7. Commissioning: a verified `070nh` memory path, not general device support
+
+**Current public address-write boundary:** confirmed K6/serial/K13 address
+operations fail before a tunnel until action- and device-specific durable
+recovery exists (ADRs 0057–0059). The earlier address-change/reset experiments
+below are dated evidence, not current permission or a working public write.
+Memory downloads retain their separately evidenced, bounded backup scope.
+
+**Scope (ADR-0048/0049, verified 2026-09-29/30).** `knx device download`
+and the Web download tab, plus individual-address programming, are real
+product commands. They require the identified target, a plan, a
+device-specific confirmation phrase and exclusive gateway access. Complete
+and all three partial download scopes were exercised on one MDT `1.1.67`
+(`0701h`, `A-0027-15-0BAC`) with read-back; an address change and return,
+and an address reset with guarded recovery, were also exercised there.
+On 2026-10-09 a complete download, a functional check and a restore from
+the pre-write backup ran on the Eibmarkt presence detector `1.1.8` (`0701h`,
+`M-006A_A-0001-22-617E-O0079`, RESEARCH §19.19); partial scopes did not run
+there. Also on 2026-10-09, MDT fourfold button `1.1.14`
+(`M-0083_A-0026-15-3591`) completed a full download, light-function
+telegram check and restore (RESEARCH §19.21); its partial scopes remain
+untested. A successful byte read-back does **not** confirm the closing Basic
+Restart: none of these three devices acknowledged it; the result is explicitly
+`RestartOutcome::Unconfirmed`. Other programs, application versions and
+masks have not acquired this evidence. The property-based `Downloader`
+remains simulator-only. Full traces and the chronological corrections are
+in [RESEARCH §19](../RESEARCH.md) and the
+[implementation log](../IMPLEMENTATION_STATUS.md), not an open task list here.
+
+**What still limits a download.** The product-database coverage probe could
+plan 55 of 181 `0701h`/`0705h` application programs at their defaults from
+103 packages; a plan is not a live verification. Other masks and unsupported
+procedures are refused by name. `Mask` semantics and parts of the
+BIM-M112 memory-procedure interpretation remain inference, identified as
+`[A]` in RESEARCH §19.1–§19.3. `LdCtrlMerge`/`MergedProcedure`, unsupported
+procedure steps, property-placed/unaligned parameter values, unsupported
+parameter encodings and types, ambiguous object priority/ReadOnInit and
+other unproved image shapes are refused rather than guessed.
+`PID_GROUP_RESPONSER_TABLE`, `A_Key_Write`, some master resets and RF writes
+have separate boundaries below (§110, §112, §141, §143–§144).
+
+**Inferences (ADR-0086, 2026-10-07).** Where the specification, product
+data and project files are silent but a working solution exists, a download
+applies it as a named inference and shows it in readiness, the plan and the
+acknowledgement; such a plan is always Untested and never counts as Verified.
+Current inferences: `union-later-member` (two active members of one union:
+the later one is written) and `machine-5-after-restart` (a machine-5 event
+after the final restart is not sent), both RESEARCH §19.12;
+`alert-is-urgent` (§19.18). `read-on-init-not-on-070n` discloses a loss
+instead: a `070nh` group object cannot read its value after a reset
+(Resources NOTE 85), so an enabled `ReadOnInitFlag` is not carried out.
+None of these has been exercised by a KNXBench download on hardware.
+`Priority="High"` and `TypeFloat` parameters stay refused: the product data
+contradicts every reading (§19.18).
+
+**Backup is bounded.** Before a permitted memory download's first mutation,
+the executor persists the overwritten memory regions and affected load
+states. A complete and parameters-only backup/restore roundtrip ran on
+`1.1.67`; failing-backup refusal and group-address-partial restore remain
+simulator-only. This is not a full image and cannot recover property values,
+keys outside those regions, or arbitrary non-Loaded states. See the
+commissioning-readiness section above and [ADR-0049](../adr/0049-download-readiness-is-per-plan-and-backups-are-pre-write.md).
+Since 2026-10-01, a restore also refuses missing, duplicate or extraneous
+load-state machine records relative to its download plan, even when the
+saved memory-region lengths still match. This is offline-tested validation
+of the existing bounded backup, not evidence of complete address-write
+recovery or support for previously untested devices.
+Returned executor errors now close a still-open device management connection
+best-effort (2026-10-01, simulator-tested), preserving the original failure
+and existing backup rather than automatically restoring or retrying. This
+does not prove remote receipt of disconnect and does not cover a dropped
+future, process termination or a power loss during the run.
+Server polling now recognises a finished worker with no terminal result as
+failed, preserving its progress and backup path. `written:partially` after a
+mutation step starts is a conservative unknown outcome, not proof that any
+telegram was sent or that device recovery succeeded. An already witnessed
+device result survives a later cleanup panic, but does not prove disconnect.
+The tunnel reservation remains held while cleanup runs, even if a `join`
+wait is cancelled. These offline-tested checks last only for this server
+process; there is no new cancel route, automatic recovery or crash journal.
+
+**Live safety and compatibility remain narrow.** `1.1.220` is an excluded
+alarm panel. No prior approval carries over to a new target, write scope or
+experiment. The gateway allows one tunnel; a refused plan sends nothing.
+No general ETS commissioning parity, every-vendor download claim, automatic
+rollback or RF hardware support is established by one device.
+<!-- END retained catalogue record -->

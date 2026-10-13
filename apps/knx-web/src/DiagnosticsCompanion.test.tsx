@@ -285,7 +285,7 @@ describe("one editing workspace", () => {
     // `flowAnimator.ts` (frames and timers through an injected scheduler) and
     // `flowMotion.ts` (reads the Motion setting and the OS preference). None
     // touches the API or project state.
-    for (const module of ["flowModel.ts", "flowLayout.ts", "flowFeed.ts", "TelegramFlowView.tsx", "flowDynamics.ts", "flowAnimator.ts", "flowMotion.ts"]) {
+    for (const module of ["flowModel.ts", "flowLayout.ts", "flowFeed.ts", "TelegramFlowView.tsx", "flowDynamics.ts", "flowAnimator.ts", "flowMotion.ts", "FlowImageExportDialog.tsx", "flowImageCapture.ts", "flowImageExport.ts", "flowImageExportLimits.ts", "gifEncoder.ts"]) {
       const moduleGraph = valueImportGraph(module);
       expect(apiCallsIn(moduleGraph)).toEqual([]);
       expect(mutatingFetchesIn(moduleGraph)).toEqual([]);
@@ -372,6 +372,7 @@ describe("one editing workspace", () => {
       "BusMonitorPanel.tsx",
       "DeviceLink.tsx",
       "DiagnosticsCompanion.tsx",
+      "FlowImageExportDialog.tsx",
       "FsPicker.tsx",
       "HelpTip.tsx",
       // Raw details add clipboard/UI-only work, not an API or project mutation.
@@ -397,6 +398,9 @@ describe("one editing workspace", () => {
       "flowDynamics.ts",
       "flowFeed.ts",
       "flowIdentity.ts",
+      "flowImageCapture.ts",
+      "flowImageExport.ts",
+      "flowImageExportLimits.ts",
       "flowLayout.ts",
       "flowModel.ts",
       "flowMotion.ts",
@@ -407,6 +411,7 @@ describe("one editing workspace", () => {
       "gaNotation.ts",
       "gatewayEndpoint.ts",
       "gatewayPreference.ts",
+      "gifEncoder.ts",
       "help.ts",
       "i18n.ts",
       "importEvidence.ts",
@@ -419,6 +424,7 @@ describe("one editing workspace", () => {
       "messages/en.ts",
       "messages/tlh.ts",
       "modalIsolation.ts",
+      "motion.ts",
       "projectHistory.ts",
       "projectMetadata.ts",
       "projectPayloads.ts",

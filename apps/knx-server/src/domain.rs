@@ -2419,6 +2419,60 @@ fn apply_guarded(
     .map_err(RenameError::Failure)
 }
 
+/// The snapshot a client read before asking for a bound write.
+pub(crate) struct SnapshotBinding {
+    pub server_incarnation: String,
+    pub project_incarnation: u64,
+    pub snapshot_revision: u64,
+}
+
+#[derive(Debug)]
+pub(crate) enum BoundCommandError {
+    NoProject,
+    /// The binding no longer names the live project; nothing ran.
+    Stale,
+    /// The command refused; nothing changed.
+    Refused(String),
+    /// The command ran on a copy but could not be persisted; nothing was
+    /// published.
+    Failure(String),
+}
+
+/// Runs one command for a client bound to a snapshot (ADR-0124 routes,
+/// [revision-bound writes](../../docs/contracts/revision-bound-writes.md)).
+/// The binding is checked while `state.project` is held; `build` runs on the
+/// candidate copy, so IDs it allocates are discarded with a refusal or a
+/// persistence failure.
+pub(crate) fn apply_bound_command(
+    state: &AppState,
+    binding: &SnapshotBinding,
+    label: &str,
+    detail: String,
+    build: impl FnOnce(&mut knx_core::Project) -> Result<knx_core::Command, String>,
+) -> Result<(), BoundCommandError> {
+    let mut lock = state.project.lock().expect("state mutex poisoned");
+    let project = lock.as_mut().ok_or(BoundCommandError::NoProject)?;
+    if !snapshot_is_current(
+        state,
+        &binding.server_incarnation,
+        binding.project_incarnation,
+        binding.snapshot_revision,
+    ) {
+        return Err(BoundCommandError::Stale);
+    }
+    let mut refused = false;
+    let result = commit_locked(state, project, label, detail, |p, s| {
+        let outcome = build(p).and_then(|cmd| s.do_command(p, cmd).map_err(|e| e.to_string()));
+        refused = outcome.is_err();
+        outcome
+    });
+    match result {
+        Ok(_) => Ok(()),
+        Err(message) if refused => Err(BoundCommandError::Refused(message)),
+        Err(message) => Err(BoundCommandError::Failure(message)),
+    }
+}
+
 /// Whether a client's binding (server run, opened project, snapshot
 /// revision) still names the live project. Read while `state.project` is
 /// held, so it is ordered with every mutation that bumps the revision.

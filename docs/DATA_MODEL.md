@@ -648,6 +648,16 @@ but not interpreted in v1:
 "Uninterpreted" is not the same as "discarded". Everything listed here
 round-trips.
 
+### 10.x Project Functions (schema 15, 2026-10-13)
+
+`Project.functions` holds ETS Functions: each is placed in one building part
+and lists, in order, group addresses of that part's installation with an
+optional role ([ADR-0124](adr/0124-project-functions.md),
+[contract](contracts/project-functions.md)). A Function owns only its
+members. `Type` is kept as text; `Implements`, `DefaulGroupRange` and `Puid`
+stay in the retained raw element, not in the model. Deleting a referenced
+group address or building part is refused.
+
 ## 11. Versioning and migration
 
 *Implemented: `Project::schema_version` and `CURRENT_SCHEMA_VERSION` (now
@@ -765,3 +775,12 @@ the monotonic high-water mark, including the maximum. All nine final entities
 and counters have a synthetic save/reopen equality regression; editing an
 existing entity does not require a new ID. This is not activation or sealing
 of the parked ADR-0039 phases 3–5.
+
+**Amendment (Goal A4, 2026-10-13): schema 15, project Functions.**
+`migrate_v14_to_v15` adds `project_function_state` (both allocator
+high-water marks), `project_function` (ordered, placed in a `building_part`)
+and `project_function_member` (ordered, referring to a `group_address`).
+Additive: an older file gains empty tables. A history image of schema 12–14
+still decodes and migrates in memory, and an image without Functions keeps
+its semantic identity because empty Function tables are left out of it
+([ADR-0124](adr/0124-project-functions.md)).

@@ -69,6 +69,10 @@ pub fn set_group_address_style(
 }
 
 const DELETE_ALL_TABLES: &[&str] = &[
+    // Functions refer to building parts and group addresses: deleted first.
+    "project_function_member",
+    "project_function",
+    "project_function_state",
     "project_note",
     "project_note_state",
     // Child-to-parent order — matches the reverse of the insert order below.
@@ -362,6 +366,7 @@ pub(crate) fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(
 
     crate::instructions::write(tx, project)?;
     crate::notes::write(tx, project)?;
+    crate::functions::write(tx, project)?;
     Ok(())
 }
 
@@ -500,6 +505,14 @@ fn highest_ids_in_use(project: &Project) -> IdAllocators {
         max(project.devices.module_instances().map(|m| m.id.0)),
     )
     .with_project_note_count(max(project.notes.iter().map(|n| n.id().0)))
+    .with_function_counts(
+        max(project.functions.iter().map(|f| f.id.0)),
+        max(project
+            .functions
+            .iter()
+            .flat_map(|f| &f.members)
+            .map(|m| m.id.0)),
+    )
 }
 
 /// Raises `project`'s counters to cover every id it holds — what a
@@ -645,10 +658,12 @@ fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
         installations,
         instructions: crate::instructions::load(conn, &devices)?,
         notes: Vec::new(),
+        functions: Vec::new(),
         devices,
         ids,
     };
     crate::notes::load(conn, &mut project)?;
+    crate::functions::load(conn, &mut project)?;
     Ok(project)
 }
 

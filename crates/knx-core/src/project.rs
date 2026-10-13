@@ -7,8 +7,8 @@ use crate::address::GroupAddressStyle;
 use crate::commissioning::CompletionStatus;
 use crate::devices::Devices;
 use crate::ids::{
-    AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId,
-    ModuleInstanceId, ParameterInstanceId,
+    AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, FunctionId, FunctionMemberId,
+    GroupAddressId, GroupRangeId, LineId, ModuleInstanceId, ParameterInstanceId,
 };
 use crate::installation::Installation;
 use crate::string_table::{Language, StringTable};
@@ -20,7 +20,7 @@ use crate::string_table::{Language, StringTable};
 /// 8 belongs to the schema->=21 export path (a concurrent branch at the time
 /// of writing); 9 is `com_object_program_default` (ADR-0012 gap 2,
 /// ADR-0027). Must always equal `knx_store::migration::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: u32 = 14;
+pub const CURRENT_SCHEMA_VERSION: u32 = 15;
 
 /// Synthetic, project-unique id counters. Ids start at 1; 0 is never
 /// allocated, which leaves it free for tests to use as an obviously-fake id.
@@ -38,6 +38,8 @@ pub struct IdAllocators {
     parameter_instance: u32,
     module_instance: u32,
     project_note: u32,
+    function: u32,
+    function_member: u32,
 }
 
 /// A project-local ID space has no representable ID left. This is not a
@@ -79,6 +81,26 @@ impl IdAllocators {
     }
     pub fn with_project_note_count(mut self, count: u32) -> Self {
         self.project_note = count;
+        self
+    }
+    pub fn next_function_id(&mut self) -> Result<crate::FunctionId, IdAllocationError> {
+        next_id!(self, function, FunctionId)
+    }
+    pub fn next_function_member_id(
+        &mut self,
+    ) -> Result<crate::FunctionMemberId, IdAllocationError> {
+        next_id!(self, function_member, FunctionMemberId)
+    }
+    pub fn peek_function(&self) -> u32 {
+        self.function
+    }
+    pub fn peek_function_member(&self) -> u32 {
+        self.function_member
+    }
+    /// Restores both Function counters, like [`Self::with_project_note_count`].
+    pub fn with_function_counts(mut self, function: u32, member: u32) -> Self {
+        self.function = function;
+        self.function_member = member;
         self
     }
 
@@ -163,6 +185,8 @@ impl IdAllocators {
         self.parameter_instance = self.parameter_instance.max(other.parameter_instance);
         self.module_instance = self.module_instance.max(other.module_instance);
         self.project_note = self.project_note.max(other.project_note);
+        self.function = self.function.max(other.function);
+        self.function_member = self.function_member.max(other.function_member);
         *self != before
     }
 
@@ -192,6 +216,8 @@ impl IdAllocators {
             parameter_instance,
             module_instance,
             project_note: 0,
+            function: 0,
+            function_member: 0,
         }
     }
 }
@@ -258,6 +284,10 @@ pub struct Project {
     pub instructions: std::collections::BTreeMap<DeviceId, crate::instruction::InstructionDocument>,
     /// Ordered authored plain-text notes; original import data remains separate.
     pub notes: Vec<crate::note::ProjectNote>,
+    /// Project Functions in source/creation order (ADR-0124). Each one is
+    /// placed in a building part and refers to group addresses of that
+    /// part's installation; [`crate::function::validate_functions`].
+    pub functions: Vec<crate::function::Function>,
     pub ids: IdAllocators,
 }
 
@@ -271,6 +301,7 @@ impl Project {
             devices: Devices::new(),
             instructions: Default::default(),
             notes: Vec::new(),
+            functions: Vec::new(),
             ids: IdAllocators::default(),
         }
     }

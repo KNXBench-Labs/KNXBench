@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 14;
+pub const CURRENT_SCHEMA_VERSION: i64 = 15;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -646,6 +646,47 @@ fn migrate_v13_to_v14(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v14→v15: project Functions and their ordered group-address members
+/// (ADR-0124). Additive: an older file gains empty tables.
+fn migrate_v14_to_v15(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "CREATE TABLE project_function_state (
+             id INTEGER PRIMARY KEY CHECK(id=0),
+             last_function_id INTEGER NOT NULL CHECK(last_function_id BETWEEN 0 AND 4294967295),
+             last_member_id INTEGER NOT NULL CHECK(last_member_id BETWEEN 0 AND 4294967295)
+         ) STRICT;
+         INSERT INTO project_function_state(id,last_function_id,last_member_id) VALUES(0,0,0);
+         CREATE TABLE project_function (
+             id INTEGER PRIMARY KEY CHECK(id BETWEEN 1 AND 4294967295),
+             position INTEGER NOT NULL UNIQUE CHECK(position>=0),
+             location INTEGER NOT NULL REFERENCES building_part(id),
+             source_path TEXT NOT NULL,
+             source_ets_id TEXT NOT NULL,
+             name TEXT NOT NULL,
+             function_type TEXT,
+             number TEXT,
+             comment TEXT,
+             description TEXT,
+             completion TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX project_function_location ON project_function (location);
+         CREATE TABLE project_function_member (
+             id INTEGER PRIMARY KEY CHECK(id BETWEEN 1 AND 4294967295),
+             function_id INTEGER NOT NULL REFERENCES project_function(id),
+             position INTEGER NOT NULL CHECK(position>=0),
+             group_address INTEGER NOT NULL REFERENCES group_address(id),
+             source_path TEXT NOT NULL,
+             source_ets_id TEXT NOT NULL,
+             name TEXT NOT NULL,
+             role TEXT,
+             UNIQUE(function_id, position)
+         ) STRICT;
+         CREATE INDEX project_function_member_group_address
+             ON project_function_member (group_address);",
+    )?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// History owns the surrounding transaction so a refused editor write also
@@ -695,6 +736,7 @@ fn migrations() -> Vec<Migration> {
         |_conn| Ok(()),
         migrate_v12_to_v13,
         migrate_v13_to_v14,
+        migrate_v14_to_v15,
     ]
 }
 
@@ -1427,7 +1469,7 @@ mod tests {
             // file a v7 build would have written for this project.
             conn.execute_batch(
                 "DROP TABLE instruction_run;
-                 DROP TABLE instruction_document; DROP TABLE project_note; DROP TABLE project_note_state;
+                 DROP TABLE instruction_document; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
                  DROP TABLE project_history_state;
                  DROP TABLE project_history_stack;
                  DROP TABLE project_history_version;

@@ -3,6 +3,8 @@
 //! §6). Validation lives here, not in the UI and not in storage. Any command
 //! that changes a `Resolved<T>` sets its layer to `Layer::UserEdit`.
 
+mod function_commands;
+
 use std::collections::HashSet;
 use std::fmt;
 
@@ -588,6 +590,60 @@ pub enum Command {
         id: crate::ProjectNoteId,
         position: usize,
     },
+    /// ADR-0124. `function.id` and every member id are pre-allocated by the
+    /// caller (`IdAllocators::next_function_id`/`next_function_member_id`).
+    /// The Function is appended; its details and members pass edit
+    /// admission, and every member's group address must belong to the
+    /// location's installation.
+    CreateFunction {
+        function: crate::function::Function,
+    },
+    /// Removes a Function with its members. Nothing else refers to a
+    /// Function, so nothing else changes.
+    DeleteFunction {
+        id: crate::FunctionId,
+    },
+    /// Undo-only inverse of [`Command::DeleteFunction`]: puts the Function
+    /// back at its former position with its text exactly as it was.
+    RestoreFunction {
+        function: crate::function::Function,
+        position: usize,
+    },
+    /// Replaces name, type, number, comment, description and completion,
+    /// with edit admission.
+    UpdateFunction {
+        id: crate::FunctionId,
+        details: crate::function::FunctionDetails,
+    },
+    /// Undo-only form of [`Command::UpdateFunction`]: restores earlier
+    /// (possibly imported) text without edit admission. Self-inverting.
+    RestoreFunctionDetails {
+        id: crate::FunctionId,
+        details: crate::function::FunctionDetails,
+    },
+    /// Places a Function in another building part of the same installation;
+    /// self-inverting. Its members stay as they are.
+    MoveFunction {
+        id: crate::FunctionId,
+        location: BuildingPartId,
+    },
+    /// Inserts a member at `position` with edit admission: unused member id,
+    /// the group address in the Function's installation and not yet a member.
+    AddFunctionMember {
+        function: crate::FunctionId,
+        member: crate::function::FunctionMember,
+        position: usize,
+    },
+    RemoveFunctionMember {
+        function: crate::FunctionId,
+        member: crate::FunctionMemberId,
+    },
+    /// Undo-only inverse of [`Command::RemoveFunctionMember`].
+    RestoreFunctionMember {
+        function: crate::FunctionId,
+        member: crate::function::FunctionMember,
+        position: usize,
+    },
     Batch(Vec<Command>),
 }
 
@@ -629,6 +685,15 @@ pub enum CommandError {
     /// exists for the reverse direction: a link created against a group
     /// address that is already gone).
     GroupAddressInUse(GroupAddressId),
+    /// `DeleteGroupAddress` refused: a Function lists it as a member.
+    GroupAddressInFunction(GroupAddressId),
+    /// `DeleteBuildingPart` refused: Functions are placed in it.
+    BuildingPartHasFunctions(BuildingPartId),
+    FunctionNotFound(crate::FunctionId),
+    FunctionMemberNotFound(crate::FunctionMemberId),
+    InvalidFunction(crate::function::FunctionError),
+    /// A command would leave the project's Functions inconsistent (ADR-0124).
+    FunctionInvariant(crate::function::FunctionInvariantError),
     AreaNotFound(AreaId),
     /// Numeric ID does not identify one area across the project.
     AreaPlacementAmbiguous(AreaId),
@@ -764,6 +829,8 @@ pub enum IdKind {
     GroupAddress,
     BuildingPart,
     ParameterInstance,
+    Function,
+    FunctionMember,
 }
 
 impl fmt::Display for IdKind {
@@ -777,6 +844,8 @@ impl fmt::Display for IdKind {
             IdKind::GroupAddress => "group address",
             IdKind::BuildingPart => "building part",
             IdKind::ParameterInstance => "parameter instance",
+            IdKind::Function => "function",
+            IdKind::FunctionMember => "function member",
         })
     }
 }
@@ -823,6 +892,18 @@ impl fmt::Display for CommandError {
                 f,
                 "installation {from} and installation {to} are separate infrastructures; this would connect them"
             ),
+            CommandError::GroupAddressInFunction(id) => {
+                write!(f, "group address {id} is still part of a function")
+            }
+            CommandError::BuildingPartHasFunctions(id) => {
+                write!(f, "building part {id} still holds functions")
+            }
+            CommandError::FunctionNotFound(id) => write!(f, "function {id} not found"),
+            CommandError::FunctionMemberNotFound(id) => {
+                write!(f, "function member {id} not found")
+            }
+            CommandError::InvalidFunction(e) => write!(f, "{e}"),
+            CommandError::FunctionInvariant(e) => write!(f, "{e}"),
             CommandError::GroupAddressInUse(id) => {
                 write!(
                     f,
@@ -970,6 +1051,15 @@ fn check_id_free(project: &Project, kind: IdKind, id: u32) -> Result<(), Command
         IdKind::ParameterInstance => installations
             .flat_map(|i| &i.parameters)
             .any(|p| p.id == ParameterInstanceId(id)),
+        IdKind::Function => project
+            .functions
+            .iter()
+            .any(|f| f.id == crate::FunctionId(id)),
+        IdKind::FunctionMember => project
+            .functions
+            .iter()
+            .flat_map(|f| &f.members)
+            .any(|m| m.id == crate::FunctionMemberId(id)),
     };
     if taken {
         Err(CommandError::IdInUse { kind, id })
@@ -1926,10 +2016,37 @@ impl Command {
             let inverse = self.apply_inner(&mut candidate)?;
             crate::note::validate_notes(&candidate, &candidate.notes)
                 .map_err(CommandError::InvalidNote)?;
+            crate::function::validate_functions(&candidate)
+                .map_err(CommandError::FunctionInvariant)?;
+            *project = candidate;
+            Ok(inverse)
+        } else if !project.functions.is_empty() || self.touches_functions() {
+            // Same publish-after-validation rule for Functions (ADR-0124):
+            // a Batch or restore must not leave a dangling reference.
+            let mut candidate = project.clone();
+            let inverse = self.apply_inner(&mut candidate)?;
+            crate::function::validate_functions(&candidate)
+                .map_err(CommandError::FunctionInvariant)?;
             *project = candidate;
             Ok(inverse)
         } else {
             self.apply_inner(project)
+        }
+    }
+
+    fn touches_functions(&self) -> bool {
+        match self {
+            Command::CreateFunction { .. }
+            | Command::DeleteFunction { .. }
+            | Command::RestoreFunction { .. }
+            | Command::UpdateFunction { .. }
+            | Command::RestoreFunctionDetails { .. }
+            | Command::MoveFunction { .. }
+            | Command::AddFunctionMember { .. }
+            | Command::RemoveFunctionMember { .. }
+            | Command::RestoreFunctionMember { .. } => true,
+            Command::Batch(commands) => commands.iter().any(Command::touches_functions),
+            _ => false,
         }
     }
 
@@ -1969,6 +2086,33 @@ impl Command {
                 let previous = std::mem::replace(target, note.clone());
                 Ok(Command::ReplaceProjectNote { note: previous })
             }
+            Command::CreateFunction { function } => function_commands::create(project, function),
+            Command::DeleteFunction { id } => function_commands::delete(project, *id),
+            Command::RestoreFunction { function, position } => {
+                function_commands::restore(project, function, *position)
+            }
+            Command::UpdateFunction { id, details } => {
+                function_commands::update(project, *id, details, true)
+            }
+            Command::RestoreFunctionDetails { id, details } => {
+                function_commands::update(project, *id, details, false)
+            }
+            Command::MoveFunction { id, location } => {
+                function_commands::relocate(project, *id, *location)
+            }
+            Command::AddFunctionMember {
+                function,
+                member,
+                position,
+            } => function_commands::add_member(project, *function, member, *position, true),
+            Command::RemoveFunctionMember { function, member } => {
+                function_commands::remove_member(project, *function, *member)
+            }
+            Command::RestoreFunctionMember {
+                function,
+                member,
+                position,
+            } => function_commands::add_member(project, *function, member, *position, false),
             Command::MoveProjectNote { id, position } => {
                 let previous = project
                     .notes
@@ -2374,6 +2518,9 @@ impl Command {
                     .any(|com| com.links.iter().any(|link| link.ga == id))
                 {
                     return Err(CommandError::GroupAddressInUse(id));
+                }
+                if crate::function::group_address_in_function(project, id) {
+                    return Err(CommandError::GroupAddressInFunction(id));
                 }
                 let index = require_unique_group_address(project, id)?;
                 let installation = &mut project.installations[index];
@@ -2953,6 +3100,10 @@ impl Command {
                 {
                     return Err(CommandError::BuildingPartNotEmpty(id));
                 }
+                if crate::function::building_part_has_functions(project, id) {
+                    return Err(CommandError::BuildingPartHasFunctions(id));
+                }
+                let installation = &mut project.installations[index];
                 let parent = installation.buildings[pos].parent;
                 let (_, child_position) =
                     relocate_building_part(installation, id, parent, None, false)?;

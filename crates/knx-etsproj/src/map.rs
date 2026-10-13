@@ -39,6 +39,8 @@
 //! original interface sketch, which named `BusAccess` as flowing through
 //! `retained` without accounting for the type mismatch.
 
+mod functions;
+
 use std::collections::BTreeMap;
 use std::net::Ipv4Addr;
 
@@ -107,6 +109,12 @@ pub enum MapProblemDetail {
         kind: &'static str,
         target: String,
     },
+    /// The reference resolves, but to an element of another installation
+    /// than the referring one (a Function member, ADR-0124). Left out.
+    CrossInstallationReference {
+        kind: &'static str,
+        target: String,
+    },
 }
 
 /// How many source elements of one kind were read, and how many were
@@ -138,6 +146,10 @@ pub struct EntityCounts {
     pub building_parts: Count,
     pub parameters: Count,
     pub module_instances: Count,
+    /// Schema-23 `Function`s and their `GroupAddressRef`s (ADR-0124). A
+    /// member whose group address does not resolve is read, not mapped.
+    pub functions: Count,
+    pub function_members: Count,
 }
 
 /// Pass 1's result: a stable internal id for every cross-referenceable
@@ -255,6 +267,14 @@ fn map_v21(
     }
 
     project.ids = ids;
+    functions::map_functions(
+        document,
+        source_path,
+        &tables,
+        &mut project,
+        &mut problems,
+        &mut counts,
+    )?;
 
     Ok(MapOutput {
         project,

@@ -49,7 +49,7 @@ fn notes_order_target_text_inclusion_and_highwater_survive_native_reopen_and_sna
             .conn
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        14
+        15
     );
 }
 #[test]
@@ -128,7 +128,7 @@ fn authentic_native13_saved_and_working_both_stacks_migrate_without_rewriting_or
             migrated
                 .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
                 .unwrap(),
-            14
+            15
         );
         assert_eq!(
             history::load_editor(&migrated).unwrap().unwrap().working,

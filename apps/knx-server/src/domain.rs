@@ -2453,7 +2453,9 @@ fn apply_guarded(
             )));
         }
     }
-    commit_locked(state, project, &cmd_name, cmd_desc, |p, s| {
+    // #13: a sentence with names, read before the command changes them.
+    let message = crate::log_text::describe(project, &cmd).unwrap_or_else(|| cmd_name.clone());
+    commit_locked(state, project, &cmd_name, &message, cmd_desc, |p, s| {
         s.do_command(p, cmd).map_err(|e| e.to_string())
     })
     .map_err(RenameError::Failure)
@@ -2501,7 +2503,7 @@ pub(crate) fn apply_bound_command(
         return Err(BoundCommandError::Stale);
     }
     let mut refused = false;
-    let result = commit_locked(state, project, label, detail, |p, s| {
+    let result = commit_locked(state, project, label, label, detail, |p, s| {
         let outcome = build(p).and_then(|cmd| s.do_command(p, cmd).map_err(|e| e.to_string()));
         refused = outcome.is_err();
         outcome
@@ -2535,6 +2537,7 @@ fn commit_locked(
     state: &AppState,
     project: &mut knx_core::Project,
     cmd_name: &str,
+    message: &str,
     cmd_desc: String,
     mutation: impl FnOnce(&mut knx_core::Project, &mut knx_core::CommandStack) -> Result<(), String>,
 ) -> Result<ProjectTree, String> {
@@ -2561,7 +2564,7 @@ fn commit_locked(
     log_outcome(
         state,
         cmd_name,
-        cmd_name.to_string(),
+        message.to_string(),
         Some(cmd_desc),
         &result,
     );
@@ -6018,7 +6021,7 @@ pub(crate) fn set_parameter_value_impl(
         };
         let cmd_desc = format!("{cmd:?}");
         let cmd_name = command_name(&cmd);
-        commit_locked(state, project, &cmd_name, cmd_desc, |p, s| {
+        commit_locked(state, project, &cmd_name, &cmd_name, cmd_desc, |p, s| {
             if existing.is_none() {
                 let allocated = p
                     .ids

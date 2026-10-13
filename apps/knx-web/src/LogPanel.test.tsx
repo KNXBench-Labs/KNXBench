@@ -56,6 +56,15 @@ function setSearch(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+/** #13: one small button opens the export dialog; the scope is chosen there. */
+async function exportLog(scope?: "filtered" | "all") {
+  await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+  const dialog = document.querySelector(".log-export-panel")!;
+  expect(dialog, "export dialog").not.toBeNull();
+  if (scope) await act(async () => dialog.querySelector<HTMLInputElement>(`input[value="${scope}"]`)!.click());
+  await act(async () => dialog.querySelector<HTMLButtonElement>(".log-export-confirm")!.click());
+}
+
 async function renderPanel(tree: ProjectTree, refreshKey = 0) {
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -91,10 +100,9 @@ describe("LogPanel", () => {
     await act(() => setSearch(host!.querySelector<HTMLInputElement>(".log-panel-search input")!, "server 1599"));
     expect(host!.querySelector(".log-panel-count")!.textContent).toBe("11 of 16000 entries");
     expect(host!.querySelector(".log-panel-more")).toBeNull();
-    const scope = host!.querySelector<HTMLSelectElement>(".log-panel-export-scope")!;
-    await act(() => { scope.value = "all"; scope.dispatchEvent(new Event("change", { bubbles: true })); });
-    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    await exportLog("all");
     expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith(server, server, "all");
+    expect(document.querySelector(".log-export-panel"), "closes after a successful export").toBeNull();
     await act(() => root.unmount());
   });
 
@@ -104,7 +112,8 @@ describe("LogPanel", () => {
     apiMock.getSessionLog.mockResolvedValue([grouped]);
     const root = await renderPanel(baseTree());
     const detail = host!.querySelector(".log-entry-detail")!;
-    expect(detail.textContent).toBe(`${paths.slice(0, 3).join("\n")}… 1397 more lines in the details`);
+    // #13: one line in the row, the rest counted, every line in the details.
+    expect(detail.textContent).toBe(`${paths[0]}… 1399 more lines in the details`);
     await act(async () => host!.querySelector<HTMLButtonElement>(".log-entry-open")!.click());
     const dialogText = [...document.querySelectorAll(".log-detail-panel pre")].map(el => el.textContent).join("\n");
     expect(dialogText).toContain(paths[1399]);
@@ -117,9 +126,7 @@ describe("LogPanel", () => {
     apiMock.getSessionLog.mockResolvedValue(server);
     const tree = baseTree(); const root = await renderPanel(tree);
     await act(() => root.render(<LogPanel tree={tree} refreshKey={0} notifications={notifications} notificationDroppedCount={7} />));
-    const scope = host!.querySelector<HTMLSelectElement>(".log-panel-export-scope")!;
-    await act(() => { scope.value = "all"; scope.dispatchEvent(new Event("change", { bubbles: true })); });
-    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    await exportLog("all");
     expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith(server, server, "all");
     expect(host!.textContent).toContain("JSON export contains only server entries");
     expect(host!.textContent).toContain("7 UI notifications dropped");
@@ -131,7 +138,10 @@ describe("LogPanel", () => {
     const tree = baseTree(); const root = await renderPanel(tree);
     await act(() => root.render(<LogPanel tree={tree} refreshKey={0} notifications={[{ id: 1, entry: entry({ source: "ui:toast:error", message: "browser-only search" }) }]} />));
     await act(() => setSearch(host!.querySelector<HTMLInputElement>(".log-panel-search input")!, "browser-only search"));
+    // The dialog counts what it exports: server entries, not the shown notification.
     await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    expect(document.querySelector(".log-export-panel")!.textContent).toContain("Entries shown now (0)");
+    await act(async () => document.querySelector<HTMLButtonElement>(".log-export-confirm")!.click());
     expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith([raw], [], "filtered");
     await act(() => root.unmount());
   });
@@ -270,12 +280,15 @@ describe("LogPanel", () => {
     const search = host!.querySelector<HTMLInputElement>('input[type="search"]')!;
     await act(async () => { setSearch(search, "address"); });
     expect(host!.textContent).toContain("2 entries dropped");
-    const scope = host!.querySelector<HTMLSelectElement>(".log-panel-export-scope")!;
-    expect(scope?.value).toBe("filtered");
     await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    const dialog = document.querySelector(".log-export-panel")!;
+    // The default is what you see; each choice says how many entries it holds.
+    expect(dialog.querySelector<HTMLInputElement>('input[value="filtered"]')!.checked).toBe(true);
+    expect(dialog.textContent).toContain("Entries shown now (1)");
+    expect(dialog.textContent).toContain("All retained entries (2)");
+    await act(async () => dialog.querySelector<HTMLButtonElement>(".log-export-confirm")!.click());
     expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith([marker, matching], [matching], "filtered");
-    await act(async () => { scope.value = "all"; scope.dispatchEvent(new Event("change", { bubbles: true })); });
-    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    await exportLog("all");
     expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith([marker, matching], [marker, matching], "all");
     root.unmount();
   });
@@ -283,7 +296,7 @@ describe("LogPanel", () => {
   it("can export an empty log without suggesting it is a lifetime audit", async () => {
     const root = await renderPanel(baseTree());
     expect(host!.textContent).toContain("not a lifetime audit");
-    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    await exportLog();
     expect(exportMock.saveSessionLog).toHaveBeenCalledWith([], [], "filtered");
     root.unmount();
   });
@@ -293,12 +306,14 @@ describe("LogPanel", () => {
     apiMock.getSessionLog.mockResolvedValue([item]);
     exportMock.saveSessionLog.mockRejectedValueOnce(new Error("disk full"));
     const root = await renderPanel(baseTree());
-    const button = host!.querySelector<HTMLButtonElement>(".log-panel-export")!;
-    await act(async () => button.click());
-    expect(host!.querySelector('[role="alert"]')!.textContent).toBe("disk full");
+    await exportLog();
+    // The dialog stays open with the reason; the log is untouched behind it.
+    const dialog = document.querySelector(".log-export-panel")!;
+    expect(dialog.querySelector('[role="alert"]')!.textContent).toBe("disk full");
     expect(host!.textContent).toContain("keep me");
-    await act(async () => button.click());
-    expect(host!.querySelector('[role="alert"]')).toBeNull();
+    await act(async () => dialog.querySelector<HTMLButtonElement>(".log-export-confirm")!.click());
+    expect(document.querySelector('.log-export-panel [role="alert"]')).toBeNull();
+    expect(document.querySelector(".log-export-panel"), "closes after the retry worked").toBeNull();
     root.unmount();
   });
 
@@ -320,6 +335,45 @@ describe("LogPanel", () => {
     expect(host!.textContent).not.toContain("previous project");
     expect(host!.querySelector(".field-error")!.textContent).toBe("failed to refetch");
     root.unmount();
+  });
+
+  it("#13: every row shows its time, the date only when it is not today, the raw timestamp on hover", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 13, 18, 0, 0));
+    try {
+      const today = new Date(2026, 9, 13, 9, 15, 2).toISOString();
+      const yesterday = new Date(2026, 9, 12, 23, 1, 0).toISOString();
+      apiMock.getSessionLog.mockResolvedValue([
+        entry({ timestamp: yesterday, message: "older" }),
+        entry({ timestamp: today, message: "newer" }),
+        entry({ timestamp: "not a time", message: "broken clock" }),
+      ]);
+      const root = await renderPanel(baseTree());
+      const times = [...host!.querySelectorAll<HTMLElement>(".log-entry-time")];
+      // An unreadable time keeps the existing order rule (it sorts by key, here first).
+      expect(times.map((time) => time.textContent)).toEqual(["—", "09:15:02", "Oct 12, 23:01:00"]);
+      expect(times.map((time) => time.title)).toEqual(["not a time", today, yesterday]);
+      expect(times[1].getAttribute("datetime")).toBe(today);
+      expect(times[0].hasAttribute("datetime"), "no machine time for an unreadable one").toBe(false);
+      expect([...host!.querySelectorAll(".log-panel-columns span")].map((c) => c.textContent)).toEqual(["Time", "Level", "Source", "Message"]);
+      await act(() => root.unmount());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("#13: an open export dialog cannot export while the log reloads", async () => {
+    apiMock.getSessionLog.mockResolvedValueOnce([entry({ message: "first snapshot" })]);
+    apiMock.getSessionLog.mockImplementationOnce(() => new Promise(() => {}));
+    const root = await renderPanel(baseTree());
+    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    const confirm = () => document.querySelector<HTMLButtonElement>(".log-export-confirm")!;
+    expect(confirm().disabled).toBe(false);
+    await act(async () => root.render(<LogPanel tree={baseTree()} refreshKey={1} />));
+    expect(confirm().disabled).toBe(true);
+    await act(async () => confirm().click());
+    expect(exportMock.saveSessionLog).not.toHaveBeenCalled();
+    await act(() => root.unmount());
   });
 
   it("renders entries newest-first", async () => {

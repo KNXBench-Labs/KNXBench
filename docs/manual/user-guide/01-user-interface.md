@@ -153,10 +153,14 @@ server-run audit format.
 In **Log**, type into **Search session log** to match operation, summary or
 detail without changing the severity checkboxes; **Clear search** restores
 the unsearched view. The result count compares shown entries with the
-retained total, including the explicitly separate UI notifications. **Export
-scope** chooses either matching **server** entries or all retained server
-entries, then **Export log (JSON)…** saves `session-log.json` to
-your computer. JSON v1 preserves raw timestamp, severity, source/operation,
+retained total, including the explicitly separate UI notifications. Every
+entry shows its time in a column of its own (today's entries the time only,
+older ones the date too; hover for the full timestamp), then level, source and
+message, one line per entry *(source build after Alpha 11; earlier builds have
+no time column and rows of uneven height)*. **Export…** opens a small dialog:
+choose the **server** entries shown now or all retained server entries, then
+**Export JSON** saves `session-log.json` to your computer *(up to Alpha 11:
+an **Export scope** list and **Export log (JSON)…** in the toolbar)*. JSON v1 preserves raw timestamp, severity, source/operation,
 message/summary, location, detail and diagnostic metadata, including
 quotes, line breaks and Unicode; it is not spreadsheet CSV. The export
 contains the cap and loss notice even when filtering hides the notice.
@@ -166,8 +170,10 @@ warnings, then errors, the oldest of each first; the pinned notice says how
 many of each are gone. Opening a replacement project or restarting the server
 resets the trail. **This is not a complete audit.** The list shows 500 entries
 at a time (**Show more** adds the next 500; search and export always cover
-all of them), and a long detail, such as a grouped list of retained files,
-shows its first three lines with the rest in the entry's details. Entries may name
+all of them). A long message or detail, such as a grouped list of retained
+files, is cut to its line with a count of the hidden lines; the entry's details
+show all of it. An RTF-like raw-text preview from an import keeps its literal
+block under its row. Entries may name
 project elements, KNX addresses or local paths; check before sharing the
 file. The desktop build opens an OS save dialog; browser export uses a local
 file download, not the server's Save As directory.

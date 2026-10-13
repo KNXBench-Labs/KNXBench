@@ -28,6 +28,7 @@ import { installationLabel } from "./installationPresentation";
 import { ParameterPanelContent, useDeviceParameters } from "./ParameterPanel";
 import HelpTip from "./HelpTip";
 import RenameNameField from "./RenameNameField";
+import { BuildingPartFunctions, GroupAddressFunctions } from "./features/functions/FunctionsPanel";
 import { linkableGroupAddresses } from "./groupAddressMembers";
 import GroupAddressLinks from "./GroupAddressLinks";
 import OpenDownloadButton from "./OpenDownloadButton";
@@ -1168,6 +1169,8 @@ function GroupAddressInspector(props: {
         </p>
       )}
       <GroupAddressLinks ga={ga} tree={props.tree} onTreeUpdate={props.onApplied} variant="list" />
+      {/* Goal B1b: a member address cannot be deleted; its memberships are listed here. */}
+      <GroupAddressFunctions tree={props.tree} groupAddressId={ga.id} onApplied={props.onApplied} />
       {canDelete ? (
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
@@ -1759,6 +1762,8 @@ function BuildingPartInspector(props: {
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
+      {/* Goal B1b: Functions are per building part in every installation. */}
+      <BuildingPartFunctions tree={tree} buildingPartId={node.id} onApplied={onApplied} />
     </div>
   );
 }

@@ -1,3 +1,12 @@
+Web-lock queue: reserved for claude-kl170-tester-verification (after claude-issues-8-9-10)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 08:55
+- **Completed:** KL-170 follow-up, owner decision (no web change): downloads of programs declaring `BigEndian` or nothing whose own base image holds every discriminating default low octet first carry the named warning `base-image-low-octet-first` (ADR-0120). `knx_productdb::byte_order_probe::base_image_order` (ADR-0119 planning at defaults, read from segment `Data`), `knx_app::device_download::byte_order_warnings` (generic rule, no manufacturer list; `base-image-order-unchecked` when the check cannot run), `PreparedDownload::warnings`, CLI `WARNING …` lines, server plan field `warnings`. Measured: 32 of 181 memory-downloadable corpus programs, all ABB/Busch-Jaeger `0701h`; no MDT (verified program included), Siemens or other. Gate on the rebased candidate: Rust 4243/0/197, five xtask checks, docs, corpus 144/144, inputs frozen. Also: issue #10 comment 6138026344 asks the reporter to run `knx device byte-order-probe` (flow verified locally up to the gateway).
+- **Pending/Next Steps:** Owner request 2026-10-13: tester verification flow. Part A (no web lock, next): `knx_app::download_report` (program, scope, mask, package hash, version, support level, inferences, warnings, octets written/read back, restart, **parameter values**; no project/device name, no address), server endpoint after a finished run, CLI `--report <file>`, bilingual issue template "download verified/failed", maintainer review procedure ending in `verified_downloads.json`. Part B (web lock, queued after claude-issues-8-9-10): in the device download tab a "help verify this device" section with a plain explanation, step-by-step guide, function checklist, report download and "open issue" / "mail issue@knxbench.com" (owner: working mailbox, for tester reports only; contribute@ wording unchanged); also show plan `warnings` and `inferences`, which the tab shows neither of today.
+- **Notes for Codex oder Claude:** For claude-issues-8-9-10: the plan response now has `warnings: string[]` (`rule: detail (reference)`); the KL-170 refusal itself is untouched, as you asked. If you render warnings while building #10's panel, tell this queue entry and Part B drops that item. No hardware, no bus traffic. Log `.ai/logs/2026-10-13_claude_kl170-base-image-warning.md`. Self-review only.
+
+---
+
 Web lock: taken by claude-parked-adoption for package 2 (ux-feedback port)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 07:11

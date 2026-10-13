@@ -1144,12 +1144,17 @@ export const messages = {
   "logPanel.search": "Search session log",
   "logPanel.clear": "Clear search",
   "logPanel.count": "{shown} of {total} entries",
+  "logPanel.renderLimit": "Showing the newest {shown} of {total} matching entries.",
+  "logPanel.showMore.one": "Show {count} more",
+  "logPanel.showMore.other": "Show {count} more",
+  "logPanel.detailMoreLines.one": "… {count} more line in the details",
+  "logPanel.detailMoreLines.other": "… {count} more lines in the details",
   "logPanel.exportScope": "Export scope",
   "logPanel.exportFiltered": "Matching entries",
   "logPanel.exportAll": "All retained entries",
   "logPanel.exportJson": "Export log (JSON)…",
   "logPanel.unknownCount": "unknown",
-  "logPanel.retention": "Only this server session's newest 1000 entries are retained; {count} entries dropped. This is not a lifetime audit. Export may include addresses and names.",
+  "logPanel.retention": "This server session keeps up to 16000 entries; when full, info entries are dropped first, then warnings, then errors; {count} entries dropped. This is not a lifetime audit. Export may include addresses and names.",
   // Same §66/§67 disclosure as `toast.error.messageIsEnglish`, for this
   // panel's own untranslated fields.
   "logPanel.entryTextIsEnglish": "Message, location and detail are the server's own text, in English.",

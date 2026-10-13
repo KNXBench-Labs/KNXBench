@@ -21,6 +21,10 @@ genuine findings remain. AppImage downloads now ask where to save instead of
 silently replacing files in Downloads
 ([KL §182](KNOWN_LIMITATIONS.md#182-appimages-up-to-alpha11-save-in-app-downloads-silently-into-downloads-and-replace-same-named-files));
 a native-window check of the dialog is still open.
+With a product database most of the warnings were unknown attributes in
+manufacturer application files; those are grouped too, and the Log now keeps
+16000 entries, dropping the least important first
+([delivery](IMPLEMENTATION_STATUS.md#2026-10-13--session-log-holds-16000-entries-and-drops-the-least-important-first)).
 
 ## AppImage EGL abort, issue #6 (12 October 2026)
 

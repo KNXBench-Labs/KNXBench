@@ -67,7 +67,7 @@ async function serve(page: Page, linkStatus: number) {
 
 test("links a group address dropped on a communication object, once, in the row's direction", async ({ page }) => {
   const { links, unexpected, row } = await serve(page, 200);
-  await row.locator("select").nth(1).selectOption("Receive");
+  await row.locator("select").selectOption("Receive");
   await page.locator("button.tree-label", { hasText: "1/2/3 Kitchen lights" }).dragTo(row);
   await expect.poll(() => links.length).toBe(1);
   expect(links).toEqual([{ comObjectId: 7, gaId: 9, direction: "Receive" }]);

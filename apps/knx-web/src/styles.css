@@ -644,6 +644,21 @@ main {
   min-width: 0;
 }
 
+/* Issue #8: searchable group-address picker in the link row. The list stays
+   in the flow (no overlay), so a scrolling table cannot clip it. */
+.tree-new-row:has(> .ga-picker) { flex-wrap: wrap; align-items: flex-start; }
+.ga-picker { display: grid; gap: 4px; flex: 1 1 16rem; min-width: 0; max-width: 100%; }
+.ga-picker > input { width: 100%; box-sizing: border-box; }
+.ga-picker-list { list-style: none; margin: 0; padding: 4px; max-height: 16rem; overflow-y: auto;
+  border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input); background: var(--knx-surface); }
+.ga-picker-option { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; padding: 6px 8px;
+  border-radius: 3px; cursor: pointer; overflow-wrap: anywhere; }
+.ga-picker-option.selected { background: color-mix(in srgb, var(--knx-accent) 20%, transparent); }
+.ga-picker-dpt, .ga-picker-dpt-warning { grid-column: 1 / -1; }
+.ga-picker-dpt { color: var(--knx-muted); }
+.ga-picker-dpt-warning { color: var(--knx-warning-color); font-weight: 600; }
+.ga-picker-empty, .ga-picker-window { margin: 0; color: var(--knx-muted); font-size: 0.85em; }
+
 .bulk-action-toolbar {
   display: flex;
   flex-wrap: wrap;

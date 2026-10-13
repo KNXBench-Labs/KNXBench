@@ -96,4 +96,14 @@ group_address_style: string,
  * own `last_saved_at` state, in lockstep with `is_modified` (both are
  * stamped only by a successful save, never by a failed one).
  */
-last_saved_at?: string, installations: Array<InstallationNode>, };
+last_saved_at?: string,
+/**
+ * Opaque, stable identity for *local view state* (which group-address
+ * ranges are open, issue #11): the `.knxdb` the project was opened from
+ * or saved to, or the file an unsaved import came from, gets the same key
+ * across sessions. A digest, so no path travels with it; `None` for a new
+ * project that was never saved. Never a project identity for data: it
+ * changes with Save As and with the file's location. Always `None` from
+ * [`build_project_tree`]; the server overlays it like `last_saved_at`.
+ */
+view_key?: string, installations: Array<InstallationNode>, };

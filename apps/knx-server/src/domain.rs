@@ -57,6 +57,10 @@ pub struct AppState {
     /// from, if any. `None` until `save_project_as`/`open_native_project`
     /// sets it; plain `save_project` requires it already set.
     pub store_path: Mutex<Option<PathBuf>>,
+    /// Digest of `store_path` for [`ProjectTree::view_key`]. A *leaf* lock:
+    /// written right after `store_path` changes and read by `tree_with_state`,
+    /// it is never held while another lock is taken, so it adds no ordering.
+    pub view_path_key: Mutex<Option<String>>,
     /// Opaque passthrough entries + manufacturer manifest carried by the
     /// current project, if any. `open_project` (ETS import) fills this from
     /// the throwaway in-memory store before it's dropped; `open_native_project`
@@ -250,6 +254,7 @@ impl AppState {
             clean_project: Mutex::new(None),
             last_saved_at: Mutex::new(None),
             store_path: Mutex::new(None),
+            view_path_key: Mutex::new(None),
             opaque: Mutex::new(Vec::new()),
             manufacturer_refs: Mutex::new(Vec::new()),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
@@ -583,7 +588,7 @@ pub fn open_project_with_password(
             return Err(failure);
         }
     };
-    let tree = replace_unless_unsaved(
+    let mut tree = replace_unless_unsaved(
         state,
         project,
         (tree.errors, tree.warnings),
@@ -593,6 +598,12 @@ pub fn open_project_with_password(
         discard_changes,
     )
     .map_err(|UnsavedChanges| unsaved_changes_refusal(state, "import"))?;
+    // Until it is saved, an imported project's local view state follows its
+    // source file. View state only: a reader between the replacement and this
+    // line sees no key and simply remembers nothing for that one reply.
+    let import_key = view_digest(&format!("import\0{}", path.display()));
+    *state.view_path_key.lock().expect("state mutex poisoned") = Some(import_key.clone());
+    tree.view_key = Some(import_key);
 
     let mut log = state.session_log.lock().expect("state mutex poisoned");
     log.reset();
@@ -1143,6 +1154,7 @@ fn save_editor_state(state: &AppState, destination: Option<&Path>) -> Result<(),
     };
     if let Some(path) = destination {
         *store_path = Some(path.to_path_buf());
+        *state.view_path_key.lock().expect("state mutex poisoned") = Some(view_key_of_path(path));
     }
     *generation = new_generation;
     *clean_project = Some(project.clone());
@@ -1990,7 +2002,33 @@ pub(crate) fn tree_with_state(
     tree.snapshot_revision = Some(snapshot_revision);
     tree.project_incarnation = Some(state.project_incarnation.load(Ordering::Relaxed));
     tree.last_saved_at = last_saved_at.map(str::to_owned);
+    tree.view_key = view_key(state);
     tree
+}
+
+/// Truncated SHA-256 over a domain-separated label, so neither a path nor a
+/// project name leaves the server through `view_key`.
+fn view_digest(label: &str) -> String {
+    use sha2::Digest;
+    let digest = sha2::Sha256::digest(format!("knxbench-view-key-v1\0{label}").as_bytes());
+    digest[..16]
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
+fn view_key_of_path(path: &Path) -> String {
+    view_digest(&format!("file\0{}", path.display()))
+}
+
+/// [`ProjectTree::view_key`]: the file the project was opened from, imported
+/// from or saved to. Not the project id: every new project is `P-0001`.
+fn view_key(state: &AppState) -> Option<String> {
+    state
+        .view_path_key
+        .lock()
+        .expect("state mutex poisoned")
+        .clone()
 }
 
 pub(crate) fn current_project_revision(state: &AppState) -> u64 {
@@ -2167,7 +2205,9 @@ fn replace_project_state_transaction(
         replacement_store_path.is_none() || restored_report,
         Ordering::Relaxed,
     );
+    let path_key = replacement_store_path.as_deref().map(view_key_of_path);
     *store_path = replacement_store_path;
+    *state.view_path_key.lock().expect("state mutex poisoned") = path_key;
     *clean_project = Some(clean_replacement);
     // `last_saved_at` describes the project on screen, not the session: a
     // project that replaced the previous one (new, open, import) has not
@@ -6534,6 +6574,23 @@ mod tests {
             new_project_impl(&state, None, None, None, None, false),
             Err(UnsavedChanges)
         ));
+    }
+
+    #[test]
+    fn view_key_is_a_digest_of_the_file_and_nothing_else() {
+        let state = AppState::new(std::env::temp_dir());
+        assert_eq!(view_key(&state), None, "nothing to name a view by");
+        let house = view_key_of_path(Path::new("/p/house.knxdb"));
+        assert_eq!(
+            house,
+            view_key_of_path(Path::new("/p/house.knxdb")),
+            "deterministic"
+        );
+        assert_ne!(house, view_key_of_path(Path::new("/p/office.knxdb")));
+        assert_eq!(house.len(), 32);
+        assert!(!house.contains("house"));
+        *state.view_path_key.lock().unwrap() = Some(house.clone());
+        assert_eq!(view_key(&state), Some(house));
     }
 
     #[test]

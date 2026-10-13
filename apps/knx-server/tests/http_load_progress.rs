@@ -26,6 +26,7 @@ fn state() -> Arc<knx_server::AppState> {
         clean_project: Default::default(),
         last_saved_at: Default::default(),
         store_path: Default::default(),
+        view_path_key: Default::default(),
         opaque: Default::default(),
         manufacturer_refs: Default::default(),
         command_stack: Default::default(),

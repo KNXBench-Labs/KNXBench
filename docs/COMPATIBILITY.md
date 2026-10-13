@@ -270,7 +270,10 @@ with visibility, group link). **Update 2026-10-09 (ADR-0094, VD5):** the one rea
 installer tree of four members, 173 MB payload) inspects and publishes with
 pinned identity, counts and diagnostics; all 88 programs evaluate under their
 defaults (`legacy_corpus.rs`, ignored). Its 1,515 `string`/`long enum`
-parameters are not mapped and have no oracle comparison yet. Synthetic
+parameters are mapped since 2026-10-13 and compared with ETS4's conversion
+of the same database: 49 types and 1,490 parameters equal
+(`legacy_atomic_types_oracle.rs`, ignored; ADR-0094 *Amendment: KL-128*).
+Their binary enumeration values are reported, not modeled. Synthetic
 installer-tree coverage: `marvin-installer.vd5` in `legacy_files.rs` and
 `http_legacy_install.rs`. The `.vd3` sample is BCU1;
 its programs import, but their behaviour beyond the evaluator is not

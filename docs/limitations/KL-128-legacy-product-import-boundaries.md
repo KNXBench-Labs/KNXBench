@@ -6,6 +6,30 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-10-13 (Goal A5): `string` and `long enum` are mapped
+
+Atomic types 3 (`string`) and 5 (`long enum`) now import the way ETS4
+converted the same Siemens database: `Text` of the type's size with the
+string default, and `Restriction` with base `BinaryValue` whose
+enumerations are keyed like type 4 (ADR-0094, *Amendment: KL-128*;
+[the oracle](../research/legacy-vd-mapping.md#atomic-types-3-and-5-the-ets4-oracle-2026-10-13)).
+The measured `.vd5` now publishes 42,728 parameters and 72,982 parameter
+refs (all rows) with no `unknown-atomic-type` or `dangling-reference`.
+
+**Still limited:**
+- `BINARY_VALUE` is reported per long-enum type
+  (`binary-values-not-modeled`, 29 in the `.vd5`) and kept only in the
+  stored payload; the product database has no field for it.
+- **Found on the way:** the `.knxprod` ingest neither stores nor reports
+  `Enumeration/@BinaryValue` (or any other `Enumeration` attribute it does
+  not read). The original package stays stored, so nothing is lost, but
+  the report does not say so. Not changed here.
+- Enumeration texts of the measured package differ from the `.vd5`'s base
+  texts for long enums and ordinary enums alike (language); texts are not
+  part of the acceptance.
+- 7 of the 56 types belong to programs without an ETS4 conversion in the
+  corpus; they follow the same rule unverified.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 128. Legacy `.vd3`–`.vd5` and `.pr3`–`.pr5` files are refused, and the refusal misnames the format
@@ -14,7 +38,8 @@ updates supersede them; they are not new work assignments.
 and password handling are delivered. The title records the original refusal;
 it is not a blanket current VD3/VD4 refusal. `.pr*`/`.vd2`, legacy
 DPTs, an untested (never run live) legacy download, unmapped
-`string`/`long enum` parameters and plaintext remembered-password storage
+`string`/`long enum` parameters (mapped since 2026-10-13, see above) and
+plaintext remembered-password storage
 remain the explicit limits below. The TypeNone spacer presentation, the VD5
 bounds/layout and L4 download planning landed on 2026-10-09.
 

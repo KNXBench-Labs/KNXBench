@@ -98,9 +98,11 @@ afterwards.
 
 ### Updating with a preview (since Alpha 10)
 
-Got a newer `.knxprod` from a manufacturer? **Update with preview…**, under the install
-picker, checks it first. It ships since Alpha 10 and is not in the Alpha 9
-screenshots; the command-line equivalent is
+Got a newer `.knxprod` from a manufacturer? In Alpha 10 and 11, **Update with
+preview…**, under the install picker, checks it first. *(Source build after
+Alpha 11:)* there is one picker, and every `.knxprod` it takes, in the catalogue and
+in the device wizard alike, is previewed first; an old ETS3 product database still
+goes straight to its own import. The command-line equivalent is
 [`knx products update`](10-command-line.md#knx-products-update--check-a-newer-product-file-before-installing-it).
 
 - The preview says **Nothing is installed yet.** and lists each application program
@@ -119,9 +121,15 @@ Open **Catalogue backups** to see the backups, newest first, with size and date.
 default, and **Restore backup** returns the catalogue to that state, removing what
 was installed after it. Devices in your projects keep their references; one whose
 program is not in the backup shows no parameters until the program is installed
-again. KNXBench does not delete backups; remove old ones from the product database's
-folder yourself. The plain **Install product database** picker still installs
-directly, without a preview or backup.
+again.
+
+*(Source build after Alpha 11:)* **Delete…** removes a backup you no longer need,
+after asking: **Keep the backup** is the default and **Delete backup** removes that
+file for good; the catalogue in use stays as it is. KNXBench deletes exactly the file
+it listed: if a file with that name changed in the meantime, nothing is deleted and
+the list is read again. It never deletes backups on its own. (Alpha 10 and 11 cannot
+delete backups, and their plain **Install product database** picker installs
+directly, without a preview or backup.)
 
 ### Old ETS3 product databases (`.vd3`, `.vd4`, `.vd5`)
 

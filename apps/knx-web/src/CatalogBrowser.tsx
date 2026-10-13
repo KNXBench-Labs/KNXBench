@@ -147,6 +147,13 @@ export default function CatalogBrowser(props: {
   }
 
   /** A package or legacy database was installed: reload with the latest filters. */
+  // An install adds a catalogue backup; the backups panel reads an open list again.
+  const [installRevision, setInstallRevision] = useState(0);
+  async function reloadAfterProductInstall() {
+    setInstallRevision((n) => n + 1);
+    await reloadAfterInstall();
+  }
+
   async function reloadAfterInstall() {
     try {
       const filters = filtersRef.current;
@@ -255,8 +262,8 @@ export default function CatalogBrowser(props: {
         <button type="button" onClick={onClose}>{t("catalog.close")}</button>
       </header>
       <ProductInstallControl className="catalog-install" label={t("catalog.installLabel")}
-        onInstalled={reloadAfterInstall} />
-      <CatalogUpdatePanel onInstalled={reloadAfterInstall} />
+        onInstalled={reloadAfterProductInstall} />
+      <CatalogUpdatePanel onInstalled={reloadAfterInstall} installRevision={installRevision} />
       <select value={manufacturer} onChange={(e) => changeManufacturer(e.target.value)}>
         <option value="">{t("catalog.allManufacturers")}</option>
         {manufacturers.map((m) => (

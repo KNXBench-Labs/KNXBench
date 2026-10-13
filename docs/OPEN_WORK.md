@@ -75,8 +75,8 @@ products restore` reverts ([ADR-0117](adr/0117-previewed-recoverable-catalogue-u
 The web catalogue has the same flow since 12 October
 ([ADR-0118](adr/0118-catalogue-updates-through-the-web-server.md)). Open: any
 automatic update source (none is documented for third-party tools), moving a
-device to a newer application version, deleting old backups from the UI, and
-retiring the direct install in favour of the previewed one.
+device to a newer application version. Since Goal B5 (14 October) the web deletes a
+listed backup after asking and installs every `.knxprod` through the preview.
 
 ## AP6 opt-in MCP rename writer (12 October 2026)
 

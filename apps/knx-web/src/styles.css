@@ -1183,6 +1183,7 @@ main {
 .catalog-backup-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.6rem; min-width: 0; }
 .catalog-backup-name { overflow-wrap: anywhere; word-break: break-all; font-size: 0.85em; }
 .catalog-backup-meta { color: var(--knx-muted); font-size: 0.85em; }
+.catalog-backup-actions { display: inline-flex; flex-wrap: wrap; gap: 0.4rem; }
 
 .catalog-report {
   font-size: 0.85rem;

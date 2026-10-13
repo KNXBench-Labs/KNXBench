@@ -453,6 +453,154 @@ async fn an_unusable_backup_is_refused_and_the_live_catalogue_stays() {
     );
 }
 
+/// The listing's entry for `name`, as the web shows it before a deletion.
+async fn listed(f: &Fixture, name: &str) -> Value {
+    let (status, body) = send(
+        &f.app,
+        json_request("GET", "/api/catalog/backups", Value::Null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    body["backups"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|entry| entry["name"] == json!(name))
+        .cloned()
+        .unwrap_or(Value::Null)
+}
+
+fn delete(name: &str, identity: &Value, confirmed: bool) -> Request<Body> {
+    json_request(
+        "POST",
+        "/api/catalog/backups/delete",
+        json!({ "name": name, "identity": identity, "confirmed": confirmed }),
+    )
+}
+
+#[tokio::test]
+async fn a_listed_backup_is_deleted_only_when_confirmed_with_the_identity_it_was_listed_with() {
+    let f = fixture();
+    let name = apply(&f, 0x11).await["backup"].as_str().unwrap().to_owned();
+    let live = std::fs::read(f.db()).unwrap();
+    let entry = listed(&f, &name).await;
+    let identity = entry["identity"].clone();
+    assert!(
+        identity.as_str().is_some_and(|id| id.len() >= 16),
+        "{entry}"
+    );
+    assert!(!entry.to_string().contains(f.dir.path().to_str().unwrap()));
+
+    let (status, body) = send(&f.app, delete(&name, &identity, false)).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["kind"], json!("confirmationRequired"));
+    assert!(f.dir.path().join(&name).exists(), "unconfirmed: kept");
+
+    let (status, body) = send(&f.app, delete(&name, &identity, true)).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["deleted"], json!(name));
+    assert!(!f.dir.path().join(&name).exists());
+    assert_eq!(listed(&f, &name).await, Value::Null);
+    // Only the backup went: the live catalogue and its connection are untouched.
+    assert_eq!(std::fs::read(f.db()).unwrap(), live);
+    assert_eq!(
+        server_program_ids(&f.state),
+        ["M-0001_A-0001-10-0001", "M-0001_A-0001-11-0001"]
+    );
+    // A second request finds nothing to delete.
+    let (status, body) = send(&f.app, delete(&name, &identity, true)).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["kind"], json!("unknownBackup"));
+}
+
+#[tokio::test]
+async fn deletion_refuses_names_it_did_not_list_and_never_follows_a_link() {
+    let f = fixture();
+    let real = apply(&f, 0x11).await["backup"].as_str().unwrap().to_owned();
+    let identity = listed(&f, &real).await["identity"].clone();
+    std::fs::write(f.dir.path().join("elsewhere.sqlite"), b"x").unwrap();
+    let link = "products.sqlite.backup-9-abcdefabcdef.sqlite";
+    std::os::unix::fs::symlink(f.db(), f.dir.path().join(link)).unwrap();
+    let live = std::fs::read(f.db()).unwrap();
+    for name in [
+        "../products.sqlite",
+        "products.sqlite",
+        "elsewhere.sqlite",
+        "sub/products.sqlite.backup-1-abcdefabcdef.sqlite",
+        link,
+        "",
+    ] {
+        let (status, body) = send(&f.app, delete(name, &identity, true)).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{name}: {body}");
+        assert_eq!(body["kind"], json!("unknownBackup"), "{name}");
+    }
+    assert_eq!(std::fs::read(f.db()).unwrap(), live);
+    assert!(f.dir.path().join("elsewhere.sqlite").exists());
+    assert!(std::fs::symlink_metadata(f.dir.path().join(link)).is_ok());
+    assert!(f.dir.path().join(&real).exists());
+}
+
+#[tokio::test]
+async fn a_backup_that_changed_since_it_was_listed_is_kept() {
+    let f = fixture();
+    let first = apply(&f, 0x11).await["backup"].as_str().unwrap().to_owned();
+    let shown = listed(&f, &first).await["identity"].clone();
+    // Same name, size, bytes and modification time; only the file is another.
+    let path = f.dir.path().join(&first);
+    let bytes = std::fs::read(&path).unwrap();
+    let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+    std::fs::remove_file(&path).unwrap();
+    std::fs::write(&path, &bytes).unwrap();
+    std::fs::File::options()
+        .write(true)
+        .open(&path)
+        .unwrap()
+        .set_modified(modified)
+        .unwrap();
+    let (status, body) = send(&f.app, delete(&first, &shown, true)).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    assert_eq!(body["kind"], json!("catalogueBackupChanged"));
+    assert!(path.exists());
+    // Another backup's identity does not unlock this one either.
+    let second = apply(&f, 0x12).await["backup"].as_str().unwrap().to_owned();
+    let other = listed(&f, &second).await["identity"].clone();
+    let (status, body) = send(&f.app, delete(&first, &other, true)).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    assert!(path.exists() && f.dir.path().join(&second).exists());
+}
+
+#[tokio::test]
+async fn a_backup_that_cannot_be_removed_is_reported_and_stays_listed() {
+    use std::os::unix::fs::PermissionsExt;
+    let f = fixture();
+    let name = apply(&f, 0x11).await["backup"].as_str().unwrap().to_owned();
+    let identity = listed(&f, &name).await["identity"].clone();
+    let dir = f.dir.path();
+    std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o555)).unwrap();
+    // A privileged runner (root, or a mapped user namespace) ignores the mode;
+    // then this failure cannot be provoked and the test says so instead of passing.
+    let privileged = std::fs::write(dir.join("probe"), b"x").is_ok();
+    let result = send(&f.app, delete(&name, &identity, true)).await;
+    std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+    if privileged {
+        eprintln!(
+            "NOT RUN: the runner can write to a 0555 directory; removal failure untested here"
+        );
+        return;
+    }
+    let (status, body) = result;
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR, "{body}");
+    assert!(
+        body["error"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("could not be deleted"),
+        "{body}"
+    );
+    assert!(dir.join(&name).exists());
+    assert_eq!(listed(&f, &name).await["identity"], identity);
+}
+
 #[tokio::test]
 async fn without_a_product_database_every_route_says_so() {
     let dir = tempfile::tempdir().unwrap();
@@ -472,6 +620,7 @@ async fn without_a_product_database_every_route_says_so() {
         ),
         json_request("GET", "/api/catalog/backups", Value::Null),
         json_request("POST", "/api/catalog/restore", json!({ "name": "x" })),
+        delete("x", &json!("y"), true),
     ] {
         assert_eq!(send(&app, request).await.0, StatusCode::SERVICE_UNAVAILABLE);
     }
@@ -497,6 +646,7 @@ async fn catalogue_update_routes_remain_inside_existing_authentication() {
         ),
         json_request("GET", "/api/catalog/backups", Value::Null),
         json_request("POST", "/api/catalog/restore", json!({ "name": "x" })),
+        delete("x", &json!("y"), true),
     ] {
         assert_eq!(send(&app, request).await.0, StatusCode::UNAUTHORIZED);
     }

@@ -14,6 +14,7 @@
 
 pub mod evaluate;
 pub mod parse;
+pub mod positional;
 
 // Flattened re-export: the plan names these `dynamic::{load_tree,
 // evaluate, Activation, Diagnostic, Test, Op}`, one level up from where
@@ -28,4 +29,7 @@ pub use evaluate::{
     ModuleDefArgument, ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, TextProjectionBudget,
     TextProjectionError, UnparsableTest, ValueMap, MAX_EVALUATION_WORK, MAX_MODULE_ACTIVATIONS,
     MAX_MODULE_EXPANSIONS, MAX_MODULE_NESTING_DEPTH, MAX_TEXT_PROJECTION_WORK,
+};
+pub use positional::{
+    fill_positional, PositionalSource, PositionalText, PositionalValue, UnavailableReason,
 };

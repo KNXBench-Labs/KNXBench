@@ -158,10 +158,16 @@ fn support_of(prepared: &PreparedDownload) -> Result<SupportLevel, ApiError> {
 }
 
 pub(crate) fn parse_target(address: &str) -> Result<IndividualAddress, ApiError> {
-    let parsed: IndividualAddress = address
-        .parse()
-        .map_err(|e| ApiError::bad_request(format!("invalid device address {address:?}: {e}")))?;
-    ContactableAddress::new(parsed).map_err(|e| ApiError::bad_request(e.to_string()))?;
+    let parsed: IndividualAddress = address.parse().map_err(|e| {
+        ApiError::with_kind(
+            StatusCode::BAD_REQUEST,
+            "downloadInvalidAddress",
+            format!("invalid device address {address:?}: {e}"),
+        )
+    })?;
+    ContactableAddress::new(parsed).map_err(|e| {
+        ApiError::with_kind(StatusCode::BAD_REQUEST, "downloadExcluded", e.to_string())
+    })?;
     Ok(parsed)
 }
 
@@ -192,6 +198,7 @@ pub(crate) fn prepare_error(target: IndividualAddress, error: &PrepareError) -> 
             let mut details = serde_json::Map::new();
             details.insert("address".into(), target.to_string().into());
             details.insert("order".into(), order.clone().into());
+            details.insert("category".into(), "byte-order".into());
             ApiError::with_details(
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "unsupportedByteOrder",
@@ -199,7 +206,21 @@ pub(crate) fn prepare_error(target: IndividualAddress, error: &PrepareError) -> 
                 details,
             )
         }
-        _ => ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, message),
+        _ => {
+            let mut details = serde_json::Map::new();
+            details.insert(
+                "category".into(),
+                knx_app::project_readiness::prepare_category(error)
+                    .code()
+                    .into(),
+            );
+            ApiError::with_details(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "downloadPreparationRefused",
+                message,
+                details,
+            )
+        }
     }
 }
 
@@ -211,15 +232,17 @@ pub(crate) fn prepare(
     partial: Option<PartialDownloadParts>,
 ) -> Result<PreparedDownload, ApiError> {
     let Some(products) = state.product_db.as_ref() else {
-        return Err(ApiError::with_status(
+        return Err(ApiError::with_kind(
             StatusCode::CONFLICT,
+            "downloadProductDataMissing",
             "no product database is configured, so no application program can be read",
         ));
     };
     let project_guard = state.project.lock().expect("state mutex poisoned");
     let Some(project) = project_guard.as_ref() else {
-        return Err(ApiError::with_status(
+        return Err(ApiError::with_kind(
             StatusCode::CONFLICT,
+            "downloadProjectMissing",
             "no project is open",
         ));
     };

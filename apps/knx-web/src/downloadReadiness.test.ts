@@ -23,7 +23,7 @@ describe("readinessMarks", () => {
       row(null, "no-address"),
     ]);
     expect([...marks.entries()]).toEqual([
-      ["0.2.23", { kind: "unsupported", category: "byte-order" }],
+      ["0.2.23", { kind: "unsupported", category: "byte-order", detail: null, programRef: "fictional" }],
       ["1.1.4", { kind: "excluded" }],
     ]);
   });
@@ -32,6 +32,11 @@ describe("readinessMarks", () => {
     const marks = readinessMarks([row("1.1.5", "unsupported", "modules"), row("1.1.5", "untested")]);
     expect(marks.size).toBe(0);
   });
+});
+
+it("retains the exact technical detail for local guidance", () => {
+  const rowWithDetail = { ...row("1.1.9", "unsupported", "modules"), detail: "PRIVATE customer /path" };
+  expect(readinessMarks([rowWithDetail]).get("1.1.9")).toMatchObject({ detail: rowWithDetail.detail });
 });
 
 describe("readinessReason", () => {

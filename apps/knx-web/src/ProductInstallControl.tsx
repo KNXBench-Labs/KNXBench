@@ -1,17 +1,12 @@
-/** Product file picker shared by catalog and device wizard: packages and legacy databases. */
+/** Product file picker shared by catalog and device wizard: packages (previewed) and legacy databases. */
 import { useState } from "react";
 import * as api from "./api";
-import type { CatalogInstallReport, LegacyInstallReport } from "./api";
-import { CatalogInstallReportView } from "./CatalogInstallReport";
+import type { LegacyInstallReport } from "./api";
+import CatalogPackageUpdate from "./CatalogPackageUpdate";
 import { LegacyInstallReportView } from "./LegacyInstallReport";
 import LegacyPasswordDialog from "./LegacyPasswordDialog";
 import { useTranslate } from "./i18n";
-import {
-  installProductFile,
-  legacyPasswordRefusal,
-  type LegacyPasswordRefusal,
-  type ProductInstallOutcome,
-} from "./legacyInstall";
+import { isLegacyProductFileName, legacyPasswordRefusal, type LegacyPasswordRefusal } from "./legacyInstall";
 
 /** What the file picker offers: product packages and legacy product databases. */
 export const PRODUCT_FILE_ACCEPT = ".knxprod,.vd3,.vd4,.vd5,application/zip";
@@ -25,20 +20,30 @@ export default function ProductInstallControl(props: {
   const { label, className, onInstalled } = props;
   const t = useTranslate();
   const [installing, setInstalling] = useState(false);
-  const [outcome, setOutcome] = useState<ProductInstallOutcome<CatalogInstallReport, LegacyInstallReport> | null>(null);
+  const [outcome, setOutcome] = useState<LegacyInstallReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<{ file: File; reason: LegacyPasswordRefusal } | null>(null);
+  // Goal B5: a package is previewed and installed only after confirmation; the
+  // direct `/api/catalog/install` is no longer used by the web.
+  const [pkg, setPkg] = useState<File | null>(null);
+  const [pkgBusy, setPkgBusy] = useState(false);
 
-  async function install(file: File, legacy?: { password: string; remember: boolean }) {
+  function choose(file: File) {
+    setError(null);
+    setOutcome(null);
+    setPrompt(null);
+    if (isLegacyProductFileName(file.name)) void installLegacy(file);
+    else setPkg(file);
+  }
+
+  async function installLegacy(file: File, legacy?: { password: string; remember: boolean }) {
+    setPkg(null);
     setError(null);
     setOutcome(null);
     setPrompt(null);
     setInstalling(true);
     try {
-      setOutcome(await installProductFile(file, {
-        installPackage: api.installProductPackage,
-        installLegacy: api.installLegacyProductDatabase,
-      }, legacy));
+      setOutcome(await api.installLegacyProductDatabase(file, legacy?.password, legacy?.remember ?? false));
       await onInstalled();
     } catch (e) {
       const reason = legacyPasswordRefusal(e);
@@ -53,19 +58,21 @@ export default function ProductInstallControl(props: {
     <>
       <label className={className}>
         {installing ? t("catalog.installing") : label}
-        <input type="file" accept={PRODUCT_FILE_ACCEPT} disabled={installing}
+        <input type="file" accept={PRODUCT_FILE_ACCEPT} disabled={installing || pkgBusy}
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) void install(file);
+            if (file) choose(file);
             e.currentTarget.value = "";
           }} />
       </label>
-      {outcome?.kind === "package" && <CatalogInstallReportView report={outcome.report} />}
-      {outcome?.kind === "legacy" && <LegacyInstallReportView report={outcome.report} />}
+      {pkg !== null && <CatalogPackageUpdate key={`${pkg.name}:${pkg.size}:${pkg.lastModified}`} file={pkg}
+        onInstalled={onInstalled} onDone={() => setPkg(null)} onLegacy={(file) => { void installLegacy(file); }}
+        onBusyChange={setPkgBusy} />}
+      {outcome && <LegacyInstallReportView report={outcome} />}
       {error && <p className="field-error" role="alert">{error}</p>}
       {prompt && (
         <LegacyPasswordDialog fileName={prompt.file.name} reason={prompt.reason}
-          onSubmit={(password, remember) => void install(prompt.file, { password, remember })}
+          onSubmit={(password, remember) => void installLegacy(prompt.file, { password, remember })}
           onCancel={() => setPrompt(null)} />
       )}
     </>

@@ -46,6 +46,8 @@ export default function NameRecipeDialog(props: {
   ids: readonly number[];
   /** After a confirmed rename: the caller re-reads the project. */
   onApplied: () => void;
+  /** The server says the shown tree is old: the caller re-reads it, so the next preview can bind. */
+  onStale: () => void;
   onClose: () => void;
 }) {
   const t = useTranslate();
@@ -77,7 +79,10 @@ export default function NameRecipeDialog(props: {
   useEffect(() => () => { if (tokenRef.current !== null) cancelNameRecipe(tokenRef.current); }, []);
 
   function explain(error: unknown): Problem {
-    if (isStaleRecipe(error)) return { lead: t("nameRecipe.stale"), detail: null };
+    if (isStaleRecipe(error)) {
+      props.onStale();
+      return { lead: t("nameRecipe.stale"), detail: null };
+    }
     const refusal = error as Partial<RecipeRefusal>;
     const key = typeof refusal.kind === "string" && Object.hasOwn(REFUSALS, refusal.kind)
       ? REFUSALS[refusal.kind as keyof typeof REFUSALS] : "nameRecipe.failed";

@@ -85,6 +85,10 @@ export default function BulkActionToolbar(props: {
             // The selection stays, so the next recipe or an Undo is one click away.
             api.currentProject().then(onTreeUpdate, (e: unknown) => setError(api.errorMessage(e)));
           }}
+          onStale={() => {
+            // Another window changed the project: read it, so a new preview binds to it.
+            api.currentProject().then(onTreeUpdate, (e: unknown) => setError(api.errorMessage(e)));
+          }}
           onClose={() => setRecipeOpen(false)}
         />
       )}

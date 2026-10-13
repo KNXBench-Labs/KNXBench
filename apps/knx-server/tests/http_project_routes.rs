@@ -265,6 +265,141 @@ async fn current_project_save_metadata_tracks_save_open_and_replacement() {
     }
 }
 
+/// Issue #11: `view_key` names the saved file for local view state, travels
+/// on edit replies too, survives reopening and changes with Save As.
+#[tokio::test]
+async fn view_key_follows_the_saved_file_not_the_session() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
+    let app = knx_server::app(state, None);
+    let key = |tree: &serde_json::Value| {
+        tree.get("view_key")
+            .and_then(|v| v.as_str())
+            .map(str::to_owned)
+    };
+    let call = |route: &'static str, body: serde_json::Value| {
+        let app = app.clone();
+        async move {
+            let response = app.oneshot(post(route, body)).await.unwrap();
+            assert_eq!(response.status(), StatusCode::OK, "{route}");
+            // Save and Save As answer with an empty body.
+            let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap();
+            if bytes.is_empty() {
+                Value::Null
+            } else {
+                serde_json::from_slice(&bytes).unwrap()
+            }
+        }
+    };
+    let current =
+        || async { body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await };
+
+    call(
+        "/api/project/new",
+        json!({ "name": "First", "force": true }),
+    )
+    .await;
+    assert_eq!(
+        key(&current().await),
+        None,
+        "a new, unsaved project has no view key"
+    );
+    call("/api/project/save-as", json!({ "path": "first.knxdb" })).await;
+    let first = key(&current().await).expect("a saved project has a view key");
+    assert_eq!(first.len(), 32);
+    assert!(first.chars().all(|c| c.is_ascii_hexdigit()));
+    assert!(
+        !first.contains("first"),
+        "the key is a digest, not the path"
+    );
+    let edited = call("/api/areas", json!({ "name": "Area A", "address": 1 })).await;
+    assert_eq!(
+        key(&edited),
+        Some(first.clone()),
+        "edit replies carry the key"
+    );
+    call("/api/project/save", json!({})).await;
+    call(
+        "/api/project/new",
+        json!({ "name": "Second", "force": true }),
+    )
+    .await;
+    assert_eq!(
+        key(&current().await),
+        None,
+        "replacing the project drops the old key"
+    );
+    call("/api/project/open", json!({ "path": "first.knxdb" })).await;
+    assert_eq!(
+        key(&current().await),
+        Some(first.clone()),
+        "reopening the same file restores it"
+    );
+    call("/api/project/save-as", json!({ "path": "copy.knxdb" })).await;
+    let copy = key(&current().await).unwrap();
+    assert_ne!(copy, first, "another file is another view");
+    call("/api/project/open", json!({ "path": "first.knxdb" })).await;
+    assert_eq!(key(&current().await), Some(first));
+}
+
+/// An unsaved import is remembered by its source file; saving moves it to the
+/// `.knxdb`. Two different import files never share a key.
+#[tokio::test]
+async fn view_key_of_an_import_follows_its_source_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let first = knx_testsupport::write_minimal_knxproj(dir.path());
+    let other = dir.path().join("other.knxproj");
+    std::fs::copy(&first, &other).unwrap();
+    let app = knx_server::app(
+        Arc::new(knx_server::AppState::new(dir.path().to_path_buf())),
+        None,
+    );
+    let key = |tree: &Value| {
+        tree.get("view_key")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+    };
+    let mut keys = Vec::new();
+    for path in [&first, &other, &first] {
+        let response = app
+            .clone()
+            .oneshot(post(
+                "/api/project/import",
+                json!({ "path": path.to_string_lossy(), "discardChanges": true }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let imported = key(&body_json(response).await).expect("the import reply carries the key");
+        let current = body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await;
+        assert_eq!(key(&current), Some(imported.clone()), "later reads agree");
+        keys.push(imported);
+    }
+    assert_ne!(keys[0], keys[1], "another import file is another view");
+    assert_eq!(
+        keys[0], keys[2],
+        "importing the same file again restores it"
+    );
+    let saved = app
+        .clone()
+        .oneshot(post(
+            "/api/project/save-as",
+            json!({ "path": "imported.knxdb" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(saved.status(), StatusCode::OK);
+    let current = body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await;
+    assert_ne!(
+        key(&current),
+        Some(keys[0].clone()),
+        "saved: the .knxdb names the view now"
+    );
+    assert!(key(&current).is_some());
+}
+
 #[tokio::test]
 async fn modified_state_clears_only_after_successful_save_or_save_as() {
     let dir = tempfile::tempdir().unwrap();

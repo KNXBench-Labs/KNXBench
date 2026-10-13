@@ -70,7 +70,9 @@ test("manual screenshots of the four group-address presentations", async ({ page
   // A fresh settings directory: the tree table is the default.
   await expect(page.locator("[data-ga-view]")).toHaveValue("tree");
 
-  // Tree table: one address selected, Lighting / Status collapsed to show the disclosure.
+  // Tree table: address lists start closed (issue #11); open them, select one address,
+  // then collapse Lighting / Status to show the disclosure.
+  await workspace.locator("[data-ga-expand-all]").click();
   await page.getByRole("button", { name: "0/0/2", exact: true }).first().click();
   await expect(page.locator(".workbench-pane-right").getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Kitchen light");
   const status = workspace.locator("[data-ga-expand]").filter({ hasText: "Status" }).first();

@@ -52,6 +52,7 @@ const click = async (element: Element, init: MouseEventInit = {}) => {
 
 it("collapses stored ranges without discarding selection or selecting hidden Shift rows", async () => {
   await act(async () => root.render(<Harness />));
+  await expandAll();
   const main = host.querySelector<HTMLButtonElement>('[data-ga-expand="range:20:0"]');
   expect(main, "production workspace must disclose real stored ranges").not.toBeNull();
   const alpha = host.querySelector<HTMLButtonElement>('[data-ga-select="30"]')!;
@@ -64,6 +65,12 @@ it("collapses stored ranges without discarding selection or selecting hidden Shi
   expect(host.querySelector("[data-selection]")!.textContent).toBe("30");
 });
 
+/** Issue #11: address lists start closed; row-focused cases open them like a user. */
+async function expandAll() {
+  const button = host.querySelector<HTMLButtonElement>("[data-ga-expand-all]");
+  expect(button, "the tree view offers Expand all").not.toBeNull();
+  await act(async () => button!.click());
+}
 async function chooseView(view: string) {
   const select = host.querySelector<HTMLSelectElement>("[data-ga-view]");
   expect(select, "production workspace must offer a presentation switch").not.toBeNull();
@@ -79,6 +86,7 @@ async function search(query: string) {
 
 it("browses actual range columns while keeping query, selection and scope on view switching", async () => {
   await act(async () => root.render(<Harness />));
+  await expandAll();
   await click(host.querySelector('[data-ga-select="30"]')!);
   await search("Alpha");
   await chooseView("columns");
@@ -147,6 +155,7 @@ it("renders a visible bounded window in every view and extends it explicitly", a
   const many: InstallationNode = { ...installation, group_ranges: [], group_addresses: Array.from({ length: 1200 }, (_, i) =>
     ({ id: 1000 + i, name: `Synthetic ${i}`, address: String(i), range: null, dpts: [], links: [] })) };
   await act(async () => root.render(<Harness input={many} />));
+  await expandAll();
   for (const view of ["tree", "columns", "matrix"]) {
     await chooseView(view);
     expect(host.querySelectorAll("[data-ga-select]"), `${view} initial window`).toHaveLength(500);

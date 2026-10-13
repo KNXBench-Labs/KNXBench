@@ -132,6 +132,10 @@ for (const language of ["en", "de"] as const) {
   test(`${language} GA table and inspector device links share the central editor`, async ({ page }) => {
     const state = await intercept(page, language); await openProject(page, language);
     await page.getByRole("navigation", { name: m["workbench.navigation"], exact: true }).getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
+    // Issue #11: address lists start closed; this case works on rows, so open them like a user.
+    // Issue #11: every installation's tree opens compact; open each one.
+    await expect(page.locator("[data-ga-expand-all]").first()).toBeVisible();
+    for (const button of await page.locator("[data-ga-expand-all]").all()) await button.click();
     await page.locator(".address-table .table-select").first().click();
     // The Inspector lists the address's members (one link here), like the table.
     await expect(page.locator(".inspector .ga-members .device-link")).toHaveCount(1);

@@ -3998,6 +3998,8 @@ describe("App — Devices navigation", () => {
     const root = await renderApp();
     await act(async () => host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!.click());
     await act(async () => findButton("Group addresses").click());
+    // Issue #11: address lists start closed.
+    await act(async () => findButton("Expand all").click());
     await act(async () => host!.querySelector<HTMLButtonElement>(".address-table .table-select")!.click());
     const link = host!.querySelector<HTMLButtonElement>(".address-links-panel .device-link");
     expect(link, "the linked project device must be a navigation button").not.toBeNull();

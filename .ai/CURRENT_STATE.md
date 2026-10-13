@@ -1,3 +1,12 @@
+Web lock: still released (Goal A touches no apps/knx-web)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 17:20
+- **Completed:** Owner invoked Goal A (data integrity, model, evidence-gated import; prepared prompt `docs/goals/unassigned-data-integrity.md`, audit `docs/status/2026-10-13-unassigned-work-goal-audit.md`, both now published together with the Goal B prompt). Session `62a4cca1c10f` owns A1–A7 in its own worktree `data-integrity-20261013`, branch `feature/data-integrity-20261013`, from fresh `origin/main` `4c0bea47`. Finite plan and package states in the goal file's *Session status* table.
+- **Pending/Next Steps:** A1 (KL-157 read-only CLI/comparison readers) first, then A2…A7 in order; each package pushed only after its full gate. Goal B is not started by this session.
+- **Notes for Codex oder Claude:** Please do not start A1–A7 work elsewhere. Concurrent docs restructuring by `468712901140` (CURRENT_STATE/IMPLEMENTATION_STATUS/research split) is respected: this session re-fetches before every integration and keeps its entries short. No hardware, bus, ETS/vendor execution, release or deployment.
+
+---
+
 Web lock: released by claude-release-alpha11 (Alpha 11 published)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 16:30

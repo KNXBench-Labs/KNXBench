@@ -35,21 +35,31 @@ export default function CatalogPackageUpdate(props: {
   const [attempt, setAttempt] = useState(0);
   const applyingRef = useRef(false);
 
+  // One request per file and "Preview again": StrictMode runs effects twice in
+  // development, and refs survive that, so the second run finds its request
+  // already on the way. Only a really unmounted panel ignores the answer.
+  const mounted = useRef(true);
   useEffect(() => {
-    let current = true;
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const requested = useRef<number | null>(null);
+  useEffect(() => {
+    if (requested.current === attempt) return;
+    requested.current = attempt;
     setPhase({ kind: "previewing" });
     void (async () => {
+      const current = () => mounted.current && requested.current === attempt;
       try {
         const answer = await api.previewCatalogUpdate(file);
-        if (current) setPhase({ kind: "previewed", preview: answer.preview, applying: false, error: null });
+        if (current()) setPhase({ kind: "previewed", preview: answer.preview, applying: false, error: null });
       } catch (e) {
-        if (!current) return;
+        if (!current()) return;
         if (isLegacyProductRefusal(e)) onLegacy(file);
         else setPhase({ kind: "failed", message: api.errorMessage(e) });
       }
     })();
-    return () => { current = false; };
-    // A new file or "Preview again" starts afresh; the callbacks do not.
+    // The parent keys this panel by file; "Preview again" starts afresh, the callbacks do not.
   }, [file, attempt]);
 
   const busy = phase.kind === "previewing" || (phase.kind === "previewed" && phase.applying);

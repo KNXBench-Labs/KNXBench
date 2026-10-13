@@ -33,6 +33,7 @@ afterEach(async () => {
   root = undefined;
   host?.remove();
   document.documentElement.removeAttribute("data-motion-level");
+  document.documentElement.removeAttribute("data-motion-flow");
   vi.unstubAllGlobals();
   seen = [];
 });
@@ -72,4 +73,19 @@ describe("useFlowMotion", () => {
     root = undefined;
     expect(media.listeners.size).toBe(0);
   });
+});
+
+it("a live flow-category change stops the script and cannot bypass global or OS Off", async () => {
+  const media = fakeMedia(false); vi.stubGlobal("matchMedia", media.matchMedia);
+  document.documentElement.setAttribute("data-motion-level", "standard");
+  host = document.createElement("div"); document.body.appendChild(host); root = createRoot(host);
+  await act(async () => root!.render(<Probe />)); expect(seen.at(-1)).toBe(true);
+  await act(async () => { document.documentElement.setAttribute("data-motion-flow", "off"); await Promise.resolve(); });
+  expect(seen.at(-1)).toBe(false);
+  await act(async () => { document.documentElement.setAttribute("data-motion-flow", "subtle"); await Promise.resolve(); });
+  expect(seen.at(-1)).toBe(true);
+  await act(async () => { document.documentElement.setAttribute("data-motion-level", "off"); await Promise.resolve(); });
+  expect(seen.at(-1)).toBe(false);
+  await act(async () => { media.set(true); document.documentElement.setAttribute("data-motion-level", "standard"); await Promise.resolve(); });
+  expect(seen.at(-1)).toBe(false);
 });

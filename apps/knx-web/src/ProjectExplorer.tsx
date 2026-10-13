@@ -19,6 +19,7 @@ import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 import { writeDraggedGroupAddress } from "./groupAddressDrag";
 import { installationLabel } from "./installationPresentation";
+import type { ImportFindingSeverity } from "./importFindings";
 
 const DEVICE_DRAG_MIME = "application/x-knxbench-device-id";
 
@@ -1021,6 +1022,8 @@ export default function ProjectExplorer(
     onSummary: (message: string) => void;
     onError: (error: unknown) => void;
     onRevealComplete?: (generation: number) => void;
+    /** Opens the session log narrowed to this project's import findings. */
+    onOpenImportFindings?: (severity: ImportFindingSeverity) => void;
     /** ADR-0093: opens the add-device wizard; the App owns it. */
     onAddDevice: (target: DeviceWizardTarget) => void;
   } & SelectionProps & { revealRequest?: RevealRequest | null },
@@ -1155,17 +1158,36 @@ export default function ProjectExplorer(
         <footer>
           {tree.errors > 0 && (
             <div className="import-errors">
-              {t("explorer.importErrorsCount", { count: tree.errors })}
+              <ImportFindingCount severity="error" onOpen={props.onOpenImportFindings}>
+                {t("explorer.importErrorsCount", { count: tree.errors })}
+              </ImportFindingCount>
             </div>
           )}
           {tree.warnings > 0 && (
             <div className="import-warnings">
-              {t("explorer.importWarningsCount", { count: tree.warnings })}
+              <ImportFindingCount severity="warning" onOpen={props.onOpenImportFindings}>
+                {t("explorer.importWarningsCount", { count: tree.warnings })}
+              </ImportFindingCount>
             </div>
           )}
         </footer>
       )}
     </div>
     </RevealCompletionContext.Provider>
+  );
+}
+
+/** A footer count that opens its log findings; plain text without a host. */
+function ImportFindingCount(props: {
+  severity: ImportFindingSeverity;
+  onOpen?: (severity: ImportFindingSeverity) => void;
+  children: React.ReactNode;
+}) {
+  const open = props.onOpen;
+  if (!open) return <>{props.children}</>;
+  return (
+    <button type="button" className="import-diagnostic-link" onClick={() => open(props.severity)}>
+      {props.children}
+    </button>
   );
 }

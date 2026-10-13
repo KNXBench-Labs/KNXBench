@@ -1,10 +1,10 @@
-/** Verifies the toast queue: errors reported once, achievement popups linger and leave animated. */
+/** Verifies the toast queue: lifetimes, pauses, visible slots, retained history, animated exits. */
 // @vitest-environment happy-dom
-import { act, StrictMode } from "react";
+import { act, StrictMode, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
-import { ACHIEVEMENT_TOAST_MS, TOAST_EXIT_FALLBACK_MS, useToasts, type AchievementPopup } from "./toast";
+import { ACHIEVEMENT_TOAST_MS, MAX_QUEUED_TOASTS, MAX_VISIBLE_TOASTS, TOAST_EXIT_FALLBACK_MS, useToasts, type AchievementPopup } from "./toast";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -63,6 +63,134 @@ it("retains achievements and reports notifications evicted by the bounded sessio
   expect(toasts!.notifications).toHaveLength(1000);
   expect(toasts!.notificationDroppedCount).toBe(2);
   expect(toasts!.notifications[999].entry.message).toBe("note 1000");
+});
+
+// Ported from the Codex ux-feedback branch (AP1, 219e4c3e), adapted to main's
+// notification history, which replaces that branch's separate error archive.
+it("pauses a focused toast and resumes only its remaining visible lifetime", async () => {
+  vi.useFakeTimers();
+  await mount();
+  await act(async () => toasts!.pushFun("Read this before closing."));
+  const id = toasts!.toasts[0].id;
+  await act(async () => vi.advanceTimersByTime(3000));
+  await act(async () => toasts!.pause(id, "focus"));
+  await act(async () => vi.advanceTimersByTime(20000));
+  expect(toasts!.toasts[0].leaving).toBeFalsy();
+  await act(async () => toasts!.resume(id, "focus"));
+  await act(async () => vi.advanceTimersByTime(5999));
+  expect(toasts!.toasts[0].leaving).toBeFalsy();
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(toasts!.toasts[0].leaving).toBe(true);
+});
+
+it("does not resume a hovered toast while its close button still has focus", async () => {
+  vi.useFakeTimers();
+  await mount();
+  await act(async () => toasts!.pushFun("Long reading."));
+  const id = toasts!.toasts[0].id;
+  await act(async () => { toasts!.pause(id, "hover"); toasts!.pause(id, "focus"); });
+  await act(async () => toasts!.resume(id, "hover"));
+  await act(async () => vi.advanceTimersByTime(20000));
+  expect(toasts!.toasts[0].leaving).toBeFalsy();
+});
+
+it("holds every lifetime while the document is hidden", async () => {
+  vi.useFakeTimers();
+  await mount();
+  let state: DocumentVisibilityState = "visible";
+  const descriptor = Object.getOwnPropertyDescriptor(document, "visibilityState");
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+  try {
+    await act(async () => toasts!.pushError("Refused while you were away."));
+    await act(async () => vi.advanceTimersByTime(4000));
+    state = "hidden";
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+    await act(async () => vi.advanceTimersByTime(60000));
+    expect(toasts!.toasts[0].leaving).toBeFalsy();
+    state = "visible";
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+    await act(async () => vi.advanceTimersByTime(4999));
+    expect(toasts!.toasts[0].leaving).toBeFalsy();
+    await act(async () => vi.advanceTimersByTime(1));
+    expect(toasts!.toasts[0].leaving).toBe(true);
+  } finally {
+    if (descriptor) Object.defineProperty(document, "visibilityState", descriptor);
+    else delete (document as { visibilityState?: unknown }).visibilityState;
+  }
+});
+
+it("keeps a toast pushed during StrictMode's first effect pass alive and dismissable", async () => {
+  // App pushes its startup toast from an effect; StrictMode then runs every
+  // effect cleanup once and mounts again. The card must survive that.
+  vi.useFakeTimers();
+  function StartupProbe() {
+    toasts = useToasts();
+    const pushed = useRef(false);
+    useEffect(() => {
+      if (pushed.current) return;
+      pushed.current = true;
+      toasts!.pushFun("Happy late night.");
+    });
+    return null;
+  }
+  host = document.createElement("div");
+  document.body.appendChild(host);
+  root = createRoot(host);
+  await act(async () => root!.render(<StrictMode><StartupProbe /></StrictMode>));
+  expect(toasts!.toasts).toMatchObject([{ message: "Happy late night." }]);
+  await act(async () => vi.advanceTimersByTime(ACHIEVEMENT_TOAST_MS));
+  expect(toasts!.toasts[0].leaving).toBe(true);
+  await act(async () => vi.advanceTimersByTime(TOAST_EXIT_FALLBACK_MS));
+  expect(toasts!.toasts).toEqual([]);
+  await act(async () => toasts!.pushFun("Second."));
+  const id = toasts!.toasts[0].id;
+  await act(async () => toasts!.dismiss(id));
+  expect(toasts!.toasts[0].leaving).toBe(true);
+});
+
+it("retires all owned timers on unmount", async () => {
+  vi.useFakeTimers();
+  await mount();
+  await act(async () => { toasts!.pushFun("Saved."); toasts!.pushError("Refused."); });
+  expect(vi.getTimerCount()).toBeGreaterThan(0);
+  await act(async () => root!.unmount());
+  root = undefined;
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+it("keeps multiple errors instead of replacing the previous unread message", async () => {
+  vi.useFakeTimers(); await mount();
+  await act(async () => { toasts!.pushError("First import refused."); toasts!.pushError("Second import refused."); });
+  expect(toasts!.toasts).toHaveLength(2);
+  expect(toasts!.toasts[0].message).toContain("First import refused.");
+  expect(toasts!.toasts[1].message).toContain("Second import refused.");
+});
+
+it("starts a queued toast's full lifetime only when a visible slot becomes free", async () => {
+  vi.useFakeTimers(); await mount();
+  await act(async () => { for (let i = 0; i < MAX_VISIBLE_TOASTS + 1; i++) toasts!.pushFun(`Message ${i}`); });
+  expect(toasts!.toasts).toHaveLength(MAX_VISIBLE_TOASTS);
+  expect(toasts!.pendingCount).toBe(1);
+  await act(async () => vi.advanceTimersByTime(ACHIEVEMENT_TOAST_MS + TOAST_EXIT_FALLBACK_MS));
+  expect(toasts!.toasts).toMatchObject([{ message: "Message 3" }]);
+  expect(toasts!.pendingCount).toBe(0);
+  await act(async () => vi.advanceTimersByTime(ACHIEVEMENT_TOAST_MS - 1));
+  expect(toasts!.toasts[0].leaving).toBeFalsy();
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(toasts!.toasts[0].leaving).toBe(true);
+});
+
+it("retires the oldest waiting card on overflow, counts it, and keeps it in the history", async () => {
+  vi.useFakeTimers(); await mount();
+  await act(async () => { for (let i = 0; i < MAX_QUEUED_TOASTS + 2; i++) toasts!.pushFun(`Card ${i}`); });
+  expect(toasts!.queueDropped).toBe(2);
+  // The cards on screen are never the ones retired.
+  expect(toasts!.toasts.map((entry) => entry.message)).toEqual(["Card 0", "Card 1", "Card 2"]);
+  expect(toasts!.pendingCount).toBe(MAX_QUEUED_TOASTS - MAX_VISIBLE_TOASTS);
+  const messages = toasts!.notifications.map((notification) => notification.entry.message);
+  expect(messages).toHaveLength(MAX_QUEUED_TOASTS + 2);
+  expect(messages).toContain("Card 3");
+  expect(messages).toContain("Card 4");
 });
 
 const popup: AchievementPopup = { title: "Bus Master", description: "Unlocked every other achievement.", tier: "legendary", glyph: "trophy" };

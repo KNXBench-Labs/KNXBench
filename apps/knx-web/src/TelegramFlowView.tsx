@@ -9,6 +9,8 @@ import { FlowAnimator, type AnimatorScheduler, type AnimatorSink, type DrawnPuls
 import { type DynamicNode } from "./flowDynamics";
 import { readableLayout, fitFlowCamera, flowFootprint, displayFlowLabel, routeFlowEdge, DETAILED_ROUTING_NODES, DETAILED_ROUTING_EDGES } from "./flowPresentation";
 import { nodeFlowTarget, type FlowNavigation, type FlowTarget } from "./flowNavigation";
+import FlowImageExportDialog from "./FlowImageExportDialog";
+import { selectSvgViewport, type ViewSelection } from "./flowImageExport";
 import { useFlowMotion } from "./flowMotion";
 import { flowNow, type FlowFeed, type FlowSourceDiagnostics } from "./flowFeed";
 import { BADGE_LINE, NODE_RADIUS, TEXT_CLEARANCE, edgeOpacity, pointOnEdge, type Point, type EdgeGeometry } from "./flowLayout";
@@ -295,14 +297,19 @@ function drawPulses(layer: SVGGElement | null, pulses: readonly DrawnPulse[], ge
   });
 }
 
-export default function TelegramFlowView({ feed, navigation, onOpenWindow, active = true }: {
-  feed: Pick<FlowFeed, "model" | "version" | "source">; navigation?: FlowNavigation; onOpenWindow?: () => void; active?: boolean;
+export default function TelegramFlowView({ feed, navigation, onOpenWindow, captureScope, active = true }: {
+  feed: Pick<FlowFeed, "model" | "version" | "source">; navigation?: FlowNavigation; onOpenWindow?: () => void; captureScope?: string; active?: boolean;
 }) {
   const t = useTranslate();
   const markerId = `flow-arrow-${useId().replace(/:/g, "")}`;
   const model = feed.model;
   const motion = useFlowMotion();
   const [frozen, setFrozen] = useState(false);
+  const [imageSelection, setImageSelection] = useState<{ selection: ViewSelection; format: "png" | "gif" } | null>(null);
+  const [imageFailure, setImageFailure] = useState(false);
+  const sourceKey = JSON.stringify([model?.identity.serverIncarnation, model?.identity.sessionId, captureScope, model?.closed,
+    [...new Set(model ? [...model.contexts.values()].flatMap(context => context.kind === "participants" && context.projectScope ? [context.projectScope] : []) : [])].sort()]);
+  useEffect(() => { if (!active) setImageSelection(null); }, [active]);
   const [maximized, setMaximized] = useState(false);
   const [autoZoom, setAutoZoom] = useState(true);
   const [box, setBox] = useState(BOX);
@@ -549,6 +556,7 @@ export default function TelegramFlowView({ feed, navigation, onOpenWindow, activ
     if (event.target !== event.currentTarget) return;
     setAutoZoom(false);
     drag.current = { x: event.clientX, y: event.clientY, view };
+    event.currentTarget.classList.add("flow-dragging");
     event.currentTarget.setPointerCapture?.(event.pointerId);
   }
 
@@ -563,6 +571,12 @@ export default function TelegramFlowView({ feed, navigation, onOpenWindow, activ
     <section ref={sectionRef} role={maximized ? "dialog" : undefined} aria-modal={maximized || undefined} className={`telegram-flow${maximized ? " flow-maximized" : ""}`} aria-label={t("flow.title")}>
       <p className="flow-explain">{t("flow.explain")}</p>
       <div className="flow-toolbar" role="toolbar" aria-label={t("flow.toolbar")}>
+        {(["png", "gif"] as const).map(format => <button type="button" key={format} onClick={() => {
+          try {
+            const svg = svgRef.current; if (!svg) return;
+            setImageSelection({ selection: selectSvgViewport(svg), format }); setImageFailure(false);
+          } catch { setImageFailure(true); }
+        }}>{t(format === "png" ? "flow.export.png" : "flow.export.gif")}</button>)}
         <button type="button" onClick={() => zoomBy(1 / ZOOM_STEP)}>{t("flow.zoomOut")}</button>
         <button type="button" onClick={() => zoomBy(ZOOM_STEP)}>{t("flow.zoomIn")}</button>
         <button type="button" onClick={() => { setAutoZoom(false); setView(HOME); }}>{t("flow.resetView")}</button>
@@ -576,6 +590,8 @@ export default function TelegramFlowView({ feed, navigation, onOpenWindow, activ
         </button>
         <span className="flow-keys">{t("flow.keys")}</span>
       </div>
+      {imageFailure && <p className="field-error" role="alert">{t("flow.export.invalidInput")}</p>}
+      {imageSelection && <FlowImageExportDialog svgRef={svgRef} selection={imageSelection.selection} initialFormat={imageSelection.format} sourceKey={sourceKey} active={active} onClose={() => setImageSelection(null)} />}
       {!motion && <p className="flow-motion-off">{t("flow.motionOff")}</p>}
       <p className="flow-summary">{t("flow.summary", { nodes: model.nodes.size, edges: model.edges.size })}</p>
       <p className="flow-leader">
@@ -599,15 +615,15 @@ export default function TelegramFlowView({ feed, navigation, onOpenWindow, activ
             aria-label={t("flow.graph")}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
-            onPointerUp={() => { drag.current = null; }}
-            onPointerCancel={() => { drag.current = null; }}
+            onPointerUp={event => { drag.current = null; event.currentTarget.classList.remove("flow-dragging"); }}
+            onPointerCancel={event => { drag.current = null; event.currentTarget.classList.remove("flow-dragging"); }}
           >
             <defs>
               <marker id={markerId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                 <path d="M0,0 L10,5 L0,10 z" className="flow-arrow" />
               </marker>
             </defs>
-            <g transform={`translate(${view.x} ${view.y}) scale(${view.zoom})`} data-zoom={view.zoom}>
+            <g className="flow-camera" transform={`translate(${view.x} ${view.y}) scale(${view.zoom})`} data-zoom={view.zoom}>
               <g aria-hidden="true">
                 {[...model.edges.values()].map((edge) => {
                   const from = position(edge.from);

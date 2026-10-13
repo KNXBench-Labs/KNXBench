@@ -244,6 +244,18 @@ appear up to about a second late; switch *Motion Off* for such an
 installation. Motion Off loses no information. See [known limitations
 §154](../../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only).
 
+### Saving the Flow as an image (newer than Alpha.10)
+
+**PNG snapshot** and **GIF clip** in the Flow toolbar save what the Flow view shows
+right now, nothing else: no sidebar, Inspector, log or earlier history. The dialog
+previews the selected area and asks you to confirm that the file may contain the
+names, addresses and values on screen. A GIF records 1 to 30 seconds at ten frames
+per second, smaller the longer it runs; **Cancel** stops it and nothing is saved. If
+the computer is too busy to take the frames on time, KNXBench refuses the clip
+rather than skip frames; try a shorter one. The camera glides between views unless
+Flow motion is off ([Motion by category](09-settings-and-appearance.md#motion-style-and-motion-level)).
+The screenshots in this manual still show Alpha.10.
+
 ### Space, windows and project links
 
 The canvas uses available width without reserving an empty Inspector column.

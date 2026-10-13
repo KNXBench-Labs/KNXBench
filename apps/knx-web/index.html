@@ -54,6 +54,15 @@
           knownLevels.indexOf(level) !== -1 ? level : "standard",
         );
 
+        var globalLevel = knownLevels.indexOf(level) !== -1 ? level : "standard";
+        // KL-43: mirror motion.ts's reduction-only priority before first paint.
+        [ ["toasts", "motionToasts"], ["achievements", "motionAchievements"], ["flow", "motionFlow"] ].forEach(function (entry) {
+          var category = cached[entry[1]];
+          var effective = globalLevel === "off" || category === "off" ? "off"
+            : globalLevel === "subtle" || category === "subtle" ? "subtle" : "standard";
+          document.documentElement.setAttribute("data-motion-" + entry[0], effective);
+        });
+
         var style = read("motionStyle", "knx-desktop:motion-style");
         var knownStyles = ["apple", "glitch", "crt"];
         document.documentElement.setAttribute(

@@ -108,9 +108,11 @@ Last updated: 2026-10-13 01:10 CEST
 | Theme packs | Import/export; declarative only | alpha.6 |
 | Appearance controls | Accent/density/motion | alpha.6 |
 | Reduced motion | OS preference takes precedence | alpha.6 |
+| Motion per category | Toasts/achievements/Flow; can only reduce | Main-only |
 | Interface languages | English/German/Bavarian/Klingon | alpha.6 |
 | Language packs | Importable JSON translations | alpha.6 |
 | Notifications | Status/errors/achievements | alpha.6 |
+| Notification queue | Three on screen; pause on hover/focus; errors stay | Main-only |
 | Release notifications | Notice only; nothing downloaded; can be switched off | alpha.10 |
 | Achievements | Recorded engineering milestones | alpha.6 |
 | Optional humour | Error/night/holiday messages | alpha.6 |
@@ -132,6 +134,7 @@ Last updated: 2026-10-13 01:10 CEST
 | Bus monitor | Tunnelling; telegram decoding | alpha.6 |
 | Telegram Flow | Read-only; session-local graph | alpha.6 |
 | Separate Flow window | Source-bound; shared monitor | alpha.6 |
+| Flow images | PNG or 1–30 s GIF of the viewport, with consent | Main-only |
 | Activity history | Bounded commissioning metadata | alpha.6 |
 
 ## Partial — Compatibility and hardware

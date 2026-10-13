@@ -94,6 +94,11 @@ export function useMotion(): {
   }, [revision]);
 
   useEffect(() => {
+    for (const category of MOTION_CATEGORIES) document.documentElement.setAttribute(
+      `data-motion-${category}`, effectiveMotionLevel(level, loadMotionCategory(settingsStorage, category)));
+  }, [revision, level]);
+
+  useEffect(() => {
     document.documentElement.setAttribute("data-motion-level", level);
     saveMotionLevel(settingsStorage, level);
   }, [level]);
@@ -104,4 +109,22 @@ export function useMotion(): {
   }, [style]);
 
   return { level, setLevel, style, setStyle };
+}
+
+export type MotionCategory = "toasts" | "achievements" | "flow";
+export type CategoryMotion = "inherit" | "off" | "subtle";
+export const MOTION_CATEGORIES = ["toasts", "achievements", "flow"] as const;
+const CATEGORY_KEYS: Record<MotionCategory, string> = { toasts: "motionToasts", achievements: "motionAchievements", flow: "motionFlow" };
+export function loadMotionCategory(storage: Pick<Storage, "getItem">, category: MotionCategory): CategoryMotion {
+  const raw = storage.getItem(CATEGORY_KEYS[category]);
+  return raw === "off" || raw === "subtle" ? raw : "inherit";
+}
+/** Categories can only reduce; global Off and the OS preference always win. */
+export function effectiveMotionLevel(global: string, category: string, osReduce = false): string {
+  if (osReduce || global === "off" || category === "off") return "off";
+  if (global === "subtle" || category === "subtle") return "subtle";
+  return "standard";
+}
+export function saveMotionCategory(storage: Pick<Storage, "setItem">, category: MotionCategory, value: CategoryMotion): void {
+  storage.setItem(CATEGORY_KEYS[category], value);
 }

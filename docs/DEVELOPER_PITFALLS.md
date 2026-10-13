@@ -105,3 +105,19 @@ already found lying in the grass.
 - **Motion settings live in `data-motion-level`** (set by
   `apps/knx-web/src/motion.ts`), not `data-motion`; assert the attribute the
   app actually sets.
+
+## Effects, bursts and real-time browser specs (ux-feedback port, 2026-10-13)
+
+- **StrictMode runs every effect cleanup once at mount.** A hook whose cleanup
+  discards state (a timer map, a queue) loses whatever an effect of the first pass
+  already created, e.g. App's startup toast. Stop timers in the cleanup, keep the
+  data, re-arm on mount; test with a StrictMode probe that pushes from an effect.
+- **A flag refreshed by an effect lags a burst.** Several synchronous updates run
+  before the effect that recomputes `visible`; decide by queue position or by state
+  computed in the same update.
+- **A browser spec that needs an env var cannot live in the default suite**, which
+  runs every `*.e2e.ts`; default to `test.info().outputPath()`.
+- **Real-time capture specs need a stepped clock.** A capture that refuses rather
+  than skips late frames will refuse on a busy host. Pause the page clock and step
+  one interval per frame after the frame's progress appears; the work itself stays
+  real. `pauseAt` must be ahead of the page's flowing time (use `Date.now() + 1000`).

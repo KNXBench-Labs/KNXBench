@@ -1,5 +1,5 @@
 /** Renders the active toast queue as a dismissible alert/status stack. */
-import type { ToastEntry } from "./toast";
+import type { ToastEntry, ToastPauseReason } from "./toast";
 import { useTranslate } from "./i18n";
 import AchievementBadge from "./AchievementBadge";
 
@@ -11,6 +11,12 @@ export default function ToastStack(props: {
   onDismiss: (id: number) => void;
   onExited?: (id: number) => void;
   onOpen?: (id: number) => void;
+  onPause?: (id: number, reason: ToastPauseReason) => void;
+  onResume?: (id: number, reason: ToastPauseReason) => void;
+  /** Cards waiting for a free slot; their lifetime has not started. */
+  pendingCount?: number;
+  /** Waiting cards retired on queue overflow; the session log keeps them. */
+  queueDropped?: number;
 }) {
   const t = useTranslate();
   if (props.toasts.length === 0) return null;
@@ -21,8 +27,15 @@ export default function ToastStack(props: {
           key={toast.id}
           role={toast.kind === "error" ? "alert" : "status"}
           className={`toast toast--${toast.kind}${toast.leaving ? " toast--leaving" : ""}`}
+          onMouseEnter={() => props.onPause?.(toast.id, "hover")}
+          onMouseLeave={() => props.onResume?.(toast.id, "hover")}
+          onFocus={() => props.onPause?.(toast.id, "focus")}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) props.onResume?.(toast.id, "focus");
+          }}
           onAnimationEnd={(event) => {
-            if (toast.leaving && event.animationName === EXIT_ANIMATION) props.onExited?.(toast.id);
+            // A child's animation (the achievement badge) bubbles here too.
+            if (event.target === event.currentTarget && toast.leaving && event.animationName === EXIT_ANIMATION) props.onExited?.(toast.id);
           }}
         >
           {toast.achievement && <AchievementBadge tier={toast.achievement.tier} glyph={toast.achievement.glyph} />}
@@ -50,6 +63,8 @@ export default function ToastStack(props: {
           </button>
         </div>
       ))}
+      {!!props.pendingCount && <p className="toast-queue-note" role="status">{t("toast.pending", { count: props.pendingCount })}</p>}
+      {!!props.queueDropped && <p className="toast-queue-note">{t("toast.queueDropped", { count: props.queueDropped })}</p>}
     </div>
   );
 }

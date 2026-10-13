@@ -1,6 +1,6 @@
 /** Serves offline browser fixtures without inheriting the application API proxy. */
 import { defineConfig } from "vite";
-import appConfig, { devFileAccess } from "./vite.config";
+import appConfig from "./vite.config";
 
 export default defineConfig({
   ...appConfig,
@@ -10,6 +10,5 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 4173,
     strictPort: true,
-    fs: devFileAccess,
   },
 });

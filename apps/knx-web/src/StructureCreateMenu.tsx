@@ -48,7 +48,17 @@ export function StructureCreateMenu(props: { groups: CreateGroup[]; onChoose: (e
   const menu = useRef<HTMLDetailsElement>(null);
   const grouped = props.groups.filter(group => group.installationId !== null).length > 1;
   const close = () => { if (menu.current) menu.current.open = false; };
-  return <details ref={menu} className="structure-new-menu" onKeyDown={(event) => {
+  // Opens towards the button's end unless that would cross into the explorer; then towards its start.
+  const [align, setAlign] = useState<"start" | "end">("end");
+  const onToggle = () => {
+    const details = menu.current;
+    if (!details?.open) return;
+    const page = (details.closest(".workbench-center") ?? document.documentElement).getBoundingClientRect();
+    const button = details.querySelector("summary")!.getBoundingClientRect();
+    const width = details.querySelector<HTMLElement>(".structure-new-menu-content")?.offsetWidth ?? 0;
+    setAlign(button.right - width >= page.left ? "end" : "start");
+  };
+  return <details ref={menu} className="structure-new-menu" onToggle={onToggle} onKeyDown={(event) => {
     if (event.key === "Escape") { event.stopPropagation(); close(); menu.current?.querySelector("summary")?.focus(); }
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("[data-create-entry]")];
@@ -59,7 +69,7 @@ export function StructureCreateMenu(props: { groups: CreateGroup[]; onChoose: (e
     items[next].focus();
   }}>
     <summary>+ {t("structure.new")}</summary>
-    <div className="structure-new-menu-content" role="group" aria-label={t("structure.newMenu")}>
+    <div className="structure-new-menu-content" data-align={align} role="group" aria-label={t("structure.newMenu")}>
       {props.groups.map(group => <div key={group.installationId ?? "project"} className="structure-new-group"
         data-installation-id={group.installationId ?? undefined}>
         {grouped && group.installationName !== null && <p className="structure-new-group-heading">{group.installationName}</p>}

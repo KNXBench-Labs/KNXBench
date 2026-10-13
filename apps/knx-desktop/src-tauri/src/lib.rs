@@ -28,6 +28,8 @@ use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 mod bus_monitor_export;
+mod download_delivery;
+mod download_handler;
 mod native_json_export;
 mod session_log_export;
 mod web_process;
@@ -222,6 +224,13 @@ pub fn run() {
                 format!("http://127.0.0.1:{port}")
             };
 
+            // In-app downloads go through a native save dialog instead of
+            // landing silently in ~/Downloads (KL-182). All windows share one
+            // WebKit context, so this handler also serves Flow/diagnostics.
+            let staging = Arc::new(download_delivery::Staging::new(
+                app.path().app_cache_dir()?.join("download-staging"),
+            ));
+            staging.remove_abandoned(download_delivery::ABANDONED_AFTER);
             let window = WebviewWindowBuilder::new(
                 app,
                 "main",
@@ -229,6 +238,9 @@ pub fn run() {
             )
             .title("KNXBench")
             .inner_size(1200.0, 800.0)
+            .on_download(move |webview, event| {
+                download_handler::handle_download(webview.app_handle(), &staging, event)
+            })
             .build()?;
 
             let supervisor: SharedSupervisor = Arc::new(Mutex::new(WebProcessSupervisor::new()));

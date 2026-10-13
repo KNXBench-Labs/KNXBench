@@ -2100,7 +2100,7 @@
       "number": 164,
       "title": "Shared achievement counters",
       "topic": "UI and accessibility",
-      "summary": "Counters are installation-wide and UI-only; concurrent increments can be lost. Hidden catalogue entries are not secrets.",
+      "summary": "Counters are installation-wide and UI-only. Since 13 October 2026 concurrent steps add up (deduplicated over the last 1,024 batches). Hidden catalogue entries are not secrets.",
       "file": "KL-164-shared-achievement-counters.md",
       "ledger_ids": [],
       "anchors": [

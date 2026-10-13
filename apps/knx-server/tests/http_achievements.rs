@@ -214,3 +214,95 @@ async fn a_reset_also_clears_a_file_from_a_newer_build_without_destroying_it() {
         body
     );
 }
+
+// KL-164: "one more" steps are additive increments under a request id.
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn twenty_windows_adding_one_step_at_once_count_twenty() {
+    let (state, _dir) = state();
+    record(&state, json!({ "progress": { "power-user": 5 } })).await;
+    // Every window saw 5; with a maximum merge they would all have reported 6.
+    let posts: Vec<_> = (0..20)
+        .map(|n| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                record(
+                    &state,
+                    json!({ "increments": { "power-user": 1 }, "requestId": format!("window-{n:04}") }),
+                )
+                .await
+            })
+        })
+        .collect();
+    for post in posts {
+        assert_eq!(post.await.unwrap().0, StatusCode::OK);
+    }
+    let (_, body) = get(&state).await;
+    assert_eq!(body["progress"]["power-user"], 25);
+}
+
+#[tokio::test]
+async fn a_duplicated_retried_or_reordered_batch_counts_once() {
+    let (state, dir) = state();
+    let first = json!({ "increments": { "power-user": 2 }, "requestId": "batch-first-01" });
+    let second = json!({ "increments": { "power-user": 1 }, "requestId": "batch-second-1",
+                         "progress": { "time-traveller": 3 } });
+    for delta in [&second, &first, &first, &second, &first] {
+        let (status, _) = record(&state, delta.clone()).await;
+        assert_eq!(status, StatusCode::OK);
+    }
+    let (_, body) = get(&state).await;
+    assert_eq!(
+        body["progress"],
+        json!({ "power-user": 3, "time-traveller": 3 })
+    );
+    assert!(
+        body.get("appliedRequests").is_none(),
+        "the dedup log stays a server detail"
+    );
+    // A restart reads the log back from the file: the same batch still counts once.
+    let restarted = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
+    let (status, body) = record(&restarted, first).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["progress"]["power-user"], 3);
+}
+
+#[tokio::test]
+async fn a_failed_write_counts_nothing_and_its_retry_counts_once() {
+    let (state, dir) = state();
+    record(&state, json!({ "progress": { "power-user": 1 } })).await;
+    let before = std::fs::read_to_string(record_file(&dir)).unwrap();
+    // The temporary file cannot be created, whoever runs the test.
+    let blocker = dir
+        .path()
+        .join(format!("{}.tmp", knx_server::ACHIEVEMENTS_FILE_NAME));
+    std::fs::create_dir(&blocker).unwrap();
+    let batch = json!({ "increments": { "power-user": 1 }, "requestId": "retry-me-0001" });
+    let (status, _) = record(&state, batch.clone()).await;
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(std::fs::read_to_string(record_file(&dir)).unwrap(), before);
+    std::fs::remove_dir(&blocker).unwrap();
+    let (status, body) = record(&state, batch.clone()).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body["progress"]["power-user"], 2,
+        "the retry was not mistaken for a duplicate"
+    );
+    let (_, body) = record(&state, batch).await;
+    assert_eq!(body["progress"]["power-user"], 2);
+}
+
+#[tokio::test]
+async fn increments_without_a_request_id_are_refused_and_a_reset_forgets_the_log() {
+    let (state, dir) = state();
+    let (status, body) = record(&state, json!({ "increments": { "power-user": 1 } })).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(body.to_string().contains("request id"), "{body}");
+    assert!(!record_file(&dir).exists());
+    let batch = json!({ "increments": { "power-user": 1 }, "requestId": "before-reset-1" });
+    record(&state, batch.clone()).await;
+    send(&state, "POST", "/api/achievements/reset", None).await;
+    // The new record starts with an empty log, like everything else in it.
+    let (_, body) = record(&state, batch).await;
+    assert_eq!(body["progress"]["power-user"], 1);
+}

@@ -24,6 +24,14 @@
 //! highest value — so two windows reporting at the same moment cannot
 //! undo each other. The one way back is an explicit reset, and even that
 //! moves the old file aside instead of deleting it.
+//!
+//! KL-164: a "one more" counter cannot be a maximum — two windows that
+//! both saw 5 would both report 6 and one step was lost. Such steps arrive
+//! as additive `increments` under a client `requestId`. The ids of the
+//! last [`MAX_APPLIED_REQUESTS`] applied batches are kept in the file
+//! (`appliedRequests`), so a duplicated, retried or reordered batch counts
+//! once. Older builds keep that member verbatim like any unknown one; the
+//! schema version does not change.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -56,9 +64,21 @@ pub const MAX_PROGRESS: u64 = 9_007_199_254_740_991;
 /// The longest id accepted.
 const MAX_ID_LEN: usize = 64;
 
+/// How many applied request ids the record remembers. A batch replayed
+/// after this many newer ones would count again; real clients retry within
+/// seconds, so the window is generous, and it bounds the file.
+pub const MAX_APPLIED_REQUESTS: usize = 1024;
+
+/// The largest single increment accepted: a batch is a handful of events.
+pub const MAX_INCREMENT: u64 = 10_000;
+
+const REQUEST_ID_MIN_LEN: usize = 8;
+const REQUEST_ID_MAX_LEN: usize = 64;
+
 const SCHEMA_VERSION_FIELD: &str = "schemaVersion";
 const UNLOCKED_FIELD: &str = "unlocked";
 const PROGRESS_FIELD: &str = "progress";
+const APPLIED_REQUESTS_FIELD: &str = "appliedRequests";
 
 /// The record in memory.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -67,12 +87,16 @@ pub struct AchievementRecord {
     pub unlocked: BTreeMap<String, String>,
     /// Achievement id -> highest counter value reported.
     pub progress: BTreeMap<String, u64>,
+    /// Request ids of applied increment batches, oldest first, at most
+    /// [`MAX_APPLIED_REQUESTS`].
+    pub applied_requests: Vec<String>,
     /// Top-level members this build does not know, carried verbatim so a
     /// newer minor addition is not lost by a write from this one.
     pub extra: Map<String, Value>,
 }
 
-/// What a client asks to be merged in. Same two maps, nothing else.
+/// What a client asks to be merged in: maxima (`unlocked`, `progress`)
+/// and, for "one more" counters, additive `increments` under a request id.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AchievementDelta {
@@ -80,6 +104,10 @@ pub struct AchievementDelta {
     pub unlocked: BTreeMap<String, String>,
     #[serde(default)]
     pub progress: BTreeMap<String, u64>,
+    #[serde(default)]
+    pub increments: BTreeMap<String, u64>,
+    #[serde(default, rename = "requestId")]
+    pub request_id: Option<String>,
 }
 
 /// What [`load`] found.
@@ -167,9 +195,19 @@ fn parse(raw: &str) -> Result<Parsed, &'static str> {
         Some(value) => serde_json::from_value::<BTreeMap<String, u64>>(value)
             .map_err(|_| "has a \"progress\" member that is not a map of counters")?,
     };
+    let applied_requests = match root.remove(APPLIED_REQUESTS_FIELD) {
+        None | Some(Value::Null) => Vec::new(),
+        Some(value) => serde_json::from_value::<Vec<String>>(value)
+            .ok()
+            .filter(|ids| {
+                ids.len() <= MAX_APPLIED_REQUESTS && ids.iter().all(|id| is_valid_request_id(id))
+            })
+            .ok_or("has an \"appliedRequests\" member that is not a short list of request ids")?,
+    };
     Ok(Parsed::Current(AchievementRecord {
         unlocked,
         progress,
+        applied_requests,
         extra: root,
     }))
 }
@@ -200,6 +238,12 @@ pub fn store(data_dir: &Path, record: &AchievementRecord) -> std::io::Result<()>
         PROGRESS_FIELD.to_string(),
         serde_json::to_value(&record.progress)?,
     );
+    if !record.applied_requests.is_empty() {
+        root.insert(
+            APPLIED_REQUESTS_FIELD.to_string(),
+            serde_json::to_value(&record.applied_requests)?,
+        );
+    }
     let mut body = serde_json::to_string_pretty(&Value::Object(root))?;
     body.push('\n');
     crate::data_file::write_atomically(data_dir, ACHIEVEMENTS_FILE_NAME, &body)
@@ -209,13 +253,18 @@ pub fn store(data_dir: &Path, record: &AchievementRecord) -> std::io::Result<()>
 /// slugs, timestamps are RFC 3339, counters fit [`MAX_PROGRESS`], and the
 /// delta names at most [`MAX_DELTA_ENTRIES`] ids.
 pub fn validate(delta: &AchievementDelta) -> Result<(), String> {
-    let named = delta.unlocked.len() + delta.progress.len();
+    let named = delta.unlocked.len() + delta.progress.len() + delta.increments.len();
     if named > MAX_DELTA_ENTRIES {
         return Err(format!(
             "a report may name at most {MAX_DELTA_ENTRIES} achievements, this one names {named}"
         ));
     }
-    for id in delta.unlocked.keys().chain(delta.progress.keys()) {
+    for id in delta
+        .unlocked
+        .keys()
+        .chain(delta.progress.keys())
+        .chain(delta.increments.keys())
+    {
         if !is_valid_id(id) {
             return Err(format!(
                 "\"{id}\" is not an achievement id (lowercase letters, digits and dashes, \
@@ -237,7 +286,30 @@ pub fn validate(delta: &AchievementDelta) -> Result<(), String> {
             ));
         }
     }
-    Ok(())
+    for (id, by) in &delta.increments {
+        if *by == 0 || *by > MAX_INCREMENT {
+            return Err(format!(
+                "the increment of \"{id}\" must be between 1 and {MAX_INCREMENT}"
+            ));
+        }
+    }
+    match &delta.request_id {
+        Some(id) if !is_valid_request_id(id) => Err(format!(
+            "a request id has {REQUEST_ID_MIN_LEN} to {REQUEST_ID_MAX_LEN} letters, digits, \
+             dashes or underscores"
+        )),
+        None if !delta.increments.is_empty() => {
+            Err("increments need a request id, so a retry cannot count twice".to_string())
+        }
+        _ => Ok(()),
+    }
+}
+
+fn is_valid_request_id(id: &str) -> bool {
+    (REQUEST_ID_MIN_LEN..=REQUEST_ID_MAX_LEN).contains(&id.len())
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 
 fn is_valid_id(id: &str) -> bool {
@@ -265,19 +337,22 @@ fn is_earlier(candidate: &str, existing: &str) -> bool {
 
 /// Merges a validated delta into `record`. An unlock keeps its earliest
 /// timestamp, a counter its highest value; nothing is ever removed.
+/// Increments add up, once per request id while that id is remembered.
 /// Refuses, leaving `record` unchanged, when the result would exceed
 /// [`MAX_RECORD_ENTRIES`].
 pub fn merge(record: &mut AchievementRecord, delta: AchievementDelta) -> Result<(), String> {
+    let new_counters: std::collections::BTreeSet<&String> = delta
+        .progress
+        .keys()
+        .chain(delta.increments.keys())
+        .filter(|id| !record.progress.contains_key(*id))
+        .collect();
     let added = delta
         .unlocked
         .keys()
         .filter(|id| !record.unlocked.contains_key(*id))
         .count()
-        + delta
-            .progress
-            .keys()
-            .filter(|id| !record.progress.contains_key(*id))
-            .count();
+        + new_counters.len();
     let total = record.unlocked.len() + record.progress.len() + added;
     if total > MAX_RECORD_ENTRIES {
         return Err(format!(
@@ -295,6 +370,22 @@ pub fn merge(record: &mut AchievementRecord, delta: AchievementDelta) -> Result<
     for (id, value) in delta.progress {
         let entry = record.progress.entry(id).or_insert(0);
         *entry = (*entry).max(value);
+    }
+    let applied = delta
+        .request_id
+        .as_ref()
+        .is_some_and(|id| record.applied_requests.contains(id));
+    if let (false, Some(request_id)) = (applied || delta.increments.is_empty(), delta.request_id) {
+        for (id, by) in delta.increments {
+            let entry = record.progress.entry(id).or_insert(0);
+            *entry = entry.saturating_add(by).min(MAX_PROGRESS);
+        }
+        record.applied_requests.push(request_id);
+        let excess = record
+            .applied_requests
+            .len()
+            .saturating_sub(MAX_APPLIED_REQUESTS);
+        record.applied_requests.drain(..excess);
     }
     Ok(())
 }
@@ -334,6 +425,145 @@ mod tests {
                 .iter()
                 .map(|(k, v)| ((*k).to_string(), *v))
                 .collect(),
+            ..AchievementDelta::default()
+        }
+    }
+
+    fn increments(request_id: &str, by: &[(&str, u64)]) -> AchievementDelta {
+        AchievementDelta {
+            increments: by.iter().map(|(k, v)| ((*k).to_string(), *v)).collect(),
+            request_id: Some(request_id.to_string()),
+            ..AchievementDelta::default()
+        }
+    }
+
+    #[test]
+    fn increments_from_two_windows_both_count() {
+        let mut record = AchievementRecord::default();
+        merge(&mut record, delta(&[], &[("power-user", 5)])).unwrap();
+        // Both windows saw 5 and each adds one step.
+        merge(
+            &mut record,
+            increments("window-a-0001", &[("power-user", 1)]),
+        )
+        .unwrap();
+        merge(
+            &mut record,
+            increments("window-b-0001", &[("power-user", 1)]),
+        )
+        .unwrap();
+        assert_eq!(record.progress["power-user"], 7);
+    }
+
+    #[test]
+    fn a_repeated_or_reordered_batch_counts_once() {
+        let mut record = AchievementRecord::default();
+        let first = increments("batch-0000001", &[("power-user", 2)]);
+        let second = increments("batch-0000002", &[("power-user", 1), ("night-owl", 1)]);
+        merge(&mut record, second.clone()).unwrap();
+        merge(&mut record, first.clone()).unwrap();
+        merge(&mut record, first).unwrap();
+        merge(&mut record, second).unwrap();
+        assert_eq!(record.progress["power-user"], 3);
+        assert_eq!(record.progress["night-owl"], 1);
+        assert_eq!(record.applied_requests, ["batch-0000002", "batch-0000001"]);
+    }
+
+    #[test]
+    fn the_dedup_log_is_bounded_and_survives_the_file() {
+        let dir = data_dir();
+        let mut record = AchievementRecord::default();
+        for n in 0..=MAX_APPLIED_REQUESTS {
+            merge(
+                &mut record,
+                increments(&format!("request-{n:06}"), &[("power-user", 1)]),
+            )
+            .unwrap();
+        }
+        assert_eq!(record.applied_requests.len(), MAX_APPLIED_REQUESTS);
+        assert_eq!(
+            record.applied_requests[0], "request-000001",
+            "the oldest id is forgotten first"
+        );
+        store(dir.path(), &record).unwrap();
+        let mut reloaded = load(dir.path()).unwrap().record();
+        assert_eq!(reloaded, record);
+        merge(
+            &mut reloaded,
+            increments("request-000500", &[("power-user", 1)]),
+        )
+        .unwrap();
+        assert_eq!(
+            reloaded.progress["power-user"], record.progress["power-user"],
+            "remembered after a restart"
+        );
+        merge(
+            &mut reloaded,
+            increments("request-000000", &[("power-user", 1)]),
+        )
+        .unwrap();
+        assert_eq!(
+            reloaded.progress["power-user"],
+            record.progress["power-user"] + 1,
+            "an id older than the window counts again: the documented bound"
+        );
+    }
+
+    #[test]
+    fn increments_saturate_and_need_a_valid_request_id() {
+        let mut record = AchievementRecord::default();
+        merge(&mut record, delta(&[], &[("power-user", MAX_PROGRESS - 1)])).unwrap();
+        merge(
+            &mut record,
+            increments("saturate-001", &[("power-user", 5)]),
+        )
+        .unwrap();
+        assert_eq!(record.progress["power-user"], MAX_PROGRESS);
+        let mut anonymous = increments("x", &[("power-user", 1)]);
+        anonymous.request_id = None;
+        assert!(validate(&anonymous).unwrap_err().contains("request id"));
+        for bad in [
+            "short",
+            "has space-in-it",
+            "ümlaut-request",
+            &"x".repeat(65),
+        ] {
+            assert!(
+                validate(&increments(bad, &[("power-user", 1)])).is_err(),
+                "{bad}"
+            );
+        }
+        assert!(validate(&increments("fine-request_01", &[("power-user", 0)])).is_err());
+        assert!(validate(&increments(
+            "fine-request_01",
+            &[("power-user", MAX_INCREMENT + 1)]
+        ))
+        .is_err());
+        assert!(validate(&increments("fine-request_01", &[("Power", 1)])).is_err());
+        assert_eq!(
+            validate(&increments(
+                "fine-request_01",
+                &[("power-user", MAX_INCREMENT)]
+            )),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn a_damaged_dedup_log_is_moved_aside_like_any_damage() {
+        for applied in [json!("one"), json!([1, 2]), json!(["no spaces allowed"])] {
+            let dir = data_dir();
+            write(
+                &dir,
+                &json!({ "schemaVersion": 1, "appliedRequests": applied }),
+            );
+            assert!(
+                matches!(
+                    load(dir.path()).unwrap(),
+                    AchievementsLoad::Quarantined { .. }
+                ),
+                "{applied}"
+            );
         }
     }
 
@@ -537,6 +767,7 @@ mod tests {
             progress: (0..=MAX_DELTA_ENTRIES)
                 .map(|i| (format!("c{i}"), 1))
                 .collect(),
+            ..AchievementDelta::default()
         };
         assert!(validate(&too_many).is_err());
         let at_limit = AchievementDelta {
@@ -544,6 +775,7 @@ mod tests {
             progress: (0..MAX_DELTA_ENTRIES)
                 .map(|i| (format!("c{i}"), 1))
                 .collect(),
+            ..AchievementDelta::default()
         };
         assert_eq!(validate(&at_limit), Ok(()));
     }

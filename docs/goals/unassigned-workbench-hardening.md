@@ -31,7 +31,7 @@ blocked (named missing evidence) or excluded; nothing else is added.
 | B9 | Issue #14: hover `transform` reset app-wide (`button:hover:not(:disabled)`), FsPicker geometry regression | delivered (W42 entry) |
 | B10 | Issue #11: group-address tree starts collapsed (`expanded` set), Expand/Collapse all, selection ancestors and filter matches open, per-project view state in localStorage | delivered (W42 entry) |
 | B11 | Issue #13: Log time column, even rows, one `Export…` button with scope in its dialog, plain link/unlink messages | blocked until `log-16k` (bcee21b10872) lands on main; touches its files |
-| B12 | Issues #12 + #15: one `+ New` menu per header reusing existing forms (structure, topology, group addresses incl. a **Group address** entry with range preselection, grouped per installation); fix the three stale "first installation only" manual sentences | planned — after B10 |
+| B12 | Issues #12 + #15: one `+ New` menu per header reusing existing forms (structure, topology, group addresses incl. a **Group address** entry with range preselection, grouped per installation); fix the three stale "first installation only" manual sentences | delivered (W42 entry) |
 | B13 | Issue #16: collapsing a communication-object channel hides its child rows/editors while drafts, pending requests and results survive reopening ([triage](../status/2026-10-13-issue-16-triage.md)); contract + ADR-0102 update | delivered (W42 entry) |
 
 B9–B12 were added on 13 October at the owner's request (triage `59b1ef8d0f72`, handover 22:10);

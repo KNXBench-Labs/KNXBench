@@ -522,17 +522,21 @@ function GroupAddressItem(props: { ga: GroupAddressNode; revealRequest?: RevealR
 // installation's own flat `group_ranges` list
 // (main and middle ranges alike) — an unset selection creates the address
 // with no range, same as every group address created before this cycle.
-function NewGroupAddressRow(props: {
+export function NewGroupAddressRow(props: {
   ranges: GroupRangeNode[];
   installationId: number;
+  /** Range to preselect (issue #15: the `+ New` menu passes the scoped or selected range). */
+  initialRangeId?: number | null;
   onCreated: (tree: ProjectTree) => void;
 }) {
   const { ranges, installationId, onCreated } = props;
+  const initialRange = props.initialRangeId != null && ranges.some((r) => r.id === props.initialRangeId)
+    ? String(props.initialRangeId) : "";
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
-  const [rangeId, setRangeId] = useState("");
+  const [rangeId, setRangeId] = useState(initialRange);
   const [error, setError] = useState<string | null>(null);
   const canCreate = address.trim() !== "" && name.trim() !== "";
 
@@ -549,7 +553,7 @@ function NewGroupAddressRow(props: {
       onCreated(tree);
       setAddress("");
       setName("");
-      setRangeId("");
+      setRangeId(initialRange);
     } catch (e) {
       setError(api.errorMessage(e));
     }
@@ -559,6 +563,7 @@ function NewGroupAddressRow(props: {
     <li className="tree-new-row">
       <input
         value={address}
+        aria-label={t("workbench.address")}
         placeholder={formatGa("1/1/1")}
         onChange={(e) => setAddress(e.target.value)}
         onKeyDown={(e) => {
@@ -567,13 +572,14 @@ function NewGroupAddressRow(props: {
       />
       <input
         value={name}
+        aria-label={t("workbench.name")}
         placeholder={t("explorer.newGroupAddressPlaceholder")}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void create();
         }}
       />
-      <select value={rangeId} onChange={(e) => setRangeId(e.target.value)}>
+      <select value={rangeId} aria-label={t("addressTable.range")} onChange={(e) => setRangeId(e.target.value)}>
         <option value="">{t("explorer.noRange")}</option>
         {ranges.map((r) => (
           <option key={r.id} value={r.id}>

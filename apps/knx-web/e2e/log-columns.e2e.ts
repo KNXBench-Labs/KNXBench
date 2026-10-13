@@ -67,7 +67,13 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const dialog = page.locator(".log-export-panel");
     await expect(dialog.getByRole("heading")).toHaveText(m["logPanel.exportTitle"]);
     await expect(dialog.getByRole("radio", { name: m["logPanel.exportFiltered"].replace("{count}", "5") })).toBeChecked();
-    await dialog.getByRole("radio", { name: m["logPanel.exportAll"].replace("{count}", "5") }).check();
+    // A radio sits right before its words, and the dialog is as tall as what it says.
+    const radio = dialog.getByRole("radio", { name: m["logPanel.exportAll"].replace("{count}", "5") });
+    const [radioBox, labelBox, panelBox] = [await radio.boundingBox(), await radio.locator("xpath=..").boundingBox(), await dialog.boundingBox()];
+    expect(radioBox!.width).toBeLessThanOrEqual(24);
+    expect(radioBox!.x - labelBox!.x).toBeLessThanOrEqual(4);
+    expect(panelBox!.height).toBeLessThan(600);
+    await radio.check();
     const box = await dialog.boundingBox();
     expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(width);
     if (process.env.KNX_LOG_CAPTURE_DIR) await page.screenshot({ path: `${process.env.KNX_LOG_CAPTURE_DIR}/export-${language}-${width}.png` });

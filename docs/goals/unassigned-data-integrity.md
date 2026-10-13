@@ -5,6 +5,9 @@ status* below). Goal B follows this goal, not concurrently.
 
 ## Session status
 
+**Goal A ended 2026-10-13** on `e5eb1e8a` + docs `5ca02b2b`: A1–A5 and A7 delivered, A6 blocked on
+external evidence. Handover for Goal B: [Goal B file, *Goal A outcome*](unassigned-workbench-hardening.md#goal-a-outcome-handover-2026-10-13).
+
 **Owner:** Claude session `62a4cca1c10f`, worktree
 `KNXBench.worktrees/data-integrity-20261013`, branch
 `feature/data-integrity-20261013`, invoked 2026-10-13 ~17:15 CEST on fresh
@@ -20,12 +23,12 @@ blocked (named missing evidence) or excluded; nothing else is added.
 | Package | Scope of record | State |
 | --- | --- | --- |
 | A1 | Read-only CLI/comparison readers use `open_existing_read_only` (KL-157) | delivered (merge `a78c1010`) |
-| A2 | Revision-bound parameter writes and installation rename; host contract for B | in progress (candidate `aabf4d2c`) |
-| A3 | Shutdown admission + bounded drain of download/address workers (KL-163) | planned |
-| A4 | Functions backend fresh on current schema (MODEL-07); Site ADR or blocked design (MODEL-05/KL-127) | planned |
-| A5 | Legacy atomic types 3/5 against the offline oracle (KL-128) | planned |
-| A6 | Evidence review PDB-04/KL-68, KL-171/172: new material only | planned |
-| A7 | KL-110/GAP-T30-04 prerequisite reconciliation (docs) | planned |
+| A2 | Revision-bound parameter writes and installation rename; host contract for B | delivered |
+| A3 | Shutdown admission + bounded drain of download/address workers (KL-163) | delivered |
+| A4 | Functions backend fresh on current schema (MODEL-07); Site ADR or blocked design (MODEL-05/KL-127) | delivered: Functions backend/projection/API; Site blocked design (ADR-0125) |
+| A5 | Legacy atomic types 3/5 against the offline oracle (KL-128) | delivered (ETS4 oracle) |
+| A6 | Evidence review PDB-04/KL-68, KL-171/172: new material only | blocked: no new authorized primary source (review 2026-10-13) |
+| A7 | KL-110/GAP-T30-04 prerequisite reconciliation (docs) | delivered: prerequisites reconciled, gates listed |
 
 ```text
 /goal KNXBench: Datenintegrität, Modell und evidenzgebundener Import

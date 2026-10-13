@@ -2185,6 +2185,55 @@ async fn linking_then_unlinking_a_com_object_to_a_group_address() {
         .await
         .unwrap();
     assert_eq!(remove_both.status(), StatusCode::OK);
+    // #13: the Log reads like a sentence; the raw command stays in `detail`.
+    let log = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/log")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let entries = body_json(log).await;
+    let links: Vec<&Value> = entries
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| {
+            e["source"] == "LinkComObject"
+                || e["source"] == "UnlinkComObject"
+                || e["source"] == "Batch"
+        })
+        .collect();
+    let messages: Vec<&str> = links
+        .iter()
+        .map(|e| e["message"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        messages,
+        [
+            "Linked object 0 of “D” to 0/0/1 “GA” (send)",
+            "Unlinked object 0 of “D” from 0/0/1 “GA” (send)",
+            "Linked object 0 of “D” to 0/0/1 “GA” (receive)",
+            // The refused "Both": the error, not a sentence about success.
+            links[3]["message"].as_str().unwrap(),
+            "Unlinked object 0 of “D” from 0/0/1 “GA” (receive)",
+            "Linked object 0 of “D” to 0/0/1 “GA” (send and receive)",
+            "Unlinked object 0 of “D” from 0/0/1 “GA” (send and receive)",
+        ]
+    );
+    assert_eq!(links[3]["severity"], "error");
+    assert_eq!(links[0]["source"], "LinkComObject");
+    assert!(
+        links[0]["detail"]
+            .as_str()
+            .unwrap()
+            .starts_with("LinkComObject { com_object: ComObjectInstanceId(1), ga: GroupAddressId(1), direction: Send"),
+        "{}",
+        links[0]["detail"]
+    );
     let detail = app
         .oneshot(
             Request::builder()

@@ -60,7 +60,6 @@ export const messages = {
   "inspector.dpt": "DPT",
   "inspector.unlink": "Verknüpfung lösn",
   "inspector.unlinkBoth": "Beide Verknüpfunga lösn",
-  "inspector.chooseGroupAddress": "(Gruppnadress aussuacha)",
   "inspector.link": "Verknüpfa",
   "inspector.line": "Linie",
   "inspector.unassigned": "(ned zuagordnet)",

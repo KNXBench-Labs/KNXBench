@@ -592,7 +592,11 @@ it("offers a later-installation device only that installation's group addresses 
   await act(async () => root.render(<DeviceWorkspace detail={detail(NO_REFERENCE, [com])} tree={twoInstallations}
     onApplied={() => {}} />));
   await act(async () => host.querySelector<HTMLElement>(".com-object-detail summary")!.click());
-  const values = Array.from(host.querySelectorAll<HTMLOptionElement>(".group-link-list select option"), (option) => option.value);
+  // Issue #8: the addresses are offered by the searchable picker once it opens.
+  const picker = host.querySelector<HTMLInputElement>(".group-link-list input[role=combobox]")!;
+  await act(async () => { picker.focus(); picker.dispatchEvent(new FocusEvent("focus")); });
+  const values = Array.from(host.querySelectorAll<HTMLElement>(".group-link-list [role=option]"), (option) => option.dataset.gaOption);
+  expect(values).toEqual(["80"]);
   expect(values).toContain("80");
   expect(values).not.toContain("70");
   await act(async () => root.unmount()); host.remove();

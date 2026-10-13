@@ -985,6 +985,18 @@ describe("Inspector — readable KNX communication flags (ISSUE-09)", () => {
   });
 });
 
+// Issue #8: the link row's address is chosen through the searchable picker,
+// the way a user does: type, then Enter on the highlighted match.
+async function chooseAddress(row: HTMLElement, text: string) {
+  const input = row.querySelector<HTMLInputElement>("input[role=combobox]")!;
+  await act(async () => { input.focus(); input.dispatchEvent(new FocusEvent("focus")); });
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, text);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => { input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })); });
+}
+
 describe("Inspector — atomic send-and-receive link action (ISSUE-09)", () => {
   it("offers Both as one request while keeping Send and Receive choices", async () => {
     const tree = deviceMoveTree();
@@ -992,18 +1004,32 @@ describe("Inspector — atomic send-and-receive link action (ISSUE-09)", () => {
     apiMock.linkComObject.mockResolvedValue(tree);
     const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, detailWithComObject());
     const row = host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
-    const selects = row.querySelectorAll<HTMLSelectElement>("select");
-    expect(Array.from(selects[1].options).map((option) => option.value)).toEqual(["Send", "Receive", "Both"]);
+    const direction = row.querySelector<HTMLSelectElement>("select")!;
+    expect(Array.from(direction.options).map((option) => option.value)).toEqual(["Send", "Receive", "Both"]);
+    await chooseAddress(row, "kitchen");
     await act(async () => {
-      selects[0].value = "9";
-      selects[0].dispatchEvent(new Event("change", { bubbles: true }));
-      selects[1].value = "Both";
-      selects[1].dispatchEvent(new Event("change", { bubbles: true }));
+      direction.value = "Both";
+      direction.dispatchEvent(new Event("change", { bubbles: true }));
     });
     await act(async () => row.querySelector("button")!.click());
     expect(apiMock.linkComObject).toHaveBeenCalledTimes(1);
     expect(apiMock.linkComObject).toHaveBeenCalledWith(7, 9, "Both");
     expect(onApplied).toHaveBeenCalledWith(tree);
+  });
+
+  it("offers only linkable addresses in the picker and enables Link only after a choice (issue #8)", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3")];
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, detailWithComObject());
+    void onApplied;
+    const row = host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
+    const link = [...row.querySelectorAll("button")].find(b => b.textContent === "Link")!;
+    expect(link.disabled).toBe(true);
+    const input = row.querySelector<HTMLInputElement>("input[role=combobox]")!;
+    await act(async () => { input.focus(); input.dispatchEvent(new FocusEvent("focus")); });
+    expect([...row.querySelectorAll<HTMLElement>("[role=option]")].map(o => o.dataset.gaOption)).toEqual(["9"]);
+    await chooseAddress(row, "1/2/3");
+    expect(link.disabled).toBe(false);
   });
 
   it("reports a refused paired link without refreshing or retrying a partial result", async () => {
@@ -1016,12 +1042,11 @@ describe("Inspector — atomic send-and-receive link action (ISSUE-09)", () => {
       detailWithComObject([{ ga_id: 9, address: "1/2/3", name: "Kitchen lights", direction: "Receive" }]),
     );
     const row = host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
-    const selects = row.querySelectorAll<HTMLSelectElement>("select");
+    const direction = row.querySelector<HTMLSelectElement>("select")!;
+    await chooseAddress(row, "1/2/3");
     await act(async () => {
-      selects[0].value = "9";
-      selects[0].dispatchEvent(new Event("change", { bubbles: true }));
-      selects[1].value = "Both";
-      selects[1].dispatchEvent(new Event("change", { bubbles: true }));
+      direction.value = "Both";
+      direction.dispatchEvent(new Event("change", { bubbles: true }));
     });
     await act(async () => row.querySelector("button")!.click());
     expect(apiMock.linkComObject).toHaveBeenCalledTimes(1);
@@ -1385,7 +1410,7 @@ describe("Inspector — group address drop", () => {
   it("uses the direction already chosen in the row", async () => {
     apiMock.linkComObject.mockResolvedValueOnce(linkTree());
     const { row } = await linkRow();
-    const direction = row.querySelectorAll<HTMLSelectElement>("select")[1];
+    const direction = row.querySelector<HTMLSelectElement>("select")!;
     await act(async () => {
       direction.value = "Receive";
       direction.dispatchEvent(new Event("change", { bubbles: true }));

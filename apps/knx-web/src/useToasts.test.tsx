@@ -1,6 +1,6 @@
 /** Verifies the toast queue: lifetimes, pauses, visible slots, retained history, animated exits. */
 // @vitest-environment happy-dom
-import { act, StrictMode } from "react";
+import { act, StrictMode, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
@@ -117,6 +117,35 @@ it("holds every lifetime while the document is hidden", async () => {
     if (descriptor) Object.defineProperty(document, "visibilityState", descriptor);
     else delete (document as { visibilityState?: unknown }).visibilityState;
   }
+});
+
+it("keeps a toast pushed during StrictMode's first effect pass alive and dismissable", async () => {
+  // App pushes its startup toast from an effect; StrictMode then runs every
+  // effect cleanup once and mounts again. The card must survive that.
+  vi.useFakeTimers();
+  function StartupProbe() {
+    toasts = useToasts();
+    const pushed = useRef(false);
+    useEffect(() => {
+      if (pushed.current) return;
+      pushed.current = true;
+      toasts!.pushFun("Happy late night.");
+    });
+    return null;
+  }
+  host = document.createElement("div");
+  document.body.appendChild(host);
+  root = createRoot(host);
+  await act(async () => root!.render(<StrictMode><StartupProbe /></StrictMode>));
+  expect(toasts!.toasts).toMatchObject([{ message: "Happy late night." }]);
+  await act(async () => vi.advanceTimersByTime(ACHIEVEMENT_TOAST_MS));
+  expect(toasts!.toasts[0].leaving).toBe(true);
+  await act(async () => vi.advanceTimersByTime(TOAST_EXIT_FALLBACK_MS));
+  expect(toasts!.toasts).toEqual([]);
+  await act(async () => toasts!.pushFun("Second."));
+  const id = toasts!.toasts[0].id;
+  await act(async () => toasts!.dismiss(id));
+  expect(toasts!.toasts[0].leaving).toBe(true);
 });
 
 it("retires all owned timers on unmount", async () => {

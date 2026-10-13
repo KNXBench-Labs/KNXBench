@@ -58,14 +58,19 @@ function standardTree(style = "ThreeLevel"): ProjectTree {
 }
 
 async function intercept(page: Page, language: Language, theme: string, initial: ProjectTree) {
-  const state = { tree: initial, unexpected: [] as string[], requests: [] as string[] };
+  const state = { tree: initial, unexpected: [] as string[], requests: [] as string[],
+    settings: { uiLanguage: language, theme } as Record<string, unknown> };
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     state.requests.push(`${method} ${path}`);
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
-    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme } };
-    else if (path === "/api/settings" && method === "PUT") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme, ...route.request().postDataJSON().settings } };
+    // Like the real server, a stored preference is still there on the next periodic read.
+    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { ...state.settings } };
+    else if (path === "/api/settings" && method === "PUT") {
+      state.settings = { ...state.settings, ...route.request().postDataJSON().settings };
+      body = { schemaVersion: 1, status: "ok", settings: { ...state.settings } };
+    }
     else if ((path === "/api/project" && method === "GET") || (path === "/api/project/new" && method === "POST")) body = state.tree;
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
@@ -82,7 +87,7 @@ async function intercept(page: Page, language: Language, theme: string, initial:
   return state;
 }
 
-async function openAddresses(page: Page, language: Language) {
+async function openAddresses(page: Page, language: Language, expandAll = true) {
   const m = language === "en" ? en : de;
   await page.goto("/");
   await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).first().click();
@@ -94,6 +99,12 @@ async function openAddresses(page: Page, language: Language) {
   if (!(await nav.isVisible())) await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
   await nav.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
   await expect(page.locator(".ga-workspace")).toBeVisible();
+  // Issue #11: address lists start closed; row-focused cases open them like a user.
+  // Issue #11: every installation's tree opens compact; open each one.
+  if (expandAll) {
+    await expect(page.locator("[data-ga-expand-all]").first()).toBeVisible();
+    for (const button of await page.locator("[data-ga-expand-all]").all()) await button.click();
+  }
 }
 const chooseView = (page: Page, view: string) => page.locator("[data-ga-view]").selectOption(view);
 const capture = async (page: Page, name: string) => {
@@ -218,6 +229,63 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     expect(Math.abs(edges.kitchen - edges.dimming), "siblings share one edge").toBeLessThan(1);
     expect(edges.spare, "unassigned address right of its group").toBeGreaterThan(edges.unassigned + step);
     if (process.env.KNX_GA_CAPTURE_DIR) await capture(page, `tree-indent-${language}-${width}-${theme}`);
+    await noPageOverflow(page);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
+// Issue #11: a compact first view, filter-opened matches, toolbar expand/collapse, local memory.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  const theme = (language === "en") === (width === 1440) ? "graphite" : "porcelain";
+  test(`${language} tree starts compact and remembers what is open at ${width}px (${theme})`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language, theme, { ...standardTree(), view_key: "fictional-house-view" });
+    await openAddresses(page, language, false);
+    expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme"))).toBe(theme);
+    const workspace = page.locator(".ga-workspace");
+    const group = (key: string) => workspace.locator(`[data-ga-expand="${key}"]`);
+    const addresses = workspace.locator("[data-ga-select]");
+    await expect(group("range:20:0")).toHaveAttribute("aria-expanded", "true");
+    await expect(group("range:21:0")).toHaveAttribute("aria-expanded", "false");
+    await expect(group("range:21:0")).toContainText("(2)");
+    await expect(group("unassigned")).toHaveAttribute("aria-expanded", "false");
+    // Lighting holds Hallway directly, so opening it shows that one address and the closed Ground floor.
+    await expect(addresses).toHaveCount(1);
+    await expect(workspace.locator('[data-ga-select="32"]')).toBeVisible();
+    for (const button of [workspace.locator("[data-ga-expand-all]"), workspace.locator("[data-ga-collapse-all]")]) {
+      await expect(button).toBeVisible();
+      const box = (await button.boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+    }
+    await capture(page, `tree-compact-${language}-${width}-${theme}`);
+    await noPageOverflow(page);
+    // A filter opens the groups with matches; clearing it returns to what you had open.
+    await workspace.locator(".address-filter").fill("spare");
+    await expect(workspace.locator('[data-ga-select="33"]')).toBeVisible();
+    await workspace.locator(".address-filter").fill("");
+    await expect(workspace.locator('[data-ga-select="33"]')).toHaveCount(0);
+    await workspace.locator("[data-ga-expand-all]").click();
+    await expect(addresses).toHaveCount(5);
+    await workspace.locator("[data-ga-collapse-all]").click();
+    await expect(addresses).toHaveCount(0);
+    await group("range:20:0").click();
+    await group("range:21:0").click();
+    await expect(workspace.locator('[data-ga-select="30"]')).toBeVisible();
+    // Leaving the view and coming back (a fresh component) restores the same open groups.
+    const nav = page.getByRole("navigation", { name: m["workbench.navigation"], exact: true });
+    if (!(await nav.isVisible())) await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
+    // Topology renders from the tree alone; the device list would load more than this fixture serves.
+    await nav.getByRole("button", { name: m["workbench.topology"], exact: true }).click();
+    await expect(page.locator(".ga-workspace")).toHaveCount(0);
+    if (!(await nav.isVisible())) await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
+    await nav.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
+    await expect(group("range:21:0")).toHaveAttribute("aria-expanded", "true");
+    await expect(group("unassigned")).toHaveAttribute("aria-expanded", "false");
+    await expect(addresses).toHaveCount(3);
+    const stored = await page.evaluate(() => localStorage.getItem("knxbench:ga-tree-open:v1"));
+    expect(JSON.parse(stored!)["fictional-house-view"].open["1"].sort()).toEqual(["range:20:0", "range:21:0"]);
+    await capture(page, `tree-remembered-${language}-${width}-${theme}`);
     await noPageOverflow(page);
     expect(state.unexpected).toEqual([]);
   });

@@ -52,8 +52,9 @@ struct ReadinessResponse {
 
 async fn readiness(State(state): State<SharedState>) -> Result<Json<ReadinessResponse>, ApiError> {
     let Some(products) = state.product_db.as_ref() else {
-        return Err(ApiError::with_status(
+        return Err(ApiError::with_kind(
             StatusCode::CONFLICT,
+            "downloadProductDataMissing",
             "no product database is configured, so no application program can be read",
         ));
     };
@@ -64,8 +65,9 @@ async fn readiness(State(state): State<SharedState>) -> Result<Json<ReadinessRes
     let rows = {
         let project_guard = state.project.lock().expect("state mutex poisoned");
         let Some(project) = project_guard.as_ref() else {
-            return Err(ApiError::with_status(
+            return Err(ApiError::with_kind(
                 StatusCode::CONFLICT,
+                "downloadProjectMissing",
                 "no project is open",
             ));
         };

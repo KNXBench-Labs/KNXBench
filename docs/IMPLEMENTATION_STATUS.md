@@ -14,6 +14,12 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-13 — Device support guidance S1: additive categorized preparation
+  refusals and pure next-action mapping; missing installed application data is
+  distinct from configuration errors. Existing safety/untested admission unchanged.
+  [Contract](contracts/device-programming-support-guidance.md). Pre-plan UI/reporting
+  and audit are pending S2–S4; this entry makes no hardware verification claim.
+
 - [2026-10-13 — Bug Hunters’ Hall of Fame: sixteen titles and a Golden Bus Probe](contracts/community-recognition.md).
   Public README/page/JSON, real GitHub counters, retained completion XP and
   automatic closure recognition. About display is handed to Goal B, not implemented

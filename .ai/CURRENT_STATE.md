@@ -1,3 +1,12 @@
+Web lock: released by claude-kl170-tester-verification (ADR-0121 part B, delivered)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 14:42
+- **Completed:** Takeover note: the 13:17 lock line was written for this reservation from another conversation; its worktree `kl170-verify-20261013` was untouched and idle until 13:49, and this session (the reservation's owner role, on the owner's question) continued in that same worktree and branch. ADR-0121 part B delivered: feature `af0daffe`, merge `0d1e24bf`. Download tab: plan `warnings` in a **Before you write** box (known rules `base-image-low-octet-first` / `base-image-order-unchecked` in plain EN/DE, server text under *Technical details*, unknown rules shown as sent), `support.inferences` listed, untested hint; after every ended run **Help verify this device** (five steps, on-request report from `GET /api/device-download/report`, 409 → try again, local checklist, privacy note, Save report, prefilled issue form, mail to issue@knxbench.com). Docs: user guide 07, known issues, KL §170 (heading unchanged, ledger `LATER`), ADR-0120/0121, contract, FEATURES, OPEN_WORK, TEST_CATALOGUE. Merge gate: build, 13/13 tsc, Vitest 235 files / 3302, Chromium 477/477, preview 19/19, docs, five xtask checks, diff --check; inputs frozen. 7/7 hand mutants killed.
+- **Pending/Next Steps:** Web lock free; queue: alpha11-prep (release preparation) was waiting on this slot. Then: wait for the first tester report (issue #10 reporter thengsty was asked for a byte-order probe) and review it per `docs/contracts/download-verification-reports.md`.
+- **Notes for Codex oder Claude:** Pre-existing flake on main: `apps/knx-web/e2e/onboarding-guide.e2e.ts` "opens on a first alpha start…" counts `/api/version` reads (expects 2, sometimes 4); red 9/20 on clean origin/main `798f6bba`, 4/20 on the branch, green in the merge gate. Worth a small package of its own. New warning rules need a plain text in `downloadVerification.ts` `KNOWN_RULES` plus EN/DE keys; without one the tab shows the server text, which is acceptable but less friendly.
+
+---
+
 Web lock: taken by claude-kl170-tester-verification (part B)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 13:17

@@ -1,7 +1,11 @@
 # Source-ID ledger
 
 The status of record for every tracked source ID ([ADR-0076](../adr/0076-one-ledger-is-the-status-of-record.md)).
-A status written anywhere else is history or an error. Evidence stays in the
+A status written anywhere else is history or an error, except for the mechanically
+checked, generated [limitations reading view](../KNOWN_LIMITATIONS.md)
+([ADR-0076 amendment](../adr/0076-one-ledger-is-the-status-of-record.md#generated-limitations-reading-view--amendment-2026-10-13)).
+Edit the row here, then run `python3 tools/limitations_catalogue.py --write`;
+the documentation gate rejects a stale view. Evidence stays in the
 owners' dossiers: [ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/ALPHA_READINESS.md) (alpha packages),
 [COMMISSIONING_ALPHA_LEDGER](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md) (commissioning:
 evidence, fallback, unblock) and [UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md)

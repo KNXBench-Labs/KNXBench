@@ -76,6 +76,24 @@ elsewhere in `docs/` or the goal files.
   axis than the inventory priority (P0–P3). It is not a status, so it stays a
   separate view.
 
+## Generated limitations reading view — amendment, 2026-10-13
+
+The owner requested a short limitations overview with status and individual
+history/detail links. `docs/KNOWN_LIMITATIONS.md` may display a **derived reading
+view** of existing ledger rows; it is not a second editable record. Authored
+summaries and ledger references live in `docs/limitations/catalogue.json`, which
+stores no status values. `tools/limitations_catalogue.py` reads only current
+Snapshot/Post-snapshot rows, rejects missing/duplicate references and generates
+the overview. The ordinary documentation gate rejects any output drift, including
+a ledger change not yet reflected in the view.
+
+Untracked notices are labelled as such; no status is inferred from a historical
+heading or a feature's partial delivery. `DONE` still describes the recorded work
+package, not universal compatibility or an absence of remaining evidence limits.
+The prohibition on independent per-ID status tables and owner-only row editing
+remains unchanged. Individual dossiers retain evidence and history, not a second
+status column. [Maintenance](../limitations/README.md).
+
 ## Consequences
 
 - One edit changes a status. A status in any other file is either history or

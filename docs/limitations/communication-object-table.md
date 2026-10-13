@@ -1,0 +1,49 @@
+# Communication-object table
+
+[Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-communication-object-table)
+
+This dossier preserves the technical detail and dated history. Earlier
+headings, failures and lifting conditions are historical where later
+updates supersede them; they are not new work assignments.
+
+<!-- BEGIN retained catalogue record -->
+
+## Communication-object table scope (2026-10-09)
+
+The [local 2026-10-11 DPT selection extension](../contracts/dpt-selection.md) names
+454 standard IDs in EN/DE without needing installed master data. This is a
+versioned display vocabulary, **not** additional codec/device support or a
+manufacturer database. Main-only/unknown/imported values remain exact selectable
+values; no subtype/name is invented for them. Additional UI language packs use
+English labels. Raw master-text language/fallback remains separately disclosed;
+these authored labels are not claimed as official KNX translations. Chromium
+checks do not establish native WebKitGTK/Orca, ETS or hardware compatibility.
+The owner-authorized main integration is accepted on `e57e3a09ff34` and
+published at `ab7db1ae7991`; the
+[source/publication receipt](../evidence/dpt-selection-publication-2026-10-11.json)
+records the separately verified merged-source and remote-readback evidence. The extension stays
+outside the Alpha.8 release snapshot and existing live container.
+
+The local UI table keeps all object summaries mounted for stable editor identity;
+editing forms mount lazily when first opened. The synthetic 1,000-object measurement
+is one production-browser action-to-visible sample, not a universal latency bound
+or proof with all editing forms expanded. Large devices may still take noticeable
+time to switch to the flat view. No virtualization is introduced without evidence.
+View state is intentionally lost when leaving the editor/changing device/project;
+there is no project-wide CO list, bulk editing, export, persistent view cache or
+resizable/reorderable columns. A UI mutation guard cannot cancel an already admitted
+server edit or replace server concurrency rules. Native WebKitGTK/Orca, real hardware
+and complete ETS compatibility remain untested by this offline UI package. Local
+source is not in alpha.6; authorized main publication is separate from release/deployment.
+[Behavior and acceptance](../COMMUNICATION_OBJECT_TABLE.md).
+
+A diagnostic real-server attempt found one existing local schema-v22 product
+catalogue without `source_identity_scan.scanner`; package installation refused
+with HTTP 500. The fresh isolated catalogue used by acceptance has the expected
+column and installs the fictional package. No catalogue repair/migration change
+is included in this UI package. The initial harness had isolated `KNX_DATA_DIR`
+but not XDG, so it opened the existing catalogue before refusal. Its main-file
+mtime still predates the run and the test package is absent; this is not a
+before/after whole-file byte audit. The corrected accepted harness isolates HOME,
+XDG data/config/state and the project directory; the source demo remains unchanged.
+<!-- END retained catalogue record -->

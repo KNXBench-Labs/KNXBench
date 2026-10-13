@@ -236,20 +236,32 @@ shell's private ephemeral port and fixed development port 4777 are unchanged.
 `docker stop knxbench` (or Ctrl+C in a terminal) sends SIGTERM, and the
 server leaves in order:
 
-1. it stops accepting connections and gives requests in flight up to 5
-   seconds to finish; an idle browser tab does not hold it up,
+1. it refuses every new bus job at once (download, address programming, monitor,
+   line scan, compare, serial lookup, service control: `503 serverStopping`,
+   nothing sent), stops accepting connections and gives requests in flight up
+   to 5 seconds to finish; an idle browser tab does not hold it up,
 2. it stops a running bus monitor and cancels a line scan, so the gateway
    gets a proper disconnect and frees the tunnel at once instead of after
    its heartbeat timeout (up to 2 more seconds),
-3. it exits with code 0.
+3. if a device download or address programming is already running, it waits
+   for it to end, up to `KNX_STOP_WRITE_WAIT_SECS` (default 120 seconds, `0`
+   = do not wait). An address programming that is still waiting for its
+   button is stopped through its own *Stop* (nothing has been written then).
+   A running write is never cancelled by the stop: KNXBench has no safe way to
+   end a partly written device,
+4. it exits with code 0.
 
-Both limits together stay below Docker's 10-second stop timeout, so the
-container should show `Exited (0)`. `Exited (137)` means Docker had to kill
+Steps 1 and 2 stay below Docker's 10-second stop timeout, so an idle container
+shows `Exited (0)`. Step 3 only waits while a device write runs, and Docker's
+own timeout must then be longer than the server's wait, or Docker kills the
+server first: `docker stop -t 130 knxbench` for the default 120 seconds (in
+Compose: `stop_grace_period: 130s`). `Exited (137)` means Docker had to kill
 it; images built before 2026-10-07 did not react to SIGTERM at all. A second
-SIGTERM or Ctrl+C skips the wait. A device download or address programming
-still running is not waited for and ends mid-way, so stop the server when
-no write to a device is in progress
-([KNOWN_LIMITATIONS.md §163](../../KNOWN_LIMITATIONS.md#163-stopping-the-server-does-not-wait-for-a-device-download-or-address-programming)).
+SIGTERM or Ctrl+C skips the 5-second wait and ends the write wait at once.
+A write that is still running when the wait ends (time out, second signal or
+kill) ends mid-way: the server log names the device, which may be left partly
+written, so check it before relying on it
+([KL-163](../../limitations/KL-163-server-shutdown-and-active-writes.md)).
 `docker rm -f` and `docker kill` skip all of this.
 
 ### Updating in one go
@@ -457,6 +469,12 @@ anything for that ([ADR-0088](../../adr/0088-server-terminates-tls-itself.md)).
 | `KNX_TLS` | `auto`: HTTPS exactly when a password is set. `on`: always, loopback included. `off`: never | `auto` |
 | `KNX_TLS_CERT`, `KNX_TLS_KEY` | Your own PEM certificate chain and private key. Set both or neither | unset |
 | `KNX_TLS_SAN` | Extra names for the generated certificate, comma-separated: `knx.lan,192.168.1.10` | unset |
+
+The stop wait has its own variable ([Stopping](#stopping)):
+
+| Variable | Meaning | Default |
+| --- | --- | --- |
+| `KNX_STOP_WRITE_WAIT_SECS` | How long a stop waits for a device download or address programming that is already running, in whole seconds, `0` to `3600`. Any other value refuses the start | `120` |
 
 **The generated certificate.** On the first start with a password, the server makes a
 self-signed certificate and keeps it in `KNX_DATA_DIR/.knxbench-tls/`, so it survives

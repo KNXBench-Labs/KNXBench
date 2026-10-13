@@ -136,6 +136,59 @@ pub enum StopOutcome {
     TooLate,
 }
 
+#[cfg(test)]
+impl AddressProgrammingSession {
+    /// A session with no tunnel for stop tests: still waiting for its
+    /// button (`writing == false`), whose task honours `request_stop` like
+    /// the real wait does, or already writing (MP §2.3), which ends only
+    /// through [`Self::synthetic_finish`].
+    pub(crate) fn synthetic(new_address: IndividualAddress, writing: bool) -> Self {
+        let shared = Arc::new(Shared {
+            status: Mutex::new(if writing {
+                AddressProgrammingStatus::Programming {
+                    previous_address: "15.15.255".into(),
+                }
+            } else {
+                AddressProgrammingStatus::Waiting {
+                    rounds: 0,
+                    in_programming_mode: Vec::new(),
+                }
+            }),
+            events: Mutex::new(Vec::new()),
+            stop_requested: AtomicBool::new(false),
+        });
+        let task = tokio::spawn({
+            let shared = Arc::clone(&shared);
+            async move {
+                loop {
+                    if shared.stop_requested.load(Ordering::SeqCst) {
+                        *shared.status.lock().unwrap() =
+                            AddressProgrammingStatus::Stopped { rounds: 0 };
+                        return;
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                }
+            }
+        });
+        Self {
+            id: 1,
+            new_address,
+            wait_seconds: 60,
+            shared,
+            task: Some(task),
+        }
+    }
+
+    /// Ends a synthetic writing session as failed after step 2.
+    pub(crate) fn synthetic_finish(&self) {
+        *self.shared.status.lock().unwrap() = AddressProgrammingStatus::Failed {
+            written: AddressWritten::Unconfirmed,
+            step: Some(2),
+            error: "synthetic".into(),
+        };
+    }
+}
+
 impl AddressProgrammingSession {
     /// Starts the wait on `tunnel`. The caller has already checked the
     /// phrase and that no other bus session runs.

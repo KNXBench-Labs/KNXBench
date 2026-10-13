@@ -332,8 +332,12 @@ main {
 .toast-body, .toast > .achievement-badge { pointer-events: none; }
 .toast .toast-dismiss { position: relative; z-index: 1; }
 .toast .toast-release-link { position: relative; z-index: 1; pointer-events: auto; color: var(--knx-accent); font-size: 0.8rem; }
-/* At most three cards; a tall stack scrolls instead of leaving the screen. */
-.toast-stack { max-height: calc(100vh - 2rem); max-width: calc(100vw - 2rem); overflow-y: auto; }
+/* At most three cards; a tall stack scrolls instead of leaving the screen.
+   Scrolling clips at the padding edge, so the stack takes the 1rem corner
+   offset as padding (cards stay where they were, shadows stay visible) and
+   lets clicks through that padding. */
+.toast-stack { bottom: 0; right: 0; padding: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; pointer-events: none; }
+.toast-stack > * { pointer-events: auto; }
 .toast { flex-shrink: 0; }
 .toast-queue-note { margin: 0; padding: 0.4rem 0.6rem; max-width: min(24rem, calc(100vw - 2rem)); border-radius: 4px; background: var(--knx-surface); color: var(--knx-muted); font-size: 0.8rem; overflow-wrap: anywhere; }
 

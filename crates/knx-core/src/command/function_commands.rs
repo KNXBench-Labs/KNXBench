@@ -1,3 +1,5 @@
+//! Applies the Function commands of ADR-0124 and returns their inverses.
+//!
 //! Applies the Function commands of ADR-0124. Each returns its inverse and
 //! leaves the project untouched on refusal: every check runs before the
 //! first mutation.

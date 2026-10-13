@@ -1,3 +1,5 @@
+//! An imported schema-23 Function and its raw source survive a native reopen.
+//!
 //! ADR-0124: an imported schema-23 Function persists through the real
 //! import service: modeled fields in the native tables, the whole source
 //! element (including `Puid`/`Implements`/`DefaulGroupRange`) in the opaque

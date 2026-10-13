@@ -1,3 +1,5 @@
+//! Persists project Functions, their ordered members and both allocators.
+//!
 //! Persists project Functions, their ordered members and both allocator
 //! high-water marks (schema 15, ADR-0124).
 

@@ -1,3 +1,5 @@
+//! Functions appear escaped in the report's Buildings section.
+//!
 //! ADR-0124: Functions appear in the Buildings section, escaped, with
 //! their ordered group addresses and roles.
 use knx_core::function::{Function, FunctionDetails, FunctionMember};

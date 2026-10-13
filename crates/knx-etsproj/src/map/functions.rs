@@ -1,3 +1,5 @@
+//! Maps schema-23 Functions once every installation is mapped.
+//!
 //! Maps schema-23 Functions after every installation is mapped, so each
 //! location and group address already has its internal id (ADR-0124).
 

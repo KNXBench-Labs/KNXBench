@@ -1,3 +1,5 @@
+//! Project Functions over HTTP: a projection read and revision-bound edits (ADR-0124).
+//!
 //! Project Functions over HTTP (ADR-0124): a read of the projection and
 //! revision-bound edits that run the `knx_core` Function commands. No bus
 //! access. The web UI that uses this is Goal B work.

@@ -1,3 +1,5 @@
+//! Parses one captured schema-23 `Function` subtree into source records.
+//!
 //! Parses one captured schema-23 `Function` subtree (*Project Schema23*
 //! §1.2.6.9/§1.2.6.10; ADR-0124).
 //!

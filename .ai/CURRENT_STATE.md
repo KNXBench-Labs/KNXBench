@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 18:33
+- **Completed:** Goal A1 (KL-157) delivered: every reading CLI command and `knx_app::comparison` open a `.knxdb` read-only (in-memory upgrade only); `ga-import` plans read-only and opens for writing only for its confirmed save. Feature `c08c3b64` + docs `08a56d7d`, merge `a78c1010` on `923c3f9d`. Gate on `c08c3b64` inputs frozen: Rust 4291/0/198, clippy, fmt, bindings, 5 xtask, docs, tools; corpus 145/145 in 32 targets (oracle targets rerun after linking `project_dump.json`). 3 mutants killed.
+- **Pending/Next Steps:** A2 (revision-bound parameter writes + installation rename, candidate `aabf4d2c`, 12 HTTP tests, 6 mutants killed) gates next, then A3 (stop admission + bounded write drain, in progress in worktree `data-integrity-a3-20261013`).
+- **Notes for Codex oder Claude:** Track section *Goal A — data integrity* below is current. Worktrees need both `OriginalData` and `project_dump.json` linked for corpus runs. Disk on <old-disk> ran to 96 % during parallel gates; this session now uses a single target dir.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-13 17:25
 - **Completed:** Owner-approved four-document reorganization implemented and integrated: source a08daed6, merge d92460a5. Current handover is a per-track summary; all inherited public journal bytes are reconstructable from archive/CURRENT_STATE_main_2026-10-13.md. Delivery source 7945→640 lines, 307 dated records in ISO-week files; KNXnet-IP/bus2651→96 with40 dossiers; commissioning2206→84 with34 dossiers. Receipt inversely restores382 contiguous source records and all old aliases. Named source-evidence mutation refused and original restored. Final merged12-stage gate green: Python90, xtask89+14=103, scoped build/clippy/fmt, docs565/4702/0, anchors1280/565/0, five xtask gates, whitespace;2595 inputs frozen.
@@ -55,6 +63,14 @@ No old web-lock queue is carried forward: its packages were delivered.
 - **Completed:** KL-170 read-only byte-order probe, named base-image warnings, structured refusal and tester workflow are delivered. Checked Time/Slider controls and explicit Colour/Picture originals are hosted.
 - **Pending/Next Steps:** Exact LittleEndian per-type runtime evidence remains external; no guessed swaps or encoder implementation. Colour/Picture value codecs, module-scope mapping, Repeat activation and UTF-8/LoadedImage semantics retain precise missing-contract boundaries. Native WebKitGTK/Orca, revision-conditional legacy writes and native reload guards remain separate work, not closed by a browser fixture.
 - **Notes for Codex oder Claude:** Sources: docs/research/parameter-byte-order.md, docs/contracts/parameter-editor-host.md and the current limitations index. New hardware/vendor/ETS validation removed from the old commissioning goal stays excluded unless the owner explicitly reopens it with operation-specific authorization.
+
+## Goal A — data integrity, model and import
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 18:33
+- **Completed:** Session `62a4cca1c10f` owns A1–A7 ([goal](../docs/goals/unassigned-data-integrity.md), *Session status* table). A1 delivered (merge `a78c1010`).
+- **Pending/Next Steps:** A2 gate and merge; A3 implementation/gate; then A4 Functions/Sites, A5 legacy types 3/5, A6 evidence review, A7 media/differential routing. Goal B is not started; its A2 host contract is `docs/contracts/revision-bound-writes.md` once A2 lands.
+- **Notes for Codex oder Claude:** Do not start A1–A7 work elsewhere. Gate script and receipts: root `.ai/logs/2026-10-13_claude_goal-a-data-integrity/`. No hardware, bus, ETS/vendor execution, release or deployment.
 
 ## Data-tooling and MCP client choice
 

@@ -20,6 +20,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--kl-164-two-windows-two-steps"></a>
+- [2026-10-13 — KL-164: two windows, two steps](history/implementation/2026-W42.md#2026-10-13--kl-164-two-windows-two-steps)
 <a id="2026-10-13--issues-14-and-16-buttons-stay-put-collapsed-channels-stay-shut"></a>
 - [2026-10-13 — Issues #14 and #16: buttons stay put, collapsed channels stay shut](history/implementation/2026-W42.md#2026-10-13--issues-14-and-16-buttons-stay-put-collapsed-channels-stay-shut)
 <a id="2026-10-13--goal-b1a-the-workbench-learns-to-say-changed-elsewhere"></a>

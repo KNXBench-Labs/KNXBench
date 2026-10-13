@@ -2101,6 +2101,21 @@ fn substitute_in_context(
     if !raw.contains(PLACEHOLDER_OPEN) {
         return append_substitution(&mut out, raw, &mut context).then_some(out);
     }
+    substitute_into(raw, scope, &mut context, &mut out, true).then_some(out)
+}
+
+/// The scanner behind [`substitute_in_context`]. A placeholder whose inside
+/// holds another `{{…}}` (`{{0:Button {{ChNo}}}}`, ADR-0126) has that inside
+/// passed through once more, one level deep (`nested` is then `false`); an
+/// outer `{{` that never closes is copied as text and scanning goes on behind
+/// it, so it cannot hide an argument.
+fn substitute_into(
+    raw: &str,
+    scope: Option<&ModuleScope>,
+    context: &mut SubstitutionContext<'_>,
+    out: &mut String,
+    nested: bool,
+) -> bool {
     let mut rest = raw;
     while let Some(open) = rest.find(PLACEHOLDER_OPEN) {
         let after_open = &rest[open + PLACEHOLDER_OPEN.len()..];
@@ -2111,38 +2126,58 @@ fn substitute_in_context(
         // Pay for the actual scope-local linear lookup before invoking it.
         let units = scope.map_or(1, |s| s.arguments.len().saturating_add(1));
         if !context.admit(units) {
-            return None;
+            return false;
         }
-        if !append_substitution(&mut out, &rest[..open], &mut context) {
-            return None;
+        if !append_substitution(out, &rest[..open], context) {
+            return false;
+        }
+        if nested && name.contains(PLACEHOLDER_OPEN) {
+            match super::positional::placeholder_len(after_open) {
+                Some(len) => {
+                    if !append_substitution(out, PLACEHOLDER_OPEN, context)
+                        || !substitute_into(&after_open[..len], scope, context, out, false)
+                        || !append_substitution(out, PLACEHOLDER_CLOSE, context)
+                    {
+                        return false;
+                    }
+                    rest = &after_open[len + PLACEHOLDER_CLOSE.len()..];
+                }
+                None => {
+                    if !append_substitution(out, PLACEHOLDER_OPEN, context) {
+                        return false;
+                    }
+                    rest = after_open;
+                }
+            }
+            continue;
         }
         match (is_argument_name(name), scope.and_then(|s| s.argument(name))) {
             (true, Some(value)) => {
-                if !append_substitution(&mut out, value, &mut context) {
-                    return None;
+                if !append_substitution(out, value, context) {
+                    return false;
                 }
             }
             (true, None) => {
                 for part in [PLACEHOLDER_OPEN, name, PLACEHOLDER_CLOSE] {
-                    if !append_substitution(&mut out, part, &mut context) {
-                        return None;
+                    if !append_substitution(out, part, context) {
+                        return false;
                     }
                 }
                 if !context.unresolved(name) {
-                    return None;
+                    return false;
                 }
             }
             (false, _) => {
                 for part in [PLACEHOLDER_OPEN, name, PLACEHOLDER_CLOSE] {
-                    if !append_substitution(&mut out, part, &mut context) {
-                        return None;
+                    if !append_substitution(out, part, context) {
+                        return false;
                     }
                 }
             }
         }
         rest = &after_open[close + PLACEHOLDER_CLOSE.len()..];
     }
-    append_substitution(&mut out, rest, &mut context).then_some(out)
+    append_substitution(out, rest, context)
 }
 
 /// Copy an entire UTF-8 slice after admission; never publish a partial label.

@@ -1,5 +1,5 @@
 /** Graphical hierarchy over generated projections; no invented physical coordinates. */
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
@@ -9,19 +9,12 @@ import { useTranslate } from "./i18n";
 import WorkbenchIcon from "./WorkbenchIcon";
 import GroupAddressTable from "./GroupAddressTable";
 import { rangePath } from "./groupAddressView";
-import { owningInstallation, findBuildingPart, flattenBuildingParts } from "./treeUtils";
-import { NewAreaRow, NewBuildingPartRow, NewGroupRangeRow, NewLineRow } from "./ProjectExplorer";
+import { findBuildingPart, flattenBuildingParts } from "./treeUtils";
 import Inspector from "./Inspector";
+import { structureCreateGroups } from "./structureCreateEntries";
+import { StructureCreateMenu, StructureCreatePanel, useStructureCreate } from "./StructureCreateMenu";
 
 export type StructureView = "buildings" | "topology" | "addresses";
-
-function CreateDisclosure(props: { kind: string; parentId?: number; label: string; hint?: string; children: ReactNode }) {
-  return <details className="structure-create" data-structure-create={props.kind} data-parent-id={props.parentId}>
-    <summary>{props.label}</summary>
-    {props.hint && <p className="structure-create-hint">{props.hint}</p>}
-    <ul>{props.children}</ul>
-  </details>;
-}
 
 export default function StructureWorkspace(props: {
   tree: ProjectTree; view: StructureView; selection: Selection | null;
@@ -53,22 +46,13 @@ export default function StructureWorkspace(props: {
     ? tree.installations.flatMap((i) => i.group_ranges).find((r) => r.id === props.rangeScope) : undefined;
   const scopedRangePath = scopedRange
     ? rangePath(tree.installations.flatMap((i) => i.group_ranges), scopedRange.id) : null;
-  // MODEL-01 / ADR-0070: a child is created in the installation that owns its
-  // parent, so its create row appears in that installation's section only.
-  // An id that occurs more than once has no owner and offers no child create.
-  // The line row needs no section check: a uniquely owned area is rendered
-  // in its owner's section and nowhere else.
-  const areaOwner = selection?.kind === "area" ? owningInstallation(tree, "area", selection.id) : undefined;
-  const selectedArea = areaOwner?.topology.find((area) => area.id === selection?.id);
-  const buildingParentId = props.buildingScope ?? (selection?.kind === "building_part" ? selection.id : null);
-  const buildingOwner = buildingParentId == null ? undefined : owningInstallation(tree, "building_part", buildingParentId);
-  const buildingParent = buildingOwner
-    ? flattenBuildingParts(buildingOwner.buildings, []).find(({ node }) => node.id === buildingParentId)?.node : undefined;
-  const rangeParentId = props.rangeScope ?? (selection?.kind === "group_range" ? selection.id : null);
-  const rangeOwner = rangeParentId == null ? undefined : owningInstallation(tree, "group_range", rangeParentId);
-  // The existing create command allows a root group range to contain a
-  // subrange, not a third level.
-  const rangeParent = rangeOwner?.group_ranges.find((range) => range.id === rangeParentId && range.parent == null);
+  // Issues #12/#15: one `+ New` menu per page. Child entries keep MODEL-01 /
+  // ADR-0070 (only the installation that owns the parent offers them); see
+  // `structureCreateEntries.ts`.
+  const createGroups = structureCreateGroups(tree, view, selection, props.buildingScope ?? null, props.rangeScope ?? null);
+  const create = useStructureCreate();
+  // A form belongs to the page it was opened on.
+  useEffect(() => { create.close(); }, [view]);
   const editingSelection = selection && (
     (view === "topology" && (selection.kind === "area" || selection.kind === "line")) ||
     (view === "buildings" && selection.kind === "building_part") ||
@@ -104,8 +88,14 @@ export default function StructureWorkspace(props: {
     buttons[e.key === "Home" ? 0 : e.key === "End" ? buttons.length - 1 : Math.max(0, Math.min(buttons.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)))]?.focus();
   }}>
     <header className="workspace-heading"><div><p className="eyebrow">{focusedBuilding?.path ?? (scopedRangePath ? `${t("workbench.addresses")} / ${scopedRangePath}` : tree.installations.map((i) => i.name).join(" / "))}</p><h1>{focusedBuilding?.node.name ?? scopedRange?.name ?? t(`workbench.${view}`)}</h1></div>
-      {view === "addresses" ? props.addressActions : <button onClick={() => onCatalog(selection?.kind === "line" ? selection.id : null)}>+ {t("workbench.device")}</button>}
+      <div className="workspace-heading-actions">
+        {view === "addresses" && props.addressActions}
+        <StructureCreateMenu groups={createGroups} onChoose={(entry) => {
+          if (entry.kind === "device") onCatalog(entry.lineId ?? null); else create.open(entry);
+        }} />
+      </div>
     </header>
+    <StructureCreatePanel tree={tree} groups={createGroups} activeKey={create.activeKey} onClose={create.close} onCreated={onTreeUpdate} />
     {editingSelection && <section className="structure-context-editor" aria-label={t("structure.editSelection")}>
       <Inspector key={`${selection.kind}-${selection.id}`} propertiesOnly selection={selection} tree={tree}
         deviceDetail={null} onApplied={onTreeUpdate} onDeleted={props.onDeleted} />
@@ -115,16 +105,9 @@ export default function StructureWorkspace(props: {
     {tree.installations.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
     {tree.installations.filter((installation) => !focusedBuilding || flattenBuildingParts(installation.buildings, []).some(({node}) => node.id === focusedBuilding.node.id)).map((installation) => <section key={installation.id} className="installation-diagram" aria-label={installation.name}>
       {view === "topology" && <>
-        <CreateDisclosure kind="area" label={t("structure.addArea")}>
-          <NewAreaRow installationId={installation.id} onCreated={onTreeUpdate} />
-        </CreateDisclosure>
         {installation.topology.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
         {installation.topology.map((area) => <section className="topology-area" key={area.id}>
           <button className="diagram-heading" aria-pressed={selected("area", area.id)} onClick={() => onSelect({ kind: "area", id: area.id })}><WorkbenchIcon name="topology" />{area.address} · {area.name}</button>
-          {selectedArea?.id === area.id && <CreateDisclosure kind="line" parentId={area.id}
-            label={t("structure.addLineIn", { name: area.name })}>
-            <NewLineRow areaId={area.id} onCreated={onTreeUpdate} />
-          </CreateDisclosure>}
           <div className="topology-lines">{area.lines.map((line) => <section className="topology-line" key={line.id}>
             <div className="diagram-line-heading"><button className="diagram-heading" aria-pressed={selected("line", line.id)} onClick={() => onSelect({ kind: "line", id: line.id })}>{area.address}.{line.address} · {line.name}</button>
               <button data-catalog-line={line.id} aria-label={`${t("workbench.device")} · ${line.name}`} onClick={() => onCatalog(line.id)}>+</button></div>
@@ -134,17 +117,6 @@ export default function StructureWorkspace(props: {
         {installation.unassigned.length > 0 && <section className="topology-line"><h2>{t("workbench.unassigned")}</h2>{devices(installation.unassigned)}</section>}
       </>}
       {view === "buildings" && <>
-        {!focusedBuilding && <CreateDisclosure kind="site-root" label={t("structure.addSite")}
-          hint={t("structure.siteHint")}>
-          <NewBuildingPartRow fixedKind="Ground" installationId={installation.id} onCreated={onTreeUpdate} />
-        </CreateDisclosure>}
-        <CreateDisclosure kind="building-root" label={t("structure.addRootBuilding")}>
-          <NewBuildingPartRow installationId={installation.id} onCreated={onTreeUpdate} />
-        </CreateDisclosure>
-        {installation === buildingOwner && buildingParent && <CreateDisclosure kind="building-child"
-          parentId={buildingParent.id} label={t("structure.addBuildingIn", { name: buildingParent.name })}>
-          <NewBuildingPartRow parentId={buildingParent.id} onCreated={onTreeUpdate} />
-        </CreateDisclosure>}
         {installation.buildings.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
         {focusedBuilding ? <>
           {deviceTable(focusedBuilding.node.devices)}
@@ -152,13 +124,6 @@ export default function StructureWorkspace(props: {
         </> : <div className="building-diagram">{installation.buildings.map(building)}</div>}
       </>}
       {view === "addresses" && <>
-        <CreateDisclosure kind="range-root" label={t("structure.addRootRange")}>
-          <NewGroupRangeRow installationId={installation.id} onCreated={onTreeUpdate} />
-        </CreateDisclosure>
-        {installation === rangeOwner && rangeParent && <CreateDisclosure kind="range-child" parentId={rangeParent.id}
-          label={t("structure.addRangeIn", { name: rangeParent.name })}>
-          <NewGroupRangeRow parentId={rangeParent.id} onCreated={onTreeUpdate} />
-        </CreateDisclosure>}
         <GroupAddressTable key={`${tree.server_incarnation ?? "offline"}:${tree.project_incarnation ?? "unbound"}:${installation.id}`}
           projectContextKey={`${tree.server_incarnation ?? "offline"}:${tree.project_incarnation ?? "unbound"}`}
           installation={installation} tree={tree} selection={selection}

@@ -6,7 +6,8 @@ Schema 20 imports and real ZipCrypto exports decrypt
 ([KL §177](KNOWN_LIMITATIONS.md#177-ets-57-projects-schema-20-rest-on-three-public-samples-sub-module-object-ids-are-not-decoded)).
 Open: the reporter's own project (asked on #6/#7), nested sub-module object ids
 (`SM-`, reported with number 0; needs the project-side `SubModule` grammar),
-schema 22 (needs an ETS 6.1 sample with devices), and the next release.
+schema 22 (needs an ETS 6.1 sample with devices). Released in Alpha 10; Alpha 11
+(13 October 2026) changes nothing here and the reporter was invited to try it.
 
 ## AppImage EGL abort, issue #6 (12 October 2026)
 
@@ -414,6 +415,11 @@ to owner `later`. Routes naming removed goal files are kept as history.
 
 ## 5. Repository chores
 
+- **Alpha11 publication** (13 October 2026): tag `v0.1.0-alpha.11` on `758a112b`
+  (main cutoff `2a43ad5c`), 44-stage gate and corpus 144/144 green, downloaded
+  AppImage/MCP/Docker verification complete. Schema stays 14. Open: the first real
+  tester download report, #10's reporter on a real gateway, a native WebKitGTK check
+  of the new screens. [Release scope](releases/alpha11.md) · [Receipt](evidence/release-alpha11-2026-10-13.json).
 - **Alpha10 publication** (12 October 2026): tag `v0.1.0-alpha.10` on `73420e13`,
   downloaded AppImage/MCP/Docker verification complete. Native/model 14 requires
   pre-upgrade backups. Open: confirmation from the #6 and #7 reporters on their own

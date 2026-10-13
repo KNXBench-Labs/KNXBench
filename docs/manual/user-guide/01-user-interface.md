@@ -187,7 +187,7 @@ This view ships since Alpha 10 and is not in the Alpha 9 screenshots.
   list keeps it and shows it as *Stored target not in host catalogue*. If the list
   cannot be loaded, the notebook says so and offers **Load targets again**; the
   notes stay readable and can still be attached to the project.
-  *Communication objects as targets need a source build after Alpha 10.*
+  *Communication objects as targets: since Alpha 11.*
 - **Include in project documentation** stays off unless you tick it.
 - **Preview change** shows the exact before and after, naming the action (*Create
   note*, *Change note*, *Remove note*, *Move note*) and whether the note goes into
@@ -208,7 +208,7 @@ This view ships since Alpha 10 and is not in the Alpha 9 screenshots.
   closing the tab with a draft makes the browser ask first, in its own wording
   (it cannot show KNXBench's dialog). The desktop window's close button uses the
   KNXBench dialog instead. *The browser prompt and the translated review names
-  need a source build after Alpha 10.*
+  arrived in Alpha 11.*
 
 **Application help** in the notebook opens the help panel's *The window* topic.
 

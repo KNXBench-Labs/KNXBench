@@ -18,16 +18,16 @@ Docker Desktop networking is not a verified substitute for Linux host networking
 ## a) Linux AppImage
 
 The current public pre-release is
-[`v0.1.0-alpha.10`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10) .
-Download **both** `KNXBench_0.1.0-alpha.10_amd64.AppImage` and `SHA256SUMS` from
+[`v0.1.0-alpha.11`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11) .
+Download **both** `KNXBench_0.1.0-alpha.11_amd64.AppImage` and `SHA256SUMS` from
 that release page into the same directory.
 
 From that directory:
 
 ```bash
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.10_amd64.AppImage
-./KNXBench_0.1.0-alpha.10_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.11_amd64.AppImage
+./KNXBench_0.1.0-alpha.11_amd64.AppImage
 ```
 
 `SHA256SUMS` also lists the `knx-mcp` binary; `--ignore-missing` checks only the
@@ -52,12 +52,13 @@ The [launcher contract](../../APPIMAGE_LAUNCHER.md) records the tested boundary.
 older data directory. Keep the old files and open/copy them deliberately; see
 [known limitation §161](../../KNOWN_LIMITATIONS.md#161-alpha5-does-not-pick-up-the-alpha4-data-folder).
 
-**Alpha.10 native-store upgrade:** close the app and independently back up native
+**Alpha.10/11 native-store upgrade:** close the app and independently back up native
 projects and Docker data before upgrading. Native/model schema 14 adds the
 project-note tables; existing data is not rewritten. Alpha.9 and earlier refuse
 upgraded files; returning to them requires the pre-upgrade backup. In-file
-history is not a disaster backup. Update `knx-mcp` too.
-[Release scope and migration](../../releases/alpha10.md#upgrade-independent-backups-first).
+history is not a disaster backup. Update `knx-mcp` too. Alpha.11 keeps schema 14
+(no migration from Alpha.10).
+[Release scope and migration](../../releases/alpha11.md#upgrade-independent-backups-first).
 
 **Update:** close KNXBench, download and verify the replacement AppImage, then
 start it. There is no auto-updater. **Remove:** delete the AppImage. Project data
@@ -103,7 +104,7 @@ compare the browser's certificate fingerprint with the one in
 
 **Choose your update policy:** `latest` follows published releases, including
 alpha pre-releases; it does not track `main`. Use
-`knxbench/knxbench-server:0.1.0-alpha.10` in both commands to pin that release.
+`knxbench/knxbench-server:0.1.0-alpha.11` in both commands to pin that release.
 The source server and source-built images now default to 8484. Keeping
 `-e KNX_PORT=8484` also makes the commands work with Alpha.9 and older images.
 Images start at `0.1.0-alpha.6` (9 October 2026); see

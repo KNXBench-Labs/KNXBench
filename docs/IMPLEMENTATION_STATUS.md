@@ -1,3 +1,17 @@
+## 2026-10-13 — Plug-in data pair test: a plug-in edit touches only the plug-in's bytes
+
+- New corpus-gated test `crates/knx-app/tests/ets6_plugin_data_pair.rs` (ignored by
+  default, fails by name under `--ignored` without the pair). It imports two ETS6
+  project archives of the maintainer's house project taken the same day, the second
+  after one text was changed in the econ SmartSensor plug-in editor, and checks: clean import;
+  every `BinaryData`/`ExtraData` entry stored with the archive's exact bytes and
+  unchanged by save/reopen; across the pair, only the project signature and that
+  device's two plug-in entries differ.
+- Paths in `knx_testsupport::ets6_plugin_pair_paths` (overridable). The files stay
+  local and gitignored, with their provenance recorded beside each one; they are test
+  input only. No ETS compatibility claim; plug-in data stays opaque and is never
+  executed (ADR-0025).
+
 ## 2026-10-13 — ADR-0121 part B: the download tab asks testers for a word, and explains how
 
 The device download tab carries the tester verification flow the owner asked for

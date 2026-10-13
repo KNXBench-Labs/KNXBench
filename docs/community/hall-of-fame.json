@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "repository": "KNXBench-Labs/KNXBench",
+  "generated_at": "2026-10-13T21:14:07Z",
+  "policy": {
+    "excluded_logins": [
+      "KNXBench-Labs",
+      "Andre1Becker"
+    ],
+    "issue_xp": 5,
+    "reply_xp": 1,
+    "resolution_xp": 10,
+    "notify_since": "2026-10-13T20:49:00Z"
+  },
+  "ranks": [
+    {
+      "minimum_xp": 0,
+      "title": "Telegram Trainee"
+    },
+    {
+      "minimum_xp": 10,
+      "title": "Bus Bug Scout"
+    },
+    {
+      "minimum_xp": 25,
+      "title": "Group Address Gumshoe"
+    },
+    {
+      "minimum_xp": 50,
+      "title": "Topology Trouble Detective"
+    },
+    {
+      "minimum_xp": 100,
+      "title": "Commissioning Chaos Tamer"
+    },
+    {
+      "minimum_xp": 150,
+      "title": "Parameter Poltergeist Hunter"
+    },
+    {
+      "minimum_xp": 225,
+      "title": "Datapoint Dragon Slayer"
+    },
+    {
+      "minimum_xp": 325,
+      "title": "Tunnel Trouble Exorcist"
+    },
+    {
+      "minimum_xp": 450,
+      "title": "Routing Riddle Resolver"
+    },
+    {
+      "minimum_xp": 650,
+      "title": "Application Apocalypse Survivor"
+    },
+    {
+      "minimum_xp": 900,
+      "title": "Master of Missing Acknowledgements"
+    },
+    {
+      "minimum_xp": 1250,
+      "title": "Grandmaster of the Green Bus"
+    },
+    {
+      "minimum_xp": 1750,
+      "title": "Keeper of the Unbroken Bus"
+    },
+    {
+      "minimum_xp": 2500,
+      "title": "Lord of the Last Regression"
+    },
+    {
+      "minimum_xp": 4000,
+      "title": "Supreme Commander of the Blinking LED"
+    },
+    {
+      "minimum_xp": 6000,
+      "title": "Legend of the Twisted Pair"
+    }
+  ],
+  "resolution_awards": {
+    "10": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T11:12:15Z",
+      "notify": false,
+      "notified": false
+    },
+    "9": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T11:12:10Z",
+      "notify": false,
+      "notified": false
+    },
+    "8": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T11:12:12Z",
+      "notify": false,
+      "notified": false
+    },
+    "6": {
+      "login": "hagbardZ",
+      "xp": 10,
+      "closed_at": "2026-10-12T18:56:54Z",
+      "notify": false,
+      "notified": false
+    },
+    "5": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-11T21:33:01Z",
+      "notify": false,
+      "notified": false
+    },
+    "2": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-10T05:00:01Z",
+      "notify": false,
+      "notified": false
+    },
+    "1": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-11T20:19:19Z",
+      "notify": false,
+      "notified": false
+    },
+    "16": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T21:00:43Z",
+      "notify": true,
+      "notified": false
+    },
+    "14": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T21:00:40Z",
+      "notify": true,
+      "notified": false
+    }
+  },
+  "contributors": [
+    {
+      "login": "thengsty",
+      "issues": 15,
+      "replies": 12,
+      "resolutions": 8,
+      "xp": 167,
+      "rank": {
+        "minimum_xp": 150,
+        "title": "Parameter Poltergeist Hunter"
+      },
+      "medals": [
+        "Golden Bus Probe"
+      ],
+      "position": 1
+    },
+    {
+      "login": "hagbardZ",
+      "issues": 1,
+      "replies": 3,
+      "resolutions": 1,
+      "xp": 18,
+      "rank": {
+        "minimum_xp": 10,
+        "title": "Bus Bug Scout"
+      },
+      "medals": [],
+      "position": 2
+    }
+  ]
+}

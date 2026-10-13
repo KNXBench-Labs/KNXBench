@@ -92,7 +92,28 @@ killed. Gate on frozen `33a74b59` (base `3deab602`): build, `tsc` for all 13 tsc
 Self-review only; no real gateway, device or bus contacted; native WebKitGTK not
 exercised.
 
-## 2026-10-13 — Parked UX feedback ported: steady toasts, Flow images, motion per category
+## 2026-10-13 — Individual limitations dossiers and a short status reading view
+
+- `KNOWN_LIMITATIONS.md` is a topic-grouped overview with current-reading titles,
+  short boundaries, ledger-derived status and individual detail/history links.
+  The 10,135-line source catalogue is reduced to a 1,559-line reading index.
+- All 189 source sections and five older resolved descriptions are preserved in
+  individual `docs/limitations/` dossiers. Original numbered identities and 290
+  heading/alias targets remain available, including the two distinct §130 tracks.
+  The old resolved-history path is a compatibility link index.
+- [Migration receipt](evidence/limitations-reorganization-2026-10-13.json) records
+  section/source hashes and reversible relative-link changes. Regression tests
+  check retained historical blocks; a deliberate historical deletion is detected.
+- `tools/limitations_catalogue.py` reads authored summaries and the canonical
+  ledger, never an independently stored status. The documentation gate and CI
+  check generated drift and preserved history; xtask accepts grouped level-3
+  limitation headings while retaining its missing-ID/status-table checks.
+- [ADR-0076 amendment](adr/0076-one-ledger-is-the-status-of-record.md#generated-limitations-reading-view--amendment-2026-10-13)
+  and [maintenance guide](limitations/README.md) define the derived-view boundary.
+  No ledger row, compatibility decision, product behavior, release or deployment
+  is changed. Root-only unpublished manufacturer research is left with its owner.
+
+## 2026-10-13 — Parked UX feedback ported: steady toasts, flow images, motion per category
 
 Package 2 of the parked-work adoption: the Codex branch `feature/ux-feedback-20261010`
 (13 commits, AP1–AP5) ported onto main; the original worktree was only read. Codex

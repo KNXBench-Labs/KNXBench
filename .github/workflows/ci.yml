@@ -78,6 +78,11 @@ jobs:
       - name: Ledger gate (one status of record, ADR-0076)
         run: cargo run -p xtask -- check-ledger
 
+      - name: Documentation and generated limitations gate
+        run: |
+          python3 tools/check_documentation.py
+          python3 -m unittest discover -s tools/tests -p test_limitations_catalogue.py
+
       - name: Corpus gate (a missing corpus is never a pass)
         run: cargo run -p xtask -- check-corpus-gates
 

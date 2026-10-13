@@ -137,6 +137,9 @@ def check(root: Path) -> tuple[dict, list[str]]:
                     errors.append(f"{source.relative_to(root)}: missing target: {link.target}")
     chapters, navigation = chapter_chain(root)
     errors.extend(navigation)
+    if (root / 'docs/KNOWN_LIMITATIONS.md').is_file():
+        from limitations_catalogue import check as check_limitations
+        errors.extend(check_limitations(root))
     return {"markdown_files": len(sources), "local_targets": count,
             "images": images, "chapters": len(chapters)}, errors
 

@@ -140,10 +140,13 @@ See [the naming contract](../../contracts/project-name-editing.md).
 
 ## Creating and deleting addresses
 
-Group addresses are created in the project explorer, under the **Group Addresses**
-branch: type the address (`1/1/1`), a name, optionally pick a range from the select,
-and press Enter or click Add. The same restriction as everywhere else applies — the
-creation row appears under the first installation only.
+Group addresses are created from **+ New → Add group address** in the group-address
+view's header *(source build after Alpha 11)*, or in the project explorer under each
+installation's **Group Addresses** branch: type the address (`1/1/1`), a name,
+optionally pick a range from the select, and press Enter or click Add. Creation works
+in every installation. When the view is scoped to a range, or a range is selected, the
+menu offers **Add group address in …** with that range preselected; with several
+installations the menu groups its entries by installation.
 
 Deleting is done from the properties pane, or from the bulk action bar for several
 addresses at once. A group address that still has a communication object linked to it
@@ -154,11 +157,11 @@ back.
 
 A **group range** is the box a set of addresses lives in — the "Lighting" main group
 and its "Ground floor" middle group, in ETS terms. Under **Group addresses**
-in the main workspace, **Add group range at installation root** creates a
-main range. Select a main range to show **Add subrange inside …**. The same
+in the main workspace, **+ New → Add group range at installation root** creates a
+main range. Select a main range to get **+ New → Add subrange inside …**. The same
 start-address, end-address and name fields are in the project explorer under
 **Group Ranges** and each main range. A selected middle range does not offer a
-third nesting level. Creation is limited to the first installation.
+third nesting level. Creation works in every installation.
 
 A selected range can be renamed, moved by choosing its parent (or the root),
 and deleted in the centre editor or Properties. A move preserves its address

@@ -100,7 +100,9 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     if (!await navigation.isVisible()) await page.locator(".workbench-panel-controls").getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
     await navigation.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
     // Issue #11: address lists start closed; this case works on rows, so open them like a user.
-    await page.locator("[data-ga-expand-all]").click();
+    // Issue #11: every installation's tree opens compact; open each one.
+    await expect(page.locator("[data-ga-expand-all]").first()).toBeVisible();
+    for (const button of await page.locator("[data-ga-expand-all]").all()) await button.click();
     // Range heading rows share the tbody since the tree-table view; count address rows only.
     const gaRows = page.locator(".address-table tbody tr[data-rename-kind='group_address']");
     await expect(gaRows).toHaveCount(105);

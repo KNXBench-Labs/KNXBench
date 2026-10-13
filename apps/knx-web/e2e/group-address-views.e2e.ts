@@ -95,7 +95,11 @@ async function openAddresses(page: Page, language: Language, expandAll = true) {
   await nav.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
   await expect(page.locator(".ga-workspace")).toBeVisible();
   // Issue #11: address lists start closed; row-focused cases open them like a user.
-  if (expandAll) await page.locator("[data-ga-expand-all]").click();
+  // Issue #11: every installation's tree opens compact; open each one.
+  if (expandAll) {
+    await expect(page.locator("[data-ga-expand-all]").first()).toBeVisible();
+    for (const button of await page.locator("[data-ga-expand-all]").all()) await button.click();
+  }
 }
 const chooseView = (page: Page, view: string) => page.locator("[data-ga-view]").selectOption(view);
 const capture = async (page: Page, name: string) => {

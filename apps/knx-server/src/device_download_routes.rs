@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use knx_app::access_key::{choose_key, download_keying, project_access_key, DownloadKeying};
 use knx_app::device_download::{prepare_device_download, PreparedDownload};
+use knx_app::download_report::{prepare_report, DownloadReport};
 use knx_app::download_support::{
     download_level, shipped_evidence, untested_acknowledgement, SupportLevel,
 };
@@ -45,6 +46,7 @@ pub fn device_download_routes() -> Router<SharedState> {
         .route("/api/device-download/plan", post(plan))
         .route("/api/device-download/start", post(start))
         .route("/api/device-download/status", get(status))
+        .route("/api/device-download/report", get(report))
 }
 
 /// The plan shown to the user, kept so `start` can prove it writes the
@@ -387,7 +389,8 @@ async fn start(
     let keying = keying(&state, &prepared)?;
     // Recomputed from the plan that will run, not trusted from the shown
     // one: the evidence is the build's, the plan is checked equal below.
-    if support_of(&prepared)?.needs_acknowledgement() {
+    let level = support_of(&prepared)?;
+    if level.needs_acknowledgement() {
         let expected = untested_acknowledgement(target);
         if body.accept_untested.as_deref() != Some(expected.as_str()) {
             return Err(ApiError::bad_request(format!(
@@ -411,6 +414,21 @@ async fn start(
         }
     }
 
+    let report = {
+        let Some(products) = state.product_db.as_ref() else {
+            return Err(ApiError::with_status(
+                StatusCode::CONFLICT,
+                "no product database is configured, so no application program can be read",
+            ));
+        };
+        let products = products.lock().expect("state mutex poisoned");
+        prepare_report(&products, &prepared, &level, &crate::version_string()).map_err(|e| {
+            ApiError::with_status(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("not sent: the download report could not be prepared: {e}"),
+            )
+        })?
+    };
     let activity = state
         .one_shot_activity
         .start_download(body.plan_id, target)
@@ -448,6 +466,7 @@ async fn start(
         prepared,
         backups,
         activity,
+        report,
     ));
     drop(scan);
     drop(monitor);
@@ -458,6 +477,62 @@ async fn start(
         .lock()
         .expect("state mutex poisoned") = None;
     Ok(Json(StartResponse { download_id: id }))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ReportQuery {
+    download_id: Option<u64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReportResponse {
+    /// The report file's contents (ADR-0121).
+    report: DownloadReport,
+    /// A file name for it.
+    file_name: String,
+    /// A short text for an issue or mail; the values stay in the file.
+    summary: String,
+    /// The issue form with program, version and outcome filled in.
+    issue_url: String,
+    /// A mail to the report mailbox with the summary as body.
+    mailto: String,
+}
+
+/// The tester's report of the last download, once it has ended.
+async fn report(
+    State(state): State<SharedState>,
+    Query(query): Query<ReportQuery>,
+) -> Result<Json<ReportResponse>, ApiError> {
+    let Ok(guard) = state.device_download.try_lock() else {
+        return Err(conflict("a download is being started"));
+    };
+    let Some(session) = guard.as_ref() else {
+        return Err(ApiError::with_status(
+            StatusCode::NOT_FOUND,
+            "no download to a device yet",
+        ));
+    };
+    if query.download_id.is_some_and(|id| id != session.id()) {
+        return Err(ApiError::with_status(
+            StatusCode::NOT_FOUND,
+            format!(
+                "download {} has been replaced",
+                query.download_id.unwrap_or_default()
+            ),
+        ));
+    }
+    let Some(report) = session.report() else {
+        return Err(conflict("the download has not ended yet"));
+    };
+    Ok(Json(ReportResponse {
+        file_name: report.file_name(),
+        summary: report.summary(),
+        issue_url: report.issue_url(),
+        mailto: report.mailto(),
+        report,
+    }))
 }
 
 #[derive(Deserialize)]
@@ -535,5 +610,28 @@ pub fn download_in_progress(state: &SharedState) -> bool {
         Ok(guard) => guard
             .as_ref()
             .is_some_and(DeviceDownloadSession::is_running),
+    }
+}
+
+#[cfg(test)]
+mod report_tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::Request;
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn there_is_no_report_before_any_download() {
+        let state: SharedState = std::sync::Arc::new(crate::AppState::default());
+        let response = device_download_routes()
+            .with_state(state)
+            .oneshot(
+                Request::get("/api/device-download/report")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 }

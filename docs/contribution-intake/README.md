@@ -158,6 +158,14 @@ Creating an issue is not a promise of a fix, compatibility approval or response 
 - **Private original blocked:** the app found known key-like fields or unexamined
   content. This guard cannot be overridden here. Do not publish that file manually.
 
+## Download reports are separate
+
+Tested a device download? That has its own route: the **Download report** issue form
+or **issue@knxbench.com** (a working mailbox, for download reports only), with the
+report file KNXBench writes
+([how](../manual/user-guide/10-command-line.md#helping-to-verify-a-device)). The
+proposed mailbox below is for analysis contributions and is still unconfirmed.
+
 ## Confidential material and email
 
 **Private intake is not confirmed yet.** `contribute@knxbench.com` is a proposed

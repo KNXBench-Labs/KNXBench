@@ -113,6 +113,9 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         file (--backup-dir, default <project>.backups/); no backup, no write.\n\
      \x20         An application nobody has downloaded this way on hardware is UNTESTED\n\
      \x20         and needs --accept-untested \"I accept an untested download to <address>\".\n\
+     \x20         --report <file> writes a tester's report of the run (program, scope,\n\
+     \x20         outcome and the parameter values written; no project or device name,\n\
+     \x20         no address) to send in by issue or to issue@knxbench.com.\n\
      \x20     knx device readiness --project <path.knxdb> [--product-db <path>]\n\
      \x20         (offline, per project device: verified, untested (plans, never downloaded\n\
      \x20         on hardware), unsupported (with the download's own refusal), excluded or\n\
@@ -219,6 +222,15 @@ fn version_line() -> String {
         env!("CARGO_PKG_VERSION"),
         option_env!("KNX_BUILD_SHA").filter(|sha| !sha.is_empty()),
     )
+}
+
+/// The version alone, as the server states it: `0.1.0-alpha.10+gabc1234`.
+fn version_string() -> String {
+    let line = version_line();
+    match line.split_once(' ') {
+        Some((_, version)) => version.to_string(),
+        None => line,
+    }
 }
 
 fn format_version_line(name: &str, version: &str, sha: Option<&str>) -> String {
@@ -2311,6 +2323,24 @@ fn run_device_download(args: &[String]) -> ExitCode {
         println!("written to the device: no");
         return ExitCode::FAILURE;
     }
+    // Prepared before anything is sent: a report that cannot be prepared
+    // stops the write, as on the server (ADR-0121).
+    let report = match &parsed.report {
+        None => None,
+        Some(path) => match knx_app::download_report::prepare_report(
+            &products,
+            &prepared,
+            &level,
+            &version_string(),
+        ) {
+            Ok(report) => Some((std::path::PathBuf::from(path), report)),
+            Err(e) => {
+                eprintln!("the download report could not be prepared; not sent: {e}");
+                println!("written to the device: no");
+                return ExitCode::FAILURE;
+            }
+        },
+    };
     let backup_dir = device_download::backup_dir(&parsed);
     println!(
         "backup: what the plan overwrites is read and kept in {} before the first write",
@@ -2392,8 +2422,23 @@ fn run_device_download(args: &[String]) -> ExitCode {
         let cleanup_recorded = activity.record_cleanup(cleanup_ok).map_err(|error| {
             eprintln!("activity history could not record cleanup: {error}; device outcome is unchanged");
         }).is_ok();
+        let reported = match (&report, device_download::reported_outcome(&result)) {
+            (Some((path, report)), Some(outcome)) => {
+                match device_download::write_report(path, &report.clone().with_outcome(outcome)) {
+                    Ok(text) => {
+                        print!("{text}");
+                        true
+                    }
+                    Err(error) => {
+                        eprintln!("{error}; device outcome is unchanged");
+                        false
+                    }
+                }
+            }
+            _ => true,
+        };
         if matches!(result, knx_app::commissioning_activity::DownloadResult::Finished { written: device_download::Written::Yes, .. })
-            && recorded && cleanup_ok && cleanup_recorded {
+            && recorded && cleanup_ok && cleanup_recorded && reported {
             ExitCode::SUCCESS
         } else {
             ExitCode::FAILURE

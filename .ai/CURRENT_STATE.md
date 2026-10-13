@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 09:52
+- **Completed:** Parked-work adoption 3b: residue check of Codex's `native-evidence-20261011` (`b76ee907`, durable import reports, recorded device state; ported as package 1 on 2026-10-12). Docs-only, no web lock taken. Against main `efb5e0ed`: 5,520 lines added outside `.ai/`, all on main verbatim except 29 that are package 1's documented adaptations (Dashboard placement, `div`/`h4` panels, quiet Cancel, corrected DE scope text, status wording). **No schema/version bump** (no `knx-store`/`knx-core` change, no migration; ADR-0113 stores a version-1 envelope in the existing passthrough rows, main refuses version 2 in `corrupt_duplicate_future_and_malformed_records_are_refused_without_mutation`), so no new ADR or migration test. Import-lifecycle preflight (`preflight_initial_save`): prose only, no code on main, not adopted. Recorded in the triage note and OPEN_WORK.
+- **Pending/Next Steps:** Parked-work adoption: docs check of the five stale-claim corrections (docs-only); removing worktrees `ux-feedback-20261010` and `native-evidence-20261011` waits for an owner go. Web lock free; queue unchanged (claude-issues-8-9-10 next).
+- **Notes for Codex oder Claude:** Credit: the native-evidence work is Codex's. Its session log `.ai/logs/2026-10-11_codex_durable-native-import-evidence.md` had never been committed (ignored file in the parked worktree); it is now added verbatim (read-only copy, private-data scan clean). The port is package 1's (`.ai/logs/2026-10-12_claude_native-evidence-port.md`). Parked worktrees untouched.
+
+---
+
 Web lock: released by claude-parked-adoption (package 2, ux-feedback port, delivered)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 09:51

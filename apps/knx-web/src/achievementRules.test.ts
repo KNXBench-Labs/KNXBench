@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import type { AchievementDefinition } from "./achievementCatalog";
 import type { AchievementEvent } from "./achievementEvents";
 import {
+  applyIncrements,
   distinctMarkerId,
   emptyRecord,
   evaluateAchievementEvent,
   mergeAchievementRecords,
+  reconcileAchievementRecord,
   recordIsEmpty,
   type AchievementRecord,
 } from "./achievementRules";
@@ -56,7 +58,7 @@ describe("evaluateAchievementEvent", () => {
     for (let i = 1; i <= 4; i++) {
       const result = evaluateAchievementEvent(record, { type: "undo" }, NOON, catalog);
       if (result.newlyUnlocked.length > 0) unlockedAt.push(i);
-      record = mergeAchievementRecords(record, result.delta);
+      record = applyIncrements(mergeAchievementRecords(record, result.delta), result.increments);
     }
     expect(unlockedAt).toEqual([3]);
     // Counting stops once unlocked: the fourth undo adds nothing.
@@ -142,7 +144,7 @@ function play(catalog: AchievementDefinition[], events: AchievementEvent[], at =
   for (const event of events) {
     const result = evaluateAchievementEvent(record, event, at, catalog);
     unlocked.push(...result.newlyUnlocked.map((d) => d.id));
-    record = mergeAchievementRecords(record, result.delta);
+    record = applyIncrements(mergeAchievementRecords(record, result.delta), result.increments);
   }
   return { record, unlocked };
 }
@@ -310,5 +312,34 @@ describe("allOthers rules", () => {
   it("is not fooled by marker or unknown ids in the record", () => {
     const start = { unlocked: { a: "2026-01-01T00:00:00.000Z", "from-a-newer-build": "2026-01-01T00:00:00.000Z" }, progress: {} };
     expect(play(catalog, [{ type: "undo" }], NOON, start).unlocked).toEqual([]);
+  });
+});
+
+describe("KL-164: counting across windows", () => {
+  const goal = [def("time-traveller", { kind: "count", event: "undo", goal: 3 })];
+  it("sends a step as an increment, never as an absolute value a maximum could swallow", () => {
+    const record: AchievementRecord = { unlocked: {}, progress: { "time-traveller": 1 } };
+    const result = evaluateAchievementEvent(record, { type: "undo" }, NOON, goal);
+    expect(result.increments).toEqual({ "time-traveller": 1 });
+    expect(result.delta.progress).toEqual({});
+    expect(applyIncrements(record, result.increments).progress["time-traveller"]).toBe(2);
+  });
+  it("unlocks a counter another window brought to its goal, once", () => {
+    const record: AchievementRecord = { unlocked: {}, progress: { "time-traveller": 4 } };
+    const first = reconcileAchievementRecord(record, NOON, goal);
+    expect(first.newlyUnlocked.map((d) => d.id)).toEqual(["time-traveller"]);
+    const after = mergeAchievementRecords(record, first.delta);
+    expect(recordIsEmpty(reconcileAchievementRecord(after, NOON, goal).delta)).toBe(true);
+    expect(recordIsEmpty(reconcileAchievementRecord({ unlocked: {}, progress: { "time-traveller": 2 } }, NOON, goal).delta)).toBe(true);
+  });
+  it("derives a distinct total from the markers both windows added", () => {
+    const catalog = [def("commissioner", { kind: "distinct", event: "deviceDownloadVerified", goal: 3 })];
+    const a = distinctMarkerId("commissioner", "1.1.1"); const b = distinctMarkerId("commissioner", "1.1.2");
+    // Each window knew one marker and reported a total of 2 — but there are three markers.
+    const c = distinctMarkerId("commissioner", "1.1.3");
+    const record: AchievementRecord = { unlocked: {}, progress: { [a]: 1, [b]: 1, [c]: 1, commissioner: 2 } };
+    const result = reconcileAchievementRecord(record, NOON, catalog);
+    expect(result.delta.progress).toEqual({ commissioner: 3 });
+    expect(result.newlyUnlocked.map((d) => d.id)).toEqual(["commissioner"]);
   });
 });

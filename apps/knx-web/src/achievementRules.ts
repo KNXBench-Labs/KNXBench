@@ -16,10 +16,28 @@ export interface AchievementRecord {
 }
 
 export interface Evaluation {
-  /** Only what this event changed; empty when nothing did. */
+  /** Only what this event changed; empty when nothing did. Merged as maxima. */
   delta: AchievementRecord;
+  /** KL-164: "one more" steps of `count` rules, added up by the server under a
+   * request id, so two windows that both saw 5 end at 7, not 6. */
+  increments: Record<string, number>;
   /** Catalogue order, so toasts appear in a stable order. */
   newlyUnlocked: AchievementDefinition[];
+}
+
+/** Applies increments to a record locally (what the server will do once). */
+export function applyIncrements(record: AchievementRecord, increments: Record<string, number>): AchievementRecord {
+  if (Object.keys(increments).length === 0) return record;
+  const progress = { ...record.progress };
+  for (const [id, by] of Object.entries(increments)) progress[id] = (progress[id] ?? 0) + by;
+  return { unlocked: record.unlocked, progress };
+}
+
+/** Adds two increment maps. */
+export function addIncrements(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
+  const sum = { ...a };
+  for (const [id, by] of Object.entries(b)) sum[id] = (sum[id] ?? 0) + by;
+  return sum;
 }
 
 export function emptyRecord(): AchievementRecord {
@@ -37,6 +55,7 @@ export function evaluateAchievementEvent(
   catalog: readonly AchievementDefinition[] = ACHIEVEMENTS,
 ): Evaluation {
   const delta = emptyRecord();
+  const increments: Record<string, number> = {};
   const newlyUnlocked: AchievementDefinition[] = [];
   const unlock = (definition: AchievementDefinition) => {
     delta.unlocked[definition.id] = now.toISOString();
@@ -53,7 +72,7 @@ export function evaluateAchievementEvent(
       case "count": {
         if (rule.event !== event.type) break;
         const count = (record.progress[definition.id] ?? 0) + 1;
-        delta.progress[definition.id] = Math.min(count, rule.goal);
+        increments[definition.id] = 1;
         if (count >= rule.goal) unlock(definition);
         break;
       }
@@ -96,6 +115,44 @@ export function evaluateAchievementEvent(
       case "allOthers":
         // Decided below, once this event's own unlocks are known.
         break;
+    }
+  }
+  for (const definition of catalog) {
+    if (definition.rule.kind !== "allOthers" || definition.id in record.unlocked) continue;
+    const everyOther = catalog.every(
+      (other) => other.rule.kind === "allOthers" || other.id in record.unlocked || other.id in delta.unlocked,
+    );
+    if (everyOther) unlock(definition);
+  }
+  return { delta, increments, newlyUnlocked };
+}
+
+/**
+ * What a record says once other windows have reported too (KL-164): a `count`
+ * that reached its goal through steps from elsewhere unlocks here, and a
+ * `distinct` total is the number of its markers, whoever added them. Returns
+ * only what is new; maxima only, safe to send again.
+ */
+export function reconcileAchievementRecord(
+  record: AchievementRecord,
+  now: Date,
+  catalog: readonly AchievementDefinition[] = ACHIEVEMENTS,
+): Omit<Evaluation, "increments"> {
+  const delta = emptyRecord();
+  const newlyUnlocked: AchievementDefinition[] = [];
+  const unlock = (definition: AchievementDefinition) => {
+    delta.unlocked[definition.id] = now.toISOString();
+    newlyUnlocked.push(definition);
+  };
+  for (const definition of catalog) {
+    if (definition.id in record.unlocked) continue;
+    const rule = definition.rule;
+    if (rule.kind === "count" && (record.progress[definition.id] ?? 0) >= rule.goal) unlock(definition);
+    if (rule.kind === "distinct") {
+      const prefix = markerPrefix(definition.id);
+      const markers = Object.keys(record.progress).filter((id) => id.startsWith(prefix)).length;
+      if (markers > (record.progress[definition.id] ?? 0)) delta.progress[definition.id] = Math.min(markers, rule.goal);
+      if (markers >= rule.goal) unlock(definition);
     }
   }
   for (const definition of catalog) {

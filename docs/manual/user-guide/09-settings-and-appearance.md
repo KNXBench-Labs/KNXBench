@@ -296,7 +296,9 @@ What achievements never do:
 - gate anything.
 
 They are stored per server, not per person, and only actions in the
-application window count, not the command line
+application window count, not the command line. Two windows counting at
+the same moment both count *(source build after Alpha 11; earlier builds
+could lose one of two simultaneous steps)*
 ([known limitation §164](../../KNOWN_LIMITATIONS.md#164-achievements-are-per-installation-count-only-in-the-ui-and-can-lose-a-concurrent-increment)).
 
 ## Debug · device control

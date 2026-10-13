@@ -6,6 +6,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { MultiSelection } from "./selection";
 import { deviceInstallations, flattenBuildingParts } from "./treeUtils";
 import { useTranslate } from "./i18n";
+import NameRecipeDialog from "./features/nameRecipe/NameRecipeDialog";
 
 // The bulk-action counterpart of `Inspector.tsx`'s single-entity Delete
 // buttons/`LineMoveField`/`BuildingPartMoveField` — same "act immediately,
@@ -23,6 +24,8 @@ export default function BulkActionToolbar(props: {
   const { multiSelection, tree, onTreeUpdate, onDone } = props;
   const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
+  const [recipeOpen, setRecipeOpen] = useState(false);
+  // Insertion order: the order the user picked the items in.
   const ids = Array.from(multiSelection.ids);
   const count = ids.length;
 
@@ -71,6 +74,20 @@ export default function BulkActionToolbar(props: {
     <div className="bulk-action-toolbar">
       <span className="bulk-action-label">{label}</span>
       <button onClick={deleteSelected}>{t("bulkAction.delete")}</button>
+      {multiSelection.kind === "group_address" && (
+        <button data-role="name-recipe" onClick={() => setRecipeOpen(true)}>{t("bulkAction.nameRecipe")}</button>
+      )}
+      {recipeOpen && multiSelection.kind === "group_address" && (
+        <NameRecipeDialog
+          tree={tree}
+          ids={ids}
+          onApplied={() => {
+            // The selection stays, so the next recipe or an Undo is one click away.
+            api.currentProject().then(onTreeUpdate, (e: unknown) => setError(api.errorMessage(e)));
+          }}
+          onClose={() => setRecipeOpen(false)}
+        />
+      )}
       {multiSelection.kind === "device" && !installation && (
         <span className="bulk-action-hint">{t("bulkAction.oneInstallation")}</span>
       )}

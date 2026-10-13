@@ -47,10 +47,11 @@ knx-csv.workspace = true
 # `knx-diff` must itself never depend on `knx-etsproj`, and `knx-app` is
 # the one crate allowed to see both.
 knx-diff.workspace = true
-# Only `tests/perf_baseline.rs` needs this: the `--ignored` performance
-# baseline times `knx_projection::build_project_tree` alongside import,
-# open, search and export. No production `knx-app` code builds a
-# projection yet — that is the desktop/web UI's job, one layer up.
+# Only tests need this: `tests/perf_baseline.rs` (the `--ignored`
+# performance baseline times `knx_projection::build_project_tree` alongside
+# import, open, search and export) and `tests/functions_import.rs` (imported
+# Function provenance as the workbench sees it). No production `knx-app`
+# code builds a projection — that is the desktop/web UI's job, one layer up.
 knx-projection.workspace = true
 # Only `tests/legacy_corpus.rs` needs this: the ETS oracle program is read
 # from inside a private `.knxproj` archive.

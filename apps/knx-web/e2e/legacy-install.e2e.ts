@@ -29,7 +29,7 @@ const report = {
 /** A stand-in server: an encrypted .vd4 asks for a password, then imports with it. */
 async function interceptApi(page: Page, settings: Record<string, unknown>) {
   const state = {
-    unexpected: [] as string[], packageInstalls: 0, installs: [] as { password: boolean; remember: boolean }[],
+    unexpected: [] as string[], packagePreviews: 0, installs: [] as { password: boolean; remember: boolean }[],
   };
   const current = {
     schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: true,
@@ -55,9 +55,9 @@ async function interceptApi(page: Page, settings: Record<string, unknown>) {
       body = { interfaces: [] };
     } else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) {
       body = [];
-    } else if (path === "/api/catalog/install" && method === "POST") {
-      // The package installer recognises a renamed legacy database by content.
-      state.packageInstalls += 1;
+    } else if (path === "/api/catalog/update/preview" && method === "POST") {
+      // The package preview recognises a renamed legacy database by content.
+      state.packagePreviews += 1;
       status = 422;
       body = { error: "legacy ETS3 product database (EX-IM) is not a .knxprod package", kind: "legacyProductDatabase" };
     } else if (path === "/api/catalog/install-legacy" && method === "POST") {
@@ -132,8 +132,8 @@ test("en 1440px: the catalog sends a renamed legacy database on to the legacy in
   await expect(wizard).toHaveCount(0);
   await page.getByRole("button", { name: l.catalog, exact: true }).first().click();
   const catalog = page.getByRole("region", { name: l.catalogTitle });
-  // The direct install is the picker that accepts legacy databases; the
-  // previewed update beside it takes packages only.
+  // One product picker (Goal B5): a package is previewed first, and the preview
+  // route names a renamed legacy database, which then goes to the legacy installer.
   await catalog.locator('input[type="file"][accept*=".vd3"]').setInputFiles({
     name: "renamed.knxprod", mimeType: "application/zip", buffer: Buffer.from("PK\u0003\u0004fixture"),
   });
@@ -142,8 +142,8 @@ test("en 1440px: the catalog sends a renamed legacy database on to the legacy in
   await dialog.getByLabel(l.field, { exact: true }).fill("fixture-password");
   await dialog.getByRole("button", { name: l.import, exact: true }).click();
   await expect(catalog).toContainText(l.imported);
-  // Each attempt asks the package route first, which names the legacy database again.
-  expect(state.packageInstalls).toBe(2);
+  // The package route is asked once; the password retry goes to the legacy installer only.
+  expect(state.packagePreviews).toBe(1);
   expect(state.installs).toEqual([{ password: false, remember: false }, { password: true, remember: false }]);
   expect(state.unexpected).toEqual([]);
 });

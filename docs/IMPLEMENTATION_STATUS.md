@@ -1,3 +1,24 @@
+## 2026-10-13 — KL-170 follow-up: named base-image byte-order warning
+
+- **Owner decision** ([ADR-0120](adr/0120-base-image-byte-order-warning.md)):
+  downloads of programs that declare `BigEndian` or nothing, but whose own base
+  image holds every discriminating default low octet first, stay allowed and
+  carry the named warning `base-image-low-octet-first`.
+- `knx_productdb::byte_order_probe::base_image_order` reuses the ADR-0119
+  planning at product defaults and reads the segment `Data`;
+  `knx_app::device_download::byte_order_warnings` decides (no manufacturer
+  list; a check that cannot run is named `base-image-order-unchecked`).
+  `PreparedDownload::warnings` is printed as `WARNING …` by
+  `knx device download` and returned as `warnings` by the server's plan route.
+  Image, support level, acknowledgement and write are unchanged.
+- Measured on 929 packages: 32 of 181 memory-downloadable programs flagged,
+  all ABB/Busch-Jaeger `0701h`; no MDT (verified program included), Siemens or
+  other program ([receipt](evidence/kl170-base-image-warning-2026-10-13.json)).
+  11.8 s for 519 checks, at most 2.0 s per program (release).
+- **Not yet:** the web download tab shows neither warnings nor inferences (web
+  lock held by another session); queued with the tester verification flow.
+- Gate on the rebased candidate `c74bbc8c` (inputs frozen): fmt, clippy `-D warnings`, Rust 4243/0/197 (passed/failed/ignored; 7 new tests, 1 new corpus test), the five xtask checks, the documentation check, private corpus 144/144 in 31 targets (the verified MDT plan carries no warning in CLI and server); 4/4 hand mutants of the decision killed. `knx-desktop` excluded locally (needs the built web bundle; unchanged).
+
 ## 2026-10-13 — Notes follow-ups: object targets, unload guard, translated review
 
 The three open items of the notes workbench host are done
@@ -28,6 +49,7 @@ names, raw DPT) fail by name. Gate on `b216f0aa` (rebased on `d5cffb2c`): build,
 417/0**, production-preview notes 12/12, instructions 11/11, devices 13/13, notes
 and DPT-monitor specs ×3 48/48, fmt, Clippy, Rust 4248/0 (196 ignored), tools 67,
 five xtask checks, inputs frozen; corpus 143/143 in 31 targets (loopback). Self-review only.
+
 
 ## 2026-10-13 — KL-170: byte-order evidence review and a read-only probe
 

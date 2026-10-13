@@ -76,6 +76,14 @@ describe("LogPanel", () => {
     expect(host!.querySelector(".log-panel-more")!.textContent).toContain("Showing the newest 500 of 16000 matching entries.");
     await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-show-more")!.click());
     expect(host!.querySelectorAll(".log-entry")).toHaveLength(1000);
+    // A refetch after a project change keeps the expanded list.
+    const newer = [...server, entry({ message: "server 16000", timestamp: new Date(Date.UTC(2026, 9, 13, 5, 0, 0)).toISOString() })];
+    apiMock.getSessionLog.mockResolvedValue(newer);
+    await act(async () => root.render(<LogPanel tree={baseTree()} refreshKey={1} />));
+    expect(host!.querySelector(".log-entry-message")!.textContent).toBe("server 16000");
+    expect(host!.querySelectorAll(".log-entry")).toHaveLength(1000);
+    apiMock.getSessionLog.mockResolvedValue(server);
+    await act(async () => root.render(<LogPanel tree={baseTree()} refreshKey={2} />));
     // Search spans every entry, not only the rendered page.
     await act(() => setSearch(host!.querySelector<HTMLInputElement>(".log-panel-search input")!, "server 7"));
     expect(host!.querySelector(".log-panel-count")!.textContent).toBe("1111 of 16000 entries");

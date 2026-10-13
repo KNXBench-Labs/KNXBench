@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "repository": "KNXBench-Labs/KNXBench",
-  "generated_at": "2026-10-13T20:50:13Z",
+  "generated_at": "2026-10-13T21:14:07Z",
   "policy": {
     "excluded_logins": [
       "KNXBench-Labs",
@@ -127,6 +127,20 @@
       "closed_at": "2026-10-11T20:19:19Z",
       "notify": false,
       "notified": false
+    },
+    "16": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T21:00:43Z",
+      "notify": true,
+      "notified": false
+    },
+    "14": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T21:00:40Z",
+      "notify": true,
+      "notified": false
     }
   },
   "contributors": [
@@ -134,11 +148,11 @@
       "login": "thengsty",
       "issues": 15,
       "replies": 12,
-      "resolutions": 6,
-      "xp": 147,
+      "resolutions": 8,
+      "xp": 167,
       "rank": {
-        "minimum_xp": 100,
-        "title": "Commissioning Chaos Tamer"
+        "minimum_xp": 150,
+        "title": "Parameter Poltergeist Hunter"
       },
       "medals": [
         "Golden Bus Probe"

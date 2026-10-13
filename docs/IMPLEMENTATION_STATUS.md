@@ -14,6 +14,12 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- [2026-10-13 — Bug Hunters’ Hall of Fame: sixteen titles and a Golden Bus Probe](contracts/community-recognition.md).
+  Public README/page/JSON, real GitHub counters, retained completion XP and
+  automatic closure recognition. About display is handed to Goal B, not implemented
+  here. [Issues #17/#18 triage](status/2026-10-13-issues-17-18-triage.md) accompanies
+  the handoff; neither product fix is claimed.
+
 - [Documentation history and research indexes reorganized](history/DOCUMENTATION_REORGANIZATION.md).
 - [Alpha 11 publication](releases/alpha11.md).
 - [Individual limitations dossiers](limitations/README.md).

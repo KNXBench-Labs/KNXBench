@@ -19,8 +19,8 @@ blocked (named missing evidence) or excluded; nothing else is added.
 
 | Package | Scope of record | State |
 | --- | --- | --- |
-| A1 | Read-only CLI/comparison readers use `open_existing_read_only` (KL-157) | in progress |
-| A2 | Revision-bound parameter writes and installation rename; host contract for B | planned |
+| A1 | Read-only CLI/comparison readers use `open_existing_read_only` (KL-157) | delivered (merge `a78c1010`) |
+| A2 | Revision-bound parameter writes and installation rename; host contract for B | in progress (candidate `aabf4d2c`) |
 | A3 | Shutdown admission + bounded drain of download/address workers (KL-163) | planned |
 | A4 | Functions backend fresh on current schema (MODEL-07); Site ADR or blocked design (MODEL-05/KL-127) | planned |
 | A5 | Legacy atomic types 3/5 against the offline oracle (KL-128) | planned |

@@ -2408,7 +2408,7 @@
       "number": 163,
       "title": "Server shutdown and active writes",
       "topic": "Platform, deployment and security",
-      "summary": "Shutdown bounds request cleanup but does not wait for download/address-programming workers. Process termination can interrupt hardware work.",
+      "summary": "A stop refuses new bus jobs and waits a bounded, configurable time for a running download/address programming; a write still running when that ends, or under SIGKILL, is cut mid-way.",
       "file": "KL-163-server-shutdown-and-active-writes.md",
       "ledger_ids": [],
       "anchors": [

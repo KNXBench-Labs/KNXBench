@@ -94,6 +94,8 @@ async fn compare(
     State(state): State<SharedState>,
     Json(body): Json<CompareRequest>,
 ) -> Result<Json<CompareResponse>, ApiError> {
+    // Goal A3: no new tunnel once a stop has begun (KL-163).
+    state.stop_admission.admit()?;
     let gateway: SocketAddrV4 = body
         .gateway
         .parse()

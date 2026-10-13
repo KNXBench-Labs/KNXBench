@@ -17,13 +17,20 @@
 //   a record that cannot be read at all makes it unavailable. Neither
 //   guesses.
 // * **A failed save is kept, not dropped.** The delta stays in an outbox
-//   and rides along with the next report.
+//   and rides along with the next report. A batch with "one more" steps
+//   (KL-164 increments) is retried unchanged under its request id, first and
+//   never mixed with newer steps, so the server can tell a retry from news.
+// * **Other windows count too.** Every answer is reconciled: a counter that
+//   reached its goal elsewhere, or a distinct total, unlocks here.
 import { ACHIEVEMENTS, type AchievementDefinition } from "./achievementCatalog";
 import type { AchievementEvent } from "./achievementEvents";
 import {
+  addIncrements,
+  applyIncrements,
   emptyRecord,
   evaluateAchievementEvent,
   mergeAchievementRecords,
+  reconcileAchievementRecord,
   recordIsEmpty,
   type AchievementRecord,
 } from "./achievementRules";
@@ -87,7 +94,20 @@ export interface TrackerDeps {
   isEnabled: () => boolean;
   onUnlocked: (definitions: AchievementDefinition[]) => void;
   catalog?: readonly AchievementDefinition[];
+  /** A fresh id per increment batch; tests pass a deterministic one. */
+  newRequestId?: () => string;
 }
+
+/** 128 random bits as hex. `getRandomValues` also works on plain-http LAN origins,
+ * where `randomUUID` does not exist. */
+export function randomRequestId(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/** One POST: maxima, plus increments under the id they were first sent with. */
+interface Batch { record: AchievementRecord; increments: Record<string, number>; requestId: string | null }
 
 export interface AchievementTracker {
   load(): Promise<void>;
@@ -112,7 +132,10 @@ export function createAchievementTracker(deps: TrackerDeps): AchievementTracker 
   const catalog = deps.catalog ?? ACHIEVEMENTS;
   let snapshot: TrackerSnapshot = { status: "loading", record: emptyRecord() };
   let buffered: AchievementEvent[] = [];
+  const newRequestId = deps.newRequestId ?? randomRequestId;
   let outbox: AchievementRecord = emptyRecord();
+  let outboxIncrements: Record<string, number> = {};
+  let retry: Batch | null = null;
   let flushing: Promise<void> = Promise.resolve();
   let sending = false;
   const listeners = new Set<() => void>();
@@ -123,33 +146,59 @@ export function createAchievementTracker(deps: TrackerDeps): AchievementTracker 
   }
 
   function evaluate(event: AchievementEvent) {
-    const { delta, newlyUnlocked } = evaluateAchievementEvent(snapshot.record, event, deps.now(), catalog);
-    if (recordIsEmpty(delta)) return;
-    publish({ ...snapshot, record: mergeAchievementRecords(snapshot.record, delta) });
+    const { delta, increments, newlyUnlocked } = evaluateAchievementEvent(snapshot.record, event, deps.now(), catalog);
+    if (recordIsEmpty(delta) && Object.keys(increments).length === 0) return;
+    publish({ ...snapshot, record: applyIncrements(mergeAchievementRecords(snapshot.record, delta), increments) });
     if (newlyUnlocked.length > 0) deps.onUnlocked(newlyUnlocked);
     outbox = mergeAchievementRecords(outbox, delta);
+    outboxIncrements = addIncrements(outboxIncrements, increments);
     flush();
   }
 
-  function flush() {
-    if (sending || recordIsEmpty(outbox) || snapshot.status !== "ready") return;
-    sending = true;
-    const sent = outbox;
+  /** Publishes `record` after unlocking what other windows' reports completed. */
+  function publishReconciled(record: AchievementRecord, status: TrackerStatus) {
+    const { delta, newlyUnlocked } = status === "ready"
+      ? reconcileAchievementRecord(record, deps.now(), catalog) : { delta: emptyRecord(), newlyUnlocked: [] };
+    publish({ status, record: mergeAchievementRecords(record, delta) });
+    if (recordIsEmpty(delta)) return;
+    if (newlyUnlocked.length > 0) deps.onUnlocked(newlyUnlocked);
+    outbox = mergeAchievementRecords(outbox, delta);
+    flush(); // a no-op while a save is in flight; that save's end sends it
+  }
+
+  function nextBatch(): Batch | null {
+    if (retry) { const batch = retry; retry = null; return batch; }
+    const hasIncrements = Object.keys(outboxIncrements).length > 0;
+    if (recordIsEmpty(outbox) && !hasIncrements) return null;
+    const batch = { record: outbox, increments: outboxIncrements, requestId: hasIncrements ? newRequestId() : null };
     outbox = emptyRecord();
+    outboxIncrements = {};
+    return batch;
+  }
+
+  function flush() {
+    if (sending || snapshot.status !== "ready") return;
+    const sent = nextBatch();
+    if (sent === null) return;
+    sending = true;
+    const body = sent.requestId === null ? sent.record
+      : { ...sent.record, increments: sent.increments, requestId: sent.requestId };
     let saved = false;
     flushing = deps
-      .request("/api/achievements/record", { method: "POST", body: JSON.stringify(sent) })
+      .request("/api/achievements/record", { method: "POST", body: JSON.stringify(body) })
       .then(admitAchievementsResponse)
       .then(
         (response) => {
           saved = true;
-          publish({ ...snapshot, record: mergeAchievementRecords(recordOf(response), snapshot.record) });
+          publishReconciled(mergeAchievementRecords(recordOf(response), snapshot.record), snapshot.status);
         },
         (error: unknown) => {
           if ((error as { status?: number }).status === 409) {
             publish({ ...snapshot, status: "readOnly" });
+          } else if (sent.requestId !== null) {
+            retry = sent;
           } else {
-            outbox = mergeAchievementRecords(sent, outbox);
+            outbox = mergeAchievementRecords(sent.record, outbox);
           }
         },
       )
@@ -167,7 +216,7 @@ export function createAchievementTracker(deps: TrackerDeps): AchievementTracker 
       try {
         const response = admitAchievementsResponse(await deps.request("/api/achievements"));
         const record = mergeAchievementRecords(recordOf(response), snapshot.record);
-        publish({ status: response.status === "refusedNewer" ? "readOnly" : "ready", record });
+        publishReconciled(record, response.status === "refusedNewer" ? "readOnly" : "ready");
       } catch {
         publish({ ...snapshot, status: "unavailable" });
       }
@@ -189,6 +238,8 @@ export function createAchievementTracker(deps: TrackerDeps): AchievementTracker 
       await flushing;
       const response = admitAchievementsResponse(await deps.request("/api/achievements/reset", { method: "POST" }));
       outbox = emptyRecord();
+      outboxIncrements = {};
+      retry = null;
       publish({ status: "ready", record: recordOf(response) });
       return response;
     },

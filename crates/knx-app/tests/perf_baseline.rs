@@ -515,6 +515,7 @@ fn build_synthetic_project() -> Project {
         devices,
         instructions: Default::default(),
         notes: Vec::new(),
+        functions: Vec::new(),
         ids: IdAllocators::from_counts(
             ids.device,
             ids.area,

@@ -371,7 +371,7 @@ fn explicit_delete_is_generation_bound_and_removes_only_the_selected_version() {
 #[test]
 fn legacy_history_mutation_migrates_only_with_its_successful_commit() {
     let (dir, conn, before, _generation) = opened();
-    conn.execute_batch("DROP TABLE instruction_run; DROP TABLE instruction_document; DROP TABLE project_note; DROP TABLE project_note_state; DROP TABLE project_history_stack; DROP TABLE project_history_state; DROP TABLE project_history_version; DROP TABLE project_history_context; ALTER TABLE line DROP COLUMN model_position; PRAGMA user_version = 10;").unwrap();
+    conn.execute_batch("DROP TABLE instruction_run; DROP TABLE instruction_document; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state; DROP TABLE project_history_stack; DROP TABLE project_history_state; DROP TABLE project_history_version; DROP TABLE project_history_context; ALTER TABLE line DROP COLUMN model_position; PRAGMA user_version = 10;").unwrap();
     drop(conn);
     let path = dir.path().join("history.knxdb");
     let original = std::fs::read(&path).unwrap();

@@ -47,6 +47,12 @@ pub(crate) fn area(area_ets_id: &str) -> String {
     format!("{INSTALLATION}/Topology/Area[@Id='{area_ets_id}']")
 }
 
+/// A schema-23 `Function`, keyed by its own id like every other element
+/// here; nested `Space`s add nothing because ETS ids are project-unique.
+pub(crate) fn function(function_ets_id: &str) -> String {
+    format!("{INSTALLATION}/Locations/Space/Function[@Id='{function_ets_id}']")
+}
+
 pub(crate) fn line(line_ets_id: &str) -> String {
     format!("{INSTALLATION}/Topology/Area/Line[@Id='{line_ets_id}']")
 }

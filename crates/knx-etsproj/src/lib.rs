@@ -360,6 +360,28 @@ fn import_knxproj_bytes_inner(
             }
         }
     }
+    // Schema-23 `Function`s keep their whole element verbatim, keyed by
+    // their own id (ADR-0124): `Puid`, `Implements`, `DefaulGroupRange`,
+    // unresolved members and unknown children all survive here.
+    fn retain_functions(
+        part: &source::SourceBuildingPart,
+        topology_path: &str,
+        out: &mut Vec<opaque::OpaqueEntry>,
+    ) {
+        for function in &part.functions {
+            let mut raw = function.raw.clone();
+            raw.xpath = xpath::function(&function.id);
+            out.push(opaque::from_retained_element(topology_path, &raw));
+        }
+        for child in &part.children {
+            retain_functions(child, topology_path, out);
+        }
+    }
+    for installation in &parsed.document.installations {
+        for part in &installation.buildings {
+            retain_functions(part, &topology_path, &mut opaque_entries);
+        }
+    }
     // Schema ≥21's `ModuleInstances`/`GroupObjectTree`/`Security` are known
     // but deliberately not modeled beyond raw retention (the plan's Global
     // Constraints — neither has a `knx_core` field), exactly like

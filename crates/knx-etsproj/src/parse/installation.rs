@@ -571,6 +571,7 @@ fn build_frame(
             completion_status: bag.take("CompletionStatus"),
             children: Vec::new(),
             device_refs: Vec::new(),
+            functions: Vec::new(),
             other: Vec::new(),
         }),
         "GroupRange" => Frame::GroupRange(SourceGroupRange {

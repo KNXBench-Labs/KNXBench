@@ -89,6 +89,7 @@ impl fmt::Display for RepresentationIssue {
 /// finding is reported together as [`StoreError::Unrepresentable`].
 pub(crate) fn check_representable(project: &Project) -> Result<(), StoreError> {
     crate::notes::check(project)?;
+    crate::functions::check(project)?;
     crate::instructions::check(project)?;
     check_unambiguous_topology(project)?;
     let mut issues = BTreeSet::new();

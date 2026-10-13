@@ -6,6 +6,7 @@ pub mod activity_history;
 pub mod building;
 pub mod command_sync;
 pub mod devices;
+mod functions;
 pub mod group;
 mod instructions;
 pub mod manifest;
@@ -45,6 +46,9 @@ pub enum StoreError {
     Sqlite(rusqlite::Error),
     /// Native note content, target, ordering or allocator metadata is invalid.
     NoteIntegrity(String),
+    /// Native Function content, references, ordering or allocators are
+    /// invalid (ADR-0124).
+    FunctionIntegrity(String),
     /// `load_project` was called against a database with no `project_info`
     /// row — it was migrated but never saved. Distinct from an empty
     /// project (`Project::new`), which is a valid in-memory value that has
@@ -102,6 +106,9 @@ impl fmt::Display for StoreError {
         match self {
             StoreError::History(e) => write!(f, "{e}"),
             StoreError::Sqlite(e) => write!(f, "{e}"),
+            StoreError::FunctionIntegrity(reason) => {
+                write!(f, "native project function integrity refused: {reason}")
+            }
             StoreError::NoteIntegrity(reason) => {
                 write!(f, "native project note integrity refused: {reason}")
             }

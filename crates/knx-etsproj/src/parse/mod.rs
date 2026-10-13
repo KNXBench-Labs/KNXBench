@@ -5,6 +5,7 @@
 //! attribute: unknown constructs are retained and reported, never silently
 //! dropped and never fatal on their own (CLAUDE.md's data-integrity rule).
 
+mod functions;
 mod installation;
 mod installation_v21;
 mod observed_reader;

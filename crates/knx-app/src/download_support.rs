@@ -144,6 +144,9 @@ pub enum UnsupportedCategory {
     ParameterValue,
     /// A product structure the image builder does not write.
     ImageStructure,
+    /// The program declares a byte order other than `BigEndian`; numbers
+    /// are written high octet first only (KL-170).
+    ByteOrder,
     /// The product database itself failed or lacks the program's code.
     ProductData,
     /// The project's configuration of the device does not yield a request:
@@ -166,6 +169,7 @@ impl UnsupportedCategory {
             Self::Modules => "modules",
             Self::ParameterValue => "parameter-value",
             Self::ImageStructure => "image-structure",
+            Self::ByteOrder => "byte-order",
             Self::ProductData => "product-data",
             Self::Configuration => "configuration",
         }
@@ -287,6 +291,7 @@ pub fn image_category(error: &ImageError) -> UnsupportedCategory {
             UnsupportedCategory::ProductData
         }
         ImageError::Evaluation(_) => UnsupportedCategory::ParameterEvaluation,
+        ImageError::UnsupportedByteOrder { .. } => UnsupportedCategory::ByteOrder,
         ImageError::Unsupported { what } if what.ends_with("a module instance") => {
             UnsupportedCategory::Modules
         }
@@ -494,6 +499,17 @@ mod tests {
     use knx_core::commissioning::load_state::MaskVersion;
     use knx_core::commissioning::memory_download::MemoryDownloadStep;
 
+    /// Issue #10: a declared little-endian program is refused for its byte
+    /// order, a category of its own, so offline readiness can say so plainly
+    /// instead of "image structure".
+    #[test]
+    fn a_declared_byte_order_refusal_has_its_own_category() {
+        let error = knx_productdb::image::ImageError::UnsupportedByteOrder {
+            order: "LittleEndian".into(),
+        };
+        assert_eq!(image_category(&error), UnsupportedCategory::ByteOrder);
+        assert_eq!(UnsupportedCategory::ByteOrder.code(), "byte-order");
+    }
     fn evidence(id: &str) -> VerifiedEvidence {
         VerifiedEvidence {
             program_id: id.into(),

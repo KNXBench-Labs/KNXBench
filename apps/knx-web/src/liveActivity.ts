@@ -13,7 +13,8 @@ export type SessionActivity =
       completedSteps: number; totalSteps: number; writtenOctets: number; totalOctets: number }
   | { kind: "addressProgramming"; id: number; address: string;
       state: "waiting" | "programming" | "finished" | "stopped" | "failed"; rounds?: number }
-  | { kind: "busMonitor"; id: number; state: "active" | "closed" }
+  /** `gateway` is named by servers since issue #10; older ones omit it. */
+  | { kind: "busMonitor"; id: number; gateway?: string; state: "active" | "closed" }
   | { kind: "lineScan"; id: number; state: "running" | "completed" | "cancelled" | "failed"; probed: number; total: number };
 export type SessionState = SessionActivity["state"];
 
@@ -42,6 +43,7 @@ function record(value: unknown, required: readonly string[], optional: readonly 
 }
 const count = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 const positive = (value: unknown): value is number => count(value) && value >= 1;
+const endpoint = (value: unknown) => typeof value === "string" && /^\d{1,3}(\.\d{1,3}){3}:\d{1,5}$/.test(value);
 const address = (value: unknown) => typeof value === "string" && /^\d{1,2}\.\d{1,2}\.\d{1,3}$/.test(value);
 const oneOf = <T extends string>(value: unknown, allowed: readonly T[]): value is T =>
   typeof value === "string" && (allowed as readonly string[]).includes(value);
@@ -49,7 +51,7 @@ const distinct = (values: readonly unknown[]) => new Set(values).size === values
 
 function admitSession(raw: unknown): SessionActivity {
   const kind = record(raw, ["kind"], ["id", "address", "state", "completedSteps", "totalSteps", "writtenOctets",
-    "totalOctets", "rounds", "probed", "total"]).kind;
+    "totalOctets", "rounds", "probed", "total", "gateway"]).kind;
   switch (kind) {
     case "deviceDownload": {
       const s = record(raw, ["kind", "id", "address", "state", "completedSteps", "totalSteps", "writtenOctets", "totalOctets"]);
@@ -66,8 +68,9 @@ function admitSession(raw: unknown): SessionActivity {
       return s as SessionActivity;
     }
     case "busMonitor": {
-      const s = record(raw, ["kind", "id", "state"]);
+      const s = record(raw, ["kind", "id", "state"], ["gateway"]);
       requireLive(positive(s.id) && oneOf(s.state, ["active", "closed"] as const));
+      requireLive(!Object.hasOwn(s, "gateway") || endpoint(s.gateway));
       return s as SessionActivity;
     }
     case "lineScan": {

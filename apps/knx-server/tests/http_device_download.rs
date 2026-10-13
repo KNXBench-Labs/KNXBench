@@ -1774,6 +1774,10 @@ async fn the_gateway_serves_one_tunnel_in_both_directions() {
     let (status, body) = start(&h, &shown["planId"], "I confirm download to 1.1.67").await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
     assert!(body.to_string().contains("monitor"), "{body}");
+    // Issue #10: the holder is named, with the monitor's gateway.
+    assert_eq!(body["kind"], "gatewayBusy", "{body}");
+    assert_eq!(body["holder"]["kind"], "busMonitor", "{body}");
+    assert_eq!(body["holder"]["gateway"], GATEWAY, "{body}");
     assert_eq!(
         h.calls.load(Ordering::SeqCst),
         1,
@@ -1808,6 +1812,11 @@ async fn the_gateway_serves_one_tunnel_in_both_directions() {
     .await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
     assert!(body.to_string().contains("download"), "{body}");
+    assert_eq!(
+        body["holder"],
+        json!({ "kind": "deviceDownload", "address": "1.1.67", "state": "running" }),
+        "{body}"
+    );
     let (status, body) = send(
         &h.app,
         post(
@@ -1825,6 +1834,7 @@ async fn the_gateway_serves_one_tunnel_in_both_directions() {
     )
     .await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    assert_eq!(body["holder"]["kind"], "deviceDownload", "{body}");
     assert_eq!(
         h.calls.load(Ordering::SeqCst),
         1,

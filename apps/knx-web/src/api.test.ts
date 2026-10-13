@@ -4,6 +4,13 @@ import * as api from "./api";
 import { snapshotJson } from "./flowTestFixtures";
 import { subscribeSessionExpired } from "./session";
 
+// `errorMessage` words structured gateway refusals in the active language;
+// this file runs without a DOM, so the language is fixed here.
+vi.mock("./uiLanguage", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./uiLanguage")>()),
+  getActiveUiLanguage: () => "en",
+}));
+
 function mockFetchOnce(body: unknown, ok = true, status = 200) {
   vi.stubGlobal(
     "fetch",
@@ -860,6 +867,21 @@ describe("api", () => {
 
   it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
     expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
+  });
+
+  it("errorMessage words a structured gateway refusal and keeps the server text for a malformed one", async () => {
+    mockFetchOnce({
+      error: "a line scan is running: the gateway serves one tunnel",
+      kind: "gatewayBusy",
+      holder: { kind: "lineScan", sessionId: 4, probed: 37, total: 120 },
+    }, false, 409);
+    const busy = await api.startDeviceDownload(7, "192.0.2.10:3671", "download 1.1.5").catch((e) => e);
+    expect(api.errorMessage(busy)).toBe(
+      "The gateway is busy: a line scan is running (37/120 addresses probed). Wait for it or cancel it first.",
+    );
+    mockFetchOnce({ error: "a line scan is running", kind: "gatewayBusy", holder: { kind: "lineScan" } }, false, 409);
+    const malformed = await api.startDeviceDownload(7, "192.0.2.10:3671", "download 1.1.5").catch((e) => e);
+    expect(api.errorMessage(malformed)).toBe("a line scan is running");
   });
 
   it("errorMessage falls back to String(e) for a non-Error throw", () => {

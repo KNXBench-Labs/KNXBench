@@ -28,6 +28,61 @@ pub const DISCONNECT_RESPONSE: u16 = 0x020A;
 pub const E_NO_ERROR: u8 = 0x00;
 pub const E_CONNECTION_TYPE: u8 = 0x22;
 
+/// A CONNECT_RESPONSE refusal named by the specification, with a plain
+/// reason for people (issue #10: a refusal must say why, not "status 0x24").
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConnectRefusal {
+    pub constant: &'static str,
+    pub reason: &'static str,
+}
+
+/// The named refusal for a CONNECT_RESPONSE status, `None` for success and
+/// for any code the specification does not define there (never guessed).
+/// Core v01.06.02 §7.8.2 Table 8 (printed p. 39): 22h, 23h, 24h, and the
+/// extended-CRI codes 28h, 2Dh, 2Eh (KNXBench sends a basic CRI, so these
+/// are not expected from it). Tunnelling v01.07.01 §2.2.2 (p. 6): 25h;
+/// §5.4.3.1 Table 11 (p. 26): 29h.
+pub fn connect_refusal(status: u8) -> Option<ConnectRefusal> {
+    let (constant, reason) = match status {
+        0x22 => (
+            "E_CONNECTION_TYPE",
+            "it does not offer this type of connection",
+        ),
+        0x23 => (
+            "E_CONNECTION_OPTION",
+            "it does not support a requested connection option",
+        ),
+        0x24 => (
+            "E_NO_MORE_CONNECTIONS",
+            "all of its connections are in use, for example by ETS, a visualisation or another \
+             KNXBench",
+        ),
+        0x25 => (
+            "E_NO_MORE_UNIQUE_CONNECTIONS",
+            "it has a free tunnel but no unique individual address for it; check the tunnel \
+             addresses in its configuration",
+        ),
+        0x28 => (
+            "E_AUTHORISATION_ERROR",
+            "this client is not authorised for the requested individual address",
+        ),
+        0x29 => (
+            "E_TUNNELLING_LAYER",
+            "it does not support the requested tunnelling layer",
+        ),
+        0x2D => (
+            "E_NO_TUNNELLING_ADDRESS",
+            "the requested individual address is not one of its tunnelling addresses",
+        ),
+        0x2E => (
+            "E_CONNECTION_IN_USE",
+            "the requested individual address is already in use",
+        ),
+        _ => return None,
+    };
+    Some(ConnectRefusal { constant, reason })
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConnectResponse {
     pub channel_id: u8,
@@ -169,6 +224,33 @@ fn decode_channel_and_status(body: &[u8]) -> Result<(u8, u8), ServiceError> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn every_specified_connect_refusal_has_its_spec_name_and_a_plain_reason() {
+        // Core v01.06.02 §7.8.2 Table 8 (p. 39); Tunnelling v01.07.01
+        // §2.2.2 (p. 6, 25h) and §5.4.3.1 Table 11 (p. 26, 29h).
+        let expected = [
+            (0x22, "E_CONNECTION_TYPE"),
+            (0x23, "E_CONNECTION_OPTION"),
+            (0x24, "E_NO_MORE_CONNECTIONS"),
+            (0x25, "E_NO_MORE_UNIQUE_CONNECTIONS"),
+            (0x28, "E_AUTHORISATION_ERROR"),
+            (0x29, "E_TUNNELLING_LAYER"),
+            (0x2D, "E_NO_TUNNELLING_ADDRESS"),
+            (0x2E, "E_CONNECTION_IN_USE"),
+        ];
+        for (status, name) in expected {
+            let refusal = super::connect_refusal(status).expect("specified code");
+            assert_eq!(refusal.constant, name);
+            assert!(!refusal.reason.is_empty());
+        }
+        // Not CONNECT_RESPONSE codes (21h/26h/27h are CONNECTIONSTATE's),
+        // and success is no refusal: none of them gets a guessed name.
+        for status in [0x00, 0x01, 0x21, 0x26, 0x27, 0x2A, 0xFF] {
+            assert_eq!(super::connect_refusal(status), None, "{status:#04x}");
+        }
+        assert!(super::connect_refusal(0x24).unwrap().reason.contains("ETS"));
+    }
+
     use super::*;
     use std::net::Ipv4Addr;
 

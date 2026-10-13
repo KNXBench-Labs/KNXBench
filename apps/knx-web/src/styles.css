@@ -2066,6 +2066,9 @@ main {
   width: 100%;
   min-width: 0;
 }
+/* A full row, so a readiness mark after the device name is not cut off. */
+.device-download-config > .device-download-device { grid-column: 1 / -1; }
+.device-download-config > .device-download-device select { max-width: 40rem; }
 
 .device-download-scope {
   grid-column: 1 / -1;
@@ -2115,8 +2118,31 @@ main {
 .device-download-actions {
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
+.device-download-actions-note { color: var(--knx-muted); font-size: 12px; }
+
+/* Issue #10: what holds the gateway, and why a device cannot be programmed,
+   said before anything is prepared. The warning colour marks the edge only,
+   so the text keeps its theme contrast. */
+.device-download-holder,
+.device-download-readiness {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--knx-warning-color);
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--knx-warning-color) 8%, transparent);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.device-download-holder { display: grid; gap: 6px; }
+.device-download-holder p { margin: 0; }
+.device-download-holder-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.device-download-holder-actions:empty { display: none; }
+.device-download-readiness-unavailable { grid-column: 1 / -1; margin: 0; color: var(--knx-muted); font-size: 12px; overflow-wrap: anywhere; }
 
 /* Gateway choice: the shared search's answer, a manual field and a note on
    where the value came from. Full width like the scope fieldset. */

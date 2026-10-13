@@ -411,6 +411,7 @@ describe("one editing workspace", () => {
       "gaNotation.ts",
       "gatewayEndpoint.ts",
       "gatewayPreference.ts",
+      "gatewayRefusal.ts",
       "gifEncoder.ts",
       "help.ts",
       "i18n.ts",

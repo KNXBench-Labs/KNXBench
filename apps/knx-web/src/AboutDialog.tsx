@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 import * as api from "./api";
 import Overlay from "./Overlay";
+import HallOfFameSection from "./HallOfFameSection";
 import ReleaseUpdatePanel from "./ReleaseUpdatePanel";
 import type { ReleaseUpdateControls } from "./useReleaseUpdates";
 import { useTranslate } from "./i18n";
@@ -51,6 +52,7 @@ export default function AboutDialog(props: { onClose: () => void; updates?: Rele
       {props.updates && <ReleaseUpdatePanel updates={props.updates} />}
       <p>{t("about.independence")}</p>
       <p>{t("about.trademark")}</p>
+      <HallOfFameSection />
       <footer className="about-dialog-footer">
         <button type="button" onClick={onClose}>
           {t("about.close")}

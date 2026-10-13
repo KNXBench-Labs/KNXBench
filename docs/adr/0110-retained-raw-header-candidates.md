@@ -1,6 +1,7 @@
 # ADR-0110 — Retained raw-header candidates, not RTF interpretation
 
 - **Status:** Accepted, bounded implementation; final admission pending
+- Status update (2026-10-13): on main since 2026-10-10, checkpoint `68922cc4`; ledger KL-175 DONE. The line above is kept as written; it predates the integration.
 - **Date:** 2026-10-10
 - **Owners:** application/import report and session-log presentation
 

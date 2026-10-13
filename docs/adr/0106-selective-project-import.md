@@ -2,6 +2,7 @@
 
 - Date: 2026-10-09
 - Status: Accepted; locally implemented, unpublished
+- Status update (2026-10-13): on main since 2026-10-10, feature `99e05425` merged with owner authorization; [integration](../status/2026-10-10-import-expansion-integration.md). The line above is kept as written; it predates the integration.
 - Scope: IMPORT-01, with separate IMPORT-02/IMPORT-04 evidence tooling
 
 ## Context

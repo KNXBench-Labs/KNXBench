@@ -6,6 +6,7 @@ published ADR0111 for bounded large history images. Earlier receipt references
 remain historical; this is the instruction overlay decision, not the codec ADR.
 Date: 2026-10-11
 Status: Accepted — native foundation locally verified; application/API/UI acceptance pending
+Status update (2026-10-13): on main since 2026-10-11, runtime `e0dbd93a`; edit API and editor published, mounted as the device editor's Installation instructions tab on 2026-10-12 ([DATA_MODEL](../DATA_MODEL.md)). The line above is kept as written; it predates the integration.
 
 ## Context
 

@@ -82,6 +82,7 @@ jobs:
         run: |
           python3 tools/check_documentation.py
           python3 -m unittest discover -s tools/tests -p test_limitations_catalogue.py
+          python3 -m unittest discover -s tools/tests -p test_documentation_history.py
 
       - name: Corpus gate (a missing corpus is never a pass)
         run: cargo run -p xtask -- check-corpus-gates

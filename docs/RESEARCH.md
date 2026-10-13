@@ -14,9 +14,11 @@ Every statement below is tagged:
 
 Split by topic on 2026-10-04 (AR14D D4). Section numbers stay global and
 stable, so `RESEARCH §8` still means section 8; follow the table to its
-file. New findings go into the topic file they belong to: a dated entry at
-its top, or the next free section number (§26 next) at its end. Sources
-stay at the end of this file.
+file. New findings go into the topic dossier they belong to; KNXnet/IP/bus
+and commissioning now have small indexes over their individual dossiers
+([maintenance](history/DOCUMENTATION_REORGANIZATION.md)). Add dated findings
+outside preserved historical blocks, or use the next free section number
+(§26 next) for a new research subject. Sources stay at the end of this file.
 
 [2026-10-11: public GitHub release discovery and SemVer evidence](contracts/RELEASE_NOTIFICATIONS.md#research-and-limitations) informs notification-only ADR-0114. No KNX format/protocol facts are inferred.
 

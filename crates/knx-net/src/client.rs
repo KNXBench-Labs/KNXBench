@@ -56,9 +56,14 @@ impl std::fmt::Display for BusError {
         match self {
             BusError::Io(e) => write!(f, "I/O error: {e}"),
             BusError::Timeout => write!(f, "timed out waiting for a response"),
-            BusError::ConnectionRefused(status) => {
-                write!(f, "gateway refused the connection (status {status:#04x})")
-            }
+            BusError::ConnectionRefused(status) => match services::connect_refusal(*status) {
+                Some(refusal) => write!(
+                    f,
+                    "gateway refused the connection: {} (status {status:#04x}), {}",
+                    refusal.constant, refusal.reason
+                ),
+                None => write!(f, "gateway refused the connection (status {status:#04x})"),
+            },
             BusError::NotImplemented => write!(f, "not implemented in this cycle"),
             BusError::Protocol(msg) => write!(f, "protocol error: {msg}"),
             BusError::NotMulticast(addr) => write!(
@@ -1132,6 +1137,21 @@ async fn wait_for_reply<T: Clone>(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_refused_connection_names_the_spec_constant_and_the_reason() {
+        let text = BusError::ConnectionRefused(0x24).to_string();
+        assert!(
+            text.contains("E_NO_MORE_CONNECTIONS (status 0x24)"),
+            "{text}"
+        );
+        assert!(text.contains("all of its connections are in use"), "{text}");
+        // An undefined code keeps the bare number; nothing is guessed.
+        assert_eq!(
+            BusError::ConnectionRefused(0x77).to_string(),
+            "gateway refused the connection (status 0x77)"
+        );
+    }
+
     use super::*;
 
     // The same synthetic DIB layout as discovery.rs's codec fixture; not a

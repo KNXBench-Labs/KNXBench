@@ -179,7 +179,8 @@ reporter has one; asked on 2026-10-13); then a reviewed, observation-limited
 encoder change. Owner decision taken: downloads of BigEndian/undeclared programs
 whose base images look little-endian carry the named warning
 `base-image-low-octet-first` ([ADR-0120](adr/0120-base-image-byte-order-warning.md));
-**open:** showing plan warnings in the web download tab (web lock), together with
+**open:** showing plan warnings in the web download tab (web lock; issue #10's
+tab texts, refusal wording and readiness marks landed 2026-10-13 without them), together with
 the tester verification flow the owner asked for on 2026-10-13. Its part A
 (reports from CLI and server, issue form, review procedure;
 [ADR-0121](adr/0121-tester-download-reports.md)) is done; part B, the tab's

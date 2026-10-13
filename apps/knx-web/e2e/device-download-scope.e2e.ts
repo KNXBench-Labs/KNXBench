@@ -35,6 +35,8 @@ async function open(page: Page) {
     if (path === "/api/project" && method === "GET") return json(tree);
     if (path === "/api/project/new" && method === "POST") return json(tree);
     if (path === "/api/bus/discover") return json({ interfaces: [] });
+    if (path === "/api/bus/activity" && method === "GET") return json({ serverIncarnation: "fixture", coverage: "partial", historyState: "disabled", sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: [], untracked: [] });
+    if (path === "/api/device-readiness" && method === "GET") return json({ devices: [], counts: {} });
     if (path === "/api/device-download/plan" && method === "POST") {
       const body = request.postDataJSON() as { address: string; partial?: { parameters: boolean; groupAddresses: boolean } };
       planBodies.push(body);
@@ -69,14 +71,14 @@ test("a parameters-only scope is sent as such and the plan names what it leaves 
   await expect(scope.getByRole("radio")).toHaveCount(4);
   await expect(scope.getByRole("radio", { name: "Complete download" })).toBeChecked();
   await scope.getByRole("radio", { name: "Parameters only" }).check();
-  await page.getByRole("button", { name: "Show what would be written" }).click();
+  await page.getByRole("button", { name: "Prepare download" }).click();
   const shown = page.getByRole("region", { name: "Download plan" });
   await expect(shown).toContainText("Partial download: parameters only.");
   await expect(shown.locator(".device-download-not-written tbody tr")).toHaveText(["4100h12"]);
   expect(planBodies).toEqual([{ address: "1.1.67", partial: { parameters: true, groupAddresses: false } }]);
   await scope.getByRole("radio", { name: "Complete download" }).check();
   await expect(shown).toHaveCount(0);
-  await page.getByRole("button", { name: "Show what would be written" }).click();
+  await page.getByRole("button", { name: "Prepare download" }).click();
   await expect(page.getByRole("region", { name: "Download plan" })).not.toContainText("Partial download");
   expect(planBodies[1]).toEqual({ address: "1.1.67" });
   await expect(page.locator(".programming-consent-dialog")).toHaveCount(0);
@@ -86,7 +88,7 @@ test("a parameters-only scope is sent as such and the plan names what it leaves 
 test("a scope the server cannot derive is refused visibly and leaves no plan to start", async ({ page }) => {
   const { planBodies, writes } = await open(page);
   await page.getByRole("group", { name: "What to write" }).getByRole("radio", { name: "Group addresses only" }).check();
-  await page.getByRole("button", { name: "Show what would be written" }).click();
+  await page.getByRole("button", { name: "Prepare download" }).click();
   await expect(page.getByRole("alert")).toContainText("no partial download to device 1.1.67 prepared");
   await expect(page.getByRole("region", { name: "Download plan" })).toHaveCount(0);
   expect(planBodies).toEqual([{ address: "1.1.67", partial: { parameters: false, groupAddresses: true } }]);

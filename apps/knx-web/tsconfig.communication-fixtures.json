@@ -1,4 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src", "e2e/communication-fixture.ts", "e2e/communication-objects.e2e.ts"]
+  "include": ["src", "e2e/communication-fixture.ts", "e2e/communication-objects.e2e.ts", "e2e/gateway-refusal.e2e.ts"]
 }

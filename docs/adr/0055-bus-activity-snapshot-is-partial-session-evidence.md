@@ -89,3 +89,12 @@ readback supports `verified`. A cancelled request is `unknown` even if a
 send had become possible. The separate property-specific backup and
 confirmation gates of ADR-0051 remain unchanged; this observer does not
 imply permission for a live write or make the aggregate snapshot complete.
+
+## Follow-up: the bus monitor's gateway in the live view (2026-10-13)
+
+The live snapshot's `busMonitor` session now carries `gateway`, the endpoint
+this server's monitor is connected to, so the download tab can say what holds
+the gateway and offer it as a suggestion (issue #10, ADR-0123). It is the same
+endpoint the starting client sent, visible only while the session exists.
+History entries and one-shot records still carry no gateway (ADR-0064); clients
+admit the field as optional, so a snapshot from an older server stays valid.

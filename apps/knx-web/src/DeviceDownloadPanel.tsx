@@ -12,6 +12,8 @@ import DeviceLink from "./DeviceLink";
 import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
+import DownloadGatewayHolder from "./DownloadGatewayHolder";
+import { readinessMarks, readinessReason, type DownloadReadinessMark } from "./downloadReadiness";
 import {
   gatewayNote, gatewayOptionLabel, initialGatewayChoice, isFound, pickedGateway, typedGateway, withDiscoveryDefault,
   type GatewayChoice,
@@ -118,6 +120,26 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   useEffect(() => {
     if (deviceId !== null && selectedDevice === null) setDeviceId(null);
   }, [deviceId, selectedDevice]);
+
+  // Offline readiness (no bus access), re-read for every project version:
+  // a device the server cannot plan is marked before anything is prepared.
+  const [marks, setMarks] = useState<Map<string, DownloadReadinessMark>>(() => new Map());
+  const [readinessError, setReadinessError] = useState<string | null>(null);
+  useEffect(() => {
+    if (project === null) return;
+    let current = true;
+    void (async () => {
+      try {
+        const next = readinessMarks((await api.getDeviceReadiness()).devices);
+        if (current) { setMarks(next); setReadinessError(null); }
+      } catch (reason) {
+        // Also a malformed answer: no marks, and the panel says so.
+        if (current) { setMarks(new Map()); setReadinessError(api.errorMessage(reason)); }
+      }
+    })();
+    return () => { current = false; };
+  }, [project]);
+  const selectedMark = address === "" ? undefined : marks.get(address);
 
   const running = status?.status.state === "running";
   const locked = planning || starting || running;
@@ -316,18 +338,31 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
         <p>{t("deviceDownload.projectRequired")}</p>
       ) : (
         <form className="device-download-config" onSubmit={(event) => event.preventDefault()}>
-          <label>
+          <label className="device-download-device">
             {t("deviceDownload.device")}
             <select data-download-device value={deviceId ?? ""} disabled={locked}
               onChange={(event) => { setDeviceId(event.target.value === "" ? null : Number(event.target.value)); dropPlan(); setHandoffOutcome(null); }}>
               <option value="">{t("deviceDownload.chooseDevice")}</option>
-              {devices.map((device) => (
-                <option key={device.id} value={device.id}>
-                  {device.address} — {device.name}
-                </option>
-              ))}
+              {devices.map((device) => {
+                const mark = device.address === null ? undefined : marks.get(device.address);
+                const suffix = mark === undefined ? ""
+                  : ` (${t(mark.kind === "excluded" ? "deviceDownload.readiness.optionMarkExcluded" : "deviceDownload.readiness.optionMark")})`;
+                return (
+                  <option key={device.id} value={device.id}>
+                    {`${device.address} — ${device.name}${suffix}`}
+                  </option>
+                );
+              })}
             </select>
           </label>
+          {selectedMark && (
+            <p className="device-download-readiness form-warning" role="status" data-readiness={selectedMark.kind}>
+              {t(selectedMark.kind === "excluded" ? "deviceDownload.readiness.selectedExcluded" : "deviceDownload.readiness.selected",
+                { reason: readinessReason(selectedMark, t) })}
+            </p>
+          )}
+          {readinessError && <p className="device-download-readiness-unavailable">
+            {t("deviceDownload.readiness.unavailable", { error: readinessError })}</p>}
           {handoffOutcome && (
             <p className={handoffOutcome.kind === "selected" ? "device-download-handoff" : "device-download-handoff form-warning"}
               role="status" data-handoff={handoffOutcome.kind}>
@@ -344,7 +379,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               {discovery.phase === "idle" ? t("deviceDownload.gatewaySearch.idle")
                 : discovery.phase === "searching" ? t("deviceDownload.gatewaySearch.searching")
                   : discovery.phase === "failed" ? t("deviceDownload.gatewaySearch.failed")
-                    : discovery.interfaces.length === 0 ? t("deviceDownload.gatewaySearch.none")
+                    : discovery.interfaces.length === 0
+                      ? t(gateway.trim() === "" ? "deviceDownload.gatewaySearch.none" : "deviceDownload.gatewaySearch.noneUseTyped")
                       : t("deviceDownload.gatewaySearch.found", { count: discovery.interfaces.length })}
             </p>
             {discovery.phase === "failed" && discovery.error && <p className="bus-discovery-detail">{discovery.error}</p>}
@@ -366,6 +402,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               </label>
             )}
             {note && <p className="device-download-gateway-note" data-gateway-note={note}>{t(`deviceDownload.gatewayNote.${note}` as const)}</p>}
+            <DownloadGatewayHolder gateway={gateway} disabled={locked}
+              onUseGateway={(endpoint) => chooseGateway(pickedGateway(endpoint))} />
             <button type="button" className="device-download-search" disabled={locked || discovery.phase === "searching"}
               onClick={() => void searchBusInterfaces()}>
               {t("deviceDownload.gatewaySearchAgain")}
@@ -385,6 +423,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             <button type="button" disabled={locked || address === ""} onClick={() => void preparePlan()}>
               {t("deviceDownload.preparePlan")}
             </button>
+            <span className="device-download-actions-note">{t("deviceDownload.preparePlanNote")}</span>
           </div>
         </form>
       )}

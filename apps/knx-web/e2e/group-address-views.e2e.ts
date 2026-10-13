@@ -190,6 +190,39 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   });
 }
 
+// Issue #9: a child's leading edge (checkbox) sits right of its parent range's
+// marker, deeper rows further right; measured, not inferred from styles.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) for (const theme of ["porcelain", "graphite"]) {
+  test(`${language} tree rows are indented under their range at ${width}px (${theme})`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language, theme, standardTree());
+    await openAddresses(page, language);
+    expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme"))).toBe(theme);
+    const workspace = page.locator(".ga-workspace");
+    await expect(workspace.locator('[data-ga-select="30"]')).toBeVisible();
+    const edges = await workspace.evaluate(root => {
+      const marker = (key: string) => {
+        const button = root.querySelector<HTMLElement>(`[data-ga-expand="${key}"]`)!;
+        return button.getBoundingClientRect().left + parseFloat(getComputedStyle(button).paddingLeft);
+      };
+      const box = (id: number) => root.querySelector(`[data-ga-select="${id}"]`)!.closest("tr")!
+        .querySelector("input[type=checkbox]")!.getBoundingClientRect().left;
+      return { lighting: marker("range:20:0"), ground: marker("range:21:0"), unassigned: marker("unassigned"),
+        kitchen: box(30), dimming: box(31), hallway: box(32), spare: box(33) };
+    });
+    const step = 8;
+    expect(edges.ground, "sub-range right of its range").toBeGreaterThan(edges.lighting + step);
+    expect(edges.hallway, "address right of its range (Lighting)").toBeGreaterThan(edges.lighting + step);
+    expect(edges.kitchen, "address right of its range (Ground floor)").toBeGreaterThan(edges.ground + step);
+    expect(edges.kitchen, "deeper address further right").toBeGreaterThan(edges.hallway + step);
+    expect(Math.abs(edges.kitchen - edges.dimming), "siblings share one edge").toBeLessThan(1);
+    expect(edges.spare, "unassigned address right of its group").toBeGreaterThan(edges.unassigned + step);
+    if (process.env.KNX_GA_CAPTURE_DIR) await capture(page, `tree-indent-${language}-${width}-${theme}`);
+    await noPageOverflow(page);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
 for (const [style, shown] of [["Free", "2049"], ["TwoLevel", "1/1"]] as const) {
   test(`${style} addresses keep stored ranges and are not regrouped by number`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });

@@ -176,22 +176,22 @@ async fn start_scan(
     // Checked while holding this session's lock, never before it: a
     // download start holds its own lock and then waits for this one, so
     // this `try_lock` sees it (ADR-0045 §4).
-    if crate::device_download_routes::download_in_progress(&state) {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
+    if let Some(holder) = crate::tunnel_holder::download_holder(&state) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a download to a device is running: the gateway serves one tunnel",
         ));
     }
-    if crate::address_programming_routes::address_programming_in_progress(&state) {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
+    if let Some(holder) = crate::tunnel_holder::programming_holder(&state) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "an individual-address programming is running: the gateway serves one tunnel",
         ));
     }
     if let Some(existing) = guard.as_mut() {
-        if existing.status() == LineScanStatus::Running {
-            return Err(ApiError::with_status(
-                StatusCode::CONFLICT,
+        if let Some(holder) = crate::tunnel_holder::scan_holder_of(existing) {
+            return Err(crate::tunnel_holder::gateway_busy(
+                holder,
                 format!("line scan session {} is already running", existing.id()),
             ));
         }
@@ -203,7 +203,7 @@ async fn start_scan(
     let session =
         LineScanSession::start(id, range, gateway, state.connector.as_ref(), plan, policy)
             .await
-            .map_err(session_error_to_api_error)?;
+            .map_err(|e| connect_error_to_api_error(gateway, e))?;
     *guard = Some(session);
     Ok(Json(ScanStartResponse {
         session_id: id,
@@ -484,6 +484,18 @@ async fn reconcile_scan(
 /// session is a conflict with what the caller asked for, not a not-found —
 /// the opposite reading applies only to `GET /telegrams`, which never
 /// constructs a [`BusSessionError`] at all, handled separately below).
+/// For the two starts that open a tunnel: a transport failure there is the
+/// gateway refusing or not answering the connect, named for the client
+/// (issue #10); everything else maps as below.
+fn connect_error_to_api_error(gateway: SocketAddrV4, error: BusSessionError) -> ApiError {
+    match error {
+        BusSessionError::Transport(_) => {
+            crate::tunnel_holder::gateway_connect_failed(gateway, &error)
+        }
+        other => session_error_to_api_error(other),
+    }
+}
+
 fn session_error_to_api_error(error: BusSessionError) -> ApiError {
     match error {
         BusSessionError::Transport(e) => {
@@ -526,26 +538,24 @@ async fn start_monitor(
     // Checked while holding this session's lock, never before it: a
     // download start holds its own lock and then waits for this one, so
     // this `try_lock` sees it (ADR-0045 §4).
-    if crate::device_download_routes::download_in_progress(&state) {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
+    if let Some(holder) = crate::tunnel_holder::download_holder(&state) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a download to a device is running: the gateway serves one tunnel",
         ));
     }
-    if crate::address_programming_routes::address_programming_in_progress(&state) {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
+    if let Some(holder) = crate::tunnel_holder::programming_holder(&state) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "an individual-address programming is running: the gateway serves one tunnel",
         ));
     }
     if let Some(existing) = guard.as_ref() {
         // Design spec §4.3 / brief item 2: the `409` body must *name* the
-        // existing session, not just say "one exists" — `ApiError` only
-        // carries a plain string, so "naming it" means putting the id and
-        // gateway into that string's prose, the same way every other
-        // `ApiError` in this codebase communicates detail.
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
+        // existing session, not just say "one exists": in the text (id and
+        // gateway) and, since issue #10, as the structured `holder`.
+        return Err(crate::tunnel_holder::gateway_busy(
+            crate::tunnel_holder::monitor_holder_of(existing),
             format!(
                 "a monitor session is already active (id {}, gateway {})",
                 existing.id(),
@@ -574,7 +584,7 @@ async fn start_monitor(
 
     let session = BusSession::start(id, gateway, state.connector.as_ref(), ctx)
         .await
-        .map_err(session_error_to_api_error)?;
+        .map_err(|e| connect_error_to_api_error(gateway, e))?;
 
     let assigned_address = session.assigned_address().to_string();
     *guard = Some(session);

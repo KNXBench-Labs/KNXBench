@@ -1,3 +1,42 @@
+## 2026-10-13 — Issues #8, #9, #10: a picker that listens, trees that indent, a gateway that says who has it
+
+Three GitHub issues from one tester (thengsty), one package under the web lock
+([log](../.ai/logs/2026-10-13_claude_issues-8-9-10.md)).
+
+- **#9 indentation** (`8d8d31a8`, KL-179). Group-address tree: address rows take
+  their level like the range headers (one `treeIndent` helper, capped at level
+  12); flat mode unchanged. Devices view, *By channel*: the header reads from the
+  left (`▾ name · count`), grouped objects start one tree step right.
+- **#8 group-address picker** (`1d977aab`, KL-178). The link row's native select is
+  a searchable combobox (CommandPalette pattern): every word must match the
+  address (shown notation or compatible spelling), name, DPT label/number or
+  stored reference; ↑/↓/Enter/Escape. Each option shows the address's DPT and
+  marks a difference with the object's effective DPT (*Different type* /
+  *Same encoding, different subtype*) without hiding or moving it. 100 options
+  drawn, *Showing N of M* beyond. MODEL-01 set, drag-and-drop and direction
+  select unchanged.
+- **#10 gateway busy or refused** (`33a74b59`, KL-180,
+  [ADR-0123](adr/0123-structured-gateway-refusals.md)). Every tunnel start refused
+  by another KNXBench session answers a structured `409` naming the holder (bus
+  monitor with its gateway, line scan with progress, download, address
+  programming, or a held lock); a gateway's CONNECT_RESPONSE refusal and a silent
+  gateway answer structured `502`s with the status's specification name (Core
+  v01.06.02 §7.8.2 Table 8; Tunnelling v01.07.01 §2.2.2, §5.4.3.1). The web words
+  them in EN/DE wherever an error is shown. The download tab says up front what
+  holds the gateway (stop button; the monitor's gateway as a suggestion), marks
+  devices that cannot be programmed yet with a plain reason, says when an empty
+  search leaves a typed address to be used directly, and names the plan step
+  **Prepare download** / **Download vorbereiten** (*nothing is written yet*). The
+  KL-170 refusal is unchanged but typed (readiness category `byte-order`, a `422`
+  with `kind: "unsupportedByteOrder"`). German download texts reviewed for the Du
+  form. The plan's `warnings` are still not rendered in the tab (KL-170 part B,
+  next in the queue).
+
+Tests first, each red for the right reason; 14 mutants (9 web, 5 server), each
+killed. Gate on frozen `33a74b59` (base `3deab602`): build, `tsc` for all 13 tsconfigs, Vitest 3290/0 in 234 files, **full fixture Chromium 473/0**, 18 production-preview/intercepted configs 255/0 (ux-feedback 52, communication 51, members/download 19, group addresses 15, dialogs 14, devices 13, notes 12, instructions 11, parameters 11, catalogue 10, issue09 10, structure 8, updates 7, monitor control 6, address-unavailable 4, device checks 4, service control 4, site 4), the six changed specs ×3 291/291, fmt/clippy clean, Rust 4281/0 (197 ignored), real-server native evidence 12/12 and naming 4/4, tools 67 (1 skipped), five xtask checks, inputs frozen; private corpus 144/144 in 31 targets; pinned download coverage (release, LARGE profile) unchanged at 467 programs.
+Self-review only; no real gateway, device or bus contacted; native WebKitGTK not
+exercised.
+
 ## 2026-10-13 — Parked UX feedback ported: steady toasts, Flow images, motion per category
 
 Package 2 of the parked-work adoption: the Codex branch `feature/ux-feedback-20261010`

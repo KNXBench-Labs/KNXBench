@@ -133,6 +133,9 @@ enum SessionActivity {
     },
     BusMonitor {
         id: u64,
+        /// The gateway this monitor is connected to (issue #10: offered as
+        /// a suggestion where a gateway is chosen).
+        gateway: String,
         state: &'static str,
     },
     LineScan {
@@ -213,6 +216,7 @@ async fn snapshot(State(state): State<SharedState>) -> Json<ActivitySnapshot> {
             if let Some(session) = guard.as_ref() {
                 sessions.push(SessionActivity::BusMonitor {
                     id: session.id(),
+                    gateway: session.gateway().to_string(),
                     state: match session.status() {
                         SessionStatus::Active => "active",
                         SessionStatus::Closed => "closed",

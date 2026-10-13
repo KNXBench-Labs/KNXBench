@@ -136,6 +136,9 @@ async function fixture(page: Page, options: Options): Promise<Fixture> {
     // The monitor tab reads the server's telegram buffer when the bus
     // workspace mounts; without a session the real server answers 404.
     if (path === "/api/bus/monitor/telegrams" && method === "GET") return ok({ error: "no monitor session is active" }, 404);
+    // Read-only hints of the download page (issue #10): nothing holds the gateway, nothing is marked.
+    if (path === "/api/bus/activity" && method === "GET") return ok({ serverIncarnation: "fixture", coverage: "partial", historyState: "disabled", sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: [], untracked: [] });
+    if (path === "/api/device-readiness" && method === "GET") return ok({ devices: [], counts: {} });
     if (path === "/api/device-download/plan" && method === "POST") { f.writes.push(`${method} ${path}`); return ok(PLAN); }
     f.unexpected.push(`${method} ${path}`);
     return ok({ error: "strict GA members/download fixture" }, 404);
@@ -306,7 +309,8 @@ test("no gateway found, typed address kept, unaddressed device explained", async
   await expect(panel.locator(".device-download-gateway-status")).toHaveText(en["deviceDownload.gatewaySearch.none"]);
   await panel.locator("input[data-download-gateway]").fill("192.0.2.77:3671");
   await panel.getByRole("button", { name: en["deviceDownload.gatewaySearchAgain"], exact: true }).click();
-  await expect(panel.locator(".device-download-gateway-status")).toHaveText(en["deviceDownload.gatewaySearch.none"]);
+  // Issue #10: with an address typed, an empty search says that address is used as-is.
+  await expect(panel.locator(".device-download-gateway-status")).toHaveText(en["deviceDownload.gatewaySearch.noneUseTyped"]);
   await expect(panel.locator("input[data-download-gateway]")).toHaveValue("192.0.2.77:3671");
   expect(f.writes).toEqual([]);
   expect(f.unexpected).toEqual([]);

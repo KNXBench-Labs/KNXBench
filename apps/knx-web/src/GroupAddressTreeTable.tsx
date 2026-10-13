@@ -9,6 +9,8 @@ import { groupAddressTreeEntries, limitGroupAddressEntries, type GroupAddressTre
 import HelpTip from "./HelpTip";
 import GroupAddressWindowNotice from "./GroupAddressWindowNotice";
 const CHECKBOX_CLICK = { shiftKey: false, ctrlKey: true, metaKey: false, preventDefault: () => {} };
+/** One step per tree level, capped so imported deep trees cannot push the table off screen. */
+const treeIndent = (depth: number) => `${Math.min(depth, 12) * 1.2}rem`;
 
 export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewProps & {
   collapsed: ReadonlySet<string>; onToggle: (key: string) => void; includeEmpty: boolean; flat?: boolean;
@@ -46,7 +48,7 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
                   : t(group.kind === "unassigned" ? "addressTable.noRange" : "gaWorkspace.unresolved");
                 return <tr key={entry.key} className="ga-range-row"><td colSpan={6}>
                   <button type="button" data-ga-expand={entry.key} data-ga-nav=""
-                    style={{ paddingInlineStart: `${Math.min(entry.depth, 12) * 1.2}rem` }}
+                    style={{ paddingInlineStart: treeIndent(entry.depth) }}
                     aria-expanded={!collapsed.has(entry.key)} onClick={() => onToggle(entry.key)}>{collapsed.has(entry.key) ? "▸" : "▾"} {label} <small>({entry.count})</small></button>
                 </td></tr>;
               }
@@ -62,9 +64,11 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
                   aria-selected={selection?.kind === "group_address" && selection.id === ga.id}
                   className={checked(ga) ? "row-multi-selected" : undefined}
                 >
-                  <td className="address-table-check">
+                  <td className={props.flat ? "address-table-check" : "address-table-check address-table-check--tree"}>
+                    {/* Issue #9: the checkbox leads the row, so it carries the row's tree level. */}
                     <input
                       type="checkbox"
+                      style={props.flat ? undefined : { marginInlineStart: treeIndent(entry.depth) }}
                       disabled={!row.selectable}
                       checked={checked(ga)}
                       aria-label={`${formatGa(ga.address)} ${ga.name}`}

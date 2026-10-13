@@ -40,7 +40,6 @@ use knx_net::commissioning::programming_button_wait::{
 use crate::address_programming::{
     AddressProgrammingEvent, AddressProgrammingSession, AddressProgrammingStatus, StopOutcome,
 };
-use crate::bus_scan::LineScanStatus;
 use crate::errors::ApiError;
 use crate::SharedState;
 
@@ -164,31 +163,31 @@ async fn start(
     // ever awaited downward and `try_lock`ed upward, so no wait can form a
     // cycle. Held until the programming is registered.
     let mut programming = state.address_programming.lock().await;
-    if crate::device_download_routes::download_in_progress(&state) {
-        return Err(conflict(
+    if let Some(holder) = crate::tunnel_holder::download_holder(&state) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a download to a device is running: the gateway serves one tunnel",
         ));
     }
     if let Some(existing) = programming.as_ref() {
-        if existing.is_active() {
-            return Err(conflict(format!(
-                "programming {} is already running",
-                existing.new_address()
-            )));
+        if let Some(holder) = crate::tunnel_holder::programming_holder_of(existing) {
+            return Err(crate::tunnel_holder::gateway_busy(
+                holder,
+                format!("programming {} is already running", existing.new_address()),
+            ));
         }
     }
     let monitor = state.bus_session.lock().await;
-    if monitor.is_some() {
-        return Err(conflict(
+    if let Some(existing) = monitor.as_ref() {
+        return Err(crate::tunnel_holder::gateway_busy(
+            crate::tunnel_holder::monitor_holder_of(existing),
             "stop the bus monitor first: the gateway serves one tunnel",
         ));
     }
     let scan = state.line_scan_session.lock().await;
-    if matches!(
-        scan.as_ref().map(|scan| scan.status()),
-        Some(LineScanStatus::Running)
-    ) {
-        return Err(conflict(
+    if let Some(holder) = scan.as_ref().and_then(crate::tunnel_holder::scan_holder_of) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a line scan is running: the gateway serves one tunnel",
         ));
     }
@@ -197,7 +196,7 @@ async fn start(
         .connector
         .connect_tunnel(gateway)
         .await
-        .map_err(|e| ApiError::with_status(StatusCode::BAD_GATEWAY, e.to_string()))?;
+        .map_err(|e| crate::tunnel_holder::gateway_connect_failed(gateway, &e))?;
     let id = state
         .next_address_programming_id
         .fetch_add(1, Ordering::SeqCst);
@@ -302,15 +301,4 @@ async fn stop(
             )),
         }
     })
-}
-
-/// For the download, monitor and scan starts: whether a programming is
-/// starting, waiting or programming. Never waits.
-pub fn address_programming_in_progress(state: &SharedState) -> bool {
-    match state.address_programming.try_lock() {
-        Err(_) => true,
-        Ok(guard) => guard
-            .as_ref()
-            .is_some_and(AddressProgrammingSession::is_active),
-    }
 }

@@ -9,6 +9,10 @@ already found lying in the grass.
 
 ## Gates
 
+- **Do not move a `CARGO_TARGET_DIR` between gates.** Tauri's build script caches
+  absolute paths under `target/debug/build/tauri-*/out`; after a move, clippy and the
+  workspace tests stop at `failed to read plugin permissions` for `knx-desktop`. Keep
+  the directory where it was built, or link the old path to it.
 - **CI runs exactly these checks** (`.github/workflows/`): `cargo fmt --all --check`,
   `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
   `npm ci`, `npm test` and `npm run build` in `apps/knx-web`, the ts-rs bindings
@@ -111,6 +115,12 @@ already found lying in the grass.
 
 ## Web app
 
+- **A browser fixture must keep what `PUT /api/settings` stored.** The app reads
+  `/api/settings` again every few seconds (`settingsStore.ts`), so a fixture that
+  answers every GET with fixed defaults resets a preference (e.g. the address
+  view) in mid-test once a slow host keeps a spec on one view for that long.
+  `group-address-views.e2e.ts` showed it RED with a 6.5 s pause and GREEN after
+  the fixture remembered the PUTs.
 - **Two tests pin the diagnostics companion's dependencies.**
   `apps/knx-web/src/DiagnosticsCompanion.test.tsx` pins its transitive imports,
   and `apps/knx-web/src/diagnosticShell.test.ts` scans literal hyphenated ids as

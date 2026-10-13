@@ -780,9 +780,22 @@ main {
 }
 .parameter-checked-editor { display: grid; gap: 0.5rem; justify-items: start; min-width: 0; }
 .parameter-checked-editor > section { justify-self: stretch; }
+/* Goal B1: a stale-write conflict keeps the draft. The current value gets its
+   own line; the explicit resend stays primary, discarding is quiet. */
+.parameter-conflict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: -0.4rem 0 0.9rem;
+  min-width: 0;
+}
+.parameter-conflict-current { flex: 1 1 100%; overflow-wrap: anywhere; }
+.parameter-conflict > button { max-width: 100%; }
 /* Quiet like the editor's own buttons: entering or leaving the checked editor
    must not outshout its Apply. */
 .parameter-checked-open,
+.parameter-conflict-discard,
 .parameter-checked-close {
   max-width: 100%;
   padding: 6px 12px;
@@ -793,8 +806,10 @@ main {
   box-shadow: none;
 }
 .parameter-checked-open:hover:not(:disabled),
+.parameter-conflict-discard:hover:not(:disabled),
 .parameter-checked-close:hover:not(:disabled) { box-shadow: none; border-color: var(--knx-accent); }
 .parameter-checked-open:focus-visible,
+.parameter-conflict-discard:focus-visible,
 .parameter-checked-close:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
 /* The access badge is a label, not a full-width bar, in the flex row. */
 .parameter-field > .provenance-badge { align-self: flex-start; }

@@ -18,6 +18,8 @@ interface Fixture {
   revision: number;
   values: Record<string, string>;
   writes: { etsId: string; raw: string }[];
+  /** Every write body's Goal A2 binding, in order, conflicts included. */
+  bindings: { serverIncarnation?: string; projectIncarnation?: number; snapshotRevision?: number; expectedValue?: string | null }[];
   refuseWrites: boolean;
   identity: boolean;
 }
@@ -52,7 +54,7 @@ const SOURCES: Record<string, { child: string; type: string; attributes: Record<
 };
 
 async function fixture(page: Page, language: Language, theme: string, width: number, identity = true): Promise<Fixture> {
-  const f: Fixture = { unexpected: [], revision: 1, writes: [], refuseWrites: false, identity,
+  const f: Fixture = { unexpected: [], revision: 1, writes: [], bindings: [], refuseWrites: false, identity,
     values: { [`${PROGRAM}_P-1_R-1`]: "0010", [`${PROGRAM}_P-2_R-1`]: "40", [`${PROGRAM}_P-3_R-1`]: "#00FF00" } };
   await page.setViewportSize({ width, height: 900 });
   await page.route("https://api.github.com/**", (route) => { f.unexpected.push(route.request().url()); return route.abort(); });
@@ -81,9 +83,15 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/device/41" && method === "GET") return ok({ ...DEVICE, com_objects: [], product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } });
     if (path === "/api/device/41/parameters" && method === "GET") return ok(panelOf(f, false));
     if (path === "/api/device/41/parameters" && method === "POST") {
-      const body = route.request().postDataJSON() as { etsId: string; raw: string };
+      const { etsId, raw, ...binding } = route.request().postDataJSON() as { etsId: string; raw: string } & Fixture["bindings"][number];
+      f.bindings.push(binding);
+      // Checked like the server (revision-bound-writes): any moved context or value is a 409.
+      if (binding.serverIncarnation !== "parameters-fixture" || binding.projectIncarnation !== 3
+        || binding.snapshotRevision !== f.revision || binding.expectedValue !== f.values[etsId]) {
+        return refuse(409, "parameterWriteConflict", "parameter value or project changed since it was shown");
+      }
       if (f.refuseWrites) return refuse(400, "invalidParameterValue", "Value 3601 is outside the parameter's range 0..3600");
-      f.writes.push(body); f.values[body.etsId] = body.raw; f.revision += 1;
+      f.writes.push({ etsId, raw }); f.values[etsId] = raw; f.revision += 1;
       return ok(panelOf(f, true));
     }
     if (path === "/api/device/41/parameter-editor-source" && method === "GET") {
@@ -144,6 +152,7 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await delay.getByRole("button", { name: language === "de" ? "Wert übernehmen" : "Apply value", exact: true }).click();
     await expect(delay).toContainText(language === "de" ? "Übernommen. Das Feld zeigt den Wert aus dem Projekt." : "Applied. The field shows the project's value.");
     expect(f.writes).toEqual([{ etsId: `${PROGRAM}_P-1_R-1`, raw: "12" }]);
+    expect(f.bindings).toEqual([{ serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: "0010" }]);
     await expect(input).toHaveValue("12");
     await expect(page.getByRole("button", { name: m["toolbar.undo"], exact: true })).toBeEnabled();
     await noHorizontalOverflow(page);
@@ -194,10 +203,52 @@ test("en 1440: a refused write keeps the draft and shows the server's reason", a
   expect(f.unexpected).toEqual([]);
 });
 
-test("en 1440: without a complete project identity no checked editor is offered", async ({ page }) => {
+test("en 1440: without a complete project identity no checked editor and no write is offered", async ({ page }) => {
   const f = await fixture(page, "en", "porcelain", 1440, false);
   const panel = await openParameters(page, en);
   await expect(panel.locator("[data-checked-for]")).toHaveCount(0);
-  await expect(panel.locator(`[data-ets-id="${PROGRAM}_P-1_R-1"] input`)).toHaveValue("0010");
+  const row = panel.locator(`[data-ets-id="${PROGRAM}_P-1_R-1"]`);
+  await expect(row.locator("input")).toHaveValue("0010");
+  await expect(row.locator("input")).toBeDisabled();
+  await expect(row).toContainText(en["parameters.noContextCaption"]);
+  expect(f.bindings).toEqual([]);
   expect(f.unexpected).toEqual([]);
 });
+
+// Goal B1: another client changed the value after this panel was shown.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}: a value changed elsewhere keeps the draft and resends only on request`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const f = await fixture(page, language, language === "de" ? "porcelain" : "graphite", width);
+    const panel = await openParameters(page, m);
+    const id = `${PROGRAM}_P-2_R-1`;
+    const row = panel.locator(`label[data-ets-id="${id}"]`);
+    const input = row.locator('input[type="number"]');
+    await expect(input).toHaveValue("40");
+    f.values[id] = "55"; f.revision += 1;
+    await input.fill("60");
+    await input.press("Enter");
+    await expect(row.getByRole("alert")).toHaveText(m["parameters.conflict"]);
+    const conflict = panel.locator(`[data-conflict-for="${id}"]`);
+    await expect(conflict).toContainText(m["parameters.conflictCurrent"].replace("{value}", "55"));
+    await expect(input).toHaveValue("60");
+    expect(f.writes).toEqual([]);
+    await input.focus(); await input.press("Tab");
+    expect(f.bindings).toHaveLength(1);
+    await conflict.scrollIntoViewIfNeeded();
+    await noHorizontalOverflow(page);
+    await capture(page, `conflict-${language}-${width}`);
+    await conflict.getByRole("button", { name: m["parameters.conflictApply"], exact: true }).click();
+    await expect(conflict).toHaveCount(0);
+    expect(f.writes).toEqual([{ etsId: id, raw: "60" }]);
+    expect(f.bindings).toEqual([
+      { serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: "40" },
+      { serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 2, expectedValue: "55" },
+    ]);
+    await expect(input).toHaveValue("60");
+    expect(f.unexpected).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+}

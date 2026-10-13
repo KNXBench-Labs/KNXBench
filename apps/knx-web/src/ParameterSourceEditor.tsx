@@ -17,6 +17,7 @@ import type { ParameterEditorField } from "./features/parameter-editors/plan";
 import { useTranslate } from "./i18n";
 import { parameterRevision, parameterSelectionKey, projectParameterSource, type ProjectedSource } from "./parameterSourceHost";
 import type { SnapshotContext } from "./snapshotIdentity";
+import { isRevisionConflict } from "./revisionConflict";
 import { useUiLanguage } from "./uiLanguage";
 
 export interface ParameterSourceEditorProps {
@@ -26,6 +27,10 @@ export interface ParameterSourceEditorProps {
   /** The authoritative parameter panel's program. */
   programId: string;
   snapshot: SnapshotContext;
+  /** Snapshot the shown panel was read under; binds the write (Goal A2/B1). */
+  writeBinding: SnapshotContext;
+  /** Reloads tree and panel after a stale-write refusal; never writes. */
+  onConflict: () => Promise<void>;
   /** Product language of the parameter panel, passed through to the write. */
   language: string | null;
   label: string;
@@ -46,7 +51,7 @@ function editorField(field: ParameterField): ParameterEditorField {
 }
 
 export default function ParameterSourceEditor(props: ParameterSourceEditorProps) {
-  const { deviceId, field, scope, programId, snapshot, language, onUpdated, onValueApplied } = props;
+  const { deviceId, field, scope, programId, snapshot, writeBinding, onConflict, language, onUpdated, onValueApplied } = props;
   const t = useTranslate();
   const [uiLanguage] = useUiLanguage();
   const [state, setState] = useState<SourceState>({ status: "loading" });
@@ -67,15 +72,29 @@ export default function ParameterSourceEditor(props: ParameterSourceEditorProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deviceId, field.etsId, programId, revision]);
 
+  const expectedValue = field.value;
   const onApply = useCallback(async (writeEtsId: string, raw: string) => {
-    const panel = await api.setParameterValue(deviceId, writeEtsId, raw, language);
+    let panel: ParameterPanel;
+    try {
+      panel = await api.setParameterValue(deviceId, writeEtsId, raw, language, { ...writeBinding, expectedValue });
+    } catch (error) {
+      // The leaf keeps its draft and shows this; the reload makes it stale,
+      // so only a new explicit Apply on the new value can write again.
+      if (!isRevisionConflict(error, "parameterWriteConflict")) throw error;
+      try {
+        await onConflict();
+      } catch (reload) {
+        throw new Error(t("parameters.conflictReloadFailed", { message: api.errorMessage(reload) }));
+      }
+      throw new Error(t("parameters.conflict"));
+    }
     onUpdated(panel);
     // The server attaches its rebuilt tree to every successful write; a
     // missing one is a broken contract, not "nothing to publish".
     if (!panel.tree) throw new Error("setParameterValue response carried no tree");
     onValueApplied(panel.tree);
     return panel;
-  }, [deviceId, language, onUpdated, onValueApplied]);
+  }, [deviceId, language, writeBinding, expectedValue, onConflict, onUpdated, onValueApplied, t]);
   const onApplied = useCallback(() => {}, []);
 
   const projected = state.status === "ready" ? state.projected : null;

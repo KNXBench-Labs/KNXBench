@@ -30,7 +30,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const errors: string[] = []; const writes: string[] = []; const successes: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("request", (r) => { if (!["GET", "HEAD"].includes(r.method())) writes.push(`${r.method()} ${new URL(r.url()).pathname}`); });
-    page.on("response", (r) => { if (r.request().method() === "PATCH" && r.url().endsWith("/name") && r.ok()) successes.push(r.url()); });
+    page.on("response", (r) => { if (r.request().method() === "PATCH" && (r.url().endsWith("/name") || /\/api\/installations\/\d+$/.test(r.url())) && r.ok()) successes.push(r.url()); });
     await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/"); await openCopy(page, m);
     await palette(page, m["workbench.devices"]);
@@ -75,6 +75,29 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     }
     const navigation = page.getByRole("navigation", { name: m["workbench.navigation"], exact: true });
     if (!await navigation.isVisible()) await page.locator(".workbench-panel-controls").getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
+    // Goal B1a: the installation name is revision-bound against the real server too.
+    const installation = (await (await request.get("/api/project")).json()).installations[0] as { id: number; name: string };
+    await page.locator(".project-explorer button.tree-label", { hasText: new RegExp(`^${installation.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }).click();
+    const installationField = page.locator(".workbench-pane-right .inspector input[data-rename-name]");
+    await expect(installationField).toHaveValue(installation.name);
+    await installationField.fill("Installation via properties"); await installationField.press("Enter");
+    await expect(page.locator(".workbench-pane-right .inspector h2")).toHaveText("Installation via properties");
+    await installationField.fill("Retained installation draft");
+    const installationSnapshot = await (await request.get("/api/project")).json();
+    const externalInstallation = await request.patch(`/api/installations/${installation.id}`, { data: { name: "External installation",
+      expectedName: "Installation via properties", serverIncarnation: installationSnapshot.server_incarnation,
+      snapshotRevision: installationSnapshot.snapshot_revision, projectIncarnation: installationSnapshot.project_incarnation } });
+    expect(externalInstallation.ok()).toBe(true);
+    await installationField.press("Enter");
+    const installationAlert = page.locator(".workbench-pane-right .rename-name-field [role=alert]");
+    await expect(installationAlert).toHaveText(m["rename.conflict"]);
+    await expect(installationField).toHaveValue("Retained installation draft");
+    await expect(page.locator(".workbench-pane-right .inspector h2")).toHaveText("Installation via properties");
+    await page.locator(".workbench-pane-right .rename-name-field").getByRole("button", { name: m["rename.refresh"], exact: true }).click();
+    await expect(page.locator(".workbench-pane-right .inspector h2")).toHaveText("External installation");
+    await expect(installationField).toHaveValue("Retained installation draft"); await installationField.press("Enter");
+    await expect(page.locator(".workbench-pane-right .inspector h2")).toHaveText("Retained installation draft");
+    if (!await navigation.isVisible()) await page.locator(".workbench-panel-controls").getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
     await navigation.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
     // Range heading rows share the tbody since the tree-table view; count address rows only.
     const gaRows = page.locator(".address-table tbody tr[data-rename-kind='group_address']");
@@ -117,7 +140,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.locator('[data-crt-surface="save"]').click();
     await expect.poll(async () => (await (await request.get("/api/project")).json()).is_modified).toBe(false);
     const beforeReopen = await (await request.get("/api/project/history")).json();
-    expect(beforeReopen.undoSteps).toBe(successes.length + 1); // plus the independent external client
+    expect(beforeReopen.undoSteps).toBe(successes.length + 2); // plus the two independent external clients
     await page.reload(); await openCopy(page, m);
     const afterReopen = await (await request.get("/api/project/history")).json();
     expect(afterReopen.undoSteps).toBe(beforeReopen.undoSteps);

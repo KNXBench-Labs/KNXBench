@@ -30,7 +30,8 @@ const apiMock = vi.hoisted(() => ({
   renameArea: vi.fn(),
   renameLine: vi.fn(),
   setGroupAddressStyle: vi.fn(),
-  renameInstallation: vi.fn(),
+  renameEntity: vi.fn(),
+  currentProject: vi.fn(),
   deleteGroupAddress: vi.fn(),
   repairDevicePlacement: vi.fn(),
   repairLineOwner: vi.fn(),
@@ -113,6 +114,7 @@ function twoInstallationTree(): ProjectTree {
     is_modified: false,
     group_address_style: "ThreeLevel",
     installations: [first, second],
+    server_incarnation: "srv-i", project_incarnation: 1, snapshot_revision: 1,
   };
 }
 
@@ -151,33 +153,35 @@ function setTextInputValue(input: HTMLInputElement, value: string) {
 }
 
 describe("selected installation properties", () => {
-  afterEach(() => apiMock.renameInstallation.mockReset());
+  afterEach(() => { apiMock.renameEntity.mockReset(); apiMock.currentProject.mockReset(); });
   it.each(["en", "de"])("explains and renames only the selected unnamed installation (%s)", async (language) => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, language);
     const tree = twoInstallationTree();
     tree.installations[1].name = "";
     const renamed = structuredClone(tree);
     renamed.installations[1].name = "Annex";
-    apiMock.renameInstallation.mockResolvedValueOnce(renamed);
+    renamed.snapshot_revision = 2;
+    apiMock.renameEntity.mockResolvedValueOnce(renamed);
     const onApplied = await renderInspector({ kind: "installation", id: 1 }, tree);
     const word = language === "de" ? "Unbenannte Installation" : "Unnamed installation";
     expect(host!.querySelector("h2")?.textContent).toBe(`${word} (ID 1)`);
     expect(host!.textContent).toContain(language === "de" ? "Gruppenadressen" : "group addresses");
     expect(host!.textContent).toContain(language === "de" ? "kein Gerät" : "not a device");
-    expect(apiMock.renameInstallation).not.toHaveBeenCalled();
+    expect(apiMock.renameEntity).not.toHaveBeenCalled();
     const fields = host!.querySelectorAll<HTMLInputElement>("input");
     expect(fields.length).toBe(1);
     expect(fields[0].value).toBe("");
     await act(async () => setTextInputValue(fields[0], "Annex"));
     await act(async () => fields[0].dispatchEvent(new Event("focusout", { bubbles: true })));
-    expect(apiMock.renameInstallation).toHaveBeenCalledExactlyOnceWith(1, "Annex");
+    // Goal B1: bound to the shown snapshot and the exact shown (empty) name.
+    expect(apiMock.renameEntity).toHaveBeenCalledExactlyOnceWith("installation", 1, "Annex", tree, "");
     expect(onApplied).toHaveBeenCalledExactlyOnceWith(renamed);
     expect(tree.installations[1].name).toBe("");
   });
 
-  it("does not overlap installation renames and reports a refused write", async () => {
+  it("does not overlap installation renames and keeps the draft on a refused write", async () => {
     let reject!: (reason: Error) => void;
-    apiMock.renameInstallation.mockReturnValueOnce(new Promise<ProjectTree>((_, fail) => { reject = fail; }));
+    apiMock.renameEntity.mockReturnValueOnce(new Promise<ProjectTree>((_, fail) => { reject = fail; }));
     const onApplied = await renderInspector({ kind: "installation", id: 1 }, twoInstallationTree());
     const field = host!.querySelector<HTMLInputElement>("input")!;
     await act(async () => setTextInputValue(field, "Annex"));
@@ -186,13 +190,42 @@ describe("selected installation properties", () => {
       field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
       field.dispatchEvent(new Event("focusout", { bubbles: true }));
     });
-    expect(apiMock.renameInstallation).toHaveBeenCalledExactlyOnceWith(1, "Annex");
+    expect(apiMock.renameEntity).toHaveBeenCalledOnce();
     expect(field.disabled).toBe(true);
     await act(async () => reject(new Error("rename refused")));
     expect(host!.querySelector('[role="alert"]')?.textContent).toBe("rename refused");
     expect(field.disabled).toBe(false);
-    expect(field.value).toBe("Installation 2");
+    expect(field.value).toBe("Annex");
     expect(onApplied).not.toHaveBeenCalled();
+  });
+
+  it.each(["en", "de"])("keeps the draft on a stale-name conflict and refreshes only on request (%s)", async (language) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    const tree = twoInstallationTree();
+    const current = structuredClone(tree);
+    current.installations[1].name = "Renamed elsewhere";
+    current.snapshot_revision = 4;
+    apiMock.renameEntity.mockRejectedValueOnce(Object.assign(new Error("raw server text"),
+      { status: 409, body: { error: "raw server text", kind: "renameConflict" } }));
+    apiMock.currentProject.mockResolvedValueOnce(current);
+    const onApplied = await renderInspector({ kind: "installation", id: 1 }, tree);
+    const field = host!.querySelector<HTMLInputElement>("input")!;
+    await act(async () => setTextInputValue(field, "Annex"));
+    await act(async () => field.dispatchEvent(new Event("focusout", { bubbles: true })));
+    expect(host!.querySelector('[role="alert"]')?.textContent).toContain(language === "de" ? "anderswo geändert" : "changed elsewhere");
+    expect(field.value).toBe("Annex");
+    expect(apiMock.currentProject).not.toHaveBeenCalled();
+    const refresh = [...host!.querySelectorAll<HTMLButtonElement>(".rename-actions button")]
+      .find((button) => button.textContent === (language === "de" ? "Stand aktualisieren" : "Refresh state"))!;
+    await act(async () => refresh.click());
+    expect(onApplied).toHaveBeenCalledExactlyOnceWith(current);
+    expect(field.value).toBe("Annex");
+    expect(apiMock.renameEntity).toHaveBeenCalledOnce();
+    apiMock.renameEntity.mockResolvedValueOnce({ ...current, snapshot_revision: 5 });
+    const apply = [...host!.querySelectorAll<HTMLButtonElement>(".rename-actions button")]
+      .find((button) => button.textContent === (language === "de" ? "Namen übernehmen" : "Apply name"))!;
+    await act(async () => apply.click());
+    expect(apiMock.renameEntity).toHaveBeenLastCalledWith("installation", 1, "Annex", current, "Renamed elsewhere");
   });
 
   it("cancels an installation draft with Escape and refuses a new blank name", async () => {
@@ -205,8 +238,7 @@ describe("selected installation properties", () => {
     await act(async () => setTextInputValue(field, "  "));
     await act(async () => field.dispatchEvent(new Event("focusout", { bubbles: true })));
     expect(host!.querySelector('[role="alert"]')?.textContent).toBeTruthy();
-    expect(field.value).toBe("Installation 2");
-    expect(apiMock.renameInstallation).not.toHaveBeenCalled();
+    expect(apiMock.renameEntity).not.toHaveBeenCalled();
   });
 
   it("keeps an installation draft across an unrelated snapshot refresh", async () => {
@@ -217,37 +249,26 @@ describe("selected installation properties", () => {
     await act(async () => root!.render(<Inspector selection={{ kind: "installation", id: 1 }}
       tree={{ ...tree, snapshot_revision: 2 }} deviceDetail={null} onApplied={onApplied} onDeleted={vi.fn()} />));
     expect(field.value).toBe("Unsubmitted draft");
-    expect(apiMock.renameInstallation).not.toHaveBeenCalled();
+    expect(apiMock.renameEntity).not.toHaveBeenCalled();
   });
 
-  it.each(["snapshot", "selection", "unmount"])("ignores an installation rename reply after %s changes", async (change) => {
+  it.each(["project", "selection", "unmount"])("ignores an installation rename reply after the %s changes", async (change) => {
     let resolve!: (tree: ProjectTree) => void;
-    apiMock.renameInstallation.mockReturnValueOnce(new Promise<ProjectTree>((done) => { resolve = done; }));
+    apiMock.renameEntity.mockReturnValueOnce(new Promise<ProjectTree>((done) => { resolve = done; }));
     const tree = twoInstallationTree();
     const onApplied = await renderInspector({ kind: "installation", id: 1 }, tree);
     const field = host!.querySelector<HTMLInputElement>("input")!;
     await act(async () => setTextInputValue(field, "Annex"));
     await act(async () => field.dispatchEvent(new Event("focusout", { bubbles: true })));
-    expect(apiMock.renameInstallation).toHaveBeenCalledExactlyOnceWith(1, "Annex");
+    expect(apiMock.renameEntity).toHaveBeenCalledOnce();
     await act(async () => {
       if (change === "unmount") root!.unmount();
       else root!.render(<Inspector selection={{ kind: "installation", id: change === "selection" ? 0 : 1 }}
-        tree={change === "snapshot" ? structuredClone(tree) : tree} deviceDetail={null}
+        tree={change === "project" ? { ...structuredClone(tree), project_incarnation: 2 } : tree} deviceDetail={null}
         onApplied={onApplied} onDeleted={vi.fn()} />);
     });
-    if (change === "snapshot") {
-      expect(field.disabled).toBe(true);
-      expect(field.value).toBe("Annex");
-      await act(async () => field.dispatchEvent(new Event("focusout", { bubbles: true })));
-      expect(apiMock.renameInstallation).toHaveBeenCalledExactlyOnceWith(1, "Annex");
-    }
     await act(async () => resolve({ ...tree, can_undo: true }));
     expect(onApplied).not.toHaveBeenCalled();
-    if (change === "snapshot") {
-      expect(field.disabled).toBe(false);
-      expect(field.value).toBe("Annex");
-      expect(host!.querySelector('[role="alert"]')?.textContent).toContain("server operation may have completed");
-    }
     if (change === "unmount") root = undefined;
   });
 
@@ -256,7 +277,7 @@ describe("selected installation properties", () => {
     tree.installations.push({ ...tree.installations[1] });
     await renderInspector({ kind: "installation", id: kind === "unknown" ? 999 : 1 }, tree);
     expect(host!.querySelector("input")).toBeNull();
-    expect(apiMock.renameInstallation).not.toHaveBeenCalled();
+    expect(apiMock.renameEntity).not.toHaveBeenCalled();
   });
 });
 
@@ -889,8 +910,8 @@ describe("Inspector — project node", () => {
   it.each(["en", "de"])("renames each installation through its own field (%s)", async (language) => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, language);
     const tree = twoInstallationTree();
-    const renamed = { ...tree, can_undo: true };
-    apiMock.renameInstallation.mockResolvedValueOnce(renamed);
+    const renamed = { ...tree, can_undo: true, snapshot_revision: 2 };
+    apiMock.renameEntity.mockResolvedValueOnce(renamed);
     const onApplied = await renderInspector({ kind: "project", id: 0 }, tree);
     const label = language === "de" ? "Name der Installation" : "Installation name";
     const fields = Array.from(host!.querySelectorAll<HTMLInputElement>(`input[aria-label^="${label}"]`));
@@ -899,21 +920,29 @@ describe("Inspector — project node", () => {
       setTextInputValue(fields[1], "Annex");
       fields[1].dispatchEvent(new Event("focusout", { bubbles: true }));
     });
-    expect(apiMock.renameInstallation).toHaveBeenCalledExactlyOnceWith(1, "Annex");
+    expect(apiMock.renameEntity).toHaveBeenCalledExactlyOnceWith("installation", 1, "Annex", tree, "Installation 2");
     expect(onApplied).toHaveBeenCalledExactlyOnceWith(renamed);
   });
 
-  it("keeps an installation's name and shows the refusal when a rename fails", async () => {
-    apiMock.renameInstallation.mockRejectedValueOnce(new Error("installation name must not be empty"));
+  it("keeps an installation's draft and shows the refusal when a rename fails", async () => {
+    apiMock.renameEntity.mockRejectedValueOnce(new Error("installation name must not be empty"));
     const onApplied = await renderInspector({ kind: "project", id: 0 }, twoInstallationTree());
     const field = host!.querySelectorAll<HTMLInputElement>('input[aria-label^="Installation name"]')[0];
     await act(async () => {
       setTextInputValue(field, "Renamed");
       field.dispatchEvent(new Event("focusout", { bubbles: true }));
     });
-    expect(field.value).toBe("Installation 1");
+    expect(field.value).toBe("Renamed");
     expect(host!.querySelector(".field-error")?.textContent).toBe("installation name must not be empty");
     expect(onApplied).not.toHaveBeenCalled();
+  });
+
+  it("offers no installation rename without a complete project snapshot", async () => {
+    const tree = { ...twoInstallationTree(), server_incarnation: undefined };
+    await renderInspector({ kind: "project", id: 0 }, tree);
+    const fields = host!.querySelectorAll<HTMLInputElement>('input[aria-label^="Installation name"]');
+    expect([...fields].every((field) => field.disabled)).toBe(true);
+    expect(apiMock.renameEntity).not.toHaveBeenCalled();
   });
 
   it("shows the project's current group address style", async () => {

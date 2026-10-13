@@ -4,11 +4,14 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
 import { hasRenameContext, nameProblem, renameTarget, type RenameTarget } from "./rename";
 import * as api from "./api";
+import { isRevisionConflict } from "./revisionConflict";
 
 export const RenameScope = createContext(0);
-export default function RenameNameField({ tree, target, onApplied, onDone, onPendingChange, autoFocus = false }: {
+export default function RenameNameField({ tree, target, onApplied, onDone, onPendingChange, autoFocus = false, inputLabel }: {
   tree: ProjectTree; target: RenameTarget; onApplied: (tree: ProjectTree) => void;
   onDone?: () => void; onPendingChange?: (pending: boolean) => void; autoFocus?: boolean;
+  /** Accessible name when several name fields share one visible label. */
+  inputLabel?: string;
 }) {
   const t = useTranslate();
   const scope = useContext(RenameScope);
@@ -54,7 +57,9 @@ export default function RenameNameField({ tree, target, onApplied, onDone, onPen
       setBase({ tree: updated, name: draft });
       onApplied(updated); onDone?.();
     } catch (reason) {
-      if (alive.current && generation.current === ownedGeneration) setError(api.errorMessage(reason));
+      // A stale binding keeps the draft and asks for an explicit Refresh; it is never resent.
+      if (alive.current && generation.current === ownedGeneration)
+        setError(isRevisionConflict(reason, "renameConflict") ? t("rename.conflict") : api.errorMessage(reason));
     } finally {
       if (alive.current && generation.current === ownedGeneration) { pending.current = false; setBusy(false); onPendingChange?.(false); }
     }
@@ -91,7 +96,7 @@ export default function RenameNameField({ tree, target, onApplied, onDone, onPen
   }
   return <div className="rename-name-field">
     <label className="inspector-field">{t("inspector.name")}
-      <input data-rename-name value={draft} disabled={!eligible || busy} autoFocus={autoFocus}
+      <input data-rename-name aria-label={inputLabel} value={draft} disabled={!eligible || busy} autoFocus={autoFocus}
         onFocus={() => { cancelled.current = false; }}
         onPaste={(event) => {
           if (nameProblem(event.clipboardData.getData("text")) === "control") {

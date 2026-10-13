@@ -1,5 +1,5 @@
 /** Panel rendering and editing a device's application-program parameters, fetched per selection. */
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type {
   ModuleScope,
@@ -15,7 +15,8 @@ import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge } from "./languageFallback";
 import { groupParameterDiagnostics, isManufacturerRestricted } from "./parameterPresentation";
 import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
-import type { SnapshotContext } from "./snapshotIdentity";
+import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentity";
+import { isRevisionConflict } from "./revisionConflict";
 import ParameterSourceEditor from "./ParameterSourceEditor";
 import { isSourceEditorCandidate } from "./parameterSourceHost";
 
@@ -105,32 +106,56 @@ function ParameterFieldRow(props: {
   sourceLanguage: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
   onValueApplied: (tree: ProjectTree) => void;
+  /** Snapshot the shown panel was read under; `null` offers no write (A2). */
+  binding: SnapshotContext | null;
+  /** Reloads tree and panel after a stale-write refusal; never writes. */
+  onConflict: () => Promise<void>;
   /** Present when the checked editor may be offered for this row. */
   checked: CheckedEditorContext | null;
 }) {
-  const { field, moduleScoped, deviceId, language, sourceLanguage, onUpdated, onValueApplied, checked } = props;
+  const { field, moduleScoped, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict, checked } = props;
   const t = useTranslate();
   const [value, setValue] = useState(field.value ?? "");
   const [checkedOpen, setCheckedOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Goal B1 (revision-bound-writes): a refused stale write keeps the draft
+  // across the reload; `at` is the binding it was refused under, so the
+  // explicit resend is offered only once a newer panel has arrived.
+  const [conflict, setConflict] = useState<{ at: string } | null>(null);
+  const conflictRef = useRef(false);
+  const restricted = isManufacturerRestricted(field) || !field.editable || field.writeEtsId === null;
   // Belt-and-braces on purpose (see `api.ts`'s `writeEtsId` doc comment):
   // the server's contract makes the two conditions exact opposites of
   // each other, but the control checks both rather than trusting either
-  // one alone.
-  const disabled = isManufacturerRestricted(field) || !field.editable || field.writeEtsId === null;
+  // one alone. Without a complete snapshot no unbound write is sent.
+  const disabled = restricted || binding === null;
+  const bindingKey = binding === null ? null : snapshotKey(binding);
 
   useEffect(() => {
+    if (conflictRef.current) return;
     setValue(field.value ?? "");
     setError(null);
   }, [field.etsId, field.value]);
 
-  async function apply() {
-    if (isManufacturerRestricted(field) || !field.editable || field.writeEtsId === null) return;
+  function clearConflict() {
+    conflictRef.current = false;
+    setConflict(null);
+  }
+
+  async function apply(explicit = false) {
+    if (restricted || binding === null || field.writeEtsId === null) return;
+    // After a conflict only the explicit button may send again.
+    if (conflictRef.current && !explicit) return;
     const current = field.value ?? "";
-    if (value === current) return;
+    if (value === current) {
+      if (conflictRef.current) { clearConflict(); setError(null); }
+      return;
+    }
     setError(null);
     try {
-      const panel = await api.setParameterValue(deviceId, field.writeEtsId, value, language);
+      const panel = await api.setParameterValue(deviceId, field.writeEtsId, value, language,
+        { ...binding, expectedValue: field.value });
+      clearConflict();
       onUpdated(panel);
       // `set_parameter_value_impl` always attaches its own freshly rebuilt
       // tree to a successful write (T3 fix round 1, item 6) — a `null` here
@@ -142,9 +167,22 @@ function ParameterFieldRow(props: {
       }
       onValueApplied(panel.tree);
     } catch (e) {
+      if (isRevisionConflict(e, "parameterWriteConflict")) {
+        conflictRef.current = true;
+        setConflict({ at: snapshotKey(binding) });
+        setError(t("parameters.conflict"));
+        onConflict().catch((reason) => setError(t("parameters.conflictReloadFailed", { message: api.errorMessage(reason) })));
+        return;
+      }
       setError(api.errorMessage(e));
       setValue(current);
     }
+  }
+
+  function discard() {
+    clearConflict();
+    setValue(field.value ?? "");
+    setError(null);
   }
 
   // `text` before `name`, not the other way round: measured on the real
@@ -171,7 +209,7 @@ function ParameterFieldRow(props: {
   if (offerChecked && checkedOpen) {
     return <div className="inspector-field parameter-field parameter-field-checked" data-ets-id={field.etsId}>
       <ParameterSourceEditor deviceId={deviceId} field={field} scope={checked.scope} programId={checked.programId}
-        snapshot={checked.snapshot} language={language} label={label}
+        snapshot={checked.snapshot} writeBinding={checked.writeBinding} onConflict={onConflict} language={language} label={label}
         onUpdated={onUpdated} onValueApplied={onValueApplied} onClose={() => setCheckedOpen(false)} />
     </div>;
   }
@@ -188,7 +226,7 @@ function ParameterFieldRow(props: {
           value={value}
           disabled={disabled}
           onChange={(e) => setValue(e.target.value)}
-          onBlur={apply}
+          onBlur={() => void apply()}
         >
           <option value="">{t("parameters.none")}</option>
           {field.enumOptions.map((opt) => (
@@ -205,7 +243,7 @@ function ParameterFieldRow(props: {
           max={field.max ?? undefined}
           disabled={disabled}
           onChange={(e) => setValue(e.target.value)}
-          onBlur={apply}
+          onBlur={() => void apply()}
           onKeyDown={(e) => {
             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
@@ -216,21 +254,30 @@ function ParameterFieldRow(props: {
           value={value}
           disabled={disabled}
           onChange={(e) => setValue(e.target.value)}
-          onBlur={apply}
+          onBlur={() => void apply()}
           onKeyDown={(e) => {
             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
         />
       )}
-      {disabled && (
+      {restricted && (
         <span className="parameter-field-caption">
           {t(field.access === "None" ? "parameters.accessNoneCaption"
             : field.access === "Read" ? "parameters.accessReadCaption"
             : moduleScoped ? "parameters.sharedReadOnlyCaption" : "parameters.readOnlyCaption")}
         </span>
       )}
-      {error && <span className="field-error">{error}</span>}
+      {!restricted && binding === null && <span className="parameter-field-caption">{t("parameters.noContextCaption")}</span>}
+      {error && <span className="field-error" role={conflict ? "alert" : undefined}>{error}</span>}
     </label>
+    {conflict && <div className="parameter-conflict" data-conflict-for={field.etsId}>
+      <span className="parameter-conflict-current">
+        {t("parameters.conflictCurrent", { value: field.value ?? t("parameters.none") })}
+      </span>
+      <button type="button" disabled={bindingKey === null || bindingKey === conflict.at}
+        onClick={() => void apply(true)}>{t("parameters.conflictApply")}</button>
+      <button type="button" className="parameter-conflict-discard" onClick={discard}>{t("parameters.conflictDiscard")}</button>
+    </div>}
     {offerChecked && <button type="button" className="parameter-checked-open" data-checked-for={field.etsId}
       title={t("parameters.checked.openHint")} onClick={() => setCheckedOpen(true)}>{t("parameters.checked.open")}</button>}
   </>;
@@ -240,7 +287,14 @@ function ParameterFieldRow(props: {
 interface CheckedEditorContext {
   programId: string;
   snapshot: SnapshotContext;
+  /** The shown panel's own snapshot, which binds the write (A2). */
+  writeBinding: SnapshotContext;
   scope: ModuleScope | null;
+}
+
+/** Exact string form of a snapshot identity, for equality only. */
+function snapshotKey(snapshot: SnapshotContext): string {
+  return `${snapshot.serverIncarnation}/${snapshot.projectIncarnation}/${snapshot.snapshotRevision}`;
 }
 
 // AR10: one line naming how many fields show the program's own text
@@ -317,9 +371,11 @@ function ParameterSectionView(props: {
   sourceLanguage: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
   onValueApplied: (tree: ProjectTree) => void;
+  binding: SnapshotContext | null;
+  onConflict: () => Promise<void>;
   checked: Omit<CheckedEditorContext, "scope"> | null;
 }) {
-  const { section, deviceId, language, sourceLanguage, onUpdated, onValueApplied } = props;
+  const { section, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict } = props;
   const checked = props.checked === null ? null : { ...props.checked, scope: section.scope };
   const t = useTranslate();
   const fields = section.fields;
@@ -337,6 +393,8 @@ function ParameterSectionView(props: {
             sourceLanguage={sourceLanguage}
             onUpdated={onUpdated}
             onValueApplied={onValueApplied}
+            binding={binding}
+            onConflict={onConflict}
             checked={checked}
           />
         ))}
@@ -429,7 +487,9 @@ type ParameterPanelProps = {
 /** One read model shared by the editor and both inspection-only tabs. */
 export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) {
   const [language] = useProductLanguage();
-  const [panel, setPanel] = useState<ParameterPanelDto | null>(null);
+  // The panel together with the snapshot it was read under (Goal B1): a
+  // write binds to the state that rendered the field, never to a later tree.
+  const [shown, setShown] = useState<{ panel: ParameterPanelDto; snapshot: SnapshotContext | null } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   // Guards against a slower, earlier device's response landing after a
   // faster, later one's — same stale-reply hazard `CatalogBrowser.tsx`'s
@@ -443,20 +503,21 @@ export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) 
   const shownRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const shown = JSON.stringify([deviceId, language]);
-    if (shownRef.current !== shown) {
-      shownRef.current = shown;
-      setPanel(null);
+    const shownKey = JSON.stringify([deviceId, language]);
+    if (shownRef.current !== shownKey) {
+      shownRef.current = shownKey;
+      setShown(null);
       setLoadError(null);
     }
     const requestId = ++requestIdRef.current;
+    const snapshot = refreshKey ? snapshotContextFromTree(refreshKey) : null;
     api
       .deviceParameters(deviceId, language)
       .then((p) => {
         if (requestId !== requestIdRef.current) return;
         // A refresh can follow a failed one now that the panel is not blanked.
         setLoadError(null);
-        setPanel(p);
+        setShown({ panel: p, snapshot });
       })
       .catch((e) => {
         if (requestId !== requestIdRef.current) return;
@@ -464,14 +525,29 @@ export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) 
       });
   }, [deviceId, language, refreshKey]);
 
-  return { panel, loadError, language, setPanel };
+  /**
+   * Shows a write's returned panel only while the same device and product
+   * language are still displayed; a late reply for another target is not
+   * put in front of this one. Its snapshot is the write's own tree.
+   */
+  const acceptWrite = useCallback((forDevice: number, forLanguage: string | null, panel: ParameterPanelDto) => {
+    if (shownRef.current !== JSON.stringify([forDevice, forLanguage])) return;
+    setShown({ panel, snapshot: panel.tree ? snapshotContextFromTree(panel.tree) : null });
+  }, []);
+
+  return { panel: shown?.panel ?? null, snapshot: shown?.snapshot ?? null, loadError, language, acceptWrite };
 }
 
 export function ParameterPanelContent(props: ParameterPanelProps & {
   state: ReturnType<typeof useDeviceParameters>;
 }) {
   const { deviceId, onValueApplied, view = "parameters", state } = props;
-  const { panel, loadError, language, setPanel } = state;
+  const { panel, snapshot, loadError, language, acceptWrite } = state;
+  const onUpdated = useCallback((written: ParameterPanelDto) => acceptWrite(deviceId, language, written),
+    [acceptWrite, deviceId, language]);
+  // A stale-write refusal reloads the authoritative tree; publishing it
+  // re-reads this panel through `refreshKey`. Nothing is written here.
+  const onConflict = useCallback(async () => { onValueApplied(await api.currentProject()); }, [onValueApplied]);
   const t = useTranslate();
   const title = view === "diagnostics" ? "parameters.diagnosticsTab"
     : view === "restricted" ? "parameters.restrictedTab" : "parameters.title";
@@ -531,10 +607,12 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
           deviceId={deviceId}
           language={language}
           sourceLanguage={panel.sourceLanguage}
-          onUpdated={setPanel}
+          onUpdated={onUpdated}
           onValueApplied={onValueApplied}
-          checked={view === "parameters" && props.snapshot && panel.programId !== null
-            ? { programId: panel.programId, snapshot: props.snapshot } : null}
+          binding={snapshot}
+          onConflict={onConflict}
+          checked={view === "parameters" && props.snapshot && snapshot && panel.programId !== null
+            ? { programId: panel.programId, snapshot: props.snapshot, writeBinding: snapshot } : null}
         />
       ))}
     </div>

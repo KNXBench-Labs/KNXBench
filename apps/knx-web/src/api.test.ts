@@ -201,13 +201,28 @@ describe("api", () => {
     await expect(api.fetchFlowSnapshot(7, "3")).rejects.toThrow(/flow snapshot/);
   });
 
-  it("renames an installation through PATCH /api/installations/{id}", async () => {
+  it("renames an installation through PATCH /api/installations/{id} bound to the shown snapshot and name", async () => {
     mockFetchOnce({ installations: [] });
-    await api.renameInstallation(2, "Annex");
+    const shown = { schema_version: 15, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
+      group_address_style: "ThreeLevel", installations: [], server_incarnation: "srv-a", project_incarnation: 4, snapshot_revision: 9 } as const;
+    await api.renameEntity("installation", 2, "Annex", { ...shown, installations: [] }, " Old ");
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe("/api/installations/2");
     expect(init.method).toBe("PATCH");
-    expect(JSON.parse(init.body as string)).toEqual({ name: "Annex" });
+    expect(JSON.parse(init.body as string)).toEqual({ name: "Annex", expectedName: " Old ",
+      serverIncarnation: "srv-a", projectIncarnation: 4, snapshotRevision: 9 });
+  });
+
+  it.each([["a stored value", "5"], ["no value", null]])("binds a parameter write to its snapshot and %s", async (_case, expectedValue) => {
+    mockFetchOnce({ programId: null, sourceLanguage: null, sections: [], stale: [], diagnostics: [], tree: null });
+    await api.setParameterValue(3, "P-1", "6", "de", { serverIncarnation: "srv-a", projectIncarnation: 4, snapshotRevision: 9, expectedValue });
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/device/3/parameters?language=de");
+    expect(init.method).toBe("POST");
+    const body = JSON.parse(init.body as string);
+    expect(body).toEqual({ etsId: "P-1", raw: "6", serverIncarnation: "srv-a", projectIncarnation: 4, snapshotRevision: 9, expectedValue });
+    // A present `null` is the contract's "the panel showed no value", not an absent key.
+    expect(Object.hasOwn(body, "expectedValue")).toBe(true);
   });
 
   it("encodes the service-control target for GET and names only the debug scope on POST", async () => {

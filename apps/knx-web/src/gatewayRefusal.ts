@@ -21,7 +21,9 @@ export type GatewayRefusal =
   /** `gatewayError` is the specification's name, `null` for an undefined code. */
   | { kind: "gatewayRefused"; gateway: string; gatewayStatus: number; gatewayError: string | null }
   | { kind: "gatewayTimeout"; gateway: string }
-  | { kind: "unsupportedByteOrder"; address: string; order: string };
+  | { kind: "unsupportedByteOrder"; address: string; order: string }
+  /** Goal A3 (KL-163): stop admission refused a new tunnel; nothing was sent. */
+  | { kind: "serverStopping" };
 
 type Fields = Record<string, unknown>;
 
@@ -89,6 +91,8 @@ export function admitGatewayRefusal(error: unknown): GatewayRefusal | null {
     case "gatewayTimeout":
       b = exactly(body, ["error", "kind", "gateway"]);
       return b && status === 502 && endpoint(b.gateway) ? { kind, gateway: b.gateway as string } : null;
+    case "serverStopping":
+      return exactly(body, ["error", "kind"]) && status === 503 ? { kind } : null;
     case "unsupportedByteOrder":
       b = exactly(body, ["error", "kind", "address", "order"]);
       return b && status === 422 && individualAddress(b.address) && text(b.order)
@@ -182,6 +186,8 @@ export function describeGatewayRefusal(refusal: GatewayRefusal, t: Translate): s
     }
     case "gatewayTimeout":
       return t("gatewayRefusal.timeout", { gateway: refusal.gateway });
+    case "serverStopping":
+      return t("gatewayRefusal.serverStopping");
     case "unsupportedByteOrder":
       return t("gatewayRefusal.byteOrder", { address: refusal.address, order: refusal.order });
   }

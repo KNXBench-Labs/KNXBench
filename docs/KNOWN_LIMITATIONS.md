@@ -9670,8 +9670,13 @@ program whose `Options/@ParameterByteOrder` is anything but `BigEndian`
 (`ParameterByteOrder "LittleEndian": numbers are written high octet first`). An
 undeclared byte order is treated as big-endian, the schema's default value
 (two independent schema derivations, research above). Offline readiness marks
-such devices `unsupported` (`image-structure`). Until this entry the boundary
-lived only in the module comment of `crates/knx-productdb/src/image.rs`.
+such devices `unsupported`, since 2026-10-13 with their own category
+`byte-order` (before: `image-structure`); the refusal is the typed
+`ImageError::UnsupportedByteOrder` with the same text, and the web download tab
+names the reason in plain words before anything is prepared (§180). The pinned
+download coverage (467 programs) has no program in `byte-order`: none of its
+counts moved with the split. Until this entry the boundary lived only in the
+module comment of `crates/knx-productdb/src/image.rs`.
 
 **Prevalence.** Local product corpus (`OriginalData/ProductDatabases`, 114
 archives, 525 unique application-program files by content hash, measured
@@ -9941,6 +9946,85 @@ protected ETS4/ETS5 files importable at all (§13).
 * Not verified on the reporter's project or any larger ETS 5.7 installation.
 
 Ledger `KL-177`.
+
+## 178. The group-address picker filters and marks; it does not judge
+
+**Issue #8 (2026-10-13).** The link row of a communication object offers its
+linkable group addresses in a searchable picker instead of one long list.
+
+- **Matching** is plain, case-insensitive substring matching per word: every
+  word of the query must occur in the address (in the shown notation or the
+  compatible spelling), the name, the DPT's label or number, or the stored DPT
+  reference. No fuzzy matching and no ranking; the order is the caller's.
+- **The DPT mark** compares the address's DPTs with the object's effective DPT.
+  The same subtype, or a main-only reference on either side, is a match; the
+  same main type with another subtype is marked *Same encoding, different
+  subtype*; another main type *Different type*. With no DPT or an unreadable
+  reference on either side nothing is marked. A mark never hides, moves or
+  blocks an address; what linking does is unchanged.
+- **At most 100 options** are drawn; beyond that *Showing N of M* asks for a
+  narrower search. The list stays in the page flow (not an overlay), so a long
+  list makes the panel longer.
+- The linkable set is still MODEL-01's (per installation); drag-and-drop and
+  the direction select are unchanged.
+
+Checked by unit tests and production-build Chromium fixtures (EN/DE, 1440/400,
+light/dark); the native WebKitGTK window was not exercised. Ledger `KL-178`.
+
+## 179. Tree indentation is capped at twelve levels; flat views stay flat
+
+**Issue #9 (2026-10-13).** In the group-address tree, address rows are now
+indented by their level with the range headers' rule (1.2 rem per level), so
+a child starts right of its parent. The indent stops growing at level 12;
+deeper rows share that indent, so deep trees stay usable on narrow screens.
+The flat presentation keeps one column. In the devices view's *By channel*
+grouping, the channel header reads from the left (`▾ name · count`) and the
+grouped objects start one step right. Only these two tables were changed and
+measured; other grouped tables were not re-measured in this package. Browser
+geometry tests in Chromium (EN/DE, 1440/400, light/dark); native WebKitGTK
+not exercised. Ledger `KL-179`.
+
+## 180. Gateway refusals name KNXBench's own sessions and the gateway's stated reason, nothing more
+
+**Issue #10 (2026-10-13), [ADR-0123](adr/0123-structured-gateway-refusals.md).**
+
+- **Who holds the gateway.** A start refused because another KNXBench session
+  of the same server holds the gateway's one tunnel names that session (`409`,
+  `kind: "gatewayBusy"`, `holder`: bus monitor with its gateway, line scan with
+  its progress, download, address programming, or only a held lock). Another
+  client (ETS, a visualisation, a second KNXBench server) is invisible to the
+  server; it appears only as the gateway's own refusal.
+- **Why the gateway refused.** A CONNECT_RESPONSE status is named only for
+  codes the specification defines there: 22h, 23h, 24h and the extended-CRI
+  codes 28h, 2Dh, 2Eh (Core v01.06.02 §7.8.2 Table 8, p. 39), 25h (Tunnelling
+  v01.07.01 §2.2.2, p. 6) and 29h (§5.4.3.1 Table 11, p. 26, titled there
+  *CONNECT_ACK error codes*). KNXBench sends a basic CRI, so it does not expect
+  the extended-CRI codes. Any other code stays a bare number. The reasons shown
+  are plain summaries of the table descriptions. 24h was seen on a real
+  gateway during the 2026-09-16 → 19 re-verification (§62); every other code
+  only in synthetic tests. For 25h, KNXBench does not run the client procedure
+  of Tunnelling §4.3 (a management connection reading the additional
+  individual addresses); it names the code and points at the tunnel addresses.
+  A gateway that does not answer is `gatewayTimeout` with its address.
+- **Up-front hint.** The download page reads the volatile, partial activity
+  snapshot (ADR-0055) every 3 s. A failed read shows nothing, and a start's own
+  refusal stays authoritative. A held lock without a session (a one-shot
+  management read, a session still connecting) is named by its lock only.
+  There are stop buttons for a bus monitor, a line scan and an address
+  programming; the page's own download is shown by the page. The snapshot now
+  carries the bus monitor's gateway in the live view only, never in history or
+  one-shot records.
+- **Readiness marks** come from the offline readiness grade, re-read after
+  every project change. Only `unsupported` and `excluded` devices with a unique
+  address are marked; a duplicate address is left unmarked. The mark is a hint:
+  preparing the download decides. A failed or malformed readiness answer is
+  said in the tab, not silently dropped.
+- **Byte order** is still refused (§170); only the wording and the category
+  changed. The plan's `warnings` (`base-image-low-octet-first`) are still not
+  shown in the tab (KL-170, next in the queue).
+
+No real gateway or device was contacted for this package; Chromium only, the
+native WebKitGTK window was not exercised. Ledger `KL-180`.
 
 ## Bounded AP3 parameter controls (2026-10-11, PDB-04 remains partial)
 

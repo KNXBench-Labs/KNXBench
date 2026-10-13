@@ -390,8 +390,15 @@ changes, the project does not. Saving or exporting a project file is something e
    a plan is being prepared or a download runs, the selection is not switched; if the
    tab cannot tell whether a download is running, it says so and leaves the choice to
    you.
-2. Choose the device, **What to write** and the gateway, then **Show what would be
-   written**. A short **Steps** list at the top of the tab (current source) shows which
+2. Choose the device, **What to write** and the gateway, then **Prepare download**
+   (German: **Download vorbereiten**; nothing is written yet). Since the fix for issue
+   #10 (current source), a device KNXBench cannot program yet is marked
+   *(cannot be programmed yet)* in the list, and choosing it shows the reason in plain
+   words before anything is prepared — for example an application program that stores
+   values little-endian. If the bus monitor, a line scan or an address programming
+   already holds the gateway's one tunnel, the gateway box says so up front, with a
+   button to stop it and, for the monitor, to use its gateway. If the search found
+   nothing but you typed an address, the tab says that address is used directly. A short **Steps** list at the top of the tab (current source) shows which
    of the five steps — device, gateway, scope, plan, confirm and start — are done and
    names what is missing; the **?** next to it leads to *What this does not do*. For the
    gateway, the tab uses the interface search that already ran at start-up: exactly one
@@ -417,8 +424,10 @@ changes, the project does not. Saving or exporting a project file is something e
    Any edit to the project discards the plan; ask for it again.
 3. **Download to 1.1.67** (with your device's address) asks for confirmation in the
    programming dialog. Only after you confirm does the server open a tunnel. It refuses
-   if the bus monitor or a line scan holds the gateway's tunnel, and it refuses a plan the
-   project no longer yields.
+   if another KNXBench session holds the gateway's tunnel and says which one; if the
+   gateway itself refuses (for example because ETS or a visualisation uses all of its
+   connections) or does not answer, the tab names the gateway's reason. It also refuses a
+   plan the project no longer yields.
 4. While it runs the tab shows step *n* of *m*, the octets written and read back against
    the total, and every data block with its address and octets, each one only after the
    device read it back unchanged.

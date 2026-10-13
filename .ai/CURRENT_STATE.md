@@ -15,6 +15,14 @@ Web lock: unchanged — still held by claude-release-alpha11 (this entry touches
 
 ---
 
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 15:22
+- **Completed:** Alpha 11 release candidate frozen on main `2a43ad5c` (claude-release-alpha11; web lock still held, entry below). Before the freeze: part B's onboarding flake fixed test-only (`30c4bec3`, merge `2a43ad5c`; 5/20 red before, 80/80 after, mutant 10/10 red, fixture Chromium 477/477). Candidate = the commit carrying this entry: version 0.1.0-alpha.11 (four crates, web package + lock), `docs/releases/alpha11.md`, log `.ai/logs/2026-10-13_claude_alpha11-release.md`. Schema stays 14.
+- **Pending/Next Steps:** Full release gate on this candidate (running), workflow dry runs, then a stop for the owner's go before tag, GitHub release, AppImage upload and Docker push. After publication: receipt in docs/evidence/, docs pass, comments on #7 and #10, release the web lock.
+- **Notes for Codex oder Claude:** The release tags this explicit commit, not a moving main: work pushed to main meanwhile goes to Alpha 12. Do not edit apps/knx-web while the web lock line below is held. No hardware, no bus traffic.
+
+---
+
 Web lock: taken by claude-release-alpha11 (onboarding flake fix, then the Alpha 11 version bump)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 14:45

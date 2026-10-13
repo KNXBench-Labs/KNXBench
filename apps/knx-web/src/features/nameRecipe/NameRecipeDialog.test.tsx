@@ -18,6 +18,7 @@ let host: HTMLDivElement;
 let root: Root;
 const applied = vi.fn();
 const closed = vi.fn();
+const stale = vi.fn();
 const PLAN = { token: "shown-preview-token", changed: 2, noOp: false, expiresInSeconds: 300, rows: [
   { id: 2, before: "Original", after: "EG Original", changed: true },
   { id: 1, before: "Original", after: "EG Original", changed: true },
@@ -35,7 +36,7 @@ beforeEach(() => {
 afterEach(() => { act(() => root.unmount()); host.remove(); vi.unstubAllGlobals(); resetSettingsForTests(); resetUiLanguageForTests(); });
 
 async function render(tree: ProjectTree = renameTree(), ids: number[] = [2, 1]) {
-  await act(async () => root.render(<NameRecipeDialog tree={tree} ids={ids} onApplied={applied} onClose={closed} />));
+  await act(async () => root.render(<NameRecipeDialog tree={tree} ids={ids} onApplied={applied} onClose={closed} onStale={stale} />));
 }
 const panel = () => document.querySelector(".name-recipe-panel") as HTMLElement;
 const confirmButton = () => panel().querySelector<HTMLButtonElement>("[data-recipe-confirm]")!;
@@ -101,6 +102,21 @@ describe("NameRecipeDialog", () => {
     expect(panel().querySelector(".name-recipe-preview")).toBeNull();
     expect(confirmButton().disabled).toBe(true);
     expect(panel().querySelector("[role=alert]")?.textContent).toBe(en["nameRecipe.stale"]);
+    expect(stale, "the caller re-reads the project so the next preview can bind").toHaveBeenCalledOnce();
+  });
+
+  it("a stale preview also asks the caller for the current project", async () => {
+    client.previewNameRecipe.mockRejectedValue(refusal(409, "nameRecipeStale", "preview again"));
+    await render();
+    await type("[data-recipe-prefix]", "EG ");
+    await preview();
+    expect(stale).toHaveBeenCalledOnce();
+    expect(panel().querySelector("[role=alert]")?.textContent).toBe(en["nameRecipe.stale"]);
+    // Any other refusal is not a reason to re-read anything.
+    stale.mockClear();
+    client.previewNameRecipe.mockRejectedValue(refusal(409, "projectBusy", "busy"));
+    await preview();
+    expect(stale).not.toHaveBeenCalled();
   });
 
   it.each(["en", "de"] as const)("names a refusal in %s and keeps the server's words verbatim", async (language) => {

@@ -38,8 +38,7 @@ refs (all rows) with no `unknown-atomic-type` or `dangling-reference`.
 and password handling are delivered. The title records the original refusal;
 it is not a blanket current VD3/VD4 refusal. `.pr*`/`.vd2`, legacy
 DPTs, an untested (never run live) legacy download, unmapped
-`string`/`long enum` parameters (mapped since 2026-10-13, see above) and
-plaintext remembered-password storage
+`string`/`long enum` parameters and plaintext remembered-password storage
 remain the explicit limits below. The TypeNone spacer presentation, the VD5
 bounds/layout and L4 download planning landed on 2026-10-09.
 

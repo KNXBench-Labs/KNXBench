@@ -1,5 +1,5 @@
 /** Built workbench notes: identity, targets, apply refresh, refusals, draft guard. */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Dialog, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { NoteAction, NoteView } from "../src/features/notes/client";
@@ -19,6 +19,7 @@ interface Fixture {
   projectReads: number;
   applyMode: ApplyMode;
   applied: number;
+  targetReads: number;
 }
 
 /** A fictional project with identity; its notes live in this in-memory service. */
@@ -42,6 +43,21 @@ function projectTree(revision: number): ProjectTree {
   };
 }
 
+/** What `knx_app::note_targets` answers for `projectTree` (one object added). */
+function targetsOf(f: Fixture) {
+  return { serverIncarnation: "notes-fixture", projectIncarnation: 4, snapshotRevision: f.revision, targets: [
+    { target: { kind: "installation", id: 0 }, owner: [], parts: ["Fictional house"] },
+    { target: { kind: "area", id: 21 }, owner: [], parts: ["1", "Main area"] },
+    { target: { kind: "line", id: 31 }, owner: [], parts: ["1.1", "Ground floor"] },
+    { target: { kind: "buildingPart", id: 51 }, owner: [], parts: ["House"] },
+    { target: { kind: "buildingPart", id: 52 }, owner: [], parts: ["Kitchen"] },
+    { target: { kind: "device", id: 41 }, owner: [], parts: ["1.1.4", "Switch actuator kitchen"] },
+    { target: { kind: "comObject", id: 401 }, owner: ["1.1.4", "Switch actuator kitchen"], parts: ["0", "Switching"] },
+    { target: { kind: "groupRange", id: 61 }, owner: [], parts: ["1/0/0–1/7/255", "Lighting"] },
+    { target: { kind: "groupAddress", id: 71 }, owner: [], parts: ["1/0/1", "Kitchen ceiling"] },
+  ] };
+}
+
 function viewOf(f: Fixture) {
   return { serverIncarnation: "notes-fixture", projectIncarnation: 4, snapshotRevision: f.revision,
     persistence: "session-only", notes: f.notes };
@@ -57,7 +73,7 @@ function applyAction(f: Fixture, action: NoteAction) {
 }
 
 async function fixture(page: Page, language: Language, theme: string, width: number): Promise<Fixture> {
-  const f: Fixture = { unexpected: [], revision: 1, projectReads: 0, applyMode: "ok", applied: 0, notes: [
+  const f: Fixture = { unexpected: [], revision: 1, projectReads: 0, applyMode: "ok", applied: 0, targetReads: 0, notes: [
     { id: 1, position: 0, target: { kind: "device", id: 41 }, title: "Check the kitchen actuator", body: "Relay clicks twice.\nRecheck after commissioning.", includeInDocumentation: true },
   ] };
   const plans = new Map<string, NoteAction>();
@@ -84,6 +100,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
     if (["/api/device-download/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
     if (path === "/api/project/notes" && method === "GET") return ok(viewOf(f));
+    if (path === "/api/project/notes/targets" && method === "GET") { f.targetReads += 1; return ok(targetsOf(f)); }
     if (path === "/api/project/notes/preview" && method === "POST") {
       const body = route.request().postDataJSON();
       if (body.serverIncarnation !== "notes-fixture" || body.projectIncarnation !== 4 || body.snapshotRevision !== f.revision) return refuse(409, "noteStale", "stale note context");
@@ -155,6 +172,7 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
       `${m["notes.target.buildingPart"]}: House`,
       `${m["notes.target.buildingPart"]}: Kitchen`,
       `${m["notes.target.device"]}: 1.1.4 Switch actuator kitchen`,
+      `${m["notes.target.comObject"]}: 0 Switching · 1.1.4 Switch actuator kitchen`,
       `${m["notes.target.groupRange"]}: 1/0/0–1/7/255 Lighting`,
       `${m["notes.target.groupAddress"]}: 1/0/1 Kitchen ceiling`,
     ]);
@@ -173,18 +191,23 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await editor.getByRole("button", { name: newNote, exact: true }).click();
     await editor.getByLabel(language === "de" ? "Titel" : "Title", { exact: true }).fill("Label the ceiling circuit");
     await editor.getByLabel(language === "de" ? "Notiztext" : "Note text", { exact: true }).fill("Use <b>tape</b>, not HTML.\nTwo lines.");
-    await target.selectOption("groupAddress:71");
+    await target.selectOption("comObject:401");
     const readsBefore = f.projectReads;
     await editor.getByRole("button", { name: language === "de" ? "Änderung prüfen" : "Preview change", exact: true }).click();
     const review = editor.getByRole("region", { name: language === "de" ? "Änderung prüfen" : "Review change" });
     await expect(review).toContainText("Use <b>tape</b>, not HTML.");
+    await expect(review).toContainText(language === "de" ? "Aktion: Notiz anlegen" : "Action: Create note");
+    await expect(review).toContainText(language === "de" ? "In die Projektdokumentation aufnehmen: Nein" : "Include in project documentation: No");
+    await expect(review).toContainText(`${m["notes.target.comObject"]}: 0 Switching · 1.1.4 Switch actuator kitchen`);
     expect(f.applied).toBe(0);
     await noHorizontalOverflow(page);
     await capture(page, `${tag}-2-review`);
     await review.getByRole("button", { name: language === "de" ? "Änderung bestätigen" : "Confirm change", exact: true }).click();
     await expect(editor.locator("nav li button")).toHaveText(["Check the kitchen actuator", "Label the ceiling circuit"]);
     expect(f.applied).toBe(1);
-    expect(f.notes[1]).toMatchObject({ title: "Label the ceiling circuit", body: "Use <b>tape</b>, not HTML.\nTwo lines.", target: { kind: "groupAddress", id: 71 }, includeInDocumentation: false });
+    expect(f.notes[1]).toMatchObject({ title: "Label the ceiling circuit", body: "Use <b>tape</b>, not HTML.\nTwo lines.", target: { kind: "comObject", id: 401 }, includeInDocumentation: false });
+    // The confirmed change bumps the revision; the host reloads the catalogue for it.
+    await expect.poll(() => f.targetReads).toBeGreaterThan(1);
     expect(f.projectReads).toBeGreaterThan(readsBefore);
     await expect(editor.locator("b")).toHaveCount(0);
     await noHorizontalOverflow(page);
@@ -232,6 +255,32 @@ test("en 1440: opening another project over a note draft asks first; keeping it 
   await guard.getByRole("button", { name: m["draftGuard.keep"], exact: true }).click();
   await expect(guard).toHaveCount(0);
   await expect(editor.getByLabel("Title", { exact: true })).toHaveValue("Unapplied thought");
+  expect(f.applied).toBe(0);
+  expect(f.unexpected).toEqual([]);
+});
+
+test("en 1440: reloading or closing the tab over a note draft asks the browser first", async ({ page }) => {
+  const m: Catalogue = en;
+  const f = await fixture(page, "en", "porcelain", 1440);
+  // Without a draft the page navigates away (here: back to itself) without asking.
+  const quiet: string[] = [];
+  const listen = (dialog: Dialog) => { quiet.push(dialog.type()); void dialog.dismiss(); };
+  page.on("dialog", listen);
+  await openNotes(page, m, 1440);
+  await page.goto("/?view=editor");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  expect(quiet).toEqual([]);
+  page.off("dialog", listen);
+
+  const reopened = (await openNotes(page, m, 1440)).locator("section").first();
+  await reopened.getByLabel("Title", { exact: true }).fill("Unapplied thought");
+  const asked = page.waitForEvent("dialog");
+  void page.close({ runBeforeUnload: true });
+  const dialog = await asked;
+  expect(dialog.type()).toBe("beforeunload");
+  await dialog.dismiss();
+  // Staying keeps the draft and changes nothing.
+  await expect(reopened.getByLabel("Title", { exact: true })).toHaveValue("Unapplied thought");
   expect(f.applied).toBe(0);
   expect(f.unexpected).toEqual([]);
 });

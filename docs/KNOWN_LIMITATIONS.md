@@ -43,7 +43,9 @@ separate" remarks are historical ([evidence](evidence/native-evidence-port-2026-
   discarded before a new preview. While the re-read runs, review and apply wait
   briefly; the notes editor also pauses typing for that moment.
 - The unapplied-draft guard covers Open/Import, New project, Quit and the desktop
-  window close; a browser reload or closed tab still drops a draft without asking.
+  window close; since the notes follow-ups (2026-10-12, see *Project notes
+  workbench host*), a browser reload or closed tab asks through the browser's own
+  prompt.
 - Evidence is Chromium (intercepted production build and loopback-only real-server
   smokes). No native WebKitGTK window, Orca session, hardware, release or deployment
   is claimed.
@@ -53,15 +55,26 @@ separate" remarks are historical ([evidence](evidence/native-evidence-port-2026-
 The **Notes** view hosts the notes editor with the open tree's real identity
 ([host](contracts/project-note-editor-host.md#workbench-host-12-october-2026)).
 
-- Communication objects are not offered as new targets, because the project tree
-  does not project every object. Stored object targets stay unchanged and are
-  labelled as not in the host catalogue.
-- An ID that the projection shows with two different identities is withheld from
-  the target list rather than guessed.
+- Since the follow-ups of 2026-10-12 the target list comes from the service
+  (`GET /api/project/notes/targets`, `knx_app::note_targets`) and includes
+  communication objects. It offers only targets the domain accepts (an ID that
+  occurs twice in a kind is withheld, not guessed). Devices are listed by
+  individual address, unaddressed ones last by ID; a device's objects follow its
+  own object order. Names are the project's default language, not the UI or
+  product-text language. The list is reloaded after every revision change; until
+  the answer arrives the previous list stays, and the server re-checks the target
+  on preview. Stored targets missing from the list stay unchanged and labelled.
+- If the list cannot be loaded (or belongs to another project), the notebook shows
+  an alert with **Load targets again** and offers only the project as a new target.
 - The draft guard covers Open/Import, New project, Quit and the desktop window's
-  close button. A browser reload or a closed tab drops an unapplied draft without
-  asking (the workbench has no such guard for project edits either).
-- The review names the raw action (`create`, `replace`, `remove`, `move`).
+  close button. In a browser, a reload or closed tab asks through the browser's
+  own prompt; its wording cannot be translated or styled. The desktop shell does
+  not install that prompt (its close is guarded by the KNXBench dialog and it quits
+  with `destroy()`); a reload inside the desktop webview is therefore unguarded.
+  Project edits without a note draft still reload without asking.
+- The review names actions and the documentation opt-in in EN/DE; the Bavarian and
+  Klingon packs fall back to English there, like the rest of the feature-local
+  notes copy.
 - Evidence is Chromium: an intercepted production build and one loopback-only
   real-server smoke. No native WebKitGTK window, Orca session, hardware, release or
   deployment is claimed. FUTURE-03 stays LATER.

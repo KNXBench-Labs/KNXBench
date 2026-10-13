@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { BusTelegramRow, BusMonitorTelegramsResponse } from "../src/api";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
-import { intercept, openProject } from "./communication-fixture";
+import { dismissToasts, intercept, openProject } from "./communication-fixture";
 
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   test(`${language} named monitor DPT and explicit send at ${width}px`, async ({ page }) => {
@@ -45,7 +45,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     });
     await page.setViewportSize({ width, height: 1000 });
     await openProject(page, language);
-    for (const dismiss of await page.getByRole("button", { name: m["toast.dismiss"], exact: true }).all()) await dismiss.click();
+    await dismissToasts(page, language);
     await page.keyboard.press("Control+Shift+P");
     await page.getByRole("combobox").fill(m["toolbar.busMonitor"]);
     await page.getByRole("combobox").press("Enter");

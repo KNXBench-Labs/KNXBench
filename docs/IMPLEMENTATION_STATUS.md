@@ -1,3 +1,34 @@
+## 2026-10-13 — Notes follow-ups: object targets, unload guard, translated review
+
+The three open items of the notes workbench host are done
+([host contract follow-up](contracts/project-note-editor-host.md#follow-ups-service-target-catalogue-unload-guard-review-names-12-october-2026)):
+
+- **Communication objects as note targets, decided by the service.**
+  `knx_app::note_targets` builds the catalogue from the domain model and keeps only
+  targets `ProjectNoteTarget::validate` accepts; installation-scoped kinds are
+  counted in one pass (20 000 group addresses: 9 ms instead of 266 ms, release
+  build). `GET /api/project/notes/targets` serves it with the snapshot identity.
+  The web host no longer walks the tree; it adds the translated kind word, drops a
+  catalogue of another project, mounts the editor after the first answer and offers
+  **Load targets again** when the list cannot load.
+- **Reload/tab-close guard.** In a browser, `beforeunload` asks while a note or
+  instruction draft exists; the desktop shell keeps its own close dialog only.
+- **Review names** *Create/Change/Remove/Move note* and *Yes/No* in EN/DE instead
+  of `replace`/`false`.
+- **Found on the way:** `dpt-monitor.e2e.ts` failed on untouched main after 23:00,
+  when a late-night humour toast joins the usual one; a shared `dismissToasts`
+  helper (front-most toast that is not leaving) fixes it in all three specs with
+  that pattern. Running `cargo test` as namespace root fails a `knx-mcp` file-mode
+  test; recorded in [DEVELOPER_PITFALLS](DEVELOPER_PITFALLS.md).
+
+Test-first throughout (service, HTTP, client, host, editor, App and browser tests
+red for the named reasons); mutants (guard disabled, guard on desktop, raw action
+names, raw DPT) fail by name. Gate on `b216f0aa` (rebased on `d5cffb2c`): build,
+`tsc` for all 12 tsconfigs, Vitest 3179/0 in 223 files, **full fixture Chromium
+417/0**, production-preview notes 12/12, instructions 11/11, devices 13/13, notes
+and DPT-monitor specs ×3 48/48, fmt, Clippy, Rust 4248/0 (196 ignored), tools 67,
+five xtask checks, inputs frozen; corpus 143/143 in 31 targets (loopback). Self-review only.
+
 ## 2026-10-13 — KL-170: byte-order evidence review and a read-only probe
 
 - **Research** ([parameter byte order](research/parameter-byte-order.md)): the

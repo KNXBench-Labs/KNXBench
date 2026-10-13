@@ -1,6 +1,6 @@
 /** Verifies strict note DTO admission and private confirmed HTTP requests. */
 import { describe, expect, it, vi } from "vitest";
-import { createNotesClient, type NotesView } from "./client";
+import { createNotesClient, createNoteTargetsReader, type NotesView } from "./client";
 const source: NotesView = {serverIncarnation:"synthetic-server",projectIncarnation:1,snapshotRevision:2,persistence:"session-only",notes:[{id:1,position:0,target:{kind:"installation",id:0},title:" literal Grüße ",body:"Literal <img src=\"https://untrusted.invalid/never\">\r\n\t",includeInDocumentation:false}]};
 describe("project notes client",()=>{
  it("reads the exact ordered literal notes and actual identity without mutating",async()=>{
@@ -129,5 +129,32 @@ describe("notes client response binding and failure lifecycle",()=>{
   }
   const transport=vi.fn<typeof fetch>().mockResolvedValue(new Response(new Uint8Array(32*1024*1024+1)));
   await expect(createNotesClient(transport).read()).rejects.toThrow("Unsupported or malformed");
+ });
+});
+
+describe("note target catalogue reader",()=>{
+ const catalogue={serverIncarnation:"synthetic-server",projectIncarnation:1,snapshotRevision:2,targets:[
+  {target:{kind:"device",id:41},owner:[],parts:["1.1.4","Actuator"]},
+  {target:{kind:"comObject",id:9},owner:["1.1.4","Actuator"],parts:["0","Switch"]},
+  {target:{kind:"installation",id:0},owner:[],parts:[]},
+ ]};
+ it("reads the service catalogue by GET and admits it unchanged",async()=>{
+  const transport=vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(catalogue)));
+  expect(await createNoteTargetsReader(transport)()).toEqual(catalogue);
+  expect(transport.mock.calls[0][0]).toBe("/api/project/notes/targets");
+  expect(transport.mock.calls[0][1]).toMatchObject({method:"GET",credentials:"same-origin"});
+ });
+ it("rejects a malformed catalogue as a whole instead of dropping entries",async()=>{
+  const first=catalogue.targets[0];
+  const invalid=[{...catalogue,serverIncarnation:""},{...catalogue,targets:undefined},{...catalogue,extra:1},
+   {...catalogue,targets:[{...first,target:{kind:"project"}}]},{...catalogue,targets:[{...first,target:{kind:"parameter",id:1}}]},
+   {...catalogue,targets:[{...first,target:{kind:"installation",id:256}}]},{...catalogue,targets:[{...first,parts:"1.1.4"}]},
+   {...catalogue,targets:[{...first,parts:[7]}]},{...catalogue,targets:[{...first,owner:["bad\0owner"]}]},
+   {...catalogue,targets:[{...first,unknown:true}]},{...catalogue,targets:[first,first]}];
+  for(const value of invalid){const transport=vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(value)));await expect(createNoteTargetsReader(transport)()).rejects.toThrow("Unsupported or malformed");}
+ });
+ it("reports a refused read with the server's status",async()=>{
+  const transport=vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({error:"No project open"}),{status:400}));
+  await expect(createNoteTargetsReader(transport)()).rejects.toMatchObject({status:400,message:"No project open"});
  });
 });

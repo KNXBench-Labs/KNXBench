@@ -77,6 +77,7 @@ import { useOnboardingGuide } from "./useOnboardingGuide";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import NotesWorkspace from "./NotesWorkspace";
 import NoteDraftGuardDialog from "./NoteDraftGuardDialog";
+import { installDraftUnloadGuard } from "./draftUnloadGuard";
 import { canQuit, onWindowCloseRequested, quitApp } from "./quit";
 import type { SessionControls } from "./session";
 import { DEFAULT_HELP_TOPIC_ID, HELP_TOPICS, focusedHelpTopic, opensHelp, requestHelpTopic } from "./help";
@@ -1279,6 +1280,13 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     }
     void quitApp();
   }
+
+  // A browser reload or tab close would drop an unapplied draft without any
+  // workbench dialog, so the browser is asked to confirm. The desktop shell
+  // guards its window close above-board (below) and quits with destroy(); a
+  // second, native prompt there would be one question too many.
+  useEffect(() => canQuit() ? undefined
+    : installDraftUnloadGuard(window, () => draftsRef.current.notes || draftsRef.current.instructions), []);
 
   // §132. The window manager's close (×, Alt+F4) takes the same decision as
   // File › Quit. The listener is registered once, so it reads

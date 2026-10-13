@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
-import { intercept, openList, openProject } from "./communication-fixture";
+import { dismissToasts, intercept, openList, openProject } from "./communication-fixture";
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   test(`${language} DPT selection and contextual source at ${width}px`, async ({ page }) => {
     const m = language === "en" ? en : de;
@@ -15,7 +15,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     state.objects[0].dpt = "DPST-17-1";
     state.objects[1].dpt = "vendor:opaque"; state.objects[1].program_dpt = null;
     await openProject(page, language);
-    for (const dismiss of await page.getByRole("button", { name: m["toast.dismiss"], exact: true }).all()) await dismiss.click();
+    await dismissToasts(page, language);
     await expect(page.locator(".toast-stack")).toHaveCount(0);
     await openList(page, language);
     await page.locator(".devices-table tbody td:nth-child(3) button").first().click();

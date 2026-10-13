@@ -10,6 +10,7 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use knx_app::note_edit::{
     self as edit, NoteEditError, NoteEditPreview, NoteNativeTarget, NoteRevision,
 };
+use knx_app::note_targets::note_target_catalogue;
 use knx_core::{
     note::{ProjectNote, ProjectNoteTarget},
     AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId,
@@ -282,6 +283,43 @@ async fn read(State(api): State<Api>) -> Result<Json<View>, ApiError> {
         ),
     }))
 }
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TargetOptionView {
+    target: Target,
+    owner: Vec<String>,
+    parts: Vec<String>,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TargetsView {
+    targets: Vec<TargetOptionView>,
+    server_incarnation: String,
+    project_incarnation: u64,
+    snapshot_revision: u64,
+}
+/// The service-owned target catalogue (`knx_app::note_targets`), stamped with
+/// the same snapshot identity as the notes read so a host can drop a stale one.
+async fn targets(State(api): State<Api>) -> Result<Json<TargetsView>, ApiError> {
+    let state = &api.app;
+    let lock = state.project.lock().expect("state mutex poisoned");
+    let project = lock
+        .as_ref()
+        .ok_or_else(|| ApiError::bad_request("No project open"))?;
+    Ok(Json(TargetsView {
+        targets: note_target_catalogue(project)
+            .into_iter()
+            .map(|option| TargetOptionView {
+                target: option.target.into(),
+                owner: option.owner,
+                parts: option.parts,
+            })
+            .collect(),
+        server_incarnation: state.server_incarnation.clone(),
+        project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
+        snapshot_revision: domain::current_project_revision(state),
+    }))
+}
 async fn preview(
     State(api): State<Api>,
     Json(request): Json<PreviewRequest>,
@@ -392,6 +430,7 @@ async fn cancel(
 pub fn router(app: SharedState) -> Router<SharedState> {
     Router::new()
         .route("/api/project/notes", get(read))
+        .route("/api/project/notes/targets", get(targets))
         .route("/api/project/notes/preview", post(preview))
         .route("/api/project/notes/apply", post(apply))
         .route("/api/project/notes/cancel", post(cancel))

@@ -1,11 +1,12 @@
 /** Notes host: explicit snapshot identity mapping and stable-ID target choices. */
 import { describe, expect, it } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import { noteTargetChoices, notesContextFromTree, type NoteTargetKindLabels } from "./notesHost";
+import type { NoteTargetOption, NoteTargetsView } from "./features/notes/client";
+import { catalogueForContext, noteTargetChoices, notesContextFromTree, type NoteTargetKindLabels } from "./notesHost";
 
 const labels: NoteTargetKindLabels = {
   installation: "Installation", area: "Area", line: "Line", buildingPart: "Building part",
-  device: "Device", groupRange: "Range", groupAddress: "Group address",
+  device: "Device", comObject: "Object", groupRange: "Range", groupAddress: "Group address",
 };
 
 function tree(overrides: Partial<ProjectTree> = {}): ProjectTree {
@@ -51,76 +52,77 @@ describe("notesContextFromTree", () => {
   });
 });
 
+/** The service catalogue for `tree()` (knx_app::note_targets order). */
+const options: NoteTargetOption[] = [
+  { target: { kind: "installation", id: 0 }, owner: [], parts: ["Home"] },
+  { target: { kind: "area", id: 21 }, owner: [], parts: ["1", "Main"] },
+  { target: { kind: "line", id: 31 }, owner: [], parts: ["1.1", "Floor"] },
+  { target: { kind: "buildingPart", id: 51 }, owner: [], parts: ["House"] },
+  { target: { kind: "device", id: 41 }, owner: [], parts: ["1.1.4", "Actuator"] },
+  { target: { kind: "device", id: 42 }, owner: [], parts: ["Spare"] },
+  { target: { kind: "comObject", id: 81 }, owner: ["1.1.4", "Actuator"], parts: ["0", "Switch"] },
+  { target: { kind: "comObject", id: 82 }, owner: ["Spare"], parts: ["3"] },
+  { target: { kind: "groupRange", id: 61 }, owner: [], parts: ["1/0/0–1/7/255", "Lights"] },
+  { target: { kind: "groupAddress", id: 71 }, owner: [], parts: ["1/0/1", "Kitchen light"] },
+];
+
 describe("noteTargetChoices", () => {
-  it("offers every projected entity once, by stable domain ID, never by address", () => {
-    const choices = noteTargetChoices(tree(), labels);
-    expect(choices.map((choice) => choice.target)).toEqual([
-      { kind: "installation", id: 0 },
-      { kind: "area", id: 21 },
-      { kind: "line", id: 31 },
-      { kind: "buildingPart", id: 51 },
-      { kind: "buildingPart", id: 52 },
-      { kind: "device", id: 41 },
-      { kind: "device", id: 42 },
-      { kind: "groupRange", id: 61 },
-      { kind: "groupAddress", id: 71 },
-    ]);
+  it("keeps the service's targets and order, adding only the translated kind word", () => {
+    const choices = noteTargetChoices(options, labels);
+    expect(choices.map((choice) => choice.target)).toEqual(options.map((option) => option.target));
     expect(choices.map((choice) => choice.label)).toEqual([
       "Installation: Home",
       "Area: 1 Main",
       "Line: 1.1 Floor",
       "Building part: House",
-      "Building part: Kitchen",
       "Device: 1.1.4 Actuator",
       "Device: Spare",
+      "Object: 0 Switch · 1.1.4 Actuator",
+      "Object: 3 · Spare",
       "Range: 1/0/0–1/7/255 Lights",
       "Group address: 1/0/1 Kitchen light",
     ]);
   });
 
   it("does not offer the project itself (the editor owns that choice)", () => {
-    expect(noteTargetChoices(tree(), labels).some((choice) => choice.target.kind === "project")).toBe(false);
+    const withProject = [{ target: { kind: "project" }, owner: [], parts: ["Project"] } as unknown as NoteTargetOption, ...options];
+    expect(noteTargetChoices(withProject, labels).some((choice) => choice.target.kind === "project")).toBe(false);
   });
 
-  it("refuses an ID that the projection shows with two different identities", () => {
-    const base = tree();
-    const conflicting = tree({ installations: [{ ...base.installations[0],
-      unassigned: [{ id: 41, name: "Imposter", address: "9.9.9", description: null, com_object_count: 0 }] }] });
-    const devices = noteTargetChoices(conflicting, labels).filter((choice) => choice.target.kind === "device");
-    expect(devices).toEqual([]);
+  it("withholds an ID the catalogue lists with two different identities", () => {
+    const conflicting = [...options, { target: { kind: "device", id: 41 }, owner: [], parts: ["9.9.9", "Imposter"] } as NoteTargetOption];
+    expect(noteTargetChoices(conflicting, labels).filter((choice) => choice.target.kind === "device").map((choice) => choice.target))
+      .toEqual([{ kind: "device", id: 42 }]);
   });
 
   it("distinguishes identical labels by their stable ID instead of hiding one", () => {
-    const base = tree();
-    const twins = tree({ installations: [{ ...base.installations[0], group_addresses: [
-      { id: 71, name: "Light", address: "1/0/1", range: null, dpts: [], links: [] },
-      { id: 72, name: "Light", address: "1/0/1", range: null, dpts: [], links: [] },
-    ] }] });
-    expect(noteTargetChoices(twins, labels).filter((choice) => choice.target.kind === "groupAddress").map((choice) => choice.label))
+    const twins: NoteTargetOption[] = [
+      { target: { kind: "groupAddress", id: 71 }, owner: [], parts: ["1/0/1", "Light"] },
+      { target: { kind: "groupAddress", id: 72 }, owner: [], parts: ["1/0/1", "Light"] },
+    ];
+    expect(noteTargetChoices(twins, labels).map((choice) => choice.label))
       .toEqual(["Group address: 1/0/1 Light · #71", "Group address: 1/0/1 Light · #72"]);
   });
 
-  it("names an unnamed, unaddressed entity by its ID", () => {
-    const base = tree();
-    const unnamed = tree({ installations: [{ ...base.installations[0], topology: [], buildings: [], group_ranges: [], group_addresses: [],
-      unassigned: [{ id: 43, name: "", address: null, description: null, com_object_count: 0 }] }] });
-    expect(noteTargetChoices(unnamed, labels).find((choice) => choice.target.kind === "device")?.label).toBe("Device: #43");
+  it("names an entity without identifying parts by its ID", () => {
+    expect(noteTargetChoices([{ target: { kind: "device", id: 43 }, owner: [], parts: [] }], labels)[0].label).toBe("Device: #43");
+  });
+});
+
+describe("catalogueForContext", () => {
+  const view = (overrides: Partial<NoteTargetsView> = {}): NoteTargetsView =>
+    ({ serverIncarnation: "srv-7", projectIncarnation: 3, snapshotRevision: 12, targets: options, ...overrides });
+  const context = { serverIncarnation: "srv-7", projectIncarnation: 3, snapshotRevision: 12 };
+
+  it("accepts a catalogue of the same server and project", () => {
+    expect(catalogueForContext(view(), context)).toBe(options);
+    // The service validates every target again on preview, so a revision
+    // that moved meanwhile does not make the choices unsafe.
+    expect(catalogueForContext(view({ snapshotRevision: 13 }), context)).toBe(options);
   });
 
-  it("walks deeply nested building parts without recursion limits", () => {
-    const base = tree();
-    let part = { id: 5000, name: "Leaf", kind: "Room", children: [] as ProjectTree["installations"][number]["buildings"], devices: [] };
-    for (let id = 4999; id >= 1000; id--) part = { id, name: `Level ${id}`, kind: "Floor", children: [part], devices: [] };
-    const deep = tree({ installations: [{ ...base.installations[0], buildings: [part] }] });
-    const parts = noteTargetChoices(deep, labels).filter((choice) => choice.target.kind === "buildingPart");
-    expect(parts).toHaveLength(4001);
-    expect(parts[0].target).toEqual({ kind: "buildingPart", id: 1000 });
-    expect(parts.at(-1)?.target).toEqual({ kind: "buildingPart", id: 5000 });
-  });
-
-  it("does not offer installation IDs that the note contract cannot address", () => {
-    const base = tree();
-    const wide = tree({ installations: [{ ...base.installations[0], id: 256 }] });
-    expect(noteTargetChoices(wide, labels).some((choice) => choice.target.kind === "installation")).toBe(false);
+  it("drops a catalogue that belongs to another server or project", () => {
+    expect(catalogueForContext(view({ serverIncarnation: "srv-8" }), context)).toBeNull();
+    expect(catalogueForContext(view({ projectIncarnation: 4 }), context)).toBeNull();
   });
 });

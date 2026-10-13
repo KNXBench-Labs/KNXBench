@@ -10,6 +10,10 @@ export type NotesView = NotesContext & Readonly<{notes:readonly NoteView[];persi
 export type NotePreview = Readonly<{token:string;action:NoteAction;previous:NoteView|null;createdId:number|null;noOp:boolean;expiresInSeconds:number}>;
 export type NotesApplied = Readonly<{changed:boolean;nativeGeneration:number|null;snapshotRevision:number;persistence:NotesPersistence}>;
 export type NotesClient = Readonly<{read(signal?:AbortSignal):Promise<NotesView>;preview(context:NotesContext,action:NoteAction,signal?:AbortSignal):Promise<NotePreview>;apply(token:string,signal?:AbortSignal):Promise<NotesApplied>;cancel(token:string):Promise<void>}>;
+/** One entity a note may be attached to, from the service's target catalogue. */
+export type NoteTargetOption = Readonly<{target:Exclude<NoteTarget,{kind:"project"}>;owner:readonly string[];parts:readonly string[]}>;
+export type NoteTargetsView = NotesContext & Readonly<{targets:readonly NoteTargetOption[]}>;
+export type NoteTargetsReader = (signal?:AbortSignal)=>Promise<NoteTargetsView>;
 export class NotesContractError extends Error {constructor(){super("Unsupported or malformed project notes response");this.name="NotesContractError";}}
 const UINT32_MAX = 0xffff_ffff;
 const MAX_NOTES = 4096;
@@ -104,16 +108,17 @@ export function validNoteDraft(value:unknown):value is NoteDraft{return draft(va
 export function sameNoteDraft(a:NoteDraft,b:NoteDraft):boolean{return sameDraft(a,b);}
 export function noteTargetKey(value:NoteTarget):string{return value.kind==="project"?"project":`${value.kind}:${value.id}`;}
 export function sameNotesContext(a:NotesContext,b:NotesContext):boolean{return a.serverIncarnation===b.serverIncarnation&&a.projectIncarnation===b.projectIncarnation&&a.snapshotRevision===b.snapshotRevision;}
-export function createNotesClient(transport:typeof fetch=fetch):NotesClient{
- async function request(path:string,payload?:unknown,signal?:AbortSignal):Promise<unknown>{
-  if(signal?.aborted)throw new DOMException("Aborted","AbortError");
-  const response=await transport(path,{method:payload===undefined?"GET":"POST",credentials:"same-origin",signal,...(payload===undefined?{}:{headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})});
-  if(!response.ok){
-   noteRefusal(path,response.status);const value=await body(response).catch(()=>null);
-   throw Object.assign(new Error(record(value)&&typeof value.error==="string"?value.error:`Project notes request failed (${response.status})`),{status:response.status,kind:record(value)&&typeof value.kind==="string"?value.kind:null});
-  }
-  const value=await body(response);if(signal?.aborted)throw new DOMException("Aborted","AbortError");return value;
+async function requestJson(transport:typeof fetch,path:string,payload?:unknown,signal?:AbortSignal):Promise<unknown>{
+ if(signal?.aborted)throw new DOMException("Aborted","AbortError");
+ const response=await transport(path,{method:payload===undefined?"GET":"POST",credentials:"same-origin",signal,...(payload===undefined?{}:{headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})});
+ if(!response.ok){
+  noteRefusal(path,response.status);const value=await body(response).catch(()=>null);
+  throw Object.assign(new Error(record(value)&&typeof value.error==="string"?value.error:`Project notes request failed (${response.status})`),{status:response.status,kind:record(value)&&typeof value.kind==="string"?value.kind:null});
  }
+ const value=await body(response);if(signal?.aborted)throw new DOMException("Aborted","AbortError");return value;
+}
+export function createNotesClient(transport:typeof fetch=fetch):NotesClient{
+ const request=(path:string,payload?:unknown,signal?:AbortSignal)=>requestJson(transport,path,payload,signal);
  return {
   read:async(signal)=>admitView(await request("/api/project/notes",undefined,signal)),
   preview:async(expected,proposed,signal)=>{
@@ -126,4 +131,20 @@ export function createNotesClient(transport:typeof fetch=fetch):NotesClient{
   apply:async(identity,signal)=>{if(!token(identity))throw new NotesContractError();return admitApplied(await request("/api/project/notes/apply",{token:identity,confirmed:true},signal));},
   cancel:async(identity)=>{if(!token(identity))throw new NotesContractError();const value=await request("/api/project/notes/cancel",{token:identity});if(!record(value)||!keys(value,["cancelled"])||value.cancelled!==true)throw new NotesContractError();},
  };
+}
+/** Bounds one label part; the service sends names and addresses, never prose. */
+const MAX_TARGET_PART = 4096;
+function labelParts(value:unknown):value is readonly string[]{return Array.isArray(value)&&value.every(part=>text(part,MAX_TARGET_PART));}
+function admitTargets(value:unknown):NoteTargetsView{
+ if(!record(value)||!keys(value,["serverIncarnation","projectIncarnation","snapshotRevision","targets"])||!context(value)||!Array.isArray(value.targets))throw new NotesContractError();
+ const seen=new Set<string>();
+ for(const option of value.targets){
+  if(!record(option)||!keys(option,["target","owner","parts"])||!target(option.target)||option.target.kind==="project"||!labelParts(option.owner)||!labelParts(option.parts))throw new NotesContractError();
+  const key=noteTargetKey(option.target);if(seen.has(key))throw new NotesContractError();seen.add(key);
+ }
+ return value as NoteTargetsView;
+}
+/** Reads `GET /api/project/notes/targets`; a malformed answer is refused as a whole. */
+export function createNoteTargetsReader(transport:typeof fetch=fetch):NoteTargetsReader{
+ return async(signal)=>admitTargets(await requestJson(transport,"/api/project/notes/targets",undefined,signal));
 }

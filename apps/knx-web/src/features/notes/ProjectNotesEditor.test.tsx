@@ -191,3 +191,34 @@ describe("revision changes that leave the notes alone",()=>{
   expect(host.textContent).toContain("Your draft is retained");expect(client.preview).not.toHaveBeenCalled();
  });
 });
+
+describe("review wording",()=>{
+ const reviewText=(host:Element)=>host.querySelector('section[aria-label="Review change"],section[aria-label="Änderung prüfen"]')?.textContent??"";
+ it("names each action and the documentation opt-in in English instead of wire values",async()=>{
+  const client=fixture();const {host}=await mount(client);
+  await edit(host,"Title","changed");await click(host,"Preview change");
+  expect(reviewText(host)).toContain("Action: Change note");
+  expect(reviewText(host)).toContain("Include in project documentation: No");
+  expect(reviewText(host)).not.toMatch(/\breplace\b|\bfalse\b|\btrue\b/);
+  // Removing and creating need an untouched draft, so each gets its own editor.
+  const removal=await mount(fixture());await click(removal.host,"Remove note");
+  expect(reviewText(removal.host)).toContain("Action: Remove note");
+  const creation=await mount(fixture());await click(creation.host,"New note");await edit(creation.host,"Title","fresh");await click(creation.host,"Preview change");
+  expect(reviewText(creation.host)).toContain("Action: Create note");
+ });
+ it("uses the German action names and Ja/Nein in the German review",async()=>{
+  const client=fixture();const {host}=await mount(client,{language:"de"});
+  await edit(host,"Titel","geändert");await click(host,"Änderung prüfen");
+  expect(reviewText(host)).toContain("Aktion: Notiz ändern");
+  expect(reviewText(host)).toContain("In die Projektdokumentation aufnehmen: Nein");
+  expect(reviewText(host)).not.toMatch(/\breplace\b|\bfalse\b/);
+ });
+ it("names a move in both languages",async()=>{
+  const two:NotesView={...source,notes:[source.notes[0],{...source.notes[0],id:2,position:1,title:"Second"}]};
+  for(const [language,up,label] of [["en","Move down","Action: Move note"],["de","Nach unten","Aktion: Notiz verschieben"]] as const){
+   const client=fixture({read:vi.fn().mockResolvedValue(two)});const {host}=await mount(client,{language});
+   await click(host,up);
+   expect(reviewText(host)).toContain(label);
+  }
+ });
+});

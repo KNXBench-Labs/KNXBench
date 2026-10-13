@@ -38,10 +38,11 @@ edited overrides, native WebKitGTK/Orca checks.
 
 The notes editor is mounted as the **Notes** workbench view
 ([host](contracts/project-note-editor-host.md#workbench-host-12-october-2026)):
-real tree identity, stable-ID target catalogue, refresh after Apply, drafts kept
-across views and guarded on Open/Import/New/Quit. Open: communication objects as
-offered targets (the tree does not project all of them), a reload/tab-close guard,
-native WebKitGTK/Orca checks, localized action names in the review, and
+real tree identity, refresh after Apply, drafts kept across views and guarded on
+Open/Import/New/Quit. Follow-ups of 12 October (source, after Alpha 10): the
+service's target catalogue including communication objects, a browser
+reload/tab-close prompt while drafts exist, and EN/DE action names in the review.
+Open: native WebKitGTK/Orca checks, a reload guard inside the desktop webview, and
 FUTURE-03 as a whole (still LATER).
 
 ## AP7 catalogue updates (12 October 2026)

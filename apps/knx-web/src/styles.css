@@ -1452,11 +1452,14 @@ main {
 .log-entry-detail-more { flex: none; font-style: normal; }
 .log-panel-more { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--knx-muted); }
 .log-panel-show-more { white-space: nowrap; }
-.log-export-panel { width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 20px; box-sizing: border-box; }
+.log-export-panel { width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); align-self: flex-start; overflow: auto; padding: 20px; box-sizing: border-box; }
 .log-export-panel h2 { margin-top: 0; }
 .log-export-scope { display: grid; gap: 8px; margin: 0 0 8px; padding: 10px 12px; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); }
-.log-export-scope label { display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
+.log-export-scope label { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; cursor: pointer; }
+/* A radio, not a text field: the global input rules would make it a wide, padded box. */
+.log-export-scope input[type="radio"] { flex: 0 0 1rem; width: 1rem; height: 1rem; min-height: 1rem; margin: 0; padding: 0; }
 .log-export-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.log-export-actions button:not(.primary-action) { background: transparent; color: var(--knx-foreground); border: 1px solid var(--knx-border); }
 
 /* ADR-0110: the raw preview keeps its literal, visible block under the row. */
 .log-entry-raw-label {

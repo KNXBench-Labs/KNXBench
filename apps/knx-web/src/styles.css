@@ -2950,6 +2950,9 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .address-table-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
 .address-filter { flex: 1 1 220px; min-width: 180px; }
 .address-table-check { width: 36px; text-align: center; }
+/* Issue #9: in the tree the checkbox starts where its range's marker would,
+   one level deeper; the inline margin carries the level. */
+.address-table-check--tree { text-align: start; }
 /* A multi-selected row is distinguishable from the single selected row
    (`tr[aria-selected="true"]` above), not a second shade of the same thing:
    the accent sits on the row's left edge, so "one of several marked for a
@@ -3084,6 +3087,12 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-table-panel button:hover { transform: none; box-shadow: none; }
 .com-table thead button { background: transparent; color: inherit; border: 0; box-shadow: none; white-space: nowrap; }
 .com-table-panel .com-object-channel-summary { width: 100%; background: transparent; color: var(--knx-foreground); border: 0; box-shadow: none; text-align: left; }
+/* Issue #9: the old card layout's space-between spread "▾ name count" across the
+   whole table row; in the table the header reads from the left. */
+.com-table-panel .com-object-channel-summary { justify-content: flex-start; }
+/* Grouped objects start one tree step (1.2rem) right of the header marker: the
+   header's 12px padding minus the summary's own 4px, plus the step. */
+.com-table .com-object-summary--grouped .com-object-detail { margin-inline-start: calc(8px + 1.2rem); }
 .com-table .com-object-detail { min-width: 55px; }
 .com-table .com-object-detail summary { cursor: pointer; padding: 4px; }
 .com-editor-fields { border: 0; padding: 0; margin: 0; min-width: 0; }

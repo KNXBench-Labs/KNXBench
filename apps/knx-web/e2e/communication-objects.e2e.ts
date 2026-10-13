@@ -5,6 +5,35 @@ import { writeFileSync } from "node:fs";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { intercept, openList, openProject } from "./communication-fixture";
+// Issue #9 (devices view): a channel header reads "▾ name · count" from the left,
+// and its objects start one level right of the header's marker.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) for (const theme of ["porcelain", "graphite"]) {
+  test(`${language} CO channel header is left-aligned and its objects indented ${theme} ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language, 8, theme); await openProject(page, language); await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+    const panel = page.locator(".com-table-panel");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    const header = panel.locator(".com-object-channel-summary").first();
+    await header.click(); await expect(header).toHaveAttribute("aria-expanded", "true");
+    const key = await header.locator("xpath=ancestor::tr").getAttribute("data-channel-key");
+    if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-indent-${language}-${width}-${theme}.png`) });
+    const geometry = await panel.evaluate((root, channel) => {
+      const button = root.querySelector<HTMLElement>(`tr[data-channel-key="${channel}"] .com-object-channel-summary`)!;
+      const parts = [...button.children].map(n => n.getBoundingClientRect()).filter(r => r.width > 0);
+      // Gaps between neighbours that share a line; a wrapped part starts a new line.
+      const gaps = parts.slice(1).flatMap((r, i) => Math.abs(r.top - parts[i].top) < 4 ? [r.left - parts[i].right] : []);
+      const first = root.querySelector<HTMLElement>(`tr.com-object-summary[data-channel-key="${channel}"]:not([hidden]) summary`)!;
+      return { marker: parts[0].left, gaps, object: first.getBoundingClientRect().left };
+    }, key);
+    expect(geometry.gaps.length, "header parts measured").toBeGreaterThan(0);
+    for (const gap of geometry.gaps) expect(gap, "header parts follow each other from the left").toBeLessThan(24);
+    expect(geometry.object, "object right of the channel marker").toBeGreaterThan(geometry.marker + 8);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) for (const theme of ["porcelain", "graphite", "lcars", "cupertino"]) {
   test(`${language} CO table headings/filter/sort/keyboard/fit ${theme} ${width}px`, async ({ page }) => {
     const m = language === "en" ? en : de;

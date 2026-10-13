@@ -687,3 +687,95 @@ fn native_source_authored_notes_are_explicitly_refused_not_silently_dropped() {
     );
     assert_eq!(target, before);
 }
+
+/// ADR-0124: a room and a group address of the destination with one
+/// Function over them, unrelated to anything the selection brings in.
+fn destination_function(target: &mut NativeSnapshot) -> knx_core::function::Function {
+    use knx_core::function::{Function, FunctionDetails, FunctionMember};
+    let native = SourceRef {
+        path: String::new(),
+        ets_id: String::new(),
+    };
+    let installation = &mut target.project.installations[0];
+    installation.buildings.push(BuildingPart {
+        id: BuildingPartId(900),
+        source: native.clone(),
+        name: "Destination room".into(),
+        number: None,
+        kind: BuildingPartType::Room,
+        default_line: None,
+        completion: CompletionStatus::Undefined,
+        children: vec![],
+        devices: vec![],
+        parent: None,
+    });
+    installation.group_addresses.push(GroupAddressEntry {
+        id: GroupAddressId(901),
+        source: native.clone(),
+        name: "Destination light".into(),
+        address: GroupAddress::from_raw(0x7FFF),
+        central: false,
+        unfiltered: false,
+        range: None,
+        declared_dpt: Default::default(),
+    });
+    target
+        .project
+        .ids
+        .raise_to(&IdAllocators::from_counts(0, 0, 0, 0, 0, 901, 900, 0, 0));
+    let function = Function {
+        id: FunctionId(1),
+        source: native.clone(),
+        location: BuildingPartId(900),
+        details: FunctionDetails {
+            name: "Keep me".into(),
+            ..Default::default()
+        },
+        members: vec![FunctionMember {
+            id: FunctionMemberId(1),
+            source: native,
+            group_address: GroupAddressId(901),
+            name: String::new(),
+            role: Some("SwitchOnOff".into()),
+        }],
+    };
+    target.project.functions.push(function.clone());
+    target.project.ids = target.project.ids.clone().with_function_counts(1, 1);
+    function
+}
+
+#[test]
+fn native15_destination_functions_survive_selection_merge_and_undo() {
+    let (source, mut target, selection) = fixture();
+    let kept = destination_function(&mut target);
+    let before = target.clone();
+    let mut stack = CommandStack::new();
+    let plan = import::plan(&target, &source, selection).unwrap();
+    import::apply(&mut target, &mut stack, plan).unwrap();
+    assert_eq!(target.project.functions, [kept]);
+    assert_eq!(
+        knx_core::function::validate_functions(&target.project),
+        Ok(())
+    );
+    stack.undo(&mut target.project).unwrap();
+    assert!(target.project.same_user_content_as(&before.project));
+}
+
+#[test]
+fn source_functions_are_explicitly_refused_not_silently_dropped() {
+    let (mut source, target, selection) = fixture();
+    let mut donor = target.clone();
+    let function = destination_function(&mut donor);
+    source.project.functions.push(function);
+    let before = target.clone();
+    let error = match import::plan(&target, &source, selection) {
+        Ok(_) => panic!("source Functions cannot be discarded"),
+        Err(e) => e,
+    };
+    assert!(
+        error
+            .contains("source project Functions require an explicit selection/disposition mapping"),
+        "{error}"
+    );
+    assert_eq!(target, before);
+}

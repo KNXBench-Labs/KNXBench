@@ -7,6 +7,11 @@
 
 use std::collections::HashMap;
 
+mod functions;
+pub use functions::{
+    build_functions_view, FunctionLocationNode, FunctionMemberNode, FunctionNode, FunctionsView,
+};
+
 use knx_core::{
     BuildingPart, BuildingPartId, BuildingPartType, Devices, DptRef, GroupAddressDpt,
     GroupAddressEntry, GroupAddressId, GroupAddressStyle, GroupRange, Project, Text, Topology,

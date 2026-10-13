@@ -57,7 +57,9 @@ projects and Docker data before upgrading. Native/model schema 14 adds the
 project-note tables; existing data is not rewritten. Alpha.9 and earlier refuse
 upgraded files; returning to them requires the pre-upgrade backup. In-file
 history is not a disaster backup. Update `knx-mcp` too. Alpha.11 keeps schema 14
-(no migration from Alpha.10).
+(no migration from Alpha.10). Builds after Alpha.11 move to schema 15, which only
+adds the empty project-Function tables; Alpha.11 and earlier then refuse the
+file, so the same backup rule applies.
 [Release scope and migration](../../releases/alpha11.md#upgrade-independent-backups-first).
 
 **Update:** close KNXBench, download and verify the replacement AppImage, then

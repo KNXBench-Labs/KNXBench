@@ -612,6 +612,10 @@ export const messages = {
   "documentationExport.export": "Export…",
   "documentationExport.close": "Close",
 
+  "toast.pending.one": "{count} more notification waiting",
+  "toast.pending.other": "{count} more notifications waiting",
+  "toast.queueDropped.one": "{count} older waiting notification was not shown. The session log keeps it.",
+  "toast.queueDropped.other": "{count} older waiting notifications were not shown. The session log keeps them.",
   "toast.dismiss": "Dismiss",
   // §67's shape (a translated sentence quoting an untranslated reason)
   // closed for language-pack rejection; this is the same shape here,

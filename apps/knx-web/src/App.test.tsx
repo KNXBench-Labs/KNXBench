@@ -653,6 +653,51 @@ describe("App — drag-and-drop announcement", () => {
   });
 });
 
+// Ported from the Codex ux-feedback branch (AP1, 219e4c3e): unread errors stay
+// until answered, and the Explorer's counts open the same log findings.
+describe("App — unread errors and Explorer import counts", () => {
+  it("opens the matching import errors from the Explorer footer count", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue({ ...treeWithDevice(), errors: 1, warnings: 1, import_report_available: true });
+    apiMock.getSessionLog.mockResolvedValue([
+      entry({ severity: "error", source: "import:validate", message: "broken element", location: "0.xml/Device" }),
+      entry({ severity: "warning", source: "import:unknown", message: "unknown element" }),
+    ]);
+    const root = await renderApp();
+    await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => {});
+    const count = host!.querySelector<HTMLButtonElement>(".project-explorer footer .import-errors button")!;
+    expect(count.textContent).toBe("1 import error — data may be missing or incorrect");
+    await act(async () => count.click());
+    await act(async () => {});
+    const scope = host!.querySelector<HTMLElement>(".log-panel .log-panel-import-scope")!;
+    expect(scope.textContent).toContain("Showing 1 import error, as counted in the project status.");
+    expect(document.activeElement).toBe(scope);
+    expect([...host!.querySelectorAll(".log-entry-message")].map((n) => n.textContent)).toEqual(["broken element"]);
+    await act(async () => root.unmount());
+  });
+
+  it("keeps a failed import's error card through the next import and a selection", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockRejectedValueOnce(new Error("first refusal")).mockResolvedValueOnce(treeWithDevice());
+    const root = await renderApp();
+    await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => {});
+    const errorCards = () => [...host!.querySelectorAll(".toast--error")].map((card) => card.textContent ?? "");
+    expect(errorCards()).toHaveLength(1);
+    expect(errorCards()[0]).toContain("first refusal");
+    await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => {});
+    expect(treeLabel("Device D")).toBeTruthy();
+    expect(errorCards()).toHaveLength(1);
+    await act(async () => treeLabel("Device D").click());
+    await act(async () => {});
+    expect(errorCards()).toHaveLength(1);
+    expect(errorCards()[0]).toContain("first refusal");
+    await act(async () => root.unmount());
+  });
+});
+
 describe("App — Log tab reachability (KNOWN_LIMITATIONS.md #36, part A)", () => {
   it("opens the matching import warnings from the project status, then the whole log again", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");

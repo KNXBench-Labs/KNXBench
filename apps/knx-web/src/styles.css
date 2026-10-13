@@ -332,6 +332,10 @@ main {
 .toast-body, .toast > .achievement-badge { pointer-events: none; }
 .toast .toast-dismiss { position: relative; z-index: 1; }
 .toast .toast-release-link { position: relative; z-index: 1; pointer-events: auto; color: var(--knx-accent); font-size: 0.8rem; }
+/* At most three cards; a tall stack scrolls instead of leaving the screen. */
+.toast-stack { max-height: calc(100vh - 2rem); max-width: calc(100vw - 2rem); overflow-y: auto; }
+.toast { flex-shrink: 0; }
+.toast-queue-note { margin: 0; padding: 0.4rem 0.6rem; max-width: min(24rem, calc(100vw - 2rem)); border-radius: 4px; background: var(--knx-surface); color: var(--knx-muted); font-size: 0.8rem; overflow-wrap: anywhere; }
 
 .toast-body {
   min-width: 0;
@@ -542,6 +546,10 @@ main {
   font-style: italic;
   opacity: 0.8;
 }
+
+/* The footer counts open their log findings; they keep the text's look. */
+.project-explorer footer .import-diagnostic-link { min-height: auto; padding: 0; border: 0; background: transparent; box-shadow: none; color: inherit; font: inherit; text-align: left; white-space: normal; text-decoration: underline; text-transform: none; }
+.project-explorer footer .import-diagnostic-link:hover:not(:disabled) { transform: none; box-shadow: none; }
 
 .workspace {
   display: flex;

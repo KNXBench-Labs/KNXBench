@@ -596,6 +596,10 @@ export const messages: Record<MessageKey, string> = {
   "documentationExport.export": "Exportieren…",
   "documentationExport.close": "Schließen",
 
+  "toast.pending.one": "{count} weitere Meldung wartet",
+  "toast.pending.other": "{count} weitere Meldungen warten",
+  "toast.queueDropped.one": "{count} ältere wartende Meldung wurde nicht angezeigt. Das Sitzungsprotokoll enthält sie.",
+  "toast.queueDropped.other": "{count} ältere wartende Meldungen wurden nicht angezeigt. Das Sitzungsprotokoll enthält sie.",
   "toast.dismiss": "Schließen",
   "toast.error.archiveTooLarge": "Die Datei ist entpackt mit {size} MiB zu groß. Das Limit liegt bei {limit} MiB.",
   "toast.error.messageIsEnglish": "Diese Meldung ist der unveränderte Text des Servers, auf Englisch.",

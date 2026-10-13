@@ -21,6 +21,10 @@ pub struct FunctionsView {
 #[serde(rename_all = "camelCase")]
 pub struct FunctionNode {
     pub id: u32,
+    /// The model's source reference id, verbatim: the ETS id of an imported
+    /// Function (e.g. `"P-0001-0_F-1"`), `"KB-Function-<id>"` for one created
+    /// in KNXBench. Shown as provenance; never parsed or rewritten.
+    pub source_id: String,
     pub installation_id: u8,
     pub location: FunctionLocationNode,
     pub name: String,
@@ -50,6 +54,8 @@ pub struct FunctionLocationNode {
 #[serde(rename_all = "camelCase")]
 pub struct FunctionMemberNode {
     pub id: u32,
+    /// Verbatim source reference id, as for [`FunctionNode::source_id`].
+    pub source_id: String,
     pub group_address_id: u32,
     /// Formatted in the project's group-address style.
     pub address: String,
@@ -93,6 +99,7 @@ fn build_function_node(project: &Project, function: &Function) -> Option<Functio
                 .find(|g| g.id == member.group_address)?;
             Some(FunctionMemberNode {
                 id: member.id.0,
+                source_id: member.source.ets_id.clone(),
                 group_address_id: member.group_address.0,
                 address: entry.address.format(style),
                 group_address_name: entry.name.clone(),
@@ -104,6 +111,7 @@ fn build_function_node(project: &Project, function: &Function) -> Option<Functio
     let details = &function.details;
     Some(FunctionNode {
         id: function.id.0,
+        source_id: function.source.ets_id.clone(),
         installation_id: installation.id.0,
         location: FunctionLocationNode {
             building_part_id: part.id.0,
@@ -167,7 +175,10 @@ mod tests {
     fn member(id: u32, ga: u32, role: &str) -> FunctionMember {
         FunctionMember {
             id: FunctionMemberId(id),
-            source: source(),
+            source: SourceRef {
+                path: format!("member/{id}"),
+                ets_id: format!("P-0001-0_F-5_GAR-{id}"),
+            },
             group_address: GroupAddressId(ga),
             name: String::new(),
             role: Some(role.into()),
@@ -224,7 +235,10 @@ mod tests {
         }
         project.functions.push(Function {
             id: FunctionId(5),
-            source: source(),
+            source: SourceRef {
+                path: "function/5".into(),
+                ets_id: "P-0001-0_F-5".into(),
+            },
             location: BuildingPartId(21),
             details: FunctionDetails {
                 name: "Kitchen light".into(),
@@ -245,6 +259,7 @@ mod tests {
             FunctionsView {
                 functions: vec![FunctionNode {
                     id: 5,
+                    source_id: "P-0001-0_F-5".into(),
                     installation_id: 1,
                     location: FunctionLocationNode {
                         building_part_id: 21,
@@ -260,6 +275,7 @@ mod tests {
                     members: vec![
                         FunctionMemberNode {
                             id: 8,
+                            source_id: "P-0001-0_F-5_GAR-8".into(),
                             group_address_id: 21,
                             address: "1/0/2".into(),
                             group_address_name: "Light status".into(),
@@ -268,6 +284,7 @@ mod tests {
                         },
                         FunctionMemberNode {
                             id: 9,
+                            source_id: "P-0001-0_F-5_GAR-9".into(),
                             group_address_id: 20,
                             address: "1/0/1".into(),
                             group_address_name: "Light".into(),

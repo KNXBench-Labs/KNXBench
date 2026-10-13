@@ -23,7 +23,7 @@ with the details. You do not need to write code to earn a place here.
 - **Golden Bus Probe:** report ten issues. No actual bus probe is shipped;
   ours fits comfortably in a Markdown table.
 
-Every external human reporter or replier is listed, not just the top ten.
+Every external reporter or replier is listed, not just the top ten.
 Maintainer accounts and bots are excluded. Pull requests, reviews, reactions,
 Discussions and private messages are not counted. Tied scores share a place;
 alphabetical order merely keeps the table stable. Counts measure participation,

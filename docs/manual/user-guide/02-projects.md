@@ -400,7 +400,8 @@ Versions are stored **inside the same `.knxdb`**. They protect against an unwant
 edit, not file/disk loss: keep independent copies of closed files. They preserve
 project data, opaque source bytes and manufacturer references, not the global
 catalogue, passwords or device/bus state. Alpha 10 uses native schema 14; Alpha 9
-and earlier refuse upgraded files. Independently back up closed files before
+and earlier refuse upgraded files. Builds after Alpha 11 use schema 15 (project
+Functions); Alpha 11 and earlier refuse files they have upgraded. Independently back up closed files before
 upgrading. Downgrading means returning to the pre-upgrade backup, not pressing Undo.
 Browser **Export project…** remains a fresh current-project serialization, not a
 copy of the source file's complete history. See [the detailed contract](../../PROJECT_HISTORY.md).

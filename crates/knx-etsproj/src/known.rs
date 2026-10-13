@@ -733,6 +733,20 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
             attributes: &["RefId"],
         },
         KnownElement {
+            // Not measured in the corpus: *Project Schema23* §1.2.6.4 lists
+            // `Function` under `Space_t`, §1.2.6.9 its attributes (ADR-0124).
+            // A real ETS 6.1 schema-22 sample has the same shape. Modeled
+            // except `Implements`, `DefaulGroupRange` (spelled as in the
+            // schema text) and `Puid`, which survive in the retained raw copy.
+            path: "/KNX/Project/Installations/Installation/Locations/Space/Function",
+            attributes: &["Id", "Name", "Type", "Implements", "Number", "Comment", "Description", "CompletionStatus", "DefaulGroupRange", "Puid"],
+        },
+        KnownElement {
+            // *Project Schema23* §1.2.6.10.
+            path: "/KNX/Project/Installations/Installation/Locations/Space/Function/GroupAddressRef",
+            attributes: &["Id", "RefId", "Name", "Role", "Puid"],
+        },
+        KnownElement {
             path: "/KNX/Project/Installations/Installation/GroupAddresses",
             attributes: &[],
         },
@@ -986,6 +1000,7 @@ mod tests {
             .elements
             .iter()
             .filter(|e| !e.path.ends_with("/Line/Segment"))
+            .filter(|e| !is_schema_23_only_function(e.path))
             .map(|e| e.path.replace("/Line/Segment/", "/Line/"))
             .collect();
         let actual: Vec<&str> = s20.elements.iter().map(|e| e.path).collect();
@@ -1029,6 +1044,40 @@ mod tests {
         }
     }
 
+    /// Functions are mapped for schema 23 only (ADR-0124): its content
+    /// model is published, the schema-20/21 one is not, so there they stay
+    /// unknown, reported and retained.
+    fn is_schema_23_only_function(path: &str) -> bool {
+        path.contains("/Locations/Space/Function")
+    }
+
+    #[test]
+    fn functions_are_known_in_schema_23_only() {
+        for version in [11, 20, 21] {
+            assert!(
+                !known_schema(version)
+                    .unwrap()
+                    .elements
+                    .iter()
+                    .any(|e| is_schema_23_only_function(e.path)),
+                "schema {version} must not claim Functions"
+            );
+        }
+        let s23: Vec<_> = SCHEMA_23
+            .elements
+            .iter()
+            .map(|e| e.path)
+            .filter(|p| is_schema_23_only_function(p))
+            .collect();
+        assert_eq!(
+            s23,
+            [
+                "/KNX/Project/Installations/Installation/Locations/Space/Function",
+                "/KNX/Project/Installations/Installation/Locations/Space/Function/GroupAddressRef",
+            ]
+        );
+    }
+
     #[test]
     fn schema_23_agrees_with_schema_21_except_the_group_object_tree_shape() {
         let paths = |s: &KnownSchema| -> Vec<&str> {
@@ -1036,6 +1085,7 @@ mod tests {
                 .iter()
                 .map(|e| e.path)
                 .filter(|p| !p.contains("GroupObjectTree"))
+                .filter(|p| !is_schema_23_only_function(p))
                 .collect()
         };
         assert_eq!(paths(&SCHEMA_21), paths(&SCHEMA_23));

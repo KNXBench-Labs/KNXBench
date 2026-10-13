@@ -453,6 +453,31 @@ fn open_element<'a>(
         return Ok(());
     }
 
+    // A known `Function` (schema 23 only, ADR-0124): captured whole and
+    // parsed on its own; the raw copy is retained by the import pipeline.
+    if local == "Function" {
+        let raw = if is_empty {
+            bytes[pos_before as usize..reader.buffer_position() as usize].to_vec()
+        } else {
+            skip_and_capture(reader, bytes, start, pos_before, source_path)?
+        };
+        let function = super::functions::parse_function(
+            raw,
+            &xpath,
+            &matching_path,
+            source_path,
+            schema,
+            aggregator,
+        )?;
+        match frames.last_mut() {
+            Some(Frame::BuildingPart(part)) => part.functions.push(function),
+            // The table only knows `Function` under `Space`, so this is
+            // unreachable today; if it ever is reached, keep the element.
+            _ => retained_elements.push(function.raw),
+        }
+        return Ok(());
+    }
+
     // Leaf string references: a single attribute, no children of their own,
     // attached straight into the enclosing frame.
     if matches!(local.as_str(), "Send" | "Receive" | "DeviceInstanceRef") {
@@ -772,6 +797,7 @@ fn build_frame(
             completion_status: bag.take("CompletionStatus"),
             children: Vec::new(),
             device_refs: Vec::new(),
+            functions: Vec::new(),
             other: Vec::new(),
         }),
         "GroupRange" => Frame::GroupRange(SourceGroupRange {

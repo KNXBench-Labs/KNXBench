@@ -6,6 +6,15 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-10-13 (Goal A4): several installations under one site
+
+The multi-installation case (MODEL-05) is a separate, blocked design:
+[ADR-0125](../adr/0125-multi-installation-site-is-blocked.md). *Project
+Schema23* has no element above installations, and the 14 readable samples
+(6 private, 8 public) each have one installation and no `Ground` space.
+Nothing was implemented; the single-installation `Ground` root of ADR-0038
+is unchanged.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 127. A site over several buildings rests on schema text and synthetic tests, not on an ETS sample

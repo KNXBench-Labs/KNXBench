@@ -100,7 +100,7 @@ impl NativeSnapshot {
         conn.deserialize_read_exact(MAIN_DB, bytes, bytes.len(), false)?;
         conn.execute_batch("PRAGMA trusted_schema = OFF; PRAGMA foreign_keys = ON;")?;
         let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if ![12, 13, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+        if ![12, 13, 14, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
             return Err(HistoryError::Invalid("unsupported snapshot schema version"));
         }
         let creator: String = conn.query_row(
@@ -171,8 +171,14 @@ fn check_schema_version(conn: &Connection, version: i64) -> Result<(), HistoryEr
     }
     let expected = crate::open_and_migrate_in_memory()
         .map_err(|_| HistoryError::Invalid("native schema admission initialization failed"))?;
-    if ![12, 13, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+    if ![12, 13, 14, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
         return Err(HistoryError::Invalid("unsupported native schema shape"));
+    }
+    if version < 15 {
+        expected.execute_batch(
+            "DROP TABLE project_function_member; DROP TABLE project_function; \
+             DROP TABLE project_function_state;",
+        )?;
     }
     if version < 14 {
         expected.execute_batch("DROP TABLE project_note; DROP TABLE project_note_state;")?;
@@ -205,7 +211,18 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
         |row| row.get(0),
     )?;
     let notes: bool = conn.query_row("SELECT EXISTS(SELECT 1 FROM project_note) OR EXISTS(SELECT 1 FROM project_note_state WHERE last_id!=0)", [], |row|row.get(0))?;
-    let identity_version: u32 = if notes {
+    // Same rule for Functions (ADR-0124): an older image without any keeps
+    // its identity after the additive v15 migration.
+    let functions: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM project_function) \
+         OR EXISTS(SELECT 1 FROM project_function_state \
+                   WHERE last_function_id!=0 OR last_member_id!=0)",
+        [],
+        |row| row.get(0),
+    )?;
+    let identity_version: u32 = if functions {
+        15
+    } else if notes {
         14
     } else if instructions {
         13
@@ -224,6 +241,11 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
             || name.starts_with("project_history_")
             || name == "schema_meta"
             || (!notes && matches!(name.as_str(), "project_note" | "project_note_state"))
+            || (!functions
+                && matches!(
+                    name.as_str(),
+                    "project_function" | "project_function_member" | "project_function_state"
+                ))
             || (!instructions
                 && matches!(name.as_str(), "instruction_document" | "instruction_run"))
         {

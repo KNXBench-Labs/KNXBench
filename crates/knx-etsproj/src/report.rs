@@ -222,6 +222,8 @@ pub fn build(
             entity_count("GroupAddress", map.counts.group_addresses),
             entity_count("BuildingPart", map.counts.building_parts),
             entity_count("ParameterInstanceRef", map.counts.parameters),
+            entity_count("Function", map.counts.functions),
+            entity_count("GroupAddressRef", map.counts.function_members),
         ],
     };
 

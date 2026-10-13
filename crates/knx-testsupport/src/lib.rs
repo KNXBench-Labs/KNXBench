@@ -311,6 +311,55 @@ pub fn mapping_boundary_knxproj_bytes(
     ])
 }
 
+/// Synthetic Function witness (ADR-0124), not a genuine ETS sample or
+/// XSD-validity claim: shaped after *Project Schema23* §1.2.6.9/§1.2.6.10
+/// and the attribute set of the public ETS 6.1 schema-22 xknxproject sample
+/// `testprojekt-ets6-functions` (inspected, not copied). One building with a
+/// nested room; `room_functions` is spliced verbatim into the room and
+/// `building_functions` into the building. Group addresses `P-0001-0_GA-1`
+/// to `-3` exist.
+pub fn functions_knxproj_bytes(
+    version: u32,
+    building_functions: &str,
+    room_functions: &str,
+) -> Vec<u8> {
+    assert!([21, 23].contains(&version));
+    let topology = format!(
+        r#"<KNX xmlns="http://knx.org/xml/project/{version}">
+          <Project Id="P-0001"><Installations>
+            <Installation InstallationId="0">
+              <Topology><Area Id="P-0001-0_A-1" Address="1">
+                <Line Id="P-0001-0_L-1" Address="1"><Segment Id="P-0001-0_L-1_S-1" Number="0" MediumTypeRefId="MT-0"/></Line>
+              </Area></Topology>
+              <Locations>
+                <Space Id="P-0001-0_BP-1" Name="House" Type="Building" Puid="1">
+                  <Space Id="P-0001-0_BP-2" Name="Living room" Type="Room" Puid="2">{room_functions}</Space>
+                  {building_functions}
+                </Space>
+              </Locations>
+              <GroupAddresses><GroupRanges>
+                <GroupRange Id="P-0001-0_GR-1" RangeStart="1" RangeEnd="100" Name="Lights" Puid="3">
+                  <GroupAddress Id="P-0001-0_GA-1" Address="1" Name="Switch" Puid="4"/>
+                  <GroupAddress Id="P-0001-0_GA-2" Address="2" Name="Status" Puid="5"/>
+                  <GroupAddress Id="P-0001-0_GA-3" Address="3" Name="Dim" Puid="6"/>
+                </GroupRange>
+              </GroupRanges></GroupAddresses>
+            </Installation>
+          </Installations></Project>
+        </KNX>"#
+    );
+    let info = format!(
+        r#"<KNX xmlns="http://knx.org/xml/project/{version}"><Project Id="P-0001">
+          <ProjectInformation Name="Synthetic Function witness" GroupAddressStyle="ThreeLevel"/>
+        </Project></KNX>"#
+    );
+    zip_with_entries(&[
+        ("P-0001.signature", b"synthetic signature"),
+        ("P-0001/0.xml", topology.as_bytes()),
+        ("P-0001/Project.xml", info.as_bytes()),
+    ])
+}
+
 /// Synthetic values that a [`retained_privacy_knxproj_bytes`] import keeps
 /// only inside retained source subtrees (`BusAccess`, `IPConfig`,
 /// `AdditionalAddresses`, `ProjectTraces`): a tunnelling host and peer, a

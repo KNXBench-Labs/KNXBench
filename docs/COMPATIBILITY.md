@@ -1,5 +1,16 @@
 # Compatibility
 
+## Schema-23 Functions (13 October 2026, Goal A4)
+
+A `Function` with its `GroupAddressRef`s in a schema-23 project now imports
+into the model ([ADR-0124](adr/0124-project-functions.md)). Evidence: *Project
+Schema23* §1.2.6.4/.9/.10 and synthetic tests shaped after the one real
+instance found, an ETS 6.1 schema-22 file KNXBench does not import. No
+supported-schema ETS file with Functions has been seen, so this is a
+spec-backed mapping, not a verified ETS round trip. Schemas 20/21 keep
+`Function` as a reported, retained unknown element. The whole source element
+stays in the opaque store; there is no export.
+
 ## ETS 5.7 projects and real protected exports (12 October 2026, issue #7)
 
 `.knxproj` schema 20 (ETS 5.7) now imports, read with the schema-23 element

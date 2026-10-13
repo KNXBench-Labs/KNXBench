@@ -337,7 +337,7 @@ below is on the remote or merged:
 | --- | --- | --- |
 | `native-evidence-20261011` (local branch; worktree removed 2026-10-13) — residue checked 2026-10-13: nothing left | 7 locally accepted commits: durable native import reports (ADR-0113), CLI/source-report/payload catalogues, export-privacy consent, read-only project metadata and recorded device state | **Delivered 2026-10-12**: ported onto main with a fresh gate ([evidence](evidence/native-evidence-port-2026-10-12.json)); the parked worktree can go after an owner go |
 | `feature/ux-feedback-20261010` (local branch; worktree removed 2026-10-13) | 13 locally accepted commits, UX AP1–AP5 | **Delivered 2026-10-13**: AP2/AP3/AP5 and the parts of AP1 main lacked, ported with a fresh gate ([evidence](evidence/ux-feedback-port-2026-10-13.json)); motion ADR lands as ADR-0122; AP4 dropped. Worktree removed after an owner go |
-| `feature/functions-sites-20261009` (local branch only) | KNX Functions (`MODEL-07`) as one unreviewed `wip(functions)` commit `1154b72f` on schema 12 (main is at 14); acceptance attempt 4 failed | Kept as WIP; a later MODEL-07 goal restarts from it on the current schema |
+| `feature/functions-sites-20261009` (local branch only) | KNX Functions (`MODEL-07`) as one unreviewed `wip(functions)` commit `1154b72f` on schema 12 (main is at 14); acceptance attempt 4 failed | Superseded 2026-10-13: Goal A4 rebuilt the backend fresh on schema 15 ([ADR-0124](adr/0124-project-functions.md)); the WIP was read, not merged. Branch kept until the owner drops it |
 | Initial native-write preflight | Never-compiled draft from `import-lifecycle-20261011` | Archived as a local patch; to be built fresh. Worktree and branch removed |
 | `audit-findings-20261011`, `native-import-diagnostics-20261011` | Superseded / already on main | Dropped. Worktrees and branches removed |
 
@@ -388,8 +388,12 @@ not erase subsequently delivered functionality.
   (`0912h`/`091Ah`), `NM_Router_Scan`/`NM_SubnetworkDevices_Scan`, KNX Data
   Secure (`DM_SecureSync_*`), Easy Modes, USB interface configuration
   (`KL-110`, `GAP-T30-04`). RF stays simulator-only.
-- **Model/import:** KNX `Functions` (`MODEL-07`, needs an ADR and samples);
-  several installations under one Site (`MODEL-05`, needs an ADR); ETS
+- **Model/import:** KNX `Functions` (`MODEL-07`): backend, storage,
+  schema-23 import, projection and HTTP API delivered
+  ([contract](contracts/project-functions.md)); the web UI is Goal B1, a
+  per-Function diff table later.
+  Several installations under one Site (`MODEL-05`): blocked on evidence
+  ([ADR-0125](adr/0125-multi-installation-site-is-blocked.md)); ETS
   restore-point revisions as extra private regressions (`IMPORT-02`, requires
   authorized ETS exports and reviewed baselines). Selective lines/devices and
   bounded `knx_cvexc` content analysis have verified local implementation and

@@ -1,0 +1,192 @@
+{
+  "version": "0.1.0-alpha.11",
+  "status": "published-and-externally-verified",
+  "recordedAt": "2026-10-13",
+  "source": {
+    "tagCommit": "758a112b765d9c10cf7a2ae59cb8cd6eb97657a2",
+    "tagObject": "44824586f4851ca3b3bab58e6107962e8655dc24",
+    "cutoffMain": "2a43ad5c",
+    "gatedCandidate": "758a112b765d9c10cf7a2ae59cb8cd6eb97657a2",
+    "candidateToTagDiff": "none (the gated commit is the tag commit)",
+    "releaseBranch": "release/alpha11-20261013",
+    "mergedIntoMain": "f9ba9cff",
+    "prerequisites": {
+      "kl170PartB": "0d1e24bf",
+      "onboardingFlakeFix": "2a43ad5c"
+    },
+    "schema": {
+      "native": 14,
+      "model": 14,
+      "changedSinceAlpha10": false
+    },
+    "externalDependenciesChanged": false,
+    "laterParallelWorkExcluded": [
+      "4665f873..d3febf6d (plug-in pair corpus test)",
+      "f15eb04c..9fcbc0e3 (limitations catalogue move)"
+    ]
+  },
+  "applicationGate": {
+    "stages": 44,
+    "stagesGreen": 44,
+    "inputsFrozen": true,
+    "window": "2026-10-13 15:02-15:45",
+    "rust": {
+      "passed": 4281,
+      "failed": 0,
+      "ignored": 197
+    },
+    "frontend": {
+      "passed": 3302,
+      "failed": 0,
+      "files": 235
+    },
+    "chromiumFixtures": {
+      "passed": 477,
+      "failed": 0,
+      "network": "loopback only"
+    },
+    "extraPlaywrightConfigs": {
+      "configs": 18,
+      "passed": 255,
+      "failed": 0
+    },
+    "realServerNativeEvidence": {
+      "passed": 12,
+      "failed": 0
+    },
+    "naming": {
+      "passed": 4,
+      "failed": 0
+    },
+    "typescriptConfigs": 13,
+    "pythonToolTests": {
+      "ran": 67,
+      "skipped": 1
+    },
+    "strictClippyFormatBuild": true,
+    "bindingsDrift": false,
+    "repositoryGates": {
+      "layering": "ok",
+      "headers": "1092 with header, 155 without (ceiling 155)",
+      "anchors": "626 links / 293 files",
+      "corpusGates": "601 Rust files",
+      "ledger": "202 rows"
+    },
+    "documentation": "293 Markdown files, 0 errors",
+    "diffCheckSince": "v0.1.0-alpha.10",
+    "harnessCorrections": []
+  },
+  "corpus": {
+    "selected": 144,
+    "targets": 31,
+    "passed": 144,
+    "oracleLinked": true,
+    "networkInterfaces": [
+      "lo"
+    ],
+    "rawPrivateDataPublished": false
+  },
+  "preFreezeFix": {
+    "commit": "30c4bec3",
+    "merge": "2a43ad5c",
+    "spec": "apps/knx-web/e2e/onboarding-guide.e2e.ts",
+    "before": "5 of 20 red (Received 4 for 2) on 7ce003d8",
+    "after": "80/80",
+    "mutantReleaseChecksOn": "10/10 red",
+    "fixtureChromium": "477/477"
+  },
+  "dryRuns": [
+    {
+      "databaseId": 38401821252,
+      "workflow": "Linux AppImage",
+      "headSha": "758a112b",
+      "conclusion": "success",
+      "publish": "skipped on dispatch"
+    },
+    {
+      "databaseId": 38401825245,
+      "workflow": "Docker release",
+      "headSha": "758a112b",
+      "conclusion": "success",
+      "publish": "skipped on dispatch"
+    }
+  ],
+  "tagWorkflows": [
+    {
+      "databaseId": 38412319954,
+      "workflow": "Linux AppImage",
+      "headSha": "758a112b",
+      "conclusion": "success"
+    },
+    {
+      "databaseId": 38412319727,
+      "workflow": "Docker release",
+      "headSha": "758a112b",
+      "conclusion": "success"
+    }
+  ],
+  "publication": {
+    "url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11",
+    "prerelease": true,
+    "draft": false,
+    "handwrittenNotes": "docs/releases/alpha11.md (11 relative links rewritten to blob/v0.1.0-alpha.11; published body equal to the notes file)",
+    "assets": [
+      {
+        "name": "KNXBench_0.1.0-alpha.11_amd64.AppImage",
+        "size": 88824312,
+        "sha256": "9223c1060bdef8504b1ae7267e4d85e8917141121021bda3aca003127fd141a8",
+        "github_digest_matches": true
+      },
+      {
+        "name": "knx-mcp-x86_64-linux",
+        "size": 12146384,
+        "sha256": "cacbe24a8ba958269b995e2a249394a1e38adfdd19b607651b922c289add476c",
+        "github_digest_matches": true
+      },
+      {
+        "name": "SHA256SUMS",
+        "size": 194,
+        "sha256": "6fcd00f4d5c5ebb41d199e02ff5bfb406206cd4e2c9c2667fa1e6c1da8ee6d4d",
+        "github_digest_matches": true
+      }
+    ],
+    "checksumFileVerified": true,
+    "mcpExecuted": "knx-mcp 0.1.0-alpha.11+g758a112",
+    "appimage": {
+      "extracted": true,
+      "bundlesLibwaylandClient": false,
+      "mesaEglPinnedStartup": "running after 12 s, 0 EGL_BAD/abort lines (one NVIDIA Arch host, glvnd pinned to 50_mesa.json, isolated HOME/XDG)"
+    },
+    "docker": {
+      "image": "knxbench/knxbench-server:0.1.0-alpha.11",
+      "indexDigest": "sha256:0ae46b8c8818c491c1cc15d737bbadca290acb2762a7a509ea513a14648fe495",
+      "latestDigestEqual": true,
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "revisionLabel": "758a112b765d9c10cf7a2ae59cb8cd6eb97657a2",
+      "versionLabel": "v0.1.0-alpha.11",
+      "anonymousPull": true,
+      "versionOutput": "knx-server 0.1.0-alpha.11+g758a112",
+      "smokeTest": "passed (HTTPS health, auth refusal, native save/reopen)",
+      "latestPulled": false,
+      "userContainerUnchanged": true
+    }
+  },
+  "review": "self-review only",
+  "notVerified": [
+    "Native WebKitGTK window (all UI checks in Chromium)",
+    "#10 against a real gateway (fake connector and injected sessions only)",
+    "Any real tester download report",
+    "Opening Alpha 11 files in Alpha 10"
+  ],
+  "exclusions": [
+    "Little-endian parameter downloads (KL-170 stays LATER)",
+    "Functions/Sites; inventory cards (AP4, dropped)",
+    "Colour/picture parameter codecs (PDB-04)",
+    "No ETS export, signing, full ETS semantics or hardware/download certification",
+    "Schema 22 (ETS 6.1) unmeasured; #7 reporter's own ETS 5.7 project untested",
+    "No replacement of existing user containers or stores"
+  ]
+}

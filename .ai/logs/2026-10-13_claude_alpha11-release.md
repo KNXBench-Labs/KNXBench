@@ -17,4 +17,19 @@
   knx-store change, knx-core only gained the byte-order decoder), so no migration.
 - Candidate: this commit (version bump to 0.1.0-alpha.11 in the four crates, web package
   and lock; `cargo update -w` touched only the four workspace packages; scope note
-  docs/releases/alpha11.md). Gate: PENDING.
+  docs/releases/alpha11.md). The handover entry inside it reads 15:22; written ~15:01.
+- Gate on 758a112b (15:02-15:45, 44/44 stages, inputs frozen): Rust 4281/0/197, Vitest
+  3302/0, Chromium 477/0, 18 configs 255/0, native 12/12, naming 4/4, corpus 144/144 in 31
+  targets with both OriginalData and project_dump.json linked. No harness corrections.
+- Dry runs 38401821252 / 38401825245 green on 758a112b (publish jobs skipped).
+- Main moved during the gate (plug-in pair test; Codex limitations catalogue move): not in
+  the release. Merge of the release branch into main (f9ba9cff) had one handover conflict,
+  both entries kept; the catalogue move kept the old KL anchors (973 links, none dead).
+- Owner go 2026-10-13. Tag object 44824586 on 758a112b; release created with
+  --verify-tag --prerelease from the notes file (11 links -> blob/v0.1.0-alpha.11, all
+  checked with git cat-file). Tag workflows 38412319954 / 38412319727 green.
+- External: assets re-downloaded, checksums + digests equal; knx-mcp version; AppImage
+  extracted, no libwayland-client; Mesa-pinned startup survived 12 s. Docker version ==
+  latest digest (latest compared in the registry, not pulled), both platforms, revision
+  label, anonymous pull + smoke test; user container identity unchanged.
+- Receipt docs/evidence/release-alpha11-2026-10-13.json; docs pass in alpha11-docs worktree.

@@ -1,3 +1,28 @@
+## 2026-10-13 — Alpha 11 published and downloaded artifacts verified
+
+- Tag `v0.1.0-alpha.11` (object `44824586`) is on `758a112b`, the gated commit itself;
+  main cutoff `2a43ad5c` after KL-170 part B (`0d1e24bf`) and a test-only fix of the
+  onboarding spec's flaky version count (`30c4bec3`: 5/20 red before, 80/80 after; the
+  update check read `/api/version` too and its GitHub request escaped the fixture).
+  All application versions are `0.1.0-alpha.11`; schema stays 14 (no migration);
+  external dependencies unchanged. [Release notes](releases/alpha11.md) carry #8, #9,
+  #10, tester download reports, the byte-order probe and warning, and the ported UX
+  feedback. Later main work (plug-in pair test, limitations catalogue move) is not in it.
+- Frozen gate, 44 stages, inputs frozen: Rust 4281/0/197 ignored, Vitest 3302/0 in 235
+  files, fixture Chromium 477/0, 18 extra Playwright configs 255/0, real-server native
+  evidence 12/12, naming 4/4, `tsc` for all 13 configs, strict Clippy, fmt, build,
+  bindings, five xtask gates, 67 tool tests, documentation; private corpus 144/144 in
+  31 targets (loopback only, oracle linked). No harness corrections this time.
+- Dry runs and tag workflows green. Downloaded assets match `SHA256SUMS` and GitHub
+  digests; `knx-mcp` reports `0.1.0-alpha.11+g758a112`; the extracted AppImage has no
+  `libwayland-client` and kept running 12 s with glvnd pinned to Mesa EGL. Docker
+  `0.1.0-alpha.11` = `latest` (index `sha256:0ae46b8c…`), amd64+arm64, revision label
+  `758a112b`, anonymous pull plus smoke test pass; `latest` was compared in the
+  registry, not pulled, and the running user container is unchanged.
+  [Receipt](evidence/release-alpha11-2026-10-13.json).
+- Not verified: the native WebKitGTK window, #10 against a real gateway, any real
+  tester report. Self-review only.
+
 ## 2026-10-13 — Plug-in data pair test: a plug-in edit touches only the plug-in's bytes
 
 - New corpus-gated test `crates/knx-app/tests/ets6_plugin_data_pair.rs` (ignored by

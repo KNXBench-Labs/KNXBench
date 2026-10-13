@@ -244,7 +244,7 @@ appear up to about a second late; switch *Motion Off* for such an
 installation. Motion Off loses no information. See [known limitations
 §154](../../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only).
 
-### Saving the Flow as an image (newer than Alpha.10)
+### Saving the Flow as an image (since Alpha 11)
 
 **PNG snapshot** and **GIF clip** in the Flow toolbar save what the Flow view shows
 right now, nothing else: no sidebar, Inspector, log or earlier history. The dialog
@@ -467,8 +467,8 @@ hint. You can change that for everyone who has the same device:
 
 A download that failed is worth reporting too: the tab offers the report after every
 download that has ended. On the command line the same report comes from `--report`
-([step by step](10-command-line.md#helping-to-verify-a-device)). This needs a source
-build newer than Alpha 10; the screenshots in this manual still show the released tab.
+([step by step](10-command-line.md#helping-to-verify-a-device)). This ships since
+Alpha 11; the screenshots in this manual still show the Alpha 10 tab.
 
 ## Programming an individual address
 

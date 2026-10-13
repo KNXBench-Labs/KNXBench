@@ -30,13 +30,15 @@ design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
 This is the source-level `0.1.0-alpha` series, checked on **8 October 2026**.
-The [public Alpha.10 pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10)
-(AppImage, `knx-mcp`, Docker Hub image) adds project notes, four group-address
-views, catalogue updates with preview, the checked parameter editors and the
-import-evidence views, and fixes the Mesa AppImage crash (#6) and ETS 5.7 import (#7).
-[Release notes](../releases/alpha10.md) preserve the exact frozen scope.
+The [public Alpha.11 pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11)
+(AppImage, `knx-mcp`, Docker Hub image) adds the searchable group-address picker
+(#8), tree indentation (#9), named gateway busy/refused states (#10), tester
+download reports and the byte-order warning; Alpha.10 fixed the Mesa AppImage crash
+(#6) and ETS 5.7 import (#7). [Release notes](../releases/alpha11.md) preserve the
+exact frozen scope.
 Independently back up native projects and Docker data before upgrading: schema 14
 is refused by Alpha.9 and earlier, and rollback needs the pre-upgrade backup.
+Alpha.11 keeps schema 14.
 The version number is not a promise that anything is finished.
 
 > A long list of known issues is what happens when a project writes its

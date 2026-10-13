@@ -35,7 +35,9 @@ review procedure) landed earlier the same day
   `diff --check`. The one red, `onboarding-guide.e2e.ts` "first alpha start" (counts
   `/api/version` reads, saw 4 for 2), is flaky on clean `origin/main` `798f6bba` too:
   9 of 20 runs red there, 4 of 20 on the branch; not touched here. Merge gate:
-  GATES_PLACEHOLDER.
+  merge `0d1e24bf` (inputs frozen), build, 13/13
+  tsconfigs, Vitest 235 files / 3302 tests, Chromium 477/477 (the flake stayed green
+  this time), preview 19/19, docs, five xtask checks, `diff --check`; no Rust change.
 
 ## 2026-10-13 — Issues #8, #9, #10: a picker that listens, trees that indent, a gateway that says who has it
 

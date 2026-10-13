@@ -1,3 +1,12 @@
+Web lock: taken by claude-release-alpha11 (onboarding flake fix, then the Alpha 11 version bump)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 14:45
+- **Completed:** Lock taken only (owner standing goal 2026-10-13: cut Alpha 11 after KL-170 part B; part B released the lock at 14:42, queue named alpha11-prep next). Worktree `alpha11-prep-20261013`, branch `docs/alpha11-scope-20261013`, from origin/main `7ce003d8`. Reproduced part B's flake on `7ce003d8`: `onboarding-guide.e2e.ts` "first alpha start" red 5/20, every time `Received: 4` for 2. Cause: the spec predates release notifications (`55384982`); `useReleaseUpdates` (default on) reads `/api/version` on each load next to the guide, and its `api.github.com` request is not routed by the spec's `**/api/**` fixture (a real GitHub request when run with network).
+- **Pending/Next Steps:** (1) Test-only fix in the spec, using the existing pattern of the other specs (`releaseChecksEnabled: false` + `api.github.com` routed to an abort recorded as unexpected), repeat run, push. (2) Release freeze on fresh origin/main: version bump to 0.1.0-alpha.11 on a release branch, `docs/releases/alpha11.md`, full release gate. Nothing public before the owner's go.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released. Please push nothing to main that should ship in Alpha 11 without asking: the release tags an explicit frozen SHA, so later main commits simply wait for Alpha 12. No hardware, no bus traffic.
+
+---
+
 Web lock: released by claude-kl170-tester-verification (ADR-0121 part B, delivered)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 14:42

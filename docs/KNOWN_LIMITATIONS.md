@@ -1253,7 +1253,7 @@ Guide state is per installation, not person. Fresh concurrent windows can both s
 ### 164. Shared achievement counters
 
 **Ledger status:** Not separately tracked.
-Counters are installation-wide and UI-only; concurrent increments can be lost. Hidden catalogue entries are not secrets.
+Counters are installation-wide and UI-only. Since 13 October 2026 concurrent steps add up (deduplicated over the last 1,024 batches). Hidden catalogue entries are not secrets.
 [Details and history](limitations/KL-164-shared-achievement-counters.md)
 
 <a id="catalogue-kl-178"></a>

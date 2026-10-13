@@ -352,6 +352,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(panel.locator("select[data-download-device]")).toHaveValue("");
     await expect(panel.getByRole("button", { name: m["deviceDownload.preparePlan"], exact: true })).toBeDisabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    await pending.scrollIntoViewIfNeeded();
     await shot(page, `download-pending-${language}-${theme}-${width}`);
     release();
     await expect(panel.locator("[data-handoff=selected]")).toContainText("1.1.10");

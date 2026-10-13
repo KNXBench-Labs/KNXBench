@@ -48,7 +48,8 @@ type Props = React.ComponentProps<typeof ParameterSourceEditor>;
 async function mount(extra: Partial<Props> = {}) {
   const host = document.createElement("div"); document.body.append(host);
   const root = createRoot(host); roots.push(root);
-  const props: Props = { deviceId: 41, field, scope: null, programId: "A", snapshot: snapshot(), language: "de-DE", label: "Delay",
+  const props: Props = { deviceId: 41, field, scope: null, programId: "A", snapshot: snapshot(), writeBinding: snapshot(11),
+    onConflict: vi.fn().mockResolvedValue(undefined), language: "de-DE", label: "Delay",
     onUpdated: vi.fn(), onValueApplied: vi.fn(), onClose: vi.fn(), ...extra };
   await act(async () => root.render(<ParameterSourceEditor {...props} />));
   return { host, root, props };
@@ -77,9 +78,33 @@ describe("checked parameter editor host", () => {
     const { host, props } = await mount();
     await type(host, "12");
     await act(async () => button(host, "Apply value").click());
-    expect(apiMock.setParameterValue).toHaveBeenCalledWith(41, "PR", "12", "de-DE");
+    // Bound to the panel's own snapshot and the field value it showed (Goal B1).
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(41, "PR", "12", "de-DE", { ...snapshot(11), expectedValue: "0010" });
     expect(props.onUpdated).toHaveBeenCalledWith(panel);
     expect(props.onValueApplied).toHaveBeenCalledWith(tree);
+  });
+
+  it("keeps the draft on a stale-write conflict, reloads once and publishes nothing", async () => {
+    apiMock.parameterEditorSource.mockResolvedValue(answer());
+    apiMock.setParameterValue.mockRejectedValueOnce(Object.assign(new Error("raw server text"),
+      { status: 409, body: { error: "raw server text", kind: "parameterWriteConflict" } }));
+    const { host, props } = await mount();
+    await type(host, "12");
+    await act(async () => button(host, "Apply value").click());
+    expect(props.onConflict).toHaveBeenCalledOnce();
+    expect(props.onUpdated).not.toHaveBeenCalled();
+    expect(props.onValueApplied).not.toHaveBeenCalled();
+    expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("12");
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain("changed elsewhere");
+  });
+
+  it("names a failed reload after a conflict", async () => {
+    apiMock.parameterEditorSource.mockResolvedValue(answer());
+    apiMock.setParameterValue.mockRejectedValueOnce(Object.assign(new Error("raw"), { status: 409, body: { error: "raw", kind: "parameterWriteConflict" } }));
+    const { host } = await mount({ onConflict: vi.fn().mockRejectedValue(new Error("offline")) });
+    await type(host, "12");
+    await act(async () => button(host, "Apply value").click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain("reloading the current state failed: offline");
   });
 
   it("still publishes a write that finishes after the editor was closed", async () => {

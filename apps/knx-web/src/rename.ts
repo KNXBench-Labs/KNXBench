@@ -1,7 +1,7 @@
 /** Pure identity and admission rules for project-local name editing. */
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { collectDevices } from "./treeUtils";
-export type RenameKind = "device" | "group_address";
+export type RenameKind = "device" | "group_address" | "installation";
 export interface RenameTarget { kind: RenameKind; id: number; name: string }
 export type NameProblem = "blank" | "long" | "control";
 export function nameProblem(name: string): NameProblem | null {
@@ -14,6 +14,10 @@ export function renameTarget(tree: ProjectTree, kind: RenameKind, id: number): R
   if (kind === "device") {
     const device = collectDevices(tree).get(id);
     return device ? { kind, id, name: device.name } : null;
+  }
+  if (kind === "installation") {
+    const installations = tree.installations.filter((installation) => installation.id === id);
+    return installations.length === 1 ? { kind, id, name: installations[0].name } : null;
   }
   const matches = tree.installations.flatMap((i) => i.group_addresses).filter((ga) => ga.id === id);
   return matches.length === 1 ? { kind, id, name: matches[0].name } : null;

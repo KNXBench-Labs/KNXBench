@@ -35,8 +35,15 @@ async function serve(page: Page, language: "en" | "de", theme: string) {
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) body = [];
     else if (path === "/api/installations/2" && method === "PATCH") {
-      const sent = request.postDataJSON() as { name: string };
+      // Goal A2 binding, checked like the server: stale context or name is a 409.
+      const sent = request.postDataJSON() as { name: string; expectedName: string; serverIncarnation: string;
+        projectIncarnation: number; snapshotRevision: number };
       writes.push({ method, path, body: sent });
+      const shown = current.installations.find((installation) => installation.id === 2)!;
+      if (sent.serverIncarnation !== current.server_incarnation || sent.projectIncarnation !== current.project_incarnation
+        || sent.snapshotRevision !== current.snapshot_revision || sent.expectedName !== shown.name) {
+        return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "stale", kind: "renameConflict" }) });
+      }
       current = { ...current, snapshot_revision: current.snapshot_revision! + 1, can_undo: true, can_redo: false, is_modified: true,
         installations: current.installations.map((installation) => installation.id === 2 ? { ...installation, name: sent.name.trim() } : installation) };
       body = current;
@@ -92,7 +99,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400])
     await expect(field).toHaveValue(""); expect(writes).toEqual([]);
     await field.fill("Annex 🛠"); await field.press("Enter");
     await expect(properties.getByRole("heading", { name: "Annex 🛠", exact: true })).toBeVisible();
-    expect(writes).toEqual([{ method: "PATCH", path: "/api/installations/2", body: { name: "Annex 🛠" } }]);
+    expect(writes).toEqual([{ method: "PATCH", path: "/api/installations/2", body: { name: "Annex 🛠", expectedName: "",
+      serverIncarnation: "installation-node-fixture", projectIncarnation: 1, snapshotRevision: 1 } }]);
     // Use the application Undo/Redo shortcuts outside the name input, not the browser's text undo.
     await properties.getByRole("heading", { name: "Annex 🛠", exact: true }).click();
     await page.keyboard.press("Control+z");

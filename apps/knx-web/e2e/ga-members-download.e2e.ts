@@ -78,7 +78,7 @@ const PLAN = {
   maskVersion: 0x07b0, manufacturer: 0x00fa, parameterValues: 2, groupLinks: 1,
   segments: [{ id: "M-00FA_A-0001-01-0000_RS-04-00000", address: 0x4000, size: 16, written: 16 }], dataOctets: 16,
   steps: ["connect", "check the mask", "write 4000h"], confirmationPhrase: "I confirm download to 1.1.10",
-  support: { level: "untested", evidence: null }, untestedAcknowledgement: "I accept an untested download to 1.1.10",
+  support: { level: "untested", evidence: null, inferences: [] }, warnings: [], untestedAcknowledgement: "I accept an untested download to 1.1.10",
   partial: false, notWritten: [],
 };
 const RUNNING: DeviceDownloadStatusResponse = { downloadId: 4, address: "1.1.11", deviceName: "Actuator", steps: 3, dataOctets: 16,

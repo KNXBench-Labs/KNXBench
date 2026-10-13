@@ -163,8 +163,8 @@ Last updated: 2026-10-13 01:10 CEST
 | Download preparation | Gateway choice from the shared search; device-editor hand-off; step guide | alpha.10 |
 | Read-only device verification | Limited hardware evidence | alpha.6 |
 | Byte-order probe | CLI, read only: which octet order an ETS-programmed device holds; little-endian downloads stay refused | Main-only |
-| Tester download reports | After a download: report file (program, outcome, values; no names or address), issue form or issue@knxbench.com; CLI and server, tab pending | Main-only |
-| Byte-order download warning | Named plan warning when a big-endian program's own data looks little-endian; CLI and server, not yet in the web tab | Main-only |
+| Tester download reports | After a download: steps, checklist and report file (program, outcome, values; no names or address), issue form or issue@knxbench.com; download tab, CLI and server | Main-only |
+| Byte-order download warning | Named plan warning when a big-endian program's own data looks little-endian; download tab, CLI and server | Main-only |
 | MCP integration | Saved files; eight read tools | alpha.6 |
 | MCP name-recipe writer | Opt-in; group-address prefix/suffix after preview and confirmation | alpha.10 |
 | Accessibility | Full screen-reader validation missing | alpha.6 |

@@ -67,9 +67,10 @@ named warning.
   checks of the measurement, at most 2.0 s for the largest program (release
   build), on top of the image build. Not optimised; nothing measured asks for
   it yet.
-- The web download tab does not show `warnings` yet: it showed no inferences
-  either, and the web lock was held when this was built. The server field is
-  in place for it.
+- The web download tab first showed neither warnings nor inferences; both
+  are shown since ADR-0121 part B (13 October 2026), a known rule in plain
+  words with the server text under *Technical details*, an unknown one as
+  sent.
 - A tester's confirmation or refutation on hardware can later settle each
   program; the warning names KNOWN_LIMITATIONS §170 so the evidence path is
   findable.

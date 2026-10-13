@@ -18,7 +18,7 @@ const plan = (partial: boolean) => ({
   segments: [{ id: "M-0083_A-0027-15-0BAC_RS-04-00000", address: 0x4000, size: 1418, written: 1416 }],
   dataOctets: 1416, steps: ["connect", "check the mask", "write 4003h"],
   confirmationPhrase: partial ? "I confirm partial download to 1.1.67" : "I confirm download to 1.1.67",
-  accessKey: "none", support: { level: "verified", evidence: "MDT, 2026-09-29" }, untestedAcknowledgement: null,
+  accessKey: "none", support: { level: "verified", evidence: "MDT, 2026-09-29", inferences: [] }, warnings: [], untestedAcknowledgement: null,
   partial, notWritten: partial ? [[0x4100, 12]] : [],
 });
 

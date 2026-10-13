@@ -30,6 +30,10 @@ could identify an installation needs an ADR.
 - **Server:** `GET /api/device-download/report[?downloadId=n]` after the run
   and its cleanup ended: `{report, fileName, summary, issueUrl, mailto}`.
   404 when there is no download (or it was replaced), 409 while it runs.
+- **Web:** the device download tab's **Help verify this device**, after
+  every ended download: **Create report** reads the endpoint above, **Save
+  report** writes the file locally, **Open issue form** / **Send by mail**
+  open the links. The checklist is local only and never sent.
 - **CLI:** `knx device download … --gateway … --confirm … --report <file>`
   writes the file after a run that reached the device, completed or stopped,
   and prints the issue link and the mailbox. No report is written when no

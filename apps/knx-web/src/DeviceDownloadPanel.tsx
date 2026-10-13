@@ -19,6 +19,8 @@ import {
   type GatewayChoice,
 } from "./downloadGateway";
 import { resolveHandoff, type DownloadActivity, type DownloadHandoff, type HandoffOutcome } from "./downloadHandoff";
+import DownloadVerification from "./DownloadVerification";
+import { planWarnings } from "./downloadVerification";
 import { currentGuideStep, downloadGuide, type GuideMissing, type GuideStepId } from "./downloadGuide";
 import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey } from "./i18n";
@@ -300,6 +302,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
     (event): event is Extract<api.DeviceDownloadEvent, { kind: "stepDone" }> =>
       event.kind === "stepDone" && event.observed !== null,
   );
+  const shownWarnings = plan === null ? [] : planWarnings(plan.warnings);
 
   return (
     <section className="device-download-panel">
@@ -453,6 +456,32 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             <dt>{t("deviceDownload.octets")}</dt>
             <dd>{t("deviceDownload.octetsValue", { count: plan.dataOctets })}</dd>
           </dl>
+          {shownWarnings.length > 0 && (
+            <section className="device-download-warnings" aria-label={t("deviceDownload.warnings.title")}>
+              <h4>{t("deviceDownload.warnings.title")}</h4>
+              <p>{t("deviceDownload.warnings.intro")}</p>
+              <ul>
+                {shownWarnings.map((warning, index) => (
+                  <li key={index} data-plan-warning={warning.rule}>
+                    {warning.explanation === null ? <code>{warning.text}</code> : t(warning.explanation)}
+                  </li>
+                ))}
+              </ul>
+              {shownWarnings.some((warning) => warning.explanation !== null) && (
+                <details>
+                  <summary>{t("deviceDownload.warnings.details")}</summary>
+                  <ul>{plan.warnings.map((text, index) => <li key={index}><code>{text}</code></li>)}</ul>
+                </details>
+              )}
+            </section>
+          )}
+          {plan.support.inferences.length > 0 && (
+            <section className="device-download-inferences" aria-label={t("deviceDownload.inferences.title")}>
+              <h4>{t("deviceDownload.inferences.title")}</h4>
+              <p>{t("deviceDownload.inferences.intro")}</p>
+              <ul>{plan.support.inferences.map((text, index) => <li key={index}><code>{text}</code></li>)}</ul>
+            </section>
+          )}
           {plan.partial && (
             <section className="device-download-not-written">
               <p><strong>{t(`deviceDownload.partialScope.${planScope === "complete" ? "both" : planScope}` as const)}</strong></p>
@@ -491,6 +520,9 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             <ol className="device-download-steps">{plan.steps.map((step, index) => <li key={index}>{step}</li>)}</ol>
           </details>
           <p>{t("deviceDownload.backupBeforeWrite")}</p>
+          {plan.support.level === "untested" && (
+            <p className="device-download-plan-hint" data-verify-hint>{t("deviceDownload.verify.planHint")}</p>
+          )}
           {plan.untestedAcknowledgement !== null && (
             <label className="device-download-acknowledgement">
               {t("deviceDownload.untestedPrompt", { phrase: plan.untestedAcknowledgement })}
@@ -566,6 +598,10 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             </table>
           )}
         </section>
+      )}
+      {status && status.status.state !== "running" && (
+        <DownloadVerification key={status.downloadId} downloadId={status.downloadId}
+          completed={status.status.state === "finished" && status.status.written === "yes"} />
       )}
       {consent.dialog}
     </section>

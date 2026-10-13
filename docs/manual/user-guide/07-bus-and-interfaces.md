@@ -444,14 +444,31 @@ that the request names the device it was shown.
 ### Helping to verify a device
 
 A download is **verified** only for application programs someone has downloaded on
-real hardware and reported; today that is one program. After an *untested* download
-you can report how it went, so that the program can be marked verified for everyone.
-The server already builds the report after every download
-(`GET /api/device-download/report`); the tab does not offer it yet, so for now use the
-command line's `--report`
-([step by step](10-command-line.md#helping-to-verify-a-device)). The report holds the
-parameter values written but no project or device name and no address; send it by the
-**Download report** issue form or to **issue@knxbench.com** (not public).
+real hardware and reported; today that is one program. *Untested* only means nobody
+has reported the program yet, and the plan of an untested download says so with a short
+hint. You can change that for everyone who has the same device:
+
+1. Download as usual. Read the plan's **Before you write** box if there is one: it
+   names what to look out for, for example a byte-order warning (`base-image-low-octet-first`)
+   that asks you to check values above 255 afterwards. **Assumptions this plan rests on**
+   lists the rules KNXBench applies where the KNX documents say nothing.
+2. When the download has ended, the tab shows **Help verify this device** with the
+   same steps. Check the device with the list it shows: group addresses, status
+   messages, settings, and the values a warning named. The ticks are only for you.
+3. **Create report**, then **Save report**. The file holds the program, how the
+   download ended and the parameter values written, but no project or device name and
+   no address. Texts you typed into parameters are part of those values.
+4. Send it: **Open issue form** opens GitHub with the program, version and outcome
+   filled in (public; attach the file and answer two questions), or **Send by mail**
+   opens your mail program addressed to **issue@knxbench.com** (not published; attach
+   the file yourself). Nothing is sent automatically.
+5. We check every report. Once it is accepted, a later KNXBench version shows the
+   program as verified ([how reports are reviewed](../../contracts/download-verification-reports.md)).
+
+A download that failed is worth reporting too: the tab offers the report after every
+download that has ended. On the command line the same report comes from `--report`
+([step by step](10-command-line.md#helping-to-verify-a-device)). This needs a source
+build newer than Alpha 10; the screenshots in this manual still show the released tab.
 
 ## Programming an individual address
 

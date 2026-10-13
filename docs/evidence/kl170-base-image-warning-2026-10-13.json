@@ -98,7 +98,7 @@
  },
  "boundaries": [
   "warning only; image, support level, acknowledgement and write unchanged",
-  "web download tab does not show warnings yet (web lock held)",
+  "web download tab: warnings shown since ADR-0121 part B (2026-10-13); at measurement time not shown",
   "no hardware, no bus traffic"
  ],
  "tests": {

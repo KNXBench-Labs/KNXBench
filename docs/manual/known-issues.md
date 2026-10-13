@@ -380,9 +380,9 @@ is the remaining copy defect.
   [the probe](user-guide/10-command-line.md#knx-device-byte-order-probe--help-settle-a-little-endian-device)
 - **Related:** some ABB and Busch-Jaeger programs declare big-endian but their
   product data looks little-endian. Their downloads are allowed and the plan says
-  so with the warning `base-image-low-octet-first` (command line and server; the
-  web download tab does not show it yet). Check multi-octet values after such a
-  download.
+  so with the warning `base-image-low-octet-first` (command line, server and the
+  download tab's **Before you write** box). Check multi-octet values after such a
+  download, and report what you saw from **Help verify this device**.
 
 ### Stopping the server is not a safe cancellation of a device write
 

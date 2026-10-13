@@ -4210,3 +4210,19 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 /* Notes: the target catalogue could not be loaded; the editor stays usable. */
 .notes-targets-failed { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-bottom: 0.75rem; }
 .notes-targets-failed .field-error { flex: 1 1 18rem; margin: 0; overflow-wrap: anywhere; }
+
+/* KL-43: category caps inherit the global reference styles and OS media guards. */
+:root:not([data-motion-level="off"])[data-motion-toasts="subtle"] .toast--error,
+:root:not([data-motion-level="off"])[data-motion-toasts="subtle"] .toast--fun,
+:root:not([data-motion-level="off"])[data-motion-toasts="subtle"] .toast--update,
+:root:not([data-motion-level="off"])[data-motion-achievements="subtle"] .toast--achievement { --knx-transition-duration: 120ms; }
+:root[data-motion-toasts="off"] .toast--error,
+:root[data-motion-toasts="off"] .toast--fun,
+:root[data-motion-toasts="off"] .toast--update,
+:root[data-motion-achievements="off"] .toast--achievement { --knx-transition-duration: 0ms; }
+:root[data-motion-toasts="off"] .toast--error button:hover,
+:root[data-motion-toasts="off"] .toast--fun button:hover,
+:root[data-motion-toasts="off"] .toast--update button:hover,
+:root[data-motion-achievements="off"] .toast--achievement button:hover { transform: none; }
+.motion-category-settings { border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); margin: 1rem 0 0; padding: 0.75rem; min-width: 0; }
+.motion-category-settings legend { color: var(--knx-foreground); font-size: 0.9rem; padding: 0 0.25rem; }

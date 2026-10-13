@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 10:58
+- **Completed:** Parked-work adoption, last docs item (docs-only, no web lock). The five stale-claim corrections of 2026-10-12 (KNOWN_LIMITATIONS schema-23, selective import v14, PDB-9; DATA_MODEL instruction editor; OPEN_WORK/ROADMAP baseline-audit wording) re-checked against main `5c3db9b1`: all still hold (selective model v14 = `SELECTIVE_MODEL_VERSION` = both `CURRENT_SCHEMA_VERSION`). The triage note's ADR-index observation was bigger than recorded: 24 ADR files had no index row; all added (118 files = 118 rows). ADR-0100/0101/0106/0107/0110/0111/0112 still read "local/unpublished/pending" although each feature commit is an ancestor of main: each got a dated "Status update" line with commit and integration record, original line kept. Triage note and OPEN_WORK updated; the parked-adoption track has nothing left.
+- **Pending/Next Steps:** Web lock free; queue: claude-issues-8-9-10 next, then claude-kl170-tester-verification (part B). Kept on purpose: local branches `feature/ux-feedback-20261010`, `fix/native-evidence-20261011`, `feature/functions-sites-20261009`, and the foreign stash `stash@{0}`.
+- **Notes for Codex oder Claude:** New ADRs: add the index row in the same commit (the index silently fell 24 rows behind). Older ADRs' own status lines may still say "local"; check ancestry before trusting them.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 10:55
 - **Completed:** Owner go: parked worktrees `ux-feedback-20261010` and `native-evidence-20261011` removed (no web lock needed: no apps/knx-web edits). Both were clean (no tracked changes, no processes). Their ignored work files (Codex logs, the ux-feedback private evidence dir, generated projection bindings) archived first in `KNXBench.backups/2026-10-13-parked-adoption-retire/` (per tree: HEAD, BRANCH, empty tracked.patch, status, ignored-work tar + sha256; MANIFEST ok, 24 MB). Three Codex ux-feedback logs that existed only there were added to main verbatim (`7adfec2a`, cmp-checked after push). Local branches `feature/ux-feedback-20261010` (`88a776c2`) and `fix/native-evidence-20261011` (`b76ee907`) kept so the original Codex history stays reachable; neither exists on the remote. Triage note, OPEN_WORK and the port log's addendum record it.
 - **Pending/Next Steps:** Parked-work adoption: docs check of the five stale-claim corrections (docs-only). Web lock free; queue unchanged (claude-issues-8-9-10 next). The foreign stash `stash@{0}` (functions-sites) was left alone.

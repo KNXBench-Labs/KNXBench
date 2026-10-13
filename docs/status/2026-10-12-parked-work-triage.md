@@ -375,5 +375,15 @@ refer to `9152877c`:
 
 - The ADR index (`docs/adr/README.md`) on main has no rows for 0110–0112. Those
   files exist; the tracks that own them should add the rows. Not changed here.
+  **Resolved 2026-10-13:** the gap was 24 rows (0035–0037, 0047, 0049, 0052,
+  0055–0058, 0060, 0061, 0092, 0098, 0100–0102, 0106–0112), all added from each
+  ADR's own heading and status. Seven ADRs (0100, 0101, 0106, 0107, 0110, 0111,
+  0112) still called themselves local, unpublished or pending although their
+  feature commits are ancestors of main; each got a dated status-update line
+  citing its commit and integration record, with the original line kept.
+- **Stale-claims re-check 2026-10-13** (after the native-evidence and ux-feedback
+  merges touched the same pages): all five corrections above still hold on main
+  `5c3db9b1`. The selective importer's admitted model is v14, matching
+  `SELECTIVE_MODEL_VERSION` and both `CURRENT_SCHEMA_VERSION` constants.
 - Both committed packages and every adoption touch `apps/knx-web`. Integrate
   them one at a time under the web lock, after the current holder releases it.

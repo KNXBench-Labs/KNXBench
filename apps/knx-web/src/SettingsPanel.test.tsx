@@ -962,3 +962,26 @@ describe("styles.css's disabled-field treatment", () => {
     expect([...declared]).toContain("cursor");
   });
 });
+
+it("keeps three independent category preferences after the settings panel reopens", async () => {
+  let mounted = await renderPanel();
+  for (const [category, value, key] of [["toasts", "off", "motionToasts"], ["achievements", "subtle", "motionAchievements"], ["flow", "off", "motionFlow"]]) {
+    const select = host!.querySelector<HTMLSelectElement>(`[data-motion-category="${category}"]`)!;
+    expect(select).not.toBeNull();
+    await act(async () => { select.value = value; select.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(getSetting(key)).toBe(value);
+    expect(document.documentElement.getAttribute(`data-motion-${category}`)).toBe(value);
+  }
+  await act(async () => mounted.root.unmount()); host!.remove();
+  mounted = await renderPanel();
+  expect(host!.querySelector<HTMLSelectElement>('[data-motion-category="toasts"]')!.value).toBe("off");
+  expect(host!.querySelector<HTMLSelectElement>('[data-motion-category="achievements"]')!.value).toBe("subtle");
+  expect(host!.querySelector<HTMLSelectElement>('[data-motion-category="flow"]')!.value).toBe("off");
+  const global = host!.querySelector<HTMLSelectElement>('[aria-label="Motion level"]')!;
+  // The existing control label is taken from the actual component/cataloque below.
+  expect(global).not.toBeNull();
+  await act(async () => { global.value = "off"; global.dispatchEvent(new Event("change", { bubbles: true })); });
+  expect(document.documentElement.getAttribute("data-motion-achievements")).toBe("off");
+  expect(getSetting("motionAchievements")).toBe("subtle");
+  await act(async () => mounted.root.unmount());
+});

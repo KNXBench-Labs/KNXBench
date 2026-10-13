@@ -113,3 +113,17 @@ describe("loadMotionStyle / saveMotionStyle", () => {
     expect(loadMotionStyle(fakeStorage({ "motionStyle": "neon" }))).toBe("apple");
   });
 });
+
+it("the actual pre-paint bootstrap matches every category priority and inherited old cache", async () => {
+  const { effectiveMotionLevel, MOTION_CATEGORIES } = await import("./motion");
+  const script = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../index.html"), "utf8").match(/<script>([\s\S]*?)<\/script>/)![1];
+  for (const level of ["off", "subtle", "standard"]) for (const category of [undefined, "off", "subtle", "future"]) {
+    const attributes: Record<string, string> = {};
+    runInNewContext(script, {
+      localStorage: { getItem: () => JSON.stringify({ settings: { motionLevel: level, motionToasts: category, motionAchievements: category, motionFlow: category } }) },
+      matchMedia: () => ({ matches: false }),
+      document: { documentElement: { dataset: {}, setAttribute: (key: string, value: string) => { attributes[key] = value; } } },
+    });
+    for (const name of MOTION_CATEGORIES) expect(attributes[`data-motion-${name}`]).toBe(effectiveMotionLevel(level, category ?? "inherit"));
+  }
+});

@@ -147,3 +147,39 @@ test("production synthetic 1000-object device records visible-operation timings"
     objects: 1000, renderMs, flatMs, filterMs, sortMs }, null, 2));
   expect(state.unexpected).toEqual([]);
 });
+
+// Issue #16: collapsing a channel hides its open object rows; reopening shows them again.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}px: a collapsed channel hides its open editor and keeps it for reopening`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language); await openProject(page, language); await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+    const panel = page.locator(".com-table-panel");
+    const key = await panel.locator('tr[data-object-id="1"]').getAttribute("data-channel-key");
+    const header = panel.locator(`tr.com-object-channel[data-channel-key="${key}"] .com-object-channel-summary`);
+    const siblings = panel.locator(`tr.com-object-summary[data-channel-key="${key}"]`);
+    await header.click(); await expect(header).toHaveAttribute("aria-expanded", "true");
+    const total = await siblings.count();
+    expect(total, "the channel holds the opened object").toBeGreaterThan(0);
+    await panel.locator('[data-object-id="1"] summary').click();
+    const editor = panel.locator('[data-editor-id="1"] .dpt-field select');
+    await expect(editor).toBeVisible();
+    await editor.focus(); await editor.selectOption("DPST-9-2");
+    const handle = await editor.elementHandle();
+    // The header click blurs the select first: the existing blur-save runs once.
+    await header.click(); await expect(header).toHaveAttribute("aria-expanded", "false");
+    await expect(panel.locator('tr[data-object-id="1"]')).toBeHidden();
+    await expect(panel.locator('tr[data-editor-id="1"]')).toBeHidden();
+    await expect(siblings.locator("visible=true")).toHaveCount(0);
+    expect(await handle!.evaluate((node) => node.isConnected), "editor stays mounted while hidden").toBe(true);
+    if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-collapse-${language}-${width}.png`) });
+    await header.click(); await expect(header).toHaveAttribute("aria-expanded", "true");
+    await expect(editor).toBeVisible();
+    await expect(editor).toHaveValue("DPST-9-2");
+    expect(await editor.evaluate((node, kept) => node === kept, handle), "the same editor returns").toBe(true);
+    await expect(siblings.locator("visible=true")).toHaveCount(total);
+    expect(state.requests.filter((r) => r === "POST /api/com-object-dpt")).toHaveLength(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(state.unexpected).toEqual([]);
+  });
+}

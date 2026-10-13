@@ -74,8 +74,16 @@ view/channel changes and same-device detail refreshes. Dirty DPT/description
 drafts are not overwritten by a refreshed committed value.
 
 Open nonmatching objects remain visibly marked editing exceptions until closed;
-they never inflate match counts. Open editors also remain visible when their
-channel is collapsed. Removing a real object unmounts its editor, prunes its open
+they never inflate match counts. **Amended 2026-10-13 (issue #16, Goal B13):** an
+explicitly collapsed channel hides all of its child summary and editor rows,
+open editors and filter editing exceptions included; the earlier rule that open
+editors stay visible under a collapsed channel is withdrawn, because the header
+then said "collapsed" while a child was still on screen. Hiding is not
+unmounting: the keyed editors, their drafts, expansion state, pending requests
+and eventual results/refusals survive and reappear when the channel is expanded
+again; collapsing never cancels, restarts or repeats a request. Inside an
+expanded channel and in the flat view, the editing exceptions are unchanged.
+Removing a real object unmounts its editor, prunes its open
 ID and announces the removal. Device changes reset the keyed table; the central
 workspace is additionally keyed by project load epoch. Leaving the editor resets
 all transient state. Tabs/refresh of the same editor retain view state; there is

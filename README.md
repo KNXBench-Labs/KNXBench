@@ -23,6 +23,7 @@
   <a href="https://hub.docker.com/r/knxbench/knxbench-server">Docker Hub</a> ·
   <a href="docs/manual/README.md">Manual</a> ·
   <a href="docs/ProjectStats.md">Project statistics</a> ·
+  <a href="docs/community/HALL_OF_FAME.md">Bug Hunters’ Hall of Fame</a> ·
   <a href="https://www.knxbench.com/story/">How this happened</a>
 </p>
 
@@ -307,6 +308,25 @@ KNXBench had its first working alpha. In hindsight: I must have been drunk.
 
 The whole story, reluctantly narrated, is at
 [knxbench.com/story](https://www.knxbench.com/story/).
+
+## Bug Hunters’ Hall of Fame
+
+**Our field-test crew earns the medals. We just fix what they find.** Every external
+issue author and replier gets a place here, from their very first contribution.
+Five XP per issue, one per reply and a one-time ten-XP bonus for a completed report.
+Sixteen KNX-flavoured titles; ten reports earn the **Golden Bus Probe**. No actual
+bus probe is shipped — this one is certified for Markdown only.
+
+<!-- HALL-OF-FAME:START -->
+| Place | Bug hunter | Issues | Replies | Resolved | XP | Rank & title | Medal |
+| ---: | --- | ---: | ---: | ---: | ---: | --- | --- |
+| 1 | [@thengsty](https://github.com/thengsty) | 15 | 12 | 6 | **147** | Commissioning Chaos Tamer | 🏅 Golden Bus Probe |
+| 2 | [@hagbardZ](https://github.com/hagbardZ) | 1 | 3 | 1 | **18** | Bus Bug Scout | — |
+
+*Snapshot: 2026-10-13T20:50:13Z. Maintainers and bots sit this one out.*
+<!-- HALL-OF-FAME:END -->
+
+[All ranks, scoring rules and the full honour roll](docs/community/HALL_OF_FAME.md).
 
 ## Contributing & support
 

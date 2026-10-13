@@ -1,0 +1,69 @@
+name: Community Hall of Fame
+
+on:
+  issues:
+    types: [opened, closed, reopened, transferred]
+  issue_comment:
+    types: [created, edited, deleted]
+  schedule:
+    - cron: "19 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+# GitHub keeps only one pending run. Every run reconciles *all* pending
+# completion awards, so a superseded close event is recovered on the next run.
+concurrency:
+  group: community-hall-of-fame
+  cancel-in-progress: false
+
+jobs:
+  honour-the-testers:
+    if: >-
+      github.repository == 'KNXBench-Labs/KNXBench' &&
+      (github.event_name != 'issue_comment' ||
+       (!github.event.issue.pull_request && github.event.comment.user.type != 'Bot'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      # Only trusted default-branch code runs, never a pull-request head or
+      # user-supplied issue text. Public handles are validated inside Python.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - name: Verify counting and notification contracts
+        run: python3 -m unittest discover -s tools/tests -p test_community_hall_of_fame.py -v
+      - name: Reconcile public counters and completion medals
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'KNXBench'
+          git config user.email 'github@knxbench.com'
+          for attempt in 1 2 3; do
+            # This is a disposable Actions checkout, not a developer worktree.
+            git fetch origin "$DEFAULT_BRANCH"
+            git reset --hard "origin/$DEFAULT_BRANCH"
+            python3 -m unittest discover -s tools/tests -p test_community_hall_of_fame.py
+            python3 tools/community_hall_of_fame.py --repository "$REPOSITORY" --notify
+            python3 tools/check_documentation.py --root .
+            git add -- README.md docs/community/HALL_OF_FAME.md docs/community/hall-of-fame.json
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git diff --cached --check
+            git commit -m 'docs: promote the bug hunters, not the bugs'
+            if git push origin "HEAD:$DEFAULT_BRANCH"; then
+              git fetch origin "$DEFAULT_BRANCH"
+              git merge-base --is-ancestor HEAD "origin/$DEFAULT_BRANCH"
+              exit 0
+            fi
+          done
+          printf '%s\n' 'Could not publish the scoreboard after three concurrent-update retries.' >&2
+          exit 1

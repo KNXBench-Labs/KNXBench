@@ -4198,3 +4198,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   :root[data-presentation="lcars"] .workbench-toolbar { border-inline-start-width: 0; }
   :root[data-presentation="lcars"] .workbench-pane-left { border-inline-start-width: 0; }
 }
+
+/* Notes: the target catalogue could not be loaded; the editor stays usable. */
+.notes-targets-failed { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-bottom: 0.75rem; }
+.notes-targets-failed .field-error { flex: 1 1 18rem; margin: 0; overflow-wrap: anywhere; }

@@ -424,6 +424,7 @@ async fn every_note_route_is_guarded_and_an_authenticated_cookie_can_confirm_an_
     let before = state.project.lock().unwrap().clone();
     for (method, path) in [
         ("GET", "/api/project/notes"),
+        ("GET", "/api/project/notes/targets"),
         ("POST", "/api/project/notes/preview"),
         ("POST", "/api/project/notes/apply"),
         ("POST", "/api/project/notes/cancel"),
@@ -955,4 +956,101 @@ async fn sqlite_lock_and_history_budget_refuse_without_publishing_or_changing_sa
         assert_eq!(Some(final_state.project), before);
         assert_eq!(final_state.opaque, original);
     }
+}
+
+#[tokio::test]
+async fn target_catalogue_offers_objects_by_stable_id_with_the_snapshot_identity() {
+    let (_dir, state, app, device) = fixture("original").await;
+    {
+        let mut lock = state.project.lock().unwrap();
+        let project = lock.as_mut().unwrap();
+        let id = knx_core::ComObjectInstanceId(4242);
+        project
+            .devices
+            .get_mut(knx_core::DeviceId(device))
+            .unwrap()
+            .com_objects
+            .push(id);
+        project
+            .devices
+            .insert_com_object(knx_core::ComObjectInstance {
+                id,
+                source: knx_core::SourceRef {
+                    path: "synthetic".into(),
+                    ets_id: "synthetic".into(),
+                },
+                device: knx_core::DeviceId(device),
+                number: 7,
+                text: knx_core::Override::Value(knx_core::Resolved {
+                    value: knx_core::Text::Literal("Synthetic switch".into()),
+                    layer: knx_core::Layer::Instance,
+                }),
+                description: knx_core::Override::Absent,
+                dpt: knx_core::Override::Absent,
+                flags: knx_core::ResolvedFlags::none(),
+                size: None,
+                is_active: true,
+                links: vec![],
+                module_instance: None,
+            });
+    }
+    let before = state.project.lock().unwrap().clone();
+    let notes = read_notes(&app).await;
+    let (status, view) = request(&app, "GET", "/api/project/notes/targets", Value::Null).await;
+    assert_eq!(status, StatusCode::OK, "{view}");
+    for key in [
+        "serverIncarnation",
+        "projectIncarnation",
+        "snapshotRevision",
+    ] {
+        assert_eq!(view[key], notes[key], "{key} must match the notes read");
+    }
+    let targets = view["targets"].as_array().unwrap();
+    assert!(
+        targets.contains(&json!({
+            "target": {"kind": "device", "id": device}, "owner": [], "parts": ["Synthetic"]
+        })),
+        "{view}"
+    );
+    assert!(
+        targets.contains(&json!({
+            "target": {"kind": "comObject", "id": 4242},
+            "owner": ["Synthetic"], "parts": ["7", "Synthetic switch"]
+        })),
+        "{view}"
+    );
+    assert!(
+        targets
+            .iter()
+            .all(|entry| entry["target"]["kind"] != "project"),
+        "the editor owns the project choice"
+    );
+    assert_eq!(
+        state.project.lock().unwrap().clone(),
+        before,
+        "reading targets is read-only"
+    );
+
+    // The offered object is accepted by a preview; nothing is applied.
+    let action = json!({"kind":"create","position":0,"draft":{
+        "target":{"kind":"comObject","id":4242},"title":"Object note","body":"",
+        "includeInDocumentation":false}});
+    let (status, plan) = request(
+        &app,
+        "POST",
+        "/api/project/notes/preview",
+        preview_payload(&notes, action),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{plan}");
+    assert_eq!(state.project.lock().unwrap().clone(), before);
+}
+
+#[tokio::test]
+async fn target_catalogue_without_a_project_is_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
+    let app = knx_server::app(state, None);
+    let (status, _) = request(&app, "GET", "/api/project/notes/targets", Value::Null).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
 }

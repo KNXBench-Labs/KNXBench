@@ -78,7 +78,8 @@ explicitly to the editor context and refuses incomplete identity (no editor, no
 read). Target choices are installations, areas, lines, building parts, devices,
 group ranges and group addresses by projection domain ID, deduplicated, with
 ambiguous IDs withheld and equal labels disambiguated by `#id`; communication
-objects are not offered because the tree does not project all of them. After a
+objects are not offered because the tree does not project all of them
+(superseded by the follow-up section below). After a
 confirmed Apply the host re-reads `GET /api/project` through the workbench's own
 snapshot publication; a failed re-read stays "confirmed, refresh failed".
 The view mounts on first visit, stays mounted (hidden) for the same
@@ -90,3 +91,33 @@ the global control height on its opt-in checkbox. Evidence: App/host/editor unit
 tests, 11 intercepted production-build Chromium cases (EN/DE, Porcelain/Graphite,
 1440/400) and one loopback-only real-server smoke; see
 [IMPLEMENTATION_STATUS](../IMPLEMENTATION_STATUS.md). Self-review only.
+
+## Follow-ups: service target catalogue, unload guard, review names (12 October 2026)
+
+- **Targets come from the service.** `knx_app::note_targets` builds the catalogue
+  from the domain model, including communication objects, and keeps only targets
+  `ProjectNoteTarget::validate` would accept (installation-scoped kinds counted in
+  one pass: 20 000 group addresses 9 ms instead of 266 ms, release build).
+  `GET /api/project/notes/targets` serves it with the snapshot identity
+  ([HTTP](project-note-http.md#wire-and-authority)). `notesHost.ts` no longer
+  walks the tree; it only labels (`Kind: parts · owner`), withholds an ID listed
+  twice with different labels, and appends `#id` to equal labels.
+- **Host lifecycle.** `NotesWorkspace` reads the catalogue once per
+  server/project/revision (aborting the previous read) and mounts the editor only
+  after the first answer, so stored targets are never shown as missing merely
+  because the list is still loading. A catalogue of another server/project is
+  dropped; a failed read shows an alert with **Load targets again** and keeps the
+  editor usable with the previous (initially empty) choices.
+- **Unload guard.** `draftUnloadGuard.ts` asks the browser to confirm
+  `beforeunload` while a note or instruction draft exists (`preventDefault` plus a
+  truthy legacy `returnValue`), reading the draft flags at unload time. App installs
+  it only outside the desktop shell, whose close is guarded by the draft dialog and
+  ends with `destroy()`.
+- **Review names.** The review shows *Create/Change/Remove/Move note* and *Yes/No*
+  from the feature-local EN/DE copy instead of wire values.
+
+Evidence: service 5 tests and 13 notes HTTP tests; Vitest host/editor/client/App
+tests (written first, red for the named reasons); production-preview Chromium notes
+suite including an object target and a real `beforeunload` dialog; mutants
+(guard disabled; guard installed on desktop; raw action names) fail by name.
+Self-review only.

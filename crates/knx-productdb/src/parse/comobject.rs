@@ -46,6 +46,8 @@ pub const COM_OBJECT_REF_ATTRS: &[&str] = &[
     "CommunicationFlag",
     "ReadOnInitFlag",
     "VisibleDescription",
+    // ADR-0126: the text parameter a positional `{{0}}` in the text reads.
+    "TextParameterRefId",
 ];
 
 fn parse_i64(v: Option<&str>) -> Option<i64> {
@@ -94,8 +96,8 @@ pub fn insert_com_object_ref(
         "INSERT INTO com_object_ref
          (program_id, id, com_object_id, tag, text, function_text, visible_description,
           object_size, priority, dpt_list, read_flag, write_flag, transmit_flag,
-          update_flag, communication_flag, read_on_init_flag)
-         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16)",
+          update_flag, communication_flag, read_on_init_flag, text_parameter_ref_id)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)",
         params![
             program_id,
             a.get("Id"),
@@ -113,6 +115,7 @@ pub fn insert_com_object_ref(
             a.get("UpdateFlag"),
             a.get("CommunicationFlag"),
             a.get("ReadOnInitFlag"),
+            a.get("TextParameterRefId"),
         ],
     )?;
     Ok(())

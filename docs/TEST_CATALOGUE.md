@@ -197,6 +197,7 @@ A plan is not a permission slip.
 | **[Offline preparation and evidence grades](../crates/knx-app/src/device_download.rs)** | Checks device preparation rejects ambiguity and keeps verified evidence separate from untested plans. | Rust / offline or loopback |
 | **[Durable commissioning activity](../crates/knx-app/src/commissioning_activity.rs)** | Checks recorded outcomes survive interruptions without replacing witnessed results or inventing completion facts. | Rust / offline or loopback |
 | **[Private download and readiness regressions](../crates/knx-app/tests/download_coverage_corpus.rs)** | Checks private offline plans, coverage and instance flags against explicitly selected fixture expectations. | Rust; explicit private cases¹ |
+| **[Tester download reports](../crates/knx-app/src/download_report.rs)** | Checks reports carry program, outcome and values but never installation names or addresses. | Rust / offline or loopback |
 
 <details>
 <summary>Source modules for this category</summary>
@@ -211,6 +212,7 @@ A plan is not a permission slip.
 - **Offline preparation and evidence grades:** [device_download.rs](../crates/knx-app/src/device_download.rs) · [download_support.rs](../crates/knx-app/src/download_support.rs) · [project_readiness.rs](../crates/knx-app/src/project_readiness.rs) · [serial_number.rs](../crates/knx-app/src/serial_number.rs) · [secure_capable_not_activated.rs](../crates/knx-app/tests/secure_capable_not_activated.rs)
 - **Durable commissioning activity:** [commissioning_activity.rs](../crates/knx-app/src/commissioning_activity.rs) · [commissioning_activity.rs](../crates/knx-app/tests/commissioning_activity.rs)
 - **Private download and readiness regressions:** [download_coverage_corpus.rs](../crates/knx-app/tests/download_coverage_corpus.rs) · [house_instance_flags.rs](../crates/knx-app/tests/house_instance_flags.rs) · [house_readiness.rs](../crates/knx-app/tests/house_readiness.rs) · [legacy_download_oracle.rs](../crates/knx-app/tests/legacy_download_oracle.rs)
+- **Tester download reports:** [download_report.rs](../crates/knx-app/src/download_report.rs) · [download-report.yml](../.github/ISSUE_TEMPLATE/download-report.yml)
 
 </details>
 

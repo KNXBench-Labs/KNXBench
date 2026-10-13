@@ -1,0 +1,75 @@
+name: Download report / Download-Bericht
+description: English / Deutsch. You downloaded a device with KNXBench and checked it. Tell us whether it works, so the program can be marked verified.
+title: "[Download] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Thank you for testing! A few clicks are enough.** **Danke fürs Testen! Ein paar Klicks reichen.**
+        KNXBench filled in the first fields for you. Attach the report file it saved (`knxbench-download-report-….json`) below.
+        KNXBench hat die ersten Felder ausgefüllt. Hänge unten die gespeicherte Berichtsdatei (`knxbench-download-report-….json`) an.
+        **This issue is public, and attachments are public as soon as you upload them.** The report holds the parameter values that were written (no project or device name, no address). Texts you typed into parameters are among them. If you prefer, mail the report to **issue@knxbench.com** instead; it is not published.
+        **Dieses Issue ist öffentlich, Anhänge schon beim Hochladen.** Der Bericht enthält die geschriebenen Parameterwerte (keinen Projekt- oder Gerätenamen, keine Adresse), auch Texte, die du in Parameter eingegeben hast. Alternativ den Bericht an **issue@knxbench.com** schicken; er wird nicht veröffentlicht.
+        A report starts a review; it does not mark the program verified by itself. Ein Bericht startet eine Prüfung; er gibt das Programm nicht selbst frei.
+  - type: input
+    id: program
+    attributes:
+      label: Application program / Applikationsprogramm
+      description: Filled in by KNXBench. Von KNXBench ausgefüllt.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: KNXBench version / KNXBench-Version
+      description: Filled in by KNXBench. Von KNXBench ausgefüllt.
+    validations:
+      required: false
+  - type: input
+    id: outcome
+    attributes:
+      label: How the download ended / Wie der Download endete
+      description: Filled in by KNXBench, e.g. "completed, written yes, restart acknowledged". Von KNXBench ausgefüllt.
+    validations:
+      required: false
+  - type: dropdown
+    id: works
+    attributes:
+      label: Does the device work as configured? / Funktioniert das Gerät wie konfiguriert?
+      options:
+        - "Yes, everything I checked works / Ja, alles Geprüfte funktioniert"
+        - "Partly, see below / Teilweise, siehe unten"
+        - "No, see below / Nein, siehe unten"
+        - "The download failed / Der Download ist fehlgeschlagen"
+    validations:
+      required: true
+  - type: textarea
+    id: checked
+    attributes:
+      label: What did you check? / Was hast du geprüft?
+      description: |
+        A few words per item, e.g. "switching via 1/1/1 works", "staircase timer 3 min ok", "status sent on change". Especially numbers that need more than one byte: times, thresholds, brightness levels. If a plan warning said "base-image-low-octet-first", those are the values to check.
+        Ein paar Worte je Punkt, z. B. „Schalten über 1/1/1 geht“, „Treppenhauszeit 3 min passt“, „Status wird gesendet“. Vor allem Werte über ein Byte: Zeiten, Schwellen, Helligkeiten. Bei der Warnung „base-image-low-octet-first“ genau diese prüfen.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Report file / Berichtsdatei
+      description: Attach knxbench-download-report-….json here and wait for the upload link. Datei hier anhängen und Upload-Link abwarten. Or write "sent by mail" / Oder „per Mail geschickt“.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else? (optional) / Sonst noch etwas? (optional)
+      description: Device model if you know it, what failed, error messages. Gerätetyp, was nicht ging, Fehlermeldungen.
+    validations:
+      required: false
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Before posting / Vor dem Absenden
+      options:
+        - label: I looked at the report and may publish it / Ich habe den Bericht angesehen und darf ihn veröffentlichen.
+          required: true

@@ -203,6 +203,13 @@ fn map_types(
             "1" => ("Number", size, None, Some("unsignedInt")),
             "2" => ("Number", size, None, Some("signedInt")),
             "4" => ("Restriction", size, Some("Value"), None),
+            // `[V]` KL-128: ETS4's conversion of the Siemens Nov 2016
+            // database writes atomic type 3 (`string`) as `TypeText` of the
+            // type's size (24/24 types) and type 5 (`long enum`) as
+            // `TypeRestriction Base="BinaryValue"` of its size (22/22),
+            // neither with bounds (docs/research/legacy-vd-mapping.md).
+            "3" => ("Text", size, None, None),
+            "5" => ("Restriction", size, Some("BinaryValue"), None),
             _ => {
                 diagnostics.push(MappingDiagnostic::UnknownAtomicType {
                     parameter_type: tid,
@@ -238,9 +245,20 @@ fn map_types(
     let mut values: BTreeMap<String, Vec<Row>> = BTreeMap::new();
     for r in rows(document, "parameter_list_of_values") {
         if let Some(tid) = r.get("PARAMETER_TYPE_ID") {
-            if types.get(&tid).is_some_and(|(a, _)| a == "4") {
+            if types.get(&tid).is_some_and(|(a, _)| a == "4" || a == "5") {
                 values.entry(tid).or_default().push(r);
             }
+        }
+    }
+    for (tid, (atomic, size)) in &types {
+        if atomic == "5" {
+            let list = values.get(tid).map(Vec::as_slice).unwrap_or_default();
+            let inconsistent = list.iter().filter(|r| !binary_value_fits(r, *size)).count();
+            diagnostics.push(MappingDiagnostic::BinaryValuesNotModeled {
+                parameter_type: tid.clone(),
+                values: list.len(),
+                inconsistent,
+            });
         }
     }
     for (tid, mut list) in values {
@@ -275,6 +293,20 @@ fn map_types(
         }
     }
     types
+}
+
+/// Whether a `long enum` row's `BINARY_VALUE` is hex whose length is its
+/// `BINARY_VALUE_LENGTH` and fills the type's size, as in all 87 measured
+/// values of the ETS4 oracle.
+fn binary_value_fits(r: &Row, size_in_bit: Option<i64>) -> bool {
+    let hex = r.get("BINARY_VALUE").unwrap_or_default();
+    let hex = hex.trim();
+    let octets = (hex.len() / 2) as i64;
+    !hex.is_empty()
+        && hex.len().is_multiple_of(2)
+        && hex.bytes().all(|b| b.is_ascii_hexdigit())
+        && r.int("BINARY_VALUE_LENGTH") == Some(octets)
+        && size_in_bit == Some(octets * 8)
 }
 
 struct PlacedParameter {
@@ -342,7 +374,14 @@ fn map_parameters(
             bit: r.int("PARAMETER_BITOFFSET").unwrap_or(0),
             size: r.int("PARAMETER_SIZE").or(*type_size),
             access: mapped_access,
-            default: r.text("PARAMETER_DEFAULT_LONG"),
+            // `[V]` KL-128: a string parameter's value is its
+            // `PARAMETER_DEFAULT_STRING`, verbatim (1,372/1,372 in the ETS4
+            // oracle); every other type's is `PARAMETER_DEFAULT_LONG`.
+            default: if atomic == "3" {
+                r.text("PARAMETER_DEFAULT_STRING")
+            } else {
+                r.text("PARAMETER_DEFAULT_LONG")
+            },
             text: r.text("PARAMETER_DESCRIPTION"),
             parent: r.get("PAR_PARAMETER_ID"),
             parent_value: r.get("PARENT_PARM_VALUE"),

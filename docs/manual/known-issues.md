@@ -231,9 +231,10 @@ is the remaining copy defect.
   detector N000520 the legacy program writes one hidden threshold
   (`4196h`) as `0` where ETS writes nothing and the device keeps `1000`.
   Siemens `07B0h` programs (merged procedures) stay refused. No mapped
-  legacy DPT codes. Parameters
-  of the legacy `string` and `long enum` types (1,515 in the measured VD5)
-  are reported, not shown. A large VD5 takes 20–40 s and over 1 GiB of
+  legacy DPT codes. Since 13 October 2026 the legacy `string` and
+  `long enum` parameters are shown and editable like ETS4's own conversion
+  of them; a long enum's binary values are only kept in the stored file,
+  which matters only for a download no legacy program offers. A large VD5 takes 20–40 s and over 1 GiB of
   memory to import. (Untyped `TypeNone` spacers are drawn as headings or blank
   space since 2026-10-09, not as fields.)
 - **Privacy:** the optional remembered password is one plaintext file with

@@ -433,10 +433,9 @@ fn the_siemens_vd5_programs_yield_the_code_of_their_ets4_conversion() {
          parameters have no legacy counterpart (unmapped types)",
         pairs.len()
     );
-    assert_eq!(
-        unmapped_count, 4,
-        "string parameters of 24774, 24815 and 24858"
-    );
+    // Until KL-128 (2026-10-13) four string parameters of 24774, 24815 and
+    // 24858 had no legacy counterpart; now they are placed and compared.
+    assert_eq!(unmapped_count, 0, "every placed ETS parameter is mapped");
     assert_eq!(pairs.len(), 9, "the measured pairs");
     assert!(wrong.is_empty(), "{wrong:#?}");
 }

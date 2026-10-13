@@ -103,3 +103,33 @@ saw (a single server process, one project at a time, log never
 persisted), but nothing stopped it from becoming one over a very long
 session.
 <!-- END retained catalogue record -->
+
+## Import projection grouped, 13 October 2026 (issue #7)
+
+A real ETS 5.7 project imported on Alpha 10 reported 2840 warnings, almost all
+of them one `import:unsupported` line per retained manufacturer file
+(`Baggages/…`), each also listed as an `import:opaque` Info line. The import
+writes errors and unknown constructs first, so the 1000-entry cap evicted
+exactly the findings worth reading. A private schema-23 corpus project showed
+the same shape: 4382 projected entries, 1268 counted warnings.
+
+`session_log::from_import_report` now groups two repetitive kinds: opaque
+entries that share kind and reason, and per-file retained-payload notices that
+share one wording (`knx_app::retained_payload_label`, recognised next to the
+code that writes them). A group of one keeps its single-entry shape; a larger
+group is one entry whose `detail` lists every member, one per line (opaque
+members with size and SHA-256), so the log itself loses nothing. Raw-text
+candidates and every other unsupported capability stay individual. The import
+report is unchanged and still holds one row per file.
+
+`knx_app::import_finding_counts` is the one counting rule for a fresh import
+and for a reopened project's historical report: a retained-payload wording
+counts once. The private project above now projects 124 entries with 108
+warnings, about a hundred of them `UnmappedObjectOverride` mapping warnings
+that the cap used to evict. Reopening a project saved earlier recounts its
+stored report with the same rule, so its warning count drops the same way.
+
+Still open: the cap evicts by age, not by severity, so an import with more
+than about 1000 *genuine* findings still loses the oldest ones (the pinned
+drop notice says how many). The complete report remains available from the
+Overview's import-report download.

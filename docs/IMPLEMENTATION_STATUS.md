@@ -20,6 +20,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--issue-7-retained-files-stop-drowning-the-import-findings"></a>
+- [2026-10-13 — Issue #7: retained files stop drowning the import findings](history/implementation/2026-W42.md#2026-10-13--issue-7-retained-files-stop-drowning-the-import-findings)
 <a id="2026-10-13--alpha-11-published-and-downloaded-artifacts-verified"></a>
 - [2026-10-13 — Alpha 11 published and downloaded artifacts verified](history/implementation/2026-W42.md#2026-10-13--alpha-11-published-and-downloaded-artifacts-verified)
 <a id="2026-10-13--plug-in-data-pair-test-a-plug-in-edit-touches-only-the-plug-ins-bytes"></a>

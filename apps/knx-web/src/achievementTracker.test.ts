@@ -23,9 +23,10 @@ function httpError(status: number): Error {
 
 /** A fake server that applies the same merge rules as the real one. */
 function fakeServer(initial: AchievementsResponse = response()) {
-  const state = { record: { unlocked: { ...initial.unlocked }, progress: { ...initial.progress } } };
+  const state = { record: { unlocked: { ...initial.unlocked }, progress: { ...initial.progress } }, applied: [] as string[] };
   const calls: { path: string; body: unknown }[] = [];
   let failNext: Error | null = null;
+  let loseNextReply = false;
   let getReply: AchievementsResponse | Error = initial;
   const request = async (path: string, init?: RequestInit): Promise<AchievementsResponse> => {
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
@@ -43,6 +44,15 @@ function fakeServer(initial: AchievementsResponse = response()) {
     for (const [id, n] of Object.entries(body.progress ?? {})) {
       state.record.progress[id] = Math.max(state.record.progress[id] ?? 0, n as number);
     }
+    // KL-164: increments add up once per request id, like the real server.
+    if (body.requestId !== undefined && !state.applied.includes(body.requestId)) {
+      for (const [id, n] of Object.entries(body.increments ?? {})) {
+        state.record.progress[id] = (state.record.progress[id] ?? 0) + (n as number);
+      }
+      state.applied.push(body.requestId);
+    }
+    // The server applied the batch, but its answer never arrived.
+    if (loseNextReply) { loseNextReply = false; throw Object.assign(new Error("connection reset"), { status: 0 }); }
     return response({ unlocked: { ...state.record.unlocked }, progress: { ...state.record.progress } });
   };
   return {
@@ -50,10 +60,12 @@ function fakeServer(initial: AchievementsResponse = response()) {
     calls,
     state,
     failNextWith(error: Error) { failNext = error; },
+    loseNextReply() { loseNextReply = true; },
     answerGetWith(reply: AchievementsResponse | Error) { getReply = reply; },
   };
 }
 
+let requests = 0;
 function tracker(server: ReturnType<typeof fakeServer>, options: { enabled?: () => boolean } = {}) {
   const unlocked: string[][] = [];
   const t = createAchievementTracker({
@@ -62,6 +74,7 @@ function tracker(server: ReturnType<typeof fakeServer>, options: { enabled?: () 
     isEnabled: options.enabled ?? (() => true),
     onUnlocked: (defs) => unlocked.push(defs.map((d) => d.id)),
     catalog: CATALOG,
+    newRequestId: () => `test-request-${String(++requests).padStart(4, "0")}`,
   });
   return { t, unlocked };
 }
@@ -242,5 +255,66 @@ describe("admitAchievementsResponse", () => {
     ["a moved-to that is not text", { ...valid, movedTo: 3 }],
   ])("refuses %s", (_label, value) => {
     expect(() => admitAchievementsResponse(value)).toThrow();
+  });
+});
+
+describe("KL-164: concurrent windows and retries", () => {
+  const posts = (server: ReturnType<typeof fakeServer>) =>
+    server.calls.filter((c) => c.path === "/api/achievements/record").map((c) => c.body as Record<string, unknown>);
+
+  it("two windows that both saw 1 make 3, and the one that sees the goal unlocks", async () => {
+    const server = fakeServer(response({ progress: { "time-traveller": 1 } }));
+    const a = tracker(server); const b = tracker(server);
+    await a.t.load(); await b.t.load();
+    a.t.report({ type: "undo" }); b.t.report({ type: "undo" });
+    await a.t.settled(); await b.t.settled();
+    expect(server.state.record.progress["time-traveller"]).toBe(3);
+    expect([...a.unlocked, ...b.unlocked]).toEqual([["time-traveller"]]);
+    expect(server.state.record.unlocked["time-traveller"]).toBe(NOW.toISOString());
+    for (const body of posts(server).filter((post) => post.increments)) {
+      expect(body.progress, "a step is never sent as an absolute value").toEqual({});
+    }
+  });
+
+  it("retries a batch whose answer was lost under the same id, first, and the server counts it once", async () => {
+    const server = fakeServer();
+    const { t } = tracker(server);
+    await t.load();
+    server.loseNextReply();
+    t.report({ type: "undo" });
+    await t.settled();
+    expect(server.state.record.progress["time-traveller"]).toBe(1);
+    t.report({ type: "undo" });
+    await t.settled();
+    const sent = posts(server);
+    expect(sent.map((body) => body.requestId)).toEqual([sent[0].requestId, sent[0].requestId, sent[2].requestId]);
+    expect(sent[1]).toEqual(sent[0]);
+    expect(sent[2].requestId).not.toBe(sent[0].requestId);
+    expect(sent[2].increments).toEqual({ "time-traveller": 1 });
+    expect(server.state.record.progress["time-traveller"]).toBe(2);
+    expect(t.snapshot().record.progress["time-traveller"]).toBe(2);
+  });
+
+  it("unlocks on load what other windows completed meanwhile", async () => {
+    const server = fakeServer(response({ progress: { "time-traveller": 3 } }));
+    const { t, unlocked } = tracker(server);
+    await t.load();
+    await t.settled();
+    expect(unlocked).toEqual([["time-traveller"]]);
+    expect(server.state.record.unlocked["time-traveller"]).toBe(NOW.toISOString());
+  });
+
+  it("forgets an unsent retry on reset", async () => {
+    const server = fakeServer();
+    const { t } = tracker(server);
+    await t.load();
+    server.failNextWith(httpError(500));
+    t.report({ type: "undo" });
+    await t.settled();
+    await t.reset();
+    t.report({ type: "projectCreated" });
+    await t.settled();
+    expect(server.state.record.progress).toEqual({});
+    expect(posts(server).at(-1)).toEqual({ unlocked: { foundation: NOW.toISOString() }, progress: {} });
   });
 });

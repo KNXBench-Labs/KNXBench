@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 21:17
+- **Completed:** Goal A ended on `e5eb1e8a` + docs `5ca02b2b` (Rust 4379/0/199, strict Clippy, fmt, web deps and build, bindings, five xtask gates, documentation, whitespace and private corpus 145/145 in 32 targets on `e5eb1e8a`; its tool tests failed only on KL-128's retained record, restored byte for byte in `5ca02b2b` and accepted by a docs-only delta run on the final head; password-gated legacy oracles on `5ca02b2b` (release): legacy_corpus 3/3, legacy_atomic_types_oracle 1/1, legacy_download_oracle 2/2). A2 revision-bound writes, A3 stop admission/drain (KL-163), A4 project Functions (schema 15, ADR-0124; Site blocked ADR-0125), A5 legacy string/long-enum mapping (KL-128, ETS4 oracle), A7 reconciliation delivered; A6 blocked (no new primary source). A1 was delivered earlier (`a78c1010`).
+- **Pending/Next Steps:** Goal B may start when the user invokes it; its handover is the *Goal A outcome* section of `docs/goals/unassigned-workbench-hardening.md`. This session does not start it.
+- **Notes for Codex oder Claude:** Gates use a fresh per-run `CARGO_TARGET_DIR`; new Rust files need one-sentence headers (DEVELOPER_PITFALLS). Native schema is 15. Password-gated legacy oracles run outside the corpus runner (`KNXBENCH_VD_PASSWORD_FILE`).
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 20:47
 - **Completed:** Issue #7 follow-ups (session bcee21b10872). Log grouping: retained manufacturer files sharing one notice are one Log entry listing every file and count as one warning, fresh and reopened (`knx_app::import_finding_counts`); merged cb61b07f, merged gate Rust 4297/0/198, Vitest 3302/0, corpus 145/145. KL-182: AppImage downloads were saved silently into ~/Downloads and replaced same-named files; now staged privately, saved through the native dialog, copied atomically; merged 76c17259 (desktop 22/0, workspace clippy, xtask 5/5, docs). #7 comment issuecomment-6151970054.
 - **Pending/Next Steps:** Wait for the #7 reporter's log/report and his confirmation with the next AppImage. No native WebKitGTK window or dialog was driven end to end for KL-181/KL-182 (no WebKitWebDriver/headless compositor on the host).
@@ -75,10 +83,10 @@ No old web-lock queue is carried forward: its packages were delivered.
 ## Goal A — data integrity, model and import
 
 - **Last Agent:** Claude
-- **Timestamp:** 2026-10-13 18:33
-- **Completed:** Session `62a4cca1c10f` owns A1–A7 ([goal](../docs/goals/unassigned-data-integrity.md), *Session status* table). A1 delivered (merge `a78c1010`).
-- **Pending/Next Steps:** A2 gate and merge; A3 implementation/gate; then A4 Functions/Sites, A5 legacy types 3/5, A6 evidence review, A7 media/differential routing. Goal B is not started; its A2 host contract is `docs/contracts/revision-bound-writes.md` once A2 lands.
-- **Notes for Codex oder Claude:** Do not start A1–A7 work elsewhere. Gate script and receipts: root `.ai/logs/2026-10-13_claude_goal-a-data-integrity/`. No hardware, bus, ETS/vendor execution, release or deployment.
+- **Timestamp:** 2026-10-13 21:17
+- **Completed:** Goal A ended (session `62a4cca1c10f`): A1–A5 and A7 delivered, A6 blocked on external evidence; final integration `e5eb1e8a` + docs `5ca02b2b`. Package states in the [goal file](../docs/goals/unassigned-data-integrity.md).
+- **Pending/Next Steps:** None for Goal A. Goal B starts only on the user's invocation; handover in `docs/goals/unassigned-workbench-hardening.md` (*Goal A outcome*). Lifting A6 needs a new authorized source.
+- **Notes for Codex oder Claude:** Contracts for B: `docs/contracts/revision-bound-writes.md`, `docs/contracts/project-functions.md`. Evidence: root `.ai/logs/2026-10-13_claude_goal-a-data-integrity/`. No hardware, bus, ETS/vendor execution, release or deployment happened.
 
 ## Data-tooling and MCP client choice
 

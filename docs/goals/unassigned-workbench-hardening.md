@@ -4,6 +4,26 @@ Planning only; no session owns these packages until the user invokes this prompt
 Start after Goal A ends. Read the root-local audit and A's published outcomes
 before creating a fresh worktree; prepared files may not yet exist on origin/main.
 
+## Goal A outcome (handover, 2026-10-13)
+
+Goal A ended on `e5eb1e8a` + docs `5ca02b2b` (session `62a4cca1c10f`); it did not start Goal B.
+What B can build on, and what it must not:
+
+| From A | State | What B uses | Must not |
+| --- | --- | --- | --- |
+| A1 KL-157 | delivered | Readers open `.knxdb` read-only; edits are writes | Upgrade a file outside a confirmed write |
+| A2 | delivered | [Revision-bound writes](../contracts/revision-bound-writes.md): bind parameter writes and installation renames to `serverIncarnation`/`projectIncarnation`/`snapshotRevision` + expected value; on `409` keep the draft and offer reload/compare | Keep a second revision counter; send unbound writes from new UI |
+| A3 KL-163 | delivered | Tunnel routes answer `503 serverStopping` while the server stops; show it as "server is stopping", not as a bus error | Retry automatically |
+| A4 MODEL-07 | delivered (backend, projection, API) | [Functions contract](../contracts/project-functions.md): `GET /api/project/functions`, `POST /api/project/functions/edit` (bound; `409 functionStale`, `422 functionRefused`), TS `FunctionsView`; deletes of a member GA or a Function's room are refused | Cascade deletes; edit `Project.functions` outside commands; show schema-20/21 Functions (not modeled) |
+| A4 MODEL-05 | blocked design ([ADR-0125](../adr/0125-multi-installation-site-is-blocked.md)) | Nothing | Build site UI or cross-installation moves |
+| A5 KL-128 | delivered | Legacy string/long-enum parameters appear in the existing parameter panel like ETS4's conversion | Hide `binary-values-not-modeled` notes, or show them as import errors |
+| A6 PDB-04, KL-68, KL-171, KL-172 | blocked (no new evidence) | [Review](../status/2026-10-13-goal-a6-a7-evidence-review.md) with gaps and fallbacks | Add Color/Picture/Repeat/UTF-8/LoadedImage semantics |
+| A7 KL-110, GAP-T30-04 | reconciled, no implementation | Readiness contracts only | Any new medium or differential download |
+
+Native schema is 15 after A4: files a current build upgrades are refused by
+Alpha 11 and earlier (manual notes it). Delivery details: W42 history,
+entries of 13 October.
+
 ```text
 /goal KNXBench: Workbench-Restarbeiten, UX und Plattformhärtung
 

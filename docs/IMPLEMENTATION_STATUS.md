@@ -20,6 +20,16 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--goal-a6a7-no-new-evidence-and-gates-tied-to-their-plans"></a>
+- [2026-10-13 — Goal A6/A7: no new evidence, and gates tied to their plans](history/implementation/2026-W42.md#2026-10-13--goal-a6a7-no-new-evidence-and-gates-tied-to-their-plans)
+<a id="2026-10-13--goal-a5-legacy-strings-and-long-enums-mapped-like-ets4"></a>
+- [2026-10-13 — Goal A5: legacy strings and long enums, mapped like ETS4](history/implementation/2026-W42.md#2026-10-13--goal-a5-legacy-strings-and-long-enums-mapped-like-ets4)
+<a id="2026-10-13--goal-a4-project-functions-and-a-blocked-site-design"></a>
+- [2026-10-13 — Goal A4: project Functions, and a site design that waits for evidence](history/implementation/2026-W42.md#2026-10-13--goal-a4-project-functions-and-a-blocked-site-design)
+<a id="2026-10-13--goal-a3-a-stop-that-waits-for-the-device-it-is-writing"></a>
+- [2026-10-13 — Goal A3: a stop that waits for the device it is writing](history/implementation/2026-W42.md#2026-10-13--goal-a3-a-stop-that-waits-for-the-device-it-is-writing)
+<a id="2026-10-13--goal-a2-writes-that-know-which-project-they-mean"></a>
+- [2026-10-13 — Goal A2: writes that know which project they mean](history/implementation/2026-W42.md#2026-10-13--goal-a2-writes-that-know-which-project-they-mean)
 <a id="2026-10-13--issue-7-follow-up-desktop-downloads-ask-before-they-land"></a>
 - [2026-10-13 — Issue #7 follow-up: desktop downloads ask before they land](history/implementation/2026-W42.md#2026-10-13--issue-7-follow-up-desktop-downloads-ask-before-they-land)
 <a id="2026-10-13--issue-7-retained-files-stop-drowning-the-import-findings"></a>

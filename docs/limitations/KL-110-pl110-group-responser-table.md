@@ -6,6 +6,12 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+**Update 2026-10-13 (Goal A7):** prerequisites and phases for a future
+PL110 task are in [powerline readiness](../contracts/powerline-readiness.md)
+(prepared 2026-10-11); remaining gates are summarised in the
+[A6/A7 evidence review](../status/2026-10-13-goal-a6-a7-evidence-review.md).
+Nothing is implemented; the boundary below is unchanged.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 110. `PID_GROUP_RESPONSER_TABLE` stays unimplemented on every medium

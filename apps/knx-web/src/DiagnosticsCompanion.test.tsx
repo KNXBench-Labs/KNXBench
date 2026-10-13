@@ -420,6 +420,7 @@ describe("one editing workspace", () => {
       "languagePack.ts",
       "liveActivity.ts",
       "localJsonDownload.ts",
+      "logRows.ts",
       "messages/bar.ts",
       "messages/de.ts",
       "messages/en.ts",

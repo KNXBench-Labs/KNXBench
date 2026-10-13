@@ -1101,12 +1101,17 @@ export const messages: Record<MessageKey, string> = {
   "logPanel.search": "Sitzungsprotokoll durchsuchen",
   "logPanel.clear": "Suche löschen",
   "logPanel.count": "{shown} von {total} Einträgen",
+  "logPanel.renderLimit": "Angezeigt werden die neuesten {shown} von {total} passenden Einträgen.",
+  "logPanel.showMore.one": "{count} weiteren anzeigen",
+  "logPanel.showMore.other": "{count} weitere anzeigen",
+  "logPanel.detailMoreLines.one": "… {count} weitere Zeile in den Details",
+  "logPanel.detailMoreLines.other": "… {count} weitere Zeilen in den Details",
   "logPanel.exportScope": "Exportumfang",
   "logPanel.exportFiltered": "Passende Einträge",
   "logPanel.exportAll": "Alle vorhandenen Einträge",
   "logPanel.exportJson": "Protokoll exportieren (JSON)…",
   "logPanel.unknownCount": "unbekannt",
-  "logPanel.retention": "Nur die neuesten 1000 Einträge dieser Serversitzung bleiben erhalten; {count} Einträge verworfen. Kein vollständiges Auditprotokoll. Der Export kann Adressen und Namen enthalten.",
+  "logPanel.retention": "Diese Serversitzung behält bis zu 16000 Einträge; ist das Protokoll voll, werden zuerst Infos verworfen, dann Warnungen, dann Fehler; {count} Einträge verworfen. Kein vollständiges Auditprotokoll. Der Export kann Adressen und Namen enthalten.",
   "logPanel.entryTextIsEnglish":
     "Meldung, Ort und Detail sind der unveränderte Text des Servers, auf Englisch.",
 

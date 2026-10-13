@@ -29,17 +29,25 @@
 //! is bounded by [`MAX_PROBE_OCTETS`],
 //! discriminating fields first.
 //!
+//! [`base_image_order`] runs the same planning at product defaults and
+//! reads the fields from the program's own segment `Data` instead of a
+//! device: what the base image suggests about the octet order, the basis of
+//! a download's named warning (ADR-0120). A base image is product data, not
+//! a device, so that is a suspicion, never a rule.
+//!
 //! Nothing here encodes a value for a download.
 
 use std::collections::BTreeMap;
 use std::fmt;
 
-use knx_core::commissioning::byte_order_evidence::covered_octets;
+use knx_core::commissioning::byte_order_evidence::{
+    covered_octets, read_field, FieldReading, Tally,
+};
 use knx_core::commissioning::load_state::MaskVersion;
 use knx_core::commissioning::parameter_image::ParameterField;
 use rusqlite::Connection;
 
-use crate::code::load_program_code;
+use crate::code::{load_program_code, ProgramCode};
 use crate::download_plan::{check_program_kind, manufacturer_of, DownloadPlanError};
 use crate::image::{
     activate, field_of, superseded_union_members, Encoded, ImageError, ImageRequest, ParameterTypes,
@@ -221,6 +229,73 @@ struct Candidate {
 
 /// Plans the probe of the device `request` describes.
 pub fn plan_probe(conn: &Connection, request: &ImageRequest) -> Result<ProbePlan, ProbeError> {
+    plan_fields(conn, request, MAX_PROBE_OCTETS).map(|(plan, _)| plan)
+}
+
+/// What a program's own base image says about the octet order of its
+/// multi-octet product defaults.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BaseImageOrder {
+    /// `Options/@ParameterByteOrder` as the program states it; `None` when
+    /// absent (the schema default, `BigEndian`).
+    pub declared_order: Option<String>,
+    /// The readings of every planned field against the segment `Data`.
+    pub tally: Tally,
+    /// Planned fields whose segment carries no `Data`: nothing to compare.
+    pub without_data: usize,
+}
+
+/// Plans the probe of the program `request` names at product defaults (its
+/// values, links and flag overrides are not used) and reads each field from
+/// the program's segment `Data` instead of a device (ADR-0120).
+///
+/// A field the classifier cannot read counts as not classified; nothing is
+/// bounded, because nothing is read from a bus.
+pub fn base_image_order(
+    conn: &Connection,
+    request: &ImageRequest,
+) -> Result<BaseImageOrder, ProbeError> {
+    let defaults = ImageRequest {
+        program_id: request.program_id.clone(),
+        individual_address: request.individual_address,
+        values: BTreeMap::new(),
+        links: Vec::new(),
+        flag_overrides: BTreeMap::new(),
+    };
+    let (plan, code) = plan_fields(conn, &defaults, usize::MAX)?;
+    let mut readings = Vec::with_capacity(plan.fields.len());
+    let mut without_data = 0;
+    for probe in &plan.fields {
+        let data = code
+            .segment(&probe.segment)
+            .and_then(|segment| segment.data.as_deref());
+        let Some(data) = data else {
+            without_data += 1;
+            continue;
+        };
+        let start = probe.field.offset as usize;
+        // The planner kept only fields inside their segment, and `Data` is
+        // as long as the segment; `get` keeps that an assumption, not a
+        // panic.
+        let reading = data
+            .get(start..start + covered_octets(probe.field))
+            .and_then(|held| read_field(probe.field, probe.value, held).ok())
+            .unwrap_or(FieldReading::NotClassified);
+        readings.push(reading);
+    }
+    Ok(BaseImageOrder {
+        declared_order: plan.declared_order,
+        tally: Tally::of(&readings),
+        without_data,
+    })
+}
+
+/// [`plan_probe`] with the octet bound `bound`, and the program's code.
+fn plan_fields(
+    conn: &Connection,
+    request: &ImageRequest,
+    bound: usize,
+) -> Result<(ProbePlan, ProgramCode), ProbeError> {
     let program_id = request.program_id.as_str();
     let code = load_program_code(conn, program_id)
         .map_err(ImageError::from)?
@@ -374,16 +449,17 @@ pub fn plan_probe(conn: &Connection, request: &ImageRequest) -> Result<ProbePlan
     fields.sort_by_key(|field| field.address);
     controls.sort_by_key(|field| field.address);
     fields.append(&mut controls);
-    let kept = within_bound(fields, MAX_PROBE_OCTETS, &mut skipped);
+    let kept = within_bound(fields, bound, &mut skipped);
 
-    Ok(ProbePlan {
+    let plan = ProbePlan {
         program_id: program_id.to_string(),
         declared_order: code.options.get("ParameterByteOrder").cloned(),
         mask,
         manufacturer,
         fields: kept,
         skipped,
-    })
+    };
+    Ok((plan, code))
 }
 
 /// The leading `fields` whose covered octets add up to at most `bound`;
@@ -794,5 +870,85 @@ mod tests {
                 "{parameter_ref}"
             );
         }
+    }
+
+    /// The base image with every planned multi-octet default of [`PROGRAM`]
+    /// (`W16`, `W32`, `C`) in `order`, `W16` low first instead when `mixed`,
+    /// and the controls `B3` and `UP-2` at their defaults.
+    fn base_image(order: OctetOrder, mixed: bool) -> String {
+        let mut data = [0u8; 32];
+        let put = |data: &mut [u8; 32], at: usize, value: u64, octets: usize, order| {
+            let bytes = match order {
+                OctetOrder::HighFirst => value.to_be_bytes()[8 - octets..].to_vec(),
+                OctetOrder::LowFirst => value.to_le_bytes()[..octets].to_vec(),
+            };
+            data[at..at + octets].copy_from_slice(&bytes);
+        };
+        put(
+            &mut data,
+            0,
+            300,
+            2,
+            if mixed { OctetOrder::LowFirst } else { order },
+        );
+        put(&mut data, 2, 16_909_060, 4, order);
+        put(&mut data, 21, 258, 2, order);
+        // UP-1 (513) is superseded by the later UP-2: a one-octet control.
+        data[24] = 9;
+        data[10] = 5 << 3;
+        use base64::Engine as _;
+        let encoded = base64::engine::general_purpose::STANDARD.encode(data);
+        PROGRAM.replace("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", &encoded)
+    }
+
+    #[test]
+    fn a_base_image_holding_defaults_low_first_says_so() {
+        let (_dir, conn) = db(&base_image(OctetOrder::LowFirst, false));
+        // Project values are not what a base image holds: they are ignored.
+        let order = base_image_order(&conn, &request(&[("P-W16_R-1", "7")])).expect("checks");
+        assert_eq!(order.declared_order, None, "undeclared");
+        assert_eq!(
+            order.tally.verdict(),
+            Verdict::Consistent(OctetOrder::LowFirst)
+        );
+        assert_eq!((order.tally.low_first, order.tally.high_first), (3, 0));
+        assert_eq!(
+            order.tally.single_octet_agree, 2,
+            "B3 and UP-2 at their defaults"
+        );
+        assert_eq!(order.without_data, 0);
+    }
+
+    #[test]
+    fn a_base_image_holding_defaults_high_first_or_mixed_says_that() {
+        let (_dir, conn) = db(&base_image(OctetOrder::HighFirst, false));
+        let order = base_image_order(&conn, &request(&[])).expect("checks");
+        assert_eq!(
+            order.tally.verdict(),
+            Verdict::Consistent(OctetOrder::HighFirst)
+        );
+        let (_dir, conn) = db(&base_image(OctetOrder::HighFirst, true));
+        let order = base_image_order(&conn, &request(&[])).expect("checks");
+        assert_eq!(order.tally.verdict(), Verdict::Contradictory);
+        assert_eq!((order.tally.low_first, order.tally.high_first), (1, 2));
+    }
+
+    #[test]
+    fn a_zero_base_image_tells_nothing_and_no_data_is_counted() {
+        let (_dir, conn) = db(PROGRAM);
+        let order = base_image_order(&conn, &request(&[])).expect("checks");
+        assert_eq!(order.tally.verdict(), Verdict::Inconclusive);
+        assert_eq!(order.tally.neither, 3, "zeros hold neither arrangement");
+        let without = PROGRAM.replace(
+            "<Data>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</Data>",
+            "",
+        );
+        let (_dir, conn) = db(&without);
+        let order = base_image_order(&conn, &request(&[])).expect("checks");
+        assert_eq!(order.tally, Tally::default());
+        assert_eq!(
+            order.without_data, 5,
+            "three multi-octet fields, B3 and UP-2"
+        );
     }
 }

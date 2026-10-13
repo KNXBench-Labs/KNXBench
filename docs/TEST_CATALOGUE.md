@@ -308,7 +308,7 @@ A pretty parameter label is not permission to write it.
 | **[Evaluation budgets and text amplification](../crates/knx-productdb/src/dynamic/evaluate/text_projection_tests.rs)** | Checks repeated traversal and copied labels consume bounded budgets before unsafe evaluation proceeds. | Rust / offline or loopback |
 | **[Offline program code and image requests](../crates/knx-productdb/src/code.rs)** | Checks code segments, masks and requested configurations preserve byte boundaries and explicit refusal conditions. | Rust; explicit private cases¹ |
 | **[Read-only AP1 procedure resolution](../crates/knx-app/tests/procedure_resolution_corpus.rs)** | Checks retained procedure fragments resolve in order while omissions and cycles remain explicit diagnostics. | Rust; explicit private cases¹ |
-| **[Byte-order probe planning](../crates/knx-productdb/src/byte_order_probe.rs)** | Checks probes read only what downloads would write, naming every skipped field. | Rust / offline or loopback |
+| **[Byte-order probe planning](../crates/knx-productdb/src/byte_order_probe.rs)** | Checks probes and base-image warnings read only what downloads would write, naming skipped fields. | Rust / offline or loopback |
 
 <details>
 <summary>Source modules for this category</summary>

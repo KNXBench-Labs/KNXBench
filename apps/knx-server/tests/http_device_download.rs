@@ -1982,6 +1982,8 @@ async fn a_verified_download_says_so_and_keeps_a_backup_first() {
         "{plan}"
     );
     assert_eq!(plan["untestedAcknowledgement"], Value::Null);
+    // Its base image holds defaults high octet first, as written (ADR-0120).
+    assert_eq!(plan["warnings"], json!([]), "{plan}");
 
     let (status, body) = start(&h, &plan["planId"], "I confirm download to 1.1.67").await;
     assert_eq!(status, StatusCode::OK, "{body}");

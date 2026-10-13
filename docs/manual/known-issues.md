@@ -378,6 +378,11 @@ is the remaining copy defect.
   holds; that output is the evidence needed to lift the limitation.
 - **Details:** [§170](../KNOWN_LIMITATIONS.md#170-little-endian-parameter-byte-order-is-refused-for-download-images),
   [the probe](user-guide/10-command-line.md#knx-device-byte-order-probe--help-settle-a-little-endian-device)
+- **Related:** some ABB and Busch-Jaeger programs declare big-endian but their
+  product data looks little-endian. Their downloads are allowed and the plan says
+  so with the warning `base-image-low-octet-first` (command line and server; the
+  web download tab does not show it yet). Check multi-octet values after such a
+  download.
 
 ### Stopping the server is not a safe cancellation of a device write
 

@@ -10,12 +10,15 @@
 
 use std::fmt;
 
+use knx_core::commissioning::byte_order_evidence::{OctetOrder, Verdict};
 use knx_core::commissioning::memory_download::{unmasked_runs, MemoryDownloadPlan};
 use knx_core::commissioning::partial_memory_download::{
     derive_partial_plan, PartialDownloadParts, PartialPlanError,
 };
 use knx_core::{DeviceId, IndividualAddress, Project};
-use knx_productdb::byte_order_probe::{plan_probe, ProbeError, ProbePlan};
+use knx_productdb::byte_order_probe::{
+    base_image_order, plan_probe, BaseImageOrder, ProbeError, ProbePlan,
+};
 use knx_productdb::code::load_program_code;
 use knx_productdb::download_plan::{
     check_program_kind, plan_memory_download_with_inferences, DownloadPlanError,
@@ -43,6 +46,9 @@ pub struct PreparedDownload {
     /// The inferences image and plan rest on (ADR-0086), for the user to
     /// see before acknowledging a write.
     pub inferences: Vec<Inference>,
+    /// What the user should know before writing that does not stop the
+    /// write (ADR-0120); empty when there is nothing.
+    pub warnings: Vec<DownloadWarning>,
     /// `Some` once [`PreparedDownload::into_partial`] has replaced `plan`
     /// with a partial one: the parts, and the application writes CP
     /// §3.9.2.4 rule 3 ignores, as `(address, octets)`.
@@ -141,6 +147,7 @@ pub fn prepare_device_download(
     let image = build_download_image(conn, &request).map_err(PrepareError::Image)?;
     let (plan, inferences) =
         plan_memory_download_with_inferences(&image).map_err(PrepareError::Plan)?;
+    let warnings = byte_order_warnings(conn, &request);
     Ok(PreparedDownload {
         device: device.id,
         device_name: device.name.clone(),
@@ -149,8 +156,86 @@ pub fn prepare_device_download(
         image,
         plan,
         inferences,
+        warnings,
         partial: None,
     })
+}
+
+/// Something a download plan's user should know before writing that does not
+/// stop the write (ADR-0120): a stable rule name, what it found here, and
+/// where the analysis lives, like an [`Inference`]. Unlike an inference it is
+/// not a rule the download applies.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DownloadWarning {
+    /// Stable short name, the same for every program it applies to.
+    pub rule: &'static str,
+    /// What was found here.
+    pub detail: String,
+    /// Where the analysis is documented.
+    pub reference: &'static str,
+}
+
+impl fmt::Display for DownloadWarning {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {} ({})", self.rule, self.detail, self.reference)
+    }
+}
+
+/// [`DownloadWarning::rule`]: a big-endian program whose own base image
+/// holds its multi-octet defaults low octet first.
+pub const BASE_IMAGE_LOW_OCTET_FIRST: &str = "base-image-low-octet-first";
+
+/// [`DownloadWarning::rule`]: the base image's octet order could not be
+/// checked, so the warning above can neither be given nor ruled out.
+pub const BASE_IMAGE_ORDER_UNCHECKED: &str = "base-image-order-unchecked";
+
+/// Where the byte-order warnings are explained.
+const BYTE_ORDER_REFERENCE: &str = "KNOWN_LIMITATIONS §170, ADR-0120";
+
+/// The byte-order warnings of a download of `request` (KL-170, ADR-0120).
+pub fn byte_order_warnings(conn: &Connection, request: &ImageRequest) -> Vec<DownloadWarning> {
+    byte_order_warnings_for(base_image_order(conn, request))
+}
+
+/// The decision of [`byte_order_warnings`], from the base image's reading.
+///
+/// Warns only when every discriminating default is held low octet first in
+/// a program that declares `BigEndian` or nothing: KNXBench writes what the
+/// program declares, and the base image is product data, not a device, so
+/// the mismatch is a reason to look, never a reason to write differently.
+/// A program declaring another order is refused before any plan exists.
+pub fn byte_order_warnings_for(order: Result<BaseImageOrder, ProbeError>) -> Vec<DownloadWarning> {
+    let order = match order {
+        Ok(order) => order,
+        Err(error) => {
+            return vec![DownloadWarning {
+                rule: BASE_IMAGE_ORDER_UNCHECKED,
+                detail: format!(
+                    "the octet order of the program's base image could not be checked: {error}"
+                ),
+                reference: BYTE_ORDER_REFERENCE,
+            }]
+        }
+    };
+    let declaration = match order.declared_order.as_deref() {
+        None => "declares no ParameterByteOrder (the schema default is BigEndian)",
+        Some("BigEndian") => "declares ParameterByteOrder BigEndian",
+        Some(_) => return Vec::new(),
+    };
+    if order.tally.verdict() != Verdict::Consistent(OctetOrder::LowFirst) {
+        return Vec::new();
+    }
+    vec![DownloadWarning {
+        rule: BASE_IMAGE_LOW_OCTET_FIRST,
+        detail: format!(
+            "the program {declaration}, so KNXBench writes multi-octet values high octet \
+             first; its own base image holds {} multi-octet default(s) low octet first and \
+             none high octet first. Whether the device reads them high octet first is not \
+             known from the product data: check the device after the download",
+            order.tally.low_first
+        ),
+        reference: BYTE_ORDER_REFERENCE,
+    }]
 }
 
 /// The one project device at `target`; none and several are refused.
@@ -305,5 +390,58 @@ mod tests {
                 DeviceRequestError::Project(ProjectRequestError::NoProgram(DeviceId(4)))
             )))
         ));
+    }
+
+    fn order(declared: Option<&str>, low_first: usize, high_first: usize) -> BaseImageOrder {
+        BaseImageOrder {
+            declared_order: declared.map(str::to_string),
+            tally: knx_core::commissioning::byte_order_evidence::Tally {
+                low_first,
+                high_first,
+                ..Default::default()
+            },
+            without_data: 0,
+        }
+    }
+
+    #[test]
+    fn a_big_endian_program_with_a_low_first_base_image_is_warned_about() {
+        for declared in [None, Some("BigEndian")] {
+            let warnings = byte_order_warnings_for(Ok(order(declared, 3, 0)));
+            assert_eq!(warnings.len(), 1, "{declared:?}");
+            assert_eq!(warnings[0].rule, BASE_IMAGE_LOW_OCTET_FIRST);
+            assert!(warnings[0]
+                .detail
+                .contains("3 multi-octet default(s) low octet first"));
+            assert_eq!(warnings[0].reference, "KNOWN_LIMITATIONS §170, ADR-0120");
+        }
+        let shown = byte_order_warnings_for(Ok(order(None, 1, 0)))[0].to_string();
+        assert!(shown.starts_with("base-image-low-octet-first: the program declares no"));
+        assert!(shown.ends_with("(KNOWN_LIMITATIONS §170, ADR-0120)"));
+    }
+
+    #[test]
+    fn high_first_mixed_or_silent_base_images_and_other_orders_are_not() {
+        for (declared, low, high) in [
+            (None, 0, 2),                 // agrees with what is written
+            (Some("BigEndian"), 2, 1),    // contradictory: no consistent story
+            (None, 0, 0),                 // nothing discriminating
+            (Some("LittleEndian"), 3, 0), // refused before any plan anyway
+        ] {
+            assert_eq!(
+                byte_order_warnings_for(Ok(order(declared, low, high))),
+                vec![],
+                "{declared:?} {low} {high}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_base_image_that_cannot_be_checked_is_named_not_passed_over() {
+        let error = ProbeError::Program(DownloadPlanError::Address(0x1_0000));
+        let warnings = byte_order_warnings_for(Err(error));
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].rule, BASE_IMAGE_ORDER_UNCHECKED);
+        assert!(warnings[0].detail.contains("could not be checked"));
     }
 }

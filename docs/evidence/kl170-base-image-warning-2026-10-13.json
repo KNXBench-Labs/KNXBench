@@ -1,0 +1,104 @@
+{
+ "date": "2026-10-13",
+ "item": "KL-170 related risk",
+ "adr": "ADR-0120",
+ "decision": "owner decision 2026-10-13: downloads stay allowed and carry a named warning",
+ "rule": {
+  "name": "base-image-low-octet-first",
+  "condition": "declared BigEndian or undeclared, and every discriminating product default in the program's own base image held low octet first (probe planning of ADR-0119 at defaults, read from segment Data)",
+  "noManufacturerList": true
+ },
+ "method": "throwaway #[ignore] test (not committed): install every package, build_download_image at product defaults, byte_order_warnings for each program whose image builds; release build; aggregates by public manufacturer id, mask, declared order and rule",
+ "packages": {
+  "local": 105,
+  "publicUnder6MB": 824,
+  "publicByVendor": {
+   "abb": 695,
+   "mdt": 97,
+   "hager": 32
+  },
+  "installFailures": 1
+ },
+ "programs": {
+  "installed": 1623,
+  "imageBuildsAtDefaults": 519,
+  "memoryDownloadable": 181,
+  "note": "338 of the 519 have masks a memory download refuses before any plan (07B0, 17B0, 0011, 0012, 0020, 0025, 0912, 091A, 2705, 0001, 0010); there the check reported base-image-order-unchecked, which prepare_device_download never reaches"
+ },
+ "memoryDownloadable": {
+  "M-0002 ABB": {
+   "MV-0701 BigEndian": {
+    "warned": 7,
+    "not": 9
+   },
+   "MV-0701 undeclared": {
+    "warned": 16,
+    "not": 18
+   },
+   "MV-0700 undeclared": {
+    "warned": 0,
+    "not": 2
+   }
+  },
+  "M-0007 Busch-Jaeger": {
+   "MV-0701 BigEndian": {
+    "warned": 2,
+    "not": 0
+   },
+   "MV-0701 undeclared": {
+    "warned": 7,
+    "not": 6
+   }
+  },
+  "M-0083 MDT": {
+   "MV-0701 undeclared": {
+    "warned": 0,
+    "not": 36
+   },
+   "MV-0705 BigEndian": {
+    "warned": 0,
+    "not": 2
+   },
+   "MV-0705 undeclared": {
+    "warned": 0,
+    "not": 55
+   }
+  },
+  "M-0001 Siemens": {
+   "MV-0701": {
+    "warned": 0,
+    "not": 7
+   },
+   "MV-0705": {
+    "warned": 0,
+    "not": 3
+   }
+  },
+  "others (M-000C, M-000E, M-00C5, M-0225)": {
+   "warned": 0,
+   "not": 11
+  },
+  "totals": {
+   "warned": 32,
+   "not": 149,
+   "unchecked": 0
+  }
+ },
+ "verifiedProgram": {
+  "id": "M-0083_A-0027-15-0BAC",
+  "baseImage": "1 discriminating default, high octet first",
+  "warned": false
+ },
+ "timing": {
+  "checks": 519,
+  "totalSeconds": 11.8,
+  "maxSeconds": 2.0,
+  "imageBuildSecondsAllAttempts": 82.9,
+  "build": "release"
+ },
+ "boundaries": [
+  "warning only; image, support level, acknowledgement and write unchanged",
+  "web download tab does not show warnings yet (web lock held)",
+  "no hardware, no bus traffic"
+ ]
+}

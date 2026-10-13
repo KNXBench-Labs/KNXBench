@@ -121,3 +121,68 @@ it("drops delayed editor results after switching device", async () => {
   expect(v.applied).not.toHaveBeenCalled(); expect(v.input("Search communication objects").value).toBe("");
   await v.cleanup();
 });
+
+// Issue #16: an explicit channel collapse hides every child row, open editors
+// included; the editors stay mounted, so drafts and requests survive reopening.
+const channelButton = (host: HTMLElement) => host.querySelector<HTMLButtonElement>(".com-object-channel-summary")!;
+const summaryRow = (host: HTMLElement, id: number) => host.querySelector<HTMLTableRowElement>(`tr[data-object-id="${id}"]`)!;
+const editorRow = (host: HTMLElement, id: number) => host.querySelector<HTMLTableRowElement>(`tr[data-editor-id="${id}"]`)!;
+async function openGrouped(v: Awaited<ReturnType<typeof render>>, ids: number[]) {
+  await v.click(channelButton(v.host));
+  for (const id of ids) await v.click(summaryRow(v.host, id).querySelector<HTMLElement>("summary")!);
+}
+it("issue #16: collapsing a channel hides every child and its open editors, and reopening restores them", async () => {
+  const v = await render([object(1, { dpt: "DPST-1-1" }), object(2), object(3)]);
+  await openGrouped(v, [1, 2]);
+  const draft = editorRow(v.host, 1).querySelector<HTMLSelectElement>(".dpt-field select")!;
+  await v.set(draft, "DPST-9-2");
+  await v.click(channelButton(v.host));
+  expect(channelButton(v.host).getAttribute("aria-expanded")).toBe("false");
+  for (const id of [1, 2, 3]) expect(summaryRow(v.host, id).hidden, `summary ${id}`).toBe(true);
+  for (const id of [1, 2]) expect(editorRow(v.host, id).hidden, `editor ${id}`).toBe(true);
+  // Hidden, not unmounted: the very same control still holds the draft.
+  expect(editorRow(v.host, 1).querySelector(".dpt-field select")).toBe(draft);
+  await v.click(channelButton(v.host));
+  for (const id of [1, 2, 3]) expect(summaryRow(v.host, id).hidden, `summary ${id}`).toBe(false);
+  for (const id of [1, 2]) expect(editorRow(v.host, id).hidden, `editor ${id}`).toBe(false);
+  expect(editorRow(v.host, 3).hidden).toBe(true);
+  expect(editorRow(v.host, 1).querySelector(".dpt-field select")).toBe(draft);
+  expect(draft.value).toBe("DPST-9-2");
+  expect(api.setComObjectDpt).not.toHaveBeenCalled();
+  await v.cleanup();
+});
+it("issue #16: an expanded channel still shows an open editor outside the filter; explicit collapse hides it", async () => {
+  const v = await render([object(1), object(2)]);
+  await openGrouped(v, [1]);
+  await v.set(v.input("Search communication objects"), "Object 2");
+  expect(channelButton(v.host).getAttribute("aria-expanded")).toBe("true");
+  expect(summaryRow(v.host, 1).hidden).toBe(false);
+  expect(editorRow(v.host, 1).hidden).toBe(false);
+  expect(v.host.textContent).toContain("Editing — outside filter");
+  await v.click(channelButton(v.host));
+  expect(summaryRow(v.host, 1).hidden).toBe(true);
+  expect(editorRow(v.host, 1).hidden).toBe(true);
+  expect(summaryRow(v.host, 2).hidden).toBe(true);
+  await v.click(channelButton(v.host));
+  expect(summaryRow(v.host, 1).hidden).toBe(false);
+  expect(editorRow(v.host, 1).hidden).toBe(false);
+  await v.cleanup();
+});
+it.each(["succeeds", "is refused"])("issue #16: a request that %s while its channel is collapsed runs once and shows its outcome on reopening", async (outcome) => {
+  let settle!: (value: unknown) => void;
+  api.setComObjectDpt.mockImplementationOnce(() => new Promise((resolve, reject) => { settle = outcome === "succeeds" ? resolve : () => reject(new Error("refused by server")); }));
+  const v = await render([object(1)]);
+  await openGrouped(v, [1]);
+  const editor = editorRow(v.host, 1).querySelector<HTMLSelectElement>(".dpt-field select")!;
+  await v.set(editor, "DPST-1-1");
+  await act(async () => editor.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
+  await v.click(channelButton(v.host));
+  expect(editorRow(v.host, 1).hidden).toBe(true);
+  await act(async () => settle({ ...tree, is_modified: true }));
+  await v.click(channelButton(v.host));
+  expect(editorRow(v.host, 1).hidden).toBe(false);
+  expect(api.setComObjectDpt).toHaveBeenCalledTimes(1);
+  if (outcome === "succeeds") expect(v.applied).toHaveBeenCalledTimes(1);
+  else { expect(editorRow(v.host, 1).textContent).toContain("refused by server"); expect(v.applied).not.toHaveBeenCalled(); }
+  await v.cleanup();
+});

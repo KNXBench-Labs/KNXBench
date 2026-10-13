@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-13 16:05
+- **Completed:** Owner-approved limitations reorganization implemented in isolated limitations-catalogue-20261013 tree. Feature f15eb04c, integrated candidate 157aeed9 on current main d3febf6d: short generated KNOWN_LIMITATIONS index (10135→1559 lines, 84.6% reduction), 189 individual dossiers, all five older resolved descriptions, 290 old heading/alias targets; 202 ledger rows unchanged. Status is generated from LEDGER through catalogue.json and checked in documentation/CI. H3 numbered-heading support in xtask; ADR-0076 amendment/maintenance guide/status/migration receipt. Separate self-review fixed closed-alias ownership, documented maintenance and guarded canonical-anchor collisions. Deliberate retained-history deletion fails by KL-128 and exact original restores. Final integrated 14-stage gate: Python 81, xtask Rust 89+14=103, scoped build/clippy/fmt, docs 482 files/4112 targets/0 errors, all five xtask gates, preservation/whitespace; 2505 frozen inputs.
+- **Pending/Next Steps:** Publish only this fully gated post-Alpha-11-source documentation package; no release version/tag/assets/web-lock changes. Then verify exact remote source and archive/clean only this session's artifacts. Future limitations edits: update catalogue summary and individual dossier, regenerate index; formal status only in LEDGER. No product feature or compatibility task was closed.
+- **Notes for Codex oder Claude:** Root checkout remains stale and contains foreign uncommitted research; its original limitations bytes are untouched. Do not restore the monolith from root or publish confidential root-only manufacturer-plugin/ETS6-host research. Its owner may add approved future evidence into KL-006's dossier outside retained-history markers. Preserve special KL-130-GATE/ZOOM IDs. No core/domain/schema/protocol/UI/vendor/hardware behavior changed, no private corpus/browser/full-product acceptance claimed. Alpha 11 retains its separately pinned release tree; web lock remains with its owner. Evidence: docs/evidence/limitations-reorganization-2026-10-13.json; local log .ai/logs/2026-10-13_codex_limitations-reorganization.md.
+
+---
+
 Web lock: unchanged — still held by claude-release-alpha11 (this entry touches no apps/knx-web)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 15:43

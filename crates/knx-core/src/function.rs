@@ -1,3 +1,5 @@
+//! Project Functions: named groups of group addresses placed in one building part.
+//!
 //! Project Functions (MODEL-07, ADR-0124): a named group of group addresses
 //! placed in one building part.
 //!

@@ -1,3 +1,5 @@
+//! Projects that differ only in their Functions never diff as equal.
+//!
 //! ADR-0124: two projects that differ only in their Functions never diff
 //! as equal; internal ids alone are no difference.
 use knx_core::function::{Function, FunctionDetails, FunctionMember};

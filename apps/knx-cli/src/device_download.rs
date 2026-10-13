@@ -54,6 +54,8 @@ pub struct DownloadArgs {
     pub accept_untested: Option<String>,
     /// Explicit durable metadata history for a confirmed write.
     pub activity_history: Option<String>,
+    /// `--report`: where the tester's report of the run goes (ADR-0121).
+    pub report: Option<String>,
 }
 
 /// `--partial parameters|group-addresses|both`.
@@ -85,6 +87,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
     let mut backup_dir = None;
     let mut accept_untested = None;
     let mut activity_history = None;
+    let mut report = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -131,6 +134,10 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
                 activity_history = Some(crate::take_value(args, i + 1, "--activity-history")?);
                 i += 1;
             }
+            "--report" => {
+                report = Some(crate::take_value(args, i + 1, "--report")?);
+                i += 1;
+            }
             flag if flag.starts_with("--") => return Err(format!("unknown flag {flag}")),
             positional => {
                 if target.replace(positional.to_string()).is_some() {
@@ -145,6 +152,13 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
     if confirm.is_some() && gateway.is_none() {
         return Err("--confirm writes to a device and needs --gateway <host:port>".to_string());
     }
+    if report.is_some() && confirm.is_none() {
+        return Err(
+            "--report describes a write and needs --gateway and --confirm; a plan alone has \
+             nothing to report"
+                .to_string(),
+        );
+    }
     Ok(DownloadArgs {
         target,
         project,
@@ -156,6 +170,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
         backup_dir,
         accept_untested,
         activity_history,
+        report,
     })
 }
 
@@ -356,6 +371,40 @@ pub fn format_plan(prepared: &PreparedDownload, keying: &DownloadKeying) -> Stri
         let _ = writeln!(out, "  {:2}: {step}", index + 1);
     }
     out
+}
+
+/// The outcome a tester's report records for `result` (ADR-0121); `None`
+/// for a run that has not ended.
+pub fn reported_outcome(
+    result: &knx_app::commissioning_activity::DownloadResult,
+) -> Option<knx_app::download_report::ReportedOutcome> {
+    use knx_app::commissioning_activity::DownloadResult;
+    use knx_app::download_report::ReportedOutcome;
+    match *result {
+        DownloadResult::Running => None,
+        DownloadResult::Finished { written, restart } => {
+            Some(ReportedOutcome::completed(written, restart))
+        }
+        DownloadResult::Failed { written } => Some(ReportedOutcome::stopped(written, None)),
+    }
+}
+
+/// Writes the report to `path` and says where it can go: an issue or a
+/// mail, each with the file attached by hand.
+pub fn write_report(
+    path: &std::path::Path,
+    report: &knx_app::download_report::DownloadReport,
+) -> Result<String, String> {
+    std::fs::write(path, report.to_json())
+        .map_err(|e| format!("the report could not be written to {}: {e}", path.display()))?;
+    Ok(format!(
+        "report: {} (it holds the parameter values written; no project or device name, no \
+         address)\n  send it: attach it to an issue at {}\n           or mail it to {} \
+         (not public)\n",
+        path.display(),
+        report.issue_url(),
+        knx_app::download_report::REPORT_MAILBOX
+    ))
 }
 
 /// The plan's warnings (ADR-0120), one line each: shown before the
@@ -1513,5 +1562,95 @@ mod tests {
             "WARNING base-image-low-octet-first: looks low first (KNOWN_LIMITATIONS §170, ADR-0120)\n"
                 .repeat(2)
         );
+    }
+
+    #[test]
+    fn a_report_needs_a_write_and_is_parsed_with_one() {
+        assert!(
+            parse_download_args(&args(&["1.1.67", "--project", "p", "--report", "r.json"]))
+                .unwrap_err()
+                .contains("--report describes a write")
+        );
+        let parsed = parse_download_args(&args(&[
+            "1.1.67",
+            "--project",
+            "p",
+            "--gateway",
+            "192.0.2.1:3671",
+            "--confirm",
+            "I confirm download to 1.1.67",
+            "--report",
+            "r.json",
+        ]))
+        .unwrap();
+        assert_eq!(parsed.report.as_deref(), Some("r.json"));
+    }
+
+    #[test]
+    fn a_run_is_reported_by_how_it_ended() {
+        use knx_app::commissioning_activity::{DownloadResult, Restart, Written};
+        use knx_app::download_report::ReportedOutcome;
+        assert_eq!(reported_outcome(&DownloadResult::Running), None);
+        assert_eq!(
+            reported_outcome(&DownloadResult::Finished {
+                written: Written::Yes,
+                restart: Restart::Acknowledged
+            }),
+            Some(ReportedOutcome::completed(
+                Written::Yes,
+                Restart::Acknowledged
+            ))
+        );
+        assert_eq!(
+            reported_outcome(&DownloadResult::Failed {
+                written: Written::Partially
+            }),
+            Some(ReportedOutcome::stopped(Written::Partially, None))
+        );
+    }
+
+    #[test]
+    fn a_report_file_is_written_and_both_ways_to_send_it_are_named() {
+        use knx_app::download_report::*;
+        let report = DownloadReport {
+            kind: REPORT_KIND,
+            format: REPORT_FORMAT,
+            knxbench_version: "test".into(),
+            program: ReportedProgram {
+                id: "M-0083_A-0001-01-0000".into(),
+                name: None,
+                application_version: None,
+                source_sha256: None,
+                manufacturer: "0083".into(),
+                mask: "0701".into(),
+            },
+            scope: "complete",
+            support: "untested",
+            inferences: vec![],
+            warnings: vec![],
+            plan: ReportedPlan {
+                steps: 3,
+                data_octets: 1,
+                group_links: 0,
+            },
+            outcome: None,
+            parameter_values: [("P-1_R-1".to_string(), "5".to_string())].into(),
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("r.json");
+        let text = write_report(&path, &report).unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), report.to_json());
+        assert!(
+            text.contains("issues/new?template=download-report.yml"),
+            "{text}"
+        );
+        assert!(
+            text.contains("mail it to issue@knxbench.com (not public)"),
+            "{text}"
+        );
+        let missing = dir.path().join("no/such/dir/r.json");
+        assert!(write_report(&missing, &report)
+            .unwrap_err()
+            .contains("could not be written"));
     }
 }

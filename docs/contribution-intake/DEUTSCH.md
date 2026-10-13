@@ -182,6 +182,14 @@ eine Lösung noch Kompatibilität oder eine bestimmte Antwortzeit.
   ungeprüfte Inhalte. Diese Sperre lässt sich hier nicht übergehen. Die Datei
   nicht manuell öffentlich hochladen.
 
+## Download-Berichte laufen getrennt
+
+Du hast einen Download auf ein Gerät getestet? Dafür gibt es einen eigenen Weg: das
+Issue-Formular **Download-Bericht** oder **issue@knxbench.com** (ein funktionierendes
+Postfach, nur für Download-Berichte), jeweils mit der Berichtsdatei, die KNXBench
+schreibt ([so geht's](../manual/user-guide/10-command-line.md#helping-to-verify-a-device)).
+Das unten vorgeschlagene Postfach gilt für Analyse-Beiträge und ist noch nicht bestätigt.
+
 ## Vertrauliche Dateien und E-Mail
 
 **Der private Posteingang ist noch nicht bestätigt.** `contribute@knxbench.com`

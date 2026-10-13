@@ -1,3 +1,26 @@
+## 2026-10-13 — Tester download reports (part A of the verification flow)
+
+- **Owner request** ([ADR-0121](adr/0121-tester-download-reports.md),
+  [contract](contracts/download-verification-reports.md)): testers report how
+  a download went, by issue or to `issue@knxbench.com`, so programs can be
+  marked verified after a maintainer review.
+- `knx_app::download_report`: report format 1 (program id, name, version and
+  program-file SHA-256 via the new `knx_productdb::query::program_identity`;
+  manufacturer, mask, scope, support level, inferences, warnings, plan size,
+  outcome, parameter values). No project/device name, address, gateway, key,
+  backup path or error text; a test pins the key set. Summary, issue link
+  (fills the new `download-report.yml` form's `program`/`version`/`outcome`
+  fields; a test reads the form) and `mailto:` link.
+- Server: report prepared when a run is admitted (a failure stops the write),
+  `GET /api/device-download/report` once run and cleanup ended (404/409).
+  CLI: `knx device download … --report <file>` (refused without a write).
+- Manual: command line and bus chapters ("Helping to verify a device"),
+  contribution guides (EN/DE) point download reports to their own route.
+- **Not yet (part B, web lock queued after claude-issues-8-9-10):** the device
+  download tab's explanation, step-by-step guide, checklist and report/issue/
+  mail buttons, and showing plan warnings and inferences.
+- Gate (inputs frozen, one fingerprint across all runs): fmt, clippy `-D warnings`, the five xtask checks, docs, private corpus 144/144 in 31 targets (the verified MDT run returns a report without its address or device name). The first `cargo test` hit two wall-clock budget tests in `dynamic_tree.rs` (20 s) while the machine ran other sessions' builds (load average 36); rerun with `--no-fail-fast` at normal load: Rust 4257/0/197 (14 new tests). 5/5 hand mutants killed. `knx-desktop` excluded locally.
+
 ## 2026-10-13 — KL-170 follow-up: named base-image byte-order warning
 
 - **Owner decision** ([ADR-0120](adr/0120-base-image-byte-order-warning.md)):

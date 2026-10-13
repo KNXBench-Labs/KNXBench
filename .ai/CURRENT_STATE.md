@@ -1,3 +1,12 @@
+Web lock: taken by claude-kl170-tester-verification (part B)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 13:17
+- **Completed:** Lock taken only (owner "Go" 2026-10-13; queue reached this slot, lock free since claude-issues-8-9-10 released it). Worktree `kl170-verify-20261013`, branch `feature/kl170-verify-20261013`, from origin/main `c712a416`.
+- **Pending/Next Steps:** As reserved (ADR-0121 part B): device download tab "help verify this device" section (plain explanation, step-by-step guide, function checklist, report download, "open issue" / "mail issue@knxbench.com" buttons fed by `GET /api/device-download/report`), plus showing the plan's `warnings` and `inferences` (issue #10 package did not render them). Test-first, full gate, docs, push, release this lock.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released. Nothing is sent automatically (ADR-0121); no hardware, no bus traffic.
+
+---
+
 Web lock: released by claude-issues-8-9-10 (issues #8, #9, #10, delivered)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 13:11

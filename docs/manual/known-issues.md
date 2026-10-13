@@ -477,10 +477,12 @@ must not be described as either universally guessed or universally explicit.
 ### Saving into an older project upgrades the file
 
 - **Affected:** a project saved by an older KNXBench version.
-- **Limitation:** the first *write* — Save, creating, restoring or deleting a
-  project version, or another confirmed change written to the file (for example
-  `knx ga-import`, a name recipe, a selective import or an approved MCP
-  rename) — upgrades the file itself to the current format. No copy
+- **Limitation:** the first *write* upgrades the file itself to the current
+  format. Writes are: any edit to a project opened from a `.knxdb` (KNXBench
+  keeps the working state and its undo history in the file as you edit), Save,
+  creating, restoring or deleting a project version, and confirmed changes such
+  as `knx ga-import`, a name recipe, a selective import or an approved MCP
+  rename. No copy
   is made, and the older KNXBench then refuses the file as "newer". A failed
   upgrade leaves the file unchanged.
 - **Not affected (since 2026-10-13):** opening and reading. The application's

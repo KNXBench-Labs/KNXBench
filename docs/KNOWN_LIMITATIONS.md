@@ -445,7 +445,7 @@ Updates use user-supplied files, not the KNX Online Catalog. Full database backu
 ### Checked parameter editors
 
 **Ledger status:** `LATER` ([PDB-04](status/LEDGER.md#snapshot-ids)).
-Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals, and writes are not revision-conditional.
+Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. The server accepts revision-bound writes; the web host still sends unbound ones.
 [Details and history](limitations/checked-parameter-editors.md)
 
 <a id="catalogue-manufacturer-report-history"></a>
@@ -1317,7 +1317,7 @@ Import links show a capped current-run log, which may hold fewer findings than t
 ### Installation-node editing
 
 **Ledger status:** Not separately tracked.
-Unnamed nodes are readable and renameable, but the rename route is not revision-conditional. This is not a general installation-management workflow.
+Unnamed nodes are readable and renameable; the rename route accepts a revision binding the web editor does not send yet. This is not a general installation-management workflow.
 [Details and history](limitations/installation-node-editing.md)
 
 <a id="catalogue-lcars-presentation"></a>
@@ -1439,7 +1439,7 @@ Alpha.5 changed the identifier without automatic alpha.4 data migration. Copy pr
 ### 163. Server shutdown and active writes
 
 **Ledger status:** Not separately tracked.
-Shutdown bounds request cleanup but does not wait for download/address-programming workers. Process termination can interrupt hardware work.
+A stop refuses new bus jobs and waits a bounded, configurable time for a running download/address programming; a write still running when that ends, or under SIGKILL, is cut mid-way.
 [Details and history](limitations/KL-163-server-shutdown-and-active-writes.md)
 
 <a id="catalogue-kl-168"></a>

@@ -720,7 +720,7 @@
       "number": null,
       "title": "Checked parameter editors",
       "topic": "Manufacturer data and parameters",
-      "summary": "Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals, and writes are not revision-conditional.",
+      "summary": "Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. The server accepts revision-bound writes; the web host still sends unbound ones.",
       "file": "checked-parameter-editors.md",
       "ledger_ids": [
         "PDB-04"
@@ -2200,7 +2200,7 @@
       "number": null,
       "title": "Installation-node editing",
       "topic": "UI and accessibility",
-      "summary": "Unnamed nodes are readable and renameable, but the rename route is not revision-conditional. This is not a general installation-management workflow.",
+      "summary": "Unnamed nodes are readable and renameable; the rename route accepts a revision binding the web editor does not send yet. This is not a general installation-management workflow.",
       "file": "installation-node-editing.md",
       "ledger_ids": [],
       "anchors": [
@@ -2408,7 +2408,7 @@
       "number": 163,
       "title": "Server shutdown and active writes",
       "topic": "Platform, deployment and security",
-      "summary": "Shutdown bounds request cleanup but does not wait for download/address-programming workers. Process termination can interrupt hardware work.",
+      "summary": "A stop refuses new bus jobs and waits a bounded, configurable time for a running download/address programming; a write still running when that ends, or under SIGKILL, is cut mid-way.",
       "file": "KL-163-server-shutdown-and-active-writes.md",
       "ledger_ids": [],
       "anchors": [

@@ -62,6 +62,10 @@ package does not introduce an unmeasured cache or bulk-query abstraction.
    editor, and serialize writes appropriately. Suppressing a late UI callback is
    not cancellation/rollback of an already sent legacy HTTP mutation. This
    package does not claim revision-conditional multi-client parameter writes.
+   **Amended 2026-10-13 (Goal A2):** the write route now accepts the binding
+   ([revision-bound writes](revision-bound-writes.md)); the host's `revision`
+   is exactly its three context fields and `expectedValue` is the field's
+   received `value`. Adopting it in the host is Goal B1.
 
 ## Supported presentation and refusals
 

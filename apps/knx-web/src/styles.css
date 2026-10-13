@@ -2851,7 +2851,10 @@ h6 {
 body { font-size: 13px; line-height: 1.5; }
 button, input, select, textarea { font-size: inherit; }
 button { min-height: var(--knx-control-height); text-transform: none; letter-spacing: normal; }
-button:hover { transform: none; }
+/* Issue #14: the reset must out-rank the legacy `button:hover:not(:disabled)`
+   scale above (0,2,1); with `button:hover` alone (0,1,1) every unstyled button
+   still grew on hover, which pushed Save As rows into a horizontal scrollbar. */
+button:hover, button:hover:not(:disabled) { transform: none; }
 input, select, textarea {
   min-height: var(--knx-control-height);
   padding: 6px 9px;

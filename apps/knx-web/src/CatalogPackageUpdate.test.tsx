@@ -1,6 +1,6 @@
 /** Tests that a chosen package is previewed and installed only on confirmation (ADR-0118, B5). */
 // @vitest-environment happy-dom
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CatalogInstallReport, CatalogueUpdatePreview } from "./api";
@@ -140,6 +140,15 @@ describe("catalogue update with preview", () => {
     expect(host.textContent).toContain("4 ID conflicts with installed data.");
     expect(host.textContent).toContain("This package is already installed; installing it again changes nothing.");
   });
+});
+
+it("asks the server once per file, also under StrictMode's double effects", async () => {
+  apiMock.previewCatalogUpdate.mockResolvedValue({ applied: false, preview });
+  const host = document.createElement("div"); document.body.append(host);
+  const root = createRoot(host); roots.push(root);
+  await act(async () => root.render(<StrictMode><CatalogPackageUpdate file={file()} onInstalled={vi.fn()} onDone={vi.fn()} onLegacy={vi.fn()} /></StrictMode>));
+  expect(apiMock.previewCatalogUpdate).toHaveBeenCalledTimes(1);
+  expect(host.textContent, "the one answer is shown").toContain("Nothing is installed yet.");
 });
 
 describe("a product file that is no package", () => {

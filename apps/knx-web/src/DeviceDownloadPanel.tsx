@@ -24,7 +24,7 @@ import { planWarnings } from "./downloadVerification";
 import { currentGuideStep, downloadGuide, type GuideMissing, type GuideStepId } from "./downloadGuide";
 import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey } from "./i18n";
-import { collectDevices } from "./treeUtils";
+import { collectDevices, projectContextKey } from "./treeUtils";
 import { useProgrammingConsent } from "./useProgrammingConsent";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
@@ -127,9 +127,13 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   // a device the server cannot plan is marked before anything is prepared.
   const [marks, setMarks] = useState<Map<string, DownloadReadinessMark>>(() => new Map());
   const [readinessError, setReadinessError] = useState<string | null>(null);
+  // #18: a read in flight is said, and a failed one can be asked again.
+  const [readinessLoading, setReadinessLoading] = useState(false);
+  const [readinessAttempt, setReadinessAttempt] = useState(0);
   useEffect(() => {
     if (project === null) return;
     let current = true;
+    setReadinessLoading(true);
     void (async () => {
       try {
         const next = readinessMarks((await api.getDeviceReadiness()).devices);
@@ -137,10 +141,12 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
       } catch (reason) {
         // Also a malformed answer: no marks, and the panel says so.
         if (current) { setMarks(new Map()); setReadinessError(api.errorMessage(reason)); }
+      } finally {
+        if (current) setReadinessLoading(false);
       }
     })();
     return () => { current = false; };
-  }, [project]);
+  }, [project, readinessAttempt]);
   const selectedMark = address === "" ? undefined : marks.get(address);
 
   const running = status?.status.state === "running";
@@ -169,6 +175,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   // switches devices while a plan is prepared or a download runs, and is
   // answered exactly once per click.
   const handledRef = useRef<number | null>(null);
+  // The same nonce as state, so the pending context below re-renders when it is answered.
+  const [answered, setAnswered] = useState<number | null>(null);
   const recheckedRef = useRef<number | null>(null);
   useEffect(() => {
     if (handoff === null || handledRef.current === handoff.nonce || statusCheck === "checking") return;
@@ -181,6 +189,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
       return;
     }
     handledRef.current = handoff.nonce;
+    setAnswered(handoff.nonce);
     const activity: DownloadActivity = locked || statusCheck === "connecting" ? "busy"
       : statusCheck === "unknown" ? "unknown" : "idle";
     const outcome = resolveHandoff(handoff, project, activity);
@@ -230,6 +239,22 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   useEffect(() => {
     void poll();
   }, []);
+
+  /** #18: one more status read on request; it never selects or plans anything by itself. */
+  function recheckStatus() {
+    setError(null);
+    setStatusCheck("checking");
+    void poll();
+  }
+
+  // #18: a request from Devices is shown at once as context, but only selected
+  // (admitted) once the status read rules out a running download, as above.
+  const pendingRequest = handoff !== null && answered !== handoff.nonce;
+  const requested = useMemo(() => {
+    if (!pendingRequest || project === null || projectContextKey(project) !== handoff.context) return null;
+    const device = collectDevices(project).get(handoff.deviceId);
+    return device && device.address !== null ? { name: device.name, address: device.address } : null;
+  }, [pendingRequest, project, handoff]);
 
   useEffect(() => {
     if (!running) return;
@@ -364,8 +389,24 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
                 { reason: readinessReason(selectedMark, t) })}
             </p>
           )}
-          {readinessError && <p className="device-download-readiness-unavailable">
-            {t("deviceDownload.readiness.unavailable", { error: readinessError })}</p>}
+          {pendingRequest && (
+            <p className="device-download-handoff" role="status" data-handoff="pending">
+              {requested ? t("deviceDownload.handoff.pending", requested) : t("deviceDownload.handoff.pendingUnknown")}
+            </p>
+          )}
+          {!pendingRequest && statusCheck !== "checked" && (
+            <p className="device-download-status" role="status" data-download-status={statusCheck}>
+              {t(`deviceDownload.status.${statusCheck}` as const)}
+              {statusCheck !== "checking" && <> <button type="button" data-status-retry onClick={recheckStatus}>
+                {t("deviceDownload.status.retry")}</button></>}
+            </p>
+          )}
+          {readinessLoading && <p className="device-download-readiness-loading" role="status" data-readiness-loading>
+            {t("deviceDownload.readiness.loading")}</p>}
+          {readinessError && !readinessLoading && <p className="device-download-readiness-unavailable">
+            {t("deviceDownload.readiness.unavailable", { error: readinessError })}{" "}
+            <button type="button" data-readiness-retry onClick={() => setReadinessAttempt((n) => n + 1)}>
+              {t("deviceDownload.readiness.retry")}</button></p>}
           {handoffOutcome && (
             <p className={handoffOutcome.kind === "selected" ? "device-download-handoff" : "device-download-handoff form-warning"}
               role="status" data-handoff={handoffOutcome.kind}>

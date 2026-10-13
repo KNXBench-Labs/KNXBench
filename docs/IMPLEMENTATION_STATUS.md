@@ -26,6 +26,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--issue-18-the-download-tab-names-the-device-at-once"></a>
+- [2026-10-13 — Issue #18: the Download tab names the device at once](history/implementation/2026-W42.md#2026-10-13--issue-18-the-download-tab-names-the-device-at-once)
 <a id="2026-10-13--issue-13-the-log-learns-to-tell-time"></a>
 - [2026-10-13 — Issue #13: the Log learns to tell time](history/implementation/2026-W42.md#2026-10-13--issue-13-the-log-learns-to-tell-time)
 <a id="2026-10-13--goal-b7-rename-several-addresses-literally"></a>

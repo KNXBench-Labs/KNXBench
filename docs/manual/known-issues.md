@@ -649,6 +649,19 @@ must not be described as either universally guessed or universally explicit.
   ([issue #6](https://github.com/KNXBench-Labs/KNXBench/issues/6)).
 - **Details:** [§176](../KNOWN_LIMITATIONS.md#176-appimages-up-to-alpha9-abort-on-hosts-with-newer-mesa-egl).
 
+### AppImages up to alpha.11 cannot save the session log or a monitor capture — fixed in source
+
+- **Affected:** *Export log (JSON)…* in the session log and *Export capture* in
+  the bus monitor, in the AppImage from `v0.1.0-alpha.5` to `v0.1.0-alpha.11`.
+  Web and Docker are not affected.
+- **Limitation:** the save fails with `Command save_session_log not allowed by ACL`
+  (or `save_bus_monitor_capture`): the desktop window's permission list never
+  granted these two commands.
+- **Workaround:** open the Docker image in a browser; there both files are
+  ordinary downloads. Or update once the next AppImage is out
+  ([issue #7](https://github.com/KNXBench-Labs/KNXBench/issues/7)).
+- **Details:** [§181](../KNOWN_LIMITATIONS.md#181-appimages-up-to-alpha11-cannot-save-the-session-log-or-a-bus-monitor-capture).
+
 ### The desktop shell has no login, on purpose
 
 - **Affected:** nothing you can do about it, but worth knowing.

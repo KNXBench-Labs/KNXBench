@@ -1367,6 +1367,28 @@ fn parameter_installation(
     }
 }
 
+/// The id of the stored value of `(device, ets_id)` — the row
+/// `SetParameterValue` overwrites, in whichever installation holds it — or
+/// `None` when no installation stores one, so a new row needs a fresh id.
+/// More than one stored row is refused as ambiguous, never resolved to the
+/// first (the same rule `SetParameterValue::apply` follows).
+pub fn stored_parameter_instance(
+    project: &Project,
+    device: DeviceId,
+    ets_id: &str,
+) -> Result<Option<ParameterInstanceId>, CommandError> {
+    let mut rows = project
+        .installations
+        .iter()
+        .flat_map(|installation| &installation.parameters)
+        .filter(|row| row.device == device && row.source.ets_id == ets_id);
+    let first = rows.next().map(|row| row.id);
+    if rows.next().is_some() {
+        return Err(CommandError::ParameterPlacementAmbiguous(device));
+    }
+    Ok(first)
+}
+
 /// Index of installation `id` for an undo-only restore.
 fn restore_installation(project: &Project, id: InstallationId) -> Result<usize, CommandError> {
     target_installation(project, Some(id))
@@ -3619,12 +3641,20 @@ impl Command {
                 }
                 Ok(Some(&first.name))
             }
+            // Resolved exactly as `apply` resolves it (stable ID, never name
+            // or order), so a guarded rename checks the name it will replace.
+            Self::RenameInstallation { id, .. } => {
+                let index = target_installation(project, Some(*id))?;
+                Ok(Some(&project.installations[index].name))
+            }
             _ => Ok(None),
         }
     }
     pub fn rename_value(&self) -> Option<&str> {
         match self {
-            Self::RenameDevice { name, .. } | Self::RenameGroupAddress { name, .. } => Some(name),
+            Self::RenameDevice { name, .. }
+            | Self::RenameGroupAddress { name, .. }
+            | Self::RenameInstallation { name, .. } => Some(name),
             _ => None,
         }
     }
@@ -3801,6 +3831,73 @@ impl CommandStack {
 
 #[cfg(test)]
 mod tests {
+    /// Goal A2: the stored row is found in whichever installation holds it;
+    /// two rows are ambiguous; none means a new row needs a fresh id.
+    #[test]
+    fn stored_parameter_instance_follows_placement_not_installation_order() {
+        let installation = |id: u8| Installation {
+            id: InstallationId(id),
+            name: format!("I{id}"),
+            default_line: None,
+            multicast_address: None,
+            completion: crate::CompletionStatus::FinishedDesign,
+            topology: Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![],
+            },
+            buildings: vec![],
+            group_ranges: vec![],
+            group_addresses: vec![],
+            parameters: vec![],
+        };
+        let row = |id: u32| ParameterInstance {
+            id: ParameterInstanceId(id),
+            device: DeviceId(1),
+            source: SourceRef {
+                path: "d".into(),
+                ets_id: "R-1".into(),
+            },
+            raw: "1".into(),
+        };
+        let mut project = Project::new(crate::Language("en".into()));
+        project.installations.push(installation(0));
+        project.installations.push(installation(1));
+        assert_eq!(
+            stored_parameter_instance(&project, DeviceId(1), "R-1"),
+            Ok(None)
+        );
+        project.installations[1].parameters.push(row(7));
+        assert_eq!(
+            stored_parameter_instance(&project, DeviceId(1), "R-1"),
+            Ok(Some(ParameterInstanceId(7)))
+        );
+        assert_eq!(
+            stored_parameter_instance(&project, DeviceId(2), "R-1"),
+            Ok(None)
+        );
+        project.installations[0].parameters.push(row(8));
+        assert_eq!(
+            stored_parameter_instance(&project, DeviceId(1), "R-1"),
+            Err(CommandError::ParameterPlacementAmbiguous(DeviceId(1)))
+        );
+
+        let rename = Command::RenameInstallation {
+            id: InstallationId(1),
+            name: "New".into(),
+        };
+        assert_eq!(rename.rename_target_name(&project), Ok(Some("I1")));
+        assert_eq!(rename.rename_value(), Some("New"));
+        let unknown = Command::RenameInstallation {
+            id: InstallationId(9),
+            name: "New".into(),
+        };
+        assert_eq!(
+            unknown.rename_target_name(&project),
+            Err(CommandError::InstallationNotFound)
+        );
+    }
+
     use super::*;
     use crate::building::{BuildingPart, BuildingPartType};
     use crate::commissioning::{CommissioningState, CompletionStatus};

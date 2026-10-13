@@ -577,11 +577,37 @@ async fn parameter_panel(
         .map_err(ApiError::bad_request)
 }
 
+/// `POST /api/device/{id}/parameters`. The four binding fields are all
+/// present (a revision-bound write) or all absent (the documented legacy
+/// form); anything in between, or an unknown field, is refused rather than
+/// silently treated as unbound (docs/contracts/revision-bound-writes.md).
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct SetParameterValueRequest {
     ets_id: String,
     raw: String,
+    server_incarnation: Option<String>,
+    project_incarnation: Option<u64>,
+    snapshot_revision: Option<u64>,
+    /// `Some(None)` is an explicit `null`: the panel showed no value.
+    #[serde(default, deserialize_with = "present_value")]
+    expected_value: Option<Option<String>>,
+}
+
+/// Distinguishes a present `null` from an absent key.
+fn present_value<'de, D>(deserializer: D) -> Result<Option<Option<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<String>::deserialize(deserializer).map(Some)
+}
+
+fn incomplete_binding() -> ApiError {
+    ApiError::refused(
+        "revisionBindingIncomplete",
+        "a revision-bound write needs serverIncarnation, projectIncarnation, snapshotRevision \
+         and its expected value together; send all of them or none",
+    )
 }
 
 async fn set_parameter_value(
@@ -590,9 +616,41 @@ async fn set_parameter_value(
     Query(q): Query<ParameterLanguageQuery>,
     Json(body): Json<SetParameterValueRequest>,
 ) -> Result<Json<ParameterPanelDto>, ApiError> {
-    domain::set_parameter_value_impl(&state, id, body.ets_id, body.raw, q.language.as_deref())
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    let binding = match (
+        body.server_incarnation,
+        body.project_incarnation,
+        body.snapshot_revision,
+        body.expected_value,
+    ) {
+        (None, None, None, None) => None,
+        (
+            Some(server_incarnation),
+            Some(project_incarnation),
+            Some(snapshot_revision),
+            Some(expected_value),
+        ) => Some(domain::ParameterWriteBinding {
+            server_incarnation,
+            project_incarnation,
+            snapshot_revision,
+            expected_value,
+        }),
+        _ => return Err(incomplete_binding()),
+    };
+    domain::set_parameter_value_impl(
+        &state,
+        id,
+        body.ets_id,
+        body.raw,
+        q.language.as_deref(),
+        binding,
+    )
+    .map(Json)
+    .map_err(|error| match error {
+        domain::ParameterWriteError::Conflict(message) => {
+            ApiError::conflict("parameterWriteConflict", message)
+        }
+        domain::ParameterWriteError::Refused(message) => ApiError::bad_request(message),
+    })
 }
 
 async fn install_catalog_package(
@@ -2668,9 +2726,16 @@ async fn import_group_addresses_csv(
     .map_err(ApiError::bad_request)
 }
 
+/// The binding fields are all present (revision-bound, like the device and
+/// group-address renames) or all absent (the documented legacy form).
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct RenameInstallationBody {
     name: String,
+    expected_name: Option<String>,
+    server_incarnation: Option<String>,
+    project_incarnation: Option<u64>,
+    snapshot_revision: Option<u64>,
 }
 
 /// MODEL-01: `PATCH /api/installations/{id}` renames one installation.
@@ -2679,9 +2744,35 @@ async fn rename_installation(
     AxumPath(id): AxumPath<u8>,
     Json(body): Json<RenameInstallationBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::rename_installation_impl(&state, id, body.name)
+    match (
+        body.expected_name,
+        body.server_incarnation,
+        body.project_incarnation,
+        body.snapshot_revision,
+    ) {
+        (None, None, None, None) => domain::rename_installation_impl(&state, id, body.name)
+            .map(Json)
+            .map_err(ApiError::bad_request),
+        (
+            Some(expected_name),
+            Some(server_incarnation),
+            Some(project_incarnation),
+            Some(snapshot_revision),
+        ) => domain::rename_installation_bound_impl(
+            &state,
+            id,
+            body.name,
+            domain::RenameExpectation {
+                server_incarnation,
+                snapshot_revision,
+                expected_name,
+                project_incarnation,
+            },
+        )
         .map(Json)
-        .map_err(ApiError::bad_request)
+        .map_err(crate::rename_routes::map_error),
+        _ => Err(incomplete_binding()),
+    }
 }
 
 #[derive(Deserialize)]

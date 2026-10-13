@@ -6,6 +6,17 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-10-13 (Goal A2): bound installation renames
+
+`PATCH /api/installations/{id}` accepts the same binding as the device and
+group-address renames (`expectedName` plus server/project incarnation and
+snapshot revision); stale or changed names are `409 renameConflict` without
+effect, a partial binding is `422 revisionBindingIncomplete`
+([contract](../contracts/revision-bound-writes.md)). The web Properties editor
+still sends the unbound legacy form until Goal B1 migrates it. Renaming to the
+current name (after trimming) is now a no-op without an undo step in both
+forms, as for devices and group addresses.
+
 <!-- BEGIN retained catalogue record -->
 
 ## Local installation-node UI boundary (2026-10-11)

@@ -164,6 +164,8 @@ async fn start_scan(
     State(state): State<SharedState>,
     Json(body): Json<ScanRequest>,
 ) -> Result<Json<ScanStartResponse>, ApiError> {
+    // Goal A3: no new tunnel once a stop has begun (KL-163).
+    state.stop_admission.admit()?;
     let gateway = body
         .gateway
         .as_deref()
@@ -529,6 +531,8 @@ async fn start_monitor(
     State(state): State<SharedState>,
     Json(body): Json<StartRequest>,
 ) -> Result<Json<StartResponse>, ApiError> {
+    // Goal A3: no new tunnel once a stop has begun (KL-163).
+    state.stop_admission.admit()?;
     let gateway: SocketAddrV4 = body
         .gateway
         .parse()

@@ -493,5 +493,29 @@ fn record(shared: &Shared, progress: Progress) {
 }
 
 #[cfg(test)]
+impl DeviceDownloadSession {
+    /// A download that runs exactly as long as `task`, for stop tests.
+    pub(crate) fn synthetic_running(target: IndividualAddress, task: JoinHandle<()>) -> Self {
+        Self {
+            id: 1,
+            target,
+            device_name: "synthetic device".into(),
+            steps: 3,
+            data_octets: 1,
+            shared: Arc::new(Shared {
+                status: Mutex::new(DownloadStatus::Running),
+                events: Mutex::new(Vec::new()),
+                first_mutation_step: Some(2),
+                last_started: Mutex::new(None),
+                granted: Mutex::new(None),
+                backup_file: Mutex::new(None),
+            }),
+            task: Some(task),
+            report: task_tests::synthetic_report(),
+        }
+    }
+}
+
+#[cfg(test)]
 #[path = "device_download_task_tests.rs"]
 mod task_tests;

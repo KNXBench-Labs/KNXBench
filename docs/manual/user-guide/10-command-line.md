@@ -592,6 +592,16 @@ it. Some devices never acknowledge that restart
 Only memory downloads to products whose load procedure KNXBench can plan are supported;
 anything else is refused while planning, before a connection opens.
 
+A plan can carry `WARNING` lines, printed before the segments. They do not stop the
+write; they say what you should know first. Today there is one:
+`base-image-low-octet-first`. The program declares big-endian (or nothing, which
+means the same), so KNXBench writes multi-octet values high octet first, but the
+program's own default image holds them low octet first. Nobody knows yet which order
+those devices really read, so after such a download check that times, thresholds and
+other multi-octet values behave as set
+([known limitations §170](../../KNOWN_LIMITATIONS.md#170-little-endian-parameter-byte-order-is-refused-for-download-images)).
+If you can, report what you saw: it settles the question for that program.
+
 ### Other device commands
 
 `knx --help` documents these, each with its safety notes; they share the download's

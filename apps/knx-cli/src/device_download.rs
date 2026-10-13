@@ -300,6 +300,7 @@ pub fn format_plan(prepared: &PreparedDownload, keying: &DownloadKeying) -> Stri
         prepared.request.values.len(),
         prepared.request.links.len()
     );
+    out.push_str(&format_warnings(&prepared.warnings));
     let _ = writeln!(
         out,
         "{} (octets the device keeps itself are not written):",
@@ -355,6 +356,15 @@ pub fn format_plan(prepared: &PreparedDownload, keying: &DownloadKeying) -> Stri
         let _ = writeln!(out, "  {:2}: {step}", index + 1);
     }
     out
+}
+
+/// The plan's warnings (ADR-0120), one line each: shown before the
+/// segments, because they do not stop a write.
+pub fn format_warnings(warnings: &[knx_app::device_download::DownloadWarning]) -> String {
+    warnings
+        .iter()
+        .map(|warning| format!("WARNING {warning}\n"))
+        .collect()
 }
 
 /// One [`Progress`] as a line of output.
@@ -1008,6 +1018,21 @@ mod tests {
         (written, String::from_utf8(out).unwrap())
     }
 
+    /// The verified MDT program's base image holds its defaults high octet
+    /// first, as KNXBench writes them: no byte-order warning (ADR-0120).
+    #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+    fn the_verified_program_carries_no_byte_order_warning() {
+        let (_dir, prepared) = prepared();
+        assert_eq!(prepared.warnings, vec![]);
+        let keying = knx_app::access_key::download_keying(
+            prepared.plan.mask,
+            None,
+            knx_app::access_key::KeySource::None,
+        );
+        assert!(!format_plan(&prepared, &keying).contains("WARNING"));
+    }
+
     /// The backup is on disk before the first write, and writing it back
     /// through `knx device restore`'s plan returns the device's old memory.
     #[test]
@@ -1472,5 +1497,21 @@ mod tests {
         assert!(parse_download_args(&args(&["1.1.1", "--project", "p", "--force"])).is_err());
         assert!(parse_download_args(&args(&["--project", "p"])).is_err());
         assert!(parse_download_args(&args(&["1.1.1"])).is_err());
+    }
+
+    #[test]
+    fn a_plan_warning_is_printed_by_name_one_line_each() {
+        use knx_app::device_download::{DownloadWarning, BASE_IMAGE_LOW_OCTET_FIRST};
+        assert_eq!(format_warnings(&[]), "");
+        let warning = DownloadWarning {
+            rule: BASE_IMAGE_LOW_OCTET_FIRST,
+            detail: "looks low first".to_string(),
+            reference: "KNOWN_LIMITATIONS §170, ADR-0120",
+        };
+        assert_eq!(
+            format_warnings(&[warning.clone(), warning]),
+            "WARNING base-image-low-octet-first: looks low first (KNOWN_LIMITATIONS §170, ADR-0120)\n"
+                .repeat(2)
+        );
     }
 }

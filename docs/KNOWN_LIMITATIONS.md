@@ -9692,6 +9692,12 @@ programs high octet first, as declared, and they are untested downloads
 (`--accept-untested`). If ETS honours their declaration, nothing is wrong; if
 those devices actually read low octet first, an untested download would write
 wrong multi-octet values. The probe answers this for any such device too.
+Since 2026-10-13 such a download carries the named warning
+`base-image-low-octet-first` in its plan (CLI and server; owner decision,
+[ADR-0120](adr/0120-base-image-byte-order-warning.md)): a generic rule on the
+program's own base image, which in the measured corpus flags 32 of 181
+memory-downloadable programs, all ABB/Busch-Jaeger `0701h`, and no MDT,
+Siemens or other program. The web download tab does not show it yet.
 
 **Impact.** No offline image, compare plan or download for little-endian
 programs. Import, display and parameter editing are unaffected.

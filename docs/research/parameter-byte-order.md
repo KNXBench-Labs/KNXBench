@@ -154,6 +154,18 @@ field either: all 24 devices a probe could settle are among the other 43, so a
 probe answer for the manufacturer would not by itself cover those 11. Both
 runs gave identical counts.
 
+## Base-image warning (owner decision, 13 October 2026) [V]
+
+Downloads of programs that declare `BigEndian` or nothing but whose own base
+image holds every discriminating default low octet first now carry the named
+warning `base-image-low-octet-first`
+([ADR-0120](../adr/0120-base-image-byte-order-warning.md)). The rule names no
+manufacturer. On 929 packages (105 local, 824 public ones under 6 MB) it flags
+32 of the 181 programs a memory download plans at product defaults: 23 ABB and
+9 Busch-Jaeger `0701h` programs. None of the 93 MDT (the hardware-verified
+program included), 10 Siemens or 11 other programs is flagged. Receipt:
+[kl170-base-image-warning-2026-10-13.json](../evidence/kl170-base-image-warning-2026-10-13.json).
+
 ## What would lift KL-170
 
 A probe of at least one ETS-programmed device per affected manufacturer, with

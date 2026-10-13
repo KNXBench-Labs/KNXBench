@@ -26,6 +26,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--goal-b1b-functions-move-into-the-room"></a>
+- [2026-10-13 — Goal B1b: Functions move into the room](history/implementation/2026-W42.md#2026-10-13--goal-b1b-functions-move-into-the-room)
 <a id="2026-10-13--session-log-holds-16000-entries-and-drops-the-least-important-first"></a>
 - [2026-10-13 — Session log holds 16000 entries and drops the least important first](history/implementation/2026-W42.md#2026-10-13--session-log-holds-16000-entries-and-drops-the-least-important-first)
 <a id="2026-10-13--issues-14-and-16-buttons-stay-put-collapsed-channels-stay-shut"></a>

@@ -147,7 +147,9 @@ creation row appears under the first installation only.
 
 Deleting is done from the properties pane, or from the bulk action bar for several
 addresses at once. A group address that still has a communication object linked to it
-cannot be deleted; unlink first. There is no confirmation dialog, and undo is the way
+cannot be deleted; unlink first. The same holds for a group address that belongs to a
+[Function](03-buildings-and-topology.md#functions): its Properties list those Functions
+with **Remove from Function**. There is no confirmation dialog, and undo is the way
 back.
 
 ## Group ranges

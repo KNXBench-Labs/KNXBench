@@ -102,6 +102,21 @@ const item2 = {
   sourceLanguage: null,
 };
 
+// Goal B5: every web install is previewed first; these tests confirm the shown preview.
+function mockApplied(report: CatalogInstallReport) {
+  const preview = { sourceName: "package.knxprod", packageSha256: report.sha256, packageAlreadyInstalled: false, programs: [],
+    productsAdded: 0, hardware2programsAdded: 0, idConflicts: 0, catalogueFingerprint: "f".repeat(64), token: "t" };
+  apiMock.previewCatalogUpdate.mockResolvedValueOnce({ applied: false, preview });
+  apiMock.applyCatalogUpdate.mockResolvedValueOnce({ applied: true, preview,
+    backup: "products.sqlite.backup-1-abcdefabcdef.sqlite", report });
+}
+async function confirmInstall() {
+  const apply = Array.from(host!.querySelectorAll("button"))
+    .find((b) => b.textContent === "Back up and install" || b.textContent === "Sichern und installieren");
+  expect(apply, "the preview offers its install button").toBeDefined();
+  await act(async () => apply!.click());
+}
+
 async function renderBrowser(onCreated = vi.fn(), onClose = vi.fn(), serverIncarnation?: string, lineId: number | null = null) {
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -155,18 +170,17 @@ describe("CatalogBrowser", () => {
     root.unmount();
   });
 
-  it("offers the previewed update after the direct install, which stays unchanged", async () => {
+  it("offers one product picker, which previews packages, and no direct install beside it", async () => {
     const { root } = await renderBrowser();
     const inputs = Array.from(host!.querySelectorAll<HTMLInputElement>('input[type="file"]'));
-    expect(inputs.map((input) => input.accept)).toEqual([".knxprod,.vd3,.vd4,.vd5,application/zip", ".knxprod,application/zip"]);
-    expect(inputs[1].closest("label")?.textContent).toContain("Update with preview…");
+    expect(inputs.map((input) => input.accept)).toEqual([".knxprod,.vd3,.vd4,.vd5,application/zip"]);
     // Backups are read only when their list is opened, not on every catalogue mount.
     expect(apiMock.catalogBackups).not.toHaveBeenCalled();
     root.unmount();
   });
 
   it("keeps a product-package installation failure visible", async () => {
-    apiMock.installProductPackage.mockRejectedValueOnce(new Error("encrypted legacy database"));
+    apiMock.previewCatalogUpdate.mockRejectedValueOnce(new Error("encrypted legacy database"));
     const { root } = await renderBrowser();
 
     const input = host!.querySelector<HTMLInputElement>('input[type="file"]')!;
@@ -176,13 +190,14 @@ describe("CatalogBrowser", () => {
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    expect(apiMock.installProductPackage).toHaveBeenCalledWith(file);
+    expect(apiMock.previewCatalogUpdate).toHaveBeenCalledWith(file);
+    expect(apiMock.installProductPackage).not.toHaveBeenCalled();
     expect(host!.textContent).toContain("encrypted legacy database");
     root.unmount();
   });
 
   it("refreshes an installed catalog using the latest selected manufacturer", async () => {
-    apiMock.installProductPackage.mockResolvedValueOnce(installReport());
+    mockApplied(installReport());
     apiMock.catalogManufacturers.mockResolvedValue([{ id: "M-2", name: "Vendor" }]);
     apiMock.catalogItems.mockResolvedValue([]);
     const { root } = await renderBrowser();
@@ -195,6 +210,7 @@ describe("CatalogBrowser", () => {
       Object.defineProperty(input, "files", { value: [new File(["package"], "vendor.knxprod")] });
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
+    await confirmInstall();
 
     expect(apiMock.catalogItems).toHaveBeenLastCalledWith("M-2", undefined, null);
     expect(host!.textContent).toContain("Installed: scheme 11");
@@ -203,13 +219,14 @@ describe("CatalogBrowser", () => {
   });
 
   it("uses a neutral report name and explicit unavailable text for historical facts", async () => {
-    apiMock.installProductPackage.mockResolvedValueOnce(installReport({ skipped: true }));
+    mockApplied(installReport({ skipped: true }));
     const { root } = await renderBrowser();
     const input = host!.querySelector<HTMLInputElement>('input[type="file"]')!;
     await act(async () => {
       Object.defineProperty(input, "files", { value: [new File(["package"], "old.knxprod")] });
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
+    await confirmInstall();
     const report = host!.querySelector<HTMLElement>(".catalog-report")!;
     expect(report.getAttribute("aria-label")).toBe("Install report");
     expect(report.textContent).toContain("Install facts unavailable for this historical install");
@@ -253,7 +270,7 @@ describe("CatalogBrowser", () => {
       ["unresolved-baggage-declaration", "catalog.installReport.diagnosticKind.unresolvedBaggageDeclaration"],
       ["undeclared-baggage-payload", "catalog.installReport.diagnosticKind.undeclaredBaggagePayload"],
     ];
-    apiMock.installProductPackage.mockResolvedValueOnce(installReport({
+    mockApplied(installReport({
       facts: {
         counts: categories.map(([category], index) => ({
           category,
@@ -283,6 +300,7 @@ describe("CatalogBrowser", () => {
       Object.defineProperty(input, "files", { value: [new File(["package"], "measured.knxprod")] });
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
+    await confirmInstall();
     categories.forEach(([, categoryKey], index) => {
       const dispositionKey = dispositions[index % dispositions.length][1];
       expect(host!.textContent).toContain(
@@ -303,7 +321,7 @@ describe("CatalogBrowser", () => {
   // The server already qualifies its role text; this test pins
   // that the report a person actually reads says so too, in English.
   it("flags an install report containing a signature member as unverified", async () => {
-    apiMock.installProductPackage.mockResolvedValueOnce(installReport({
+    mockApplied(installReport({
       members: [
         { path: "M-0001.signature", role: "Signature (stored, not verified)", sha256: "def", size: 175 },
         { path: "M-0001/Catalog.xml", role: "Catalog", sha256: "ghi", size: 42 },
@@ -316,6 +334,7 @@ describe("CatalogBrowser", () => {
       Object.defineProperty(input, "files", { value: [new File(["package"], "signed.knxprod")] });
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
+    await confirmInstall();
 
     expect(host!.textContent).toContain("1 signature member stored, not verified");
     expect(host!.textContent).toContain("this application cannot check it");

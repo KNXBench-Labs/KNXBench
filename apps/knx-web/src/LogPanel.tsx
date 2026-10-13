@@ -1,6 +1,6 @@
 /** Panel rendering the backend session log, refetched on tree changes and failed operations. */
 // apps/knx-web/src/LogPanel.tsx
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import LogEntryDetails from "./LogEntryDetails";
 import type { ToastNotification } from "./toast";
 import * as api from "./api";
@@ -12,6 +12,7 @@ import { formatSettingsDiagnostic } from "./settingsDiagnostic";
 import { droppedCount, saveSessionLog } from "./sessionLogExport";
 import { countImportFindings, isImportFinding, type ImportFindingSeverity } from "./importFindings";
 import type { LogExportScope } from "./sessionLogExport";
+import { LOG_RENDER_STEP, detailPreview, newestFirst, notificationRows, serverRows } from "./logRows";
 
 type Severity = LogEntry["severity"];
 
@@ -147,18 +148,27 @@ export default function LogPanel(props: {
   // Newest first for display; export-all keeps the server's chronological
   // ordering while a filtered export mirrors the current visible order.
   const query = search.trim().toLocaleLowerCase();
-  const rows = [
-    ...entries.map((entry, index) => ({ key: `server:${index}:${JSON.stringify(entry)}`, entry })),
-    ...notifications.map(n => ({ key: `ui:${n.id}`, entry: n.entry })),
-  ].sort((a, b) => (Date.parse(b.entry.timestamp) - Date.parse(a.entry.timestamp)) || b.key.localeCompare(a.key, undefined, { numeric: true }));
+  // Up to 16000 server entries (#7): keys, times and order are computed once
+  // per snapshot, not on every keystroke, and only a page of rows is rendered.
+  const serverRowList = useMemo(() => serverRows(entries), [entries]);
+  const rows = useMemo(() => newestFirst([...serverRowList, ...notificationRows(notifications)]), [serverRowList, notifications]);
   const allEntries = notifications.length === 0 ? entries : [...rows].reverse().map(row => row.entry);
-  const visibleRows = rows.filter(({ entry }) =>
+  const scopedToImport = Boolean(importScope && props.tree);
+  const visibleRows = useMemo(() => rows.filter(({ entry }) =>
     filters[entry.severity] &&
-    (!importScope || !props.tree || isImportFinding(entry)) &&
+    (!scopedToImport || isImportFinding(entry)) &&
     (!query || [entry.source, entry.message, formatSettingsDiagnostic(t, entry.diagnostic, entry.message), entry.location ?? "", entry.detail ?? ""]
       .some((field) => field.toLocaleLowerCase().includes(query))),
-  );
+  ), [rows, filters, scopedToImport, query, t]);
   const visibleServerEntries = visibleRows.filter(row => row.key.startsWith("server:")).map(row => row.entry);
+  const [renderLimit, setRenderLimit] = useState(LOG_RENDER_STEP);
+  // A new filter or search starts at the first page again; a refetch (every
+  // project change while the panel is open) keeps what the user expanded.
+  useEffect(() => setRenderLimit(LOG_RENDER_STEP), [filters, query, scopedToImport]);
+  // A selected entry beyond the current page (opened from a notification) is still shown.
+  const selectedIndex = selected ? visibleRows.findIndex(row => row.key === selected.key) : -1;
+  const shownRows = visibleRows.slice(0, Math.max(renderLimit, selectedIndex + 1));
+  const remainingRows = visibleRows.length - shownRows.length;
 
   function clearImportScope() {
     setImportScope(null);
@@ -266,8 +276,9 @@ export default function LogPanel(props: {
       ) : visibleRows.length === 0 ? (
         <p className="log-panel-empty">{t("logPanel.emptyFiltered")}</p>
       ) : (
+        <>
         <ul className="log-panel-list" ref={list}>
-          {visibleRows.map(({ entry, key }) => (
+          {shownRows.map(({ entry, key }) => (
             <li key={key} data-log-key={key} className={`log-entry log-entry-${entry.severity}${selected?.key === key ? " log-entry--selected" : ""}`}>
               <span className="log-entry-severity">{t(SEVERITY_LABEL_KEYS[entry.severity])}</span>
               <span className="log-entry-source">{entry.source}</span>
@@ -278,11 +289,30 @@ export default function LogPanel(props: {
               {entry.source === "import:opaque:raw-text" && <span className="log-entry-raw-label">{t("logPanel.rawRtfLike")}</span>}
               {entry.detail && (entry.source === "import:opaque:raw-text"
                 ? <pre className="log-entry-detail log-entry-raw-text">{entry.detail}</pre>
-                : <span className="log-entry-detail">{entry.detail}</span>)}
+                : <LogDetailPreview detail={entry.detail} />)}
             </li>
           ))}
         </ul>
+        {remainingRows > 0 && (
+          <p className="log-panel-more">
+            {t("logPanel.renderLimit", { shown: shownRows.length, total: visibleRows.length })}{" "}
+            <button type="button" className="log-panel-show-more" onClick={() => setRenderLimit(shownRows.length + LOG_RENDER_STEP)}>
+              {t("logPanel.showMore", { count: Math.min(LOG_RENDER_STEP, remainingRows) })}
+            </button>
+          </p>
+        )}
+        </>
       )}
     </div>
   );
+}
+
+/** A multi-line detail (e.g. a grouped list of retained files) shows its first lines here. */
+function LogDetailPreview({ detail }: { detail: string }) {
+  const t = useTranslate();
+  const { text, hiddenLines } = detailPreview(detail);
+  return <span className="log-entry-detail">
+    {text}
+    {hiddenLines > 0 && <span className="log-entry-detail-more">{t("logPanel.detailMoreLines", { count: hiddenLines })}</span>}
+  </span>;
 }

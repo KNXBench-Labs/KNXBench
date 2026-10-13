@@ -4,6 +4,8 @@
 //! file again with the preview's token, and `apply_package_update` re-runs the
 //! preview and refuses a mismatch. Backups are addressed by name only, taken
 //! from a fresh listing of the database directory; no client path is opened.
+//! Deleting one (Goal B5) also needs the opaque identity that listing showed,
+//! so a file replaced under the same name since then is kept.
 
 use crate::{
     errors::ApiError,
@@ -18,6 +20,8 @@ use axum::{
 };
 use knx_productdb::{PackageError, PackageLimits, ProductDbError, UpdateError, UpdatePreview};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::MutexGuard;
 
@@ -39,6 +43,7 @@ pub(crate) fn router() -> Router<SharedState> {
         )
         .route("/api/catalog/backups", get(backups))
         .route("/api/catalog/restore", post(restore))
+        .route("/api/catalog/backups/delete", post(delete_backup))
 }
 
 #[derive(Serialize)]
@@ -64,6 +69,9 @@ struct BackupEntry {
     name: String,
     bytes: u64,
     modified_unix_seconds: u64,
+    /// Opaque: which file this name was when listed (device, inode, size,
+    /// modification time). A deletion must present it unchanged.
+    identity: String,
 }
 
 #[derive(Serialize)]
@@ -80,6 +88,20 @@ struct RestoreRequest {
 #[derive(Serialize)]
 struct Restored {
     restored: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DeleteBackupRequest {
+    name: String,
+    identity: String,
+    #[serde(default)]
+    confirmed: bool,
+}
+
+#[derive(Serialize)]
+struct Deleted {
+    deleted: String,
 }
 
 struct Upload {
@@ -237,6 +259,23 @@ fn digits(text: &str) -> Option<u64> {
     text.parse().ok()
 }
 
+/// Which file a listed name is, without exposing device or inode numbers.
+fn file_identity(metadata: &std::fs::Metadata) -> String {
+    let fingerprint = format!(
+        "{}:{}:{}:{}.{}",
+        metadata.dev(),
+        metadata.ino(),
+        metadata.len(),
+        metadata.mtime(),
+        metadata.mtime_nsec()
+    );
+    let digest = Sha256::digest(fingerprint.as_bytes());
+    digest[..16]
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
 /// Regular files (not links) next to the database with backup names, newest first.
 fn list_backups(path: &Path) -> Result<Vec<BackupEntry>, ApiError> {
     let database = file_name(path)
@@ -271,6 +310,7 @@ fn list_backups(path: &Path) -> Result<Vec<BackupEntry>, ApiError> {
                 name,
                 bytes: metadata.len(),
                 modified_unix_seconds,
+                identity: file_identity(&metadata),
             },
         ));
     }
@@ -312,5 +352,53 @@ async fn restore(
     })?;
     Ok(Json(Restored {
         restored: request.name,
+    }))
+}
+
+fn backup_changed() -> ApiError {
+    ApiError::conflict(
+        "catalogueBackupChanged",
+        "this backup changed since it was listed; list the backups again",
+    )
+}
+
+/// Deletes one backup the user confirmed, exactly the file that was listed.
+async fn delete_backup(
+    State(state): State<SharedState>,
+    Json(request): Json<DeleteBackupRequest>,
+) -> Result<Json<Deleted>, ApiError> {
+    // Serialised with apply and restore, which write and read backups.
+    let (_products, path) = products(&state)?;
+    if !request.confirmed {
+        return Err(ApiError::with_kind(
+            StatusCode::BAD_REQUEST,
+            "confirmationRequired",
+            "deleting a catalogue backup needs an explicit confirmation",
+        ));
+    }
+    // Only a name from a fresh listing, which holds regular files only.
+    let entry = list_backups(&path)?
+        .into_iter()
+        .find(|entry| entry.name == request.name)
+        .ok_or_else(|| {
+            ApiError::with_kind(
+                StatusCode::BAD_REQUEST,
+                "unknownBackup",
+                "not a product database backup listed by this server",
+            )
+        })?;
+    if entry.identity != request.identity {
+        return Err(backup_changed());
+    }
+    let backup = path.with_file_name(&entry.name);
+    // Checked again right before removal, without following a link.
+    let still = std::fs::symlink_metadata(&backup).map_err(|_| backup_changed())?;
+    if !still.file_type().is_file() || file_identity(&still) != request.identity {
+        return Err(backup_changed());
+    }
+    std::fs::remove_file(&backup)
+        .map_err(|error| ApiError::internal(format!("the backup could not be deleted: {error}")))?;
+    Ok(Json(Deleted {
+        deleted: entry.name,
     }))
 }

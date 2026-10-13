@@ -106,6 +106,16 @@ pub struct ProjectTree {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub last_saved_at: Option<String>,
+    /// Opaque, stable identity for *local view state* (which group-address
+    /// ranges are open, issue #11): the `.knxdb` the project was opened from
+    /// or saved to, or the file an unsaved import came from, gets the same key
+    /// across sessions. A digest, so no path travels with it; `None` for a new
+    /// project that was never saved. Never a project identity for data: it
+    /// changes with Save As and with the file's location. Always `None` from
+    /// [`build_project_tree`]; the server overlays it like `last_saved_at`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub view_key: Option<String>,
     pub installations: Vec<InstallationNode>,
 }
 
@@ -328,6 +338,7 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
         group_address_context_session_id: None,
         group_address_style: group_address_style_str(project.info.group_address_style).to_string(),
         last_saved_at: None,
+        view_key: None,
         installations: project
             .installations
             .iter()

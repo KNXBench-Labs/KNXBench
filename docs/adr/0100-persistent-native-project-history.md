@@ -1,6 +1,7 @@
 # ADR-0100: Persistent native undo and project versions
 
 - Status: scoped local implementation verified; in-session self-review, no release claim
+- Status update (2026-10-13): on main since 2026-10-09, feature `62464763`; [verification](../status/2026-10-09-project-history-verification.md), ledger HISTORY-01/02 DONE. The line above is kept as written; it predates the integration.
 - Date: 2026-10-09
 - Scope: HISTORY-01 and HISTORY-02
 

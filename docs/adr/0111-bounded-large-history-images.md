@@ -1,6 +1,7 @@
 # ADR-0111: Bounded compression for large native history images
 
 - Status: implemented locally; integration/publication are separate
+- Status update (2026-10-13): on main since 2026-10-11, commit `4e0e874d` (the large-history codec that ADR-0112 was renumbered around). The line above is kept as written; it predates the integration.
 - Date: 2026-10-11
 - Scope: native history Save As, editing, recovery and versions
 

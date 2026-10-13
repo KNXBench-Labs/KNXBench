@@ -1,6 +1,7 @@
 # ADR-0101: Guarded project-local device and group-address names
 
 - Status: implemented locally; acceptance evidence recorded separately
+- Status update (2026-10-13): on main since 2026-10-09, feature `28b6511b`; [verification](../status/2026-10-09-project-name-editing-verification.md). The line above is kept as written; it predates the integration.
 - Date: 2026-10-09
 - Scope: single-device-instance and single-group-address name editing
 

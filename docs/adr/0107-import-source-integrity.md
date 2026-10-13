@@ -1,6 +1,7 @@
 # ADR-0107: Source-bound import integrity and completion vocabulary
 
 Status: local implementation; unpublished.
+Status update (2026-10-13): on main since 2026-10-10, feature `d8346579` merged with owner authorization; [integration](../status/2026-10-10-import-integrity-integration.md). The line above is kept as written; it predates the integration.
 
 ## Decision
 

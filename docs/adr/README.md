@@ -46,6 +46,9 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0032](0032-application-snapshot-ordering.md) | Order project snapshots at the application boundary | Accepted | 2026-09-23 |
 | [0033](0033-destructive-csv-imports-require-bound-confirmation.md) | Destructive CSV imports require revision-bound confirmation | Accepted | 2026-09-23 |
 | [0034](0034-zip-member-names-follow-declared-encoding.md) | ZIP member names follow their declared encoding before safety checks | Accepted | 2026-09-23 |
+| [0035](0035-product-package-install-evidence.md) | Persist product-package install evidence | Not stated in the ADR (added with its implementation, `991824ff`) | 2026-09-24 |
+| [0036](0036-scheme21-namespace-gate.md) | Scheme-21 package XML fails closed on foreign namespaces | Accepted | 2026-09-24 |
+| [0037](0037-product-program-catalog-metadata.md) | Preserve application-program catalogue metadata as source values | Accepted (PDB-7) | 2026-09-24 |
 | [0038](0038-site-is-a-ground-root-space.md) | A site is a `Ground` space at the root of the building structure — no new kind, no new level | Proposed | 2026-09-26 |
 | [0039](0039-project-mutation-goes-through-commands.md) | A live project changes only through `Command::apply`, and ids are reserved by a command that never rewinds | Accepted | 2026-09-26 |
 | [0040](0040-programming-requires-release-stage-consent.md) | Programming a device needs a release-stage-aware consent, rememberable per stage | Accepted | 2026-09-27 |
@@ -55,12 +58,21 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0044](0044-download-data-is-read-from-the-stored-product-file.md) | An application's download data is read on demand from the stored product file | Accepted | 2026-09-28 |
 | [0045](0045-device-download-route-demands-phrase-and-plan.md) | The device-download route demands the device's confirmation phrase and the exact plan the user saw | Accepted | 2026-09-28 |
 | [0046](0046-address-programming-route-one-phrase-stoppable-wait.md) | Address programming from the web: one phrase covers write and restart, and the button wait can be stopped | Accepted | 2026-09-28 |
+| [0047](0047-session-log-export-is-a-versioned-local-json-snapshot.md) | Session-log export is a versioned local JSON snapshot | Accepted | 2026-09-28 |
 | [0048](0048-commissioning-v1-scope-is-the-verified-memory-path.md) | Commissioning v1 is the verified memory path for mask 070nh; everything else is refused by name | Accepted (decision 5 superseded by ADR-0086) | 2026-09-28 |
+| [0049](0049-download-readiness-is-per-plan-and-backups-are-pre-write.md) | Download readiness is evidence-scoped; pre-write backups fail closed | Accepted | 2026-09-29 |
 | [0050](0050-com-object-activation-is-evaluated-and-four-valued.md) | A communication object's evaluated activation is four-valued and separate from the stored `is_active` | Accepted | 2026-09-29 |
 | [0051](0051-individual-address-write-enable-is-opt-in-debug.md) | Individual Address Write Enable is an opt-in debug action, never automatic | Accepted | 2026-09-30 |
+| [0052](0052-channel-name-and-number-are-stored-verbatim.md) | A channel's `@Name` and `@Number` are stored verbatim, and the v18 migration keeps every other unknown row | Accepted | 2026-09-30 |
 | [0053](0053-contributions-come-with-a-license-grant-for-dual-licensing.md) | Contributions come with a license grant, so KNXBench can be dual-licensed | Superseded by ADR-0054 | 2026-09-30 |
 | [0054](0054-no-contributor-license-agreement-agpl-only.md) | No contributor license agreement; contributions come in under the AGPL alone | Accepted | 2026-09-30 |
+| [0055](0055-bus-activity-snapshot-is-partial-session-evidence.md) | The bus-activity snapshot reports only observed sessions | Accepted | 2026-09-30 |
+| [0056](0056-write-activity-needs-evidence-states.md) | Write activity needs evidence states, not generic success/failure | Accepted | 2026-09-30 |
+| [0057](0057-serial-address-writes-require-durable-recovery.md) | Serial-address writes fail closed until durable recovery is demonstrable | Accepted | 2026-09-30 |
+| [0058](0058-individual-address-reset-requires-durable-recovery.md) | Public individual-address reset fails closed without durable recovery | Accepted | 2026-09-30 |
 | [0059](0059-button-address-programming-requires-durable-recovery.md) | Button-based address programming needs durable pre-write recovery | Accepted | 2026-10-01 |
+| [0060](0060-versioned-declarative-theme-packs.md) | Versioned declarative theme packs, never arbitrary CSS | Accepted; preview and per-theme management superseded by ADR-0079 | 2026-10-02 |
+| [0061](0061-unsupported-choose-controller-kinds.md) | Unsupported declared choose controllers fail closed, not as missing references | Accepted (published at `2d9aaeb8`) | 2026-10-02 |
 | [0062](0062-dynamic-evaluation-work-admission.md) | Dynamic evaluation admits repeated work before performing it | Accepted (bounded contract) | 2026-10-03 |
 | [0063](0063-parameter-scopes-preserve-evaluation-identity.md) | Parameter scopes preserve the full evaluation identity | Accepted (bounded backend contract) | 2026-10-03 |
 | [0064](0064-durable-activity-history-is-not-recovery.md) | Activity history is durable metadata, not recovery or bus proof | Accepted (bounded backend contract) | 2026-10-02 |
@@ -91,11 +103,23 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0089](0089-achievements.md) | Achievements are a frontend catalogue over a grow-only server record | Accepted | 2026-10-07 |
 | [0090](0090-read-only-mcp-adapter.md) | A read-only, stdio-only MCP adapter over saved project files | Accepted | 2026-10-07 |
 | [0091](0091-community-evidence-analysis.md) | Maintainer-reviewable community evidence, not automatic compatibility | Accepted | 2026-10-08 |
+| [0092](0092-lcars-built-in-presentation.md) | LCARS is a built-in palette with a controlled presentation | Accepted (owner-approved study) | 2026-10-08 |
 | [0093](0093-wizards-are-views-over-existing-commands.md) | Wizards are views over existing commands; a new project's structure is seeded atomically | Accepted (both wizards implemented) | 2026-10-08 |
 | [0094](0094-legacy-exim-product-files.md) | Legacy EX-IM product files get a separate, content-detected path with a user-supplied password | Accepted | 2026-10-08 |
 | [0095](0095-static-marketing-companion.md) | Marketing is a static companion, not a hosted engineering application | Accepted (site deployment gated) | 2026-10-08 |
 | [0096](0096-devices-navigation-and-catalogue-batch.md) | Devices navigation and a snapshot-bound catalogue batch | Accepted implementation decision; local delivery/publication separate | 2026-10-08 |
 | [0097](0097-docker-hub-release-image.md) | Release tags publish a multi-arch server image to Docker Hub | Accepted (first publication needs credentials and the next tag) | 2026-10-09 |
+| [0098](0098-offline-ap1-procedure-resolution.md) | Offline AP1 sequence resolution is not download capability | Accepted; on main | 2026-10-09 |
+| [0100](0100-persistent-native-project-history.md) | Persistent native undo and project versions | Implemented; on main since 2026-10-09 | 2026-10-09 |
+| [0101](0101-project-local-device-and-ga-names.md) | Guarded project-local device and group-address names | Implemented; on main since 2026-10-09 | 2026-10-09 |
+| [0102](0102-communication-object-table-view-state.md) | Object editors keep one parent while the table changes its mind | Accepted; on main | 2026-10-09 |
+| [0106](0106-selective-project-import.md) | Selective project import into the open project | Accepted; on main since 2026-10-10 | 2026-10-09 |
+| [0107](0107-import-source-integrity.md) | Source-bound import integrity and completion vocabulary | Implemented; on main since 2026-10-10 | 2026-10-10 |
+| [0108](0108-read-only-module-instance-values.md) | Read stored module-instance values without interpreting RepeatIndex | Accepted (Repeat evaluation research-bound) | 2026-10-10 |
+| [0109](0109-opaque-payload-content-and-candidate-roles.md) | Opaque payload content is evidence, not authenticated App identity | Accepted (bounded scope) | 2026-10-10 |
+| [0110](0110-retained-raw-header-candidates.md) | Retained raw-header candidates, not RTF interpretation | Accepted, bounded; on main since 2026-10-10 (KL-175 DONE) | 2026-10-10 |
+| [0111](0111-bounded-large-history-images.md) | Bounded compression for large native history images | Implemented; on main since 2026-10-11 | 2026-10-11 |
+| [0112](0112-native-instruction-overlays.md) | Native instruction overlays keep imported text authoritative | Accepted; on main, editor mounted 2026-10-12 | 2026-10-11 |
 | [0113](0113-durable-native-import-evidence.md) | Durable historical import evidence in native passthrough | Accepted (on main 2026-10-12) | 2026-10-11 |
 | [0114](0114-client-release-discovery.md) | Client release discovery is notification-only | Accepted implementation decision | 2026-10-11 |
 | [0115](0115-offline-application-edit-boundary.md) | Offline application edits live in `knx-edit`, below App | Accepted implementation decision | 2026-10-12 |

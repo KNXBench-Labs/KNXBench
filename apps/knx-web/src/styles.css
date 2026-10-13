@@ -3515,6 +3515,18 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .about-dialog .release-update-panel a { display: inline-block; margin: 0 0 8px; color: var(--knx-accent); }
 .about-dialog .release-update-panel button { background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); box-shadow: none; }
 .about-dialog button:hover:not(:disabled) { transform: none; }
+/* B16: the bundled community board, read like a list rather than centred prose. */
+.about-dialog .hall-of-fame { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--knx-border); }
+.about-dialog .hall-of-fame h3 { margin: 0 0 6px; font-size: 15px; }
+.about-dialog .hall-of-fame > a { display: inline-block; margin-top: 4px; font-size: 13px; color: var(--knx-accent); }
+.hall-of-fame-list { margin: 6px 0 4px; padding: 0 0 0 2.2em; text-align: start; font-size: 13px; }
+.hall-of-fame-entry { padding: 6px 0; border-bottom: 1px solid var(--knx-border); }
+.hall-of-fame-entry:last-child { border-bottom: none; }
+.hall-of-fame-entry::marker { color: var(--knx-muted); font-variant-numeric: tabular-nums; }
+.hall-of-fame-who { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-weight: 600; overflow-wrap: anywhere; }
+.hall-of-fame-who a { color: var(--knx-accent); }
+.hall-of-fame-xp { font-variant-numeric: tabular-nums; color: var(--knx-foreground); }
+.hall-of-fame-title, .hall-of-fame-counters { display: block; color: var(--knx-muted); overflow-wrap: anywhere; }
 .about-dialog-footer { display: flex; justify-content: center; margin-top: 14px; border-top: 1px solid var(--knx-border); padding-top: 12px; }
 .about-dialog-footer button { min-width: 8rem; }
 .search-panel.programming-consent-dialog { width: min(36rem, 92vw); padding: 1rem 1.15rem; }

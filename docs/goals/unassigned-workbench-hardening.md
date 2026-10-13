@@ -24,7 +24,7 @@ blocked (named missing evidence) or excluded; nothing else is added.
 | B2 | Desktop webview reload/navigation guard for notes/instruction drafts; native/Orca/Firefox only as actually run | planned |
 | B3 | Read-only stored BusAccess/IP view, redacted endpoints, no connect | planned |
 | B4 | Instructions for natively created devices (no invented original) | planned |
-| B5 | Catalogue backup deletion; web direct `.knxprod` install routed to preview/apply | planned |
+| B5 | Catalogue backup deletion; web direct `.knxprod` install routed to preview/apply | delivered (W42 entry) |
 | B6 | KL-164 idempotent achievement increments | delivered (W42 entry) |
 | B7 | Naming recipe UI over the existing `knx-edit` service | delivered (W42 entry) |
 | B8 | EN/DE report texts, KL-13/KL-29/KL-43 summaries, TOOLS-01–05 provenance, optional FUTURE-08 | planned |
@@ -35,7 +35,7 @@ blocked (named missing evidence) or excluded; nothing else is added.
 | B13 | Issue #16: collapsing a communication-object channel hides its child rows/editors while drafts, pending requests and results survive reopening ([triage](../status/2026-10-13-issue-16-triage.md)); contract + ADR-0102 update | delivered (W42 entry) |
 | B14 | Issue #17: evidence-gated positional/default text resolution in the product/application projection; raw, provenance and user names preserved; no unverified UI regex ([triage](../status/2026-10-13-issues-17-18-triage.md)) | planned — evidence first |
 | B15 | Issue #18: the requested device is visible as context at once; visible status/readiness wait; planning/start gates and active-download target protection kept; status and readiness latency measured separately ([triage](../status/2026-10-13-issues-17-18-triage.md)) | delivered (W42 entry) |
-| B16 | About: Hall of Fame from the bundled `docs/community/hall-of-fame.json` (participants, counters, English titles, medals, timestamp, link to the live board); no background GitHub request, no second scoring logic ([contract](../contracts/community-recognition.md)) | planned |
+| B16 | About: Hall of Fame from the bundled `docs/community/hall-of-fame.json` (participants, counters, English titles, medals, timestamp, link to the live board); no background GitHub request, no second scoring logic ([contract](../contracts/community-recognition.md)) | delivered (W42 entry) |
 
 B9–B12 were added on 13 October at the owner's request (triage `59b1ef8d0f72`, handover 22:10);
 #15 joined B12 (triage `922727d3ed74`, 22:45) and #16 became B13 (same session, 22:16).

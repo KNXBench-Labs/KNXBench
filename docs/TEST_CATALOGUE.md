@@ -749,7 +749,7 @@ These checks guard the workshop, not the bus.
 - **Docker release workflow contract:** [test_docker_release_workflow.py](../tools/tests/test_docker_release_workflow.py)
 - **Read-only conversion-exception analysis:** [test_analyze_cvexc.py](../tools/tests/test_analyze_cvexc.py)
 - **Container smoke acceptance:** [smoke-test.sh](../apps/knx-server/scripts/smoke-test.sh)
-- **Built-server naming, Functions and fictional-demo checks:** [verify_community_demos.js](../tools/verify_community_demos.js) · [verify_name_editing.py](../tools/verify_name_editing.py) · [verify_native_evidence.py](../tools/verify_native_evidence.py)
+- **Built-server naming, Functions, naming-recipe and fictional-demo checks:** [verify_community_demos.js](../tools/verify_community_demos.js) · [verify_name_editing.py](../tools/verify_name_editing.py) · [name-recipe.native.ts](../apps/knx-web/e2e/name-recipe.native.ts) · [http_name_recipe.rs](../apps/knx-server/tests/http_name_recipe.rs) · [verify_native_evidence.py](../tools/verify_native_evidence.py)
 
 </details>
 

@@ -64,6 +64,21 @@ bus traffic, private project/tester fixture or product implementation was perfor
 
 ## Delivery receipt
 
-PENDING: final merged-input tool/docs/xtask checks, publication readback and real
-GitHub workflow execution. Do not treat local success as GitHub permission proof.
+Merged source `a1da6cf440dc628d717f998265e88a8ca5ad6ec6`, exact feature tree
+`45706da4848f506229543d21c8cb1205fe3ff845`: all eight relevant stages passed
+(tools 122/0, one existing skip; documentation; five xtask gates; whitespace),
+with matching start/end input fingerprint. Publication proved local = tracking =
+live and read back five exact targets before reporting success.
+
+Actual GitHub workflow runs `38469361417` and `38469710272` both completed
+successfully. The first exercised real issue write permissions: closure-credit
+comments for #14 (`6155371968`) and #16 (`6155372590`) were posted by GitHub Actions,
+read back, and matched the persisted notified flags. The second run left both
+notice counts and IDs unchanged. Generated snapshot updates were fetched and
+fast-forwarded into this session's isolated checkout. Source acceptance and remote
+receipts are preserved in `docs/evidence/community-recognition-2026-10-13.json`.
+
 About dialog and fixes for #17/#18 remain handoff requests, not completed features.
+No Rust/frontend production code changed in this package; no full application
+build/browser/hardware gate is claimed for the scoreboard tooling. The selected
+shared root remains stale/dirty; it was not wholesale synchronized.

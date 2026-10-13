@@ -1,5 +1,19 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "types": ["node"] },
-  "include": ["src", "e2e/ux-feedback.e2e.ts", "e2e/achievements-fixture.ts", "playwright.ux-feedback.config.ts"]
+  "include": [
+    "src",
+    "e2e/ux-feedback.e2e.ts",
+    "e2e/achievements-fixture.ts",
+    "e2e/achievements.e2e.ts",
+    "e2e/flow-camera.e2e.ts",
+    "e2e/flow-image-export.e2e.ts",
+    "e2e/toast-fixture.tsx",
+    "e2e/toast.e2e.ts",
+    "e2e/archive-size.e2e.ts",
+    "e2e/telegram-flow-fixture.tsx",
+    "e2e/telegram-flow-server.ts",
+    "playwright.ux-feedback.config.ts",
+    "vite.ux-feedback.config.ts"
+  ]
 }

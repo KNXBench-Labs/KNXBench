@@ -4226,3 +4226,27 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 :root[data-motion-achievements="off"] .toast--achievement button:hover { transform: none; }
 .motion-category-settings { border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); margin: 1rem 0 0; padding: 0.75rem; min-width: 0; }
 .motion-category-settings legend { color: var(--knx-foreground); font-size: 0.9rem; padding: 0 0.25rem; }
+
+/* Selected graph images: local-only, bounded, independently scrollable on narrow screens. */
+.flow-export-dialog { align-self: flex-start; width: min(38rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem); box-sizing: border-box; padding: 1.1rem; overflow: auto; color: var(--knx-foreground); }
+.flow-export-dialog h2 { margin: 0 0 .8rem; font-size: 1.15rem; }
+.flow-export-dialog p { line-height: 1.45; overflow-wrap: anywhere; }
+.flow-export-dialog label { display: grid; gap: .4rem; margin-block: .8rem; }
+.flow-export-dialog select, .flow-export-dialog input[type="number"] { box-sizing: border-box; width: 100%; padding: .5rem; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input); color: var(--knx-foreground); background: var(--knx-surface); }
+.flow-export-dialog .flow-export-consent { display: flex; align-items: flex-start; gap: .6rem; }
+.flow-export-dialog .flow-export-consent input { flex: 0 0 auto; width: 1rem; margin: .2rem 0 0; }
+.flow-export-preview { margin: .8rem 0; }
+.flow-export-preview img { display: block; width: 100%; max-height: 10rem; object-fit: contain; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input); }
+.flow-export-preview figcaption, .flow-export-dialog small { font-size: .75rem; line-height: 1.4; color: var(--knx-muted); }
+.flow-export-preview figcaption { margin-top: .4rem; }
+.flow-export-resolution { font-variant-numeric: tabular-nums; font-weight: 600; }
+.flow-export-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0 .7rem; }
+.flow-export-dialog button:hover { transform: none; box-shadow: none; }
+.flow-export-dialog progress { width: 100%; accent-color: var(--knx-accent); }
+/* No new timer/RAF or data throttling: the shared clock animates only camera changes. */
+@media (prefers-reduced-motion: no-preference) {
+  .flow-camera { transition: transform var(--knx-transition-duration) var(--knx-motion-easing); }
+}
+html[data-motion-level="off"] .flow-camera,
+html[data-motion-flow="off"] .flow-camera,
+.flow-dragging .flow-camera { --knx-transition-duration: 0s; }

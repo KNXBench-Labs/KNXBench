@@ -152,6 +152,16 @@ describe("checkMotionDeclarations", () => {
 // read the same single path for their own reasons. Recorded rather than
 // built — the walk belongs in one shared helper, not in a third copy.
 describe("styles.css", () => {
+  it("smooths the Flow camera only through the shared guarded clock and can stop it locally", () => {
+    const rules = parseRules(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "styles.css"), "utf-8"));
+    const camera = rules.find(rule => rule.selector === ".flow-camera" && rule.declarations.some(d => d.property === "transition"));
+    expect(camera).toBeTruthy();
+    expect(camera!.ancestors).toContain("@media (prefers-reduced-motion: no-preference)");
+    expect(camera!.declarations.find(d => d.property === "transition")!.value).toContain("var(--knx-transition-duration)");
+    const stop = rules.find(rule => rule.selector.includes('[data-motion-flow="off"] .flow-camera'));
+    expect(stop!.declarations).toContainEqual(expect.objectContaining({ property: "--knx-transition-duration", value: "0s" }));
+    expect(stop!.selector).toContain(".flow-dragging");
+  });
   it("has no unguarded transition/animation declarations", () => {
     const stylesheetPath = join(dirname(fileURLToPath(import.meta.url)), "styles.css");
     const css = readFileSync(stylesheetPath, "utf-8");

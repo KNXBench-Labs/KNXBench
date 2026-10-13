@@ -1045,7 +1045,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       {flowWindowError && <p role="alert" className="field-error">{flowWindowError}</p>}
       {(session || rows.length > 0) && (
         <div id="monitorview-panel-flow" role="tabpanel" hidden={monitorView !== "flow"} aria-labelledby="monitorview-tab-flow">
-          <TelegramFlowView key={flowFeed.model ? `${flowFeed.model.identity.serverIncarnation}:${flowFeed.model.identity.sessionId}` : "empty"} feed={presentedFlow} active={active && monitorView === "flow"} navigation={navigation} onOpenWindow={() => void openFlow()} />
+          <TelegramFlowView key={flowFeed.model ? `${flowFeed.model.identity.serverIncarnation}:${flowFeed.model.identity.sessionId}` : "empty"} feed={presentedFlow} captureScope={projectScope} active={active && monitorView === "flow"} navigation={navigation} onOpenWindow={() => void openFlow()} />
         </div>
       )}
       {monitorView === "table" && <div id="monitorview-panel-table" role="tabpanel" aria-labelledby="monitorview-tab-table">

@@ -84,6 +84,8 @@ for (const palette of palettes) test(`${palette.id} ${palette.scheme}: real stat
   await expect(address).toHaveValue("12");
   await expect(inspector.locator(".inspector")).toHaveCSS("color", await color(page, "var(--knx-foreground)"));
 
+  // Issue #11: the address tree opens compact; open it to reach the row.
+  await table.locator("[data-ga-expand-all]").click();
   const row = table.getByRole("row", { name: /1\/1\/1.*Lighting/ });
   await row.getByRole("button", { name: "1/1/1", exact: true }).click();
   await expect(row).toHaveAttribute("aria-selected", "true");

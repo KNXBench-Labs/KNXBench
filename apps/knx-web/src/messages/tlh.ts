@@ -60,7 +60,6 @@ export const messages = {
   "inspector.dpt": "DPT",
   "inspector.unlink": "rarHa'",
   "inspector.unlinkBoth": "cha' rarHa'",
-  "inspector.chooseGroupAddress": "(ghom Daq wIv)",
   "inspector.link": "rar",
   "inspector.line": "He",
   "inspector.unassigned": "(pagh yoS)",

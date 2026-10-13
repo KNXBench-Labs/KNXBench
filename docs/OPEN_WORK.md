@@ -12,10 +12,12 @@ schema 22 (needs an ETS 6.1 sample with devices). Released in Alpha 10; Alpha 11
 **13 October 2026:** the reporter's ~80-device project imports on Alpha 10, with
 2840 warnings. *Export log (JSON)…* failed in the AppImage: fixed in source
 ([KL §181](KNOWN_LIMITATIONS.md#181-appimages-up-to-alpha11-cannot-save-the-session-log-or-a-bus-monitor-capture)),
-reaches users with the next AppImage. Open: the reporter's log (the Docker image
-exports it today); most visible warnings are one `import:unsupported` line per
-retained manufacturer file (`Baggages/…`), so grouping them without losing any
-detail is a candidate follow-up once the log shows what else is in there.
+reaches users with the next AppImage. Most warnings were one `import:unsupported` line
+per retained manufacturer file (`Baggages/…`); the Log now groups those notices (one
+entry listing every file) and counts them once
+([delivery](IMPLEMENTATION_STATUS.md#2026-10-13--issue-7-retained-files-stop-drowning-the-import-findings)).
+Open: the reporter's log or report (the Docker image exports it today), to see which
+genuine findings remain.
 
 ## AppImage EGL abort, issue #6 (12 October 2026)
 

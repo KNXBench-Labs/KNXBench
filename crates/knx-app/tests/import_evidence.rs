@@ -197,3 +197,67 @@ fn refused_primary_capture_preserves_all_original_entries() {
 fn absent_legacy_evidence_is_unavailable_not_a_measured_zero() {
     assert!(import_evidence::read(&[]).unwrap().is_none());
 }
+
+const PNG_NOTICE: &str = "manufacturer payload (png); retained byte-exact, uninterpreted; not rendered or executed; contents not unpacked";
+
+fn report_with_retained_files() -> ImportReport {
+    let mut input = report();
+    for name in ["a", "b", "c"] {
+        input.unsupported.push(UnsupportedFeature {
+            what: format!("M-0001/Baggages/{name}.png"),
+            consequence: PNG_NOTICE.into(),
+        });
+    }
+    input
+}
+
+#[test]
+fn reopened_counts_follow_the_fresh_import_rule_for_retained_files() {
+    // Issue #7: three retained PNGs share one notice and count once, both
+    // right after the import and after the project was saved and reopened.
+    let input = report_with_retained_files();
+    assert_eq!(knx_app::import_finding_counts(&input), (0, 3));
+    let entry = import_evidence::encode(&input).unwrap();
+    let restored = import_evidence::read(&[entry]).unwrap().unwrap();
+    assert_eq!(restored.counts(), knx_app::import_finding_counts(&input));
+    assert_eq!(
+        restored.report["unsupported"].as_array().unwrap().len(),
+        4,
+        "the stored report keeps one row per file"
+    );
+}
+
+fn edit_report(entry: &mut knx_store::StoredOpaqueEntry, edit: impl FnOnce(&mut String)) {
+    replace_envelope(entry, |envelope| {
+        let mut raw = envelope["report_json"].as_str().unwrap().to_owned();
+        edit(&mut raw);
+        envelope["report_json"] = serde_json::json!(raw);
+    });
+}
+
+#[test]
+fn unsupported_rows_without_text_count_once_and_ambiguous_text_is_refused() {
+    let mut entry = import_evidence::encode(&report_with_retained_files()).unwrap();
+    let mut bare = entry.clone();
+    edit_report(&mut bare, |raw| {
+        *raw = raw.replace(
+            r#"{"what":"fictional feature","consequence":"retained, not editable"}"#,
+            "{}",
+        );
+    });
+    assert_eq!(
+        import_evidence::read(&[bare]).unwrap().unwrap().counts(),
+        (0, 3)
+    );
+    edit_report(&mut entry, |raw| {
+        *raw = raw.replacen(
+            r#""consequence":"manufacturer"#,
+            r#""consequence":"other","consequence":"manufacturer"#,
+            1,
+        );
+    });
+    assert!(
+        import_evidence::read(&[entry]).is_err(),
+        "ambiguous historical unsupported text accepted"
+    );
+}

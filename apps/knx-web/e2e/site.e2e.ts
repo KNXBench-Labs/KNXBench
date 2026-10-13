@@ -33,13 +33,16 @@ for (const language of ["en", "de"] as const) {
       });
       await page.goto(`/e2e/site-fixture.html?lang=${language}`);
       await expect(page.locator("html")).toHaveAttribute("lang", language);
+      // Issue #12: the site form opens from the page's single `+ New` menu.
+      await expect(page.locator(".installation-diagram [data-structure-create]")).toHaveCount(0);
+      await page.locator(".structure-new-menu > summary").click();
+      await page.locator('[data-create-entry="site-root"]').click();
       const siteForm = page.locator('[data-structure-create="site-root"]');
       await expect(siteForm).toBeVisible();
-      await siteForm.locator("summary").click();
       await expect(siteForm.locator(".structure-create-hint")).toContainText(language === "de" ? "Ground" : "Ground root");
       await expect(siteForm.locator("select")).toHaveCount(0);
       await siteForm.locator("input").fill("Campus");
-      await siteForm.locator("button").click();
+      await siteForm.locator("ul button").click();
       await expect(page.locator('.building-diagram > .building-diagram-node')).toHaveCount(3);
       for (const [id, name] of [[4, "North building"], [6, "South building"]] as const) {
         await page.locator(".building-diagram .diagram-heading").filter({ hasText: name }).click();

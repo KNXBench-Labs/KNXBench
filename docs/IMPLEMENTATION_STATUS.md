@@ -26,6 +26,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--issues-12-and-15-one-new-menu-per-page"></a>
+- [2026-10-13 — Issues #12 and #15: one + New menu per page](history/implementation/2026-W42.md#2026-10-13--issues-12-and-15-one-new-menu-per-page)
 <a id="2026-10-13--issue-11-the-address-tree-opens-compact-and-remembers"></a>
 - [2026-10-13 — Issue #11: the address tree opens compact and remembers](history/implementation/2026-W42.md#2026-10-13--issue-11-the-address-tree-opens-compact-and-remembers)
 <a id="2026-10-13--goal-b1b-functions-move-into-the-room"></a>

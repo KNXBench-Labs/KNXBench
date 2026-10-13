@@ -294,6 +294,33 @@ The L2 decision "Download is refused by name" is replaced:
   500 MiB for the 173 MB `.vd5`. Caching the parsed rows waits for a
   measured need.
 
+## Amendment: KL-128 (2026-10-13), atomic types 3 and 5
+
+ETS4's conversion of the same Siemens database
+(`SIEMENS_KNX_PDB_Nov_2016_ETS4.knxprod`) is the oracle
+([legacy-vd-mapping.md](../research/legacy-vd-mapping.md#atomic-types-3-and-5-the-ets4-oracle-2026-10-13)).
+
+- **Atomic type 3 (`string`)** maps to kind `Text` of `PARAMETER_TYPE_SIZE`
+  bits, without bounds; a string parameter's value is
+  `PARAMETER_DEFAULT_STRING`, verbatim.
+- **Atomic type 5 (`long enum`)** maps to kind `Restriction`, base
+  `BinaryValue`, of `PARAMETER_TYPE_SIZE` bits; its list rows become
+  enumerations exactly as for type 4 (value `REAL_VALUE`, order
+  `DISPLAY_ORDER`, id `…_EN-<value>`); the value is `PARAMETER_DEFAULT_LONG`.
+- **`BINARY_VALUE` is not modeled**, as `Enumeration/@BinaryValue` is not
+  for `.knxprod` files. Each long-enum type reports
+  `binary-values-not-modeled` with the number of its values and of those
+  inconsistent with `BINARY_VALUE_LENGTH` or the type's size; the values
+  stay in the stored payload. No download is affected: legacy programs are
+  refused by the download path, and the image builder refuses
+  `Base="BinaryValue"`.
+- Any other atomic type keeps `unknown-atomic-type`.
+- **Acceptance:** `knx-app/tests/legacy_atomic_types_oracle.rs` (ignored;
+  49 types and 1,490 parameters equal through both import paths), the
+  updated download oracle (no unplaced ETS parameter, identical code for the
+  nine `070nh` programs) and `knx-productdb/tests/legacy_atomic_types.rs`
+  (synthetic).
+
 ## Alternatives considered
 
 - **Built-in or "known" password.** Rejected. VD4_PRODUCT_DATABASE_IMPORT.md

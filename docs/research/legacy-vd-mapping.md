@@ -215,7 +215,8 @@ parameters (1,377 string, 138 long enum) in 22 programs. L2 maps only 0, 1,
 `dangling-reference` for every row that names them) and stay in the stored
 payload. Mapping them needs evidence of ETS's conversion; the corpus holds
 `SIEMENS_KNX_PDB_Nov_2016_ETS4.knxprod`, a candidate oracle not yet
-compared.
+compared. **Update 2026-10-13:** compared and mapped, see
+[Atomic types 3 and 5: the ETS4 oracle](#atomic-types-3-and-5-the-ets4-oracle-2026-10-13).
 
 **Import `[V]`.** 88 programs, 129 catalog items, 41,817 parameters, 71,467
 parameter refs (72,982 rows minus the 1,515 above), 55,381 object refs,
@@ -349,3 +350,75 @@ under its defaults, and the only evaluator diagnostic is `NoBranchMatched`:
 ETS3 attaches children to some values only. ETS's own conversion of
 N000520 shows the same kind under defaults (6 there, 1 in the legacy tree;
 measured 2026-10-08).
+
+## Atomic types 3 and 5: the ETS4 oracle (2026-10-13)
+
+KL-128, Goal A5. Both Siemens November 2016 files were read only: the
+`.vd5` (EX-IM, decrypted with the user's password) and
+`SIEMENS_KNX_PDB_Nov_2016_ETS4.knxprod` (ETS4's export of the same
+database: 88 application programs, 84 of them `ConvertedFromPreEts4Data`).
+No ETS was run. Only structure and counts are recorded here.
+
+**Method.** Programs pair by manufacturer, application number and version
+(the existing download oracle's rule); within a pair, parameter types pair
+by name and parameters by `ParameterRef/@Tag` = `PARAMETER_NUMBER` (the
+identity rule above). A first scratch probe compared the raw XML; the
+acceptance test (`knx-app/tests/legacy_atomic_types_oracle.rs`, ignored)
+compares what KNXBench's own two import paths store.
+
+**Type histogram `[V]`.** The `.vd5` has 107/372/46/27/1,906/29 parameter
+types of atomic types 0–5; the package has exactly 107 `TypeNone`.
+
+**Atomic type 3, `string` `[V]`.** 24 of 24 paired types (probe) are
+`TypeText` whose `SizeInBit` equals `PARAMETER_TYPE_SIZE` (sizes 24–560
+bits), with no bounds; the `.vd5` bounds are empty. 1,372 of 1,372 paired
+parameters have the value `PARAMETER_DEFAULT_STRING`, verbatim (leading and
+trailing spaces included); `PARAMETER_DEFAULT_LONG` is empty for 1,339 of
+them and ignored.
+
+**Atomic type 5, `long enum` `[V]`.** 22 of 22 paired types (probe) are
+`TypeRestriction Base="BinaryValue"` whose `SizeInBit` equals
+`PARAMETER_TYPE_SIZE` (whole octets: 7 of at most 8, 10 of 9–16, 5 above
+16 bits). Every type has as many `Enumeration`s as list rows; their `Value`s
+are the `REAL_VALUE`s in `DISPLAY_ORDER` (22/22), `DisplayOrder` is
+`DISPLAY_ORDER`, and each `Id` ends in `_EN-<value>`, as for atomic type 4.
+Every enumeration also carries `BinaryValue`: the base64 of the hex
+`BINARY_VALUE`, whose octet count is `BINARY_VALUE_LENGTH` and fills
+`SizeInBit` (87 of 87 values). The binary value is not the numeric one in
+some byte order: only 4 of 87 equal `REAL_VALUE` big-endian and 3
+little-endian. 113 of 113 paired parameters have
+the value `PARAMETER_DEFAULT_LONG`.
+
+**Access `[V]`.** For the paired parameters of types 3, 4 and 5 the
+effective `Access` follows `PARAMETER_HIGH_ACCESS` without exception:
+0 → `None` (6,315), 1 → `Read` (793), 2 → `ReadWrite` (26,850). This is the
+first measurement of 1 → `Read`, which the N000520 oracle above could only
+assume.
+
+**Texts.** Enumeration texts differ from `DISPLAYED_VALUE` for 19 of 22
+long-enum types and also for 1,615 of 1,830 already-mapped atomic-4 types:
+the package's default texts are not the `.vd5`'s base language. This is not
+type-specific; the mapping keeps `DISPLAYED_VALUE` plus translations as for
+type 4, and the acceptance test does not compare texts.
+
+**Acceptance `[V]`, through both import paths.** 49 of the 56 types have
+an ETS4 counterpart (7 belong to programs the package does not hold). For
+all 49 the stored shape (kind, size, base, bounds) is equal; for every long
+enum the ordered values and `_EN-` keys are equal; 1,490 of 1,490 paired
+parameters have equal value and access. The download oracle's nine
+`070nh` programs now compare with no unplaced ETS parameter (four string
+parameters were unmapped before) and identical program code.
+
+**Not modeled.** The product database has no place for `BinaryValue`:
+neither the legacy path nor the `.knxprod` path stores it (the XML ingest
+neither stores nor reports `Enumeration/@BinaryValue`; found here). The
+legacy import reports each long-enum type (`binary-values-not-modeled`,
+with a count of values inconsistent with their length or the type's size,
+0 in this file); the values stay in the stored payload. Nothing downloads
+such a type: legacy programs are refused by the download path, and the
+image builder refuses `Base="BinaryValue"` for every program.
+
+**Control, not investigated.** For atomic type 4 the same comparison shows
+15 of 1,830 types with values in another order, 84 with another
+`DisplayOrder` and 84 of 32,473 parameters with another default. A5 did not
+change type-4 mapping; these stay for a later look.

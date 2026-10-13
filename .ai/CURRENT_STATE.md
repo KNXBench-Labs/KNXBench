@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 21:35
+- **Completed:** Owner invoked Goal B (workbench, UX, platform; prompt `docs/goals/unassigned-workbench-hardening.md`). Session `ba673d45ff9d` owns B1–B8 in worktree `KNXBench.worktrees/workbench-b`, branch `feature/workbench-b-20261013`, from fresh `origin/main` `40aba5dc`; Goal A had ended (A2/A3/A4/A5 delivered, A6 blocked, Site blocked by ADR-0125). Finite plan in the goal file's *Session status* table. Web lock taken.
+- **Pending/Next Steps:** B1a (bound parameter/installation writes, `serverStopping` wording) first, then B1b … B8 in order; each package pushed only after its full gate.
+- **Notes for Codex oder Claude:** Please do not start B1–B8 work elsewhere. Session `bcee21b10872` is working on KL-036 (session log) in `log-16k` without a published lock; B leaves those files alone. No hardware, bus, ETS/vendor execution, release, deployment or user-container change.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 21:17
 - **Completed:** Goal A ended on `e5eb1e8a` + docs `5ca02b2b` (Rust 4379/0/199, strict Clippy, fmt, web deps and build, bindings, five xtask gates, documentation, whitespace and private corpus 145/145 in 32 targets on `e5eb1e8a`; its tool tests failed only on KL-128's retained record, restored byte for byte in `5ca02b2b` and accepted by a docs-only delta run on the final head; password-gated legacy oracles on `5ca02b2b` (release): legacy_corpus 3/3, legacy_atomic_types_oracle 1/1, legacy_download_oracle 2/2). A2 revision-bound writes, A3 stop admission/drain (KL-163), A4 project Functions (schema 15, ADR-0124; Site blocked ADR-0125), A5 legacy string/long-enum mapping (KL-128, ETS4 oracle), A7 reconciliation delivered; A6 blocked (no new primary source). A1 was delivered earlier (`a78c1010`).
 - **Pending/Next Steps:** Goal B may start when the user invokes it; its handover is the *Goal A outcome* section of `docs/goals/unassigned-workbench-hardening.md`. This session does not start it.
@@ -48,7 +56,7 @@ ledger or an append-only diary. Formal per-ID status stays in
 
 ## Coordination
 
-Web lock: released by claude-release-alpha11 (Alpha 11 published)
+Web lock: held by claude-goal-b-ba673d45ff9d (Goal B, per package; see docs/goals/unassigned-workbench-hardening.md *Session status*). Excluded from this claim: the KL-036 session-log files in flight in `log-16k` (bcee21b10872)
 Release freeze: released — Alpha 11 published; never move its tag
 
 At migration preflight only the stale shared root and this documentation tree

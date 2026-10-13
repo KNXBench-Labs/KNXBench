@@ -102,9 +102,9 @@ application's own repository constant, never from the file. The section shows th
 snapshot time and "This is not a live count." No domain, storage or project
 mutation is involved.
 
-Because the file lies outside `apps/knx-web`, the Vite dev server, the browser
-fixture server and Vitest's DOM environment each allow exactly
-`docs/community` beyond the app (`devFileAccess` in `vite.config.ts`).
+Because the file lies outside `apps/knx-web`, Vitest's DOM environment needs
+exactly `docs/community` on its allow-list (`vitest.config.ts`); the dev server and
+a production build read it as imported by the app.
 
 ## Acceptance
 

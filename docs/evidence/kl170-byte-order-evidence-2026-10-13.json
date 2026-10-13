@@ -440,6 +440,7 @@
     "nonAsciiTextWithoutEncoding": 2
    },
    "devicesWithActivePropertyPlacements": 11,
+   "thoseWithDiscriminatingFields": 0,
    "runs": 2,
    "runsIdentical": true
   },

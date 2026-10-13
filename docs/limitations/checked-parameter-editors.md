@@ -6,6 +6,20 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-10-13 (Goal A2): the server accepts revision-bound writes
+
+`POST /api/device/{id}/parameters` now also takes a binding — server
+incarnation, project incarnation, snapshot revision and the panel `value` it
+expects to replace — checked under the lock that applies, persists and
+publishes the write; a stale or changed value is `409 parameterWriteConflict`
+with no effect ([contract](../contracts/revision-bound-writes.md)). The web
+editor host still sends the unbound legacy form until Goal B1 migrates it, so
+the retained bullet below about legacy writes still describes the workbench.
+Fixed on the way, for both forms: the panel showed only values stored in the
+*first* installation (a device in another installation saw its defaults), and
+an overwrite in another installation spent a parameter id. Evidence:
+`apps/knx-server/tests/http_revision_bound_writes.rs`.
+
 <!-- BEGIN retained catalogue record -->
 
 ## Checked parameter editors in the device editor (2026-10-12)

@@ -23,8 +23,10 @@ Time/Number/Colour/Picture rows offer a **Checked editor**
 ([host](contracts/parameter-editor-host.md#workbench-host-12-october-2026)): exact
 source evidence verified per field, writes only through the existing route, drafts
 kept across Save. Open: module-scope source mapping, verified Colour/Picture value
-codecs (PDB-04 stays LATER), revision-conditional parameter writes, native
-WebKitGTK/Orca checks.
+codecs (PDB-04 stays LATER), adopting the server's revision-bound parameter writes
+and installation renames in the web host (Goal B1;
+[contract](contracts/revision-bound-writes.md), server side delivered 13 October),
+native WebKitGTK/Orca checks.
 
 ## Installation instructions in the device editor (12 October 2026)
 

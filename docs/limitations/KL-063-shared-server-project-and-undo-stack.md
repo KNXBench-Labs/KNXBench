@@ -6,6 +6,14 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-10-13 (Goal A2)
+
+Parameter writes and installation renames joined the device/group-address
+renames and CSV import as routes with an optional revision binding
+([contract](../contracts/revision-bound-writes.md)). They remain
+feature-specific guards: one shared project and undo stack, no accounts, no
+merge. The retained record below predates every such guard.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 63. `knx-server` has no multi-user/concurrent-edit support — one shared project, one shared undo stack, no conflict detection at all

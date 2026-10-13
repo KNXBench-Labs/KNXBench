@@ -1694,18 +1694,16 @@ fn device_parameter_inputs(
     project: &knx_core::Project,
     device: knx_core::DeviceId,
 ) -> (Vec<(String, String)>, Vec<knx_core::ModuleInstance>) {
+    // Every installation, in order: a device's values live in the
+    // installation that holds them (MODEL-01), not necessarily the first.
+    // A value stored twice stays visible to the panel's duplicate diagnostics.
     let stored: Vec<(String, String)> = project
         .installations
-        .first()
-        .map(|installation| {
-            installation
-                .parameters
-                .iter()
-                .filter(|p| p.device == device)
-                .map(|p| (p.source.ets_id.clone(), p.raw.clone()))
-                .collect()
-        })
-        .unwrap_or_default();
+        .iter()
+        .flat_map(|installation| &installation.parameters)
+        .filter(|p| p.device == device)
+        .map(|p| (p.source.ets_id.clone(), p.raw.clone()))
+        .collect();
     let module_instances: Vec<knx_core::ModuleInstance> = project
         .devices
         .module_instances()
@@ -2373,10 +2371,12 @@ fn apply_guarded(
         .as_mut()
         .ok_or_else(|| RenameError::Conflict("no project open".into()))?;
     if let Some(ref expected) = rename {
-        if expected.server_incarnation != state.server_incarnation
-            || expected.snapshot_revision != current_project_revision(state)
-            || expected.project_incarnation != state.project_incarnation.load(Ordering::Relaxed)
-        {
+        if !snapshot_is_current(
+            state,
+            &expected.server_incarnation,
+            expected.project_incarnation,
+            expected.snapshot_revision,
+        ) {
             return Err(RenameError::Conflict(
                 "Project changed; refresh before renaming. Your draft has not been applied.".into(),
             ));
@@ -2415,10 +2415,39 @@ fn apply_guarded(
             )));
         }
     }
-    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let result = durable_mutation(state, project, &mut stack, |p, s| {
+    commit_locked(state, project, &cmd_name, cmd_desc, |p, s| {
         s.do_command(p, cmd).map_err(|e| e.to_string())
-    });
+    })
+    .map_err(RenameError::Failure)
+}
+
+/// Whether a client's binding (server run, opened project, snapshot
+/// revision) still names the live project. Read while `state.project` is
+/// held, so it is ordered with every mutation that bumps the revision.
+fn snapshot_is_current(
+    state: &AppState,
+    server_incarnation: &str,
+    project_incarnation: u64,
+    snapshot_revision: u64,
+) -> bool {
+    server_incarnation == state.server_incarnation
+        && project_incarnation == state.project_incarnation.load(Ordering::Relaxed)
+        && snapshot_revision == current_project_revision(state)
+}
+
+/// The commit half of every guarded command, run while the caller holds
+/// `state.project`: `mutation` runs on a copy that is persisted before it is
+/// published (`durable_mutation`), then the revision, tree and session log
+/// follow. A failed mutation or persistence publishes nothing.
+fn commit_locked(
+    state: &AppState,
+    project: &mut knx_core::Project,
+    cmd_name: &str,
+    cmd_desc: String,
+    mutation: impl FnOnce(&mut knx_core::Project, &mut knx_core::CommandStack) -> Result<(), String>,
+) -> Result<ProjectTree, String> {
+    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
+    let result = durable_mutation(state, project, &mut stack, mutation);
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
@@ -2437,9 +2466,15 @@ fn apply_guarded(
         last_saved_at.as_deref(),
     );
 
-    log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
+    log_outcome(
+        state,
+        cmd_name,
+        cmd_name.to_string(),
+        Some(cmd_desc),
+        &result,
+    );
 
-    result.map(|()| tree).map_err(RenameError::Failure)
+    result.map(|()| tree)
 }
 
 pub fn set_individual_address_impl(
@@ -2734,6 +2769,32 @@ pub fn rename_installation_impl(
             id: knx_core::InstallationId(id),
             name: name.to_string(),
         },
+    )
+}
+
+/// [`rename_installation_impl`] bound to the caller's snapshot and the name
+/// it expects to replace (contract: revision-bound writes). Trimmed and
+/// refused when blank exactly like the unbound form; the check, the command,
+/// its persistence and the new revision happen under one project lock.
+pub(crate) fn rename_installation_bound_impl(
+    state: &AppState,
+    id: u8,
+    name: String,
+    expectation: RenameExpectation,
+) -> Result<knx_projection::ProjectTree, RenameError> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(RenameError::Invalid(
+            "installation name must not be blank".into(),
+        ));
+    }
+    rename_impl(
+        state,
+        knx_core::Command::RenameInstallation {
+            id: knx_core::InstallationId(id),
+            name: name.to_string(),
+        },
+        expectation,
     )
 }
 
@@ -5741,12 +5802,21 @@ pub(crate) fn set_parameter_value_impl(
     ets_id: String,
     raw: String,
     language: Option<&str>,
-) -> Result<crate::routes::ParameterPanelDto, String> {
-    let before = assemble_parameter_panel(state, device_id, language)?;
-    let program_id = before
-        .program_id
-        .clone()
-        .ok_or("device has no resolvable application program")?;
+    binding: Option<ParameterWriteBinding>,
+) -> Result<crate::routes::ParameterPanelDto, ParameterWriteError> {
+    // A stale binding is a conflict before anything is read or validated:
+    // the panel of another revision could refuse or admit the wrong thing.
+    if let Some(binding) = &binding {
+        let _project = state.project.lock().expect("state mutex poisoned");
+        if !binding.is_current(state) {
+            return Err(ParameterWriteError::Conflict(PROJECT_CHANGED.into()));
+        }
+    }
+    let before = assemble_parameter_panel(state, device_id, language)
+        .map_err(ParameterWriteError::Refused)?;
+    let program_id = before.program_id.clone().ok_or_else(|| {
+        ParameterWriteError::Refused("device has no resolvable application program".into())
+    })?;
 
     // D43: the assembled panel is the single authority on what is
     // writable — a field's `write_ets_id` (never `None` unless it is
@@ -5802,52 +5872,110 @@ pub(crate) fn set_parameter_value_impl(
             } else {
                 "is not a parameter declared by this program".to_string()
             };
-            return Err(format!("'{ets_id}' {reason} (program '{program_id}')"));
+            return Err(ParameterWriteError::Refused(format!(
+                "'{ets_id}' {reason} (program '{program_id}')"
+            )));
         }
     };
 
+    if let Some(binding) = &binding {
+        if field.value != binding.expected_value {
+            return Err(ParameterWriteError::Conflict(
+                "Value changed; refresh before writing. Your draft has not been applied.".into(),
+            ));
+        }
+    }
     let view = before.views_by_id.get(&field.ets_id).ok_or_else(|| {
-        format!(
+        ParameterWriteError::Refused(format!(
             "'{}' is declared by program '{program_id}' but its parameter/parameter_type row could not be resolved",
             field.ets_id
-        )
+        ))
     })?;
-    validate_kind_and_bounds(view, &raw)?;
+    validate_kind_and_bounds(view, &raw).map_err(ParameterWriteError::Refused)?;
 
     let device = knx_core::DeviceId(device_id);
-    let cmd = {
-        let mut project = state.project.lock().expect("state mutex poisoned");
-        let project = project.as_mut().ok_or("no project open")?;
-        let installation = project.installations.first().ok_or("no installation")?;
-        let existing_id = installation
-            .parameters
-            .iter()
-            .find(|p| p.device == device && p.source.ets_id == ets_id)
-            .map(|p| p.id);
-        let id = match existing_id {
+    // `apply`-style commit, but the id of a new row is allocated on the copy
+    // that is persisted, and the existing row is found in whichever
+    // installation holds it (never `installations.first()` by assumption):
+    // a refused, stale or unpersisted write spends no id.
+    let tree = {
+        let mut guard = state.project.lock().expect("state mutex poisoned");
+        let project = guard
+            .as_mut()
+            .ok_or_else(|| ParameterWriteError::Refused("no project open".into()))?;
+        if let Some(binding) = &binding {
+            if !binding.is_current(state) {
+                return Err(ParameterWriteError::Conflict(PROJECT_CHANGED.into()));
+            }
+        }
+        let existing = knx_core::stored_parameter_instance(project, device, &ets_id)
+            .map_err(|error| ParameterWriteError::Refused(error.to_string()))?;
+        let planned_id = match existing {
             Some(id) => id,
             None => project
                 .ids
+                .clone()
                 .next_parameter_instance_id()
-                .map_err(|error| error.to_string())?,
+                .map_err(|error| ParameterWriteError::Refused(error.to_string()))?,
         };
-        knx_core::Command::SetParameterValue {
-            id,
+        let cmd = knx_core::Command::SetParameterValue {
+            id: planned_id,
             device,
             ets_id: ets_id.clone(),
             raw: raw.clone(),
-        }
+        };
+        let cmd_desc = format!("{cmd:?}");
+        let cmd_name = command_name(&cmd);
+        commit_locked(state, project, &cmd_name, cmd_desc, |p, s| {
+            if existing.is_none() {
+                let allocated = p
+                    .ids
+                    .next_parameter_instance_id()
+                    .map_err(|error| error.to_string())?;
+                debug_assert_eq!(allocated, planned_id);
+            }
+            s.do_command(p, cmd).map_err(|e| e.to_string())
+        })
+        .map_err(ParameterWriteError::Refused)?
     };
-    // `apply` already rebuilds the authoritative tree from the genuine
-    // post-write `CommandStack` (`tree_with_state`, called after
-    // `do_command`) -- surface it rather than let the caller reconstruct
-    // `can_undo`/`can_redo` by hand from a staler tree it happened to be
-    // holding (T3 fix round 1, item 6).
-    let tree = apply(state, cmd)?;
 
-    let mut panel = parameter_panel_impl(state, device_id, language)?;
+    let mut panel =
+        parameter_panel_impl(state, device_id, language).map_err(ParameterWriteError::Refused)?;
     panel.tree = Some(tree);
     Ok(panel)
+}
+
+const PROJECT_CHANGED: &str =
+    "Project changed; refresh before writing. Your draft has not been applied.";
+
+/// What a revision-bound parameter write was prepared against (contract:
+/// revision-bound writes): the snapshot the client read and the panel
+/// `value` it expects to replace (`None` when the panel showed none).
+pub(crate) struct ParameterWriteBinding {
+    pub server_incarnation: String,
+    pub project_incarnation: u64,
+    pub snapshot_revision: u64,
+    pub expected_value: Option<String>,
+}
+
+impl ParameterWriteBinding {
+    fn is_current(&self, state: &AppState) -> bool {
+        snapshot_is_current(
+            state,
+            &self.server_incarnation,
+            self.project_incarnation,
+            self.snapshot_revision,
+        )
+    }
+}
+
+/// Why a parameter write was not applied.
+#[derive(Debug)]
+pub(crate) enum ParameterWriteError {
+    /// A bound write whose snapshot or expected value is no longer current.
+    Conflict(String),
+    /// Everything else, as the unbound route always reported it.
+    Refused(String),
 }
 
 #[cfg(test)]

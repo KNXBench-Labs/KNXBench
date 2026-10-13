@@ -44,6 +44,9 @@ not extend an external format or domain model.
 No new bus, installation create/delete/move, importer or compatibility capability.
 The legacy installation rename endpoint is not the revision-conditional device/GA
 rename endpoint; multi-client/server-side conflicts are not newly guarded here.
+**Amended 2026-10-13 (Goal A2):** the same endpoint now also accepts that
+binding ([revision-bound writes](revision-bound-writes.md)); the Properties
+editor adopts it in Goal B1.
 Browser execution is Chromium, not an interactive native WebKitGTK/Orca session.
 Source-like unnamed fixtures and a real native project are exercised; no private
 original archive is imported or changed by this UI delivery. Save/Open acceptance

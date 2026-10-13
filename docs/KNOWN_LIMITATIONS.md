@@ -445,7 +445,7 @@ Updates use user-supplied files, not the KNX Online Catalog. Full database backu
 ### Checked parameter editors
 
 **Ledger status:** `LATER` ([PDB-04](status/LEDGER.md#snapshot-ids)).
-Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals, and writes are not revision-conditional.
+Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. The server accepts revision-bound writes; the web host still sends unbound ones.
 [Details and history](limitations/checked-parameter-editors.md)
 
 <a id="catalogue-manufacturer-report-history"></a>
@@ -1317,7 +1317,7 @@ Import links show a capped current-run log, which may hold fewer findings than t
 ### Installation-node editing
 
 **Ledger status:** Not separately tracked.
-Unnamed nodes are readable and renameable, but the rename route is not revision-conditional. This is not a general installation-management workflow.
+Unnamed nodes are readable and renameable; the rename route accepts a revision binding the web editor does not send yet. This is not a general installation-management workflow.
 [Details and history](limitations/installation-node-editing.md)
 
 <a id="catalogue-lcars-presentation"></a>

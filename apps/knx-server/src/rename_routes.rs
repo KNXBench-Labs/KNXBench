@@ -29,7 +29,7 @@ impl RenameBody {
         }
     }
 }
-fn map_error(error: RenameError) -> ApiError {
+pub(crate) fn map_error(error: RenameError) -> ApiError {
     match error {
         RenameError::Conflict(message) => ApiError::conflict("renameConflict", message),
         RenameError::Invalid(message) => ApiError::refused("renameInvalid", message),

@@ -75,3 +75,34 @@ it("disposes a stale raster which finishes after the cancellation refusal", asyn
   finish({ rgba: new Uint8ClampedArray(4), png: async () => new Blob(), dispose });
   await Promise.resolve(); expect(dispose).toHaveBeenCalledOnce();
 });
+
+// The capture never skips frames: a frame that would start more than one
+// interval late refuses the whole clip instead (port review, 2026-10-13).
+function slowRaster(slowFrame: number, takesMs: number) {
+  let index = 0;
+  return vi.fn(async ({ width, height }: { width: number; height: number }) => {
+    if (index++ === slowFrame) vi.advanceTimersByTime(takesMs);
+    return { rgba: new Uint8ClampedArray(width * height * 4), png: async () => new Blob() };
+  });
+}
+
+it("refuses a GIF clip, without a partial file, once a frame falls more than one interval behind", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  const raster = slowRaster(1, 250);
+  const job = capture.captureSelectedImage({ format: "gif", seconds: 3, width: 100, height: 50, signal: controller().signal, raster });
+  const refused = expect(job).rejects.toThrow("tooSlow");
+  await vi.runAllTimersAsync(); await refused;
+  // Frame 1 ended at 350 ms; frame 2 was due at 200 ms, so it is never sampled.
+  expect(raster).toHaveBeenCalledTimes(2);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+it("keeps a clip whose frame is late by less than one interval, on the original schedule", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  const raster = slowRaster(1, 150);
+  const job = capture.captureSelectedImage({ format: "gif", seconds: 3, width: 100, height: 50, signal: controller().signal, raster });
+  const done = expect(job).resolves.toHaveProperty("type", "image/gif");
+  await vi.runAllTimersAsync(); await done;
+  expect(raster).toHaveBeenCalledTimes(30);
+  expect(performance.now()).toBe(3000);
+});

@@ -122,7 +122,10 @@ export default function ComObjectTable({ objects, editor }: { objects: ComObject
       </button></th></tr>);
     for (const com of group.objects) {
       const open = openObjects.has(com.id), matches = matchedIds.has(com.id);
-      const visible = open || matches && (flat || groupVisible && isExpanded(channelKey(com)));
+      // Issue #16: a collapsed channel hides every child, open editors included.
+      // Inside an expanded channel (and in the flat view) an open editor stays
+      // visible even outside the filter. Hidden rows keep their editors mounted.
+      const visible = (open || matches) && (flat || groupVisible && isExpanded(channelKey(com)));
       rows.push(<ObjectRow key={`object:${com.id}`} com={com} flat={flat} hidden={!visible} matches={matches} open={open}
         descriptionMatch={view.descriptionMatches.has(com.id)} editor={editor} onOpen={onOpen} />);
     }

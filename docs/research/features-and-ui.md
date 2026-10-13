@@ -479,6 +479,19 @@ the repository reference projects contain no `Function` instance. Those
 versions must not be inferred from Schema 23. A schema-specific fixture or
 corresponding published schema decides their support later.
 
+### 15.3 Implemented backend and one real sample (2026-10-13)
+
+[ADR-0124](../adr/0124-project-functions.md) implements the backend for
+schema 23. **[V]** One real ETS instance was measured: xknxproject's public
+`testprojekt-ets6-functions.knxproj` (ETS 6.1.5686, schema 22, inspected not
+copied) has a `Function` under `Space Type="Room"` with `Id`, `Name`, `Type`
+(`FT-1`) and `Puid`, and `GroupAddressRef`s with `Id`, empty `Name`, `Role`,
+a full `RefId` and `Puid`. That matches §1.2.6.9/.10 above. Schema 22 is not
+imported, and none of the 6 readable private or 7 other readable public
+samples has a Function, so `Implements` and the `DefaulGroupRange` spelling
+are still unobserved and stay unmodeled (kept in the raw element). The
+schema-22 sample's own AES-protected siblings were not opened.
+
 ---
 
 ## 16. “Who talks to whom?” flow-view decision (2026-09-22)
@@ -638,7 +651,10 @@ tables are presentation mappings for KNX IoT servers. They do not define
 - No real ETS sample with a `Ground` root (KNOWN_LIMITATIONS §127).
 - No command renames an `Installation` (found on the way, §127).
 - Grouping *separate* installations under one site is unmodelled and would
-  need its own ADR.
+  need its own ADR. **Update 2026-10-13:** [ADR-0125](../adr/0125-multi-installation-site-is-blocked.md)
+  records it as a blocked design: Schema23 has nothing above installations
+  (only `GroupAddress/@Global` spans them), and 14 readable samples each have
+  one installation and no `Ground`.
 
 ## 20. UI issue U2: AppImage interface discovery and line-relative addresses (2026-09-28)
 

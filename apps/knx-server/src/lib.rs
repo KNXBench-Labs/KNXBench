@@ -79,6 +79,7 @@ mod load_progress;
 mod note_routes;
 pub use load_progress::*;
 mod catalogue_update_routes;
+mod function_routes;
 mod one_shot_activity;
 mod parameter_editor_routes;
 mod paths;
@@ -190,6 +191,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(routes::project_routes())
         .merge(instruction_routes::router(state.clone()))
         .merge(note_routes::router(state.clone()))
+        .merge(function_routes::router())
         .merge(parameter_editor_routes::router())
         .merge(catalogue_update_routes::router())
         .merge(fs_routes::fs_routes())

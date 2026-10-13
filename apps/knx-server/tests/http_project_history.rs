@@ -307,7 +307,7 @@ async fn session_only_history_is_explicit_and_version_writes_require_a_native_pa
 async fn opening_a_legacy_native_store_validates_history_without_rewriting_the_file() {
     let (dir, path, _state, _app) = fixture().await;
     let conn = knx_store::Connection::open(&path).unwrap();
-    conn.execute_batch("DROP TABLE instruction_run; DROP TABLE instruction_document; DROP TABLE project_note; DROP TABLE project_note_state; DROP TABLE project_history_stack; DROP TABLE project_history_state; DROP TABLE project_history_version; DROP TABLE project_history_context; ALTER TABLE line DROP COLUMN model_position; PRAGMA user_version = 10;").unwrap();
+    conn.execute_batch("DROP TABLE instruction_run; DROP TABLE instruction_document; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state; DROP TABLE project_history_stack; DROP TABLE project_history_state; DROP TABLE project_history_version; DROP TABLE project_history_context; ALTER TABLE line DROP COLUMN model_position; PRAGMA user_version = 10;").unwrap();
     drop(conn);
     let before = std::fs::read(&path).unwrap();
     let app = knx_server::app(

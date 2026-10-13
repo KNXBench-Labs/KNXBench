@@ -662,6 +662,19 @@ must not be described as either universally guessed or universally explicit.
   ([issue #7](https://github.com/KNXBench-Labs/KNXBench/issues/7)).
 - **Details:** [§181](../KNOWN_LIMITATIONS.md#181-appimages-up-to-alpha11-cannot-save-the-session-log-or-a-bus-monitor-capture).
 
+### AppImages up to alpha.11 save downloads silently and can replace files — fixed in source
+
+- **Affected:** every *Download* or *Export* in the AppImage that is not a save
+  dialog: the full import report, source reports, retained payloads, the download
+  verification report, settings export, contribution ZIP, Flow images and the
+  confirmed project export (`project.knxdb`). Web and Docker are not affected.
+- **Limitation:** nothing visible happens. The file is written straight into your
+  Downloads folder, and a file of the same name already there is replaced.
+- **Workaround:** before downloading again, rename or move the previous file in
+  Downloads; or use the Docker image in a browser. The next AppImage asks where to
+  save each download.
+- **Details:** [§182](../KNOWN_LIMITATIONS.md#182-appimages-up-to-alpha11-save-in-app-downloads-silently-into-downloads-and-replace-same-named-files).
+
 ### The desktop shell has no login, on purpose
 
 - **Affected:** nothing you can do about it, but worth knowing.

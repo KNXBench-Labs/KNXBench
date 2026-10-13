@@ -85,3 +85,13 @@ against the hover-plus-focus test). Evidence:
 Self-review only (no subagents, owner rule 2026-09-28); native WebKitGTK not run.
 The Codex branch's private screenshots/evidence archive was copied, ignored, to the
 root checkout's `.ai/logs/2026-10-11_codex_ux-feedback-evidence/`.
+
+## Addendum: retirement of the parked worktrees (owner go, 2026-10-13)
+
+The port had committed only the Codex logs the branch itself tracked (plus AP1's).
+Three more Codex logs (`2026-10-10_codex_ux-feedback.md`, `2026-10-10_codex_flow-images.md`,
+`2026-10-11_codex_ux-feedback-ap5.md`) existed only as ignored files in the parked
+worktree; they went to main verbatim in `7adfec2a` before the worktree was removed.
+Both parked worktrees' ignored files are archived in
+`KNXBench.backups/2026-10-13-parked-adoption-retire/` (sha256 manifest); the local
+branches stay.

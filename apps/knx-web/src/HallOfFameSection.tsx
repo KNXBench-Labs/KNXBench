@@ -32,8 +32,12 @@ export default function HallOfFameSection() {
   const t = useTranslate();
   const [language] = useUiLanguage();
   const result = BUNDLED_HALL_OF_FAME;
-  return <section className="hall-of-fame" data-hall-of-fame="" aria-labelledby="hall-of-fame-title">
-    <h3 id="hall-of-fame-title">{t("about.hallOfFame.title")}</h3>
+  // A disclosure, so About keeps its compact size (dialogs-overview.e2e.ts pins it);
+  // opened, it shows every participant.
+  const count = result.ok ? result.snapshot.entries.length : null;
+  return <details className="hall-of-fame" data-hall-of-fame="">
+    <summary id="hall-of-fame-title">
+      {count === null ? t("about.hallOfFame.title") : t("about.hallOfFame.titleCount", { count })}</summary>
     <p>{t("about.hallOfFame.intro")}</p>
     {!result.ok && <p role="status">{t("about.hallOfFame.unavailable")}</p>}
     {result.ok && <>
@@ -48,5 +52,5 @@ export default function HallOfFameSection() {
     </>}
     <a href={HALL_OF_FAME_BOARD_URL} target="_blank" rel="noopener noreferrer" data-hall-of-fame-board="">
       {t("about.hallOfFame.board")}</a>
-  </section>;
+  </details>;
 }

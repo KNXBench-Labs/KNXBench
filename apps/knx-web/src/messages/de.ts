@@ -2446,6 +2446,7 @@ export const messages: Record<MessageKey, string> = {
   "about.trademark": "ETS ist eine Marke der KNX Association.",
   "about.close": "Schließen",
   "about.hallOfFame.title": "Hall of Fame der Community",
+  "about.hallOfFame.titleCount": "Hall of Fame der Community ({count})",
   "about.hallOfFame.intro": "Alle außerhalb des Teams, die auf GitHub ein Problem gemeldet oder mitdiskutiert haben. Titel und Medaillen sind ein Dankeschön, keine Bewertung von Können.",
   "about.hallOfFame.asOf": "Mit diesem Build ausgeliefert, Stand",
   "about.hallOfFame.notLive": "Das ist kein Live-Zähler.",

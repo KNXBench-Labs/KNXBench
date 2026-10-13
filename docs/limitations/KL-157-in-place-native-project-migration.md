@@ -16,7 +16,8 @@ server's compare route shares), `knx device readiness`, the download plan,
 store with `open_existing_read_only` (ADR-0090) through one CLI helper,
 `open_native_for_reading`. An older file is copied into memory and only the
 copy is migrated. The application's Open and the read-only MCP adapter already
-did this.
+did this (Open: `apps/knx-server/tests/http_project_history.rs`,
+`opening_a_legacy_native_store_validates_history_without_rewriting_the_file`).
 
 `knx ga-import` is the one CLI command that writes a store back. It now plans
 against the same read-only view and opens the file for writing only for the
@@ -25,10 +26,12 @@ confirmation leave an older file untouched — before, it was upgraded while the
 command printed `store written: no`. The save itself still compares the
 stored project with the planned one inside its transaction.
 
-**Remaining boundary:** the first write — Save, creating/restoring/deleting a
-project version, or another confirmed change written to the file (`ga-import`,
-name recipe, selective import, an approved MCP rename) — still upgrades an
-older file in place, with no copy. Ledger status
+**Remaining boundary:** the first write still upgrades an older file in place,
+with no copy. Writes are every edit to a project opened from a `.knxdb` (each
+command persists the working state and undo history into the file,
+`durable_mutation` → `persist_working`), Save, creating/restoring/deleting a
+project version, and confirmed changes (`ga-import`, name recipe, selective
+import, an approved MCP rename). Ledger status
 unchanged (`ACCEPTED_BOUNDARY`).
 
 Evidence: `apps/knx-cli/tests/cli_native_readers_read_only.rs` (6 tests: nine

@@ -9,6 +9,12 @@ Open: the reporter's own project (asked on #6/#7), nested sub-module object ids
 schema 22 (needs an ETS 6.1 sample with devices). Released in Alpha 10; Alpha 11
 (13 October 2026) changes nothing here and the reporter was invited to try it.
 
+**13 October 2026:** the reporter's project imports on Alpha 10 with 2840 warnings,
+mostly one notice per retained manufacturer file. The Log now groups those notices
+(one entry listing every file) and counts them once
+([delivery](IMPLEMENTATION_STATUS.md#2026-10-13--issue-7-retained-files-stop-drowning-the-import-findings)). Open: the reporter's
+log or report, to see which genuine findings remain.
+
 ## AppImage EGL abort, issue #6 (12 October 2026)
 
 Fixed in source: the AppImage no longer bundles `libwayland-client`

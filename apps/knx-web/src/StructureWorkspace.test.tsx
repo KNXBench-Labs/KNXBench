@@ -110,6 +110,18 @@ async function fill(input: HTMLInputElement, value: string) {
   });
 }
 
+/** Issues #12/#15: creation forms open from the header's `+ New` menu. */
+const menuEntry = (host: HTMLElement, kind: string, installation?: number) => host.querySelector<HTMLButtonElement>(
+  `.structure-new-menu [data-create-entry="${kind}"]${installation === undefined ? "" : `[data-installation-id="${installation}"]`}`);
+async function openCreate(host: HTMLElement, kind: string, installation?: number): Promise<HTMLElement> {
+  const button = menuEntry(host, kind, installation);
+  expect(button, `the menu offers ${kind}`).not.toBeNull();
+  await act(async () => button!.click());
+  const panel = host.querySelector<HTMLElement>(`[data-structure-create="${kind}"]`);
+  expect(panel, `${kind} form opens`).not.toBeNull();
+  return panel!;
+}
+
 it("creates areas and lines in the main topology using the same commands as the explorer", async () => {
   const host = document.createElement("div"); const root = createRoot(host);
   const later = { ...tree.installations[0], id: 6, name: "Later installation",
@@ -118,28 +130,27 @@ it("creates areas and lines in the main topology using the same commands as the 
   const onTreeUpdate = vi.fn();
   await act(async () => root.render(<StructureWorkspace {...inert} tree={both} view="topology" selection={{ kind: "area", id: 2 }}
     onTreeUpdate={onTreeUpdate} onSelect={() => {}} onCatalog={() => {}} />));
-  const first = host.querySelectorAll(".installation-diagram")[0];
-  const second = host.querySelectorAll(".installation-diagram")[1];
-  const area = first.querySelector<HTMLElement>('[data-structure-create="area"]')!;
-  const line = first.querySelector<HTMLElement>('[data-structure-create="line"][data-parent-id="2"]')!;
-  expect(area).toBeTruthy(); expect(line).toBeTruthy();
+  // MODEL-01: a later installation gets its own root create; the line entry
+  // follows the selected area, which lives in the first installation.
+  expect(menuEntry(host, "area", 6)).not.toBeNull();
+  expect(menuEntry(host, "line", 6)).toBeNull();
+  expect(host.querySelectorAll(".structure-new-group-heading")).toHaveLength(2);
+  const area = await openCreate(host, "area", 1);
   expect([...area.querySelectorAll("input")].map((field) => field.getAttribute("aria-label")))
     .toEqual(["Address", "Name"]);
-  expect([...line.querySelectorAll("input")].map((field) => field.getAttribute("aria-label")))
-    .toEqual(["Address", "Name", "Medium reference"]);
-  // MODEL-01: a later installation gets its own root create; the line row
-  // follows the selected area, which lives in the first installation.
-  expect(second.querySelector('[data-structure-create="area"]')).toBeTruthy();
-  expect(second.querySelector('[data-structure-create="line"]')).toBeNull();
   await fill(area.querySelectorAll("input")[0], "4");
   await fill(area.querySelectorAll("input")[1], "New area");
   apiMock.createArea.mockResolvedValueOnce(both);
-  await act(async () => area.querySelector("button")!.click());
+  await act(async () => area.querySelector<HTMLButtonElement>("ul button")!.click());
   expect(apiMock.createArea).toHaveBeenCalledWith("New area", 4, 1);
+  const line = await openCreate(host, "line", 1);
+  expect(line.getAttribute("data-parent-id")).toBe("2");
+  expect([...line.querySelectorAll("input")].map((field) => field.getAttribute("aria-label")))
+    .toEqual(["Address", "Name", "Medium reference"]);
   await fill(line.querySelectorAll("input")[0], "3");
   await fill(line.querySelectorAll("input")[1], "New line");
   apiMock.createLine.mockResolvedValueOnce(both);
-  await act(async () => line.querySelector("button")!.click());
+  await act(async () => line.querySelector<HTMLButtonElement>("ul button")!.click());
   expect(apiMock.createLine).toHaveBeenCalledWith(2, "New line", 3, "MT-0");
   expect(onTreeUpdate).toHaveBeenCalledTimes(2);
   await act(async () => root.unmount());
@@ -151,14 +162,14 @@ it("creates building parts and group ranges at explicit roots or the selected pa
   const props = { ...inert, onTreeUpdate, onSelect: () => {}, onCatalog: () => {} };
   await act(async () => root.render(<StructureWorkspace {...props} tree={tree} view="buildings"
     selection={{ kind: "building_part", id: 5 }} buildingScope={5} />));
-  const rootPart = host.querySelector<HTMLElement>('[data-structure-create="building-root"]')!;
-  const childPart = host.querySelector<HTMLElement>('[data-structure-create="building-child"][data-parent-id="5"]')!;
-  expect(rootPart).toBeTruthy(); expect(childPart).toBeTruthy();
+  expect(menuEntry(host, "building-root")).not.toBeNull();
+  const childPart = await openCreate(host, "building-child");
+  expect(childPart.getAttribute("data-parent-id")).toBe("5");
   expect(childPart.querySelector("select")?.getAttribute("aria-label")).toBe("Building part type");
   expect(childPart.querySelector("input")?.getAttribute("aria-label")).toBe("Name");
   await fill(childPart.querySelector("input")!, "Inside room");
   apiMock.createBuildingPart.mockResolvedValueOnce(tree);
-  await act(async () => childPart.querySelector("button")!.click());
+  await act(async () => childPart.querySelector<HTMLButtonElement>("ul button")!.click());
   expect(apiMock.createBuildingPart).toHaveBeenCalledWith("Inside room", "Room", 5);
   const addresses: ProjectTree = { ...tree, installations: [{ ...tree.installations[0], group_ranges: [
     { id: 20, name: "Root", start: "1/0/0", end: "1/7/255", parent: null },
@@ -166,19 +177,21 @@ it("creates building parts and group ranges at explicit roots or the selected pa
   ] }] };
   await act(async () => root.render(<StructureWorkspace {...props} tree={addresses} view="addresses"
     selection={{ kind: "group_range", id: 20 }} rangeScope={20} />));
-  expect(host.querySelector('[data-structure-create="range-root"]')).toBeTruthy();
-  const childRange = host.querySelector<HTMLElement>('[data-structure-create="range-child"][data-parent-id="20"]')!;
-  expect(childRange).toBeTruthy();
+  expect(menuEntry(host, "range-root")).not.toBeNull();
+  const childRange = await openCreate(host, "range-child");
+  expect(childRange.getAttribute("data-parent-id")).toBe("20");
   expect([...childRange.querySelectorAll("input")].map((field) => field.getAttribute("aria-label")))
     .toEqual(["Range start", "Range end", "Name"]);
   await fill(childRange.querySelectorAll("input")[0], "1/0/0");
   await fill(childRange.querySelectorAll("input")[1], "1/0/255");
   await fill(childRange.querySelectorAll("input")[2], "Lights");
   apiMock.createGroupRange.mockResolvedValueOnce(addresses);
-  await act(async () => childRange.querySelector("button")!.click());
+  await act(async () => childRange.querySelector<HTMLButtonElement>("ul button")!.click());
   expect(apiMock.createGroupRange).toHaveBeenCalledWith("Lights", "1/0/0", "1/0/255", 20);
   await act(async () => root.render(<StructureWorkspace {...props} tree={addresses} view="addresses"
     selection={{ kind: "group_range", id: 21 }} rangeScope={21} />));
+  // A subrange can only go into a main range: no entry, and the open form for range 20 closed.
+  expect(menuEntry(host, "range-child")).toBeNull();
   expect(host.querySelector('[data-structure-create="range-child"]')).toBeNull();
   expect(onTreeUpdate).toHaveBeenCalledTimes(2);
   await act(async () => root.unmount());
@@ -202,6 +215,7 @@ it.each([
     selection={{ kind, id }} buildingScope={kind === "building_part" ? id : null}
     rangeScope={kind === "group_range" ? id : null}
     onSelect={() => {}} onCatalog={() => {}} />));
+  expect(menuEntry(host, child)).toBeNull();
   expect(host.querySelector(`[data-structure-create="${child}"]`)).toBeNull();
   expect(host.querySelector('.structure-context-editor [role="alert"]')?.textContent)
     .toContain("This structure ID occurs more than once");
@@ -251,14 +265,13 @@ it("creates a Ground site and groups two buildings via the existing commands wit
       onTreeUpdate={onTreeUpdate} onSelect={() => {}} onCatalog={() => {}} />,
   );
   await act(async () => render(initial, null));
-  const installationSections = host.querySelectorAll(".installation-diagram");
-  const createSite = installationSections[0].querySelector<HTMLElement>('[data-structure-create="site-root"]')!;
-  expect(createSite).toBeTruthy();
-  expect(installationSections[1].querySelector('[data-structure-create="site-root"]')).toBeTruthy();
+  expect(menuEntry(host, "site-root", 30)).not.toBeNull();
+  const createSite = await openCreate(host, "site-root", 1);
+  expect(createSite.querySelector(".structure-create-hint")).not.toBeNull();
   expect(createSite.querySelector("select")).toBeNull();
   await fill(createSite.querySelector("input")!, "Campus");
   apiMock.createBuildingPart.mockResolvedValueOnce(created);
-  await act(async () => createSite.querySelector("button")!.click());
+  await act(async () => createSite.querySelector<HTMLButtonElement>("ul button")!.click());
   expect(apiMock.createBuildingPart).toHaveBeenCalledWith("Campus", "Ground", undefined, 1);
   expect(onTreeUpdate).toHaveBeenLastCalledWith(created);
 
@@ -294,36 +307,37 @@ it("creates under a parent selected in a later installation and roots there by n
   apiMock.createGroupRange.mockResolvedValue(both);
   await act(async () => root.render(<StructureWorkspace {...props} tree={both} view="topology"
     selection={{ kind: "area", id: 7 }} />));
-  let [first, second] = host.querySelectorAll(".installation-diagram");
-  expect(first.querySelector('[data-structure-create="line"]')).toBeNull();
-  const line = second.querySelector<HTMLElement>('[data-structure-create="line"][data-parent-id="7"]')!;
+  expect(menuEntry(host, "line", 1)).toBeNull();
+  const line = await openCreate(host, "line", 6);
+  expect(line.getAttribute("data-parent-id")).toBe("7");
+  expect(line.querySelector(".structure-create-target")?.textContent).toBe("Later installation");
   await fill(line.querySelectorAll("input")[0], "1");
   await fill(line.querySelectorAll("input")[1], "Later line");
-  await act(async () => line.querySelector("button")!.click());
+  await act(async () => line.querySelector<HTMLButtonElement>("ul button")!.click());
   expect(apiMock.createLine).toHaveBeenCalledWith(7, "Later line", 1, "MT-0");
 
   await act(async () => root.render(<StructureWorkspace {...props} tree={both} view="buildings"
     selection={{ kind: "building_part", id: 8 }} />));
-  [first, second] = host.querySelectorAll(".installation-diagram");
-  expect(first.querySelector('[data-structure-create="building-child"]')).toBeNull();
-  const child = second.querySelector<HTMLElement>('[data-structure-create="building-child"][data-parent-id="8"]')!;
+  expect(menuEntry(host, "building-child", 1)).toBeNull();
+  const child = await openCreate(host, "building-child", 6);
+  expect(child.getAttribute("data-parent-id")).toBe("8");
   await fill(child.querySelector("input")!, "Later room");
-  await act(async () => child.querySelector("button")!.click());
+  await act(async () => child.querySelector<HTMLButtonElement>("ul button")!.click());
   expect(apiMock.createBuildingPart).toHaveBeenLastCalledWith("Later room", "Room", 8);
-  const rootBuilding = second.querySelector<HTMLElement>('[data-structure-create="building-root"]')!;
+  const rootBuilding = await openCreate(host, "building-root", 6);
   await fill(rootBuilding.querySelector("input")!, "Later annex");
-  await act(async () => rootBuilding.querySelector("button")!.click());
+  await act(async () => rootBuilding.querySelector<HTMLButtonElement>("ul button")!.click());
   expect(apiMock.createBuildingPart).toHaveBeenLastCalledWith("Later annex", "Room", undefined, 6);
 
   await act(async () => root.render(<StructureWorkspace {...props} tree={both} view="addresses"
     selection={{ kind: "group_range", id: 40 }} />));
-  [first, second] = host.querySelectorAll(".installation-diagram");
-  expect(first.querySelector('[data-structure-create="range-child"]')).toBeNull();
-  const range = second.querySelector<HTMLElement>('[data-structure-create="range-child"][data-parent-id="40"]')!;
+  expect(menuEntry(host, "range-child", 1)).toBeNull();
+  const range = await openCreate(host, "range-child", 6);
+  expect(range.getAttribute("data-parent-id")).toBe("40");
   await fill(range.querySelectorAll("input")[0], "3/1/0");
   await fill(range.querySelectorAll("input")[1], "3/1/255");
   await fill(range.querySelectorAll("input")[2], "Later middle");
-  await act(async () => range.querySelector("button")!.click());
+  await act(async () => range.querySelector<HTMLButtonElement>("ul button")!.click());
   expect(apiMock.createGroupRange).toHaveBeenLastCalledWith("Later middle", "3/1/0", "3/1/255", 40);
   await act(async () => root.unmount());
 });

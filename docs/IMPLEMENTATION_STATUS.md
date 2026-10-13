@@ -26,6 +26,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--kl-164-two-windows-two-steps"></a>
+- [2026-10-13 — KL-164: two windows, two steps](history/implementation/2026-W42.md#2026-10-13--kl-164-two-windows-two-steps)
 <a id="2026-10-13--issues-12-and-15-one-new-menu-per-page"></a>
 - [2026-10-13 — Issues #12 and #15: one + New menu per page](history/implementation/2026-W42.md#2026-10-13--issues-12-and-15-one-new-menu-per-page)
 <a id="2026-10-13--issue-11-the-address-tree-opens-compact-and-remembers"></a>

@@ -135,6 +135,19 @@ The shared card is viewport-bounded and wraps long unbroken messages without
 hiding its close control. No backend, KNX domain, project/product schema,
 achievement tracking, persistent notification history or dependency changes.
 
+## 2026-10-13 amendment: "one more" adds up (KL-164)
+
+The grow-only record keeps its maxima for unlocks, thresholds and steps.
+A `count` step is no longer an absolute value: the client sends
+`increments` with a `requestId`, the server adds them and remembers the
+last 1,024 applied ids in the record (`appliedRequests`), so retries,
+duplicates and reordering count once and two windows no longer lose a
+step. The client retries an increment batch unchanged and reconciles every
+answer (goals reached elsewhere unlock; `distinct` totals follow their
+markers). The server still owns structure, not meaning: it adds numbers
+under ids and never learns what a counter counts. Schema stays 1.
+[KL-164](../limitations/KL-164-shared-achievement-counters.md#update-2026-10-13-steps-add-up-goal-b6).
+
 ## Alternatives considered
 
 - **A key in `settings.json`.** Rejected by the maintainer. Unlocks are

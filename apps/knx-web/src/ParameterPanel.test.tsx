@@ -16,6 +16,9 @@ import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
 const panelTree: ProjectTree = {
   schema_version: 11, errors: 0, warnings: 0, can_undo: true, can_redo: false, is_modified: true, group_address_style: "ThreeLevel", installations: [],
 };
+// Goal B1: the snapshot the panel is read under; every write binds to it.
+const shownTree: ProjectTree = { ...panelTree, server_incarnation: "srv-p", project_incarnation: 1, snapshot_revision: 2 };
+const bound = (expectedValue: string | null) => ({ serverIncarnation: "srv-p", projectIncarnation: 1, snapshotRevision: 2, expectedValue });
 
 const apiMock = vi.hoisted(() => ({
   deviceParameters: vi.fn(),
@@ -116,7 +119,7 @@ async function renderPanel(deviceId = 1, view: "parameters" | "diagnostics" | "r
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<ParameterPanel deviceId={deviceId} view={view} onValueApplied={() => {}} />);
+    root.render(<ParameterPanel deviceId={deviceId} view={view} refreshKey={shownTree} onValueApplied={() => {}} />);
   });
   return root;
 }
@@ -261,7 +264,7 @@ describe("ParameterPanel", () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "6", null);
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "6", null, bound("5"));
     expect(host!.querySelector<HTMLInputElement>('input[type="number"]')!.value).toBe("6");
     root.unmount();
   });
@@ -289,7 +292,7 @@ describe("ParameterPanel", () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "99", null);
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "99", null, bound("5"));
     expect(host!.querySelector<HTMLInputElement>('input[type="number"]')!.value).toBe("5");
     expect(host!.querySelector(".field-error")!.textContent).toBe("out of range");
 
@@ -339,7 +342,7 @@ describe("ParameterPanel", () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "6", "de");
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "6", "de", bound("5"));
 
     root.unmount();
   });
@@ -457,8 +460,7 @@ describe("ParameterPanel", () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "M-7_MI-3_P2", "2", null);
-    expect(apiMock.setParameterValue).not.toHaveBeenCalledWith(1, "P2", "2", null);
+    expect(apiMock.setParameterValue).toHaveBeenCalledExactlyOnceWith(1, "M-7_MI-3_P2", "2", null, bound("1"));
 
     root.unmount();
   });
@@ -641,7 +643,7 @@ describe("ParameterPanel", () => {
     const ids = () => [...host!.querySelectorAll(".parameter-field")].map((row) => row.getAttribute("data-ets-id"));
     expect(ids()).toEqual(["A"]);
     expect(host!.querySelector(".parameter-hidden-toggle")).toBeNull();
-    await act(async () => root.render(<ParameterPanel deviceId={1} view="restricted" onValueApplied={() => {}} />));
+    await act(async () => root.render(<ParameterPanel deviceId={1} view="restricted" refreshKey={shownTree} onValueApplied={() => {}} />));
     expect(ids()).toEqual(["B", "C", "D"]);
     const inputs = [...host!.querySelectorAll<HTMLInputElement>("input")];
     expect(inputs.map((input) => input.value)).toEqual(["5", "5", "5"]);

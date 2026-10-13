@@ -153,3 +153,22 @@ describe("holderFromActivity", () => {
     expect(describeHolder(holder, en)).toBe("The gateway is busy: a bus monitor session is open. Stop the bus monitor first.");
   });
 });
+
+describe("serverStopping (Goal A3, KL-163)", () => {
+  const stopping = (status = 503, extra: Record<string, unknown> = {}) => refusal(status, {
+    error: "the server is stopping; nothing was started and nothing was sent", kind: "serverStopping", ...extra,
+  });
+  it("words the stop-admission refusal in both languages instead of a bus error", () => {
+    expect(admitGatewayRefusal(stopping())).toEqual({ kind: "serverStopping" });
+    expect(describeGatewayRefusal({ kind: "serverStopping" }, en)).toBe(en("gatewayRefusal.serverStopping"));
+    expect(en("gatewayRefusal.serverStopping")).toContain("server is stopping");
+    expect(de("gatewayRefusal.serverStopping")).toContain("Server wird beendet");
+    active.language = "de";
+    expect(gatewayRefusalMessage(stopping())).toBe(de("gatewayRefusal.serverStopping"));
+  });
+  it("keeps the server's own text for any other status or an unexpected shape", () => {
+    expect(admitGatewayRefusal(stopping(409))).toBeNull();
+    expect(admitGatewayRefusal(stopping(503, { retryAfter: 5 }))).toBeNull();
+    expect(gatewayRefusalMessage(stopping(500))).toBeNull();
+  });
+});

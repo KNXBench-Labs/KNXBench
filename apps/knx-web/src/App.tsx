@@ -225,7 +225,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     revision: 0,
     retiredServerIncarnations: new Set(),
   });
-  const { toasts, notifications, notificationDroppedCount, pushUpdate, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit } = useToasts();
+  const { toasts, pendingCount, queueDropped, notifications, notificationDroppedCount, pushUpdate, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit, pause, resume } = useToasts();
   const updates = useReleaseUpdates(update => pushUpdate(t("updates.available", { version: update.version }), update.url));
   const [logTarget, setLogTarget] = useState<{ id: number } | null>(null);
   // ADR-0089. Unlocks are announced in the language of the moment they
@@ -650,7 +650,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     }
     setLogOpen(false);
     setMonitorOpen(false);
-    clearErrors();
+    // Selecting something does not answer an unread error card.
     if (sel.kind !== "device") {
       // Group-address/building-part detail resolves synchronously from
       // `tree` inside Inspector — nothing to fetch, and no stale
@@ -947,7 +947,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     const imported = kind === "import" ? { passwordProtected } : undefined;
     if (loadingRef.current) return;
     loadingRef.current = true;
-    clearErrors();
+    // A new import must not remove the unread failure of the attempt before.
     setLoadSource(fileNameOf(path));
     setLoadSnapshot(null);
     setLoadKey((k) => k + 1);
@@ -1528,7 +1528,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
               explorer between these three, so there is nothing to
               redistribute and no separator to offer. */}
           {tree && <PaneSplitter label={t("workbench.resizeNavigation")} target={navBlockRef} resizes="above" value={navHeight} onChange={setNavHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
-          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onAddDevice={(target) => setDeviceWizard({ target })} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} onRevealComplete={completeSearchReveal} />}
+          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onAddDevice={(target) => setDeviceWizard({ target })} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} onRevealComplete={completeSearchReveal} onOpenImportFindings={openImportFindings} />}
           {tree && <PaneSplitter label={t("workbench.resizeDiagnostics")} target={diagnosticsBlockRef} resizes="below" value={diagnosticsHeight} onChange={setDiagnosticsHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
           <nav ref={diagnosticsBlockRef} className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")} style={{ height: diagnosticsHeight ?? undefined }}>
             <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen((open) => !open); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
@@ -1554,7 +1554,8 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
         )}
         <span>v{manifestVersion}</span>
       </footer>
-      <ToastStack toasts={toasts} onDismiss={dismiss} onExited={finishExit} onOpen={(id) => {
+      <ToastStack toasts={toasts} onDismiss={dismiss} onExited={finishExit} onPause={pause} onResume={resume}
+        pendingCount={pendingCount} queueDropped={queueDropped} onOpen={(id) => {
         setLogTarget({ id }); setLogOpen(true); setMonitorOpen(false); dismiss(id);
       }} />
       {autosave.secondsRemaining !== null && (

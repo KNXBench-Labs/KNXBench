@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Verify project naming with the built app in a Linux loopback-only namespace."""
+"""Verify project naming (default) or Functions (`--spec functions.native.ts`) with the built app
+and the real server in a Linux loopback-only namespace."""
 # SPDX-License-Identifier: AGPL-3.0-or-later
 import argparse
 import hashlib
@@ -11,11 +12,16 @@ import sys
 import time
 import urllib.request
 
+# Specs this runner may start; each copies the fictional demo into the isolated data directory.
+SPECS = ("rename.native.ts", "functions.native.ts")
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--server", type=Path, required=True)
     parser.add_argument("--scratch", type=Path, required=True)
+    parser.add_argument("--spec", choices=SPECS, default=SPECS[0],
+                        help="isolated browser spec to run (default: name editing)")
     parser.add_argument("--inside", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
@@ -24,7 +30,7 @@ def main():
     if not args.inside:
         return subprocess.call(["unshare", "--user", "--map-root-user", "--net", sys.executable,
                                 str(Path(__file__).resolve()), "--server", str(args.server),
-                                "--scratch", str(args.scratch), "--inside"])
+                                "--scratch", str(args.scratch), "--spec", args.spec, "--inside"])
     subprocess.run(["ip", "link", "set", "lo", "up"], check=True)
     links = json.loads(subprocess.check_output(["ip", "-j", "link", "show"]))
     if [link["ifname"] for link in links] != ["lo"]:
@@ -49,7 +55,8 @@ def main():
                 "KNX_DATA_DIR": str(data), "KNX_STATIC_DIR": str(web / "dist"),
                 "KNX_RENAME_NATIVE_URL": "http://127.0.0.1:4779", "KNX_RENAME_NATIVE_DATA": str(data),
                 "KNX_RENAME_NATIVE_DEMO": str(demo), "KNX_RENAME_ISOLATED": "1",
-                "KNX_RENAME_CAPTURE": str(capture), "KNX_RENAME_TEST_OUTPUT": str(args.scratch / "test-output")})
+                "KNX_RENAME_CAPTURE": str(capture), "KNX_RENAME_TEST_OUTPUT": str(args.scratch / "test-output"),
+                "KNX_NATIVE_SPEC": args.spec})
     with (args.scratch / "server.log").open("w") as log:
         server = subprocess.Popen([str(args.server)], env=env, stdout=log, stderr=subprocess.STDOUT)
         try:

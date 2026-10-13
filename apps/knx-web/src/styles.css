@@ -791,11 +791,36 @@ main {
   min-width: 0;
 }
 .parameter-conflict-current { flex: 1 1 100%; overflow-wrap: anywhere; }
+/* Goal B1b: Functions in building-part and group-address Properties. */
+.functions-panel { margin: 12px 0; min-width: 0; }
+.functions-panel > summary { cursor: pointer; font-weight: 600; }
+.functions-list, .functions-members { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
+.functions-item > details { border: 1px solid var(--knx-border); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.functions-item summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; cursor: pointer; }
+.functions-name { font-weight: 600; overflow-wrap: anywhere; }
+.functions-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; margin: 8px 0; }
+.functions-facts dd { margin: 0; overflow-wrap: anywhere; }
+.functions-members li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.functions-member-name { font-style: italic; }
+.functions-provenance { font-size: 0.85em; color: var(--knx-muted); overflow-wrap: anywhere; }
+.functions-provenance code { font-family: var(--knx-font-mono); }
+.functions-add-member, .functions-move, .functions-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 8px 0; min-width: 0; }
+.functions-add-member > *, .functions-move > label { flex: 1 1 12rem; min-width: 0; }
+.functions-add-member > button, .functions-move > button { flex: 0 0 auto; }
+.functions-details { display: grid; gap: 4px; margin: 8px 0; min-width: 0; }
+.functions-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; overflow-wrap: anywhere; }
+.functions-server-text { font-family: var(--knx-font-mono); overflow-wrap: anywhere; }
+/* Grid items default to min-width: auto, so one long building-part option in the
+   move select would widen the whole card past the Properties pane. */
+.functions-list > li, .functions-members > li, .functions-details > label { min-width: 0; }
+.functions-panel select, .functions-panel input, .functions-panel textarea { max-width: 100%; min-width: 0; box-sizing: border-box; }
+.functions-move select, .functions-details input, .functions-details select, .functions-details textarea { width: 100%; }
 .parameter-conflict > button { max-width: 100%; }
 /* Quiet like the editor's own buttons: entering or leaving the checked editor
    must not outshout its Apply. */
 .parameter-checked-open,
 .parameter-conflict-discard,
+.functions-quiet,
 .parameter-checked-close {
   max-width: 100%;
   padding: 6px 12px;
@@ -807,9 +832,11 @@ main {
 }
 .parameter-checked-open:hover:not(:disabled),
 .parameter-conflict-discard:hover:not(:disabled),
+.functions-quiet:hover:not(:disabled),
 .parameter-checked-close:hover:not(:disabled) { box-shadow: none; border-color: var(--knx-accent); }
 .parameter-checked-open:focus-visible,
 .parameter-conflict-discard:focus-visible,
+.functions-quiet:focus-visible,
 .parameter-checked-close:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
 /* The access badge is a label, not a full-width bar, in the flex row. */
 .parameter-field > .provenance-badge { align-self: flex-start; }

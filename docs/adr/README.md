@@ -131,3 +131,5 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0121](0121-tester-download-reports.md) | Tester download reports, and a maintainer review before "verified" | Accepted implementation decision | 2026-10-13 |
 | [0122](0122-category-motion-preferences.md) | Reduction-only motion preferences per category (Toasts, Achievements, Flow) | Accepted (on main 2026-10-13; written by Codex as local 0109/0112) | 2026-10-10 |
 | [0123](0123-structured-gateway-refusals.md) | Gateway refusals are structured, and name only what is known | Accepted implementation decision | 2026-10-13 |
+| [0124](0124-project-functions.md) | Project Functions are placed in one building part and refer to group addresses of its installation | Accepted implementation decision | 2026-10-13 |
+| [0125](0125-multi-installation-site-is-blocked.md) | A site over several installations is not modelled; its invariants are fixed and it waits for evidence | Proposed — blocked design | 2026-10-13 |

@@ -459,8 +459,81 @@ fn render_buildings(
             }
             out.push_str("</ul>");
         }
+        render_functions(out, project, installation, &by_id, language);
     }
     out.push_str("</section>");
+}
+
+/// ADR-0124: the Functions placed in this installation's building parts,
+/// in project order, each with its ordered group addresses and roles.
+fn render_functions(
+    out: &mut String,
+    project: &Project,
+    installation: &knx_core::Installation,
+    by_id: &HashMap<BuildingPartId, &BuildingPart>,
+    language: ReportLanguage,
+) {
+    let functions: Vec<_> = project
+        .functions
+        .iter()
+        .filter(|f| by_id.contains_key(&f.location))
+        .collect();
+    if functions.is_empty() {
+        return;
+    }
+    write!(
+        out,
+        "<h4 id=\"functions-{}\">{}</h4><table><thead><tr><th>{}</th><th>{}</th><th>{}</th><th>{}</th><th>{}</th></tr></thead><tbody>",
+        installation.id.0,
+        language.text("Functions", "Funktionen"),
+        language.text("Function", "Funktion"),
+        language.text("Type", "Typ"),
+        language.text("Building part", "Gebäudeteil"),
+        language.text("Group addresses", "Gruppenadressen"),
+        language.text("Comment", "Kommentar"),
+    )
+    .unwrap();
+    let style = project.info.group_address_style;
+    for function in functions {
+        let location = by_id
+            .get(&function.location)
+            .map(|p| p.name.as_str())
+            .unwrap_or_default();
+        let mut members = String::new();
+        for member in &function.members {
+            let address = installation
+                .group_addresses
+                .iter()
+                .find(|g| g.id == member.group_address);
+            let (formatted, name) = address
+                .map(|g| (g.address.format(style), g.name.as_str()))
+                .unwrap_or_default();
+            let role = member
+                .role
+                .as_deref()
+                .map(|r| format!(" [{}]", escape_text(r)))
+                .unwrap_or_default();
+            write!(
+                members,
+                "<li>{} {}{}</li>",
+                escape_text(&formatted),
+                escape_text(name),
+                role
+            )
+            .unwrap();
+        }
+        write!(
+            out,
+            "<tr><td>{}</td><td>{}</td><td>{}</td><td><ul>{}</ul></td><td style=\"white-space:pre-wrap\">{}</td></tr>",
+            escape_text(&function.details.name),
+            escape_text(function.details.function_type.as_deref().unwrap_or_default()),
+            escape_text(location),
+            members,
+            escape_text(function.details.comment.as_deref().unwrap_or_default()),
+        )
+        .unwrap();
+    }
+    out.push_str("</tbody></table>");
 }
 
 fn render_building_part(

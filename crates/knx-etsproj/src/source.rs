@@ -196,7 +196,34 @@ pub struct SourceBuildingPart {
     pub completion_status: Option<String>,
     pub children: Vec<SourceBuildingPart>,
     pub device_refs: Vec<String>,
+    /// Schema 23 `Function` children, in source order (ADR-0124).
+    pub functions: Vec<SourceFunction>,
     pub other: Vec<RetainedAttribute>,
+}
+
+/// One schema-23 `Function` (*Project Schema23* §1.2.6.9).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SourceFunction {
+    pub id: String,
+    pub name: Option<String>,
+    pub function_type: Option<String>,
+    pub number: Option<String>,
+    pub comment: Option<String>,
+    pub description: Option<String>,
+    pub completion_status: Option<String>,
+    pub members: Vec<SourceFunctionMember>,
+    /// The whole element verbatim, including `Puid`, `Implements`,
+    /// `DefaulGroupRange` and anything unknown; retained in the opaque store.
+    pub raw: RetainedElement,
+}
+
+/// One `GroupAddressRef` (*Project Schema23* §1.2.6.10).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SourceFunctionMember {
+    pub id: String,
+    pub ref_id: String,
+    pub name: Option<String>,
+    pub role: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

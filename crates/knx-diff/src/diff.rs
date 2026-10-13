@@ -109,6 +109,64 @@ impl<K, F: FieldDiff> EntityChange<K, F> {
     }
 }
 
+/// One line per Function in project order: identity, name, type, building
+/// part and members with their roles. Internal ids are deliberately left
+/// out, so two imports of the same file compare equal.
+fn functions_summary(project: &Project) -> String {
+    let part_name = |id| {
+        project
+            .installations
+            .iter()
+            .flat_map(|i| &i.buildings)
+            .find(|b: &&BuildingPart| b.id == id)
+            .map(|b| format!("{} {}", b.source.ets_id, b.name))
+            .unwrap_or_default()
+    };
+    let address = |id| {
+        project
+            .installations
+            .iter()
+            .flat_map(|i| &i.group_addresses)
+            .find(|g: &&GroupAddressEntry| g.id == id)
+            .map(|g| g.address.format(project.info.group_address_style))
+            .unwrap_or_default()
+    };
+    project
+        .functions
+        .iter()
+        .map(|f| {
+            let members: Vec<String> = f
+                .members
+                .iter()
+                .map(|m| {
+                    format!(
+                        "{} {}{}",
+                        address(m.group_address),
+                        m.name,
+                        m.role
+                            .as_deref()
+                            .map(|r| format!(" [{r}]"))
+                            .unwrap_or_default()
+                    )
+                })
+                .collect();
+            format!(
+                "{} {} ({}) in {}: {}; {:?}; {}; {}; {}",
+                f.source.ets_id,
+                f.details.name,
+                f.details.function_type.as_deref().unwrap_or_default(),
+                part_name(f.location),
+                members.join(", "),
+                f.details.completion,
+                f.details.number.as_deref().unwrap_or_default(),
+                f.details.comment.as_deref().unwrap_or_default(),
+                f.details.description.as_deref().unwrap_or_default(),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// Computes what changed between `left` and `right`. Pure: no clock, no
 /// filesystem, no RNG — the same two `Project` values always produce
 /// `PartialEq`-equal `ProjectDiff`s (design spec §4).
@@ -119,6 +177,17 @@ pub fn diff_projects(left: &Project, right: &Project) -> ProjectDiff {
             field: "notes",
             left: format!("{:?}", left.notes),
             right: format!("{:?}", right.notes),
+        });
+    }
+    // ADR-0124: a coarse but complete comparison, so two projects that
+    // differ only in their Functions never diff as equal. A per-Function
+    // table is later work (see the Functions contract).
+    let (left_functions, right_functions) = (functions_summary(left), functions_summary(right));
+    if left_functions != right_functions {
+        info_changes.push(FieldChange {
+            field: "functions",
+            left: left_functions,
+            right: right_functions,
         });
     }
     let installations = diff_installations(left, right);

@@ -38,7 +38,8 @@ See [Projects](02-projects.md).
 ## 2. Read the import report before you change anything
 
 If the header strip shows **Import: N errors · M warnings**, click it. It takes you to
-the Overview, where the counts are broken down; the Log holds one entry per finding.
+the Overview, where the counts are broken down; the Log holds one entry per finding
+(repetitive retained-file notices grouped into one entry that lists every file).
 
 This is worth five minutes. An import finding tells you what KNXBench did not
 understand about the file, and that is exactly the part where later surprises come

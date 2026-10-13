@@ -48,4 +48,5 @@ pub use import::{
     import_ets_project_with, import_ets_project_with_password, AppError, ImportOptions,
     ImportedProject,
 };
+pub use import_payload_evidence::{import_finding_counts, retained_payload_label};
 pub use progress::{LoadObserver, LoadStage};

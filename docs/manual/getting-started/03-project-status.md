@@ -9,23 +9,25 @@ Read this chapter before you trust KNXBench with a project you care about.
 Every part of KNXBench carries its own version
 ([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). Since the
 `v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
-The CLI, desktop, web frontend, server and `knx-mcp` now carry `0.1.0-alpha.10`;
+The CLI, desktop, web frontend, server and `knx-mcp` now carry `0.1.0-alpha.11`;
 library crates keep their own numbers. The public pre-release is
-[`v0.1.0-alpha.10`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10), published on 12 October 2026: AppImage, `knx-mcp` and the Docker Hub
+[`v0.1.0-alpha.11`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11), published on 13 October 2026: AppImage, `knx-mcp` and the Docker Hub
 image `knxbench/knxbench-server`. See [Installation](04-installation.md).
 
-Alpha 10 fixes the AppImage crash on newer Mesa drivers
-([#6](https://github.com/KNXBench-Labs/KNXBench/issues/6)) and imports ETS 5.7
-projects ([#7](https://github.com/KNXBench-Labs/KNXBench/issues/7)). It adds
-project notes, four group-address views with member editing, the installation
-instructions tab, checked time/slider parameter editors, catalogue updates with a
-preview and backup, import evidence that survives saving, and release
-notifications. [Release notes](../../releases/alpha10.md) keep the exact scope
-together. Most screenshots in this manual still show Alpha 9; newer views are
-marked where they differ.
+Alpha 11 adds a group-address picker you can type into
+([#8](https://github.com/KNXBench-Labs/KNXBench/issues/8)), indents tree rows
+under their parent ([#9](https://github.com/KNXBench-Labs/KNXBench/issues/9)) and
+says which session holds the gateway or why it refused
+([#10](https://github.com/KNXBench-Labs/KNXBench/issues/10)). It also brings tester
+download reports, a read-only byte-order probe with a named download warning,
+steadier notifications, Flow images, motion per category and notes on
+communication objects. [Release notes](../../releases/alpha11.md) keep the exact
+scope together; [Alpha 10's](../../releases/alpha10.md) fixed the Mesa AppImage
+crash (#6) and ETS 5.7 import (#7). Most screenshots in this manual still show
+Alpha 9; newer views are marked where they differ.
 
 **Before upgrading:** close the app and independently back up `.knxdb` files and
-Docker data. Alpha 10 uses native schema **14**; Alpha 9 and earlier refuse upgraded
+Docker data. Alpha 10 and 11 use native schema **14**; Alpha 9 and earlier refuse upgraded
 files. Returning to an older build requires your pre-upgrade backup. In-file
 versions and Undo are not an independent backup. Update `knx-mcp` together with
 the application.

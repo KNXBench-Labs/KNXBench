@@ -7,7 +7,7 @@ does not exist at all, area by area across the whole application.
 
 The detailed inventory retains its **8 October 2026** source audit and dated
 follow-ups. The current public snapshot is
-[`v0.1.0-alpha.10`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10),
+[`v0.1.0-alpha.11`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11),
 not a promise that every later source feature is bundled.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
@@ -23,7 +23,7 @@ rests on, and a hint on untested programs. After every download it offers **Help
 this device**: steps, a checklist, a report file without names or addresses, and the
 GitHub issue form or a mail to issue@knxbench.com to send it. Nothing is sent
 automatically; a maintainer reviews each report before a program counts as verified.
-Newer than Alpha.10.
+Included in Alpha.11.
 
 ## Steadier notifications, Flow images and motion per category (13 October 2026 source)
 
@@ -31,9 +31,9 @@ Error cards stay until you have seen them, hold still under the pointer and no l
 replace each other; the Explorer's import counts open the matching Log entries. The
 Flow view saves a PNG or a GIF clip of up to 30 seconds after asking; toasts,
 achievements and the Flow each get their own motion setting that can only reduce
-motion; four more achievements. Newer than Alpha.10
+motion; four more achievements. Included in Alpha.11
 ([notifications](user-guide/09-settings-and-appearance.md#toast-notifications),
-[Flow images](user-guide/07-bus-and-interfaces.md#saving-the-flow-as-an-image-newer-than-alpha10),
+[Flow images](user-guide/07-bus-and-interfaces.md#saving-the-flow-as-an-image-since-alpha-11),
 [limits](../KNOWN_LIMITATIONS.md#ported-ux-feedback-2026-10-13)).
 
 ## Original import reports, retained payloads and read-only project facts (12 October 2026 source)
@@ -80,7 +80,7 @@ colour/picture values unchanged with a note
 [limits](../KNOWN_LIMITATIONS.md#checked-parameter-editors-in-the-device-editor-2026-10-12)).
 Included in Alpha.10.
 
-## Notes follow-ups (12 October 2026 source, after Alpha 10)
+## Notes follow-ups (12 October 2026 source)
 
 Notes can now be attached to communication objects; the target list comes from the
 server and offers only targets a note can really use. In a browser, reloading or
@@ -88,7 +88,7 @@ closing the tab with an unapplied note or instruction draft asks first, and the
 note review names its action in your language
 ([how to use it](user-guide/01-user-interface.md#project-notes-since-alpha-10),
 [limits](../KNOWN_LIMITATIONS.md#project-notes-workbench-host-2026-10-12)).
-Needs a source build after Alpha 10.
+Included in Alpha.11.
 
 ## Installation instructions in the device editor (12 October 2026 source)
 
@@ -139,6 +139,18 @@ Stable builds exclude prereleases; alpha/beta builds include newer prereleases.
 No automatic installation or upgrade-compatibility approval is implied. Offline
 and rate-limited checks leave editing usable. Included in Alpha.10; Alpha.9 does not have it. [Contract and privacy](../contracts/RELEASE_NOTIFICATIONS.md),
 [verified source scope](../evidence/release-notifications-2026-10-11.json).
+
+## Alpha.11 release boundary (13 October 2026)
+
+[`v0.1.0-alpha.11`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11)
+packages frozen source `758a112b` (main cutoff `2a43ad5c`): everything above marked
+"Included in Alpha.11", the group-address picker (#8), tree indentation (#9), named
+gateway busy/refused states and offline readiness marks in the download tab (#10),
+and the read-only byte-order probe with its named download warning (KL-170 stays
+LATER: little-endian downloads are still refused). Schema stays **14**; no migration
+from Alpha.10. Not exercised in the native WebKitGTK window; #10 was not tried
+against a real gateway.
+[Release notes](../releases/alpha11.md) · [artifact verification](../evidence/release-alpha11-2026-10-13.json).
 
 ## Alpha.10 release boundary (12 October 2026)
 

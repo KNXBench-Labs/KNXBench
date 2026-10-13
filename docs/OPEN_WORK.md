@@ -109,7 +109,8 @@ and has original assembled acceptance plus strengthened native-refusal/incarnati
 controls. [Current evidence](evidence/offline-name-recipe-2026-10-12.json) separates
 those source snapshots; final assembled18 stages now pass, integration/publication
 closure documentation8 passes; source package publication/readback on main
-`f70183f0` is verified. It does
+`f70183f0` is verified. Since Goal B7 the web app offers it as **Rename…** for a
+group-address selection. It does
 not deliver a macro VM/registry, generated selection, MCP/LLM writes or bus rights.
 Broader FUTURE-02, AP6 permission/confirmation and AP7 catalogue work remain separate;
 missing AP3 value/module contracts remain open (the project-note host followed later, see above).

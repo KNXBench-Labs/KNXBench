@@ -1,0 +1,50 @@
+/* Goal B7: the naming-recipe dialog (`NameRecipeDialog.tsx`). */
+.search-panel.name-recipe-panel {
+  width: min(760px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  align-self: flex-start;
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  color: var(--knx-foreground);
+}
+.name-recipe-heading h2 { margin: 0; font-size: 1.35rem; overflow-wrap: anywhere; }
+.name-recipe-heading p { margin: 8px 0 0; color: var(--knx-muted); line-height: 1.5; }
+.name-recipe-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.name-recipe-form label { display: grid; gap: 6px; min-width: 0; }
+.name-recipe-form input { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.name-recipe-form .name-recipe-hint,
+.name-recipe-form .field-error,
+.name-recipe-form button { grid-column: 1 / -1; margin: 0; }
+.name-recipe-form button { justify-self: start; }
+.name-recipe-hint,
+.name-recipe-undo { color: var(--knx-muted); line-height: 1.5; }
+.name-recipe-problem { padding: 12px 14px; border-radius: var(--knx-radius-card); border: 1px solid var(--knx-error-color);
+  line-height: 1.5; overflow-wrap: anywhere; }
+.name-recipe-problem strong { color: var(--knx-error-color); }
+.name-recipe-problem p { margin: 8px 0; }
+.name-recipe-problem small { color: var(--knx-muted); }
+.name-recipe-preview h3 { margin: 0 0 8px; font-size: 1rem; }
+.name-recipe-table-wrap { max-height: 40vh; overflow: auto; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); }
+.name-recipe-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.name-recipe-table th,
+.name-recipe-table td { padding: 6px 10px; text-align: left; vertical-align: top; overflow-wrap: anywhere; border-bottom: 1px solid var(--knx-border); }
+.name-recipe-table th:first-child,
+.name-recipe-table td:first-child { width: 7.5em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.name-recipe-table tr[data-changed="true"] td:last-child { font-weight: 600; }
+.name-recipe-unchanged { color: var(--knx-muted); font-style: italic; }
+.name-recipe-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.name-recipe-actions button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+/* The one button that changes the project looks like it. */
+.name-recipe-actions .primary-action:not(:disabled) { background: var(--knx-accent); color: var(--knx-on-accent); border-color: var(--knx-accent); }
+@media (max-width: 560px) {
+  .search-panel.name-recipe-panel { padding: 16px; }
+  .name-recipe-form { grid-template-columns: minmax(0, 1fr); }
+  .name-recipe-table th:first-child,
+  .name-recipe-table td:first-child { width: 5.5em; }
+  .name-recipe-actions { justify-content: stretch; }
+  .name-recipe-actions button { flex: 1 1 140px; }
+}

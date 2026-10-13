@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify project naming (default) or Functions (`--spec functions.native.ts`) with the built app
+"""Verify naming (default), Functions or the naming recipe (`--spec …`) with the built app
 and the real server in a Linux loopback-only namespace."""
 # SPDX-License-Identifier: AGPL-3.0-or-later
 import argparse
@@ -13,7 +13,7 @@ import time
 import urllib.request
 
 # Specs this runner may start; each copies the fictional demo into the isolated data directory.
-SPECS = ("rename.native.ts", "functions.native.ts")
+SPECS = ("rename.native.ts", "functions.native.ts", "name-recipe.native.ts")
 
 
 def main():

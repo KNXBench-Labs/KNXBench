@@ -166,6 +166,10 @@ async function render(props: Parameters<typeof Harness>[0] = {}): Promise<Root> 
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => root.render(<Harness {...props} />));
+  // Issue #11: the tree starts with address lists closed. These cases are about
+  // rows, so they open everything the way a user would.
+  const expandAll = host.querySelector<HTMLButtonElement>("[data-ga-expand-all]");
+  if (expandAll) await act(async () => expandAll.click());
   return root;
 }
 

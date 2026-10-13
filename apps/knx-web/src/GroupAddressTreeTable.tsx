@@ -13,13 +13,14 @@ const CHECKBOX_CLICK = { shiftKey: false, ctrlKey: true, metaKey: false, prevent
 const treeIndent = (depth: number) => `${Math.min(depth, 12) * 1.2}rem`;
 
 export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewProps & {
-  collapsed: ReadonlySet<string>; onToggle: (key: string) => void; includeEmpty: boolean; flat?: boolean;
+  /** Open groups (issue #11: the tree remembers what is open, not what is closed). */
+  expanded: ReadonlySet<string>; onToggle: (key: string) => void; includeEmpty: boolean; flat?: boolean;
 }) {
-  const { installation, index, rows, selection, multiSelection, onItemClick, collapsed, onToggle } = props;
+  const { installation, index, rows, selection, multiSelection, onItemClick, expanded, onToggle } = props;
   const t = useTranslate(); const [language] = useUiLanguage(); const formatGa = useGroupAddressFormat();
   const allEntries: GroupAddressTreeEntry[] = props.flat
     ? rows.map(row => ({ kind: "address", key: row.key, depth: 0, row }))
-    : groupAddressTreeEntries(index, rows, new Set([...index.groups.keys()].filter(key => !collapsed.has(key))), props.includeEmpty);
+    : groupAddressTreeEntries(index, rows, expanded, props.includeEmpty);
   const totalAddresses = allEntries.filter(entry => entry.kind === "address").length;
   const entries = limitGroupAddressEntries(allEntries, props.limit);
   const shownAddresses = Math.min(totalAddresses, props.limit);
@@ -49,7 +50,7 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
                 return <tr key={entry.key} className="ga-range-row"><td colSpan={6}>
                   <button type="button" data-ga-expand={entry.key} data-ga-nav=""
                     style={{ paddingInlineStart: treeIndent(entry.depth) }}
-                    aria-expanded={!collapsed.has(entry.key)} onClick={() => onToggle(entry.key)}>{collapsed.has(entry.key) ? "▸" : "▾"} {label} <small>({entry.count})</small></button>
+                    aria-expanded={expanded.has(entry.key)} onClick={() => onToggle(entry.key)}>{expanded.has(entry.key) ? "▾" : "▸"} {label} <small>({entry.count})</small></button>
                 </td></tr>;
               }
               const row = entry.row;

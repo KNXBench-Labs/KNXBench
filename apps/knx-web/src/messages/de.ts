@@ -30,6 +30,8 @@ export const messages: Record<MessageKey, string> = {
   "gaWorkspace.filter.conflict": "DPT-Konflikte",
   "gaWorkspace.filter.linked": "Mit projizierten Links",
   "gaWorkspace.filter.unlinked": "Ohne projizierte Links",
+  "gaWorkspace.expandAll": "Alle aufklappen",
+  "gaWorkspace.collapseAll": "Alle zuklappen",
   "gaWorkspace.all": "Alle Bereiche",
   "gaWorkspace.level": "Bereichsebene {level}",
   "gaWorkspace.problems": "{count} Darstellungsbefunde — Daten erhalten",

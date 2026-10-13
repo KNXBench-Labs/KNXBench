@@ -19,7 +19,15 @@ import { useGroupAddressObjectInventory } from "./groupAddressObjectInventory";
 import GroupAddressLinks from "./GroupAddressLinks";
 import HelpTip from "./HelpTip";
 import { GROUP_ADDRESS_WINDOW } from "./GroupAddressWindowNotice";
+import {
+  defaultOpenGroups, effectiveOpenGroups, groupWithAncestors, groupsRevealing, groupsWithMatches, pruneGroups, readOpenGroups, writeOpenGroups,
+} from "./groupAddressTreeState";
 import "./groupAddressWorkspace.css";
+
+/** Local view memory; absent (private mode, tests without storage) means this session only. */
+function viewStorage(): Storage | null {
+  try { return typeof window === "undefined" ? null : window.localStorage; } catch { return null; }
+}
 
 export default function GroupAddressTable(props: {
   installation: InstallationNode; selection: Selection | null; multiSelection: MultiSelection | null;
@@ -35,15 +43,31 @@ export default function GroupAddressTable(props: {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<GroupAddressPresentationFilter>("all");
   const [scope, setScope] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const index = useMemo(() => buildGroupAddressPresentation(installation), [installation]);
+  // Issue #11: the tree remembers which groups are *open*, per project on this machine.
+  const viewKey = props.tree.view_key ?? null;
+  const initialOpen = () => {
+    const storage = viewStorage();
+    const stored = viewKey === null || storage === null ? null : readOpenGroups(storage, viewKey, installation.id);
+    return stored === null ? defaultOpenGroups(index) : pruneGroups(stored, index);
+  };
+  // The open set belongs to one project and installation; a reply for the next
+  // one must never store the previous view under its key.
+  const owner = `${props.projectContextKey ?? ""}:${installation.id}`;
+  const [openState, setOpenState] = useState(() => ({ owner, keys: initialOpen() }));
+  const open = openState.owner === owner ? openState.keys : initialOpen();
+  const setOpen = (update: (previous: Set<string>) => Set<string>) => setOpenState(previous =>
+    ({ owner, keys: update(previous.owner === owner ? previous.keys : initialOpen()) }));
+  // Groups the user closed while a search or filter forced them open; reset with the search.
+  const [closedDuringSearch, setClosedDuringSearch] = useState<Set<string>>(() => new Set());
   const inventory = useGroupAddressObjectInventory(installation, `${props.projectContextKey ?? ""}:${installation.id}`);
   const matrix = useMemo(() => buildGroupAddressMatrix(index, inventory.current), [index, inventory.current]);
   const [columnKeys, setColumnKeys] = useState<Set<string> | null>(null);
   const [columnQuery, setColumnQuery] = useState("");
   const [limit, setLimit] = useState(GROUP_ADDRESS_WINDOW);
   useEffect(() => {
-    setQuery(""); setFilter("all"); setScope(null); setCollapsed(new Set());
+    setQuery(""); setFilter("all"); setScope(null); setClosedDuringSearch(new Set());
+    setOpenState(previous => previous.owner === owner ? previous : { owner, keys: initialOpen() });
     setColumnKeys(null); setColumnQuery("");
   }, [props.projectContextKey, installation.id]);
   useEffect(() => {
@@ -59,10 +83,7 @@ export default function GroupAddressTable(props: {
   const validScope = scope !== null && index.groups.has(scope) ? scope : null;
   useEffect(() => {
     if (scope !== validScope) setScope(validScope);
-    setCollapsed(previous => {
-      const next = new Set([...previous].filter(key => index.groups.has(key)));
-      return next.size === previous.size ? previous : next;
-    });
+    setOpen(previous => pruneGroups(previous, index));
   }, [index, scope, validScope]);
   useEffect(() => { setScope(null); }, [rangeScope]);
   // A new result set starts from a bounded window again; selection is unaffected.
@@ -77,9 +98,45 @@ export default function GroupAddressTable(props: {
   const selected = selectedRows.length === 1 ? selectedRows[0].node : null;
   const shared: GroupAddressWorkspaceViewProps = { installation, index, rows, baseRows, scope: validScope,
     onScope: setScope, selection, multiSelection, onItemClick, limit, onLimit: setLimit };
-  const toggle = (key: string) => setCollapsed(previous => {
-    const next = new Set(previous); if (next.has(key)) next.delete(key); else next.add(key); return next;
-  });
+  const searching = query.trim() !== "" || filter !== "all";
+  useEffect(() => { setClosedDuringSearch(new Set()); }, [query, filter]);
+  const matches = searching ? groupsWithMatches(index, new Set(rows.map(row => row.key))) : null;
+  const expanded = effectiveOpenGroups(open, matches, closedDuringSearch);
+  // Whatever selects an address (a link, the search, the explorer) opens the groups above it.
+  const selectedId = selection?.kind === "group_address" ? selection.id : null;
+  useEffect(() => {
+    if (selectedId === null) return;
+    const reveal = groupsRevealing(index, selectedId);
+    if (reveal.size === 0) return;
+    setOpen(previous => [...reveal].every(key => previous.has(key)) ? previous : new Set([...previous, ...reveal]));
+    setClosedDuringSearch(previous => [...reveal].some(key => previous.has(key)) ? new Set([...previous].filter(key => !reveal.has(key))) : previous);
+    // Only a new selection reveals; an edit that re-reads the tree must not reopen what the user closed.
+  }, [selectedId, owner]);
+  // Scoping to a range (explorer or breadcrumb) is navigation too: that range opens.
+  const scopeKey = validScope ?? externalScope;
+  useEffect(() => {
+    if (scopeKey === null) return;
+    const reveal = groupWithAncestors(index, scopeKey);
+    setOpen(previous => reveal.every(key => previous.has(key)) ? previous : new Set([...previous, ...reveal]));
+  }, [scopeKey, owner]);
+  // Stores what is open (not search-forced groups). Save As changes the key and
+  // takes the current view along; an unsaved new project stores nothing.
+  useEffect(() => {
+    const storage = viewStorage();
+    if (viewKey === null || storage === null || openState.owner !== owner) return;
+    writeOpenGroups(storage, viewKey, installation.id, openState.keys);
+  }, [openState, owner, viewKey, installation.id]);
+  const toggle = (key: string) => {
+    if (expanded.has(key)) {
+      setOpen(previous => { const next = new Set(previous); next.delete(key); return next; });
+      if (matches?.has(key)) setClosedDuringSearch(previous => new Set([...previous, key]));
+    } else {
+      setOpen(previous => new Set([...previous, key]));
+      setClosedDuringSearch(previous => { const next = new Set(previous); next.delete(key); return next; });
+    }
+  };
+  const expandAll = () => { setOpen(() => new Set(index.groups.keys())); setClosedDuringSearch(new Set()); };
+  const collapseAll = () => { setOpen(() => new Set()); setClosedDuringSearch(new Set(index.groups.keys())); };
   return <div className="address-table-view ga-workspace" onKeyDown={e => {
     if (!(e.target instanceof HTMLButtonElement) || !e.target.hasAttribute("data-ga-nav")) return;
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
@@ -104,6 +161,10 @@ export default function GroupAddressTable(props: {
       <label>{t("gaWorkspace.filter")}<select value={filter} onChange={e => setFilter(e.target.value as GroupAddressPresentationFilter)}>
         {(["all", "untyped", "conflict", "linked", "unlinked"] as const).map(choice => <option key={choice} value={choice}>{t(`gaWorkspace.filter.${choice}`)}</option>)}
       </select></label>
+      {view === "tree" && <span className="ga-tree-actions">
+        <button type="button" className="ga-tree-action" data-ga-expand-all="" onClick={expandAll}>{t("gaWorkspace.expandAll")}</button>
+        <button type="button" className="ga-tree-action" data-ga-collapse-all="" onClick={collapseAll}>{t("gaWorkspace.collapseAll")}</button>
+      </span>}
       <HelpTip labelKey="help.tip.addressTable.label" textKey="help.tip.addressTable.text" topicId="groupAddresses" />
     </div>
     <nav className="ga-breadcrumb" aria-label={t("addressTable.range")}>
@@ -116,7 +177,7 @@ export default function GroupAddressTable(props: {
     {rangeScope !== null && externalGroups.length !== 1 && <p role="status">{t("gaWorkspace.scopeUnavailable")}</p>}
     {view === "columns" ? <GroupAddressColumns {...shared} /> : view === "atlas" ? <GroupAddressAtlas {...shared} /> : view === "matrix" ? <GroupAddressMatrix {...shared}
       matrix={matrix} inventory={inventory} columnKeys={columnKeys} onColumns={setColumnKeys} columnQuery={columnQuery} onColumnQuery={setColumnQuery} /> : <GroupAddressTreeTable {...shared}
-      collapsed={collapsed} onToggle={toggle} includeEmpty={query.trim() === "" && filter === "all" && validScope === null && externalScope === null} />}
+      expanded={expanded} onToggle={toggle} includeEmpty={query.trim() === "" && filter === "all" && validScope === null && externalScope === null} />}
     {selected && <GroupAddressLinks ga={selected} tree={props.tree} onTreeUpdate={onTreeUpdate} />}
   </div>;
 }

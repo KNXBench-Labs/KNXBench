@@ -12,6 +12,11 @@ interface Fixture {
 
 // Every request is answered locally: no server, no gateway, no network.
 async function serve(page: Page, fixture: Fixture, version = "0.1.0-alpha.2+gfixture") {
+  // The release check is off (see `fresh`); if it ever asks GitHub anyway, say so.
+  await page.route("https://api.github.com/**", (route) => {
+    fixture.unexpected.push(route.request().url());
+    return route.abort();
+  });
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -44,8 +49,10 @@ async function serve(page: Page, fixture: Fixture, version = "0.1.0-alpha.2+gfix
   });
 }
 
+// Release checks off: they read `/api/version` too, which would make the guide's
+// own version reads uncountable (2 or 4 after a reload, by timing).
 function fresh(settings: Record<string, unknown> = {}): Fixture {
-  return { settings, puts: [], versionRequests: 0, unexpected: [] };
+  return { settings: { releaseChecksEnabled: false, ...settings }, puts: [], versionRequests: 0, unexpected: [] };
 }
 
 test("opens on a first alpha start, is remembered on Escape, and stays closed after a reload", async ({ page }) => {

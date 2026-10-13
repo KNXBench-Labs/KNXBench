@@ -390,8 +390,8 @@ not erase subsequently delivered functionality.
   (`KL-110`, `GAP-T30-04`). RF stays simulator-only.
 - **Model/import:** KNX `Functions` (`MODEL-07`): backend, storage,
   schema-23 import, projection and HTTP API delivered
-  ([contract](contracts/project-functions.md)); the web UI is Goal B1, a
-  per-Function diff table later.
+  ([contract](contracts/project-functions.md)); web workbench delivered
+  (Goal B1b); a per-Function diff table, desktop and MCP surfaces later.
   Several installations under one Site (`MODEL-05`): blocked on evidence
   ([ADR-0125](adr/0125-multi-installation-site-is-blocked.md)); ETS
   restore-point revisions as extra private regressions (`IMPORT-02`, requires

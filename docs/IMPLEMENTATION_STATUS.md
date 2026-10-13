@@ -20,6 +20,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--goal-b1b-functions-move-into-the-room"></a>
+- [2026-10-13 — Goal B1b: Functions move into the room](history/implementation/2026-W42.md#2026-10-13--goal-b1b-functions-move-into-the-room)
 <a id="2026-10-13--goal-b1a-the-workbench-learns-to-say-changed-elsewhere"></a>
 - [2026-10-13 — Goal B1a: the workbench learns to say "changed elsewhere"](history/implementation/2026-W42.md#2026-10-13--goal-b1a-the-workbench-learns-to-say-changed-elsewhere)
 <a id="2026-10-13--goal-a6a7-no-new-evidence-and-gates-tied-to-their-plans"></a>

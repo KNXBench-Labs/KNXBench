@@ -175,6 +175,31 @@ disables its rename, move and delete controls instead of guessing which
 installation you meant. Correct duplicate identities at the source; no
 automatic renumbering or cross-installation structure editor exists here.
 
+## Functions
+
+*Source build after Alpha 11.* A Function bundles the group addresses that serve
+one purpose in a room — a light, a blind, a heating circuit. Open a building
+part's Properties and unfold **Functions**: you see the Functions located there,
+their completion state, members and the **Source ID** they came with (an ETS
+project's own identifier, or `KB-…` for one made in KNXBench). Type and role are
+shown exactly as stored.
+
+- **Create:** fill in at least a name under *New Function in this building part*.
+- **Members:** pick a group address of the same installation and click **Add
+  group address**; **Remove from Function** only removes the reference, the
+  group address stays.
+- **Details, move, delete:** **Edit details** changes name, number, type,
+  comment, description and completion; **Move Function** offers building parts
+  of the same installation; **Delete Function** asks once and keeps the group
+  addresses.
+
+Every change is one undo step and marks the project modified. If the project
+changed since you opened the panel (another window, a script), nothing is
+applied: KNXBench says so, keeps what you typed and offers **Reload current
+state**. A room that holds a Function cannot be deleted, and a group address
+that belongs to a Function cannot be deleted either; its Properties list those
+Functions so you can remove it there first.
+
 ## Deleting
 
 Delete never cascades. KNXBench refuses to delete anything that still holds something
@@ -185,7 +210,7 @@ else:
 | An area | It still has lines |
 | A line | It still has devices |
 | A device | Any of its communication objects is still linked to a group address |
-| A building part | It still has child parts or devices in it |
+| A building part | It still has child parts, devices or Functions in it |
 | A group range | It still has subranges or group addresses assigned to it |
 
 Empty it first, then delete it. If an imported child points at a parent that

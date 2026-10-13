@@ -1,11 +1,11 @@
-Last updated: 2026-10-13 01:10 CEST
+Last updated: 2026-10-13 16:30 CEST
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.10` |
-| Released baseline | `v0.1.0-alpha.10` |
+| Source snapshot | `v0.1.0-alpha.11` |
+| Released baseline | `v0.1.0-alpha.11` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
@@ -59,6 +59,8 @@ Last updated: 2026-10-13 01:10 CEST
 | Object editing | DPT/description; six flags | alpha.6 |
 | Object links | Directional group-address connections | alpha.6 |
 | Group-address members | Add from the address (device → object → direction) in all four views and Properties; same link rule | alpha.10 |
+| Group-address picker | Link row: type to filter by address, name or DPT; marks a type difference, never hides (#8) | alpha.11 |
+| Tree indentation | Address rows by level (capped at 12); channel groups in the object table (#9) | alpha.11 |
 | Object table | Channels/search/filter/sort | alpha.7 |
 | Module-instance values | Stored per instance; read-only | alpha.8 |
 | Parameters | Validated edits; dynamic evaluation | alpha.6 |
@@ -108,15 +110,16 @@ Last updated: 2026-10-13 01:10 CEST
 | Theme packs | Import/export; declarative only | alpha.6 |
 | Appearance controls | Accent/density/motion | alpha.6 |
 | Reduced motion | OS preference takes precedence | alpha.6 |
-| Motion per category | Toasts/achievements/Flow; can only reduce | Main-only |
+| Motion per category | Toasts/achievements/Flow; can only reduce | alpha.11 |
 | Interface languages | English/German/Bavarian/Klingon | alpha.6 |
 | Language packs | Importable JSON translations | alpha.6 |
 | Notifications | Status/errors/achievements | alpha.6 |
-| Notification queue | Three on screen; pause on hover/focus; errors stay | Main-only |
+| Notification queue | Three on screen; pause on hover/focus; errors stay | alpha.11 |
 | Release notifications | Notice only; nothing downloaded; can be switched off | alpha.10 |
 | Achievements | Recorded engineering milestones | alpha.6 |
 | Optional humour | Error/night/holiday messages | alpha.6 |
 | Project notes | Notebook view; review-first edits | alpha.10 |
+| Notes on objects | Communication objects as targets; tab-close prompt for drafts | alpha.11 |
 | Installation instructions | Device tab; imported hints, review-first | alpha.10 |
 | Checked parameter editor | Time count, integer slider; source-checked | alpha.10 |
 | Catalogue update with preview | Backup before install; restore listed backups | alpha.10 |
@@ -134,7 +137,7 @@ Last updated: 2026-10-13 01:10 CEST
 | Bus monitor | Tunnelling; telegram decoding | alpha.6 |
 | Telegram Flow | Read-only; session-local graph | alpha.6 |
 | Separate Flow window | Source-bound; shared monitor | alpha.6 |
-| Flow images | PNG or 1–30 s GIF of the viewport, with consent | Main-only |
+| Flow images | PNG or 1–30 s GIF of the viewport, with consent | alpha.11 |
 | Activity history | Bounded commissioning metadata | alpha.6 |
 
 ## Partial — Compatibility and hardware
@@ -161,10 +164,11 @@ Last updated: 2026-10-13 01:10 CEST
 | Line scan | Diagnostics; bounded identification | alpha.6 |
 | Device downloads | Restricted programs/devices; confirmed operations | alpha.6 |
 | Download preparation | Gateway choice from the shared search; device-editor hand-off; step guide | alpha.10 |
+| Gateway busy/refused | Names which KNXBench session holds the tunnel, and the gateway's own refusal code (#10) | alpha.11 |
 | Read-only device verification | Limited hardware evidence | alpha.6 |
-| Byte-order probe | CLI, read only: which octet order an ETS-programmed device holds; little-endian downloads stay refused | Main-only |
-| Tester download reports | After a download: steps, checklist and report file (program, outcome, values; no names or address), issue form or issue@knxbench.com; download tab, CLI and server | Main-only |
-| Byte-order download warning | Named plan warning when a big-endian program's own data looks little-endian; download tab, CLI and server | Main-only |
+| Byte-order probe | CLI, read only: which octet order an ETS-programmed device holds; little-endian downloads stay refused | alpha.11 |
+| Tester download reports | After a download: steps, checklist and report file (program, outcome, values; no names or address), issue form or issue@knxbench.com; download tab, CLI and server | alpha.11 |
+| Byte-order download warning | Named plan warning when a big-endian program's own data looks little-endian; download tab, CLI and server | alpha.11 |
 | MCP integration | Saved files; eight read tools | alpha.6 |
 | MCP name-recipe writer | Opt-in; group-address prefix/suffix after preview and confirmation | alpha.10 |
 | Accessibility | Full screen-reader validation missing | alpha.6 |

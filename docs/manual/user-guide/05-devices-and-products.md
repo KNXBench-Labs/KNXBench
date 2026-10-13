@@ -467,6 +467,13 @@ The tab loads the device's parameters when you select the device. What you get:
 - **Fields.** A select for a choice parameter, a number field with the program's own
   minimum and maximum for a numeric one, a text field otherwise. Values commit on blur,
   and Enter is a shortcut for that. A rejected value snaps back with the reason.
+- **Changed elsewhere** *(source build after Alpha 11)*. Each write names the
+  project state and the value you saw. If another window or client changed the
+  value first, nothing is written, your value stays in the field and the current
+  state is reloaded. Under the field, **Current value** shows the new value;
+  **Apply my value** writes yours on top of it, **Discard my value** takes the
+  current one. Leaving the field does not resend. Without a complete project
+  identity the fields are read-only and say so.
 - **Headings and spacers.** A parameter without a value (ETS `TypeNone`, or type 0
   in an old `.vd*` database) is drawn as a bold heading with its text, or as blank
   space when it has none. It never gets an input and cannot be written.

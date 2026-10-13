@@ -44,14 +44,25 @@ struct SeverityWitness {
 #[derive(Deserialize)]
 struct CounterWitness {
     errors: Vec<SeverityWitness>,
-    unknown: Vec<serde::de::IgnoredAny>,
+    unknown: Vec<UnknownWitness>,
     conflicts: Vec<serde::de::IgnoredAny>,
     unsupported: Vec<UnsupportedWitness>,
 }
 
-/// Only what the shared counting rule reads (`import_finding_counts`). Both
+/// Only what the shared counting rule reads (`import_finding_counts`). All
 /// fields are optional so a row the rule cannot group still counts once;
 /// a duplicate or non-string value is ambiguous and refused like the rest.
+#[derive(Deserialize)]
+struct UnknownWitness {
+    #[serde(default)]
+    source_path: Option<String>,
+    #[serde(default)]
+    kind: Option<String>,
+    #[serde(default)]
+    name: Option<String>,
+}
+
+/// The same for an unsupported-capability row.
 #[derive(Deserialize)]
 struct UnsupportedWitness {
     #[serde(default)]
@@ -244,19 +255,22 @@ fn report_counts(report: &Value, original_json: &str) -> Result<(usize, usize), 
     }
     // The same rule as a fresh import (`import_finding_counts`), so a
     // reopened project shows the counts it showed when it was imported.
-    let unsupported = crate::import_payload_evidence::unsupported_warning_rows(
-        counters.unsupported.iter().map(|row| {
+    let unsupported =
+        crate::import_findings::unsupported_warning_rows(counters.unsupported.iter().map(|row| {
             (
                 row.what.as_deref().unwrap_or_default(),
                 row.consequence.as_deref().unwrap_or_default(),
             )
-        }),
-    );
-    for len in [
-        counters.unknown.len(),
-        counters.conflicts.len(),
-        unsupported,
-    ] {
+        }));
+    let unknown =
+        crate::import_findings::unknown_warning_rows(counters.unknown.iter().map(|row| {
+            (
+                row.source_path.as_deref().unwrap_or_default(),
+                row.kind.as_deref().unwrap_or_default(),
+                row.name.as_deref().unwrap_or_default(),
+            )
+        }));
+    for len in [unknown, counters.conflicts.len(), unsupported] {
         warning_count = warning_count.checked_add(len).ok_or_else(invalid)?;
     }
     Ok((error_count, warning_count))

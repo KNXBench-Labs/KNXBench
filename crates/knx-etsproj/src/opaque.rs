@@ -153,6 +153,12 @@ pub fn collect_container_entries_observed(
     Ok(out)
 }
 
+/// Whether a container entry belongs to a manufacturer (`M-xxxx/…`: product
+/// data, application programs, baggage) rather than the project or master.
+pub fn is_manufacturer_entry(path: &str) -> bool {
+    path.split('/').next().unwrap_or(path).starts_with("M-")
+}
+
 /// Classifies a container entry by where it sits in the archive, not by
 /// its content — cheap, and the archive layout is exactly what
 /// IMPORT_EXPORT §2/§5 documents as stable across schema versions.
@@ -164,7 +170,7 @@ fn classify(path: &str) -> OpaqueKind {
         return OpaqueKind::Signature;
     }
     let top = path.split('/').next().unwrap_or(path);
-    if top.starts_with("M-") {
+    if is_manufacturer_entry(path) {
         return if path.contains("/Baggages/") {
             OpaqueKind::Baggage
         } else {

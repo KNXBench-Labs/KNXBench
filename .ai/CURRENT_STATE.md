@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 08:49
+- **Completed:** Tester verification flow, part A (ADR-0121, no web change): `knx_app::download_report` (format 1: program id/name/version/program-file SHA-256 via new `knx_productdb::query::program_identity`, manufacturer, mask, scope, support, inferences, warnings, plan size, outcome, **parameter values**; never project/device name, address, gateway, key, backup path or error text), summary, issue link prefilling the new bilingual `.github/ISSUE_TEMPLATE/download-report.yml` (`program`/`version`/`outcome`; a test reads the form) and `mailto:issue@knxbench.com`. Server prepares the report at admission (failure stops the write) and serves `GET /api/device-download/report` after run and cleanup (404/409); CLI `knx device download … --report <file>`. Maintainer review in `docs/contracts/download-verification-reports.md`; manual (CLI + bus chapter "Helping to verify a device"), contribution guides EN/DE point reports to their own route. Gate: corpus 144/144, Rust 4257/0/197 on rerun (first run: two wall-clock budget tests in `dynamic_tree.rs` failed at load average 36 from parallel sessions).
+- **Pending/Next Steps:** Part B in the web-lock queue (after claude-issues-8-9-10, entry below): device download tab section with a plain explanation, step-by-step guide, function checklist, report download, "open issue" and "mail issue@knxbench.com" buttons fed by `GET /api/device-download/report` (`summary`, `issueUrl`, `mailto`, `fileName`, `report`), plus showing plan `warnings` and `inferences`. The first real report needs a maintainer review per the contract before any `verified_downloads.json` entry.
+- **Notes for Codex oder Claude:** Wall-clock budget tests (`dynamic_tree.rs` 20 s bounds) fail under heavy parallel load; rerun at normal load before suspecting code. No hardware, no bus traffic. Log `.ai/logs/2026-10-13_claude_tester-download-reports.md`. Self-review only.
+
+---
+
 Web-lock queue: reserved for claude-kl170-tester-verification (after claude-issues-8-9-10)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 08:55

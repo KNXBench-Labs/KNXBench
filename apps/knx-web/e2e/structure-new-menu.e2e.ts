@@ -18,14 +18,14 @@ const project = (): ProjectTree => ({ schema_version: 15, errors: 0, warnings: 0
   is_modified: false, group_address_style: "ThreeLevel", server_incarnation: "new-menu", project_incarnation: 1, snapshot_revision: 1,
   installations: [installation(1, "Fictional house"), installation(2, "Fictional annex with a long name")] });
 
-async function intercept(page: Page, language: Language) {
+async function intercept(page: Page, language: Language, theme: string) {
   const state = { tree: project(), unexpected: [] as string[], created: [] as unknown[] };
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
-    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme: "porcelain", motionLevel: "off" } };
-    else if (path === "/api/settings" && method === "PUT") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme: "porcelain", ...route.request().postDataJSON().settings } };
+    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme, motionLevel: "off" } };
+    else if (path === "/api/settings" && method === "PUT") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme, ...route.request().postDataJSON().settings } };
     else if ((path === "/api/project" && method === "GET") || (path === "/api/project/new" && method === "POST")) body = state.tree;
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
@@ -57,11 +57,14 @@ const noPageOverflow = async (page: Page) =>
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
 
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
-  test(`${language} one + New menu per structure page at ${width}px`, async ({ page }) => {
+  // Each theme in each language and at each width.
+  const theme = (language === "en") === (width === 1440) ? "graphite" : "porcelain";
+  test(`${language} one + New menu per structure page at ${width}px (${theme})`, async ({ page }) => {
     const m = language === "en" ? en : de;
     await page.setViewportSize({ width, height: 900 });
-    const state = await intercept(page, language);
+    const state = await intercept(page, language, theme);
     await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).first().click();
     await page.getByRole("dialog", { name: m["newProject.title"], exact: true }).getByRole("button", { name: m["newProject.create"], exact: true }).click();
     await page.getByRole("dialog", { name: m["projectWizard.done.title"], exact: true }).getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
@@ -80,7 +83,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const box = (await content.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(width);
-    await capture(page, `new-menu-buildings-${language}-${width}`);
+    await capture(page, `new-menu-buildings-${language}-${width}-${theme}`);
     await noPageOverflow(page);
     await content.locator('[data-create-entry="site-root"][data-installation-id="2"]').click();
     const site = page.locator('[data-structure-create="site-root"]');
@@ -98,7 +101,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(form.locator("h2")).toHaveText(m["structure.addGroupAddress"]);
     await form.getByLabel(m["workbench.address"], { exact: true }).fill("2/0/7");
     await form.getByLabel(m["workbench.name"], { exact: true }).fill("Annex blind");
-    await capture(page, `new-menu-address-${language}-${width}`);
+    await capture(page, `new-menu-address-${language}-${width}-${theme}`);
     await noPageOverflow(page);
     await form.locator("ul button").click();
     await expect.poll(() => state.created.length).toBe(1);

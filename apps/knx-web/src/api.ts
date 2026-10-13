@@ -214,9 +214,12 @@ export function isUnsavedProjectConflict(e: unknown): boolean {
   return status === 409 && body?.kind === "projectUnsavedChanges";
 }
 
-export function renameEntity(kind: "device" | "group_address", id: number, name: string,
+/** Revision-bound rename (docs/contracts/revision-bound-writes.md); `409 renameConflict` keeps nothing applied. */
+export function renameEntity(kind: "device" | "group_address" | "installation", id: number, name: string,
   tree: ProjectTree, expectedName: string): Promise<ProjectTree> {
-  return request(`/api/${kind === "device" ? "devices" : "group-addresses"}/${id}/name`, {
+  const path = kind === "installation" ? `/api/installations/${id}`
+    : `/api/${kind === "device" ? "devices" : "group-addresses"}/${id}/name`;
+  return request(path, {
     method: "PATCH", body: JSON.stringify({ name, expectedName,
       serverIncarnation: tree.server_incarnation, snapshotRevision: tree.snapshot_revision,
       projectIncarnation: tree.project_incarnation }),
@@ -570,11 +573,6 @@ export function repairDevicePlacement(deviceId: number, keep: PlacementKeep): Pr
 
 export function repairLineOwner(lineId: number, keepAreaId: number): Promise<ProjectTree> {
   return request("/api/repair/line-owner", { method: "POST", body: JSON.stringify({ lineId, keepAreaId }) });
-}
-
-// MODEL-01: `Command::RenameInstallation`, one undo step.
-export function renameInstallation(id: number, name: string): Promise<ProjectTree> {
-  return request(`/api/installations/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
 }
 
 export function deleteArea(id: number): Promise<ProjectTree> {
@@ -2305,17 +2303,33 @@ export function parameterEditorSource(deviceId: number, etsId: string): Promise<
   return request(`/api/device/${deviceId}/parameter-editor-source?etsId=${encodeURIComponent(etsId)}`);
 }
 
+/**
+ * Goal A2 binding for one parameter write: the snapshot the shown panel was
+ * read under plus that field's `value` exactly as received (`null` included).
+ * The server answers `409 parameterWriteConflict` when either moved.
+ */
+export interface ParameterWriteBinding {
+  serverIncarnation: string;
+  projectIncarnation: number;
+  snapshotRevision: number;
+  expectedValue: string | null;
+}
+
 export function setParameterValue(
   deviceId: number,
   etsId: string,
   raw: string,
-  language?: string | null,
+  language: string | null | undefined,
+  binding: ParameterWriteBinding,
 ): Promise<ParameterPanel> {
   return request(`/api/device/${deviceId}/parameters${languageQuery(language)}`, {
     method: "POST",
-    body: JSON.stringify({ etsId, raw }),
+    body: JSON.stringify({ etsId, raw, serverIncarnation: binding.serverIncarnation,
+      projectIncarnation: binding.projectIncarnation, snapshotRevision: binding.snapshotRevision,
+      expectedValue: binding.expectedValue }),
   });
 }
+
 
 export function undo(): Promise<ProjectTree> {
   return request("/api/undo", { method: "POST" });

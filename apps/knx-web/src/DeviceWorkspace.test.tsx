@@ -333,8 +333,10 @@ it("publishes a committed parameter edit to onApplied, not just to api.setParame
   const host2 = document.createElement("div");
   document.body.append(host2);
   const root2 = createRoot(host2);
+  // Goal B1: a write needs the shown snapshot's identity to bind to.
+  const shown: ProjectTree = { ...tree, server_incarnation: "srv-t3", project_incarnation: 2, snapshot_revision: 7 };
   await act(async () => {
-    root2.render(<DeviceWorkspace detail={detail(NO_REFERENCE)} tree={tree} onApplied={onApplied} />);
+    root2.render(<DeviceWorkspace detail={detail(NO_REFERENCE)} tree={shown} onApplied={onApplied} />);
   });
   const tabs2 = [...host2.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
   await act(async () => tabs2[1].click());
@@ -348,7 +350,8 @@ it("publishes a committed parameter edit to onApplied, not just to api.setParame
 
   // The call alone is not the fix — the hole was that `onApplied` never
   // ran, so `App.tsx`'s tree-publish effect never fired either.
-  expect(api.setParameterValue).toHaveBeenCalledWith(9, "P1", "6", null);
+  expect(api.setParameterValue).toHaveBeenCalledWith(9, "P1", "6", null,
+    { serverIncarnation: "srv-t3", projectIncarnation: 2, snapshotRevision: 7, expectedValue: committableField().value });
   expect(onApplied).toHaveBeenCalledTimes(1);
   // `serverTree` differs from the local `tree` prop in fields no overlay
   // of `tree` could ever produce (`errors`/`warnings`) — this passes only

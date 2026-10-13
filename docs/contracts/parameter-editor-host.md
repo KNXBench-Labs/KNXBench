@@ -66,6 +66,10 @@ package does not introduce an unmeasured cache or bulk-query abstraction.
    ([revision-bound writes](revision-bound-writes.md)); the host's `revision`
    is exactly its three context fields and `expectedValue` is the field's
    received `value`. Adopting it in the host is Goal B1.
+   **Amended 2026-10-13 (Goal B1a):** adopted. The host binds to the shown
+   panel's own snapshot (`writeBinding`), a conflict reloads tree and panel
+   and leaves the leaf's draft stale, a failed reload is named
+   ([web consumer](revision-bound-writes.md#web-consumer-goal-b1a-13-october-2026)).
 
 ## Supported presentation and refusals
 

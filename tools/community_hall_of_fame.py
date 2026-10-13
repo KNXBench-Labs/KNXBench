@@ -1,0 +1,338 @@
+#!/usr/bin/env python3
+"""Publish evidence-based community ranks without touching application state."""
+import argparse
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import re
+import subprocess
+import tempfile
+
+RANKS = [
+    {"minimum_xp": minimum, "title": title}
+    for minimum, title in [
+        (0, "Telegram Trainee"), (10, "Bus Bug Scout"),
+        (25, "Group Address Gumshoe"), (50, "Topology Trouble Detective"),
+        (100, "Commissioning Chaos Tamer"), (150, "Parameter Poltergeist Hunter"),
+        (225, "Datapoint Dragon Slayer"), (325, "Tunnel Trouble Exorcist"),
+        (450, "Routing Riddle Resolver"), (650, "Application Apocalypse Survivor"),
+        (900, "Master of Missing Acknowledgements"), (1250, "Grandmaster of the Green Bus"),
+        (1750, "Keeper of the Unbroken Bus"), (2500, "Lord of the Last Regression"),
+        (4000, "Supreme Commander of the Blinking LED"), (6000, "Legend of the Twisted Pair"),
+    ]
+]
+START = "<!-- HALL-OF-FAME:START -->"
+END = "<!-- HALL-OF-FAME:END -->"
+BOT = "github-actions[bot]"
+
+
+def positive(value):
+    if type(value) is not int or value <= 0:
+        raise ValueError("expected a positive integer")
+    return value
+
+
+def login(value):
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})", value):
+        raise ValueError("invalid public account identifier")
+    return value
+
+
+def timestamp(value):
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        raise ValueError("timestamp must include a timezone")
+    return parsed
+
+
+def rank_for(xp):
+    return next(rank.copy() for rank in reversed(RANKS) if xp >= rank["minimum_xp"])
+
+
+def validate_policy(policy):
+    for key in ["issue_xp", "reply_xp", "resolution_xp"]:
+        positive(policy[key])
+    timestamp(policy["notify_since"])
+    if not isinstance(policy["excluded_logins"], list):
+        raise ValueError("excluded_logins must be a list")
+    return {login(value).casefold() for value in policy["excluded_logins"]}
+
+
+def human(actor, excluded):
+    if actor is None:
+        return None
+    if actor.get("type") == "Bot":
+        return None
+    if actor.get("type") not in {"User", "Organization"}:
+        raise ValueError("unknown GitHub actor type")
+    value = login(actor["login"])
+    return value if value.casefold() not in excluded else None
+
+
+def unique(records, key):
+    result = {}
+    for record in records:
+        identifier = positive(record[key])
+        if identifier in result and result[identifier] != record:
+            raise ValueError("conflicting duplicate API records; retry the snapshot")
+        result[identifier] = record
+    return list(result.values())
+
+
+def validate_previous(previous, repository):
+    if previous.get("schema_version") != 1 or previous.get("repository") != repository:
+        raise ValueError("unsupported or foreign community snapshot")
+    awards = previous["resolution_awards"]
+    if not isinstance(awards, dict):
+        raise ValueError("resolution awards must be an object")
+    for number, award in awards.items():
+        if str(positive(int(number))) != number:
+            raise ValueError("invalid award issue identifier")
+        login(award["login"]); positive(award["xp"]); timestamp(award["closed_at"])
+        if type(award["notify"]) is not bool or type(award["notified"]) is not bool:
+            raise ValueError("invalid notification state")
+    return json.loads(json.dumps(awards))
+
+
+def build_snapshot(issues, comments, policy, repository, now, previous=None):
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+        raise ValueError("invalid repository identifier")
+    timestamp(now)
+    excluded = validate_policy(policy)
+    awards = validate_previous(previous, repository) if previous else {}
+    rows = {}
+
+    def row(who):
+        return rows.setdefault(who.casefold(), {"login": who, "issues": 0, "replies": 0,
+                                               "resolutions": 0, "resolution_xp": 0})
+
+    real_issues = {}
+    for item in unique(issues, "id"):
+        if "pull_request" in item:
+            continue
+        number = positive(item["number"])
+        if number in real_issues:
+            raise ValueError("duplicate issue number")
+        if item["state"] not in {"open", "closed"}:
+            raise ValueError("unknown issue state")
+        real_issues[number] = item
+        who = human(item.get("user"), excluded)
+        if who is None:
+            continue
+        row(who)["issues"] += 1
+        if item["state"] == "closed" and item.get("state_reason") == "completed":
+            closed_at = item["closed_at"]; timestamp(closed_at)
+            awards.setdefault(str(number), {"login": who, "xp": policy["resolution_xp"],
+                "closed_at": closed_at, "notify": timestamp(closed_at) >= timestamp(policy["notify_since"]),
+                "notified": False})
+    for comment in unique(comments, "id"):
+        match = re.fullmatch(r"https://api\.github\.com/repos/" + re.escape(repository) + r"/issues/([1-9][0-9]*)", comment["issue_url"])
+        if not match:
+            raise ValueError("foreign or invalid comment issue URL")
+        if int(match[1]) not in real_issues:
+            continue  # Pull-request conversations are deliberately outside this scoreboard.
+        who = human(comment.get("user"), excluded)
+        if who is not None:
+            row(who)["replies"] += 1
+    for award in awards.values():
+        if award["login"].casefold() not in excluded:
+            target = row(award["login"])
+            target["resolutions"] += 1; target["resolution_xp"] += award["xp"]
+    contributors = list(rows.values())
+    for target in contributors:
+        target["xp"] = target["issues"] * policy["issue_xp"] + target["replies"] * policy["reply_xp"] + target.pop("resolution_xp")
+        target["rank"] = rank_for(target["xp"])
+        target["medals"] = ["Golden Bus Probe"] if target["issues"] >= 10 else []
+    contributors.sort(key=lambda target: (-target["xp"], target["login"].casefold()))
+    for index, target in enumerate(contributors):
+        target["position"] = index + 1 if index == 0 or target["xp"] != contributors[index - 1]["xp"] else contributors[index - 1]["position"]
+    snapshot = {"schema_version": 1, "repository": repository, "generated_at": now,
+                "policy": policy.copy(), "ranks": RANKS, "resolution_awards": awards,
+                "contributors": contributors}
+    if previous and {k: v for k, v in snapshot.items() if k != "generated_at"} == {k: v for k, v in previous.items() if k != "generated_at"}:
+        snapshot["generated_at"] = previous["generated_at"]
+    return snapshot
+
+
+def render_table(snapshot):
+    lines = ["| Place | Bug hunter | Issues | Replies | Resolved | XP | Rank & title | Medal |",
+             "| ---: | --- | ---: | ---: | ---: | ---: | --- | --- |"]
+    for target in snapshot["contributors"]:
+        who = target["login"]
+        medal = "🏅 Golden Bus Probe" if target["medals"] else "—"
+        lines.append(f"| {target['position']} | [@{who}](https://github.com/{who}) | {target['issues']} | {target['replies']} | {target['resolutions']} | **{target['xp']}** | {target['rank']['title']} | {medal} |")
+    if not snapshot["contributors"]:
+        lines.append("| — | Your first report belongs here. | 0 | 0 | 0 | 0 | Telegram Trainee | — |")
+    return "\n".join(lines)
+
+
+def replace_readme(text, snapshot):
+    if text.count(START) != 1 or text.count(END) != 1 or text.index(START) >= text.index(END):
+        raise ValueError("README must contain exactly one ordered hall-of-fame marker pair")
+    before, rest = text.split(START); _, after = rest.split(END)
+    content = "\n" + render_table(snapshot) + f"\n\n*Snapshot: {snapshot['generated_at']}. Maintainers and bots sit this one out.*\n"
+    return before + START + content + END + after
+
+
+def render_page(snapshot):
+    policy = snapshot["policy"]
+    title = "# Bug Hunters’ Hall of Fame\n\n"
+    intro = "**Every report makes the bus a little less mysterious.** This is our public\nthank-you to the people who test KNXBench, reproduce surprises and come back\nwith the details. You do not need to write code to earn a place here.\n\n"
+    rules = f"""## How the points work
+
+- **+{policy['issue_xp']} XP per issue** opened in this repository, open or closed.
+- **+{policy['reply_xp']} XP per reply** on an issue, including follow-up-only contributors.
+- **+{policy['resolution_xp']} XP for the reporter** when an issue is closed as **completed**.
+  This bonus is awarded once per issue and retained if it is reopened. Closing
+  as **not planned** does not earn a completion bonus.
+- **Golden Bus Probe:** report ten issues. No actual bus probe is shipped;
+  ours fits comfortably in a Markdown table.
+
+Every external human reporter or replier is listed, not just the top ten.
+Maintainer accounts and bots are excluded. Pull requests, reviews, reactions,
+Discussions and private messages are not counted. Tied scores share a place;
+alphabetical order merely keeps the table stable. Counts measure participation,
+not report quality, correctness, or a promise that every request will be implemented.
+
+Reply edits do not create points. Deleted replies stop counting at the next
+refresh; retained completion awards are not silently discarded when an issue
+is deleted or transferred. Historical completed issues receive their bonus
+without posting historical award comments. New completed issues receive an
+automatic acknowledgement with earned XP, total XP and rank/title (and a
+rank-up announcement if the bonus crosses a threshold). Retry/reopen does not
+post a second award notice for the same issue.
+
+This page and the README refresh on issue/reply events and daily, with manual
+refresh available. GitHub API or permission failures fail the job rather than
+publish invented counts. Schedule delays or outages can leave the displayed
+snapshot behind; the timestamp states what was actually generated.
+
+Only public GitHub handles, counters, award issue numbers and dates are stored;
+no report bodies, names, emails or project files enter this data. Want your
+handle removed? Ask a maintainer; the explicit exclusion list is in
+`docs/community/hall-of-fame-policy.json`.
+
+"""
+    ranking = "## Ranks and suitably over-engineered titles\n\n| XP from | Title |\n| ---: | --- |\n"
+    ranking += "\n".join(f"| {rank['minimum_xp']} | {rank['title']} |" for rank in RANKS)
+    return (title + intro + "## The field-test crew\n\n" + render_table(snapshot) +
+            f"\n\n*Snapshot: {snapshot['generated_at']}.*\n\n" + rules + ranking +
+            "\n\n**Found a bug? You found an opportunity for promotion.**\n").rstrip() + "\n"
+
+
+def closing_note(snapshot, number):
+    award = snapshot["resolution_awards"][str(number)]
+    target = next(row for row in snapshot["contributors"] if row["login"].casefold() == award["login"].casefold())
+    previous_rank = rank_for(target["xp"] - award["xp"])["title"]
+    current_rank = target["rank"]["title"]
+    rank_up = f"\n\n**Rank up:** {previous_rank} → **{current_rank}**." if current_rank != previous_rank else ""
+    medal = "\n\n🏅 **Golden Bus Probe** holder — ten reports and counting." if target["medals"] else ""
+    return (f"🏅 **Field-test credit for @{target['login']}: +{award['xp']} XP** for this completed issue.\n\n"
+            f"**Total: {target['xp']} XP · Title: {current_rank}**\n"
+            f"{target['issues']} issues · {target['replies']} replies · {target['resolutions']} completed reports."
+            + rank_up + medal + "\n\nThanks for making KNXBench harder to break. The bus salutes you.\n\n"
+            f"[Bug Hunters’ Hall of Fame](https://github.com/{snapshot['repository']}/blob/HEAD/docs/community/HALL_OF_FAME.md)\n\n"
+            f"<!-- knxbench-field-credit:{number} -->")
+
+
+def notify_pending(snapshot, api):
+    excluded = validate_policy(snapshot["policy"])
+    for identifier, award in sorted(snapshot["resolution_awards"].items(), key=lambda pair: int(pair[0])):
+        if not award["notify"] or award["notified"] or award["login"].casefold() in excluded:
+            continue
+        number = int(identifier); live = api.get_issue(number)
+        if live["state"] != "closed" or live.get("state_reason") != "completed":
+            continue
+        marker = f"<!-- knxbench-field-credit:{number} -->"
+        trusted = [comment for comment in api.get_comments(number)
+                   if comment.get("user") and
+                   (comment["user"].get("login", "").casefold() in excluded or
+                    (comment["user"].get("login") == BOT and comment["user"].get("type") == "Bot"))]
+        if not any(marker in comment.get("body", "") for comment in trusted):
+            body = closing_note(snapshot, number)
+            posted = api.post_comment(number, body)
+            receipt = api.get_comment(positive(posted["id"]))
+            if receipt.get("id") != posted["id"] or receipt.get("body") != body:
+                raise ValueError("award comment did not pass exact readback")
+        award["notified"] = True
+
+
+class GitHub:
+    def __init__(self, repository):
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+            raise ValueError("invalid repository identifier")
+        self.repository = repository
+
+    def api(self, endpoint, *, pages=False, body=None):
+        command = ["gh", "api", endpoint]
+        if pages:
+            command += ["--paginate", "--slurp"]
+        if body is not None:
+            command += ["--method", "POST", "--input", "-"]
+        result = subprocess.run(command, input=json.dumps({"body": body}) if body is not None else None,
+                                text=True, capture_output=True, check=True, timeout=180)
+        payload = json.loads(result.stdout)
+        if pages:
+            if not isinstance(payload, list) or not all(isinstance(page, list) for page in payload):
+                raise ValueError("invalid paginated GitHub response")
+            return [item for page in payload for item in page]
+        return payload
+
+    def get_issue(self, number):
+        return self.api(f"repos/{self.repository}/issues/{positive(number)}")
+
+    def get_comments(self, number):
+        return self.api(f"repos/{self.repository}/issues/{positive(number)}/comments?per_page=100", pages=True)
+
+    def post_comment(self, number, body):
+        return self.api(f"repos/{self.repository}/issues/{positive(number)}/comments", body=body)
+
+    def get_comment(self, cid):
+        return self.api(f"repos/{self.repository}/issues/comments/{positive(cid)}")
+
+
+def write_outputs(root, snapshot):
+    readme = root / "README.md"
+    targets = {
+        readme: replace_readme(readme.read_text(), snapshot),
+        root / "docs/community/HALL_OF_FAME.md": render_page(snapshot),
+        root / "docs/community/hall-of-fame.json": json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n",
+    }
+    # Render and validate every payload before replacing any existing file.
+    for path, text in targets.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as stream:
+            stream.write(text); temp = Path(stream.name)
+        try:
+            temp.replace(path)
+        finally:
+            temp.unlink(missing_ok=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--repository", default="KNXBench-Labs/KNXBench")
+    parser.add_argument("--notify", action="store_true", help="publish pending completion-credit comments")
+    args = parser.parse_args()
+    policy = json.loads((args.root / "docs/community/hall-of-fame-policy.json").read_text())
+    old_file = args.root / "docs/community/hall-of-fame.json"
+    previous = json.loads(old_file.read_text()) if old_file.exists() else None
+    # Validation happens before network access or externally visible writes.
+    validate_policy(policy)
+    api = GitHub(args.repository)
+    issues = api.api(f"repos/{args.repository}/issues?state=all&per_page=100", pages=True)
+    comments = api.api(f"repos/{args.repository}/issues/comments?per_page=100", pages=True)
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    snapshot = build_snapshot(issues, comments, policy, args.repository, now, previous)
+    replace_readme((args.root / "README.md").read_text(), snapshot)
+    if args.notify:
+        notify_pending(snapshot, api)
+    write_outputs(args.root, snapshot)
+    print(json.dumps({"contributors": len(snapshot["contributors"]), "generated_at": snapshot["generated_at"],
+                      "issues": sum(row["issues"] for row in snapshot["contributors"]),
+                      "replies": sum(row["replies"] for row in snapshot["contributors"])}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

@@ -83,15 +83,28 @@ original notice. If posting succeeded but persistence failed, the trusted marker
 recovers the next run. A deletion in that narrow crash window cannot be recovered
 from a marker that no longer exists; no claim of distributed exactly-once delivery.
 
-## About dialog handoff — not yet implemented
+## About dialog (Goal B16, 14 October 2026)
 
-Goal B owns the application web surface. Its requested separate package should
-bundle the public schema-1 snapshot (no background GitHub/telemetry request), show
-English titles/medals plus every participant, counters and as-of timestamp, and
-link the live repository board. State clearly that a release's bundled snapshot
-is not a live count. Render handles as escaped text and fixed-origin validated
-profile links; use the same generated scores/titles, not an independent rank
-calculation. No domain/storage or project mutation belongs in About.
+Implemented as handed off. `apps/knx-web/src/bundledHallOfFame.ts` reads
+`docs/community/hall-of-fame.json` at build time (`?raw`); there is no request to
+GitHub or anywhere else for it. `hallOfFame.ts` admits it like untrusted input:
+schema 1, a parseable `generated_at`, and per contributor a handle, a position
+≥ 1, non-negative integer XP/issue/reply/completion counters, a title and text
+medals. Any malformed or duplicate (case-insensitive) contributor refuses the
+whole snapshot, so About never shows part of a board; it then says the bundled
+board could not be read and still links the live one. Order, positions (as the
+`<ol>` item values, so equal XP keeps an equal number), XP, titles and medals are
+the generator's; About computes none of them. Titles and medals stay English in
+every UI language. Handles are React text; only a handle matching GitHub's
+grammar (1–39 letters, digits, single inner hyphens) links to
+`https://github.com/<handle>`, and the live-board link is built from the
+application's own repository constant, never from the file. The section shows the
+snapshot time and "This is not a live count." No domain, storage or project
+mutation is involved.
+
+Because the file lies outside `apps/knx-web`, the Vite dev server, the browser
+fixture server and Vitest's DOM environment each allow exactly
+`docs/community` beyond the app (`devFileAccess` in `vite.config.ts`).
 
 ## Acceptance
 

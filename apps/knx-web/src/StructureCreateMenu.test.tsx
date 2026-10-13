@@ -134,3 +134,29 @@ it("closes the menu and the form with Escape", async () => {
   await act(async () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
   expect(host.querySelector("[data-structure-create]")).toBeNull();
 });
+
+// The menu opens towards the side it fits on inside the scrolling page, never under the explorer.
+it("opens its list towards the side where it fits inside the page area", async () => {
+  const page = document.createElement("div"); page.className = "workbench-center"; host.append(page);
+  const pageRoot = createRoot(page);
+  await act(async () => pageRoot.render(<StructureWorkspace {...inert} tree={two} view="topology" selection={null}
+    onTreeUpdate={() => {}} onCatalog={() => {}} />));
+  const menu = page.querySelector<HTMLDetailsElement>(".structure-new-menu")!;
+  const content = menu.querySelector<HTMLElement>(".structure-new-menu-content")!;
+  const rect = (left: number, right: number) => ({ left, right, width: right - left, top: 0, bottom: 20, height: 20, x: left, y: 0, toJSON: () => ({}) });
+  vi.spyOn(page, "getBoundingClientRect").mockReturnValue(rect(300, 1100) as DOMRect);
+  vi.spyOn(content, "offsetWidth", "get").mockReturnValue(280);
+  const summary = vi.spyOn(menu.querySelector("summary")!, "getBoundingClientRect");
+  const openAt = async (left: number) => {
+    summary.mockReturnValue(rect(left, left + 70) as DOMRect);
+    menu.open = true;
+    await act(async () => menu.dispatchEvent(new Event("toggle")));
+  };
+  await openAt(1000);
+  expect(content.dataset.align, "room on the left: aligned to the button's end").toBe("end");
+  menu.open = false;
+  await act(async () => menu.dispatchEvent(new Event("toggle")));
+  await openAt(320);
+  expect(content.dataset.align, "no room on the left: it opens to the right").toBe("start");
+  await act(async () => pageRoot.unmount());
+});

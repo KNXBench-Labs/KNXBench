@@ -100,5 +100,35 @@
   "warning only; image, support level, acknowledgement and write unchanged",
   "web download tab does not show warnings yet (web lock held)",
   "no hardware, no bus traffic"
- ]
+ ],
+ "tests": {
+  "new": [
+   "knx-productdb byte_order_probe: 3 base-image tests (low first, high first and mixed, zero data and no data)",
+   "knx-app device_download: 3 decision tests (warned, not warned, unchecked named)",
+   "knx-cli: WARNING line format",
+   "corpus: the verified MDT plan carries no warning (CLI and server)"
+  ],
+  "mutations": {
+   "applied": 4,
+   "killed": 4,
+   "names": [
+    "warn-any-verdict",
+    "warn-little-endian-too",
+    "silent-on-error",
+    "use-project-values"
+   ]
+  }
+ },
+ "gates": {
+  "candidate": "c74bbc8c (rebased on 71b7fc87)",
+  "fmt": 0,
+  "clippy": 0,
+  "rust": "4243/0/197",
+  "xtask": "layering, headers, anchors, ledger, corpus-gates all 0",
+  "docs": 0,
+  "diffCheck": 0,
+  "privateCorpus": "144/144 in 31 targets",
+  "inputsFrozen": true,
+  "excluded": "knx-desktop (build script needs the built web bundle; crate unchanged)"
+ }
 }

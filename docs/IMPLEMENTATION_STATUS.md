@@ -17,7 +17,7 @@
   11.8 s for 519 checks, at most 2.0 s per program (release).
 - **Not yet:** the web download tab shows neither warnings nor inferences (web
   lock held by another session); queued with the tester verification flow.
-- GATES_PLACEHOLDER
+- Gate on the rebased candidate `c74bbc8c` (inputs frozen): fmt, clippy `-D warnings`, Rust 4243/0/197 (passed/failed/ignored; 7 new tests, 1 new corpus test), the five xtask checks, the documentation check, private corpus 144/144 in 31 targets (the verified MDT plan carries no warning in CLI and server); 4/4 hand mutants of the decision killed. `knx-desktop` excluded locally (needs the built web bundle; unchanged).
 
 ## 2026-10-13 — Notes follow-ups: object targets, unload guard, translated review
 

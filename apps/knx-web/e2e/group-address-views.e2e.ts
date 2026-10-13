@@ -227,11 +227,13 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
 
 // Issue #11: a compact first view, filter-opened matches, toolbar expand/collapse, local memory.
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
-  test(`${language} tree starts compact and remembers what is open at ${width}px`, async ({ page }) => {
+  const theme = (language === "en") === (width === 1440) ? "graphite" : "porcelain";
+  test(`${language} tree starts compact and remembers what is open at ${width}px (${theme})`, async ({ page }) => {
     const m = language === "en" ? en : de;
     await page.setViewportSize({ width, height: 1000 });
-    const state = await intercept(page, language, "porcelain", { ...standardTree(), view_key: "fictional-house-view" });
+    const state = await intercept(page, language, theme, { ...standardTree(), view_key: "fictional-house-view" });
     await openAddresses(page, language, false);
+    expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme"))).toBe(theme);
     const workspace = page.locator(".ga-workspace");
     const group = (key: string) => workspace.locator(`[data-ga-expand="${key}"]`);
     const addresses = workspace.locator("[data-ga-select]");
@@ -247,7 +249,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       const box = (await button.boundingBox())!;
       expect(box.x + box.width).toBeLessThanOrEqual(width);
     }
-    await capture(page, `tree-compact-${language}-${width}`);
+    await capture(page, `tree-compact-${language}-${width}-${theme}`);
     await noPageOverflow(page);
     // A filter opens the groups with matches; clearing it returns to what you had open.
     await workspace.locator(".address-filter").fill("spare");
@@ -273,7 +275,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(addresses).toHaveCount(3);
     const stored = await page.evaluate(() => localStorage.getItem("knxbench:ga-tree-open:v1"));
     expect(JSON.parse(stored!)["fictional-house-view"].open["1"].sort()).toEqual(["range:20:0", "range:21:0"]);
-    await capture(page, `tree-remembered-${language}-${width}`);
+    await capture(page, `tree-remembered-${language}-${width}-${theme}`);
     await noPageOverflow(page);
     expect(state.unexpected).toEqual([]);
   });

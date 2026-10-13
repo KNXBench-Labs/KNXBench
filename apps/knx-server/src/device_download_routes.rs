@@ -124,6 +124,10 @@ struct PlanResponse {
     /// The phrase `start` also demands, as `acceptUntested`, when
     /// `support.level` is `untested`; `None` otherwise.
     untested_acknowledgement: Option<String>,
+    /// What the user should know before writing that does not stop the
+    /// write (ADR-0120), each as `rule: detail (reference)`; empty when
+    /// there is nothing.
+    warnings: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -278,6 +282,7 @@ async fn plan(
         untested_acknowledgement: level
             .needs_acknowledgement()
             .then(|| untested_acknowledgement(target)),
+        warnings: prepared.warnings.iter().map(ToString::to_string).collect(),
     };
     *state
         .device_download_plan

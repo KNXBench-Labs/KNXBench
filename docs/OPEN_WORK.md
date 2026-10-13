@@ -175,10 +175,12 @@ undermined by the same pattern in BigEndian-declared and undeclared programs.
 `knx device byte-order-probe` ([ADR-0119](adr/0119-read-only-byte-order-probe.md))
 reads an ETS-programmed device without writing. **Open:** probe output from
 ETS-programmed LittleEndian devices (none available to the project; issue #10's
-reporter has one); then a reviewed, observation-limited encoder change. **Owner
-decision open:** whether untested downloads of BigEndian/undeclared ABB and
-Busch-Jaeger `0701h` programs whose base images look little-endian should carry
-a named warning ([§170 related risk](KNOWN_LIMITATIONS.md#170-little-endian-parameter-byte-order-is-refused-for-download-images)).
+reporter has one; asked on 2026-10-13); then a reviewed, observation-limited
+encoder change. Owner decision taken: downloads of BigEndian/undeclared programs
+whose base images look little-endian carry the named warning
+`base-image-low-octet-first` ([ADR-0120](adr/0120-base-image-byte-order-warning.md));
+**open:** showing plan warnings in the web download tab (web lock), together with
+the tester verification flow the owner asked for on 2026-10-13.
 
 ## How this was checked
 

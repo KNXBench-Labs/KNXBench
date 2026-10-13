@@ -1,7 +1,8 @@
 /** Pure rules linking project-status import counts to session-log entries. */
 // The server counts a project's import findings in `ProjectTree.errors` /
 // `ProjectTree.warnings` (`domain.rs`, `apply_report_counts`) and writes the
-// same import report into the session log, one entry per finding, under an
+// same import report into the session log, one entry per finding (retained
+// per-file notices grouped, counted once per group by the same rule), under an
 // `import:*` source (`session_log.rs`, `from_import_report`): genuine
 // errors at severity `error`; warning-severity items, unknown constructs,
 // DPT conflicts and unsupported capabilities at severity `warning`.

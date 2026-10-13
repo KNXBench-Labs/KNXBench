@@ -33,14 +33,10 @@ async fn importing_the_reference_project_returns_the_golden_counts() {
     let imported = knx_app::import_ets_project(&reference_ets4_path(), &conn)
         .unwrap_or_else(|_| panic!("reference application import refused"));
     let report = &imported.report;
-    let expected_warnings = report
-        .errors
-        .iter()
-        .filter(|item| item.severity == knx_etsproj::report::Severity::Warning)
-        .count()
-        + report.unknown.len()
-        + report.conflicts.len()
-        + report.unsupported.len();
+    // The one counting rule (#7): retained manufacturer files that share a
+    // notice count once; the report itself still lists every file.
+    let (expected_errors, expected_warnings) = knx_app::import_finding_counts(report);
+    assert_eq!(expected_errors, 0);
     assert!(report.error_count() == 0 && !report.has_losses());
     assert!(
         expected_warnings > 0,

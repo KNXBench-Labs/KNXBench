@@ -46,7 +46,18 @@ struct CounterWitness {
     errors: Vec<SeverityWitness>,
     unknown: Vec<serde::de::IgnoredAny>,
     conflicts: Vec<serde::de::IgnoredAny>,
-    unsupported: Vec<serde::de::IgnoredAny>,
+    unsupported: Vec<UnsupportedWitness>,
+}
+
+/// Only what the shared counting rule reads (`import_finding_counts`). Both
+/// fields are optional so a row the rule cannot group still counts once;
+/// a duplicate or non-string value is ambiguous and refused like the rest.
+#[derive(Deserialize)]
+struct UnsupportedWitness {
+    #[serde(default)]
+    what: Option<String>,
+    #[serde(default)]
+    consequence: Option<String>,
 }
 
 struct BoundedBytes(Vec<u8>);
@@ -231,10 +242,20 @@ fn report_counts(report: &Value, original_json: &str) -> Result<(usize, usize), 
             _ => return Err(invalid()),
         }
     }
+    // The same rule as a fresh import (`import_finding_counts`), so a
+    // reopened project shows the counts it showed when it was imported.
+    let unsupported = crate::import_payload_evidence::unsupported_warning_rows(
+        counters.unsupported.iter().map(|row| {
+            (
+                row.what.as_deref().unwrap_or_default(),
+                row.consequence.as_deref().unwrap_or_default(),
+            )
+        }),
+    );
     for len in [
         counters.unknown.len(),
         counters.conflicts.len(),
-        counters.unsupported.len(),
+        unsupported,
     ] {
         warning_count = warning_count.checked_add(len).ok_or_else(invalid)?;
     }

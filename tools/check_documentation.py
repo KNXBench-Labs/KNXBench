@@ -140,6 +140,9 @@ def check(root: Path) -> tuple[dict, list[str]]:
     if (root / 'docs/KNOWN_LIMITATIONS.md').is_file():
         from limitations_catalogue import check as check_limitations
         errors.extend(check_limitations(root))
+    if (root / 'docs/evidence/documentation-reorganization-2026-10-13.json').is_file():
+        from documentation_history import check as check_history
+        errors.extend(check_history(root))
     return {"markdown_files": len(sources), "local_targets": count,
             "images": images, "chapters": len(chapters)}, errors
 

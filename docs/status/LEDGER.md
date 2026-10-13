@@ -43,7 +43,7 @@ open is summarized in [OPEN_WORK](../OPEN_WORK.md); removed files are listed in
 ## Counts
 
 - **Snapshot IDs** (180 rows) — status: DONE=46, BLOCKED_EXTERNAL=1, ACCEPTED_BOUNDARY=118, LATER=15; owner: alpha=93, commission=39, later=23, ui=25; priority: P0=4, P1=29, P2=87, P3=60.
-- **Post-snapshot IDs** (22 rows) — status: DONE=16, ACCEPTED_BOUNDARY=3, LATER=3; owner: alpha=10, later=11, ui=1; priority: P1=7, P2=8, P3=7.
+- **Post-snapshot IDs** (23 rows) — status: DONE=17, ACCEPTED_BOUNDARY=3, LATER=3; owner: alpha=10, later=12, ui=1; priority: P1=7, P2=9, P3=7.
 
 ## Snapshot IDs
 
@@ -260,6 +260,8 @@ for real installations; the rest are P3.
 Origin of `KL-178`…`KL-180`: GitHub issues #8, #9 and #10, reported by
 thengsty (2026-10-12/13). `KL-180` is P1 because a tester could not program a
 device and was told the wrong reason; the other two are P3.
+Origin of `KL-181`: GitHub issue #7, reported by hagbardZ (2026-10-13). P2:
+the desktop app could not save the session log needed for an import report.
 
 | ID | P | Owner | Route | Status | Owner disposition | Evidence and remaining work |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -285,6 +287,7 @@ device and was told the wrong reason; the other two are P3.
 | `KL-178` | P3 | later | GitHub issue #8 | DONE | — | docs/KNOWN_LIMITATIONS.md §178; searchable group-address picker in the link row with DPT-difference marks (never hiding or moving an address), `1d977aab`. Tests: `groupAddressPicker.test.ts` (12), `GroupAddressPicker.test.tsx` (9), Inspector/DeviceWorkspace link tests, `e2e/group-address-picker.e2e.ts` (EN/DE × 1440/400 × light/dark, production build). Chromium only. |
 | `KL-179` | P3 | later | GitHub issue #9 | DONE | — | docs/KNOWN_LIMITATIONS.md §179; address rows indented by level in the group-address tree (capped at 12), channel header left-aligned with grouped objects one step right, `8d8d31a8`. Tests: geometry checks in `e2e/group-address-views.e2e.ts` and `e2e/communication-objects.e2e.ts` (EN/DE × 1440/400 × light/dark), red on the old layout. |
 | `KL-180` | P1 | later | GitHub issue #10 | DONE | — | docs/KNOWN_LIMITATIONS.md §180, ADR-0123; structured `gatewayBusy` 409 / `gatewayRefused`·`gatewayTimeout` 502 / `unsupportedByteOrder` 422, the download tab's up-front holder, readiness marks and renamed plan step, `33a74b59`. Tests: `http_gateway_busy.rs` (5), `connect_refusal`/`BusError` unit tests, `prepare_error_tests`, `gatewayRefusal.test.ts`, `downloadReadiness.test.ts`, `DeviceDownloadPreparation.test.tsx`, `e2e/gateway-refusal.e2e.ts` (24); 14 mutants killed. No real gateway contacted; plan warnings in the tab remain KL-170 part B. |
+| `KL-181` | P2 | later | GitHub issue #7 | DONE | — | docs/KNOWN_LIMITATIONS.md §181; AppImages alpha.5–alpha.11 refuse `save_session_log`/`save_bus_monitor_capture` from the remote origin `http://127.0.0.1:<port>` (no app permission granted). Fixed in source by `permissions/app-commands.toml` plus a main-window-only grant in `capabilities/default.json`, `7ba0989e`. Test: `app_command_acl_tests` (2; mock runtime with the real capabilities, release and debug origins, companion windows refused), red before the fix and with the grants removed. Native WebKitGTK window and save dialog not exercised; users get it with the next AppImage. |
 
 ## Reconciliation record (AR14D D2, 2026-10-04)
 

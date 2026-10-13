@@ -1,0 +1,22 @@
+# The desktop shell's own IPC commands (issue #7).
+#
+# A release window loads the UI from the embedded server at
+# http://127.0.0.1:<ephemeral port>. Tauri treats that as a remote origin, and
+# a remote origin reaches an app command only through a permission granted by
+# a capability; `capabilities/default.json` grants these to the main window
+# only. Both commands open a native save dialog in Rust: no path travels
+# through JavaScript, and the written JSON is validated before an atomic write.
+#
+# A new `#[tauri::command]` needs its own entry here, a grant in
+# `capabilities/default.json` and a place in `APP_COMMANDS` of
+# `src/app_command_acl_tests.rs`.
+
+[[permission]]
+identifier = "allow-save-session-log"
+description = "Save the session log through a native save dialog."
+commands.allow = ["save_session_log"]
+
+[[permission]]
+identifier = "allow-save-bus-monitor-capture"
+description = "Save a bus monitor capture through a native save dialog."
+commands.allow = ["save_bus_monitor_capture"]

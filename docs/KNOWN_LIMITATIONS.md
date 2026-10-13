@@ -1466,6 +1466,14 @@ Raw/member/XML budgets remain; large admission proves neither full scanning nor 
 The alpha.9-and-earlier libwayland failure has a scoped launcher fix. One-host repair does not guarantee every Mesa/EGL/display backend.
 [Details and history](limitations/KL-176-appimage-mesa-egl-compatibility.md)
 
+<a id="catalogue-kl-181"></a>
+<a id="181-appimages-up-to-alpha11-cannot-save-the-session-log-or-a-bus-monitor-capture"></a>
+### 181. Desktop export commands
+
+**Ledger status:** `DONE` ([KL-181](status/LEDGER.md#post-snapshot-ids)).
+AppImages up to alpha.11 refuse saving the session log and monitor captures; fixed in source, ships with the next AppImage. Web and Docker unaffected.
+[Details and history](limitations/KL-181-desktop-export-commands.md)
+
 ## Integrations and community
 
 <a id="catalogue-kl-107"></a>

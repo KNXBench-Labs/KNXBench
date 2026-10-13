@@ -20,6 +20,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--issue-7-the-appimage-may-save-its-own-logs-again"></a>
+- [2026-10-13 — Issue #7: the AppImage may save its own logs again](history/implementation/2026-W42.md#2026-10-13--issue-7-the-appimage-may-save-its-own-logs-again)
 <a id="2026-10-13--goal-a1-old-projects-stay-old-until-you-change-them"></a>
 - [2026-10-13 — Goal A1: old projects stay old until you change them](history/implementation/2026-W42.md#2026-10-13--goal-a1-old-projects-stay-old-until-you-change-them)
 <a id="2026-10-13--alpha-11-published-and-downloaded-artifacts-verified"></a>

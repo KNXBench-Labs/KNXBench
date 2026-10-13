@@ -87,7 +87,10 @@ fn destroy<R: tauri::Runtime>(window: &tauri::Window<R>) {
 }
 
 #[tauri::command]
-async fn save_session_log(app: tauri::AppHandle, contents: String) -> Result<bool, String> {
+async fn save_session_log<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    contents: String,
+) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let destination = app
             .dialog()
@@ -109,7 +112,10 @@ async fn save_session_log(app: tauri::AppHandle, contents: String) -> Result<boo
 }
 
 #[tauri::command]
-async fn save_bus_monitor_capture(app: tauri::AppHandle, contents: String) -> Result<bool, String> {
+async fn save_bus_monitor_capture<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    contents: String,
+) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let destination = app
             .dialog()
@@ -147,14 +153,22 @@ fn spawn_server(
     });
 }
 
+/// The app's own IPC commands, shared by `run` and the ACL regression test.
+/// A release window loads the UI from `http://127.0.0.1:<port>`, a remote
+/// origin to Tauri, so each command also needs its `allow-…` permission in
+/// `permissions/app-commands.toml`, granted to the main window in
+/// `capabilities/default.json` (issue #7).
+macro_rules! app_command_handler {
+    () => {
+        tauri::generate_handler![crate::save_session_log, crate::save_bus_monitor_capture]
+    };
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![
-            save_session_log,
-            save_bus_monitor_capture
-        ])
+        .invoke_handler(app_command_handler!())
         // The only window this app ever builds is "main" (see `setup` below).
         // Destroying it must end the process, not just hide it: a File > Quit
         // that leaves the binary running is a bug, and a user closing the
@@ -311,3 +325,6 @@ mod bus_capture_export_tests {
         assert_eq!(std::fs::read_to_string(path).unwrap(), "previous");
     }
 }
+
+#[cfg(test)]
+mod app_command_acl_tests;

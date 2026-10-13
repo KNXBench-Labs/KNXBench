@@ -13,7 +13,7 @@ async function serve(page: Page) {
   const unexpected: string[] = [];
   let current: ProjectTree = {
     schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
-    group_address_style: "ThreeLevel", server_incarnation: "installations-fixture", snapshot_revision: 1,
+    group_address_style: "ThreeLevel", server_incarnation: "installations-fixture", project_incarnation: 1, snapshot_revision: 1,
     installations: [installation(1, "Main"), { ...installation(2, "Annex"),
       topology: [{ id: 20, name: "Annex area", address: 2, lines: [{ id: 21, name: "Annex line", address: 1, devices: [] }] }] }],
   };
@@ -41,8 +41,15 @@ async function serve(page: Page) {
             lines: area.lines.map((line) => line.id === 21 ? { ...line, name: sent.name } : line) })) }) };
       body = current;
     } else if (path === "/api/installations/2" && method === "PATCH") {
-      const sent = request.postDataJSON() as { name: string };
+      // Goal A2 binding, checked like the server: stale context or name is a 409.
+      const sent = request.postDataJSON() as { name: string; expectedName: string; serverIncarnation: string;
+        projectIncarnation: number; snapshotRevision: number };
       writes.push({ method, path, body: sent });
+      const shown = current.installations.find((inst) => inst.id === 2)!;
+      if (sent.serverIncarnation !== current.server_incarnation || sent.projectIncarnation !== current.project_incarnation
+        || sent.snapshotRevision !== current.snapshot_revision || sent.expectedName !== shown.name) {
+        return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "stale", kind: "renameConflict" }) });
+      }
       current = { ...current, can_undo: true, is_modified: true, snapshot_revision: 3,
         installations: current.installations.map((inst) => inst.id === 2 ? { ...inst, name: sent.name } : inst) };
       body = current;
@@ -82,7 +89,8 @@ test("creates a root area in the second installation and renames that installati
 
   expect(writes).toEqual([
     { method: "POST", path: "/api/areas", body: { name: "Annex area", address: 5, installationId: 2 } },
-    { method: "PATCH", path: "/api/installations/2", body: { name: "Annex hall" } },
+    { method: "PATCH", path: "/api/installations/2", body: { name: "Annex hall", expectedName: "Annex",
+      serverIncarnation: "installations-fixture", projectIncarnation: 1, snapshotRevision: 2 } },
   ]);
   expect(unexpected).toEqual([]);
 });

@@ -914,7 +914,7 @@
       "number": 157,
       "title": "In-place native project migration",
       "topic": "Project model and storage",
-      "summary": "Opening older projects upgrades the original, even through read-only commands. Atomic migration is not backup; older builds refuse newer schemas.",
+      "summary": "The first write into an older project upgrades the original in place; opening and every reading command use an in-memory copy. Atomic migration is not backup; older builds refuse newer schemas.",
       "file": "KL-157-in-place-native-project-migration.md",
       "ledger_ids": [
         "KL-157"

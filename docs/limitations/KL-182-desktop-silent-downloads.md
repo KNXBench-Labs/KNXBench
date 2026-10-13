@@ -54,11 +54,19 @@ and Docker builds are not affected: the browser handles the download.
   into staging and allowed, and that a staging failure falls back without
   refusing. Two mutants (request not redirected, staged copy not discarded) turn
   them red.
-- **Boundary.** No test drives a native WebKitGTK window: WebKitWebDriver and a
-  headless compositor are not available on the development host. The save
-  dialog, the message dialogs and the Flow/diagnostics routing are verified by
-  source reading and probes, not end to end. The fix reaches users with the next
-  AppImage.
+- **Native-window check, 13 October 2026.** Release build of `6ba1590a`, driven
+  by hand in a real window (GTK X11 backend, isolated home directory), with the
+  demo project *KV v2.5* imported: **Download full report** opened the native
+  save dialog with `import-report.json` suggested. *Cancel* wrote nothing and
+  emptied the private staging directory (mode 0700, removed with the staged
+  copy). *Save* wrote the chosen path (mode 0600, the same 84 683 bytes as the
+  staged copy) and emptied the staging directory again. The XDG Downloads folder
+  stayed empty throughout.
+- **Boundary.** No automated test drives a native WebKitGTK window: WebKitWebDriver
+  and a headless compositor are not available on the development host. Not
+  checked by hand either: the Wayland backend (the AppImage's default is
+  `wayland,x11`), the message dialogs for a failed copy, and the Flow/diagnostics
+  window routing. The fix reaches users with the next AppImage.
 
 Ledger `KL-182`.
 <!-- END retained catalogue record -->

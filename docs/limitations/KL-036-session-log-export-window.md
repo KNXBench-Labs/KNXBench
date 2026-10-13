@@ -173,3 +173,13 @@ about 100 each.
 
 Remaining boundary: eviction is still lossy once 16000 entries are exceeded;
 the import report download keeps the complete findings.
+
+## One line per entry, 13 October 2026 (issue #13, Goal B11)
+
+The list now has columns (time, level, source, message) and every row is one
+line, so the three-line preview above became one line plus the hidden-line
+count; the details dialog still shows every line, and the export is unchanged.
+The scope choice moved from the toolbar into the dialog behind **Export…**;
+`scope` in the exported document means what it meant before
+([ADR-0047](../adr/0047-session-log-export-is-a-versioned-local-json-snapshot.md)).
+None of this changes what the log retains.

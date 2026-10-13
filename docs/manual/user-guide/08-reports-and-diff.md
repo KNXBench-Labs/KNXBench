@@ -267,8 +267,9 @@ stops the whole log. This was checked on 2026-10-06 with a small repository hold
 commits of one project, including an added and a removed file.
 It shows what `knx diff` compares, not every stored byte. Two cautions: the new side of
 `git diff` (without a commit range) is your real working file, and if that file comes
-from an older KNXBench version, `knx diff` upgrades it in place
-([known issue](../known-issues.md#opening-an-older-project-upgrades-the-file)); and the
+from an older KNXBench version, `knx diff` reads it through an in-memory copy and leaves
+it unchanged; only a later save upgrades it
+([known issue](../known-issues.md#saving-into-an-older-project-upgrades-the-file)); and the
 driver needs `knx` on the `PATH` of every machine that runs the diff.
 
 ### What comparison is good for, and where it stops

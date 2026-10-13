@@ -58,14 +58,19 @@ function standardTree(style = "ThreeLevel"): ProjectTree {
 }
 
 async function intercept(page: Page, language: Language, theme: string, initial: ProjectTree) {
-  const state = { tree: initial, unexpected: [] as string[], requests: [] as string[] };
+  const state = { tree: initial, unexpected: [] as string[], requests: [] as string[],
+    settings: { uiLanguage: language, theme } as Record<string, unknown> };
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     state.requests.push(`${method} ${path}`);
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
-    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme } };
-    else if (path === "/api/settings" && method === "PUT") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme, ...route.request().postDataJSON().settings } };
+    // Like the real server, a stored preference is still there on the next periodic read.
+    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { ...state.settings } };
+    else if (path === "/api/settings" && method === "PUT") {
+      state.settings = { ...state.settings, ...route.request().postDataJSON().settings };
+      body = { schemaVersion: 1, status: "ok", settings: { ...state.settings } };
+    }
     else if ((path === "/api/project" && method === "GET") || (path === "/api/project/new" && method === "POST")) body = state.tree;
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };

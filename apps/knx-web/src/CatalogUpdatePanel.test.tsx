@@ -1,4 +1,4 @@
-/** Catalogue backups in the catalogue view: list, restore and delete after asking (ADR-0118, B5). */
+/** Catalogue backups: listed, restored and deleted only after asking (ADR-0118, B5). */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";

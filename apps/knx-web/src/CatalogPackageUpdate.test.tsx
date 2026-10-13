@@ -1,4 +1,4 @@
-/** Tests that a chosen product package is previewed and installed only on confirmation (ADR-0118, B5). */
+/** Tests that a chosen package is previewed and installed only on confirmation (ADR-0118, B5). */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";

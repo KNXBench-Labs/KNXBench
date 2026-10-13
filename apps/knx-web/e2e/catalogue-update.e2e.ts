@@ -1,4 +1,4 @@
-/** Built catalogue view: previewed install, backup, ask-first restore and delete, intercepted API. */
+/** Built catalogue view: previewed install, backup, ask-first restore and delete, fixture API. */
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";

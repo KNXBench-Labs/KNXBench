@@ -1,4 +1,4 @@
-/** ProductInstallControl: packages previewed before installing (B5), legacy password prompt and wording. */
+/** ProductInstallControl: packages previewed first (B5), legacy password prompt and wording. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

@@ -1,4 +1,4 @@
-/** Catalogue backups in the catalogue view: list, restore and delete, each after asking (ADR-0118, B5). */
+/** Catalogue backups in the catalogue view: list, restore and delete, each after asking. */
 // Installing (with preview) lives in ProductInstallControl/CatalogPackageUpdate
 // since Goal B5; this panel keeps what the server backed up. The catalogue view
 // is mounted for every session, so backups are read only once their list is

@@ -9,6 +9,8 @@ interface Fixture {
   settings: Record<string, unknown>;
   record: { unlocked: Record<string, string>; progress: Record<string, number> };
   posts: unknown[];
+  /** KL-164: request ids of applied increment batches, like the real server. */
+  applied: string[];
   unexpected: string[];
 }
 
@@ -35,11 +37,18 @@ async function serve(page: Page, fixture: Fixture) {
     } else if (path === "/api/achievements" && method === "GET") {
       body = record();
     } else if (path === "/api/achievements/record" && method === "POST") {
-      const delta = request.postDataJSON() as Fixture["record"];
+      const delta = request.postDataJSON() as Fixture["record"] & { increments?: Record<string, number>; requestId?: string };
       fixture.posts.push(delta);
       for (const [id, at] of Object.entries(delta.unlocked)) fixture.record.unlocked[id] ??= at;
       for (const [id, n] of Object.entries(delta.progress)) {
         fixture.record.progress[id] = Math.max(fixture.record.progress[id] ?? 0, n);
+      }
+      // KL-164: "one more" steps add up, once per request id.
+      if (delta.requestId !== undefined && !fixture.applied.includes(delta.requestId)) {
+        for (const [id, n] of Object.entries(delta.increments ?? {})) {
+          fixture.record.progress[id] = (fixture.record.progress[id] ?? 0) + n;
+        }
+        fixture.applied.push(delta.requestId);
       }
       body = record();
     } else if (path === "/api/bus/discover" && method === "POST") {
@@ -61,6 +70,7 @@ function fresh(settings: Record<string, unknown> = {}): Fixture {
     settings: { onboardingGuide: { seenStage: "alpha", version: VERSION }, ...settings },
     record: { unlocked: {}, progress: {} },
     posts: [],
+    applied: [],
     unexpected: [],
   };
 }

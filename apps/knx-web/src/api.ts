@@ -872,7 +872,8 @@ export interface CatalogueUpdatePreview {
 }
 export interface CatalogueUpdatePreviewAnswer { applied: false; preview: CatalogueUpdatePreview }
 export interface CatalogueUpdateApplied { applied: true; preview: CatalogueUpdatePreview; backup: string; report: CatalogInstallReport }
-export interface CatalogueBackup { name: string; bytes: number; modifiedUnixSeconds: number }
+/** `identity` is opaque: which file the name was when listed; a deletion must present it (B5). */
+export interface CatalogueBackup { name: string; bytes: number; modifiedUnixSeconds: number; identity: string }
 export async function previewCatalogUpdate(file: File): Promise<CatalogueUpdatePreviewAnswer> {
   const form = new FormData();
   form.append("file", file);
@@ -890,6 +891,15 @@ export function catalogBackups(): Promise<{ backups: CatalogueBackup[] }> {
 /** Restores a backup the server listed; the server accepts no other name. */
 export function restoreCatalogBackup(name: string): Promise<{ restored: string }> {
   return request("/api/catalog/restore", { method: "POST", body: JSON.stringify({ name }) });
+}
+/** Deletes the listed backup the user confirmed; a file changed since the listing is kept (409). */
+export function deleteCatalogBackup(name: string, identity: string): Promise<{ deleted: string }> {
+  return request("/api/catalog/backups/delete", { method: "POST", body: JSON.stringify({ name, identity, confirmed: true }) });
+}
+/** The backup is no longer the file that was listed: list again, nothing was deleted. */
+export function isCatalogueBackupChanged(e: unknown): boolean {
+  const error = e as { status?: unknown; body?: { kind?: unknown } } | null;
+  return error?.status === 409 && error.body?.kind === "catalogueBackupChanged";
 }
 /** The catalogue or the file changed since the preview: preview again. */
 export function isCatalogueUpdateStale(e: unknown): boolean {

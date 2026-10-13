@@ -87,7 +87,9 @@ const RUNNING: DeviceDownloadStatusResponse = { downloadId: 4, address: "1.1.11"
 const gateway = (endpoint: string, name: string, address: string): BusDiscoveredInterface =>
   ({ controlEndpoint: endpoint, friendlyName: name, individualAddress: address, supportsTunnelling: true });
 
-interface Options { language: Language; theme: string; width: number; gateways?: BusDiscoveredInterface[]; running?: boolean }
+interface Options { language: Language; theme: string; width: number; gateways?: BusDiscoveredInterface[]; running?: boolean;
+  /** #18: the status read answers only once this settles, like a slow server. */
+  statusGate?: Promise<void> }
 interface Fixture { unexpected: string[]; writes: string[]; linkBodies: unknown[]; reads: string[]; undo: number; discover: number }
 
 async function fixture(page: Page, options: Options): Promise<Fixture> {
@@ -131,7 +133,9 @@ async function fixture(page: Page, options: Options): Promise<Fixture> {
       return ok(tree());
     }
     if (path === "/api/undo" && method === "POST") { f.undo += 1; links = history.pop() ?? links; revision += 1; return ok(tree()); }
-    if (path === "/api/device-download/status" && method === "GET") return options.running ? ok(RUNNING) : ok({ error: "no download" }, 404);
+    if (path === "/api/device-download/status" && method === "GET") {
+      return (options.statusGate ?? Promise.resolve()).then(() => options.running ? ok(RUNNING) : ok({ error: "no download" }, 404));
+    }
     if (path === "/api/device-address/status" && method === "GET") return ok({ error: "no operation" }, 404);
     // The monitor tab reads the server's telegram buffer when the bus
     // workspace mounts; without a session the real server answers 404.
@@ -333,3 +337,33 @@ test("a running download is never taken over by a hand-off", async ({ page }) =>
   expect(f.writes).toEqual([]);
   expect(f.unexpected).toEqual([]);
 });
+
+// Issue #18: the requested device is named at once; it is selected only once the status is known.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  const theme = (language === "en") === (width === 1440) ? "graphite" : "porcelain";
+  test(`#18 ${language}-${theme}-${width}: a slow status read still shows the requested device at once`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const errors: string[] = []; page.on("pageerror", (error) => errors.push(error.message));
+    let release!: () => void;
+    const statusGate = new Promise<void>((done) => { release = done; });
+    const f = await fixture(page, { language, theme, width, statusGate });
+    await openDeviceEditor(page, m, "Push button");
+    await page.locator(".device-workspace").getByRole("button", { name: m["devices.downloadToDevice"], exact: true }).click();
+    const panel = page.locator(".device-download-panel");
+    const pending = panel.locator('[data-handoff="pending"]');
+    await expect(pending).toHaveText(m["deviceDownload.handoff.pending"].replace("{address}", "1.1.10").replace("{name}", "Push button"));
+    // Context, not admission: nothing is selected or can be prepared yet.
+    await expect(panel.locator("select[data-download-device]")).toHaveValue("");
+    await expect(panel.getByRole("button", { name: m["deviceDownload.preparePlan"], exact: true })).toBeDisabled();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    await pending.scrollIntoViewIfNeeded();
+    await shot(page, `download-pending-${language}-${theme}-${width}`);
+    release();
+    await expect(panel.locator("[data-handoff=selected]")).toContainText("1.1.10");
+    await expect(pending).toHaveCount(0);
+    await expect(panel.locator("select[data-download-device]")).toHaveValue("10");
+    expect(f.writes).toEqual([]);
+    expect(f.unexpected).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+}

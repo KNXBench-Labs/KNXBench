@@ -1,6 +1,9 @@
 /** Verifies achievements in Chromium: popup, overview through the palette, and off means off. */
 
 import { expect, test, type Page } from "@playwright/test";
+import { ACHIEVEMENTS } from "../src/achievementCatalog";
+import { messages as en } from "../src/messages/en";
+import { messages as de } from "../src/messages/de";
 
 interface Fixture {
   settings: Record<string, unknown>;
@@ -90,7 +93,7 @@ test("the Konami code unlocks a popup, the record is saved, and the palette open
   await expect(dialog).toBeVisible();
   await page.waitForTimeout(300);
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("1 of 38 unlocked");
+  await expect(dialog).toContainText(`1 of ${ACHIEVEMENTS.length} unlocked`);
   await expect(dialog.locator('[data-achievement="konami"]')).toContainText("Unlocked");
   await expect(dialog.locator('[data-achievement="night-shift"]')).toContainText("Hidden achievement");
   // The palette run counted towards its own achievement.
@@ -170,3 +173,74 @@ test("with reduced motion the popup vanishes at once and the fallback removes it
   expect(result.opacity).toBe("0");
   expect(result.ms).toBeGreaterThanOrEqual(900);
 });
+
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}: additive achievement persists once and retains old unlocks`, async ({ page }) => {
+    const m = language === "de" ? de : en;
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: width === 400 ? "reduce" : "no-preference" });
+    const fixture = fresh({ uiLanguage: language, theme: width === 400 ? "porcelain" : "graphite",
+      motionToasts: "off", motionAchievements: "subtle" });
+    const oldAt = "2026-10-01T10:00:00Z";
+    fixture.record.unlocked = { konami: oldAt, "palette-pro": oldAt, "bus-master": oldAt };
+    fixture.record.progress = { "palette-pro": 50, "palette-resident": 99 };
+    await serve(page, fixture); await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("lang", language);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", width === 400 ? "porcelain" : "graphite");
+    async function overview() {
+      await expect(page.locator(".workbench-toolbar")).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("lang", language);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", width === 400 ? "porcelain" : "graphite");
+      await page.keyboard.press("Control+Shift+P");
+      await page.getByRole("combobox").fill(m["achievements.command"]);
+      await page.getByRole("option").filter({ hasText: m["achievements.command"] }).click();
+    }
+    await overview();
+    const dialog = page.locator(".achievements-dialog");
+    await expect(dialog).toBeVisible();
+    const popup = page.locator(".toast--achievement");
+    await expect(popup).toHaveCount(1);
+    await expect(popup).toContainText(m["achievement.palette-resident.title"]);
+    await expect.poll(() => fixture.record.progress["palette-resident"]).toBe(100);
+    await expect.poll(() => fixture.record.unlocked["palette-resident"]).toBeTruthy();
+    expect(fixture.record.unlocked.konami).toBe(oldAt);
+    expect(fixture.record.unlocked["bus-master"]).toBe(oldAt);
+    for (const id of ["save-point-regular", "palette-resident", "room-atlas", "address-librarian"] as const) {
+      await expect(dialog.locator(`[data-achievement="${id}"]`)).toContainText(m[`achievement.${id}.description`]);
+    }
+    const resident = dialog.locator('[data-achievement="palette-resident"]');
+    await resident.scrollIntoViewIfNeeded();
+    if (width === 400) {
+      const text = await resident.locator(".achievement-item-text").boundingBox();
+      const meta = await resident.locator(".achievement-item-meta").boundingBox();
+      expect.soft(text!.width, "narrow description retains a readable column").toBeGreaterThanOrEqual(180);
+      expect.soft(meta!.y, "date/tier move below description on narrow screens").toBeGreaterThanOrEqual(text!.y + text!.height - 1);
+    }
+    const closeButton = dialog.getByRole("button", { name: m["achievements.close"], exact: true });
+    const closeHit = await closeButton.evaluate(button => {
+      const box = button.getBoundingClientRect();
+      return button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+    });
+    expect.soft(closeHit, "achievement popup does not cover overview Close").toBe(true);
+    const layers = await dialog.evaluate(panel => ({
+      overview: Number(getComputedStyle(panel.parentElement!).zIndex),
+      popup: Number(getComputedStyle(document.querySelector(".toast-stack")!).zIndex),
+    }));
+    expect.soft(layers.overview, "overview stays above its unlock popup").toBeGreaterThan(layers.popup);
+    if (process.env.UX_FEEDBACK_SHOTS) {
+      await dialog.locator('[data-achievement="palette-resident"]').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${process.env.UX_FEEDBACK_SHOTS}/achievements-${language}-${width}.png` });
+    }
+    await dialog.getByRole("button", { name: m["achievements.close"], exact: true }).click();
+    await popup.getByRole("button", { name: m["toast.dismiss"], exact: true }).click();
+    await expect(popup).toHaveCount(0);
+    await page.reload(); await overview();
+    await expect(dialog.locator('[data-achievement="palette-resident"]')).toHaveClass(/achievement-item--unlocked/);
+    await expect(popup).toHaveCount(0);
+    expect(fixture.record.progress["palette-resident"]).toBe(100);
+    expect(fixture.record.unlocked.konami).toBe(oldAt);
+    expect(fixture.unexpected).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  });
+}

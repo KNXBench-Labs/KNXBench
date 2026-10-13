@@ -71,6 +71,18 @@ const button = (label: string) => Array.from(host!.querySelectorAll("button")).f
 const zoomGroup = () => host!.querySelector<SVGGElement>("g[data-zoom]")!;
 
 describe("TelegramFlowView", () => {
+  it("opens image exports only for the chosen visible graph and pins a smooth camera", async () => {
+    await render(model());
+    expect(zoomGroup().classList.contains("flow-camera")).toBe(true);
+    await act(async () => button("PNG snapshot").click());
+    expect(host!.querySelector('.flow-export-dialog')).not.toBeNull();
+    expect(host!.querySelector('.flow-export-consent')?.textContent).toContain("locally");
+    expect(host!.querySelector('[data-export-start]')?.hasAttribute("disabled")).toBe(true);
+    await act(async () => button("Close").click());
+    expect(host!.querySelector('.flow-export-dialog')).toBeNull();
+    await act(async () => button("GIF clip").click());
+    expect(host!.querySelector<HTMLInputElement>('.flow-export-dialog input[type="number"]')!.max).toBe("30");
+  });
   it("keeps capture-loss and stale-context warnings inside the maximizable/shareable view", async () => {
     await render(model(), { gaps: 3, pruned: 2, context: "stale", ended: false, error: null });
     expect(host!.querySelector(".flow-source-diagnostics")?.textContent).toContain("3");

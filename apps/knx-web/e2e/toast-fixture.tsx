@@ -24,7 +24,8 @@ function Fixture() {
     <button onClick={() => queue.pushAchievements([
       { title: "Night Shift", description: "Saved at night.", tier: "gold", glyph: "moon" },
     ], (n) => `+${n} more`)}>Achievement</button>
-    <ToastStack toasts={queue.toasts} onDismiss={queue.dismiss} onExited={queue.finishExit} />
+    <ToastStack toasts={queue.toasts} onDismiss={queue.dismiss} onExited={queue.finishExit} onPause={queue.pause} onResume={queue.resume}
+      pendingCount={queue.pendingCount} queueDropped={queue.queueDropped} />
   </main>;
 }
 

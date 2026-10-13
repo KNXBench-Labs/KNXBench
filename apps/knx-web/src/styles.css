@@ -332,6 +332,14 @@ main {
 .toast-body, .toast > .achievement-badge { pointer-events: none; }
 .toast .toast-dismiss { position: relative; z-index: 1; }
 .toast .toast-release-link { position: relative; z-index: 1; pointer-events: auto; color: var(--knx-accent); font-size: 0.8rem; }
+/* At most three cards; a tall stack scrolls instead of leaving the screen.
+   Scrolling clips at the padding edge, so the stack takes the 1rem corner
+   offset as padding (cards stay where they were, shadows stay visible) and
+   lets clicks through that padding. */
+.toast-stack { bottom: 0; right: 0; padding: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; pointer-events: none; }
+.toast-stack > * { pointer-events: auto; }
+.toast { flex-shrink: 0; }
+.toast-queue-note { margin: 0; padding: 0.4rem 0.6rem; max-width: min(24rem, calc(100vw - 2rem)); border-radius: 4px; background: var(--knx-surface); color: var(--knx-muted); font-size: 0.8rem; overflow-wrap: anywhere; }
 
 .toast-body {
   min-width: 0;
@@ -488,6 +496,13 @@ main {
 .achievement-tier--gold { color: var(--knx-warning-color); }
 .achievement-tier--legendary { color: var(--knx-accent); }
 .achievement-item-state { font-size: 12px; color: var(--knx-muted); }
+@media (max-width: 600px) {
+  /* Keep descriptions readable; dates are metadata, not a competing column. */
+  .achievements-header { flex-wrap: wrap; gap: 0.25rem 1rem; }
+  .achievement-item { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .achievement-item-meta { grid-column: 2; min-width: 0; align-items: flex-start; text-align: left; overflow-wrap: anywhere; }
+  .achievement-item-progress { flex-wrap: wrap; }
+}
 .achievements-footer {
   display: flex;
   justify-content: flex-end;
@@ -542,6 +557,10 @@ main {
   font-style: italic;
   opacity: 0.8;
 }
+
+/* The footer counts open their log findings; they keep the text's look. */
+.project-explorer footer .import-diagnostic-link { min-height: auto; padding: 0; border: 0; background: transparent; box-shadow: none; color: inherit; font: inherit; text-align: left; white-space: normal; text-decoration: underline; text-transform: none; }
+.project-explorer footer .import-diagnostic-link:hover:not(:disabled) { transform: none; box-shadow: none; }
 
 .workspace {
   display: flex;
@@ -4202,3 +4221,46 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 /* Notes: the target catalogue could not be loaded; the editor stays usable. */
 .notes-targets-failed { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-bottom: 0.75rem; }
 .notes-targets-failed .field-error { flex: 1 1 18rem; margin: 0; overflow-wrap: anywhere; }
+
+/* KL-43: category caps inherit the global reference styles and OS media guards. */
+:root:not([data-motion-level="off"])[data-motion-toasts="subtle"] .toast--error,
+:root:not([data-motion-level="off"])[data-motion-toasts="subtle"] .toast--fun,
+:root:not([data-motion-level="off"])[data-motion-toasts="subtle"] .toast--update,
+:root:not([data-motion-level="off"])[data-motion-achievements="subtle"] .toast--achievement { --knx-transition-duration: 120ms; }
+:root[data-motion-toasts="off"] .toast--error,
+:root[data-motion-toasts="off"] .toast--fun,
+:root[data-motion-toasts="off"] .toast--update,
+:root[data-motion-achievements="off"] .toast--achievement { --knx-transition-duration: 0ms; }
+:root[data-motion-toasts="off"] .toast--error button:hover,
+:root[data-motion-toasts="off"] .toast--fun button:hover,
+:root[data-motion-toasts="off"] .toast--update button:hover,
+:root[data-motion-achievements="off"] .toast--achievement button:hover { transform: none; }
+.motion-category-settings { border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); margin: 1rem 0 0; padding: 0.75rem; min-width: 0; }
+.motion-category-settings legend { color: var(--knx-foreground); font-size: 0.9rem; padding: 0 0.25rem; }
+
+/* Selected graph images: local-only, bounded, independently scrollable on narrow screens. */
+.flow-export-dialog { align-self: flex-start; width: min(38rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem); box-sizing: border-box; padding: 1.1rem; overflow: auto; color: var(--knx-foreground); }
+.flow-export-dialog h2 { margin: 0 0 .8rem; font-size: 1.15rem; }
+.flow-export-dialog p { line-height: 1.45; overflow-wrap: anywhere; }
+.flow-export-dialog label { display: grid; gap: .4rem; margin-block: .8rem; }
+.flow-export-dialog select, .flow-export-dialog input[type="number"] { box-sizing: border-box; width: 100%; padding: .5rem; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input); color: var(--knx-foreground); background: var(--knx-surface); }
+.flow-export-dialog .flow-export-consent { display: flex; align-items: flex-start; gap: .6rem; }
+.flow-export-dialog .flow-export-consent input { flex: 0 0 auto; width: 1rem; margin: .2rem 0 0; }
+.flow-export-preview { margin: .8rem 0; }
+.flow-export-preview img { display: block; width: 100%; max-height: 10rem; object-fit: contain; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input); }
+.flow-export-preview figcaption, .flow-export-dialog small { font-size: .75rem; line-height: 1.4; color: var(--knx-muted); }
+.flow-export-preview figcaption { margin-top: .4rem; }
+.flow-export-resolution { font-variant-numeric: tabular-nums; font-weight: 600; }
+.flow-export-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0 .7rem; }
+.flow-export-dialog button:hover { transform: none; box-shadow: none; }
+.flow-export-dialog progress { width: 100%; accent-color: var(--knx-accent); }
+/* No new timer/RAF or data throttling: the shared clock animates only camera changes. */
+@media (prefers-reduced-motion: no-preference) {
+  .flow-camera { transition: transform var(--knx-transition-duration) var(--knx-motion-easing); }
+}
+html[data-motion-level="off"] .flow-camera,
+html[data-motion-flow="off"] .flow-camera,
+.flow-dragging .flow-camera { --knx-transition-duration: 0s; }
+
+/* The achievements overview stays above its own unlock popup. */
+.search-overlay:has(> .achievements-dialog) { z-index: 110; }

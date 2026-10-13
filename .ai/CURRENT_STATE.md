@@ -1,3 +1,12 @@
+Web lock: taken by claude-web-fixups (notes follow-ups)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 05:57
+- **Completed:** Lock taken only. Owner decision (user "Go", 2026-10-13): the notes follow-ups go before parked-adoption's ux-feedback package, which still waits for the AP1 owner call.
+- **Pending/Next Steps:** Deliver `feature/notes-followups-20261012` (worktree `web-fixups-20261012`): service target catalogue incl. communication objects (`GET /api/project/notes/targets`), browser reload/tab-close guard while drafts exist, EN/DE action names in the review, a shared `dismissToasts` e2e helper (late-night toast broke `dpt-monitor` after 23:00), docs. Full gate on the rebased candidate, merge, release this lock.
+- **Notes for Codex oder Claude:** Do not edit apps/knx-web until this lock line is released. After the release the queue continues with claude-parked-adoption (package 3 docs-only, then ux-feedback).
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 01:44
 - **Completed:** KL-170 advanced as far as possible without hardware (branch `feature/kl170-little-endian`). Research `docs/research/parameter-byte-order.md` (receipt `docs/evidence/kl170-byte-order-evidence-2026-10-13.json`): no KNX source defines `LittleEndian` per type; undeclared = `BigEndian` by schema default; 370 public LE programs hold whole-octet defaults low octet first, 32 layouts re-declared BE→LE unchanged, but BE/undeclared ABB/Busch-Jaeger `0701h` programs show the same pattern, so files cannot settle what ETS writes. New read-only `knx device byte-order-probe` (ADR-0119): `knx_core::commissioning::byte_order_evidence` (classifier), `knx_productdb::byte_order_probe` (plan via the extracted `image::activate`, every skip named, 16-bit segment rule of the download plan), `knx_net` `read_memory_runs` (read-only session; `check_identity`/`read_region` extracted from compare), `knx_app::device_download::prepare_byte_order_probe`, CLI + manual/known-issues/FEATURES/§170/ledger/OPEN_WORK/TEST_CATALOGUE. Download behaviour unchanged: LE still refused, ledger stays LATER. Gate (inputs frozen): fmt, clippy, Rust 4229/0/196, five xtask checks, docs; private corpus 143/143 (31 targets); 9/9 mutants killed.

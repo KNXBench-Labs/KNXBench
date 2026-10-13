@@ -2,12 +2,18 @@
 import type { FunctionLocationNode } from "./FunctionLocationNode";
 import type { FunctionMemberNode } from "./FunctionMemberNode";
 
-export type FunctionNode = { id: number, installationId: number, location: FunctionLocationNode, name: string, 
+export type FunctionNode = { id: number,
+/**
+ * The model's source reference id, verbatim: the ETS id of an imported
+ * Function (e.g. `"P-0001-0_F-1"`), `"KB-Function-<id>"` for one created
+ * in KNXBench. Shown as provenance; never parsed or rewritten.
+ */
+sourceId: string, installationId: number, location: FunctionLocationNode, name: string,
 /**
  * The ETS function type reference as written (e.g. `"FT-1"`); not
  * resolved to a master-data name.
  */
-functionType: string | null, number: string | null, comment: string | null, description: string | null, 
+functionType: string | null, number: string | null, comment: string | null, description: string | null,
 /**
  * `CompletionStatus` spelled as in the ETS schema (`"Editing"`, …).
  */

@@ -26,7 +26,17 @@ fn an_imported_function_and_its_raw_source_survive_native_reopen() {
     drop(store);
 
     let reopened = open_existing_read_only(&native).unwrap();
-    assert_eq!(load_project(&reopened.conn).unwrap(), imported.project);
+    let project = load_project(&reopened.conn).unwrap();
+    assert_eq!(project, imported.project);
+    // Goal B1b: the workbench shows the ETS ids verbatim as provenance.
+    let view = knx_projection::build_functions_view(&project);
+    assert_eq!(view.functions[0].source_id, "P-0001-0_F-1");
+    let members: Vec<_> = view.functions[0]
+        .members
+        .iter()
+        .map(|m| m.source_id.as_str())
+        .collect();
+    assert_eq!(members, ["P-0001-0_GF-1", "P-0001-0_GF-2"]);
     let raw: Vec<_> = load_opaque(&reopened.conn)
         .unwrap()
         .into_iter()

@@ -77,6 +77,32 @@ pub fn reference_kv_schema21_path() -> PathBuf {
     )
 }
 
+/// A pair of project archives of the maintainer's ETS6 house project, taken
+/// on one day from the same project state. The second differs from the first
+/// only by one text the owner changed in a manufacturer plug-in editor, so the
+/// pair isolates plug-in-owned data (`BinaryData`, `ExtraData`). Both files
+/// are local and gitignored; how each was produced is recorded beside it as
+/// `<name>.provenance.json`. They are test input only. Override with
+/// `KNXBENCH_ETS6_PLUGIN_PAIR_UNCHANGED` / `KNXBENCH_ETS6_PLUGIN_PAIR_EDITED`.
+pub fn ets6_plugin_pair_paths() -> (PathBuf, PathBuf) {
+    (
+        overridable(
+            "KNXBENCH_ETS6_PLUGIN_PAIR_UNCHANGED",
+            "OriginalData/DemoProjects/Unser Zuhause ets6 plugin pair - 2026-10-13 - unchanged.knxproj",
+        ),
+        overridable(
+            "KNXBENCH_ETS6_PLUGIN_PAIR_EDITED",
+            "OriginalData/DemoProjects/Unser Zuhause ets6 plugin pair - 2026-10-13 - SmartSensor EG Aussen Tmp.knxproj",
+        ),
+    )
+}
+
+/// True when both files of [`ets6_plugin_pair_paths`] are present locally.
+pub fn ets6_plugin_pair_available() -> bool {
+    let (unchanged, edited) = ets6_plugin_pair_paths();
+    unchanged.exists() && edited.exists()
+}
+
 /// True when the gitignored `OriginalData/` fixture corpus is present
 /// locally. It holds the maintainer's own real KNX installation and
 /// manufacturer files — never committed, so CI (and any contributor

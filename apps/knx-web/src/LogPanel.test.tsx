@@ -67,6 +67,50 @@ async function renderPanel(tree: ProjectTree, refreshKey = 0) {
 }
 
 describe("LogPanel", () => {
+  it("renders 16000 entries a page at a time, searches all of them and keeps exports whole", async () => {
+    const server = Array.from({ length: 16000 }, (_, index) => entry({ message: `server ${index}`, timestamp: new Date(Date.UTC(2026, 9, 13, 0, 0, index)).toISOString() }));
+    apiMock.getSessionLog.mockResolvedValue(server);
+    const root = await renderPanel(baseTree());
+    expect(host!.querySelectorAll(".log-entry")).toHaveLength(500);
+    expect(host!.querySelector(".log-entry-message")!.textContent).toBe("server 15999");
+    expect(host!.querySelector(".log-panel-more")!.textContent).toContain("Showing the newest 500 of 16000 matching entries.");
+    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-show-more")!.click());
+    expect(host!.querySelectorAll(".log-entry")).toHaveLength(1000);
+    // A refetch after a project change keeps the expanded list.
+    const newer = [...server, entry({ message: "server 16000", timestamp: new Date(Date.UTC(2026, 9, 13, 5, 0, 0)).toISOString() })];
+    apiMock.getSessionLog.mockResolvedValue(newer);
+    await act(async () => root.render(<LogPanel tree={baseTree()} refreshKey={1} />));
+    expect(host!.querySelector(".log-entry-message")!.textContent).toBe("server 16000");
+    expect(host!.querySelectorAll(".log-entry")).toHaveLength(1000);
+    apiMock.getSessionLog.mockResolvedValue(server);
+    await act(async () => root.render(<LogPanel tree={baseTree()} refreshKey={2} />));
+    // Search spans every entry, not only the rendered page.
+    await act(() => setSearch(host!.querySelector<HTMLInputElement>(".log-panel-search input")!, "server 7"));
+    expect(host!.querySelector(".log-panel-count")!.textContent).toBe("1111 of 16000 entries");
+    expect(host!.querySelectorAll(".log-entry")).toHaveLength(500);
+    await act(() => setSearch(host!.querySelector<HTMLInputElement>(".log-panel-search input")!, "server 1599"));
+    expect(host!.querySelector(".log-panel-count")!.textContent).toBe("11 of 16000 entries");
+    expect(host!.querySelector(".log-panel-more")).toBeNull();
+    const scope = host!.querySelector<HTMLSelectElement>(".log-panel-export-scope")!;
+    await act(() => { scope.value = "all"; scope.dispatchEvent(new Event("change", { bubbles: true })); });
+    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith(server, server, "all");
+    await act(() => root.unmount());
+  });
+
+  it("previews a grouped file list in the row and keeps every line for the details", async () => {
+    const paths = Array.from({ length: 1400 }, (_, n) => `M-0001/Baggages/${n}.png`);
+    const grouped = entry({ severity: "warning", source: "import:unsupported", message: "1400 retained files: manufacturer payload (png)", detail: paths.join("\n") });
+    apiMock.getSessionLog.mockResolvedValue([grouped]);
+    const root = await renderPanel(baseTree());
+    const detail = host!.querySelector(".log-entry-detail")!;
+    expect(detail.textContent).toBe(`${paths.slice(0, 3).join("\n")}… 1397 more lines in the details`);
+    await act(async () => host!.querySelector<HTMLButtonElement>(".log-entry-open")!.click());
+    const dialogText = [...document.querySelectorAll(".log-detail-panel pre")].map(el => el.textContent).join("\n");
+    expect(dialogText).toContain(paths[1399]);
+    await act(() => root.unmount());
+  });
+
   it("keeps the full backend v1 export at 1000 records despite a separate 1000 UI records", async () => {
     const server = Array.from({ length: 1000 }, (_, index) => entry({ message: `server ${index}` }));
     const notifications = Array.from({ length: 1000 }, (_, id) => ({ id, entry: entry({ source: "ui:toast:error", message: `browser ${id}` }) }));

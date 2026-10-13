@@ -6,8 +6,9 @@ import { downloadLocalJson } from "./localJsonDownload";
 
 export type LogExportScope = "all" | "filtered";
 
-const CAPACITY = 1000; // apps/knx-server/src/session_log.rs::MAX_ENTRIES
-const DROP_MARKER = /^(\d+) log entries dropped after exceeding the 1000-entry session log cap$/;
+export const SESSION_LOG_CAPACITY = 16000; // apps/knx-server/src/session_log.rs::MAX_ENTRIES
+// Any cap, with or without the per-severity breakdown the server adds since #7.
+const DROP_MARKER = /^(\d+) log entries dropped after exceeding the \d+-entry session log cap( \(.*\))?$/;
 
 export function droppedCount(entries: LogEntry[]): number | null {
   const warnings = entries.filter((entry) => entry.source === "log" && entry.severity === "warning");
@@ -23,7 +24,7 @@ export function serializeSessionLog(all: LogEntry[], selected: LogEntry[], scope
     format: "knxbench-session-log",
     version: 1,
     scope,
-    capacity: CAPACITY,
+    capacity: SESSION_LOG_CAPACITY,
     droppedCount: droppedCount(all),
     dropNotices: all.filter((entry) => entry.source === "log" && entry.severity === "warning").map((entry) => entry.message),
     notice: "Only entries retained during this server run are included; this is not a lifetime audit. Opening another project resets the log.",

@@ -20,7 +20,7 @@ describe("session log JSON export", () => {
     const text = serializeSessionLog([raw], [raw], "all");
     const snapshot = JSON.parse(text);
     expect(text).toMatch(/^\{/);
-    expect(snapshot).toMatchObject({ format: "knxbench-session-log", version: 1, scope: "all", capacity: 1000, droppedCount: 0 });
+    expect(snapshot).toMatchObject({ format: "knxbench-session-log", version: 1, scope: "all", capacity: 16000, droppedCount: 0 });
     expect(snapshot.entries).toEqual([raw]);
     expect(snapshot.entries[0].detail).toBe("=HYPERLINK(\"url\")\r\n+formula\t@formula");
   });
@@ -40,6 +40,12 @@ describe("session log JSON export", () => {
     expect(snapshot.droppedCount).toBe(42);
     expect(snapshot.dropNotices).toEqual([marker.message]);
     expect(snapshot.scope).toBe("filtered");
+  });
+
+  it("reads the loss count from the per-severity notice of the 16000-entry log", () => {
+    const marker = entry({ source: "log", location: null, detail: null, diagnostic: undefined,
+      message: "17 log entries dropped after exceeding the 16000-entry session log cap (15 info, 2 warning, 0 error; least severe and oldest first)" });
+    expect(JSON.parse(serializeSessionLog([marker], [], "all")).droppedCount).toBe(17);
   });
 
   it("does not invent a loss count if the server notice changes or overflows JS precision", () => {

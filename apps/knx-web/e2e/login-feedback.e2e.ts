@@ -114,7 +114,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     expect(download.suggestedFilename()).toBe("session-log.json");
     const path = await download.path(); expect(path).not.toBeNull();
     const exported = JSON.parse(await readFile(path!, "utf8"));
-    expect(exported.version).toBe(1); expect(exported.capacity).toBe(1000);
+    expect(exported.version).toBe(1); expect(exported.capacity).toBe(16000);
     expect(exported.entries).toEqual([f.backend, { ...f.backend, detail: "Distinct same-message occurrence" }]); // Never add the UI toast as a fake server record.
     await page.keyboard.press("Escape"); await expect(details).toBeHidden();
     expect(f.unexpected).toEqual([]); expect(f.requests.filter(r => r === "POST /api/project/import")).toHaveLength(1);

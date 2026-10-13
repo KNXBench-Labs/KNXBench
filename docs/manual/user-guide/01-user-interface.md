@@ -160,9 +160,14 @@ your computer. JSON v1 preserves raw timestamp, severity, source/operation,
 message/summary, location, detail and diagnostic metadata, including
 quotes, line breaks and Unicode; it is not spreadsheet CSV. The export
 contains the cap and loss notice even when filtering hides the notice.
-Only this server run's most recent 1000 entries exist here; older entries
-may have been dropped, and opening a replacement project or restarting the
-server resets the trail. **This is not a complete audit.** Entries may name
+This server run keeps up to 16000 entries (up to Alpha 11:
+1000, oldest first). When the log is full, info entries are dropped first, then
+warnings, then errors, the oldest of each first; the pinned notice says how
+many of each are gone. Opening a replacement project or restarting the server
+resets the trail. **This is not a complete audit.** The list shows 500 entries
+at a time (**Show more** adds the next 500; search and export always cover
+all of them), and a long detail, such as a grouped list of retained files,
+shows its first three lines with the rest in the entry's details. Entries may name
 project elements, KNX addresses or local paths; check before sharing the
 file. The desktop build opens an OS save dialog; browser export uses a local
 file download, not the server's Save As directory.

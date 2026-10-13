@@ -1395,6 +1395,12 @@ main {
   width: 100%;
 }
 
+/* Grouped findings list one file per line (#7); keep the lines. */
+.log-entry-detail { white-space: pre-wrap; overflow-wrap: anywhere; }
+.log-entry-detail-more { display: block; font-style: normal; }
+.log-panel-more { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--knx-muted); }
+.log-panel-show-more { white-space: nowrap; }
+
 .log-entry-raw-label {
   width: 100%;
   font-weight: 600;

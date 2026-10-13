@@ -11,6 +11,8 @@
     "e2e/toast-fixture.tsx",
     "e2e/toast.e2e.ts",
     "e2e/archive-size.e2e.ts",
+    "e2e/log-columns.e2e.ts",
+    "e2e/raw-log-fixture.tsx",
     "e2e/telegram-flow-fixture.tsx",
     "e2e/telegram-flow-server.ts",
     "playwright.ux-feedback.config.ts",

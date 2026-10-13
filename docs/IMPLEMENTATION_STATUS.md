@@ -26,6 +26,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--issue-13-the-log-learns-to-tell-time"></a>
+- [2026-10-13 — Issue #13: the Log learns to tell time](history/implementation/2026-W42.md#2026-10-13--issue-13-the-log-learns-to-tell-time)
 <a id="2026-10-13--goal-b7-rename-several-addresses-literally"></a>
 - [2026-10-13 — Goal B7: rename several addresses, literally](history/implementation/2026-W42.md#2026-10-13--goal-b7-rename-several-addresses-literally)
 <a id="2026-10-13--kl-164-two-windows-two-steps"></a>

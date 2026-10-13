@@ -1,4 +1,4 @@
-/** The naming recipe against the real server: preview, stale refusal, confirm, undo, save and reopen. */
+/** The naming recipe on the real server: preview, stale refusal, confirm, undo, save, reopen. */
 import { expect, test, type Page } from "@playwright/test";
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";

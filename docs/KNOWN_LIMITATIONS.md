@@ -559,7 +559,7 @@ Collision/rewind/exhaustion data-loss paths are closed. Structural enforcement p
 ### 157. In-place native project migration
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-157](status/LEDGER.md#post-snapshot-ids)).
-Opening older projects upgrades the original, even through read-only commands. Atomic migration is not backup; older builds refuse newer schemas.
+The first write into an older project upgrades the original in place; opening and every reading command use an in-memory copy. Atomic migration is not backup; older builds refuse newer schemas.
 [Details and history](limitations/KL-157-in-place-native-project-migration.md)
 
 <a id="catalogue-kl-166"></a>

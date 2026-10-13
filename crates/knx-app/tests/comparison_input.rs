@@ -70,3 +70,44 @@ fn the_input_kind_is_named_by_the_extension_alone_ignoring_case() {
     );
     assert_eq!(ComparisonInputKind::of_path(Path::new("knxproj")), None);
 }
+
+/// Every file in `dir` with its bytes, sorted by name: a SQLite journal or
+/// WAL sidecar left behind counts as a change just like rewritten bytes.
+fn directory_bytes(dir: &std::path::Path) -> Vec<(String, Vec<u8>)> {
+    let mut files: Vec<(String, Vec<u8>)> = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| {
+            let entry = entry.unwrap();
+            (
+                entry.file_name().to_string_lossy().into_owned(),
+                std::fs::read(entry.path()).unwrap(),
+            )
+        })
+        .collect();
+    files.sort();
+    files
+}
+
+/// KL-157: comparing against a project saved by an older KNXBench reads it
+/// through an in-memory upgrade; the file keeps its bytes, its schema
+/// version, its working history and its retained opaque entries.
+#[test]
+fn an_older_native_store_is_compared_without_upgrading_the_file() {
+    for fixture in [
+        include_bytes!("../../knx-store/tests/fixtures/native13-before-notes-saved.sqlite")
+            .as_slice(),
+        include_bytes!("../../knx-store/tests/fixtures/native13-before-notes-working.sqlite")
+            .as_slice(),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("older.knxdb");
+        std::fs::write(&path, fixture).unwrap();
+        let before = directory_bytes(dir.path());
+
+        let input = load_comparison_input(&path).expect("an older native store loads");
+
+        assert!(input.import_report.is_none());
+        assert!(!input.project.info.name.is_empty());
+        assert_eq!(directory_bytes(dir.path()), before);
+    }
+}

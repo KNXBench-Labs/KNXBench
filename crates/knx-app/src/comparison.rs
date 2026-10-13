@@ -92,9 +92,11 @@ impl std::error::Error for ComparisonInputError {
 /// existence before opening (SQLite would otherwise create a typo'd path),
 /// and returns the normalized project used by `knx-diff` callers.
 ///
-/// Opening a native store may run the normal forward-only store migration.
-/// Importing `.knxproj` is in-memory and retains the full `ImportReport` so a
-/// caller cannot silently hide losses or unsupported data from the user.
+/// A native store is opened read-only (KL-157, ADR-0090): a file saved by an
+/// older KNXBench is upgraded only in an in-memory copy, so comparing never
+/// changes the file, its schema version or its working history. Importing
+/// `.knxproj` is in-memory and retains the full `ImportReport` so a caller
+/// cannot silently hide losses or unsupported data from the user.
 pub fn load_comparison_input(path: &Path) -> Result<ComparisonInput, ComparisonInputError> {
     if !path.exists() {
         return Err(ComparisonInputError::NotFound(path.to_path_buf()));
@@ -102,13 +104,13 @@ pub fn load_comparison_input(path: &Path) -> Result<ComparisonInput, ComparisonI
 
     match ComparisonInputKind::of_path(path) {
         Some(ComparisonInputKind::NativeStore) => {
-            let connection = knx_store::open_existing_and_migrate(path).map_err(|error| {
+            let store = knx_store::open_existing_read_only(path).map_err(|error| {
                 ComparisonInputError::NativeStore {
                     path: path.to_path_buf(),
                     detail: error.to_string(),
                 }
             })?;
-            let project = knx_store::load_project(&connection).map_err(|error| {
+            let project = knx_store::load_project(&store.conn).map_err(|error| {
                 ComparisonInputError::NativeStore {
                     path: path.to_path_buf(),
                     detail: error.to_string(),

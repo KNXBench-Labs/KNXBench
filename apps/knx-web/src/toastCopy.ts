@@ -43,6 +43,9 @@ export const ERROR_WRAPPERS: string[] = [
   "toast.error.mediocrityInErrorForm",
   "toast.error.universeIndifferent",
   "toast.error.filedUnderOfCourse",
+  "toast.error.electronObjection",
+  "toast.error.planB",
+  "toast.error.administrativeGremlin",
 ];
 
 export interface HolidayEntry {

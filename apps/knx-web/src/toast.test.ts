@@ -212,3 +212,17 @@ describe("planAchievementToasts", () => {
     expect(planAchievementToasts([], summary)).toEqual([]);
   });
 });
+
+
+it.each(["toast.error.electronObjection", "toast.error.planB", "toast.error.administrativeGremlin"])("resolves additive wrapper%s without changing raw diagnostic text", key => {
+  expect(ERROR_WRAPPERS).toContain(key);
+  const raw = "Original $& {msg} <text> /source.xml";
+  for (const [language, copy] of [["en", enMessages], ["de", deMessages]] as const) {
+    const template = (copy as Record<string, string>)[key];
+    expect(template.match(/\{msg\}/g)).toHaveLength(1);
+    saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+    const resolved = humorizeError(raw, () => 0, [key]);
+    expect(resolved).toBe(template.replace("{msg}", () => raw));
+    expect(resolved).toContain(raw);
+  }
+});

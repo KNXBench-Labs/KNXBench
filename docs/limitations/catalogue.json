@@ -2454,6 +2454,20 @@
       ]
     },
     {
+      "key": "KL-181",
+      "number": 181,
+      "title": "Desktop export commands",
+      "topic": "Platform, deployment and security",
+      "summary": "AppImages up to alpha.11 refuse saving the session log and monitor captures; fixed in source, ships with the next AppImage. Web and Docker unaffected.",
+      "file": "KL-181-desktop-export-commands.md",
+      "ledger_ids": [
+        "KL-181"
+      ],
+      "anchors": [
+        "181-appimages-up-to-alpha11-cannot-save-the-session-log-or-a-bus-monitor-capture"
+      ]
+    },
+    {
       "key": "KL-107",
       "number": 107,
       "title": "Extension API scope",

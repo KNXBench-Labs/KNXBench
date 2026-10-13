@@ -28,6 +28,13 @@ blocked (named missing evidence) or excluded; nothing else is added.
 | B6 | KL-164 idempotent achievement increments | planned |
 | B7 | Naming recipe UI over the existing `knx-edit` service | planned |
 | B8 | EN/DE report texts, KL-13/KL-29/KL-43 summaries, TOOLS-01–05 provenance, optional FUTURE-08 | planned |
+| B9 | Issue #14: hover `transform` reset app-wide (`button:hover:not(:disabled)`), FsPicker geometry regression | planned — taken right after B1a (bug, promised for the next alpha) |
+| B10 | Issue #11: group-address tree starts collapsed (`expanded` set), Expand/Collapse all, selection ancestors and filter matches open, per-project view state in localStorage | planned — after B1b |
+| B11 | Issue #13: Log time column, even rows, one `Export…` button with scope in its dialog, plain link/unlink messages | blocked until `log-16k` (bcee21b10872) lands on main; touches its files |
+| B12 | Issue #12: one `+ New` menu per header reusing existing forms (structure and topology) | planned — after B10 |
+
+B9–B12 were added on 13 October at the owner's request (triage `59b1ef8d0f72`, handover 22:10);
+each issue is updated or closed only after its fix is on `main`.
 
 ## Goal A outcome (handover, 2026-10-13)
 

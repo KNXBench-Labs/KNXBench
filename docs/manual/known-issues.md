@@ -472,18 +472,24 @@ must not be described as either universally guessed or universally explicit.
   and the Inspector stay; nothing is lost.
 - **Details:** [§154 the telegram-flow view](../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only)
 
-### Opening an older project upgrades the file
+<a id="opening-an-older-project-upgrades-the-file"></a>
+
+### Saving into an older project upgrades the file
 
 - **Affected:** a project saved by an older KNXBench version.
-- **Limitation:** normal application/project readers and CLI commands such as
-  `knx diff` and `knx doc-export`
-  upgrades the file itself to the current format. No copy is made, and the
-  older KNXBench then refuses the file as "newer". A failed upgrade leaves the
-  file unchanged.
-- **Exception:** the read-only MCP adapter migrates an older database's
-  in-memory copy, not the source file. It sees only saved state, not unsaved UI edits.
+- **Limitation:** the first *write* — Save, creating, restoring or deleting a
+  project version, or another confirmed change written to the file (for example
+  `knx ga-import`, a name recipe, a selective import or an approved MCP
+  rename) — upgrades the file itself to the current format. No copy
+  is made, and the older KNXBench then refuses the file as "newer". A failed
+  upgrade leaves the file unchanged.
+- **Not affected (since 2026-10-13):** opening and reading. The application's
+  Open, `knx diff`, `knx ga-export`, `knx doc-export`, the device readiness,
+  download plan, compare and byte-order probe, the bus commands' `--project`,
+  a `knx ga-import` dry run or refusal, and the read-only MCP adapter all read
+  an older file through an in-memory copy and leave it byte for byte as it was.
 - **Workaround:** copy the project file first if an older version must still
-  open it.
+  open it after you change it.
 - **Details:** [§157](../KNOWN_LIMITATIONS.md#157-opening-an-older-project-upgrades-it-in-place)
 
 ### A running monitor keeps the group-address style it started with

@@ -6,6 +6,11 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+**Update 2026-10-13 (Goal A1, KL-157).** `knx diff` now opens a native
+store read-only and upgrades an older one only in memory, so the Git
+textconv/diff-driver recipe no longer changes an older working file. The
+retained sentence below about an in-place upgrade describes the earlier state.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 9. Project files are not diffable

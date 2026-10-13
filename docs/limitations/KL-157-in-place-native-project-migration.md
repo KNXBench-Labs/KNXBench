@@ -6,6 +6,42 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-10-13 (Goal A1): every reader is read-only
+
+The CLI readers no longer migrate the original. `knx ga-export`,
+`knx doc-export`, `knx diff` (through `knx_app::comparison`, which the
+server's compare route shares), `knx device readiness`, the download plan,
+`knx device compare`, `knx device byte-order-probe` and the bus commands'
+`--project` (monitor, write, route-monitor, scan comparison) now open the
+store with `open_existing_read_only` (ADR-0090) through one CLI helper,
+`open_native_for_reading`. An older file is copied into memory and only the
+copy is migrated. The application's Open and the read-only MCP adapter already
+did this.
+
+`knx ga-import` is the one CLI command that writes a store back. It now plans
+against the same read-only view and opens the file for writing only for the
+confirmed save, so a dry run, a rejected CSV and a stale or missing
+confirmation leave an older file untouched — before, it was upgraded while the
+command printed `store written: no`. The save itself still compares the
+stored project with the planned one inside its transaction.
+
+**Remaining boundary:** the first write — Save, creating/restoring/deleting a
+project version, or another confirmed change written to the file (`ga-import`,
+name recipe, selective import, an approved MCP rename) — still upgrades an
+older file in place, with no copy. Ledger status
+unchanged (`ACCEPTED_BOUNDARY`).
+
+Evidence: `apps/knx-cli/tests/cli_native_readers_read_only.rs` (6 tests: nine
+reading invocations against the committed schema-13 saved and working-history
+fixtures, a current store and a newer store compare the whole project
+directory byte for byte; `ga-import` refusal; the confirmed write still writes
+and upgrades), the unit tests `bus_project_readers_leave_an_older_store_untouched`
+and `only_ga_import_opens_a_native_store_for_writing` in `apps/knx-cli/src/main.rs`,
+and `an_older_native_store_is_compared_without_upgrading_the_file` in
+`crates/knx-app/tests/comparison_input.rs`. Three mutants (reader helper back
+to the writable opener, comparison back to it, `ga-import` opening writable up
+front) each fail named tests.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 157. Opening an older project upgrades it in place

@@ -133,6 +133,8 @@ interface ToastClock {
   remaining: number;
   started: number;
   timer?: ReturnType<typeof setTimeout>;
+  /** Set once the card plays its exit; the fallback timer below removes it. */
+  leaving: boolean;
   exit?: ReturnType<typeof setTimeout>;
   pauses: Set<ToastPauseReason>;
 }
@@ -176,8 +178,9 @@ export function useToasts() {
   /** Every toast follows the same animated exit before removal. */
   function dismiss(id: number) {
     const clock = timers.current.get(id);
-    if (!clock || clock.exit !== undefined) return;
+    if (!clock || clock.leaving) return;
     stopTimer(id);
+    clock.leaving = true;
     clock.exit = setTimeout(() => finishExit(id), TOAST_EXIT_FALLBACK_MS);
     setToasts((ts) => ts.map((t) => t.id === id ? { ...t, leaving: true } : t));
   }
@@ -185,7 +188,7 @@ export function useToasts() {
   /** A card's lifetime runs only while it is on screen and nothing pauses it. */
   function startTimer(id: number) {
     const clock = timers.current.get(id);
-    if (!clock || clock.timer !== undefined || clock.exit !== undefined || !clock.visible || clock.pauses.size) return;
+    if (!clock || clock.timer !== undefined || clock.leaving || !clock.visible || clock.pauses.size) return;
     clock.started = Date.now();
     clock.timer = setTimeout(() => dismiss(id), clock.remaining);
   }
@@ -209,10 +212,18 @@ export function useToasts() {
       }
     };
     document.addEventListener("visibilitychange", visibility);
+    // A remount (StrictMode runs cleanup and mount once more) re-arms what
+    // the cleanup stopped; the clocks themselves survive it.
+    for (const [id, clock] of clocks) {
+      if (clock.leaving && clock.exit === undefined) clock.exit = setTimeout(() => finishExit(id), TOAST_EXIT_FALLBACK_MS);
+      else startTimer(id);
+    }
     return () => {
       document.removeEventListener("visibilitychange", visibility);
-      for (const clock of clocks.values()) { clearTimeout(clock.timer); clearTimeout(clock.exit); }
-      clocks.clear();
+      for (const [id, clock] of clocks) {
+        stopTimer(id);
+        clearTimeout(clock.exit); clock.exit = undefined;
+      }
     };
     // The handlers only touch refs; one registration per mount is intended.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -239,7 +250,7 @@ export function useToasts() {
       timers.current.delete(retired);
       setQueueDropped((count) => count + 1);
     }
-    timers.current.set(id, { kind: entry.kind, visible: false, remaining: duration, started: Date.now(),
+    timers.current.set(id, { kind: entry.kind, visible: false, remaining: duration, started: Date.now(), leaving: false,
       pauses: new Set<ToastPauseReason>(document.visibilityState === "hidden" ? ["hidden"] : []) });
     setToasts((previous) => [...previous.filter((t) => t.id !== retired), { id, ...entry }]);
   }

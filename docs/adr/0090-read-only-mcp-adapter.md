@@ -185,6 +185,13 @@ adapter still links no server, bus or key code.
   release passed the placeholder `NoDatabase` through even when the product
   database resolved the device; a client test surfaced it.
 
+## 2026-10-13 amendment
+
+The opener is no longer MCP-specific in practice: every reading CLI command and
+`knx_app::comparison` (`knx diff`, the server's compare route) use
+`open_existing_read_only` too, and `knx ga-import` plans against it before it
+opens the file for its confirmed save (KL-157 update 2026-10-13).
+
 ## 2026-10-12 amendment
 
 [ADR-0116](0116-opt-in-mcp-name-recipe-writer.md) adds one opt-in exception:

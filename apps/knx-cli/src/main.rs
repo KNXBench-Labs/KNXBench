@@ -638,7 +638,7 @@ fn run_ga_export(args: &[String]) -> ExitCode {
         }
     };
 
-    let conn = match knx_store::open_existing_and_migrate(&PathBuf::from(&parsed.store)) {
+    let conn = match open_native_for_reading(&PathBuf::from(&parsed.store)) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("failed to open store at {}: {e}", parsed.store);
@@ -731,7 +731,7 @@ fn run_doc_export(args: &[String]) -> ExitCode {
         }
     };
 
-    let conn = match knx_store::open_existing_and_migrate(&PathBuf::from(&parsed.store)) {
+    let conn = match open_native_for_reading(&PathBuf::from(&parsed.store)) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("failed to open store at {}: {e}", parsed.store);
@@ -1176,7 +1176,11 @@ fn run_ga_import(args: &[String]) -> ExitCode {
         }
     };
 
-    let conn = match knx_store::open_existing_and_migrate(&PathBuf::from(&parsed.store)) {
+    // Planned against a read-only view (KL-157): a dry run, a rejected CSV
+    // or a refused confirmation leaves an older file exactly as it was. Only
+    // the save below opens the file for writing.
+    let store_path = PathBuf::from(&parsed.store);
+    let conn = match open_native_for_reading(&store_path) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("failed to open store at {}: {e}", parsed.store);
@@ -1267,14 +1271,23 @@ fn run_ga_import(args: &[String]) -> ExitCode {
                 println!("store written: no (error)");
                 return ExitCode::FAILURE;
             }
-            if let Err(e) = knx_store::save_project_if_unchanged(&conn, &expected_project, &project)
-            {
-                eprintln!("failed to save project to store: {e}");
-                let status = if matches!(e, knx_store::StoreError::ConcurrentModification) {
-                    "stale confirmation"
-                } else {
-                    "error"
-                };
+            // The deliberate write: opening for it upgrades an older file in
+            // place (the remaining KL-157 boundary). The stored project is
+            // compared with what was planned inside the save's transaction.
+            drop(conn);
+            let saved = match knx_store::open_existing_and_migrate(&store_path) {
+                Ok(writable) => {
+                    knx_store::save_project_if_unchanged(&writable, &expected_project, &project)
+                        .map_err(|e| {
+                            let stale = matches!(e, knx_store::StoreError::ConcurrentModification);
+                            (e.to_string(), stale)
+                        })
+                }
+                Err(e) => Err((e.to_string(), false)),
+            };
+            if let Err((message, stale)) = saved {
+                eprintln!("failed to save project to store: {message}");
+                let status = if stale { "stale confirmation" } else { "error" };
                 println!("store written: no ({status})");
                 return ExitCode::FAILURE;
             }
@@ -1419,6 +1432,16 @@ fn check_download_history_inputs(
     }
     activity_history_paths::ensure_separate(Path::new(history), &inputs)
         .map_err(|error| error.to_string())
+}
+
+/// Opens a saved native project for a command that only reads it (KL-157,
+/// ADR-0090): the file is opened read-only, and one saved by an older
+/// KNXBench is upgraded in an in-memory copy, never in place. Refuses a
+/// missing path, a foreign or empty database and a newer schema untouched.
+fn open_native_for_reading(
+    path: &Path,
+) -> Result<knx_store::Connection, knx_store::MigrationError> {
+    knx_store::open_existing_read_only(path).map(|store| store.conn)
 }
 
 fn open_products_db(explicit: Option<&str>) -> Result<knx_productdb::Connection, String> {
@@ -2210,7 +2233,7 @@ fn run_device_download(args: &[String]) -> ExitCode {
     } else {
         None
     };
-    let (project, opaque) = match knx_store::open_existing_and_migrate(Path::new(&parsed.project))
+    let (project, opaque) = match open_native_for_reading(Path::new(&parsed.project))
         .map_err(|e| e.to_string())
         .and_then(|conn| {
             let project = knx_store::load_project(&conn).map_err(|e| e.to_string())?;
@@ -2460,7 +2483,7 @@ fn run_device_readiness(args: &[String]) -> ExitCode {
         eprintln!("project not found: {}", parsed.project);
         return ExitCode::FAILURE;
     }
-    let project = match knx_store::open_existing_and_migrate(Path::new(&parsed.project))
+    let project = match open_native_for_reading(Path::new(&parsed.project))
         .map_err(|e| e.to_string())
         .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
     {
@@ -2515,7 +2538,7 @@ fn run_device_byte_order_probe(args: &[String]) -> ExitCode {
         eprintln!("project not found: {}", parsed.project);
         return ExitCode::FAILURE;
     }
-    let project = match knx_store::open_existing_and_migrate(Path::new(&parsed.project))
+    let project = match open_native_for_reading(Path::new(&parsed.project))
         .map_err(|e| e.to_string())
         .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
     {
@@ -2636,7 +2659,7 @@ fn run_device_compare(args: &[String]) -> ExitCode {
             Some(log)
         }
     };
-    let project = match knx_store::open_existing_and_migrate(Path::new(&parsed.project))
+    let project = match open_native_for_reading(Path::new(&parsed.project))
         .map_err(|e| e.to_string())
         .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
     {
@@ -4505,7 +4528,7 @@ fn load_project_individual_addresses(
             path.display()
         ));
     }
-    let conn = knx_store::open_existing_and_migrate(path).map_err(|e| e.to_string())?;
+    let conn = open_native_for_reading(path).map_err(|e| e.to_string())?;
     let project = knx_store::project::load_project(&conn).map_err(|e| e.to_string())?;
     Ok(project.devices.iter().filter_map(|d| d.address).collect())
 }
@@ -4527,7 +4550,7 @@ struct ProjectBusView {
 /// Loads [`ProjectBusView`] from a stored project. Any failure to open or
 /// read a *given* path is reported, never swallowed.
 fn load_project_bus_view(path: &Path) -> Result<ProjectBusView, String> {
-    let conn = knx_store::open_existing_and_migrate(path).map_err(|e| e.to_string())?;
+    let conn = open_native_for_reading(path).map_err(|e| e.to_string())?;
     let project = knx_store::project::load_project(&conn).map_err(|e| e.to_string())?;
     Ok(ProjectBusView {
         style: project.info.group_address_style,
@@ -4749,9 +4772,9 @@ fn format_decoded_value(v: &knx_net::GroupValue, dpt: DptAnnotation) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        format_control, format_telegram, format_version_line, load_project_individual_addresses,
-        parse_bus_monitor_args, parse_bus_route_monitor_args, parse_bus_route_send_args,
-        DISCOVER_EMPTY_HINT,
+        format_control, format_telegram, format_version_line, load_project_bus_view,
+        load_project_individual_addresses, parse_bus_monitor_args, parse_bus_route_monitor_args,
+        parse_bus_route_send_args, DISCOVER_EMPTY_HINT,
     };
     use std::path::Path;
 
@@ -4958,6 +4981,39 @@ mod tests {
             addresses,
             vec![knx_core::IndividualAddress::new(1, 1, 5).unwrap()]
         );
+    }
+
+    /// KL-157: the `--project` readers of the bus commands (monitor, write,
+    /// route-monitor, scan comparison) read an older store through an
+    /// in-memory upgrade. The file, its working history and its retained
+    /// opaque entries stay byte-identical and no sidecar is left behind.
+    #[test]
+    fn bus_project_readers_leave_an_older_store_untouched() {
+        let fixture: &[u8] = include_bytes!(
+            "../../../crates/knx-store/tests/fixtures/native13-before-notes-working.sqlite"
+        );
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("older.knxdb");
+        std::fs::write(&path, fixture).unwrap();
+
+        load_project_bus_view(&path).expect("bus view of an older store");
+        load_project_individual_addresses(&path).expect("addresses of an older store");
+
+        assert_eq!(std::fs::read(&path).unwrap(), fixture);
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+    }
+
+    /// KL-157 guard: `ga-import` is the one CLI command that writes a native
+    /// store back, so it alone may open one for writing (and thereby upgrade
+    /// an older file). Every reader goes through `open_native_for_reading`.
+    #[test]
+    fn only_ga_import_opens_a_native_store_for_writing() {
+        let source = include_str!("main.rs");
+        let writable_open = concat!("open_existing", "_and_migrate(");
+        assert_eq!(source.matches(writable_open).count(), 1);
+        let ga_import = &source[source.find("fn run_ga_import(").unwrap()..];
+        let ga_import = &ga_import[..ga_import.find("\nfn ").unwrap()];
+        assert!(ga_import.contains(writable_open));
     }
 
     #[test]

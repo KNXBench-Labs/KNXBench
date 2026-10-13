@@ -77,6 +77,19 @@ the properties pane and the existing commands; no view edits on its own.
 
 *Tree table, the default. Range headings fold away; the count stays visible.*
 
+**Which ranges are open** *(source build after Alpha 11; Alpha 11 and earlier open
+every range and forget what you closed)*. The tree table opens compact: main and
+middle ranges show with their counts, but no range unfolds its address list.
+**Expand all** and **Collapse all** sit in the toolbar. Selecting an address — in
+the project explorer, from a link or from the search — opens the ranges above it;
+scoping the view to a range opens that range. While a search or filter is active,
+ranges with matches open by themselves (close one and it stays closed for that
+search); clearing the search returns to what you had open. KNXBench remembers the
+open ranges per project on this computer: by the `.knxdb` file you opened or saved,
+or by the file you imported, until you save it. It is view state in the browser's
+local storage, never written into the project, and a new project that was never
+saved does not remember it. The screenshot above still shows the Alpha 9 view.
+
 ![Source build after Alpha 9, Porcelain: the column browser with a Range column listing Lighting, Blinds and Heating, a Lighting column listing Switching and Status, the breadcrumb All ranges / Switching, and the four Switching addresses below with Kitchen light still selected](../../assets/screenshots/porcelain-ga-view-columns.png)
 
 *Column browser: one column per range level. The selection came along from the tree.*

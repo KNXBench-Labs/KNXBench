@@ -16,6 +16,15 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Help verify a device (13 October 2026 source)
+
+The download tab now shows what a plan warns about in plain words, the assumptions it
+rests on, and a hint on untested programs. After every download it offers **Help verify
+this device**: steps, a checklist, a report file without names or addresses, and the
+GitHub issue form or a mail to issue@knxbench.com to send it. Nothing is sent
+automatically; a maintainer reviews each report before a program counts as verified.
+Newer than Alpha.10.
+
 ## Steadier notifications, Flow images and motion per category (13 October 2026 source)
 
 Error cards stay until you have seen them, hold still under the pointer and no longer

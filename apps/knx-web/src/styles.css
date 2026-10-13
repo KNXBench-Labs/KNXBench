@@ -2194,6 +2194,58 @@ main {
 .device-download-guide-hint { grid-column: 1 / -1; color: var(--knx-muted); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
 .device-download-guide-note { margin: 8px 0 0; color: var(--knx-muted); font-size: 12px; }
 
+/* Plan warnings and assumptions (ADR-0120, ADR-0086), and "help verify this device" (ADR-0121). */
+.device-download-warnings,
+.device-download-inferences,
+.device-download-verify {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  min-width: 0;
+}
+.device-download-warnings { border-left: 3px solid var(--knx-warning-color, var(--knx-accent)); }
+.device-download-warnings h4,
+.device-download-inferences h4,
+.device-download-verify h3,
+.device-download-verify h4 { margin: 0; font-size: 14px; }
+.device-download-warnings p,
+.device-download-inferences p,
+.device-download-verify p { margin: 0; overflow-wrap: anywhere; }
+.device-download-warnings ul,
+.device-download-inferences ul,
+.device-download-verify-hints { display: grid; gap: 6px; margin: 0; padding-left: 1.2rem; }
+.device-download-warnings li,
+.device-download-inferences li { overflow-wrap: anywhere; }
+.device-download-warnings code,
+.device-download-inferences code { font-size: 12px; overflow-wrap: anywhere; white-space: normal; }
+.device-download-plan-hint { margin: 0; color: var(--knx-muted); font-size: 13px; overflow-wrap: anywhere; }
+.device-download-verify-steps { display: grid; gap: 4px; margin: 0; padding-left: 1.4rem; }
+.device-download-verify-steps li,
+.device-download-verify-hints li { overflow-wrap: anywhere; line-height: 1.45; }
+.device-download-verify-hints { color: var(--knx-muted); font-size: 12px; }
+.device-download-verify-checklist { display: grid; gap: 6px; margin: 0; padding: 8px 10px; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); min-width: 0; }
+.device-download-verify-checklist legend { padding-inline: 4px; color: var(--knx-muted); font-size: 12px; }
+.device-download-verify-checklist label { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; overflow-wrap: anywhere; }
+.device-download-verify-checklist input[type="checkbox"] { width: auto; min-height: 0; margin: 2px 0 0; }
+.device-download-verify-note,
+.device-download-verify-privacy { color: var(--knx-muted); font-size: 12px; }
+.device-download-verify-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.device-download-verify-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--knx-control-height, 44px);
+  padding: 0 0.9rem;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-button);
+  color: var(--knx-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.device-download-verify-link:hover { text-decoration: underline; }
+.device-download-verify-summary { margin: 6px 0 0; padding: 8px; max-width: 100%; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+
 /* "Download to device…" in the device editor's heading. */
 .device-download-entry { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
 .device-download-entry small { color: var(--knx-muted); font-size: 12px; }

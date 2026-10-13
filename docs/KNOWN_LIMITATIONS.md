@@ -9705,7 +9705,9 @@ Since 2026-10-13 such a download carries the named warning
 [ADR-0120](adr/0120-base-image-byte-order-warning.md)): a generic rule on the
 program's own base image, which in the measured corpus flags 32 of 181
 memory-downloadable programs, all ABB/Busch-Jaeger `0701h`, and no MDT,
-Siemens or other program. The web download tab does not show it yet.
+Siemens or other program. The web download tab shows it in the plan's
+**Before you write** box and asks for multi-octet checks in the tester
+checklist (ADR-0121).
 
 **Impact.** No offline image, compare plan or download for little-endian
 programs. Import, display and parameter editing are unaffected.

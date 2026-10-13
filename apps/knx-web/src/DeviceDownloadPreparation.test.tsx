@@ -57,8 +57,8 @@ const PLAN = {
   planId: 7, address: "1.1.67", deviceId: 10, deviceName: "Push button 2-fold", programId: "M-0083_A-0027-15-0BAC",
   maskVersion: 0x0701, manufacturer: 0x0083, parameterValues: 3, groupLinks: 1,
   segments: [{ id: "S", address: 0x4000, size: 4, written: 4 }], dataOctets: 4, steps: ["connect"],
-  confirmationPhrase: "I confirm download to 1.1.67", support: { level: "verified", evidence: "MDT" },
-  untestedAcknowledgement: null, partial: false, notWritten: [],
+  confirmationPhrase: "I confirm download to 1.1.67", support: { level: "verified", evidence: "MDT", inferences: [] },
+  untestedAcknowledgement: null, partial: false, notWritten: [], warnings: [],
 };
 
 const iface = (endpoint: string, name: string, address = "1.1.250"): BusDiscoveredInterface =>

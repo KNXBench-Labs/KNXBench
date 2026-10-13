@@ -270,34 +270,34 @@ const PUBLISHED: [Published; 3] = [
             "1 text_attribute rows were not mapped (LANGUAGE_ID, COLUMN_ID, ENTITY_ID or the text is empty); they stay in the payload",
         ],
     },
-    // Measured 2026-10-09 (ADR-0094, amendment VD5). Atomic types 3
-    // (`string`) and 5 (`long enum`) are not mapped yet: 56 types, whose
-    // 1,515 parameters are the `parameter.PARAMETER_TYPE_ID` dangling
-    // references; nothing is dropped from the stored payload.
+    // Measured 2026-10-09 (ADR-0094, amendment VD5); since 2026-10-13
+    // (KL-128, Goal A5) atomic types 3 (`string`) and 5 (`long enum`) map
+    // as ETS4 converted them: their 56 types and 1,515 parameters (once the
+    // 1,607 dangling references and 56 unknown-atomic-type notes) are in the
+    // model, and each of the 29 long-enum types reports that its binary
+    // values stay in the stored payload only.
     Published {
         name: "SIEMENS_KNX_PDB_Nov_2016_ETS3.vd5",
         programs: 88,
         catalog_items: 129,
         // 3,576 rows at address 0 stand alone since 2026-10-09 (no memory,
         // ADR-0094 L4): 3,364 more parameters than when they were merged.
-        parameters: 41817,
-        parameter_refs: 71467,
+        parameters: 42728,
+        parameter_refs: 72982,
         com_object_refs: 55381,
-        translations: 291765,
+        translations: 293955,
         diagnostics: &[
-            ("dangling-reference", 1607),
+            ("binary-values-not-modeled", 29),
             ("no-page", 18),
-            ("orphan-translation", 7),
-            ("overlapping-memory", 25),
-            ("skipped-rows", 3),
-            ("unknown-atomic-type", 56),
+            ("orphan-translation", 5),
+            ("overlapping-memory", 26),
+            ("skipped-rows", 2),
             ("unknown-text-column", 1),
             ("unmapped-column", 30),
             ("unmapped-table", 23),
             ("unread-member", 3),
         ],
         skipped: &[
-            "117 parameter_list_of_values rows were not mapped (PARAMETER_TYPE_ID names no mapped enumeration type); they stay in the payload",
             "12 product_to_program rows were not mapped (PROD2PROG_ID, PRODUCT_ID or PROGRAM_ID is empty); they stay in the payload",
             "197272 text_attribute rows were not mapped (LANGUAGE_ID, COLUMN_ID, ENTITY_ID or the text is empty); they stay in the payload",
         ],

@@ -65,7 +65,8 @@ fn program_id(bytes: &[u8]) -> String {
 
 #[test]
 fn the_schema_is_v22_with_the_legacy_provenance_tables() {
-    assert_eq!(CURRENT_PRODUCTDB_VERSION, 22);
+    // v23 (ADR-0126) adds two columns elsewhere and keeps these tables.
+    assert_eq!(CURRENT_PRODUCTDB_VERSION, 23);
     let (_dir, conn) = database();
     for table in [
         "legacy_source",

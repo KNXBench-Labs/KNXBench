@@ -49,6 +49,8 @@ struct ElementSpec {
     value_attr: Option<&'static str>,
     name_attr: Option<&'static str>,
     number_attr: Option<&'static str>,
+    /// ADR-0126: the text parameter a positional `{{0}}` in `@Text` reads.
+    text_parameter_ref_attr: Option<&'static str>,
 }
 
 const UNMODELLED: ElementSpec = ElementSpec {
@@ -61,6 +63,7 @@ const UNMODELLED: ElementSpec = ElementSpec {
     value_attr: None,
     name_attr: None,
     number_attr: None,
+    text_parameter_ref_attr: None,
 };
 
 /// Design D4's table. `choose`'s `@ParamRefId`, `Channel`/`ParameterBlock`/
@@ -88,20 +91,29 @@ fn spec_for(kind: &str) -> ElementSpec {
         // have an empty `@Text`, so these two are all that names such a
         // channel. `@Number` is text: 5 corpus values are not numbers.
         "Channel" => ElementSpec {
-            known: &["Id", "RefId", "Text", "Name", "Number"],
+            known: &[
+                "Id",
+                "RefId",
+                "Text",
+                "Name",
+                "Number",
+                "TextParameterRefId",
+            ],
             id_attr: Some("Id"),
             ref_attrs: &["RefId"],
             text_attr: Some("Text"),
             name_attr: Some("Name"),
             number_attr: Some("Number"),
+            text_parameter_ref_attr: Some("TextParameterRefId"),
             ..UNMODELLED
         },
         // `@Name` is recognized but read by nothing, so it stays in `extra`.
         "ParameterBlock" => ElementSpec {
-            known: &["Id", "RefId", "Text", "Name"],
+            known: &["Id", "RefId", "Text", "Name", "TextParameterRefId"],
             id_attr: Some("Id"),
             ref_attrs: &["RefId"],
             text_attr: Some("Text"),
+            text_parameter_ref_attr: Some("TextParameterRefId"),
             ..UNMODELLED
         },
         "ParameterRefRef" | "ComObjectRefRef" => ElementSpec {
@@ -110,9 +122,10 @@ fn spec_for(kind: &str) -> ElementSpec {
             ..UNMODELLED
         },
         "ParameterSeparator" => ElementSpec {
-            known: &["Id", "Text", "UIHint"],
+            known: &["Id", "Text", "UIHint", "TextParameterRefId"],
             id_attr: Some("Id"),
             text_attr: Some("Text"),
+            text_parameter_ref_attr: Some("TextParameterRefId"),
             ..UNMODELLED
         },
         "Module" => ElementSpec {
@@ -205,6 +218,10 @@ pub(crate) fn parse_dynamic_trees_detailed(
     // included: one frame per currently-open ancestor.
     let mut stack: Vec<Frame> = Vec::new();
     let mut next_node_id: i64 = 0;
+    // ADR-0126: an older migration re-parsing into a pre-v23 table writes and
+    // reports `TextParameterRefId` the way that schema's parser did.
+    let text_parameter_refs_modelled =
+        crate::migration::column_exists(conn, "dynamic_node", "text_parameter_ref_id")?;
 
     loop {
         buf.clear();
@@ -233,6 +250,7 @@ pub(crate) fn parse_dynamic_trees_detailed(
                     &mut next_node_id,
                     &mut unknown,
                     &mut entities,
+                    text_parameter_refs_modelled,
                 )?;
             }
             Event::Empty(e) => {
@@ -252,6 +270,7 @@ pub(crate) fn parse_dynamic_trees_detailed(
                     &mut next_node_id,
                     &mut unknown,
                     &mut entities,
+                    text_parameter_refs_modelled,
                 )?;
             }
             Event::End(e) => {
@@ -293,6 +312,7 @@ fn handle_start_or_empty(
     next_node_id: &mut i64,
     unknown: &mut UnknownCollector,
     entities: &mut EntityCounts,
+    text_parameter_refs_modelled: bool,
 ) -> Result<(), ProductDbError> {
     match name {
         "ApplicationProgram" => {
@@ -349,6 +369,7 @@ fn handle_start_or_empty(
                 unknown,
                 entities,
                 is_start,
+                text_parameter_refs_modelled,
             )?;
         }
     }
@@ -408,6 +429,7 @@ fn handle_dynamic_element(
     unknown: &mut UnknownCollector,
     entities: &mut EntityCounts,
     is_start: bool,
+    text_parameter_refs_modelled: bool,
 ) -> Result<(), ProductDbError> {
     let (parent_id, position) = if name == "Dynamic" && stack.is_empty() {
         // `node_id` is monotonic per (program_id, module_def_id), design
@@ -445,6 +467,7 @@ fn handle_dynamic_element(
         a,
         unknown,
         !skip_program,
+        text_parameter_refs_modelled,
     )?;
     if !skip_program {
         entities.stored(EntityKind::DynamicNode)?;
@@ -464,8 +487,12 @@ fn insert_node(
     a: &Attrs,
     unknown: &mut UnknownCollector,
     store: bool,
+    text_parameter_refs_modelled: bool,
 ) -> Result<(), ProductDbError> {
-    let spec = spec_for(kind);
+    let mut spec = spec_for(kind);
+    if !text_parameter_refs_modelled {
+        spec.text_parameter_ref_attr = None;
+    }
     let xpath = if module_def_id.is_empty() {
         format!("/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Dynamic/{kind}")
     } else {
@@ -489,6 +516,7 @@ fn insert_node(
         .iter()
         .copied()
         .filter(|name| attribute_is_known(kind, name, a.get(name)))
+        .filter(|name| text_parameter_refs_modelled || *name != "TextParameterRefId")
         .collect();
     crate::parse::report_unknown_attrs(unknown, &xpath, a, &known);
 
@@ -499,6 +527,7 @@ fn insert_node(
     let value = spec.value_attr.and_then(|n| a.get(n));
     let name = spec.name_attr.and_then(|n| a.get(n));
     let number = spec.number_attr.and_then(|n| a.get(n));
+    let text_parameter_ref_id = spec.text_parameter_ref_attr.and_then(|n| a.get(n));
 
     let mut captured: Vec<&str> = Vec::new();
     captured.extend(spec.id_attr);
@@ -511,6 +540,7 @@ fn insert_node(
     captured.extend(spec.value_attr);
     captured.extend(spec.name_attr);
     captured.extend(spec.number_attr);
+    captured.extend(spec.text_parameter_ref_attr);
     // `extra` is a human-readable audit trail, not a re-parseable encoding:
     // "name=value" pairs, sorted, newline-joined (design D2), which cannot
     // be split unambiguously back apart when a value itself contains `=` or
@@ -529,29 +559,39 @@ fn insert_node(
     };
 
     if store {
-        conn.execute(
+        // Before v23 the column does not exist yet (ADR-0126).
+        let (columns, placeholders) = if text_parameter_refs_modelled {
+            (", text_parameter_ref_id", ",?16")
+        } else {
+            ("", "")
+        };
+        let sql = format!(
             "INSERT INTO dynamic_node
          (program_id, module_def_id, node_id, parent_id, position, kind,
-          element_id, ref_id, test, is_default, text, value, extra, name, number)
-         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15)",
-            params![
-                program_id,
-                module_def_id,
-                node_id,
-                parent_id,
-                position,
-                kind,
-                element_id,
-                ref_id,
-                test,
-                is_default,
-                text,
-                value,
-                extra,
-                name,
-                number,
-            ],
-        )?;
+          element_id, ref_id, test, is_default, text, value, extra, name, number{columns})
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15{placeholders})"
+        );
+        let mut values: Vec<&dyn rusqlite::ToSql> = vec![
+            &program_id,
+            &module_def_id,
+            &node_id,
+            &parent_id,
+            &position,
+            &kind,
+            &element_id,
+            &ref_id,
+            &test,
+            &is_default,
+            &text,
+            &value,
+            &extra,
+            &name,
+            &number,
+        ];
+        if text_parameter_refs_modelled {
+            values.push(&text_parameter_ref_id);
+        }
+        conn.execute(&sql, values.as_slice())?;
     }
     Ok(())
 }

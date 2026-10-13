@@ -318,19 +318,13 @@ impl Default for AppState {
 /// `Severity::Error` (data actually lost or misread) distinct from
 /// everything else merely worth a look — the same split
 /// `apps/knx-cli/src/main.rs`'s `error_count()` draws, since `ImportReport`
-/// keeps both severities in one `errors` Vec.
+/// keeps both severities in one `errors` Vec. `knx_app::import_finding_counts`
+/// is the one rule, shared with a reopened project's historical report:
+/// hundreds of retained manufacturer files with one shared notice count
+/// once, not once per file (#7), as the session log groups them.
 fn apply_report_counts(tree: &mut ProjectTree, report: &knx_etsproj::ImportReport) {
     tree.import_report_available = Some(true);
-    let error_count = report
-        .errors
-        .iter()
-        .filter(|e| e.severity == knx_etsproj::report::Severity::Error)
-        .count();
-    let warning_count = report.errors.len() - error_count;
-
-    tree.errors = error_count;
-    tree.warnings =
-        warning_count + report.unknown.len() + report.conflicts.len() + report.unsupported.len();
+    (tree.errors, tree.warnings) = knx_app::import_finding_counts(report);
 }
 
 /// Shared by `open_project_impl` (display-only) and `open_project`

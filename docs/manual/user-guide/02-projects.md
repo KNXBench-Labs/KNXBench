@@ -299,7 +299,13 @@ You see the result in three places:
 3. **The Log**, which carries one entry per finding: one per import error, one per
    unknown construct (with how many times it was seen and where), one per opaque
    entry (with its size and checksum), one per datapoint-type conflict, and one per
-   unsupported feature.
+   unsupported feature. Repetitive notices are grouped: opaque entries that share
+   a kind and a reason, and the "retained byte-exact" notice for manufacturer files
+   (icons, help archives, installers) of the same type, each become **one** entry
+   such as *412 retained files: manufacturer payload (png); …*. Its detail lists
+   every file, one per line, so nothing is left out; the count in the Overview
+   counts the grouped entry once. This way a project with a thousand retained
+   files no longer pushes its genuine findings out of the Log.
 
 The structured report itself — counts read versus mapped, every unknown construct,
 every opaque summary — is written as JSON by the command line:

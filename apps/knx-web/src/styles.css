@@ -2189,6 +2189,11 @@ main {
 .device-download-gateway-note { color: var(--knx-muted); }
 .device-download-gateway .device-download-search { justify-self: start; }
 .device-download-handoff { grid-column: 1 / -1; margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+/* #18: what the panel is still waiting for, said where the answer will appear. */
+.device-download-status,
+.device-download-readiness-loading { grid-column: 1 / -1; margin: 0; color: var(--knx-muted); font-size: 13px; overflow-wrap: anywhere; }
+.device-download-status button,
+.device-download-readiness-unavailable button { margin-inline-start: 4px; padding: 2px 10px; font-size: 12px; }
 
 /* The five steps: compact, the next open step marked, hints only where
    something is missing or worth knowing. */

@@ -302,6 +302,81 @@ it("re-reads an uncertain status once, then refuses rather than guessing", async
   expect(deviceSelect().value).toBe("10");
 });
 
+// Issue #18: the requested device is context at once; admission still waits for a safe status.
+it("#18: shows the requested device at once while the status read is pending, and selects nothing yet", async () => {
+  const poll = deferred<DeviceDownloadStatusResponse>();
+  apiMock.pollDeviceDownload.mockReset().mockReturnValueOnce(poll.promise).mockRejectedValue(status(404));
+  await render({ handoff: downloadHandoff(project(), 10, 1) });
+  expect(text('[data-handoff="pending"]')).toBe(en["deviceDownload.handoff.pending"]
+    .replace("{address}", "1.1.67").replace("{name}", "Push button 2-fold"));
+  expect(deviceSelect().value, "context, not a selection").toBe("");
+  expect(button(en["deviceDownload.preparePlan"])?.disabled ?? true).toBe(true);
+  await act(async () => poll.reject(status(404)));
+  await flush();
+  expect(host.querySelector('[data-handoff="pending"]')).toBeNull();
+  expect(host.querySelector("[data-download-status]")).toBeNull();
+  expect(deviceSelect().value).toBe("10");
+  expect(text("[data-handoff]")).toContain("1.1.67 — Push button 2-fold");
+  expect(apiMock.planDeviceDownload).not.toHaveBeenCalled();
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it("#18: says it is checking even without a request, and never names a device of another project", async () => {
+  const poll = deferred<DeviceDownloadStatusResponse>();
+  apiMock.pollDeviceDownload.mockReset().mockReturnValueOnce(poll.promise).mockRejectedValue(status(404));
+  await render();
+  expect(text('[data-download-status="checking"]')).toBe(en["deviceDownload.status.checking"]);
+  await render({ handoff: downloadHandoff(project(1), 10, 1), tree: project(2) });
+  expect(text('[data-handoff="pending"]')).toBe(en["deviceDownload.handoff.pendingUnknown"]);
+  expect(text('[data-handoff="pending"]')).not.toContain("Push button");
+  await act(async () => poll.reject(status(404)));
+  await flush();
+  expect(text("[data-handoff]")).toBe(en["deviceDownload.handoff.stale"]);
+});
+
+it("#18: offers a status re-check after an uncertain read, and the re-check selects nothing by itself", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockRejectedValue(status(500));
+  await render({ handoff: downloadHandoff(project(), 10, 1) });
+  expect(text("[data-handoff]")).toBe(en["deviceDownload.handoff.unknownStatus"]);
+  expect(text('[data-download-status="unknown"]')).toContain(en["deviceDownload.status.unknown"]);
+  const calls = apiMock.pollDeviceDownload.mock.calls.length;
+  apiMock.pollDeviceDownload.mockReset().mockRejectedValue(status(404));
+  await act(async () => host.querySelector<HTMLButtonElement>("[data-status-retry]")!.click());
+  await flush();
+  expect(apiMock.pollDeviceDownload).toHaveBeenCalledTimes(1);
+  expect(calls).toBe(2);
+  expect(host.querySelector("[data-download-status]")).toBeNull();
+  expect(deviceSelect().value, "the answered request stays answered").toBe("");
+  expect(apiMock.planDeviceDownload).not.toHaveBeenCalled();
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it("#18: names a connecting download and lets you check again", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockRejectedValueOnce(status(409)).mockResolvedValue(running());
+  await render();
+  expect(text('[data-download-status="connecting"]')).toContain(en["deviceDownload.status.connecting"]);
+  await act(async () => host.querySelector<HTMLButtonElement>("[data-status-retry]")!.click());
+  await flush();
+  expect(host.querySelector('[data-download-status="connecting"]')).toBeNull();
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it("#18: shows readiness while it loads, and a failed read can be retried", async () => {
+  const ready = deferred<{ devices: never[]; counts: Record<string, never> }>();
+  apiMock.getDeviceReadiness.mockReset().mockReturnValueOnce(ready.promise);
+  await render();
+  expect(text("[data-readiness-loading]")).toBe(en["deviceDownload.readiness.loading"]);
+  await act(async () => ready.reject(new Error("readiness exploded")));
+  await flush();
+  expect(host.querySelector("[data-readiness-loading]")).toBeNull();
+  expect(text(".device-download-readiness-unavailable")).toContain("readiness exploded");
+  apiMock.getDeviceReadiness.mockReset().mockResolvedValue({ devices: [], counts: {} });
+  await act(async () => host.querySelector<HTMLButtonElement>("[data-readiness-retry]")!.click());
+  await flush();
+  expect(apiMock.getDeviceReadiness).toHaveBeenCalledTimes(1);
+  expect(host.querySelector(".device-download-readiness-unavailable")).toBeNull();
+});
+
 it("walks the five steps from the actual state and names what is missing", async () => {
   await render();
   const state = (id: string) => host.querySelector(`[data-guide-step="${id}"]`)?.getAttribute("data-guide-state");

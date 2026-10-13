@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "repository": "KNXBench-Labs/KNXBench",
-  "generated_at": "2026-10-13T21:14:07Z",
+  "generated_at": "2026-10-13T23:08:57Z",
   "policy": {
     "excluded_logins": [
       "KNXBench-Labs",
@@ -141,6 +141,41 @@
       "closed_at": "2026-10-13T21:00:40Z",
       "notify": true,
       "notified": true
+    },
+    "18": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T23:08:46Z",
+      "notify": true,
+      "notified": true
+    },
+    "15": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T23:08:44Z",
+      "notify": true,
+      "notified": true
+    },
+    "13": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T23:08:41Z",
+      "notify": true,
+      "notified": true
+    },
+    "12": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T23:08:39Z",
+      "notify": true,
+      "notified": true
+    },
+    "11": {
+      "login": "thengsty",
+      "xp": 10,
+      "closed_at": "2026-10-13T23:08:37Z",
+      "notify": true,
+      "notified": true
     }
   },
   "contributors": [
@@ -148,8 +183,8 @@
       "login": "thengsty",
       "issues": 15,
       "replies": 12,
-      "resolutions": 8,
-      "xp": 167,
+      "resolutions": 13,
+      "xp": 217,
       "rank": {
         "minimum_xp": 150,
         "title": "Parameter Poltergeist Hunter"

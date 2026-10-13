@@ -105,6 +105,13 @@ already found lying in the grass.
 - **Motion settings live in `data-motion-level`** (set by
   `apps/knx-web/src/motion.ts`), not `data-motion`; assert the attribute the
   app actually sets.
+- **Release checks are on by default and read `/api/version` too.**
+  `useReleaseUpdates` asks the server for its version and then
+  `https://api.github.com/...` on every load, which a `**/api/**` route does not
+  catch. A spec that counts version reads or must stay offline sets
+  `releaseChecksEnabled: false` in its fixture settings and routes
+  `https://api.github.com/**` to a recorded abort (`onboarding-guide.e2e.ts` was red
+  about one run in four with 4 reads for 2 until it did).
 
 ## Effects, bursts and real-time browser specs (ux-feedback port, 2026-10-13)
 

@@ -2718,6 +2718,16 @@ export const messages = {
     "KNXBench is an independent project. It is not certified by the KNX Association and is not affiliated with it.",
   "about.trademark": "ETS is a trademark of the KNX Association.",
   "about.close": "Close",
+  "about.hallOfFame.title": "Community Hall of Fame",
+  "about.hallOfFame.titleCount": "Community Hall of Fame ({count})",
+  "about.hallOfFame.intro": "Everyone outside the team who reported or discussed an issue on GitHub. Titles and medals are a thank-you, not a rating of anyone's skill.",
+  "about.hallOfFame.asOf": "Bundled with this build, as of",
+  "about.hallOfFame.notLive": "This is not a live count.",
+  "about.hallOfFame.unavailable": "The Hall of Fame bundled with this build could not be read.",
+  "about.hallOfFame.empty": "Nobody is on the board yet.",
+  "about.hallOfFame.board": "Live board on GitHub",
+  "about.hallOfFame.xp": "{xp} XP",
+  "about.hallOfFame.counters": "Issues {issues} · Replies {replies} · Completed {resolutions}",
 
   // Programming consent (`ProgrammingConsentDialog.tsx`). Asked before any
   // write that programs a device; names the build's release stage. Group

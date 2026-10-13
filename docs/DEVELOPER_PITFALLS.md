@@ -121,6 +121,12 @@ already found lying in the grass.
   view) in mid-test once a slow host keeps a spec on one view for that long.
   `group-address-views.e2e.ts` showed it RED with a 6.5 s pause and GREEN after
   the fixture remembered the PUTs.
+- **A module from outside `apps/knx-web` fails only in Vitest's DOM tests.**
+  Vitest's `happy-dom` environment refuses it (`Denied ID …`) while the `node`
+  environment does not check, so a unit test can pass while `App.test.tsx` fails
+  to load. Add exactly that directory to `server.fs.allow` in `vitest.config.ts`.
+  The Vite dev server (and so the browser fixtures) and a production build serve
+  it as imported by the app without help; do not widen their allow-lists.
 - **Two tests pin the diagnostics companion's dependencies.**
   `apps/knx-web/src/DiagnosticsCompanion.test.tsx` pins its transitive imports,
   and `apps/knx-web/src/diagnosticShell.test.ts` scans literal hyphenated ids as

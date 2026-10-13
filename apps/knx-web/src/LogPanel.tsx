@@ -162,7 +162,9 @@ export default function LogPanel(props: {
   ), [rows, filters, scopedToImport, query, t]);
   const visibleServerEntries = visibleRows.filter(row => row.key.startsWith("server:")).map(row => row.entry);
   const [renderLimit, setRenderLimit] = useState(LOG_RENDER_STEP);
-  useEffect(() => setRenderLimit(LOG_RENDER_STEP), [entries, filters, query, scopedToImport]);
+  // A new filter or search starts at the first page again; a refetch (every
+  // project change while the panel is open) keeps what the user expanded.
+  useEffect(() => setRenderLimit(LOG_RENDER_STEP), [filters, query, scopedToImport]);
   // A selected entry beyond the current page (opened from a notification) is still shown.
   const selectedIndex = selected ? visibleRows.findIndex(row => row.key === selected.key) : -1;
   const shownRows = visibleRows.slice(0, Math.max(renderLimit, selectedIndex + 1));

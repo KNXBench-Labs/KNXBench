@@ -50,6 +50,42 @@ must refuse; no confirmation parser may supply a raw Command. Missing/old native
 stores are not created/migrated; explicit existing open/save is required first.
 Root/working-history differences and Undo/Redo/reopen are reported and tested.
 
+## Web consumer (Goal B7, 13 October 2026)
+
+The web app reaches the same service through
+`apps/knx-server/src/name_recipe_routes.rs`, bound the way the instruction routes
+bind theirs:
+
+- `POST /api/name-recipe/preview` takes the client's snapshot binding
+  (`serverIncarnation`, `projectIncarnation`, `snapshotRevision`), the explicit
+  ordered `groupAddresses` ids and literal `prefix`/`suffix`; a binding that is
+  no longer current is refused (`409 nameRecipeStale`) before anything is
+  computed. The answer lists every row (`id`, `before`, `after`, `changed`) in
+  the given order and a random token.
+- One pending preview per server, for 300 s. A newer preview, from any window,
+  replaces it; the older dialog's confirmation then needs a new preview.
+- `POST /api/name-recipe/apply` takes only that token and `confirmed: true`.
+  It calls `apply_name_recipe` with the native working-history target when the
+  project has a file, so persistence failure publishes nothing
+  (`422 nameRecipePersistenceFailed`); a project or revision change since the
+  preview is `409 nameRecipeStale`. A confirmed preview is spent, also when it
+  changed nothing.
+- `POST /api/name-recipe/cancel` forgets the caller's own preview only.
+- Service refusals keep their own kinds (`nameRecipeSelection`,
+  `nameRecipeDuplicate`, `nameRecipeTarget`, `nameRecipeInvalidName`,
+  `nameRecipeBudget`, `nameRecipeRefused`) with an English message; the dialog
+  names them in the UI language and shows the message verbatim.
+
+The dialog (`apps/knx-web/src/features/nameRecipe/`) is opened from the bulk
+action bar for a group-address selection; it sends the ids in the order they
+were ticked, retires its preview when the text or the project changes, and
+re-reads the project after a stale refusal. No selection is generated, nothing
+is interpolated, nothing reaches the bus, and the MCP surface is unchanged.
+Evidence: `apps/knx-server/tests/http_name_recipe.rs` (one undo step, stale and
+replaced previews, bounded selections, no-op, failed native commit, save/reopen
+with undo/redo, cancel), Vitest for client and dialog, and the built-server
+`e2e/name-recipe.native.ts` (EN/DE × 1440/400, a real concurrent rename).
+
 Own paths: new knx-app name_recipe service/tests and one lib export; new CLI
 name_recipe module/test plus narrow existing dispatch/help; this contract and
 owned status/evidence/handover later. No UI shell/DB schema/parser/protocol/raw

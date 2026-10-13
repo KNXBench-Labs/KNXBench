@@ -151,6 +151,20 @@ an explicit action; another project's context is refused. Undo/redo is exact;
 saved/native recovered names survive reopening. No .knxproj export or bus write.
 See [the naming contract](../../contracts/project-name-editing.md).
 
+### Renaming several addresses at once
+
+*(Source build after Alpha 11.)* Tick the addresses in the table, then
+**Rename…** in the bulk action bar. The dialog adds the same text before and/or
+after each selected name, exactly as typed: no placeholders, patterns or
+numbering, and spaces count. **Show preview** lists every selected address with
+its name now and after renaming; unchanged names say so. Nothing is renamed until
+you press **Rename N names** under that preview. Changing the text, or any change
+to the project (also from another window), retires the preview: the dialog says
+so, reads the project again, and you show a new preview. All names change in one
+step, so a single **Undo** brings them all back; **Redo** and Save work as for any
+other edit. At most 256 addresses at a time. See the
+[naming recipe contract](../../contracts/offline-name-recipe.md#web-consumer-goal-b7-13-october-2026).
+
 ## Creating and deleting addresses
 
 Group addresses are created from **+ New → Add group address** in the group-address

@@ -50,6 +50,8 @@ export const messages = {
   "gaWorkspace.filter.conflict": "DPT conflicts",
   "gaWorkspace.filter.linked": "With projected links",
   "gaWorkspace.filter.unlinked": "Without projected links",
+  "gaWorkspace.expandAll": "Expand all",
+  "gaWorkspace.collapseAll": "Collapse all",
   "gaWorkspace.all": "All ranges",
   "gaWorkspace.level": "Range level {level}",
   "gaWorkspace.problems": "{count} presentation findings — data retained",

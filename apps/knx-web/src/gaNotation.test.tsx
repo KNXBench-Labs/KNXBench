@@ -141,7 +141,7 @@ function installation(): InstallationNode {
 }
 
 function renderTable(): HTMLDivElement {
-  return mount(
+  const host = mount(
     <GroupAddressTable
       installation={installation()}
       tree={{ schema_version: 1, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
@@ -153,6 +153,9 @@ function renderTable(): HTMLDivElement {
       rangeScope={null}
     />,
   );
+  // Issue #11: address lists start closed; these cases are about the rows.
+  act(() => host.querySelector<HTMLButtonElement>("[data-ga-expand-all]")!.click());
+  return host;
 }
 
 // React tracks an input's value on the DOM node, so assigning `.value`

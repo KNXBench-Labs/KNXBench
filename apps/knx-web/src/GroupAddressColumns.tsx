@@ -25,6 +25,6 @@ export default function GroupAddressColumns(props: GroupAddressWorkspaceViewProp
         })}</ul>
       </section>,
     )}</div>
-    <GroupAddressTreeTable {...props} flat includeEmpty={false} collapsed={new Set()} onToggle={() => {}} />
+    <GroupAddressTreeTable {...props} flat includeEmpty={false} expanded={new Set()} onToggle={() => {}} />
   </div>;
 }

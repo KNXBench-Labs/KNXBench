@@ -8,10 +8,10 @@ with the details. You do not need to write code to earn a place here.
 
 | Place | Bug hunter | Issues | Replies | Resolved | XP | Rank & title | Medal |
 | ---: | --- | ---: | ---: | ---: | ---: | --- | --- |
-| 1 | [@thengsty](https://github.com/thengsty) | 15 | 12 | 8 | **167** | Parameter Poltergeist Hunter | 🏅 Golden Bus Probe |
+| 1 | [@thengsty](https://github.com/thengsty) | 15 | 12 | 13 | **217** | Parameter Poltergeist Hunter | 🏅 Golden Bus Probe |
 | 2 | [@hagbardZ](https://github.com/hagbardZ) | 1 | 3 | 1 | **18** | Bus Bug Scout | — |
 
-*Snapshot: 2026-10-13T21:14:07Z.*
+*Snapshot: 2026-10-13T23:08:57Z.*
 
 ## How the points work
 
@@ -23,7 +23,7 @@ with the details. You do not need to write code to earn a place here.
 - **Golden Bus Probe:** report ten issues. No actual bus probe is shipped;
   ours fits comfortably in a Markdown table.
 
-Every external reporter or replier is listed, not just the top ten.
+Every external human reporter or replier is listed, not just the top ten.
 Maintainer accounts and bots are excluded. Pull requests, reviews, reactions,
 Discussions and private messages are not counted. Tied scores share a place;
 alphabetical order merely keeps the table stable. Counts measure participation,

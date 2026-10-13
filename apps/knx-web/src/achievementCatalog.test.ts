@@ -16,8 +16,8 @@ describe("ACHIEVEMENTS", () => {
     for (const id of ids) expect(id, id).toMatch(SERVER_ID);
   });
 
-  it("holds the 38 achievements agreed in the interview", () => {
-    expect(ACHIEVEMENTS).toHaveLength(38);
+  it("retains the original catalogue plus additive outcome achievements", () => {
+    expect(ACHIEVEMENTS).toHaveLength(42);
   });
 
   it("keeps the distinct-marker separator out of every id", () => {

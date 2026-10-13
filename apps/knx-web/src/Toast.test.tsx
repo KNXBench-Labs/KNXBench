@@ -1,4 +1,4 @@
-/** Tests for ToastStack's dismiss handler and the error-only English-text disclosure. */
+/** Tests for ToastStack: dismiss/open, disclosure, exit animation, pause and queue notes. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -137,5 +137,56 @@ describe("ToastStack", () => {
     });
     expect(onExited).toHaveBeenCalledExactlyOnceWith(7);
     root.unmount();
+  });
+
+  it("ignores an exit animation that bubbles up from a child element", async () => {
+    const onExited = vi.fn();
+    const leaving: ToastEntry = { id: 9, kind: "achievement", message: "Bus Master", serverText: false, leaving: true,
+      achievement: { title: "Bus Master", description: "All of them.", tier: "legendary", glyph: "trophy" } };
+    const root = await renderStack([leaving], vi.fn(), onExited);
+    const badge = host!.querySelector(".toast--achievement .achievement-badge")!;
+    expect(badge).not.toBeNull();
+    await act(async () => {
+      badge.dispatchEvent(Object.assign(new Event("animationend", { bubbles: true }), { animationName: "knx-achievement-out" }));
+    });
+    expect(onExited).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  it("pauses on hover and focus, and resumes focus only when it leaves the card", async () => {
+    const onPause = vi.fn(), onResume = vi.fn();
+    host = document.createElement("div"); document.body.append(host);
+    const root = createRoot(host);
+    await act(() => root.render(<ToastStack toasts={[{ id: 4, kind: "error", message: "Refused", serverText: false }]}
+      onDismiss={vi.fn()} onOpen={vi.fn()} onPause={onPause} onResume={onResume} />));
+    const card = host.querySelector<HTMLElement>(".toast")!;
+    const open = host.querySelector<HTMLButtonElement>(".toast-open")!;
+    const dismiss = host.querySelector<HTMLButtonElement>(".toast-dismiss")!;
+    await act(async () => { card.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, relatedTarget: document.body })); });
+    expect(onPause).toHaveBeenLastCalledWith(4, "hover");
+    await act(async () => { card.dispatchEvent(new MouseEvent("mouseout", { bubbles: true, relatedTarget: document.body })); });
+    expect(onResume).toHaveBeenLastCalledWith(4, "hover");
+    onResume.mockClear();
+    await act(async () => open.focus());
+    expect(onPause).toHaveBeenLastCalledWith(4, "focus");
+    // Moving focus to the card's own close button keeps the pause.
+    await act(async () => dismiss.focus());
+    expect(onResume).not.toHaveBeenCalled();
+    await act(async () => dismiss.blur());
+    expect(onResume).toHaveBeenCalledExactlyOnceWith(4, "focus");
+    await act(() => root.unmount());
+  });
+
+  it("states how many cards wait and how many the queue retired", async () => {
+    host = document.createElement("div"); document.body.append(host);
+    const root = createRoot(host);
+    await act(() => root.render(<ToastStack toasts={[{ id: 1, kind: "fun", message: "Saved", serverText: false }]}
+      onDismiss={vi.fn()} pendingCount={2} queueDropped={1} />));
+    const notes = [...host.querySelectorAll(".toast-queue-note")].map((note) => note.textContent);
+    expect(notes).toEqual([
+      enMessages["toast.pending.other"].replace("{count}", "2"),
+      enMessages["toast.queueDropped.one"].replace("{count}", "1"),
+    ]);
+    await act(() => root.unmount());
   });
 });

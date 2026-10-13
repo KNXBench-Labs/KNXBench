@@ -1,0 +1,2612 @@
+{
+  "version": 1,
+  "date": "2026-10-13",
+  "source_revision": "2a43ad5cca5e26414bc75f817ce1047e5d5c0d75",
+  "source_file": "docs/KNOWN_LIMITATIONS.md",
+  "source_sha256": "da13a7d0adfeae3e3444e0d5392a41fad5b8d492f3c6ecf3d35d327f00cbd37b",
+  "source_lines": 10135,
+  "preamble": "# Known limitations\n",
+  "sections": [
+    {
+      "key": "native-import-evidence-and-recorded-device-state",
+      "source_index": 0,
+      "heading": "## Ported native import evidence (2026-10-12)",
+      "source_lines": 16,
+      "source_sha256": "edf036dc791a1d2c894e4470bdf8b31c6780ec9d1b157b176f427075fae47113",
+      "retained_sha256": "93be30cd1675d0f308b694965765774f4c24fc0e9cb5b029c22f0664496006d8",
+      "detail_file": "docs/limitations/native-import-evidence-and-recorded-device-state.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "ported-native-import-evidence-2026-10-12"
+      ]
+    },
+    {
+      "key": "checked-parameter-editors",
+      "source_index": 1,
+      "heading": "## Checked parameter editors in the device editor (2026-10-12)",
+      "source_lines": 16,
+      "source_sha256": "51333f7fa3f7353f174f63e103af38cfb25a943a84ace16f714900ed11233403",
+      "retained_sha256": "4e2901b2b73fd5b7c7dd2a83968f9578c1b8eafafc297d6f2f6a8793b3617a02",
+      "detail_file": "docs/limitations/checked-parameter-editors.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "checked-parameter-editors-in-the-device-editor-2026-10-12"
+      ]
+    },
+    {
+      "key": "instruction-and-note-drafts-across-save",
+      "source_index": 2,
+      "heading": "## Installation instructions tab and Save-proof drafts (2026-10-12)",
+      "source_lines": 18,
+      "source_sha256": "c3120170fd34eb0e2df6a1109df409b465831f450551c2819885add4a5d913ac",
+      "retained_sha256": "98ce9f08068a5ea6e32b7cdf3071d73014648757d433f972a0ae4db91f405e15",
+      "detail_file": "docs/limitations/instruction-and-note-drafts-across-save.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "installation-instructions-tab-and-save-proof-drafts-2026-10-12"
+      ]
+    },
+    {
+      "key": "project-notes-workbench",
+      "source_index": 3,
+      "heading": "## Project notes workbench host (2026-10-12)",
+      "source_lines": 29,
+      "source_sha256": "e6108875a81800e5a03d4d9f757f7ba9e0705ad84092679fedf0f45bb6fb538f",
+      "retained_sha256": "021db41c398412f7d4d6fa064b571e982ccfe7f717692352694841564dcf5abc",
+      "detail_file": "docs/limitations/project-notes-workbench.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "project-notes-workbench-host-2026-10-12"
+      ]
+    },
+    {
+      "key": "catalogue-updates-from-supplied-files",
+      "source_index": 4,
+      "heading": "## Catalogue updates come only from files you supply (2026-10-12)",
+      "source_lines": 17,
+      "source_sha256": "2f10804761631dc84f6c91a4d1450338018ab287279ca13dd137962be31377fe",
+      "retained_sha256": "802312a9f74f6223c031a649076c917677159f46dfa1687b937dc91b550d15f5",
+      "detail_file": "docs/limitations/catalogue-updates-from-supplied-files.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "catalogue-updates-come-only-from-files-you-supply-2026-10-12"
+      ]
+    },
+    {
+      "key": "import-count-links-and-unsaved-change-dialogs",
+      "source_index": 5,
+      "heading": "## Project-status import links and unsaved-changes dialogs (2026-10-12)",
+      "source_lines": 12,
+      "source_sha256": "5a3cc0e444b7e5ad79b0287131e0028714095cdb288b47e0d0b9f84a14fa1496",
+      "retained_sha256": "263daa87d19bcd996b32e06d4783a8eafb4dc17e69ab508030728bcf196f1af8",
+      "detail_file": "docs/limitations/import-count-links-and-unsaved-change-dialogs.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "project-status-import-links-and-unsaved-changes-dialogs-2026-10-12"
+      ]
+    },
+    {
+      "key": "mcp-rename-confirmation",
+      "source_index": 6,
+      "heading": "## MCP renames rely on the client's confirmation form (2026-10-12)",
+      "source_lines": 13,
+      "source_sha256": "74b9627867a5ec6999366c513f13da47c70b38854eda9a9542dbabfd5eff8c0e",
+      "retained_sha256": "75636a3852475d522160d81a13e67a9ecf03833855b7ff95d9bd7e8f6acf10af",
+      "detail_file": "docs/limitations/mcp-rename-confirmation.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "mcp-renames-rely-on-the-clients-confirmation-form-2026-10-12"
+      ]
+    },
+    {
+      "key": "offline-naming-recipes",
+      "source_index": 7,
+      "heading": "## Offline naming recipe boundary (2026-10-12)",
+      "source_lines": 14,
+      "source_sha256": "c829bd54eb947def49570fb5716a61b12804562cde68629050d071c38a161d5f",
+      "retained_sha256": "253c97d7364740735573229f3d894372616e3b704335321443c9ed7b52049cd6",
+      "detail_file": "docs/limitations/offline-naming-recipes.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "offline-naming-recipe-boundary-2026-10-12"
+      ]
+    },
+    {
+      "key": "notes-editor-integration",
+      "source_index": 8,
+      "heading": "## Project notes editor integration boundary (2026-10-12)",
+      "source_lines": 18,
+      "source_sha256": "c647ccb56c60d7bac030f1ee1acd152c4a5b7016d4f6c6ab8d0070b6a8d3f8d2",
+      "retained_sha256": "35ddb2cc9c2e59e79bb66033f5c682ea661e522aed023eddb22e515e54ce02f3",
+      "detail_file": "docs/limitations/notes-editor-integration.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "project-notes-editor-integration-boundary-2026-10-12"
+      ]
+    },
+    {
+      "key": "release-notifications",
+      "source_index": 9,
+      "heading": "## Release notification boundary (2026-10-11)",
+      "source_lines": 12,
+      "source_sha256": "e1dea9204549e483843a245442bbcd0d2066c7ab0246fa93d22bc666a3bb3019",
+      "retained_sha256": "68015b6bcbefebd4149d40f988c43979def1420e7248d0f48dea5a298515b8b3",
+      "detail_file": "docs/limitations/release-notifications.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "release-notification-boundary-2026-10-11"
+      ]
+    },
+    {
+      "key": "installation-instruction-editing",
+      "source_index": 10,
+      "heading": "## Installation instruction editor integration boundary (2026-10-11)",
+      "source_lines": 16,
+      "source_sha256": "0e4a6da2274c982466427a95196ce228b9311bb0b4614dfe31f57c4b5e000330",
+      "retained_sha256": "3fa808b35859d3e340d1ffceeea1e664dd8e84362de86971199b98ba59ee1be8",
+      "detail_file": "docs/limitations/installation-instruction-editing.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "installation-instruction-editor-integration-boundary-2026-10-11"
+      ]
+    },
+    {
+      "key": "installation-node-editing",
+      "source_index": 11,
+      "heading": "## Local installation-node UI boundary (2026-10-11)",
+      "source_lines": 80,
+      "source_sha256": "9555e5423f479b42a7e95902520ffa0bd1539f31045d34d773e500342fae1a98",
+      "retained_sha256": "c879e93ae8ec27b0eb3584fd8da5cbcfd4b89e0511c2c153ca7f55ca3d195397",
+      "detail_file": "docs/limitations/installation-node-editing.md",
+      "rewritten_link_targets": 8,
+      "anchors": [
+        "local-installation-node-ui-boundary-2026-10-11",
+        "recorded-device-state-view-boundary-2026-10-11",
+        "local-modeled-project-information-boundary-2026-10-11",
+        "local-native-export-privacy-boundary-2026-10-11",
+        "local-retained-payload-access-boundary-2026-10-11",
+        "local-durable-import-report-boundary-2026-10-11"
+      ]
+    },
+    {
+      "key": "alpha8-release-snapshot",
+      "source_index": 12,
+      "heading": "## Alpha.8 release snapshot (2026-10-10)",
+      "source_lines": 13,
+      "source_sha256": "a24ebea6d878693270ac8ac397f5dd533cc846c226b3de8d895c18ecc9a7652c",
+      "retained_sha256": "56ab5df34a4bb62ca2f5bdc4964e85cf21278ccce73eff31411d2c9f3d6875ea",
+      "detail_file": "docs/limitations/alpha8-release-snapshot.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "alpha8-release-snapshot-2026-10-10"
+      ]
+    },
+    {
+      "key": "import-integrity-repairs",
+      "source_index": 13,
+      "heading": "## Local integrity repairs and remaining boundaries (2026-10-10)",
+      "source_lines": 4,
+      "source_sha256": "be268368a7ec586267080450d91b0512ad2eb8fa646e0bc263872b44ef4f57e6",
+      "retained_sha256": "a29d39b78cae7e06e4af23073e9a5f91302b3ca9b7681301944ca82d7abfaf6d",
+      "detail_file": "docs/limitations/import-integrity-repairs.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "local-integrity-repairs-and-remaining-boundaries-2026-10-10"
+      ]
+    },
+    {
+      "key": "independent-private-schema-23-review",
+      "source_index": 14,
+      "heading": "## Private schema-23 sample review (2026-10-10)",
+      "source_lines": 21,
+      "source_sha256": "806f4981bee60c27c016ca5252d3c6ed0ccde4c6889944a93bb429c01ea023cf",
+      "retained_sha256": "8ad35b620862e8502fbb5f37514d7ebfddbe69cd05afc20e3b12f837fe9dbce9",
+      "detail_file": "docs/limitations/independent-private-schema-23-review.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "private-schema-23-sample-review-2026-10-10"
+      ]
+    },
+    {
+      "key": "selective-import",
+      "source_index": 15,
+      "heading": "## Selective import and evidence boundaries (2026-10-10 source integration)",
+      "source_lines": 33,
+      "source_sha256": "7ed3ee5e7dc57ce72c6519aa1b91d1a106a86389753c5f90d3dd3da161884a8c",
+      "retained_sha256": "d88235580c756d526023c6087e90a0d7700ac16bd47e0f96a7de1cf4929fa2bd",
+      "detail_file": "docs/limitations/selective-import.md",
+      "rewritten_link_targets": 5,
+      "anchors": [
+        "selective-import-and-evidence-boundaries-2026-10-10-source-integration"
+      ]
+    },
+    {
+      "key": "name-first-dpt-presentation",
+      "source_index": 16,
+      "heading": "## Name-first DPT presentation (2026-10-12 source)",
+      "source_lines": 11,
+      "source_sha256": "55809d93d16662a6808f86f95e28ef57c00530daed061dc7fb31acec9124440c",
+      "retained_sha256": "171cc1a9b3534db193e68a865eca4060b55d9cfba993a4b2f95f28d38c447f45",
+      "detail_file": "docs/limitations/name-first-dpt-presentation.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "name-first-dpt-presentation-2026-10-12-source"
+      ]
+    },
+    {
+      "key": "communication-object-table",
+      "source_index": 17,
+      "heading": "## Communication-object table scope (2026-10-09)",
+      "source_lines": 39,
+      "source_sha256": "071cef3e8e54fa84194cbf5fef4288a08d2451927a18041a0f74f2a5d73544bc",
+      "retained_sha256": "3a5d577a544ce7762dc07076bba3cd5f87d129c7b730488ab577e81cdcfec8b5",
+      "detail_file": "docs/limitations/communication-object-table.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "communication-object-table-scope-2026-10-09"
+      ]
+    },
+    {
+      "key": "project-local-name-editing",
+      "source_index": 18,
+      "heading": "## Project-local name editing is not bulk authoring (ADR-0101)",
+      "source_lines": 19,
+      "source_sha256": "88f87730e43b8d4eb622eda4282414ae96b65a9d2668f697e1966122f348a3ea",
+      "retained_sha256": "eef03c1a6175c974e05c5a5e4415f2b6bb0f5cc1bf513e50699ccfbe81c4bf4f",
+      "detail_file": "docs/limitations/project-local-name-editing.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "project-local-name-editing-is-not-bulk-authoring-adr-0101"
+      ]
+    },
+    {
+      "key": "persistent-native-working-history",
+      "source_index": 19,
+      "heading": "## Persistent native history is bounded, not an independent backup (ADR-0100)",
+      "source_lines": 26,
+      "source_sha256": "8212e5ba50612710ac08b62a0f536707ab92d9b6692a9c4c94317a8ab03a3d9e",
+      "retained_sha256": "36172c5e89cf162e51f0f9a703b3c4722bfd64dda1c74ad47ee525e31d123ec5",
+      "detail_file": "docs/limitations/persistent-native-working-history.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "persistent-native-history-is-bounded-not-an-independent-backup-adr-0100"
+      ]
+    },
+    {
+      "key": "historical-reading-guide",
+      "source_index": 20,
+      "heading": "## Current reading guide — 8 October 2026",
+      "source_lines": 27,
+      "source_sha256": "1433e6431dfda065d78a3570334b6480006fad06c27c3c4d48189ebf2ca3ccd1",
+      "retained_sha256": "a5ddab88bd94ec8e87a7821f9fe51d2f03ce3e98c376c1747843883a300128ad",
+      "detail_file": "docs/limitations/historical-reading-guide.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "current-reading-guide--8-october-2026"
+      ]
+    },
+    {
+      "key": "offline-ap1-sequence-inspection",
+      "source_index": 21,
+      "heading": "## Offline AP1 sequence inspection is not new download support (2026-10-09)",
+      "source_lines": 16,
+      "source_sha256": "20fafaf0c0fb53843ebf0f716e2a9aa424baaf3ddf705481225e75f61a0bff27",
+      "retained_sha256": "fa5a3bbf7d884574ad53747742bc4dbe88b115c21f5f917174c98c9730aa6bf9",
+      "detail_file": "docs/limitations/offline-ap1-sequence-inspection.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "offline-ap1-sequence-inspection-is-not-new-download-support-2026-10-09"
+      ]
+    },
+    {
+      "key": "current-project-device-navigation",
+      "source_index": 22,
+      "heading": "## Devices navigation: local source, current-project links and bounded evidence (2026-10-08)",
+      "source_lines": 19,
+      "source_sha256": "a696cdf358fc1d77a6a4d494f32750baf50dd5c72f1f8277dbfa5ae026c54967",
+      "retained_sha256": "ed98bdb666623f876f01dd2baff7a3399844e1172e2ffcd3e0529d416dcdf8c9",
+      "detail_file": "docs/limitations/current-project-device-navigation.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "devices-navigation-local-source-current-project-links-and-bounded-evidence-2026-10-08"
+      ]
+    },
+    {
+      "key": "fictional-community-demos",
+      "source_index": 23,
+      "heading": "## Community demos are fictional offline learning data, not building designs (2026-10-08)",
+      "source_lines": 17,
+      "source_sha256": "0904e999aa67362502c20536a54895a0f2125a0613ad110c1ab2f65cffe5f842",
+      "retained_sha256": "0078157daf24e835eb4cb46dee7794581e15001e86e664ef6e2ae3a9535f766f",
+      "detail_file": "docs/limitations/fictional-community-demos.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "community-demos-are-fictional-offline-learning-data-not-building-designs-2026-10-08"
+      ]
+    },
+    {
+      "key": "community-support-evidence",
+      "source_index": 24,
+      "heading": "## Community evidence is bounded, manually shared and not anonymous (2026-10-08)",
+      "source_lines": 19,
+      "source_sha256": "12e0226c5b9cc706f3b2c18d3fbd489ade53d74a496d36d3a0106f6fb5e98bbd",
+      "retained_sha256": "6d0898c8ff154b3523b07d5b7ae841f1a39e8144f79b5afd773d55bcec263fcd",
+      "detail_file": "docs/limitations/community-support-evidence.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "community-evidence-is-bounded-manually-shared-and-not-anonymous-2026-10-08"
+      ]
+    },
+    {
+      "key": "website-and-public-story",
+      "source_index": 25,
+      "heading": "## Website on GitHub Pages: checked in Chromium, privacy text not legally reviewed",
+      "source_lines": 15,
+      "source_sha256": "ac79791fe3a17570b9f972fbcec8169f1b70ef50cc7ebbb3a7c2d042dad568ab",
+      "retained_sha256": "e5a9d0bdf79ea501cea33b7d8ef91c669a7d20f6b7b8b8d5e77b4260c114520c",
+      "detail_file": "docs/limitations/website-and-public-story.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "website-on-github-pages-checked-in-chromium-privacy-text-not-legally-reviewed"
+      ]
+    },
+    {
+      "key": "lcars-presentation",
+      "source_index": 26,
+      "heading": "## LCARS presentation is Chromium-verified, not an executable imported pack",
+      "source_lines": 12,
+      "source_sha256": "a06714535eea0f6efb89857ea0ddac91181cebbb44d7351f73a920b9e1015858",
+      "retained_sha256": "6e61eb845ee033bd0abc8084273b615e31c1603ebfe99754bda8098b8bf97adc",
+      "detail_file": "docs/limitations/lcars-presentation.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "lcars-presentation-is-chromium-verified-not-an-executable-imported-pack"
+      ]
+    },
+    {
+      "key": "telegram-flow-delivery-and-scope",
+      "source_index": 27,
+      "heading": "## Telegram-flow visualization is implemented with bounded evidence",
+      "source_lines": 29,
+      "source_sha256": "301ec61ebfc852643f466ccdd70d63e56407e33422912237e778407065691499",
+      "retained_sha256": "bf96467658f0a049603437a7ab38e6ae0bba6415e306eaece517b84b0359f845",
+      "detail_file": "docs/limitations/telegram-flow-delivery-and-scope.md",
+      "rewritten_link_targets": 4,
+      "anchors": [
+        "telegram-flow-visualization-is-approved-but-not-implemented",
+        "telegram-flow-visualization-is-implemented-with-bounded-evidence"
+      ]
+    },
+    {
+      "key": "accepted-commissioning-validation-boundary",
+      "source_index": 28,
+      "heading": "## Accepted commissioning validation boundary — user decision 2026-10-04",
+      "source_lines": 15,
+      "source_sha256": "a0518c6aaa2bf4d880c0dda85f21e2817366bb0296cbe2b3bf974dad590b8a77",
+      "retained_sha256": "42e1075c4ad4f2fbe82696d3f39e9ec17cf96817581045d7f3d71526be752033",
+      "detail_file": "docs/limitations/accepted-commissioning-validation-boundary.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "accepted-commissioning-validation-boundary--user-decision-2026-10-04"
+      ]
+    },
+    {
+      "key": "crt-motion",
+      "source_index": 29,
+      "heading": "## CRT motion is browser-verified application behavior, not theme-pack v2",
+      "source_lines": 24,
+      "source_sha256": "422a8f0578530b2216997d439e9c29b559622c264b693ebd75f9219fb0961d55",
+      "retained_sha256": "5442eb7b579197dc7f936e4005b5af5a183c3cebb0cbbc92426c84ad85b076eb",
+      "detail_file": "docs/limitations/crt-motion.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "crt-motion-is-browser-verified-application-behavior-not-theme-pack-v2"
+      ]
+    },
+    {
+      "key": "theme-pack-management",
+      "source_index": 30,
+      "heading": "## Verified theme pack management is not whole-extension release acceptance",
+      "source_lines": 52,
+      "source_sha256": "f9e31c477838cd41989f6f842b565d796e5ef63285eded7ddd58f00d3ace34b8",
+      "retained_sha256": "7cfdeadfc2945a1ed6de32e6effac66362b462377afa7c03a28d0a2000ba4c97",
+      "detail_file": "docs/limitations/theme-pack-management.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "theme-pack-management-is-a-local-candidate-not-release-acceptance",
+        "verified-theme-pack-management-is-not-whole-extension-release-acceptance"
+      ]
+    },
+    {
+      "key": "backup-directory-synchronization",
+      "source_index": 31,
+      "heading": "## Backup directory synchronization is not a disk-loss or confinement proof",
+      "source_lines": 17,
+      "source_sha256": "d09962f4a945944310dce7a78ec752a4f4852a337de5ee1c96e0926aa8ed89c2",
+      "retained_sha256": "b7b31f27cdb9a70558082f1a95ca355c21d0fdccf1fb7d59f56ec9213f16c58c",
+      "detail_file": "docs/limitations/backup-directory-synchronization.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "backup-directory-synchronization-is-not-a-disk-loss-or-confinement-proof"
+      ]
+    },
+    {
+      "key": "bus-activity-snapshot",
+      "source_index": 32,
+      "heading": "## Partial commissioning bus-activity snapshot (ADR-0055)",
+      "source_lines": 61,
+      "source_sha256": "aa064c3c340562196638ebdde27ced94e8ceb599e72500bc164f1cc9198aebe7",
+      "retained_sha256": "6c9351ad8de180d33d86080bbd3f521883d4a6a9ca64ff01e706c4208268290a",
+      "detail_file": "docs/limitations/bus-activity-snapshot.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "partial-commissioning-bus-activity-snapshot-adr-0055"
+      ]
+    },
+    {
+      "key": "structure-editor-scope",
+      "source_index": 33,
+      "heading": "## U12 structure editor scope (ISSUE-05)",
+      "source_lines": 84,
+      "source_sha256": "2eac0154c7fe7a7a39865fbd7ae5ca64ec467acc78c21f397cce040bb15e0952",
+      "retained_sha256": "a7f63a1aa0f3235b3f891298e1c230293082191006ce3745d630b3e54e24c0a0",
+      "detail_file": "docs/limitations/structure-editor-scope.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "u12-structure-editor-scope-issue-05"
+      ]
+    },
+    {
+      "key": "device-editor-address-scope",
+      "source_index": 34,
+      "heading": "## U11 device editor scope (ISSUE-09)",
+      "source_lines": 44,
+      "source_sha256": "a9b109b35d2df135665ec83e865543a5cae6b01f912e146de38d14fa5ea937a0",
+      "retained_sha256": "4613acd20471a0e805d2b06f333cd36fb853385eef55f2b0ff3e0641426ac4ff",
+      "detail_file": "docs/limitations/device-editor-address-scope.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "u11-device-editor-scope-issue-09"
+      ]
+    },
+    {
+      "key": "catalogue-batch-creation",
+      "source_index": 35,
+      "heading": "## U11 catalog batch scope (ISSUE-07)",
+      "source_lines": 58,
+      "source_sha256": "84a3a6bac427d9af8c1b0185eea82c0f5a35aa1f36cdb2926c29479eee7addd2",
+      "retained_sha256": "06680f501e227f52ae2081588854a836f0432cf933f0566fd9118ce2878f0ec8",
+      "detail_file": "docs/limitations/catalogue-batch-creation.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "u11-catalog-batch-scope-issue-07"
+      ]
+    },
+    {
+      "key": "download-readiness-and-pre-write-backup",
+      "source_index": 36,
+      "heading": "## Commissioning readiness and pre-write backup boundary (ADR-0049)",
+      "source_lines": 38,
+      "source_sha256": "19605fcbe5bb683cbec46c24723631227c5f4ddee6b7a76df3b3d1b500d5cc05",
+      "retained_sha256": "f32fcbd9eb6c7822488af42405c78799054c72290447f2701e5b31c3ab2fadb3",
+      "detail_file": "docs/limitations/download-readiness-and-pre-write-backup.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "commissioning-readiness-and-pre-write-backup-boundary-adr-0049"
+      ]
+    },
+    {
+      "key": "parameter-and-dynamic-coverage",
+      "source_index": 37,
+      "heading": "## PDB-9 parameter and Dynamic coverage boundary",
+      "source_lines": 67,
+      "source_sha256": "6c8324e9b85fa382b70ebe1ef2cc8f337ae2a099f84cdcf72f06f088d667c0aa",
+      "retained_sha256": "215abb2f063f968b05e4ed9d608c19bddc54b4a7a23e6dd38358f8e72bf44a79",
+      "detail_file": "docs/limitations/parameter-and-dynamic-coverage.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "pdb-9-parameter-and-dynamic-coverage-boundary"
+      ]
+    },
+    {
+      "key": "manufacturer-report-history",
+      "source_index": 38,
+      "heading": "## PDB-3 report history and coverage boundary",
+      "source_lines": 38,
+      "source_sha256": "3d5dca0cc98806a147cf6737a3ae11ccf16d8f9b13b9d39df1eee87a04dc8cdc",
+      "retained_sha256": "5bae3e301f49cfcc621ba8c416d131065777965bd7fb991498182d4dca207743",
+      "detail_file": "docs/limitations/manufacturer-report-history.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "pdb-3-report-history-and-coverage-boundary"
+      ]
+    },
+    {
+      "key": "catalogue-metadata-semantics",
+      "source_index": 39,
+      "heading": "## PDB-7 catalogue metadata are source strings, not capabilities",
+      "source_lines": 35,
+      "source_sha256": "6eff40daa01c51b88b91f4d5088e3a2f0c2f2ffec4d130c537814a7b97af439c",
+      "retained_sha256": "aa9b6191a602e9bd9b165a472d457cef37f76685afe705c7c8c744b45f38ad7d",
+      "detail_file": "docs/limitations/catalogue-metadata-semantics.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "pdb-7-catalogue-metadata-are-source-strings-not-capabilities"
+      ]
+    },
+    {
+      "key": "closed-entries-and-legacy-links",
+      "source_index": 40,
+      "heading": "## Closed entries and historical links",
+      "source_lines": 9,
+      "source_sha256": "d17c125d1857f2dc2c07d2562b80ef47d316f3e115e232e98a652c1b3c8992b9",
+      "retained_sha256": "b38ef5c71df12f1691b9aeb4905c55ea6efb189d1bb1408c1b25ecab2a01c94c",
+      "detail_file": "docs/limitations/closed-entries-and-legacy-links.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "closed-entries-and-historical-links",
+        "10-project-licence--resolved-2026-09-16",
+        "10-the-project-licence-is-not-decided",
+        "103-unsaved-is-inferred-from-the-undo-stack-not-a-real-dirty-flag",
+        "103-unsaved-is-inferred-from-the-undo-stack-not-a-real-dirty-flag--resolved",
+        "11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly",
+        "117-read_on_init_flag-is-parsed-and-stored-then-discarded-before-it-reaches-knx-core",
+        "118-a-succeeded-project-load-announces-nothing-to-a-screen-reader",
+        "118-a-succeeded-project-load-announces-nothing-to-a-screen-reader--resolved",
+        "119-on-this-machines-ntfs3-mount-cargo-has-rebuilt-from-a-stale-fingerprint--a-green-gate-is-not-evidence-by-itself",
+        "120-nothing-checks-that-a-theme-is-legible",
+        "120-nothing-checks-that-a-theme-is-legible--resolved-by-the-role-pair-contrast-gate",
+        "122-resolved-settings-file-diagnostics-follow-the-ui-language",
+        "122-settings-file-notices-reach-the-user-in-english-only",
+        "123-resolved-group-addresses-no-longer-use-dotted-display-notation",
+        "131-seventy-two-corpus-gates-repo-wide-still-pass-when-the-corpus-is-absent",
+        "132-the-window-managers-close-button-quits-the-desktop-app-without-the-unsaved-changes-prompt",
+        "147-a-received-telegrams-priority-repeat-flag-and-hop-count-are-not-kept--lifted-2026-09-30",
+        "148-the-contributor-license-agreement-is-not-reviewed-by-a-lawyer-and-nothing-enforces-it--withdrawn-2026-09-30",
+        "17-deleting-a-group-address-can-leave-a-dangling-grouplink--resolved",
+        "19-a-search-result-inside-a-collapsed-tree-branch-is-not-revealed",
+        "19-a-search-result-inside-a-collapsed-tree-branch-is-not-revealed--resolved-2026-09-22-t12",
+        "21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved",
+        "21-resolved-export-refuses-a-group-address-without-a-range",
+        "22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback",
+        "22-the-webdocker-deployment-target-has-no-authentication",
+        "25-resolved-the-web-package-and-docker-frontend-stage-use-node-22",
+        "27-tunnelclient-heartbeat-retry-has-a-narrow-race-condition--resolved",
+        "28-tunnelclient-subscribers-receive-no-signal-when-the-tunnel-closes--resolved",
+        "30-apiprojectdownload-has-no-frontend-caller",
+        "30-apiprojectdownload-has-no-frontend-caller--resolved-2026-09-22",
+        "32-routing_busy-is-logged-not-honored-by-routingclient--resolved",
+        "33-routingclients-round-trip-test-transmitted-on-the-physical-lan-not-on-loopback--resolved-2026-09-20",
+        "34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes--resolved-2026-09-20",
+        "35-device-creation-enrichmentissues-are-silently-dropped--resolved-2026-09-10",
+        "4-round-trips-are-semantic-not-byte-exact",
+        "4-round-trips-are-semantic-not-byte-exact--closed-2026-09-20-export-withdrawn",
+        "49-project-documentation-export-has-an-in-application-preview-and-print-action",
+        "49-project-documentation-export-has-no-in-application-print-preview",
+        "5-exports-are-unsigned-and-ets-acceptance-is-untested",
+        "5-exports-are-unsigned-and-ets-acceptance-is-untested--closed-2026-09-20-export-withdrawn",
+        "50-project-documentation-export-has-no-section-selection",
+        "50-project-documentation-export-has-section-selection-in-the-web-ui",
+        "57-project-diff-cannot-compare-against-a-raw-knxproj",
+        "57-raw-knxproj-comparison-is-available-on-the-cli-and-in-the-web-ui",
+        "58-project-diff-has-an-opt-in-ci-exit-code-contract",
+        "58-project-diff-has-no-ci-friendly-exit-nonzero-on-any-difference-flag",
+        "59-project-diff-exposes-beforeafter-values-but-the-web-panel-does-not-render-them-yet",
+        "59-project-diff-shows-beforeafter-values-in-cli-api-and-web-panel",
+        "59-project-diffs-text-and-web-renderers-show-which-fields-changed-not-their-beforeafter-values-for-most-entity-types",
+        "60-project-diffs-web-panel-shows-grouped-counts-only",
+        "67-a-rejected-language-packs-own-reason-was-shown-untranslated-inside-a-translated-sentence--resolved-2026-09-14-t14",
+        "80-a-project-can-be-created-from-scratch-in-the-ui--resolved-2026-09-16-goal-task-17",
+        "81-new_project_impl-refuses-on-can-undo-not-on-is-dirty",
+        "81-new_project_impl-refuses-on-can-undo-not-on-is-dirty--resolved",
+        "83-the-from-scratch-launcher-is-browser-verified--resolved-2026-09-16-goal-task-17",
+        "84-a-projects-group-address-style-can-be-chosen-and-afterwards-never-seen--resolved-2026-09-14-t4",
+        "89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import",
+        "89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import--resolved-2026-09-22",
+        "91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started",
+        "91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started--resolved",
+        "92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device",
+        "96-a-browser-that-loses-the-import-response-cannot-get-the-project-back-without-reloading"
+      ]
+    },
+    {
+      "key": "KL-001",
+      "source_index": 41,
+      "heading": "## 1. Single-sample bias",
+      "source_lines": 46,
+      "source_sha256": "08cb553ab2527592a6a5985ea4309b4bf5450c54d4d8d4525cb5721e27e2ce38",
+      "retained_sha256": "c107b95d4449e7696a3dd709cfb2360eb91b6f602aacc2ae82eb2cd20a47fc0a",
+      "detail_file": "docs/limitations/KL-001-independent-sample-coverage.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "1-single-sample-bias"
+      ]
+    },
+    {
+      "key": "KL-002",
+      "source_index": 42,
+      "heading": "## 2. No authoritative XSD is publicly available",
+      "source_lines": 68,
+      "source_sha256": "84bf584fb8c94cc2150a5f626647b9b6604a8751e9d7b288ab6d68101872f0df",
+      "retained_sha256": "b81e9620d1ab89849d21cfcce90188abba2c8d2c62328015da89823797fb850d",
+      "detail_file": "docs/limitations/KL-002-structural-validation-without-authoritative-xsd.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "2-no-authoritative-xsd-is-publicly-available"
+      ]
+    },
+    {
+      "key": "KL-003",
+      "source_index": 43,
+      "heading": "## 3. Device parameters are preserved but not interpreted",
+      "source_lines": 377,
+      "source_sha256": "f167e248d99ebe90d4d24f5fa45a958be29b0aefe0f4eaad8d8098bf3535744a",
+      "retained_sha256": "df644e0ea276c3d65d167cc6d5996f5c508f8b7f95d634115a0eff404e98e73b",
+      "detail_file": "docs/limitations/KL-003-parameter-evaluation-and-editing-boundaries.md",
+      "rewritten_link_targets": 9,
+      "anchors": [
+        "3-device-parameters-are-preserved-but-not-interpreted"
+      ]
+    },
+    {
+      "key": "KL-006",
+      "source_index": 44,
+      "heading": "## 6. Devices behind vendor plug-in DLLs",
+      "source_lines": 21,
+      "source_sha256": "38264a6eb585349aba069b98b0a642e93c5a80aed8e3f100b5529ea527a5297d",
+      "retained_sha256": "e3504f50177b7995a842bb0e3b5cd50360217109d3f6c96c8ef1bcc6bc9ada12",
+      "detail_file": "docs/limitations/KL-006-devices-dependent-on-vendor-plug-ins.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "6-devices-behind-vendor-plug-in-dlls"
+      ]
+    },
+    {
+      "key": "KL-007",
+      "source_index": 45,
+      "heading": "## 7. Commissioning: a verified `070nh` memory path, not general device support",
+      "source_lines": 88,
+      "source_sha256": "d2efebc8ff82ab4aa84ff35729053e90f23b96c224593e6d67319157e09c43ad",
+      "retained_sha256": "5b0ea3c10b797074fd7ee95001509903d433660c389bf8a0d985f12cb1fdd8d2",
+      "detail_file": "docs/limitations/KL-007-bounded-commissioning-support.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "7-commissioning-and-device-download-are-required-but-blocked",
+        "7-commissioning-a-verified-070nh-memory-path-not-general-device-support"
+      ]
+    },
+    {
+      "key": "KL-008",
+      "source_index": 46,
+      "heading": "## 8. KNX Secure is not implemented",
+      "source_lines": 57,
+      "source_sha256": "ebf30bb53798b57648a94211429d3a160fe986d31c70603172013e3b9c59526f",
+      "retained_sha256": "9a69ec86874948cf82c8481e661d16b1eae5bf47d562b2f4eb70b3ee9d53f7b1",
+      "detail_file": "docs/limitations/KL-008-knx-secure-runtime.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "8-knx-secure-is-not-implemented"
+      ]
+    },
+    {
+      "key": "KL-009",
+      "source_index": 47,
+      "heading": "## 9. Project files are not diffable",
+      "source_lines": 28,
+      "source_sha256": "113e69506c86bb0a0c3d13c1167ad108bb6b76f0b97165aa810bfd18a9f9ab1c",
+      "retained_sha256": "52c006a4d7a700cceedbab2b38b3ae463010bd98bc7b5a38125aa3c0ca82c474",
+      "detail_file": "docs/limitations/KL-009-binary-project-files-and-version-control.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "9-project-files-are-not-diffable"
+      ]
+    },
+    {
+      "key": "KL-011",
+      "source_index": 48,
+      "heading": "## 11. `.knxprod` support is evidenced for schemes 11, 12, 13, 14, 20, and exact-namespace 21",
+      "source_lines": 151,
+      "source_sha256": "7082e0c8134253b9ec626159705907311c786bb2f3bcdc7ebfadf47610309834",
+      "retained_sha256": "f5e23c61833393f27d45e4dea18e277634e5764cdea1ebc53bb196a7520ab80d",
+      "detail_file": "docs/limitations/KL-011-product-schema-and-namespace-coverage.md",
+      "rewritten_link_targets": 4,
+      "anchors": [
+        "11-knxprod-support-is-evidenced-for-schemes-11-12-13-14-20-and-exact-namespace-21"
+      ]
+    },
+    {
+      "key": "KL-012",
+      "source_index": 49,
+      "heading": "## 12. Manufacturer data resolution — one of three gaps closed (2026-09-20)",
+      "source_lines": 104,
+      "source_sha256": "2498f702ce124b68d2a743c01439a1709c8224f7fd2f3cf7d6b086a655eb732e",
+      "retained_sha256": "910fecf9425b2542d374de364c42b9b48aa9c5c8685013d3e3c6bdfecdffc663",
+      "detail_file": "docs/limitations/KL-012-manufacturer-resolution-gaps.md",
+      "rewritten_link_targets": 8,
+      "anchors": [
+        "12-manufacturer-data-resolution--one-of-three-gaps-closed-2026-09-20"
+      ]
+    },
+    {
+      "key": "KL-013",
+      "source_index": 50,
+      "heading": "## 13. Password-protected projects: ZipCrypto (ETS4/ETS5) is decrypted, AES (ETS6) is still refused",
+      "source_lines": 145,
+      "source_sha256": "7db7d9dc5e9fb0d9cdd935d63608c59f597fdfd22029a4be6012a7fd3be11342",
+      "retained_sha256": "5f37ce0f58c74cc4b1a79cc072c7da2faa53c71e5814f462773b9fdaa43d6e63",
+      "detail_file": "docs/limitations/KL-013-protected-project-import.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "13-password-protected-projects-zipcrypto-ets4ets5-is-decrypted-aes-ets6-is-still-refused"
+      ]
+    },
+    {
+      "key": "KL-014",
+      "source_index": 51,
+      "heading": "## 14. The project's default language is a placeholder",
+      "source_lines": 39,
+      "source_sha256": "91c239e217d30d38a6b52d1d00e31478e5f3ab7608aa0fa960c47aa42c26f6a3",
+      "retained_sha256": "d535982ce6e6a279e7e4f7da703f5bd95a1388aae804b30ddc97da3f5893f4ad",
+      "detail_file": "docs/limitations/KL-014-imported-project-default-language.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "14-the-projects-default-language-is-a-placeholder"
+      ]
+    },
+    {
+      "key": "KL-015",
+      "source_index": 52,
+      "heading": "## 15. Unparsable values survive only on `Override` fields",
+      "source_lines": 25,
+      "source_sha256": "e14e3165b6581010fb12eff934a4ba9893dc128c0b8f905fb5c2a8e667d4ee6c",
+      "retained_sha256": "8b40ef098f129fa44ac43da903076b0e2a739487d584cbf063b2a9335753beff",
+      "detail_file": "docs/limitations/KL-015-malformed-values-and-typed-mappings.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "15-unparsable-values-survive-only-on-override-fields"
+      ]
+    },
+    {
+      "key": "KL-016",
+      "source_index": 53,
+      "heading": "## 16. Tauri v2 remains on GTK3; former maintenance advisories are resolved",
+      "source_lines": 92,
+      "source_sha256": "6aeaccc39718e022bbdd27c366bd9a9ba2682163f2ae5bc016fb2ae8822c6bd1",
+      "retained_sha256": "006ac557a4f508b52941edd7eac5451414252629eaddf7bce133ec15bb6e4c6e",
+      "detail_file": "docs/limitations/KL-016-gtk3-desktop-dependency.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "16-tauri-v2s-linux-backend-depends-on-archived-gtk3-bindings",
+        "16-tauri-v2-remains-on-gtk3-former-maintenance-advisories-are-resolved"
+      ]
+    },
+    {
+      "key": "KL-018",
+      "source_index": 54,
+      "heading": "## 18. `open_project` does not clear the previous `.knxdb` `store_path`",
+      "source_lines": 12,
+      "source_sha256": "78f1763bc15fad1915d7a3b5e141d150bfcb485c1ea1f22c5b6174d1ab605e1e",
+      "retained_sha256": "3e83e40c61a234b762916689f2fb04a1562a2e52cd7f7259484996eb110e6379",
+      "detail_file": "docs/limitations/KL-018-resolved-imported-project-store-path.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "18-open_project-does-not-clear-the-previous-knxdb-store_path"
+      ]
+    },
+    {
+      "key": "KL-020",
+      "source_index": 55,
+      "heading": "## 20. Command palette and search share overlay CSS and an accessibility gap — partially resolved",
+      "source_lines": 93,
+      "source_sha256": "39fdab7f7ec4d86b9790b4b7f446a4f3659a4c363e6b706e857ba6dd99bfaf61",
+      "retained_sha256": "b9880f940cc874f16d9939f053616ed09deea9d07aba931e852868e101c3cb57",
+      "detail_file": "docs/limitations/KL-020-overlay-accessibility-evidence.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap--partially-resolved"
+      ]
+    },
+    {
+      "key": "KL-022",
+      "source_index": 56,
+      "heading": "## 22. One shared server password, no per-user rights or internet-security claim",
+      "source_lines": 113,
+      "source_sha256": "f0067e22f411d8ad3de290ac84203376321aa82ca805a7e99bbcbbfe14e78f6d",
+      "retained_sha256": "35b2d39b1580238f42508665e6b02217b03196337ec599b5f46fbcbe432f8750",
+      "detail_file": "docs/limitations/KL-022-server-authentication-and-exposure.md",
+      "rewritten_link_targets": 4,
+      "anchors": [
+        "22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback--resolved-2026-09-20",
+        "22-one-shared-server-password-no-per-user-rights-or-internet-security-claim"
+      ]
+    },
+    {
+      "key": "KL-023",
+      "source_index": 57,
+      "heading": "## 23. `/api/project/download` buffers the whole `.knxdb` file in memory",
+      "source_lines": 8,
+      "source_sha256": "9b0de8a163214df3b42f32835ad3d645812ebf3cefb2c10bd5bfd9a691eec3f3",
+      "retained_sha256": "37185592ff9d01100bec7f00814804510a548a27cd679e70a297d5f445653635",
+      "detail_file": "docs/limitations/KL-023-native-project-download-streaming.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "23-apiprojectdownload-buffers-the-whole-knxdb-file-in-memory"
+      ]
+    },
+    {
+      "key": "KL-024",
+      "source_index": 58,
+      "heading": "## 24. `FsPicker` has no drag-and-drop or multi-select",
+      "source_lines": 8,
+      "source_sha256": "9d360d3ff9cf20f9f0461e1deeda73b58f221541bbacb6a60e24f3986e310e0f",
+      "retained_sha256": "365948262d5efd1290e96794f6c4c0d0077fa39f8d4be68606d48ea8429b30a7",
+      "detail_file": "docs/limitations/KL-024-file-picker-upload-and-selection.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "24-fspicker-has-no-drag-and-drop-or-multi-select"
+      ]
+    },
+    {
+      "key": "KL-026",
+      "source_index": 59,
+      "heading": "## 26. `BusConnection` does not yet support KNX IP Secure",
+      "source_lines": 47,
+      "source_sha256": "4067a48f3974c68f8cc73346f1a1d797bab1fb2753a681dcd5da0075554ecd1e",
+      "retained_sha256": "e45c86504dbef26cda450e5db01e563652a187586aa6cbd72dee0345e498648b",
+      "detail_file": "docs/limitations/KL-026-knxnetip-protocol-scope.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "26-busconnection-does-not-yet-support-knx-ip-secure"
+      ]
+    },
+    {
+      "key": "KL-029",
+      "source_index": 60,
+      "heading": "## 29. `apps/knx-cli bus monitor` has formatting limitations",
+      "source_lines": 64,
+      "source_sha256": "4f7b2a052b20c4d52b7850e6cfb97c134a1bbc97271a330f57b41d4ea1767f4a",
+      "retained_sha256": "54df0863b5814234340a78a2a49c0715f3e081994170609b3ccdf1da3aed499a",
+      "detail_file": "docs/limitations/KL-029-cli-monitor-formatting.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "29-appsknx-cli-bus-monitor-has-formatting-limitations"
+      ]
+    },
+    {
+      "key": "KL-031",
+      "source_index": 61,
+      "heading": "## 31. Routing multicast override exists; discovery and real custom-group traffic unverified",
+      "source_lines": 73,
+      "source_sha256": "2b42ca5739b3e35d2a24e9d8cae14636a902955c340535aaa215e9703d30bcf3",
+      "retained_sha256": "c2d3d417c7294910f8f3f831b5643b8fa77fc32352a0c9b94788037489fc36bc",
+      "detail_file": "docs/limitations/KL-031-custom-routing-multicast-evidence.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "31-knxnetip-routing-has-no-custom-multicast-address-override--resolved-routing-half",
+        "31-routing-multicast-override-exists-discovery-and-real-custom-group-traffic-unverified"
+      ]
+    },
+    {
+      "key": "KL-036",
+      "source_index": 62,
+      "heading": "## 36. Session-log export is a bounded retained window, not a lifetime audit",
+      "source_lines": 95,
+      "source_sha256": "df204cc34f9da858fe7b2be6c01979a630c36c63c4da8c71ff38db501766492b",
+      "retained_sha256": "373f92703853d99e0c2d1e64a4278633b54475555e6c8cbe1a1962ffca3badcd",
+      "detail_file": "docs/limitations/KL-036-session-log-export-window.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "36-session-log-t11-the-log-tab-was-unreachable-without-an-open-project-and-had-no-growth-cap--resolved-2026-09-10",
+        "36-session-log-export-is-a-bounded-retained-window-not-a-lifetime-audit"
+      ]
+    },
+    {
+      "key": "KL-037",
+      "source_index": 63,
+      "heading": "## 37. Translations reach selected surfaces, not every imported text or UI output",
+      "source_lines": 215,
+      "source_sha256": "9b372cd86ec6bfe5f4ec2922d2e53e5812a9741572c9535592980ff6dd51437e",
+      "retained_sha256": "c43bc96d9d43246be3c13440629f988f77bc91c10b5fde2e785f505ef9b7bfc4",
+      "detail_file": "docs/limitations/KL-037-translation-coverage.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12",
+        "37-translations-reach-selected-surfaces-not-every-imported-text-or-ui-output"
+      ]
+    },
+    {
+      "key": "KL-038",
+      "source_index": 64,
+      "heading": "## 38. Group-address CSV export/import (T12) has no verified ETS interoperability",
+      "source_lines": 37,
+      "source_sha256": "64a732ae60e56d4c738844af8712769ea138dfd1593139d50813aeca06729e7b",
+      "retained_sha256": "aadb6c4186cbb1569f51229655a1b12c2e27837d20ec6239c879bc5ae86df6d4",
+      "detail_file": "docs/limitations/KL-038-csv-interoperability.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability"
+      ]
+    },
+    {
+      "key": "KL-039",
+      "source_index": 65,
+      "heading": "## 39. CSV import does not create or rename group ranges",
+      "source_lines": 26,
+      "source_sha256": "86177dd1855c7058d3c53b509439c4b1efe51df7cbc8ac3e07f07b4957761a4a",
+      "retained_sha256": "bea2fd9087fe76f574cc04c901b0844e0e196a2ba4982eea3b6bce9596e4a9a4",
+      "detail_file": "docs/limitations/KL-039-csv-group-range-and-address-operations.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "39-csv-import-never-re-addresses-deletes-or-manages-group-ranges",
+        "39-csv-import-does-not-create-or-rename-group-ranges"
+      ]
+    },
+    {
+      "key": "KL-040",
+      "source_index": 66,
+      "heading": "## 40. CSV derived columns are read-only, and there are no `Description`/`Comment` columns",
+      "source_lines": 41,
+      "source_sha256": "f632ed6d4c00172aef44f282e9f8cb32f17204c478e73e7c6332e8562cbfb07e",
+      "retained_sha256": "d9694b80a0e3d52c847e269d006756fd62738a94e546cd09d3e7bc104f19607c",
+      "detail_file": "docs/limitations/KL-040-csv-read-only-and-absent-columns.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "40-csv-export-only-columns-are-never-applied-on-import-and-there-are-no-descriptioncomment-columns",
+        "40-csv-derived-columns-are-read-only-and-there-are-no-descriptioncomment-columns"
+      ]
+    },
+    {
+      "key": "KL-041",
+      "source_index": 67,
+      "heading": "## 41. German-locale separators are supported; unverified spreadsheet transformations remain",
+      "source_lines": 33,
+      "source_sha256": "2304983b4f131302f35580fd1345c9cee58b618d06f7698f1f55743fed03fc06",
+      "retained_sha256": "4c123a75051f567d135650b0d754f6dfe2146076f686b5f7573e932a72d7b376",
+      "detail_file": "docs/limitations/KL-041-spreadsheet-transformations.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "41-a-csv-file-saved-from-excel-under-a-german-locale-may-still-surprise-a-user",
+        "41-german-locale-separators-are-supported-unverified-spreadsheet-transformations-remain"
+      ]
+    },
+    {
+      "key": "KL-042",
+      "source_index": 68,
+      "heading": "## 42. `command_sync.rs`'s module doc overstates its own role — pre-existing, not introduced by T12",
+      "source_lines": 10,
+      "source_sha256": "f85adb814f8b396d00397b0fb02be9b56cf9a09b00d4cf039a0c8edcf7cce4c6",
+      "retained_sha256": "f83f2ea788a7c3273a425c787eaa8e19732269314deb1a7c0669bbd4cfd317b7",
+      "detail_file": "docs/limitations/KL-042-resolved-save-helper-claims.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "42-command_syncrss-module-doc-overstates-its-own-role--pre-existing-not-introduced-by-t12"
+      ]
+    },
+    {
+      "key": "KL-043",
+      "source_index": 69,
+      "heading": "## 43. Animation controls exist; some motion surfaces remain outside their guard",
+      "source_lines": 109,
+      "source_sha256": "c54841e4ced45366b34f9177040259d20266f0b748cce2c199fb87c4006c7c1e",
+      "retained_sha256": "a38676061fd5b7891024d0aa44fee62a5466bc0ba6c01737637d036f119ca424",
+      "detail_file": "docs/limitations/KL-043-motion-controls-and-residual-surfaces.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference",
+        "43-animation-controls-exist-some-motion-surfaces-remain-outside-their-guard"
+      ]
+    },
+    {
+      "key": "KL-044",
+      "source_index": 70,
+      "heading": "## 44. Project documentation export (T13) has no ETS report parity, and none can currently be measured",
+      "source_lines": 27,
+      "source_sha256": "b6a231d793eff6a153803d28086ccf9fe6150e4e73e495b35aab54ba342eabeb",
+      "retained_sha256": "5a020160bfe4f86ed95be645c174cf110055530e3eb339739333b94cdb96e2f1",
+      "detail_file": "docs/limitations/KL-044-project-report-parity.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "44-project-documentation-export-t13-has-no-ets-report-parity-and-none-can-currently-be-measured"
+      ]
+    },
+    {
+      "key": "KL-045",
+      "source_index": 71,
+      "heading": "## 45. Project documentation export has no native PDF output",
+      "source_lines": 25,
+      "source_sha256": "706060b475fc6235a68ea9dcd52a877ec3eab8c1331ee9d2832ecd5b98ca8d96",
+      "retained_sha256": "a20444db66bedd7f9082dbdacdcbea8f4ad18d8d989480509557141eea9e14c6",
+      "detail_file": "docs/limitations/KL-045-pdf-output.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "45-project-documentation-export-has-no-native-pdf-output"
+      ]
+    },
+    {
+      "key": "KL-046",
+      "source_index": 72,
+      "heading": "## 46. Project documentation export resolves names only with installed product data — partially resolved 2026-09-23 (T14)",
+      "source_lines": 36,
+      "source_sha256": "f1952223d9e6676cc65f956e144bcbd53f865a3072ee47c83c246b23a030b03c",
+      "retained_sha256": "974f2d4081e2dcf9989a308219d8c0234d45daea6df76a033a946a4e7cd3a6e5",
+      "detail_file": "docs/limitations/KL-046-report-name-resolution.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "46-project-documentation-export-does-not-resolve-manufacturer-product-or-program-names",
+        "46-project-documentation-export-resolves-names-only-with-installed-product-data--partially-resolved-2026-09-23-t14"
+      ]
+    },
+    {
+      "key": "KL-047",
+      "source_index": 73,
+      "heading": "## 47. Project documentation export lists parameter values and module-instance arguments — partially resolved 2026-09-23 (T14)",
+      "source_lines": 25,
+      "source_sha256": "cf79a650d9601ee3b7d959b813a7dcb2bb0cc37b380581d86cd0cb1f7cae20f3",
+      "retained_sha256": "dfd701caf96bd236e82a365fe1a060f469222949eb202c9a20173fe7f324b7b5",
+      "detail_file": "docs/limitations/KL-047-report-parameter-semantics.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "47-project-documentation-export-does-not-list-parameter-values-or-module-instance-arguments",
+        "47-project-documentation-export-lists-parameter-values-and-module-instance-arguments--partially-resolved-2026-09-23-t14"
+      ]
+    },
+    {
+      "key": "KL-048",
+      "source_index": 74,
+      "heading": "## 48. Project documentation export has English/German chrome but not a complete prose catalogue — partially resolved 2026-09-23 (T14)",
+      "source_lines": 22,
+      "source_sha256": "002d1cfe67f3223701e6b5a9f7d51d5c57d6f59930f54efd7ae39243442959cb",
+      "retained_sha256": "97d5957945dee33480bdd7a0b3474e0105a0f59e9e9f8d84380430f6d7580973",
+      "detail_file": "docs/limitations/KL-048-report-languages.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "48-project-documentation-export-renders-in-one-language-only",
+        "48-project-documentation-export-has-englishgerman-chrome-but-not-a-complete-prose-catalogue--partially-resolved-2026-09-23-t14"
+      ]
+    },
+    {
+      "key": "KL-051",
+      "source_index": 75,
+      "heading": "## 51. Project diff (T14) has no ETS-comparison parity, and none can currently be measured",
+      "source_lines": 28,
+      "source_sha256": "fb47460b4689daef929c2e14f67a7bd7caaf39e370dfa215ec79a736750d9ff3",
+      "retained_sha256": "0339e73848f63bf1cd5639aed06e9e64e7c276fd331522daecedccee54660edd",
+      "detail_file": "docs/limitations/KL-051-project-comparison-parity.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "51-project-diff-t14-has-no-ets-comparison-parity-and-none-can-currently-be-measured"
+      ]
+    },
+    {
+      "key": "KL-052",
+      "source_index": 76,
+      "heading": "## 52. Project diff cannot correlate a device with no individual address and no matching `ets_id`",
+      "source_lines": 40,
+      "source_sha256": "a0d6e9f90d50138058892e891704d7af2ee59bb093c74408cc7724c0657d7941",
+      "retained_sha256": "7fa8efa9dfb9366f6568fc4098152ff9d63da042237b7c772162454280d0f942",
+      "detail_file": "docs/limitations/KL-052-device-matching-without-stable-keys.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "52-project-diff-cannot-correlate-a-device-with-no-individual-address-and-no-matching-ets_id"
+      ]
+    },
+    {
+      "key": "KL-053",
+      "source_index": 77,
+      "heading": "## 53. Project diff can collide two same-named sibling building parts",
+      "source_lines": 28,
+      "source_sha256": "f2fdb5cadca9e0fa6817c73ca497c360a37dc35bb68d190414de165b595b1c51",
+      "retained_sha256": "028a7c75d8e7850e8a48671f4400605a242c29d85ba8bc992438f1b3b3c55b73",
+      "detail_file": "docs/limitations/KL-053-duplicate-building-part-names-in-comparison.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "53-project-diff-can-collide-two-same-named-sibling-building-parts"
+      ]
+    },
+    {
+      "key": "KL-054",
+      "source_index": 78,
+      "heading": "## 54. Project diff does not detect an ETS re-import's regenerated `RefId`s as \"the same project\"",
+      "source_lines": 28,
+      "source_sha256": "a4c5e2bb226cacf3b523db481ae19b268c21487c365964a69bce7c8bc8be15e1",
+      "retained_sha256": "e297bd91c39e9786b5d072f2ef19a94a0c63c40aa1c25dc5f668db8f5c037292",
+      "detail_file": "docs/limitations/KL-054-regenerated-ets-identifiers.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "54-project-diff-does-not-detect-an-ets-re-imports-regenerated-refids-as-the-same-project"
+      ]
+    },
+    {
+      "key": "KL-055",
+      "source_index": 79,
+      "heading": "## 55. Project diff cannot merge or apply a diff back onto a project",
+      "source_lines": 20,
+      "source_sha256": "1b53297b37767353112abac25021e96ac445969611ac6d34efddbef734e4c234",
+      "retained_sha256": "7a996c92a085b7a3b50bdcd6075fe4b49c5a3bf8ca19aa858b17002f9af54e8b",
+      "detail_file": "docs/limitations/KL-055-applying-or-merging-project-diffs.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "55-project-diff-cannot-merge-or-apply-a-diff-back-onto-a-project"
+      ]
+    },
+    {
+      "key": "KL-056",
+      "source_index": 80,
+      "heading": "## 56. Project diff does not do a three-way comparison",
+      "source_lines": 17,
+      "source_sha256": "9626a17ac8567b53a41230becb3291cc77d06de327574789ceb79ab3584bc7e6",
+      "retained_sha256": "7ed11f87675e9051bd5208959ba6eb470c509e175559684a9a30ca5ee7626ed8",
+      "detail_file": "docs/limitations/KL-056-three-way-comparison.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "56-project-diff-does-not-do-a-three-way-comparison"
+      ]
+    },
+    {
+      "key": "KL-060",
+      "source_index": 81,
+      "heading": "## 60. Project diff's web panel lists entities, with filtered, virtualised long tables",
+      "source_lines": 66,
+      "source_sha256": "f31c42df132df286f9693d53f2b5a588ee2196a076f874709beafd0ea54044ce",
+      "retained_sha256": "f5edfb83c96bf475752cc41f70b2b31c2c7b6e61eaba550b1a573f9a13b7f1b6",
+      "detail_file": "docs/limitations/KL-060-project-diff-table-presentation.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "60-project-diffs-web-panel-lists-entities-with-filtered-virtualised-long-tables"
+      ]
+    },
+    {
+      "key": "KL-061",
+      "source_index": 82,
+      "heading": "## 61. The DPT codec covers thirty main types with explicit input formats and disclosed encoding rulings",
+      "source_lines": 385,
+      "source_sha256": "df3f8cde23e6462c2d7ed3ad19f697706e0a4257138010eed9528512fc9499a9",
+      "retained_sha256": "9e73c608e0f366a0680686f782c78720c89c2cc40da0d163074d856057783e29",
+      "detail_file": "docs/limitations/KL-061-dpt-codec-coverage.md",
+      "rewritten_link_targets": 5,
+      "anchors": [
+        "61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard",
+        "61-the-dpt-codec-covers-thirty-main-types-with-explicit-input-formats-and-disclosed-encoding-rulings"
+      ]
+    },
+    {
+      "key": "KL-062",
+      "source_index": 83,
+      "heading": "## 62. The Group Monitor GUI (T15) is tunnelling-only, single-session, client-filtered, and only its passive receive path has real-gateway evidence",
+      "source_lines": 203,
+      "source_sha256": "e663038eeb6c8b6227ee9e17237ef995030e3d79bd7674b25c2367e56e0d4a8b",
+      "retained_sha256": "ed3c5afaae768932af5a3f761e3588b8d34a9e899182f1ef86ba210d46c7ccc9",
+      "detail_file": "docs/limitations/KL-062-group-monitor-evidence.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence"
+      ]
+    },
+    {
+      "key": "KL-063",
+      "source_index": 84,
+      "heading": "## 63. `knx-server` has no multi-user/concurrent-edit support — one shared project, one shared undo stack, no conflict detection at all",
+      "source_lines": 105,
+      "source_sha256": "6f3dc09bdb9bf6e8076e10473c281267129660d49468b378cc2e44c91bb6febc",
+      "retained_sha256": "2baccdd217f1b98cf6b7a5b0a970935bf5913bc64696dfa0a5a6cb5363f839df",
+      "detail_file": "docs/limitations/KL-063-shared-server-project-and-undo-stack.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all"
+      ]
+    },
+    {
+      "key": "KL-064",
+      "source_index": 85,
+      "heading": "## 64. `Languages` blocks outside an application program are discarded on import",
+      "source_lines": 200,
+      "source_sha256": "661ab61c0f5d691e22a4156ec8bb6e109cec8aeb5639374e9d15f3d259d1c862",
+      "retained_sha256": "b0eb27affd34d7c8eb2a87b7b9b076cb7a143a41b8ffc65c0ead75874a9b1c0a",
+      "detail_file": "docs/limitations/KL-064-non-program-translation-semantics.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "64-languages-blocks-outside-an-application-program-are-discarded-on-import"
+      ]
+    },
+    {
+      "key": "KL-065",
+      "source_index": 86,
+      "heading": "## 65. `--version` names a commit, never a working tree",
+      "source_lines": 43,
+      "source_sha256": "09c8288604891af7c9a2ede30c9362b92afc06e5aac308b718bb30f93c1f0563",
+      "retained_sha256": "82bd4cbd3d3f59e585e7100ca816e589c7b70a59374a0163bc08f52a9e60b634",
+      "detail_file": "docs/limitations/KL-065-version-identity-and-dirty-builds.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "65---version-names-a-commit-never-a-working-tree"
+      ]
+    },
+    {
+      "key": "KL-066",
+      "source_index": 87,
+      "heading": "## 66. Server-composed prose is only partly localized",
+      "source_lines": 175,
+      "source_sha256": "b6bc1bd1e4328a187cc319de603eac93966e1ad068f17473a9e6112460223596",
+      "retained_sha256": "7ff02f76167e784cc48f19384bc5c41a81b465d393d818877555e990a128a52a",
+      "detail_file": "docs/limitations/KL-066-technical-prose-localization.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14",
+        "66-server-composed-prose-and-documentation-are-only-partly-localized--partially-resolved-2026-09-23-t14",
+        "66-server-composed-prose-is-only-partly-localized"
+      ]
+    },
+    {
+      "key": "KL-068",
+      "source_index": 88,
+      "heading": "## 68. Repeat activation stays unsupported; own instance values are readable",
+      "source_lines": 55,
+      "source_sha256": "ba3617bc06cddae12ebb39142c4aa8dddc54719a225fd79dd55354f9c33594e3",
+      "retained_sha256": "4cf95c6497f3ed066f9d32b3b103b853a2ca892eafb522507f54123e39faeaa4",
+      "detail_file": "docs/limitations/KL-068-repeated-module-activation.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "68-repeated-module-instantiation-is-refused-not-supported",
+        "68-repeat-activation-stays-unsupported-own-instance-values-are-readable"
+      ]
+    },
+    {
+      "key": "KL-069",
+      "source_index": 89,
+      "heading": "## 69. A `Module` with no `@Id` cannot be matched to a project instance",
+      "source_lines": 37,
+      "source_sha256": "26568c1ef3ae42fb8d0d5881baae9984596cbb08065ccf18eb67738395e2e5ba",
+      "retained_sha256": "ac6c6acbf494d3bb4f1f75c5e695ddb1f0fb5f747a531cf7a38053c1a155b0a8",
+      "detail_file": "docs/limitations/KL-069-modules-without-identifiers.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "69-a-module-with-no-id-cannot-be-matched-to-a-project-instance"
+      ]
+    },
+    {
+      "key": "KL-070",
+      "source_index": 90,
+      "heading": "## 70. Writing a declared-but-not-currently-shown parameter is now refused",
+      "source_lines": 43,
+      "source_sha256": "c262f28e0d6528e01ac06e3cbe3503beafa37e1883efbfff7cd0aba99e95a7c0",
+      "retained_sha256": "273d004332effda5fe58f7c907f94dbd8f66ef97d158bba24c88809ec3a9c881",
+      "detail_file": "docs/limitations/KL-070-writing-inactive-parameters.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "70-writing-a-declared-but-not-currently-shown-parameter-is-now-refused"
+      ]
+    },
+    {
+      "key": "KL-071",
+      "source_index": 91,
+      "heading": "## 71. A project imported before store schema 6 has no module-instance ids to write with",
+      "source_lines": 38,
+      "source_sha256": "3f47bac919102b7412ff118afeced784cf22bb3b1df37e99c3458f677740608f",
+      "retained_sha256": "93928f5929e13d30c74dbb7eb1ca20114c58da5b378cf60111ae3588d369e667",
+      "detail_file": "docs/limitations/KL-071-pre-schema-6-module-identities.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "71-a-project-imported-before-store-schema-6-has-no-module-instance-ids-to-write-with"
+      ]
+    },
+    {
+      "key": "KL-072",
+      "source_index": 92,
+      "heading": "## 72. Line-scan (T17): an unthrottled scan is a live-bus cost, not a theoretical one — shipped 2026-09-13, still true",
+      "source_lines": 55,
+      "source_sha256": "586cc2fdf92d0be2afe65c2cb77dee880cdfd1bcea496a03671501645c45bd2f",
+      "retained_sha256": "61939c7674d4feb191e620ad01c0d0e04a8305fddadcb496e5ca31c3d78e574b",
+      "detail_file": "docs/limitations/KL-072-line-scan-duration-and-bus-load.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "72-line-scan-t17-an-unthrottled-scan-is-a-live-bus-cost-not-a-theoretical-one--shipped-2026-09-13-still-true"
+      ]
+    },
+    {
+      "key": "KL-073",
+      "source_index": 93,
+      "heading": "## 73. A line scan cannot learn product identity, manufacturer, or serial number",
+      "source_lines": 42,
+      "source_sha256": "34602abee5f26eced15c57426bb76815060e0b633e689c517732c6f8231093d2",
+      "retained_sha256": "67efbbd732dba3065fdf16d29e2a2046330a8f3c62cb035e8f433e3afeb78bbd",
+      "detail_file": "docs/limitations/KL-073-line-scan-identity-limits.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "73-a-line-scan-cannot-learn-product-identity-manufacturer-or-serial-number"
+      ]
+    },
+    {
+      "key": "KL-074",
+      "source_index": 94,
+      "heading": "## 74. A line scan cannot distinguish a busy-but-present device from an absent one",
+      "source_lines": 51,
+      "source_sha256": "4a56374a089ed0ced67d6e4065ea10b322f64bdeaf31cd63aa022b38b355556c",
+      "retained_sha256": "97a53cec843abf769bf1e7fa2cbd588470ccedf951004e4961b6a640199421f2",
+      "detail_file": "docs/limitations/KL-074-busy-devices-and-vacant-scan-results.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "74-a-line-scan-cannot-distinguish-a-busy-but-present-device-from-an-absent-one"
+      ]
+    },
+    {
+      "key": "KL-075",
+      "source_index": 95,
+      "heading": "## 75. A shorter `--timeout-ms` is a real option, but not the default — a slow-but-present device can look vacant",
+      "source_lines": 30,
+      "source_sha256": "e8e3353405e20eb6f8d8495d73017ec7e93d7876a230a4a0c41dc5d7bb1f2ad1",
+      "retained_sha256": "b3649a2952a42b65aa30ded2fa31140c05cba77864dea571cc5763918706ffaa",
+      "detail_file": "docs/limitations/KL-075-short-scan-timeouts.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "75-a-shorter---timeout-ms-is-a-real-option-but-not-the-default--a-slow-but-present-device-can-look-vacant"
+      ]
+    },
+    {
+      "key": "KL-076",
+      "source_index": 96,
+      "heading": "## 76. A negative Layer 2 confirm's fast path was deliberately not built; `Indeterminate` does not retry",
+      "source_lines": 44,
+      "source_sha256": "e79a9816bfa29eb1d40972c4d573eda23452979f388cf424492af6e2bcd891d6",
+      "retained_sha256": "7c0beabcb139ee7522cc0d4ba5a153c2ed3ae7158988da7f5d43c7179308fcc8",
+      "detail_file": "docs/limitations/KL-076-scan-shortcuts-and-ambiguous-probes.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "76-a-negative-layer-2-confirms-fast-path-was-deliberately-not-built-indeterminate-does-not-retry"
+      ]
+    },
+    {
+      "key": "KL-077",
+      "source_index": 97,
+      "heading": "## 77. A line scan covers one line at a time; it does not cross couplers",
+      "source_lines": 22,
+      "source_sha256": "d280f653a7b218857336a421470bb9e5cb45c5f42eccf47f6e12a1bdf45bca5b",
+      "retained_sha256": "bd742d8ea25b79641a5463d45e06bacb465269f7f6d36aa5639cf1c132e0e55c",
+      "detail_file": "docs/limitations/KL-077-single-line-scan-scope.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "77-a-line-scan-covers-one-line-at-a-time-it-does-not-cross-couplers"
+      ]
+    },
+    {
+      "key": "KL-078",
+      "source_index": 98,
+      "heading": "## 78. A line scan reports other KNXnet/IP tunnelling endpoints as occupied devices",
+      "source_lines": 33,
+      "source_sha256": "f3494464bcf4e9583112ccc9295e7fbf64349e1ba2cf941eb943437451666fa3",
+      "retained_sha256": "a3cf82a4500c0ca7185121e43dbfc0dd7bf56ce83f1fe2aa5fbd2b23259c4432",
+      "detail_file": "docs/limitations/KL-078-gateway-endpoints-in-scan-results.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "78-a-line-scan-reports-other-knxnetip-tunnelling-endpoints-as-occupied-devices"
+      ]
+    },
+    {
+      "key": "KL-079",
+      "source_index": 99,
+      "heading": "## 79. Discovery needs reachable multicast and permitted unicast replies",
+      "source_lines": 37,
+      "source_sha256": "907c310551e1f27f7aa3f6a63d1f9a3b0c8a04dda7b4cbcffc271416741c6e30",
+      "retained_sha256": "376c95a731c5298fe70807aa548282e7ff4a9a151915d2f7668d7f5d58991af8",
+      "detail_file": "docs/limitations/KL-079-discovery-reachability.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry",
+        "79-discovery-needs-reachable-multicast-and-permitted-unicast-replies"
+      ]
+    },
+    {
+      "key": "KL-082",
+      "source_index": 100,
+      "heading": "## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else",
+      "source_lines": 173,
+      "source_sha256": "0b0385ad70e6da74268e14dd29198676a4eb6ec7347af97b5ecdbbed5e69c5bf",
+      "retained_sha256": "6155b199096d17caccdff41f065159d21259bc9dc076efaf61b194267a71fcd4",
+      "detail_file": "docs/limitations/KL-082-monitor-context-freshness.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else"
+      ]
+    },
+    {
+      "key": "KL-085",
+      "source_index": 101,
+      "heading": "## 85. A `.signature` package member is stored with role `Signature`, never verified",
+      "source_lines": 122,
+      "source_sha256": "f6230caa1a1a49d1a464d5c9fd9f4b6b3b9acd26d8009f7d6e23b9e34dad3276",
+      "retained_sha256": "1a1f24ad6764a43a74ac2c0567df00286096ba4325e4ce87eaedcf786890ea68",
+      "detail_file": "docs/limitations/KL-085-unverified-package-signatures.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "85-a-signature-package-member-is-stored-with-role-signature-never-verified"
+      ]
+    },
+    {
+      "key": "KL-086",
+      "source_index": 102,
+      "heading": "## 86. Duplicate identifiers inside one file — recorded for normalized product identifiers; DPT provenance remains limited",
+      "source_lines": 149,
+      "source_sha256": "539f1e224b0805d6efaa1473458edd79784c06a8f5f25459c7da5cf4d3b9e883",
+      "retained_sha256": "f00909e98866180f5cb9417b573b045da113215c7fa82679f86942e43356658a",
+      "detail_file": "docs/limitations/KL-086-duplicate-product-identifiers.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "86-duplicate-identifiers-inside-one-file--recorded-for-normalized-product-identifiers-dpt-provenance-remains-limited"
+      ]
+    },
+    {
+      "key": "KL-087",
+      "source_index": 103,
+      "heading": "## 87. A parse fix does not reach rows that were already ingested, and only a migration can go back for them",
+      "source_lines": 82,
+      "source_sha256": "5b604c4c3139a75301b7690c3e3c6f08a26a26d98d62ba76016d654f058b2a77",
+      "retained_sha256": "ca8dc767655a30ff20e82adfb0037aaf12118fc2d66ec2213d3d146f4795e538",
+      "detail_file": "docs/limitations/KL-087-re-derivation-after-parser-fixes.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "87-a-parse-fix-does-not-reach-rows-that-were-already-ingested-and-only-a-migration-can-go-back-for-them"
+      ]
+    },
+    {
+      "key": "KL-088",
+      "source_index": 104,
+      "heading": "## 88. A manufacturer's display name is last-writer-wins, and that is on purpose",
+      "source_lines": 119,
+      "source_sha256": "6edf5cb3eca4e07029e7ad66e534621cd331bc2e6d4ee5e6cb47eda8a471647e",
+      "retained_sha256": "fa183e434397fe25dd58ce78796bb112a207dc292886e4c989c2db670d1d2863",
+      "detail_file": "docs/limitations/KL-088-manufacturer-display-name-winner.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "88-a-manufacturers-display-name-is-last-writer-wins-and-that-is-on-purpose"
+      ]
+    },
+    {
+      "key": "KL-090",
+      "source_index": 105,
+      "heading": "## 90. There is no DPT main type 46; 46 is a *count* of main types in one ETS master-data file",
+      "source_lines": 71,
+      "source_sha256": "3953c7d7db06fbbbde0abc80d347f1b064e8c6aa106e21954d96fe9cc39072b5",
+      "retained_sha256": "5e9393898811c9f6869beda74919d9dbd4825291353f24cf0c7f081ac6db8ea3",
+      "detail_file": "docs/limitations/KL-090-historical-dpt-count-correction.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "90-there-is-no-dpt-main-type-46-46-is-a-count-of-main-types-in-one-ets-master-data-file"
+      ]
+    },
+    {
+      "key": "KL-092",
+      "source_index": 106,
+      "heading": "## 92. Commissioning phase 2 is verified against a simulator this project wrote; one device has been written since",
+      "source_lines": 88,
+      "source_sha256": "b069d0e4e2437bb3ced7a0ba837b5a6bac40deaf478f1e136f05ca6db00c343a",
+      "retained_sha256": "2b5eb2fd5f7d08b544cdd35aeba21dfb846d4babddd9a7649e8d0721f04dfcb0",
+      "detail_file": "docs/limitations/KL-092-simulator-versus-hardware-evidence.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-one-device-has-been-written-since"
+      ]
+    },
+    {
+      "key": "KL-093",
+      "source_index": 107,
+      "heading": "## 93. `knx-core`'s declarative procedure model still writes `PID_PROGRAM_VERSION` unconditionally, for every part — PARKED, unowned",
+      "source_lines": 67,
+      "source_sha256": "6c88b27b57d66e910391ac5d19bfb6ee7b0a40473d9ec8913c67e04f23be1314",
+      "retained_sha256": "12833c32857a5b6116510043a6b0b8c506bd1352038b2cc5792c6dbd0fb37f0e",
+      "detail_file": "docs/limitations/KL-093-declarative-procedure-version-writes.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "93-knx-cores-declarative-procedure-model-still-writes-pid_program_version-unconditionally-for-every-part--parked-deferred-to-task-c11",
+        "93-knx-cores-declarative-procedure-model-still-writes-pid_program_version-unconditionally-for-every-part--parked-unowned"
+      ]
+    },
+    {
+      "key": "KL-095",
+      "source_index": 108,
+      "heading": "## 95. Six places where the KNX Standard's printed text must not be followed literally",
+      "source_lines": 44,
+      "source_sha256": "36a5d91c7f34cd73d2f55f9a8b170a35644322dcd536244656c1e8cd6ad4b843",
+      "retained_sha256": "571793f36589e72a3a9b421313293f9b4738097391ecffdf41429a479de4596f",
+      "detail_file": "docs/limitations/KL-095-documented-specification-contradictions.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "95-six-places-where-the-knx-standards-printed-text-must-not-be-followed-literally"
+      ]
+    },
+    {
+      "key": "KL-097",
+      "source_index": 109,
+      "heading": "## 97. Progress is a phase label far more often than it is a percentage",
+      "source_lines": 24,
+      "source_sha256": "af7e6c58e676bff60e38b91946dbd2800b8ae19699a803e73f840f80d28ec5d2",
+      "retained_sha256": "b94712bffb29eb10204e18fe298260a9cee016c83e4b3d0070c1e61a72765700",
+      "detail_file": "docs/limitations/KL-097-indeterminate-import-progress.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "97-progress-is-a-phase-label-far-more-often-than-it-is-a-percentage"
+      ]
+    },
+    {
+      "key": "KL-098",
+      "source_index": 110,
+      "heading": "## 98. Almost nobody will ever see the second flavour message",
+      "source_lines": 29,
+      "source_sha256": "100b9b01d1cacb25df4ebf71d36c68f708390e3c28a0588d363b4ab8bb9e3696",
+      "retained_sha256": "1840cc0b1a4797a83036d08ff26afbff8691a51350eb2b94e93014bbb0abe60a",
+      "detail_file": "docs/limitations/KL-098-load-banner-message-timing.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "98-almost-nobody-will-ever-see-the-second-flavour-message"
+      ]
+    },
+    {
+      "key": "KL-099",
+      "source_index": 111,
+      "heading": "## 99. `MemoryControlBlock`'s access-nibble order is inferred, not spec-stated",
+      "source_lines": 42,
+      "source_sha256": "ea5028a001d459f7c8eb240d0c143dc80e11498e990aebfc1f1a5ba8b006285a",
+      "retained_sha256": "bb78290e8562c08d49fb604656ebd516183200a46606655d00e7e2f99fbd3ca7",
+      "detail_file": "docs/limitations/KL-099-memory-control-access-nibble-inference.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "99-memorycontrolblocks-access-nibble-order-is-inferred-not-spec-stated"
+      ]
+    },
+    {
+      "key": "KL-100",
+      "source_index": 112,
+      "heading": "## 100. Help prose lives in the message catalogue, one paragraph per key",
+      "source_lines": 40,
+      "source_sha256": "e3b2ee5a0a08ab2fd66bdfe9834f20b206759e9759c7d1b1a13c2addeeea9171",
+      "retained_sha256": "5fe583fab30207ede9daaf0e0ff25d66b7f3f5b435a8434760a9eca7d0e7cf97",
+      "detail_file": "docs/limitations/KL-100-help-text-format.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "100-help-prose-lives-in-the-message-catalogue-one-paragraph-per-key"
+      ]
+    },
+    {
+      "key": "KL-101",
+      "source_index": 113,
+      "heading": "## 101. RES §4.23.2.4.1's \"once more\" attempt can roughly triple a load-state wait's worst-case latency",
+      "source_lines": 79,
+      "source_sha256": "fceed9ab1c329392edcfd248f0666e71dcc776d3a277ec72b701ca34e9a78f68",
+      "retained_sha256": "79cac9a9031fecb9cffd443ab2248377c8cbe4051521633836218d8d306241bd",
+      "detail_file": "docs/limitations/KL-101-load-state-retry-latency.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "101-res-423241s-once-more-attempt-can-roughly-triple-a-load-state-waits-worst-case-latency"
+      ]
+    },
+    {
+      "key": "KL-102",
+      "source_index": 114,
+      "heading": "## 102. The write echo's decode-failure branch has no known real trigger",
+      "source_lines": 39,
+      "source_sha256": "9fcf5498867f4182cb4de6e7cd2dcd080038fe64f3b44b2c7cf82cd5aeb5e301",
+      "retained_sha256": "2ca035a66147319f57354d560f4dc0926db713c10962e018586cda1d07cd2901",
+      "detail_file": "docs/limitations/KL-102-write-echo-error-branch.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "102-the-write-echos-decode-failure-branch-has-no-known-real-trigger"
+      ]
+    },
+    {
+      "key": "KL-104",
+      "source_index": 115,
+      "heading": "## 104. A device that goes offline mid-`LoadCompleting` now costs a full reconnect per quiet poll",
+      "source_lines": 65,
+      "source_sha256": "6675a6dc09dd801bfe49e8103b5e208c3aa7f15f3ace6fb8b025f379e48d226e",
+      "retained_sha256": "e67383ff72e51c0b8f43a206af668e31703f5b4f673b76f949ced21688cc417a",
+      "detail_file": "docs/limitations/KL-104-reconnect-cost-during-quiet-completion.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "104-a-device-that-goes-offline-mid-loadcompleting-now-costs-a-full-reconnect-per-quiet-poll"
+      ]
+    },
+    {
+      "key": "KL-105",
+      "source_index": 116,
+      "heading": "## 105. System-priority control frames sent; on-wire priority unmeasured",
+      "source_lines": 13,
+      "source_sha256": "2ffd7430fa6e953c4845bb0a3290f6e6feb1ec37d8a394dad15a13e2fb4145a2",
+      "retained_sha256": "b1bfe9a95236ccbb34dc6a07946cff5f8d9cb6f0f100ccd514389a1d72cedb33",
+      "detail_file": "docs/limitations/KL-105-control-frame-on-wire-priority.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "105-transport-layer-control-frames-go-out-at-low-priority-not-system",
+        "105-system-priority-control-frames-sent-on-wire-priority-unmeasured"
+      ]
+    },
+    {
+      "key": "KL-106",
+      "source_index": 117,
+      "heading": "## 106. The debug report redacts five pattern classes, and nothing else",
+      "source_lines": 131,
+      "source_sha256": "47625c05365c1de5522397630bbdc27a2505ab829afb09383e1b08269cfe9d66",
+      "retained_sha256": "f860d0a7ec98c8e452082242a1ae6cf1d1e304e518a1326e24b73bc97ad4e71f",
+      "detail_file": "docs/limitations/KL-106-debug-report-privacy-limits.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "106-the-debug-report-redacts-five-pattern-classes-and-nothing-else"
+      ]
+    },
+    {
+      "key": "KL-107",
+      "source_index": 118,
+      "heading": "## 107. There is no plugin API — a third party cannot add a format, a protocol, a report template or a UI panel without forking",
+      "source_lines": 82,
+      "source_sha256": "1ea2cb2625b6c9664f904d3f222f60697f1b000964f9b665aec645b86d9bce8b",
+      "retained_sha256": "0ce787b8f58c090dfd09ceb664c1c6e87f2076fde90207c01eadc59c7e42f33a",
+      "detail_file": "docs/limitations/KL-107-extension-api-scope.md",
+      "rewritten_link_targets": 8,
+      "anchors": [
+        "107-there-is-no-plugin-api--a-third-party-cannot-add-a-format-a-protocol-a-report-template-or-a-ui-panel-without-forking"
+      ]
+    },
+    {
+      "key": "KL-108",
+      "source_index": 119,
+      "heading": "## 108. MP §2.3 contradicts itself about an occupied IA_new, and this project follows the exception text",
+      "source_lines": 59,
+      "source_sha256": "0560e2699f3dcf102a230451e96e74ba18644070a31482716b6e86b49e6d6fae",
+      "retained_sha256": "a8c93b572711bc9ecfbb8e31992282904aca5b8b77765bedd1b4e31a31ffdcea",
+      "detail_file": "docs/limitations/KL-108-occupied-address-specification-ruling.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "108-mp-23-contradicts-itself-about-an-occupied-ia_new-and-this-project-follows-the-exception-text"
+      ]
+    },
+    {
+      "key": "KL-109",
+      "source_index": 120,
+      "heading": "## 109. Two loadable parts of the same `PartKind` have no defined relative order, so `DownloadPlan::new` refuses them both",
+      "source_lines": 49,
+      "source_sha256": "5238737ff22f5ab5eb707434a3db5198d1fac6431b05af11b7434257e6b50c5b",
+      "retained_sha256": "0497ad824fccd9c76a7237cf637a268a706d5f1bb279665308ac595ca66b17f1",
+      "detail_file": "docs/limitations/KL-109-repeated-download-part-kinds.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "109-two-loadable-parts-of-the-same-partkind-have-no-defined-relative-order-so-downloadplannew-refuses-them-both"
+      ]
+    },
+    {
+      "key": "KL-110",
+      "source_index": 121,
+      "heading": "## 110. `PID_GROUP_RESPONSER_TABLE` stays unimplemented on every medium",
+      "source_lines": 34,
+      "source_sha256": "e1a7f23837c091074a885aacadf401d771cd630633b9a7cbb48a92fdba862675",
+      "retained_sha256": "a2fbc76702726002027e4a47e5976696ec54f05c909bd6e0ae86d09f09a113c8",
+      "detail_file": "docs/limitations/KL-110-pl110-group-responser-table.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "110-pid_group_responser_table-stays-unimplemented-on-every-medium"
+      ]
+    },
+    {
+      "key": "KL-111",
+      "source_index": 122,
+      "heading": "## 111. CP §3.5.4 step 07 (unload the individual address) stays unimplemented",
+      "source_lines": 35,
+      "source_sha256": "ad3b4332bfde56d65937513b41fd5565d68f3d502e95e1b16921d22d92d4e7e2",
+      "retained_sha256": "c2177d5810eafcbe2dc24867c5817e977aa6061418d3659c2fb89d8ad4105694",
+      "detail_file": "docs/limitations/KL-111-individual-address-unload.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "111-cp-354-step-07-unload-the-individual-address-stays-unimplemented"
+      ]
+    },
+    {
+      "key": "KL-112",
+      "source_index": 123,
+      "heading": "## 112. A download plan that needs `A_Key_Write` is refused outright, not carried out",
+      "source_lines": 43,
+      "source_sha256": "3c1ab81b8aa0cc003a37d48a7255a1a55f475a95da981c7de2d60658aa7e7cd3",
+      "retained_sha256": "bc82c9617d9ff9efbca7baefda97f898500b576c4a812e327f6a3fcc204e9a33",
+      "detail_file": "docs/limitations/KL-112-access-key-assignment-during-download.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "112-a-download-plan-that-needs-a_key_write-is-refused-outright-not-carried-out"
+      ]
+    },
+    {
+      "key": "KL-113",
+      "source_index": 124,
+      "heading": "## 113. An escalation only reloads the segments a shortened plan actually carries",
+      "source_lines": 48,
+      "source_sha256": "6a2bcaac5f0b1ef151ffb808c15acab73bbd730bbb750a5486b38bd80bc70ad7",
+      "retained_sha256": "aa05d8ae365086e91b47c8342c2eeef2a2b77eff9429820f3c98fc897cce58d6",
+      "detail_file": "docs/limitations/KL-113-partial-download-escalation-scope.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "113-an-escalation-only-reloads-the-segments-a-shortened-plan-actually-carries"
+      ]
+    },
+    {
+      "key": "KL-114",
+      "source_index": 125,
+      "heading": "## 114. The Download Counter refusal is this project's own conservative rule, not a System B obligation",
+      "source_lines": 99,
+      "source_sha256": "9559619cf5f089c308effc10c0bb239e67144c0c0c4261a0d6c011969ed0bd19",
+      "retained_sha256": "644e5da62952c14b36158427b741d17801d9bcd574538756dee7b0a1d87d3915",
+      "detail_file": "docs/limitations/KL-114-download-counter-refusal-policy.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "114-the-download-counter-refusal-is-this-projects-own-conservative-rule-not-a-system-b-obligation"
+      ]
+    },
+    {
+      "key": "KL-115",
+      "source_index": 126,
+      "heading": "## 115. `MasterResetResponse::recovery_wait` and `SessionTiming::restart_basic_t1` compute durations nobody waits on yet",
+      "source_lines": 84,
+      "source_sha256": "220279f557e3c813ebaaff29229cd2773bc556f6a0720378b3a69508539c592f",
+      "retained_sha256": "033dbfe48006f6570f351328033a4fe1b29041e736c24d43059c90c85c81f725",
+      "detail_file": "docs/limitations/KL-115-recovery-and-restart-waits.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "115-masterresetresponserecovery_wait-and-sessiontimingrestart_basic_t1-compute-durations-nobody-waits-on-yet"
+      ]
+    },
+    {
+      "key": "KL-116",
+      "source_index": 127,
+      "heading": "## 116. `NM_IndividualAddress_Write` does not loop for the operator, and reads one Transport Layer release as MP §2.3 never quite says",
+      "source_lines": 117,
+      "source_sha256": "ac44aa3874dca816a5ec50cbcd8e384a272bfe247c75151a8a1f6850f8cd5b7e",
+      "retained_sha256": "550f81273c146054e4412e78a25055d71ae5f71fa8ba73f69c596e64a7084bae",
+      "detail_file": "docs/limitations/KL-116-individual-address-write-procedure.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "116-nm_individualaddress_write-does-not-loop-for-the-operator-and-reads-one-transport-layer-release-as-mp-23-never-quite-says"
+      ]
+    },
+    {
+      "key": "KL-121",
+      "source_index": 128,
+      "heading": "## 121. Two open windows do not see each other's preference changes until one reloads",
+      "source_lines": 46,
+      "source_sha256": "ffdc8f12d8d11acffd6a25182ec2ee359f9a10aaa90b14feef1f981b2ddc82d7",
+      "retained_sha256": "ffdd8b04072f26361ac4685f3c54670108a12cbb70a800372ef95970cf94f9f3",
+      "detail_file": "docs/limitations/KL-121-cross-window-preference-refresh.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "121-two-open-windows-do-not-see-each-others-preference-changes-until-one-reloads"
+      ]
+    },
+    {
+      "key": "KL-124",
+      "source_index": 129,
+      "heading": "## 124. The interface search shows four facts about an interface; the protocol carries more",
+      "source_lines": 53,
+      "source_sha256": "6d584bc32a9a1ac2d6df1b7403fb67048b3bdd86a12763ec0a8c4e76ce3b23aa",
+      "retained_sha256": "fadf9f716fd1df2c289fd86c30b02be46600074b6fb1f928dfa6902d8944037c",
+      "detail_file": "docs/limitations/KL-124-discovery-metadata-display.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "124-the-interface-search-shows-four-facts-about-an-interface-the-protocol-carries-more"
+      ]
+    },
+    {
+      "key": "KL-125",
+      "source_index": 130,
+      "heading": "## 125. ETS 6's device-local communication-object ids are read from a single project's evidence",
+      "source_lines": 117,
+      "source_sha256": "e3cbf4c72c5850cf0b14e29c5bc7f54ddb7d032e2345bcb50ef774fd8a7c416a",
+      "retained_sha256": "9a0af4fb4d0360ff6784303dfdfb1e0475cb41ef586d242494fc338c4b38907c",
+      "detail_file": "docs/limitations/KL-125-independent-ets6-object-id-evidence.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "125-ets-6s-device-local-communication-object-ids-are-read-from-a-single-projects-evidence"
+      ]
+    },
+    {
+      "key": "KL-126",
+      "source_index": 131,
+      "heading": "## 126. line-scan reconciliation acts on occupancy evidence, not device identity",
+      "source_lines": 32,
+      "source_sha256": "c70ea52d2db8324d94da710b1a8b4c9525df657b0ff7134b2f3059abe874a05a",
+      "retained_sha256": "5dc123c90603be463a81233764c2df11a17b6a6444d0251752595ca0f1e73583",
+      "detail_file": "docs/limitations/KL-126-scan-reconciliation-is-occupancy-based.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "126-line-scan-reconciliation-acts-on-occupancy-evidence-not-device-identity"
+      ]
+    },
+    {
+      "key": "KL-127",
+      "source_index": 132,
+      "heading": "## 127. A site over several buildings rests on schema text and synthetic tests, not on an ETS sample",
+      "source_lines": 42,
+      "source_sha256": "8de27c4dccba48cb0547fedda15f00fc0912a3488caee77a7c39a904730ad78e",
+      "retained_sha256": "adb70a9e8616ff1016ca999f8285acd01aaf1d68455c93f57fb466cabaaebbc6",
+      "detail_file": "docs/limitations/KL-127-site-and-building-evidence.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "127-a-site-over-several-buildings-rests-on-schema-text-and-synthetic-tests-not-on-an-ets-sample"
+      ]
+    },
+    {
+      "key": "KL-128",
+      "source_index": 133,
+      "heading": "## 128. Legacy `.vd3`–`.vd5` and `.pr3`–`.pr5` files are refused, and the refusal misnames the format",
+      "source_lines": 150,
+      "source_sha256": "551331be3e8197969a5d36b277501920d7fcb49d9531407027704c43e9e58671",
+      "retained_sha256": "ace39817c46a4a66a74b62b858cc612524130c5f7cd11c8c23a373f37cdb5d76",
+      "detail_file": "docs/limitations/KL-128-legacy-product-import-boundaries.md",
+      "rewritten_link_targets": 4,
+      "anchors": [
+        "128-legacy-vd3vd5-and-pr3pr5-files-are-refused-and-the-refusal-misnames-the-format"
+      ]
+    },
+    {
+      "key": "KL-129",
+      "source_index": 134,
+      "heading": "## 129. A stale id-allocator snapshot can duplicate ids, and saving then drops one entity",
+      "source_lines": 73,
+      "source_sha256": "2fc61dfd64027f830be06a07acb9360868dbbcb0646b5bd6633cc56e740fc8ce",
+      "retained_sha256": "c7f3d0c601df74cf8df493cffdd7e12840024dca88fa0a34287629a5f6232b11",
+      "detail_file": "docs/limitations/KL-129-allocator-safeguards-and-deferred-enforcement.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "129-a-stale-id-allocator-snapshot-can-duplicate-ids-and-saving-then-drops-one-entity"
+      ]
+    },
+    {
+      "key": "KL-130-GATE",
+      "source_index": 135,
+      "heading": "## §130 A gate binary can verify a directory that no longer exists",
+      "source_lines": 7,
+      "source_sha256": "4923d0c4bb31525cd3b04f78cbdab2bc2db5f2104bfdee101dcac9d727a37416",
+      "retained_sha256": "4ac53d0e6dbdcf138473389ad702fe6f9da5d91b912d3edbbe7ae871bf915e5a",
+      "detail_file": "docs/limitations/KL-130-GATE-resolved-gate-root-validation.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "130-a-gate-binary-can-verify-a-directory-that-no-longer-exists"
+      ]
+    },
+    {
+      "key": "KL-133",
+      "source_index": 136,
+      "heading": "## §133 A dead webview cannot be closed with the window manager's close button",
+      "source_lines": 82,
+      "source_sha256": "241e9bfe14477dd1944d6a73b9ec5d705aae62ccdca9c6c6742be72d60c0b883",
+      "retained_sha256": "7701fdc8882c114bd455800de3810852953d341758e785839524c7c563fcd1f5",
+      "detail_file": "docs/limitations/KL-133-terminated-versus-hung-webviews.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "133-a-dead-webview-cannot-be-closed-with-the-window-managers-close-button"
+      ]
+    },
+    {
+      "key": "KL-134",
+      "source_index": 137,
+      "heading": "## §134 Baggage is inventoried, not interpreted",
+      "source_lines": 42,
+      "source_sha256": "5ee078efb65ab886d94d7a6e6acc927b895e78118c750b3940260e7e8e187d20",
+      "retained_sha256": "4edad6b534565230d285ffe666af9d0d7dfdbf6079d5472eb9b45376140ca152",
+      "detail_file": "docs/limitations/KL-134-baggage-classification-versus-interpretation.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "134-baggage-is-inventoried-not-interpreted"
+      ]
+    },
+    {
+      "key": "KL-135",
+      "source_index": 138,
+      "heading": "## §135 Package identity is recorded, not decided",
+      "source_lines": 55,
+      "source_sha256": "9aa3571297202e9c486b2b96fce8b22238da52ed14d72c04d7a1c4e4c022caf8",
+      "retained_sha256": "8a810c85f23d87fd579f0fdf3029290587fe62e40610ae996ffab6822fea6c3e",
+      "detail_file": "docs/limitations/KL-135-product-and-application-identity-policy.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "135-package-identity-is-recorded-not-decided",
+        "136-mask-0701h-bim-m112-devices-cannot-receive-an-application-download",
+        "136-mask-0701h-bim-m112-devices-can-receive-an-application-download--lifted-the-restart-stays-unconfirmed"
+      ]
+    },
+    {
+      "key": "KL-136",
+      "source_index": 139,
+      "heading": "## §136 `0701h` download verified on three programs; restart remains unconfirmed",
+      "source_lines": 18,
+      "source_sha256": "c359d1af03108c025b84040fa069ac9e9d56ff420bc8eec9e0477a53126b9e08",
+      "retained_sha256": "c69bcd8597af85b171b7a427e473529b57d441042e199a8a2a7fe90d665777dc",
+      "detail_file": "docs/limitations/KL-136-0701h-download-and-restart-evidence.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "136-0701h-download-verified-on-three-programs-restart-remains-unconfirmed"
+      ]
+    },
+    {
+      "key": "KL-138",
+      "source_index": 140,
+      "heading": "## §138 A device's access key comes from the project or a key file, and nothing checks it live",
+      "source_lines": 49,
+      "source_sha256": "0ab8e91739c2dd1ee44af633bcdc0e80425cb991b66b554d429800c368e00ace",
+      "retained_sha256": "1248e1aa6fcb8a62608e03bbbdb70ec9fba8c18494ba576bc78a13750db855f9",
+      "detail_file": "docs/limitations/KL-138-download-authorization-key-provenance.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "138-a-devices-access-key-comes-from-the-project-or-a-key-file-and-nothing-checks-it-live"
+      ]
+    },
+    {
+      "key": "KL-139",
+      "source_index": 141,
+      "heading": "## §139 Serial-number address write was ignored by the tested device",
+      "source_lines": 43,
+      "source_sha256": "fc7c62cd77bfcca876987ee11bfb9b6005e5d24032329805ae1a699a39b29225",
+      "retained_sha256": "664d0aa6dfeeefe9b2942cbde11eecc43b1124fa04d0a4799566b5448f0046b3",
+      "detail_file": "docs/limitations/KL-139-serial-number-address-write-evidence.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "139-a-device-can-be-addressed-by-its-serial-number-and-nothing-has-done-it-live",
+        "139-serial-number-address-write-was-ignored-by-the-tested-device"
+      ]
+    },
+    {
+      "key": "KL-146",
+      "source_index": 142,
+      "heading": "## §146 Channel labels are shown; undetermined activation and missing DPT remain",
+      "source_lines": 113,
+      "source_sha256": "50ebd6c692751da298e2ae61c3399cb8d50e573d707058a97ecdbb42c27a4975",
+      "retained_sha256": "e84fa6b6c71c46fae85f90fa084854ef44ca52fd5bd113e3b43977bec2cf5b5b",
+      "detail_file": "docs/limitations/KL-146-object-activation-and-dpt-gaps.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined",
+        "146-channel-labels-are-shown-undetermined-activation-and-missing-dpt-remain"
+      ]
+    },
+    {
+      "key": "KL-145",
+      "source_index": 143,
+      "heading": "## §145 Instance flags are written; unlinked active objects can still differ",
+      "source_lines": 15,
+      "source_sha256": "fa1085401770e18061757b0055bb0fcf8cc4e3e08454db5f90ce13d3b3639e27",
+      "retained_sha256": "22d8fd2edbcabe5e92137e24b9078b8bf46fa59dbc8e5b1fcca1a1351c4ff6e8",
+      "detail_file": "docs/limitations/KL-145-unlinked-active-communication-objects.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "145-instance-level-flag-overrides-are-not-written-into-the-group-object-table",
+        "145-instance-flags-are-written-unlinked-active-objects-can-still-differ"
+      ]
+    },
+    {
+      "key": "KL-144",
+      "source_index": 144,
+      "heading": "## §144 RF device configuration exists in the simulator only",
+      "source_lines": 33,
+      "source_sha256": "6e733afd192f86d46b7055b54375e63c7c71974f23c7e2484f3534184dcefd6d",
+      "retained_sha256": "d0cbe842e9b376eedacaa4a64cbf474eaaced90750a19a98b3c938d970866601",
+      "detail_file": "docs/limitations/KL-144-rf-configuration-scope.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "144-rf-device-configuration-exists-in-the-simulator-only"
+      ]
+    },
+    {
+      "key": "KL-143",
+      "source_index": 145,
+      "heading": "## §143 RF domain addresses exist in the simulator only; there is no RF device",
+      "source_lines": 40,
+      "source_sha256": "401aaecd9cd233dfba21a4ec41658f977e3b660464b70d4b72075c85dc976243",
+      "retained_sha256": "9e25620bfd4d86e3f62e66b034f30b803fd138f17170009d16a135d0490726ed",
+      "detail_file": "docs/limitations/KL-143-rf-domain-address-scope.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "143-rf-domain-addresses-exist-in-the-simulator-only-there-is-no-rf-device"
+      ]
+    },
+    {
+      "key": "KL-142",
+      "source_index": 146,
+      "heading": "## §142 Partial download: one verified device, product and UI boundaries remain",
+      "source_lines": 48,
+      "source_sha256": "b5ddc9aa9a74503d2f6e97549c4b52c7eeecb8439feecce32c7a0015a4569ddb",
+      "retained_sha256": "65ccb8e8eb367ab80131a23d77fe2e3e61962745ca2abcf24b6e89681899dde2",
+      "detail_file": "docs/limitations/KL-142-partial-download-evidence.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "142-the-mask-070nh-partial-download-is-tested-in-the-simulator-only",
+        "142-partial-download-one-verified-device-product-and-ui-boundaries-remain"
+      ]
+    },
+    {
+      "key": "KL-141",
+      "source_index": 147,
+      "heading": "## §141 Master Reset erases in the simulator only; hardware keeps its configuration",
+      "source_lines": 35,
+      "source_sha256": "ffc033772a05951581e98043985bf4f00a3564af2196e1cd7b7c8ae0a355e307",
+      "retained_sha256": "3933797542af9a8bfdb7d1daccd42307bfe5d4973ce39ebfae2ed3811f842401",
+      "detail_file": "docs/limitations/KL-141-master-reset-evidence.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "141-master-reset-erases-in-the-simulator-only-hardware-keeps-its-configuration"
+      ]
+    },
+    {
+      "key": "KL-140",
+      "source_index": 148,
+      "heading": "## §140 The individual-address reset needs the pressed devices named, and its restart is unconfirmed",
+      "source_lines": 46,
+      "source_sha256": "8946d361d93bdd27519afa90bf255276bf0b2b6213e9b9a8e3badc85d42ad5c7",
+      "retained_sha256": "38ea7d3361b7cd944fdfb4a323325472b321fdd890813d81bcdf685b02f70279",
+      "detail_file": "docs/limitations/KL-140-individual-address-reset-boundary.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "140-the-individual-address-reset-needs-the-pressed-devices-named-and-its-restart-is-unconfirmed"
+      ]
+    },
+    {
+      "key": "KL-130-ZOOM",
+      "source_index": 149,
+      "heading": "## 130. Application zoom is browser-verified, not native WebKitGTK-verified",
+      "source_lines": 20,
+      "source_sha256": "7729af78d65ac5e40a85f899684531204ad65c6e272b644ce7924ac766a6923a",
+      "retained_sha256": "2eaacf446b0397af43be0aa064bfba421e3a446807eb01cfe0c9b37e97820f65",
+      "detail_file": "docs/limitations/KL-130-ZOOM-application-zoom.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "130-application-zoom-is-browser-verified-not-native-webkitgtk-verified"
+      ]
+    },
+    {
+      "key": "KL-137",
+      "source_index": 150,
+      "heading": "## 137. A bus-monitor JSON capture is a retained window, not a complete trace",
+      "source_lines": 29,
+      "source_sha256": "fc83e9f8a658a48e14e12b00640e6a785f70acb825a326951f34078e07a61d3a",
+      "retained_sha256": "f6f5f4ca2ea0ca204ce18cbce3f7d55f32c134fdba68571d58d6f0c155a1f3f4",
+      "detail_file": "docs/limitations/KL-137-monitor-capture-retention.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "137-a-bus-monitor-json-capture-is-a-retained-window-not-a-complete-trace"
+      ]
+    },
+    {
+      "key": "download-lifecycle-history",
+      "source_index": 151,
+      "heading": "## Download lifecycle history admission — SAFE-03 / AUDIT-01 evidence boundary",
+      "source_lines": 84,
+      "source_sha256": "f585279b93b253c152e0df0f7038216b7341a862d6f8de0e401ef3a1714b0fd4",
+      "retained_sha256": "439bff421761549b3cea08a16727bb2b008d615e6f366075e0665f9734d75de9",
+      "detail_file": "docs/limitations/download-lifecycle-history.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "download-lifecycle-history-admission--safe-03--audit-01-evidence-boundary"
+      ]
+    },
+    {
+      "key": "KL-149",
+      "source_index": 152,
+      "heading": "## §149 `knx products ingest` matches the `.knxprod` extension case-sensitively",
+      "source_lines": 38,
+      "source_sha256": "7648fae626e9babaaf9f5594438e990c318ca6dd9699009e5a086c0693e8d33d",
+      "retained_sha256": "4eb84ff293d11b770195fae509536e8b7796d192012ecf2b73830bbd7cf2f56c",
+      "detail_file": "docs/limitations/KL-149-resolved-product-filename-case-handling.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "149-knx-products-ingest-matches-the-knxprod-extension-case-sensitively"
+      ]
+    },
+    {
+      "key": "KL-150",
+      "source_index": 153,
+      "heading": "## §150 A product with nested `ModuleDef`s crashes the install with a database constraint error",
+      "source_lines": 70,
+      "source_sha256": "33b108acc8287d10ea72e0df37b7d10ff28107dc844dea84b893db8a2f2bb644",
+      "retained_sha256": "b113c5e917e3efd2f4be235b56b06631f7319a48e30084e762d1a84c6e6143c1",
+      "detail_file": "docs/limitations/KL-150-resolved-nested-module-storage.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "150-a-product-with-nested-moduledefs-crashes-the-install-with-a-database-constraint-error"
+      ]
+    },
+    {
+      "key": "KL-151",
+      "source_index": 154,
+      "heading": "## §151 Real manufacturer packages exceed the product-ZIP size limits",
+      "source_lines": 74,
+      "source_sha256": "564440d7309776a651f1439a847124cfcb009c98995aa4c70d9b75cbf438a3c0",
+      "retained_sha256": "4bf1ae066c959b035f743a90c99a1780d967d7783ba831f566a74046fb528b35",
+      "detail_file": "docs/limitations/KL-151-product-package-size-profiles.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "151-real-manufacturer-packages-exceed-the-product-zip-size-limits"
+      ]
+    },
+    {
+      "key": "KL-152",
+      "source_index": 155,
+      "heading": "## §152 The XML evidence item limit refuses two real packages",
+      "source_lines": 37,
+      "source_sha256": "6b07da14c097dcf93d870e4694d38e3f93f1e0f585dbf9cf8c557a7a25117c5f",
+      "retained_sha256": "4cfa5db0de699ab70614f775ff24fb81de8a6bac30a5aeb18f7115c14142dd49",
+      "detail_file": "docs/limitations/KL-152-xml-evidence-budgets.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "152-the-xml-evidence-item-limit-refuses-two-real-packages"
+      ]
+    },
+    {
+      "key": "KL-153",
+      "source_index": 156,
+      "heading": "## §153 Product scheme10 is refused; exact23 support is bounded",
+      "source_lines": 70,
+      "source_sha256": "e88e7b51ab30a68f65889fa139b67b74594cea813b2a955edcae40c43e5f9abd",
+      "retained_sha256": "d0dc648cec77ce2ee6deb735f3564c2c9ab59a4775e86994d7b5b238692d38b8",
+      "detail_file": "docs/limitations/KL-153-exact-product-namespaces-10-and-23.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "153-master-data-schemes-10-and-23-are-refused-for-standalone-knxprod",
+        "153-product-scheme10-is-refused-exact23-support-is-bounded"
+      ]
+    },
+    {
+      "key": "KL-154",
+      "source_index": 157,
+      "heading": "## 154. The telegram-flow view is checked and measured in Chromium only",
+      "source_lines": 91,
+      "source_sha256": "8bdb58e273fcef9d3d3193559c8a67bf097476deb2112a6077efcf722b7f6c37",
+      "retained_sha256": "61a725b59df27eb76ab9378f1687fdf4c057221679ff663a3fa0c097ddea59d5",
+      "detail_file": "docs/limitations/KL-154-telegram-flow-evidence-and-capacity.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only",
+        "154-the-telegram-flow-view-is-checked-in-chromium-only-load-figures-follow-in-u21-part-c",
+        "154-the-telegram-flow-view-is-static-and-checked-in-chromium-only"
+      ]
+    },
+    {
+      "key": "KL-155",
+      "source_index": 158,
+      "heading": "## §155 Tunnelling from a container on Docker's bridge network gets no answer",
+      "source_lines": 39,
+      "source_sha256": "669f7b96a66b6688f1fa2f6067ff142584d7d0f8474acf7752d7e0ccaaad57d1",
+      "retained_sha256": "7c4bc9db49b0685bed15e27f8e87fb01fd0a5a5990da27ef642835885b810b81",
+      "detail_file": "docs/limitations/KL-155-bridge-network-tunnel-reachability.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer"
+      ]
+    },
+    {
+      "key": "KL-156",
+      "source_index": 159,
+      "heading": "## 156. Unstored `Parameter`/`ParameterRef` attributes are not reported",
+      "source_lines": 46,
+      "source_sha256": "0377e79b1dbfdb1fde7c3d9d356be63c952ba8347fd61f087485c5b9d1aefd04",
+      "retained_sha256": "65f92669fdf56864fa100db6475ef53a3ea162e55d1f85edc4db46d7a6586150",
+      "detail_file": "docs/limitations/KL-156-parameter-attribute-reporting.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "156-unstored-parameterparameterref-attributes-are-not-reported"
+      ]
+    },
+    {
+      "key": "KL-157",
+      "source_index": 160,
+      "heading": "## 157. Opening an older project upgrades it in place",
+      "source_lines": 56,
+      "source_sha256": "854f472dfeeb0b1323efb8c7848850334db524fe16d0750253b1ac53f0c8ca9f",
+      "retained_sha256": "acffe89adece327ca0e44a8b084f1e14799e89d2d0e9af54633ef7b8614717fa",
+      "detail_file": "docs/limitations/KL-157-in-place-native-project-migration.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "157-opening-an-older-project-upgrades-it-in-place"
+      ]
+    },
+    {
+      "key": "KL-158",
+      "source_index": 161,
+      "heading": "## 158. The AppImage starts only with an X server",
+      "source_lines": 51,
+      "source_sha256": "815659c103e70b098663834c7ee996bba73ce428fc27bf6ffaff95258fea6c2b",
+      "retained_sha256": "b35289b2d60631df390d876822123ff179fc9b4dec0589ab6a362479298dec59",
+      "detail_file": "docs/limitations/KL-158-appimage-display-backend-evidence.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "158-the-appimage-starts-only-with-an-x-server"
+      ]
+    },
+    {
+      "key": "KL-159",
+      "source_index": 162,
+      "heading": "## 159. A project archive may unpack to at most 1024 MiB, and every member name must be unique",
+      "source_lines": 121,
+      "source_sha256": "d8a87822f22ac1132a55c652b37bd88b5de569ba0e96413b7601198191f240f3",
+      "retained_sha256": "07de6e051a03dfe069794b4f3e810362c6258ff1cbea3632c20cc441c6e56a4a",
+      "detail_file": "docs/limitations/KL-159-project-archive-budgets-and-duplicate-names.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "159-a-project-archive-may-unpack-to-at-most-512-mib-and-every-member-name-must-be-unique",
+        "159-a-project-archive-may-unpack-to-at-most-1024-mib-and-every-member-name-must-be-unique"
+      ]
+    },
+    {
+      "key": "KL-160",
+      "source_index": 163,
+      "heading": "## 160. The first-run guide is remembered per installation, not per person",
+      "source_lines": 25,
+      "source_sha256": "f5848b33eb494fe250209f0adf0e624a7acaa6cf92bef3ac6ef5c32c58ea837c",
+      "retained_sha256": "1dea2518f026a1c3fb2011b879aeb25fefb53681305fc2cbc21b4e3ab08de79c",
+      "detail_file": "docs/limitations/KL-160-shared-first-run-guide-state.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "160-the-first-run-guide-is-remembered-per-installation-not-per-person"
+      ]
+    },
+    {
+      "key": "KL-161",
+      "source_index": 164,
+      "heading": "## 161. Alpha.5 does not pick up the alpha.4 data folder",
+      "source_lines": 24,
+      "source_sha256": "9b9e8e09919da7dbd5e09782d739616e9a37d295426c1e548cff7fa7c975c5a8",
+      "retained_sha256": "3ae6bdbec3c7d7ea185a8fc614905836d3932c8a9e6f8ebf22c0910678fdd3b8",
+      "detail_file": "docs/limitations/KL-161-older-desktop-data-folder-transition.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "161-alpha5-does-not-pick-up-the-alpha4-data-folder"
+      ]
+    },
+    {
+      "key": "KL-162",
+      "source_index": 165,
+      "heading": "## 162. Commit hashes cited before 2026-10-07 refer to the rewritten history",
+      "source_lines": 64,
+      "source_sha256": "0d905e04af315ad527f9ef5fc8542c0d35475ee3273c48644c243132ef81dfc8",
+      "retained_sha256": "e98df59df7ba5281ffdb624aa9ec2d4d067503696f00e3ac7965867a17e1e3ee",
+      "detail_file": "docs/limitations/KL-162-rewritten-git-commit-identities.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "162-commit-hashes-cited-before-2026-10-07-refer-to-the-rewritten-history"
+      ]
+    },
+    {
+      "key": "KL-163",
+      "source_index": 166,
+      "heading": "## 163. Stopping the server does not wait for a device download or address programming",
+      "source_lines": 26,
+      "source_sha256": "906a6c45e137195e87163b3e8d408a9b58a4fa4c96f5283f76c8dd35a868ee3f",
+      "retained_sha256": "5e6d51a1f3ed2d0633d718add5943e02392f4037ede9899f3d209132467633a3",
+      "detail_file": "docs/limitations/KL-163-server-shutdown-and-active-writes.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "163-stopping-the-server-does-not-wait-for-a-device-download-or-address-programming"
+      ]
+    },
+    {
+      "key": "KL-164",
+      "source_index": 167,
+      "heading": "## 164. Achievements are per installation, count only in the UI, and can lose a concurrent increment",
+      "source_lines": 46,
+      "source_sha256": "b94286384bba0e8cf9824d79912f9d96a3adf6ada71fa26510337728cda2c352",
+      "retained_sha256": "692370bd58a5f76683ddbffe5c7ed156ca9156a7844c3995ee72829a296c104a",
+      "detail_file": "docs/limitations/KL-164-shared-achievement-counters.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "164-achievements-are-per-installation-count-only-in-the-ui-and-can-lose-a-concurrent-increment"
+      ]
+    },
+    {
+      "key": "KL-165",
+      "source_index": 168,
+      "heading": "## 165. The MCP adapter reads saved files only, and its visibility ignores access",
+      "source_lines": 54,
+      "source_sha256": "3fc64c6161546feb87e0683e4d014869750d22fb84d0457f3bb0e68c8e10803c",
+      "retained_sha256": "bac135820301a30582dd34d05785e8d0e4207e2f3bba7507c76c0475a3ff792e",
+      "detail_file": "docs/limitations/KL-165-mcp-state-and-visibility-boundaries.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "165-the-mcp-adapter-reads-saved-files-only-and-its-visibility-ignores-access"
+      ]
+    },
+    {
+      "key": "KL-166",
+      "source_index": 169,
+      "heading": "## 166. The new-project wizard seeds one installation from a fixed preset vocabulary",
+      "source_lines": 21,
+      "source_sha256": "18ffc4fd2cc1af4e4e1bb85cd3f68e2d26bd17b8ad86e34ad97da5edb519f716",
+      "retained_sha256": "b4bd34e376ec1a1a4b939383c84ace83f4c819381e52c20e40b65d260e138b1e",
+      "detail_file": "docs/limitations/KL-166-new-project-wizard-presets.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "166-the-new-project-wizard-seeds-one-installation-from-a-fixed-preset-vocabulary"
+      ]
+    },
+    {
+      "key": "KL-167",
+      "source_index": 170,
+      "heading": "## 167. The add-device wizard confirms names and addresses, not the whole project",
+      "source_lines": 23,
+      "source_sha256": "0d5f7b63cfdbab81a2313eb4e638de34611f0c04ba73f4451f896fe89f902089",
+      "retained_sha256": "70730a9f9934c0b10a5dabd27dc3fcb6887c67a21f3a59ca9ef7db331d1e8421",
+      "detail_file": "docs/limitations/KL-167-add-device-preview-freshness.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "167-the-add-device-wizard-confirms-names-and-addresses-not-the-whole-project"
+      ]
+    },
+    {
+      "key": "KL-168",
+      "source_index": 171,
+      "heading": "## 168. The Docker Hub image follows release tags only, and `latest` follows alphas",
+      "source_lines": 26,
+      "source_sha256": "de0e4f438d5cd08947ec3022adb99d140ef81ca9156e8e0ee7136c155467215a",
+      "retained_sha256": "8e1ecb5a939979c93b155623c957f45a5981ba775936757506c7b2cad80dd780",
+      "detail_file": "docs/limitations/KL-168-docker-release-image-publication.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "168-the-docker-hub-image-follows-release-tags-only-and-latest-follows-alphas"
+      ]
+    },
+    {
+      "key": "KL-169",
+      "source_index": 172,
+      "heading": "## 169. Browser uploads remain bounded and return navigation reloads the editor",
+      "source_lines": 37,
+      "source_sha256": "6646a28a71f4febbd7950de982907ca08054f57532f6177a27c13580d42c423c",
+      "retained_sha256": "a80b245361e7396b44fea3f5a7316df2c5d349d9b41c986e833a257db5fd9e24",
+      "detail_file": "docs/limitations/KL-169-browser-upload-and-navigation-limits.md",
+      "rewritten_link_targets": 3,
+      "anchors": [
+        "169-browser-uploads-remain-bounded-and-return-navigation-reloads-the-editor"
+      ]
+    },
+    {
+      "key": "KL-170",
+      "source_index": 173,
+      "heading": "## 170. Little-endian parameter byte order is refused for download images",
+      "source_lines": 74,
+      "source_sha256": "6485fdb6c4562c4a76ef837048a6cd82e43caaa6a913ce32725c622d54cee193",
+      "retained_sha256": "a25941a2aa8c3362c9a9ad7968c1b515f2e1125f22cff440cd76763f699fa9e7",
+      "detail_file": "docs/limitations/KL-170-parameter-byte-order-download-boundary.md",
+      "rewritten_link_targets": 4,
+      "anchors": [
+        "170-little-endian-parameter-byte-order-is-refused-for-download-images"
+      ]
+    },
+    {
+      "key": "KL-171",
+      "source_index": 174,
+      "heading": "## 171. UTF-8 text-parameter encoding is refused for download images",
+      "source_lines": 30,
+      "source_sha256": "80e895d2d9d6d9d370e86470660438a547b97f9c6fb129830629f48ab6a10b2f",
+      "retained_sha256": "113a351674ba2705f9707118af123b29823983ad3831d0e01e2a5c0fd2d172d2",
+      "detail_file": "docs/limitations/KL-171-utf-8-text-download-encoding.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "171-utf-8-text-parameter-encoding-is-refused-for-download-images"
+      ]
+    },
+    {
+      "key": "KL-172",
+      "source_index": 175,
+      "heading": "## 172. A device's stored loaded image is kept, not decoded",
+      "source_lines": 29,
+      "source_sha256": "36737507688bbaf833ad1708a0b24640530227a1953f988751239be629dbf586",
+      "retained_sha256": "f4ab1669e16e06d9925a483792066890c03cc4382a4ff57602f6936b38529fc6",
+      "detail_file": "docs/limitations/KL-172-stored-loaded-image-semantics.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "172-a-devices-stored-loaded-image-is-kept-not-decoded"
+      ]
+    },
+    {
+      "key": "KL-173",
+      "source_index": 176,
+      "heading": "## 173. Instance overrides outside the active object tree: retained and reported",
+      "source_lines": 35,
+      "source_sha256": "6a2a0225bf4856055ea79f7bb206fb4f00dd03ede33c19f571454e64f649e8da",
+      "retained_sha256": "264de135c4130d0a036101cf1d1e6a9afcb1a5f21de680a7607c1a8bcd0d92f9",
+      "detail_file": "docs/limitations/KL-173-overrides-outside-the-active-object-tree.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "173-instance-overrides-outside-the-active-object-tree-retained-and-reported"
+      ]
+    },
+    {
+      "key": "KL-174",
+      "source_index": 177,
+      "heading": "## 174. Project user files and add-in data are filed as plain container entries",
+      "source_lines": 35,
+      "source_sha256": "bff8735a01e15eb7cc051f2e1f86607f337088c145c92bc0872e77627b63eaaa",
+      "retained_sha256": "7c3938da2fe5401611c86f06a048cc271d26c85ba10792e2f07c7b768538ff63",
+      "detail_file": "docs/limitations/KL-174-project-user-files-and-add-in-payloads.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "174-project-user-files-and-add-in-data-are-filed-as-plain-container-entries"
+      ]
+    },
+    {
+      "key": "KL-175",
+      "source_index": 178,
+      "heading": "## 175. Rich-text header candidates are kept raw, not validated or rendered",
+      "source_lines": 35,
+      "source_sha256": "5d2f0d577f5b1b4399465b6aa1d993b990dd0d613c5c346ec68dc7acb65373f6",
+      "retained_sha256": "98adbbea4ff3b9744221b85eccfefda3b32825ffa17e7c19b4513420c73b6daf",
+      "detail_file": "docs/limitations/KL-175-raw-rich-text-header-candidates.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "175-rich-text-attribute-values-are-kept-verbatim-not-rendered",
+        "175-rich-text-header-candidates-are-kept-raw-not-validated-or-rendered"
+      ]
+    },
+    {
+      "key": "KL-176",
+      "source_index": 179,
+      "heading": "## 176. AppImages up to alpha.9 abort on hosts with newer Mesa EGL",
+      "source_lines": 30,
+      "source_sha256": "1173169ec55d3dd2d91b209075583b7d58695bfa3bf1eda8c4f7aa9cfd036e1f",
+      "retained_sha256": "dede8ca0784ca9da070bf381200e341ac34152906f6061a784e59bbcb52312dc",
+      "detail_file": "docs/limitations/KL-176-appimage-mesa-egl-compatibility.md",
+      "rewritten_link_targets": 2,
+      "anchors": [
+        "176-appimages-up-to-alpha9-abort-on-hosts-with-newer-mesa-egl"
+      ]
+    },
+    {
+      "key": "KL-177",
+      "source_index": 180,
+      "heading": "## 177. ETS 5.7 projects (schema 20) rest on three public samples; sub-module object ids are not decoded",
+      "source_lines": 35,
+      "source_sha256": "b03410e81a8b42f71a47fb24bb8d7da05271347554d1001f2a1cb6c6e38638fa",
+      "retained_sha256": "b2143dec14ba843072d4cbfc3df439b81e52b62c489645e4d0f7905550bffdc1",
+      "detail_file": "docs/limitations/KL-177-ets-57-schema-20-evidence.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "177-ets-57-projects-schema-20-rest-on-three-public-samples-sub-module-object-ids-are-not-decoded"
+      ]
+    },
+    {
+      "key": "KL-178",
+      "source_index": 181,
+      "heading": "## 178. The group-address picker filters and marks; it does not judge",
+      "source_lines": 24,
+      "source_sha256": "81d36a83607697c85716dcf8b8cb421896bbd28770ece01b2214b9a220e89c7e",
+      "retained_sha256": "d1925c58e6293fe039845ef4cd162df14a51d9f26cc310a13cae587f7d571e7f",
+      "detail_file": "docs/limitations/KL-178-group-address-picker-matching.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "178-the-group-address-picker-filters-and-marks-it-does-not-judge"
+      ]
+    },
+    {
+      "key": "KL-179",
+      "source_index": 182,
+      "heading": "## 179. Tree indentation is capped at twelve levels; flat views stay flat",
+      "source_lines": 13,
+      "source_sha256": "fdb9afb7a936b35d8da2868137abe8049f42c191833cd38fa3205bcb040fe519",
+      "retained_sha256": "56385a14f0f4e1260e86a6adb9bba07d65bafd96cc1bd6da76a6503a736729fe",
+      "detail_file": "docs/limitations/KL-179-tree-indentation-limits.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "179-tree-indentation-is-capped-at-twelve-levels-flat-views-stay-flat"
+      ]
+    },
+    {
+      "key": "KL-180",
+      "source_index": 183,
+      "heading": "## 180. Gateway refusals name KNXBench's own sessions and the gateway's stated reason, nothing more",
+      "source_lines": 42,
+      "source_sha256": "4195139e8ad0e977f8e4edc44e695b2e653449b39bcbbe31415dbb1f937e94be",
+      "retained_sha256": "7ff63ce7f4df48a892a42caac86aaf44e43fb7896a31ccf3a83d00c01eedd875",
+      "detail_file": "docs/limitations/KL-180-named-gateway-refusals.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "180-gateway-refusals-name-knxbenchs-own-sessions-and-the-gateways-stated-reason-nothing-more"
+      ]
+    },
+    {
+      "key": "ap3-bounded-parameter-controls",
+      "source_index": 184,
+      "heading": "## Bounded AP3 parameter controls (2026-10-11, PDB-04 remains partial)",
+      "source_lines": 15,
+      "source_sha256": "fb3fd6c8300ead88d5776ff1829a47fc1c2b43a67c950e5ad97d6cb53a2b2035",
+      "retained_sha256": "d394ddc7bf490d6c6fee785d5ed07897637089d37ab8df9c1d00ba79a3ee33f0",
+      "detail_file": "docs/limitations/ap3-bounded-parameter-controls.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "bounded-ap3-parameter-controls-2026-10-11-pdb-04-remains-partial"
+      ]
+    },
+    {
+      "key": "historical-native-notes-foundation",
+      "source_index": 185,
+      "heading": "## Native notes Foundation candidate (2026-10-11, AP4 not delivered yet)",
+      "source_lines": 12,
+      "source_sha256": "3384ebcc9dadf8b92aa65fa494b581111bf3a5e465780096b2e3337c0efdee2f",
+      "retained_sha256": "f5d7302dc97cc97b8ddd083aa62903745038ed983f6399c7f40472a5c71fcea2",
+      "detail_file": "docs/limitations/historical-native-notes-foundation.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "native-notes-foundation-candidate-2026-10-11-ap4-not-delivered-yet"
+      ]
+    },
+    {
+      "key": "four-group-address-views",
+      "source_index": 186,
+      "heading": "## Four group-address presentations (2026-10-12)",
+      "source_lines": 25,
+      "source_sha256": "c7931e10b2c8e4b93bfb31c242e097276f1ddec455391742c73f36a48ca49c6c",
+      "retained_sha256": "dced5ce731d2b8f221e4ab241891af16ed97661b5db72500b85de14fb7801493",
+      "detail_file": "docs/limitations/four-group-address-views.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "four-group-address-presentations-2026-10-12"
+      ]
+    },
+    {
+      "key": "group-address-membership-and-download-preparation",
+      "source_index": 187,
+      "heading": "## Group-address members and download preparation (2026-10-12)",
+      "source_lines": 32,
+      "source_sha256": "04417ceffa3c415edf4a9710f703ffe6fe87cdf984f2708f3fbc7f4a7081e49b",
+      "retained_sha256": "dd7c38731aa08b3ef3c9d1515c8fb2c53aea7fd844b86ea9ce91f6163b8396b6",
+      "detail_file": "docs/limitations/group-address-membership-and-download-preparation.md",
+      "rewritten_link_targets": 0,
+      "anchors": [
+        "group-address-members-and-download-preparation-2026-10-12"
+      ]
+    },
+    {
+      "key": "ported-ux-feedback-limits",
+      "source_index": 188,
+      "heading": "## Ported UX feedback (2026-10-13)",
+      "source_lines": 22,
+      "source_sha256": "9c218d64c92a1b1b8f96d4011e7e397f53e2124e833c82c0d10ad0d7f32618bb",
+      "retained_sha256": "95c44d317fd10ff685af1fc987feeb3db03b0c458ba2b5fa0b489c6a2088d672",
+      "detail_file": "docs/limitations/ported-ux-feedback-limits.md",
+      "rewritten_link_targets": 1,
+      "anchors": [
+        "ported-ux-feedback-2026-10-13"
+      ]
+    }
+  ],
+  "preservation": "Every source section retained exactly apart from reversible local-link destination changes. No per-ID status or compatibility decision changed.",
+  "resolved_history": {
+    "source_file": "docs/history/KNOWN_LIMITATIONS_resolved.md",
+    "source_sha256": "51c990101f65e65f82db7531c501cab0122edb6c719d6a1e2e4f59bb9a63a4df",
+    "source_lines": 170,
+    "preamble": "# Resolved limitations — historical descriptions\n\nMoved verbatim from [KNOWN_LIMITATIONS](../KNOWN_LIMITATIONS.md) on 2026-10-04\n(AR14D D5); only relative links changed. Each entry keeps a stub with its\nheading, number and status line in the main file, so numbering, triage counts\nand fragment links still work. These descriptions are history: the status\nline says what holds today, and the [source-ID ledger](../status/LEDGER.md)\ncarries the row status.\n\n",
+    "sections": [
+      {
+        "heading": "## 18. `open_project` does not clear the previous `.knxdb` `store_path`",
+        "source_sha256": "7d46594acdfc8b1c561d4749c06e0f15f3bbcdcab1508d411c64d75fdb939430",
+        "retained_sha256": "9a5f415865ff877c4efc06d7524c27fba0a0498428a24c58b2843d3f7a432484",
+        "detail_file": "docs/limitations/KL-018-resolved-imported-project-store-path.md",
+        "rewritten_link_targets": 0
+      },
+      {
+        "heading": "## 23. `/api/project/download` buffers the whole `.knxdb` file in memory",
+        "source_sha256": "a0a6cad8031e92d3e7f74a4b3c39fdeba1965b1397a39f91af7ff3b1fdf5432f",
+        "retained_sha256": "679c7770cb8b6316b2b69b8fad86a80a70a354e08f1020f7c2cf91c5b57253de",
+        "detail_file": "docs/limitations/KL-023-native-project-download-streaming.md",
+        "rewritten_link_targets": 0
+      },
+      {
+        "heading": "## 24. `FsPicker` has no drag-and-drop or multi-select",
+        "source_sha256": "38b7f757708c50baeaa1a30e78b5f2a6af2c914ec47d95a8ad8beea6591bb6c4",
+        "retained_sha256": "0d06fee0ff7db373b63b529865fe522788b2307ad4c8124c3cb684ad1c1cd096",
+        "detail_file": "docs/limitations/KL-024-file-picker-upload-and-selection.md",
+        "rewritten_link_targets": 0
+      },
+      {
+        "heading": "## 42. `command_sync.rs`'s module doc overstates its own role — pre-existing, not introduced by T12",
+        "source_sha256": "d5deaa52c642580857921432181199f00861dd3483792ed26c86bbc1125486c8",
+        "retained_sha256": "8f3198739ca01ba3bc3c56ef8f1257991a5f31e7c5c1184772d7cb8aa374d565",
+        "detail_file": "docs/limitations/KL-042-resolved-save-helper-claims.md",
+        "rewritten_link_targets": 1
+      },
+      {
+        "heading": "## §130 A gate binary can verify a directory that no longer exists",
+        "source_sha256": "865d115199ee2d9ab71112bc8b54cc28dd0a4edd583a2762e2ff42f0cbf8b914",
+        "retained_sha256": "ad45e4bf888442b0a01ab2a533ae549ecb093822765691e8e443b919dc704bc1",
+        "detail_file": "docs/limitations/KL-130-GATE-resolved-gate-root-validation.md",
+        "rewritten_link_targets": 1
+      }
+    ]
+  }
+}

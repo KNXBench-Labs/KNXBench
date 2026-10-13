@@ -1,3 +1,18 @@
+Web lock: released by claude-web-fixups (notes follow-ups, delivered)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 06:44
+- **Completed:** Notes follow-ups on main (feature `deb86aa1`, merge `cd7b0efd`; the merge differs from the gated tree only by main's docs-only delta `d5cffb2c..845046ae`, checked file by file, anchors/ledger green on the merge):
+  - **Object targets via the service:** `knx_app::note_targets` + `GET /api/project/notes/targets` (catalogue incl. communication objects, only `validate`-accepted targets, one-pass counting: 20k GAs 9 ms vs 266 ms). Web host labels it, drops a foreign catalogue, mounts the editor after the first answer, offers **Load targets again** on failure.
+  - **Unload guard:** browser `beforeunload` while a note/instruction draft exists (not in the desktop shell, which keeps its close dialog).
+  - **Review names** in EN/DE (*Create/Change/Remove/Move note*, *Yes/No*).
+  - **Side fix:** `dpt-monitor.e2e.ts` was red on untouched main after 23:00 (late-night humour toast + nth-based `.all()` dismiss loop); shared `dismissToasts` helper in `communication-fixture.ts` used by all three specs with that pattern.
+  - Docs: manual ch. 01 + implementation-status, host/HTTP/service contracts, KNOWN_LIMITATIONS, OPEN_WORK, DEVELOPER_PITFALLS, IMPLEMENTATION_STATUS.
+  - Gate on `b216f0aa`: build, tsc ×12, Vitest 3179/0 (223 files), **fixture Chromium 417/0**, preview notes 12/12, instructions 11/11, devices 13/13, notes+DPT-monitor ×3 48/48, fmt, Clippy, Rust 4248/0/196, tools 67, five xtask, inputs frozen; corpus 143/143 (31 targets).
+- **Pending/Next Steps:** Web-lock queue as published by claude-issues-8-9-10: claude-parked-adoption next (package 3 docs-only, then ux-feedback; AP1 needs an owner call), then claude-issues-8-9-10. Notes still open: native WebKitGTK/Orca checks, a reload guard inside the desktop webview, FUTURE-03 as a whole (LATER).
+- **Notes for Codex oder Claude:** Self-review only. To claude-issues-8-9-10: `communication-fixture.ts` now exports `dismissToasts`; use it in new specs that open a project (the wall clock adds a toast after 23:00). Run `cargo test` outside `unshare --map-root-user` (namespace root fails `knx-mcp`'s file-mode test). No hardware, release, deployment, subagents or quota checks.
+
+---
+
 Web-lock queue: reserved for claude-issues-8-9-10 (after claude-parked-adoption)
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 06:09 (system clock; the entry below reads 06:10)

@@ -13,7 +13,8 @@ export const effectiveDpt = (o: ComObjectNode): string | null => o.dpt ?? o.prog
 export const evaluatedChannel = (o: ComObjectNode): ComObjectChannel | null => o.activation === "Active" ? o.channel ?? null : null;
 export const channelKey = (o: ComObjectNode): string => evaluatedChannel(o) ? `channel:${evaluatedChannel(o)!.key}` : "unassigned";
 export const hasFilters = (f: ComFilters): boolean => !!f.query.trim() || f.status !== "all" || f.link !== "all" || f.dpt !== "all";
-function dptParts(value: string | null): number[] | null {
+/** `[main]` for `DPT-n`, `[main, sub]` for `DPST-n-m`, `null` for anything else. */
+export function dptParts(value: string | null): number[] | null {
   const match = value?.match(/^(?:DPT-(\d+)|DPST-(\d+)-(\d+))$/);
   if (!match) return null;
   const parts = match[1] ? [Number(match[1])] : [Number(match[2]), Number(match[3])];

@@ -37,7 +37,7 @@ function ObjectRow({ com, flat, hidden, matches, open, descriptionMatch, editor,
   const details = useRef<HTMLDetailsElement>(null);
   const dpt = effectiveDpt(com);
   return <Fragment>
-    <tr className="com-object-summary" data-object-id={com.id} data-channel-key={channelKey(com)} data-activation={com.activation} hidden={hidden}>
+    <tr className={flat ? "com-object-summary" : "com-object-summary com-object-summary--grouped"} data-object-id={com.id} data-channel-key={channelKey(com)} data-activation={com.activation} hidden={hidden}>
       <td className="mono"><details className="com-object-detail" ref={details} open={open} onToggle={event => {
         const next = event.currentTarget.open;
         if (!next && busy) { event.currentTarget.open = true; return; }
@@ -118,7 +118,7 @@ export default function ComObjectTable({ objects, editor }: { objects: ComObject
     if (!flat) rows.push(<tr className="com-object-channel" key={`group:${group.key}`} data-channel-key={group.key} hidden={!groupVisible}>
       <th colSpan={6} scope="row"><button type="button" className="com-object-channel-summary" aria-expanded={isExpanded(group.key)} onClick={() => toggle(group.key)}>
         <span aria-hidden="true">{isExpanded(group.key) ? "▾" : "▸"}</span><ChannelText channel={group.channel} />
-        <span className="com-object-channel-count">{t("comTable.count", { shown: count, total: group.total })}</span>
+        <span aria-hidden="true" className="com-object-channel-separator">·</span><span className="com-object-channel-count">{t("comTable.count", { shown: count, total: group.total })}</span>
       </button></th></tr>);
     for (const com of group.objects) {
       const open = openObjects.has(com.id), matches = matchedIds.has(com.id);

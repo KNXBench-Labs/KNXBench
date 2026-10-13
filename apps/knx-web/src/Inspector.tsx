@@ -36,6 +36,8 @@ import { useProductLanguage } from "./productLanguage";
 import DeviceInstructionsPanel from "./DeviceInstructionsPanel";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useGroupAddressFormat } from "./gaNotation";
+import GroupAddressPicker from "./GroupAddressPicker";
+import { effectiveDpt } from "./comObjectView";
 import {
   directionLabel,
   dptText,
@@ -491,12 +493,11 @@ function NewGroupLinkRow(props: {
   const { com, groupAddresses, onApplied } = props;
   const t = useTranslate();
   const mutate = useComMutation();
-  const formatGa = useGroupAddressFormat();
-  const [gaId, setGaId] = useState("");
+  const [gaId, setGaId] = useState<number | null>(null);
   const [direction, setDirection] = useState<"Send" | "Receive" | "Both">("Send");
   const [error, setError] = useState<string | null>(null);
   const [dropReady, setDropReady] = useState(false);
-  const canLink = gaId !== "";
+  const canLink = gaId !== null;
 
   async function linkTo(id: number, viaDrop = false) {
     setError(null);
@@ -505,15 +506,15 @@ function NewGroupLinkRow(props: {
       if (!tree) return;
       onApplied(tree);
       if (viaDrop) emitAchievementEvent({ type: "dragDropApplied" });
-      setGaId("");
+      setGaId(null);
     } catch (e) {
       setError(api.errorMessage(e));
     }
   }
 
   async function link() {
-    if (!canLink) return;
-    await linkTo(Number(gaId));
+    if (gaId === null) return;
+    await linkTo(gaId);
   }
 
   // UX-01: a group address dropped on this row is linked exactly like
@@ -543,14 +544,8 @@ function NewGroupLinkRow(props: {
       }}
       onDragLeave={() => setDropReady(false)}
       onDrop={drop}>
-      <select value={gaId} onChange={(e) => setGaId(e.target.value)}>
-        <option value="">{t("inspector.chooseGroupAddress")}</option>
-        {groupAddresses.map((ga) => (
-          <option key={ga.id} value={ga.id}>
-            {formatGa(ga.address)} {ga.name}
-          </option>
-        ))}
-      </select>
+      {/* Issue #8: searchable, shows each address's DPT and marks a mismatch with this object's. */}
+      <GroupAddressPicker addresses={groupAddresses} objectDpt={effectiveDpt(com)} value={gaId} onChange={setGaId} />
       <select
         value={direction}
         onChange={(e) => setDirection(e.target.value as "Send" | "Receive" | "Both")}

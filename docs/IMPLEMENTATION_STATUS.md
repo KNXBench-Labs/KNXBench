@@ -20,6 +20,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--session-log-holds-16000-entries-and-drops-the-least-important-first"></a>
+- [2026-10-13 — Session log holds 16000 entries and drops the least important first](history/implementation/2026-W42.md#2026-10-13--session-log-holds-16000-entries-and-drops-the-least-important-first)
 <a id="2026-10-13--issue-7-follow-up-desktop-downloads-ask-before-they-land"></a>
 - [2026-10-13 — Issue #7 follow-up: desktop downloads ask before they land](history/implementation/2026-W42.md#2026-10-13--issue-7-follow-up-desktop-downloads-ask-before-they-land)
 <a id="2026-10-13--issue-7-retained-files-stop-drowning-the-import-findings"></a>

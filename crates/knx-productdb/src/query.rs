@@ -1051,6 +1051,38 @@ pub struct ProgramRow {
     pub replaces_versions: Option<String>,
 }
 
+/// What names one application program exactly: its product-data name and
+/// version, and the SHA-256 of the file it was read from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProgramIdentity {
+    pub id: String,
+    pub name: Option<String>,
+    pub application_version: Option<String>,
+    /// The ingested program file's SHA-256: the same id from another file
+    /// shows as another hash.
+    pub source_sha256: String,
+}
+
+/// [`ProgramIdentity`] of `id`, if installed.
+pub fn program_identity(
+    conn: &Connection,
+    id: &str,
+) -> Result<Option<ProgramIdentity>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name, application_version, source_sha256
+           FROM application_program WHERE id = ?1",
+    )?;
+    let mut rows = stmt.query_map([id], |r| {
+        Ok(ProgramIdentity {
+            id: r.get(0)?,
+            name: r.get(1)?,
+            application_version: r.get(2)?,
+            source_sha256: r.get(3)?,
+        })
+    })?;
+    Ok(rows.next().transpose()?)
+}
+
 /// Every application program, optionally narrowed to one manufacturer,
 /// ordered by id — the listing `knx products list` prints.
 pub fn programs(
@@ -2187,6 +2219,21 @@ mod tests {
         ingest_hardware(&conn, "sha-h", "M-006A/Hardware.xml", HARDWARE.as_bytes()).unwrap();
         ingest_program(&conn, "sha-p", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
         (dir, conn)
+    }
+
+    #[test]
+    fn a_program_is_identified_by_name_version_and_source_file() {
+        let (_dir, conn) = db();
+        assert_eq!(
+            program_identity(&conn, "A-1").unwrap(),
+            Some(ProgramIdentity {
+                id: "A-1".into(),
+                name: Some("P".into()),
+                application_version: Some("22".into()),
+                source_sha256: "sha-p".into(),
+            })
+        );
+        assert_eq!(program_identity(&conn, "A-2").unwrap(), None);
     }
 
     const CATALOG: &str = r#"<?xml version="1.0" encoding="utf-8"?>

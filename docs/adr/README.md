@@ -104,3 +104,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0118](0118-catalogue-updates-through-the-web-server.md) | Catalogue updates through the web server | Accepted | 2026-10-12 |
 | [0119](0119-read-only-byte-order-probe.md) | A read-only byte-order probe, never an encoder | Accepted implementation decision | 2026-10-13 |
 | [0120](0120-base-image-byte-order-warning.md) | A named warning when a big-endian program's base image looks little-endian | Accepted implementation decision | 2026-10-13 |
+| [0121](0121-tester-download-reports.md) | Tester download reports, and a maintainer review before "verified" | Accepted implementation decision | 2026-10-13 |

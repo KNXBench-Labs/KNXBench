@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex};
 use knx_app::access_key::DownloadKeying;
 use knx_app::device_backup::{write_backup, StoredBackup};
 use knx_app::device_download::PreparedDownload;
+use knx_app::download_report::{DownloadReport, ReportedOutcome};
 use knx_core::commissioning::authorisation::Authorisation;
 use knx_core::commissioning::device_backup::DeviceBackup;
 use knx_core::commissioning::memory_download::MemoryDownloadStep;
@@ -132,6 +133,8 @@ pub struct DeviceDownloadSession {
     data_octets: usize,
     shared: Arc<Shared>,
     task: Option<JoinHandle<()>>,
+    /// The tester's report of this run, without its outcome (ADR-0121).
+    report: DownloadReport,
 }
 
 impl DeviceDownloadSession {
@@ -148,6 +151,7 @@ impl DeviceDownloadSession {
         prepared: PreparedDownload,
         backups: BackupDestination,
         activity: crate::one_shot_activity::DownloadGuard,
+        report: DownloadReport,
     ) -> Self {
         let shared = Arc::new(Shared {
             status: Mutex::new(DownloadStatus::Running),
@@ -169,6 +173,7 @@ impl DeviceDownloadSession {
             data_octets: prepared.plan.data_octets(),
             shared: Arc::clone(&shared),
             task: None,
+            report,
         };
         let task = tokio::spawn(run(
             tunnel,
@@ -213,6 +218,25 @@ impl DeviceDownloadSession {
             .lock()
             .expect("download backup poisoned")
             .clone()
+    }
+
+    /// The tester's report, once the run has ended; `None` while it runs.
+    pub fn report(&self) -> Option<DownloadReport> {
+        if self.is_running() {
+            return None;
+        }
+        let outcome = match self.status() {
+            DownloadStatus::Running => return None,
+            DownloadStatus::Finished {
+                written, restart, ..
+            } => ReportedOutcome::completed(written, restart),
+            DownloadStatus::Failed {
+                written,
+                stopped_in_step,
+                ..
+            } => ReportedOutcome::stopped(written, stopped_in_step),
+        };
+        Some(self.report.clone().with_outcome(outcome))
     }
 
     pub fn is_running(&self) -> bool {

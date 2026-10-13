@@ -18,6 +18,7 @@ mod contribution_structure;
 pub mod device_backup;
 pub mod device_download;
 pub mod documentation;
+pub mod download_report;
 pub mod download_support;
 pub mod import;
 pub mod import_evidence;

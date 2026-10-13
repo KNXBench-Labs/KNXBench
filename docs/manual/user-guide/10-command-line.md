@@ -565,6 +565,7 @@ written to the device: no (plan only; add --gateway and --confirm "I confirm dow
 | `--product-db <path>` | The product database holding the device's application program |
 | `--gateway <host:port>` | The KNXnet/IP interface to write through |
 | `--confirm "<phrase>"` | Write. The phrase must read exactly `I confirm download to <address>` |
+| `--report <file>` | With a write: save a tester's report of the run there (see below) |
 
 The checks run in this order, and each stops the command before the next: the address
 is parsed and checked against the list of addresses KNXBench never contacts; the phrase
@@ -601,6 +602,27 @@ those devices really read, so after such a download check that times, thresholds
 other multi-octet values behave as set
 ([known limitations §170](../../KNOWN_LIMITATIONS.md#170-little-endian-parameter-byte-order-is-refused-for-download-images)).
 If you can, report what you saw: it settles the question for that program.
+
+#### Helping to verify a device
+
+Only one application program is *verified* so far; everything else is *untested*,
+which only means nobody has told us it works. If you download a device anyway, you can
+change that for everyone who has the same device:
+
+1. Download as usual and add `--report report.json` (plus `--accept-untested …` for
+   an untested program). The report is written after the run, completed or stopped.
+2. Check the device: does it do what you configured? Switch it, wait for its timers,
+   look at its status messages. If the plan showed a `WARNING`, check exactly those
+   values (times, thresholds, brightness levels).
+3. Send the report: the command prints a link to the **Download report** issue form
+   with the program, version and outcome filled in; attach `report.json` there. Or
+   mail it to **issue@knxbench.com**; that is not published.
+
+The report holds the parameter values that were written, but no project or device
+name and no address. Texts you typed into parameters are part of those values, so look
+at it before posting it publicly. A maintainer checks each report before the program is
+marked verified in a later build
+([how reports are reviewed](../../contracts/download-verification-reports.md)).
 
 ### Other device commands
 

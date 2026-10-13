@@ -153,6 +153,7 @@ it.each([
   ["more bytes written than planned", { sessions: [{ kind: "deviceDownload", id: 3, address: "1.1.67", state: "running", completedSteps: 2, totalSteps: 5, writtenOctets: 121, totalOctets: 120 }] }],
   ["more steps done than planned", { sessions: [{ kind: "deviceDownload", id: 3, address: "1.1.67", state: "running", completedSteps: 6, totalSteps: 5, writtenOctets: 0, totalOctets: 120 }] }],
   ["more addresses probed than exist", { sessions: [{ kind: "lineScan", id: 4, state: "running", probed: 256, total: 255 }] }],
+  ["a monitor gateway that is no endpoint", { sessions: [{ kind: "busMonitor", id: 6, gateway: "somewhere", state: "active" }] }],
   ["a one-shot record without its evidence", { oneShot: [{ id: 2, kind: "serviceControlWrite", address: "1.1.5", state: "running", startedAt: "2026-10-06T08:00:00Z", finishedAt: null }] }],
 ])("admission refuses %s", (_name, overrides) => {
   expect(() => admitActivitySnapshot(snapshot(overrides))).toThrow();
@@ -164,4 +165,11 @@ it("admits a session without optional rounds and an address-programming session 
     { kind: "busMonitor", id: 6, state: "active" },
   ] }));
   expect(admitted.sessions.map((session) => session.kind)).toEqual(["addressProgramming", "busMonitor"]);
+});
+
+it("admits the monitor's gateway the server names since issue #10", () => {
+  const admitted = admitActivitySnapshot(snapshot({ sessions: [
+    { kind: "busMonitor", id: 6, gateway: "192.0.2.10:3671", state: "active" },
+  ] }));
+  expect(admitted.sessions).toEqual([{ kind: "busMonitor", id: 6, gateway: "192.0.2.10:3671", state: "active" }]);
 });

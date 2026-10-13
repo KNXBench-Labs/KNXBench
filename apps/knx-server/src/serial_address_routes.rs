@@ -31,7 +31,6 @@ use knx_net::commissioning::serial_number_write::{
     serial_number_read, serial_number_write, SerialNumberWriteError,
 };
 
-use crate::bus_scan::LineScanStatus;
 use crate::device_download::TunnelTransport;
 use crate::errors::ApiError;
 use crate::SharedState;
@@ -40,10 +39,6 @@ pub fn serial_address_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/device-address/by-serial", post(write))
         .route("/api/device-address/find-serial", get(find))
-}
-
-fn conflict(message: impl Into<String>) -> ApiError {
-    ApiError::with_status(StatusCode::CONFLICT, message)
 }
 
 fn parse_serial(text: &str) -> Result<SerialNumber, ApiError> {
@@ -140,26 +135,32 @@ async fn write(
 
     // Same lock order as `address_programming_routes::start`.
     let programming = state.address_programming.lock().await;
-    if crate::device_download_routes::download_in_progress(&state) {
-        return Err(conflict(
+    if let Some(holder) = crate::tunnel_holder::download_holder(&state) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a download to a device is running: the gateway serves one tunnel",
         ));
     }
-    if programming.as_ref().is_some_and(|p| p.is_active()) {
-        return Err(conflict("an individual-address programming is running"));
+    if let Some(holder) = programming
+        .as_ref()
+        .and_then(crate::tunnel_holder::programming_holder_of)
+    {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
+            "an individual-address programming is running",
+        ));
     }
     let monitor = state.bus_session.lock().await;
-    if monitor.is_some() {
-        return Err(conflict(
+    if let Some(existing) = monitor.as_ref() {
+        return Err(crate::tunnel_holder::gateway_busy(
+            crate::tunnel_holder::monitor_holder_of(existing),
             "stop the bus monitor first: the gateway serves one tunnel",
         ));
     }
     let scan = state.line_scan_session.lock().await;
-    if matches!(
-        scan.as_ref().map(|scan| scan.status()),
-        Some(LineScanStatus::Running)
-    ) {
-        return Err(conflict(
+    if let Some(holder) = scan.as_ref().and_then(crate::tunnel_holder::scan_holder_of) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a line scan is running: the gateway serves one tunnel",
         ));
     }
@@ -167,7 +168,7 @@ async fn write(
         .connector
         .connect_tunnel(gateway)
         .await
-        .map_err(|e| ApiError::with_status(StatusCode::BAD_GATEWAY, e.to_string()))?;
+        .map_err(|e| crate::tunnel_holder::gateway_connect_failed(gateway, &e))?;
     let outcome = serial_number_write(
         &TunnelTransport(tunnel.as_ref()),
         state.address_programming_timing,
@@ -230,31 +231,43 @@ async fn find(
         query.device.as_deref(),
     )?;
     let Ok(programming) = state.address_programming.try_lock() else {
-        return Err(conflict("an individual-address programming is running"));
+        return Err(crate::tunnel_holder::gateway_busy(
+            crate::tunnel_holder::TunnelHolder::Connecting {
+                session: "managementOperation",
+            },
+            "an individual-address programming is running",
+        ));
     };
-    if crate::device_download_routes::download_in_progress(&state)
-        || programming.as_ref().is_some_and(|p| p.is_active())
-    {
-        return Err(conflict(
+    if let Some(holder) = crate::tunnel_holder::download_holder(&state).or_else(|| {
+        programming
+            .as_ref()
+            .and_then(crate::tunnel_holder::programming_holder_of)
+    }) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "the gateway is in use by a download or a programming",
         ));
     }
     let monitor = state.bus_session.lock().await;
-    if monitor.is_some() {
-        return Err(conflict(
+    if let Some(existing) = monitor.as_ref() {
+        return Err(crate::tunnel_holder::gateway_busy(
+            crate::tunnel_holder::monitor_holder_of(existing),
             "stop the bus monitor first: the gateway serves one tunnel",
         ));
     }
     // A scan may hold the only usable tunnel. Do not wait behind a held
     // holder lock or open a second tunnel while a scan is running.
     let Ok(scan) = state.line_scan_session.try_lock() else {
-        return Err(conflict("a line scan is using the gateway"));
+        return Err(crate::tunnel_holder::gateway_busy(
+            crate::tunnel_holder::TunnelHolder::Connecting {
+                session: "lineScan",
+            },
+            "a line scan is using the gateway",
+        ));
     };
-    if matches!(
-        scan.as_ref().map(|scan| scan.status()),
-        Some(LineScanStatus::Running)
-    ) {
-        return Err(conflict(
+    if let Some(holder) = scan.as_ref().and_then(crate::tunnel_holder::scan_holder_of) {
+        return Err(crate::tunnel_holder::gateway_busy(
+            holder,
             "a line scan is running: the gateway serves one tunnel",
         ));
     }
@@ -265,10 +278,7 @@ async fn find(
         Ok(tunnel) => tunnel,
         Err(e) => {
             activity.finish("failed");
-            return Err(ApiError::with_status(
-                StatusCode::BAD_GATEWAY,
-                e.to_string(),
-            ));
+            return Err(crate::tunnel_holder::gateway_connect_failed(gateway, &e));
         }
     };
     let found = serial_number_read(

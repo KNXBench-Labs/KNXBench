@@ -1,3 +1,5 @@
+//! Project Functions over HTTP: bound edits, typed refusals and no effect on failure.
+//!
 //! Project Functions over HTTP (ADR-0124, Goal A4): the read projection and
 //! revision-bound edits. Every edit names the snapshot it was prepared
 //! against; a stale one is a typed 409, a refused command a typed 422 and a

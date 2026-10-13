@@ -1,3 +1,5 @@
+//! Display-shaped view of project Functions with resolved rooms and members.
+//!
 //! Display-shaped view of project Functions (ADR-0124): each Function with
 //! its resolved location and its members' group addresses, in model order.
 //! Read-only; edits go through `knx_core` commands.

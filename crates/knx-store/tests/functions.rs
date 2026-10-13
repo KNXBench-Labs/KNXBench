@@ -1,3 +1,5 @@
+//! Native schema 15 keeps project Functions exact and upgrades older files.
+//!
 //! Native schema 15: project Functions persist exactly, older files gain
 //! empty tables, history images keep their identity, and malformed rows are
 //! refused instead of repaired by guessing (ADR-0124).

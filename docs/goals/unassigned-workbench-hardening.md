@@ -4,6 +4,31 @@ Planning only; no session owns these packages until the user invokes this prompt
 Start after Goal A ends. Read the root-local audit and A's published outcomes
 before creating a fresh worktree; prepared files may not yet exist on origin/main.
 
+## Session status
+
+**Owner:** Claude session `ba673d45ff9d`, worktree `KNXBench.worktrees/workbench-b`,
+branch `feature/workbench-b-20261013`, invoked 2026-10-13 ~21:25 CEST on fresh
+`origin/main` `40aba5dc` after Goal A ended. Web lock taken per package (see
+`.ai/CURRENT_STATE.md` *Coordination*). Concurrent owner seen at start: Claude
+`bcee21b10872` in worktree `log-16k` (KL-036 session log: `LogPanel`,
+`sessionLogExport`, `session_log.rs`, desktop log export and their catalogue
+keys). B does not edit those files and rebases over them when they land.
+
+Finite plan, in order. Each package is delivered (tests + gate + push),
+blocked (named missing evidence) or excluded; nothing else is added.
+
+| Package | Scope of record | State |
+| --- | --- | --- |
+| B1a | Revision-bound parameter writes + installation renames in the web client (A2); `serverStopping` worded (A3) | in progress |
+| B1b | Functions in the workbench over A4's API (read, create/update/move/delete, members, undo/redo/save/reopen); no Site UI (ADR-0125 blocked) | planned |
+| B2 | Desktop webview reload/navigation guard for notes/instruction drafts; native/Orca/Firefox only as actually run | planned |
+| B3 | Read-only stored BusAccess/IP view, redacted endpoints, no connect | planned |
+| B4 | Instructions for natively created devices (no invented original) | planned |
+| B5 | Catalogue backup deletion; web direct `.knxprod` install routed to preview/apply | planned |
+| B6 | KL-164 idempotent achievement increments | planned |
+| B7 | Naming recipe UI over the existing `knx-edit` service | planned |
+| B8 | EN/DE report texts, KL-13/KL-29/KL-43 summaries, TOOLS-01–05 provenance, optional FUTURE-08 | planned |
+
 ## Goal A outcome (handover, 2026-10-13)
 
 Goal A ended on `e5eb1e8a` + docs `5ca02b2b` (session `62a4cca1c10f`); it did not start Goal B.

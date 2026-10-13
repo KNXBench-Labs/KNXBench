@@ -133,14 +133,14 @@
       "xp": 10,
       "closed_at": "2026-10-13T21:00:43Z",
       "notify": true,
-      "notified": false
+      "notified": true
     },
     "14": {
       "login": "thengsty",
       "xp": 10,
       "closed_at": "2026-10-13T21:00:40Z",
       "notify": true,
-      "notified": false
+      "notified": true
     }
   },
   "contributors": [

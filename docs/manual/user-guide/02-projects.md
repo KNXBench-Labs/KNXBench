@@ -304,8 +304,12 @@ You see the result in three places:
    (icons, help archives, installers) of the same type, each become **one** entry
    such as *412 retained files: manufacturer payload (png); …*. Its detail lists
    every file, one per line, so nothing is left out; the count in the Overview
-   counts the grouped entry once. This way a project with a thousand retained
-   files no longer pushes its genuine findings out of the Log.
+   counts the grouped entry once. The same applies to unknown elements and
+   attributes in the manufacturers' application programs: one entry per kind
+   and name (*unknown Attribute 'Name' in manufacturer data: 412 places in 23
+   files*), its details listing every file and path. Unknowns in the project
+   itself stay individual. This way a project with a thousand retained files
+   or a large product catalogue no longer buries its genuine findings.
 
 The structured report itself — counts read versus mapped, every unknown construct,
 every opaque summary — is written as JSON by the command line:

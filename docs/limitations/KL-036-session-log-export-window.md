@@ -129,7 +129,47 @@ warnings, about a hundred of them `UnmappedObjectOverride` mapping warnings
 that the cap used to evict. Reopening a project saved earlier recounts its
 stored report with the same rule, so its warning count drops the same way.
 
-Still open: the cap evicts by age, not by severity, so an import with more
-than about 1000 *genuine* findings still loses the oldest ones (the pinned
-drop notice says how many). The complete report remains available from the
-Overview's import-report download.
+Still open at that point: the cap evicted by age, not by severity (closed by
+the next section).
+
+## Larger cap, severity-aware eviction and a paged list, 13 October 2026
+
+The owner asked for a log of about 16000 lines. `MAX_ENTRIES` is now 16000,
+and a full log no longer drops by age alone: every info entry goes before any
+warning, every warning before any error, the oldest of each first. The pinned
+notice keeps its parsed leading sentence and adds the breakdown, e.g. `17 log
+entries dropped after exceeding the 16000-entry session log cap (15 info, 2
+warning, 0 error; least severe and oldest first)`. JSON exports state
+`capacity: 16000`; the desktop writer accepts that capacity, at most 16000
+entries and up to 64 MiB (other native exports keep 16 MiB).
+
+Cost, measured in a release build with 16000 realistic entries (one in fifty
+with a 40-line detail): filling the log 10 ms, one push with eviction 27 µs,
+serializing `GET /api/log` 6 ms for 5.3 MB. The Log panel refetches that on
+every project change while it is open.
+
+The Log panel used to render every entry and re-sort them on each keystroke
+(`Date.parse` inside the comparator, a `JSON.stringify` key per row). It now
+computes keys, times and order once per snapshot, renders 500 rows at a time
+with **Show more**, and still searches, filters and exports all entries. A
+multi-line detail used to collapse into one paragraph (no `white-space`
+rule), so a grouped list of 1400 files filled the screen as one block; the
+list now shows its first three lines plus a count, and the entry's details
+show every line. Browser timings are in the delivery record.
+
+Measuring the cap against real imports *with* a product database (the
+desktop default) showed that the #7 grouping above covered only part of the
+noise: product-database ingestion turns every unknown attribute or element of
+every manufacturer application file into its own warning. The large private
+schema-23 project produced 3432 log entries and 3415 warnings, almost all
+`unknown Attribute 'Name'/'Id'/'InternalDescription'…` in `M-xxxx/…` files.
+Those are now grouped by kind and name as well
+(`knx_app::import_findings`, archive rule `knx_etsproj::opaque::is_manufacturer_entry`),
+counted once per group for fresh and reopened projects, with every file and
+path in the detail; unknowns in the project and in `knx_master.xml` stay
+individual. The same project now shows 328 entries and 311 warnings (93 of
+them object-mapping warnings); the two smaller private ETS6/ETS4 projects
+about 100 each.
+
+Remaining boundary: eviction is still lossy once 16000 entries are exceeded;
+the import report download keeps the complete findings.

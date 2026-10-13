@@ -294,7 +294,8 @@ You see the result in three places:
    *Import report* card. Since Alpha 10 a non-zero count has a **Show in log** link
    that opens the Log narrowed to exactly those import entries.
 2. **The Import: N errors · M warnings button** in the strip under the header, which
-   takes you there.
+   takes you there. In source builds newer than Alpha.10, the error and warning
+   counts at the foot of the Explorer open the same narrowed Log.
 3. **The Log**, which carries one entry per finding: one per import error, one per
    unknown construct (with how many times it was seen and where), one per opaque
    entry (with its size and checksum), one per datapoint-type conflict, and one per

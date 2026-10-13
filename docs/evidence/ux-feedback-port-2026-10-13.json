@@ -1,0 +1,285 @@
+{
+  "schema": 1,
+  "date": "2026-10-13",
+  "scope": "port of the parked Codex branch feature/ux-feedback-20261010 (88a776c2, 13 commits, AP1-AP5) onto main: AP2 Flow image export, AP3/KL-43 motion categories (ADR-0122), AP5 achievements whole; AP1 without what main already had; AP4 dropped by owner decision",
+  "origin": "Codex, ux-feedback session 1 (2026-10-10/11); original worktree ux-feedback-20261010 read only",
+  "base": "9e1c1574a5c57fd7752b1cf636289ebe6ed0f552",
+  "gated_candidate": "97219b58d57b4be8271592aa1928ca483dc4571f",
+  "commits": [
+    {
+      "sha": "38ed264d99d5bbce629bc94c1ebdca5cabf59a48",
+      "subject": "feat(toasts): unread errors stay put, and wait their turn politely"
+    },
+    {
+      "sha": "54881f72a40527493c1c462c7cfb8d51d35532f5",
+      "subject": "feat(motion): Toasts, Achievements and Flow get their own (smaller) volume knob"
+    },
+    {
+      "sha": "516defd60591669ed4bd70113744e34cc6219817",
+      "subject": "feat(flow): say cheese — PNG snapshots and GIF clips of the telegram flow, 30 s max"
+    },
+    {
+      "sha": "17c95a1aca06583b37b786c049cc400676fe9de0",
+      "subject": "feat(achievements): four new trophies and three fresh gremlins for the error jar"
+    },
+    {
+      "sha": "f45b217982babee2ab84c3bd264b78db615387c5",
+      "subject": "fix(toasts): StrictMode's encore no longer strands the opening act"
+    },
+    {
+      "sha": "97219b58d57b4be8271592aa1928ca483dc4571f",
+      "subject": "test(flow): the GIF spec stops racing the host's CPU, and the frame guard gets a referee"
+    }
+  ],
+  "left_out": {
+    "86c3167d": "AP4 inventory cards (owner decision 2026-10-12; main's Project status cards)",
+    "219e4c3e (part)": "100-entry Recent-errors archive, its buttons, Dashboard count links, log row timestamp: already on main in other form",
+    "4dc9e98d": "archive z-index (archive not ported)",
+    "59d3ae54, 6714e82b, 88a776c2": "Codex handover/acceptance records for the old base 7d39628f",
+    "docs/contracts/ux-feedback-ownership.md": "file ownership between two 2026-10-10 sessions that no longer exist"
+  },
+  "gate": {
+    "stages": {
+      "build": 0,
+      "tsc": 0,
+      "flow_study": 0,
+      "theme_fixtures": 0,
+      "tsc_tsconfig_catalogue_fixtures": 0,
+      "tsc_tsconfig_communication_fixtures": 0,
+      "tsc_tsconfig_dialogs_fixtures": 0,
+      "tsc_tsconfig_flow_study": 0,
+      "tsc_tsconfig_ga_members_download_fixtures": 0,
+      "tsc_tsconfig_history_fixtures": 0,
+      "tsc_tsconfig_instructions_fixtures": 0,
+      "tsc_tsconfig_notes_fixtures": 0,
+      "tsc_tsconfig_parameters_fixtures": 0,
+      "tsc_tsconfig_rename_fixtures": 0,
+      "tsc_tsconfig_theme_fixtures": 0,
+      "tsc_tsconfig_ux_feedback": 0,
+      "vitest": 0,
+      "chromium": 0,
+      "cfg_playwright_ux_feedback_config": 0,
+      "cfg_playwright_dialogs_config": 0,
+      "cfg_playwright_notes_config": 0,
+      "cfg_playwright_instructions_config": 0,
+      "cfg_playwright_parameters_config": 0,
+      "cfg_playwright_catalogue_config": 0,
+      "cfg_playwright_communication_config": 0,
+      "cfg_playwright_devices_config": 0,
+      "cfg_playwright_group_addresses_config": 0,
+      "cfg_playwright_ga_members_download_config": 0,
+      "cfg_playwright_structure_config": 0,
+      "cfg_playwright_updates_config": 0,
+      "cfg_playwright_address_unavailable_config": 0,
+      "cfg_playwright_device_checks_config": 0,
+      "cfg_playwright_issue09_config": 0,
+      "cfg_playwright_monitor_control_config": 0,
+      "cfg_playwright_service_control_config": 0,
+      "cfg_playwright_site_config": 0,
+      "repeat": 0,
+      "fmt": 0,
+      "clippy": 0,
+      "rust_tests": 0,
+      "server_build": 0,
+      "native_evidence": 0,
+      "rename_native": 0,
+      "py_tools": 0,
+      "check-layering": 0,
+      "check-headers": 0,
+      "check-anchors": 0,
+      "check-ledger": 0,
+      "check-corpus-gates": 0,
+      "diff_check": 0
+    },
+    "counts": {
+      "vitest": [
+        "Test Files  230 passed (230)",
+        "Tests  3242 passed (3242)"
+      ],
+      "chromium": [
+        "433 passed (10.7m)"
+      ],
+      "cfg_playwright_ux_feedback_config": [
+        "52 passed (1.2m)"
+      ],
+      "cfg_playwright_dialogs_config": [
+        "14 passed (13.2s)"
+      ],
+      "cfg_playwright_notes_config": [
+        "12 passed (8.4s)"
+      ],
+      "cfg_playwright_instructions_config": [
+        "11 passed (8.8s)"
+      ],
+      "cfg_playwright_parameters_config": [
+        "11 passed (8.4s)"
+      ],
+      "cfg_playwright_catalogue_config": [
+        "10 passed (8.3s)"
+      ],
+      "cfg_playwright_communication_config": [
+        "19 passed (26.6s)"
+      ],
+      "cfg_playwright_devices_config": [
+        "13 passed (21.3s)"
+      ],
+      "cfg_playwright_group_addresses_config": [
+        "7 passed (38.6s)"
+      ],
+      "cfg_playwright_ga_members_download_config": [
+        "19 passed (16.3s)"
+      ],
+      "cfg_playwright_structure_config": [
+        "8 passed (19.1s)"
+      ],
+      "cfg_playwright_updates_config": [
+        "7 passed (5.8s)"
+      ],
+      "cfg_playwright_address_unavailable_config": [
+        "4 passed (2.1s)"
+      ],
+      "cfg_playwright_device_checks_config": [
+        "4 passed (2.6s)"
+      ],
+      "cfg_playwright_issue09_config": [
+        "10 passed (6.3s)"
+      ],
+      "cfg_playwright_monitor_control_config": [
+        "6 passed (9.4s)"
+      ],
+      "cfg_playwright_service_control_config": [
+        "4 passed (3.1s)"
+      ],
+      "cfg_playwright_site_config": [
+        "4 passed (3.3s)"
+      ],
+      "repeat": [
+        "102 passed (2.8m)"
+      ],
+      "rust_tests": [
+        "rust passed=4269 failed=0 ignored=197"
+      ],
+      "native_evidence": [
+        "12 passed (13.4s)"
+      ],
+      "rename_native": [
+        "4 passed (1.9m)"
+      ],
+      "py_tools": [
+        "Ran 67 tests in 8.404s",
+        "OK (skipped=1)"
+      ],
+      "check-layering": [
+        "layering ok: knx-core reaches none of [\"serde_json\", \"quick-xml\", \"rusqlite\", \"tokio\", \"axum\", \"tower\"]; knx-etsproj reaches neither knx-store nor knx-productdb; knx-productdb reaches none of knx-etsp"
+      ],
+      "check-headers": [
+        "headers ok: 1075 files with a well-formed header, 155 without one (ceiling 155), 42 generated files skipped"
+      ],
+      "check-anchors": [
+        "anchors ok: 616 links checked across 291 markdown files, none dead"
+      ],
+      "check-ledger": [
+        "ledger ok: 199 rows in docs/status/LEDGER.md"
+      ],
+      "check-corpus-gates": [
+        "corpus gates ok: 599 Rust files scanned, no silent early return on a missing corpus"
+      ],
+      "inputs_frozen": [
+        "gate_done 09:38:25"
+      ]
+    }
+  },
+  "private_corpus": {
+    "passed": 144,
+    "total": 144,
+    "targets": 31,
+    "command": "unshare --user --map-root-user --net python3 tools/run_corpus_tests.py"
+  },
+  "mutants": {
+    "log": [
+      "M1 selection clears errors: KILLED rc=1 restored=True",
+      "M2 import start clears errors: KILLED rc=1 restored=True",
+      "M3 new error replaces old: KILLED rc=1 restored=True",
+      "M4 retire by stale visible flag: KILLED rc=1 restored=True",
+      "M5 pauses ignored: SURVIVED rc=0 restored=True",
+      "M6 hidden tab not paused: KILLED rc=1 restored=True",
+      "M7 queued cards start their clock: KILLED rc=1 restored=True",
+      "M8 child animation ends card: KILLED rc=1 restored=True",
+      "M9 focus resumes on inner move: KILLED rc=1 restored=True",
+      "M10 Explorer count not wired: KILLED rc=1 restored=True",
+      "M11 StrictMode cleanup deletes clocks: KILLED rc=1 restored=True",
+      "M12 category subtle ignored: KILLED rc=1 restored=True",
+      "M13 pre-paint bootstrap drops category off: KILLED rc=1 restored=True",
+      "M14 Toasts=Off CSS misses fun cards: KILLED rc=1 restored=True",
+      "M15 flow category ignored at runtime: KILLED rc=1 restored=True",
+      "tree_clean_after=yes",
+      "M5b rc=1 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+      "Tests  1 failed | 20 skipped (21)",
+      "M16 tooSlow guard removed: rc=1 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+      "Tests  1 failed | 8 passed (9)",
+      "M17 tolerance tightened to 0: rc=1 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+      "Tests  1 failed | 8 passed (9)"
+    ],
+    "note": "M5 (resume guard `|| clock.pauses.size` removed) survived the test the sweep named (`pauses a focused toast`); the follow-up M5b, the same mutant against the whole useToasts file, failed 1 test (21 in the run): `does not resume a hovered toast while its close button still has focus`. Run inline at the time, so its log line holds the count, not the name. Every mutant restored and cmp-checked.",
+    "killed": 17,
+    "total": 17
+  },
+  "earlier_attempts": [
+    "attempt 1 on 8069db49: repeat x3 4/102 red (flow-image-export tooSlow refusals at load average 68 from another session's cargo build); stopped and voided after the spec fix",
+    "attempt 2 on baa21ea7 (base 4efabd13): all stages green, corpus 144/144 in 31 targets; superseded because main gained Rust runtime inputs (tester download reports) and took ADR-0121"
+  ],
+  "not_verified": [
+    "native WebKitGTK desktop window",
+    "Firefox",
+    "screen readers"
+  ],
+  "source_hashes": {
+    "apps/knx-web/e2e/achievements.e2e.ts": "d2fbca808435b3e6e1a4baab951a38af0e92159b69e3d477720dba2d8079d826",
+    "apps/knx-web/e2e/flow-camera.e2e.ts": "b8c85b5672674ac4b9f0e85932e32c44ebf2b10bcfa23d6206d2d4c0b3d5d66a",
+    "apps/knx-web/e2e/flow-image-export.e2e.ts": "ee24879e95e926dc3ac658c2646f622e941b00a1b46feeaaffd62b71cd8dd296",
+    "apps/knx-web/e2e/toast-fixture.tsx": "1c31bc7c3b9e3e16060c497ab69e2605453a13dd8b1554bb14cf20704e79e52a",
+    "apps/knx-web/e2e/ux-feedback.e2e.ts": "9ac6c7044ff48db3b85f211f0a6a19a47ef8c560b5a978e27fff0925bcdd6f0e",
+    "apps/knx-web/index.html": "4c66a9699656709e707f02ffd7294c9cb556377c38c183fbc98af016b76ff58e",
+    "apps/knx-web/playwright.ux-feedback.config.ts": "8fdc4aea88b8a5956d7154f0317495c9f5b7be7a267d20dfc8a8889e366d9425",
+    "apps/knx-web/src/App.test.tsx": "4be519ea78e60518c6fc01658f590c0a4b1c646b7a37f7fec63071e33dce8d04",
+    "apps/knx-web/src/App.tsx": "a3fd3b4c6cdb4b21a15e6995013ef35522cf8bcb3b591b56d12b0f0c1596bc2d",
+    "apps/knx-web/src/BusMonitorPanel.tsx": "6c9667f115634cddb72f92b1b2520b1123355f2b524b7d1ce842a7e4603a3682",
+    "apps/knx-web/src/DiagnosticsCompanion.test.tsx": "9daae0b7cf19777f83946e557087759b823451f552556969115e6846b927987b",
+    "apps/knx-web/src/FlowImageExportDialog.test.tsx": "f4310dd2b3fa429e9815f120e6a75d65a756ec9a6030fbebad0b39623500f712",
+    "apps/knx-web/src/FlowImageExportDialog.tsx": "c070912efe7957872676a2bce0f44dd916489d781c4af7745693605e7c46d9d5",
+    "apps/knx-web/src/MotionCategorySettings.tsx": "8b634461db211b7af7fcf4a9ba60c302eb339762c80c3ed8bd9893a12dc6ba73",
+    "apps/knx-web/src/ProjectExplorer.tsx": "101f5bc0fcb2d0d40c3761457b0a6b5077bc128259d259105683b517b5837d4b",
+    "apps/knx-web/src/SettingsPanel.test.tsx": "a29e57d67aaef44205d6cd4881918d5dce75e1b66d653da87036e10d0ad5fa2e",
+    "apps/knx-web/src/SettingsPanel.tsx": "7dcf1a3f205a83f1c9c34af1ca7cd08c61a571995a185fa8f500bb0ecb8c4680",
+    "apps/knx-web/src/TelegramFlowView.test.tsx": "267f851c27d71a25deb22f099314ce62529857a78364497e556524923de9bdf6",
+    "apps/knx-web/src/TelegramFlowView.tsx": "f8e7f54cee2699b03f6ace99109f5abef345fca26645aca1f55a010b846c0831",
+    "apps/knx-web/src/Toast.test.tsx": "cf236e001e1dc0ec9979fe31f3955a540a555a35d0e93eb2086167f7b304b057",
+    "apps/knx-web/src/Toast.tsx": "db146b60160cff0f311e865000472f37ea462180f4d20d6e292b877a27e2a8e6",
+    "apps/knx-web/src/achievementAdditions.test.ts": "b93910924e05839e0fa89905d9e38f1a5935d0374a9a1313e8736300513be56a",
+    "apps/knx-web/src/achievementCatalog.test.ts": "d3d346e6558fd15563e1074e59497f54b808e6badfa7cbfeed2422ab6c4e5c2e",
+    "apps/knx-web/src/achievementCatalog.ts": "c17dd364a80fa07a223a2753e6f2bdbfc21e4fdd419408d4f8f1254f2ddb9d04",
+    "apps/knx-web/src/flowImageCapture.test.ts": "1f37a17fcee13f23a9cb471082d75ec9745ed1ae0a0a76f028a704f551d50207",
+    "apps/knx-web/src/flowImageCapture.ts": "ddce207da3d31f2ac92dcecf74a56fe99832fc9502d73a5f911e1a5064d75051",
+    "apps/knx-web/src/flowImageExport.test.ts": "5442ac3f5eeed2d0b97cac33aaf0b00895c596fd38623ba05b647c5f327d0fb5",
+    "apps/knx-web/src/flowImageExport.ts": "3909512136269b02fd293b3e9bd39a75338bab140179849c9cbd9ea780ae5b62",
+    "apps/knx-web/src/flowImageExportLimits.test.ts": "26f73fcf82480a9b93d3cdf007663c9597cece3850fa429e1c1d3b330fb2b1cb",
+    "apps/knx-web/src/flowImageExportLimits.ts": "864f5781799beec29d7d20fec382b5a158525daaffb129bfb72380b9382b0283",
+    "apps/knx-web/src/flowMotion.test.tsx": "b0543a13b72dce8c4d50ca3caef56a123c1e5074da5fae77188a685b48ebb83e",
+    "apps/knx-web/src/flowMotion.ts": "e8aa9d52a74bdd25dbf9a96f64c01e3349644ac10ebaf581f7afe1712249b832",
+    "apps/knx-web/src/gifEncoder.test.ts": "dfbed74f9e042be44af61395825276dcbaabb7de8036f2a4824617273fccb409",
+    "apps/knx-web/src/gifEncoder.ts": "e76d279b2dad004484aededa460e477083b62858666f5efd4cd3cbc1acd30ecc",
+    "apps/knx-web/src/messages/de.ts": "810f9a237e32aaa3db780d92787652b95e707c0c071c89744d9e719386fd01da",
+    "apps/knx-web/src/messages/en.ts": "a9123a0ba111a42c51342e52af1517e51af29dfad0e8eff821d3aa407b2da2bb",
+    "apps/knx-web/src/motion.test.ts": "80e204ffc8081921c69c7ca2fb6308bfca9ba9aa8836c88250d33c87271ebdd8",
+    "apps/knx-web/src/motion.ts": "facae67da59ee553aba5cdb7d05c3fd0c66d8b76c8075b7fc581ac091cd15876",
+    "apps/knx-web/src/motionCategories.test.ts": "fb37b548ec71010c5fb0af815ada0e0e8eb72b307a4f104f1d95fce78cee3da1",
+    "apps/knx-web/src/motionGuard.test.ts": "f577d209277293b6551bf97a1afdcbf8d2a80f209b585a97a4fa25f80068f709",
+    "apps/knx-web/src/styles.css": "d698dbe9169586e2c21a05f827bf813498378ab440e7c3c18f87aac160d79d87",
+    "apps/knx-web/src/toast.test.ts": "2bb6787c47002fd80d35c9b1fdde58ad625e676059d853c60375e9ca3c67a3fc",
+    "apps/knx-web/src/toast.ts": "563733fe8799c3515826b45f340075081382818478bf14d67c7617859f608a0a",
+    "apps/knx-web/src/toastCopy.ts": "f7adde4f76cc0e739939553bc24e507b1e93d7db6d171cabf74b83f4cfbf63ab",
+    "apps/knx-web/src/useToasts.test.tsx": "f829876005aa7f09bb389c1317b04a5bccca7617db0cbeb1fea8684039944839",
+    "apps/knx-web/tsconfig.ux-feedback.json": "0f45c3542ee6dc1f9e04917c7fe4dec7c1f16ae87f5fcdd09a90bf2368d5dfa7",
+    "apps/knx-web/vite.ux-feedback.config.ts": "8d2619e034d4b93ae253affcd75bde8c2e165ad989aaa22e8764213dac2595ef"
+  }
+}

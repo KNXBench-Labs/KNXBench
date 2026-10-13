@@ -20,6 +20,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-13--goal-a1-old-projects-stay-old-until-you-change-them"></a>
+- [2026-10-13 — Goal A1: old projects stay old until you change them](history/implementation/2026-W42.md#2026-10-13--goal-a1-old-projects-stay-old-until-you-change-them)
 <a id="2026-10-13--alpha-11-published-and-downloaded-artifacts-verified"></a>
 - [2026-10-13 — Alpha 11 published and downloaded artifacts verified](history/implementation/2026-W42.md#2026-10-13--alpha-11-published-and-downloaded-artifacts-verified)
 <a id="2026-10-13--plug-in-data-pair-test-a-plug-in-edit-touches-only-the-plug-ins-bytes"></a>

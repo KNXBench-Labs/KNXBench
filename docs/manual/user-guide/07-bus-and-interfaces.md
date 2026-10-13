@@ -389,7 +389,12 @@ changes, the project does not. Saving or exporting a project file is something e
    device without an individual address shows the button disabled with the reason. While
    a plan is being prepared or a download runs, the selection is not switched; if the
    tab cannot tell whether a download is running, it says so and leaves the choice to
-   you.
+   you. *(Source build after Alpha 11, issue #18:)* the requested device is named at
+   once — "Requested from Devices: … Checking whether a download is running before
+   selecting it" — and selected as soon as that check answers; the tab also says when it
+   is still checking the download status or which devices it can prepare, and offers
+   **Check again** when either check failed. Both checks only read the server; neither
+   touches the bus.
 2. Choose the device, **What to write** and the gateway, then **Prepare download**
    (German: **Download vorbereiten**; nothing is written yet). Since the fix for issue
    #10 (current source), a device KNXBench cannot program yet is marked

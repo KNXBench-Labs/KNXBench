@@ -166,7 +166,7 @@ import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
 Images are available for **x86-64 (`amd64`) and 64-bit Arm (`arm64`)**. `latest`
 follows published releases, including alphas, not the newest source. To stay on a
-specific release, use `knxbench/knxbench-server:0.1.0-alpha.10` in both commands
+specific release, use `knxbench/knxbench-server:0.1.0-alpha.11` in both commands
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
 
 Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
@@ -189,15 +189,15 @@ and may enter shell history.
 ### Linux desktop, via AppImage
 
 ```bash
-REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.10
-curl -LO "$REL/KNXBench_0.1.0-alpha.10_amd64.AppImage"
+REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.11
+curl -LO "$REL/KNXBench_0.1.0-alpha.11_amd64.AppImage"
 curl -LO "$REL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.10_amd64.AppImage
-./KNXBench_0.1.0-alpha.10_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.11_amd64.AppImage
+./KNXBench_0.1.0-alpha.11_amd64.AppImage
 ```
 
-This is the `v0.1.0-alpha.10` pre-release, x86-64 only, built by the release workflow.
+This is the `v0.1.0-alpha.11` pre-release, x86-64 only, built by the release workflow.
 `--ignore-missing` skips the `knx-mcp` binary listed in the same checksum file.
 Source changes after this tag still need a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The
@@ -234,7 +234,7 @@ Alpha.10 is the first release with it; Alpha.9 and older packages do not check.
 ## Project status
 
 **Alpha — and we mean it.** The current pre-release is
-[`v0.1.0-alpha.10`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10).
+[`v0.1.0-alpha.11`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11).
 The test suite is large, the documentation is honest, and things still move.
 
 - **Solid:** importing real ETS projects with a full report, editing with undo, the

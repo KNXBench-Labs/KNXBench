@@ -353,8 +353,11 @@ and counts show matches/total regardless of collapse. Reset restores your origin
 channel expansion; reapplying a filter reveals matches again.
 
 The open editor stays visible if its object leaves the result, marked **Editing —
-outside filter**, without inflating counts. Inputs/refusal/pending state survive
-sort/filter/view/channel changes; only committed data drives results. Removing an
+outside filter**, without inflating counts. Collapsing a channel hides all of its
+objects, open editors included *(source build after Alpha 11; Alpha 11 and earlier
+kept an open editor visible under a collapsed channel)*; expanding it again shows
+them as you left them. Inputs/refusal/pending state survive sort/filter/view/channel
+changes and collapsing; only committed data drives results. Removing an
 edited object announces and closes that editor. Tabs/refresh retain view settings;
 device/project change or leaving the editor resets them. No view state is stored
 in the project. Editing still saves DPT/description on blur/Enter and flags/links

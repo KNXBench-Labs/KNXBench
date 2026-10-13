@@ -28,6 +28,10 @@ or introduce a new wire contract. Refusal messages remain owned by the existing
 fields. Dirty inputs survive committed-value refresh; real object removal is
 announced rather than reusing its editor for another identity.
 
+**Amendment 2026-10-13 (issue #16):** a collapsed channel hides its open object
+rows too; the decision above (mounted, keyed, sibling editors) is what keeps their
+drafts and requests alive while hidden, so the change is visibility only.
+
 [The full behavior and acceptance contract](../COMMUNICATION_OBJECT_TABLE.md)
 defines grouping, effective values, filters, stable sorting, counts, editing
 exceptions, save gestures and narrow-screen/keyboard behavior. No core, storage,

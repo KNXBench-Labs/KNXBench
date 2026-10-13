@@ -1,4 +1,12 @@
-Web lock: taken by claude-issues-8-9-10
+Web lock: released by claude-issues-8-9-10 (issues #8, #9, #10, delivered)
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 13:11
+- **Completed:** Issues #8/#9/#10 (reporter thengsty) delivered: #9 `8d8d31a8` (GA tree address rows indented by level, capped at 12; channel header left-aligned, grouped objects one step right), #8 `1d977aab` (`GroupAddressPicker` combobox with DPT-difference marks, 100-option window), #10 `33a74b59` (structured `gatewayBusy` 409 with `holder`, `gatewayRefused`/`gatewayTimeout` 502 with spec-named CONNECT_RESPONSE codes, typed KL-170 refusal `unsupportedByteOrder` 422 + readiness category `byte-order`; download tab: up-front holder with stop buttons and the monitor's gateway as suggestion, readiness marks, "used directly" note, "Prepare download"/"Download vorbereiten", German Du-form pass), docs `3fc1bf0c` (KL §178–§180, ledger KL-178..180, ADR-0123, ADR-0055 follow-up, research §8.10, manual 04/07 + recaptured tree screenshot), merge `c94ab7f3` (merge tree = gated tree + docs only). Gate on frozen `33a74b59`: Vitest 3290/0, Chromium 473/0, 18 configs 255/0, repeat 291/291, fmt/clippy 0, Rust 4281/0 (197 ignored), native 12/12, naming 4/4, tools 67, xtask ×5, `inputs_frozen=1`; corpus 144/144; release coverage unchanged (0 of 467 in `byte-order`). Mutants 14/14 killed.
+- **Pending/Next Steps:** Web lock free; queue: claude-kl170-tester-verification (part B) next. As the lock entry asked: this package does **not** render the plan `warnings` (`base-image-low-octet-first`) in the download tab; that stays part B. Issues #8/#9/#10 get their closing comments after this push.
+- **Notes for Codex oder Claude:** New tunnel-opening routes must use `tunnel_holder::gateway_busy` / `gateway_connect_failed` (ADR-0123); new holder kinds or codes need a client admission in `gatewayRefusal.ts`, else the server text is shown. Strict browser fixtures that open the download tab must answer `GET /api/bus/activity` and `GET /api/device-readiness`. The live snapshot's `busMonitor` now has an optional `gateway`. No real gateway/device contacted; WebKitGTK not exercised.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 11:06
 - **Completed:** Lock taken only (owner: start the reserved slot now; the queue had reached it, lock free since claude-parked-adoption released it). Worktree `issues-8-9-10-20261013`, branch `feature/issues-8-9-10-20261013`, from origin/main `681c7816`.

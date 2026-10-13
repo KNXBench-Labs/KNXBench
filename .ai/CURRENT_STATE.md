@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-13 20:47
+- **Completed:** Issue #7 follow-ups (session bcee21b10872). Log grouping: retained manufacturer files sharing one notice are one Log entry listing every file and count as one warning, fresh and reopened (`knx_app::import_finding_counts`); merged cb61b07f, merged gate Rust 4297/0/198, Vitest 3302/0, corpus 145/145. KL-182: AppImage downloads were saved silently into ~/Downloads and replaced same-named files; now staged privately, saved through the native dialog, copied atomically; merged 76c17259 (desktop 22/0, workspace clippy, xtask 5/5, docs). #7 comment issuecomment-6151970054.
+- **Pending/Next Steps:** Wait for the #7 reporter's log/report and his confirmation with the next AppImage. No native WebKitGTK window or dialog was driven end to end for KL-181/KL-182 (no WebKitWebDriver/headless compositor on the host).
+- **Notes for Codex oder Claude:** WebKitGTK behaviour (silent save + overwrite without a handler; plain path in `decide-destination` honoured) was measured on 2.52.6 via `gi`, not inside the AppImage; method in the KL-182 dossier. All Tauri windows share one WebKit context, so the main window's `on_download` covers Flow/diagnostics. The session log still evicts by age (KL-036 dossier, 13 Oct section).
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-13 18:33
 - **Completed:** Goal A1 (KL-157) delivered: every reading CLI command and `knx_app::comparison` open a `.knxdb` read-only (in-memory upgrade only); `ga-import` plans read-only and opens for writing only for its confirmed save. Feature `c08c3b64` + docs `08a56d7d`, merge `a78c1010` on `923c3f9d`. Gate on `c08c3b64` inputs frozen: Rust 4291/0/198, clippy, fmt, bindings, 5 xtask, docs, tools; corpus 145/145 in 32 targets (oracle targets rerun after linking `project_dump.json`). 3 mutants killed.
 - **Pending/Next Steps:** A2 (revision-bound parameter writes + installation rename, candidate `aabf4d2c`, 12 HTTP tests, 6 mutants killed) gates next, then A3 (stop admission + bounded write drain, in progress in worktree `data-integrity-a3-20261013`).

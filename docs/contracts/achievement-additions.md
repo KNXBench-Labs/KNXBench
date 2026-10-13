@@ -1,5 +1,8 @@
 # Additive outcome achievements and optional humour (AP5 / FUTURE-08)
 
+Written by Codex (`feature/ux-feedback-20261010`); on main since 2026-10-13
+([port evidence](../evidence/ux-feedback-port-2026-10-13.json)).
+
 Four permanent new IDs reuse existing rules and observed UI events:
 
 | ID | Evidence | Threshold |

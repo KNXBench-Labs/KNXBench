@@ -1,5 +1,15 @@
 # Open work after the 0.1 alpha
 
+## Siemens System-2 download support, issue #22 (14 October 2026)
+
+Exact product/application identified; [offline prerequisites](contracts/system2-download-prerequisites.md)
+add typed TaskCtrl2 parsing and its property-record codec, not programming support.
+Open: verified System-2 table/image representation, complete product-procedure and
+machine-5 mapping, hardware-comparison semantics, and durable property+memory
+recovery before executable planner admission. `MV-0025` stays refused. Firmware
+25N03-V04 onward must be confirmed before separately authorised hardware work.
+No private project or manufacturer-executable upload is needed for this stage.
+
 ## ETS 5.7 project import, issue #7 (12 October 2026)
 
 Schema 20 imports and real ZipCrypto exports decrypt

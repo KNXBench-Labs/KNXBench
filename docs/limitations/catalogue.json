@@ -1005,7 +1005,7 @@
       "number": null,
       "title": "Installation instruction editing",
       "topic": "Project model and storage",
-      "summary": "Editing admits bounded exact-source Schema23 XML and selected text/header forms. Other schemas, encodings, ambiguous owners and unsupported formats remain explicit refusals.",
+      "summary": "Editing admits bounded exact-source Schema23 XML and selected text/header forms, and devices made in KNXBench (no invented original, Goal B4). Other schemas, encodings, ambiguous owners and unsupported formats remain explicit refusals.",
       "file": "installation-instruction-editing.md",
       "ledger_ids": [],
       "anchors": [

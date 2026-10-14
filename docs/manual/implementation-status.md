@@ -98,7 +98,8 @@ through a preview and an explicit Apply; the imported original is kept. Drafts o
 notes and instructions now survive saving the project
 ([how to use it](user-guide/05-devices-and-products.md#installation-instructions-since-alpha-10),
 [limits](../KNOWN_LIMITATIONS.md#installation-instructions-tab-and-save-proof-drafts-2026-10-12)).
-Included in Alpha.10.
+Included in Alpha.10. Since Goal B4 (after Alpha 11) devices added in KNXBench get
+instructions too, without an invented original.
 
 ## Project notes in the workbench (12 October 2026 source)
 

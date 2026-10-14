@@ -95,7 +95,9 @@ export default function LoadProgressBanner({ source, snapshot, random = Math.ran
         </div>
       )}
       <p className="load-progress-phase">
-        {failed ? t("loadProgress.failedDuring", { phase }) : t("loadProgress.currentStep", { phase })}
+        <span className={snapshot === null || snapshot.status === "running" ? "task-status-text" : undefined}>
+          {failed ? t("loadProgress.failedDuring", { phase }) : t("loadProgress.currentStep", { phase })}
+        </span>
       </p>
       {!failed && !fraction && <p className="load-progress-unmeasured">{t("loadProgress.unmeasured")}</p>}
       {fraction && (

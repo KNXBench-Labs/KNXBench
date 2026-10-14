@@ -250,6 +250,7 @@ fn reset_restores_original_without_conversion_and_preview_debug_is_payload_free(
     assert!(snapshot.project.instructions.is_empty());
     assert!(plan
         .original()
+        .unwrap()
         .hints
         .as_ref()
         .unwrap()
@@ -311,4 +312,30 @@ fn already_approved_override_can_be_edited_without_reconverting_the_retained_ori
             .changed
     );
     assert_eq!(stack.history_lengths(), (1, 0));
+}
+
+#[test]
+fn an_original_replaced_consistently_between_preview_and_apply_is_a_conflict() {
+    // Not a broken hash (that is a source error): another, internally consistent original.
+    let (mut snapshot, id) = source("original");
+    let (other, _) = source("another original");
+    let rev = revision();
+    let plan = preview_instruction_edit(&snapshot, &rev, id, Some(doc("edited"))).unwrap();
+    let pick = |s: &NativeSnapshot| {
+        s.opaque
+            .iter()
+            .position(|e| e.source_path == "P-0001/0.xml" && e.xpath.is_empty())
+            .unwrap()
+    };
+    let (mine, theirs) = (pick(&snapshot), pick(&other));
+    snapshot.opaque[mine] = other.opaque[theirs].clone();
+    let before = snapshot.clone();
+    let mut stack = CommandStack::new();
+    let refused = apply_instruction_edit(&mut snapshot, &mut stack, &rev, &plan, true, None);
+    assert!(
+        matches!(refused, Err(InstructionEditError::Conflict)),
+        "{refused:?}"
+    );
+    assert_eq!(snapshot, before);
+    assert_eq!(stack.history_lengths(), (0, 0));
 }

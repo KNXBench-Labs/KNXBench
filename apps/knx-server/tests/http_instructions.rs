@@ -474,3 +474,119 @@ async fn supported_noop_preserves_absence_revision_and_redo_stack() {
     );
     assert!(state.command_stack.lock().unwrap().can_redo());
 }
+
+/// A new project with one device as `POST /api/devices` names it (`KB-DEV-<id>`);
+/// placing from the catalogue itself is covered in `http_catalog_to_device`.
+async fn native_fixture() -> (
+    tempfile::TempDir,
+    Arc<knx_server::AppState>,
+    axum::Router,
+    u32,
+) {
+    let dir = tempfile::tempdir().unwrap();
+    let state = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
+    let app = knx_server::app(state.clone(), None);
+    let (status, _) = request(&app, "POST", "/api/project/new", json!({})).await;
+    assert_eq!(status, StatusCode::OK);
+    let mut lock = state.project.lock().unwrap();
+    let project = lock.as_mut().unwrap();
+    let id = project.ids.next_device_id().unwrap();
+    project.devices.insert(knx_core::DeviceInstance {
+        id,
+        source: knx_core::SourceRef {
+            path: format!("KB-DEV-{}", id.0),
+            ets_id: format!("KB-DEV-{}", id.0),
+        },
+        name: "Made here".into(),
+        description: None,
+        address: None,
+        product_ref: String::new(),
+        program_ref: String::new(),
+        commissioning: Default::default(),
+        visibility_calculated: true,
+        com_objects: vec![],
+        binary_data: vec![],
+    });
+    drop(lock);
+    (dir, state, app, id.0)
+}
+
+#[tokio::test]
+async fn a_device_made_here_gets_instructions_without_an_invented_original() {
+    let (_dir, state, app, id) = native_fixture().await;
+    let opaque = state.opaque.lock().unwrap().clone();
+    let url = format!("/api/devices/{id}/instructions");
+    let (status, view) = request(&app, "GET", &url, Value::Null).await;
+    assert_eq!(status, StatusCode::OK, "{view}");
+    assert_eq!(view["origin"], "native");
+    assert_eq!(view["originalXmlSha256"], Value::Null);
+    assert_eq!(view["originalPresent"], false);
+    assert_eq!(view["effectiveDocument"], Value::Null);
+    assert_eq!(view["overrideDocument"], Value::Null);
+    let (status, plan) = request(
+        &app,
+        "POST",
+        &format!("{url}/preview"),
+        preview_request(&view, document("Above the door")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{plan}");
+    assert_eq!(plan["conversionRequired"], false);
+    let (status, applied) = request(
+        &app,
+        "POST",
+        &format!("{url}/apply"),
+        apply_request(&plan, true, false),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    let (_, view) = request(&app, "GET", &url, Value::Null).await;
+    assert_eq!(
+        view["overrideDocument"]["runs"][0]["text"],
+        "Above the door"
+    );
+    assert_eq!(view["origin"], "native");
+    assert_eq!(
+        *state.opaque.lock().unwrap(),
+        opaque,
+        "no original is stored for a native device"
+    );
+    assert_eq!(
+        state.command_stack.lock().unwrap().history_lengths(),
+        (1, 0)
+    );
+    // Removing returns to no instructions at all.
+    let (_, plan) = request(
+        &app,
+        "POST",
+        &format!("{url}/preview"),
+        preview_request(&view, Value::Null),
+    )
+    .await;
+    assert_eq!(plan["noOp"], false);
+    let (status, _) = request(
+        &app,
+        "POST",
+        &format!("{url}/apply"),
+        apply_request(&plan, true, false),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, view) = request(&app, "GET", &url, Value::Null).await;
+    assert_eq!(view["overrideDocument"], Value::Null);
+    assert_eq!(view["effectiveDocument"], Value::Null);
+}
+
+#[tokio::test]
+async fn an_imported_device_still_says_imported_with_its_hash() {
+    let (_dir, _state, app, id) = fixture(r"{\rtf1 original}").await;
+    let (_, view) = request(
+        &app,
+        "GET",
+        &format!("/api/devices/{id}/instructions"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(view["origin"], "imported");
+    assert_eq!(view["originalXmlSha256"].as_str().map(str::len), Some(64));
+}

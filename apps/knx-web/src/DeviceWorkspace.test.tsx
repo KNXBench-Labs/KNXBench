@@ -608,7 +608,7 @@ it("offers a later-installation device only that installation's group addresses 
 it("mounts the installation instructions only once their tab is opened, and reports the draft", async () => {
   const identityTree: ProjectTree = { ...tree, server_incarnation: "srv-d", project_incarnation: 1, snapshot_revision: 4 };
   instructionClient.read.mockReset().mockResolvedValue({ serverIncarnation: "srv-d", projectIncarnation: 1, snapshotRevision: 4, device: 9,
-    originalXmlSha256: "b".repeat(64), originalPresent: true, originalBytes: 5, originalFormat: "plain", unsupported: [], previewError: null,
+    origin: "imported", originalXmlSha256: "b".repeat(64), originalPresent: true, originalBytes: 5, originalFormat: "plain", unsupported: [], previewError: null,
     effectiveDocument: { runs: [{ text: "Hints", style: { bold: false, italic: false, underline: false } }] }, overrideDocument: null, persistence: "session-only" });
   const onInstructionDraftChange = vi.fn();
   const host = document.createElement("div"); document.body.append(host);

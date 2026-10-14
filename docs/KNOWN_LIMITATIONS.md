@@ -615,7 +615,7 @@ Local-only/no-editor wording is superseded by service/workbench delivery. Litera
 ### Installation instruction editing
 
 **Ledger status:** Not separately tracked.
-Editing admits bounded exact-source Schema23 XML and selected text/header forms. Other schemas, encodings, ambiguous owners and unsupported formats remain explicit refusals.
+Editing admits bounded exact-source Schema23 XML and selected text/header forms, and devices made in KNXBench (no invented original, Goal B4). Other schemas, encodings, ambiguous owners and unsupported formats remain explicit refusals.
 [Details and history](limitations/installation-instruction-editing.md)
 
 <a id="catalogue-instruction-and-note-drafts-across-save"></a>

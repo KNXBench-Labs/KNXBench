@@ -23,7 +23,7 @@ blocked (named missing evidence) or excluded; nothing else is added.
 | B1b | Functions in the workbench over A4's API (read, create/update/move/delete, members, undo/redo/save/reopen); no Site UI (ADR-0125 blocked) | delivered (W42 entry) |
 | B2 | Desktop webview reload/navigation guard for notes/instruction drafts; native/Orca/Firefox only as actually run | delivered (W42 entry; Firefox run, native WebKitGTK/Orca not run) |
 | B3 | Read-only stored BusAccess/IP view, redacted endpoints, no connect | delivered (W42 entry; IPConfig unassigned: the stored row names no device) |
-| B4 | Instructions for natively created devices (no invented original) | planned |
+| B4 | Instructions for natively created devices (no invented original) | delivered (W42 entry; no ETS export of native instructions) |
 | B5 | Catalogue backup deletion; web direct `.knxprod` install routed to preview/apply | delivered (W42 entry) |
 | B6 | KL-164 idempotent achievement increments | delivered (W42 entry) |
 | B7 | Naming recipe UI over the existing `knx-edit` service | delivered (W42 entry) |

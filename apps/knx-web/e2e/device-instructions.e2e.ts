@@ -22,6 +22,7 @@ interface Fixture {
   applied: number;
   projectReads: number;
   identity: boolean;
+  native: boolean;
 }
 
 function projectTree(f: Fixture): ProjectTree {
@@ -43,12 +44,15 @@ const ORIGINAL: Document = { runs: [
 
 function viewOf(f: Fixture) {
   return { serverIncarnation: "instructions-fixture", projectIncarnation: 2, snapshotRevision: f.revision, device: 41,
-    originalXmlSha256: "d".repeat(64), originalPresent: true, originalBytes: 64, originalFormat: "rtf", unsupported: [],
-    previewError: null, effectiveDocument: f.override ?? ORIGINAL, overrideDocument: f.override, persistence: "session-only" };
+    ...(f.native
+      ? { origin: "native", originalXmlSha256: null, originalPresent: false, originalBytes: 0, originalFormat: null }
+      : { origin: "imported", originalXmlSha256: "d".repeat(64), originalPresent: true, originalBytes: 64, originalFormat: "rtf" }),
+    unsupported: [], previewError: null, effectiveDocument: f.override ?? (f.native ? null : ORIGINAL), overrideDocument: f.override,
+    persistence: "session-only" };
 }
 
-async function fixture(page: Page, language: Language, theme: string, width: number, identity = true): Promise<Fixture> {
-  const f: Fixture = { unexpected: [], revision: 1, override: null, applyMode: "ok", applied: 0, projectReads: 0, identity };
+async function fixture(page: Page, language: Language, theme: string, width: number, identity = true, native = false): Promise<Fixture> {
+  const f: Fixture = { unexpected: [], revision: 1, override: null, applyMode: "ok", applied: 0, projectReads: 0, identity, native };
   const plans = new Map<string, Document | null>();
   await page.setViewportSize({ width, height: 900 });
   await page.route("https://api.github.com/**", (route) => { f.unexpected.push(route.request().url()); return route.abort(); });
@@ -191,3 +195,40 @@ test("en 1440: without a complete project identity the instructions are read-onl
   expect(f.applied).toBe(0);
   expect(f.unexpected).toEqual([]);
 });
+
+// Goal B4: a device made in KNXBench has no imported original, and none is invented.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}: a device made in KNXBench gets its first instructions, then loses them again`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const f = await fixture(page, language, "porcelain", width, true, true);
+    const panel = await openInstructions(page, m);
+    const madeHere = language === "de" ? "In KNXBench angelegt: kein Importoriginal" : "Made in KNXBench: no imported original";
+    const remove = panel.getByRole("button", { name: language === "de" ? "Hinweise entfernen" : "Remove instructions", exact: true });
+    await expect(panel.getByText(madeHere, { exact: true })).toBeVisible();
+    await expect(panel.locator("textarea")).toHaveValue("");
+    await expect(remove).toBeDisabled();
+    await noHorizontalOverflow(page);
+    await capture(page, `native-${language}-${width}-1-empty`);
+
+    await panel.locator("textarea").fill("Mount above the kitchen door.");
+    await panel.getByRole("button", { name: language === "de" ? "Änderung prüfen" : "Preview change", exact: true }).click();
+    await panel.getByRole("button", { name: language === "de" ? "Änderung anwenden" : "Apply change", exact: true }).click();
+    await expect(remove).toBeEnabled();
+    expect(f.override?.runs.map((run) => run.text).join("")).toBe("Mount above the kitchen door.");
+    await expect(panel.getByText(madeHere, { exact: true })).toBeVisible();
+    await capture(page, `native-${language}-${width}-2-written`);
+
+    await remove.click();
+    const change = panel.getByRole("region", { name: language === "de" ? "Änderungsvorschau" : "Change preview" });
+    await expect(change).toContainText(language === "de" ? "Das Gerät hat dann wieder keine" : "The device then has none again");
+    await expect(change).not.toContainText(language === "de" ? "Importoriginal" : "imported original");
+    await change.scrollIntoViewIfNeeded();
+    await noHorizontalOverflow(page);
+    await capture(page, `native-${language}-${width}-3-remove`);
+    await change.getByRole("button", { name: language === "de" ? "Änderung anwenden" : "Apply change", exact: true }).click();
+    await expect(remove).toBeDisabled();
+    expect(f.override).toBeNull();
+    expect(f.applied).toBe(2);
+    expect(f.unexpected).toEqual([]);
+  });
+}

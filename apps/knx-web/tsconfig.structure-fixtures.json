@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "types": ["node"] },
-  "include": ["src", "e2e/structure-new-menu.e2e.ts", "e2e/site.e2e.ts", "e2e/achievements-fixture.ts"]
+  "include": ["src", "e2e/structure-new-menu.e2e.ts", "e2e/range-ga-create.e2e.ts", "e2e/site.e2e.ts", "e2e/achievements-fixture.ts"]
 }

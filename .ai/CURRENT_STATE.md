@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-14 04:34
+- **Completed:** S1–S4 source committed as `74d91057`, `f12e1da7`, `61015a7e`, `c8ace5f4`. Corrected full branch gate accepted (35 stages, frozen; Rust 4411/0, Vitest 3460/0, Chromium 513/0, production download specs 33/0, corpus 145/145). Isolated integration reconciles exact upstream `97cbcd63`, including Goal B's published B14 v23. Full upstream handover suffix and every unrelated incoming path retained.
+- **Pending/Next Steps:** Complete merged-result gate on owned `device-support-integrate-20261014`; only then update acceptance and normal push with remote readback. No merged pass or publication claimed yet. Goal B retains B2/B3/B4/B8 and unrelated web surfaces; v23 belongs to its integrated B14.
+- **Notes for Codex oder Claude:** Session `d03c0319b8c1`. Feature source acceptance cannot certify B14 integration, so complete Rust/web/browser/corpus/doc gate is rerun with new checkout-specific Cargo target. Private inputs are ignored root symlinks for gate only; no corpus/keys/identities in public receipts. No hardware/ETS/vendor/subagent/quota/external submission/release/deploy, no force/automatic verification. Selected dirty root remains unsynchronized.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-14 04:27
 - **Completed:** S1–S4 corrected complete branch gate accepted: 35 zero-exit stages, frozen inputs; Rust 4411/0 (200 ignored), Vitest 3460/0 in 247 files, Chromium 513/0, production download/report/scope/B15 33/0, focused browser 8/0, private corpus 145/145. All typechecks/Clippy/docs/xtask pass. Current screenshots inspected. Two S4 audits identical (105 packages, 467 applications; 98 Untested, dependencies all unassessed). No hardware, submission, release or deployment.
 - **Pending/Next Steps:** Commit scoped reviewed packages; integrate on isolated fresh `origin/main` `00f73602`, preserving Goal B and full handover history; run complete merged-result gate, then normal push and exact remote readback. Branch gate is not integration acceptance. Goal B owns unrelated web surfaces and B14 v23 migration.

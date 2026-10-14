@@ -120,7 +120,7 @@ it("the actual pre-paint bootstrap matches every category priority and inherited
   for (const level of ["off", "subtle", "standard"]) for (const category of [undefined, "off", "subtle", "future"]) {
     const attributes: Record<string, string> = {};
     runInNewContext(script, {
-      localStorage: { getItem: () => JSON.stringify({ settings: { motionLevel: level, motionToasts: category, motionAchievements: category, motionFlow: category } }) },
+      localStorage: { getItem: () => JSON.stringify({ settings: { motionLevel: level, motionToasts: category, motionAchievements: category, motionFlow: category, motionLines: category } }) },
       matchMedia: () => ({ matches: false }),
       document: { documentElement: { dataset: {}, setAttribute: (key: string, value: string) => { attributes[key] = value; } } },
     });

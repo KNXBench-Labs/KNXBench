@@ -153,7 +153,10 @@ errors, results or decision prompts, and adds no separate setting. This needs
 a source build after Alpha 11; the existing screenshots show the released UI.
 
 **Motion by category** (since Alpha 11) sets toast
-notifications, achievement popups and the telegram Flow separately. Each starts at
+notifications, achievement popups and the telegram Flow separately. Source builds
+after Alpha 11 add **Structure lines in the explorer**: *Inherit* lets the lines grow
+when a branch opens and pulse about every twelve seconds, *At most subtle* only lets
+them grow, *Off* draws them still. The pulse also pauses while the tab is hidden. Each starts at
 *Inherit* (follow the motion level) and can only go down: *At most subtle* or *Off*.
 A category never brings back motion that the level, or your desktop, turned off;
 switch the level back on and each category returns to its own choice.

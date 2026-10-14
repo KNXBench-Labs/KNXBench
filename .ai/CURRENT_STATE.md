@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-14 07:17
+- **Completed:** S1–S4 complete and merged runtime `6bf86976` accepted: all 35 stages zero, frozen; Rust 4442/0 (200 ignored), Vitest 3504/0 in 249 files, Chromium 522/0, production download/report/scope/B15 33/0, focused browser 8/0, private corpus 145/145. All compiler/typecheck/doc/repository gates pass; final production screenshots inspected. Structured pre-plan/start reasons/actions, EN/DE local-copy and deliberate unsent docs/issue/mail routes delivered as source; Untested confirmation and all server guards unchanged. Earlier audit: 105 packages/467 programs, 98 Untested; executable dependencies all unassessed; bounded F1–F5 documented.
+- **Pending/Next Steps:** Only documentation closure checks and normal main push/readback remain before publication confirmation. Goal B keeps unrelated web/B3/B4/B8 ownership; this finite S1–S4 claim ends after delivery. No new goal, encoder, hardware run, external submission, release or deployment follows.
+- **Notes for Codex oder Claude:** Session `d03c0319b8c1`; runtime receipt `integrated-b2-gate-20261014`, public aggregate receipt in `docs/evidence/device-support-guidance-acceptance-2026-10-14.json`. Local detailed provenance is preserved in profile evidence at closure; no private paths/originals in public receipt. Prior failed attempts remain failed, not rewritten. Source commits `74d91057`, `f12e1da7`, `61015a7e`, `c8ace5f4`; self-review, not independent review. Selected root drafts/index remain unsynchronized and preserved; isolated integration is the delivered source artifact.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-14 04:34
 - **Completed:** S1–S4 source committed as `74d91057`, `f12e1da7`, `61015a7e`, `c8ace5f4`. Corrected full branch gate accepted (35 stages, frozen; Rust 4411/0, Vitest 3460/0, Chromium 513/0, production download specs 33/0, corpus 145/145). Isolated integration reconciles exact upstream `97cbcd63`, including Goal B's published B14 v23. Full upstream handover suffix and every unrelated incoming path retained.
 - **Pending/Next Steps:** Complete merged-result gate on owned `device-support-integrate-20261014`; only then update acceptance and normal push with remote readback. No merged pass or publication claimed yet. Goal B retains B2/B3/B4/B8 and unrelated web surfaces; v23 belongs to its integrated B14.

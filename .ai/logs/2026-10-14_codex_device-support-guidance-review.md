@@ -122,3 +122,29 @@ full configuration width, no clipping. No hardware/mail evidence follows.
 Fresh main remains `00f73602`; its B15 release is explicit, other web surfaces
 and B14 v23 remain Goal B-owned. Commits and isolated integration acceptance
 are next; branch success alone is not a merged-result or push claim.
+
+## 2026-10-14 07:17 — final merged runtime acceptance
+
+`6bf86976` (includes published Goal B B14 and B2) passes all 35 stages with
+frozen inputs: Rust 4442/0/200 ignored; Vitest 3504/0, 249 files; Chromium
+522/0; production download/report/scope/B15 33/0; focused browser 8/0; corpus
+145/145 in 32 targets; Python 122, one skipped; all 15 tsconfig checks,
+Clippy/build/bindings/final binding/docs/xtask/whitespace zero. Exact current
+tracked input hashes equal the retained immutable manifest. Final production
+EN 1440 Porcelain and DE 400 Graphite screenshots reopened and inspected:
+readable full-width notice, reason/action, three links and local/private-copy
+controls, no clipping. Self-review only; no independent/hardware/mail claim.
+
+The earlier integrated attempt's corpus disk exhaustion remains rejected. Its
+unchanged-source recovery separately passed 145/145 before B2 was merged; the
+new complete gate is a distinct execution, not rewritten old evidence.
+Prior aggregate-audit counts are not relabelled as a new B14/B2 census.
+
+Remaining delivery actions are documentation-only closure checks, normal push
+and exact remote readback, then verified owned cleanup. All device-family
+follow-ups remain outside this finite goal; no new goal/release/deploy starts.
+
+Documentation-only closure passes documentation checker, Python tool suite
+(122 executed, one skip), anchors and ledger; whitespace zero. Every non-doc
+tracked blob matches the immutable accepted runtime manifest. Normal push and
+exact remote readback are the remaining publication boundary.

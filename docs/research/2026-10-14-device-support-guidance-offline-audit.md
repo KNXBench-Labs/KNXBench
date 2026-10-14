@@ -116,6 +116,12 @@ not automatically new device engineering.
 
 ## Delivery distinction
 
+The two aggregate-audit executions above precede the final merged B14/B2
+runtime. The final [merged regression receipt](../evidence/device-support-guidance-acceptance-2026-10-14.json)
+is separate: it does not claim another aggregate census or hardware/dependency
+assessment. Counts above are retained measured sample results, not a current
+all-products compatibility guarantee.
+
 S1–S3 deliver explanations, local details and deliberate reporting for existing
 support decisions; they do not remove any of these refusal boundaries. Simulator,
 HTTP, component and browser tests exercise admission and presentation only.

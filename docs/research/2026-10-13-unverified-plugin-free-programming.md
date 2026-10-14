@@ -71,8 +71,12 @@ structured refusal/action help before a plan, local details/copy and deliberate
 EN/DE docs/issue/mail links; the [contract](../contracts/device-programming-support-guidance.md)
 extends issue@ inquiry scope without claiming private intake or delivery.
 No new device encoder, extension-dependency detector, hardware evidence or force
-route follows. Broad source acceptance/integration and the second offline audit
-run are pending in the goal's current session table.
+route follows. Both separate offline audit runs passed with identical privacy-checked aggregates;
+final merged source acceptance passed all 35 gates on `6bf86976`. See the
+[acceptance receipt](../evidence/device-support-guidance-acceptance-2026-10-14.json)
+and [bounded follow-ups](2026-10-14-device-support-guidance-offline-audit.md).
+This supersedes the follow-up's earlier pending statement, not the original
+investigation/evidence boundary.
 
 ## Boundaries of this investigation
 

@@ -1,0 +1,105 @@
+{
+  "kind": "knxbench-test-suite-performance-audit",
+  "format": 1,
+  "date": "2026-10-14",
+  "scope": "read-only test-source/configuration inspection and retained execution evidence; not an implementation or runtime acceptance receipt",
+  "sourceRevision": "1817fb2ab3d6cae503433954658f8a54626d9151",
+  "trackingRevisionAtInspection": "871cc2859be0ae2dc375d0b545feed6d42d6a663",
+  "sourceInventory": {
+    "vitestFiles": 250,
+    "explicitHappyDomFiles": 139,
+    "defaultBrowserCandidateFiles": 73,
+    "rustIntegrationSourceFilesIncludingHelpers": 294,
+    "pythonToolingTestFiles": 11,
+    "playwrightConfigs": 29,
+    "explicitSingleWorkerConfigs": 23,
+    "inheritedSingleWorkerConfigs": 6,
+    "typescriptConfigsIncludingBase": 15,
+    "corpusSelectedTests": 145,
+    "corpusTargets": 32,
+    "corpusSelectionProblems": 0,
+    "browserWaitForTimeoutCallSites": 13,
+    "browserFilesWithWaitForTimeout": 8
+  },
+  "lockedFrontendVersions": {
+    "playwright": "1.63.0",
+    "vitest": "5.0.0",
+    "vite": "8.2.2",
+    "typescript": "7.0.2"
+  },
+  "hostSnapshot": {
+    "cpu": "AMD Ryzen 7 5800X 8-Core Processor",
+    "physicalCores": 8,
+    "logicalCpus": 16,
+    "reportedMemoryGiB": 62,
+    "gpu": "NVIDIA GeForce RTX 4070 Ti",
+    "gpuMemoryMiB": 12282,
+    "gpuAccelerationOfTestBrowserVerified": false,
+    "foreignBrowserGateActive": true,
+    "foreignGateWaitingForLease": true
+  },
+  "historicalExample": {
+    "runtimeRevision": "53046e6495d271b7d51b01b9aff39ff34d294b85",
+    "startAfterLeasesLocalTime": "12:14:49",
+    "endLocalTime": "12:31:44",
+    "wallSecondsExcludingLeaseWait": 1015,
+    "actualStages": 32,
+    "nonzeroActualStageExits": 0,
+    "inputsFrozen": true,
+    "originalWrapperExit": 1,
+    "correctedAggregationExit": 0,
+    "aggregationCorrectionWasNotAnotherRuntimeExecution": true,
+    "vitestPassed": 3530,
+    "vitestFiles": 251,
+    "browserPassed": 531,
+    "browserWorkers": 1,
+    "browserReportedDurationMinutesRounded": 14.6,
+    "browserSharePercentApproximate": 86.31,
+    "productionBrowserPassed": 27,
+    "productionBrowserReportedSeconds": 27.3,
+    "focusedRepeatPassed": 12,
+    "focusedRepeatReportedSeconds": 27.9,
+    "typeScriptCompilerInvocationsIncludingBuild": 19
+  },
+  "otherRetainedVitestObservations": [
+    {
+      "scope": "P2 gate Vitest stage, not complete gate acceptance",
+      "testsPassed": 3589,
+      "filesPassed": 256,
+      "wallSeconds": 33.61
+    },
+    {
+      "scope": "P2 earlier gate Vitest stage, not complete gate acceptance",
+      "testsPassed": 3547,
+      "filesPassed": 252,
+      "wallSeconds": 40.0
+    }
+  ],
+  "vitestFileDurationObservations": {
+    "scope": "four retained issue19 Vitest JSON reports; file durations are not whole-suite wall time",
+    "BusMonitorPanel.test.tsxSeconds": [31.334, 34.664, 31.781, 36.84],
+    "App.test.tsxSeconds": [10.9, 12.948, 11.097, 13.024]
+  },
+  "newExecution": {
+    "corpusRunnerUnitTestsPassed": 4,
+    "corpusRunnerUnitTestExit": 0,
+    "corpusListExit": 0,
+    "corpusListWallSecondsSingleObservation": 0.1359,
+    "actualPrivateCorpusTestsExecuted": false,
+    "fullRuntimeSuiteExecuted": false,
+    "workerScalingBenchmarkExecuted": false,
+    "nextestVersionProbeExit": 101,
+    "nextestInstalled": false,
+    "testConfigurationChanged": false,
+    "productCodeChanged": false
+  },
+  "limitations": [
+    "Source-file inventory is not a compiled test inventory; helper files and generated registrations differ.",
+    "Historical runs use different revisions and are not an A/B worker-scaling benchmark.",
+    "The historical 14.6-minute browser duration is rounded; the calculated share is approximate.",
+    "Most inspected receipts have no per-stage wall/CPU/RSS measurements or queue-wait duration.",
+    "A browser worker is not a CPU core; Chromium has multiple processes and threads.",
+    "No measured multicore speedup or GPU speedup is claimed.",
+    "The four new passing runner tests do not establish that the private corpus or the whole workspace passed today."
+  ]
+}

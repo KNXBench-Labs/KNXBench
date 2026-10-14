@@ -1,4 +1,5 @@
 /** Local mock-only browser gate for the K6 fail-closed availability affordance. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

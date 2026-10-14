@@ -14,6 +14,28 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-14 — Measured web-test tooling candidate: a maintained Linux runner
+  replaces ad-hoc web wrappers, retains all default/production cases and derived
+  TypeScript configs, removes three exact compiler duplicates and admits only
+  unchanged reviewed functional specs to bounded parallel execution. Six equal-case
+  1/2/4/4/2/1 runs pass (276 per execution): mean 331.18/195.66/165.15 s, about
+  2× on this host for the functional lane only. Default browser union is 554 cases
+  (276 functional / 278 exclusive); no assertions, retries, protocol or application
+  behavior changed. Twenty runner regressions plus five central-temp regressions
+  pass. The shared guard covers all thirty Playwright configs, including direct
+  invocations; a real Chromium probe repairs a 245-byte requested TMPDIR to a
+  59-byte owned path and verifies cleanup without deleting the caller's directory.
+  Three exact typecheck duplicates are removed; one new Node-only tooling config
+  is added (19 previous calls → 17 now, all old scopes retained). The earlier
+  branch attempt was intentionally stopped on the owner's scope expansion and
+  remains unaccepted. Complete expanded-source branch web acceptance passed:
+  60 zero/proof-valid stages, inputs/build/tool versions frozen, Vitest 3559/0,
+  default browser 554/0, 15 serial production configs 313/0, Python 148 run
+  (one existing skip), all typechecks/docs/xtask checks zero. Merged-result
+  acceptance and publication remain pending; this is not release certification.
+  [Contract](contracts/web-test-gate.md),
+  [evidence](evidence/web-test-optimization-2026-10-14.json).
+
 - 2026-10-14 — Owner UI feedback P2 ([goal](goals/ui-feedback-p1-p4.md)): the
   project explorer shows what opens. A chevron turns a quarter when a branch
   opens, a closed branch shows how many entries it holds, and Expand all /

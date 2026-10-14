@@ -1,4 +1,5 @@
 /** Playwright gate for local mocked readiness and comparison; never contacts a KNX gateway. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

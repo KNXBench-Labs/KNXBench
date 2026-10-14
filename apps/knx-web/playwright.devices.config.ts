@@ -1,4 +1,5 @@
 /** Production-built Devices browser proofs and bounded large-project measurements. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 import base from "./playwright.config";
 

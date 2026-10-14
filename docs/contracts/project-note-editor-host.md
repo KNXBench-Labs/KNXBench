@@ -110,9 +110,13 @@ tests, 11 intercepted production-build Chromium cases (EN/DE, Porcelain/Graphite
   editor usable with the previous (initially empty) choices.
 - **Unload guard.** `draftUnloadGuard.ts` asks the browser to confirm
   `beforeunload` while a note or instruction draft exists (`preventDefault` plus a
-  truthy legacy `returnValue`), reading the draft flags at unload time. App installs
-  it only outside the desktop shell, whose close is guarded by the draft dialog and
-  ends with `destroy()`.
+  truthy legacy `returnValue`), reading the draft flags at unload time. Since Goal
+  B2 (14 October) App installs it in the desktop shell too: a reload inside the
+  webview (WebKitGTK's context menu offers Reload) asks through WebKitGTK's own
+  Stay/Leave dialog, which it shows when the shell does not handle script dialogs
+  (wry 0.55.1 does not). The window's close stays with the draft dialog and ends
+  with `destroy()`, which runs no `beforeunload` (neither wry, tao nor
+  tauri-runtime-wry calls `webkit_web_view_try_close`), so Quit asks once.
 - **Review names.** The review shows *Create/Change/Remove/Move note* and *Yes/No*
   from the feature-local EN/DE copy instead of wire values.
 

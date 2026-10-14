@@ -37,3 +37,23 @@ The **Notes** view hosts the notes editor with the open tree's real identity
   real-server smoke. No native WebKitGTK window, Orca session, hardware, release or
   deployment is claimed. FUTURE-03 stays LATER.
 <!-- END retained catalogue record -->
+
+## Update 2026-10-14: the desktop webview asks before a reload too (Goal B2)
+
+The reload/tab-close prompt is now installed in the desktop shell as well. A
+reload inside the desktop webview (WebKitGTK's context menu offers **Reload**)
+with a note or instruction draft asks through WebKitGTK's own **Stay**/**Leave**
+dialog; its wording follows WebKitGTK and the system language, not KNXBench's.
+The window's close button and **Quit** still use the KNXBench dialog and ask once:
+the window ends with `destroy()`, which runs no `beforeunload`.
+
+Why this should hold natively, from sources rather than a run: WebKitGTK documents
+that an unhandled `script-dialog` signal shows a Stay/Leave dialog for
+`beforeunload`; wry 0.55.1 handles neither `script-dialog` nor `context-menu`; and
+no `webkit_web_view_try_close` call exists in wry, tao or tauri-runtime-wry.
+Evidence actually run: Vitest, and a reload with and without a draft (stay keeps
+it, leave reloads) in Chromium and in Playwright's Firefox 155. **Not run:** a
+native WebKitGTK window (no isolated display on the build host; the owner's
+desktop is not used without a go), Playwright's WebKit (host libraries missing)
+and Orca. Same-tab navigations to other pages ask the same way; links that open
+outside the app use `target="_blank"` and do not unload it.

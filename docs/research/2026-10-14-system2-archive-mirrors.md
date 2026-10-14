@@ -65,7 +65,7 @@ place it after LoadCompleted and before Restart or Disconnect. Eight place it
 between TaskCtrl2 and LoadCompleted. The scanner read 261932531 bytes, refused
 30 members above its 8 MiB/ratio limits, and had a 512 MiB aggregate budget.
 Thus **44 is a scoped result, not all programs in the corpus**. The earlier
-unbounded exploratory result of 47 is not promoted into this count. IDs and
+broader-limit exploratory result of 47 is not promoted into this count. IDs and
 manufacturer-source bytes stay in private evidence, not Git.
 
 [A] These independent witnesses strongly support interpreting the exact

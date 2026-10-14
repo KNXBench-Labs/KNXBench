@@ -337,6 +337,19 @@ put it, exactly as Save As does. The suggested name is `project.knxdb`.
 
 **Save As…** always asks.
 
+**Replacing an existing file asks first** (source builds after v0.1.0-alpha.11).
+In the browser, picking a name that already exists opens **Replace the existing
+file?**: **Cancel** writes nothing and leaves the project unsaved, **Replace**
+makes this project that file's content. The desktop build's own save dialog
+asks the same question, so it does not ask twice. Saving as the file that is
+already open counts as replacing it too; plain **Save** to the project's own
+file never asks. Nothing is lost by replacing a KNXBench project: its previous
+saved state stays restorable in that file's
+[project history](#project-history-restart-safe-undo-and-versions). A file that
+is not a KNXBench project is never overwritten; Save As refuses it. The server
+keeps this rule as well (`409`, kind `fileExists`, until a request sends
+`overwrite: true`), so no script replaces a file by accident either.
+
 In the browser, Save As writes to the server's permitted directory, not to your
 computer's Downloads folder. To obtain a copy locally, choose **Export
 project…** from the File menu after opening a project. This exports a freshly

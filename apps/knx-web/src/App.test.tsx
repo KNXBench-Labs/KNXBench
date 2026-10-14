@@ -111,6 +111,11 @@ vi.mock("./api", () => ({
   errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
   isUnsavedChangesConflict: (error: unknown) =>
     error instanceof Error && (error as Error & { status?: number }).status === 409,
+  // Same predicate as `api.ts`'s: a Save As onto an existing file.
+  isSaveAsFileExists: (error: unknown) => {
+    const { status, body } = (error ?? {}) as { status?: unknown; body?: { kind?: unknown } | null };
+    return status === 409 && body?.kind === "fileExists";
+  },
   // Same predicate as `api.ts`'s; App only reaches it after a failed load.
   isUnsavedProjectConflict: (error: unknown) => {
     const { status, body } = (error ?? {}) as { status?: unknown; body?: { kind?: unknown } | null };
@@ -3260,7 +3265,9 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
       findButton(enMessages["toolbar.saveAs"])
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(apiMock.saveProjectAs).toHaveBeenCalledWith("/tmp/project.knxdb");
+    // The native dialog asked before an existing file; nothing asks twice.
+    expect(apiMock.saveProjectAs).toHaveBeenCalledExactlyOnceWith("/tmp/project.knxdb", true);
+    expect(host!.querySelector(".overwrite-confirm")).toBeNull();
     expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
 
     await openMenu();
@@ -3273,6 +3280,68 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
+  });
+
+  describe("Save As asks before replacing an existing file (owner request 2026-10-14)", () => {
+    function fileExists(): Error {
+      return Object.assign(new Error("a file with this name already exists; nothing was written"),
+        { status: 409, body: { kind: "fileExists" } });
+    }
+
+    async function saveAsOverAnExistingFile() {
+      filePickerMock.pickSavePath.mockResolvedValue("projects/villa.knxdb");
+      apiMock.saveProjectAs.mockRejectedValueOnce(fileExists());
+      const dirty = { ...baseTree(), can_undo: true, is_modified: true };
+      apiMock.currentProject.mockResolvedValue({ ...dirty, is_modified: false, has_store_path: true });
+      const root = await openProject(dirty);
+      await openMenu();
+      await act(async () => {
+        findButton(enMessages["toolbar.saveAs"]).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      return root;
+    }
+
+    it("asks after the server refused, and replaces only on Replace", async () => {
+      const root = await saveAsOverAnExistingFile();
+      expect(apiMock.saveProjectAs).toHaveBeenCalledExactlyOnceWith("projects/villa.knxdb", false);
+      const dialog = document.querySelector(".overwrite-confirm")!;
+      expect(dialog.textContent).toContain("projects/villa.knxdb already exists.");
+      expect(dialog.textContent).toContain("project history");
+      expect(apiMock.currentProject).not.toHaveBeenCalled();
+      await act(async () => document.querySelector<HTMLButtonElement>(".overwrite-confirm-replace")!.click());
+      expect(apiMock.saveProjectAs).toHaveBeenLastCalledWith("projects/villa.knxdb", true);
+      expect(apiMock.saveProjectAs).toHaveBeenCalledTimes(2);
+      expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+      expect(document.querySelector(".overwrite-confirm")).toBeNull();
+      expect(host!.querySelector('[role="alert"]')).toBeNull();
+      await act(async () => root.unmount());
+    });
+
+    it("writes nothing more and stays unsaved when the answer is Cancel", async () => {
+      const root = await saveAsOverAnExistingFile();
+      const cancel = Array.from(document.querySelectorAll<HTMLButtonElement>(".overwrite-confirm button"))
+        .find((button) => button.textContent === enMessages["overwrite.cancel"])!;
+      await act(async () => cancel.click());
+      expect(apiMock.saveProjectAs).toHaveBeenCalledTimes(1);
+      expect(apiMock.currentProject).not.toHaveBeenCalled();
+      expect(document.querySelector(".overwrite-confirm")).toBeNull();
+      expect(host!.querySelector('[role="alert"]')).toBeNull();
+      await act(async () => root.unmount());
+    });
+
+    it("reports any other refusal instead of asking", async () => {
+      filePickerMock.pickSavePath.mockResolvedValue("projects/villa.knxdb");
+      apiMock.saveProjectAs.mockRejectedValueOnce(Object.assign(new Error("disk full"), { status: 500 }));
+      const root = await openProject({ ...baseTree(), can_undo: true, is_modified: true });
+      await openMenu();
+      await act(async () => {
+        findButton(enMessages["toolbar.saveAs"]).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      expect(document.querySelector(".overwrite-confirm")).toBeNull();
+      expect(host!.textContent).toContain("disk full");
+      expect(apiMock.saveProjectAs).toHaveBeenCalledTimes(1);
+      await act(async () => root.unmount());
+    });
   });
 
   it.each([

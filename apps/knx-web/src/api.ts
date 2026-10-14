@@ -377,8 +377,22 @@ export function saveProject(): Promise<void> {
   return request("/api/project/save", { method: "POST" });
 }
 
-export function saveProjectAs(path: string): Promise<void> {
-  return request("/api/project/save-as", { method: "POST", body: JSON.stringify({ path }) });
+/**
+ * `overwrite` is sent only after the user confirmed replacing an existing
+ * file; without it the server refuses one with `409 fileExists` and writes
+ * nothing (see `isSaveAsFileExists`).
+ */
+export function saveProjectAs(path: string, overwrite = false): Promise<void> {
+  return request("/api/project/save-as", {
+    method: "POST",
+    body: JSON.stringify(overwrite ? { path, overwrite: true } : { path }),
+  });
+}
+
+/** Save As named a file that already exists; nothing was written. */
+export function isSaveAsFileExists(e: unknown): boolean {
+  const error = e as { status?: unknown; body?: { kind?: unknown } } | null;
+  return error?.status === 409 && error.body?.kind === "fileExists";
 }
 
 // `language` picks which stored translation row `com_objects[].name`/

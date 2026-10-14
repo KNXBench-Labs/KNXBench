@@ -148,3 +148,13 @@ Documentation-only closure passes documentation checker, Python tool suite
 (122 executed, one skip), anchors and ledger; whitespace zero. Every non-doc
 tracked blob matches the immutable accepted runtime manifest. Normal push and
 exact remote readback are the remaining publication boundary.
+
+## 2026-10-14 07:20 — publication readback
+
+Normal main push delivered `e478a1a0a2b448ad96439213b5214c7936923c18`.
+Local, tracking and exact live `refs/heads/main` matched; goal/receipt/handover
+were read back remotely. Complete non-doc path set and each runtime blob match
+the immutable `6bf86976` input manifest. Protected root files and index still
+match the preflight witness; shared root was not synchronized. This handover
+closure changes only Markdown and does not claim another runtime execution.
+S1–S4 stop condition is met; F1–F5 remain separate, unstarted follow-ups.

@@ -1,5 +1,6 @@
 /** Native hierarchical address table over the shared presentation index. */
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
+import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { GroupAddressWorkspaceViewProps } from "./groupAddressWorkspaceView";
 import { useTranslate } from "./i18n";
 import { useUiLanguage } from "./uiLanguage";
@@ -15,6 +16,8 @@ const treeIndent = (depth: number) => `${Math.min(depth, 12) * 1.2}rem`;
 export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewProps & {
   /** Open groups (issue #11: the tree remembers what is open, not what is closed). */
   expanded: ReadonlySet<string>; onToggle: (key: string) => void; includeEmpty: boolean; flat?: boolean;
+  /** Issue #20: a range heading's `+` asks to create an address in that range. */
+  onCreateInRange?: (range: GroupRangeNode, label: string, groupKey: string) => void;
 }) {
   const { installation, index, rows, selection, multiSelection, onItemClick, expanded, onToggle } = props;
   const t = useTranslate(); const [language] = useUiLanguage(); const formatGa = useGroupAddressFormat();
@@ -47,11 +50,15 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
                 const group = entry.group;
                 const label = group.range ? (group.range.name || t("gaWorkspace.unnamedRange", { id: group.range.id }))
                   : t(group.kind === "unassigned" ? "addressTable.noRange" : "gaWorkspace.unresolved");
-                return <tr key={entry.key} className="ga-range-row"><td colSpan={6}>
+                return <tr key={entry.key} className="ga-range-row"><td colSpan={6}><span className="ga-range-heading">
                   <button type="button" data-ga-expand={entry.key} data-ga-nav=""
                     style={{ paddingInlineStart: treeIndent(entry.depth) }}
                     aria-expanded={expanded.has(entry.key)} onClick={() => onToggle(entry.key)}>{expanded.has(entry.key) ? "▾" : "▸"} {label} <small>({entry.count})</small></button>
-                </td></tr>;
+                  {group.range && props.onCreateInRange && <button type="button" className="ga-range-add"
+                    data-ga-range-add={group.range.id} aria-label={t("gaWorkspace.newInRange.add", { range: label })}
+                    title={t("gaWorkspace.newInRange.add", { range: label })}
+                    onClick={() => props.onCreateInRange!(group.range!, label, entry.key)}>+</button>}
+                </span></td></tr>;
               }
               const row = entry.row;
               const ga = row.node;

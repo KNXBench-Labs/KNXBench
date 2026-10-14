@@ -147,7 +147,7 @@ Stored values/module arguments are listed with resolvable display names. Raw val
 ### 48. Report languages
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-48](status/LEDGER.md#snapshot-ids)).
-English/German chrome/product overlays exist. Report-owned prose is not a complete multilingual catalogue.
+English/German chrome, table labels and product overlays exist (labels since Goal B8). Diagnostic sentences and raw values stay English; no third language.
 [Details and history](limitations/KL-048-report-languages.md)
 
 <a id="catalogue-kl-125"></a>

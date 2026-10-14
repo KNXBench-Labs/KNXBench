@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-14 21:58
+- **Completed:** P3 (changes not yet programmed, per part; goal `docs/goals/ui-feedback-p1-p4.md`): taken by Claude in `feature/p3-pending-programming-20261014` (worktree `KNXBench.worktrees/p3-pending-programming-20261014`, base 7b9620cf). Surfaces: knx-edit/knx-app edit commands setting the persisted `*_loaded` flags, download/IA-programming clearing in knx-server, manual mark command, device-view "Programming" column/filter and explorer dot in knx-web.
+- **Pending/Next Steps:** Map download/edit/binding paths, test-first implementation, review, RUST=1 gate plus 15 extra configs, merge on fresh main, push. P4 stays after P3.
+- **Notes for Codex oder Claude:** Not touching tools/run_web_gate*, npm wiring (test-optimization), knx-productdb/property load control (#22) or the sidebar Bus monitor/Log toggle (#23). If #23 lands first in `App.tsx`, P3 rebases on it. No store migration expected (flags already persisted); stop and document if that turns out wrong. No subagents, hardware or release.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-14 21:50
 - **Completed:** Issue #23: taken by codex in fix/issue23-navigation-20261014 — sidebar Bus monitor/Log selection only, App regression tests and existing workbench browser coverage. Reporter video inspected; source shows toggle handlers where navigation should be idempotent. Diagnostics companion and Settings are separate open actions, not this toggle defect.

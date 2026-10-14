@@ -122,6 +122,14 @@ all configs now load the common guard. Final expanded-source web acceptance is
 recorded separately, not retagged as that earlier matrix. Original failures and
 the intentionally superseded branch attempt remain retained.
 
+Final expanded-source branch and merged web/docs gates each passed all sixty
+stages. Merged runtime source is `5db49560`: 554 default cases, 313 production
+cases and 3,559 Vitest cases. The initial merged exclusive stage briefly overlapped
+an unsuccessful evidence-archive attempt, so its duration is not clean performance
+proof. A separately source/build/tool-bound followup reproved the exact 278
+exclusive cases under the shared leases, with zero retries/skips. This is a scoped
+followup, not another full gate or scaling benchmark.
+
 Primary runner references: Playwright [parallel execution](https://playwright.dev/docs/test-parallel)
 and [JSON reporter](https://playwright.dev/docs/test-reporters#json-reporter),
 retrieved 2026-10-14; actual installed 1.63.0 behavior also exercised.

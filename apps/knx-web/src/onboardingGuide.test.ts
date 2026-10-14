@@ -125,6 +125,7 @@ describe("ONBOARDING_TASKS", () => {
       openProjectHistory: () => {},
       openDevices: () => {},
       openNotes: () => {},
+      openStoredBusAccess: () => {},
       addDevice: record("addDevice"),
       openIntroduction: record("openIntroduction"),
       openAchievements: record("openAchievements"),

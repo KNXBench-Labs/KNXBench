@@ -24,3 +24,13 @@ separate" remarks are historical ([evidence](../evidence/native-evidence-port-20
 - Real-server browser evidence uses two fictional schema-23 projects in Chromium. No
   WebKitGTK window, private corpus run, hardware, release or deployment is claimed.
 <!-- END retained catalogue record -->
+
+## Update 2026-10-14: stored BusAccess/IP configuration is shown (Goal B3)
+
+The first remaining point above no longer holds: stored `BusAccess` and
+`IPConfig` records are shown read-only, every endpoint value hidden until one
+record is revealed, never used to connect
+([contract](../contracts/stored-bus-access.md)). An `IPConfig` is not assigned to
+a device, because the stored row does not say which. Evidence is Vitest, HTTP
+and Chromium with fictional RFC 5737 data; no private project, hardware or
+native window.

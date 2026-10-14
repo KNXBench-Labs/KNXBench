@@ -272,6 +272,30 @@ Full element inventory of the real project, with observed counts and the complet
 **`BusAccess` stores the commissioning interface** as a free-form connection string:
 `Name='GATEWAY-NAME';IpAddr='192.0.2.1';Port='3671';NAT='on';` plus an `Edi` GUID identifying the ETS interface driver [V]. This is ETS-tool-specific configuration. It should be preserved verbatim for round-trip and *not* mapped into our own connection model.
 
+#### Update 2026-10-14: BusAccess and IPConfig (Goal B3)
+
+- `[D]` KNX Project Schema 23 v01.00.00, `BusAccess_t`: `Name` (xs:string,
+  required, *"The name of the access"*), `Edi` (knx:Guid_t, optional, *"The Guid of
+  the access type. If no Edi specified, the Parameter contains the
+  FalconConnectionString"*), `Parameter` (xs:string, required, *"The parameters
+  necessary for the connection"*). No syntax is given for `Parameter`.
+- `[D]` Same document, `IPConfig_t` (a `DeviceInstance` child): `Assign`
+  (`Auto`/`Fixed`, default `Auto`), `IPAddress`, `SubnetMask`, `DefaultGateway`
+  (knx:Ipv4Address_t) and `MACAddress` (knx:String50_t), all optional.
+- `[V]` Private corpus, six `.knxproj`, classes and counts only (no values): five
+  `BusAccess` (four under `Segment`, one directly under `Line`), all with `Name`
+  and `Parameter`, one with `Edi`. Every `Parameter` is `;`-separated
+  `key=value` parts with exactly one `=` each (one ends in `;`); keys seen are
+  `Type`, `HostAddress`, `IpPort`, `UseNat`, `Name`, and in the `Edi` record
+  `IpAddr`, `Port`, `NAT`, `ProtocolType`. `HostAddress` values are IPv4-shaped.
+  One `IPConfig`, with a MAC-shaped `MACAddress`.
+- `[V]` Code: the importer keys a retained `BusAccess` by its line
+  (`Line[@Id='…']`), but stores `IPConfig` as an unknown element keyed by element
+  names only, so the stored row cannot say which device it belongs to.
+- Consequence: [stored bus access](../contracts/stored-bus-access.md) shows both
+  read-only, every endpoint hidden until one record is revealed, never as a
+  connection.
+
 ### 3.2 The override chain (most important single finding)
 
 A communication object's effective properties are resolved through **three layers**:

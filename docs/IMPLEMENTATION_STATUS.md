@@ -26,6 +26,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-14--stored-bus-access-read-only-and-hidden-until-asked"></a>
+- [2026-10-14 — Stored bus access: read-only, and hidden until asked](history/implementation/2026-W42.md#2026-10-14--stored-bus-access-read-only-and-hidden-until-asked)
 <a id="2026-10-14--the-desktop-webview-asks-before-a-reload"></a>
 - [2026-10-14 — The desktop webview asks before a reload](history/implementation/2026-W42.md#2026-10-14--the-desktop-webview-asks-before-a-reload)
 <a id="2026-10-14--issue-17-page-1-learns-its-page-name"></a>

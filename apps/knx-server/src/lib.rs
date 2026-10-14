@@ -97,6 +97,7 @@ mod tunnel_holder;
 /// private: everything outside this crate talks to it over `/api/settings`.
 pub use settings::{CURRENT_SCHEMA_VERSION, SETTINGS_FILE_NAME};
 mod settings_routes;
+mod stored_bus_access_routes;
 /// Exported so an integration test can seed a log entry directly. The two
 /// types and nothing else: the module also holds `SessionLog`'s internals
 /// and the import-report converters, which would drag `knx-etsproj` and
@@ -197,6 +198,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(function_routes::router())
         .merge(parameter_editor_routes::router())
         .merge(catalogue_update_routes::router())
+        .merge(stored_bus_access_routes::router())
         .merge(fs_routes::fs_routes())
         .merge(bus_routes::bus_routes())
         .merge(bus_activity_routes::bus_activity_routes())

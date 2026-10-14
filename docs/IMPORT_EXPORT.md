@@ -875,6 +875,24 @@ the `.knxproj` writer; the writer is gone (ADR-0028) and the manifest is
 not, because knowing the provenance of a device's application program is an
 import property.
 
+**Carrying the manifest's files (schema 16, GitHub #21).** A manifest alone left a
+`.knxdb` unusable next to an empty product database: a rebuilt Docker container
+or another computer resolved no application program. Since
+[ADR-0128](adr/0128-native-project-files-carry-their-manufacturer-files.md) the
+file also carries the files' bytes (`manufacturer_file`, zlib, keyed and
+re-checked by SHA-256):
+
+- Save, Save As, the browser download and `knx import --store` fill them in from
+  the product database or the project's previous file. A file nobody can supply
+  is logged by `source_path`.
+- Every open installs whatever the product database lacks from the carried bytes.
+- A file saved before schema 16 has nothing to install from. Its devices report
+  `unresolvedProgram` on the parameter panel, and
+  `POST /api/project/manufacturer-files/restore` installs, from the original
+  `.knxproj`, exactly the outer members whose SHA-256 matches the manifest. A
+  protected project needs no password. Members with other bytes are named and
+  skipped, and the project is not changed.
+
 **Degradation.** `--no-product-db` (or `ImportOptions { product_db: None
 }`) runs the Session 3 path unchanged: manufacturer bytes go into the
 project's own opaque store, no ingest, no enrichment — a tested fallback,

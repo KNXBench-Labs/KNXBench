@@ -19,6 +19,7 @@ import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentit
 import { isRevisionConflict } from "./revisionConflict";
 import ParameterSourceEditor from "./ParameterSourceEditor";
 import { isSourceEditorCandidate } from "./parameterSourceHost";
+import UnresolvedProgramNotice from "./UnresolvedProgramNotice";
 
 // T18 slice 3, task 4 (design docs/superpowers/specs/2026-09-11-parameter-editor-design.md).
 // Fetches `GET /api/device/{id}/parameters` on every device selection —
@@ -596,9 +597,11 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
     <div className="parameter-panel">
       <h3>{t(title)}</h3>
       {view === "restricted" && <p className="inspector-description">{t("parameters.restrictedDescription")}</p>}
-      {panel.programId === null ? (
-        <p className="inspector-description">{t("parameters.noProgram")}</p>
-      ) : sections.length === 0 ? (
+      {/* Outside the branch below: a restore's summary must survive the
+          reload that makes the program resolve (#21, ADR-0128). */}
+      <UnresolvedProgramNotice key={deviceId} unresolved={panel.programId === null}
+        info={panel.programId === null ? panel.unresolvedProgram ?? null : null} onRestored={onConflict} />
+      {panel.programId === null ? null : sections.length === 0 ? (
         <p className="inspector-description">{t(view === "restricted" ? "parameters.noRestrictedFields" : "parameters.noUserFields")}</p>
       ) : sections.map((section, i) => (
         <ParameterSectionView

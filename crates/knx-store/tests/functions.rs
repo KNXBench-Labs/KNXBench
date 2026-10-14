@@ -170,7 +170,7 @@ fn functions_text_order_and_allocators_survive_save_reopen_and_snapshot() {
             .conn
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        15
+        knx_store::CURRENT_SCHEMA_VERSION
     );
 }
 
@@ -205,7 +205,7 @@ fn a_project_without_functions_keeps_its_semantic_identity_after_the_v15_tables_
         .semantic_hash()
         .unwrap();
     conn.execute_batch(
-        "DROP TABLE project_function_member; DROP TABLE project_function; \
+        "DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; \
          DROP TABLE project_function_state; PRAGMA user_version=14;",
     )
     .unwrap();
@@ -215,7 +215,7 @@ fn a_project_without_functions_keeps_its_semantic_identity_after_the_v15_tables_
         upgraded
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        15
+        knx_store::CURRENT_SCHEMA_VERSION
     );
     assert_eq!(
         NativeSnapshot::read(&upgraded)

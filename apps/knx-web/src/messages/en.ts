@@ -1171,6 +1171,27 @@ export const messages = {
   "parameters.loading": "Loading parameters…",
   "parameters.noProgram":
     "This device has no resolvable application program; parameters cannot be shown.",
+  "parameters.unresolved.noDatabase":
+    "This server has no product database, so the device's application program cannot be loaded and its parameters cannot be shown.",
+  "parameters.unresolved.restorable.one":
+    "This project's product data is not installed: 1 manufacturer file is missing from the product database, and the project file does not contain it (it was saved by an older KNXBench). Restore it from the project's original .knxproj. Only a file with a matching checksum is installed; the project itself does not change.",
+  "parameters.unresolved.restorable.other":
+    "This project's product data is not installed: {count} manufacturer files are missing from the product database, and the project file does not contain them (it was saved by an older KNXBench). Restore them from the project's original .knxproj. Only files with a matching checksum are installed; the project itself does not change.",
+  "parameters.unresolved.notInstalled":
+    "The device's application program is not in the product database. Install the device's product data (.knxprod) from the catalogue.",
+  "parameters.unresolved.programRef": "Program reference:",
+  "parameters.unresolved.restore": "Restore from original .knxproj…",
+  "parameters.unresolved.restoring": "Restoring product data…",
+  "parameters.unresolved.installed.one": "Product data restored: 1 file installed.",
+  "parameters.unresolved.installed.other": "Product data restored: {count} files installed.",
+  "parameters.unresolved.nothingInstalled": "No file from this archive was installed.",
+  "parameters.unresolved.saveHint": "Save the project so its file contains them from now on.",
+  "parameters.unresolved.stillMissing.one": "1 file is still missing. Try another copy of the original project.",
+  "parameters.unresolved.stillMissing.other": "{count} files are still missing. Try another copy of the original project.",
+  "parameters.unresolved.mismatched":
+    "Not installed because they differ from the files this project was made with: {paths}",
+  "parameters.unresolved.notInArchive": "Not in this archive: {paths}",
+  "parameters.unresolved.failed": "{path} could not be installed: {reason}",
   "parameters.none": "(none)",
   "parameters.conflict": "This value was changed elsewhere. Nothing was written; your draft is kept and the current state is being reloaded.",
   "parameters.conflictReloadFailed": "This value was changed elsewhere. Nothing was written and your draft is kept, but reloading the current state failed: {message}",

@@ -216,6 +216,20 @@ part; both real ZipCrypto exports decrypt with our own implementation and
 agree with xknxproject (§3.6). The ZipCrypto bullet above is therefore
 verified against two real exports, not only read from xknxproject's source.
 
+**Manufacturer files stay outside the protection [V], measured 2026-10-14
+(issue #21).** In the same three protected exports
+(`test_project-ets4`, `xknx_test_project`, `testprojekt-ets6`), every `M-xxxx`
+member (15, 35 and 15 of them, `.signature` files included) sits in the outer
+archive with the ZIP encryption flag clear. Only the project part is inside the
+nested `<P-xxxx>.zip`. KNXBench's restore from an original `.knxproj`
+([ADR-0128](../adr/0128-native-project-files-carry-their-manufacturer-files.md))
+relies on this: it reads outer members only and asks for no password. The two
+ZipCrypto exports were driven end to end (import with password, save, carried
+files removed, reopen next to an empty product database, restore without
+password): 4 of 4 and 2 of 2 devices resolved their application program again.
+The ETS6 AES export was inspected only, because KNXBench does not decrypt AES
+projects.
+
 ### 2.4 Container differences, ETS4 (schema 11) vs. ETS6 (schema 23) [V]
 
 Same installation, exported by ETS4 then by ETS6.3.7959.0, diffed archive entry by archive entry:

@@ -100,7 +100,7 @@ impl NativeSnapshot {
         conn.deserialize_read_exact(MAIN_DB, bytes, bytes.len(), false)?;
         conn.execute_batch("PRAGMA trusted_schema = OFF; PRAGMA foreign_keys = ON;")?;
         let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if ![12, 13, 14, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+        if ![12, 13, 14, 15, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
             return Err(HistoryError::Invalid("unsupported snapshot schema version"));
         }
         let creator: String = conn.query_row(
@@ -129,6 +129,17 @@ impl NativeSnapshot {
                 conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))?;
             if count != 0 {
                 return Err(HistoryError::Invalid("recursive history snapshot"));
+            }
+        }
+        // Carried manufacturer files belong to the file, never to a
+        // snapshot (ADR-0128): an image holding any is not one we wrote.
+        if version >= 16 {
+            let carried: i64 =
+                conn.query_row("SELECT count(*) FROM manufacturer_file", [], |r| r.get(0))?;
+            if carried != 0 {
+                return Err(HistoryError::Invalid(
+                    "snapshot carries file-level manufacturer files",
+                ));
             }
         }
         check_schema_version(&conn, version)?;
@@ -171,8 +182,11 @@ fn check_schema_version(conn: &Connection, version: i64) -> Result<(), HistoryEr
     }
     let expected = crate::open_and_migrate_in_memory()
         .map_err(|_| HistoryError::Invalid("native schema admission initialization failed"))?;
-    if ![12, 13, 14, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+    if ![12, 13, 14, 15, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
         return Err(HistoryError::Invalid("unsupported native schema shape"));
+    }
+    if version < 16 {
+        expected.execute_batch("DROP TABLE manufacturer_file;")?;
     }
     if version < 15 {
         expected.execute_batch(
@@ -240,6 +254,8 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
         if name.starts_with("sqlite_")
             || name.starts_with("project_history_")
             || name == "schema_meta"
+            // File-level carried bytes, never snapshot content (ADR-0128).
+            || name == "manufacturer_file"
             || (!notes && matches!(name.as_str(), "project_note" | "project_note_state"))
             || (!functions
                 && matches!(

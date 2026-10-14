@@ -392,6 +392,16 @@ becomes the heading; if both are absent, the group says **Untitled channel**.
 The source **Number** appears beside either heading as text (it need not be a
 decimal number). Name and Number are shown as supplied, not translated,
 reformatted, used as keys, or joined into an invented label.
+Some products write a placeholder such as `{{0:Page 1}}` into a heading or an
+object name, meaning "the text you typed into this text parameter". KNXBench
+fills it in: the device's value of that parameter, otherwise the product's
+default, and the placeholder's own text (`Page 1`) when the value is empty.
+Hover the heading or name to see the product text and where the inserted text
+came from; a placeholder that cannot be filled stays visible, with the reason
+in the same tooltip. Names you edited yourself are shown exactly as you wrote
+them. The documentation report prints the same filled names; group-address
+member lists, the Log and CSV exports still show the stored text
+([details](../../contracts/positional-text-templates.md)).
 A channel-independent block gets its own group. Objects without evaluated
 channel ownership — including inactive, uncertain and not-evaluated objects —
 remain visible under **Without evaluated channel**, not silently discarded.

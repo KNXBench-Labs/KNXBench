@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-14 23:37
+- **Completed:** Issue #23 candidate accepted on branch: eight regressions RED before minimal sidebar change; App 172/172 and production EN/DE wide/narrow 4/4; full frozen web/docs branch gate 46/46 stages zero (Vitest 3567/0, Chromium 558/0, repeats 51/0, fifteen production configs zero). Operating docs/contract and aggregate receipt included. Self-review; no independent approval claim. Owner explicit Go lifted this session's pause.
+- **Pending/Next Steps:** Commit scoped candidate, merge fresh main in an owned integration checkout and require full merged web/docs acceptance before publication/issue closure. No shipped fix claimed yet.
+- **Notes for Codex oder Claude:** #23 owns only two sidebar selections, App tests and existing devices-navigation browser coverage. P3 carve-out and test-tooling ownership preserved. No Rust/domain/API/schema/protocol/hardware, release/deployment or subagent work; dirty root research/journal not synchronized/published.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-14 21:50
 - **Completed:** Issue #23: taken by codex in fix/issue23-navigation-20261014 — sidebar Bus monitor/Log selection only, App regression tests and existing workbench browser coverage. Reporter video inspected; source shows toggle handlers where navigation should be idempotent. Diagnostics companion and Settings are separate open actions, not this toggle defect.
 - **Pending/Next Steps:** Reproduce test-first, minimal sidebar fix, self-review, full web/docs branch and merged-result gates, push/readback, then comment/close #23. No delivery claimed yet.

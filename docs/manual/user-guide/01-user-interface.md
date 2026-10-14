@@ -342,14 +342,14 @@ interface language and product-data language. See
 They are covered in [Devices and products](05-devices-and-products.md) and
 [Projects](02-projects.md).
 
-**About KNXBench** shows version and license information. *(Source build after
-Alpha 11:)* below it, **Community Hall of Fame (N)** opens to thank everyone
-outside the team who reported or discussed an issue on GitHub (it starts closed so
-About stays compact): every participant with
-position, XP, English title, medals and counters, exactly as the repository's
-generator published them. It is the snapshot bundled with your build, dated, and
-says so; **Live board on GitHub** opens the current one. KNXBench sends no request
-to GitHub for it.
+**About KNXBench** shows version and license information. *(Current source,
+14 October 2026:)* **Community Hall of Fame on GitHub** links directly to the
+[public community document](../../community/HALL_OF_FAME.md), with everyone outside
+the team who reported or discussed an issue, their titles, medals and counters.
+The app no longer bundles a snapshot or fetches the board in the background;
+only activating the link opens GitHub. Reading the board needs an Internet
+connection; opening About does not.
+Existing release artifacts are unchanged by this source fix.
 
 **The introduction** (**File → Show introduction…**, or the palette) is the
 four-page guide described in [First

@@ -1,7 +1,7 @@
 - **Last Agent:** codex
-- **Timestamp:** 2026-10-14 15:02
-- **Completed:** Issue #19 taken in worktree `issue19-docker-20261014`; owner changed scope to linking the GitHub Hall of Fame document, with no bundled snapshot or new build dependency.
-- **Pending/Next Steps:** Prove original Docker frontend failure, replace About snapshot with an explicit external document link, remove unused snapshot parser/allow-list, update tests/docs, build and self-review before publication/closure.
+- **Timestamp:** 2026-10-14 15:56
+- **Completed:** Issue #19 link-only fix implemented and self-reviewed. Original Docker frontend failure and About regression reproduced; fixed frontend/full precommit image plus network-none HTTP/asset/stop smoke pass. Branch gate: all 31 stages zero/frozen, Vitest 3500/0 (251 files), Chromium 531/0, production dialogs/link 18/0, repeats 12/0, tools 122 (one skip), all types/docs/xtask pass. Actual production EN/DE 1440/400 screenshots inspected.
+- **Pending/Next Steps:** Commit scoped candidate, integrate fresh main, verify the merged result and committed-tree image, publish/read back, close #19, archive evidence and retire owned probes/worktrees. No final delivery claimed yet.
 - **Notes for Codex oder Claude:** Own HallOfFameSection/About tests, hallOfFame modules, about.hallOfFame locale keys and the corresponding browser assertions. P1 owns its project-bootstrap fixture changes in the same e2e file: retain those when integrating. No edits to App/Toast/server behavior, deployment, hardware, releases or private root research. Root stays unchanged apart from final handover prefix.
 
 ---

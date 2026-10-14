@@ -83,30 +83,26 @@ original notice. If posting succeeded but persistence failed, the trusted marker
 recovers the next run. A deletion in that narrow crash window cannot be recovered
 from a marker that no longer exists; no claim of distributed exactly-once delivery.
 
-## About dialog (Goal B16, 14 October 2026)
+## About dialog (issue #19, owner amendment, 14 October 2026)
 
-Implemented as handed off. `apps/knx-web/src/bundledHallOfFame.ts` reads
-`docs/community/hall-of-fame.json` at build time (`?raw`); there is no request to
-GitHub or anywhere else for it. `hallOfFame.ts` admits it like untrusted input:
-schema 1, a parseable `generated_at`, and per contributor a handle, a position
-≥ 1, non-negative integer XP/issue/reply/completion counters, a title and text
-medals. Any malformed or duplicate (case-insensitive) contributor refuses the
-whole snapshot, so About never shows part of a board; it then says the bundled
-board could not be read and still links the live one. Order, positions (as the
-`<ol>` item values, so equal XP keeps an equal number), XP, titles and medals are
-the generator's; About computes none of them. The section is a disclosure,
-closed by default and counting the participants in its summary, so About keeps the
-compact size `dialogs-overview.e2e.ts` pins. Titles and medals stay English in
-every UI language. Handles are React text; only a handle matching GitHub's
-grammar (1–39 letters, digits, single inner hyphens) links to
-`https://github.com/<handle>`, and the live-board link is built from the
-application's own repository constant, never from the file. The section shows the
-snapshot time and "This is not a live count." No domain, storage or project
-mutation is involved.
+The owner replaced Goal B16's bundled snapshot with a direct link to the
+[public Hall of Fame document](../community/HALL_OF_FAME.md). About renders one
+translated link, built from the application's fixed repository constant and the
+canonical `blob/main/docs/community/HALL_OF_FAME.md` path. It uses
+`target="_blank"` and `rel="noopener noreferrer"`; opening About makes no request
+for the board. Only deliberate link activation opens GitHub. There is no JSON
+import, snapshot parser, local participant list, counter or scoring logic in the
+app, and no external-directory exception in Vitest. The generator, public JSON,
+policy, awards and repository workflow remain unchanged.
 
-Because the file lies outside `apps/knx-web`, Vitest's DOM environment needs
-exactly `docs/community` on its allow-list (`vitest.config.ts`); the dev server and
-a production build read it as imported by the app.
+The earlier source imported a file outside `apps/knx-web`, which the Docker
+frontend stage does not copy; the actual frontend target reproduced an
+`UNRESOLVED_IMPORT` for `bundledHallOfFame.ts`. Removing that dependency fixes the
+app-only frontend build without enlarging the Docker context or adding another
+copy/generation step. The link needs an Internet connection when opened; there
+is deliberately no offline board. No domain, storage or project mutation and
+no release or deployment is part of this change. The original B16 implementation
+and acceptance remain historical in the delivery archive.
 
 ## Acceptance
 

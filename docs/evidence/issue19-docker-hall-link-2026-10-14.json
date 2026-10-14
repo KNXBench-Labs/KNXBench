@@ -1,0 +1,96 @@
+{
+  "issue": 19,
+  "owner_decision": "Link the public GitHub document; do not bundle the JSON snapshot",
+  "review": "self-review; no delegation",
+  "branch_acceptance": {
+    "base_commit": "ad1dfec3fef42fc95a6edb5ee81a270a0d8e027a",
+    "working_diff_sha256": "1e5e76cc8827b55d67d6d85c3810f2093798b816bc4ff6f04c5c1a3c1d1cc264",
+    "stage_count": 31,
+    "stage_exits": {
+      "build": 0,
+      "tsc": 0,
+      "flow_study": 0,
+      "theme_fixtures": 0,
+      "tsc_tsconfig_catalogue_fixtures": 0,
+      "tsc_tsconfig_communication_fixtures": 0,
+      "tsc_tsconfig_device_download_support": 0,
+      "tsc_tsconfig_dialogs_fixtures": 0,
+      "tsc_tsconfig_flow_study": 0,
+      "tsc_tsconfig_ga_members_download_fixtures": 0,
+      "tsc_tsconfig_history_fixtures": 0,
+      "tsc_tsconfig_instructions_fixtures": 0,
+      "tsc_tsconfig_notes_fixtures": 0,
+      "tsc_tsconfig_parameters_fixtures": 0,
+      "tsc_tsconfig_rename_fixtures": 0,
+      "tsc_tsconfig_structure_fixtures": 0,
+      "tsc_tsconfig_task_status_fixtures": 0,
+      "tsc_tsconfig_theme_fixtures": 0,
+      "tsc_tsconfig_ux_feedback": 0,
+      "vitest": 0,
+      "chromium": 0,
+      "cfg_production_config": 0,
+      "repeat": 0,
+      "py_tools": 0,
+      "check-layering": 0,
+      "check-headers": 0,
+      "check-anchors": 0,
+      "check-ledger": 0,
+      "check-corpus-gates": 0,
+      "documentation": 0,
+      "diff_check": 0
+    },
+    "inputs_frozen": true,
+    "vitest": {
+      "passed": 3500,
+      "failed": 0,
+      "files": 251
+    },
+    "chromium": {
+      "passed": 531,
+      "failed": 0
+    },
+    "production_browser": {
+      "passed": 18,
+      "failed": 0
+    },
+    "repeat_browser": {
+      "passed": 12,
+      "failed": 0
+    },
+    "tooling": {
+      "tests_run": 122,
+      "skipped": 1,
+      "failed": 0
+    }
+  },
+  "regression": {
+    "original_frontend_docker_exit": 1,
+    "original_failure": "UNRESOLVED_IMPORT: ../../../docs/community/hall-of-fame.json?raw",
+    "about_test_red": {
+      "passed": 6,
+      "failed": 1
+    },
+    "about_test_green": {
+      "passed": 8,
+      "failed": 0
+    },
+    "fixed_frontend_docker_exit": 0
+  },
+  "precommit_image_probe": {
+    "build_exit": 0,
+    "version_http_status": 200,
+    "index_http_status": 200,
+    "asset_http_status": 200,
+    "canonical_link_present": true,
+    "network_mode": "none",
+    "data": "ephemeral tmpfs; no host data",
+    "orderly_stop_exit": 0
+  },
+  "limits": [
+    "No release, deployment, hardware or ETS compatibility change",
+    "No offline participant snapshot",
+    "Native WebKitGTK external-link behavior not newly exercised",
+    "Rust workspace/private corpus not rerun for this UI-only scope"
+  ],
+  "integration_acceptance": "pending"
+}

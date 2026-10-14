@@ -16,6 +16,15 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Community Hall of Fame link (14 October 2026 source, main-only)
+
+About links the public GitHub document instead of bundling its JSON snapshot.
+The Docker frontend no longer needs `docs/community` in its app-only build
+stage. No board request is made until the user activates the link; there is no
+local/offline participant list. Repository scoring and award automation are
+unchanged. [User guide](user-guide/01-user-interface.md),
+[contract](../contracts/community-recognition.md#about-dialog-issue-19-owner-amendment-14-october-2026).
+
 ## Active task status shimmer (14 October 2026 source, main-only)
 
 Existing active-work text gains a slow monochrome sweep followed by a quiet

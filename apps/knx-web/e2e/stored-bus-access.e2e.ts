@@ -1,5 +1,5 @@
 /** Goal B3 in the browser: stored bus access is read-only, hidden until asked, never a gateway. */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { StoredRecord } from "../src/api";
@@ -145,6 +145,13 @@ test("en 1440px: the line inspector shows its own stored bus access", async ({ p
   expect(new Set(ids).size, "no duplicate heading ids").toBe(2);
   for (const id of ids) expect(await page.locator(`[id="${id}"]`).count(), `exactly one #${id}`).toBe(1);
   const section = page.getByRole("complementary").locator(".stored-bus-access-line");
+  // The properties panel is narrow at any window width: its fields stack, label over
+  // value, while the wider structure workspace keeps them side by side.
+  const placement = (scope: Locator) => scope.locator(".stored-bus-access-fields > div").filter({ hasText: "KnxIpTunneling" })
+    .evaluate((row) => { const [dt, dd] = [row.querySelector("dt")!, row.querySelector("dd")!].map((e) => e.getBoundingClientRect());
+      return { stacked: dd.top >= dt.bottom - 1, valueLines: Math.round(dd.height / parseFloat(getComputedStyle(row.querySelector("dd")!).lineHeight)) }; });
+  expect(await placement(page.getByRole("complementary"))).toEqual({ stacked: true, valueLines: 1 });
+  expect((await placement(page.getByRole("region", { name: en["structure.editSelection"] }))).stacked).toBe(false);
   await expect(section.getByRole("heading", { name: en["storedBusAccess.lineTitle"] })).toBeVisible();
   await expect(section.locator("[data-record-id]")).toHaveCount(1);
   await expect(section).not.toContainText(HOST);

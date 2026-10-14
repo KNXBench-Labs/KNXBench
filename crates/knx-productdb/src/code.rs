@@ -128,6 +128,19 @@ pub enum LoadStep {
         /// `@Count`.
         count: u8,
     },
+    /// `LdCtrlTaskCtrl2`: callback, communication-object table and segment pointers.
+    TaskCtrl2 {
+        /// `@LsmIdx`; retained independently of the pointer fields.
+        lsm: u8,
+        /// `@Callback`.
+        callback: u16,
+        /// `@Address`.
+        address: u16,
+        /// `@Seg0`.
+        segment_0: u16,
+        /// `@Seg1`.
+        segment_1: u16,
+    },
     /// Anything else, kept by name so that it can be refused by name.
     Unmodelled {
         /// The element's local name.
@@ -725,6 +738,7 @@ impl<'a> Parser<'a> {
             ],
             "LdCtrlTaskSegment" => &["LsmIdx", "Address"],
             "LdCtrlTaskCtrl1" => &["LsmIdx", "Address", "Count"],
+            "LdCtrlTaskCtrl2" => &["LsmIdx", "Callback", "Address", "Seg0", "Seg1"],
             _ => return Ok(unmodelled(element, has_children)),
         };
         let exact = a.names().all(|attribute| known.contains(&attribute))
@@ -765,6 +779,13 @@ impl<'a> Parser<'a> {
                 lsm: octet("LsmIdx")?,
                 address: word("Address")?,
                 count: octet("Count")?,
+            },
+            "LdCtrlTaskCtrl2" => LoadStep::TaskCtrl2 {
+                lsm: octet("LsmIdx")?,
+                callback: word("Callback")?,
+                address: word("Address")?,
+                segment_0: word("Seg0")?,
+                segment_1: word("Seg1")?,
             },
             _ => LoadStep::TaskSegment {
                 lsm: octet("LsmIdx")?,
@@ -1074,6 +1095,105 @@ mod tests {
                 lsm: 3,
                 address: 16463,
                 count: 1
+            }]
+        );
+    }
+
+    #[test]
+    fn task_control_2_is_not_an_opaque_step() {
+        let code = parsed(
+            r#"<LoadProcedures><LoadProcedure>
+                 <LdCtrlConnect />
+                 <LdCtrlTaskCtrl2 LsmIdx="3" Callback="4660" Address="22136" Seg0="39612" Seg1="57072" />
+                 <LdCtrlDisconnect />
+               </LoadProcedure></LoadProcedures>"#,
+        );
+        let procedure = &code.load_procedures[0];
+        assert_eq!(procedure.steps.len(), 3);
+        assert_eq!(procedure.steps[0], LoadStep::Connect);
+        assert_eq!(procedure.steps[2], LoadStep::Disconnect);
+        assert_eq!(
+            procedure.steps[1],
+            LoadStep::TaskCtrl2 {
+                lsm: 3,
+                callback: 0x1234,
+                address: 0x5678,
+                segment_0: 0x9ABC,
+                segment_1: 0xDEF0,
+            }
+        );
+        assert_eq!(procedure.unmodelled().count(), 0, "{:?}", procedure.steps);
+    }
+
+    #[test]
+    fn task_control_2_preserves_missing_extra_and_nested_shapes() {
+        let cases = [
+            r#"<LdCtrlTaskCtrl2 LsmIdx="3" Callback="0" Address="0" Seg0="0" />"#,
+            r#"<LdCtrlTaskCtrl2 LsmIdx="3" Callback="0" Address="0" Seg0="0" Seg1="0" Extra="keep" />"#,
+            r#"<LdCtrlTaskCtrl2 LsmIdx="3" Callback="0" Address="0" Seg0="0" Seg1="0"><OnError Cause="keep" /></LdCtrlTaskCtrl2>"#,
+        ];
+        for (index, step) in cases.iter().enumerate() {
+            let code = parsed(&format!(
+                "<LoadProcedures><LoadProcedure>{step}</LoadProcedure></LoadProcedures>"
+            ));
+            let LoadStep::Unmodelled {
+                name,
+                attributes,
+                has_children,
+            } = &code.load_procedures[0].steps[0]
+            else {
+                panic!("unexpected typed shape: {step}");
+            };
+            assert_eq!(name, "LdCtrlTaskCtrl2");
+            assert_eq!(attributes.get("LsmIdx").map(String::as_str), Some("3"));
+            assert_eq!(*has_children, index == 2);
+            if index == 1 {
+                assert_eq!(attributes.get("Extra").map(String::as_str), Some("keep"));
+            }
+        }
+    }
+
+    #[test]
+    fn task_control_2_rejects_malformed_and_out_of_range_fields() {
+        for (attribute, value) in [
+            ("LsmIdx", "256"),
+            ("Callback", "65536"),
+            ("Address", "65536"),
+            ("Seg0", "65536"),
+            ("Seg1", "65536"),
+            ("Address", "-1"),
+            ("Callback", "0x1234"),
+            ("Seg0", ""),
+        ] {
+            let step =
+                r#"<LdCtrlTaskCtrl2 LsmIdx="3" Callback="0" Address="0" Seg0="0" Seg1="0" />"#;
+            let original = if attribute == "LsmIdx" { "3" } else { "0" };
+            let step = step.replace(
+                &format!(r#"{attribute}="{original}""#),
+                &format!(r#"{attribute}="{value}""#),
+            );
+            let cause = malformed(&format!(
+                "<LoadProcedures><LoadProcedure>{step}</LoadProcedure></LoadProcedures>"
+            ));
+            assert!(cause.contains(attribute), "{cause}");
+        }
+    }
+
+    #[test]
+    fn task_control_2_accepts_zero_and_maximum_words_without_swapping_them() {
+        let code = parsed(
+            r#"<LoadProcedures><LoadProcedure>
+                 <LdCtrlTaskCtrl2 LsmIdx="255" Callback="0" Address="65535" Seg0="65535" Seg1="0" />
+               </LoadProcedure></LoadProcedures>"#,
+        );
+        assert_eq!(
+            code.load_procedures[0].steps,
+            vec![LoadStep::TaskCtrl2 {
+                lsm: 255,
+                callback: 0,
+                address: u16::MAX,
+                segment_0: u16::MAX,
+                segment_1: 0,
             }]
         );
     }

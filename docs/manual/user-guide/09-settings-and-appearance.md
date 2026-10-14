@@ -144,6 +144,14 @@ different questions.
 - **Subtle** — reduced.
 - **Standard** — the full set. The default.
 
+**Active task text shimmer** (14 October 2026 source, main-only) uses the
+ordinary motion level: Standard gives a 2.5-second left-to-right sweep and a
+1-second pause; Subtle keeps it slow (about 3.6 seconds per complete cycle).
+The glint stays steady even with Glitch style. Off or OS reduced motion leaves
+the real status text static. It does not animate ordinary connection states,
+errors, results or decision prompts, and adds no separate setting. This needs
+a source build after Alpha 11; the existing screenshots show the released UI.
+
 **Motion by category** (since Alpha 11) sets toast
 notifications, achievement popups and the telegram Flow separately. Each starts at
 *Inherit* (follow the motion level) and can only go down: *At most subtle* or *Off*.

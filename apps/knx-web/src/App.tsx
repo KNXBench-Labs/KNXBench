@@ -1395,7 +1395,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
           {selection?.kind === "device" && deviceDetail?.id === selection.id
             ? <DeviceWorkspace key={`${loadKey}:${deviceDetail.id}`} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate}
               onInstructionDraftChange={(dirty) => { draftsRef.current.instructions = dirty; }} />
-            : <div><p role="status">{t(deviceDetailLoading ? "devices.loadingEditor" : "devices.editorUnavailable")}</p>
+            : <div><p role="status"><span className={deviceDetailLoading ? "task-status-text" : undefined}>{t(deviceDetailLoading ? "devices.loadingEditor" : "devices.editorUnavailable")}</span></p>
               {!deviceDetailLoading && selection?.kind === "device" && <button type="button" onClick={() => void selectEntity(selection)}>{t("devices.retry")}</button>}</div>}
         </section> : view === "devices" || view === "notes" ? null : view === "overview" ? <Dashboard tree={tree} onOpenImportFindings={openImportFindings} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
           rangeScope={addressScope} onRangeScope={setAddressScope}

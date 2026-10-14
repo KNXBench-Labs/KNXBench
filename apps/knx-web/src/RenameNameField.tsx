@@ -119,6 +119,6 @@ export default function RenameNameField({ tree, target, onApplied, onDone, onPen
       <button type="button" disabled={busy} onPointerDown={(e) => e.preventDefault()} onClick={cancel}>{t("rename.cancel")}</button>
       {error && <button type="button" disabled={busy} onPointerDown={(e) => e.preventDefault()} onClick={() => void refresh()}>{t("rename.refresh")}</button>}
     </div>}
-    {busy && <p role="status">{t("rename.saving")}</p>}
+    {busy && <p role="status"><span className="task-status-text">{t("rename.saving")}</span></p>}
   </div>;
 }

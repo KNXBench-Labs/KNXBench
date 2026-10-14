@@ -118,7 +118,7 @@ export default function AuthGate(props: {
   if (!ready) {
     return (
       <p className="auth-checking" role="status">
-        {t("login.checking")}
+        <span className="task-status-text">{t("login.checking")}</span>
       </p>
     );
   }

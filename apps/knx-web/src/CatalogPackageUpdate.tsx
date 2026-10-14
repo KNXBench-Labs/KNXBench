@@ -85,7 +85,7 @@ export default function CatalogPackageUpdate(props: {
 
   const unknown = t("catalogUpdate.notDeclared");
   return <>
-    {phase.kind === "previewing" && <p className="catalog-update-notice" role="status">{t("catalogUpdate.previewing")}</p>}
+    {phase.kind === "previewing" && <p className="catalog-update-notice" role="status"><span className="task-status-text">{t("catalogUpdate.previewing")}</span></p>}
 
     {phase.kind === "failed" && <p className="field-error" role="alert">{t("catalogUpdate.error", { message: phase.message })}</p>}
 

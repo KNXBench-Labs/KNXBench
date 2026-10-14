@@ -282,7 +282,7 @@ export default function DeviceWizard(props: {
             </>)}
           </dl>
           {staleNotice && <p className="field-error" role="alert">{t("deviceWizard.review.stale")}</p>}
-          {preview?.status === "loading" && <p>{t("deviceWizard.review.loading")}</p>}
+          {preview?.status === "loading" && <p><span className="task-status-text">{t("deviceWizard.review.loading")}</span></p>}
           {preview?.status === "failed" && <p className="field-error" role="alert">{preview.message}</p>}
           {preview?.status === "ready" && (
             <>

@@ -26,6 +26,12 @@ Last updated: 2026-10-13 16:30 CEST
 | MCP server | Read-only saved-file tools; opt-in rename writer from alpha.10 | alpha.6 |
 | Remote browser | Authenticated server; networking-dependent | alpha.6 |
 
+## Main-only interface additions
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| Active task text shimmer | Readable slow sweep plus pause on existing running-work status text; motion/accessibility gates; no fabricated progress ([contract](contracts/task-status-shimmer.md)) | Main-only (14 October 2026 source) |
+
 ## Implemented — Projects
 
 | Feature | Scope | Availability |

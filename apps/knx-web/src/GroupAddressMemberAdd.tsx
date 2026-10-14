@@ -129,7 +129,7 @@ export default function GroupAddressMemberAdd(props: {
           </option>)}
         </select>
       </label>
-      {objectState === "loading" && <p role="status">{t("addressTable.members.loadingObjects")}</p>}
+      {objectState === "loading" && <p role="status"><span className="task-status-text">{t("addressTable.members.loadingObjects")}</span></p>}
       {objectState === "failed" && entry?.status === "failed" && <p className="field-error" role="alert">
         {t("addressTable.members.objectsFailed", { message: entry.mismatch ? t("gaWorkspace.inventory.mismatch") : entry.message ?? t("gaWorkspace.inventory.unknownError") })}
         {" "}<button type="button" onClick={() => draft.deviceId !== null && inventory.load(draft.deviceId)}>{t("gaWorkspace.retryObjects")}</button>

@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 12:11
+- **Completed:** Owner-approved shimmer implemented and self-reviewed (CSS capability fallback and computed warning-ink regressions fixed test-first). Corrected frozen branch: build/all TypeScript configs, Vitest 3530/0, production import/download 27/0, shimmer repeats 12/0, tooling/docs/five xtask checks pass; default Chromium 530/1 because the unchanged Toast hover case also fails on base 1817fb2a (2/20 repeats; candidate 1/20). Failed receipts retained, no skips/retries/relaxed tests or unrelated fixes. Earlier production light/dark EN/DE 1440/400 sweep/pause screenshots inspected. Manuals/contract updated; no delivery yet.
+- **Pending/Next Steps:** Commit the reviewed UI-only candidate; isolated integration plus a fresh complete merged-result gate is mandatory, then publication/readback, root-owned journal reconciliation and cleanup. No complete acceptance yet.
+- **Notes for Codex oder Claude:** Finite UI-only package, no subagents, hardware, API/schema/domain/protocol/storage changes. Native WebKitGTK/Orca unverified; busy control captions and steady connection/results/prompts stay static. Root interview journal edits are this task's own and will be preserved in private evidence before final synchronization. Detailed self-review: .ai/logs/2026-10-14_codex_task-status-shimmer.md.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-14 09:22
 - **Completed:** Root checkout synchronized on owner go: `main` fast-forwarded 8c130912 → 309ce64f (133 commits); no local commits, no index changes, no ignored file was overwritten. The 13 root-only handover entries (Codex S1–S4 session `d03c0319b8c1`, 2026-10-13 23:14 to 07:25, plus two Claude hygiene notes) were never published; they are now merged into this journal at their timestamps, verbatim. The two untracked starter drafts (`docs/goals/device-programming-support-guidance.md`, `docs/research/2026-10-13-unverified-plugin-free-programming.md`) were superseded: every line is in main's later version. Backup of the pre-sync journal, both drafts, status and HEAD: `KNXBench.backups/2026-10-14-root-sync/` (sha256 manifest).
@@ -383,7 +391,7 @@ ledger or an append-only diary. Formal per-ID status stays in
 
 ## Coordination
 
-Web lock: free — released 2026-10-14 by claude-goal-b-ba673d45ff9d when Goal B ended (all packages delivered; docs/goals/unassigned-workbench-hardening.md *Session status*)
+Web lock: held — codex-task-status-shimmer-20261014 (owner go; UI-only active-status text/CSS/tests/docs; isolated worktree status-text-shimmer-20261014). Goal B has ended; this claim does not reopen its packages.
 Release freeze: released — Alpha 11 published; never move its tag
 
 At migration preflight only the stale shared root and this documentation tree

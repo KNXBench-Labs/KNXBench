@@ -16,6 +16,17 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Active task status shimmer (14 October 2026 source, main-only)
+
+Existing active-work text gains a slow monochrome sweep followed by a quiet
+pause; real text, counters and progress bars remain. It stops for results,
+errors or decisions and respects Motion Off, OS reduced motion, forced colours
+and printing. Ordinary connection labels and busy action-button captions are
+unchanged. Chromium is the acceptance target; native WebKitGTK/Orca and arbitrary
+imported-theme contrast are not certified by this cosmetic change.
+[Use and controls](user-guide/01-user-interface.md#active-task-status-text-14-october-2026-source-main-only),
+[contract and boundaries](../contracts/task-status-shimmer.md).
+
 ## Pre-plan programming support help (14 October 2026 source, main-only)
 
 The download tab shows a reason and next action before any plan or report exists,

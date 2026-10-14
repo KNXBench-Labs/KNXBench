@@ -162,7 +162,7 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
           <button type="button" onClick={() => void refresh()} disabled={loading || comparing}>{t("deviceChecks.refresh")}</button>
         </div>
         <p>{t("deviceChecks.scope")}</p>
-        {loading && <p role="status">{t("deviceChecks.loading")}</p>}
+        {loading && <p role="status"><span className="task-status-text">{t("deviceChecks.loading")}</span></p>}
         {readinessError && <p className="form-error" role="alert">{readinessError}</p>}
         {readiness && <>
           <p>{t("deviceChecks.count", { count: readiness.devices.length })}</p>
@@ -216,7 +216,7 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
           <button type="button" onClick={() => void compare()}>{t("deviceChecks.confirm")}</button>
           <button type="button" onClick={() => setReview(null)}>{t("deviceChecks.cancel")}</button>
         </div>}
-        {comparing && <p role="status">{t("deviceChecks.comparing")}</p>}
+        {comparing && <p role="status"><span className="task-status-text">{t("deviceChecks.comparing")}</span></p>}
         {compareError && <p className="form-error" role="alert">{compareError}</p>}
         {result && <section className="device-checks-result" aria-label={t("deviceChecks.resultTitle")}>
           <h4>{t("deviceChecks.resultTitle")}</h4>

@@ -82,7 +82,7 @@ export default function BusActivityHistory() {
       </div>
       <p>{t("activityHistory.cursorMeaning")}</p>
       {running && paged && <p className="activity-history-running-paged">{t("activityHistory.runningPaged")}</p>}
-      {loading && <p role="status">{t("activityHistory.loading")}</p>}
+      {loading && <p role="status"><span className="task-status-text">{t("activityHistory.loading")}</span></p>}
       {failure !== null && <p role="alert">{t(`activityHistory.${failure}`)}</p>}
       {failure === null && loaded && entries.length === 0 && <p>{t("activityHistory.empty")}</p>}
       {failure === null && loaded && <>

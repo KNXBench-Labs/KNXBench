@@ -1,4 +1,5 @@
 /** Exercises the production-built checked parameter editors with intercepted APIs. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

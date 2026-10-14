@@ -1,4 +1,5 @@
 /** Runs the manual screenshot spec; never part of the normal browser suite. */
+import "./browserTmp";
 
 import { defineConfig } from "@playwright/test";
 import { mkdtempSync } from "node:fs";

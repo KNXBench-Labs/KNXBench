@@ -1,4 +1,5 @@
 /** Production-built browser regressions for stable building/topology headings. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 import base from "./playwright.config";
 

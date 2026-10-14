@@ -1,4 +1,5 @@
 /** Runs only the group-address view manual captures; never part of the normal suite. */
+import "./browserTmp";
 
 import { defineConfig } from "@playwright/test";
 import base from "./playwright.manual.config";

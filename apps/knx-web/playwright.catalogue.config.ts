@@ -1,4 +1,5 @@
 /** Exercises the production-built catalogue update and restore with intercepted APIs. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

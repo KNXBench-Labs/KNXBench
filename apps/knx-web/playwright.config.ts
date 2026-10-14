@@ -1,4 +1,5 @@
 /** Runs intercepted-API browser fixtures on an isolated local Vite server. */
+import "./browserTmp";
 
 import { defineConfig } from "@playwright/test";
 

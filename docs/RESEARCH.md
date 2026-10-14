@@ -24,6 +24,8 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-14 — System-2 archive mirrors and tool-side records](research/2026-10-14-system2-archive-mirrors.md) | Recovered SDK/help, bounded TaskSegment/5 correlation, image/identity/recovery boundaries; no new programming support |
+| [2026-10-14 — Test-suite structure and performance audit](research/2026-10-14-test-suite-performance-audit.md) | Historical bottlenecks and multicore/GPU boundaries; implementation and real scaling proof in the [web gate contract](contracts/web-test-gate.md) |
 | [2026-10-14 — Device-support guidance offline audit](research/2026-10-14-device-support-guidance-offline-audit.md) | Product-default planning aggregates, unassessed executable dependencies and bounded follow-ups; no new device support |
 | [2026-10-13 — Parameter byte order (KL-170)](research/parameter-byte-order.md) | No defining source; base images low-octet-first but not proof; read-only probe ADR-0119 |
 | [2026-10-12 — AP3 colour/picture contract and module scope](research/product-database.md#2026-10-12--ap3-colourpicture-contract-and-module-scope-follow-up) | Missing value contracts; safe fallback is not PDB-04 completion |

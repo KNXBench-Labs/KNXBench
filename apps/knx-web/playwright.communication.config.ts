@@ -1,4 +1,5 @@
 /** Production-only, offline communication-table browser acceptance configuration. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e", testMatch: ["communication-objects.e2e.ts", "group-address-picker.e2e.ts", "gateway-refusal.e2e.ts"], fullyParallel: false, workers: 1, retries: 0,

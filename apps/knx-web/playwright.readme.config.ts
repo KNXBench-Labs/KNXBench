@@ -1,4 +1,5 @@
 /** Records the README telegram-flow clip on the isolated fixture Vite server. */
+import "./browserTmp";
 
 import { defineConfig } from "@playwright/test";
 

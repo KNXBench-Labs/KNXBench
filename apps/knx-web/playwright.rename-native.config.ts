@@ -1,4 +1,5 @@
 /** Native rename verification against an explicitly isolated, externally started server. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 if (!process.env.KNX_RENAME_NATIVE_URL || process.env.KNX_RENAME_ISOLATED !== "1") {
   throw new Error("Native rename tests require an isolated loopback server.");

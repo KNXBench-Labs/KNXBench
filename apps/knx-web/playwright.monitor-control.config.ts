@@ -1,4 +1,5 @@
 /** Browser gate for a local mocked bus-monitor fixture; never connects to a gateway. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

@@ -1,4 +1,5 @@
 /** Runs the ISSUE-09 browser regression on a local Vite fixture, never a KNX server. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

@@ -35,7 +35,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       if (path === "/api/version") return ok({ version: "0.1.0-alpha.10" });
       if (path === "/api/legacy-password") return ok({ available: true, remembered: false, problem: null });
       if (path === "/api/project" && method === "GET") return imports ? ok(tree)
-        : route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"no project"}' });
+        : route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"no project open"}' });
       if (path === "/api/bus/discover") return ok({ interfaces: [] });
       if (path === "/api/project/load-progress") return ok(null);
       if (path === "/api/fs/list") return ok([{ name: "synthetic.knxproj", is_dir: false }]);

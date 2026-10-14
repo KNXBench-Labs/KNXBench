@@ -371,10 +371,18 @@ the decision with **Keep editing** or Escape while the save was running; the ser
 discard edits by accident either (`409`, kind `projectUnsavedChanges`, until it resends
 with `discardChanges: true`).
 
+### Closing the browser tab
+
+Closing the tab of the web build loses nothing (source builds after
+v0.1.0-alpha.11; ADR-0127): the server keeps the open project. Open KNXBench again,
+or reload, and the project is back exactly as you left it, with a short
+**Welcome back** notice that says whether it still has unsaved changes. Nothing is
+reopened or reimported for that; KNXBench only reads what the server holds.
+
 > **Warning**
 >
-> Closing the browser tab of the web build does not warn you about unsaved edits. Save
-> before you close it.
+> Unsaved changes live in the server's memory. Restarting the server (for
+> example `docker restart`) loses them. Save, or keep autosave on.
 
 ## Project history: restart-safe undo and versions
 

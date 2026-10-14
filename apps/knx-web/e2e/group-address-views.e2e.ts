@@ -60,6 +60,8 @@ function standardTree(style = "ThreeLevel"): ProjectTree {
 async function intercept(page: Page, language: Language, theme: string, initial: ProjectTree) {
   const state = { tree: initial, unexpected: [] as string[], requests: [] as string[],
     settings: { uiLanguage: language, theme } as Record<string, unknown> };
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     state.requests.push(`${method} ${path}`);
@@ -71,7 +73,8 @@ async function intercept(page: Page, language: Language, theme: string, initial:
       state.settings = { ...state.settings, ...route.request().postDataJSON().settings };
       body = { schemaVersion: 1, status: "ok", settings: { ...state.settings } };
     }
-    else if ((path === "/api/project" && method === "GET") || (path === "/api/project/new" && method === "POST")) body = state.tree;
+    else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = state.tree; }
+    else if (path === "/api/project" && method === "GET") { if (projectOpen) body = state.tree; else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];

@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { fulfillNoProjectOpen } from "./server-project-fixture";
 import { GITHUB_RELEASES_API } from "../src/githubReleases";
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -35,6 +36,7 @@ async function fixture(page: Page, language: "en" | "de", width: number, enabled
     }
     if (path === "/api/version") return ok({ version });
     if (path === "/api/bus/discover") return ok({ interfaces: [] });
+    if (path === "/api/project" && method === "GET") return fulfillNoProjectOpen(route);
     if (path === "/api/legacy-password") return ok({ available: true, remembered: false, problem: null });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items", "/api/log"].includes(path)) return ok([]);
     unexpected.push(`${method} ${path}`); return route.fulfill({ status: 404, body: "unexpected request" });

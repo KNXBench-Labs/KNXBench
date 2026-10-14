@@ -1939,6 +1939,8 @@ export const messages: Record<MessageKey, string> = {
 
   // `DiagnosticsCompanion.tsx` und der Knopf in `App.tsx`, der es öffnet.
   "companion.open": "Diagnosefenster",
+  "resume.notice": "Willkommen zurück. Das Projekt, das der Server noch offen hatte, ist wieder da.",
+  "resume.noticeUnsaved": "Willkommen zurück. Das Projekt, das der Server noch offen hatte, ist wieder da, samt ungespeicherter Änderungen. Speichere sie: Ein Neustart des Servers würde sie verlieren.",
   "companion.title": "Diagnose",
   "companion.eyebrow": "Begleitfenster · nur lesend",
   "companion.readOnly":

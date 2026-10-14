@@ -131,8 +131,9 @@ The [upload and return contract](contracts/DOCKER_UPLOAD_AND_RETURN.md)
 keeps HTTP size admission and streamed temporary-file publication in the server
 file adapter. Explicit browser return navigates the current document; native
 focus and source-bound Flow selection keep their existing adapter behavior.
-A consumed `view=editor` marker requests read-only project resume through the
-existing authenticated `/api/project` projection, not open/import or a mutation.
+Every editor mount (since ADR-0127, not only a consumed `view=editor` marker)
+requests read-only project resume through the existing authenticated
+`/api/project` projection, not open/import or a mutation.
 No KNX model, parser budget, storage schema, protocol or dependency changes.
 
 ## Selective import shares one application planner (2026-10-10 local source)

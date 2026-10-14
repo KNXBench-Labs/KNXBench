@@ -14,6 +14,24 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-14 — Active-task text gets a slow shimmer and a quiet pause:
+  readable real text, existing active-state bindings, measured progress retained;
+  Off/reduced motion/forced colours/print and unsupported-CSS plain-text fallback.
+  Standard 2.5-second sweep + 1-second pause; Subtle 3.6-second cycle.
+  Self-review: feature-query fallback and warning-ink specificity fixed test-first.
+  Integrated runtime `53046e64`: Vitest 3530/0 (251 files), Chromium 531/0,
+  production import/download 27/0, shimmer repeats 12/0; build/all typechecks,
+  tooling (122 tests, one skip), docs and five xtask checks zero; inputs frozen.
+  All 32 actual stages accepted. Private runner footer falsely rejected positive
+  freeze metadata; corrected outside the source candidate, four regression checks
+  and independent raw-report aggregation pass (original wrapper exit retained).
+  An earlier Toast-hover failure also reproduces on unchanged base; no unrelated
+  code/test change, skip, retry or weakened assertion. Final production EN/DE
+  wide/narrow light/dark sweep/pause frames inspected. No release/deployment,
+  hardware, Rust workspace or private-corpus run.
+  [Contract](contracts/task-status-shimmer.md),
+  [acceptance receipt](evidence/task-status-shimmer-2026-10-14.json).
+
 - 2026-10-14 — Device-programming support guidance S1–S4: structured refusal
   reasons/actions, EN/DE help before any plan/report, explicit local-copy privacy
   and fixed unsent docs/issue/mail routes; supported untested admission and every

@@ -1,4 +1,4 @@
-Last updated: 2026-10-13 16:30 CEST
+Last updated: 2026-10-14 12:58 CEST
 
 # KNXBench Features
 

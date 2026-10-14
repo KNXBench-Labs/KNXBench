@@ -120,6 +120,19 @@ already found lying in the grass.
 
 ## Web app
 
+- **Keep gate stage exits separate from freeze metadata.** `inputs_frozen=1`
+  is successful proof, not a failed test. The task-status private runner's final
+  grep once treated it as a nonzero stage: every actual stage and raw report
+  passed. Preserve the original wrapper exit, validate nonempty reports and
+  start/end hashes independently, and correct the verdict logic test-first.
+- **The existing Toast-hover fixture can fail intermittently on unchanged source.**
+  `ux-feedback.e2e.ts:129` (en, 1440) reported zero held error cards instead of one
+  on `1817fb2a` (2/20 repetitions) and the task-status candidate (1/20); the final
+  integrated suite passed 531/0. The root cause is unestablished; do not attribute
+  it to an unrelated feature, weaken the assertion or silently retry it. Retain
+  failures and compare against an immutable baseline before changing anything.
+  [Receipt](evidence/task-status-shimmer-2026-10-14.json).
+
 - **A browser fixture must keep what `PUT /api/settings` stored.** The app reads
   `/api/settings` again every few seconds (`settingsStore.ts`), so a fixture that
   answers every GET with fixed defaults resets a preference (e.g. the address

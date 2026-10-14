@@ -17,6 +17,8 @@ import GroupAddressMatrix from "./GroupAddressMatrix";
 import { buildGroupAddressMatrix } from "./groupAddressMatrix";
 import { useGroupAddressObjectInventory } from "./groupAddressObjectInventory";
 import GroupAddressLinks from "./GroupAddressLinks";
+import NewGroupAddressInRangeDialog from "./NewGroupAddressInRangeDialog";
+import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import HelpTip from "./HelpTip";
 import { GROUP_ADDRESS_WINDOW } from "./GroupAddressWindowNotice";
 import {
@@ -65,8 +67,10 @@ export default function GroupAddressTable(props: {
   const [columnKeys, setColumnKeys] = useState<Set<string> | null>(null);
   const [columnQuery, setColumnQuery] = useState("");
   const [limit, setLimit] = useState(GROUP_ADDRESS_WINDOW);
+  // Issue #20: the range a `+` asked to create an address in.
+  const [createIn, setCreateIn] = useState<{ range: GroupRangeNode; label: string; groupKey: string } | null>(null);
   useEffect(() => {
-    setQuery(""); setFilter("all"); setScope(null); setClosedDuringSearch(new Set());
+    setQuery(""); setFilter("all"); setScope(null); setClosedDuringSearch(new Set()); setCreateIn(null);
     setOpenState(previous => previous.owner === owner ? previous : { owner, keys: initialOpen() });
     setColumnKeys(null); setColumnQuery("");
   }, [props.projectContextKey, installation.id]);
@@ -177,7 +181,17 @@ export default function GroupAddressTable(props: {
     {rangeScope !== null && externalGroups.length !== 1 && <p role="status">{t("gaWorkspace.scopeUnavailable")}</p>}
     {view === "columns" ? <GroupAddressColumns {...shared} /> : view === "atlas" ? <GroupAddressAtlas {...shared} /> : view === "matrix" ? <GroupAddressMatrix {...shared}
       matrix={matrix} inventory={inventory} columnKeys={columnKeys} onColumns={setColumnKeys} columnQuery={columnQuery} onColumnQuery={setColumnQuery} /> : <GroupAddressTreeTable {...shared}
-      expanded={expanded} onToggle={toggle} includeEmpty={query.trim() === "" && filter === "all" && validScope === null && externalScope === null} />}
+      expanded={expanded} onToggle={toggle} includeEmpty={query.trim() === "" && filter === "all" && validScope === null && externalScope === null}
+      onCreateInRange={(range, label, groupKey) => setCreateIn({ range, label, groupKey })} />}
+    {createIn && <NewGroupAddressInRangeDialog range={createIn.range} rangeLabel={createIn.label}
+      usedAddresses={installation.group_addresses.map(ga => ga.address)} style={props.tree.group_address_style}
+      onCreated={created => {
+        // The new address shows where it was asked for: its range opens.
+        const reveal = groupWithAncestors(index, createIn.groupKey);
+        setOpen(previous => new Set([...previous, ...reveal]));
+        onTreeUpdate(created);
+      }}
+      onClose={() => setCreateIn(null)} />}
     {selected && <GroupAddressLinks ga={selected} tree={props.tree} onTreeUpdate={onTreeUpdate} />}
   </div>;
 }

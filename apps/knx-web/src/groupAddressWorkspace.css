@@ -50,3 +50,25 @@
 .ga-workspace .ga-inventory-state { color: var(--knx-muted); }
 .ga-workspace [data-ga-inventory-state="failed"] .ga-inventory-state { color: var(--knx-error-color); }
 .ga-workspace .ga-inventory-devices button { min-height: 0; padding: .2rem .6rem; }
+/* Issue #20: a range heading's create button and its dialog (rendered inside the workspace, no portal). */
+/* The name wraps; the + stays beside it instead of dropping onto a line of its own. */
+.ga-workspace .ga-range-heading { display: flex; align-items: center; min-width: 0; }
+.ga-workspace .ga-range-heading > [data-ga-expand] { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.ga-workspace .ga-range-heading > .ga-range-add { flex: 0 0 auto; }
+.ga-workspace .ga-range-row .ga-range-add { margin-inline-start: .4rem; padding: 0 .45rem; min-height: 1.5rem; line-height: 1.35;
+  border: 1px solid var(--knx-border); border-radius: var(--knx-radius-button); color: var(--knx-muted); font-weight: 600; }
+.ga-workspace .ga-range-row .ga-range-add:hover:not(:disabled), .ga-workspace .ga-range-row .ga-range-add:focus-visible {
+  color: var(--knx-foreground); border-color: var(--knx-accent); }
+.ga-new-in-range { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); align-self: flex-start; overflow: auto;
+  padding: 20px; box-sizing: border-box; }
+.ga-new-in-range h2 { margin-top: 0; }
+.ga-new-in-range-range { margin: 0 0 12px; overflow-wrap: anywhere; color: var(--knx-muted); }
+.ga-new-in-range-address { display: grid; gap: 8px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card); min-width: 0; }
+.ga-new-in-range-address label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; cursor: pointer; }
+/* A radio, not a text field: the global input rules would make it a wide, padded box. */
+.ga-new-in-range-address input[type="radio"] { flex: 0 0 1rem; width: 1rem; height: 1rem; min-height: 1rem; margin: 0; padding: 0; }
+.ga-new-in-range-manual, .ga-new-in-range-name input { width: 100%; box-sizing: border-box; }
+.ga-new-in-range-name { display: grid; gap: 4px; margin: 0 0 12px; }
+.ga-new-in-range-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.ga-new-in-range-actions button:not(.primary-action) { background: transparent; color: var(--knx-foreground); border: 1px solid var(--knx-border); }

@@ -460,7 +460,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Create/delete and address/reference validation | ✅ Implemented | Numeric duplicate/still-linked rules; display names may repeat — [Working with group addresses](user-guide/04-group-addresses.md) |
+| Create/delete and address/reference validation | ✅ Implemented | Numeric duplicate/still-linked rules; display names may repeat; a range heading's **+** creates in that range with the next free address suggested (issue #20, source build after Alpha 11) — [Working with group addresses](user-guide/04-group-addresses.md#creating-an-address-right-in-its-range) |
 | Individual group-address name editing through Properties, F2/context menu | ✅ Current source, newer than alpha.6 | Name-only, all installations, guarded revision and exact undo/native history; [naming contract](../contracts/project-name-editing.md) |
 | Choosing free, two-level or three-level style when the project is created | ✅ Implemented | Initial display/address structure; the next row describes changing it later |
 | Changing the style afterwards | ✅ Implemented | On the Project node in the properties pane, undoable |

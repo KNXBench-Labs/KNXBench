@@ -145,7 +145,8 @@ fn render_header(out: &mut String, project: &Project, options: &ReportOptions) {
     .unwrap();
     write!(
         out,
-        "<tr><th>Project number</th><td>{}</td></tr>",
+        "<tr><th>{}</th><td>{}</td></tr>",
+        options.language.text("Project number", "Projektnummer"),
         info.project_number
             .as_deref()
             .map(escape_text)
@@ -154,43 +155,56 @@ fn render_header(out: &mut String, project: &Project, options: &ReportOptions) {
     .unwrap();
     write!(
         out,
-        "<tr><th>Group address style</th><td>{:?}</td></tr>",
+        "<tr><th>{}</th><td>{:?}</td></tr>",
+        options
+            .language
+            .text("Group address style", "Gruppenadressen-Stil"),
         info.group_address_style
     )
     .unwrap();
     write!(
         out,
-        "<tr><th>Completion</th><td>{:?}</td></tr>",
+        "<tr><th>{}</th><td>{:?}</td></tr>",
+        options.language.text("Completion", "Bearbeitungsstand"),
         info.completion
     )
     .unwrap();
     write!(
         out,
-        "<tr><th>Last modified</th><td>{}</td></tr>",
+        "<tr><th>{}</th><td>{}</td></tr>",
+        options.language.text("Last modified", "Zuletzt geändert"),
         format_optional_dt(info.last_modified)
     )
     .unwrap();
     write!(
         out,
-        "<tr><th>Project start</th><td>{}</td></tr>",
+        "<tr><th>{}</th><td>{}</td></tr>",
+        options.language.text("Project start", "Projektbeginn"),
         format_optional_dt(info.project_start)
     )
     .unwrap();
     write!(
         out,
-        "<tr><th>ETS schema version</th><td>{}</td></tr>",
+        "<tr><th>{}</th><td>{}</td></tr>",
+        options
+            .language
+            .text("ETS schema version", "ETS-Schemaversion"),
         info.ets_schema_version
     )
     .unwrap();
     write!(
         out,
-        "<tr><th>Domain schema version</th><td>{}</td></tr>",
+        "<tr><th>{}</th><td>{}</td></tr>",
+        options
+            .language
+            .text("Domain schema version", "Version des Domänenschemas"),
         project.schema_version
     )
     .unwrap();
     write!(
         out,
-        "<tr><th>Generated at</th><td>{}</td></tr>",
+        "<tr><th>{}</th><td>{}</td></tr>",
+        options.language.text("Generated at", "Erzeugt am"),
         options.generated_at.to_rfc3339()
     )
     .unwrap();
@@ -298,15 +312,33 @@ fn render_summary(out: &mut String, counts: &Counts, language: ReportLanguage) {
     )
     .unwrap();
     let rows: [(&str, usize); 9] = [
-        ("Installations", counts.installations),
-        ("Areas", counts.areas),
-        ("Lines", counts.lines),
-        ("Devices", counts.devices),
-        ("Communication objects", counts.com_objects),
-        ("Group ranges", counts.group_ranges),
-        ("Group addresses", counts.group_addresses),
-        ("Building parts", counts.building_parts),
-        ("Parameter values", counts.parameter_values),
+        (
+            language.text("Installations", "Installationen"),
+            counts.installations,
+        ),
+        (language.text("Areas", "Bereiche"), counts.areas),
+        (language.text("Lines", "Linien"), counts.lines),
+        (language.text("Devices", "Geräte"), counts.devices),
+        (
+            language.text("Communication objects", "Kommunikationsobjekte"),
+            counts.com_objects,
+        ),
+        (
+            language.text("Group ranges", "Gruppenbereiche"),
+            counts.group_ranges,
+        ),
+        (
+            language.text("Group addresses", "Gruppenadressen"),
+            counts.group_addresses,
+        ),
+        (
+            language.text("Building parts", "Gebäudeteile"),
+            counts.building_parts,
+        ),
+        (
+            language.text("Parameter values", "Parameterwerte"),
+            counts.parameter_values,
+        ),
     ];
     for (label, value) in rows {
         write!(out, "<tr><th>{label}</th><td>{value}</td></tr>").unwrap();
@@ -339,13 +371,19 @@ fn render_topology(out: &mut String, project: &Project, language: ReportLanguage
 
         let topo = &installation.topology;
         if topo.areas.is_empty() {
-            out.push_str("<p>No areas.</p>");
+            write!(
+                out,
+                "<p>{}</p>",
+                language.text("No areas.", "Keine Bereiche.")
+            )
+            .unwrap();
         } else {
             out.push_str("<ul>");
             for area in &topo.areas {
                 write!(
                     out,
-                    "<li>Area {}: {}<ul>",
+                    "<li>{} {}: {}<ul>",
+                    language.text("Area", "Bereich"),
                     area.address,
                     escape_text(&area.name)
                 )
@@ -354,14 +392,17 @@ fn render_topology(out: &mut String, project: &Project, language: ReportLanguage
                     if let Some(line) = topo.line(*line_id) {
                         write!(
                             out,
-                            "<li>Line {}: {} (medium {}",
+                            "<li>{} {}: {} ({} {}",
+                            language.text("Line", "Linie"),
                             line.address,
                             escape_text(&line.name),
+                            language.text("medium", "Medium"),
                             escape_text(&line.medium_ref)
                         )
                         .unwrap();
                         if let Some(domain) = &line.domain_address {
-                            write!(out, ", domain address {}", escape_text(domain)).unwrap();
+                            let label = language.text("domain address", "Domänenadresse");
+                            write!(out, ", {label} {}", escape_text(domain)).unwrap();
                         }
                         if let Some(mc) = line.ip_routing_multicast_address {
                             write!(out, ", multicast {mc}").unwrap();
@@ -383,15 +424,23 @@ fn render_topology(out: &mut String, project: &Project, language: ReportLanguage
             out.push_str("</ul>");
         }
 
-        out.push_str("<h4>Devices with no line</h4>");
+        let heading = language.text("Devices with no line", "Geräte ohne Linie");
+        write!(out, "<h4>{heading}</h4>").unwrap();
         if topo.unassigned.is_empty() {
-            out.push_str("<p>None.</p>");
+            write!(out, "<p>{}</p>", language.text("None.", "Keine.")).unwrap();
         } else {
             out.push_str("<ul>");
             for device_id in &topo.unassigned {
                 match project.devices.get(*device_id) {
                     Some(device) => render_device_summary_li(out, device),
-                    None => write!(out, "<li>device {} (not found)</li>", device_id.0).unwrap(),
+                    None => write!(
+                        out,
+                        "<li>{} {} ({})</li>",
+                        language.text("device", "Gerät"),
+                        device_id.0,
+                        language.text("not found", "nicht gefunden")
+                    )
+                    .unwrap(),
                 }
             }
             out.push_str("</ul>");
@@ -443,7 +492,8 @@ fn render_buildings(
             installation.buildings.iter().map(|p| (p.id, p)).collect();
 
         if inst_model.building_roots.is_empty() {
-            out.push_str("<p>No building parts.</p>");
+            let none = language.text("No building parts.", "Keine Gebäudeteile.");
+            write!(out, "<p>{none}</p>").unwrap();
         } else {
             out.push_str("<ul>");
             for root in &inst_model.building_roots {
@@ -453,7 +503,11 @@ fn render_buildings(
         }
 
         if !inst_model.orphan_building_parts.is_empty() {
-            out.push_str("<h4>Building parts with an unresolved parent</h4><ul>");
+            let heading = language.text(
+                "Building parts with an unresolved parent",
+                "Gebäudeteile mit nicht aufgelöstem übergeordnetem Teil",
+            );
+            write!(out, "<h4>{heading}</h4><ul>").unwrap();
             for id in &inst_model.orphan_building_parts {
                 render_building_part(out, *id, &by_id, &project.devices);
             }
@@ -591,6 +645,7 @@ struct GroupAddressCtx<'a> {
     links_by_address: &'a BTreeMap<GroupAddressId, Vec<ComObjectInstanceId>>,
     devices: &'a Devices,
     style: GroupAddressStyle,
+    language: ReportLanguage,
 }
 
 /// Group ranges nest main → middle via the model's own `range_roots`/
@@ -644,10 +699,12 @@ fn render_group_addresses(
             links_by_address: &inst_model.links_by_address,
             devices: &project.devices,
             style,
+            language,
         };
 
         if inst_model.range_roots.is_empty() {
-            out.push_str("<p>No group ranges.</p>");
+            let none = language.text("No group ranges.", "Keine Gruppenbereiche.");
+            write!(out, "<p>{none}</p>").unwrap();
         } else {
             out.push_str("<ul>");
             for root in &inst_model.range_roots {
@@ -657,7 +714,11 @@ fn render_group_addresses(
         }
 
         if !inst_model.addresses_without_range.is_empty() {
-            out.push_str("<h4>Group addresses inside no range</h4><ul>");
+            let heading = language.text(
+                "Group addresses inside no range",
+                "Gruppenadressen außerhalb jedes Gruppenbereichs",
+            );
+            write!(out, "<h4>{heading}</h4><ul>").unwrap();
             for id in &inst_model.addresses_without_range {
                 render_group_address(out, *id, &ctx);
             }
@@ -713,17 +774,30 @@ fn render_group_address(out: &mut String, ga_id: GroupAddressId, ctx: &GroupAddr
     )
     .unwrap();
     if entry.central {
-        out.push_str(" \u{b7} Central");
+        write!(out, " \u{b7} {}", ctx.language.text("Central", "Zentral")).unwrap();
     }
     if entry.unfiltered {
-        out.push_str(" \u{b7} Unfiltered");
+        write!(
+            out,
+            " \u{b7} {}",
+            ctx.language.text("Unfiltered", "Ungefiltert")
+        )
+        .unwrap();
     }
     match ctx.links_by_address.get(&ga_id) {
-        None => out.push_str(" \u{2014} no linked communication objects."),
+        None => write!(
+            out,
+            " \u{2014} {}",
+            ctx.language.text(
+                "no linked communication objects.",
+                "keine verknüpften Kommunikationsobjekte."
+            )
+        )
+        .unwrap(),
         Some(ids) => {
             out.push_str("<ul>");
             for com_id in ids {
-                render_ga_link(out, *com_id, ga_id, ctx.devices);
+                render_ga_link(out, *com_id, ga_id, ctx.devices, ctx.language);
             }
             out.push_str("</ul>");
         }
@@ -736,14 +810,27 @@ fn render_ga_link(
     com_id: ComObjectInstanceId,
     ga_id: GroupAddressId,
     devices: &Devices,
+    language: ReportLanguage,
 ) {
     let Some(com) = devices.com_object(com_id) else {
-        write!(out, "<li>communication object {} (missing)</li>", com_id.0).unwrap();
+        write!(
+            out,
+            "<li>{} {} ({})</li>",
+            language.text("communication object", "Kommunikationsobjekt"),
+            com_id.0,
+            language.text("missing", "fehlt")
+        )
+        .unwrap();
         return;
     };
     let device_label = match devices.get(com.device) {
         Some(device) => escape_text(&device.name),
-        None => format!("device {} (not found)", com.device),
+        None => format!(
+            "{} {} ({})",
+            language.text("device", "Gerät"),
+            com.device,
+            language.text("not found", "nicht gefunden")
+        ),
     };
     let dpt = com
         .dpt
@@ -758,8 +845,12 @@ fn render_ga_link(
         .unwrap_or_else(|| "\u{2014}".to_string());
     write!(
         out,
-        "<li>{} \u{2014} object {} \u{b7} DPT {} \u{b7} {}</li>",
-        device_label, com.number, dpt, direction
+        "<li>{} \u{2014} {} {} \u{b7} DPT {} \u{b7} {}</li>",
+        device_label,
+        language.text("object", "Objekt"),
+        com.number,
+        dpt,
+        direction
     )
     .unwrap();
 }
@@ -797,7 +888,10 @@ fn render_devices(
         out.push_str("<table>");
         write!(
             out,
-            "<tr><th>Individual address</th><td>{}</td></tr>",
+            "<tr><th>{}</th><td>{}</td></tr>",
+            options
+                .language
+                .text("Individual address", "Physikalische Adresse"),
             device
                 .address
                 .map(|a| a.to_string())
@@ -806,7 +900,8 @@ fn render_devices(
         .unwrap();
         write!(
             out,
-            "<tr><th>Description</th><td>{}</td></tr>",
+            "<tr><th>{}</th><td>{}</td></tr>",
+            options.language.text("Description", "Beschreibung"),
             device
                 .description
                 .as_deref()
@@ -816,10 +911,11 @@ fn render_devices(
         .unwrap();
         write!(
             out,
-            "<tr><th>Commissioning</th><td>{:?}{}</td></tr>",
+            "<tr><th>{}</th><td>{:?}{}</td></tr>",
+            options.language.text("Commissioning", "Inbetriebnahme"),
             device.commissioning.completion,
             if device.commissioning.broken {
-                " (broken)"
+                options.language.text(" (broken)", " (defekt)")
             } else {
                 ""
             }
@@ -827,31 +923,35 @@ fn render_devices(
         .unwrap();
         write!(
             out,
-            "<tr><th>Product ref</th><td>{}</td></tr>",
+            "<tr><th>{}</th><td>{}</td></tr>",
+            options.language.text("Product ref", "Produktreferenz"),
             escape_text(&device.product_ref)
         )
         .unwrap();
         write!(
             out,
-            "<tr><th>Program ref</th><td>{}</td></tr>",
+            "<tr><th>{}</th><td>{}</td></tr>",
+            options.language.text("Program ref", "Programmreferenz"),
             escape_text(&device.program_ref)
         )
         .unwrap();
         let identity_fields = [
             (
-                "Manufacturer",
+                options.language.text("Manufacturer", "Hersteller"),
                 "manufacturer name",
                 resolved.and_then(|data| data.manufacturer.as_deref()),
                 resolved.and_then(|data| data.manufacturer_reference.as_deref()),
             ),
             (
-                "Product",
+                options.language.text("Product", "Produkt"),
                 "product name",
                 resolved.and_then(|data| data.product.as_deref()),
                 Some(device.product_ref.as_str()),
             ),
             (
-                "Application program",
+                options
+                    .language
+                    .text("Application program", "Applikationsprogramm"),
                 "application-program name",
                 resolved.and_then(|data| data.application_program.as_deref()),
                 Some(device.program_ref.as_str()),
@@ -867,7 +967,10 @@ fn render_devices(
                 value
                     .map(escape_text)
                     .or_else(|| fallback.map(escape_text))
-                    .unwrap_or_else(|| "unresolved".to_string())
+                    .unwrap_or_else(|| options
+                        .language
+                        .text("unresolved", "nicht aufgelöst")
+                        .to_string())
             )
             .unwrap();
             if resolved.is_some() && value.is_none() {
@@ -905,14 +1008,24 @@ fn render_devices(
             }
         }
 
+        let parameters_heading = options.language.text("Parameters", "Parameter");
+        let arguments_heading = options.language.text("Module arguments", "Modulargumente");
         if let Some(data) = resolved {
-            render_report_fields(out, "Parameters", &data.parameters, device.id, warnings);
             render_report_fields(
                 out,
-                "Module arguments",
+                parameters_heading,
+                &data.parameters,
+                device.id,
+                warnings,
+                options.language,
+            );
+            render_report_fields(
+                out,
+                arguments_heading,
                 &data.module_arguments,
                 device.id,
                 warnings,
+                options.language,
             );
         } else {
             let parameters: Vec<ReportField> = project
@@ -945,12 +1058,31 @@ fn render_devices(
                     ),
                 })
                 .collect();
-            render_report_fields(out, "Parameters", &parameters, device.id, warnings);
-            render_report_fields(out, "Module arguments", &arguments, device.id, warnings);
+            let language = options.language;
+            render_report_fields(
+                out,
+                parameters_heading,
+                &parameters,
+                device.id,
+                warnings,
+                language,
+            );
+            render_report_fields(
+                out,
+                arguments_heading,
+                &arguments,
+                device.id,
+                warnings,
+                language,
+            );
         }
 
         if !device.binary_data.is_empty() {
-            out.push_str("<p>Binary data (referenced, not embedded): ");
+            let label = options.language.text(
+                "Binary data (referenced, not embedded):",
+                "Binärdaten (referenziert, nicht eingebettet):",
+            );
+            write!(out, "<p>{label} ").unwrap();
             let items: Vec<String> = device
                 .binary_data
                 .iter()
@@ -966,11 +1098,14 @@ fn render_devices(
                 &detail.com_objects,
                 malformed_com_object_fields,
                 resolved.map(|data| &data.com_object_texts),
+                options.language,
             ),
             None => {
-                out.push_str(
-                    "<p class=\"warning\">Communication object detail unavailable for this device.</p>",
+                let text = options.language.text(
+                    "Communication object detail unavailable for this device.",
+                    "Für dieses Gerät sind keine Details zu Kommunikationsobjekten verfügbar.",
                 );
+                write!(out, "<p class=\"warning\">{text}</p>").unwrap();
                 warnings.push(ReportWarning {
                     location: format!("device {}", device.id),
                     detail: "build_device_detail returned no detail for this device".to_string(),
@@ -980,11 +1115,27 @@ fn render_devices(
         out.push_str("</article>");
     }
 
-    out.push_str("<h3>Orphaned communication objects</h3>");
+    let language = options.language;
+    write!(
+        out,
+        "<h3>{}</h3>",
+        language.text(
+            "Orphaned communication objects",
+            "Verwaiste Kommunikationsobjekte"
+        )
+    )
+    .unwrap();
     if orphan_com_objects.is_empty() {
-        out.push_str("<p>None.</p>");
+        write!(out, "<p>{}</p>", language.text("None.", "Keine.")).unwrap();
     } else {
-        out.push_str("<table><tr><th>Id</th><th>Device</th><th>Number</th></tr>");
+        write!(
+            out,
+            "<table><tr><th>{}</th><th>{}</th><th>{}</th></tr>",
+            language.text("Id", "ID"),
+            language.text("Device", "Gerät"),
+            language.text("Number", "Nummer")
+        )
+        .unwrap();
         for id in orphan_com_objects {
             match project.devices.com_object(*id) {
                 Some(com) => write!(
@@ -995,8 +1146,10 @@ fn render_devices(
                 .unwrap(),
                 None => write!(
                     out,
-                    "<tr><td id=\"com-{}\">{}</td><td colspan=\"2\">not found</td></tr>",
-                    id.0, id.0
+                    "<tr><td id=\"com-{}\">{}</td><td colspan=\"2\">{}</td></tr>",
+                    id.0,
+                    id.0,
+                    language.text("not found", "nicht gefunden")
                 )
                 .unwrap(),
             }
@@ -1012,15 +1165,22 @@ fn render_report_fields(
     fields: &[ReportField],
     device_id: knx_core::DeviceId,
     warnings: &mut Vec<ReportWarning>,
+    language: ReportLanguage,
 ) {
     write!(out, "<h4>{}</h4>", escape_text(heading)).unwrap();
     if fields.is_empty() {
-        out.push_str("<p>None.</p>");
+        write!(out, "<p>{}</p>", language.text("None.", "Keine.")).unwrap();
         return;
     }
-    out.push_str(
-        "<table><tr><th>Reference</th><th>Name</th><th>Raw value</th><th>Display value</th></tr>",
-    );
+    write!(
+        out,
+        "<table><tr><th>{}</th><th>{}</th><th>{}</th><th>{}</th></tr>",
+        language.text("Reference", "Referenz"),
+        language.text("Name", "Name"),
+        language.text("Raw value", "Rohwert"),
+        language.text("Display value", "Anzeigewert")
+    )
+    .unwrap();
     for field in fields {
         let name = field.name.as_deref().filter(|name| !name.trim().is_empty());
         let mut problems = Vec::new();
@@ -1070,14 +1230,34 @@ fn render_com_objects_table(
     coms: &[ComObjectNode],
     malformed_com_object_fields: &BTreeMap<ComObjectInstanceId, Vec<MalformedField>>,
     translated: Option<&BTreeMap<ComObjectInstanceId, ReportComObjectText>>,
+    language: ReportLanguage,
 ) {
     if coms.is_empty() {
-        out.push_str("<p>No communication objects.</p>");
+        let none = language.text("No communication objects.", "Keine Kommunikationsobjekte.");
+        write!(out, "<p>{none}</p>").unwrap();
         return;
     }
-    out.push_str(
-        "<table><tr><th>Number</th><th>Name</th><th>Description</th><th>DPT</th><th>Active</th><th>R</th><th>W</th><th>T</th><th>U</th><th>C</th><th>I</th><th>Links</th></tr>",
-    );
+    // Flag letters as in the ETS user interface of each language:
+    // Read/Write/Transmit/Update/Communication/Init = L/S/Ü/A/K/I in German.
+    let headers = [
+        language.text("Number", "Nummer"),
+        language.text("Name", "Name"),
+        language.text("Description", "Beschreibung"),
+        "DPT",
+        language.text("Active", "Aktiv"),
+        language.text("R", "L"),
+        language.text("W", "S"),
+        language.text("T", "Ü"),
+        language.text("U", "A"),
+        language.text("C", "K"),
+        "I",
+        language.text("Links", "Verknüpfungen"),
+    ];
+    out.push_str("<table><tr>");
+    for header in headers {
+        write!(out, "<th>{header}</th>").unwrap();
+    }
+    out.push_str("</tr>");
     for com in coms {
         let text = translated.and_then(|texts| texts.get(&ComObjectInstanceId(com.id)));
         let name = text
@@ -1108,7 +1288,12 @@ fn render_com_objects_table(
             _ => "\u{2014}".to_string(),
         };
         write!(out, "<td>{dpt_cell}</td>").unwrap();
-        write!(out, "<td>{}</td>", if com.is_active { "yes" } else { "no" }).unwrap();
+        let active = if com.is_active {
+            language.text("yes", "ja")
+        } else {
+            language.text("no", "nein")
+        };
+        write!(out, "<td>{active}</td>").unwrap();
         for flag in [
             com.read,
             com.write,
@@ -1123,17 +1308,21 @@ fn render_com_objects_table(
         if com.links.is_empty() {
             out.push('\u{2014}');
         } else {
-            let parts: Vec<String> =
-                com.links
-                    .iter()
-                    .map(|link| {
-                        let address =
-                            link.address.as_deref().map(escape_text).unwrap_or_else(|| {
-                                format!("group address {} (not found)", link.ga_id)
-                            });
-                        format!("{} {}", link.direction, address)
-                    })
-                    .collect();
+            let parts: Vec<String> = com
+                .links
+                .iter()
+                .map(|link| {
+                    let address = link.address.as_deref().map(escape_text).unwrap_or_else(|| {
+                        format!(
+                            "{} {} ({})",
+                            language.text("group address", "Gruppenadresse"),
+                            link.ga_id,
+                            language.text("not found", "nicht gefunden")
+                        )
+                    });
+                    format!("{} {}", link.direction, address)
+                })
+                .collect();
             out.push_str(&parts.join(", "));
         }
         out.push_str("</td></tr>");
@@ -1206,7 +1395,7 @@ fn render_limits(out: &mut String, warnings: &[ReportWarning], language: ReportL
     )
     .unwrap();
     if warnings.is_empty() {
-        out.push_str("<p>None.</p>");
+        write!(out, "<p>{}</p>", language.text("None.", "Keine.")).unwrap();
     } else {
         out.push_str("<ul class=\"warning\">");
         for w in warnings {
@@ -1661,5 +1850,88 @@ mod tests {
         assert!(report.html.contains("Zusammenfassung"));
         assert!(report.html.contains("Geräte"));
         assert!(!report.html.contains(">Contents<"));
+    }
+    /// Goal B8 (KL-048): labels, headings and fixed phrases follow the report
+    /// language; raw identifiers and enum values stay exactly as stored.
+    #[test]
+    fn german_report_labels_tables_and_headings_but_keeps_raw_values() {
+        let project = sample_project();
+        let mut options = options();
+        options.language = ReportLanguage::German;
+        let german = render_html(&project, &options).html;
+        let english = render_html(&project, &self::options()).html;
+        for label in [
+            ">Project number<",
+            ">Group address style<",
+            ">Completion<",
+            ">Last modified<",
+            ">Project start<",
+            ">ETS schema version<",
+            ">Domain schema version<",
+            ">Generated at<",
+            ">Installations<",
+            ">Areas<",
+            ">Lines<",
+            ">Communication objects<",
+            ">Group ranges<",
+            ">Building parts<",
+            ">Parameter values<",
+            ">No areas.<",
+            ">Devices with no line<",
+            ">None.<",
+            ">No building parts.<",
+            ">Building parts with an unresolved parent<",
+            ">No group ranges.<",
+            ">Group addresses inside no range<",
+            ">Individual address<",
+            ">Description<",
+            ">Commissioning<",
+            ">Product ref<",
+            ">Program ref<",
+            ">Manufacturer<",
+            ">Product<",
+            ">Application program<",
+            ">Parameters<",
+            ">Module arguments<",
+            ">Orphaned communication objects<",
+            ">Raw value<",
+            ">Display value<",
+            ">Reference<",
+            ">No communication objects.<",
+            ">Number<",
+            ">Active<",
+            ">Links<",
+            "<li>Area ",
+            "<li>Line ",
+            " (medium ",
+        ] {
+            assert!(!german.contains(label), "German report still says {label}");
+        }
+        for label in [
+            ">Projektnummer<",
+            ">Gruppenadressen-Stil<",
+            ">Bearbeitungsstand<",
+            ">Erzeugt am<",
+            ">Installationen<",
+            ">Bereiche<",
+            ">Linien<",
+            ">Kommunikationsobjekte<",
+            ">Gruppenbereiche<",
+            ">Gebäudeteile<",
+            ">Parameterwerte<",
+            ">Geräte ohne Linie<",
+            ">Physikalische Adresse<",
+            ">Inbetriebnahme<",
+            ">Produktreferenz<",
+            ">Programmreferenz<",
+            ">Verwaiste Kommunikationsobjekte<",
+        ] {
+            assert!(german.contains(label), "German report lacks {label}");
+        }
+        // Raw values are evidence, not prose: the stored enum names stay.
+        let raw = format!("{:?}", project.info.group_address_style);
+        assert!(german.contains(&format!("<td>{raw}</td>")));
+        // English stays English.
+        assert!(english.contains(">Project number<") && english.contains(">Individual address<"));
     }
 }

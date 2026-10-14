@@ -29,6 +29,7 @@ import { projectPasswordRefusal, type ProjectPasswordRefusal } from "./projectPa
 import Inspector, { DeviceWorkspace } from "./Inspector";
 import Search from "./Search";
 import CommandPalette from "./CommandPalette";
+import { StoredBusAccessDialog } from "./StoredBusAccess";
 import type { CommandContext } from "./commandRegistry";
 import SettingsPanel from "./SettingsPanel";
 import { serverLegacyPassword } from "./LegacyPasswordSettings";
@@ -316,6 +317,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
   useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [storedBusAccessOpen, setStoredBusAccessOpen] = useState(false);
   const [nativeExportReviewed, setNativeExportReviewed] = useState<ProjectTree | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpTopicId, setHelpTopicId] = useState<HelpTopicId>(DEFAULT_HELP_TOPIC_ID);
@@ -1368,6 +1370,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     openProjectHistory,
     openDevices,
     openNotes,
+    openStoredBusAccess: () => { if (tree) setStoredBusAccessOpen(true); },
     addDevice: () => setDeviceWizard({ target: wizardTargetFor(selection) }),
     openIntroduction: guide.show,
     openAchievements: () => setAchievementsOpen(true),
@@ -1602,6 +1605,7 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
         <Search tree={tree} onSelect={selectSearchResult} onClose={() => setSearchOpen(false)} />
       )}
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
+      {tree && storedBusAccessOpen && <StoredBusAccessDialog onClose={() => setStoredBusAccessOpen(false)} />}
       {tree && historyOpen && <ProjectHistoryDialog tree={tree} onTreeUpdate={historyChanged} onClose={() => setHistoryOpen(false)} />}
       {nativeExportReviewed && <NativeExportDialog reviewed={nativeExportReviewed} current={tree} onClose={() => setNativeExportReviewed(null)} />}
       {helpOpen && <HelpPanel key={helpTopicId} initialTopicId={helpTopicId} onClose={() => setHelpOpen(false)} />}

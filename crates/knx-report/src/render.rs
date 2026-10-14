@@ -1769,6 +1769,22 @@ mod tests {
         ] {
             assert!(report.html.contains(expected), "missing {expected}");
         }
+
+        // Goal B8: the same fields in German; references and raw values unchanged.
+        options.language = ReportLanguage::German;
+        let german = render_html(&project, &options).html;
+        for expected in [
+            "<th>Referenz</th><th>Name</th><th>Rohwert</th><th>Anzeigewert</th>",
+            "<h4>Parameter</h4>",
+            "<h4>Modulargumente</h4>",
+            "<th>Hersteller</th>",
+            "<th>Applikationsprogramm</th>",
+            "P-1_R-1",
+            "MD-1_A-1",
+        ] {
+            assert!(german.contains(expected), "German report lacks {expected}");
+        }
+        assert!(!german.contains(">Raw value<") && !german.contains(">Module arguments<"));
     }
 
     #[test]

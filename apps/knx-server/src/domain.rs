@@ -815,6 +815,7 @@ pub fn open_native_project(
         recovered,
     )
     .map_err(|UnsavedChanges| unsaved_changes_refusal(state, "open"))?;
+    let reinstalled = reinstall_manufacturer_files(state, path, progress);
 
     let mut log = state.session_log.lock().expect("state mutex poisoned");
     log.reset();
@@ -829,6 +830,9 @@ pub fn open_native_project(
     });
     if let Some(repair) = &allocator_repair {
         log.push(allocator_repair_log_entry(repair));
+    }
+    for entry in reinstalled {
+        log.push(entry);
     }
     drop(log);
 
@@ -1125,6 +1129,11 @@ pub fn save_project_as_with(
     path: &Path,
     overwrite: bool,
 ) -> Result<(), SaveAsError> {
+    let previous = state
+        .store_path
+        .lock()
+        .expect("state mutex poisoned")
+        .clone();
     let result = save_editor_state(state, Some((path, overwrite)));
     if result != Err(SaveAsError::Exists) {
         log_outcome(
@@ -1135,7 +1144,198 @@ pub fn save_project_as_with(
             &result.clone().map_err(|e| e.to_string()),
         );
     }
+    if result.is_ok() {
+        carry_manufacturer_files(state, path, previous.as_deref(), "save");
+    }
     result
+}
+
+/// ADR-0128 (GitHub #21): after a successful save, the file carries every
+/// manufacturer file its saved manifest names, so it reopens with its
+/// application programs next to any product database. Runs after the save
+/// released every project lock; takes only `product_db`. A failure here
+/// leaves the saved project intact and is logged, never hidden: the save
+/// itself succeeded.
+pub(crate) fn carry_manufacturer_files(
+    state: &AppState,
+    path: &Path,
+    previous: Option<&Path>,
+    source: &str,
+) {
+    let outcome = (|| {
+        let target = knx_store::open_existing_and_migrate(path).map_err(|e| e.to_string())?;
+        // An earlier copy can supply what this product database lacks.
+        let earlier = previous
+            .filter(|earlier| *earlier != path)
+            .and_then(|earlier| knx_store::open_existing_read_only(earlier).ok());
+        let fallbacks: Vec<&knx_store::Connection> =
+            earlier.iter().map(|earlier| &earlier.conn).collect();
+        let products = state
+            .product_db
+            .as_ref()
+            .map(|m| m.lock().expect("state mutex poisoned"));
+        knx_app::manufacturer_files::embed_into(&target, products.as_deref(), &fallbacks)
+            .map_err(|e| e.to_string())
+    })();
+    let entry = match outcome {
+        Ok(report) if report.unavailable.is_empty() => {
+            if report.stored == 0 {
+                return;
+            }
+            LogEntry {
+                timestamp: session_log::now(),
+                severity: Severity::Info,
+                source: source.to_string(),
+                message: format!(
+                    "the project file now carries {} manufacturer file(s) itself, \
+                     so it opens with its application programs on any computer",
+                    report.stored
+                ),
+                location: None,
+                diagnostic: None,
+                detail: None,
+            }
+        }
+        Ok(report) => LogEntry {
+            timestamp: session_log::now(),
+            severity: Severity::Warning,
+            source: source.to_string(),
+            message: format!(
+                "{} manufacturer file(s) of this project are not in the product database, \
+                 so the project file cannot carry them; restore them from the original \
+                 .knxproj (a device's Parameters tab) and save again",
+                report.unavailable.len()
+            ),
+            location: None,
+            diagnostic: None,
+            detail: Some(
+                report
+                    .unavailable
+                    .iter()
+                    .map(|r| r.source_path.as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            ),
+        },
+        Err(message) => LogEntry {
+            timestamp: session_log::now(),
+            severity: Severity::Warning,
+            source: source.to_string(),
+            message: "the project was saved, but its manufacturer files could not be \
+                      stored in the file"
+                .to_string(),
+            location: None,
+            diagnostic: None,
+            detail: Some(message),
+        },
+    };
+    state
+        .session_log
+        .lock()
+        .expect("state mutex poisoned")
+        .push(entry);
+}
+
+/// ADR-0128: after an open, installs into the product database whatever
+/// manifest entry it lacks, from the bytes the file carries. Returns the
+/// log lines; the open itself never fails because of this.
+fn reinstall_manufacturer_files(
+    state: &AppState,
+    path: &Path,
+    progress: &LoadHandle,
+) -> Vec<LogEntry> {
+    let entry = |severity, message: String, detail: Option<String>| LogEntry {
+        timestamp: session_log::now(),
+        severity,
+        source: "open".to_string(),
+        message,
+        location: None,
+        diagnostic: None,
+        detail,
+    };
+    let refs = state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned")
+        .clone();
+    let Some(products) = state.product_db.as_ref() else {
+        return Vec::new();
+    };
+    if refs.is_empty() {
+        return Vec::new();
+    }
+    let products = products.lock().expect("state mutex poisoned");
+    let missing = match knx_app::manufacturer_files::missing_from_products(&products, &refs) {
+        Ok(missing) if missing.is_empty() => return Vec::new(),
+        Ok(missing) => missing,
+        Err(e) => {
+            return vec![entry(
+                Severity::Warning,
+                "could not check the product database for this project's manufacturer files"
+                    .to_string(),
+                Some(e.to_string()),
+            )]
+        }
+    };
+    let carrier = match knx_store::open_existing_read_only(path) {
+        Ok(carrier) => carrier,
+        Err(e) => {
+            return vec![entry(
+                Severity::Warning,
+                "could not read the manufacturer files this project file carries".to_string(),
+                Some(e.to_string()),
+            )]
+        }
+    };
+    let report = knx_app::manufacturer_files::reinstall_from_file(
+        &products,
+        &carrier.conn,
+        &missing,
+        progress,
+    );
+    let mut entries = Vec::new();
+    if !report.installed.is_empty() {
+        entries.push(entry(
+            Severity::Info,
+            format!(
+                "installed {} manufacturer file(s) this project file carries into the \
+                 product database",
+                report.installed.len()
+            ),
+            Some(report.installed.join("\n")),
+        ));
+    }
+    if !report.unavailable.is_empty() {
+        entries.push(entry(
+            Severity::Warning,
+            format!(
+                "{} manufacturer file(s) of this project are neither in the product database \
+                 nor in the project file (saved by an older KNXBench); devices using them \
+                 cannot show parameters until you restore them from the original .knxproj \
+                 (a device's Parameters tab)",
+                report.unavailable.len()
+            ),
+            Some(
+                report
+                    .unavailable
+                    .iter()
+                    .map(|r| r.source_path.as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            ),
+        ));
+    }
+    for (r, reason) in &report.failed {
+        entries.push(entry(
+            Severity::Warning,
+            format!(
+                "the carried manufacturer file {} could not be installed",
+                r.source_path
+            ),
+            Some(reason.clone()),
+        ));
+    }
+    entries
 }
 
 fn save_editor_state(
@@ -1227,6 +1427,16 @@ fn save_project_with(
 pub fn save_project(state: &AppState) -> Result<(), String> {
     let result = save_editor_state(state, None).map_err(|e| e.to_string());
     log_outcome(state, "save", "saved".to_string(), None, &result);
+    if result.is_ok() {
+        let path = state
+            .store_path
+            .lock()
+            .expect("state mutex poisoned")
+            .clone();
+        if let Some(path) = path {
+            carry_manufacturer_files(state, &path, None, "save");
+        }
+    }
     result
 }
 
@@ -5118,11 +5328,31 @@ fn empty_assembly(stale: Vec<(String, String)>) -> PanelAssembly {
                 .collect(),
             diagnostics: vec![],
             tree: None,
+            unresolved_program: None,
         },
         program_id: None,
         views_by_id: HashMap::new(),
         ref_ids: HashSet::new(),
     }
+}
+
+/// [`empty_assembly`] for a device whose program did not resolve: names
+/// the gap when the device refers to a program at all (ADR-0128).
+fn unresolved_assembly(
+    stale: Vec<(String, String)>,
+    program_ref: &str,
+    product_database: bool,
+    missing_files: usize,
+) -> PanelAssembly {
+    let mut assembly = empty_assembly(stale);
+    if !program_ref.is_empty() {
+        assembly.dto.unresolved_program = Some(crate::routes::UnresolvedProgramDto {
+            program_ref: program_ref.to_string(),
+            product_database,
+            missing_files,
+        });
+    }
+    assembly
 }
 
 /// One device's evaluated `Dynamic` tree, from its stored parameter values
@@ -5254,8 +5484,15 @@ fn assemble_parameter_panel(
     };
 
     let Some(products_mutex) = state.product_db.as_ref() else {
-        return Ok(empty_assembly(stored));
+        return Ok(unresolved_assembly(stored, &program_ref, false, 0));
     };
+    // ADR-0128: the manifest, cloned before `product_db` is taken, so an
+    // unresolved program can say whether the project's files are missing.
+    let manufacturer_refs = state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned")
+        .clone();
 
     // Step 2: lock only `product_db` (`project`'s lock above is already
     // dropped — the two mutexes are never held at once).
@@ -5263,7 +5500,15 @@ fn assemble_parameter_panel(
     let program_id = knx_productdb::query::resolve_program(&products, &program_ref)
         .map_err(|e| e.to_string())?;
     let Some(program_id) = program_id else {
-        return Ok(empty_assembly(stored));
+        let missing =
+            knx_app::manufacturer_files::missing_from_products(&products, &manufacturer_refs)
+                .map_err(|e| e.to_string())?;
+        return Ok(unresolved_assembly(
+            stored,
+            &program_ref,
+            true,
+            missing.len(),
+        ));
     };
 
     let DeviceEvaluation {
@@ -5575,6 +5820,7 @@ fn assemble_parameter_panel(
             instance_values,
             diagnostics,
             tree: None,
+            unresolved_program: None,
         },
         program_id: Some(program_id),
         views_by_id,

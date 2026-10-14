@@ -15,7 +15,10 @@ use serde::{Deserialize, Serialize};
 /// A separate bounded offline selection path, never an increased importer limit.
 pub const MAX_SOURCE_BYTES: usize = 64 * 1024 * 1024;
 /// Explicitly frozen reference closure; audit new fields before widening.
-pub const SELECTIVE_MODEL_VERSION: u32 = 15;
+/// v16 (ADR-0128) was audited: it adds no `Project` field, only the
+/// file-level `manufacturer_file` table, which a source never fills (its
+/// manufacturer files arrive as whole-file opaque entries, already carried).
+pub const SELECTIVE_MODEL_VERSION: u32 = 16;
 /// Source attributes remain evidence, not unscoped destination settings.
 pub const SELECTIVE_ATTRIBUTE_KIND: &str = "SelectiveImportRetainedAttribute";
 

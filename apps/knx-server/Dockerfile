@@ -24,6 +24,11 @@ COPY --from=backend /src/target/release/knx-server /usr/local/bin/knx-server
 COPY --from=frontend /src/dist /app/frontend
 ENV KNX_STATIC_DIR=/app/frontend
 ENV KNX_DATA_DIR=/data
+# The product database (application programs, ~/.local/share/knx/products.sqlite
+# outside a container) lives on the volume too, so a rebuilt or updated
+# container keeps it (GitHub #21, ADR-0128). Saved projects also carry their own
+# manufacturer files since then and reinstall them on open.
+ENV XDG_DATA_HOME=/data/.knxbench-share
 ENV KNX_PORT=8484
 VOLUME /data
 EXPOSE 8484

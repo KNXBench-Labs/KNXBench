@@ -2482,6 +2482,20 @@
       ]
     },
     {
+      "key": "KL-183",
+      "number": 183,
+      "title": "Project files without their manufacturer files",
+      "topic": "Project model and storage",
+      "summary": "A .knxdb saved before store schema v16 does not carry its application programs; next to an empty product database its devices show no parameters until restored from the original .knxproj. Fixed for new saves.",
+      "file": "KL-183-knxdb-manufacturer-files.md",
+      "ledger_ids": [
+        "KL-183"
+      ],
+      "anchors": [
+        "183-a-knxdb-saved-before-store-schema-v16-does-not-carry-its-application-programs"
+      ]
+    },
+    {
       "key": "KL-107",
       "number": 107,
       "title": "Extension API scope",

@@ -304,3 +304,22 @@ fn reading_changes_nothing() {
     assert_eq!(project, before_project);
     assert_eq!(opaque, before_opaque);
 }
+
+#[test]
+fn a_harmless_key_carrying_an_address_is_hidden_all_the_same() {
+    let project = knx_core::Project::new(knx_core::Language("en".into()));
+    let view = stored_bus_access(
+        &project,
+        &[row(
+            "/x/BusAccess",
+            "BusAccess",
+            r#"<BusAccess Name="n" Parameter="NAT='on';ProtocolType=tcp://192.0.2.5;Type=KNX IP"/>"#,
+        )],
+        None,
+    );
+    let record = &view.records[0];
+    // A quoted word is still a word; anything else under a shown key is not shown.
+    assert_eq!(field(record, "NAT").value.as_deref(), Some("'on'"));
+    assert_eq!(field(record, "ProtocolType").value, None);
+    assert_eq!(field(record, "Type").value, None);
+}

@@ -127,7 +127,7 @@ export function StoredBusAccessDialog({ onClose }: { onClose: () => void }) {
     </header>
     <p className="stored-bus-access-intro">{t("storedBusAccess.intro")}</p>
     {changed && <p role="status" className="stored-bus-access-notice">{t("storedBusAccess.changed")}</p>}
-    {load.state === "loading" && <p role="status">{t("storedBusAccess.loading")}</p>}
+    {load.state === "loading" && <p role="status"><span className="task-status-text">{t("storedBusAccess.loading")}</span></p>}
     {load.state === "failed" && <p role="alert" className="field-error">{t("storedBusAccess.failed")} {load.message}</p>}
     {load.state === "ready" && (load.records.length === 0
       ? <p className="stored-bus-access-empty">{t("storedBusAccess.empty")}</p>

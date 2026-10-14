@@ -320,10 +320,10 @@ bus probe is shipped — this one is certified for Markdown only.
 <!-- HALL-OF-FAME:START -->
 | Place | Bug hunter | Issues | Replies | Resolved | XP | Rank & title | Medal |
 | ---: | --- | ---: | ---: | ---: | ---: | --- | --- |
-| 1 | [@thengsty](https://github.com/thengsty) | 18 | 12 | 16 | **262** | Datapoint Dragon Slayer | 🏅 Golden Bus Probe |
+| 1 | [@thengsty](https://github.com/thengsty) | 20 | 12 | 16 | **272** | Datapoint Dragon Slayer | 🏅 Golden Bus Probe |
 | 2 | [@hagbardZ](https://github.com/hagbardZ) | 1 | 3 | 1 | **18** | Bus Bug Scout | — |
 
-*Snapshot: 2026-10-14T15:32:36Z. Maintainers and bots sit this one out.*
+*Snapshot: 2026-10-14T17:07:04Z. Maintainers and bots sit this one out.*
 <!-- HALL-OF-FAME:END -->
 
 [All ranks, scoring rules and the full honour roll](docs/community/HALL_OF_FAME.md).

@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { fulfillNoProjectOpen } from "./server-project-fixture";
 
 for (const language of ["en", "de"] as const) {
   for (const width of [1440, 400]) {
@@ -29,7 +30,7 @@ for (const language of ["en", "de"] as const) {
           onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.8" },
         } });
         if (path === "/api/version") return ok({ version: "0.1.0-alpha.8" });
-        if (path === "/api/project" && method === "GET") return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"no project open"}' });
+        if (path === "/api/project" && method === "GET") return fulfillNoProjectOpen(route);
         if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
         if (path === "/api/project/load-progress") return ok(token === null ? null : {
           operationId: 1, kind: "import", source: "fictional-progress.knxproj", phase,

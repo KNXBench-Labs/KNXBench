@@ -30,20 +30,27 @@ async function interceptApi(page: Page, settings: Record<string, unknown> = {}) 
       installations: [],
     } as ProjectTree,
   };
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
     const method = route.request().method();
     let body: unknown;
+    let status = 200;
     if (path === "/api/auth/status" && method === "GET") {
       body = { required: false, authenticated: true };
     } else if (path === "/api/settings" && method === "GET") {
       body = { schemaVersion: 1, status: "ok", settings };
+    } else if (path === "/api/project" && method === "GET" && !projectOpen) {
+      status = 400;
+      body = { error: "no project open" };
     } else if (path === "/api/project" && method === "GET") {
       body = state.current;
     } else if (path === "/api/bus/discover" && method === "POST") {
       // The sidebar's automatic search is intercepted, never a real UDP scan.
       body = { interfaces: [] };
     } else if (path === "/api/project/new" && method === "POST") {
+      projectOpen = true;
       const request = route.request().postDataJSON() as SeedRequest;
       state.requests.push(request);
       let id = 0;
@@ -81,7 +88,7 @@ async function interceptApi(page: Page, settings: Record<string, unknown> = {}) 
       state.unexpected.push(`${method} ${path}`);
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"local fixture only"}' });
     }
-    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });
   return state;
 }

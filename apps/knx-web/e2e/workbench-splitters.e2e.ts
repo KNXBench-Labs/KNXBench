@@ -13,14 +13,17 @@ const tree = {
 
 async function openProject(page: Page) {
   const unexpected: string[] = [];
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
     const method = route.request().method();
     let body: unknown;
+    let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
     else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: {} };
-    else if (path === "/api/project" && method === "GET") body = tree;
-    else if (path === "/api/project/new" && method === "POST") body = tree;
+    else if (path === "/api/project" && method === "GET") { if (projectOpen) body = tree; else { status = 400; body = { error: "no project open" }; } }
+    else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = tree; }
     // The sidebar's automatic search is intercepted, never a real UDP scan.
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) body = [];
@@ -29,7 +32,7 @@ async function openProject(page: Page) {
       unexpected.push(`${method} ${path}`);
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"local fixture only"}' });
     }
-    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto("/");

@@ -4,6 +4,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { fulfillNoProjectOpen } from "./server-project-fixture";
 
 type Catalogue = { readonly [K in keyof typeof en]: string };
 const FILES = Array.from({ length: 14 }, (_, i) => ({
@@ -17,6 +18,8 @@ async function serve(page: Page, language: "en" | "de", motionLevel: "off" | "fu
     installations: [{ id: 0, name: "Fictional flat", topology: [], buildings: [], unassigned: [], group_addresses: [], group_ranges: [] }],
   };
   const unexpected: string[] = [];
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await page.route("https://api.github.com/**", (route) => { unexpected.push(route.request().url()); return route.abort(); });
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -29,7 +32,8 @@ async function serve(page: Page, language: "en" | "de", motionLevel: "off" | "fu
       uiLanguage: language, theme: "porcelain", motionLevel, releaseChecksEnabled: false, achievementsEnabled: "false",
       onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.11" } } });
     if (path === "/api/settings" && method === "PUT") return ok({ schemaVersion: 1, status: "ok", settings: route.request().postDataJSON().settings });
-    if ((path === "/api/project" && method === "GET") || (path === "/api/project/new" && method === "POST")) return ok(tree);
+    if (path === "/api/project/new" && method === "POST") { projectOpen = true; return ok(tree); }
+    if (path === "/api/project" && method === "GET") return projectOpen ? ok(tree) : fulfillNoProjectOpen(route);
     if (path === "/api/fs/list") return ok(FILES);
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);

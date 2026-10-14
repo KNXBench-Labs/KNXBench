@@ -14,6 +14,25 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-14 — Owner UI feedback P1 ([goal](goals/ui-feedback-p1-p4.md)): toasts
+  enter with their exit animation played backwards (same keyframes, length and
+  curve; the stack clips the slide instead of flashing a scrollbar). Every web
+  editor mount resumes the project the server still holds through the read-only
+  `GET /api/project`, announced with a notice that names unsaved changes
+  ([ADR-0127](adr/0127-web-workbench-resumes-the-open-project.md)). Save As onto
+  an existing file asks first: `knx-app::save_as_with` and
+  `POST /api/project/save-as` refuse it (`409 fileExists`, nothing written) until
+  `overwrite: true`; the browser asks in a dialog, the desktop relies on its GTK
+  dialog's own question (source-verified, Linux only). Browser fixtures now answer
+  `GET /api/project` like the real server (400 until a project exists). Tests
+  first: RED proofs for entry, overflow, resume (5 by name), resume language,
+  overwrite route (2) and dialog (2). Self-review: notice language and a stale
+  doc comment fixed test-first. Frozen branch gate on `29573d41` + candidate:
+  build and 16 typechecks 0, Vitest 3535/0 (251 files), Chromium 542/0, 15 production
+  configs 262/0, repeat ×3 75/0, Rust fmt/clippy 0, Rust 4467/0 (200 ignored),
+  Python 122 (1 skip), five xtask checks 0, `inputs_frozen=1`. No hardware,
+  corpus, release or deployment.
+
 - 2026-10-14 — Active-task text gets a slow shimmer and a quiet pause:
   readable real text, existing active-state bindings, measured progress retained;
   Off/reduced motion/forced colours/print and unsupported-CSS plain-text fallback.

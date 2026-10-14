@@ -45,6 +45,8 @@ for (const theme of ["graphite", "porcelain", "cupertino", "lcars"]) {
       await expect(error.locator(".toast-hint")).toContainText(width === 400 ? "Englisch" : "English");
       await expect(page.locator(".toast--fun .achievement-badge, .toast--error .achievement-badge")).toHaveCount(0);
       for (const card of [status, error, achievement]) {
+        // Resting geometry: the entry slides in from the right.
+        await card.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
         const box = await card.boundingBox();
         expect(box!.x).toBeGreaterThanOrEqual(0);
         expect(box!.x + box!.width).toBeLessThanOrEqual(width);
@@ -68,6 +70,60 @@ test("all toast kinds stay nine seconds and use the same automatic exit", async 
   await expect(page.locator(".toast")).toHaveCount(0);
   expect(unexpected).toEqual([]);
 });
+
+/** The keyframes text of one named `@keyframes` rule, or null. */
+async function keyframesText(page: Page, name: string) {
+  return page.evaluate((wanted) => {
+    for (const sheet of Array.from(document.styleSheets)) {
+      for (const rule of Array.from(sheet.cssRules)) {
+        if (rule instanceof CSSKeyframesRule && rule.name === wanted) {
+          return Array.from(rule.cssRules).map((frame) => frame.cssText).join(" ");
+        }
+      }
+    }
+    return null;
+  }, name);
+}
+
+for (const name of ["Status", "Error", "Achievement"]) {
+  test(`${name}: the entry is the exit animation played backwards`, async ({ page }) => {
+    const unexpected = await open(page);
+    await page.getByRole("button", { name, exact: true }).click();
+    const card = page.locator(".toast").first();
+    const entry = await card.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { name: s.animationName, direction: s.animationDirection, duration: s.animationDuration, easing: s.animationTimingFunction };
+    });
+    // A name of its own, so switching to the exit restarts the animation.
+    expect(entry.name).toBe("knx-toast-in");
+    expect(entry.direction).toBe("reverse");
+    expect(await keyframesText(page, "knx-toast-in")).toBe(await keyframesText(page, "knx-achievement-out"));
+    // Its first frame is the exit's last: shifted right and invisible.
+    const start = await card.evaluate((el) => {
+      const animation = el.getAnimations().find((a) => (a as CSSAnimation).animationName === "knx-toast-in")!;
+      animation.pause();
+      animation.currentTime = 0;
+      const s = getComputedStyle(el);
+      const result = { opacity: s.opacity, transform: s.transform, stackOverflowX: getComputedStyle(el.parentElement!).overflowX };
+      animation.play();
+      return result;
+    });
+    expect(start.opacity).toBe("0");
+    expect(start.transform).toBe("matrix(1, 0, 0, 1, 24, 0)");
+    // The slide reaches past the stack's padding; the stack must not turn
+    // that into a horizontal scrollbar flashing on every new card.
+    expect(start.stackOverflowX).toBe("hidden");
+    await card.getByRole("button", { name: "Dismiss" }).click();
+    const exit = await card.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { name: s.animationName, direction: s.animationDirection, duration: s.animationDuration, easing: s.animationTimingFunction };
+    });
+    expect(exit).toEqual({ ...entry, name: "knx-achievement-out", direction: "normal" });
+    // Dismissed mid-entry, the card still leaves through the exit's own end.
+    await expect(card).toHaveCount(0, { timeout: 800 });
+    expect(unexpected).toEqual([]);
+  });
+}
 
 for (const kind of ["fun", "error"]) {
   test(`${kind}: manual dismissal ends at animationend, before the fallback`, async ({ page }) => {

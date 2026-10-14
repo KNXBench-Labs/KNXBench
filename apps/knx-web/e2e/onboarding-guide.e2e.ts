@@ -2,6 +2,7 @@
 
 import { expect, test, type Page } from "@playwright/test";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { fulfillNoProjectOpen } from "./server-project-fixture";
 
 interface Fixture {
   settings: Record<string, unknown>;
@@ -36,6 +37,9 @@ async function serve(page: Page, fixture: Fixture, version = "0.1.0-alpha.2+gfix
       body = { version };
     } else if (path === "/api/bus/discover" && method === "POST") {
       body = { interfaces: [] };
+    } else if (path === "/api/project" && method === "GET") {
+      await fulfillNoProjectOpen(route);
+      return;
     } else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) {
       body = [];
     } else if (achievementsFixtureAnswer(method, path) !== undefined) {

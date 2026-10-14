@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { act } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { version as packageVersion } from "../package.json";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -66,7 +66,9 @@ const apiMock = vi.hoisted(() => ({
   // reattach effect); the palette-reachability tests below render it, and
   // a 404 is the "no session yet" answer that leaves the connect form up.
   pollBusTelegrams: vi.fn().mockRejectedValue(new Error("no session")),
-  errorStatus: vi.fn().mockReturnValue(404),
+  // Reads a real `status` like `api.ts`'s does; errors without one stay 404.
+  errorStatus: vi.fn((error: unknown) => (error as { status?: unknown } | null)?.status === undefined
+    ? 404 : (error as { status: number }).status),
   // ADR-0023's progress poll. `null` is the honest default for a server
   // that has loaded nothing, and the answer every test here wants except
   // the two that drive a load on purpose.
@@ -109,6 +111,11 @@ vi.mock("./api", () => ({
   errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
   isUnsavedChangesConflict: (error: unknown) =>
     error instanceof Error && (error as Error & { status?: number }).status === 409,
+  // Same predicate as `api.ts`'s: a Save As onto an existing file.
+  isSaveAsFileExists: (error: unknown) => {
+    const { status, body } = (error ?? {}) as { status?: unknown; body?: { kind?: unknown } | null };
+    return status === 409 && body?.kind === "fileExists";
+  },
   // Same predicate as `api.ts`'s; App only reaches it after a failed load.
   isUnsavedProjectConflict: (error: unknown) => {
     const { status, body } = (error ?? {}) as { status?: unknown; body?: { kind?: unknown } | null };
@@ -194,6 +201,9 @@ beforeEach(() => {
   // midnight, and on CI runners in another timezone.
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-02-03T12:00:00Z"));
+  // Every mount asks for the server's open project (ADR-0127); by default
+  // there is none, exactly as the real server answers.
+  apiMock.currentProject.mockRejectedValue(noProjectOpen());
   // Most `/api/` calls in this file go through the mocked `./api`; two
   // modules talk HTTP by themselves: the achievement tracker (ADR-0089) and
   // the settings record's server-confirmed reads (`settingsStore.ts`, used
@@ -342,27 +352,72 @@ function entry(overrides: Partial<LogEntry>): LogEntry {
   };
 }
 
-async function renderApp(manifestVersion?: string, session?: SessionControls, resumeCurrentProject = false) {
+async function renderApp(manifestVersion?: string, session?: SessionControls, editorReturn = false) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<App manifestVersion={manifestVersion} session={session} resumeCurrentProject={resumeCurrentProject} />);
+    root.render(<App manifestVersion={manifestVersion} session={session} editorReturn={editorReturn} />);
   });
   return root;
 }
 
-describe("explicit browser return resumes the server project", () => {
-  it("keeps an ordinary fresh editor mount on the welcome screen", async () => {
+/**
+ * Mounts the way a freshly started server answers (nothing open), then puts
+ * back whatever later `GET /api/project` answer the test configured and
+ * forgets the mount's own read. For tests about saves and loads that
+ * count their snapshot reads; resuming itself is tested above (ADR-0127).
+ */
+async function renderAppOnFreshServer(): Promise<Root> {
+  const configured = apiMock.currentProject.getMockImplementation();
+  apiMock.currentProject.mockImplementation(() => Promise.reject(noProjectOpen()));
+  const root = await renderApp();
+  if (configured) apiMock.currentProject.mockImplementation(configured);
+  apiMock.currentProject.mockClear();
+  return root;
+}
+
+/** What the real server answers to `GET /api/project` with nothing open. */
+function noProjectOpen(): Error {
+  return Object.assign(new Error("no project open"), { status: 400 });
+}
+
+describe("every editor mount resumes the server project (ADR-0127)", () => {
+  it("resumes after a reload and says so, without reopening or importing", async () => {
+    apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), is_modified: false, has_store_path: true });
     const root = await renderApp();
-    expect(apiMock.currentProject).not.toHaveBeenCalled();
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    expect(host!.textContent).toContain("Device D");
+    expect(host!.querySelector(".toast--fun")?.textContent).toContain("Welcome back.");
+    expect(host!.querySelector(".toast--fun")?.textContent).not.toContain("unsaved");
+    expect(apiMock.openProject).not.toHaveBeenCalled();
+    expect(apiMock.importProject).not.toHaveBeenCalled();
     await act(async () => root.unmount());
   });
 
-  it("resumes the current tree and its saved-file authority without reopening or importing", async () => {
+  it("names unsaved changes in the notice when the server project has them", async () => {
+    apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), is_modified: true, has_store_path: true });
+    const root = await renderApp();
+    expect(host!.querySelector(".toast--fun")?.textContent).toContain("unsaved changes included");
+    await act(async () => root.unmount());
+  });
+
+  it("words the notice in the language active when it appears, not at mount", async () => {
+    let finish!: (tree: ProjectTree & { has_store_path: boolean }) => void;
+    apiMock.currentProject.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    const root = await renderApp();
+    // The settings record lands between the mount and the server's answer.
+    await act(async () => setSetting("uiLanguage", "de"));
+    await act(async () => finish({ ...treeWithDevice(), is_modified: false, has_store_path: true }));
+    expect(host!.querySelector(".toast--fun")?.textContent).toContain(deMessages["resume.notice"]);
+    await act(async () => root.unmount());
+  });
+
+  it("resumes the current tree and its saved-file authority on the companion's return, silently", async () => {
     apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), is_modified: true, has_store_path: true });
     const root = await renderApp(undefined, undefined, true);
     expect(host!.textContent).toContain("Device D");
+    expect(host!.querySelector(".toast--fun")).toBeNull();
     await act(async () => { host!.querySelector<HTMLButtonElement>('button[data-crt-surface="save"]')!.click(); });
     expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
     expect(filePickerMock.pickSavePath).not.toHaveBeenCalled();
@@ -374,37 +429,35 @@ describe("explicit browser return resumes the server project", () => {
   it("does not invent a save destination for an unsaved server project", async () => {
     apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), is_modified: true, has_store_path: false });
     filePickerMock.pickSavePath.mockResolvedValue(null);
-    const root = await renderApp(undefined, undefined, true);
+    const root = await renderApp();
     await act(async () => { host!.querySelector<HTMLButtonElement>('button[data-crt-surface="save"]')!.click(); });
     expect(filePickerMock.pickSavePath).toHaveBeenCalledTimes(1);
     expect(apiMock.saveProject).not.toHaveBeenCalled();
     await act(async () => root.unmount());
   });
 
-  it("leaves the welcome screen usable when no server project is open", async () => {
-    apiMock.currentProject.mockRejectedValue(Object.assign(new Error("no project open"), { status: 400 }));
-    apiMock.errorStatus.mockReturnValueOnce(400);
-    const root = await renderApp(undefined, undefined, true);
+  it("leaves the welcome screen usable and quiet when no server project is open", async () => {
+    apiMock.currentProject.mockRejectedValue(noProjectOpen());
+    const root = await renderApp();
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
     expect(host!.querySelector(".welcome-workspace")).not.toBeNull();
-    expect(host!.querySelector(".toast-error")).toBeNull();
+    expect(host!.querySelector(".toast")).toBeNull();
     await act(async () => root.unmount());
   });
 
-  it("ignores a pending resume after that request is canceled", async () => {
+  it("ignores a resume answer that arrives after the editor unmounted", async () => {
     let finish!: (tree: ProjectTree & { has_store_path: boolean }) => void;
     apiMock.currentProject.mockReturnValue(new Promise(resolve => { finish = resolve; }));
-    const root = await renderApp(undefined, undefined, true);
-    await act(async () => root.render(<App resumeCurrentProject={false} />));
-    await act(async () => finish({ ...treeWithDevice(), has_store_path: true }));
-    expect(host!.textContent).not.toContain("Device D");
+    const root = await renderApp();
     expect(host!.querySelector(".welcome-workspace")).not.toBeNull();
     await act(async () => root.unmount());
+    await act(async () => finish({ ...treeWithDevice(), has_store_path: true }));
+    expect(apiMock.openProject).not.toHaveBeenCalled();
   });
 
   it("reports a failed resume instead of claiming a project is open", async () => {
-    apiMock.currentProject.mockRejectedValue(new Error("resume refused"));
-    apiMock.errorStatus.mockReturnValueOnce(500);
-    const root = await renderApp(undefined, undefined, true);
+    apiMock.currentProject.mockRejectedValue(Object.assign(new Error("resume refused"), { status: 500 }));
+    const root = await renderApp();
     expect(host!.textContent).toContain("resume refused");
     expect(host!.querySelector(".welcome-workspace")).not.toBeNull();
     await act(async () => root.unmount());
@@ -463,7 +516,7 @@ describe("App — ISSUE-04 last-saved status", () => {
     const second = "2026-02-03T11:45:00Z";
     const dirty = treeAt({ ...baseTree(), is_modified: true, last_saved_at: first }, 1);
     apiMock.openProject.mockResolvedValueOnce(dirty);
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
     const status = () => host!.querySelector(".workbench-status-saved")?.textContent;
     const germanTime = (iso: string) => new Intl.DateTimeFormat("de", {
       dateStyle: "short", timeStyle: "medium",
@@ -1086,7 +1139,7 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
     apiMock.importProject.mockResolvedValue(treeWithDevice());
     apiMock.deviceDetail.mockResolvedValue(deviceDetailFixture());
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
     await act(async () => {
       findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
@@ -1895,7 +1948,7 @@ describe("App — a failed load never renders a running banner", () => {
       clientToken: "99999999-9999-9999-9999-999999999999",
     });
     apiMock.importProject.mockRejectedValue(new Error("path is outside the data directory"));
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
 
     await clickOpen();
 
@@ -1954,7 +2007,7 @@ describe("App — a failed load never renders a running banner", () => {
     apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), has_store_path: false });
     let fail: (error: Error) => void = () => {};
     apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
 
     await clickOpen();
     // The poll has adopted operation 1 by now and the banner is running.
@@ -1981,7 +2034,7 @@ describe("App — a failed load never renders a running banner", () => {
     });
     apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), has_store_path: true });
     apiMock.openProject.mockRejectedValueOnce(new Error("connection closed"));
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
 
     await act(async () => {
       findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -2031,7 +2084,7 @@ describe("App — a failed load never renders a running banner", () => {
       completed: null, total: null, status: "succeeded", error: null, clientToken: null,
     });
     apiMock.importProject.mockRejectedValue(new Error("connection closed"));
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
 
     await clickOpen();
 
@@ -2049,7 +2102,7 @@ describe("App — a failed load never renders a running banner", () => {
     });
     apiMock.currentProject.mockRejectedValue(new Error("current project unavailable"));
     apiMock.importProject.mockRejectedValue(new Error("connection closed"));
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
 
     await clickOpen();
 
@@ -2737,7 +2790,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
   async function openProject(tree: ProjectTree = baseTree()) {
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
     apiMock.importProject.mockResolvedValue(tree);
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
     await act(async () => {
       findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
@@ -3040,7 +3093,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     const dirty = treeAt({ ...baseTree(), can_undo: true, is_modified: true }, 1);
     apiMock.openProject.mockResolvedValue(dirty);
     apiMock.currentProject.mockResolvedValue({ ...dirty, is_modified: false, has_store_path: true });
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
 
     await act(async () => {
       findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -3173,7 +3226,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
       is_modified: false,
       has_store_path: true,
     });
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
 
     await act(async () => {
       findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -3212,7 +3265,9 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
       findButton(enMessages["toolbar.saveAs"])
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(apiMock.saveProjectAs).toHaveBeenCalledWith("/tmp/project.knxdb");
+    // The native dialog asked before an existing file; nothing asks twice.
+    expect(apiMock.saveProjectAs).toHaveBeenCalledExactlyOnceWith("/tmp/project.knxdb", true);
+    expect(host!.querySelector(".overwrite-confirm")).toBeNull();
     expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
 
     await openMenu();
@@ -3225,6 +3280,68 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
+  });
+
+  describe("Save As asks before replacing an existing file (owner request 2026-10-14)", () => {
+    function fileExists(): Error {
+      return Object.assign(new Error("a file with this name already exists; nothing was written"),
+        { status: 409, body: { kind: "fileExists" } });
+    }
+
+    async function saveAsOverAnExistingFile() {
+      filePickerMock.pickSavePath.mockResolvedValue("projects/villa.knxdb");
+      apiMock.saveProjectAs.mockRejectedValueOnce(fileExists());
+      const dirty = { ...baseTree(), can_undo: true, is_modified: true };
+      apiMock.currentProject.mockResolvedValue({ ...dirty, is_modified: false, has_store_path: true });
+      const root = await openProject(dirty);
+      await openMenu();
+      await act(async () => {
+        findButton(enMessages["toolbar.saveAs"]).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      return root;
+    }
+
+    it("asks after the server refused, and replaces only on Replace", async () => {
+      const root = await saveAsOverAnExistingFile();
+      expect(apiMock.saveProjectAs).toHaveBeenCalledExactlyOnceWith("projects/villa.knxdb", false);
+      const dialog = document.querySelector(".overwrite-confirm")!;
+      expect(dialog.textContent).toContain("projects/villa.knxdb already exists.");
+      expect(dialog.textContent).toContain("project history");
+      expect(apiMock.currentProject).not.toHaveBeenCalled();
+      await act(async () => document.querySelector<HTMLButtonElement>(".overwrite-confirm-replace")!.click());
+      expect(apiMock.saveProjectAs).toHaveBeenLastCalledWith("projects/villa.knxdb", true);
+      expect(apiMock.saveProjectAs).toHaveBeenCalledTimes(2);
+      expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+      expect(document.querySelector(".overwrite-confirm")).toBeNull();
+      expect(host!.querySelector('[role="alert"]')).toBeNull();
+      await act(async () => root.unmount());
+    });
+
+    it("writes nothing more and stays unsaved when the answer is Cancel", async () => {
+      const root = await saveAsOverAnExistingFile();
+      const cancel = Array.from(document.querySelectorAll<HTMLButtonElement>(".overwrite-confirm button"))
+        .find((button) => button.textContent === enMessages["overwrite.cancel"])!;
+      await act(async () => cancel.click());
+      expect(apiMock.saveProjectAs).toHaveBeenCalledTimes(1);
+      expect(apiMock.currentProject).not.toHaveBeenCalled();
+      expect(document.querySelector(".overwrite-confirm")).toBeNull();
+      expect(host!.querySelector('[role="alert"]')).toBeNull();
+      await act(async () => root.unmount());
+    });
+
+    it("reports any other refusal instead of asking", async () => {
+      filePickerMock.pickSavePath.mockResolvedValue("projects/villa.knxdb");
+      apiMock.saveProjectAs.mockRejectedValueOnce(Object.assign(new Error("disk full"), { status: 500 }));
+      const root = await openProject({ ...baseTree(), can_undo: true, is_modified: true });
+      await openMenu();
+      await act(async () => {
+        findButton(enMessages["toolbar.saveAs"]).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      expect(document.querySelector(".overwrite-confirm")).toBeNull();
+      expect(host!.textContent).toContain("disk full");
+      expect(apiMock.saveProjectAs).toHaveBeenCalledTimes(1);
+      await act(async () => root.unmount());
+    });
   });
 
   it.each([
@@ -3240,7 +3357,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     let finishRefresh!: (tree: ProjectTree & { has_store_path: boolean }) => void;
     apiMock.currentProject.mockReturnValue(new Promise((resolve) => { finishRefresh = resolve; }));
     apiMock.undo.mockResolvedValue(treeAt({ ...dirty, can_undo: false, can_redo: true }, 3));
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
 
     await act(async () => {
       findButton(nativeOpen ? "Open (.knxdb)…" : "Open project…")
@@ -3366,7 +3483,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     );
     let finishRefresh!: (tree: ProjectTree & { has_store_path: boolean }) => void;
     apiMock.currentProject.mockReturnValue(new Promise((resolve) => { finishRefresh = resolve; }));
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
 
     await act(async () => {
       findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -3495,7 +3612,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     const dirty = { ...baseTree(), can_undo: true, is_modified: true };
     apiMock.openProject.mockResolvedValue(dirty);
     apiMock.saveProject.mockRejectedValueOnce(new Error("disk full"));
-    const root = await renderApp();
+    const root = await renderAppOnFreshServer();
 
     await act(async () => {
       findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));

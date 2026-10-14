@@ -25,7 +25,7 @@ function tree(revision = 9): ProjectTree {
 }
 function view(revision = 9): InstructionView {
   return { serverIncarnation: "srv-i", projectIncarnation: 2, snapshotRevision: revision, device: 41,
-    originalXmlSha256: "a".repeat(64), originalPresent: true, originalBytes: 12, originalFormat: "plain",
+    origin: "imported", originalXmlSha256: "a".repeat(64), originalPresent: true, originalBytes: 12, originalFormat: "plain",
     unsupported: [], previewError: null, effectiveDocument: literal("Mount at 1.5 m"), overrideDocument: null,
     persistence: "session-only" };
 }

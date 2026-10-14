@@ -14,6 +14,12 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-14 — Issue #22 offline prerequisite: exact-shape `LdCtrlTaskCtrl2`
+  source parsing and the pure ten-octet property-record encoder, strict unknown
+  preservation and unchanged download refusal. This is not System-2 device
+  support; image/procedure/recovery contracts remain open. [Contract](contracts/system2-download-prerequisites.md).
+  Gate results are recorded in the delivery handover, not inferred from this entry.
+
 - 2026-10-14 — Owner UI feedback P2 ([goal](goals/ui-feedback-p1-p4.md)): the
   project explorer shows what opens. A chevron turns a quarter when a branch
   opens, a closed branch shows how many entries it holds, and Expand all /

@@ -1,5 +1,14 @@
 # Import and export
 
+## System-2 TaskCtrl2 source projection (14 October 2026)
+
+The on-demand product-code reader now types the exact five-attribute
+`LdCtrlTaskCtrl2` shape, preserving every pointer and its LSM index in order.
+Unknown/missing/extra/nested shapes stay `Unmodelled`; original source blobs and
+stored diagnostics are unchanged. No database migration or compatibility-report
+rewrite is needed. This is not download support or an ETS exporter;
+[contract and remaining boundaries](contracts/system2-download-prerequisites.md).
+
 ## Native import evidence on main (12 October 2026)
 
 The 2026-10-11 sections below on durable import reports, the reviewed native export

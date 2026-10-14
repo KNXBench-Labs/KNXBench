@@ -153,18 +153,60 @@ const ADDITIONAL_LOAD_CONTROL: u8 = 0x03;
 /// Builds an `Additional Load Control` payload: `03h`, the subtype, and
 /// eight octets of subtype-specific fields.
 ///
-/// The eight field octets are passed whole rather than assembled here
-/// because only two of the eight subtypes are needed by the procedures in
-/// scope. The other six layouts are in MP §3.31.3.4, with widths and bit
-/// meanings, and are not built because nothing calls for them — not because
-/// the Standard is silent about them. Use [`data_relative_allocation`] for
-/// the one System B needs and [`relative_allocation`] for System 300.
+/// The raw field octets are passed whole; their layouts are defined by
+/// MP §3.31.3.4, not inferred from the subtype. Prefer a typed helper when
+/// available: [`data_relative_allocation`] for System B,
+/// [`relative_allocation`] for System 300, and [`task_control_2`] for the
+/// TaskCtrl2 record. Encoding a payload does not admit a mask or a write.
 pub fn additional_load_control(subtype: LoadControlSubtype, fields: [u8; 8]) -> LoadControlPayload {
     let mut octets = [0u8; LOAD_CONTROL_PAYLOAD_OCTETS];
     octets[0] = ADDITIONAL_LOAD_CONTROL;
     octets[1] = subtype.octet();
     octets[2..].copy_from_slice(&fields);
     LoadControlPayload(octets)
+}
+
+/// Fields of MP §3.31.3.4's TaskCtrl2 property load-control record.
+///
+/// `[D]` Management Procedures `03_05_02` v02.01.02, printed p. 141:
+/// four independent 16-bit pointers in this order. Their resource-specific
+/// applicability and target object are the planner's responsibility.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TaskControl2 {
+    /// Callback address.
+    pub callback: u16,
+    /// Communication-object pointer.
+    pub communication_objects: u16,
+    /// First communication-object segment pointer.
+    pub segment_1: u16,
+    /// Second communication-object segment pointer.
+    pub segment_2: u16,
+}
+
+/// Encodes subtype `05h` without a target, mask admission or any bus activity.
+///
+/// `[D]` MP §3.31.3.4, p. 141: `03h`, `05h`, callback, object pointer,
+/// first segment pointer, second segment pointer; each word most significant
+/// octet first. This is the ten-octet property record, not an eleven-octet
+/// BIM M112 memory record. It neither admits a mask nor proves recovery.
+pub fn task_control_2(record: TaskControl2) -> LoadControlPayload {
+    let callback = record.callback.to_be_bytes();
+    let objects = record.communication_objects.to_be_bytes();
+    let segment_1 = record.segment_1.to_be_bytes();
+    let segment_2 = record.segment_2.to_be_bytes();
+    additional_load_control(
+        LoadControlSubtype::TaskCtrl2,
+        [
+            callback[0],
+            callback[1],
+            objects[0],
+            objects[1],
+            segment_1[0],
+            segment_1[1],
+            segment_2[0],
+            segment_2[1],
+        ],
+    )
 }
 
 /// What subtype `0Bh`'s Mode octet asks the device to do with memory it
@@ -413,6 +455,41 @@ pub fn require_subtype(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn task_control_2_property_record_has_four_big_endian_words() {
+        let payload = task_control_2(TaskControl2 {
+            callback: 0x1234,
+            communication_objects: 0x5678,
+            segment_1: 0x9ABC,
+            segment_2: 0xDEF0,
+        });
+        assert_eq!(
+            payload.octets(),
+            &[0x03, 0x05, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0]
+        );
+    }
+
+    #[test]
+    fn task_control_2_property_record_preserves_zero_and_maximum_pointers() {
+        for word in [0, u16::MAX] {
+            let payload = task_control_2(TaskControl2 {
+                callback: word,
+                communication_objects: word,
+                segment_1: word,
+                segment_2: word,
+            });
+            assert_eq!(&payload.octets()[..2], &[3, 5]);
+            assert_eq!(
+                &payload.octets()[2..],
+                &[if word == 0 { 0 } else { 255 }; 8]
+            );
+        }
+        assert!(matches!(
+            allocation_subtype_for(MaskVersion(0x0025)),
+            Err(AllocationSubtypeError::MaskNotProfiled(MaskVersion(0x0025)))
+        ));
+    }
 
     /// Design spec §5.3 and §7.3: the ten-octet payloads, octet for octet.
     #[test]

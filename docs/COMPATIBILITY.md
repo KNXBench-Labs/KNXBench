@@ -1,5 +1,13 @@
 # Compatibility
 
+## System-2 product-data prerequisite (14 October 2026 source)
+
+[Typed TaskCtrl2 parsing and property payloads](contracts/system2-download-prerequisites.md)
+are offline prerequisites, **not new device-programming support**. `MV-0025`
+remains refused; no public planner/executor admission or hardware evidence is
+added. Unknown step shapes remain preserved and refused. No schema/version,
+ETS-export, certification or executable-dependency claim changes.
+
 ## Device programming support guidance (14 October 2026 source)
 
 [Support/refusal guidance](contracts/device-programming-support-guidance.md)

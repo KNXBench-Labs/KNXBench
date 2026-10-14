@@ -61,3 +61,38 @@ pub fn original_device_instructions(
         hints,
     })
 }
+
+/// Where a device's instructions start from (Goal B4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InstructionOrigin {
+    /// Imported: the retained original, exactly as [`original_device_instructions`] reads it.
+    Imported(OriginalInstructions),
+    /// Made in KNXBench: there is no imported original, and none is invented.
+    Native,
+}
+
+/// The prefix KNXBench gives the provenance of what it creates itself
+/// (`KB-<Kind>-<id>`, ADR-0093; `KB-DEV-<id>` and `KB-SCAN-<address>` for devices).
+const KNXBENCH_SOURCE_PREFIX: &str = "KB-";
+
+/// [`InstructionOrigin::Native`] only for a device KNXBench created: its source
+/// path and id are the same `KB-…` text, and nothing at all was retained from
+/// that path. Every other device reads its imported original; one whose
+/// retained source is missing is still refused, never treated as native.
+pub fn instruction_origin(
+    project: &Project,
+    opaque: &[StoredOpaqueEntry],
+    device: DeviceId,
+) -> Result<InstructionOrigin, InstructionSourceError> {
+    let source = &project
+        .devices
+        .get(device)
+        .ok_or(InstructionSourceError::DeviceNotFound)?
+        .source;
+    let issued_here =
+        source.path.starts_with(KNXBENCH_SOURCE_PREFIX) && source.path == source.ets_id;
+    if issued_here && !opaque.iter().any(|entry| entry.source_path == source.path) {
+        return Ok(InstructionOrigin::Native);
+    }
+    original_device_instructions(project, opaque, device).map(InstructionOrigin::Imported)
+}

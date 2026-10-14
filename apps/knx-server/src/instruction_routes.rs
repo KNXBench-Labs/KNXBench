@@ -10,6 +10,7 @@ use knx_app::instruction_edit::{
     self as edit, InstructionEditError, InstructionEditPreview, InstructionNativeTarget,
     InstructionRevision,
 };
+use knx_app::instructions::InstructionOrigin;
 use knx_core::{
     instruction::{InstructionDocument, InstructionRun, InstructionStyle},
     DeviceId,
@@ -116,7 +117,10 @@ struct View {
     server_incarnation: String,
     project_incarnation: u64,
     snapshot_revision: u64,
-    original_xml_sha256: String,
+    /// `"imported"`, or `"native"` for a device made in KNXBench (Goal B4).
+    origin: &'static str,
+    /// The imported device XML's hash; `None` for a native device.
+    original_xml_sha256: Option<String>,
     original_present: bool,
     original_bytes: usize,
     original_format: Option<&'static str>,
@@ -195,17 +199,22 @@ async fn read(State(api): State<Api>, Path(id): Path<u32>) -> Result<Json<View>,
     let project = lock
         .as_ref()
         .ok_or_else(|| ApiError::bad_request("No project open"))?;
-    let original = knx_app::instructions::original_device_instructions(
+    let origin = knx_app::instructions::instruction_origin(
         project,
         &state.opaque.lock().expect("state mutex poisoned"),
         DeviceId(id),
     )
     .map_err(|source| error(InstructionEditError::Source(source)))?;
+    let original = match &origin {
+        InstructionOrigin::Imported(original) => Some(original),
+        InstructionOrigin::Native => None,
+    };
+    let hints = original.and_then(|original| original.hints.as_ref());
     let mut unsupported = vec![];
     let mut preview_error = None;
     let mut original_format = None;
     let mut effective_document = None;
-    if let Some(hints) = &original.hints {
+    if let Some(hints) = hints {
         match &hints.preview {
             Ok(view) => {
                 original_format = Some(match view.format {
@@ -240,9 +249,14 @@ async fn read(State(api): State<Api>, Path(id): Path<u32>) -> Result<Json<View>,
         server_incarnation: state.server_incarnation.clone(),
         project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
         snapshot_revision: domain::current_project_revision(state),
-        original_xml_sha256: original.xml_sha256,
-        original_present: original.hints.is_some(),
-        original_bytes: original.hints.as_ref().map_or(0, |h| h.original.len()),
+        origin: if original.is_some() {
+            "imported"
+        } else {
+            "native"
+        },
+        original_xml_sha256: original.map(|original| original.xml_sha256.clone()),
+        original_present: hints.is_some(),
+        original_bytes: hints.map_or(0, |h| h.original.len()),
         original_format,
         unsupported,
         preview_error,

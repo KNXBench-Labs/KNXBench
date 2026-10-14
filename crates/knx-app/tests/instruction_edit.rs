@@ -250,6 +250,7 @@ fn reset_restores_original_without_conversion_and_preview_debug_is_payload_free(
     assert!(snapshot.project.instructions.is_empty());
     assert!(plan
         .original()
+        .unwrap()
         .hints
         .as_ref()
         .unwrap()

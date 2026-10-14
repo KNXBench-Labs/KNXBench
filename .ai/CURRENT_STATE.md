@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-14 15:58
+- **Completed:** Owner UI feedback **P1** published (decision record and P2–P4 scope: `docs/goals/ui-feedback-p1-p4.md`; owner accepted every grill-me recommendation). Feature commits `42f53208` (toasts enter with the exit animation reversed; stack clips the slide), `3bb27ff6` (every web editor mount resumes the server's open project read-only, notice names unsaved changes, ADR-0127; browser fixtures answer `GET /api/project` 400 until a project exists via `e2e/server-project-fixture.ts`), `8d047455` (Save As refuses an existing file with `409 fileExists` until `overwrite: true`; browser dialog, desktop relies on the GTK dialog, source-verified Linux only), `9e6be673` (goal file, status). Merge `93d31731` onto `e7a86b7c`. Frozen branch gate: build + 16 typechecks 0, Vitest 3535/0, Chromium 542/0, 15 production configs 262/0, repeat ×3 75/0, Rust 4467/0 (200 ignored), fmt/clippy 0, Python 122 (1 skip), five xtask 0, inputs frozen. Merged result: delta acceptance (upstream docs/data only: build/tsc/Vitest 3535/0, Hall of Fame + P1 specs 12/0, dialogs config 14/0, Python, xtask, diff check 0; Rust carried from the branch gate).
+- **Pending/Next Steps:** **P2** (explorer: chevron, counts, Expand/Collapse all, structure lines with grow/pulse, motion category "lines") in progress by this session in worktree `ui-feedback-p2-20261014`. P3 and P4: fresh sessions, one after another, starter prompt in the goal file.
+- **Notes for Codex oder Claude:** Issue #19 (Codex): `about-hall-of-fame.e2e.ts` now answers `GET /api/project` through `fulfillNoProjectOpen`; keep that line. Every whole-app fixture must answer `GET /api/project` (the app reads it on mount); use the shared helper. `knx_app::project_history::save_as` keeps its replace meaning; HTTP uses `save_as_with(..., overwrite)`. Root checkout untouched (foreign uncommitted research/handover edits preserved there).
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-14 15:02
 - **Completed:** Issue #19 taken in worktree `issue19-docker-20261014`; owner changed scope to linking the GitHub Hall of Fame document, with no bundled snapshot or new build dependency.

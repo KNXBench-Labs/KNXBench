@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-14 08:12
+- **Completed:** Session `ba673d45ff9d`: **Goal B has ended; all seventeen package rows (B1a/B1b through B16) are delivered.** The last train (head `aed1e1e6` on `c3f8e32a`: Vitest 3492/0, Chromium 527/0, instructions build 15/0, repeat 72/0, Rust 4460/0, fmt/clippy/Python/docs 0) brought **B3** (read-only stored `BusAccess`/`IPConfig`: `GET /api/project/stored-bus-access`, `POST …/reveal` for one record, every endpoint hidden with class and length until revealed, owner only when exactly one line/device has the stored id, never a connection or gateway; palette command and line inspector), **B4** (devices made in KNXBench, `KB-DEV-…`/`KB-SCAN-…` with nothing retained, get instructions through the existing preview/apply/undo/history without an invented original; view gains `origin`, `originalXmlSha256` nullable; absent/empty/present stay three states) and **B8** (German documentation report labels; KL-13/KL-29/KL-43 summaries, `OPEN_WORK`/`ROADMAP`/ideas/`IMPORT_EXPORT` caught up with the code; TOOLS-01–05 ledger rows point at the statistics-measurement contract instead of a file that never existed). Browser runs caught two real bugs (duplicate heading ids; the instruction client refusing a native view's `null` hash) and the screenshot review one layout bug (container query now); all fixed test-first.
+- **Pending/Next Steps:** None for Goal B. Open and documented, not planned: native WebKitGTK/Orca checks (B2), `IPConfig` cannot be assigned to a device (stored row names none), no ETS export of native instructions, report diagnostics stay English (KL-066), AES (ETS6), `knx diff`/`products ingest` without password, `route-send` three-level.
+- **Notes for Codex oder Claude:** The web lock is **free** (Coordination below). New wire fields: `InstructionView.origin` (`imported`/`native`), `originalXmlSha256` may be `null` for native; the client admission requires exactly that pairing. `knx-report` helpers now take a `ReportLanguage`; enum values and references stay raw on purpose. Product database still v23.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-14 08:40
 - **Completed:** Session `ba673d45ff9d` (Goal B): **B2** on `main`. The browser's `beforeunload` draft guard (`draftUnloadGuard.ts`) is now installed in the desktop shell too, so a webview **Reload** over a note or instruction draft gets WebKitGTK's own Stay/Leave dialog; window close and **Quit** keep the KNXBench draft dialog and ask once (`destroy()` runs no `beforeunload`). Tests: Vitest `App` (RED first), notes reload E2E in Chromium and Playwright's Firefox (`playwright.reload-guard.config.ts`); mutant "guard never asks" killed. Gate on the train (base `97cbcd63`, merge `1268dd99`): Vitest 3476/0, Chromium 518/0, notes 13/0, Firefox 2/0, repeat 39/0, fmt/clippy 0, Rust 4438/0, Python/docs/limitations 0. Receipt: W42 "The desktop webview asks before a reload".
 - **Pending/Next Steps:** Goal B continues with **B3** (read-only stored BusAccess/IPConfig, endpoints hidden until revealed; worktree `workbench-b3`, branch `feature/goal-b3-stored-bus-access-20261014`, committed, E2E rerun pending), then **B4** (instructions for devices made in KNXBench; worktree `workbench-b4`, in progress), then **B8** (KL-013, KL-029, KL-043).
@@ -200,7 +208,7 @@ ledger or an append-only diary. Formal per-ID status stays in
 
 ## Coordination
 
-Web lock: held by claude-goal-b-ba673d45ff9d (Goal B, per package; see docs/goals/unassigned-workbench-hardening.md *Session status*). Excluded from this claim: the KL-036 session-log files in flight in `log-16k` (bcee21b10872)
+Web lock: free — released 2026-10-14 by claude-goal-b-ba673d45ff9d when Goal B ended (all packages delivered; docs/goals/unassigned-workbench-hardening.md *Session status*)
 Release freeze: released — Alpha 11 published; never move its tag
 
 At migration preflight only the stale shared root and this documentation tree

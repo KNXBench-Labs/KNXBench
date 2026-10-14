@@ -14,6 +14,19 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-14 — Issue #19: About links the GitHub Hall of Fame document instead
+  of bundling its JSON. Snapshot parsing, unused strings/list styles and Vitest's
+  external-directory exception removed; public generator and awards unchanged.
+  Original Docker frontend failure reproduced; fixed frontend/full precommit
+  image and network-none HTTP/asset smoke pass. Self-reviewed branch acceptance:
+  31 stages zero/frozen, Vitest 3500/0 in 251 files, Chromium 531/0,
+  production dialogs/link 18/0, repeat link checks 12/0, tooling 122 (one skip),
+  build/all TypeScript configurations/docs/five xtask checks pass.
+  EN/DE production screenshots at 1440/400 inspected. Integration/publication
+  acceptance is recorded separately in the [receipt](evidence/issue19-docker-hall-link-2026-10-14.json).
+  No offline board, new package dependency, Rust/core/schema change, hardware,
+  release or deployment. [Contract](contracts/community-recognition.md#about-dialog-issue-19-owner-amendment-14-october-2026).
+
 - 2026-10-14 — Issue #21: a `.knxdb` carries its application programs. Store
   schema 16 adds `manufacturer_file` (each manifest entry's bytes, zlib,
   SHA-256 keyed and re-checked on every read, outside the snapshot and the

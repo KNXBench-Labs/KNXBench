@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 15:56
+- **Completed:** Issue #19 link-only fix implemented and self-reviewed. Original Docker frontend failure and About regression reproduced; fixed frontend/full precommit image plus network-none HTTP/asset/stop smoke pass. Branch gate: all 31 stages zero/frozen, Vitest 3500/0 (251 files), Chromium 531/0, production dialogs/link 18/0, repeats 12/0, tools 122 (one skip), all types/docs/xtask pass. Actual production EN/DE 1440/400 screenshots inspected.
+- **Pending/Next Steps:** Commit scoped candidate, integrate fresh main, verify the merged result and committed-tree image, publish/read back, close #19, archive evidence and retire owned probes/worktrees. No final delivery claimed yet.
+- **Notes for Codex oder Claude:** Own HallOfFameSection/About tests, hallOfFame modules, about.hallOfFame locale keys and the corresponding browser assertions. P1 owns its project-bootstrap fixture changes in the same e2e file: retain those when integrating. No edits to App/Toast/server behavior, deployment, hardware, releases or private root research. Root stays unchanged apart from final handover prefix.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-14 18:05
 - **Completed:** GitHub **#20** and **#21** delivered. #20 (range heading **+** creates a group address, next free suggested; client-only) merged as `bd2e3927` (feature `9c871f06`) and pushed; issue closed. #21 (`.knxdb` carries its application programs: store schema **16** table `manufacturer_file`, reinstall on open, "Restore from the original .knxproj…" for older files via `POST /api/project/manufacturer-files/restore`, Docker `XDG_DATA_HOME=/data/.knxbench-share`; ADR-0128, KL-183) merged as `ceb54d2f` (fix `ed8edea9`; rebased over the docs-only `5ed264aa`, re-checked: Python 123, Hall-of-Fame/About Vitest 38/0, build, docs, anchors 0). Full merged gate ran on the pre-rebase merge `8aab7c27`: fmt/Clippy/build/16 typechecks 0, Rust 4487/0 (200 ignored), Vitest 3577/0 (255 files), Python 123 (1 skip), five xtask + docs 0, corpus 145/145. Log: `.ai/logs/2026-10-14_claude_issues-20-21.md`.
@@ -11,14 +19,6 @@
 - **Completed:** Owner UI feedback **P1** published (decision record and P2–P4 scope: `docs/goals/ui-feedback-p1-p4.md`; owner accepted every grill-me recommendation). Feature commits `42f53208` (toasts enter with the exit animation reversed; stack clips the slide), `3bb27ff6` (every web editor mount resumes the server's open project read-only, notice names unsaved changes, ADR-0127; browser fixtures answer `GET /api/project` 400 until a project exists via `e2e/server-project-fixture.ts`), `8d047455` (Save As refuses an existing file with `409 fileExists` until `overwrite: true`; browser dialog, desktop relies on the GTK dialog, source-verified Linux only), `9e6be673` (goal file, status). Merge `93d31731` onto `e7a86b7c`. Frozen branch gate: build + 16 typechecks 0, Vitest 3535/0, Chromium 542/0, 15 production configs 262/0, repeat ×3 75/0, Rust 4467/0 (200 ignored), fmt/clippy 0, Python 122 (1 skip), five xtask 0, inputs frozen. Merged result: delta acceptance (upstream docs/data only: build/tsc/Vitest 3535/0, Hall of Fame + P1 specs 12/0, dialogs config 14/0, Python, xtask, diff check 0; Rust carried from the branch gate).
 - **Pending/Next Steps:** **P2** (explorer: chevron, counts, Expand/Collapse all, structure lines with grow/pulse, motion category "lines") in progress by this session in worktree `ui-feedback-p2-20261014`. P3 and P4: fresh sessions, one after another, starter prompt in the goal file.
 - **Notes for Codex oder Claude:** Issue #19 (Codex): `about-hall-of-fame.e2e.ts` now answers `GET /api/project` through `fulfillNoProjectOpen`; keep that line. Every whole-app fixture must answer `GET /api/project` (the app reads it on mount); use the shared helper. `knx_app::project_history::save_as` keeps its replace meaning; HTTP uses `save_as_with(..., overwrite)`. Root checkout untouched (foreign uncommitted research/handover edits preserved there).
-
----
-
-- **Last Agent:** codex
-- **Timestamp:** 2026-10-14 15:02
-- **Completed:** Issue #19 taken in worktree `issue19-docker-20261014`; owner changed scope to linking the GitHub Hall of Fame document, with no bundled snapshot or new build dependency.
-- **Pending/Next Steps:** Prove original Docker frontend failure, replace About snapshot with an explicit external document link, remove unused snapshot parser/allow-list, update tests/docs, build and self-review before publication/closure.
-- **Notes for Codex oder Claude:** Own HallOfFameSection/About tests, hallOfFame modules, about.hallOfFame locale keys and the corresponding browser assertions. P1 owns its project-bootstrap fixture changes in the same e2e file: retain those when integrating. No edits to App/Toast/server behavior, deployment, hardware, releases or private root research. Root stays unchanged apart from final handover prefix.
 
 ---
 

@@ -337,6 +337,10 @@ pub fn plan_memory_download_with_inferences(
                     count: *count,
                 },
             )?)),
+            LoadStep::TaskCtrl2 { .. } => {
+                // Typed product data is not a verified BIM M112 translation.
+                return Err(DownloadPlanError::Unmodelled("LdCtrlTaskCtrl2".into()));
+            }
             LoadStep::Unmodelled { name, .. } => {
                 return Err(DownloadPlanError::Unmodelled(name.clone()))
             }
@@ -654,6 +658,30 @@ mod tests {
         assert_eq!(
             plan_memory_download(&image),
             Err(DownloadPlanError::NotMemoryMapped(Some("MV-07B0".into())))
+        );
+    }
+
+    #[test]
+    fn task_control_2_is_not_silently_translated_by_the_memory_planner() {
+        let mut image = image();
+        image.code.load_procedures[0].steps.insert(
+            1,
+            LoadStep::TaskCtrl2 {
+                lsm: 3,
+                callback: 0,
+                address: 0x0400,
+                segment_0: 0,
+                segment_1: 0,
+            },
+        );
+        assert_eq!(
+            plan_memory_download(&image),
+            Err(DownloadPlanError::Unmodelled("LdCtrlTaskCtrl2".into()))
+        );
+        image.code.mask_version = Some("MV-0025".into());
+        assert_eq!(
+            plan_memory_download(&image),
+            Err(DownloadPlanError::NotMemoryMapped(Some("MV-0025".into())))
         );
     }
 

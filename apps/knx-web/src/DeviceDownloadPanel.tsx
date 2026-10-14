@@ -13,13 +13,15 @@ import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
 import DownloadGatewayHolder from "./DownloadGatewayHolder";
-import { readinessMarks, readinessReason, type DownloadReadinessMark } from "./downloadReadiness";
+import { readinessMarks, type DownloadReadinessMark } from "./downloadReadiness";
 import {
   gatewayNote, gatewayOptionLabel, initialGatewayChoice, isFound, pickedGateway, typedGateway, withDiscoveryDefault,
   type GatewayChoice,
 } from "./downloadGateway";
 import { resolveHandoff, type DownloadActivity, type DownloadHandoff, type HandoffOutcome } from "./downloadHandoff";
 import DownloadVerification from "./DownloadVerification";
+import DownloadSupportNotice from "./DownloadSupportNotice";
+import { guidanceForError, guidanceForMark, type SupportGuidance } from "./downloadSupportGuidance";
 import { planWarnings } from "./downloadVerification";
 import { currentGuideStep, downloadGuide, type GuideMissing, type GuideStepId } from "./downloadGuide";
 import HelpTip from "./HelpTip";
@@ -110,13 +112,14 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   const sinceRef = useRef(0);
   const pollInFlightRef = useRef(false);
   const downloadIdRef = useRef<number | null>(null);
+  const planningRequest = useRef(0);
+  const latestContext = useRef({ project, deviceId, scope });
+  latestContext.current = { project, deviceId, scope };
+  const [refusal, setRefusal] = useState<{ project: ProjectTree | null; deviceId: number | null; scope: DownloadScope; guidance: SupportGuidance } | null>(null);
 
   // A plan belongs to the project it was prepared from; any edit makes it
   // stale, and the server would refuse it anyway (ADR-0045 §3).
-  useEffect(() => {
-    setPlan(null);
-    setUntestedAcknowledgement("");
-  }, [project]);
+  useEffect(() => { dropPlan(); }, [project]);
 
   // A device that left the project or lost its address cannot stay chosen.
   useEffect(() => {
@@ -125,29 +128,28 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
 
   // Offline readiness (no bus access), re-read for every project version:
   // a device the server cannot plan is marked before anything is prepared.
-  const [marks, setMarks] = useState<Map<string, DownloadReadinessMark>>(() => new Map());
-  const [readinessError, setReadinessError] = useState<string | null>(null);
-  // #18: a read in flight is said, and a failed one can be asked again.
-  const [readinessLoading, setReadinessLoading] = useState(false);
   const [readinessAttempt, setReadinessAttempt] = useState(0);
+  const [readiness, setReadiness] = useState<{ project: ProjectTree; marks: Map<string, DownloadReadinessMark>; error: SupportGuidance | null; checking: boolean } | null>(null);
+  const currentReadiness = readiness?.project === project ? readiness : null;
+  const marks = currentReadiness?.marks ?? new Map<string, DownloadReadinessMark>();
   useEffect(() => {
     if (project === null) return;
     let current = true;
-    setReadinessLoading(true);
+    setReadiness({ project, marks: new Map(), error: null, checking: true });
     void (async () => {
       try {
         const next = readinessMarks((await api.getDeviceReadiness()).devices);
-        if (current) { setMarks(next); setReadinessError(null); }
+        if (current) setReadiness({ project, marks: next, error: null, checking: false });
       } catch (reason) {
         // Also a malformed answer: no marks, and the panel says so.
-        if (current) { setMarks(new Map()); setReadinessError(api.errorMessage(reason)); }
-      } finally {
-        if (current) setReadinessLoading(false);
+        if (current) setReadiness({ project, marks: new Map(), error: guidanceForError(reason), checking: false });
       }
     })();
     return () => { current = false; };
   }, [project, readinessAttempt]);
   const selectedMark = address === "" ? undefined : marks.get(address);
+  const selectedRefusal = refusal?.project === project && refusal.deviceId === deviceId && refusal.scope === scope ? refusal.guidance : null;
+  const shownGuidance = selectedRefusal ?? currentReadiness?.error ?? (selectedMark ? guidanceForMark(selectedMark) : null);
 
   const running = status?.status.state === "running";
   const locked = planning || starting || running;
@@ -155,6 +157,10 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   function dropPlan() {
     setPlan(null);
     setUntestedAcknowledgement("");
+    setRefusal(null);
+    setError(null);
+    planningRequest.current += 1;
+    setPlanning(false);
   }
 
   // Device, gateway and scope changes discard a shown plan, like a project edit.
@@ -264,29 +270,38 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
 
   async function preparePlan() {
     setError(null);
+    setRefusal(null);
     setPlan(null);
     setUntestedAcknowledgement("");
     setPlanning(true);
+    const context = { project, deviceId, scope };
+    const request = ++planningRequest.current;
+    const current = () => request === planningRequest.current &&
+      latestContext.current.project === context.project && latestContext.current.deviceId === context.deviceId &&
+      latestContext.current.scope === context.scope;
     try {
       const target = address.trim();
       const asked = scope;
-      setPlan(asked === "complete"
+      const next = asked === "complete"
         ? await api.planDeviceDownload(target)
-        : await api.planDeviceDownload(target, SCOPE_PARTS[asked]));
-      setPlanScope(asked);
+        : await api.planDeviceDownload(target, SCOPE_PARTS[asked]);
+      if (current()) { setPlan(next); setPlanScope(asked); }
     } catch (reason) {
-      setError(api.errorMessage(reason));
+      if (current()) setRefusal({ ...context, guidance: guidanceForError(reason) });
     } finally {
-      setPlanning(false);
+      if (request === planningRequest.current) setPlanning(false);
     }
   }
 
   async function start() {
     if (plan === null) return;
     const shown = plan;
+    const context = { project, deviceId, scope };
     if (shown.untestedAcknowledgement !== null && untestedAcknowledgement !== shown.untestedAcknowledgement) return;
     setError(null);
     if (!(await consent.request(`${shown.address} — ${shown.deviceName}`))) return;
+    if (latestContext.current.project !== context.project || latestContext.current.deviceId !== context.deviceId ||
+      latestContext.current.scope !== context.scope) return;
     setStarting(true);
     try {
       const startArgs: [number, string, string, string?] = [
@@ -305,7 +320,14 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
       setPlan(null);
       await poll();
     } catch (reason) {
-      setError(api.errorMessage(reason));
+      if (latestContext.current.project === context.project && latestContext.current.deviceId === context.deviceId) {
+        const guidance = guidanceForError(reason);
+        setRefusal({ ...context, guidance });
+        if (guidance.action === "prepareAgain") {
+          setPlan(null);
+          setUntestedAcknowledgement("");
+        }
+      }
     } finally {
       setStarting(false);
     }
@@ -383,12 +405,6 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               })}
             </select>
           </label>
-          {selectedMark && (
-            <p className="device-download-readiness form-warning" role="status" data-readiness={selectedMark.kind}>
-              {t(selectedMark.kind === "excluded" ? "deviceDownload.readiness.selectedExcluded" : "deviceDownload.readiness.selected",
-                { reason: readinessReason(selectedMark, t) })}
-            </p>
-          )}
           {pendingRequest && (
             <p className="device-download-handoff" role="status" data-handoff="pending">
               {requested ? t("deviceDownload.handoff.pending", requested) : t("deviceDownload.handoff.pendingUnknown")}
@@ -401,12 +417,12 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
                 {t("deviceDownload.status.retry")}</button></>}
             </p>
           )}
-          {readinessLoading && <p className="device-download-readiness-loading" role="status" data-readiness-loading>
+          {currentReadiness?.checking && <p className="device-download-readiness-loading" role="status" data-readiness-loading>
             {t("deviceDownload.readiness.loading")}</p>}
-          {readinessError && !readinessLoading && <p className="device-download-readiness-unavailable">
-            {t("deviceDownload.readiness.unavailable", { error: readinessError })}{" "}
-            <button type="button" data-readiness-retry onClick={() => setReadinessAttempt((n) => n + 1)}>
-              {t("deviceDownload.readiness.retry")}</button></p>}
+          {shownGuidance && <DownloadSupportNotice key={`${deviceId}-${scope}-${shownGuidance.code}-${shownGuidance.detail}`}
+            guidance={shownGuidance} failedRequest={selectedRefusal !== null} />}
+          {currentReadiness?.error && !currentReadiness.checking && <button type="button" data-readiness-retry
+            onClick={() => setReadinessAttempt((n) => n + 1)}>{t("deviceDownload.readiness.retry")}</button>}
           {handoffOutcome && (
             <p className={handoffOutcome.kind === "selected" ? "device-download-handoff" : "device-download-handoff form-warning"}
               role="status" data-handoff={handoffOutcome.kind}>
@@ -458,7 +474,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             {SCOPES.map((option) => (
               <label key={option}>
                 <input type="radio" name="device-download-scope" value={option} checked={scope === option}
-                  disabled={locked} onChange={() => { setScope(option); setPlan(null); setUntestedAcknowledgement(""); }} />
+                  disabled={locked} onChange={() => { setScope(option); dropPlan(); }} />
                 {t(`deviceDownload.scope.${option}` as const)}
               </label>
             ))}
@@ -562,7 +578,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
           </details>
           <p>{t("deviceDownload.backupBeforeWrite")}</p>
           {plan.support.level === "untested" && (
-            <p className="device-download-plan-hint" data-verify-hint>{t("deviceDownload.verify.planHint")}</p>
+            <><p className="device-download-plan-hint">{t("deviceDownload.help.untested")}</p>
+              <p className="device-download-plan-hint" data-verify-hint>{t("deviceDownload.verify.planHint")}</p></>
           )}
           {plan.untestedAcknowledgement !== null && (
             <label className="device-download-acknowledgement">

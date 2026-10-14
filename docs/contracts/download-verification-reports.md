@@ -43,6 +43,15 @@ could identify an installation needs an ADR.
   issue form (public) or mails it to `issue@knxbench.com` (not public).
   Nothing is sent automatically.
 
+## Pre-plan support inquiries remain separate
+
+The existing mailbox `issue@knxbench.com` also accepts device-programming
+support-gap inquiries. A refusal before a connection has no ended-run report:
+use `analysis.yml` or an unsent inquiry without attachments instead. Opening a
+form/draft does not submit/send; email is not a guarantee of delivery, privacy,
+encryption, retention or deletion. No private-original intake is confirmed by
+this scope amendment. See [support guidance](device-programming-support-guidance.md).
+
 ## Maintainer review
 
 1. **Read the report.** Check `kind`/`format`, that `outcome.completed` is

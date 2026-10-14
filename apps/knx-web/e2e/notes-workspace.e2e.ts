@@ -284,3 +284,50 @@ test("en 1440: reloading or closing the tab over a note draft asks the browser f
   expect(f.applied).toBe(0);
   expect(f.unexpected).toEqual([]);
 });
+
+// Goal B2: a reload is what the desktop webview can do (WebKitGTK's context
+// menu offers Reload); the guard is the same listener in every engine. Typed
+// with the keyboard: Firefox only asks after a real user interaction.
+test("en 1440: a reload over a note draft asks first; staying keeps it, leaving reloads", async ({ page }) => {
+  const m: Catalogue = en;
+  const f = await fixture(page, "en", "porcelain", 1440);
+  const quiet: string[] = [];
+  const listen = (dialog: Dialog) => { quiet.push(dialog.type()); void dialog.dismiss(); };
+  page.on("dialog", listen);
+  // This fixture reloads to the start page; the editor is one navigation away.
+  const backToNotes = async () => {
+    await page.goto("/?view=editor");
+    return openNotes(page, m, 1440);
+  };
+  await openNotes(page, m, 1440);
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  expect(quiet, "no draft, no question").toEqual([]);
+  page.off("dialog", listen);
+
+  const note = (await backToNotes()).locator("section").first();
+  const title = note.getByLabel("Title", { exact: true });
+  await title.click();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type("Unapplied thought");
+  const stay = page.waitForEvent("dialog");
+  void page.reload().catch(() => undefined);
+  const first = await stay;
+  expect(first.type()).toBe("beforeunload");
+  await first.dismiss();
+  await expect(title).toHaveValue("Unapplied thought");
+
+  const leave = page.waitForEvent("dialog");
+  const reloaded = page.waitForEvent("load");
+  void page.reload().catch(() => undefined);
+  const second = await leave;
+  expect(second.type()).toBe("beforeunload");
+  await second.accept();
+  await reloaded;
+  // Leaving was the user's choice: back in Notes, the stored title is shown.
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect((await backToNotes()).locator("section").first().getByLabel("Title", { exact: true }))
+    .toHaveValue("Check the kitchen actuator");
+  expect(f.applied).toBe(0);
+  expect(f.unexpected).toEqual([]);
+});

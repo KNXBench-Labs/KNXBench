@@ -92,5 +92,34 @@
     "Native WebKitGTK external-link behavior not newly exercised",
     "Rust workspace/private corpus not rerun for this UI-only scope"
   ],
-  "integration_acceptance": "pending"
+  "integration_acceptance": {
+    "merge_commit": "655f056e3062ad78ea821c9aae7d9186c241d727",
+    "upstream_base": "871cc2859be0ae2dc375d0b545feed6d42d6a663",
+    "source_commit": "72738fa4d715f7fbf272c700eefacf00da5dd6b2",
+    "stage_count": 31,
+    "all_stage_exits_zero": true,
+    "inputs_frozen": true,
+    "vitest": { "passed": 3547, "failed": 0, "files": 255 },
+    "chromium": { "passed": 546, "failed": 0 },
+    "production_browser": { "passed": 18, "failed": 0 },
+    "repeat_browser": { "passed": 12, "failed": 0 },
+    "tooling": { "tests_run": 123, "skipped": 1, "failed": 0 },
+    "docker": {
+      "image_build_exit": 0,
+      "network_none_link_smoke": "HTTP 200 version/index/asset, canonical link in bundle, source stamp g655f056e",
+      "repo_smoke_test_exit": 0,
+      "repo_smoke_scope": "apps/knx-server/scripts/smoke-test.sh: HTTPS, auth, save, reopen on isolated port 18419"
+    },
+    "rust": "not rerun: this package changes no Rust; upstream #20/#21 Rust gate is recorded by its owner"
+  },
+  "superseded_attempts": [
+    { "merge": "04ca7cf2", "disposition": "first run interrupted by a session crash; rerun Chromium 530/1 (P1 toast spec under load); not accepted; superseded by newer main" },
+    { "merge": "71b9a346", "disposition": "Chromium 537/5: communication-objects New-project timeouts at load ~50; isolated rerun 70/70 on candidate and main; superseded by newer main" }
+  ],
+  "observed_flake": {
+    "spec": "apps/knx-web/e2e/toast.e2e.ts (P1; 800 ms animationend windows)",
+    "under_load": "2/140 and 3/170 failures on candidate trees",
+    "normal_load_interleaved": { "main_07df8a4d": "340/340", "candidate_71b9a346": "340/340" },
+    "classification": "timing-sensitive under host load; not attributed to this diff (no toast source, fixture or keyframe change); passed in the accepted gate; no test change, retry or skip"
+  }
 }

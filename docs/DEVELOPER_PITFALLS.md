@@ -132,6 +132,15 @@ already found lying in the grass.
   it to an unrelated feature, weaken the assertion or silently retry it. Retain
   failures and compare against an immutable baseline before changing anything.
   [Receipt](evidence/task-status-shimmer-2026-10-14.json).
+- **P1's toast entry/exit spec is timing-sensitive under host load.**
+  `toast.e2e.ts` waits 800 ms for `animationend` after a dismissal. While parallel
+  gates pushed the load average past ~10, it failed 2/140 and 3/170 times on the
+  issue #19 candidate; at normal load interleaved runs passed 340/340 on both
+  `main` `07df8a4d` and the candidate, and the accepted #19 gate passed it. The
+  same load also timed out `communication-objects.e2e.ts` on its first click
+  (70/70 when rerun alone). Record `uptime` with a red browser run and compare
+  against `main` before blaming a diff; do not widen the window or retry silently.
+  [Receipt](evidence/issue19-docker-hall-link-2026-10-14.json).
 
 - **A browser fixture must keep what `PUT /api/settings` stored.** The app reads
   `/api/settings` again every few seconds (`settingsStore.ts`), so a fixture that

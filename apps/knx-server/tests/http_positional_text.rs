@@ -114,9 +114,10 @@ fn state(page: Option<&str>) -> (tempfile::TempDir, Arc<knx_server::AppState>) {
     project
         .devices
         .insert_com_object(object(1, "Page 1 - {{0:Icon 1}}", Layer::Program));
-    project
-        .devices
-        .insert_com_object(object(2, "Switch {{0:Output}}", Layer::Program));
+    // As ETS 6 stores it: the device-local `O-<n>_R-<m>` id, no program prefix.
+    let mut switch = object(2, "Switch {{0:Output}}", Layer::Program);
+    switch.source = source("O-2_R-1");
+    project.devices.insert_com_object(switch);
     project
         .devices
         .insert_com_object(object(3, "Dim {{0}}", Layer::Program));

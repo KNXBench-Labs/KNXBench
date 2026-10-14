@@ -19,6 +19,7 @@ import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 import { writeDraggedGroupAddress } from "./groupAddressDrag";
 import { installationLabel } from "./installationPresentation";
+import { useTreePulse } from "./treeLines";
 import type { ImportFindingSeverity } from "./importFindings";
 
 const DEVICE_DRAG_MIME = "application/x-knxbench-device-id";
@@ -69,6 +70,30 @@ function buildingPartKindLabel(t: Translate, kind: string): string {
 
 const RevealCompletionContext = createContext<((generation: number) => void) | undefined>(undefined);
 
+/**
+ * Expand all / Collapse all (owner feedback P2): a numbered command that every
+ * mounted node obeys once. Nodes mounted later keep their own default, so a
+ * search reveal opening a branch is never overruled by an older command.
+ */
+type ExpansionCommand = { generation: number; open: boolean };
+const ExpansionContext = createContext<ExpansionCommand | null>(null);
+/** Collapse all keeps nodes above this depth open: the installations stay, their sections close. */
+const COLLAPSE_ALL_KEEPS_DEPTH = 1;
+/** How deep the nodes rendered here sit; a node's own list is one deeper. */
+const DepthContext = createContext(0);
+/** How long a list the user just opened lets its lines grow (see styles.css). */
+const TREE_GROW_MS = 1_200;
+
+/** The toggle's icon; CSS turns it a quarter when the node is open. */
+function Chevron() {
+  return (
+    <svg className="tree-chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.8"
+        strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function TreeNode(props: {
   label: string;
   description?: string;
@@ -86,10 +111,35 @@ function TreeNode(props: {
   scrollOnReveal?: boolean;
   renameKind?: "device" | "group_address";
   renameId?: number;
+  /** Real entries below this node (no "add" rows), shown while it is collapsed. */
+  count?: number;
 }) {
+  const t = useTranslate();
   const [open, setOpen] = useState(true);
   const labelRef = useRef<HTMLButtonElement>(null);
   const onRevealComplete = useContext(RevealCompletionContext);
+  const depth = useContext(DepthContext);
+  const expansion = useContext(ExpansionContext);
+  const appliedExpansion = useRef(expansion?.generation ?? 0);
+  // Lines grow only below a node the user just opened (a click, the keyboard,
+  // Expand all), never on load or reveal: that keeps the animation where the
+  // eye already is, and a large project does not animate thousands of rows.
+  const [growing, setGrowing] = useState(false);
+  const growTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(growTimer.current), []);
+  function openByHand(next: boolean) {
+    setOpen(next);
+    window.clearTimeout(growTimer.current);
+    setGrowing(next);
+    if (next) growTimer.current = window.setTimeout(() => setGrowing(false), TREE_GROW_MS);
+  }
+  useEffect(() => {
+    if (!expansion || expansion.generation === appliedExpansion.current) return;
+    appliedExpansion.current = expansion.generation;
+    const next = expansion.open || depth < COLLAPSE_ALL_KEEPS_DEPTH;
+    if (next !== open) openByHand(next);
+    // Only a new command applies; `open` is read, not followed.
+  }, [expansion, depth]);
   useEffect(() => {
     if (props.revealGeneration !== undefined) setOpen(true);
   }, [props.revealGeneration]);
@@ -107,13 +157,13 @@ function TreeNode(props: {
   // BuildingItem) keeps the old whole-row-toggles behavior. A node with
   // `onSelect` (DeviceItem, BuildingItem) selects on the label instead —
   // BuildingItem still gets its own dedicated chevron to expand/collapse.
-  const labelClick = props.onSelect ?? (hasChildren ? () => setOpen(!open) : undefined);
+  const labelClick = props.onSelect ?? (hasChildren ? () => openByHand(!open) : undefined);
   return (
     <li>
       <span className="tree-row">
         {hasChildren && (
-          <button type="button" className="tree-toggle" aria-label={props.label} aria-expanded={open} onClick={() => setOpen(!open)}>
-            {open ? "▾" : "▸"}
+          <button type="button" className="tree-toggle" aria-label={props.label} aria-expanded={open} onClick={() => openByHand(!open)}>
+            <Chevron />
           </button>
         )}
         <button
@@ -138,8 +188,20 @@ function TreeNode(props: {
         >
           {props.label}
         </button>
+        {hasChildren && !open && props.count !== undefined && (
+          <span className="tree-count">
+            <span aria-hidden="true">{props.count}</span>
+            <span className="sr-only">{t("explorer.childCount", { count: props.count })}</span>
+          </span>
+        )}
       </span>
-      {hasChildren && open && <ul>{props.children}</ul>}
+      {hasChildren && open && (
+        <DepthContext.Provider value={depth + 1}>
+          <ul style={{ "--tree-depth": depth + 1 } as React.CSSProperties} data-tree-grow={growing ? "" : undefined}>
+            {props.children}
+          </ul>
+        </DepthContext.Provider>
+      )}
     </li>
   );
 }
@@ -422,6 +484,7 @@ function LineItem(
       onDrop={(event) => props.onDeviceDropOnLine(line, event)}
       revealGeneration={revealGeneration(props.revealRequest, lineReveals)}
       scrollOnReveal={selectionIs(props.revealRequest, "line", line.id)}
+      count={line.devices.length}
     >
       {line.devices.map((d) => (
         <DeviceItem
@@ -465,6 +528,7 @@ function AreaItem(
       onSelect={() => onSelect({ kind: "area", id: area.id })}
       revealGeneration={revealGeneration(props.revealRequest, areaReveals)}
       scrollOnReveal={selectionIs(props.revealRequest, "area", area.id)}
+      count={area.lines.length}
     >
       {area.lines.map((l) => (
         <LineItem
@@ -790,6 +854,7 @@ function BuildingItem(
       onDrop={(event) => props.onDeviceDropOnBuildingPart(building, event)}
       revealGeneration={revealGeneration(props.revealRequest, buildingReveals)}
       scrollOnReveal={selectionIs(props.revealRequest, "building_part", building.id)}
+      count={building.children.length + building.devices.length}
     >
       {building.children.map((c) => (
         <BuildingItem
@@ -862,6 +927,7 @@ function GroupRangeItem(
       onSelect={() => onSelect({ kind: "group_range", id: range.id })}
       revealGeneration={revealGeneration(props.revealRequest, rangeReveals)}
       scrollOnReveal={selectionIs(props.revealRequest, "group_range", range.id)}
+      count={children.length}
     >
       {children.map((c) => (
         <GroupRangeItem
@@ -924,7 +990,8 @@ function InstallationItem(
       selected={selection?.kind === "installation" && selection.id === installation.id}
       onSelect={() => onSelect({ kind: "installation", id: installation.id })}
       revealGeneration={revealGeneration(props.revealRequest, installationReveals)}>
-      <TreeNode label={t("explorer.topology")} revealGeneration={revealGeneration(props.revealRequest, topologyReveals)}>
+      <TreeNode label={t("explorer.topology")} revealGeneration={revealGeneration(props.revealRequest, topologyReveals)}
+        count={installation.topology.length}>
         {installation.topology.map((a) => (
           <AreaItem
             key={a.id}
@@ -945,7 +1012,8 @@ function InstallationItem(
         ))}
         <NewAreaRow installationId={installation.id} onCreated={onTreeUpdate} />
       </TreeNode>
-      <TreeNode label={t("explorer.buildings")} revealGeneration={revealGeneration(props.revealRequest, buildingsReveal)}>
+      <TreeNode label={t("explorer.buildings")} revealGeneration={revealGeneration(props.revealRequest, buildingsReveal)}
+        count={installation.buildings.length}>
         {installation.buildings.map((b) => (
           <BuildingItem
             key={b.id}
@@ -967,7 +1035,8 @@ function InstallationItem(
         ))}
         <NewBuildingPartRow installationId={installation.id} onCreated={onTreeUpdate} />
       </TreeNode>
-      <TreeNode label={t("explorer.unassigned")} revealGeneration={revealGeneration(props.revealRequest, unassignedReveal)}>
+      <TreeNode label={t("explorer.unassigned")} revealGeneration={revealGeneration(props.revealRequest, unassignedReveal)}
+        count={installation.unassigned.length}>
           {installation.unassigned.map((d) => (
             <DeviceItem
               key={d.id}
@@ -989,7 +1058,8 @@ function InstallationItem(
           ))}
           <AddDeviceRow onAdd={() => onAddDevice({ lineId: null, installationId: installation.id })} />
         </TreeNode>
-      <TreeNode label={t("explorer.groupAddresses")} revealGeneration={revealGeneration(props.revealRequest, groupAddressesReveal)}>
+      <TreeNode label={t("explorer.groupAddresses")} revealGeneration={revealGeneration(props.revealRequest, groupAddressesReveal)}
+        count={installation.group_addresses.length}>
         {installation.group_addresses.map((ga) => (
           <GroupAddressItem
             key={ga.id}
@@ -1004,7 +1074,8 @@ function InstallationItem(
         <NewGroupAddressRow ranges={installation.group_ranges} installationId={installation.id}
           onCreated={onTreeUpdate} />
       </TreeNode>
-      <TreeNode label={t("explorer.groupRanges")} revealGeneration={revealGeneration(props.revealRequest, groupRangesReveal)}>
+      <TreeNode label={t("explorer.groupRanges")} revealGeneration={revealGeneration(props.revealRequest, groupRangesReveal)}
+        count={nestGroupRanges(installation.group_ranges).length}>
         {nestGroupRanges(installation.group_ranges).map((node) => (
           <GroupRangeItem
             key={node.range.id}
@@ -1037,6 +1108,7 @@ export default function ProjectExplorer(
   const { tree, onTreeUpdate, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
   const [dragSource, setDragSource] = useState<DragSource | null>(null);
+  const [expansion, setExpansion] = useState<ExpansionCommand | null>(null);
   // MODEL-01 / ADR-0070: a device can be moved inside the one installation
   // whose topology places it; each installation only accepts its own.
   const topologyDevices = tree.installations.flatMap((installation) => [
@@ -1117,9 +1189,15 @@ export default function ProjectExplorer(
     }
   }
 
+  const explorerRef = useRef<HTMLDivElement>(null);
+  const pulsing = useTreePulse(explorerRef);
+  const expandAll = (open: boolean) =>
+    setExpansion((current) => ({ generation: (current?.generation ?? 0) + 1, open }));
+
   return (
     <RevealCompletionContext.Provider value={props.onRevealComplete}>
-    <div className="project-explorer" onKeyDown={(e) => {
+    <ExpansionContext.Provider value={expansion}>
+    <div ref={explorerRef} className="project-explorer" data-tree-pulse={pulsing ? "" : undefined} onKeyDown={(e) => {
       if (!(e.target instanceof HTMLButtonElement) || !e.target.matches(".tree-label, .tree-toggle")) return;
       const current = e.target;
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
@@ -1133,6 +1211,16 @@ export default function ProjectExplorer(
       const index = labels.indexOf(current);
       labels[e.key === "Home" ? 0 : e.key === "End" ? labels.length - 1 : Math.max(0, Math.min(labels.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)))]?.focus();
     }}>
+      <div className="explorer-toolbar">
+        <button type="button" className="explorer-tool" aria-label={t("explorer.expandAll")} title={t("explorer.expandAll")}
+          onClick={() => expandAll(true)}>
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4" /><path d="M4 2.5h8M4 13.5h8" /></svg>
+        </button>
+        <button type="button" className="explorer-tool" aria-label={t("explorer.collapseAll")} title={t("explorer.collapseAll")}
+          onClick={() => expandAll(false)}>
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 10l4-4 4 4" /><path d="M4 2.5h8M4 13.5h8" /></svg>
+        </button>
+      </div>
       <ul className="tree-root">
         <TreeNode
           label={t("explorer.project")}
@@ -1179,6 +1267,7 @@ export default function ProjectExplorer(
         </footer>
       )}
     </div>
+    </ExpansionContext.Provider>
     </RevealCompletionContext.Provider>
   );
 }

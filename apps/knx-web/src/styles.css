@@ -3379,6 +3379,76 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 }
 .workbench .tree-label, .workbench .tree-toggle { background: transparent; color: var(--knx-foreground) !important; border: 0; box-shadow: none; font-weight: 400; text-align: left; white-space: normal; }
 .workbench .tree-toggle { padding: 0; min-width: 18px; flex: 0 0 18px; }
+/* Owner feedback P2: the explorer shows that a node opens and how its
+   structure hangs together. The chevron turns a quarter when the node is
+   open; a collapsed node shows how many entries it holds; lines connect each
+   node to its children, grow below a node the user opens and pulse from the
+   root about every twelve seconds on the rows treeLines.ts finds visible. The "lines" motion category decides what moves:
+   standard grows and pulses, subtle only grows, off keeps the lines still. */
+.workbench .project-explorer {
+  --tree-line: color-mix(in srgb, var(--knx-muted) 75%, var(--knx-surface));
+  --tree-row-mid: calc(var(--knx-control-height) / 2);
+  --tree-indent: 18px;
+  --tree-stem: 10px;
+}
+.workbench .project-explorer .tree-root li > ul { padding-left: var(--tree-indent); }
+.workbench .tree-toggle { min-width: 20px; flex: 0 0 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 4px; }
+.workbench .tree-toggle:hover:not(:disabled) { background: color-mix(in srgb, var(--knx-accent) 12%, transparent); transform: none; box-shadow: none; }
+.workbench .tree-chevron { width: 14px; height: 14px; color: var(--knx-muted); }
+.workbench .tree-toggle[aria-expanded="true"] .tree-chevron { transform: rotate(90deg); }
+.workbench .tree-toggle:is(:hover, :focus-visible) .tree-chevron { color: var(--knx-accent); }
+.workbench .tree-count {
+  flex: none; min-width: 1.5em; margin-left: 4px; padding: 0 6px; border-radius: 999px;
+  background: color-mix(in srgb, var(--knx-muted) 18%, transparent); color: var(--knx-muted);
+  font-size: 11px; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums;
+}
+.workbench .explorer-toolbar { display: flex; justify-content: flex-end; gap: 4px; margin: -6px 0 2px; }
+.workbench .explorer-tool {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; min-height: 24px; padding: 0;
+  border: 0; border-radius: 4px; background: transparent; color: var(--knx-muted) !important; box-shadow: none;
+}
+.workbench .explorer-tool svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.workbench .explorer-tool:hover:not(:disabled) { background: color-mix(in srgb, var(--knx-accent) 12%, transparent); color: var(--knx-accent) !important; transform: none; box-shadow: none; }
+
+/* Each child draws its stretch of the parent's stem (::before) and its own
+   tick towards its row (::after); the last child's stem stops at its row. */
+.workbench .project-explorer .tree-root li { position: relative; }
+.workbench .project-explorer .tree-root li > ul > li::before,
+.workbench .project-explorer .tree-root li > ul > li::after {
+  content: ""; position: absolute; left: calc(var(--tree-stem) - var(--tree-indent));
+  background: var(--tree-line); pointer-events: none;
+}
+.workbench .project-explorer .tree-root li > ul > li::before { top: 0; bottom: 0; width: 1px; transform-origin: top; }
+.workbench .project-explorer .tree-root li > ul > li:last-child::before { bottom: auto; height: var(--tree-row-mid); }
+.workbench .project-explorer .tree-root li > ul > li::after { top: var(--tree-row-mid); width: calc(var(--tree-indent) - var(--tree-stem)); height: 1px; transform-origin: left; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .workbench .tree-chevron { transition: transform var(--knx-transition-duration) var(--knx-motion-easing), color var(--knx-transition-duration) var(--knx-motion-easing); }
+  /* Durations derive from the motion level's --knx-transition-duration (200ms
+     at standard): grow 1.8x, ticks 1.2x after 1.2x, pulse 4.5x with 0.8x per
+     level. treeLines.ts's pulse window covers that at standard. */
+  /* Grow: only the list a node the user just opened (ProjectExplorer's
+     TREE_GROW_MS marks it); the stem first, then the ticks. */
+  :root:is([data-motion-lines="standard"], [data-motion-lines="subtle"]) .workbench .project-explorer ul[data-tree-grow] > li::before {
+    animation: knx-tree-grow-down calc(var(--knx-transition-duration) * 1.8) var(--knx-motion-easing) both;
+  }
+  :root:is([data-motion-lines="standard"], [data-motion-lines="subtle"]) .workbench .project-explorer ul[data-tree-grow] > li::after {
+    animation: knx-tree-grow-right calc(var(--knx-transition-duration) * 1.2) var(--knx-motion-easing) calc(var(--knx-transition-duration) * 1.2) both;
+  }
+  /* Pulse: only the rows treeLines.ts found visible, one level after the other. */
+  :root[data-motion-lines="standard"] .workbench .project-explorer li[data-tree-pulse-row]::before {
+    animation: knx-tree-pulse calc(var(--knx-transition-duration) * 4.5) ease-in-out calc(var(--tree-depth, 1) * var(--knx-transition-duration) * 0.8);
+  }
+  :root[data-motion-lines="standard"] .workbench .project-explorer li[data-tree-pulse-row]::after {
+    animation: knx-tree-pulse calc(var(--knx-transition-duration) * 4.5) ease-in-out calc((var(--tree-depth, 1) * 0.8 + 0.6) * var(--knx-transition-duration));
+  }
+}
+@keyframes knx-tree-grow-down { from { transform: scaleY(0); } to { transform: none; } }
+@keyframes knx-tree-grow-right { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes knx-tree-pulse {
+  0%, 100% { background-color: var(--tree-line); }
+  40% { background-color: var(--knx-accent); }
+}
 .workbench .tree-label.selected { background: color-mix(in srgb, var(--knx-accent) 14%, transparent); color: var(--knx-accent) !important; }
 .fs-picker-list button { display: block; width: 100%; background: transparent; color: var(--knx-foreground) !important; text-align: left; box-shadow: none; border: 0; }
 .fs-picker-upload-input { display: block; max-width: 100%; }

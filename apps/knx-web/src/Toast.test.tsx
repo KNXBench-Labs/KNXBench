@@ -129,7 +129,7 @@ describe("ToastStack", () => {
     const toast = host!.querySelector(".toast--achievement")!;
     expect(toast.classList.contains("toast--leaving")).toBe(true);
     await act(async () => {
-      toast.dispatchEvent(Object.assign(new Event("animationend", { bubbles: true }), { animationName: "knx-achievement-in" }));
+      toast.dispatchEvent(Object.assign(new Event("animationend", { bubbles: true }), { animationName: "knx-toast-in" }));
     });
     expect(onExited).not.toHaveBeenCalled();
     await act(async () => {

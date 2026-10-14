@@ -186,3 +186,11 @@ already found lying in the grass.
   than skips late frames will refuse on a busy host. Pause the page clock and step
   one interval per frame after the frame's progress appears; the work itself stays
   real. `pauseAt` must be ahead of the page's flowing time (use `Date.now() + 1000`).
+- **A hovered element that moves keeps its hover only until the next frame.**
+  Chromium recomputes hover (and fires `mouseleave`) on a rendered frame. Under a
+  paused page clock with nothing animating, a card that slid away from the pointer
+  still counts as hovered, so the spec passes by luck; any new animation on the page
+  (the explorer's structure-line pulse) makes it fail. Hover what stays put.
+- **Never run ad-hoc Playwright in a worktree while its gate runs there.** The
+  default config and several production configs share `target/playwright/knx-web`,
+  and each run clears it at start: the gate's traces vanish (`ENOENT … .trace`).

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-14 22:43
+- **Completed:** Issue #22 offline prerequisite delivered on main as merge 171a63be (feature eb0b277b): exact-shape `LdCtrlTaskCtrl2` parsing in knx-productdb, pure ten-octet TaskCtrl2 property-record encoder in knx-core (MP §3.31.3.4 p.141), memory planner still refuses typed TaskCtrl2 and `MV-0025` stays `NotMemoryMapped`. Contract `docs/contracts/system2-download-prerequisites.md`; COMPATIBILITY/IMPORT_EXPORT/OPEN_WORK/IMPLEMENTATION_STATUS updated. Frozen merged gate on 171a63be: all 17 stages 0 (Rust 4495/0, 201 ignored; Vitest 3559/0 in 256 files; corpus 146/146 in 33 targets incl. the opt-in exact Siemens fixture; clippy, bindings, xtask checks, docs). Two mutants (segment swap, skipped planner arm) killed. Issue comment 6177110239 lists the exact next steps and was edited to point at the published contract; read back, issue OPEN. Claim on #22 released.
+- **Pending/Next Steps:** #22 stays OPEN and blocked on: System-2 image/GrOT/association table contract, full 21-step product procedure incl. machine 5 and hardware-property compare, `allocation_subtype_for(0x0025)` profile, durable property+memory recovery, offline acceptance; only then a separately authorised hardware test (firmware 25N03-V04+ to confirm with reporter). Do not lift the mask gate before all of that exists.
+- **Notes for Codex oder Claude:** No hardware or bus activity happened. Private Siemens package is only read at runtime by the ignored test `crates/knx-productdb/tests/system2_program_code.rs` (`KNXBENCH_PRODUCT_CORPUS` or `OriginalData/ProductDatabases`). Existing System-B `Downloader` is simulator-only and not this procedure; the `0701` table writer must not be reused for System 2 without evidence. Log `.ai/logs/2026-10-14_claude_issue22-system2-prerequisites.md`.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-14 21:58
 - **Completed:** P3 (changes not yet programmed, per part; goal `docs/goals/ui-feedback-p1-p4.md`): taken by Claude in `feature/p3-pending-programming-20261014` (worktree `KNXBench.worktrees/p3-pending-programming-20261014`, base 7b9620cf). Surfaces: knx-edit/knx-app edit commands setting the persisted `*_loaded` flags, download/IA-programming clearing in knx-server, manual mark command, device-view "Programming" column/filter and explorer dot in knx-web.
 - **Pending/Next Steps:** Map download/edit/binding paths, test-first implementation, review, RUST=1 gate plus 15 extra configs, merge on fresh main, push. P4 stays after P3.

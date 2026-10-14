@@ -83,6 +83,24 @@ async fn configuration_and_missing_application_have_distinct_codes_before_any_se
 }
 
 #[tokio::test]
+async fn invalid_gateway_and_missing_plan_name_the_correction_without_a_tunnel() {
+    let app = knx_server::app(Arc::new(knx_server::AppState::default()), None);
+    for (gateway, status, kind) in [
+        ("invalid", StatusCode::BAD_REQUEST, "downloadGatewayInvalid"),
+        ("192.0.2.10:3671", StatusCode::CONFLICT, "downloadPlanStale"),
+    ] {
+        let (actual, body) = post(
+            app.clone(),
+            "/api/device-download/start",
+            json!({"planId":0,"gateway":gateway,"confirmation":"I confirm download to 1.1.10"}),
+        )
+        .await;
+        assert_eq!(actual, status);
+        assert_eq!(body["kind"], kind);
+    }
+}
+
+#[tokio::test]
 async fn missing_database_is_not_an_unsupported_device() {
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state, None);

@@ -264,3 +264,58 @@ async fn without_a_stored_value_the_empty_product_default_counts_as_empty() {
         fill("Switch {{0:Output}}", "TemplateDefault")
     );
 }
+
+/// A fill that would not fit is refused like any over-budget product text:
+/// nothing is shortened, the whole detail is refused, and nothing changes.
+#[tokio::test]
+async fn a_fill_that_would_not_fit_refuses_the_detail_and_shortens_nothing() {
+    let quarter = knx_productdb::dynamic::MAX_TEXT_PROJECTION_WORK / 4;
+    let huge = "X".repeat(quarter);
+    let program = PROGRAM
+        .replace(
+            r#"<TypeText SizeInBit="240" />"#,
+            &format!(r#"<TypeText SizeInBit="{}" />"#, quarter * 8),
+        )
+        .replace(
+            r#"Text="Icon name" Value="Lamp""#,
+            &format!(r#"Text="Icon name" Value="{huge}""#),
+        );
+    let dir = tempfile::tempdir().unwrap();
+    let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    knx_productdb::ingest_file(&products, "M-1/Hardware.xml", HARDWARE.as_bytes()).unwrap();
+    knx_productdb::ingest_file(&products, "M-1/A.xml", program.as_bytes()).unwrap();
+    let (_old, state) = state(None);
+    *state.product_db.as_ref().unwrap().lock().unwrap() = products;
+    // Five names read the quarter-budget icon default: 5/4 of the budget.
+    {
+        let mut project = state.project.lock().unwrap();
+        let project = project.as_mut().unwrap();
+        for n in 1..=5u32 {
+            let mut com = object(n, "{{0}}", Layer::Program);
+            com.source = source("A-1_O-1_R-1");
+            project.devices.insert_com_object(com);
+        }
+    }
+    let before = state.project.lock().unwrap().as_ref().unwrap().clone();
+    let response = knx_server::app(Arc::clone(&state), None)
+        .oneshot(
+            Request::builder()
+                .uri("/api/device/1")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let body: Value = serde_json::from_slice(
+        &axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        body,
+        serde_json::json!({"error": "device text projection budget exhausted"})
+    );
+    assert_eq!(state.project.lock().unwrap().as_ref().unwrap(), &before);
+}

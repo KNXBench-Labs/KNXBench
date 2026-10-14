@@ -60,6 +60,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(action).toHaveAttribute("href", "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10");
     await action.focus(); await expect(action).toBeFocused();
     expect(await action.evaluate(node => { const r = node.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === node; })).toBe(true);
+    // Resting geometry: a toast slides in from the right.
+    await toast.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
     const box = await toast.boundingBox(); expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(width);
     if (process.env.UPDATE_SCREENSHOTS) await page.screenshot({ path: `${process.env.UPDATE_SCREENSHOTS}/toast-${language}-${width}.png` });
     const opening = page.waitForEvent("popup"); await action.click(); const releasePage = await opening;

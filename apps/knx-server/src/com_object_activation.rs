@@ -232,8 +232,10 @@ impl ChannelTable {
             std::collections::hash_map::Entry::Occupied(entry) => entry.into_mut(),
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let raw = channel_text(owner, activation, channel_texts, budget)?;
+                // Only a text with a placeholder is filled; any other text is
+                // kept as it is and costs the budget nothing more (ADR-0126).
                 let (text, text_fill) = match (raw, texts) {
-                    (Some(raw), Some(texts)) => {
+                    (Some(raw), Some(texts)) if raw.contains("{{") => {
                         let filled = texts.fill_channel(
                             &raw,
                             owner.scope.as_deref(),

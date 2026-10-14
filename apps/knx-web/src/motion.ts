@@ -111,10 +111,12 @@ export function useMotion(): {
   return { level, setLevel, style, setStyle };
 }
 
-export type MotionCategory = "toasts" | "achievements" | "flow";
+export type MotionCategory = "toasts" | "achievements" | "flow" | "lines";
 export type CategoryMotion = "inherit" | "off" | "subtle";
-export const MOTION_CATEGORIES = ["toasts", "achievements", "flow"] as const;
-const CATEGORY_KEYS: Record<MotionCategory, string> = { toasts: "motionToasts", achievements: "motionAchievements", flow: "motionFlow" };
+// `lines`: the project explorer's structure lines (owner feedback P2):
+// standard grows and pulses them, subtle only grows them, off draws them still.
+export const MOTION_CATEGORIES = ["toasts", "achievements", "flow", "lines"] as const;
+const CATEGORY_KEYS: Record<MotionCategory, string> = { toasts: "motionToasts", achievements: "motionAchievements", flow: "motionFlow", lines: "motionLines" };
 export function loadMotionCategory(storage: Pick<Storage, "getItem">, category: MotionCategory): CategoryMotion {
   const raw = storage.getItem(CATEGORY_KEYS[category]);
   return raw === "off" || raw === "subtle" ? raw : "inherit";

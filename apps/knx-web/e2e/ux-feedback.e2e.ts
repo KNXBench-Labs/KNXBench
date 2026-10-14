@@ -124,11 +124,14 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(await duration(".toast--error")).toBe("0.24s");
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/two-errors-${language}-${width}.png` });
 
-    // The pointer holds one card; the other runs out on its own clock.
-    await cards.nth(0).hover();
+    // The pointer holds one card; the other runs out on its own clock. Hold
+    // the bottom card: the stack sits on it, so it stays under the pointer
+    // when the card above leaves (a card above would slide away, and Chromium
+    // reports that mouseleave on the next rendered frame).
+    await cards.nth(1).hover();
     await page.clock.runFor(3 * TOAST_MS);
     await expect(page.locator(".toast--error")).toHaveCount(1);
-    await expect(page.locator(".toast--error")).toContainText("Raw refused import 2:");
+    await expect(page.locator(".toast--error")).toContainText("Raw refused import 3:");
     await page.mouse.move(1, 1);
     await page.clock.runFor(TOAST_MS + TOAST_EXIT_FALLBACK_MS);
     await expect(page.locator(".toast--error")).toHaveCount(0);

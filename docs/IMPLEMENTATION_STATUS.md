@@ -14,6 +14,23 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-14 — Owner UI feedback P2 ([goal](goals/ui-feedback-p1-p4.md)): the
+  project explorer shows what opens. A chevron turns a quarter when a branch
+  opens, a closed branch shows how many entries it holds, and Expand all /
+  Collapse all sit above the tree (Collapse all keeps installations open).
+  Thin structure lines connect every node to its children; they grow below a
+  branch the user opens, and about every twelve seconds a pulse runs from the
+  root through the rows on screen (`treeLines.ts`; nothing pulses in a hidden
+  tab). New motion category "Structure lines" (`motionLines`): inherit grows
+  and pulses, subtle only grows, off keeps the lines still; global Off and OS
+  reduced motion win in CSS. Measured on a synthetic 2,394-row tree (production build,
+  noisy host at load 8): a pulse marked 4 on-screen rows and cost about what
+  lines off cost (2 versus 3 long tasks, style 12 ms); the first draft that
+  pulsed every row cost 10 long tasks and 759 ms of style work. Expand all
+  costs the same with lines on or off (row mounting dominates).
+  Tests: `ProjectExplorer.test.tsx`, `treeLines.test.tsx`,
+  `motionCategories.test.ts`, `e2e/explorer-structure.e2e.ts`.
+
 - 2026-10-14 — Issue #19: About links the GitHub Hall of Fame document instead
   of bundling its JSON. Snapshot parsing, unused strings/list styles and Vitest's
   external-directory exception removed; public generator and awards unchanged.

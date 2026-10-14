@@ -24,6 +24,9 @@ async function serve(page: Page) {
     let body: unknown;
     if (path === "/api/project" && method === "GET") {
       body = current;
+    } else if (path === "/api/project/stored-bus-access" && method === "GET") {
+      // The line inspector reads stored ETS bus access (Goal B3); this project has none.
+      body = { records: [] };
     } else if (path === "/api/areas" && method === "POST") {
       const sent = request.postDataJSON() as { name: string; address: number; installationId?: number };
       writes.push({ method, path, body: sent });

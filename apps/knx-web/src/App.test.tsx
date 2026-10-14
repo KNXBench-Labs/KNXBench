@@ -4199,13 +4199,19 @@ describe("App — project notes workspace", () => {
     expect(browserUnload()).toBe(false);
   });
 
-  it("leaves the desktop window's close to its own guard, without a second browser prompt", async () => {
+  // Goal B2: the desktop webview reloads too (WebKitGTK's context menu offers
+  // Reload). It asks through WebKitGTK's own Stay/Leave dialog; the window's
+  // close still goes through the workbench guard and destroy(), which never
+  // runs beforeunload, so Quit asks once.
+  it("asks the desktop webview before a reload drops an unapplied note draft", async () => {
     filePickerMock.isTauri.mockReturnValue(true);
     const root = await openNotesProject();
     await act(async () => findButton(enMessages["workbench.notes"]).click());
-    await typeTitle("Unapplied thought");
     expect(browserUnload()).toBe(false);
+    await typeTitle("Unapplied thought");
+    expect(browserUnload()).toBe(true);
     await act(async () => root.unmount());
+    expect(browserUnload()).toBe(false);
     filePickerMock.isTauri.mockReturnValue(false);
   });
 

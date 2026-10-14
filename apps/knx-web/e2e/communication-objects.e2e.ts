@@ -183,3 +183,38 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(state.unexpected).toEqual([]);
   });
 }
+
+// Issue #17 (ADR-0126): the server fills a product name's `{{0}}`; the table
+// shows the result and the tooltip says where it came from. Fictional texts.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}px: a filled product name and heading say where their text came from`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language, 8);
+    const heading = "Ground floor kitchen and dining area, north side";
+    state.objects[0] = { ...state.objects[0], name: `Page 1 - ${heading}`,
+      name_fill: { template: "Page 1 - {{0:Icon 1}}", source: "StoredValue" },
+      channel: { ...state.objects[0].channel!, text: heading, text_fill: { template: "{{0:Page 1}}", source: "StoredValue" } } };
+    state.objects[4] = { ...state.objects[4], name: "Dim {{0}}", name_fill: { template: "Dim {{0}}", source: "NoReference" } };
+    await openProject(page, language); await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+    const panel = page.locator(".com-table-panel");
+    const header = panel.locator(".com-object-channel-summary", { hasText: heading });
+    await expect(header.locator("strong")).toHaveAttribute("title",
+      `${m["comTable.textFill.StoredValue"]}\n${m["comTable.textFill.template"].replace("{value}", "{{0:Page 1}}")}`);
+    await header.click(); await expect(header).toHaveAttribute("aria-expanded", "true");
+    const filled = panel.locator('tr[data-object-id="1"] .com-object-name');
+    await expect(filled).toHaveText(`Page 1 - ${heading}`);
+    await expect(filled).toHaveAttribute("data-text-fill", "StoredValue");
+    if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-text-fill-${language}-${width}-grouped.png`) });
+    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    const unfilled = panel.locator('tr[data-object-id="5"] .com-object-name');
+    await expect(unfilled).toHaveText("Dim {{0}}");
+    await expect(unfilled).toHaveAttribute("title", new RegExp(m["comTable.textFill.NoReference"].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    // A name without a fill record has no tooltip.
+    await expect(panel.locator('tr[data-object-id="2"] .com-object-name')).not.toHaveAttribute("title", /./);
+    if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-text-fill-${language}-${width}.png`) });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(state.unexpected).toEqual([]);
+  });
+}

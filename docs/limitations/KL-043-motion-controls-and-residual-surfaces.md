@@ -117,3 +117,16 @@ coverage (longhands, non-`styles.css` sources, inline `style=` motion) —
 deliberately deferred, since it needs a dependency this slice was not
 scoped to add.
 <!-- END retained catalogue record -->
+
+## Update 2026-10-14: per-category motion exists (Goal B8)
+
+The record above still says a user "cannot quiet one feature while keeping
+another animated" and lists a per-category control as open item (1). That was
+delivered on 2026-10-13 ([ADR-0122](../adr/0122-category-motion-preferences.md),
+ledger `KL-43` `DONE`): **Toasts**, **Achievements** and **Flow** each inherit,
+stay at most subtle, or are off (`motionToasts`, `motionAchievements`,
+`motionFlow`); a category only reduces, and global Off and the OS preference
+always win (`apps/knx-web/src/motion.ts`). Open item (2) is unchanged: the guard
+in `motionGuard.test.ts` is a text check over `styles.css`, not a CSS parser, and
+no test proves that nothing moves outside its guard. Other animated surfaces have
+no category of their own and follow the global level.

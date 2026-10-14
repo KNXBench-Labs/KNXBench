@@ -407,18 +407,18 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
           </label>
           {pendingRequest && (
             <p className="device-download-handoff" role="status" data-handoff="pending">
-              {requested ? t("deviceDownload.handoff.pending", requested) : t("deviceDownload.handoff.pendingUnknown")}
+              <span className={statusCheck === "checking" || currentReadiness?.checking ? "task-status-text" : undefined}>{requested ? t("deviceDownload.handoff.pending", requested) : t("deviceDownload.handoff.pendingUnknown")}</span>
             </p>
           )}
           {!pendingRequest && statusCheck !== "checked" && (
             <p className="device-download-status" role="status" data-download-status={statusCheck}>
-              {t(`deviceDownload.status.${statusCheck}` as const)}
+              <span className={statusCheck === "checking" ? "task-status-text" : undefined}>{t(`deviceDownload.status.${statusCheck}` as const)}</span>
               {statusCheck !== "checking" && <> <button type="button" data-status-retry onClick={recheckStatus}>
                 {t("deviceDownload.status.retry")}</button></>}
             </p>
           )}
           {currentReadiness?.checking && <p className="device-download-readiness-loading" role="status" data-readiness-loading>
-            {t("deviceDownload.readiness.loading")}</p>}
+            <span className="task-status-text">{t("deviceDownload.readiness.loading")}</span></p>}
           {shownGuidance && <DownloadSupportNotice key={`${deviceId}-${scope}-${shownGuidance.code}-${shownGuidance.detail}`}
             guidance={shownGuidance} failedRequest={selectedRefusal !== null} />}
           {currentReadiness?.error && !currentReadiness.checking && <button type="button" data-readiness-retry
@@ -436,12 +436,12 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
           <fieldset className="device-download-gateway">
             <legend>{t("deviceDownload.gatewayLegend")}</legend>
             <p className="device-download-gateway-status" role="status" aria-live="polite">
-              {discovery.phase === "idle" ? t("deviceDownload.gatewaySearch.idle")
+              <span className={discovery.phase === "searching" ? "task-status-text" : undefined}>{discovery.phase === "idle" ? t("deviceDownload.gatewaySearch.idle")
                 : discovery.phase === "searching" ? t("deviceDownload.gatewaySearch.searching")
                   : discovery.phase === "failed" ? t("deviceDownload.gatewaySearch.failed")
                     : discovery.interfaces.length === 0
                       ? t(gateway.trim() === "" ? "deviceDownload.gatewaySearch.none" : "deviceDownload.gatewaySearch.noneUseTyped")
-                      : t("deviceDownload.gatewaySearch.found", { count: discovery.interfaces.length })}
+                      : t("deviceDownload.gatewaySearch.found", { count: discovery.interfaces.length })}</span>
             </p>
             {discovery.phase === "failed" && discovery.error && <p className="bus-discovery-detail">{discovery.error}</p>}
             <label>
@@ -600,11 +600,11 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
         <section className="device-download-progress" aria-live="polite">
           <h3>{t("deviceDownload.progressTitle", { address: status.address, device: status.deviceName })}</h3>
           <p data-download-state={status.status.state}>
-            {status.status.state === "running"
+            <span className={status.status.state === "running" ? "task-status-text" : undefined}>{status.status.state === "running"
               ? t("deviceDownload.running", { step: stepsStarted, of: status.steps, name: stepNames.get(stepsStarted) ?? "" })
               : status.status.state === "finished"
                 ? t("deviceDownload.finished")
-                : t("deviceDownload.failed", { step: status.status.stoppedInStep ?? "—" })}
+                : t("deviceDownload.failed", { step: status.status.stoppedInStep ?? "—" })}</span>
           </p>
           <label>
             {t("deviceDownload.stepsProgress", { done: stepsStarted, of: status.steps })}

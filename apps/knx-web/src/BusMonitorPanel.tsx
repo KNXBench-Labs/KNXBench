@@ -838,7 +838,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       {!session && discoveryStatus && (
         <section className="bus-discovery">
           <p className="bus-discovery-status" role="status" aria-live="polite">
-            {discoveryStatus}
+            <span className={searching ? "task-status-text" : undefined}>{discoveryStatus}</span>
           </p>
           {discovery.phase === "done" && discovery.interfaces.length === 0 && (
             <p className="bus-discovery-hint">{t("busDiscovery.emptyHint")}</p>

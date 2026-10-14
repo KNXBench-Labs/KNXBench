@@ -92,7 +92,7 @@ export default function FlowImageExportDialog(props: Props) {
     {format === "gif" && <p>{t("flow.export.limits")}</p>}
     <label className="flow-export-consent"><input disabled={busy} type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} /><span>{t("flow.export.privacy")}</span></label>
     {failure && <p className="field-error" role="alert">{t(failure)}</p>}
-    <p role="status">{busy ? t("flow.export.working") : downloaded ? t("flow.export.downloadStarted") : ""}</p>
+    <p role="status"><span className={busy ? "task-status-text" : undefined}>{busy ? t("flow.export.working") : downloaded ? t("flow.export.downloadStarted") : ""}</span></p>
     {busy && <progress value={completed} max={total} aria-label={t("flow.export.progress")} />}
     <div className="flow-export-actions"><button type="button" data-export-start onClick={start} disabled={busy || !consent || !sourceValid || (format === "gif" && !valid)}>{t("flow.export.start")}</button>
       {busy && <button type="button" onClick={() => job.current?.abort()}>{t("flow.export.cancel")}</button>}

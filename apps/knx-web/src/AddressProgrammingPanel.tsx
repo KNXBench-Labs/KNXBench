@@ -285,7 +285,7 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
           )}
           {current.state === "programming" && (
             <p className="form-warning" role="status">
-              {t("addressProgramming.programming", { previous: current.previousAddress, address: status.address })}
+              <span className="task-status-text">{t("addressProgramming.programming", { previous: current.previousAddress, address: status.address })}</span>
             </p>
           )}
           {current.state === "finished" && (

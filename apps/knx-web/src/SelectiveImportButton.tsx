@@ -123,7 +123,7 @@ function ImportDialog({ tree, scope, onTreeUpdate, onClose }: Props & { tree: Pr
       </>}
       <details><summary>{t("selectiveImport.report")}</summary><pre>{JSON.stringify(inventory.sourceReport, null, 2)}</pre></details>
     </>}
-    {mode && <p role="status">{t("selectiveImport.busy")}</p>}
+    {mode && <p role="status"><span className="task-status-text">{t("selectiveImport.busy")}</span></p>}
     {error && <p role="alert">{error}</p>}
     {done && <p role="status">{t("selectiveImport.done")}</p>}
     <div className="selective-import-actions"><button disabled={!ready || Boolean(mode) || done} onClick={() => void run("preview")}>{t("selectiveImport.preview")}</button></div>

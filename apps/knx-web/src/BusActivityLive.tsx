@@ -72,7 +72,7 @@ export default function BusActivityLive() {
       </header>
       {restarted && <p className="activity-live-restart" role="status">{t("activityLive.restarted")}</p>}
       {failure !== null && <p role="alert">{t(`activityLive.${failure}`)}</p>}
-      {snapshot === null && failure === null && <p role="status">{t("activityLive.loading")}</p>}
+      {snapshot === null && failure === null && <p role="status"><span className="task-status-text">{t("activityLive.loading")}</span></p>}
       {snapshot !== null && <>
         <p className="activity-live-history-state" role={snapshot.historyState === "unavailable" ? "alert" : undefined}>
           {t(`activityLive.historyState.${snapshot.historyState}`)}

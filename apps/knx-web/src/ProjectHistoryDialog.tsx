@@ -116,8 +116,8 @@ export default function ProjectHistoryDialog(props: {
     {notice && <p className="project-history-notice" role="status">{t("projectHistory.stale")}</p>}
     {error !== null && <div className="project-history-error" role="alert"><strong>{t("projectHistory.failed")}</strong>
       <p>{error}</p><small>{t("toast.error.messageIsEnglish")}</small></div>}
-    {loading && <p role="status">{t("projectHistory.loading")}</p>}
-    {busy && <p role="status" data-project-history-busy>{t("projectHistory.busy")}</p>}
+    {loading && <p role="status"><span className="task-status-text">{t("projectHistory.loading")}</span></p>}
+    {busy && <p role="status" data-project-history-busy><span className="task-status-text">{t("projectHistory.busy")}</span></p>}
     {confirmation ? <section className="project-history-confirmation" aria-labelledby="project-history-confirm-title">
       <h3 id="project-history-confirm-title">{t(confirmation.kind === "restore" ? "projectHistory.restoreTitle" : confirmation.kind === "delete" ? "projectHistory.deleteTitle" : "projectHistory.clearTitle")}</h3>
       <p>{t(confirmation.kind === "restore" ? "projectHistory.restoreWarning" : confirmation.kind === "delete" ? "projectHistory.deleteWarning" : "projectHistory.clearWarning", { name: confirmation.version ? displayLabel(confirmation.version) : "" })}</p>

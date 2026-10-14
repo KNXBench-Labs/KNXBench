@@ -7,16 +7,17 @@ takes no lock and changes no hardware authorization or support classification.
 
 Owner invoked S1–S4 in session `d03c0319b8c1` on 2026-10-13 and explicitly
 released the affected support-guidance surface after the initial ownership
-blocker. Worktree `device-support-guidance-20261013`; branch
-`feature/device-support-guidance-20261013`. Goal B retains all unrelated work.
+blocker. Current reconciled worktree `device-support-resume-20261014`; branch
+`feature/device-support-resume-20261014`, from published B15 main. The original
+candidate is retained as history. Goal B retains all unrelated work.
 No nested goal is launched.
 
 | Package | State |
 | --- | --- |
-| S1 | Implemented; focused 11 web, 5 HTTP and 4 application tests pass; full gate pending |
-| S2 | Next: pre-plan EN/DE notice, details/copy, asynchronous target binding |
-| S3 | Pending: deliberate links/drafts, intake mail scope and privacy |
-| S4 | Pending: offline fixture coverage audit and finite follow-ups |
+| S1 | Structured preparation/start refusals and shared mapping accepted in corrected full branch gate; integration gate pending |
+| S2 | EN/DE pre-plan notice, local details/copy, invalid-address and late-target guards accepted; 92 focused tests, 513 fixture-browser and 33 production download tests pass; integration gate pending |
+| S3 | Fixed unsent docs/form/mail links, zero project-derived prefill, privacy tests and EN/DE scope documentation accepted in corrected branch gate; no external submission |
+| S4 | Two real offline corpus runs passed with identical privacy-checked aggregates (105 packages, 467 programs); bounded F1–F5 follow-ups documented; all executable dependencies remain unassessed |
 
 ## Invocation
 

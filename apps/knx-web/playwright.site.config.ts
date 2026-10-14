@@ -1,4 +1,5 @@
 /** Local mocked Chromium gate for the Ground-root Site/Property affordance. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

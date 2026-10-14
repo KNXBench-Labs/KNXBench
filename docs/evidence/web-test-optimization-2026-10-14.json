@@ -1,0 +1,195 @@
+{
+  "format": 1,
+  "kind": "knxbench-web-test-optimization",
+  "date": "2026-10-14",
+  "scope": "Linux web test tooling; no KNX application behavior or test assertions changed",
+  "benchmarkSourceKind": "source-bound uncommitted tooling overlay on base 0fe39190; exact runner sources and raw receipts archived privately; predates recurring-temp-guard expansion; final expanded-source acceptance is separate",
+  "matrix": {
+    "sourceFingerprint": "a55bf7220742ee0b1f7c6a40a7b8b2ba717901c69550ae90753c6812293577ed",
+    "casesPerExecution": 276,
+    "executions": 6,
+    "caseIdsSha256": "4aedf47b2d604eaf6e5d1a86510197782565b6ea2fd1bf4a8aa2f986f56197a4",
+    "rows": [
+      {
+        "workers": 1,
+        "wallSeconds": 333.86056679300964,
+        "cpuSeconds": 375.61156500000004,
+        "peakRssKiB": 372692,
+        "passed": 276,
+        "actualParallelIndices": [
+          0
+        ]
+      },
+      {
+        "workers": 2,
+        "wallSeconds": 195.51844613696449,
+        "cpuSeconds": 428.314262,
+        "peakRssKiB": 378132,
+        "passed": 276,
+        "actualParallelIndices": [
+          0,
+          1
+        ]
+      },
+      {
+        "workers": 4,
+        "wallSeconds": 175.30311705591157,
+        "cpuSeconds": 519.646427,
+        "peakRssKiB": 341940,
+        "passed": 276,
+        "actualParallelIndices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "workers": 4,
+        "wallSeconds": 155.0031514619477,
+        "cpuSeconds": 531.48548,
+        "peakRssKiB": 338356,
+        "passed": 276,
+        "actualParallelIndices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "workers": 2,
+        "wallSeconds": 195.80801925901324,
+        "cpuSeconds": 433.18937600000004,
+        "peakRssKiB": 353296,
+        "passed": 276,
+        "actualParallelIndices": [
+          0,
+          1
+        ]
+      },
+      {
+        "workers": 1,
+        "wallSeconds": 328.49935151217505,
+        "cpuSeconds": 372.729104,
+        "peakRssKiB": 375328,
+        "passed": 276,
+        "actualParallelIndices": [
+          0
+        ]
+      }
+    ],
+    "meanWallSeconds": {
+      "1": 331.17995915259235,
+      "2": 195.66323269798886,
+      "4": 165.15313425892964
+    },
+    "speedup4Vs1": 2.0052901850071057,
+    "speedup2Vs1": 1.6926018986090094,
+    "durationReduction4Percent": 50.1319057223403,
+    "proof": "every case passed exactly once in every execution; no retries, no skips; frozen source and tool versions"
+  },
+  "toolVersions": {
+    "python": "3.14.7 (main, Sep  1 2026, 14:18:09) [Clang 22.1.3 ]",
+    "packages": {
+      "playwright": "1.63.0",
+      "vitest": "5.0.0",
+      "vite": "8.2.2",
+      "typescript": "7.0.2"
+    },
+    "node": "v26.8.1",
+    "chromium": "Chromium 152.0.7977.82 Arch Linux"
+  },
+  "browserCoverage": {
+    "defaultCases": 554,
+    "functionalCases": 276,
+    "exclusiveCases": 278,
+    "functionalFiles": 45,
+    "exclusiveFiles": 31,
+    "retries": 0,
+    "omittedCases": 0
+  },
+  "typecheckInvocations": {
+    "oldPrivateRunner": 19,
+    "canonicalWebRunner": 17,
+    "appInBuild": 1,
+    "derivedConfigs": 16,
+    "allDerivedConfigsRetained": true,
+    "newBrowserToolingConfig": 1,
+    "exactDuplicateInvocationsRemoved": 3
+  },
+  "workerDefault": {
+    "maximum": 4,
+    "availableAffinityCap": true,
+    "overrideCounts": [
+      1,
+      2,
+      4
+    ],
+    "cpuQuotaInference": false
+  },
+  "initialLaunchFailure": {
+    "attempt": "benchmark-a",
+    "classification": "Chromium socket-path harness refusal",
+    "success": false,
+    "applicationAcceptance": false,
+    "preserved": true
+  },
+  "toolingRegressions": {
+    "focusedPassed": 25,
+    "includesRealExitFailure": true,
+    "includesLeaseTimeoutRelease": true,
+    "includesSigtermChildAndTermIgnoringDescendant": true
+  },
+  "acceptance": {
+    "status": "complete expanded-source branch web gate passed; merged gate pending",
+    "branch": {
+      "success": true,
+      "inputsFrozen": true,
+      "stages": 60,
+      "defaultBrowserPassed": 554,
+      "functionalPassed": 276,
+      "exclusivePassed": 278,
+      "productionConfigs": 15,
+      "productionPassed": 313,
+      "vitestPassed": 3559,
+      "vitestFiles": 256,
+      "toolTestsRan": 148,
+      "toolTestsSkipped": 1,
+      "sourceFingerprint": "c6955deeb0127773f15ec7d1dee97d99182a0b36578aef057fe92e49746ca820",
+      "browserFunctionalSeconds": 165.71061519207433,
+      "browserExclusiveSeconds": 638.7137032689061,
+      "totalCommandWallSeconds": 1340.8473693898413,
+      "queueWaitSeconds": 270.7428663489409
+    }
+  },
+  "limitations": [
+    "Matrix measures the functional lane only, not a full-gate speedup.",
+    "Two observations per worker count on one host do not establish cross-host statistical guarantees.",
+    "wait4 peak RSS is not aggregate simultaneous-worker memory.",
+    "Installed dependency versions and build bytes are bound, not every node_modules byte or system attestation.",
+    "Existing whole-gate leases, Rust/private-corpus scheduling and GPU acceleration are unchanged."
+  ],
+  "recurringTempGuard": {
+    "playwrightEntryConfigs": 30,
+    "sharedPythonSelector": true,
+    "directPlaywrightProtected": true,
+    "automaticFallback": "only an owned, non-group/world-writable canonical scratch ancestor",
+    "explicitRootSupported": true,
+    "arbitrarySystemTempFallback": false,
+    "deepRequestedPathBytes": 245,
+    "ownedSelectedPathBytes": 59,
+    "realChromiumProbePassed": 1,
+    "ownedDirectoryCleanupVerified": true,
+    "originalDirectoryPreserved": true,
+    "actualCjsConfigLoaderAndMode0700Verified": true,
+    "noPersistentProfileOrOsSettingsChanged": true,
+    "validatedParentManagedReuse": true,
+    "exactPathProtocol": "JSON string; no trimming or whitespace repair"
+  },
+  "supersededBranchAttempt": {
+    "reason": "owner expanded scope to central recurring-temp protection",
+    "accepted": false,
+    "failedOrInterruptedReceiptPreserved": true
+  }
+}

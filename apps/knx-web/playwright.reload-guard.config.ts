@@ -1,4 +1,5 @@
 /** Goal B2: the draft reload guard in Firefox, as actually run (Chromium runs in notes). */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

@@ -20,7 +20,11 @@ fragment aliases and update this index. Do not rewrite previous results.
   server guard retained. Corrected branch gate: Rust 4411/0 (200 ignored),
   Vitest 3460/0 in 247 files, Chromium 513/0, production download specs 33/0,
   focused browser 8/0, private corpus 145/145, all typechecks/Clippy/docs/xtask
-  zero; inputs frozen. Integration acceptance pending, not a release.
+  zero; inputs frozen (historical branch acceptance).
+  Final merged-runtime `6bf86976`: Rust 4442/0 (200 ignored), Vitest 3504/0
+  in 249 files, Chromium 522/0, production specs 33/0, corpus 145/145;
+  all 35 stages zero with frozen inputs. [Acceptance receipt](evidence/device-support-guidance-acceptance-2026-10-14.json).
+  Closure changes documentation only; no release or deployment.
   [Contract](contracts/device-programming-support-guidance.md),
   [bounded offline audit](research/2026-10-14-device-support-guidance-offline-audit.md).
   All audited executable dependencies remain unassessed; no new encoder or

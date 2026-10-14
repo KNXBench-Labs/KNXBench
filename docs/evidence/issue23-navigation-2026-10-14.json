@@ -1,0 +1,48 @@
+{
+  "format": "knxbench-issue23-acceptance-v1",
+  "scope": "UI-only diagnostic sidebar selection; self-review",
+  "status": "branch-accepted-integration-pending",
+  "branch": {
+    "success": true,
+    "stageCount": 46,
+    "expectedStageCount": 46,
+    "missing": [],
+    "failed": {},
+    "inputsFrozen": true,
+    "vitest": {
+      "passed": 3567,
+      "failed": 0,
+      "files": 256
+    },
+    "browserPassed": {
+      "chromium": 558,
+      "repeat": 51,
+      "cfg_playwright_catalogue_config": 10,
+      "cfg_playwright_communication_config": 59,
+      "cfg_playwright_device_download_support_config": 33,
+      "cfg_playwright_devices_config": 17,
+      "cfg_playwright_dialogs_config": 14,
+      "cfg_playwright_ga_members_download_config": 23,
+      "cfg_playwright_group_addresses_config": 19,
+      "cfg_playwright_instructions_config": 15,
+      "cfg_playwright_notes_config": 13,
+      "cfg_playwright_parameters_config": 15,
+      "cfg_playwright_reload_guard_config": 2,
+      "cfg_playwright_structure_config": 8,
+      "cfg_playwright_task_status_config": 27,
+      "cfg_playwright_updates_config": 7,
+      "cfg_playwright_ux_feedback_config": 55
+    },
+    "productionBrowserPassedTotal": 317
+  },
+  "boundaries": [
+    "No Rust workspace/private-corpus rerun for this UI-only change",
+    "No KNX device or bus operation",
+    "No release/deployment",
+    "Native WebKitGTK/Orca not verified"
+  ],
+  "source": {
+    "base": "7b9620cf1db2af1d954451a1a255656dbead74a4",
+    "frontendManifestSha256": "65d9fca59c31a952ac5d282d7011da02bd9c78107d7dbfa71b7aa787d5871eb4"
+  }
+}

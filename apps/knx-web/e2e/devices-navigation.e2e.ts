@@ -36,6 +36,8 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
     else if (path === "/api/project" && method === "GET") { if (projectOpen) body = state.tree; else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = state.tree; }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
+    else if (path === "/api/log" && method === "GET") body = [];
+    else if (path === "/api/legacy-password" && method === "GET") body = { available: true, remembered: false, problem: null };
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
@@ -149,6 +151,61 @@ for (const language of ["en", "de"] as const) {
     expect(state.unexpected).toEqual([]);
   });
 }
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  const m = language === "de" ? de : en;
+  test(`${language} repeated diagnostic navigation stays selected at ${width}px (#23)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const theme = width === 1440 ? "porcelain" : "graphite";
+    const state = await intercept(page, language, 3, theme);
+    await openProject(page, language);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    const sidebar = page.locator(".diagnostic-navigation");
+    if (!await sidebar.isVisible()) {
+      await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
+    }
+    const topology = page.getByRole("navigation", { name: m["workbench.navigation"], exact: true })
+      .getByRole("button", { name: m["workbench.topology"], exact: true });
+    await topology.click();
+    const monitor = sidebar.getByRole("button", { name: m["toolbar.busMonitor"], exact: true });
+    await monitor.click();
+    await page.locator(".bus-diagnostics-tabs").getByRole("button", { name: m["addressProgramming.tab"], exact: true }).click();
+    const address = page.locator('.address-programming-config input[name="address"]');
+    await address.fill("1.1.2");
+    for (let i = 0; i < 3; i++) {
+      await monitor.click();
+      await expect(monitor).toHaveAttribute("aria-current", "page");
+      await expect(topology).not.toHaveAttribute("aria-current", "page");
+      await expect(address).toBeVisible();
+      await expect(address).toHaveValue("1.1.2");
+    }
+    if (process.env.KNX_ISSUE23_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_ISSUE23_CAPTURE_DIR, `monitor-${language}-${width}.png`) });
+    const log = sidebar.getByRole("button", { name: m["toolbar.log"], exact: true });
+    await log.click();
+    const search = page.locator(".log-panel").getByRole("searchbox");
+    await search.fill("keep my filter");
+    for (let i = 0; i < 3; i++) {
+      await log.click();
+      await expect(log).toHaveAttribute("aria-current", "page");
+      await expect(monitor).not.toHaveAttribute("aria-current", "page");
+      await expect(search).toHaveValue("keep my filter");
+    }
+    await sidebar.getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
+    await expect(page.locator(".settings-panel")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".settings-panel")).toHaveCount(0);
+    await expect(log).toHaveAttribute("aria-current", "page");
+    await expect(search).toHaveValue("keep my filter");
+    if (process.env.KNX_ISSUE23_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_ISSUE23_CAPTURE_DIR, `log-${language}-${width}.png`) });
+    await topology.click();
+    await expect(topology).toHaveAttribute("aria-current", "page");
+    await expect(page.locator(".log-panel")).toHaveCount(0);
+    await expect(page.locator(".bus-diagnostics-panel")).toBeHidden();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(state.requests.some((request) => /^POST .*\/(?:start|stop|plan|write|estimate|device-compare)$/.test(request))).toBe(false);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
 test("monitor source navigation keeps capture/polling alive with no reconnect, stop or write", async ({ page }) => {
   const state = await intercept(page, "en"); await openProject(page, "en");
   await page.locator(".diagnostic-navigation").getByRole("button", { name: en["toolbar.busMonitor"], exact: true }).click();

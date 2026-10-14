@@ -14,6 +14,19 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-14 — Issue #23: diagnostic sidebar entries select instead of toggle.
+  Re-clicking Bus monitor or Log keeps its panel and local state; choose another
+  project view explicitly to leave. Settings/companion actions are unchanged.
+  Test-first: eight App regressions reproduce the old active-marker loss;
+  corrected App suite 172/172, dedicated spec TypeScript/build zero, production
+  browser 4/4 (EN/DE × 1440/400). Frozen branch web/docs gate: 46 stages zero,
+  Vitest 3567/0 (256 files), Chromium 558/0, fifteen production configurations
+  zero, devices-navigation repeats 51/0; Python 123 (one skip), all compiler,
+  documentation and five repository checks pass. Merged-result acceptance pending.
+  [Behaviour and boundaries](contracts/diagnostic-sidebar-selection.md),
+  [operating guide](manual/user-guide/01-user-interface.md#the-navigation-pane).
+  No API/domain/storage/schema/protocol change, hardware, release or deployment.
+
 - 2026-10-14 — Owner UI feedback P2 ([goal](goals/ui-feedback-p1-p4.md)): the
   project explorer shows what opens. A chevron turns a quarter when a branch
   opens, a closed branch shows how many entries it holds, and Expand all /

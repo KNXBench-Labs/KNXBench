@@ -14,7 +14,7 @@ claim the package there.
 | Package | Scope | State |
 | --- | --- | --- |
 | P1 | Toast entry, resume after reload, overwrite question | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
-| P2 | Explorer: visibly expandable nodes, structure lines with spread/pulse | open |
+| P2 | Explorer: visibly expandable nodes, structure lines with spread/pulse | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
 | P3 | Changes not yet programmed, per part | open (fresh session) |
 | P4 | Project file versus real devices: tags and comparison table | open (fresh session, after P3) |
 
@@ -63,6 +63,11 @@ Implement P3 in its own worktree: review, full gate, push.
 - Switch: a new motion category "Structure lines" in Settings › Motion:
   inherit = grow and pulse, subtle = grow only, off = static lines. Global Off
   and OS reduced motion always win. On by default.
+- As built: lines grow only below a node the user opens (click, keyboard,
+  Expand all), not on load or on a search reveal, so the eye is already
+  there. The pulse marks the rows visible when it starts (`treeLines.ts`) and
+  the CSS animates only those; the count is a small pill beside the label.
+  Durations derive from `--knx-transition-duration`, as the motion guard asks.
 
 ## P3 — changes not yet programmed (point 5)
 

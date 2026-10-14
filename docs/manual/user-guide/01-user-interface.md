@@ -95,6 +95,18 @@ Group Addresses, Group Ranges, and any unassigned devices. This is where you cre
 things. Each branch that can hold a new child has an inline row at the bottom of it:
 type a name, press Enter or click Add, and the object exists. No dialog opens.
 
+Every branch that can open has a chevron in front of it (source builds after
+v0.1.0-alpha.11): it points right while the branch is closed and turns down when it
+opens. A closed branch shows how many entries it holds, for example a small **3**
+next to a line with three devices. The two buttons above the tree are **Expand
+all** and **Collapse all**; Collapse all keeps the installations open and folds
+their sections, so a large project shrinks to one screen. Thin lines connect each
+node to its children. When a branch opens, they grow from the parent down, level
+after level, and about every twelve seconds a soft pulse runs from the top of the
+tree through the open branches. Turn that down or off under **Settings → Motion by
+category → Structure lines in the explorer**; the lines themselves stay. The
+screenshots in this manual still show the released explorer.
+
 **The diagnostics block**, at the bottom: **Bus monitor**, **Log**, **Diagnostics
 window** and **Settings**. The first two swap the center workspace for a panel; the
 third opens a second window (below); the fourth opens the Settings overlay.

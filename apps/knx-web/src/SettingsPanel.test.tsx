@@ -963,9 +963,9 @@ describe("styles.css's disabled-field treatment", () => {
   });
 });
 
-it("keeps three independent category preferences after the settings panel reopens", async () => {
+it("keeps four independent category preferences after the settings panel reopens", async () => {
   let mounted = await renderPanel();
-  for (const [category, value, key] of [["toasts", "off", "motionToasts"], ["achievements", "subtle", "motionAchievements"], ["flow", "off", "motionFlow"]]) {
+  for (const [category, value, key] of [["toasts", "off", "motionToasts"], ["achievements", "subtle", "motionAchievements"], ["flow", "off", "motionFlow"], ["lines", "subtle", "motionLines"]]) {
     const select = host!.querySelector<HTMLSelectElement>(`[data-motion-category="${category}"]`)!;
     expect(select).not.toBeNull();
     await act(async () => { select.value = value; select.dispatchEvent(new Event("change", { bubbles: true })); });
@@ -977,6 +977,7 @@ it("keeps three independent category preferences after the settings panel reopen
   expect(host!.querySelector<HTMLSelectElement>('[data-motion-category="toasts"]')!.value).toBe("off");
   expect(host!.querySelector<HTMLSelectElement>('[data-motion-category="achievements"]')!.value).toBe("subtle");
   expect(host!.querySelector<HTMLSelectElement>('[data-motion-category="flow"]')!.value).toBe("off");
+  expect(host!.querySelector<HTMLSelectElement>('[data-motion-category="lines"]')!.value).toBe("subtle");
   const global = host!.querySelector<HTMLSelectElement>('[aria-label="Motion level"]')!;
   // The existing control label is taken from the actual component/cataloque below.
   expect(global).not.toBeNull();

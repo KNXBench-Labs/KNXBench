@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "repository": "KNXBench-Labs/KNXBench",
-  "generated_at": "2026-10-14T17:15:26Z",
+  "generated_at": "2026-10-14T17:16:33Z",
   "policy": {
     "excluded_logins": [
       "KNXBench-Labs",
@@ -210,9 +210,9 @@
     {
       "login": "thengsty",
       "issues": 20,
-      "replies": 12,
+      "replies": 13,
       "resolutions": 17,
-      "xp": 282,
+      "xp": 283,
       "rank": {
         "minimum_xp": 225,
         "title": "Datapoint Dragon Slayer"

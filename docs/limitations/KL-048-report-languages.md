@@ -30,3 +30,18 @@ language pack exists. The web documentation dialog (CT-2) requests the
 report in the UI language (`de` for German, `en` otherwise); a separate report
 language selector is still absent.
 <!-- END retained catalogue record -->
+
+## Update 2026-10-14: the German report labels its tables too (Goal B8)
+
+The *Remaining limitation* above named detailed table labels. Since Goal B8 the
+German documentation report also translates the project header rows, the summary
+counts, topology/building/group-address subheadings and empty states, the device
+table rows (address, description, commissioning, references, manufacturer,
+product, application program), the parameter/module-argument and communication
+object table headers (flags as in the German ETS: L/S/Ü/A/K/I) and the orphan
+table (`knx-report` `render.rs`; test
+`german_report_labels_tables_and_headings_but_keeps_raw_values`). Still English,
+on purpose: stored enum values (`ThreeLevel`, `Editing`, link directions) and
+references, which are raw identifiers, and the diagnostic sentences that carry
+raw references (*product database did not resolve …*, *… raw value shown*),
+the KL-066 boundary. No third language, no separate report language selector.

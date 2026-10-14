@@ -26,6 +26,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-14--texts-and-status-claims-catch-up"></a>
+- [2026-10-14 — Texts and status claims catch up](history/implementation/2026-W42.md#2026-10-14--texts-and-status-claims-catch-up)
 <a id="2026-10-14--devices-made-in-knxbench-get-instructions"></a>
 - [2026-10-14 — Devices made in KNXBench get instructions](history/implementation/2026-W42.md#2026-10-14--devices-made-in-knxbench-get-instructions)
 <a id="2026-10-14--stored-bus-access-read-only-and-hidden-until-asked"></a>

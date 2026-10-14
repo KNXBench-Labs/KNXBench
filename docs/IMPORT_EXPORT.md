@@ -271,6 +271,13 @@ name (`ContainerError::UnsupportedEncryption`), not attempted — neither
 scheme may be described as *verified* before it has been tested against a
 real protected project.
 
+*Update 2026-10-14 (Goal B8):* the ZipCrypto half has since run against real
+exports: the public protected ETS4 and ETS 5.7 samples (xknxproject test
+resources) decrypt since 2026-10-12 and agree with xknxproject, in an opt-in test
+([KL-013](limitations/KL-013-protected-project-import.md)). Their password is
+ASCII, so the UTF-8 reading above is still untested where it matters. AES is
+still refused, as above.
+
 **Password entry paths (AR08, 2026-10-04).** A password reaches stage 1
 through `knx_etsproj::import_knxproj_with`/`import_knxproj_bytes_with`
 (`Option<&ProjectPassword>`), `knx_app::import_ets_project_with_password`,

@@ -51,7 +51,7 @@ Imports use bounded structural rules, not authoritative XSD conformance. Unknown
 ### 13. Protected project import
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-13](status/LEDGER.md#snapshot-ids)).
-ZipCrypto has synthetic end-to-end evidence, not a real protected ETS4/5 sample. AES ETS6 remains refused; password handling differs between callers.
+ZipCrypto (ETS4/ETS5) decrypts: synthetic fixtures always, the public protected ETS4 and ETS 5.7 samples in an opt-in test since 2026-10-12. AES (ETS6) remains refused; knx diff and product ingest take no password.
 [Details and history](limitations/KL-013-protected-project-import.md)
 
 <a id="catalogue-kl-014"></a>
@@ -147,7 +147,7 @@ Stored values/module arguments are listed with resolvable display names. Raw val
 ### 48. Report languages
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-48](status/LEDGER.md#snapshot-ids)).
-English/German chrome/product overlays exist. Report-owned prose is not a complete multilingual catalogue.
+English/German chrome, table labels and product overlays exist (labels since Goal B8). Diagnostic sentences and raw values stay English; no third language.
 [Details and history](limitations/KL-048-report-languages.md)
 
 <a id="catalogue-kl-125"></a>
@@ -963,7 +963,7 @@ Tunnelling/routing/discovery have bounded implementations. Ordinary connectivity
 ### 29. CLI monitor formatting
 
 **Ledger status:** `DONE` ([KL-29](status/LEDGER.md#snapshot-ids)).
-CLI monitoring uses three-level address formatting and flattened names. This is not a fully project-aware multi-installation presentation.
+Lifted by AR14: monitor and write use the --project style and show every installation's name. Three-level remains without --project and for route-send; joined names are not escaped.
 [Details and history](limitations/KL-029-cli-monitor-formatting.md)
 
 <a id="catalogue-kl-031"></a>

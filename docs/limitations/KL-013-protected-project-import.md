@@ -153,3 +153,17 @@ through blames the user's perfectly correct password instead.
   remains with the UI owner; `knx diff`/`products ingest` stay
   password-less.
 <!-- END retained catalogue record -->
+
+## Update 2026-10-14: what the short summary says now (Goal B8)
+
+The catalogue summary still said "synthetic end-to-end evidence, not a real
+protected ETS4/5 sample". The record's own *Lifted when* already says otherwise:
+since 2026-10-12 the public protected ETS4 and ETS 5.7 samples (xknxproject test
+resources, GPL-2.0, not vendored) decrypt and agree with xknxproject, in an
+`#[ignore]`d test that needs `KNXBENCH_XKNXPROJECT_RESOURCES`
+(`crates/knx-etsproj/tests/schema20_import.rs`); the always-on tests keep the
+synthetic fixtures. The summary now says that. Still true, checked against the
+code on this date: AES (ETS6) is refused by name (`UnsupportedEncryption`), and
+`knx diff` and `knx products ingest` take no password (their usage lines offer
+none). The Web password dialog the record's last bullet leaves to the UI owner
+has existed since 2026-10-04 (*Impact* above).

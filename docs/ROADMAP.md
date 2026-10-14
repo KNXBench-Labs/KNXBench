@@ -315,8 +315,9 @@ localization. See [LANGUAGE_PACKS](LANGUAGE_PACKS.md).
 
 T27 shipped user-selectable level and Smooth/Glitch/CRT styles. The OS
 `prefers-reduced-motion` setting wins, and a style guard covers the
-`styles.css` transitions it can measure. Per-category controls and other
-CSS surfaces are not claimed (KNOWN_LIMITATIONS §43).
+`styles.css` transitions it can measure. Per-category controls for Toasts,
+Achievements and Flow followed on 2026-10-13 (ADR-0122); other CSS surfaces are
+not claimed (KNOWN_LIMITATIONS §43).
 
 ## Cross-cutting — Web/Docker deployment target
 

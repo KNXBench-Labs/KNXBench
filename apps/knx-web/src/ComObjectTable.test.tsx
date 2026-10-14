@@ -186,3 +186,28 @@ it.each(["succeeds", "is refused"])("issue #16: a request that %s while its chan
   else { expect(editorRow(v.host, 1).textContent).toContain("refused by server"); expect(v.applied).not.toHaveBeenCalled(); }
   await v.cleanup();
 });
+it("#17: a filled product name and channel heading say where the text came from; others say nothing", async () => {
+  const channel = { key: "/1", kind: "Channel", text: "Kitchen", name: "A", number: "1", order: 0,
+    text_fill: { template: "{{0:Page 1}}", source: "StoredValue" as const } };
+  const v = await render([
+    object(1, { name: "Page 1 - Lamp", activation: "Active", channel,
+      name_fill: { template: "Page 1 - {{0:Icon 1}}", source: "ProductDefault" } }),
+    object(2, { name: "Dim {{0}}", activation: "Active", channel, name_fill: { template: "Dim {{0}}", source: "NoReference" } }),
+    object(3, { name: "My {{0}} name", activation: "Active", channel }),
+  ]);
+  const name = (id: number) => v.host.querySelector<HTMLElement>(`tr[data-object-id="${id}"] .com-object-name`)!;
+  expect(name(1).textContent).toBe("Page 1 - Lamp");
+  expect(name(1).getAttribute("data-text-fill")).toBe("ProductDefault");
+  expect(name(1).title).toBe("Filled in from the text parameter's default in the product.\nProduct text: Page 1 - {{0:Icon 1}}");
+  // Not filled, visibly: the braces stay, and the tooltip says why.
+  expect(name(2).textContent).toBe("Dim {{0}}");
+  expect(name(2).title).toBe("Not filled in: the product names no text parameter for this text.\nProduct text: Dim {{0}}");
+  // A user's name has no fill record and no tooltip.
+  expect(name(3).hasAttribute("data-text-fill")).toBe(false);
+  expect(name(3).title).toBe("");
+  const heading = v.host.querySelector<HTMLElement>(".com-object-channel-summary strong")!;
+  expect(heading.textContent).toBe("Kitchen");
+  expect(heading.getAttribute("data-text-fill")).toBe("StoredValue");
+  expect(heading.title).toBe("Filled in from this device's value of the text parameter.\nProduct text: {{0:Page 1}}");
+  await v.cleanup();
+});

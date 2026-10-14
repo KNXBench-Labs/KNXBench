@@ -453,6 +453,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | --- | --- | --- |
 | Viewing every communication object of a device, with its resolved values and their provenance | ✅ Implemented | [Devices and products](user-guide/05-devices-and-products.md) |
 | Editing the datapoint type and the description | ✅ Implemented | Both are undoable commands |
+| Filling a product name's or channel heading's `{{0}}` from its text parameter | ✅ Implemented (2026-10-14) | Device detail and documentation report; index `0` only, project-owned names untouched — [contract](../contracts/positional-text-templates.md) |
 | All six communication flags, including Read on init (`I`) | ✅ Implemented | Stored, resolved through the product-data layers, undoable |
 | Exporting Read on init into a `.knxproj` | ❌ Not applicable since 2026-09-20 | There is no `.knxproj` export at all — [ADR-0028](../adr/0028-no-knxproj-export.md). The flag is stored and undoable in `.knxdb`; the warning that used to announce its loss is gone with the exporter — [§117](../KNOWN_LIMITATIONS.md#117-read_on_init_flag-is-parsed-and-stored-then-discarded-before-it-reaches-knx-core) |
 | Linking and unlinking a communication object to a group address, with a send/receive direction | ✅ Implemented | [Working with group addresses](user-guide/04-group-addresses.md) |

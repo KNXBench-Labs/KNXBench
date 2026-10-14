@@ -26,6 +26,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-14--issue-17-page-1-learns-its-page-name"></a>
+- [2026-10-14 — Issue #17: `{{0:Page 1}}` learns its page name](history/implementation/2026-W42.md#2026-10-14--issue-17-page-1-learns-its-page-name)
 <a id="2026-10-14--about-thanks-the-community-from-a-bundled-board"></a>
 - [2026-10-14 — About thanks the community, from a bundled board](history/implementation/2026-W42.md#2026-10-14--about-thanks-the-community-from-a-bundled-board)
 <a id="2026-10-14--catalogue-backups-can-go-and-every-install-is-previewed"></a>

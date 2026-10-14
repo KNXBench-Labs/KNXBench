@@ -2,6 +2,7 @@
 import type { ComObjectActivation } from "./ComObjectActivation";
 import type { ComObjectChannel } from "./ComObjectChannel";
 import type { GroupLinkNode } from "./GroupLinkNode";
+import type { TextFill } from "./TextFill";
 
 export type ComObjectNode = { id: number,
 /**
@@ -92,4 +93,11 @@ dpt_text_language?: string,
  * object's own module instance substituted. The main-function label
  * ETS shows next to the name (ISSUE-08). Server-only, like `dpt_text`.
  */
-function_text: string | null, };
+function_text: string | null,
+/**
+ * ADR-0126: present when `name` is a product text with a positional
+ * `{{0}}`. `name` is then the filled text (or the template, when nothing
+ * could be filled) and this says what it was before and where the
+ * inserted text came from. Server-only, like `dpt_text`.
+ */
+name_fill?: TextFill, };

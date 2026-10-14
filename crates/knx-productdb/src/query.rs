@@ -860,6 +860,86 @@ fn translation_overlay(
     Ok(resolved)
 }
 
+/// ADR-0126: which text parameter each host's positional `{{0}}` reads, for
+/// one program. `dynamic` is keyed like `dynamic_node`'s own primary key,
+/// `(module_def_id, node_id)` with `""` for the program's own tree, so an
+/// evaluated label or channel finds its row without an element id.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TextParameterRefs {
+    pub dynamic: HashMap<(String, i64), String>,
+    pub com_object_refs: HashMap<String, String>,
+}
+
+pub fn text_parameter_refs(
+    conn: &Connection,
+    program_id: &str,
+) -> Result<TextParameterRefs, ProductDbError> {
+    let dynamic = conn
+        .prepare(
+            "SELECT module_def_id, node_id, text_parameter_ref_id FROM dynamic_node
+             WHERE program_id = ?1 AND text_parameter_ref_id IS NOT NULL",
+        )?
+        .query_map([program_id], |r| Ok(((r.get(0)?, r.get(1)?), r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    let com_object_refs = conn
+        .prepare(
+            "SELECT id, text_parameter_ref_id FROM com_object_ref
+             WHERE program_id = ?1 AND text_parameter_ref_id IS NOT NULL",
+        )?
+        .query_map([program_id], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<Result<_, _>>()?;
+    Ok(TextParameterRefs {
+        dynamic,
+        com_object_refs,
+    })
+}
+
+/// What the product says about one referenced parameter: whether it is a
+/// text parameter, and its default (`ParameterRef/@Value`, otherwise the
+/// `Parameter`'s).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TextParameterFact {
+    pub is_text: bool,
+    pub default: Option<String>,
+}
+
+/// [`TextParameterFact`] per `ParameterRef` id in `ref_ids` that names a
+/// `ParameterRef` of `program_id` with its `Parameter`; any other id is absent.
+pub fn text_parameter_facts(
+    conn: &Connection,
+    program_id: &str,
+    ref_ids: &[&str],
+) -> Result<HashMap<String, TextParameterFact>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT t.kind, COALESCE(r.value, p.value) FROM parameter_ref AS r
+         JOIN parameter AS p ON p.program_id = r.program_id AND p.id = r.parameter_id
+         LEFT JOIN parameter_type AS t
+           ON t.program_id = p.program_id AND t.id = p.parameter_type_id
+         WHERE r.program_id = ?1 AND r.id = ?2",
+    )?;
+    let mut facts = HashMap::with_capacity(ref_ids.len());
+    for id in ref_ids {
+        let row = stmt
+            .query_row((program_id, id), |r| {
+                Ok((
+                    r.get::<_, Option<String>>(0)?,
+                    r.get::<_, Option<String>>(1)?,
+                ))
+            })
+            .optional()?;
+        if let Some((kind, default)) = row {
+            facts.insert(
+                (*id).to_string(),
+                TextParameterFact {
+                    is_text: kind.as_deref() == Some("Text"),
+                    default,
+                },
+            );
+        }
+    }
+    Ok(facts)
+}
+
 /// `Channel`/`ChannelIndependentBlock` `@Id` -> translated `@Text` for one
 /// program and language (ISSUE-08). Placeholders are left as stored; the
 /// caller substitutes them per module expansion. An element without a

@@ -184,6 +184,43 @@ pub fn report_options(
                     .collect();
             }
         }
+        // ADR-0126: the name as the report shows it (translated or not) gets its
+        // `{{0}}` filled, product-layer names only, as in the device detail.
+        if let Some(input) = crate::com_object_text_fill::NameFillInput::collect(project, device.id)
+        {
+            let shown: HashMap<knx_core::ComObjectInstanceId, String> = device
+                .com_objects
+                .iter()
+                .filter_map(|id| {
+                    let translated = data
+                        .com_object_texts
+                        .get(id)
+                        .and_then(|text| text.name.clone());
+                    let name = translated.or_else(|| {
+                        let com = project.devices.com_object(*id)?;
+                        let resolved = com.text.value()?;
+                        project
+                            .strings
+                            .text(&resolved.value, project.strings.default_language())
+                            .map(str::to_string)
+                    })?;
+                    Some((*id, name))
+                })
+                .collect();
+            if let Ok(filled) =
+                crate::com_object_text_fill::fill_object_names(products, &input, &shown)
+            {
+                for (id, name) in filled {
+                    data.com_object_texts
+                        .entry(id)
+                        .or_insert_with(|| knx_report::ReportComObjectText {
+                            name: None,
+                            description: None,
+                        })
+                        .name = Some(name.text);
+                }
+            }
+        }
         options.device_data.insert(device.id, data);
     }
     options

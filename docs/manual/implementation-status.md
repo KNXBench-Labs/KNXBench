@@ -16,6 +16,15 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Diagnostic navigation selection (14 October 2026 source, main-only)
+
+Selecting the active Bus monitor or Log sidebar entry keeps the same workspace,
+including its tab/input or filter, rather than returning to the previous project
+view. Select another view explicitly to leave. Settings and Diagnostics window
+retain their separate overlay/window actions. No protocol or storage change.
+[User guide](user-guide/01-user-interface.md#the-navigation-pane),
+[contract](../contracts/diagnostic-sidebar-selection.md).
+
 ## Community Hall of Fame link (14 October 2026 source, main-only)
 
 About links the public GitHub document instead of bundling its JSON snapshot.

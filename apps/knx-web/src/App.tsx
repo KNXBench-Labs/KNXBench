@@ -1566,8 +1566,8 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
           {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onAddDevice={(target) => setDeviceWizard({ target })} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} onRevealComplete={completeSearchReveal} onOpenImportFindings={openImportFindings} />}
           {tree && <PaneSplitter label={t("workbench.resizeDiagnostics")} target={diagnosticsBlockRef} resizes="below" value={diagnosticsHeight} onChange={setDiagnosticsHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
           <nav ref={diagnosticsBlockRef} className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")} style={{ height: diagnosticsHeight ?? undefined }}>
-            <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen((open) => !open); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
-            <button aria-current={logOpen ? "page" : undefined} onClick={() => { setMonitorOpen(false); setLogOpen((open) => !open); }}><WorkbenchIcon name="log" />{t("toolbar.log")}</button>
+            <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen(true); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
+            <button aria-current={logOpen ? "page" : undefined} onClick={() => { setMonitorOpen(false); setLogOpen(true); }}><WorkbenchIcon name="log" />{t("toolbar.log")}</button>
             <button className="companion-open" onClick={() => void openCompanion()}><WorkbenchIcon name="panel" />{t("companion.open")}</button>
             <button onClick={() => setSettingsOpen(true)}><GearIcon />{t("toolbar.settings")}</button>
           </nav>

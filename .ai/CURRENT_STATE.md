@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 23:37
+- **Completed:** Issue #23 candidate accepted on branch: eight regressions RED before minimal sidebar change; App 172/172 and production EN/DE wide/narrow 4/4; full frozen web/docs branch gate 46/46 stages zero (Vitest 3567/0, Chromium 558/0, repeats 51/0, fifteen production configs zero). Operating docs/contract and aggregate receipt included. Self-review; no independent approval claim. Owner explicit Go lifted this session's pause.
+- **Pending/Next Steps:** Commit scoped candidate, merge fresh main in an owned integration checkout and require full merged web/docs acceptance before publication/issue closure. No shipped fix claimed yet.
+- **Notes for Codex oder Claude:** #23 owns only two sidebar selections, App tests and existing devices-navigation browser coverage. P3 carve-out and test-tooling ownership preserved. No Rust/domain/API/schema/protocol/hardware, release/deployment or subagent work; dirty root research/journal not synchronized/published.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-14 22:43
 - **Completed:** Issue #22 offline prerequisite delivered on main as merge 171a63be (feature eb0b277b): exact-shape `LdCtrlTaskCtrl2` parsing in knx-productdb, pure ten-octet TaskCtrl2 property-record encoder in knx-core (MP §3.31.3.4 p.141), memory planner still refuses typed TaskCtrl2 and `MV-0025` stays `NotMemoryMapped`. Contract `docs/contracts/system2-download-prerequisites.md`; COMPATIBILITY/IMPORT_EXPORT/OPEN_WORK/IMPLEMENTATION_STATUS updated. Frozen merged gate on 171a63be: all 17 stages 0 (Rust 4495/0, 201 ignored; Vitest 3559/0 in 256 files; corpus 146/146 in 33 targets incl. the opt-in exact Siemens fixture; clippy, bindings, xtask checks, docs). Two mutants (segment swap, skipped planner arm) killed. Issue comment 6177110239 lists the exact next steps and was edited to point at the published contract; read back, issue OPEN. Claim on #22 released.

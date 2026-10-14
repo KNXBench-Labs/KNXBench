@@ -4,8 +4,8 @@ import type { Translate, TranslatableKey } from "./i18n";
 
 /** Why a download cannot serve a device, from the offline readiness grade. */
 export type DownloadReadinessMark =
-  | { kind: "unsupported"; category: string | null }
-  | { kind: "excluded" };
+  | { kind: "unsupported"; category: string | null; detail?: string | null; programRef?: string }
+  | { kind: "excluded"; detail?: string | null };
 
 /**
  * The marks by individual address. Only `unsupported` and `excluded` are
@@ -18,7 +18,9 @@ export function readinessMarks(rows: readonly DeviceReadinessRow[]): Map<string,
   const marks = new Map<string, DownloadReadinessMark>();
   for (const row of rows) {
     if (row.address === null || seen.get(row.address) !== 1) continue;
-    if (row.readiness === "unsupported") marks.set(row.address, { kind: "unsupported", category: row.category });
+    if (row.readiness === "unsupported") marks.set(row.address, {
+      kind: "unsupported", category: row.category, detail: row.detail, programRef: row.programRef,
+    });
     else if (row.readiness === "excluded") marks.set(row.address, { kind: "excluded" });
   }
   return marks;

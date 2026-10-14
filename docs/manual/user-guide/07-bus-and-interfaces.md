@@ -421,7 +421,7 @@ changes, the project does not. Saving or exporting a project file is something e
    data or stack segments in EEPROM are written); before writing it checks that the
    device already carries this application with every part loaded, and otherwise stops
    without writing. If the server cannot derive the chosen partial download, it says why
-   and shows no plan; run the complete download instead. Changing the choice discards a
+   and shows no plan; follow the specific refusal rather than forcing another scope. Changing the choice discards a
    shown plan. The plan
    names the application program, the mask and manufacturer the device must report
    before the first write, the parameter values and group links taken from the project,
@@ -446,12 +446,39 @@ There is no stop button: stopping between steps would leave the device in an und
 state. The server cannot tell a person from a script; like the command, it only checks
 that the request names the device it was shown.
 
+### When preparation or starting is refused
+
+*Source implementation after Alpha 11:* the selected device or failed request shows
+**Why this request cannot proceed**, a plain reason and a matching next action.
+This works before a download plan or report exists. Missing product data directs
+you to the exact application package in the catalogue; configuration errors ask
+for the named correction; unsupported image/procedure/byte-order behavior offers
+a support-gap inquiry. A server/network failure asks for a deliberate retry and
+does not declare the device technically unsupported. Unknown codes remain visible.
+
+**Instructions**, **Report support gap** and **Email draft** lead to the
+[English guide](../../contribution-intake/README.md), a public GitHub support-gap
+form and an unsent draft to **issue@knxbench.com** respectively. The German UI
+links the [German guide](../../contribution-intake/DEUTSCH.md). No attachment is
+required and no project-derived metadata is inserted into those links or drafts.
+**Technical details (local)** expands the retained reason code and server detail;
+**Copy technical details** requires your click. Review it before sharing: it may
+contain names, addresses, paths or secrets. Local copying is not publication
+consent. Nothing submits or sends automatically; email is not a guarantee of
+confidentiality, encryption, retention or delivery. A pre-plan refusal is not a
+post-run verification report.
+
 ### Helping to verify a device
 
-A download is **verified** only for application programs someone has downloaded on
-real hardware and reported; today that is one program. *Untested* only means nobody
-has reported the program yet, and the plan of an untested download says so with a short
-hint. You can change that for everyone who has the same device:
+A download is **verified** only by matching application-and-operation hardware
+evidence, not a blanket manufacturer/device approval. **Untested** means a complete
+supported plan has no matching hardware evidence; it is not **unsupported**.
+Before starting it, enter the plan's extra exact target-bound acknowledgement,
+then confirm in the ordinary programming dialog. Identity, key, freshness,
+backup/readback and gateway guards still apply. No acknowledgement unlocks an
+unsupported plan. Required executable-extension behavior is not assessed by this
+status: this workflow is initially for applications without unresolved required
+executable extensions. You can help with a supported device as follows:
 
 1. Download as usual. Read the plan's **Before you write** box if there is one: it
    names what to look out for, for example a byte-order warning (`base-image-low-octet-first`)

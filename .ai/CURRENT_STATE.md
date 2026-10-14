@@ -1,3 +1,59 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 07:20
+- **Completed:** S1–S4 device-programming support guidance delivered on `main` as `e478a1a0a2b448ad96439213b5214c7936923c18`; normal push followed by exact local/tracking/live equality and remote file readback. Accepted runtime `6bf86976`: 35 zero-exit stages, frozen; Rust 4442/0 (200 ignored), Vitest 3504/0 in 249 files, Chromium 522/0, production download/report/scope/B15 33/0, focused browser 8/0, private corpus 145/145. Final documentation-only closure checks pass and every published runtime blob matches the accepted manifest. Reasons/actions and deliberate EN/DE pre-plan reporting work without a plan/report; original confirmations/server guards retained.
+- **Pending/Next Steps:** None in this finite S1–S4 goal. Bounded F1–F5 research/planner packages are follow-ups only, not started. Goal B continues its unrelated B3/B4/B8 web scope. No release/deployment or new goal. Task-owned accepted worktrees/caches retire after evidence preservation; earlier candidates/root-local drafts are preserved.
+- **Notes for Codex oder Claude:** Session `d03c0319b8c1`; detailed provenance stays in private profile evidence directory `device-support-d03c0319b8c1`, public aggregates in `docs/evidence`. Two prior audit executions: 105 packages/467 applications, 98 Untested; executable dependencies all unassessed, not DLL-free. No new encoder, hardware/ETS/vendor execution, evidence promotion, force route, subagent/quota or external submission. Original failed runs remain unaccepted; recovered disk-bound corpus is separately recorded. Shared root/index were not synchronized or reset; remote main is the delivered artifact.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 07:17
+- **Completed:** S1–S4 complete and merged runtime `6bf86976` accepted: all 35 stages zero, frozen; Rust 4442/0 (200 ignored), Vitest 3504/0 in 249 files, Chromium 522/0, production download/report/scope/B15 33/0, focused browser 8/0, private corpus 145/145. All compiler/typecheck/doc/repository gates pass; final production screenshots inspected. Structured pre-plan/start reasons/actions, EN/DE local-copy and deliberate unsent docs/issue/mail routes delivered as source; Untested confirmation and all server guards unchanged. Earlier audit: 105 packages/467 programs, 98 Untested; executable dependencies all unassessed; bounded F1–F5 documented.
+- **Pending/Next Steps:** Only documentation closure checks and normal main push/readback remain before publication confirmation. Goal B keeps unrelated web/B3/B4/B8 ownership; this finite S1–S4 claim ends after delivery. No new goal, encoder, hardware run, external submission, release or deployment follows.
+- **Notes for Codex oder Claude:** Session `d03c0319b8c1`; runtime receipt `integrated-b2-gate-20261014`, public aggregate receipt in `docs/evidence/device-support-guidance-acceptance-2026-10-14.json`. Local detailed provenance is preserved in profile evidence at closure; no private paths/originals in public receipt. Prior failed attempts remain failed, not rewritten. Source commits `74d91057`, `f12e1da7`, `61015a7e`, `c8ace5f4`; self-review, not independent review. Selected root drafts/index remain unsynchronized and preserved; isolated integration is the delivered source artifact.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 04:34
+- **Completed:** S1–S4 source committed as `74d91057`, `f12e1da7`, `61015a7e`, `c8ace5f4`. Corrected full branch gate accepted (35 stages, frozen; Rust 4411/0, Vitest 3460/0, Chromium 513/0, production download specs 33/0, corpus 145/145). Isolated integration reconciles exact upstream `97cbcd63`, including Goal B's published B14 v23. Full upstream handover suffix and every unrelated incoming path retained.
+- **Pending/Next Steps:** Complete merged-result gate on owned `device-support-integrate-20261014`; only then update acceptance and normal push with remote readback. No merged pass or publication claimed yet. Goal B retains B2/B3/B4/B8 and unrelated web surfaces; v23 belongs to its integrated B14.
+- **Notes for Codex oder Claude:** Session `d03c0319b8c1`. Feature source acceptance cannot certify B14 integration, so complete Rust/web/browser/corpus/doc gate is rerun with new checkout-specific Cargo target. Private inputs are ignored root symlinks for gate only; no corpus/keys/identities in public receipts. No hardware/ETS/vendor/subagent/quota/external submission/release/deploy, no force/automatic verification. Selected dirty root remains unsynchronized.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 04:27
+- **Completed:** S1–S4 corrected complete branch gate accepted: 35 zero-exit stages, frozen inputs; Rust 4411/0 (200 ignored), Vitest 3460/0 in 247 files, Chromium 513/0, production download/report/scope/B15 33/0, focused browser 8/0, private corpus 145/145. All typechecks/Clippy/docs/xtask pass. Current screenshots inspected. Two S4 audits identical (105 packages, 467 applications; 98 Untested, dependencies all unassessed). No hardware, submission, release or deployment.
+- **Pending/Next Steps:** Commit scoped reviewed packages; integrate on isolated fresh `origin/main` `00f73602`, preserving Goal B and full handover history; run complete merged-result gate, then normal push and exact remote readback. Branch gate is not integration acceptance. Goal B owns unrelated web surfaces and B14 v23 migration.
+- **Notes for Codex oder Claude:** `proc_40d4373f1c77` completed zero; receipt `branch-gate-corrected-20261014` under task-owned scratch. Original failed attempt remains rejected. Root-local drafts/index/other agents untouched, selected root is not synchronized by isolated delivery. Executor/evidence/schema untouched; no force/verification override. Session `d03c0319b8c1`, worktree `device-support-resume-20261014`.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 03:27
+- **Completed:** S1–S4 source reconciled with released B15; first complete gate rejected, not published (namespace capability precondition, eight old browser selectors, generated binding trailing spaces). Corrections preserve guards: unprivileged capability-free Rust namespace probe and eight name-recipe tests pass; new EN/DE invalid-address and late-clipboard regressions RED then GREEN; focused 92/0 and tsc pass. First run production browser 4/0, all four corrected-width screenshots inspected; corpus 145/145; S4 identical 105-package/467-program aggregates and bounded F1–F5 follow-ups recorded.
+- **Pending/Next Steps:** Corrected complete frozen branch gate next in `branch-gate-corrected-20261014`; no gate success/publication claimed. Require all zero stages plus frozen inputs, then focused commits, fresh-main isolated merge, complete integrated gate and normal push/readback. Respect Goal B's unrelated web lock and reserved v23 migration.
+- **Notes for Codex oder Claude:** Worktree `device-support-resume-20261014`, session `d03c0319b8c1`; original `proc_d337eb132a58` exited 1. Failed receipts retained in task-owned scratch. Runner now checks/restores only proven generated trailing-space drift after corpus and refuses receipt overwrites; cache reuse stays in the same checkout. Preserve root drafts/index/foreign files and old candidates. No hardware/vendor/ETS/external submission/subagents/quota/release/deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 02:38
+- **Completed:** Session `d03c0319b8c1` resumed after the published B15 release. Reconciled S1–S3 source and self-review fixes: categorized refusals, EN/DE pre-plan reason/actions and fixed unsent docs/issue/mail links, stale-plan removal and project/late-result guards; 86 focused tests pass. Two S4 offline runs pass with identical privacy-checked aggregates (105 packages, 467 programs, 98 Untested; all executable dependencies unassessed). Practical manual/FAQ/troubleshooting and bounded F1–F5 follow-ups updated. No hardware evidence, code publication, release or deployment.
+- **Pending/Next Steps:** Freeze and run full Rust/web/browser/typecheck/repository/corpus gate, inspect corrected full-width notice, commit scoped reviewed packages, reconcile newest upstream and owners, gate the actual isolated merge, normal push and exact remote readback. Goal B retains all unrelated surfaces; B14's v23 migration is reserved to it.
+- **Notes for Codex oder Claude:** Candidate worktree `device-support-resume-20261014`, local head `74d91057`; local evidence is task-owned profile scratch `device-support-d03c0319b8c1`, public audit receipt contains aggregates only. Preserve original root-local work/journals and old candidates. No nested goal/subagents/quota/hardware/ETS/vendor/external submission/release/deployment. All confirmations and server guards remain. Full gate completion is PENDING, not implied by earlier focused/browser receipts.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 01:15
+- **Completed:** Session `d03c0319b8c1` observed Goal B's explicit published **B15 is released** entry on integrated main `cb46cdf1ec8d69e04f8c511853c74c64b9145d9e` and confirmed final B15 commit `f20543a3` is an ancestor. Read-only polling ended; timer inactive, event listener exited, scripts removed. Created isolated `device-support-resume-20261014` / `feature/device-support-resume-20261014` from that main; S1 picked and S2 source reconciled, preserving B15 pending handoff context, status feedback and manual readiness retry. No code publication or new device verification yet.
+- **Pending/Next Steps:** Finish S1–S4 acceptance on the reconciled candidate: targeted/component/browser/privacy/safety tests, deliberate intake docs, offline coverage audit, full frozen gates, reviewed integration and normal push. Goal B retains B5/B16 and other surfaces; this session only owns the explicitly released download/support scope and its dedicated locale keys/documents.
+- **Notes for Codex oder Claude:** Source candidates/old journals remain intact. All confirmations/server guards remain. No nested goal/subagents/quota/hardware/ETS/vendor/external submission/release/deployment. Background watcher completion is historical, not another command to start or a new result.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-14 08:12
 - **Completed:** Session `ba673d45ff9d`: **Goal B has ended; all seventeen package rows (B1a/B1b through B16) are delivered.** The last train (head `aed1e1e6` on `c3f8e32a`: Vitest 3492/0, Chromium 527/0, instructions build 15/0, repeat 72/0, Rust 4460/0, fmt/clippy/Python/docs 0) brought **B3** (read-only stored `BusAccess`/`IPConfig`: `GET /api/project/stored-bus-access`, `POST …/reveal` for one record, every endpoint hidden with class and length until revealed, owner only when exactly one line/device has the stored id, never a connection or gateway; palette command and line inspector), **B4** (devices made in KNXBench, `KB-DEV-…`/`KB-SCAN-…` with nothing retained, get instructions through the existing preview/apply/undo/history without an invented original; view gains `origin`, `originalXmlSha256` nullable; absent/empty/present stay three states) and **B8** (German documentation report labels; KL-13/KL-29/KL-43 summaries, `OPEN_WORK`/`ROADMAP`/ideas/`IMPORT_EXPORT` caught up with the code; TOOLS-01–05 ledger rows point at the statistics-measurement contract instead of a file that never existed). Browser runs caught two real bugs (duplicate heading ids; the instruction client refusing a native view's `null` hash) and the screenshot review one layout bug (container query now); all fixed test-first.

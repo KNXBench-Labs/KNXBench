@@ -9,6 +9,22 @@ guard rails in the code rather than imagined in advance. If your problem isn't h
 the [issue tracker](https://github.com/KNXBench-Labs/KNXBench/issues) is where to report
 anything neither of those explains.
 
+## A device cannot be prepared or a download cannot start
+
+*Current source implementation:* **Download to device** shows the refusal's reason,
+its next action and local technical details even when no download plan or report
+exists. Follow the specific action: install the exact application package for
+missing data, correct the named project configuration, retry an unavailable server,
+or request support for an unsupported encoder/procedure. Missing hardware evidence
+alone is **untested**, not a technical refusal; an untested supported plan still
+requires its extra exact acknowledgement and ordinary confirmation.
+
+The **Instructions**, **Report support gap** and **Email draft** links are deliberate
+handoffs, not uploads. Review technical details before sharing them. Neither link
+needs an attachment or invents a post-run report. See
+[the download workflow](../user-guide/07-bus-and-interfaces.md#when-preparation-or-starting-is-refused)
+and the [intake guide](../../contribution-intake/README.md).
+
 ## The browser warns that the connection is not private
 
 **You see:** a full-page warning such as "Your connection is not private" or "Warning:

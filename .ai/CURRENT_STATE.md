@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-14 20:35
+- **Completed:** Issue #22: taken by codex in feature/issue22-system2-20261014 on owner Go. Offline System-2 product-procedure prerequisites and tests own knx-productdb code/load-step parsing, knx-core property load-control encoders and dedicated issue22 contracts/tests. The no-tests boundary is lifted for this task; tooling/browser-runner owner remains separate. No hardware operation authorized.
+- **Pending/Next Steps:** Test-first TaskCtrl2 parsing/strict preservation and source-defined property records; exact application regression; resolve System2 image/table/LSM contracts before adding an executable planner. Public download admission remains fail-closed until complete plan and property+memory recovery are established. Gate and publish each bounded reviewed package; keep #22 open unless actual programming support delivered.
+- **Notes for Codex oder Claude:** No tools/run_web_gate*, npm/test-config changes or shared browser benchmarks. Foreign test-optimization frozen candidate and root research untouched. Primary product evidence and local-only initial triage live in profile evidence/issue22-offline-analysis-20261014 and root docs/status/2026-10-14-issue-22-triage.md; do not publish root private journal. No DLL/vendor execution, bus access, bypass, compatibility certification, subagents or release/deploy.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-14 19:52
 - **Completed:** Owner go accepted for finite test-optimization package. Fresh isolated worktree test-optimization-20261014 from main 14264526; former P2/#19 worktrees/gates are gone. Tooling/browser-runner claim: taken by codex, tools/run_web_gate*, tools/tests/test_web_gate*, new browser lane policy and npm test:e2e wiring; no application behavior, Rust/corpus scheduler or GPU/backend changes in this first package. Root foreign research and local handover preserved.
 - **Pending/Next Steps:** Test-first measured runner, exact duplicate TypeScript removal, conservative functional/exclusive browser partition, source-bound 1/2/4-worker same-case benchmark, review and complete web/docs branch/merged gate, normal push/readback. Existing performance cases remain exclusive and assertions/retries/isolation unchanged.

@@ -13,6 +13,11 @@ already found lying in the grass.
   absolute paths under `target/debug/build/tauri-*/out`; after a move, clippy and the
   workspace tests stop at `failed to read plugin permissions` for `knx-desktop`. Keep
   the directory where it was built, or link the old path to it.
+- **`knx-net`'s loopback-join test reads the host's `/proc/net/igmp`.** When that
+  table does not fit one `read(2)` (many interfaces or groups at that moment),
+  `the_loopback_join_lands_on_lo_and_nowhere_else` refuses the truncated snapshot
+  and fails. That is host state, not the change under test: rerun `knx-net` on the
+  frozen tree and report both results.
 - **CI runs exactly these checks** (`.github/workflows/`): `cargo fmt --all --check`,
   `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
   `npm ci`, `npm test` and `npm run build` in `apps/knx-web`, the ts-rs bindings

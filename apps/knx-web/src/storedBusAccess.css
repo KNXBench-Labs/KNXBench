@@ -3,7 +3,10 @@
 .stored-bus-access-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .stored-bus-access-intro { color: var(--knx-muted); margin: 0.25rem 0 0.75rem; }
 .stored-bus-access-records { display: grid; gap: 0.75rem; }
-.stored-bus-access-record { border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); padding: 0.6rem 0.75rem; min-width: 0; }
+.stored-bus-access-record {
+  border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); padding: 0.6rem 0.75rem; min-width: 0;
+  container-type: inline-size;
+}
 .stored-bus-access-record > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
 .stored-bus-access-record h3 { margin: 0; font-size: 1rem; }
 .stored-bus-access-owner { margin: 0; flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
@@ -20,6 +23,7 @@
 .stored-bus-access-source dl { display: grid; gap: 0.2rem; margin: 0.3rem 0 0; }
 .stored-bus-access-line { margin-top: 1rem; }
 .stored-bus-access-line h3 { font-size: 0.95rem; margin: 0 0 0.25rem; }
-@media (max-width: 520px) {
+/* A record's own width decides, not the window's: the properties panel is narrow at any size. */
+@container (max-width: 26rem) {
   .stored-bus-access-fields > div, .stored-bus-access-source dl > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }

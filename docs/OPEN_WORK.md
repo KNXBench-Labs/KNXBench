@@ -419,8 +419,8 @@ not erase subsequently delivered functionality.
   (`FUTURE-01`; the read-only MCP server shipped, ADR-0090), dashboard
   drill-down, mobile app, native ports and manufacturer online-catalog
   updates (`FUTURE-05`). More humour (`FUTURE-08`) means optional expansion:
-  the original thirty-entry lists already exist. Per-category motion controls
-  remain later scope; global motion controls already work.
+  the original thirty-entry lists already exist. Motion has global controls and,
+  since 2026-10-13, per-category ones for Toasts, Achievements and Flow (ADR-0122).
 - **KNX Secure follow-up:** [key provenance research](research/secure-key-provenance.md)
   answers the documented project/keyring routes (`R-SEC-01`). Offline keyring
   admission, a separate credential store, actual protected-project extraction

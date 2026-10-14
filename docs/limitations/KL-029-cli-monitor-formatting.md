@@ -72,3 +72,14 @@ escaped. Tests: `apps/knx-cli/tests/cli_bus_address_style.rs`,
 `names_shared_across_installations_are_all_shown`. See
 [ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
 <!-- END retained catalogue record -->
+
+## Update 2026-10-14: the short summary caught up with AR14 (Goal B8)
+
+The catalogue summary still described the original limitation ("three-level
+address formatting and flattened names"), which AR14 lifted on 2026-10-04 (above;
+ledger `KL-29` is `DONE`). Checked against the code on this date: `bus monitor`,
+`route-monitor` and `bus write` use the `--project` style and show every distinct
+name through `knx_core::resolve_project_group_address_names`; what remains
+three-level is the default without `--project` and `route-send`
+(`run_bus_route_send` parses and prints `ThreeLevel`, it takes no project). A
+name containing ` | ` is not escaped in the joined display.

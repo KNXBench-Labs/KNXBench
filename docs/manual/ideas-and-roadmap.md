@@ -46,7 +46,7 @@ messages and toasts.
 
 | Original idea | Available now | Real remainder |
 | --- | --- | --- |
-| Small animations | Motion level/style settings and reduced-motion handling | Per-category controls; broader native/accessibility evidence |
+| Small animations | Motion level/style settings, reduced-motion handling, and per-category settings for toasts, achievements and Flow | Categories for other surfaces; broader native/accessibility evidence |
 | MCP | Experimental read-only saved-project tools and agent skill | No agent edits, chatbox or bus control |
 | Device discovery | Gateway search, one-line occupancy scan, explicit reconciliation | No product identity from a scan or coupler traversal |
 | Repetitive-task automation | Undoable batch primitive, not a macro feature | No templates/recorder/scheduler UI |

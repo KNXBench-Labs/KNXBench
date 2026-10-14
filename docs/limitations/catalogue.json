@@ -34,7 +34,7 @@
       "number": 13,
       "title": "Protected project import",
       "topic": "Import and export",
-      "summary": "ZipCrypto has synthetic end-to-end evidence, not a real protected ETS4/5 sample. AES ETS6 remains refused; password handling differs between callers.",
+      "summary": "ZipCrypto (ETS4/ETS5) decrypts: synthetic fixtures always, the public protected ETS4 and ETS 5.7 samples in an opt-in test since 2026-10-12. AES (ETS6) remains refused; knx diff and product ingest take no password.",
       "file": "KL-013-protected-project-import.md",
       "ledger_ids": [
         "KL-13"
@@ -1595,7 +1595,7 @@
       "number": 29,
       "title": "CLI monitor formatting",
       "topic": "Bus diagnostics and DPT",
-      "summary": "CLI monitoring uses three-level address formatting and flattened names. This is not a fully project-aware multi-installation presentation.",
+      "summary": "Lifted by AR14: monitor and write use the --project style and show every installation's name. Three-level remains without --project and for route-send; joined names are not escaped.",
       "file": "KL-029-cli-monitor-formatting.md",
       "ledger_ids": [
         "KL-29"

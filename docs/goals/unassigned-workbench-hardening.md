@@ -22,7 +22,7 @@ blocked (named missing evidence) or excluded; nothing else is added.
 | B1a | Revision-bound parameter writes + installation renames in the web client (A2); `serverStopping` worded (A3) | delivered (gate in the W42 entry) |
 | B1b | Functions in the workbench over A4's API (read, create/update/move/delete, members, undo/redo/save/reopen); no Site UI (ADR-0125 blocked) | delivered (W42 entry) |
 | B2 | Desktop webview reload/navigation guard for notes/instruction drafts; native/Orca/Firefox only as actually run | planned |
-| B3 | Read-only stored BusAccess/IP view, redacted endpoints, no connect | planned |
+| B3 | Read-only stored BusAccess/IP view, redacted endpoints, no connect | delivered (W42 entry; IPConfig unassigned: the stored row names no device) |
 | B4 | Instructions for natively created devices (no invented original) | planned |
 | B5 | Catalogue backup deletion; web direct `.knxprod` install routed to preview/apply | delivered (W42 entry) |
 | B6 | KL-164 idempotent achievement increments | delivered (W42 entry) |

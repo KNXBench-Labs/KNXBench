@@ -675,7 +675,9 @@ for what that GUI does and does not cover.
 `BusAccess` from `0.xml` — the ETS commissioning interface connection string —
 is preserved verbatim and **not** translated into our own connection model
 (RESEARCH §3.1). It is ETS tool configuration, not domain data, and rewriting
-it would be inventing meaning we have not verified.
+it would be inventing meaning we have not verified. Since Goal B3 it is shown
+read-only, endpoints hidden until revealed, and never used to connect
+([contract](contracts/stored-bus-access.md)).
 
 Commissioning and download are not implemented (RESEARCH §8.3) and not
 excluded either — the user ruled 2026-09-11 that this capability is

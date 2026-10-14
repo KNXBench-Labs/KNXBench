@@ -45,8 +45,10 @@ and the modeled project information; **Export project…** asks before a native
 download; the Properties Inspector shows a device's recorded load state. All of it is
 read-only and contacts no device
 ([how to use it](user-guide/02-projects.md#review-the-complete-original-import-report),
-[limits](../KNOWN_LIMITATIONS.md#ported-native-import-evidence-2026-10-12)). Stored
-BusAccess/IP settings are not shown yet. Included in Alpha.10.
+[limits](../KNOWN_LIMITATIONS.md#ported-native-import-evidence-2026-10-12)). Included
+in Alpha.10. Stored bus access and IP settings are shown read-only since Goal B3
+(after Alpha 11), endpoints hidden until revealed
+([contract](../contracts/stored-bus-access.md)).
 
 ## Group-address members and download preparation (12 October 2026 source)
 

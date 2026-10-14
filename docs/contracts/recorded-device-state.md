@@ -76,5 +76,6 @@ against an immutable copy of the final accepted binary, not adopted by claim.
 
 No private corpus, manufacturer execution, hardware observation/write, schema
 migration, native13/main integration, publication or full commissioning closure.
-Review is source self-review. Stored BusAccess/IP details and target-specific
+Review is source self-review. Stored BusAccess/IP details are a separate read-only
+view since Goal B3 ([stored bus access](stored-bus-access.md)); target-specific
 planning/writers remain independent scope, not quietly included in this view.

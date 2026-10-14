@@ -217,9 +217,11 @@ This view ships since Alpha 10 and is not in the Alpha 9 screenshots.
   starting a new one or quitting asks first: **Keep editing** returns to the notes,
   **Discard draft and continue** goes on. In a browser, reloading the page or
   closing the tab with a draft makes the browser ask first, in its own wording
-  (it cannot show KNXBench's dialog). The desktop window's close button uses the
-  KNXBench dialog instead. *The browser prompt and the translated review names
-  arrived in Alpha 11.*
+  (it cannot show KNXBench's dialog). In the desktop window a reload (right-click
+  › **Reload**) asks the same way, in WebKit's **Stay**/**Leave** dialog; the
+  window's close button uses the KNXBench dialog instead. *The browser prompt and
+  the translated review names arrived in Alpha 11; the desktop reload prompt
+  after Alpha 11.*
 
 **Application help** in the notebook opens the help panel's *The window* topic.
 

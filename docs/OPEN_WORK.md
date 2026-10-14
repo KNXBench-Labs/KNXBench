@@ -64,8 +64,9 @@ real tree identity, refresh after Apply, drafts kept across views and guarded on
 Open/Import/New/Quit. Follow-ups of 12 October (source, after Alpha 10): the
 service's target catalogue including communication objects, a browser
 reload/tab-close prompt while drafts exist, and EN/DE action names in the review.
-Open: native WebKitGTK/Orca checks, a reload guard inside the desktop webview, and
-FUTURE-03 as a whole (still LATER).
+Since Goal B2 the desktop webview asks before a reload too (source-based; run in
+Chromium and Firefox, not in a native WebKitGTK window). Open: native
+WebKitGTK/Orca checks, and FUTURE-03 as a whole (still LATER).
 
 ## AP7 catalogue updates (12 October 2026)
 

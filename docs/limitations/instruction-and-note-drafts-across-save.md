@@ -26,3 +26,9 @@ updates supersede them; they are not new work assignments.
   smokes). No native WebKitGTK window, Orca session, hardware, release or deployment
   is claimed.
 <!-- END retained catalogue record -->
+
+## Update 2026-10-14: reloads ask in the desktop webview too (Goal B2)
+
+The browser's reload/tab-close prompt is installed in the desktop shell as well,
+where WebKitGTK shows its own Stay/Leave dialog. Evidence and what was not run:
+[project notes workbench](project-notes-workbench.md#update-2026-10-14-the-desktop-webview-asks-before-a-reload-too-goal-b2).

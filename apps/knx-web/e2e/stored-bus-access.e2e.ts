@@ -54,6 +54,8 @@ async function intercept(page: Page, language: "en" | "de") {
     else if (path === "/api/project/new" && method === "POST") body = tree;
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/product-languages" && method === "GET") body = [];
+    // The workbench's own start-up interface discovery, answered empty: not this view.
+    else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation" }; }
     else if (path === "/api/project/stored-bus-access" && method === "GET") body = { records: [ipConfig, access(false)] };
     else if (path === "/api/project/stored-bus-access/reveal" && method === "POST") {
@@ -138,8 +140,10 @@ test("en 1440px: the line inspector shows its own stored bus access", async ({ p
   await page.locator("button.tree-label", { hasText: /^Line 1: Ground floor$/ }).click();
   // The properties panel and the structure workspace both show the line.
   await expect(page.locator(".stored-bus-access-line")).toHaveCount(2);
-  const ids = await page.locator(".stored-bus-access-line h3").evaluateAll((hs) => hs.map((h) => h.id));
+  const ids = await page.locator(".stored-bus-access-line").evaluateAll((sections) =>
+    sections.map((section) => section.getAttribute("aria-labelledby") ?? ""));
   expect(new Set(ids).size, "no duplicate heading ids").toBe(2);
+  for (const id of ids) expect(await page.locator(`[id="${id}"]`).count(), `exactly one #${id}`).toBe(1);
   const section = page.getByRole("complementary").locator(".stored-bus-access-line");
   await expect(section.getByRole("heading", { name: en["storedBusAccess.lineTitle"] })).toBeVisible();
   await expect(section.locator("[data-record-id]")).toHaveCount(1);

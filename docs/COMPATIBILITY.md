@@ -1,5 +1,16 @@
 # Compatibility
 
+## Device programming support guidance (14 October 2026 source)
+
+[Support/refusal guidance](contracts/device-programming-support-guidance.md)
+explains the existing supported-but-untested path and actual technical refusals
+before a plan/report exists. It changes neither encoders/procedures nor hardware
+evidence, import admission or native schema. Missing/unresolved application data
+is identified as product-data rather than a device-family incompatibility.
+No executable-dependency scanner is introduced: an uninspected package is not
+called DLL-free. Server/transport errors are not compatibility verdicts; all
+write safety checks and the extra exact untested acknowledgement remain.
+
 ## Schema-23 Functions (13 October 2026, Goal A4)
 
 A `Function` with its `GroupAddressRef`s in a schema-23 project now imports

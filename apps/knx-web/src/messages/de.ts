@@ -1941,6 +1941,11 @@ export const messages: Record<MessageKey, string> = {
   "companion.open": "Diagnosefenster",
   "resume.notice": "Willkommen zurück. Das Projekt, das der Server noch offen hatte, ist wieder da.",
   "resume.noticeUnsaved": "Willkommen zurück. Das Projekt, das der Server noch offen hatte, ist wieder da, samt ungespeicherter Änderungen. Speichere sie: Ein Neustart des Servers würde sie verlieren.",
+  "overwrite.title": "Vorhandene Datei ersetzen?",
+  "overwrite.message": "{path} gibt es schon. Speicherst du hier, wird dieses Projekt zum Inhalt dieser Datei.",
+  "overwrite.history": "Der bisherige Stand der Datei bleibt in ihrem Projektverlauf wiederherstellbar. Eine Datei, die kein KNXBench-Projekt ist, wird nie überschrieben.",
+  "overwrite.cancel": "Abbrechen",
+  "overwrite.replace": "Ersetzen",
   "companion.title": "Diagnose",
   "companion.eyebrow": "Begleitfenster · nur lesend",
   "companion.readOnly":

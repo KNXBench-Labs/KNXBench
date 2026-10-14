@@ -76,6 +76,7 @@ import AboutDialog from "./AboutDialog";
 import OnboardingGuide from "./OnboardingGuide";
 import { useOnboardingGuide } from "./useOnboardingGuide";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
+import OverwriteConfirmDialog from "./OverwriteConfirmDialog";
 import NotesWorkspace from "./NotesWorkspace";
 import NoteDraftGuardDialog from "./NoteDraftGuardDialog";
 import { installDraftUnloadGuard } from "./draftUnloadGuard";
@@ -220,6 +221,11 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
   // this dialog's explicit button.
   const [replaceConfirm, setReplaceConfirm] = useState<{ path: string; kind: "import" | "open" } | null>(null);
   const [replaceSaving, setReplaceSaving] = useState(false);
+  // Save As named an existing file and the server refused it: the open
+  // question and how to answer the Save As waiting for it.
+  const [overwritePrompt, setOverwritePrompt] = useState<
+    { path: string; answer: (replace: boolean) => void } | null
+  >(null);
   // Bumped whenever the pending replacement is decided or withdrawn, so a
   // late save-first result can tell it no longer speaks for the user.
   const replaceAttemptRef = useRef(0);
@@ -1162,16 +1168,25 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
       revision: snapshotLifetimeRef.current.revision,
     };
     const path = await pickSavePath(knxdbFilter, "project.knxdb");
-    const latestSnapshot = snapshotLifetimeRef.current;
-    if (
-      !path ||
-      projectSnapshot.serverIncarnation !== latestSnapshot.serverIncarnation ||
-      projectSnapshot.revision !== latestSnapshot.revision
-    ) return false;
+    const unchanged = () => {
+      const latestSnapshot = snapshotLifetimeRef.current;
+      return projectSnapshot.serverIncarnation === latestSnapshot.serverIncarnation &&
+        projectSnapshot.revision === latestSnapshot.revision;
+    };
+    if (!path || !unchanged()) return false;
     clearErrors();
     try {
       requestCrtActivation(saveButtonRef.current);
-      await api.saveProjectAs(path);
+      try {
+        // The native dialog already asked before an existing file; the
+        // server-mount picker did not, so the server's refusal asks here.
+        await api.saveProjectAs(path, isTauri());
+      } catch (e) {
+        if (!api.isSaveAsFileExists(e)) throw e;
+        const replace = await new Promise<boolean>((answer) => setOverwritePrompt({ path, answer }));
+        if (!replace || !unchanged()) return false;
+        await api.saveProjectAs(path, true);
+      }
       return await refreshSavedProject();
     } catch (e) {
       reportError(e);
@@ -1585,6 +1600,13 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
             {t("autosave.cancel")}
           </button>
         </div>
+      )}
+
+      {overwritePrompt && (
+        <OverwriteConfirmDialog path={overwritePrompt.path} onAnswer={(replace) => {
+          setOverwritePrompt(null);
+          overwritePrompt.answer(replace);
+        }} />
       )}
 
       {newProjectOpen && (

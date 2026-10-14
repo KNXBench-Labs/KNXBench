@@ -1312,12 +1312,28 @@ async fn save_project(State(state): State<SharedState>) -> Result<(), ApiError> 
     domain::save_project(&state).map_err(ApiError::internal)
 }
 
+/// `POST /api/project/save-as`. `overwrite` is absent (false) unless the
+/// user confirmed replacing the file; without it an existing file is a
+/// `409 fileExists` and nothing is written.
+#[derive(Deserialize)]
+struct SaveAsBody {
+    path: String,
+    #[serde(default)]
+    overwrite: bool,
+}
+
 async fn save_project_as(
     State(state): State<SharedState>,
-    Json(body): Json<PathBody>,
+    Json(body): Json<SaveAsBody>,
 ) -> Result<(), ApiError> {
     let path = resolve_new_project_path(&state.data_dir, &body.path)?;
-    domain::save_project_as(&state, &path).map_err(ApiError::internal)
+    domain::save_project_as_with(&state, &path, body.overwrite).map_err(|error| match error {
+        knx_app::project_history::SaveAsError::Exists => ApiError::conflict(
+            "fileExists",
+            "a file with this name already exists; nothing was written",
+        ),
+        knx_app::project_history::SaveAsError::Failed(message) => ApiError::internal(message),
+    })
 }
 
 async fn device_detail(

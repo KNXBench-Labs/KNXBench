@@ -14,7 +14,7 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-14 — Measured web-test tooling candidate: a maintained Linux runner
+- 2026-10-14 — Measured web-test tooling: a maintained Linux runner
   replaces ad-hoc web wrappers, retains all default/production cases and derived
   TypeScript configs, removes three exact compiler duplicates and admits only
   unchanged reviewed functional specs to bounded parallel execution. Six equal-case
@@ -31,8 +31,12 @@ fragment aliases and update this index. Do not rewrite previous results.
   remains unaccepted. Complete expanded-source branch web acceptance passed:
   60 zero/proof-valid stages, inputs/build/tool versions frozen, Vitest 3559/0,
   default browser 554/0, 15 serial production configs 313/0, Python 148 run
-  (one existing skip), all typechecks/docs/xtask checks zero. Merged-result
-  acceptance and publication remain pending; this is not release certification.
+  (one existing skip), all typechecks/docs/xtask checks zero. Merged-source
+  `5db49560` also passed sixty stages with the same execution counts. Its exclusive
+  stage overlapped a failed archive attempt; a separate unchanged 278-case
+  exclusive followup passed under leases, with source/build/tools frozen and no
+  retries/skips. No whole-gate speedup, Rust/corpus or release certification.
+  Publication follows documentation-only closure checks.
   [Contract](contracts/web-test-gate.md),
   [evidence](evidence/web-test-optimization-2026-10-14.json).
 

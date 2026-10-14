@@ -142,7 +142,7 @@
     "includesSigtermChildAndTermIgnoringDescendant": true
   },
   "acceptance": {
-    "status": "complete expanded-source branch web gate passed; merged gate pending",
+    "status": "complete expanded-source branch and merged web gates passed; clean exclusive followup passed",
     "branch": {
       "success": true,
       "inputsFrozen": true,
@@ -161,6 +161,39 @@
       "browserExclusiveSeconds": 638.7137032689061,
       "totalCommandWallSeconds": 1340.8473693898413,
       "queueWaitSeconds": 270.7428663489409
+    },
+    "merged": {
+      "success": true,
+      "inputsFrozen": true,
+      "stages": 60,
+      "defaultBrowserPassed": 554,
+      "functionalPassed": 276,
+      "exclusivePassed": 278,
+      "productionConfigs": 15,
+      "productionPassed": 313,
+      "vitestPassed": 3559,
+      "vitestFiles": 256,
+      "toolTestsRan": 148,
+      "toolTestsSkipped": 1,
+      "sourceFingerprint": "5992550d0edde977440dd1a41202ace7070770a96b9c589c02281e1cc1d16b52",
+      "browserFunctionalSeconds": 191.55622194707394,
+      "browserExclusiveSeconds": 661.6065497850068,
+      "totalCommandWallSeconds": 1407.211821075296,
+      "queueWaitSeconds": 1317.454712116858,
+      "revision": "5db49560211529ae0742ff843a917c5251f17349",
+      "scope": "full declared web/docs profile, not Rust/corpus/release"
+    },
+    "cleanExclusiveFollowup": {
+      "success": true,
+      "stages": 3,
+      "passed": 278,
+      "sourceFingerprint": "5992550d0edde977440dd1a41202ace7070770a96b9c589c02281e1cc1d16b52",
+      "wallSeconds": 687.13698166213,
+      "sameCompiledInventory": true,
+      "inputsBuildAndToolsFrozen": true,
+      "reason": "first merged exclusive start overlapped an unsuccessful archive attempt; separate unchanged exclusive-only followup under shared leases",
+      "notAnotherFullGate": true,
+      "notScalingBenchmark": true
     }
   },
   "limitations": [
@@ -168,7 +201,8 @@
     "Two observations per worker count on one host do not establish cross-host statistical guarantees.",
     "wait4 peak RSS is not aggregate simultaneous-worker memory.",
     "Installed dependency versions and build bytes are bound, not every node_modules byte or system attestation.",
-    "Existing whole-gate leases, Rust/private-corpus scheduling and GPU acceleration are unchanged."
+    "Existing whole-gate leases, Rust/private-corpus scheduling and GPU acceleration are unchanged.",
+    "Initial merged run overlapped an archive compressor; no clean performance claim from that run. Complete assertion acceptance and a separate unchanged 278-case exclusive followup are retained independently."
   ],
   "recurringTempGuard": {
     "playwrightEntryConfigs": 30,

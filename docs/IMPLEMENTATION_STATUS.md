@@ -22,10 +22,38 @@ fragment aliases and update this index. Do not rewrite previous results.
   browser 4/4 (EN/DE × 1440/400). Frozen branch web/docs gate: 46 stages zero,
   Vitest 3567/0 (256 files), Chromium 558/0, fifteen production configurations
   zero, devices-navigation repeats 51/0; Python 123 (one skip), all compiler,
-  documentation and five repository checks pass. Merged-result acceptance pending.
+  documentation and five repository checks pass. First merged result `b9a2decc`
+  also passed all 47 stages with the same test counts. New upstream test tooling
+  is integrated separately and final-source acceptance remains pending.
   [Behaviour and boundaries](contracts/diagnostic-sidebar-selection.md),
   [operating guide](manual/user-guide/01-user-interface.md#the-navigation-pane).
   No API/domain/storage/schema/protocol change, hardware, release or deployment.
+
+- 2026-10-14 — Measured web-test tooling: a maintained Linux runner
+  replaces ad-hoc web wrappers, retains all default/production cases and derived
+  TypeScript configs, removes three exact compiler duplicates and admits only
+  unchanged reviewed functional specs to bounded parallel execution. Six equal-case
+  1/2/4/4/2/1 runs pass (276 per execution): mean 331.18/195.66/165.15 s, about
+  2× on this host for the functional lane only. Default browser union is 554 cases
+  (276 functional / 278 exclusive); no assertions, retries, protocol or application
+  behavior changed. Twenty runner regressions plus five central-temp regressions
+  pass. The shared guard covers all thirty Playwright configs, including direct
+  invocations; a real Chromium probe repairs a 245-byte requested TMPDIR to a
+  59-byte owned path and verifies cleanup without deleting the caller's directory.
+  Three exact typecheck duplicates are removed; one new Node-only tooling config
+  is added (19 previous calls → 17 now, all old scopes retained). The earlier
+  branch attempt was intentionally stopped on the owner's scope expansion and
+  remains unaccepted. Complete expanded-source branch web acceptance passed:
+  60 zero/proof-valid stages, inputs/build/tool versions frozen, Vitest 3559/0,
+  default browser 554/0, 15 serial production configs 313/0, Python 148 run
+  (one existing skip), all typechecks/docs/xtask checks zero. Merged-source
+  `5db49560` also passed sixty stages with the same execution counts. Its exclusive
+  stage overlapped a failed archive attempt; a separate unchanged 278-case
+  exclusive followup passed under leases, with source/build/tools frozen and no
+  retries/skips. No whole-gate speedup, Rust/corpus or release certification.
+  Publication follows documentation-only closure checks.
+  [Contract](contracts/web-test-gate.md),
+  [evidence](evidence/web-test-optimization-2026-10-14.json).
 
 - 2026-10-14 — Issue #22 offline prerequisite: exact-shape `LdCtrlTaskCtrl2`
   source parsing and the pure ten-octet property-record encoder, strict unknown

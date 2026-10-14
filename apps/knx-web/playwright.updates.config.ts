@@ -1,4 +1,5 @@
 /** Exercises the production-built shell with synthetic project-free release discovery. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
  testDir: "./e2e", testMatch: "release-updates.e2e.ts", outputDir: "../../target/playwright/release-updates",

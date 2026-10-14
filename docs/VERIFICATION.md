@@ -31,6 +31,38 @@ misplaced `--root` or extra scan-task argument fails. AppImage verification
 uses the same root selection and retains its task-specific `--artifact-dir`
 and `--tag` options. `freeze-fixture` is a separate storage helper, not a scan.
 
+## Measured web tests
+
+After `npm ci` in `apps/knx-web`, use:
+
+```sh
+npm run test:e2e       # build + complete default browser cases
+npm run test:gate      # declared web/docs package gate
+npm run test:benchmark # functional-only 1/2/4/4/2/1 scaling matrix
+```
+
+The [web gate contract](contracts/web-test-gate.md) defines the exact profile
+coverage, Linux prerequisites, source-hash parallel admission and receipt limits.
+`test:gate` is **web-only**, not a Rust/private-corpus/release acceptance. Its
+browser default is at most four workers, capped by CPU affinity; timing/performance
+and unreviewed/changed specs remain exclusive. Override with `-- --workers 1` for
+serial execution or a constrained machine. Installed dependencies must match the
+lock; the runner never installs them silently.
+
+From the workspace root, an explicit immutable attempt path is also supported:
+
+```sh
+python3 tools/run_web_gate.py --profile web --output /path/to/new-attempt
+```
+
+`receipt.json` separates actual command exits, proof validity, queue wait and
+input/build/version commitments. Existing attempt paths are refused. Do not edit
+the candidate while a gate runs or retag old output as new execution. The three
+existing execution leases remain in force; this version does not shorten them.
+See the [audit](research/2026-10-14-test-suite-performance-audit.md) and
+[measured matrix](evidence/web-test-optimization-2026-10-14.json). The approximately
+2× functional-lane gain is host/scope-specific, not a promised whole-gate speedup.
+
 ## Coverage contract
 
 Each gate prints `gate target: <canonical root>`. Verify that this is **your

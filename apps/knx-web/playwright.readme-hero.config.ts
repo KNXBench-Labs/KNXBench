@@ -1,4 +1,5 @@
 /** Records the README hero clip on a real server; never part of the normal browser suite. */
+import "./browserTmp";
 
 import { defineConfig } from "@playwright/test";
 import { mkdtempSync } from "node:fs";

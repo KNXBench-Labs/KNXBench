@@ -51,6 +51,8 @@ const report = {
 async function open(page: Page, language: "en" | "de") {
   const m = language === "en" ? en : de;
   const state = { started: false, writes: [] as string[], reportReads: 0 };
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -58,8 +60,8 @@ async function open(page: Page, language: "en" | "de") {
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     if (path === "/api/auth/status") return json({ required: false, authenticated: true });
     if (path === "/api/settings" && method === "GET") return json({ schemaVersion: 1, status: "ok", settings: { uiLanguage: language } });
-    if (path === "/api/project" && method === "GET") return json(tree);
-    if (path === "/api/project/new" && method === "POST") return json(tree);
+    if (path === "/api/project" && method === "GET") return projectOpen ? json(tree) : json({ error: "no project open" }, 400);
+    if (path === "/api/project/new" && method === "POST") { projectOpen = true; return json(tree); }
     if (path === "/api/bus/discover") return json({ interfaces: [] });
     if (path === "/api/bus/activity" && method === "GET") return json({ serverIncarnation: "fixture", coverage: "partial", historyState: "disabled", sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: [], untracked: [] });
     if (path === "/api/device-readiness" && method === "GET") return json({ devices: [], counts: {} });

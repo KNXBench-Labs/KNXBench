@@ -4,6 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { fulfillNoProjectOpen } from "./server-project-fixture";
 
 const bundled = JSON.parse(readFileSync(new URL("../../../docs/community/hall-of-fame.json", import.meta.url), "utf8")) as {
   generated_at: string; contributors: Array<{ login: string; xp: number; rank: { title: string }; medals: string[] }> };
@@ -26,6 +27,7 @@ async function fixture(page: Page, language: "en" | "de", width: number, theme: 
     if (path === "/api/settings") return ok({ conditionalPatchVersion: 1, schemaVersion: 1, status: "ok", settings });
     if (path === "/api/version") return ok({ version: "0.1.0-alpha.11+g1234567" });
     if (path === "/api/bus/discover") return ok({ interfaces: [] });
+    if (path === "/api/project" && method === "GET") return fulfillNoProjectOpen(route);
     if (path === "/api/legacy-password") return ok({ available: true, remembered: false, problem: null });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items", "/api/log"].includes(path)) return ok([]);
     unexpected.push(`${method} ${path}`); return route.fulfill({ status: 404, body: "unexpected request" });

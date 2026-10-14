@@ -26,7 +26,7 @@ async function serve(page: Page, answers: Array<"required" | "wrong" | "ok">) {
     if (path === "/api/auth/status") return ok({ required: false, authenticated: true });
     if (path === "/api/settings" && method === "GET") return ok({ schemaVersion: 1, status: "ok", settings: {} });
     if (path === "/api/project" && method === "GET") {
-      return current ? ok(current) : route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"no project open"}' });
+      return current ? ok(current) : route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"no project open"}' });
     }
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (path === "/api/project/load-progress") return ok(null);

@@ -11,13 +11,15 @@ async function intercept(page: Page, language: "en" | "de", session = false) {
   const history = admitProjectHistory({...structuredClone(HISTORY_FIXTURE), limits: {...HISTORY_FIXTURE.limits, maxContextBytes: 268435456, maxDecodedImageBytes: 536870912, maxDecodedHistoryBytes: 536870912}});
   if (session) { history.persistence = "session"; history.generation = 0; history.versions = []; history.totalBytes = 0; }
   const state = { history, unexpected: [] as string[], writes: [] as { path: string; body: Record<string, unknown> }[] };
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname; const method = route.request().method();
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
     else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme: language === "en" ? "graphite" : "porcelain" } };
-    else if (path === "/api/project" && method === "GET") body = history.project;
-    else if (path === "/api/project/new" && method === "POST") body = history.project;
+    else if (path === "/api/project" && method === "GET") { if (projectOpen) body = history.project; else { status = 400; body = { error: "no project open" }; } }
+    else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = history.project; }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];

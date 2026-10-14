@@ -639,6 +639,11 @@ text. It ships since Alpha 10 and is not in the Alpha 9 screenshots.
   used formatting KNXBench cannot show, Apply asks you to agree to the supported
   subset first; the original stays retained either way.
 - **Return to imported original** removes your override.
+- A device you added in KNXBench has no imported original: the tab says **Made in
+  KNXBench: no imported original** and starts empty. An imported device that came
+  without instructions says **Imported without instructions**. In both cases
+  **Remove instructions** takes your text away again, and the device has none, as
+  before.
 - After Apply the workbench reloads the project, so Undo/Redo and the modified state
   follow the edit. Applying is not saving the file: use Save or Save As.
 - Saving the project does not disturb a draft. If the instructions really changed on

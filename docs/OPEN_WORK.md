@@ -52,9 +52,9 @@ native WebKitGTK/Orca checks.
 The instruction editor is the device editor's sixth tab
 ([host](contracts/instruction-editor-host.md#workbench-host-12-october-2026)):
 real tree identity (read-only without one), refresh after every Apply, drafts kept
-across tabs and Save, guarded on Open/Import/New/Quit. Open: natively authored
-devices (no imported source), other source schemas/encodings, an ETS export of
-edited overrides, native WebKitGTK/Orca checks.
+across tabs and Save, guarded on Open/Import/New/Quit. Devices made in KNXBench get instructions since
+Goal B4, without an invented original. Open: other source schemas/encodings, an
+ETS export of edited overrides, native WebKitGTK/Orca checks.
 
 ## Project notes in the workbench (12 October 2026)
 

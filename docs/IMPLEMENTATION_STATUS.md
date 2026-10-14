@@ -14,6 +14,32 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-14 — Issue #21: a `.knxdb` carries its application programs. Store
+  schema 16 adds `manufacturer_file` (each manifest entry's bytes, zlib,
+  SHA-256 keyed and re-checked on every read, outside the snapshot and the
+  editor history); Save, Save As, the browser export and `knx import --store`
+  fill it, and opening reinstalls whatever the product database lacks. A file
+  saved before v16 names its missing files in the parameter panel and offers
+  **Restore from the original .knxproj…** (hash-matched, outer members only so
+  no password is needed, project untouched;
+  `POST /api/project/manufacturer-files/restore`). The Docker image keeps the
+  product database on `/data` (`XDG_DATA_HOME=/data/.knxbench-share`).
+  [ADR-0128](adr/0128-native-project-files-carry-their-manufacturer-files.md),
+  [§183](KNOWN_LIMITATIONS.md#183-a-knxdb-saved-before-store-schema-v16-does-not-carry-its-application-programs).
+  Tests first (server RED before the store module): server 11, store units incl.
+  v15→v16, CLI 1, web 2 files, Docker default 1 (RED without the line).
+  End-to-end probe (not committed): two real ZipCrypto exports restored without
+  password (4/4 and 2/2 devices) and the largest private project (76/76 devices,
+  248 files, 18 MiB carried). Branch gate on `ed8edea9`: Rust 4487/0 (200
+  ignored), Vitest 3546/0. Merged gate on `8aab7c27` (with #20): fmt, Clippy,
+  build, 16 typechecks 0, Rust 4487/0 (200 ignored, 324 suites), Vitest 3577/0
+  (255 files), Python 123 (1 skip), five xtask checks and the documentation
+  check 0, bindings unchanged apart from end-of-line spaces; private corpus
+  145/145 in 32 targets.
+  The Docker smoke test could not run: the image build fails on `main` at the
+  web build (`docs/community/hall-of-fame.json`), which is issue #19's
+  subject, not this change. No hardware, release or deployment.
+
 - 2026-10-14 — Issue #20: every range heading in the group-address tree table
   gets a **+** that opens **New group address in this range**. The suggested
   address is the range's first gap, else the one after its highest, else its

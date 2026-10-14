@@ -158,10 +158,16 @@ fn support_of(prepared: &PreparedDownload) -> Result<SupportLevel, ApiError> {
 }
 
 pub(crate) fn parse_target(address: &str) -> Result<IndividualAddress, ApiError> {
-    let parsed: IndividualAddress = address
-        .parse()
-        .map_err(|e| ApiError::bad_request(format!("invalid device address {address:?}: {e}")))?;
-    ContactableAddress::new(parsed).map_err(|e| ApiError::bad_request(e.to_string()))?;
+    let parsed: IndividualAddress = address.parse().map_err(|e| {
+        ApiError::with_kind(
+            StatusCode::BAD_REQUEST,
+            "downloadInvalidAddress",
+            format!("invalid device address {address:?}: {e}"),
+        )
+    })?;
+    ContactableAddress::new(parsed).map_err(|e| {
+        ApiError::with_kind(StatusCode::BAD_REQUEST, "downloadExcluded", e.to_string())
+    })?;
     Ok(parsed)
 }
 
@@ -173,8 +179,9 @@ pub(crate) fn parse_target(address: &str) -> Result<IndividualAddress, ApiError>
 fn keying(state: &SharedState, prepared: &PreparedDownload) -> Result<DownloadKeying, ApiError> {
     let opaque = state.opaque.lock().expect("state mutex poisoned");
     let project_key = project_access_key(&opaque).map_err(|e| {
-        ApiError::with_status(
+        ApiError::with_kind(
             StatusCode::UNPROCESSABLE_ENTITY,
+            "downloadKeyRefused",
             format!("no download to device {} prepared: {e}", prepared.target),
         )
     })?;
@@ -192,6 +199,7 @@ pub(crate) fn prepare_error(target: IndividualAddress, error: &PrepareError) -> 
             let mut details = serde_json::Map::new();
             details.insert("address".into(), target.to_string().into());
             details.insert("order".into(), order.clone().into());
+            details.insert("category".into(), "byte-order".into());
             ApiError::with_details(
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "unsupportedByteOrder",
@@ -199,7 +207,21 @@ pub(crate) fn prepare_error(target: IndividualAddress, error: &PrepareError) -> 
                 details,
             )
         }
-        _ => ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, message),
+        _ => {
+            let mut details = serde_json::Map::new();
+            details.insert(
+                "category".into(),
+                knx_app::project_readiness::prepare_category(error)
+                    .code()
+                    .into(),
+            );
+            ApiError::with_details(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "downloadPreparationRefused",
+                message,
+                details,
+            )
+        }
     }
 }
 
@@ -211,15 +233,17 @@ pub(crate) fn prepare(
     partial: Option<PartialDownloadParts>,
 ) -> Result<PreparedDownload, ApiError> {
     let Some(products) = state.product_db.as_ref() else {
-        return Err(ApiError::with_status(
+        return Err(ApiError::with_kind(
             StatusCode::CONFLICT,
+            "downloadProductDataMissing",
             "no product database is configured, so no application program can be read",
         ));
     };
     let project_guard = state.project.lock().expect("state mutex poisoned");
     let Some(project) = project_guard.as_ref() else {
-        return Err(ApiError::with_status(
+        return Err(ApiError::with_kind(
             StatusCode::CONFLICT,
+            "downloadProjectMissing",
             "no project is open",
         ));
     };
@@ -229,8 +253,9 @@ pub(crate) fn prepare(
     match partial {
         None => Ok(prepared),
         Some(parts) => prepared.into_partial(parts).map_err(|e| {
-            ApiError::with_status(
+            ApiError::with_kind(
                 StatusCode::UNPROCESSABLE_ENTITY,
+                "downloadPartialRefused",
                 format!("no partial download to device {target} prepared: {e}"),
             )
         }),
@@ -333,7 +358,7 @@ struct StartResponse {
 }
 
 fn conflict(message: impl Into<String>) -> ApiError {
-    ApiError::with_status(StatusCode::CONFLICT, message)
+    ApiError::conflict("downloadPlanStale", message)
 }
 
 async fn start(
@@ -342,10 +367,13 @@ async fn start(
 ) -> Result<Json<StartResponse>, ApiError> {
     // Goal A3: no new tunnel once a stop has begun (KL-163).
     state.stop_admission.admit()?;
-    let gateway: SocketAddrV4 = body
-        .gateway
-        .parse()
-        .map_err(|_| ApiError::bad_request("gateway is not a host:port IPv4 address"))?;
+    let gateway: SocketAddrV4 = body.gateway.parse().map_err(|_| {
+        ApiError::with_kind(
+            StatusCode::BAD_REQUEST,
+            "downloadGatewayInvalid",
+            "gateway is not a host:port IPv4 address",
+        )
+    })?;
     let (target, partial) = {
         let shown = state
             .device_download_plan
@@ -362,7 +390,13 @@ async fn start(
     };
     let authorisation =
         WriteAuthorisation::for_hardware(target, WriteScope::Download, &body.confirmation)
-            .map_err(|e| ApiError::bad_request(format!("not written: {e}")))?;
+            .map_err(|e| {
+                ApiError::with_kind(
+                    StatusCode::BAD_REQUEST,
+                    "downloadConfirmationRefused",
+                    format!("not written: {e}"),
+                )
+            })?;
 
     // Held until the run is registered: a second start waits here and
     // then sees the first one running.
@@ -415,10 +449,14 @@ async fn start(
     if level.needs_acknowledgement() {
         let expected = untested_acknowledgement(target);
         if body.accept_untested.as_deref() != Some(expected.as_str()) {
-            return Err(ApiError::bad_request(format!(
-                "not written: this download is untested on hardware; acceptUntested must read \
+            return Err(ApiError::with_kind(
+                StatusCode::BAD_REQUEST,
+                "downloadConfirmationRefused",
+                format!(
+                    "not written: this download is untested on hardware; acceptUntested must read \
                  exactly {expected:?}"
-            )));
+                ),
+            ));
         }
     }
     {
@@ -650,6 +688,7 @@ mod prepare_error_tests {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
         assert_eq!(body["kind"], "unsupportedByteOrder", "{body}");
         assert_eq!(body["order"], "LittleEndian", "{body}");
+        assert_eq!(body["category"], "byte-order", "{body}");
         assert_eq!(body["address"], "0.2.23", "{body}");
         assert_eq!(
             body["error"],
@@ -659,13 +698,39 @@ mod prepare_error_tests {
     }
 
     #[tokio::test]
-    async fn every_other_refusal_stays_a_plain_422() {
+    async fn procedure_and_module_refusals_use_the_shared_typed_category() {
+        let target: IndividualAddress = "1.1.5".parse().unwrap();
+        for (error, category) in [
+            (
+                PrepareError::Plan(
+                    knx_productdb::download_plan::DownloadPlanError::ProcedureCount(2),
+                ),
+                "procedure-shape",
+            ),
+            (
+                PrepareError::Image(ImageError::Unsupported {
+                    what: "parameter in a module instance".into(),
+                }),
+                "modules",
+            ),
+        ] {
+            let expected_detail = format!("no download to device {target} prepared: {error}");
+            let (status, result) = body(prepare_error(target, &error)).await;
+            assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+            assert_eq!(result["kind"], "downloadPreparationRefused");
+            assert_eq!(result["category"], category);
+            assert_eq!(result["error"], expected_detail);
+        }
+    }
+
+    #[tokio::test]
+    async fn every_other_refusal_retains_its_text_and_adds_the_preparation_category() {
         let target: IndividualAddress = "1.1.5".parse().unwrap();
         let (status, body) = body(prepare_error(target, &PrepareError::NoDeviceAt(target))).await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
         assert_eq!(
             body,
-            serde_json::json!({ "error": "no download to device 1.1.5 prepared: no device in the project has address 1.1.5" })
+            serde_json::json!({ "kind": "downloadPreparationRefused", "category": "configuration", "error": "no download to device 1.1.5 prepared: no device in the project has address 1.1.5" })
         );
     }
 }

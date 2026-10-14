@@ -16,6 +16,14 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Pre-plan programming support help (14 October 2026 source, main-only)
+
+The download tab shows a reason and next action before any plan or report exists,
+with EN/DE instructions, the support-gap issue form and an unsent email draft.
+Technical details remain local and copyable; links contain no project-derived
+metadata. B15's pending context and readiness/status retry remain. This is not a
+new encoder, device approval or release. [How to report](../contribution-intake/README.md#device-programming-refused-before-a-plan-exists).
+
 ## Help verify a device (13 October 2026 source)
 
 The download tab now shows what a plan warns about in plain words, the assumptions it

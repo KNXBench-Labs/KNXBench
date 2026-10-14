@@ -23,7 +23,7 @@ describe("readinessMarks", () => {
       row(null, "no-address"),
     ]);
     expect([...marks.entries()]).toEqual([
-      ["0.2.23", { kind: "unsupported", category: "byte-order" }],
+      ["0.2.23", { kind: "unsupported", category: "byte-order", detail: null, programRef: "fictional" }],
       ["1.1.4", { kind: "excluded" }],
     ]);
   });
@@ -34,13 +34,18 @@ describe("readinessMarks", () => {
   });
 });
 
+it("retains the exact technical detail for local guidance", () => {
+  const rowWithDetail = { ...row("1.1.9", "unsupported", "modules"), detail: "PRIVATE customer /path" };
+  expect(readinessMarks([rowWithDetail]).get("1.1.9")).toMatchObject({ detail: rowWithDetail.detail });
+});
+
 describe("readinessReason", () => {
   it("says the byte-order refusal in plain words", () => {
     expect(readinessReason({ kind: "unsupported", category: "byte-order" }, en)).toBe(
-      "its application program stores values in little-endian byte order, which KNXBench does not write yet",
+      "its application program declares a byte order that KNXBench cannot yet write",
     );
     expect(readinessReason({ kind: "unsupported", category: "byte-order" }, de)).toBe(
-      "sein Applikationsprogramm speichert Werte in Little-Endian-Byte-Reihenfolge, die KNXBench noch nicht schreibt",
+      "sein Applikationsprogramm deklariert eine Byte-Reihenfolge, die KNXBench noch nicht schreiben kann",
     );
   });
 

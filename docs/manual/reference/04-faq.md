@@ -27,6 +27,17 @@ exists, and unloading and secure devices are not supported. For anything beyond 
 use a commissioning tool that covers your devices. See
 [Bus monitor and KNXnet/IP](../user-guide/07-bus-and-interfaces.md#what-knxbench-does-and-does-not-do-on-a-bus).
 
+**Does “untested” mean my device cannot be programmed?**
+
+No. A complete supported plan can be **untested** when it lacks matching hardware
+evidence; it still requires the extra target-bound acknowledgement, ordinary
+confirmation and every server guard. **Unsupported** means a technical preparation
+boundary that no acknowledgement bypasses. Required executable-extension behavior
+is a separate unresolved prerequisite, not proven absent by the status. Current
+source builds show actionable refusal help and deliberate docs/issue/mail links
+before any plan or report exists. See
+[the download workflow](../user-guide/07-bus-and-interfaces.md#when-preparation-or-starting-is-refused).
+
 **Is my project safe with KNXBench?**
 
 KNXBench never silently discards information it doesn't understand — unknown data is

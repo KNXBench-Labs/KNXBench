@@ -1,4 +1,5 @@
 /** Runs refusal/reporting and existing download safety specs against the production build. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e", testMatch: ["device-download-support.e2e.ts", "device-download-verification.e2e.ts", "device-download-scope.e2e.ts", "ga-members-download.e2e.ts"],

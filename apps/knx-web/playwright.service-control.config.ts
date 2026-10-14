@@ -1,4 +1,5 @@
 /** Playwright gate for the isolated Debug setting and service-control mock. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

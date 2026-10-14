@@ -1,4 +1,5 @@
 /** Production-built four-view group-address workspace browser gate. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 import base from "./playwright.config";
 

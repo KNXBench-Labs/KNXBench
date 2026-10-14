@@ -1,4 +1,5 @@
 /** Verifies slow task text and download preparation against the actual production bundle. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

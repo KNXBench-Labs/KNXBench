@@ -1,4 +1,5 @@
 /** Production-built UX feedback acceptance: toasts, Explorer findings, Flow export, motion. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

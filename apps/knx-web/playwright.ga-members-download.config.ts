@@ -1,4 +1,5 @@
 /** Production-built GA members and device-download preparation browser gate. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

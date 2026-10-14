@@ -120,6 +120,16 @@ already found lying in the grass.
 
 ## Web app
 
+- **Keep the central Chromium temp guard in every Playwright config.**
+  `browserTmp.ts` delegates to `tools/browser_tmp.py`, keeps the socket pathname
+  within Linux's byte budget, creates a private owned directory and removes only
+  that directory on exit. A deep `TMPDIR` may use an owned, non-writable-by-others
+  `scratch` ancestor; otherwise provide `KNXBENCH_BROWSER_TMP_ROOT` or the gate's
+  `--temp-root`. Do not disable the guard, add unsafe Chromium switches, reuse
+  another process's profile, or move temporary data into system `/tmp` to conceal
+  a setup failure. The [contract](contracts/web-test-gate.md#recurring-chromium-socket-path-protection)
+  and CI regressions cover direct/CJS config loads as well as the measured runner.
+
 - **Keep gate stage exits separate from freeze metadata.** `inputs_frozen=1`
   is successful proof, not a failed test. The task-status private runner's final
   grep once treated it as a nonzero stage: every actual stage and raw report

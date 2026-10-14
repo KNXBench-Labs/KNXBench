@@ -79,7 +79,9 @@ async function openProject(page: Page, m: Catalogue) {
 /** Nothing that could connect, write or pick a gateway was requested. */
 function readOnly(requests: string[]) {
   return requests.filter((r) => r.startsWith("POST ") || r.startsWith("PUT ") || r.startsWith("DELETE "))
-    .filter((r) => r !== "POST /api/project/new" && r !== "POST /api/project/stored-bus-access/reveal");
+    .filter((r) => r !== "POST /api/project/new" && r !== "POST /api/project/stored-bus-access/reveal")
+    // The app-wide achievement counter (palette use): not the project, not a gateway.
+    .filter((r) => r !== "POST /api/achievements/record");
 }
 
 async function noOverflow(page: Page) {
@@ -92,6 +94,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.setViewportSize({ width, height: 900 });
     const state = await intercept(page, language);
     await openProject(page, m);
+    // Count from here: the app's own start-up (interface discovery) is not this view.
+    const before = state.requests.length;
     await page.keyboard.press("Control+Shift+P");
     await page.getByRole("combobox").fill(m["storedBusAccess.command"]);
     await page.getByRole("option").filter({ hasText: m["storedBusAccess.command"] }).first().click();
@@ -118,9 +122,10 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await dialog.getByRole("button", { name: m["storedBusAccess.close"], exact: true }).click();
     await expect(dialog).toHaveCount(0);
 
-    expect(state.requests.filter((r) => r === "POST /api/project/stored-bus-access/reveal")).toHaveLength(1);
-    expect(readOnly(state.requests), "nothing connects, writes or picks a gateway").toEqual([]);
-    expect(state.requests.some((r) => r.includes("/api/bus/") && !r.endsWith("/api/bus/activity"))).toBe(false);
+    const since = state.requests.slice(before);
+    expect(since.filter((r) => r === "POST /api/project/stored-bus-access/reveal")).toHaveLength(1);
+    expect(readOnly(since), "nothing connects, writes or picks a gateway").toEqual([]);
+    expect(since.some((r) => r.includes("/api/bus/") && !r.endsWith("/api/bus/activity"))).toBe(false);
     expect(state.unexpected).toEqual([]);
   });
 }
@@ -129,12 +134,17 @@ test("en 1440px: the line inspector shows its own stored bus access", async ({ p
   await page.setViewportSize({ width: 1440, height: 900 });
   const state = await intercept(page, "en");
   await openProject(page, en);
+  const before = state.requests.length;
   await page.locator("button.tree-label", { hasText: /^Line 1: Ground floor$/ }).click();
-  const section = page.locator(".stored-bus-access-line");
+  // The properties panel and the structure workspace both show the line.
+  await expect(page.locator(".stored-bus-access-line")).toHaveCount(2);
+  const ids = await page.locator(".stored-bus-access-line h3").evaluateAll((hs) => hs.map((h) => h.id));
+  expect(new Set(ids).size, "no duplicate heading ids").toBe(2);
+  const section = page.getByRole("complementary").locator(".stored-bus-access-line");
   await expect(section.getByRole("heading", { name: en["storedBusAccess.lineTitle"] })).toBeVisible();
   await expect(section.locator("[data-record-id]")).toHaveCount(1);
   await expect(section).not.toContainText(HOST);
   if (CAPTURE) await page.screenshot({ path: join(CAPTURE, "b3-line-inspector-en-1440.png") });
-  expect(readOnly(state.requests)).toEqual([]);
+  expect(readOnly(state.requests.slice(before))).toEqual([]);
   expect(state.unexpected).toEqual([]);
 });

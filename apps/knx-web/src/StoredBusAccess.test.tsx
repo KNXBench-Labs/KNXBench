@@ -135,3 +135,14 @@ it("an empty project says so", async () => {
   expect(v.host.textContent).toContain("This project stores no bus access or IP configuration.");
   await v.cleanup();
 });
+
+it("two inspectors on one line still name their own heading (no duplicate ids)", async () => {
+  // The properties panel and the structure workspace show the same line at once.
+  const v = await render(<><LineStoredBusAccess lineId={7} /><LineStoredBusAccess lineId={7} /></>);
+  const sections = [...v.host.querySelectorAll("section.stored-bus-access-line")];
+  expect(sections).toHaveLength(2);
+  const ids = sections.map(section => section.getAttribute("aria-labelledby"));
+  expect(new Set(ids).size).toBe(2);
+  for (const [i, section] of sections.entries()) expect(section.querySelector("h3")?.id).toBe(ids[i]);
+  await v.cleanup();
+});

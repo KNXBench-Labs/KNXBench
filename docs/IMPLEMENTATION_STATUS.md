@@ -31,7 +31,9 @@ fragment aliases and update this index. Do not rewrite previous results.
   End-to-end probe (not committed): two real ZipCrypto exports restored without
   password (4/4 and 2/2 devices) and the largest private project (76/76 devices,
   248 files, 18 MiB carried). Branch gate on `ed8edea9`: Rust 4487/0 (200
-  ignored), Vitest 3546/0. Merged gate on `8aab7c27` (with #20): fmt, Clippy,
+  ignored), Vitest 3546/0. Merged gate on `8aab7c27` (with #20; published as `ceb54d2f` after a
+  rebase over the docs-only `5ed264aa`, its Python, Hall-of-Fame and build checks
+  rerun): fmt, Clippy,
   build, 16 typechecks 0, Rust 4487/0 (200 ignored, 324 suites), Vitest 3577/0
   (255 files), Python 123 (1 skip), five xtask checks and the documentation
   check 0, bindings unchanged apart from end-of-line spaces; private corpus

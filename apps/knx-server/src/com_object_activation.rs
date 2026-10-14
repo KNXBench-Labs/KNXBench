@@ -34,10 +34,37 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use knx_productdb::dynamic::{
-    substitute_text_checked, Activation, ActiveRef, ChannelOwner, ModuleScope,
-    TextProjectionBudget, TextProjectionError,
+    substitute_text_checked, Activation, ActiveRef, ChannelOwner, ModuleScope, PositionalSource,
+    TextProjectionBudget, TextProjectionError, UnavailableReason,
 };
-use knx_projection::{ComObjectActivation, ComObjectChannel, ComObjectNode};
+use knx_productdb::text_parameters::DeviceTexts;
+use knx_projection::{
+    ComObjectActivation, ComObjectChannel, ComObjectNode, TextFill, TextFillSource,
+};
+
+/// ADR-0126: the record shown next to a filled product text, `None` when the
+/// text had no `{{0}}` to fill.
+pub(crate) fn text_fill(source: PositionalSource, template: &str) -> Option<TextFill> {
+    let source = match source {
+        PositionalSource::NoPlaceholder => return None,
+        PositionalSource::StoredValue => TextFillSource::StoredValue,
+        PositionalSource::ProductDefault => TextFillSource::ProductDefault,
+        PositionalSource::TemplateDefault => TextFillSource::TemplateDefault,
+        PositionalSource::EmptyValue => TextFillSource::EmptyValue,
+        PositionalSource::Unresolved(UnavailableReason::NoReference) => TextFillSource::NoReference,
+        PositionalSource::Unresolved(UnavailableReason::UnknownParameter) => {
+            TextFillSource::UnknownParameter
+        }
+        PositionalSource::Unresolved(UnavailableReason::NotTextParameter) => {
+            TextFillSource::NotTextParameter
+        }
+        PositionalSource::Unresolved(UnavailableReason::Undecided) => TextFillSource::Undecided,
+    };
+    Some(TextFill {
+        template: template.to_string(),
+        source,
+    })
+}
 
 /// What `apply` needs to know about one communication object.
 pub(crate) struct ComObjectKey<'a> {
@@ -55,6 +82,7 @@ pub(crate) struct ComObjectKey<'a> {
 /// requested language, placeholders not yet substituted; empty when no
 /// language was requested or none is translated. `values_complete` is
 /// `false` when any stored value could not be fed to the evaluation.
+/// `texts`, when given, fills each heading's positional `{{0}}` (ADR-0126).
 pub(crate) fn apply(
     com_objects: &mut [ComObjectNode],
     keys: &HashMap<u32, ComObjectKey<'_>>,
@@ -62,6 +90,7 @@ pub(crate) fn apply(
     activation: &Activation,
     channel_texts: &HashMap<String, String>,
     values_complete: bool,
+    texts: Option<&DeviceTexts<'_>>,
 ) -> Result<(), TextProjectionError> {
     // One context for the complete overlay, including repeated channel copies.
     let mut budget = TextProjectionBudget::default();
@@ -80,7 +109,7 @@ pub(crate) fn apply(
         com.activation = state;
         com.channel = hit
             .and_then(|hit| hit.channel.as_ref())
-            .map(|owner| channels.node(owner, activation, channel_texts, &mut budget))
+            .map(|owner| channels.node(owner, activation, channel_texts, texts, &mut budget))
             .transpose()?;
         // A module-based object's `FunctionText` names the module's own
         // arguments (`{{argChannel}}`); only the activating expansion knows
@@ -194,20 +223,38 @@ impl ChannelTable {
         owner: &ChannelOwner,
         activation: &Activation,
         channel_texts: &HashMap<String, String>,
+        texts: Option<&DeviceTexts<'_>>,
         budget: &mut TextProjectionBudget,
     ) -> Result<ComObjectChannel, TextProjectionError> {
         let key = channel_key(owner);
         let order = self.order.get(&key).copied().unwrap_or(u32::MAX);
         let node = match self.known.entry(key.clone()) {
             std::collections::hash_map::Entry::Occupied(entry) => entry.into_mut(),
-            std::collections::hash_map::Entry::Vacant(entry) => entry.insert(ComObjectChannel {
-                key,
-                kind: owner.kind.clone(),
-                text: channel_text(owner, activation, channel_texts, budget)?,
-                name: non_empty(owner.name.as_deref()),
-                number: non_empty(owner.number.as_deref()),
-                order,
-            }),
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let raw = channel_text(owner, activation, channel_texts, budget)?;
+                let (text, text_fill) = match (raw, texts) {
+                    (Some(raw), Some(texts)) => {
+                        let filled = texts.fill_channel(
+                            &raw,
+                            owner.scope.as_deref(),
+                            owner.node_id,
+                            budget,
+                        )?;
+                        let fill = text_fill(filled.source, &raw);
+                        (Some(filled.text), fill)
+                    }
+                    (raw, _) => (raw, None),
+                };
+                entry.insert(ComObjectChannel {
+                    key,
+                    kind: owner.kind.clone(),
+                    text,
+                    text_fill,
+                    name: non_empty(owner.name.as_deref()),
+                    number: non_empty(owner.number.as_deref()),
+                    order,
+                })
+            }
         };
         // Cache hits still copy text into each object's serialized projection.
         if let Some(text) = node.text.as_deref() {
@@ -336,6 +383,7 @@ mod tests {
             dpt_text: None,
             dpt_text_language: None,
             function_text: None,
+            name_fill: None,
         }
     }
 
@@ -366,7 +414,7 @@ mod tests {
     ) -> Vec<ComObjectNode> {
         let activation = evaluate(trees, &ValueMap::default());
         let mut nodes: Vec<ComObjectNode> = ids.iter().map(|&id| com_node(id)).collect();
-        apply(&mut nodes, keys, instances, &activation, texts, true).unwrap();
+        apply(&mut nodes, keys, instances, &activation, texts, true, None).unwrap();
         nodes
     }
 
@@ -469,7 +517,16 @@ mod tests {
         let keys = HashMap::from([(9, unscoped("O-9"))]);
         let activation = evaluate(&two_channels(), &ValueMap::default());
         let mut nodes = vec![com_node(9)];
-        apply(&mut nodes, &keys, &[], &activation, &HashMap::new(), false).unwrap();
+        apply(
+            &mut nodes,
+            &keys,
+            &[],
+            &activation,
+            &HashMap::new(),
+            false,
+            None,
+        )
+        .unwrap();
         assert_eq!(nodes[0].activation, ComObjectActivation::Undetermined);
     }
 
@@ -643,6 +700,7 @@ mod tests {
             &activation,
             &HashMap::new(),
             true,
+            None,
         )
         .unwrap();
         assert_eq!(nodes[0].function_text.as_deref(), Some("Schalten 7"));
@@ -700,7 +758,8 @@ mod tests {
                 &instances,
                 &activation,
                 &HashMap::new(),
-                true
+                true,
+                None,
             ),
             Err(TextProjectionError),
         );

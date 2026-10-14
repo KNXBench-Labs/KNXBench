@@ -8,10 +8,10 @@ with the details. You do not need to write code to earn a place here.
 
 | Place | Bug hunter | Issues | Replies | Resolved | XP | Rank & title | Medal |
 | ---: | --- | ---: | ---: | ---: | ---: | --- | --- |
-| 1 | [@thengsty](https://github.com/thengsty) | 15 | 12 | 13 | **217** | Parameter Poltergeist Hunter | 🏅 Golden Bus Probe |
+| 1 | [@thengsty](https://github.com/thengsty) | 15 | 12 | 14 | **227** | Datapoint Dragon Slayer | 🏅 Golden Bus Probe |
 | 2 | [@hagbardZ](https://github.com/hagbardZ) | 1 | 3 | 1 | **18** | Bus Bug Scout | — |
 
-*Snapshot: 2026-10-13T23:08:57Z.*
+*Snapshot: 2026-10-14T02:27:27Z.*
 
 ## How the points work
 

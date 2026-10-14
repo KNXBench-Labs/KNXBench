@@ -215,3 +215,31 @@ read-only, file-byte equality, no-journal, history and product-store assertions.
 No production migration, MCP write operation or server-load change is authorized
 by this correction. Product-database predecessor fixtures are unrelated and stay
 untouched. Combined1 refusal retained; corrected candidate requires full re-gate.
+
+## Devices made in KNXBench (Goal B4, 14 October)
+
+A device KNXBench created itself has no imported original, and none is invented.
+
+- **Which devices.** `instruction_origin` answers `Native` only when the device's
+  source path and id are the same `KB-…` text KNXBench issues for what it creates
+  (`KB-DEV-<id>` from the device dialog, `KB-SCAN-<address>` from a bus scan;
+  ADR-0093) and nothing at all was retained from that path. Every other device
+  reads its imported original as before; an imported device whose retained source
+  is missing stays the `MissingSource` refusal, it is never treated as native.
+- **Same workflow.** A native device goes through the same preview, explicit
+  apply, one undo step and native working history. No original bytes, no
+  `InstallationHints` and no source digest are written.
+- **Three states, not two.** *Absent* (no instructions: a native device, or an
+  imported device without `InstallationHints`), *empty* (an imported empty
+  original) and *present* stay distinct. Removing an override returns to what was
+  really there: nothing for an absent original, the original otherwise. An
+  explicitly empty document is an override and stays one.
+- **Apply binds the origin.** The origin read at preview must still hold at apply;
+  a device that gains a retained source, or an original replaced in between, is a
+  conflict and changes nothing.
+- **View.** `GET /api/devices/{id}/instructions` carries `origin` (`imported` or
+  `native`); `originalXmlSha256` is `null` for a native device. The editor says
+  *Made in KNXBench: no imported original* or *Imported without instructions*, and
+  offers **Remove instructions** where there is no original to return to.
+- **Not covered:** an ETS export of native instructions, and anything beyond the
+  editor's existing text subset.

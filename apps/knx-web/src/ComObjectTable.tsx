@@ -2,6 +2,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ComObjectChannel } from "./bindings/ComObjectChannel";
+import type { TextFill } from "./bindings/TextFill";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { useUiLanguage } from "./uiLanguage";
 import { useProductLanguage } from "./productLanguage";
@@ -22,9 +23,19 @@ function channelLabel(c: ComObjectChannel | null, t: Translate): string {
   return c === null ? t("inspector.noEvaluatedChannel") : c.kind === "ChannelIndependentBlock"
     ? t("inspector.channelIndependent") : c.text || c.name || t("inspector.untitledChannel");
 }
+const FILL_KEYS: Record<TextFill["source"], MessageKey> = {
+  StoredValue: "comTable.textFill.StoredValue", ProductDefault: "comTable.textFill.ProductDefault",
+  TemplateDefault: "comTable.textFill.TemplateDefault", EmptyValue: "comTable.textFill.EmptyValue",
+  NoReference: "comTable.textFill.NoReference", UnknownParameter: "comTable.textFill.UnknownParameter",
+  NotTextParameter: "comTable.textFill.NotTextParameter", Undecided: "comTable.textFill.Undecided" };
+/** ADR-0126: says where a product text's `{{0}}` came from; nothing for any other text. */
+function fillProps(fill: TextFill | undefined, t: Translate): { "data-text-fill"?: string; title?: string } {
+  return fill === undefined ? {} : { "data-text-fill": fill.source,
+    title: `${t(FILL_KEYS[fill.source])}\n${t("comTable.textFill.template", { value: fill.template })}` };
+}
 function ChannelText({ channel }: { channel: ComObjectChannel | null }) {
   const t = useTranslate();
-  return <><strong>{channelLabel(channel, t)}</strong>
+  return <><strong {...fillProps(channel?.text ? channel.text_fill : undefined, t)}>{channelLabel(channel, t)}</strong>
     {channel?.kind === "Channel" && channel.text && channel.name && <span className="com-object-channel-name">{t("inspector.channelName", { value: channel.name })}</span>}
     {channel?.kind === "Channel" && channel.number && <span className="com-object-channel-number">{t("inspector.channelNumber", { value: channel.number })}</span>}</>;
 }
@@ -44,7 +55,7 @@ function ObjectRow({ com, flat, hidden, matches, open, descriptionMatch, editor,
         if (next) setVisited(true);
         if (next !== open) onOpen(com.id, next);
       }}><summary aria-label={t("comTable.edit", { number: com.number })}>{com.number}</summary></details></td>
-      <td><strong>{com.name ?? t("inspector.unnamed")}</strong>
+      <td><strong className="com-object-name" {...fillProps(com.name === null ? undefined : com.name_fill, t)}>{com.name ?? t("inspector.unnamed")}</strong>
         {descriptionMatch && <small className="com-description-match">{t("comTable.descriptionMatch", { value: com.description ?? "" })}</small>}
         {!matches && open && <small className="com-edit-exception">{t("comTable.editException")}</small>}</td>
       <td>{com.function_text || "—"}</td>

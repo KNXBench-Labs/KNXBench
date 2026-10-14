@@ -276,6 +276,89 @@ function hasTreeLabel(text: string): boolean {
     .some((label) => label.textContent === text);
 }
 
+describe("expandable structure at a glance (owner feedback P2)", () => {
+  it("shows how many entries a collapsed node holds, and only while it is collapsed", async () => {
+    const { root } = await renderExplorer(baseTree());
+    const row = labelFor("Line 1: Line 1").closest(".tree-row")!;
+    expect(row.querySelector(".tree-count")).toBeNull();
+    await click(toggleFor("Line 1: Line 1"));
+    expect(hasTreeLabel("Device A")).toBe(false);
+    expect(row.querySelector(".tree-count [aria-hidden='true']")!.textContent).toBe("3");
+    expect(row.querySelector(".tree-count .sr-only")!.textContent).toBe("3 entries");
+    await click(toggleFor("Group Addresses"));
+    const gaRow = toggleFor("Group Addresses").closest(".tree-row")!;
+    expect(gaRow.querySelector(".tree-count .sr-only")!.textContent).toBe("3 entries");
+    await click(toggleFor("Unassigned"));
+    const unassignedRow = toggleFor("Unassigned").closest(".tree-row")!;
+    expect(unassignedRow.querySelector(".tree-count .sr-only")!.textContent).toBe("1 entry");
+    await click(toggleFor("Line 1: Line 1"));
+    expect(row.querySelector(".tree-count")).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("counts real entries, not the rows that add new ones", async () => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
+    const { root } = await renderExplorer(baseTree());
+    await click(toggleFor("Bereich 1: Area 1"));
+    const row = toggleFor("Bereich 1: Area 1").closest(".tree-row")!;
+    expect(row.querySelector(".tree-count .sr-only")!.textContent).toBe("1 Eintrag");
+    await act(async () => root.unmount());
+  });
+
+  it("collapses everything below the installation sections at once, and opens it all again", async () => {
+    const { root } = await renderExplorer(baseTree());
+    const collapse = host!.querySelector<HTMLButtonElement>('button[aria-label="Collapse all"]')!;
+    const expand = host!.querySelector<HTMLButtonElement>('button[aria-label="Expand all"]')!;
+    expect(collapse).not.toBeNull();
+    expect(expand).not.toBeNull();
+    await click(collapse);
+    expect(hasTreeLabel("Device A")).toBe(false);
+    expect(hasTreeLabel("Device D")).toBe(false);
+    expect(hasTreeLabel("Area 1: Area 1")).toBe(false);
+    for (const section of ["Topology", "Unassigned", "Group Addresses"]) {
+      expect(hasTreeLabel(section)).toBe(true);
+      expect(toggleFor(section).getAttribute("aria-expanded")).toBe("false");
+    }
+    expect(hasTreeLabel("Installation")).toBe(true);
+    await click(expand);
+    for (const label of ["Device A", "Device D", "1/1/1 GA A", "Area 1: Area 1"]) expect(hasTreeLabel(label), label).toBe(true);
+    await act(async () => root.unmount());
+  });
+
+  it("tells each nested list its depth, so the lines can spread from the root", async () => {
+    const { root } = await renderExplorer(baseTree());
+    const list = labelFor("Device A").closest("ul")!;
+    expect(list.style.getPropertyValue("--tree-depth")).toBe("4");
+    const sections = labelFor("Topology").closest("ul")!;
+    expect(sections.style.getPropertyValue("--tree-depth")).toBe("1");
+    await act(async () => root.unmount());
+  });
+
+  it("lets the lines grow only below a node the user just opened, and only for a moment", async () => {
+    vi.useFakeTimers();
+    const { root } = await renderExplorer(baseTree());
+    expect(host!.querySelectorAll("ul[data-tree-grow]")).toHaveLength(0);
+    await click(toggleFor("Line 1: Line 1"));
+    await click(toggleFor("Line 1: Line 1"));
+    const list = labelFor("Device A").closest("ul")!;
+    expect(list.hasAttribute("data-tree-grow")).toBe(true);
+    expect(host!.querySelectorAll("ul[data-tree-grow]")).toHaveLength(1);
+    await act(async () => { vi.advanceTimersByTime(1200); });
+    expect(list.hasAttribute("data-tree-grow")).toBe(false);
+    await act(async () => root.unmount());
+    vi.useRealTimers();
+  });
+
+  it("draws the toggle as a chevron icon, not a text glyph", async () => {
+    const { root } = await renderExplorer(baseTree());
+    const toggle = toggleFor("Topology");
+    expect(toggle.textContent).toBe("");
+    expect(toggle.querySelector("svg.tree-chevron")).not.toBeNull();
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    await act(async () => root.unmount());
+  });
+});
+
 describe("installation nodes", () => {
   it.each(["en", "de"])("labels unnamed installations without changing their names (%s)", async (language) => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, language);

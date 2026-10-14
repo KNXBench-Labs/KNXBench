@@ -20,13 +20,16 @@ const project = (): ProjectTree => ({ schema_version: 15, errors: 0, warnings: 0
 
 async function intercept(page: Page, language: Language, theme: string) {
   const state = { tree: project(), unexpected: [] as string[], created: [] as unknown[] };
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
     else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme, motionLevel: "off" } };
     else if (path === "/api/settings" && method === "PUT") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme, ...route.request().postDataJSON().settings } };
-    else if ((path === "/api/project" && method === "GET") || (path === "/api/project/new" && method === "POST")) body = state.tree;
+    else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = state.tree; }
+    else if (path === "/api/project" && method === "GET") { if (projectOpen) body = state.tree; else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];

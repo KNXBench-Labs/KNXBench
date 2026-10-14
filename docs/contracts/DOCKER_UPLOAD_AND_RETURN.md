@@ -41,8 +41,9 @@ acceptance; existing published images are unchanged.
   `editor` return marker, retaining other query parameters, deployment path
   and hash. The entrypoint consumes that marker and, after authentication,
   reads `/api/project` to resume the currently open server project, including
-  its dirty state and saved-file authority. Ordinary editor mounts still start
-  at the welcome screen. Missing projects stay there; other read failures are
+  its dirty state and saved-file authority. Since ADR-0127 ordinary editor
+  mounts (a reload, a reopened tab) resume the same way and announce it; the
+  explicit return stays silent. Missing projects stay at the welcome screen; other read failures are
   reported. Canceled resumes and responses after another project has loaded
   are ignored. No project is reopened, reimported, replaced or saved by return.
   It works without an opener or when an opener is closed, does not close

@@ -25,14 +25,16 @@ function fixtureTree(nodes: DeviceNode[]): ProjectTree {
 async function intercept(page: Page, language: "en" | "de", count = 3, theme = "porcelain") {
   const nodes = devices(count); const tree = fixtureTree(nodes);
   const state = { tree, nodes, unexpected: [] as string[], requests: [] as string[], polls: 0, failCatalogue: false };
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     state.requests.push(`${method} ${path}`);
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
     else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme } };
-    else if (path === "/api/project" && method === "GET") body = state.tree;
-    else if (path === "/api/project/new" && method === "POST") body = state.tree;
+    else if (path === "/api/project" && method === "GET") { if (projectOpen) body = state.tree; else { status = 400; body = { error: "no project open" }; } }
+    else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = state.tree; }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];

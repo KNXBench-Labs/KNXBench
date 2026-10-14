@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-14 15:02
+- **Completed:** Issue #19 taken in worktree `issue19-docker-20261014`; owner changed scope to linking the GitHub Hall of Fame document, with no bundled snapshot or new build dependency.
+- **Pending/Next Steps:** Prove original Docker frontend failure, replace About snapshot with an explicit external document link, remove unused snapshot parser/allow-list, update tests/docs, build and self-review before publication/closure.
+- **Notes for Codex oder Claude:** Own HallOfFameSection/About tests, hallOfFame modules, about.hallOfFame locale keys and the corresponding browser assertions. P1 owns its project-bootstrap fixture changes in the same e2e file: retain those when integrating. No edits to App/Toast/server behavior, deployment, hardware, releases or private root research. Root stays unchanged apart from final handover prefix.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-14 13:04
 - **Completed:** Published and verified on main as 4bb11039 (exact local/tracking/live equality and source/contract/receipt readback). Owner-approved slow active-task text shimmer implemented as 8f53d520 and integrated as 53046e64. Exact merged runtime accepted: all 32 actual web/docs stages zero, frozen; Vitest 3530/0 (251 files), Chromium 531/0, production import/download 27/0, repeats 12/0, tooling 122 (one skip), build/all typechecks/docs/five xtask zero. Real final production 4/4 and eight light/dark EN/DE 1440/400 sweep/pause PNGs inspected; raster movement proven. Self-review capability fallback and warning specificity fixed test-first. Private footer falsely matched positive freeze metadata: raw wrapper exit 1 retained; four footer regressions and independent aggregation exit zero. Earlier unchanged Toast hover flake reproduced on base and candidate, not hidden or fixed here. Runtime source unchanged by closure docs; receipt docs/evidence/task-status-shimmer-2026-10-14.json.
 - **Pending/Next Steps:** None for this delivered feature or its acceptance. No new goal, release or deployment follows. Selected root stays at 1817fb2a with other owners' unpublished research/local-only handovers, not synchronized or published. Keep those exact bytes and their owners' separate go boundaries; task-created caches/worktrees may retire only after their workers stop.

@@ -2,7 +2,8 @@
 import { noteRefusal } from "../../api";
 import { validateDocument, type Document } from "./document";
 export type Context = Readonly<{ serverIncarnation: string; projectIncarnation: number; snapshotRevision: number }>;
-export type InstructionView = Context & Readonly<{ device: number; originalXmlSha256: string; originalPresent: boolean; originalBytes: number; originalFormat: "plain" | "rtf" | null; unsupported: readonly string[]; previewError: string | null; effectiveDocument: Document | null; overrideDocument: Document | null; persistence: "session-only" | "native-working-history" }>;
+/** `native`: made in KNXBench, so there is no imported original and no hash (Goal B4). */
+export type InstructionView = Context & Readonly<{ device: number; origin: "imported" | "native"; originalXmlSha256: string | null; originalPresent: boolean; originalBytes: number; originalFormat: "plain" | "rtf" | null; unsupported: readonly string[]; previewError: string | null; effectiveDocument: Document | null; overrideDocument: Document | null; persistence: "session-only" | "native-working-history" }>;
 export type InstructionPreview = Readonly<{ token: string; device: number; replacement: Document | null; conversionRequired: boolean; noOp: boolean; expiresInSeconds: number }>;
 export type InstructionApplied = Readonly<{ changed: boolean; nativeGeneration: number | null; snapshotRevision: number; persistence: "session-only" | "native-working-history" }>;
 export type InstructionClient = Readonly<{
@@ -19,8 +20,13 @@ function context(value: unknown): value is Context & Record<string, unknown> { r
 function documentsEqual(a: Document, b: Document): boolean { return a.runs.length === b.runs.length && a.runs.every((run, i) => { const other = b.runs[i]; return run.text === other.text && run.style.bold === other.style.bold && run.style.italic === other.style.italic && run.style.underline === other.style.underline; }); }
 export function sameContext(a: Context, b: Context): boolean { return a.serverIncarnation === b.serverIncarnation && a.projectIncarnation === b.projectIncarnation && a.snapshotRevision === b.snapshotRevision; }
 export class InstructionContractError extends Error { constructor() { super("Unsupported or malformed instruction response"); this.name = "InstructionContractError"; } }
+/** Imported: the device XML's hash. Native (Goal B4): no hash and no original, never an invented one. */
+function origin(value: Record<string, unknown>): boolean {
+  if (value.origin === "imported") return typeof value.originalXmlSha256 === "string" && /^[a-f0-9]{64}$/.test(value.originalXmlSha256);
+  return value.origin === "native" && value.originalXmlSha256 === null && value.originalPresent === false;
+}
 function admitView(value: unknown, device: number): InstructionView {
-  if (!record(value) || !context(value) || value.device !== device || typeof value.originalXmlSha256 !== "string" || !/^[a-f0-9]{64}$/.test(value.originalXmlSha256) || typeof value.originalPresent !== "boolean" || !integer(value.originalBytes) || value.originalBytes > 8 * 1024 * 1024 || ![null, "plain", "rtf"].includes(value.originalFormat as null | string) || !Array.isArray(value.unsupported) || value.unsupported.length > 256 || !value.unsupported.every(word => typeof word === "string") || !(value.previewError === null || typeof value.previewError === "string") || !nullableDocument(value.effectiveDocument) || !nullableDocument(value.overrideDocument) || !persistence(value.persistence)) throw new InstructionContractError();
+  if (!record(value) || !context(value) || value.device !== device || !origin(value) || typeof value.originalPresent !== "boolean" || !integer(value.originalBytes) || value.originalBytes > 8 * 1024 * 1024 || ![null, "plain", "rtf"].includes(value.originalFormat as null | string) || !Array.isArray(value.unsupported) || value.unsupported.length > 256 || !value.unsupported.every(word => typeof word === "string") || !(value.previewError === null || typeof value.previewError === "string") || !nullableDocument(value.effectiveDocument) || !nullableDocument(value.overrideDocument) || !persistence(value.persistence)) throw new InstructionContractError();
   if (value.overrideDocument !== null && (value.effectiveDocument === null || !documentsEqual(value.overrideDocument, value.effectiveDocument))) throw new InstructionContractError();
   return value as InstructionView;
 }

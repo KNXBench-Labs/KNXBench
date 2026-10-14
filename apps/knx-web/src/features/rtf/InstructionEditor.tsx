@@ -10,7 +10,7 @@ const defaultClient = createInstructionClient();
 function equalDocument(a: Document, b: Document): boolean { return a.runs.length === b.runs.length && a.runs.every((run, i) => { const other = b.runs[i]; return run.text === other.text && run.style.bold === other.style.bold && run.style.italic === other.style.italic && run.style.underline === other.style.underline; }); }
 /** Same instruction content (source and override), ignoring identity and persistence mode. */
 function sameInstructionContent(a: InstructionView, b: InstructionView): boolean {
-  const content = (v: InstructionView) => JSON.stringify([v.device, v.originalXmlSha256, v.originalPresent, v.originalBytes, v.originalFormat, v.unsupported, v.previewError, v.effectiveDocument, v.overrideDocument]);
+  const content = (v: InstructionView) => JSON.stringify([v.device, v.origin, v.originalXmlSha256, v.originalPresent, v.originalBytes, v.originalFormat, v.unsupported, v.previewError, v.effectiveDocument, v.overrideDocument]);
   return content(a) === content(b);
 }
 function Rendered({ document }: { document: Document }) {
@@ -98,8 +98,11 @@ export function InstructionEditor({ deviceId, context, language = "en", client =
     } catch (reason) { if (generation.current === active) setError(reason instanceof Error ? reason.message : copy.invalid); }
     finally { if (generation.current === active) setBusy(false); }
   }
+  const native = view?.origin === "native";
+  // No original to return to: made here, or imported without instructions (absent, not empty).
+  const nothingToReturnTo = native || view?.originalPresent === false;
   return <section className={styles.panel} aria-labelledby={`${id}-title`} aria-busy={busy}>
-    <header className={styles.header}><h3 id={`${id}-title`}>{copy.title}</h3>{view && <span className={styles.provenance}>{view.overrideDocument !== null ? copy.edited : copy.original}</span>}</header>
+    <header className={styles.header}><h3 id={`${id}-title`}>{copy.title}</h3>{view && <span className={styles.provenance}>{native ? copy.madeHere : !view.originalPresent ? copy.importedNone : view.overrideDocument !== null ? copy.edited : copy.original}</span>}</header>
     {busy && <div role="status">{view ? copy.pending : copy.loading}</div>}
     {view && <div className={styles.provenance}>{view.persistence === "session-only" ? copy.session : copy.native}</div>}
     {view && (view.unsupported.length > 0 || view.previewError) && <aside className={styles.warning}>{view.previewError ? copy.unreadable : copy.subset}<details><summary>{view.unsupported.length ? `${view.unsupported.length} ${copy.unsupported}` : view.previewError}</summary>{view.unsupported.map((word, index) => <div key={index}>{word.slice(0, 120)}{word.length > 120 ? "…" : ""}</div>)}</details></aside>}
@@ -111,8 +114,8 @@ export function InstructionEditor({ deviceId, context, language = "en", client =
       {!readOnly && <div className={styles.toolbar} role="toolbar" aria-label={copy.rendered}>{(["bold", "italic", "underline", "clear"] as const).map(flag => <button key={flag} type="button" disabled={busy || conflict} onMouseDown={event => event.preventDefault()} onClick={() => format(flag)}>{copy[flag]}</button>)}</div>}
       <textarea id={`${id}-text`} ref={textarea} className={styles.input} value={displayText(draft)} readOnly={readOnly} disabled={busy || conflict} onChange={() => undefined} onSelect={event => { selection.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd]; }} onInput={event => { try { change(replaceText(draftRef.current, event.currentTarget.value)); } catch { setError(copy.invalid); } }}/>
       <h4>{copy.rendered}</h4><Rendered document={draft}/>
-      {!readOnly && <div className={styles.actions}><button type="button" disabled={busy || rebasing || conflict || !dirty.current} onClick={() => void makePreview(draft)}>{copy.preview}</button><button type="button" disabled={busy || rebasing || conflict || view?.overrideDocument === null} onClick={() => void makePreview(null)}>{copy.reset}</button></div>}
+      {!readOnly && <div className={styles.actions}><button type="button" disabled={busy || rebasing || conflict || !dirty.current} onClick={() => void makePreview(draft)}>{copy.preview}</button><button type="button" disabled={busy || rebasing || conflict || view?.overrideDocument === null} onClick={() => void makePreview(null)}>{nothingToReturnTo ? copy.remove : copy.reset}</button></div>}
     </>}
-    {plan && <section className={styles.change} aria-label={copy.change}><h4>{copy.change}</h4>{plan.noOp && <p>{copy.noOp}</p>}{plan.replacement ? <Rendered document={plan.replacement}/> : <p>{copy.resetPreview}</p>}{plan.conversionRequired && <label className={styles.confirm}><input type="checkbox" checked={conversion} onChange={event => setConversion(event.currentTarget.checked)}/><span>{copy.conversion}</span></label>}<div className={styles.actions}><button type="button" disabled={busy || conflict || (plan.conversionRequired && !conversion)} onClick={() => void apply()}>{copy.apply}</button><button type="button" disabled={busy} onClick={revoke}>{copy.cancel}</button></div></section>}
+    {plan && <section className={styles.change} aria-label={copy.change}><h4>{copy.change}</h4>{plan.noOp && <p>{copy.noOp}</p>}{plan.replacement ? <Rendered document={plan.replacement}/> : <p>{nothingToReturnTo ? copy.removePreview : copy.resetPreview}</p>}{plan.conversionRequired && <label className={styles.confirm}><input type="checkbox" checked={conversion} onChange={event => setConversion(event.currentTarget.checked)}/><span>{copy.conversion}</span></label>}<div className={styles.actions}><button type="button" disabled={busy || conflict || (plan.conversionRequired && !conversion)} onClick={() => void apply()}>{copy.apply}</button><button type="button" disabled={busy} onClick={revoke}>{copy.cancel}</button></div></section>}
   </section>;
 }

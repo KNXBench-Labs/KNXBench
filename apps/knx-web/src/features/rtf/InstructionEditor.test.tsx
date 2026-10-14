@@ -7,7 +7,7 @@ import { InstructionEditor } from "./InstructionEditor";
 import type { Context, InstructionClient, InstructionView } from "./client";
 import { literal } from "./document";
 const context: Context = {serverIncarnation:"synthetic-server",projectIncarnation:1,snapshotRevision:2};
-const source: InstructionView = {...context,device:1,originalXmlSha256:"a".repeat(64),originalPresent:true,originalBytes:8,originalFormat:"plain",unsupported:[],previewError:null,effectiveDocument:literal("original"),overrideDocument:null,persistence:"session-only"};
+const source: InstructionView = {...context,device:1,origin:"imported",originalXmlSha256:"a".repeat(64),originalPresent:true,originalBytes:8,originalFormat:"plain",unsupported:[],previewError:null,effectiveDocument:literal("original"),overrideDocument:null,persistence:"session-only"};
 let roots: Root[]=[];
 afterEach(async()=>{await act(async()=>roots.forEach(root=>root.unmount()));roots=[];document.body.replaceChildren();vi.restoreAllMocks();});
 function fixture(overrides:Partial<InstructionClient>={}) {
@@ -99,4 +99,14 @@ describe("revision changes that leave these instructions alone",()=>{
   expect(host.textContent).toContain("changed");expect(host.querySelector("textarea")?.value).toBe("unsaved draft");
   expect(client.preview).not.toHaveBeenCalled();
  });
+});
+describe("a device made in KNXBench (Goal B4)",()=>{
+ const native:InstructionView={...source,origin:"native",originalXmlSha256:null,originalPresent:false,originalBytes:0,originalFormat:null,effectiveDocument:null};
+ it("says there is no imported original and writes the first instructions through preview and apply",async()=>{const client=fixture({read:vi.fn().mockResolvedValue(native)});const {host}=await mount(client);expect(host.textContent).toContain("Made in KNXBench: no imported original");expect(host.textContent).not.toContain("Imported original is preserved");expect(host.querySelector("textarea")?.value).toBe("");await edit(host,"Above the door");await click(host,"Preview change");expect(client.preview).toHaveBeenCalledWith(1,context,literal("Above the door"),expect.anything());await click(host,"Apply change");expect(client.apply).toHaveBeenCalledOnce();});
+ it("removes instructions instead of returning to an original it never had",async()=>{const client=fixture({read:vi.fn().mockResolvedValue({...native,overrideDocument:literal("edited"),effectiveDocument:literal("edited")}),preview:vi.fn().mockResolvedValue({token:"synthetic-plan",device:1,replacement:null,conversionRequired:false,noOp:false,expiresInSeconds:300})});const {host}=await mount(client);expect(host.textContent).not.toContain("Return to imported original");await click(host,"Remove instructions");expect(client.preview).toHaveBeenCalledWith(1,context,null,expect.anything());expect(host.textContent).toContain("Remove these instructions. The device then has none again.");expect(host.textContent).not.toContain("return to the preserved imported original");expect(client.apply).not.toHaveBeenCalled();});
+ it("has nothing to remove before the first instructions",async()=>{const client=fixture({read:vi.fn().mockResolvedValue(native)});const {host}=await mount(client);const remove=Array.from(host.querySelectorAll("button")).find(button=>button.textContent==="Remove instructions");expect(remove?.disabled).toBe(true);});
+});
+describe("absent, empty and present originals stay three different things (Goal B4)",()=>{
+ it("an imported device without instructions says so and offers removal, not a return",async()=>{const client=fixture({read:vi.fn().mockResolvedValue({...source,originalPresent:false,originalBytes:0,originalFormat:null,effectiveDocument:literal("added"),overrideDocument:literal("added")})});const {host}=await mount(client);expect(host.textContent).toContain("Imported without instructions");expect(host.textContent).not.toContain("Imported original is preserved");expect(host.textContent).not.toContain("Return to imported original");await click(host,"Remove instructions");expect(client.preview).toHaveBeenCalledWith(1,context,null,expect.anything());});
+ it("an imported empty original is still an original to return to",async()=>{const client=fixture({read:vi.fn().mockResolvedValue({...source,originalBytes:0,effectiveDocument:literal("added"),overrideDocument:literal("added")})});const {host}=await mount(client);expect(host.textContent).not.toContain("Imported without instructions");await click(host,"Return to imported original");expect(client.preview).toHaveBeenCalledWith(1,context,null,expect.anything());});
 });

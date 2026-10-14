@@ -14,6 +14,11 @@ branch `feature/workbench-b-20261013`, invoked 2026-10-13 ~21:25 CEST on fresh
 `sessionLogExport`, `session_log.rs`, desktop log export and their catalogue
 keys). B does not edit those files and rebases over them when they land.
 
+**Ended** 2026-10-14 by the same session: all seventeen package rows below (B1a/B1b through B16) are delivered
+(the last train, B3/B4/B8, is the W42 entry *Texts and status claims catch up* and
+its two predecessors). The web lock is released. Nothing is blocked or excluded;
+the leftovers each package names stay documented, not planned.
+
 Finite plan, in order. Each package is delivered (tests + gate + push),
 blocked (named missing evidence) or excluded; nothing else is added.
 

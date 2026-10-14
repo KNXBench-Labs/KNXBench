@@ -565,7 +565,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
     return (
       <div className="parameter-panel parameter-panel-loading">
         <h3>{t(title)}</h3>
-        <p className="inspector-description">{t("parameters.loading")}</p>
+        <p className="inspector-description"><span className="task-status-text">{t("parameters.loading")}</span></p>
       </div>
     );
   }

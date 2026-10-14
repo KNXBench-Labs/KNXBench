@@ -18,7 +18,7 @@ export default function GroupAddressObjectInventoryList(props: { inventory: Grou
       return <li key={device.id} data-ga-inventory-device={device.id} data-ga-inventory-state={state}>
         <span>{device.name} · {device.address ?? t("gaWorkspace.noDeviceAddress")}
           <small>{t("gaWorkspace.objectCount", { count: device.com_object_count })}</small></span>
-        <span className="ga-inventory-actions"><span className="ga-inventory-state">{failure !== null ? t("gaWorkspace.inventory.failed", { message: failure })
+        <span className="ga-inventory-actions"><span className={`ga-inventory-state${state === "loading" && failure === null ? " task-status-text" : ""}`}>{failure !== null ? t("gaWorkspace.inventory.failed", { message: failure })
           : t(state === "loaded" ? "gaWorkspace.inventory.loaded" : state === "loading" ? "gaWorkspace.inventory.loading" : "gaWorkspace.inventory.notLoaded")}</span>
         {(state === "not-loaded" || state === "failed") && <button type="button" data-ga-load-objects={device.id}
           onClick={() => inventory.load(device.id)}>{t(state === "failed" ? "gaWorkspace.retryObjects" : "gaWorkspace.loadObjects")}</button>}</span>

@@ -99,7 +99,7 @@ function ContributionDialog({ onClose }: { onClose: () => void }) {
     <p className="contribution-warning">{t("contribution.limitHint")}</p>
     {file && !valid && <p role="alert">{t("contribution.invalid")}</p>}
     <div className="contribution-actions"><button disabled={!valid || busy} onClick={() => void run("analyze")}>{t("contribution.analyze")}</button></div>
-    {busy && <p role="status">{t("contribution.busy")}</p>}
+    {busy && <p role="status"><span className="task-status-text">{t("contribution.busy")}</span></p>}
     {error && <p role="alert">{error}</p>}
     {analysis && <>
       <h3>{t("contribution.checks")}</h3>

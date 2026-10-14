@@ -361,11 +361,36 @@ it("#18: names a connecting download and lets you check again", async () => {
   expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
 });
 
+it("shimmers only during the download status read, not its failed result", async () => {
+  const check = deferred<DeviceDownloadStatusResponse>();
+  apiMock.pollDeviceDownload.mockReset().mockReturnValue(check.promise);
+  await render();
+  expect(host.querySelector('[data-download-status="checking"] .task-status-text')).not.toBeNull();
+  await act(async () => check.reject(status(503)));
+  await flush();
+  expect(host.querySelector('[data-download-status="unknown"]')).not.toBeNull();
+  expect(host.querySelector('[data-download-status] .task-status-text')).toBeNull();
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it("shimmers a gateway search but not its settled empty result", async () => {
+  const search = deferred<{ interfaces: BusDiscoveredInterface[] }>();
+  apiMock.discoverBusInterfaces.mockReset().mockReturnValue(search.promise);
+  await render();
+  let done!: Promise<void>;
+  await act(async () => { done = searchBusInterfaces(); });
+  expect(host.querySelector('.device-download-gateway-status .task-status-text')).not.toBeNull();
+  await act(async () => { search.resolve({ interfaces: [] }); await done; });
+  expect(host.querySelector('.device-download-gateway-status .task-status-text')).toBeNull();
+  expect(text('.device-download-gateway-status')).toContain(en['deviceDownload.gatewaySearch.none']);
+});
+
 it("#18: shows readiness while it loads, and a failed read can be retried", async () => {
   const ready = deferred<{ devices: never[]; counts: Record<string, never> }>();
   apiMock.getDeviceReadiness.mockReset().mockReturnValueOnce(ready.promise);
   await render();
   expect(text("[data-readiness-loading]")).toBe(en["deviceDownload.readiness.loading"]);
+  expect(host.querySelector('[data-readiness-loading] .task-status-text')).not.toBeNull();
   await act(async () => ready.reject(new Error("readiness exploded")));
   await flush();
   expect(host.querySelector("[data-readiness-loading]")).toBeNull();

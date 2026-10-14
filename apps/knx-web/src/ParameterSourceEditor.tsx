@@ -104,7 +104,7 @@ export default function ParameterSourceEditor(props: ParameterSourceEditorProps)
     : projected.kind === "mismatch" || projected.kind === "malformed" ? t("parameters.checked.mismatch") : null;
 
   return <div className="parameter-checked-editor">
-    {state.status === "loading" && <p className="inspector-description" role="status">{t("parameters.checked.loading")}</p>}
+    {state.status === "loading" && <p className="inspector-description" role="status"><span className="task-status-text">{t("parameters.checked.loading")}</span></p>}
     {state.status === "failed" && <p className="field-error" role="alert">{t("parameters.checked.readFailed", { message: state.message })}</p>}
     {note !== null && <p className="inspector-description" role="status">{note}</p>}
     {projected !== null && <ParameterEditor field={editorField(field)} source={source}

@@ -51,6 +51,33 @@ const flavour = () => host!.querySelector(".load-progress-flavour");
 const rotateByOne = () => 0;
 
 describe("LoadProgressBanner", () => {
+  it("marks only the actual running phase for text shimmer, not counts or jokes", async () => {
+    const root = await render("villa.knxproj", null, rotateByOne);
+    expect(host!.querySelectorAll(".task-status-text")).toHaveLength(1);
+    expect(host!.querySelector(".load-progress-phase .task-status-text")!.textContent)
+      .toContain(enMessages["loadProgress.phase.starting"]);
+    await act(async () => root.render(<LoadProgressBanner source="villa.knxproj"
+      snapshot={snapshot({ completed: 9, total: 36 })} />));
+    expect(host!.querySelectorAll(".task-status-text")).toHaveLength(1);
+    expect(host!.querySelector(".load-progress-phase .task-status-text")!.textContent)
+      .toContain(enMessages["loadProgress.phase.parseTopology"]);
+    expect(bar().getAttribute("aria-valuenow")).toBe("25");
+    expect(host!.querySelector(".load-progress-count .task-status-text")).toBeNull();
+    expect(flavour()!.querySelector(".task-status-text")).toBeNull();
+    root.unmount();
+  });
+
+  it.each(["succeeded", "failed"] as const)("stops text shimmer when a load is %s", async (status) => {
+    const root = await render("villa.knxproj", snapshot());
+    expect(host!.querySelectorAll(".task-status-text")).toHaveLength(1);
+    await act(async () => root.render(<LoadProgressBanner source="villa.knxproj"
+      snapshot={snapshot({ status })} />));
+    expect(host!.querySelectorAll(".task-status-text")).toHaveLength(0);
+    expect(host!.querySelector(".load-progress-phase")!.textContent)
+      .toContain(enMessages["loadProgress.phase.parseTopology"]);
+    root.unmount();
+  });
+
   it("keeps a joke readable for 4.3 seconds, 2.5 seconds longer than before", async () => {
     vi.useFakeTimers();
     const root = await render("villa.knxproj", snapshot(), rotateByOne);

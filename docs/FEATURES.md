@@ -86,6 +86,7 @@ Last updated: 2026-10-13 16:30 CEST
 | Project comparison | Two-project; before/after values | alpha.6 |
 | ETS comparison | Import-based `.knxproj` comparison | alpha.6 |
 | Support-gap analysis | Read-only; disclosure preview | alpha.6 |
+| Programming refusal help | EN/DE reason/action, local details, docs/unsent issue/mail before any plan; no new device support | Main-only |
 | Evidence ZIP | Consented export; manual submission | alpha.6 |
 | Offline AP1 diagnostics | Unresolved steps; no execution | alpha.7 |
 | Original import report | Kept in native files; local download | alpha.10 |

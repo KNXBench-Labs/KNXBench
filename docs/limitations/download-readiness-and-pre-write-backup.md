@@ -46,3 +46,18 @@ read-protected device. It is neither a backup nor proof that a later write
 will work. Web evidence is mocked/EN-DE and server evidence simulated, not a
 live test of this view.
 <!-- END retained catalogue record -->
+
+## 14 October 2026 — pre-plan support guidance, not broader device support
+
+The download panel now explains a pre-plan refusal with a next action and fixed
+EN/DE instructions, unsent support-gap form and email draft, without requiring a
+run report. Details are explicitly local/private; copying is not permission to
+publish. The existing untested route remains available only for a complete
+supported plan with both confirmations and all server checks. Missing hardware
+verification is not technical non-support. No new device encoder/procedure,
+executable-dependency detector or universal rollback is implemented.
+
+[Contract and privacy boundary](../contracts/device-programming-support-guidance.md).
+Executable dependency coverage stays unassessed where no reviewed census exists;
+an uninspected archive is not called DLL-free. Browser/simulator acceptance is
+not a new hardware or email-delivery witness.

@@ -1,0 +1,192 @@
+{
+  "kind": "knxbench-device-support-guidance-acceptance",
+  "format": 1,
+  "runtimeRevision": "6bf86976200e0c642ad32b6c78935f2374c6ed79",
+  "verdict": "all required merged runtime stages passed; documentation-only closure is checked separately",
+  "inputsFrozen": true,
+  "stages": [
+    {
+      "step": "fmt",
+      "exit": 0
+    },
+    {
+      "step": "clippy",
+      "exit": 0
+    },
+    {
+      "step": "rust",
+      "exit": 0
+    },
+    {
+      "step": "bindings",
+      "exit": 0
+    },
+    {
+      "step": "binding_diff",
+      "exit": 0
+    },
+    {
+      "step": "web",
+      "exit": 0
+    },
+    {
+      "step": "build",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.catalogue-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.communication-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.device-download-support",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.dialogs-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.flow-study",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.ga-members-download-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.history-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.instructions-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.notes-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.parameters-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.rename-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.structure-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.theme-fixtures",
+      "exit": 0
+    },
+    {
+      "step": "typecheck_tsconfig.ux-feedback",
+      "exit": 0
+    },
+    {
+      "step": "focused_browser",
+      "exit": 0
+    },
+    {
+      "step": "chromium",
+      "exit": 0
+    },
+    {
+      "step": "production_browser",
+      "exit": 0
+    },
+    {
+      "step": "documentation",
+      "exit": 0
+    },
+    {
+      "step": "tool_tests",
+      "exit": 0
+    },
+    {
+      "step": "check-layering",
+      "exit": 0
+    },
+    {
+      "step": "check-headers",
+      "exit": 0
+    },
+    {
+      "step": "check-anchors",
+      "exit": 0
+    },
+    {
+      "step": "check-ledger",
+      "exit": 0
+    },
+    {
+      "step": "check-corpus-gates",
+      "exit": 0
+    },
+    {
+      "step": "corpus",
+      "exit": 0
+    },
+    {
+      "step": "binding_final_diff",
+      "exit": 0
+    },
+    {
+      "step": "whitespace",
+      "exit": 0
+    }
+  ],
+  "rust": {
+    "passed": 4442,
+    "failed": 0,
+    "ignored": 200
+  },
+  "vitest": {
+    "passed": 3504,
+    "failed": 0,
+    "files": 249
+  },
+  "typechecks": 15,
+  "chromium": {
+    "passed": 522,
+    "failed": 0
+  },
+  "productionDownloadBrowser": {
+    "passed": 33,
+    "failed": 0
+  },
+  "focusedBrowser": {
+    "passed": 8,
+    "failed": 0
+  },
+  "privateCorpus": {
+    "passed": 145,
+    "expected": 145,
+    "targets": 32,
+    "failed": 0
+  },
+  "python": {
+    "executed": 122,
+    "skipped": 1,
+    "failed": 0
+  },
+  "review": "self-review, no subagents or independent-review claim",
+  "screenshots": "Final production EN 1440 Porcelain and DE 400 Graphite inspected; full-width, readable, no clipping",
+  "boundaries": [
+    "No live hardware, ETS or vendor executable run",
+    "No external issue/mail submission, release or deployment",
+    "No new encoder, force route or hardware-verification evidence",
+    "Executable dependency statuses remain unassessed; no DLL-free claim",
+    "Earlier audit counts remain separate prior executions, not a repeated census on this runtime revision"
+  ]
+}

@@ -28,6 +28,7 @@ pub mod procedure_resolution;
 pub mod query;
 pub mod report;
 pub mod source_diagnostics;
+pub mod text_parameters;
 pub mod update;
 pub use source_diagnostics::{source_diagnostics, SourceDiagnostic};
 pub mod xml;

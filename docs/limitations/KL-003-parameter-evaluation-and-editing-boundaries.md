@@ -385,3 +385,24 @@ unmatched `choose` is active) is itself an inference (RESEARCH §4.3,
 finding 2), not a documented rule — noted here, not hidden, and unaffected
 by this slice.
 <!-- END retained catalogue record -->
+
+## Update 2026-10-14: positional `{{0}}` texts are filled (Goal B14, issue #17)
+
+The numeric placeholder family named above is no longer left verbatim
+everywhere. Product database v23 stores each host's `TextParameterRefId`
+(`Channel`, `ParameterBlock`, `ParameterSeparator`, `ComObjectRef`), and the
+device's communication objects show a product-layer object name or channel
+heading with its `{{0}}` / `{{0:def}}` filled from that text parameter: the
+device's stored value, otherwise the product default, and `def` when the value
+is empty. The documentation report prints the same names. Each filled name and
+heading says, in the device detail and its tooltip, where the text came from
+([contract](../contracts/positional-text-templates.md),
+[ADR-0126](../adr/0126-positional-text-placeholders.md)).
+
+Still open: indices other than `0`; a `ParameterRef` host (allowed by the
+Manufacturer Tool documentation, absent from the corpus, stored and reported);
+parameter block and separator titles, which no surface shows yet; and
+group-address member lists, the Log and CSV exports, which read the project
+without a product database and keep the stored name. Project-owned names are
+never filled. Memory allocation (`@Allocates`, `Memory/@BaseOffset`,
+`ComObject/@BaseNumber`) and `choose` on arguments are unchanged.

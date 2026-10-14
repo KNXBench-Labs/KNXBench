@@ -134,8 +134,12 @@ function formatLastSaved(iso: string, language: string): string {
 
 type AppProps = {
   manifestVersion?: string;
-  /** Explicit browser return may read the currently open server project. */
-  resumeCurrentProject?: boolean;
+  /**
+   * The companion's explicit return marker was consumed. The editor
+   * resumes the server's open project on every mount either way; only an
+   * automatic resume (a reload, a reopened tab) announces itself.
+   */
+  editorReturn?: boolean;
   /**
    * What `AuthGate` knows about the session this shell is running inside
    * (ADR-0026). Absent in the tests that render `App` directly, and
@@ -181,13 +185,17 @@ function acceptedSnapshotLifetime(
   return { initialized: true, serverIncarnation, revision, retiredServerIncarnations };
 }
 
-function App({ manifestVersion = packageVersion, session, resumeCurrentProject = false }: AppProps) {
+function App({ manifestVersion = packageVersion, session, editorReturn = false }: AppProps) {
   // Called unconditionally on every render (not just from `SettingsPanel`,
   // which only mounts once Settings is opened) so `useUiLanguage()`'s own
   // effect — setting `document.documentElement.lang` — runs for the whole
   // session, not only for whoever happens to open Settings first. See
   // `App.test.tsx`'s "lang attribute is correct on a fresh mount" test.
   const t = useTranslate();
+  // For answers that arrive after the render that asked, e.g. the resume
+  // notice: they speak the language of the moment they appear.
+  const latestT = useRef(t);
+  latestT.current = t;
   const [uiLanguage] = useUiLanguage();
   useEffect(() => {
     document.title = `KNXBench ${manifestVersion}`;
@@ -561,19 +569,25 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     ensureBusDiscovery();
   }, []);
 
-  // Only an explicit secondary-window return resumes the existing server
-  // project. This is a read, never an open/import/replacement operation.
+  // ADR-0127: every editor mount resumes the project the server still
+  // holds (a reload, a reopened tab, the companion's return), so closing a
+  // browser tab by accident loses nothing. This is a read, never an
+  // open/import/replacement operation; a server with no project answers
+  // 400 and the welcome screen stays. Anything the user started meanwhile
+  // wins over the late answer.
   useEffect(() => {
-    if (!resumeCurrentProject) return;
     let cancelled = false;
     void api.currentProject().then(current => {
       if (cancelled || treeRef.current !== null || loadingRef.current) return;
-      if (resetTree(current)) setHasStorePath(current.has_store_path);
+      if (!resetTree(current)) return;
+      setHasStorePath(current.has_store_path);
+      if (!editorReturn) pushFun(latestT.current(current.is_modified ? "resume.noticeUnsaved" : "resume.notice"));
     }).catch(error => {
       if (!cancelled && treeRef.current === null && !loadingRef.current && api.errorStatus(error) !== 400) reportError(error);
     });
     return () => { cancelled = true; };
-  }, [resumeCurrentProject]);
+    // Once per mount: the marker cannot change after `main.tsx` read it.
+  }, []);
 
   // Opens (or focuses) the read-only diagnostic companion. Every outcome is
   // reported: a blocked popup and a refused webview are ordinary results on

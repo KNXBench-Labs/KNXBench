@@ -2053,6 +2053,9 @@ export const messages = {
 
   // `DiagnosticsCompanion.tsx` and the button in `App.tsx` that opens it.
   "companion.open": "Diagnostics window",
+  // ADR-0127: an automatic resume after a reload or a reopened tab.
+  "resume.notice": "Welcome back. The project the server still had open is here again.",
+  "resume.noticeUnsaved": "Welcome back. The project the server still had open is here again, unsaved changes included. Save them: a server restart would lose them.",
   "companion.title": "Diagnostics",
   "companion.eyebrow": "Companion window · read-only",
   "companion.readOnly":

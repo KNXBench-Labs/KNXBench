@@ -12,6 +12,8 @@ function project(revision = 1) {
 }
 async function editor(page: Page, context: BrowserContext) {
   const state = { tree: project(), requests: [] as string[], unexpected: [] as string[], holdProject: false, releases: [] as (() => void)[] };
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await context.route("**/api/**", async route => {
     const r = route.request(); const path = new URL(r.url()).pathname; const method = r.method();
     state.requests.push(`${method} ${path}`);
@@ -20,7 +22,8 @@ async function editor(page: Page, context: BrowserContext) {
     if (path === "/api/settings" && method === "GET") return json({ schemaVersion: 1, conditionalPatchVersion: 1, status: "ok", settings: { uiLanguage: "en", onboardingGuide: { seenStage: "alpha" }, accent: "violet", density: "compact", motionLevel: "off" } });
     if (path === "/api/version" && method === "GET") return json({ version: "0.1.0-alpha.2+gfixture" });
     if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return json([]);
-    if (path === "/api/project/new" && method === "POST") return json(state.tree);
+    if (path === "/api/project/new" && method === "POST") { projectOpen = true; return json(state.tree); }
+    if (path === "/api/project" && method === "GET" && !projectOpen) return json({ error: "no project open" }, 400);
     if (path === "/api/project" && method === "GET") {
       const tree = structuredClone(state.tree);
       if (state.holdProject) await new Promise<void>(resolve => state.releases.push(resolve));

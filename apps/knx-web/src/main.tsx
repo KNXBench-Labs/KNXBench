@@ -25,8 +25,8 @@ import "./styles.css";
 // keeps the editor's whole module graph — and therefore every project
 // mutation and the undo shortcuts — out of the companion entirely.
 const companion = isCompanionView(window.location.search);
-const resumeCurrentProject = isEditorReturn(window.location.search);
-if (resumeCurrentProject) {
+const editorReturn = isEditorReturn(window.location.search);
+if (editorReturn) {
   // Consume the explicit return marker, but retain unrelated URL state.
   const url = new URL(window.location.href);
   url.searchParams.delete("view");
@@ -59,7 +59,7 @@ createRoot(document.getElementById("root")!).render(
     <AuthGate>
       {(session) => (
         <SettingsBootstrap>
-          {isFlowWindow(window.location.search) ? <FlowWindow /> : companion ? <DiagnosticsCompanion /> : <App session={session} resumeCurrentProject={resumeCurrentProject} />}
+          {isFlowWindow(window.location.search) ? <FlowWindow /> : companion ? <DiagnosticsCompanion /> : <App session={session} editorReturn={editorReturn} />}
         </SettingsBootstrap>
       )}
     </AuthGate>

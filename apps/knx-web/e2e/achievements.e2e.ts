@@ -4,6 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { ACHIEVEMENTS } from "../src/achievementCatalog";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
+import { fulfillNoProjectOpen } from "./server-project-fixture";
 
 interface Fixture {
   settings: Record<string, unknown>;
@@ -53,6 +54,9 @@ async function serve(page: Page, fixture: Fixture) {
       body = record();
     } else if (path === "/api/bus/discover" && method === "POST") {
       body = { interfaces: [] };
+    } else if (path === "/api/project" && method === "GET") {
+      await fulfillNoProjectOpen(route);
+      return;
     } else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) {
       body = [];
     } else {

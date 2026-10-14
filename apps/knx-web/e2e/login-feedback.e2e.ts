@@ -6,6 +6,7 @@ import { messages as de } from "../src/messages/de";
 import manifest from "../package.json" with { type: "json" };
 const { version } = manifest;
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { fulfillNoProjectOpen } from "./server-project-fixture";
 
 test.use({ timezoneId: "UTC" });
 
@@ -31,6 +32,7 @@ async function fixture(page: Page, language: "en" | "de", theme: "graphite" | "p
       if (path === "/api/version") return ok({ version });
       if (path === "/api/bus/discover") return ok({ interfaces: [] });
       if (path === "/api/project/load-progress") return ok(null);
+      if (path === "/api/project" && method === "GET") return fulfillNoProjectOpen(route);
       if (path === "/api/fs/list") return ok([{ name: "synthetic.knxproj", is_dir: false }]);
       if (path === "/api/project/import") return route.fulfill({ status: 422, contentType: "application/json", body: JSON.stringify({ error: raw, kind: "projectNotImportable" }) });
       if (path === "/api/log") return ok([backend, { ...backend, detail: "Distinct same-message occurrence" }]);

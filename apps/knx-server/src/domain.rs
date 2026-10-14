@@ -15,6 +15,7 @@
 //! this app's own project state as a `.knxdb` SQLite file. Neither path
 //! calls into the other.
 
+use knx_app::project_history::SaveAsError;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -1109,21 +1110,42 @@ fn command_name(cmd: &knx_core::Command) -> String {
         .to_string()
 }
 
+/// Save As that replaces an existing native project at `path`; see
+/// [`save_project_as_with`] for the form that asks first.
 pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
-    let result = save_editor_state(state, Some(path));
-    log_outcome(
-        state,
-        "save",
-        format!("saved as {}", path.display()),
-        None,
-        &result,
-    );
+    save_project_as_with(state, path, true).map_err(|e| e.to_string())
+}
+
+/// Save As to `path`. An existing file is refused with
+/// [`SaveAsError::Exists`] unless `overwrite` is set (owner request
+/// 2026-10-14). That refusal is a question for the user, not a failed save,
+/// so it changes nothing and is not logged; every other outcome is.
+pub fn save_project_as_with(
+    state: &AppState,
+    path: &Path,
+    overwrite: bool,
+) -> Result<(), SaveAsError> {
+    let result = save_editor_state(state, Some((path, overwrite)));
+    if result != Err(SaveAsError::Exists) {
+        log_outcome(
+            state,
+            "save",
+            format!("saved as {}", path.display()),
+            None,
+            &result.clone().map_err(|e| e.to_string()),
+        );
+    }
     result
 }
 
-fn save_editor_state(state: &AppState, destination: Option<&Path>) -> Result<(), String> {
+fn save_editor_state(
+    state: &AppState,
+    destination: Option<(&Path, bool)>,
+) -> Result<(), SaveAsError> {
     let project = state.project.lock().expect("state mutex poisoned");
-    let project = project.as_ref().ok_or("no project open")?;
+    let project = project
+        .as_ref()
+        .ok_or_else(|| SaveAsError::Failed("no project open".to_string()))?;
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let mut store_path = state.store_path.lock().expect("state mutex poisoned");
     let mut generation = state
@@ -1142,17 +1164,20 @@ fn save_editor_state(state: &AppState, destination: Option<&Path>) -> Result<(),
             .clone(),
     };
     let new_generation = match destination {
-        Some(path) => knx_app::project_history::save_as(path, &snapshot, &stack)?,
+        Some((path, overwrite)) => {
+            knx_app::project_history::save_as_with(path, &snapshot, &stack, overwrite)?
+        }
         None => knx_app::project_history::save(
-            store_path
-                .as_deref()
-                .ok_or("no save location yet — use Save As")?,
+            store_path.as_deref().ok_or_else(|| {
+                SaveAsError::Failed("no save location yet — use Save As".to_string())
+            })?,
             &snapshot,
             &stack,
             *generation,
-        )?,
+        )
+        .map_err(SaveAsError::Failed)?,
     };
-    if let Some(path) = destination {
+    if let Some((path, _)) = destination {
         *store_path = Some(path.to_path_buf());
         *state.view_path_key.lock().expect("state mutex poisoned") = Some(view_key_of_path(path));
     }
@@ -1200,7 +1225,7 @@ fn save_project_with(
 }
 
 pub fn save_project(state: &AppState) -> Result<(), String> {
-    let result = save_editor_state(state, None);
+    let result = save_editor_state(state, None).map_err(|e| e.to_string());
     log_outcome(state, "save", "saved".to_string(), None, &result);
     result
 }

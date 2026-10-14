@@ -1,13 +1,11 @@
-/** About lists the bundled Hall of Fame in both languages and widths without asking GitHub. */
-import { readFileSync } from "node:fs";
+/** About links the GitHub Hall of Fame in both languages and widths without fetching it. */
 import { expect, test, type Page } from "@playwright/test";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
 
-const bundled = JSON.parse(readFileSync(new URL("../../../docs/community/hall-of-fame.json", import.meta.url), "utf8")) as {
-  generated_at: string; contributors: Array<{ login: string; xp: number; rank: { title: string }; medals: string[] }> };
+const boardUrl = "https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/community/HALL_OF_FAME.md";
 
 async function fixture(page: Page, language: "en" | "de", width: number, theme: string) {
   await page.setViewportSize({ width, height: 900 });
@@ -15,7 +13,7 @@ async function fixture(page: Page, language: "en" | "de", width: number, theme: 
     onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.11" } };
   await page.addInitScript((value) => localStorage.setItem("knx-desktop:settings-cache", JSON.stringify({ schemaVersion: 1, settings: value })), settings);
   const github: string[] = [], unexpected: string[] = [];
-  // Any request to GitHub would be a background request About must never make.
+  // Abort even the deliberate link activation: this fixture never contacts GitHub.
   await page.context().route(/^https:\/\/([a-z0-9-]+\.)?github(usercontent)?\.com\//, (route) => {
     github.push(route.request().url()); return route.abort();
   });
@@ -37,36 +35,24 @@ async function fixture(page: Page, language: "en" | "de", width: number, theme: 
 
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   const theme = (language === "en") === (width === 1440) ? "graphite" : "porcelain";
-  test(`${language}-${theme}-${width}: About lists every participant of the bundled Hall of Fame`, async ({ page }) => {
+  test(`${language}-${theme}-${width}: About links the Hall of Fame document only on activation`, async ({ page }) => {
     const m = language === "de" ? de : en;
     const errors: string[] = []; page.on("pageerror", (error) => errors.push(error.message));
     const f = await fixture(page, language, width, theme);
     await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await page.locator(".file-menu > summary").click();
     await page.getByRole("button", { name: m["toolbar.about"], exact: true }).click();
     const dialog = page.getByRole("dialog", { name: m["about.title"], exact: true });
     const section = dialog.locator("[data-hall-of-fame]");
-    // Closed at first, so About stays compact; one click shows everyone.
-    const summary = section.locator("summary");
-    await expect(summary).toHaveText(m["about.hallOfFame.titleCount"].replace("{count}", String(bundled.contributors.length)));
-    await expect(section).not.toHaveAttribute("open", "");
-    await summary.click();
-    await expect(section).toHaveAttribute("open", "");
-    const rows = section.locator("[data-hall-of-fame-entry]");
-    await expect(rows).toHaveCount(bundled.contributors.length);
-    for (const [index, person] of bundled.contributors.entries()) {
-      const row = rows.nth(index);
-      await expect(row).toHaveAttribute("data-hall-of-fame-entry", person.login);
-      await expect(row).toContainText(person.rank.title);
-      await expect(row).toContainText(`${person.xp} XP`);
-      for (const medal of person.medals) await expect(row).toContainText(medal);
-    }
-    await expect(section.locator("time")).toHaveAttribute("datetime", bundled.generated_at);
-    await expect(section).toContainText(m["about.hallOfFame.notLive"]);
-    await expect(section.locator("[data-hall-of-fame-board]")).toHaveAttribute("href",
-      "https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/community/HALL_OF_FAME.md");
-    await rows.last().scrollIntoViewIfNeeded();
-    const box = (await section.boundingBox())!;
+    const link = section.getByRole("link", { name: m["about.hallOfFame.board"], exact: true });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute("href", boardUrl);
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(section.locator("summary, time, ol, [data-hall-of-fame-entry]")).toHaveCount(0);
+    await link.scrollIntoViewIfNeeded();
+    const box = (await link.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(width);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
@@ -74,5 +60,14 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(f.github).toEqual([]);
     expect(f.unexpected).toEqual([]);
     expect(errors).toEqual([]);
+    // Real keyboard activation opens the canonical link, not a background fetch.
+    await link.focus();
+    const [request] = await Promise.all([
+      page.context().waitForEvent("request", (request) => request.url() === boardUrl),
+      link.press("Enter"),
+    ]);
+    expect(request.isNavigationRequest()).toBe(true);
+    await expect.poll(() => f.github).toEqual([boardUrl]);
+    await expect(dialog).toBeVisible();
   });
 }

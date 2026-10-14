@@ -623,7 +623,7 @@ Editing admits bounded exact-source Schema23 XML and selected text/header forms.
 ### Instruction and note drafts across Save
 
 **Ledger status:** Not separately tracked.
-Drafts survive Save when server content is unchanged. Real changes require comparison/discard; browser close prompts and native reload guards have different coverage.
+Drafts survive Save when server content is unchanged. Real changes require comparison/discard; reloads ask through the engine's own prompt in the browser and, since Goal B2, the desktop webview (not run natively).
 [Details and history](limitations/instruction-and-note-drafts-across-save.md)
 
 <a id="catalogue-notes-editor-integration"></a>

@@ -25,6 +25,9 @@ async function serve(page: Page, initial: ProjectTree, repaired: ProjectTree) {
     let body: unknown;
     if (path === "/api/project" && method === "GET") {
       body = current;
+    } else if (path === "/api/project/stored-bus-access" && method === "GET") {
+      // The line inspector reads stored ETS bus access (Goal B3); this project has none.
+      body = { records: [] };
     } else if (path === "/api/device/42" && method === "GET") {
       body = { id: 42, name: "Twin device", address: null, description: null, com_objects: [],
         product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" } };

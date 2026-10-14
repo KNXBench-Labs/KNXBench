@@ -1734,19 +1734,34 @@ fn apply_com_object_activation(
     detail: &mut knx_projection::DeviceDetail,
     input: ActivationInput,
     language: Option<&str>,
-) -> Result<(), String> {
+) -> Result<Option<EvaluatedTexts>, String> {
     let Some(program_id) = knx_productdb::query::resolve_program(products, &input.program_ref)
         .map_err(|e| e.to_string())?
     else {
-        return Ok(());
+        return Ok(None);
     };
     apply_function_texts(products, detail, &input, &program_id, language)?;
     let trees = knx_productdb::dynamic::load_program_trees(products, &program_id)
         .map_err(|e| e.to_string())?;
     if !trees.has_program_tree() {
-        return Ok(());
+        return Ok(None);
     }
-    let evaluation = evaluate_device(products, &program_id, input.stored, &input.module_instances)?;
+    // The shared evaluation itself, not the panel's DTO wrapper: the name fill
+    // below needs its instance evidence (ADR-0126).
+    let evaluation = knx_productdb::device_evaluation::evaluate_device(
+        products,
+        &program_id,
+        input.stored,
+        &input.module_instances,
+    )
+    .map_err(|e| e.to_string())?;
+    let parameters = knx_productdb::text_parameters::TextParameters::load(products, &program_id)
+        .map_err(|e| e.to_string())?;
+    let texts = knx_productdb::text_parameters::DeviceTexts {
+        parameters: &parameters,
+        evaluation: &evaluation,
+        module_instances: &input.module_instances,
+    };
     let by_id: HashMap<knx_core::ModuleInstanceId, &knx_core::ModuleInstance> =
         input.module_instances.iter().map(|m| (m.id, m)).collect();
     let keys: HashMap<u32, crate::com_object_activation::ComObjectKey<'_>> = input
@@ -1779,8 +1794,60 @@ fn apply_com_object_activation(
         &evaluation.activation,
         &channel_texts,
         evaluation.stale.is_empty(),
+        Some(&texts),
     )
     .map_err(|error| error.to_string())?;
+    drop(keys);
+    Ok(Some(EvaluatedTexts {
+        program_id,
+        evaluation,
+        parameters,
+        module_instances: input.module_instances,
+    }))
+}
+
+/// What filling object names needs once the translation overlay has run
+/// (ADR-0126): the evaluation [`apply_com_object_activation`] already made.
+struct EvaluatedTexts {
+    program_id: String,
+    evaluation: knx_productdb::device_evaluation::DeviceEvaluation,
+    parameters: knx_productdb::text_parameters::TextParameters,
+    module_instances: Vec<knx_core::ModuleInstance>,
+}
+
+/// ADR-0126: fills each product-supplied object name's `{{0}}`, after the
+/// translation overlay, and records where the inserted text came from.
+fn apply_name_fill(
+    detail: &mut knx_projection::DeviceDetail,
+    evaluated: &EvaluatedTexts,
+    input: &knx_app::com_object_text_fill::NameFillInput,
+) -> Result<(), String> {
+    let names: HashMap<knx_core::ComObjectInstanceId, String> = detail
+        .com_objects
+        .iter()
+        .filter_map(|com| {
+            com.name
+                .clone()
+                .map(|name| (knx_core::ComObjectInstanceId(com.id), name))
+        })
+        .collect();
+    let texts = knx_productdb::text_parameters::DeviceTexts {
+        parameters: &evaluated.parameters,
+        evaluation: &evaluated.evaluation,
+        module_instances: &evaluated.module_instances,
+    };
+    let filled = knx_app::com_object_text_fill::fill_object_names_with(
+        &texts,
+        &evaluated.program_id,
+        input,
+        &names,
+    )?;
+    for com in &mut detail.com_objects {
+        if let Some(name) = filled.get(&knx_core::ComObjectInstanceId(com.id)) {
+            com.name = Some(name.text.clone());
+            com.name_fill = crate::com_object_activation::text_fill(name.source, &name.template);
+        }
+    }
     Ok(())
 }
 
@@ -1872,18 +1939,22 @@ pub fn device_detail(
     language: Option<&str>,
 ) -> Result<knx_projection::DeviceDetail, String> {
     // Step 1: lock only `project`.
-    let (mut detail, overlay_input, activation_input) = {
+    let (mut detail, overlay_input, activation_input, name_input) = {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
         let detail = device_detail_impl(project, device_id)?;
         let activation_input = activation_input(project, knx_core::DeviceId(device_id));
+        let name_input = knx_app::com_object_text_fill::NameFillInput::collect(
+            project,
+            knx_core::DeviceId(device_id),
+        );
         let overlay_input = language.and_then(|_| {
             knx_app::com_object_language::ComObjectTextInput::collect(
                 project,
                 knx_core::DeviceId(device_id),
             )
         });
-        (detail, overlay_input, activation_input)
+        (detail, overlay_input, activation_input, name_input)
     };
 
     // T16: a product/program ref is present, so `resolution` needs a real
@@ -1951,29 +2022,36 @@ pub fn device_detail(
     }
 
     apply_dpt_texts(&products, &mut detail, language)?;
-    if let Some(input) = activation_input {
-        apply_com_object_activation(&products, &mut detail, input, language)?;
-    }
-
-    let (Some(lang), Some(overlay_input)) = (language, overlay_input) else {
-        return Ok(detail);
+    let evaluated = match activation_input {
+        Some(input) => apply_com_object_activation(&products, &mut detail, input, language)?,
+        None => None,
     };
 
-    // T33/§37: the shared rule — product-layer text only, and only where a
-    // translation answered; see `knx_app::com_object_language`.
-    let translated =
-        knx_app::com_object_language::translate_com_object_texts(&products, &overlay_input, lang)
-            .map_err(|e| e.to_string())?;
-    for com in &mut detail.com_objects {
-        let Some(text) = translated.get(&knx_core::ComObjectInstanceId(com.id)) else {
-            continue;
-        };
-        if let Some(name) = &text.name {
-            com.name = Some(name.clone());
+    if let (Some(lang), Some(overlay_input)) = (language, overlay_input) {
+        // T33/§37: the shared rule — product-layer text only, and only where a
+        // translation answered; see `knx_app::com_object_language`.
+        let translated = knx_app::com_object_language::translate_com_object_texts(
+            &products,
+            &overlay_input,
+            lang,
+        )
+        .map_err(|e| e.to_string())?;
+        for com in &mut detail.com_objects {
+            let Some(text) = translated.get(&knx_core::ComObjectInstanceId(com.id)) else {
+                continue;
+            };
+            if let Some(name) = &text.name {
+                com.name = Some(name.clone());
+            }
+            if let Some(description) = &text.description {
+                com.description = Some(description.clone());
+            }
         }
-        if let Some(description) = &text.description {
-            com.description = Some(description.clone());
-        }
+    }
+
+    // ADR-0126: the name as shown, translated or not, gets its `{{0}}` filled.
+    if let (Some(evaluated), Some(name_input)) = (evaluated, name_input) {
+        apply_name_fill(&mut detail, &evaluated, &name_input)?;
     }
 
     Ok(detail)

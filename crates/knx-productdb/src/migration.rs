@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 22;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 23;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -295,7 +295,296 @@ fn migrations() -> Vec<Migration> {
         migrate_v19_to_v20,
         migrate_v20_to_v21,
         migrate_v21_to_v22,
+        migrate_v22_to_v23,
     ]
+}
+
+/// The hosts ADR-0126 models `TextParameterRefId` on, by element name: the
+/// last step of an `ingest_unknown` xpath. `ParameterRef` is not one of them;
+/// its `TextParameterRefId` stays unmodelled and reported.
+const TEXT_PARAMETER_REF_HOSTS: [&str; 4] = [
+    "Channel",
+    "ParameterBlock",
+    "ParameterSeparator",
+    "ComObjectRef",
+];
+
+/// v22 -> v23 (ADR-0126). `dynamic_node` and `com_object_ref` gain
+/// `text_parameter_ref_id`, and `TextParameterRefId` on the four hosts stops
+/// being an unknown attribute.
+///
+/// Per `ApplicationProgram` blob whose bytes still match their key, inside its
+/// own savepoint: the trees of the programs it owns are re-parsed as v18 does
+/// (`reparse_owned_trees`, the parse's unknown rows discarded), so the column
+/// is filled and `extra` loses the attribute exactly as on a fresh install; its
+/// `ComObjectRef` rows get the column from the bytes; and the blob's
+/// unqualified `TextParameterRefId` rows at host xpaths are deleted. A blob that no longer classifies, whose
+/// bytes do not match their key, or that does not re-read keeps its rows and
+/// gets a `TextParameterRefBackfillError` record. `package.unknown_count` then
+/// loses the distinct rows its members lost, and every *measured* report drops
+/// the same rows, as v18 did for `Channel/@Number`.
+fn migrate_v22_to_v23(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "ALTER TABLE dynamic_node ADD COLUMN text_parameter_ref_id TEXT;
+         ALTER TABLE com_object_ref ADD COLUMN text_parameter_ref_id TEXT;",
+    )?;
+    let blobs = conn
+        .prepare("SELECT sha256, source_path FROM source_file ORDER BY sha256")?
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    // Blob -> the distinct xpaths whose rows it lost. A blob missing from this
+    // map was not carried forward, and neither is any report that counts it.
+    let mut retired: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
+    for (sha256, source_path) in blobs {
+        let failure = |cause: &str| ProductDbError::Xml {
+            source_path: source_path.clone(),
+            cause: format!("v23 backfill: {cause}"),
+        };
+        let Some(bytes) = crate::load_source_file(conn, &sha256)? else {
+            continue;
+        };
+        let refused = if classify(&bytes) != FileKind::ApplicationProgram {
+            let was_program: bool = conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM application_program WHERE source_sha256 = ?1)
+                     OR EXISTS(SELECT 1 FROM package_member WHERE source_sha256 = ?1
+                               AND role = 'ApplicationProgram')",
+                [&sha256],
+                |r| r.get(0),
+            )?;
+            if !was_program {
+                continue;
+            }
+            failure("stored program no longer classifies as an ApplicationProgram")
+        } else if crate::sha256_hex(&bytes) != sha256 {
+            failure("stored bytes do not match their SHA-256 key")
+        } else {
+            conn.execute_batch("SAVEPOINT v23_text_parameter_refs;")?;
+            match backfill_text_parameter_refs(conn, &sha256, &source_path, &bytes) {
+                Ok(()) => {
+                    let xpaths = retire_text_parameter_ref_unknowns(conn, &sha256)?;
+                    conn.execute_batch("RELEASE SAVEPOINT v23_text_parameter_refs;")?;
+                    retired.insert(sha256, xpaths);
+                    continue;
+                }
+                Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+                Err(error) => {
+                    conn.execute_batch(
+                        "ROLLBACK TO SAVEPOINT v23_text_parameter_refs;
+                         RELEASE SAVEPOINT v23_text_parameter_refs;",
+                    )?;
+                    error
+                }
+            }
+        };
+        record_backfill_failure(
+            conn,
+            &sha256,
+            &source_path,
+            "TextParameterRefBackfillError",
+            "backfill_text_parameter_refs",
+            &refused,
+        )?;
+    }
+    retire_text_parameter_refs_from_reports(conn, &retired)
+}
+
+/// Re-parses the dynamic trees of the programs one blob owns and stores each
+/// `ComObjectRef`'s `TextParameterRefId` from the bytes. A program another blob
+/// owns is left alone, as the parsers leave it.
+fn backfill_text_parameter_refs(
+    conn: &Connection,
+    sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<(), ProductDbError> {
+    use quick_xml::events::Event;
+    reparse_owned_trees(conn, sha256, source_path, bytes)?;
+    let owned: std::collections::HashSet<String> = conn
+        .prepare("SELECT id FROM application_program WHERE source_sha256 = ?1")?
+        .query_map([sha256], |r| r.get(0))?
+        .collect::<Result<_, _>>()?;
+    let mut reader = quick_xml::Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut program: Option<String> = None;
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        let (start, empty) = match &event {
+            Event::Eof => break,
+            Event::Start(e) => (e, false),
+            Event::Empty(e) => (e, true),
+            _ => continue,
+        };
+        let name = crate::xml::local_name(start);
+        if name == "ApplicationProgram" {
+            if !empty {
+                program = crate::xml::attrs(start, source_path)?
+                    .get("Id")
+                    .map(str::to_string);
+            }
+            continue;
+        }
+        if name != "ComObjectRef" {
+            continue;
+        }
+        let Some(program_id) = program.as_deref().filter(|p| owned.contains(*p)) else {
+            continue;
+        };
+        let a = crate::xml::attrs(start, source_path)?;
+        let (Some(id), Some(reference)) = (a.get("Id"), a.get("TextParameterRefId")) else {
+            continue;
+        };
+        conn.execute(
+            "UPDATE com_object_ref SET text_parameter_ref_id = ?3
+             WHERE program_id = ?1 AND id = ?2",
+            params![program_id, id, reference],
+        )?;
+    }
+    Ok(())
+}
+
+/// Deletes one blob's unqualified `TextParameterRefId` rows at host xpaths and
+/// returns the distinct xpaths that had any: what one parse of it reported.
+fn retire_text_parameter_ref_unknowns(
+    conn: &Connection,
+    sha256: &str,
+) -> Result<Vec<String>, ProductDbError> {
+    let xpaths: Vec<String> = conn
+        .prepare(
+            "SELECT DISTINCT xpath FROM ingest_unknown
+             WHERE source_sha256 = ?1 AND kind = 'Attribute' AND name = 'TextParameterRefId'
+             ORDER BY xpath",
+        )?
+        .query_map([sha256], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .filter(|xpath| {
+            xpath
+                .rsplit('/')
+                .next()
+                .is_some_and(|host| TEXT_PARAMETER_REF_HOSTS.contains(&host))
+        })
+        .collect();
+    for xpath in &xpaths {
+        conn.execute(
+            "DELETE FROM ingest_unknown
+             WHERE source_sha256 = ?1 AND xpath = ?2 AND kind = 'Attribute'
+               AND name = 'TextParameterRefId'",
+            params![sha256, xpath],
+        )?;
+    }
+    Ok(xpaths)
+}
+
+/// The package half of `migrate_v22_to_v23`, the mirror of v18's
+/// `retire_channel_number_from_reports`: per package, the distinct rows its
+/// `ApplicationProgram` members lost leave `package.unknown_count`, and the
+/// measured report is rewritten without them in its own savepoint. A member
+/// that was not carried forward, or a report that does not validate, downgrades
+/// the report to `unavailable` with an `InstallReportBackfillError`.
+fn retire_text_parameter_refs_from_reports(
+    conn: &Connection,
+    retired: &std::collections::HashMap<String, Vec<String>>,
+) -> Result<(), ProductDbError> {
+    let packages = conn
+        .prepare("SELECT sha256 FROM package ORDER BY sha256")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    for package in packages {
+        let members = conn
+            .prepare(
+                "SELECT source_sha256 FROM package_member
+                 WHERE package_sha256 = ?1 AND role = 'ApplicationProgram'
+                 ORDER BY ordinal",
+            )?
+            .query_map([&package], |r| r.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        let overflow = || ProductDbError::Xml {
+            source_path: package.clone(),
+            cause: "v23 backfill: unknown counter overflow".into(),
+        };
+        let lost = members.iter().try_fold(0i64, |total, m| {
+            let rows = i64::try_from(retired.get(m).map_or(0, Vec::len)).map_err(|_| overflow())?;
+            total.checked_add(rows).ok_or_else(overflow)
+        })?;
+        let updated = conn.execute(
+            "UPDATE package SET unknown_count = unknown_count - ?2
+             WHERE sha256 = ?1 AND unknown_count >= ?2",
+            params![package, lost],
+        )?;
+        if updated != 1 {
+            return Err(ProductDbError::Xml {
+                source_path: package.clone(),
+                cause: "v23 backfill: package unknown counter would underflow".into(),
+            });
+        }
+        // An `unavailable` report keeps no unknown rows; there is nothing to
+        // retire from it and nothing to record a second time.
+        let measured: bool = conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM package_install_report
+                           WHERE package_sha256 = ?1 AND status = 'measured')",
+            [&package],
+            |r| r.get(0),
+        )?;
+        if !measured {
+            continue;
+        }
+        let mut xpaths: Vec<&str> = members
+            .iter()
+            .filter_map(|m| retired.get(m))
+            .flatten()
+            .map(String::as_str)
+            .collect();
+        xpaths.sort_unstable();
+        xpaths.dedup();
+        let stale_member = members.iter().find(|m| !retired.contains_key(*m));
+        conn.execute_batch("SAVEPOINT v23_text_parameter_report;")?;
+        let outcome = match stale_member {
+            Some(member) => Ok(Err(crate::package::ReportNotUpgradable(format!(
+                "member {member} was not carried forward"
+            )))),
+            None => crate::package::retire_report_unknowns(
+                conn,
+                &package,
+                &xpaths,
+                "TextParameterRefId",
+            ),
+        };
+        let why = match outcome {
+            Ok(Ok(())) => None,
+            Ok(Err(why)) => Some(why.0),
+            Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+            Err(error) => Some(error.to_string()),
+        };
+        match why {
+            None => conn.execute_batch("RELEASE SAVEPOINT v23_text_parameter_report;")?,
+            Some(why) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT v23_text_parameter_report;
+                     RELEASE SAVEPOINT v23_text_parameter_report;",
+                )?;
+                crate::package::mark_report_unavailable(conn, &package)?;
+                record_backfill_failure(
+                    conn,
+                    &package,
+                    &package,
+                    "InstallReportBackfillError",
+                    "text_parameter_ref_report_backfill",
+                    &ProductDbError::Xml {
+                        source_path: package.clone(),
+                        cause: format!("v23 backfill: {why}"),
+                    },
+                )?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// v21 -> v22 (ADR-0094, legacy EX-IM product databases). Additive DDL only.
@@ -2153,7 +2442,11 @@ fn migrate_v4_to_v5(conn: &Connection) -> Result<(), ProductDbError> {
 /// True if `table` already has a column named `column`. Used where an
 /// `ALTER TABLE ... ADD COLUMN` migration must tolerate being replayed
 /// against a table that already has it (see `migrate_v4_to_v5`).
-fn column_exists(conn: &Connection, table: &str, column: &str) -> Result<bool, ProductDbError> {
+pub(crate) fn column_exists(
+    conn: &Connection,
+    table: &str,
+    column: &str,
+) -> Result<bool, ProductDbError> {
     let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
     let mut rows = stmt.query([])?;
     while let Some(row) = rows.next()? {

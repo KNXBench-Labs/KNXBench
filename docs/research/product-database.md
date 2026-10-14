@@ -1,5 +1,64 @@
 # Research — Manufacturer and product data
 
+## 2026-10-14 — Positional text placeholders `{{0}}` (Goal B14, issue #17)
+
+Issue #17 showed `{{0:Page 1}}` as a channel heading and `Page 1 - {{0:Icon 1}}`
+as object names. This is the evidence the resolution rests on; the contract is
+[positional-text-templates.md](../contracts/positional-text-templates.md).
+
+- **[D]** KNX Association, Manufacturer Tool help *Dynamic text change*
+  (support.knx.org article 360000160080, dated 2020-03-20; read from the Internet
+  Archive snapshot of 24 October 2020 because the live page sits behind a bot
+  check). In our words: ETS can insert the value of a **text parameter** into the
+  text of a `Channel`, `ParameterBlock`, `ParameterSeparator`, `ParameterRef` or
+  `ComObjectRef`. The text carries `{{0}}` or `{{0:def}}`, the parameter is chosen
+  with `TextParameterRefId`, and `def` is shown when the parameter's value is
+  **empty**. Translations carry the same placeholder, and `def` may be translated.
+  The article says nothing about other indices, non-text parameters, a missing
+  parameter or whitespace around `def`.
+- **[D]** The local KNX Standard v3.0.0 corpus has no rule for this: `Project
+  Schema23 v01.00.00` covers the project side only, and `02_06_01 ETS App
+  Development` and `02_04_01 Manufacturer Tool` do not mention it.
+- **[V]** Corpus, 14 October 2026: every application program member under
+  `OriginalData/`, nested archives included, 597 distinct members (name, CRC and
+  size; 20 repeats skipped), host `@Text` only (translations counted apart):
+  - Every `TextParameterRefId` names a `ParameterRef` of a `TypeText` parameter in
+    the same file: `ComObjectRef` 85,910, `ParameterBlock` 1,595, `Channel` 815,
+    `ParameterSeparator` 734. None sits on a `ParameterRef`.
+  - Every `{{0}}`/`{{0:…}}` on a `Channel`, `ParameterBlock`, `ParameterSeparator`
+    or `ComObjectRef` comes with a `TextParameterRefId` on that element. The 1,124
+    on a `ComObject` have none there; all 5,774 `ComObjectRef`s that carry a
+    reference but no `@Text` of their own inherit a `{{0…}}` text from their
+    `ComObject`.
+  - `def` never starts or ends with whitespace (84,549 defaults) and is never
+    empty after the colon. 5,082 defaults contain a module argument, e.g.
+    `{{0:Button {{ChNo}}}}`.
+  - Other indices are a different family: about 61,900 digit-headed placeholders
+    other than `0`, nearly all above 99, on `ComObjectRef`, `ParameterBlock` and
+    `ParameterSeparator` hosts **without** a `TextParameterRefId` and never inside a
+    `ModuleDef`. No `ModuleDef` declares a numeric argument (all 1,928 argument
+    names are identifiers, as `Identifier50_t` requires). Nothing documented says
+    what fills them; they stay verbatim.
+- **[V]** The six `.knxproj` files under `OriginalData/` (221 devices): 654
+  referenced text parameters per embedded program occurrence, 283 with a
+  non-empty product default and 371 with an empty one. Seven devices store values
+  for them (47 `ParameterInstanceRef`s): 38 non-empty over an empty default, 5
+  empty over a non-empty default, 4 non-empty over a non-empty default, never
+  empty over empty. So the value that applies is the stored one, otherwise the
+  product default; an empty stored value is a real value, not an absence.
+- **[A]** Whether ETS still inserts the value when the text parameter itself is
+  inactive (outside the evaluated `choose` branch) is not documented. KNXBench uses
+  the value either way and says where it came from.
+- Independent reading: xknxproject (`util.text_parameter_template_replace`, read
+  at `f97db06`, nothing copied) inserts the project's stored value and falls back
+  to `def` otherwise, also when the product default is not empty. KNXBench follows
+  the article instead: the product default is the parameter's value.
+
+**Correction to the 2026-09-14 addendum below.** It counted 948 purely numeric
+placeholders that "belong to `TextParameterRefId`". Its counting unit was not
+recorded, so the number cannot be reconciled with the counts above. Its conclusion
+holds only for index `0`: higher indices occur without any `TextParameterRefId`.
+
 ## 2026-10-12 — Catalogue update sources
 
 Read on 2026-10-12 through the public Zendesk Help Center API, because the
@@ -951,7 +1010,8 @@ placeholders in text, **978**, of which **978 resolve to an
 of them reached through `TranslationElement/@RefId`, 203 direct). A
 separate, larger family of **948** purely numeric `{{<digits>}}`
 placeholders resolves to nothing in any file and belongs to
-`TextParameterRefId`, not to this mechanism. Only **24** placeholders sit
+`TextParameterRefId`, not to this mechanism (only index `0` does; see the
+2026-10-14 correction at the top). Only **24** placeholders sit
 where the `Dynamic` evaluator can reach them — inside a `ModuleDef`'s own
 stored tree — and those 24 are what T18 task 12 interprets.
 

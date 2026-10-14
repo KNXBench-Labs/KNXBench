@@ -22,6 +22,8 @@ export interface CommandContext {
   openDevices: () => void;
   /** The project notes workspace (needs an open project). */
   openNotes: () => void;
+  /** Goal B3: the project's stored ETS bus access, read-only. */
+  openStoredBusAccess: () => void;
   /** ADR-0093: the add-device wizard, aimed at the selected line or building part. */
   addDevice: () => void;
   openIntroduction: () => void;
@@ -178,6 +180,12 @@ export const COMMANDS: PaletteCommand[] = [
     labelKey: "workbench.notes",
     isEnabled: (ctx) => ctx.tree !== null,
     run: (ctx) => ctx.openNotes(),
+  },
+  {
+    id: "stored-bus-access",
+    labelKey: "storedBusAccess.command",
+    isEnabled: (ctx) => ctx.tree !== null,
+    run: (ctx) => ctx.openStoredBusAccess(),
   },
   {
     id: "add-device",

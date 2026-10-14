@@ -661,7 +661,27 @@ the project believes about the device's loaded parts (individual address,
 application program, parameters, communication part, medium configuration) next to
 any report the model still holds. It never contacts the device. *No report
 retained* does not mean "not loaded"; recorded dates are project metadata, not the
-last successful download. Stored BusAccess/IP settings are not shown.
+last successful download. Stored bus access and IP settings from ETS are a separate,
+read-only view (see *Stored bus access* below).
 [Contract](../../contracts/recorded-device-state.md).
+
+## Stored bus access
+
+An ETS project can remember how ETS reached the bus for a line (*bus access*) and
+a device's IP settings (*IP configuration*). KNXBench keeps both and shows them
+read-only: **Stored bus access…** in the command palette lists every record, and
+a selected line shows its own under **Stored bus access (from ETS)**.
+
+Addresses, ports and names are hidden at first; you see what kind of value is
+there (for example *hidden (IPv4 address, 13 characters)*). **Show values** shows
+one record's values; **Hide values** hides them again. Settings such as the
+access type stay visible. Each record says which line it belongs to, or why it
+belongs to none: an IP configuration never names its device in the stored
+project, so it is listed without one. **Source** shows the file, the path inside
+it, the size and a SHA-256 checksum.
+
+KNXBench never connects to these addresses and never offers them as a gateway;
+you choose your gateway in the bus connection as before
+([details](../../contracts/stored-bus-access.md)).
 
 [Manual index](../README.md) · Next: [A complete configuration workflow](06-configuration-workflow.md) →

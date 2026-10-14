@@ -211,7 +211,7 @@ One independent project widens import evidence, not universal ETS coverage. Gene
 ### Native import evidence and recorded device state
 
 **Ledger status:** Not separately tracked.
-Stored load states are project records, not bus measurements. Missing historical reports are not reconstructed; retained BusAccess/IP configuration is not shown.
+Stored load states are project records, not bus measurements. Missing historical reports are not reconstructed; retained BusAccess/IP configuration is shown read-only since Goal B3, IPConfig without a device.
 [Details and history](limitations/native-import-evidence-and-recorded-device-state.md)
 
 <a id="catalogue-selective-import"></a>

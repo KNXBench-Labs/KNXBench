@@ -1,5 +1,6 @@
 /** Properties inspector showing and editing details for whatever tree entity is selected. */
 import { useEffect, useRef, useState } from "react";
+import { LineStoredBusAccess } from "./StoredBusAccess";
 import { carriesGroupAddress, readDraggedGroupAddress } from "./groupAddressDrag";
 import * as api from "./api";
 import RecordedDeviceStatePanel from "./RecordedDeviceStatePanel";
@@ -1616,6 +1617,7 @@ function LineInspector(props: {
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
+      <LineStoredBusAccess key={line.id} lineId={line.id} />
     </div>
   );
 }

@@ -46,6 +46,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openProjectHistory: () => {},
     openDevices: () => {},
     openNotes: () => {},
+    openStoredBusAccess: () => {},
     addDevice: () => {},
     openIntroduction: () => {},
     openAchievements: () => {},
@@ -141,11 +142,22 @@ describe("command enablement", () => {
     expect(called).toBe(true);
   });
 
+  it("opens the stored bus access only with a project, and only to read it (Goal B3)", () => {
+    const command = COMMANDS.find((entry) => entry.id === "stored-bus-access")!;
+    expect(command.labelKey).toBe("storedBusAccess.command");
+    expect(command.isEnabled(noopCtx({ tree: null }))).toBe(false);
+    let opened = false;
+    const ctx = { ...noopCtx({ tree: fakeTree(false, false) }), openStoredBusAccess: () => { opened = true; } };
+    expect(command.isEnabled(ctx)).toBe(true);
+    command.run(ctx);
+    expect(opened).toBe(true);
+  });
+
   it("lists every command in palette order, with an unconditionally enabled first entry", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
       "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "project-history", "search",
       "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
-      "open-catalog", "open-devices", "open-notes", "add-device", "show-introduction", "open-achievements", "open-help",
+      "open-catalog", "open-devices", "open-notes", "stored-bus-access", "add-device", "show-introduction", "open-achievements", "open-help",
     ]);
     expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
   });

@@ -2324,6 +2324,43 @@ export interface ParameterPanel {
   // offer; always present on a successful `POST`, since `apply()` on the
   // server already built it from the genuine post-write `CommandStack`.
   tree: ProjectTree | null;
+  /** Why `programId` is `null` for a device that names a program
+   * (ADR-0128, GitHub #21); absent or `null` otherwise. */
+  unresolvedProgram?: UnresolvedProgram | null;
+}
+
+/** A device's program reference no installed application program answers. */
+export interface UnresolvedProgram {
+  /** The device's `Hardware2ProgramRefId`, verbatim. */
+  programRef: string;
+  /** Whether the server has a product database at all. */
+  productDatabase: boolean;
+  /** Manufacturer files the project names that the product database lacks. */
+  missingFiles: number;
+}
+
+/** What restoring manufacturer files from an original `.knxproj` did. */
+export interface ManufacturerFileRestore {
+  installed: string[];
+  alreadyInstalled: number;
+  /** Same path as the project's file, other bytes: not installed. */
+  mismatched: string[];
+  notInArchive: string[];
+  failed: { sourcePath: string; reason: string }[];
+  /** Files the product database still lacks afterwards. */
+  stillMissing: number;
+}
+
+/**
+ * Installs the open project's missing manufacturer files from its original
+ * `.knxproj` at `path` (server-side path). Only files whose checksum matches
+ * the project's manifest are installed; the project itself is unchanged.
+ */
+export function restoreManufacturerFiles(path: string): Promise<ManufacturerFileRestore> {
+  return request("/api/project/manufacturer-files/restore", {
+    method: "POST",
+    body: JSON.stringify({ path }),
+  });
 }
 
 // `language` selects which stored translation row the server substitutes

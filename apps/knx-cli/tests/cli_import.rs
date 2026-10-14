@@ -163,6 +163,45 @@ fn import_with_a_product_db_reports_what_it_ingested() {
     assert!(products.exists());
 }
 
+/// ADR-0128 (GitHub #21): a store written with a product database carries
+/// every manufacturer file its manifest names, so it opens elsewhere too.
+#[test]
+fn import_with_a_product_db_stores_the_manufacturer_files_in_the_project() {
+    let dir = tempfile::tempdir().unwrap();
+    let source = knx_testsupport::write_minimal_knxproj(dir.path());
+    let products = dir.path().join("products.sqlite");
+    let store = dir.path().join("p.knxdb");
+    let out = run_cli(&[
+        "import",
+        source.to_str().unwrap(),
+        "--store",
+        store.to_str().unwrap(),
+        "--product-db",
+        products.to_str().unwrap(),
+    ]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let conn = knx_store::open_existing_and_migrate(&store).unwrap();
+    let manifest: std::collections::BTreeSet<String> = knx_store::load_manufacturer_refs(&conn)
+        .unwrap()
+        .into_iter()
+        .map(|r| r.sha256)
+        .collect();
+    assert!(!manifest.is_empty(), "the fixture has manufacturer data");
+    let rows: std::collections::BTreeSet<String> = conn
+        .prepare("SELECT sha256 FROM manufacturer_file")
+        .unwrap()
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(rows, manifest);
+}
+
 #[test]
 #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn import_with_no_product_db_keeps_manufacturer_data_in_the_project() {

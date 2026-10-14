@@ -1157,6 +1157,27 @@ export const messages: Record<MessageKey, string> = {
   "parameters.loading": "Parameter werden geladen…",
   "parameters.noProgram":
     "Für dieses Gerät lässt sich kein Anwendungsprogramm auflösen; Parameter können nicht angezeigt werden.",
+  "parameters.unresolved.noDatabase":
+    "Dieser Server hat keine Produktdatenbank. Das Anwendungsprogramm des Geräts lässt sich deshalb nicht laden, und seine Parameter können nicht angezeigt werden.",
+  "parameters.unresolved.restorable.one":
+    "Die Produktdaten dieses Projekts sind nicht installiert: 1 Herstellerdatei fehlt in der Produktdatenbank, und die Projektdatei enthält sie nicht (sie wurde mit einer älteren KNXBench gespeichert). Stelle sie aus der ursprünglichen .knxproj des Projekts wieder her. Installiert wird nur eine Datei mit passender Prüfsumme; das Projekt selbst ändert sich nicht.",
+  "parameters.unresolved.restorable.other":
+    "Die Produktdaten dieses Projekts sind nicht installiert: {count} Herstellerdateien fehlen in der Produktdatenbank, und die Projektdatei enthält sie nicht (sie wurde mit einer älteren KNXBench gespeichert). Stelle sie aus der ursprünglichen .knxproj des Projekts wieder her. Installiert werden nur Dateien mit passender Prüfsumme; das Projekt selbst ändert sich nicht.",
+  "parameters.unresolved.notInstalled":
+    "Das Anwendungsprogramm des Geräts ist nicht in der Produktdatenbank. Installiere die Produktdaten des Geräts (.knxprod) über den Katalog.",
+  "parameters.unresolved.programRef": "Programmreferenz:",
+  "parameters.unresolved.restore": "Aus ursprünglicher .knxproj wiederherstellen…",
+  "parameters.unresolved.restoring": "Produktdaten werden wiederhergestellt…",
+  "parameters.unresolved.installed.one": "Produktdaten wiederhergestellt: 1 Datei installiert.",
+  "parameters.unresolved.installed.other": "Produktdaten wiederhergestellt: {count} Dateien installiert.",
+  "parameters.unresolved.nothingInstalled": "Aus diesem Archiv wurde keine Datei installiert.",
+  "parameters.unresolved.saveHint": "Speichere das Projekt, damit seine Datei sie ab jetzt enthält.",
+  "parameters.unresolved.stillMissing.one": "1 Datei fehlt weiterhin. Versuche eine andere Kopie des ursprünglichen Projekts.",
+  "parameters.unresolved.stillMissing.other": "{count} Dateien fehlen weiterhin. Versuche eine andere Kopie des ursprünglichen Projekts.",
+  "parameters.unresolved.mismatched":
+    "Nicht installiert, weil sie von den Dateien abweichen, mit denen dieses Projekt erstellt wurde: {paths}",
+  "parameters.unresolved.notInArchive": "Nicht in diesem Archiv: {paths}",
+  "parameters.unresolved.failed": "{path} konnte nicht installiert werden: {reason}",
   "parameters.none": "(keine)",
   "parameters.conflict": "Dieser Wert wurde anderswo geändert. Nichts wurde geschrieben; dein Entwurf bleibt erhalten und der aktuelle Stand wird neu geladen.",
   "parameters.conflictReloadFailed": "Dieser Wert wurde anderswo geändert. Nichts wurde geschrieben und dein Entwurf bleibt erhalten, aber das Neuladen des aktuellen Stands ist fehlgeschlagen: {message}",

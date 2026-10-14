@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 15;
+pub const CURRENT_SCHEMA_VERSION: i64 = 16;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -687,6 +687,23 @@ fn migrate_v14_to_v15(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v15→v16: the manufacturer files a project file carries itself
+/// (ADR-0128, GitHub #21), keyed by the manifest's SHA-256. Additive: an
+/// older file gains an empty table and fills it on its next save.
+fn migrate_v15_to_v16(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "CREATE TABLE manufacturer_file (
+             sha256      TEXT PRIMARY KEY
+                         CHECK(length(sha256) = 64 AND sha256 NOT GLOB '*[^0-9a-f]*'),
+             source_path TEXT NOT NULL,
+             len         INTEGER NOT NULL CHECK(len BETWEEN 0 AND 67108864),
+             codec       TEXT NOT NULL CHECK(codec = 'zlib'),
+             bytes       BLOB NOT NULL
+         ) STRICT;",
+    )?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// History owns the surrounding transaction so a refused editor write also
@@ -737,6 +754,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v12_to_v13,
         migrate_v13_to_v14,
         migrate_v14_to_v15,
+        migrate_v15_to_v16,
     ]
 }
 
@@ -1469,7 +1487,7 @@ mod tests {
             // file a v7 build would have written for this project.
             conn.execute_batch(
                 "DROP TABLE instruction_run;
-                 DROP TABLE instruction_document; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
+                 DROP TABLE instruction_document; DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
                  DROP TABLE project_history_state;
                  DROP TABLE project_history_stack;
                  DROP TABLE project_history_version;

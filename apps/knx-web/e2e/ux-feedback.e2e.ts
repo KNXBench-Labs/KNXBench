@@ -120,7 +120,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(cards).toHaveCount(2);
     await expect(cards.nth(0)).toContainText("Raw refused import 2:");
     await expect(cards.nth(1)).toContainText("Raw refused import 3:");
-    expect(await duration(".toast--error")).toBe("0.12s");
+    // Subtle: 120 ms; the entry mirrors the exit, which runs twice as long.
+    expect(await duration(".toast--error")).toBe("0.24s");
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/two-errors-${language}-${width}.png` });
 
     // The pointer holds one card; the other runs out on its own clock.

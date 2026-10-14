@@ -44,6 +44,7 @@ pub mod selective_import;
 pub mod serial_address_recovery;
 pub mod serial_number;
 pub mod service_control_backup;
+pub mod stored_bus_access;
 
 pub use import::{
     import_ets_project, import_ets_project_bytes, import_ets_project_observed,

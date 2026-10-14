@@ -36,6 +36,14 @@ describe("support guidance", () => {
     expect(guidanceForError(error(400, { kind: "downloadExcluded" })).action).toBe("respectExclusion");
   });
 
+  it("gives existing start safety refusals their specific correction instead of compatibility guesses", () => {
+    expect(guidanceForError(error(400, { kind: "downloadGatewayInvalid" })).action).toBe("fixGateway");
+    expect(guidanceForError(error(409, { kind: "downloadPlanStale" })).action).toBe("prepareAgain");
+    expect(guidanceForError(error(400, { kind: "downloadConfirmationRefused" })).action).toBe("confirmRequest");
+    expect(guidanceForError(error(422, { kind: "downloadKeyRefused" })).action).toBe("checkKey");
+    expect(guidanceForError(error(409, { kind: "gatewayBusy" })).action).toBe("releaseResource");
+  });
+
   it("never interprets network/server failures as device incompatibility", () => {
     for (const status of [undefined, 500, 502, 503]) {
       expect(guidanceForError(error(status, { category: "modules" }))).toMatchObject({ kind: "transient", action: "retryService" });

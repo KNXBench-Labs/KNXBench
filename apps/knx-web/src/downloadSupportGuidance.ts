@@ -2,7 +2,8 @@
 import type { DownloadReadinessMark } from "./downloadReadiness";
 
 export type SupportAction = "installData" | "fixConfiguration" | "respectExclusion" | "requestSupport"
-  | "checkParameters" | "reportUnknown" | "retryService" | "openProject";
+  | "checkParameters" | "reportUnknown" | "retryService" | "openProject"
+  | "fixGateway" | "prepareAgain" | "confirmRequest" | "checkKey" | "releaseResource";
 export interface SupportGuidance {
   kind: "unsupported" | "excluded" | "transient" | "unknown";
   category: string | null;
@@ -41,6 +42,12 @@ export function guidanceForError(error: unknown): SupportGuidance {
   if (typeof fields?.status !== "number" || fields.status >= 500) {
     return { ...base, kind: "transient", action: "retryService" };
   }
+  const safetyActions: Readonly<Record<string, SupportAction>> = {
+    downloadGatewayInvalid: "fixGateway", downloadPlanStale: "prepareAgain",
+    downloadConfirmationRefused: "confirmRequest", downloadKeyRefused: "checkKey", gatewayBusy: "releaseResource",
+    downloadPartialRefused: "requestSupport",
+  };
+  if (code !== null && Object.hasOwn(safetyActions, code)) return { ...base, kind: "unknown", action: safetyActions[code] };
   if (code === "downloadProductDataMissing") return { ...base, kind: "unknown", action: "installData" };
   if (code === "downloadProjectMissing") return { ...base, kind: "unknown", action: "openProject" };
   if (code === "downloadExcluded") return { ...base, kind: "excluded", action: "respectExclusion" };

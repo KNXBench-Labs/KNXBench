@@ -22,8 +22,11 @@ fragment aliases and update this index. Do not rewrite previous results.
   31 stages zero/frozen, Vitest 3500/0 in 251 files, Chromium 531/0,
   production dialogs/link 18/0, repeat link checks 12/0, tooling 122 (one skip),
   build/all TypeScript configurations/docs/five xtask checks pass.
-  EN/DE production screenshots at 1440/400 inspected. Integration/publication
-  acceptance is recorded separately in the [receipt](evidence/issue19-docker-hall-link-2026-10-14.json).
+  EN/DE production screenshots at 1440/400 inspected. Merged result `655f056e`
+  (on `871cc285`, with P1, #20, #21): 31 stages zero/frozen, Vitest 3547/0 in
+  255 files, Chromium 546/0, production 18/0, repeats 12/0, tooling 123 (one
+  skip); Docker image, network-none link smoke and `smoke-test.sh` pass. Details
+  and two superseded merge attempts in the [receipt](evidence/issue19-docker-hall-link-2026-10-14.json).
   No offline board, new package dependency, Rust/core/schema change, hardware,
   release or deployment. [Contract](contracts/community-recognition.md#about-dialog-issue-19-owner-amendment-14-october-2026).
 

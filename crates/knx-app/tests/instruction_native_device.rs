@@ -178,7 +178,7 @@ fn removing_leaves_no_instructions_and_an_explicit_empty_document_stays_distinct
     let plan = preview_instruction_edit(&snapshot, &rev, id, None).unwrap();
     assert!(!plan.is_no_op());
     apply_instruction_edit(&mut snapshot, &mut stack, &rev, &plan, false, None).unwrap();
-    assert!(snapshot.project.instructions.get(&id).is_none());
+    assert!(!snapshot.project.instructions.contains_key(&id));
     assert_eq!(stack.history_lengths(), (2, 0));
 }
 

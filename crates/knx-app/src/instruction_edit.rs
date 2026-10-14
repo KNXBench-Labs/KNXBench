@@ -1,5 +1,5 @@
 //! Previewed normalized instruction edits, independent of UI or protocol.
-use crate::instructions::{InstructionSourceError, OriginalInstructions};
+use crate::instructions::{InstructionOrigin, InstructionSourceError, OriginalInstructions};
 use knx_core::instruction::InstructionDocument;
 use knx_core::{CommandStack, DeviceId, Project};
 use knx_store::project_history::NativeSnapshot;
@@ -24,7 +24,7 @@ pub struct InstructionEditPreview {
     before: Project,
     revision: InstructionRevision,
     device: DeviceId,
-    original: OriginalInstructions,
+    origin: InstructionOrigin,
     replacement: Option<InstructionDocument>,
     conversion_required: bool,
     no_op: bool,
@@ -33,8 +33,15 @@ impl InstructionEditPreview {
     pub fn device(&self) -> DeviceId {
         self.device
     }
-    pub fn original(&self) -> &OriginalInstructions {
-        &self.original
+    /// The imported original; `None` for a device made in KNXBench (Goal B4).
+    pub fn original(&self) -> Option<&OriginalInstructions> {
+        match &self.origin {
+            InstructionOrigin::Imported(original) => Some(original),
+            InstructionOrigin::Native => None,
+        }
+    }
+    pub fn origin(&self) -> &InstructionOrigin {
+        &self.origin
     }
     pub fn replacement(&self) -> Option<&InstructionDocument> {
         self.replacement.as_ref()
@@ -78,17 +85,20 @@ pub fn preview_instruction_edit(
     {
         return Err(InstructionEditError::InvalidRevision);
     }
-    let original = crate::instructions::original_device_instructions(
-        &snapshot.project,
-        &snapshot.opaque,
-        device,
-    )
-    .map_err(InstructionEditError::Source)?;
+    let origin =
+        crate::instructions::instruction_origin(&snapshot.project, &snapshot.opaque, device)
+            .map_err(InstructionEditError::Source)?;
     let current = snapshot.project.instructions.get(&device);
     let mut conversion_required = false;
     let mut no_op = current == replacement.as_ref();
+    // Only an imported original can be shown in place of no override; a
+    // native device without an override simply has no instructions.
+    let imported_hints = match &origin {
+        InstructionOrigin::Imported(original) => original.hints.as_ref(),
+        InstructionOrigin::Native => None,
+    };
     if current.is_none() && replacement.is_some() {
-        if let Some(hints) = &original.hints {
+        if let Some(hints) = imported_hints {
             match &hints.preview {
                 Ok(view) if view.unsupported.is_empty() => {
                     let runs = view
@@ -117,7 +127,7 @@ pub fn preview_instruction_edit(
         before: snapshot.project.clone(),
         revision: revision.clone(),
         device,
-        original,
+        origin,
         replacement,
         conversion_required,
         no_op,
@@ -136,13 +146,13 @@ pub fn apply_instruction_edit(
     if revision != &preview.revision || snapshot.project != preview.before {
         return Err(E::Conflict);
     }
-    let original = crate::instructions::original_device_instructions(
+    let origin = crate::instructions::instruction_origin(
         &snapshot.project,
         &snapshot.opaque,
         preview.device,
     )
     .map_err(E::Source)?;
-    if original != preview.original {
+    if origin != preview.origin {
         return Err(E::Conflict);
     }
     if preview.conversion_required && !confirm_conversion {

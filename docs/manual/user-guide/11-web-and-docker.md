@@ -149,6 +149,18 @@ docker run -d --name knxbench --network host \
 Now `./data` on your host is `/data` in the container. Removing the container with
 `docker rm` leaves it alone; only `rm -rf` on your own directory removes your projects.
 
+**Product data lives there too (source build after alpha.11).** The product database
+(the installed application programs) is `/data/.knxbench-share/knx/products.sqlite`
+in the image, so it survives a rebuild or an image update. Images up to alpha.11
+kept it inside the container, so every rebuild emptied it. Since the same change,
+every saved `.knxdb` also carries its own application programs and installs them
+again when it is opened. A project saved by alpha.11 or earlier cannot do that.
+If its devices say that this project's product data is not installed, open any of
+those devices' **Parameters** tab and choose **Restore from original .knxproj…**
+([KL-183](../../KNOWN_LIMITATIONS.md#catalogue-kl-183)). Only files that match the
+project byte for byte are installed; save the project afterwards so its file carries
+them from then on.
+
 ### Uploads and the data directory
 
 In the browser build, opening a project that is not already inside `/data` means

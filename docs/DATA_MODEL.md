@@ -784,3 +784,14 @@ Additive: an older file gains empty tables. A history image of schema 12–14
 still decodes and migrates in memory, and an image without Functions keeps
 its semantic identity because empty Function tables are left out of it
 ([ADR-0124](adr/0124-project-functions.md)).
+
+**Amendment (GitHub #21, 2026-10-14): schema 16, carried manufacturer files.**
+`migrate_v15_to_v16` adds `manufacturer_file` (`sha256` primary key, checked as
+64 lower-case hex digits; `source_path`; `len` up to 64 MiB; `codec = 'zlib'`;
+`bytes`). It holds the bytes of the files the `manufacturer_ref` manifest names,
+so a `.knxdb` reopens with its application programs next to an empty product
+database. The rows belong to the file, not to `Project` (no Rust field changed)
+and not to the editor history. A snapshot image with rows is refused, the
+semantic snapshot hash skips the table, and a schema-15 image still decodes and
+migrates. Additive: an older file gains an empty table and fills it on its next
+save ([ADR-0128](adr/0128-native-project-files-carry-their-manufacturer-files.md)).

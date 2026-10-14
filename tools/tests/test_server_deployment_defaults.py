@@ -25,6 +25,15 @@ class ServerDeploymentDefaultsTests(unittest.TestCase):
         self.assertRegex(dockerfile, r"(?m)^ENV KNX_PORT=8484$")
         self.assertRegex(dockerfile, r"(?m)^EXPOSE 8484$")
 
+    def test_product_database_lives_on_the_data_volume(self):
+        # GitHub #21: a product database outside /data vanished with every
+        # container rebuild while the saved projects survived on the volume.
+        dockerfile = (ROOT / "apps/knx-server/Dockerfile").read_text()
+        self.assertRegex(dockerfile, r"(?m)^VOLUME /data$")
+        match = re.search(r"(?m)^ENV XDG_DATA_HOME=(\S+)$", dockerfile)
+        self.assertIsNotNone(match, "XDG_DATA_HOME must be set in the image")
+        self.assertTrue(match.group(1).startswith("/data/"), match.group(1))
+
     def test_all_documented_server_starts_use_host_networking(self):
         for guide in GUIDES:
             commands = server_commands((ROOT / guide).read_text())

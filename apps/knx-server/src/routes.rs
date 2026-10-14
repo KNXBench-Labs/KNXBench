@@ -390,6 +390,25 @@ pub(crate) struct ParameterPanelDto {
     /// `CommandStack` this field does) but stale for every other field a
     /// future command could change, since it never asked the server.
     pub(crate) tree: Option<knx_projection::ProjectTree>,
+    /// Why `program_id` is `null` for a device that names a program
+    /// (ADR-0128, GitHub #21); `null` when the program resolved or the
+    /// device names none.
+    pub(crate) unresolved_program: Option<UnresolvedProgramDto>,
+}
+
+/// A device's `Hardware2ProgramRefId` that no installed application
+/// program answers, and what the server knows about the gap.
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct UnresolvedProgramDto {
+    /// The device's reference, verbatim.
+    pub(crate) program_ref: String,
+    /// Whether this server has a product database at all.
+    pub(crate) product_database: bool,
+    /// Manufacturer files the project's manifest names that the product
+    /// database does not hold. Nonzero means the original `.knxproj` can
+    /// restore them.
+    pub(crate) missing_files: usize,
 }
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]

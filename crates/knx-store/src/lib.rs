@@ -10,6 +10,7 @@ mod functions;
 pub mod group;
 mod instructions;
 pub mod manifest;
+pub mod manufacturer_files;
 pub mod migration;
 pub mod module_instance;
 mod notes;
@@ -23,6 +24,11 @@ pub mod topology;
 
 pub use command_sync::sync_after_command;
 pub use manifest::{insert_manufacturer_refs, load_manufacturer_refs, ManufacturerRef};
+pub use manufacturer_files::{
+    carried_manufacturer_hashes, load_manufacturer_file, manufacturer_file_hash,
+    retain_manufacturer_files, store_manufacturer_file, CarriedManufacturerFile,
+    ManufacturerFileError,
+};
 pub use migration::{
     open_and_migrate, open_and_migrate_in_memory, open_existing_and_migrate,
     open_existing_read_only, MigrationError, ReadOnlyStore, CURRENT_SCHEMA_VERSION,

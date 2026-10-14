@@ -15,11 +15,12 @@ pub(super) fn plan(
     // Model14 preserves destination notes and explicitly refuses source notes without disposition mapping.
     // Model15 (ADR-0124) does the same for Functions: destination Functions are kept (the merge only adds,
     // so their rooms and group addresses stay), source Functions are refused rather than dropped.
+    // Model16 (ADR-0128) adds no Project field: its carried manufacturer files are file-level rows.
     // A model bump needs a new audit, not accidental acceptance of newly cloned but unremapped entity fields.
     if before.project.schema_version != super::SELECTIVE_MODEL_VERSION
         || source.project.schema_version != super::SELECTIVE_MODEL_VERSION
     {
-        return Err("selective import supports normalized model v15 only; a new model requires an audited dependency mapping".into());
+        return Err("selective import supports normalized model v16 only; a new model requires an audited dependency mapping".into());
     }
     if !source.project.notes.is_empty() {
         return Err("source project notes require an explicit selection/disposition mapping; selective import refused without dropping authored data".into());

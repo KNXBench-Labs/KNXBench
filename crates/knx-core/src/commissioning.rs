@@ -20,6 +20,7 @@ pub mod mutation;
 pub mod parameter_image;
 pub mod partial_download_variant;
 pub mod partial_memory_download;
+pub mod pending;
 pub mod procedure;
 pub mod programming_mode;
 pub mod properties;

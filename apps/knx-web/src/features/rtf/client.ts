@@ -2,7 +2,8 @@
 import { noteRefusal } from "../../api";
 import { validateDocument, type Document } from "./document";
 export type Context = Readonly<{ serverIncarnation: string; projectIncarnation: number; snapshotRevision: number }>;
-export type InstructionView = Context & Readonly<{ device: number; originalXmlSha256: string; originalPresent: boolean; originalBytes: number; originalFormat: "plain" | "rtf" | null; unsupported: readonly string[]; previewError: string | null; effectiveDocument: Document | null; overrideDocument: Document | null; persistence: "session-only" | "native-working-history" }>;
+/** `native`: made in KNXBench, so there is no imported original and no hash (Goal B4). */
+export type InstructionView = Context & Readonly<{ device: number; origin: "imported" | "native"; originalXmlSha256: string | null; originalPresent: boolean; originalBytes: number; originalFormat: "plain" | "rtf" | null; unsupported: readonly string[]; previewError: string | null; effectiveDocument: Document | null; overrideDocument: Document | null; persistence: "session-only" | "native-working-history" }>;
 export type InstructionPreview = Readonly<{ token: string; device: number; replacement: Document | null; conversionRequired: boolean; noOp: boolean; expiresInSeconds: number }>;
 export type InstructionApplied = Readonly<{ changed: boolean; nativeGeneration: number | null; snapshotRevision: number; persistence: "session-only" | "native-working-history" }>;
 export type InstructionClient = Readonly<{

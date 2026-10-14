@@ -62,6 +62,18 @@ Published paths verified in the repository:
 
 Acceptance for a future implementation: refusal reason and next action visible without a download session; known/unknown reasons covered; correct documentation and support-gap links; no silent uploads or hardware connection from reporting; original safety gates unchanged. EN/DE component and browser tests should cover the blocked-before-plan case as well as a failed completed run. Goal B owns the web surface, so this investigation does not implement a parallel UI change.
 
+## Follow-up — support-guidance source work, 2026-10-14
+
+The owner invoked the separate [S1–S4 goal](../goals/device-programming-support-guidance.md)
+and Goal B explicitly released the affected surface after its B15 integration.
+The earlier investigation above stays historical. The source candidate now adds
+structured refusal/action help before a plan, local details/copy and deliberate
+EN/DE docs/issue/mail links; the [contract](../contracts/device-programming-support-guidance.md)
+extends issue@ inquiry scope without claiming private intake or delivery.
+No new device encoder, extension-dependency detector, hardware evidence or force
+route follows. Broad source acceptance/integration and the second offline audit
+run are pending in the goal's current session table.
+
 ## Boundaries of this investigation
 
 No application code, support policy, hardware evidence or compatibility promise changed. No bus access, manufacturer contact, vendor execution or hardware programming occurred. The user's specific device/package and refusal have not yet been supplied, so no device-specific compatibility conclusion is possible.

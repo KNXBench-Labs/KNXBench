@@ -118,8 +118,10 @@ for (const language of ["en", "de"] as const) {
           const mark = messages["deviceDownload.readiness.optionMark"];
           await expect(panel.locator("select[data-download-device] option")).toContainText([`1.1.2 — Actuator 1 (${mark})`]);
           await panel.locator("select[data-download-device]").selectOption({ label: `1.1.2 — Actuator 1 (${mark})` });
-          await expect(panel.locator(".device-download-readiness")).toHaveText(fill(messages["deviceDownload.readiness.selected"],
-            { reason: messages["deviceDownload.readiness.reason.byteOrder"] }));
+          const guidance = panel.locator("[data-support-guidance=unsupported]");
+          await expect(guidance.getByRole("status")).toHaveText(messages["deviceDownload.readiness.reason.byteOrder"]);
+          await expect(guidance.locator("[data-next-action=requestSupport]")).toHaveText(messages["deviceDownload.help.action.requestSupport"]);
+          await expect(guidance.locator("a")).toHaveCount(3);
           await expect(panel.getByRole("button", { name: messages["deviceDownload.preparePlan"], exact: true })).toBeVisible();
           await expect(panel.locator(".device-download-actions-note")).toHaveText(messages["deviceDownload.preparePlanNote"]);
           if (process.env.KNX_REFUSAL_CAPTURE_DIR) {
@@ -129,7 +131,7 @@ for (const language of ["en", "de"] as const) {
           // The closed select shows the whole label, mark included.
           const select = panel.locator("select[data-download-device]");
           expect(await select.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
-          for (const element of [holder, panel.locator(".device-download-readiness")]) {
+          for (const element of [holder, guidance]) {
             const box = (await element.boundingBox())!;
             expect(box.x).toBeGreaterThanOrEqual(0);
             expect(box.x + box.width).toBeLessThanOrEqual(width);

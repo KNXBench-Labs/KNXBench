@@ -27,7 +27,7 @@ blocked (named missing evidence) or excluded; nothing else is added.
 | B5 | Catalogue backup deletion; web direct `.knxprod` install routed to preview/apply | delivered (W42 entry) |
 | B6 | KL-164 idempotent achievement increments | delivered (W42 entry) |
 | B7 | Naming recipe UI over the existing `knx-edit` service | delivered (W42 entry) |
-| B8 | EN/DE report texts, KL-13/KL-29/KL-43 summaries, TOOLS-01–05 provenance, optional FUTURE-08 | planned |
+| B8 | EN/DE report texts, KL-13/KL-29/KL-43 summaries, TOOLS-01–05 provenance, optional FUTURE-08 | delivered (W42 entry; FUTURE-08 not taken) |
 | B9 | Issue #14: hover `transform` reset app-wide (`button:hover:not(:disabled)`), FsPicker geometry regression | delivered (W42 entry) |
 | B10 | Issue #11: group-address tree starts collapsed (`expanded` set), Expand/Collapse all, selection ancestors and filter matches open, per-project view state in localStorage | delivered (W42 entry) |
 | B11 | Issue #13: Log time column, even rows, one `Export…` button with scope in its dialog, plain link/unlink messages | delivered (W42 entry) |

@@ -205,7 +205,7 @@
       "number": 48,
       "title": "Report languages",
       "topic": "Import and export",
-      "summary": "English/German chrome/product overlays exist. Report-owned prose is not a complete multilingual catalogue.",
+      "summary": "English/German chrome, table labels and product overlays exist (labels since Goal B8). Diagnostic sentences and raw values stay English; no third language.",
       "file": "KL-048-report-languages.md",
       "ledger_ids": [
         "KL-48"

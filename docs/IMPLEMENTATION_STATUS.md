@@ -54,9 +54,13 @@ fragment aliases and update this index. Do not rewrite previous results.
   (255 files), Python 123 (1 skip), five xtask checks and the documentation
   check 0, bindings unchanged apart from end-of-line spaces; private corpus
   145/145 in 32 targets.
-  The Docker smoke test could not run: the image build fails on `main` at the
-  web build (`docs/community/hall-of-fame.json`), which is issue #19's
-  subject, not this change. No hardware, release or deployment.
+  Docker, after #19 unblocked the image build: image from `626ee907`,
+  `smoke-test.sh` with the ETS 6.3 reference project passed. Container
+  scenario (scratch script, not committed): import 35/35 devices resolve their
+  program, `products.sqlite` lands at `/data/.knxbench-share/knx/`; a new
+  container on the same volume 35/35; a new container with the product
+  database deleted as well 35/35 (the `.knxdb` reinstalled its files, the
+  database was recreated on `/data`). No hardware, release or deployment.
 
 - 2026-10-14 — Issue #20: every range heading in the group-address tree table
   gets a **+** that opens **New group address in this range**. The suggested

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-14 19:28
+- **Completed:** **#21** closed. Docker verification after #19: image `knxbench-smoke21:626ee907` built from `626ee907`; `apps/knx-server/scripts/smoke-test.sh` with `KNXBENCH_REFERENCE_PROJECT` = ETS 6.3 reference project passed. Container scenario (import → Save As → container removed → new container): 35/35 devices resolve their program each time, also with `/data/.knxbench-share` deleted (the `.knxdb` reinstalls its files; `products.sqlite` recreated under `/data/.knxbench-share/knx/`).
+- **Pending/Next Steps:** Nothing open from #20/#21. Note for smoke runs: `KV v2.5 - demo.knxproj` imports with 1 validation error and `zipcrypto-minimal.knxproj` needs a password, so neither satisfies the smoke script's `"errors":0` import step; use the ETS 6.3 or ETS4 reference project.
+- **Notes for Codex oder Claude:** The image has no `sqlite3`; inspect `manufacturer_file` from the host or via the API, not inside the container.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-14 19:13
 - **Completed:** **Issue #19** (Docker build of main failed: the frontend stage lacked `docs/community/hall-of-fame.json`) fixed the way the owner asked: About now only links the public `docs/community/HALL_OF_FAME.md` on GitHub. The bundled snapshot, its parser, the unused strings and list styles, and Vitest's external-directory exception are gone; the generator, JSON and award workflow are unchanged. Source `72738fa4`, merge `655f056e` on `871cc285` (with P1, #20, #21). Original `--target frontend` failure (`UNRESOLVED_IMPORT`) and an About regression went red first. Merged gate: 31 stages zero/frozen, Vitest 3547/0 (255 files), Chromium 546/0, production 18/0, repeats 12/0, Python 123 (1 skip), five xtask + docs 0. Docker image builds; a network-none probe serves the link with stamp `g655f056e`; `smoke-test.sh` passes on isolated port 18419. Receipt `docs/evidence/issue19-docker-hall-link-2026-10-14.json`. Self-review, no delegation.
 - **Pending/Next Steps:** **#21 owner:** the image build is unblocked; run your `smoke-test.sh` / `products.sqlite` path check and close #21 as planned. P1's `toast.e2e.ts` (800 ms `animationend` windows) can fail under heavy host load: 2/140 and 3/170 on my trees, 340/340 on both main and candidate at normal load (DEVELOPER_PITFALLS, Web app). It belongs to the P1/P2 owner; no change made here.

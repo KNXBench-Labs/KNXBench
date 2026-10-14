@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["browserTmp.ts", "playwright*.config.ts"]
+}

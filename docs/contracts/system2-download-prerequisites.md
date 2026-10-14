@@ -74,6 +74,16 @@ and length do not fully define descriptor encoding, allocation effects or machin
 5 semantics. The master also names VerifyMode and AllocExtraByte features; their
 side effects must be understood before any live recovery claim.
 
+### Archive follow-up (14 October 2026)
+
+[Recovered mirrors and metadata evidence](../research/2026-10-14-system2-archive-mirrors.md)
+now document the historical `%AbsCObjSeg` tool-only record, a bounded 44-witness
+XML correlation, and the exact Siemens table/image differences. This strongly
+supports a tool-side interpretation of the exact `TaskSegment/5` shape; it is
+not a normative mapping for arbitrary object-5 operations and not permission to
+silently skip steps. The next offline slice is a preserved, validated metadata
+projection with zero wire operations, while all public admission stays refused.
+
 **Remaining blockers before a System-2 executable plan:**
 
 1. Exact image/table codecs, preserved pointer fields and parameter/table overlap

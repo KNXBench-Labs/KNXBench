@@ -1,4 +1,5 @@
 /** Runs the U21 flow load study on a production build; never part of the normal browser suite. */
+import "./browserTmp";
 
 import { defineConfig } from "@playwright/test";
 import base from "./playwright.config";

@@ -897,6 +897,35 @@ export function deleteCatalogBackup(name: string, identity: string): Promise<{ d
   return request("/api/catalog/backups/delete", { method: "POST", body: JSON.stringify({ name, identity, confirmed: true }) });
 }
 /** The backup is no longer the file that was listed: list again, nothing was deleted. */
+/** Goal B3: one stored `BusAccess`/`IPConfig` record; values hidden unless `revealed`. */
+export interface StoredRecordField {
+  name: string; part: "attribute" | "parameter"; known: boolean;
+  value: string | null;
+  hidden: { class: "empty" | "ipv4Address" | "macAddress" | "guid" | "number" | "text"; length: number } | null;
+}
+export interface StoredRecord {
+  recordId: string; element: string; status: "read" | "tooLarge" | "notWellFormed"; revealed: boolean;
+  owner: { kind: "line" | "device" | "unattributed"; id: number | null; address: string | null; name: string | null;
+    reason: "notKeyed" | "noMatch" | "severalMatches" | null };
+  source: { sourcePath: string; xpath: string; size: number; sha256: string };
+  fields: StoredRecordField[];
+  /** Child element names kept but not read, and `parameterNotSplit`. */
+  unread: string[];
+}
+export interface StoredBusAccess { records: StoredRecord[] }
+/** Read-only; every endpoint value comes back hidden. */
+export function storedBusAccess(): Promise<StoredBusAccess> {
+  return request("/api/project/stored-bus-access");
+}
+/** The one record's values, on the user's explicit request. Nothing is written or connected. */
+export function revealStoredBusAccess(recordId: string): Promise<StoredRecord> {
+  return request("/api/project/stored-bus-access/reveal", { method: "POST", body: JSON.stringify({ recordId }) });
+}
+/** The record is no longer in the open project: read the list again. */
+export function isStoredBusAccessChanged(e: unknown): boolean {
+  const error = e as { status?: unknown; body?: { kind?: unknown } } | null;
+  return error?.status === 404 && error.body?.kind === "storedBusAccessChanged";
+}
 export function isCatalogueBackupChanged(e: unknown): boolean {
   const error = e as { status?: unknown; body?: { kind?: unknown } } | null;
   return error?.status === 409 && error.body?.kind === "catalogueBackupChanged";

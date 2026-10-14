@@ -37,6 +37,7 @@ function ctx(): CommandContext {
     openProjectHistory: () => {},
     openDevices: () => {},
     openNotes: () => {},
+    openStoredBusAccess: () => {},
     addDevice: record("addDevice"),
     openIntroduction: record("openIntroduction"),
     openAchievements: record("openAchievements"),

@@ -64,10 +64,13 @@ documentation report prints the filled name only.
 
 ## Bounds
 
-Filled text counts against the existing device text projection budget. When it
-would not fit, nothing is shortened: the device detail is refused with the same
-`device text projection budget exhausted` error as any other over-budget product
-text, and the documentation report prints that device's names unfilled.
+Filled channel headings count against the device detail's existing text
+projection budget; object names are filled under a second budget of the same
+size, per request. Only a text containing `{{` is filled, so every other text
+costs nothing more than before. When a fill would not fit, nothing is
+shortened: the device detail is refused with the same `device text projection
+budget exhausted` error as any other over-budget product text, and the
+documentation report prints that device's names unfilled.
 
 ## Not covered
 

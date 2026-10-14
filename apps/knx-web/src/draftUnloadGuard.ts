@@ -1,9 +1,10 @@
-/** Browser reload/tab-close guard while an unapplied editor draft exists. */
+/** Reload/tab-close guard (browser and desktop webview) while an editor draft exists. */
 // The workbench's own exits (Open, Import, New, Quit, desktop window close)
-// ask through the draft dialog. A browser reload or tab close cannot show
-// that dialog; the only thing a page may do is ask the browser to confirm
-// (it shows its own, untranslatable wording). The draft state is read at
-// unload time, so the listener is installed once.
+// ask through the draft dialog. A reload or tab close cannot show that
+// dialog; the only thing a page may do is ask the engine to confirm (it shows
+// its own wording: the browser's, or WebKitGTK's Stay/Leave dialog in the
+// desktop shell). The draft state is read at unload time, so the listener is
+// installed once.
 
 /** Installs the guard on `target` (normally `window`); returns its removal. */
 export function installDraftUnloadGuard(target: EventTarget, hasDraft: () => boolean): () => void {

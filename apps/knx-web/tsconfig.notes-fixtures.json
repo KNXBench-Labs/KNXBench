@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "types": ["node"] },
-  "include": ["src", "e2e/notes-workspace.e2e.ts", "e2e/achievements-fixture.ts", "playwright.notes.config.ts"]
+  "include": ["src", "e2e/notes-workspace.e2e.ts", "e2e/achievements-fixture.ts", "playwright.notes.config.ts", "playwright.reload-guard.config.ts"]
 }

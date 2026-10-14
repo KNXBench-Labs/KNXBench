@@ -1281,12 +1281,15 @@ function App({ manifestVersion = packageVersion, session, resumeCurrentProject =
     void quitApp();
   }
 
-  // A browser reload or tab close would drop an unapplied draft without any
-  // workbench dialog, so the browser is asked to confirm. The desktop shell
-  // guards its window close above-board (below) and quits with destroy(); a
-  // second, native prompt there would be one question too many.
-  useEffect(() => canQuit() ? undefined
-    : installDraftUnloadGuard(window, () => draftsRef.current.notes || draftsRef.current.instructions), []);
+  // A reload or tab close would drop an unapplied draft without any workbench
+  // dialog, so the engine is asked to confirm. That includes the desktop
+  // webview (Goal B2): WebKitGTK offers Reload in its context menu and shows
+  // its own Stay/Leave dialog for beforeunload when the shell does not handle
+  // script dialogs (wry does not). The window's close stays with the workbench
+  // guard (below) and quits with destroy(), which runs no beforeunload, so
+  // Quit still asks only once.
+  useEffect(() => installDraftUnloadGuard(window,
+    () => draftsRef.current.notes || draftsRef.current.instructions), []);
 
   // §132. The window manager's close (×, Alt+F4) takes the same decision as
   // File › Quit. The listener is registered once, so it reads

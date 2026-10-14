@@ -139,12 +139,14 @@ already found lying in the grass.
   view) in mid-test once a slow host keeps a spec on one view for that long.
   `group-address-views.e2e.ts` showed it RED with a 6.5 s pause and GREEN after
   the fixture remembered the PUTs.
-- **A module from outside `apps/knx-web` fails only in Vitest's DOM tests.**
-  Vitest's `happy-dom` environment refuses it (`Denied ID …`) while the `node`
-  environment does not check, so a unit test can pass while `App.test.tsx` fails
-  to load. Add exactly that directory to `server.fs.allow` in `vitest.config.ts`.
-  The Vite dev server (and so the browser fixtures) and a production build serve
-  it as imported by the app without help; do not widen their allow-lists.
+- **A host build is not a Docker frontend build.** The frontend stage copies
+  only `apps/knx-web` to `/src`; imports from repository documentation can resolve
+  on the host yet fail inside Docker. Issue #19 reproduced this with the bundled
+  Hall of Fame JSON. About now links the GitHub document and needs no snapshot or
+  Vitest external-directory exception. Verify `docker build --target frontend
+  -f apps/knx-server/Dockerfile .` when changing production asset imports; do not
+  enlarge the build context or allow-list merely to conceal an accidental
+  cross-directory dependency.
 - **Two tests pin the diagnostics companion's dependencies.**
   `apps/knx-web/src/DiagnosticsCompanion.test.tsx` pins its transitive imports,
   and `apps/knx-web/src/diagnosticShell.test.ts` scans literal hyphenated ids as

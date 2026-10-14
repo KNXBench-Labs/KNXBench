@@ -444,3 +444,114 @@ mod com_object_text {
         assert!(!device.contains("Schalten"));
     }
 }
+
+/// ADR-0126 (Goal B14, issue #17): the report shows a product name's `{{0}}`
+/// filled from the text parameter, translated first; a user's name stays.
+mod positional_text {
+    use super::*;
+    use knx_core::{
+        ComObjectInstance, ComObjectInstanceId, Layer, Override, Resolved, ResolvedFlags, Text,
+    };
+
+    const HARDWARE: &str = r#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<Hardware><Hardware Id="H-1" Name="Public synthetic fixture" SerialNumber="S" VersionNumber="1">
+<Products><Product Id="M-1_P-1" /></Products>
+<Hardware2Programs><Hardware2Program Id="H-1_HP-1" MediumTypes="MT-0">
+<ApplicationProgramRef RefId="A-1" /></Hardware2Program></Hardware2Programs>
+</Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
+
+    const PROGRAM: &str = r#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static>
+<ParameterTypes><ParameterType Id="A-1_PT-T" Name="T"><TypeText SizeInBit="240" /></ParameterType></ParameterTypes>
+<Parameters><Parameter Id="A-1_P-1" Name="Page" ParameterType="A-1_PT-T" Text="Page name" Value="" /></Parameters>
+<ParameterRefs><ParameterRef Id="A-1_P-1_R-1" RefId="A-1_P-1" /></ParameterRefs>
+<ComObjectTable>
+  <ComObject Id="A-1_O-1" Number="1" Text="Switch {{0:Output}}" ObjectSize="1 Bit" />
+  <ComObject Id="A-1_O-2" Number="2" Text="Mine {{0}}" ObjectSize="1 Bit" />
+</ComObjectTable><ComObjectRefs>
+  <ComObjectRef Id="A-1_O-1_R-1" RefId="A-1_O-1" TextParameterRefId="A-1_P-1_R-1" />
+  <ComObjectRef Id="A-1_O-2_R-1" RefId="A-1_O-2" TextParameterRefId="A-1_P-1_R-1" />
+</ComObjectRefs></Static>
+<Dynamic><Channel Id="A-1_CH-1" Name="A" Number="1" Text="Channel">
+<ComObjectRefRef RefId="A-1_O-1_R-1" /><ComObjectRefRef RefId="A-1_O-2_R-1" /></Channel></Dynamic>
+<Languages><Language Identifier="de-DE"><TranslationUnit RefId="A-1">
+  <TranslationElement RefId="A-1_O-1"><Translation AttributeName="Text" Text="Schalten {{0:Ausgang}}" /></TranslationElement>
+</TranslationUnit></Language></Languages>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    fn com(id: u32, name: &str, layer: Layer) -> ComObjectInstance {
+        ComObjectInstance {
+            id: ComObjectInstanceId(id),
+            source: source(&format!("A-1_O-{id}_R-1")),
+            device: DeviceId(1),
+            number: id as u16,
+            text: Override::Value(Resolved {
+                value: Text::Literal(name.into()),
+                layer,
+            }),
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        }
+    }
+
+    fn fixture(page: &str) -> (tempfile::TempDir, knx_productdb::Connection, Project) {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        knx_productdb::ingest_file(&conn, "M-1/Hardware.xml", HARDWARE.as_bytes()).unwrap();
+        knx_productdb::ingest_file(&conn, "M-1/A.xml", PROGRAM.as_bytes()).unwrap();
+        let mut project = project();
+        add_device(&mut project, 1, "M-1_P-1", "H-1_HP-1");
+        project.devices.get_mut(DeviceId(1)).unwrap().com_objects =
+            vec![ComObjectInstanceId(1), ComObjectInstanceId(2)];
+        project
+            .devices
+            .insert_com_object(com(1, "Switch {{0:Output}}", Layer::Program));
+        project
+            .devices
+            .insert_com_object(com(2, "My {{0}} name", Layer::UserEdit));
+        add_parameter(&mut project, 1, 1, "A-1_P-1_R-1", page);
+        (dir, conn, project)
+    }
+
+    fn report(
+        project: &Project,
+        products: &knx_productdb::Connection,
+        language: ReportLanguage,
+    ) -> String {
+        let options = knx_app::documentation::report_options(
+            project,
+            Some(products),
+            Utc.with_ymd_and_hms(2026, 10, 14, 12, 0, 0).unwrap(),
+            language,
+            [ReportSection::Devices].into_iter().collect(),
+        );
+        article(&render_html(project, &options).html, 1).to_string()
+    }
+
+    #[test]
+    fn the_report_names_the_object_after_the_text_parameter() {
+        let (_dir, products, project) = fixture("Kitchen");
+        let device = report(&project, &products, ReportLanguage::English);
+        assert!(device.contains("<td>Switch Kitchen</td>"), "{device}");
+        assert!(!device.contains("{{0:Output}}"));
+        // The user's own name, braces and all, is the user's.
+        assert!(device.contains("<td>My {{0}} name</td>"), "{device}");
+        let german = report(&project, &products, ReportLanguage::German);
+        assert!(german.contains("<td>Schalten Kitchen</td>"), "{german}");
+    }
+
+    #[test]
+    fn an_empty_value_shows_the_translated_default() {
+        let (_dir, products, project) = fixture("");
+        let device = report(&project, &products, ReportLanguage::English);
+        assert!(device.contains("<td>Switch Output</td>"), "{device}");
+        let german = report(&project, &products, ReportLanguage::German);
+        assert!(german.contains("<td>Schalten Ausgang</td>"), "{german}");
+    }
+}

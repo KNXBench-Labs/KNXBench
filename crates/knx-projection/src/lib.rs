@@ -811,6 +811,47 @@ pub struct ComObjectNode {
     /// object's own module instance substituted. The main-function label
     /// ETS shows next to the name (ISSUE-08). Server-only, like `dpt_text`.
     pub function_text: Option<String>,
+    /// ADR-0126: present when `name` is a product text with a positional
+    /// `{{0}}`. `name` is then the filled text (or the template, when nothing
+    /// could be filled) and this says what it was before and where the
+    /// inserted text came from. Server-only, like `dpt_text`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub name_fill: Option<TextFill>,
+}
+
+/// ADR-0126: a product text whose positional `{{0}}` was filled, or could not be.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct TextFill {
+    /// The text before filling: the stored or translated product text, module
+    /// arguments substituted.
+    pub template: String,
+    /// Where the inserted text came from, or why nothing was inserted.
+    pub source: TextFillSource,
+}
+
+/// [`TextFill::source`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub enum TextFillSource {
+    /// The device's stored value of the text parameter.
+    StoredValue,
+    /// The text parameter's product default; the device stores no value.
+    ProductDefault,
+    /// The value is empty; the placeholder's own default text is shown.
+    TemplateDefault,
+    /// The value is empty and the placeholder has no default text.
+    EmptyValue,
+    /// Not filled: the product text names no text parameter.
+    NoReference,
+    /// Not filled: the named parameter is not in the program.
+    UnknownParameter,
+    /// Not filled: the named parameter is not a text parameter.
+    NotTextParameter,
+    /// Not filled: the value cannot be decided (a module instance that
+    /// cannot be told apart).
+    Undecided,
 }
 
 /// [`ComObjectNode::activation`]: the evaluated state, or why there is none.
@@ -845,6 +886,11 @@ pub struct ComObjectChannel {
     /// substituted. `None` when the element has no text (every
     /// `ChannelIndependentBlock` in the corpus has none).
     pub text: Option<String>,
+    /// ADR-0126: present when `text` had a positional `{{0}}`; see
+    /// [`ComObjectNode::name_fill`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub text_fill: Option<TextFill>,
     /// `Channel/@Name` as the product states it (ADR-0052): not
     /// translated (no product translates it) and not substituted (no
     /// corpus value holds a placeholder). `None` for a
@@ -965,6 +1011,7 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
         dpt_text: None,
         dpt_text_language: None,
         function_text: None,
+        name_fill: None,
     }
 }
 

@@ -1,0 +1,128 @@
+{
+  "format_version": 1,
+  "scope": "UI-only slow active-task text shimmer; no domain/API/protocol/storage changes or release",
+  "base_revision": "1817fb2ab3d6cae503433954658f8a54626d9151",
+  "implementation_commit": "8f53d52022c1b0efb2b32167c0318b6f50310084",
+  "accepted_runtime_revision": "53046e6495d271b7d51b01b9aff39ff34d294b85",
+  "review": "in-session self-review; no independent reviewer or subagent",
+  "runtime_stage_exits": {
+    "build": 0,
+    "tsc": 0,
+    "flow_study": 0,
+    "theme_fixtures": 0,
+    "tsc_tsconfig_catalogue_fixtures": 0,
+    "tsc_tsconfig_communication_fixtures": 0,
+    "tsc_tsconfig_device_download_support": 0,
+    "tsc_tsconfig_dialogs_fixtures": 0,
+    "tsc_tsconfig_flow_study": 0,
+    "tsc_tsconfig_ga_members_download_fixtures": 0,
+    "tsc_tsconfig_history_fixtures": 0,
+    "tsc_tsconfig_instructions_fixtures": 0,
+    "tsc_tsconfig_notes_fixtures": 0,
+    "tsc_tsconfig_parameters_fixtures": 0,
+    "tsc_tsconfig_rename_fixtures": 0,
+    "tsc_tsconfig_structure_fixtures": 0,
+    "tsc_tsconfig_task_status_fixtures": 0,
+    "tsc_tsconfig_theme_fixtures": 0,
+    "tsc_tsconfig_ux_feedback": 0,
+    "vitest": 0,
+    "chromium": 0,
+    "cfg_playwright_task_status_config": 0,
+    "repeat": 0,
+    "py_tools": 0,
+    "check-layering": 0,
+    "check-headers": 0,
+    "check-anchors": 0,
+    "check-ledger": 0,
+    "check-corpus-gates": 0,
+    "docs": 0,
+    "limitations": 0,
+    "diff_check": 0
+  },
+  "runtime_stage_count": 32,
+  "inputs_frozen": true,
+  "vitest": {
+    "passed": 3530,
+    "failed": 0,
+    "files": 251
+  },
+  "chromium": {
+    "startTime": "2026-10-14T10:15:44.028Z",
+    "duration": 876646.4149999999,
+    "expected": 531,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "production_import_download": {
+    "startTime": "2026-10-14T10:30:21.287Z",
+    "duration": 27290.122,
+    "expected": 27,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "shimmer_repeat": {
+    "startTime": "2026-10-14T10:30:49.140Z",
+    "duration": 27855.964,
+    "expected": 12,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "python_tools": {
+    "tests_run": 122,
+    "skipped": 1,
+    "exit": 0
+  },
+  "final_production_screenshot_cases": {
+    "passed": 4,
+    "failed": 0,
+    "frames": 8,
+    "languages": [
+      "en",
+      "de"
+    ],
+    "widths": [
+      1440,
+      400
+    ],
+    "palettes": [
+      "graphite",
+      "porcelain"
+    ],
+    "reviewed": "readable sweep/pause; no clipped banner; actual phase-band raster differs between sweep and pause"
+  },
+  "runner_aggregation": {
+    "original_wrapper_exit": 1,
+    "cause": "Private custom footer mistook inputs_frozen=1 metadata for a nonzero runtime stage. Every actual stage exited zero.",
+    "corrected_aggregation_exit": 0,
+    "footer_regressions_passed": 4,
+    "raw_runtime_reports_unchanged": true,
+    "runtime_tests_not_rerun_for_footer_repair": true
+  },
+  "earlier_default_browser_failure": {
+    "accepted_as_full_gate": false,
+    "passed": 530,
+    "failed": 1,
+    "case": "ux-feedback.e2e.ts:129 \u2014 en 1440 Toast hover retains one error card",
+    "base_unchanged_repeat": {
+      "passed": 18,
+      "failed": 2
+    },
+    "candidate_repeat": {
+      "passed": 19,
+      "failed": 1
+    },
+    "toast_implementation_and_test_unchanged": true,
+    "skip_retry_or_assertion_relaxation_added": false,
+    "root_cause_not_established": true,
+    "final_integrated_full_suite_passed": true
+  },
+  "boundaries": [
+    "Action-button captions and ordinary connection/result/decision text remain static.",
+    "Native WebKitGTK/Orca and arbitrary imported-theme contrast are not certified.",
+    "Rust workspace and private corpus were not rerun: this package changes only frontend presentation and documentation.",
+    "Selected root has other unpublished local work; no synchronization or publication of those changes."
+  ]
+}

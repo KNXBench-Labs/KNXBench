@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-14 12:58
+- **Completed:** Owner-approved slow active-task text shimmer implemented as 8f53d520 and integrated as 53046e64. Exact merged runtime accepted: all 32 actual web/docs stages zero, frozen; Vitest 3530/0 (251 files), Chromium 531/0, production import/download 27/0, repeats 12/0, tooling 122 (one skip), build/all typechecks/docs/five xtask zero. Real final production 4/4 and eight light/dark EN/DE 1440/400 sweep/pause PNGs inspected; raster movement proven. Self-review capability fallback and warning specificity fixed test-first. Private footer falsely matched positive freeze metadata: raw wrapper exit 1 retained; four footer regressions and independent aggregation exit zero. Earlier unchanged Toast hover flake reproduced on base and candidate, not hidden or fixed here. Runtime source unchanged by closure docs; receipt docs/evidence/task-status-shimmer-2026-10-14.json.
+- **Pending/Next Steps:** Documentation-only closure gates, normal main publication/remote readback and owned cleanup. No complete publication claimed yet. Do not synchronize the selected root: it now contains other owners' unpublished research and local-only handovers, preserved separately.
+- **Notes for Codex oder Claude:** Finite UI-only package; no release/deploy, subagent, bus/hardware, Rust workspace/private corpus rerun or domain/API/schema/protocol/storage changes. Busy control captions and steady results/connections/prompts remain static; native WebKitGTK/Orca unverified. Implementation detail/limits: docs/contracts/task-status-shimmer.md. Source candidate's old pending next steps below are historical and superseded. Other UI work may rebase on the published shimmer after the normal publication boundary, not on the dirty root.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-14 12:11
 - **Completed:** Owner-approved shimmer implemented and self-reviewed (CSS capability fallback and computed warning-ink regressions fixed test-first). Corrected frozen branch: build/all TypeScript configs, Vitest 3530/0, production import/download 27/0, shimmer repeats 12/0, tooling/docs/five xtask checks pass; default Chromium 530/1 because the unchanged Toast hover case also fails on base 1817fb2a (2/20 repeats; candidate 1/20). Failed receipts retained, no skips/retries/relaxed tests or unrelated fixes. Earlier production light/dark EN/DE 1440/400 sweep/pause screenshots inspected. Manuals/contract updated; no delivery yet.
 - **Pending/Next Steps:** Commit the reviewed UI-only candidate; isolated integration plus a fresh complete merged-result gate is mandatory, then publication/readback, root-owned journal reconciliation and cleanup. No complete acceptance yet.
@@ -391,7 +399,7 @@ ledger or an append-only diary. Formal per-ID status stays in
 
 ## Coordination
 
-Web lock: held — codex-task-status-shimmer-20261014 (owner go; UI-only active-status text/CSS/tests/docs; isolated worktree status-text-shimmer-20261014). Goal B has ended; this claim does not reopen its packages.
+Web lock: free — codex-task-status-shimmer-20261014 completed its accepted UI-only package; released with publication. Other UI packages need their own owner go and fresh-main preflight.
 Release freeze: released — Alpha 11 published; never move its tag
 
 At migration preflight only the stale shared root and this documentation tree

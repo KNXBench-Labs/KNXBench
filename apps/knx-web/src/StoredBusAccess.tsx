@@ -1,5 +1,5 @@
 /** Stored ETS bus access and IP configuration: read-only, values hidden until asked (Goal B3). */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import * as api from "./api";
 import type { StoredRecord, StoredRecordField } from "./api";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
@@ -138,13 +138,15 @@ export function StoredBusAccessDialog({ onClose }: { onClose: () => void }) {
 /** The line inspector's share: this line's records, or nothing at all. */
 export function LineStoredBusAccess({ lineId }: { lineId: number }) {
   const t = useTranslate();
+  // The properties panel and the structure workspace can show one line twice.
+  const headingId = useId();
   const { load, reload } = useStoredRecords();
   if (load.state === "failed") return <p className="field-error">{t("storedBusAccess.failed")}</p>;
   if (load.state !== "ready") return null;
   const records = load.records.filter(record => record.owner.kind === "line" && record.owner.id === lineId);
   if (records.length === 0) return null;
-  return <section className="stored-bus-access-line" aria-labelledby={`stored-bus-access-line-${lineId}`}>
-    <h3 id={`stored-bus-access-line-${lineId}`}>{t("storedBusAccess.lineTitle")}</h3>
+  return <section className="stored-bus-access-line" aria-labelledby={headingId}>
+    <h3 id={headingId}>{t("storedBusAccess.lineTitle")}</h3>
     <p className="stored-bus-access-intro">{t("storedBusAccess.intro")}</p>
     <RecordList records={records} onChanged={() => void reload()} />
   </section>;

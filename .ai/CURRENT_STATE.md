@@ -1,3 +1,35 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 04:27
+- **Completed:** S1–S4 corrected complete branch gate accepted: 35 zero-exit stages, frozen inputs; Rust 4411/0 (200 ignored), Vitest 3460/0 in 247 files, Chromium 513/0, production download/report/scope/B15 33/0, focused browser 8/0, private corpus 145/145. All typechecks/Clippy/docs/xtask pass. Current screenshots inspected. Two S4 audits identical (105 packages, 467 applications; 98 Untested, dependencies all unassessed). No hardware, submission, release or deployment.
+- **Pending/Next Steps:** Commit scoped reviewed packages; integrate on isolated fresh `origin/main` `00f73602`, preserving Goal B and full handover history; run complete merged-result gate, then normal push and exact remote readback. Branch gate is not integration acceptance. Goal B owns unrelated web surfaces and B14 v23 migration.
+- **Notes for Codex oder Claude:** `proc_40d4373f1c77` completed zero; receipt `branch-gate-corrected-20261014` under task-owned scratch. Original failed attempt remains rejected. Root-local drafts/index/other agents untouched, selected root is not synchronized by isolated delivery. Executor/evidence/schema untouched; no force/verification override. Session `d03c0319b8c1`, worktree `device-support-resume-20261014`.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 03:27
+- **Completed:** S1–S4 source reconciled with released B15; first complete gate rejected, not published (namespace capability precondition, eight old browser selectors, generated binding trailing spaces). Corrections preserve guards: unprivileged capability-free Rust namespace probe and eight name-recipe tests pass; new EN/DE invalid-address and late-clipboard regressions RED then GREEN; focused 92/0 and tsc pass. First run production browser 4/0, all four corrected-width screenshots inspected; corpus 145/145; S4 identical 105-package/467-program aggregates and bounded F1–F5 follow-ups recorded.
+- **Pending/Next Steps:** Corrected complete frozen branch gate next in `branch-gate-corrected-20261014`; no gate success/publication claimed. Require all zero stages plus frozen inputs, then focused commits, fresh-main isolated merge, complete integrated gate and normal push/readback. Respect Goal B's unrelated web lock and reserved v23 migration.
+- **Notes for Codex oder Claude:** Worktree `device-support-resume-20261014`, session `d03c0319b8c1`; original `proc_d337eb132a58` exited 1. Failed receipts retained in task-owned scratch. Runner now checks/restores only proven generated trailing-space drift after corpus and refuses receipt overwrites; cache reuse stays in the same checkout. Preserve root drafts/index/foreign files and old candidates. No hardware/vendor/ETS/external submission/subagents/quota/release/deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 02:38
+- **Completed:** Session `d03c0319b8c1` resumed after the published B15 release. Reconciled S1–S3 source and self-review fixes: categorized refusals, EN/DE pre-plan reason/actions and fixed unsent docs/issue/mail links, stale-plan removal and project/late-result guards; 86 focused tests pass. Two S4 offline runs pass with identical privacy-checked aggregates (105 packages, 467 programs, 98 Untested; all executable dependencies unassessed). Practical manual/FAQ/troubleshooting and bounded F1–F5 follow-ups updated. No hardware evidence, code publication, release or deployment.
+- **Pending/Next Steps:** Freeze and run full Rust/web/browser/typecheck/repository/corpus gate, inspect corrected full-width notice, commit scoped reviewed packages, reconcile newest upstream and owners, gate the actual isolated merge, normal push and exact remote readback. Goal B retains all unrelated surfaces; B14's v23 migration is reserved to it.
+- **Notes for Codex oder Claude:** Candidate worktree `device-support-resume-20261014`, local head `74d91057`; local evidence is task-owned profile scratch `device-support-d03c0319b8c1`, public audit receipt contains aggregates only. Preserve original root-local work/journals and old candidates. No nested goal/subagents/quota/hardware/ETS/vendor/external submission/release/deployment. All confirmations and server guards remain. Full gate completion is PENDING, not implied by earlier focused/browser receipts.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-14 01:15
+- **Completed:** Session `d03c0319b8c1` observed Goal B's explicit published **B15 is released** entry on integrated main `cb46cdf1ec8d69e04f8c511853c74c64b9145d9e` and confirmed final B15 commit `f20543a3` is an ancestor. Read-only polling ended; timer inactive, event listener exited, scripts removed. Created isolated `device-support-resume-20261014` / `feature/device-support-resume-20261014` from that main; S1 picked and S2 source reconciled, preserving B15 pending handoff context, status feedback and manual readiness retry. No code publication or new device verification yet.
+- **Pending/Next Steps:** Finish S1–S4 acceptance on the reconciled candidate: targeted/component/browser/privacy/safety tests, deliberate intake docs, offline coverage audit, full frozen gates, reviewed integration and normal push. Goal B retains B5/B16 and other surfaces; this session only owns the explicitly released download/support scope and its dedicated locale keys/documents.
+- **Notes for Codex oder Claude:** Source candidates/old journals remain intact. All confirmations/server guards remain. No nested goal/subagents/quota/hardware/ETS/vendor/external submission/release/deployment. Background watcher completion is historical, not another command to start or a new result.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-14 01:08
 - **Completed:** Session `ba673d45ff9d` (Goal B): one integration train on `main` with **B1b** (Functions in the room), **B10** (#11 compact address tree), **B12** (#12/#15 one `+ New` menu, now opening where there is room), **B6** (KL-164 achievement steps add up), **B7** (naming recipe dialog, real server 4/0), **B11** (#13 Log time column, one-line rows, export dialog) and **B15** (#18 requested device shown at once). Gate on the train tree `d6600856`: Vitest 3432/0, tsc all 0, Chromium 509/0, extra configs 19+13+23+4, repeat ×3 105/0, Python 122 (1 skip), docs/xtask 0, Rust fmt/clippy 0 and tests 4407/0 (199 ignored; rerun on the frozen tree after a moved build cache, see DEVELOPER_PITFALLS *Gates*). Train-only fixes: B12 menu side choice (was covered by the explorer), B10 fixtures (both *Expand all* buttons, Topology exit, theme spec, settings fixture that forgot PUTs: RED with a 6.5 s pause, GREEN after), B11 export radios (300 px wide → scoped), B7 primary button and header width, `lib.rs` module order. **B15 is released:** Goal B makes no further edits to `DeviceDownloadPanel.tsx`, its readiness/status lifecycle or the download messages; that surface belongs to the S1–S4 claim of `d03c0319b8c1` from now on.

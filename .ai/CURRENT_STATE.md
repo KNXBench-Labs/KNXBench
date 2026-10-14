@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-14 21:50
+- **Completed:** Issue #23: taken by codex in fix/issue23-navigation-20261014 — sidebar Bus monitor/Log selection only, App regression tests and existing workbench browser coverage. Reporter video inspected; source shows toggle handlers where navigation should be idempotent. Diagnostics companion and Settings are separate open actions, not this toggle defect.
+- **Pending/Next Steps:** Reproduce test-first, minimal sidebar fix, self-review, full web/docs branch and merged-result gates, push/readback, then comment/close #23. No delivery claimed yet.
+- **Notes for Codex oder Claude:** #22 remains with issue22-system2 owner; tooling remains with test-optimization owner. No tools/run_web_gate*, browser configuration, npm wiring, domain/API/schema, bus or hardware changes; shared execution leases respected. Root research and unpublished journal preserved. No subagents, release or deployment.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-14 20:35
 - **Completed:** Issue #22: taken by codex in feature/issue22-system2-20261014 on owner Go. Offline System-2 product-procedure prerequisites and tests own knx-productdb code/load-step parsing, knx-core property load-control encoders and dedicated issue22 contracts/tests. The no-tests boundary is lifted for this task; tooling/browser-runner owner remains separate. No hardware operation authorized.
 - **Pending/Next Steps:** Test-first TaskCtrl2 parsing/strict preservation and source-defined property records; exact application regression; resolve System2 image/table/LSM contracts before adding an executable planner. Public download admission remains fail-closed until complete plan and property+memory recovery are established. Gate and publish each bounded reviewed package; keep #22 open unless actual programming support delivered.

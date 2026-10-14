@@ -110,6 +110,10 @@ fn grade(
 /// The category of a refusal to prepare.
 pub fn prepare_category(error: &PrepareError) -> UnsupportedCategory {
     match error {
+        PrepareError::Request(knx_productdb::image_request::DeviceRequestError::Database(_))
+        | PrepareError::Request(knx_productdb::image_request::DeviceRequestError::Project(
+            knx_productdb::image_request::ProjectRequestError::UnresolvedProgram { .. },
+        )) => UnsupportedCategory::ProductData,
         PrepareError::NoDeviceAt(_)
         | PrepareError::SeveralDevicesAt { .. }
         | PrepareError::Request(_) => UnsupportedCategory::Configuration,
@@ -204,10 +208,15 @@ mod tests {
             device(3, Some("1.1.3"), ""),
             device(4, Some("1.1.3"), ""),
         ]);
-        for row in &rows {
+        for (index, row) in rows.iter().enumerate() {
             match &row.readiness {
                 DeviceReadiness::Graded(SupportLevel::Unsupported { category, detail }) => {
-                    assert_eq!(*category, UnsupportedCategory::Configuration, "{detail}");
+                    let expected = if index == 1 {
+                        UnsupportedCategory::ProductData
+                    } else {
+                        UnsupportedCategory::Configuration
+                    };
+                    assert_eq!(*category, expected, "{detail}");
                 }
                 other => panic!("{}: {other:?}", row.name),
             }

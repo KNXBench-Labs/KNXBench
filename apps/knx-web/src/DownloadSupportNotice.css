@@ -1,0 +1,25 @@
+/* Pre-plan support help uses the existing theme, without global button overrides. */
+.download-support-notice {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--knx-border);
+  border-radius: 0.5rem;
+  background: var(--knx-surface);
+  overflow-wrap: anywhere;
+}
+.download-support-notice h3 { margin-top: 0; }
+.download-support-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.download-support-actions a { color: var(--knx-accent); overflow-wrap: anywhere; }
+.download-support-notice label { display: block; }
+.download-support-notice textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 6rem;
+  font-family: var(--knx-font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.download-support-note { font-size: 0.9rem; }

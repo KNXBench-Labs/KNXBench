@@ -182,11 +182,58 @@ eine Lösung noch Kompatibilität oder eine bestimmte Antwortzeit.
   ungeprüfte Inhalte. Diese Sperre lässt sich hier nicht übergehen. Die Datei
   nicht manuell öffentlich hochladen.
 
+## Geräteprogrammierung wird vor einem Plan abgelehnt
+
+Im Geräte-Download-Tab zeigt der Hinweis den Grund, eine konkrete nächste Handlung
+sowie **Anleitung**, **Unterstützungslücke melden** und **E-Mail-Entwurf**. Diese
+Source-Build-Funktion arbeitet bereits ohne Plan, Verbindung oder Download-Bericht.
+Die Screenshots von Alpha 11 zeigen weiterhin die veröffentlichte Oberfläche,
+nicht diese Ergänzung auf main.
+
+- **Ungetestet**: Ein vollständiger unterstützter Plan hat keinen passenden
+  Hardware-Nachweis. Er benötigt weiterhin die zusätzliche genaue zielbezogene
+  Untested-Bestätigung und die normale Bestätigung. Identitäts-/Schlüsselprüfung,
+  Planfrische, Backup/Rücklesen und Bus-Schutz bleiben bestehen.
+- **Nicht unterstützt**: eine technische Planungslücke, keine fehlende Freigabe.
+  Erzwinge keinen Download. Bei fehlenden Applikationsdaten installiere genau das
+  Paket/die Version im Katalog; bei Konfigurationsfehlern behebe den in den lokalen
+  Details genannten Konflikt; fehlende Byte-Reihenfolge-/Encoder-/Verfahrens-/
+  Modulunterstützung benötigt eine evidenzbasierte Untersuchung.
+- Server-/Transportfehler sind kein Geräte-Kompatibilitätsurteil. Prüfe die
+  Erreichbarkeit und versuche es bewusst erneut. Erforderliches, ungeklärtes
+  ausführbares Erweiterungsverhalten bleibt außerhalb dieses Wegs; das Fehlen
+  eines `.dll`-Dateinamens beweist nichts. Das planbezogene Backup ist weder ein
+  vollständiges Gerätebackup noch eine universelle Rückrollmöglichkeit.
+
+Zum Melden: Öffne **Unterstützungslücke melden**, melde dich bei GitHub an,
+beschreibe deinen Versuch und den angezeigten Grund/nächsten Schritt, prüfe die
+optionalen Felder und sende das `analysis.yml`-Formular selbst ab. Eine ZIP ist
+nicht erforderlich. Ohne Verbindung gibt es keinen nachträglichen Download-Bericht:
+erfinde keinen. Wenn du freigegebene Quelldaten getrennt analysierst, verwende die
+reduzierte ZIP erst nach deren vorhandener Vorschau und Freigabeprüfung.
+
+Alternativ öffnet **E-Mail-Entwurf** eine ungesendete Anfrage an
+**issue@knxbench.com**. Dieses Postfach nimmt neben Tester-Download-Berichten auch
+Anfragen zu Unterstützungslücken bei der Geräteprogrammierung an. Es werden keine
+Anhänge oder Projekt-/Gerätemetadaten ergänzt. Schreibe und prüfe deine Beschreibung,
+kontrolliere den Empfänger und sende bewusst selbst. E-Mail garantiert weder
+Zustellung, Verschlüsselung, Vertraulichkeit, Aufbewahrung noch Löschung. Sende
+keine privaten Originale, Kundendaten, Passwörter, Schlüssel oder Backups ohne
+separat bestätigte Umgangsbedingungen. `contribute@knxbench.com` ist kein
+bestätigter alternativer Posteingang.
+
+**Technische Details (lokal)** können Namen, Adressen, Pfade und Werte enthalten.
+Der Kopierknopf kopiert nur lokal; er anonymisiert nicht und erlaubt keine
+Veröffentlichung. Die drei festen Links enthalten keine projektspezifischen
+Metadaten. Nichts wird automatisch hochgeladen, mit dem Bus verbunden, als Issue
+abgesendet oder per Mail verschickt. Der getrennte **Download-Bericht**-Weg gilt
+nur nach einem tatsächlich beendeten Lauf.
+
 ## Download-Berichte laufen getrennt
 
 Du hast einen Download auf ein Gerät getestet? Dafür gibt es einen eigenen Weg: das
-Issue-Formular **Download-Bericht** oder **issue@knxbench.com** (ein funktionierendes
-Postfach, nur für Download-Berichte), jeweils mit der Berichtsdatei, die KNXBench
+Issue-Formular **Download-Bericht** oder **issue@knxbench.com** (das bestehende
+Postfach, auch für Anfragen zu Unterstützungslücken bei der Geräteprogrammierung), jeweils mit der Berichtsdatei, die KNXBench
 schreibt ([so geht's](../manual/user-guide/10-command-line.md#helping-to-verify-a-device)).
 Das unten vorgeschlagene Postfach gilt für Analyse-Beiträge und ist noch nicht bestätigt.
 

@@ -369,12 +369,12 @@ it("#18: shows readiness while it loads, and a failed read can be retried", asyn
   await act(async () => ready.reject(new Error("readiness exploded")));
   await flush();
   expect(host.querySelector("[data-readiness-loading]")).toBeNull();
-  expect(text(".device-download-readiness-unavailable")).toContain("readiness exploded");
+  expect(host.querySelector<HTMLTextAreaElement>("[data-support-guidance=transient] textarea")!.value).toContain("readiness exploded");
   apiMock.getDeviceReadiness.mockReset().mockResolvedValue({ devices: [], counts: {} });
   await act(async () => host.querySelector<HTMLButtonElement>("[data-readiness-retry]")!.click());
   await flush();
   expect(apiMock.getDeviceReadiness).toHaveBeenCalledTimes(1);
-  expect(host.querySelector(".device-download-readiness-unavailable")).toBeNull();
+  expect(host.querySelector("[data-support-guidance=transient]")).toBeNull();
 });
 
 it("walks the five steps from the actual state and names what is missing", async () => {
@@ -458,10 +458,9 @@ it("marks a device KNXBench cannot program yet, with the reason, before anything
   expect(labels).toContain("1.1.67 — Push button 2-fold (cannot be programmed yet)");
   expect(labels).toContain("1.1.3 — Actuator");
   await setSelect(deviceSelect(), "10");
-  expect(text(".device-download-readiness")).toBe(
-    "KNXBench cannot program this device yet: its application program stores values in little-endian byte order, "
-    + "which KNXBench does not write yet. Preparing a download will be refused; nothing is written.",
-  );
+  expect(text("[data-support-guidance=unsupported]")).toContain(en["deviceDownload.readiness.reason.byteOrder"]);
+  expect(text("[data-next-action=requestSupport]")).toBe(en["deviceDownload.help.action.requestSupport"]);
+  expect(host.querySelector<HTMLTextAreaElement>("[data-support-guidance] textarea")!.value).toContain("ParameterByteOrder");
 });
 
 it("names the prepare step plainly and says nothing is written yet", async () => {
@@ -473,6 +472,6 @@ it("names the prepare step plainly and says nothing is written yet", async () =>
 it("says readiness could not be checked instead of marking nothing silently", async () => {
   apiMock.getDeviceReadiness.mockResolvedValue([]);
   await render();
-  expect(text(".device-download-readiness-unavailable")).toContain("Readiness could not be checked offline");
+  expect(text("[data-support-guidance=transient]")).toContain(en["deviceDownload.help.reason.transient"]);
   expect([...deviceSelect().options].map((option) => option.textContent)).toContain("1.1.67 — Push button 2-fold");
 });

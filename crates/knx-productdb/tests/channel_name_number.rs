@@ -19,8 +19,8 @@ const HARDWARE: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><Manufact
 
 /// Every shape the corpus shows, with invented values: a channel whose
 /// `@Text` is empty, one whose `@Name` is empty, a non-numeric `@Number`,
-/// a channel without either attribute, a `TextParameterRefId` that stays
-/// unmodelled, and a `ModuleDef` channel with a placeholder in `@Text`.
+/// a channel without either attribute, a `TextParameterRefId` (modelled since
+/// v23, ADR-0126), and a `ModuleDef` channel with a placeholder in `@Text`.
 const PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms><ApplicationProgram Id="A-1" Name="Program">
 <Static><ComObjectTable><ComObject Id="O-1" Number="1"/><ComObject Id="O-2" Number="2"/></ComObjectTable><ComObjectRefs><ComObjectRef Id="OR-1" RefId="O-1"/><ComObjectRef Id="OR-2" RefId="O-2"/></ComObjectRefs></Static>
 <Dynamic>
@@ -85,12 +85,17 @@ fn channels_store_name_and_number_verbatim() {
     ingest_file(&conn, "M-0001/A.xml", PROGRAM).unwrap();
 
     assert_eq!(channel(&conn, "CH-1"), (s("Light A"), s("1"), None));
-    // An empty `@Name` is stored as the file states it, like `text`. The
-    // unmodelled `TextParameterRefId` keeps its place in `extra`.
-    assert_eq!(
-        channel(&conn, "CH-2"),
-        (s(""), s("B"), s("TextParameterRefId=P-1"))
-    );
+    // An empty `@Name` is stored as the file states it, like `text`. Since
+    // v23 (ADR-0126) `TextParameterRefId` has a column and leaves `extra`.
+    assert_eq!(channel(&conn, "CH-2"), (s(""), s("B"), None));
+    let reference: Option<String> = conn
+        .query_row(
+            "SELECT text_parameter_ref_id FROM dynamic_node WHERE element_id = 'CH-2'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(reference, s("P-1"));
     assert_eq!(channel(&conn, "CH-3"), (None, None, None));
     assert_eq!(
         channel(&conn, "MD-1_CH-1"),
@@ -121,11 +126,9 @@ fn channel_number_is_no_longer_an_unknown_attribute() {
     let dir = tempfile::tempdir().unwrap();
     let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     ingest_file(&conn, "M-0001/A.xml", PROGRAM).unwrap();
-    // `TextParameterRefId` is still unmodelled, so still reported.
-    assert_eq!(
-        unknown_names(&conn, PROGRAM_CHANNEL),
-        ["TextParameterRefId"]
-    );
+    // `TextParameterRefId` is modelled since v23 (ADR-0126), so nothing is
+    // left to report on a channel.
+    assert!(unknown_names(&conn, PROGRAM_CHANNEL).is_empty());
     let module_channel = "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/ModuleDefs/ModuleDef/Dynamic/Channel";
     assert!(unknown_names(&conn, module_channel).is_empty());
 }
@@ -306,10 +309,9 @@ fn v17_to_v18_keeps_unknown_rows_it_does_not_retire() {
         .unwrap();
     }
     let conn = open_and_migrate(&path).unwrap();
-    assert_eq!(
-        unknown_names(&conn, PROGRAM_CHANNEL),
-        ["TextParameterRefId", "x:Evidence"]
-    );
+    // v18 retires only `Number`; the namespaced row survives it and v23,
+    // which retires only the unqualified `TextParameterRefId` (ADR-0126).
+    assert_eq!(unknown_names(&conn, PROGRAM_CHANNEL), ["x:Evidence"]);
 }
 
 #[test]

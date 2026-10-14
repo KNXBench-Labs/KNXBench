@@ -8,10 +8,33 @@
 
 use rusqlite::Connection;
 
+/// Removes the schema-v23 `text_parameter_ref_id` columns (ADR-0126), so that
+/// `migrate_v22_to_v23` finds no column already there. Only the columns: a
+/// rewind that needs a genuine v22 report uses `v22_rewind::rewind_to_v22`.
+#[allow(dead_code)]
+pub fn drop_v23_objects(conn: &Connection) {
+    for table in ["dynamic_node", "com_object_ref"] {
+        let present: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM pragma_table_info(?1) WHERE name = 'text_parameter_ref_id')",
+                [table],
+                |r| r.get(0),
+            )
+            .unwrap();
+        if present {
+            conn.execute_batch(&format!(
+                "ALTER TABLE {table} DROP COLUMN text_parameter_ref_id;"
+            ))
+            .unwrap();
+        }
+    }
+}
+
 /// Removes the schema-v22 legacy provenance tables (ADR-0094), so that
 /// `migrate_v21_to_v22` finds a genuine v21 database.
 #[allow(dead_code)]
 pub fn drop_v22_objects(conn: &Connection) {
+    drop_v23_objects(conn);
     conn.execute_batch(
         "DROP TABLE IF EXISTS legacy_diagnostic;
          DROP TABLE IF EXISTS legacy_program;

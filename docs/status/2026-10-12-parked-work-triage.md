@@ -53,6 +53,7 @@ Recorded the same day; do not reopen without a new decision.
 | functions-sites | **Keep as WIP** | Whole residue committed as `wip(functions)` `1154b72f` on local branch `feature/functions-sites-20261009` (91 files, each byte-checked against the backup; unreviewed, unpushed). Worktree removed |
 | import-lifecycle | **Archive** | Preflight residue kept as a patch in the local prune backup. Worktree and branch removed |
 | audit-findings, native-import-diagnostics | **Drop** | Worktrees and branches removed after backup |
+| ux-feedback, native-evidence, functions-sites (branches + Functions stash, 2026-10-14) | Retire (owner go); keep `wip/manufacturer-plugin-research-20261013` | All refs bundled first (`KNXBench.backups/2026-10-14-hygiene-cleanup/`, `git bundle verify` and a restore test into an empty repository matched `refs.txt`); then deleted with expected-SHA guards. Remote `release/alpha11-20261013` (ancestor of main) deleted with a lease |
 
 The local branches of all 24 retired worktrees were deleted afterwards. Each SHA
 was checked as an ancestor of `origin/main` and deleted with an expected-SHA guard.

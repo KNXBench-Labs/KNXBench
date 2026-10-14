@@ -2053,6 +2053,15 @@ export const messages = {
 
   // `DiagnosticsCompanion.tsx` and the button in `App.tsx` that opens it.
   "companion.open": "Diagnostics window",
+  // ADR-0127: an automatic resume after a reload or a reopened tab.
+  "resume.notice": "Welcome back. The project the server still had open is here again.",
+  "resume.noticeUnsaved": "Welcome back. The project the server still had open is here again, unsaved changes included. Save them: a server restart would lose them.",
+  // Save As onto a file that already exists (owner request 2026-10-14).
+  "overwrite.title": "Replace the existing file?",
+  "overwrite.message": "{path} already exists. Saving here makes this project that file's content.",
+  "overwrite.history": "The file's previous state stays restorable in its project history. A file that is not a KNXBench project is never overwritten.",
+  "overwrite.cancel": "Cancel",
+  "overwrite.replace": "Replace",
   "companion.title": "Diagnostics",
   "companion.eyebrow": "Companion window · read-only",
   "companion.readOnly":

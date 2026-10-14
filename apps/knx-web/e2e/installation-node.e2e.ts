@@ -19,19 +19,22 @@ async function serve(page: Page, language: "en" | "de", theme: string) {
   let current = structuredClone(original);
   const writes: Array<{ method: string; path: string; body: unknown }> = [];
   const unexpected: string[] = [];
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
     const method = request.method();
     let body: unknown;
+    let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
     else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme, motionLevel: "off", achievementsEnabled: "false", autosaveEnabled: "false",
       onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.8" },
     } };
     else if (path === "/api/settings" && method === "PUT") body = { schemaVersion: 1, status: "ok", settings: request.postDataJSON().settings };
-    else if (path === "/api/project" && method === "GET") body = current;
-    else if (path === "/api/project/new" && method === "POST") body = current;
+    else if (path === "/api/project" && method === "GET") { if (projectOpen) body = current; else { status = 400; body = { error: "no project open" }; } }
+    else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = current; }
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) body = [];
     else if (path === "/api/installations/2" && method === "PATCH") {
@@ -58,7 +61,7 @@ async function serve(page: Page, language: "en" | "de", theme: string) {
       unexpected.push(`${method} ${path}`);
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"offline fixture only"}' });
     }
-    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });
   return { writes, unexpected, original };
 }

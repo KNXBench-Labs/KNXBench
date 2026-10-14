@@ -67,6 +67,8 @@ async function interceptApi(page: Page, settings: Record<string, unknown> = {}) 
       return { index: i + 1, name: quantity === 1 ? body.name : `${body.name} ${i + 1}`, address };
     });
   };
+  // Like the real server: no project until the test creates one (ADR-0127).
+  let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
     const method = route.request().method();
@@ -76,9 +78,13 @@ async function interceptApi(page: Page, settings: Record<string, unknown> = {}) 
       body = { required: false, authenticated: true };
     } else if (path === "/api/settings" && method === "GET") {
       body = { schemaVersion: 1, status: "ok", settings };
+    } else if (path === "/api/project" && method === "GET" && !projectOpen) {
+      status = 400;
+      body = { error: "no project open" };
     } else if (path === "/api/project" && method === "GET") {
       body = state.current;
     } else if (path === "/api/project/new" && method === "POST") {
+      projectOpen = true;
       // The fixture's project stands in for what the seed would build.
       body = state.current;
     } else if (path === "/api/bus/discover" && method === "POST") {

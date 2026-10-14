@@ -586,6 +586,26 @@ must not be described as either universally guessed or universally explicit.
   in-memory project. Save separately if you want the server-side file updated.
 - **Details:** [Projects](user-guide/02-projects.md)
 
+### A reopened tab resumes the server's project, but a server restart forgets it
+
+- **Affected:** the web build (Docker or `knx-server`), source builds after
+  v0.1.0-alpha.11.
+- **Limitation:** reopening or reloading the tab brings back the project the
+  server still holds (ADR-0127), unsaved changes included. Those changes live in
+  the server's memory only: restarting the server loses them, and two tabs on
+  the same server show and edit the same project.
+- **Workaround:** save, or keep autosave on, before restarting the server.
+- **Details:** [Projects](user-guide/02-projects.md#closing-the-browser-tab)
+
+### The desktop overwrite question comes from the native dialog
+
+- **Affected:** Save As in the desktop build, source builds after v0.1.0-alpha.11.
+- **Limitation:** the desktop build sends the overwrite confirmation directly
+  because its native save dialog asks before replacing a file. That was verified
+  in the GTK file chooser used on Linux (`do_overwrite_confirmation`), not on
+  Windows or macOS builds.
+- **Details:** [Projects](user-guide/02-projects.md#saving)
+
 ### The Docker Hub image is the last release, and `latest` follows alphas
 
 - **Affected:** `knxbench/knxbench-server` from Docker Hub.

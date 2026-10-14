@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { fulfillNoProjectOpen } from "./server-project-fixture";
 
 for (const language of ["en", "de"] as const) {
   for (const width of [1440, 400]) {
@@ -25,7 +26,7 @@ for (const language of ["en", "de"] as const) {
           uiLanguage: language, theme: "graphite", onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.7" },
         } });
         if (path === "/api/version") return ok({ version: "0.1.0-alpha.7" });
-        if (path === "/api/project" && method === "GET") return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"no project open"}' });
+        if (path === "/api/project" && method === "GET") return fulfillNoProjectOpen(route);
         if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
         if (path === "/api/project/load-progress") return ok(null);
         if (path === "/api/fs/list") return ok([{ name: "fictional-large.knxproj", is_dir: false }]);
@@ -54,6 +55,8 @@ for (const language of ["en", "de"] as const) {
         : "The file is too large when unpacked: 1280 MiB. The limit is 1024 MiB.");
       await expect(toast.locator(".toast-hint")).toHaveCount(0);
       await expect(toast.getByRole("button", { name: messages["toast.dismiss"], exact: true })).toBeInViewport();
+      // Resting geometry: a toast slides in from the right.
+      await toast.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
       const box = await toast.boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width).toBeLessThanOrEqual(width);

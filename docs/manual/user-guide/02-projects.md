@@ -337,6 +337,19 @@ put it, exactly as Save As does. The suggested name is `project.knxdb`.
 
 **Save As…** always asks.
 
+**Replacing an existing file asks first** (source builds after v0.1.0-alpha.11).
+In the browser, picking a name that already exists opens **Replace the existing
+file?**: **Cancel** writes nothing and leaves the project unsaved, **Replace**
+makes this project that file's content. The desktop build's own save dialog
+asks the same question, so it does not ask twice. Saving as the file that is
+already open counts as replacing it too; plain **Save** to the project's own
+file never asks. Nothing is lost by replacing a KNXBench project: its previous
+saved state stays restorable in that file's
+[project history](#project-history-restart-safe-undo-and-versions). A file that
+is not a KNXBench project is never overwritten; Save As refuses it. The server
+keeps this rule as well (`409`, kind `fileExists`, until a request sends
+`overwrite: true`), so no script replaces a file by accident either.
+
 In the browser, Save As writes to the server's permitted directory, not to your
 computer's Downloads folder. To obtain a copy locally, choose **Export
 project…** from the File menu after opening a project. This exports a freshly
@@ -371,10 +384,18 @@ the decision with **Keep editing** or Escape while the save was running; the ser
 discard edits by accident either (`409`, kind `projectUnsavedChanges`, until it resends
 with `discardChanges: true`).
 
+### Closing the browser tab
+
+Closing the tab of the web build loses nothing (source builds after
+v0.1.0-alpha.11; ADR-0127): the server keeps the open project. Open KNXBench again,
+or reload, and the project is back exactly as you left it, with a short
+**Welcome back** notice that says whether it still has unsaved changes. Nothing is
+reopened or reimported for that; KNXBench only reads what the server holds.
+
 > **Warning**
 >
-> Closing the browser tab of the web build does not warn you about unsaved edits. Save
-> before you close it.
+> Unsaved changes live in the server's memory. Restarting the server (for
+> example `docker restart`) loses them. Save, or keep autosave on.
 
 ## Project history: restart-safe undo and versions
 

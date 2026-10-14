@@ -35,7 +35,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       if (path === "/api/version") return ok({ version: "0.1.0-alpha.10" });
       if (path === "/api/legacy-password") return ok({ available: true, remembered: false, problem: null });
       if (path === "/api/project" && method === "GET") return imports ? ok(tree)
-        : route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"no project"}' });
+        : route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"no project open"}' });
       if (path === "/api/bus/discover") return ok({ interfaces: [] });
       if (path === "/api/project/load-progress") return ok(null);
       if (path === "/api/fs/list") return ok([{ name: "synthetic.knxproj", is_dir: false }]);
@@ -120,7 +120,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(cards).toHaveCount(2);
     await expect(cards.nth(0)).toContainText("Raw refused import 2:");
     await expect(cards.nth(1)).toContainText("Raw refused import 3:");
-    expect(await duration(".toast--error")).toBe("0.12s");
+    // Subtle: 120 ms; the entry mirrors the exit, which runs twice as long.
+    expect(await duration(".toast--error")).toBe("0.24s");
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/two-errors-${language}-${width}.png` });
 
     // The pointer holds one card; the other runs out on its own clock.

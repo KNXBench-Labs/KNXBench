@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { fulfillNoProjectOpen } from "./server-project-fixture";
 import { GITHUB_RELEASES_API } from "../src/githubReleases";
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -35,6 +36,7 @@ async function fixture(page: Page, language: "en" | "de", width: number, enabled
     }
     if (path === "/api/version") return ok({ version });
     if (path === "/api/bus/discover") return ok({ interfaces: [] });
+    if (path === "/api/project" && method === "GET") return fulfillNoProjectOpen(route);
     if (path === "/api/legacy-password") return ok({ available: true, remembered: false, problem: null });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items", "/api/log"].includes(path)) return ok([]);
     unexpected.push(`${method} ${path}`); return route.fulfill({ status: 404, body: "unexpected request" });
@@ -60,6 +62,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(action).toHaveAttribute("href", "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.10");
     await action.focus(); await expect(action).toBeFocused();
     expect(await action.evaluate(node => { const r = node.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === node; })).toBe(true);
+    // Resting geometry: a toast slides in from the right.
+    await toast.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
     const box = await toast.boundingBox(); expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(width);
     if (process.env.UPDATE_SCREENSHOTS) await page.screenshot({ path: `${process.env.UPDATE_SCREENSHOTS}/toast-${language}-${width}.png` });
     const opening = page.waitForEvent("popup"); await action.click(); const releasePage = await opening;

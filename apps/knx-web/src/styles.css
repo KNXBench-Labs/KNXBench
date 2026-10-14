@@ -335,8 +335,11 @@ main {
 /* At most three cards; a tall stack scrolls instead of leaving the screen.
    Scrolling clips at the padding edge, so the stack takes the 1rem corner
    offset as padding (cards stay where they were, shadows stay visible) and
-   lets clicks through that padding. */
-.toast-stack { bottom: 0; right: 0; padding: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; pointer-events: none; }
+   lets clicks through that padding. A card slides in from (and out to)
+   the right by more than that padding; `overflow-x: hidden` keeps the
+   slide from flashing a horizontal scrollbar (overflow-y auto alone
+   computes overflow-x to auto). */
+.toast-stack { bottom: 0; right: 0; padding: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; overflow-x: hidden; pointer-events: none; }
 .toast-stack > * { pointer-events: auto; }
 .toast { flex-shrink: 0; }
 .toast-queue-note { margin: 0; padding: 0.4rem 0.6rem; max-width: min(24rem, calc(100vw - 2rem)); border-radius: 4px; background: var(--knx-surface); color: var(--knx-muted); font-size: 0.8rem; overflow-wrap: anywhere; }
@@ -420,17 +423,23 @@ main {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  /* The entry is the exit played backwards (owner request 2026-10-14):
+     the same keyframes, length and curve, run in reverse, which also
+     reverses the curve. It needs a name of its own: an animation whose
+     name stays the same does not restart, so a card dismissed while it
+     was still arriving would never get its exit's `animationend`. */
   .toast {
-    animation: knx-achievement-in var(--knx-transition-duration) var(--knx-motion-easing);
+    animation: knx-toast-in calc(var(--knx-transition-duration) * 2) var(--knx-motion-easing) reverse;
   }
   /* Twice the entry: leaving should be seen, not just happen. */
   .toast.toast--leaving {
     animation: knx-achievement-out calc(var(--knx-transition-duration) * 2) var(--knx-motion-easing) forwards;
   }
 }
-@keyframes knx-achievement-in {
-  from { transform: translateY(0.75rem); opacity: 0; }
-  to { transform: none; opacity: 1; }
+/* Keep these two frame lists identical; `knx-toast-in` runs reversed. */
+@keyframes knx-toast-in {
+  from { transform: none; opacity: 1; }
+  to { transform: translateX(1.5rem); opacity: 0; }
 }
 @keyframes knx-achievement-out {
   from { transform: none; opacity: 1; }

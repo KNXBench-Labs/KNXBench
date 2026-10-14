@@ -1,4 +1,5 @@
 /** Exercises production-built dialogs and project status with intercepted APIs. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

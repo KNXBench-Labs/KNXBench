@@ -1,4 +1,5 @@
 /** Built browser against an isolated real server: import evidence, metadata, device state. */
+import "./browserTmp";
 import { defineConfig } from "@playwright/test";
 if (!process.env.KNX_NATIVE_EVIDENCE_URL || process.env.KNX_NATIVE_EVIDENCE_ISOLATED !== "1" || !process.env.KNX_METADATA_DATA_DIR) {
   throw new Error("Native evidence tests require tools/verify_native_evidence.py (isolated loopback server).");

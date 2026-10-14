@@ -11,7 +11,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:e2e": "npm run build && playwright test",
+    "test:e2e": "python3 ../../tools/run_web_gate.py --profile browser",
+    "test:gate": "python3 ../../tools/run_web_gate.py --profile web",
+    "test:benchmark": "python3 ../../tools/run_web_gate.py --profile benchmark",
     "check:theme-fixtures": "tsc -p tsconfig.theme-fixtures.json",
     "check:flow-study": "tsc -p tsconfig.flow-study.json"
   },

@@ -1,4 +1,5 @@
 /** Runs the U19 telegram-flow measurements explicitly; never part of the normal browser suite. */
+import "./browserTmp";
 
 import { defineConfig } from "@playwright/test";
 import base from "./playwright.config";

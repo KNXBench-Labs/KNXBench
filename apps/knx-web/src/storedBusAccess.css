@@ -1,0 +1,25 @@
+/* Goal B3: stored ETS bus access and IP configuration, read-only. */
+.stored-bus-access-panel { width: min(46rem, calc(100vw - 2rem)); }
+.stored-bus-access-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.stored-bus-access-intro { color: var(--knx-muted); margin: 0.25rem 0 0.75rem; }
+.stored-bus-access-records { display: grid; gap: 0.75rem; }
+.stored-bus-access-record { border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); padding: 0.6rem 0.75rem; min-width: 0; }
+.stored-bus-access-record > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
+.stored-bus-access-record h3 { margin: 0; font-size: 1rem; }
+.stored-bus-access-owner { margin: 0; flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+.stored-bus-access-fields { display: grid; gap: 0.2rem; margin: 0.5rem 0 0; }
+.stored-bus-access-fields > div, .stored-bus-access-source dl > div {
+  display: grid; grid-template-columns: minmax(7rem, 12rem) minmax(0, 1fr); gap: 0.75rem;
+}
+.stored-bus-access-fields dt small { display: block; color: var(--knx-muted); font-weight: normal; }
+.stored-bus-access-fields dd, .stored-bus-access-source dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.stored-bus-access-hidden { color: var(--knx-muted); font-style: italic; }
+.stored-bus-access-value, .stored-bus-access-source code { overflow-wrap: anywhere; white-space: pre-wrap; }
+.stored-bus-access-note, .stored-bus-access-status { margin: 0.4rem 0 0; }
+.stored-bus-access-source { margin-top: 0.4rem; }
+.stored-bus-access-source dl { display: grid; gap: 0.2rem; margin: 0.3rem 0 0; }
+.stored-bus-access-line { margin-top: 1rem; }
+.stored-bus-access-line h3 { font-size: 0.95rem; margin: 0 0 0.25rem; }
+@media (max-width: 520px) {
+  .stored-bus-access-fields > div, .stored-bus-access-source dl > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}

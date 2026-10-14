@@ -26,6 +26,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## 2026-W42
 
+<a id="2026-10-14--stored-bus-access-read-only-and-hidden-until-asked"></a>
+- [2026-10-14 — Stored bus access: read-only, and hidden until asked](history/implementation/2026-W42.md#2026-10-14--stored-bus-access-read-only-and-hidden-until-asked)
 <a id="2026-10-14--issue-17-page-1-learns-its-page-name"></a>
 - [2026-10-14 — Issue #17: `{{0:Page 1}}` learns its page name](history/implementation/2026-W42.md#2026-10-14--issue-17-page-1-learns-its-page-name)
 <a id="2026-10-14--about-thanks-the-community-from-a-bundled-board"></a>

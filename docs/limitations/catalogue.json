@@ -313,7 +313,7 @@
       "number": null,
       "title": "Native import evidence and recorded device state",
       "topic": "Import and export",
-      "summary": "Stored load states are project records, not bus measurements. Missing historical reports are not reconstructed; retained BusAccess/IP configuration is not shown.",
+      "summary": "Stored load states are project records, not bus measurements. Missing historical reports are not reconstructed; retained BusAccess/IP configuration is shown read-only since Goal B3, IPConfig without a device.",
       "file": "native-import-evidence-and-recorded-device-state.md",
       "ledger_ids": [],
       "anchors": [

@@ -427,7 +427,8 @@ not erase subsequently delivered functionality.
   and Secure interoperability remain new scope, not runtime support.
 - **Tooling/statistics** (`TOOLS-01` to `TOOLS-05`): where the AI statistics
   generator lives, and the measurement gaps it discloses (network traffic, end
-  times, unattributed sessions, CSS/shell metrics).
+  times, unattributed sessions, CSS/shell metrics;
+  [contract](contracts/statistics-measurement.md)).
 - **Platform validation:** native WebKitGTK, Orca/screen readers and complete
   accessibility, Firefox for the app; these are disclosed in every UI receipt.
 

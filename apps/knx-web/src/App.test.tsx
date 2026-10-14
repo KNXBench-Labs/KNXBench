@@ -4269,7 +4269,7 @@ describe("App — unapplied installation-instructions draft", () => {
     apiMock.deviceDetail.mockReset();
     apiMock.deviceDetail.mockResolvedValue(deviceDetailFixture());
     instructionClientMock.read.mockImplementation(() => Promise.resolve({ serverIncarnation: "srv-ins", projectIncarnation: 1, snapshotRevision: 3,
-      device: 42, originalXmlSha256: "c".repeat(64), originalPresent: true, originalBytes: 4, originalFormat: "plain", unsupported: [],
+      device: 42, origin: "imported", originalXmlSha256: "c".repeat(64), originalPresent: true, originalBytes: 4, originalFormat: "plain", unsupported: [],
       previewError: null, effectiveDocument: { runs: [{ text: "Hint", style: { bold: false, italic: false, underline: false } }] },
       overrideDocument: null, persistence: "session-only" }));
     const root = await renderApp();

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createInstructionClient, type Context, type InstructionView } from "./client";
 import { literal } from "./document";
 const context: Context = {serverIncarnation:"synthetic-server",projectIncarnation:1,snapshotRevision:2};
-const view: InstructionView = {...context,device:1,originalXmlSha256:"a".repeat(64),originalPresent:true,originalBytes:8,originalFormat:"plain",unsupported:[],previewError:null,effectiveDocument:literal("original"),overrideDocument:null,persistence:"session-only"};
+const view: InstructionView = {...context,device:1,origin:"imported",originalXmlSha256:"a".repeat(64),originalPresent:true,originalBytes:8,originalFormat:"plain",unsupported:[],previewError:null,effectiveDocument:literal("original"),overrideDocument:null,persistence:"session-only"};
 function response(value:unknown,status=200):Response { return new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json"}}); }
 describe("instruction wire admission",()=>{
  it("reads source without any POST or resource load",async()=>{const transport=vi.fn<typeof fetch>().mockResolvedValue(response(view));expect(await createInstructionClient(transport).read(1)).toEqual(view);expect(transport).toHaveBeenCalledOnce();expect(transport.mock.calls[0][0]).toBe("/api/devices/1/instructions");expect(transport.mock.calls[0][1]?.method).toBe("GET");});

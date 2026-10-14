@@ -776,8 +776,8 @@ describe("App — Log tab reachability (KNOWN_LIMITATIONS.md #36, part A)", () =
     const listed = () => [...host!.querySelectorAll(".log-entry-message")].map((n) => n.textContent).sort();
     expect(listed()).toEqual(["unknown element", "unsupported thing"]);
     // The narrowing was a one-off request: leaving and reopening the Log
-    // shows every entry again.
-    await act(async () => findButton("Log").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    // shows every entry again. Clicking the active sidebar entry stays put.
+    await act(async () => findButton(enMessages["workbench.overview"]).click());
     await act(async () => findButton("Log").dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await act(async () => {});
     expect(host!.querySelector(".log-panel-import-scope")).toBeNull();
@@ -834,15 +834,64 @@ describe("App — Log tab reachability (KNOWN_LIMITATIONS.md #36, part A)", () =
     expect(host!.querySelector(".project-explorer")).not.toBeNull();
     expect(host!.textContent).toContain("opened ok");
 
-    // Closing the Log tab returns to the Dashboard (no selection yet), as
-    // before.
+    // Select a project view explicitly to leave the Log.
     await act(async () => {
-      logButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      findButton(enMessages["workbench.overview"]).click();
     });
     expect(host!.querySelector(".log-panel")).toBeNull();
 
     root.unmount();
   });
+});
+
+describe("App — diagnostic navigation is idempotent (#23)", () => {
+  for (const language of ["en", "de"] as const) {
+    const messages = language === "de" ? deMessages : enMessages;
+    for (const projectOpen of [false, true]) {
+      for (const panel of ["monitor", "log"] as const) {
+        it(`${language}: repeated ${panel} selection stays active with project ${projectOpen ? "open" : "closed"}`, async () => {
+          vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+          saveUiLanguage(settingsStorage, language);
+          if (projectOpen) apiMock.currentProject.mockResolvedValue(baseTree());
+          const root = await renderApp();
+          try {
+            const topology = findButton(messages["workbench.topology"]);
+            await act(async () => topology.click());
+            const label = panel === "monitor" ? "toolbar.busMonitor" : "toolbar.log";
+            const otherLabel = panel === "monitor" ? "toolbar.log" : "toolbar.busMonitor";
+            const selector = panel === "monitor" ? ".bus-monitor-panel" : ".log-panel";
+            const button = findButton(messages[label]);
+            await act(async () => button.click());
+            const mountedPanel = host!.querySelector(selector);
+            expect(mountedPanel).not.toBeNull();
+            const reads = apiMock.getSessionLog.mock.calls.length;
+            const polls = apiMock.pollBusTelegrams.mock.calls.length;
+            for (let i = 0; i < 3; i++) {
+              await act(async () => button.click());
+              expect(button.getAttribute("aria-current")).toBe("page");
+              expect(topology.hasAttribute("aria-current")).toBe(false);
+              expect(host!.querySelector(selector)).toBe(mountedPanel);
+            }
+            expect(apiMock.getSessionLog).toHaveBeenCalledTimes(reads);
+            expect(apiMock.pollBusTelegrams).toHaveBeenCalledTimes(polls);
+            const other = findButton(messages[otherLabel]);
+            await act(async () => other.click());
+            expect(other.getAttribute("aria-current")).toBe("page");
+            expect(button.hasAttribute("aria-current")).toBe(false);
+            await act(async () => topology.click());
+            expect(topology.getAttribute("aria-current")).toBe("page");
+            expect(other.hasAttribute("aria-current")).toBe(false);
+            expect(host!.querySelector(".log-panel")).toBeNull();
+            const hiddenMonitor = host!.querySelector(".bus-monitor-panel");
+            expect(hiddenMonitor).not.toBeNull();
+            expect(hiddenMonitor!.closest("[hidden]")).not.toBeNull();
+          } finally {
+            await act(async () => root.unmount());
+          }
+        });
+      }
+    }
+  }
 });
 
 describe("App — catalog is a persistent centre workspace (ISSUE-07)", () => {

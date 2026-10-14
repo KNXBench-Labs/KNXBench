@@ -282,6 +282,15 @@ impl Container {
         Ok(container)
     }
 
+    /// Opens `bytes` for its outer members only (ADR-0128). Unlike
+    /// [`Container::open`] a password-protected project is not refused:
+    /// its manufacturer files sit outside the encrypted payload, and a
+    /// caller of this constructor never reads that payload. Every size and
+    /// name check of the archive itself still applies.
+    pub fn open_outer(bytes: Vec<u8>) -> Result<Self, ContainerError> {
+        Self::open_raw(bytes)
+    }
+
     /// Opens `bytes` as a `.knxproj` archive, decrypting the nested
     /// `<project part>.zip` payload with `password` if one is present.
     ///

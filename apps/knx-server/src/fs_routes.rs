@@ -208,6 +208,14 @@ async fn download(
             .map_err(ApiError::internal)?;
         tmp.into_temp_path()
     };
+    // ADR-0128: the downloaded file carries its manufacturer files like a
+    // saved one; the open project's own file can supply them.
+    let open_file = state
+        .store_path
+        .lock()
+        .expect("state mutex poisoned")
+        .clone();
+    domain::carry_manufacturer_files(&state, &tmp, open_file.as_deref(), "download");
     let mut response = stream_temp_file(tmp, DOWNLOAD_CHUNK_BYTES).await?;
     response.headers_mut().insert(
         header::CONTENT_DISPOSITION,

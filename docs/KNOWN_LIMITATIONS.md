@@ -674,6 +674,14 @@ Notes use real project targets; ambiguous identities are withheld. Browser promp
 Commands respect installation ownership and refuse ambiguous/cross-installation moves. This is not general multi-installation transfer or topology-compatibility validation.
 [Details and history](limitations/structure-editor-scope.md)
 
+<a id="catalogue-kl-183"></a>
+<a id="183-a-knxdb-saved-before-store-schema-v16-does-not-carry-its-application-programs"></a>
+### 183. Project files without their manufacturer files
+
+**Ledger status:** `ACCEPTED_BOUNDARY` ([KL-183](status/LEDGER.md#post-snapshot-ids)).
+A .knxdb saved before store schema v16 does not carry its application programs; next to an empty product database its devices show no parameters until restored from the original .knxproj. Fixed for new saves.
+[Details and history](limitations/KL-183-knxdb-manufacturer-files.md)
+
 ## Commissioning and recovery
 
 <a id="catalogue-kl-007"></a>

@@ -43,7 +43,7 @@ open is summarized in [OPEN_WORK](../OPEN_WORK.md); removed files are listed in
 ## Counts
 
 - **Snapshot IDs** (180 rows) — status: IN_PROGRESS=1, DONE=46, BLOCKED_EXTERNAL=2, ACCEPTED_BOUNDARY=118, LATER=13; owner: alpha=93, commission=39, later=23, ui=25; priority: P0=4, P1=29, P2=87, P3=60.
-- **Post-snapshot IDs** (24 rows) — status: DONE=18, ACCEPTED_BOUNDARY=3, LATER=3; owner: alpha=10, later=13, ui=1; priority: P1=7, P2=10, P3=7.
+- **Post-snapshot IDs** (25 rows) — status: DONE=18, ACCEPTED_BOUNDARY=4, LATER=3; owner: alpha=10, later=14, ui=1; priority: P1=8, P2=10, P3=7.
 
 ## Snapshot IDs
 
@@ -264,6 +264,8 @@ Origin of `KL-181`: GitHub issue #7, reported by hagbardZ (2026-10-13). P2:
 the desktop app could not save the session log needed for an import report.
 Origin of `KL-182`: found while checking the import-report download for #7
 (2026-10-13). P2: desktop downloads replaced same-named files without asking.
+Origin of `KL-183`: GitHub issue #21, reported by thengsty (2026-10-14). P1:
+every device of a reopened project lost its parameters after a Docker rebuild.
 
 | ID | P | Owner | Route | Status | Owner disposition | Evidence and remaining work |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -291,6 +293,7 @@ Origin of `KL-182`: found while checking the import-report download for #7
 | `KL-180` | P1 | later | GitHub issue #10 | DONE | — | docs/KNOWN_LIMITATIONS.md §180, ADR-0123; structured `gatewayBusy` 409 / `gatewayRefused`·`gatewayTimeout` 502 / `unsupportedByteOrder` 422, the download tab's up-front holder, readiness marks and renamed plan step, `33a74b59`. Tests: `http_gateway_busy.rs` (5), `connect_refusal`/`BusError` unit tests, `prepare_error_tests`, `gatewayRefusal.test.ts`, `downloadReadiness.test.ts`, `DeviceDownloadPreparation.test.tsx`, `e2e/gateway-refusal.e2e.ts` (24); 14 mutants killed. No real gateway contacted; plan warnings in the tab remain KL-170 part B. |
 | `KL-181` | P2 | later | GitHub issue #7 | DONE | — | docs/KNOWN_LIMITATIONS.md §181; AppImages alpha.5–alpha.11 refuse `save_session_log`/`save_bus_monitor_capture` from the remote origin `http://127.0.0.1:<port>` (no app permission granted). Fixed in source by `permissions/app-commands.toml` plus a main-window-only grant in `capabilities/default.json`, `7ba0989e`. Test: `app_command_acl_tests` (2; mock runtime with the real capabilities, release and debug origins, companion windows refused), red before the fix and with the grants removed. **2026-10-13 native-window check** (release build `6ba1590a`, X11): session-log export saved through the native dialog, no ACL refusal; bus-monitor capture export not driven (needs a live tunnel). Users get it with the next AppImage. |
 | `KL-182` | P2 | later | GitHub issue #7 (found while checking) | DONE | — | docs/KNOWN_LIMITATIONS.md §182; without `on_download` WebKitGTK saved every in-app `<a download>` silently into the XDG Downloads folder and replaced a same-named file (probe on WebKitGTK 2.52.6, not inside the AppImage). Fixed in source: private staging per download, native save dialog, atomic copy, staged copy always removed, failures reported; all windows share the WebKit context. Tests: `download_delivery` (6), `download_handler` (2, mock runtime); two mutants killed. **2026-10-13 native-window check** (release build `6ba1590a`, X11): import-report download opens the save dialog; Cancel writes nothing and removes the staged copy; Save writes the chosen file (0600) and removes it; Downloads stays empty. Wayland backend, failure dialogs and Flow/diagnostics routing not driven. |
+| `KL-183` | P1 | later | GitHub issue #21 | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §183, ADR-0128; store schema v16 carries manufacturer files (zlib, SHA-256 keyed, outside the editor history), filled by Save/Save As/download/`knx import --store`, reinstalled on open; Docker keeps the product database on `/data`. Remaining boundary: files saved before v16 need **Restore from original .knxproj** (hash-matched members only, project untouched); master data not reinstalled; CLI readers do not reinstall. Tests: `http_knxdb_product_data` (9), store unit tests, CLI store test, Docker image check, web panel tests. No real Docker rebuild driven. |
 
 ## Reconciliation record (AR14D D2, 2026-10-04)
 

@@ -60,6 +60,20 @@ Two things appear in this bar only when they have something to say:
   found something worth telling you about. Clicking it goes to the Overview, where the
   counts are broken down. [Projects](02-projects.md) explains what those numbers mean.
 
+## Active task status text (14 October 2026 source, main-only)
+
+While work is actually running, its status text has a quiet glint that moves
+from left to right and pauses before repeating. The words remain readable: this
+is an activity cue, not a skeleton placeholder or a progress estimate. Existing
+bars and real counts remain. Results, errors, connection states and prompts
+waiting for your input do not shimmer. Busy action-button captions are unchanged.
+
+Turn **Settings → Appearance → Motion level → Off** to stop it. Your operating
+system's reduced-motion preference also wins; forced-colour mode and printing
+keep plain text. This needs a source build after Alpha 11; the published manual
+screenshots still show the earlier released UI. See
+[Motion settings](09-settings-and-appearance.md#motion-style-and-motion-level).
+
 ## The navigation pane
 
 The left pane has three stacked blocks.

@@ -103,7 +103,7 @@ export function InstructionEditor({ deviceId, context, language = "en", client =
   const nothingToReturnTo = native || view?.originalPresent === false;
   return <section className={styles.panel} aria-labelledby={`${id}-title`} aria-busy={busy}>
     <header className={styles.header}><h3 id={`${id}-title`}>{copy.title}</h3>{view && <span className={styles.provenance}>{native ? copy.madeHere : !view.originalPresent ? copy.importedNone : view.overrideDocument !== null ? copy.edited : copy.original}</span>}</header>
-    {busy && <div role="status">{view ? copy.pending : copy.loading}</div>}
+    {busy && <div role="status"><span className="task-status-text">{view ? copy.pending : copy.loading}</span></div>}
     {view && <div className={styles.provenance}>{view.persistence === "session-only" ? copy.session : copy.native}</div>}
     {view && (view.unsupported.length > 0 || view.previewError) && <aside className={styles.warning}>{view.previewError ? copy.unreadable : copy.subset}<details><summary>{view.unsupported.length ? `${view.unsupported.length} ${copy.unsupported}` : view.previewError}</summary>{view.unsupported.map((word, index) => <div key={index}>{word.slice(0, 120)}{word.length > 120 ? "…" : ""}</div>)}</details></aside>}
     {conflict && <aside className={styles.warning} role="alert">{copy.changed}<div><button type="button" onClick={() => { markDirty(false); setConflict(false); setReload(value => value + 1); }}>{copy.reload}</button></div></aside>}

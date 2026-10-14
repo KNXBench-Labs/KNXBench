@@ -2676,30 +2676,17 @@ main {
   text-transform: uppercase;
 }
 
-/* A found interface arriving, and a search in flight. Both durations come
-   from the motion setting, so "Motion: off" sets them to 0ms and nothing
-   moves at all; the easing comes from the motion *style*, which is what
-   makes the same two rules read as a smooth fade under "Smooth" and as a
-   stepped flicker under "Glitch" without a second set of keyframes.
-   `prefers-reduced-motion: reduce` is handled structurally by the media
-   query, as everywhere else in this file. */
+/* Found interfaces arrive with the existing motion setting/style. Search
+   activity now uses the shared text shimmer, not a second pulsing button.
+   Reduced motion is gated structurally, as elsewhere in this file. */
 @keyframes knx-discovery-option-in {
   from { opacity: 0; transform: translateY(-3px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes knx-discovery-searching {
-  from { opacity: 1; }
-  to { opacity: 0.55; }
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .bus-discovery-option {
     animation: knx-discovery-option-in var(--knx-transition-duration) var(--knx-motion-easing) both;
-  }
-  .bus-discovery-search[aria-busy="true"] {
-    animation: knx-discovery-searching calc(var(--knx-transition-duration) * 3)
-      var(--knx-motion-easing) infinite alternate;
   }
 }
 
@@ -4512,3 +4499,45 @@ html[data-motion-flow="off"] .flow-camera,
 
 /* The achievements overview stays above its own unlock popup. */
 .search-overlay:has(> .achievements-dialog) { z-index: 110; }
+
+.bus-discovery-search[aria-busy="true"] { animation-name: none; }
+
+/* Running task text, never a percentage: a 2.5 s left-to-right sweep followed
+   by 1 s with the glint outside the text. The reset is invisible. Only a
+   caller's existing active state installs the class; one real text node,
+   no placeholder, duplicate accessible text, timer or layout animation.
+   Fallbacks keep inherited plain text, including forced colours and print. */
+@keyframes knx-task-text-shimmer {
+  0% { background-position: 110% 0; }
+  71.428571%, 100% { background-position: -10% 0; }
+}
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  @supports (color: color-mix(in srgb, currentColor 70%, transparent)) and (-webkit-text-fill-color: transparent) {
+    @media (prefers-reduced-motion: no-preference) {
+      @media (forced-colors: none) {
+        :root:not([data-motion-level="off"]) .task-status-text {
+          color: var(--knx-foreground);
+          background-image: linear-gradient(90deg,
+            color-mix(in srgb, currentColor 70%, var(--knx-muted)) 45%,
+            currentColor 50%,
+            color-mix(in srgb, currentColor 70%, var(--knx-muted)) 55%);
+          background-size: 200% 100%;
+          background-clip: text;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: knx-task-text-shimmer
+            calc(var(--knx-transition-duration) * var(--task-status-cycle-factor, 17.5)) linear infinite;
+        }
+        :root:not([data-motion-level="off"]) .form-warning .task-status-text { color: inherit; }
+        :root[data-motion-level="subtle"] .task-status-text { --task-status-cycle-factor: 30; }
+      }
+    }
+  }
+}
+@media print {
+  .task-status-text {
+    background-image: none !important;
+    -webkit-text-fill-color: currentColor !important;
+    animation-name: none !important;
+  }
+}

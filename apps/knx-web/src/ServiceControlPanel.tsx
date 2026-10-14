@@ -183,7 +183,7 @@ export default function ServiceControlPanel({ projectOpen, projectRevision }: {
         <button type="button" onClick={() => { setReview(null); setConfirmation(""); }}>{t("serviceControl.cancel")}</button>
       </div>
     </div>}
-    {busy === "writing" && <p role="status">{t("serviceControl.writing")}</p>}
+    {busy === "writing" && <p role="status"><span className="task-status-text">{t("serviceControl.writing")}</span></p>}
     {error && <p className="form-error" role="alert">{error}</p>}
     {result && <p role="status" className="service-control-result">{result}</p>}
   </section>;

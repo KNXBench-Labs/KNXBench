@@ -76,7 +76,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
         value={query} onChange={(event) => setQuery(event.target.value)} />
       <button type="button" onClick={() => setRefresh((value) => value + 1)} disabled={loading}>{t("devices.refresh")}</button>
     </div>
-    {loading && <p role="status">{t("devices.loading")}</p>}
+    {loading && <p role="status"><span className="task-status-text">{t("devices.loading")}</span></p>}
     {error && <p className="field-error" role="alert">{t("devices.catalogueFailed", { reason: error })}</p>}
     <div className="workspace-table-wrap devices-table-scroll" tabIndex={0} aria-label={t("devices.table")}>
       <table className="workspace-table devices-table"><thead><tr>

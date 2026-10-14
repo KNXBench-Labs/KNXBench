@@ -268,7 +268,7 @@ export function BuildingPartFunctions(props: {
   return <details className="functions-panel" onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>{t("functions.title")}{read !== null && ` (${here.length})`}</summary>
     {!identified || !known ? <p className="inspector-description">{t("functions.unavailable")}</p>
-      : read === null ? (notice === null ? <p className="inspector-description" role="status">{t("functions.loading")}</p> : null)
+      : read === null ? (notice === null ? <p className="inspector-description" role="status"><span className="task-status-text">{t("functions.loading")}</span></p> : null)
       : <>
         <p className="inspector-description">{t("functions.explanation")}</p>
         {here.length === 0 && <p className="inspector-description">{t("functions.none")}</p>}
@@ -294,7 +294,7 @@ export function GroupAddressFunctions(props: {
   const memberships = read === null ? [] : membershipsOf(read.functions, props.groupAddressId);
   return <details className="functions-panel" onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>{t("functions.title")}{read !== null && ` (${memberships.length})`}</summary>
-    {read === null ? (notice === null ? <p className="inspector-description" role="status">{t("functions.loading")}</p> : null)
+    {read === null ? (notice === null ? <p className="inspector-description" role="status"><span className="task-status-text">{t("functions.loading")}</span></p> : null)
       : memberships.length === 0 ? <p className="inspector-description">{t("functions.noMemberships")}</p>
       : <>
         <p className="inspector-description">{t("functions.membershipHint")}</p>

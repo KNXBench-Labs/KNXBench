@@ -246,7 +246,7 @@ export default function LogPanel(props: {
           <div>
             <strong id={importScopeTitleId}>{t("logPanel.importScope.title")}</strong>
             {/* A failed fetch is reported below; it is not "none in the log". */}
-            <p role="status">{loading ? t("logPanel.loading") : error ? "" : importScopeMessage(importScope, props.tree)}</p>
+            <p role="status"><span className={loading ? "task-status-text" : undefined}>{loading ? t("logPanel.loading") : error ? "" : importScopeMessage(importScope, props.tree)}</span></p>
           </div>
           <button type="button" className="log-panel-import-scope-clear" onClick={clearImportScope}>{t("logPanel.importScope.showAll")}</button>
         </div>
@@ -268,7 +268,7 @@ export default function LogPanel(props: {
       {entries.length > 0 && <p className="log-panel-hint">{t("logPanel.entryTextIsEnglish")}</p>}
       {error && <span className="field-error">{error}</span>}
       {loading ? (
-        <p className="log-panel-empty">{t("logPanel.loading")}</p>
+        <p className="log-panel-empty"><span className="task-status-text">{t("logPanel.loading")}</span></p>
       ) : error && allEntries.length === 0 ? null : allEntries.length === 0 ? (
         <p className="log-panel-empty">{t("logPanel.emptyNoEntries")}</p>
       ) : visibleRows.length === 0 ? (

@@ -86,7 +86,7 @@ export default function NotesWorkspace({ tree, active, onTreeUpdate, onDirtyChan
   // never shown as "not in the catalogue" merely because it is still loading.
   let body;
   if (!context) body = <p role="status">{t("notes.identityUnavailable")}</p>;
-  else if (!targetState.settled) body = <p role="status">{t("notes.targetsLoading")}</p>;
+  else if (!targetState.settled) body = <p role="status"><span className="task-status-text">{t("notes.targetsLoading")}</span></p>;
   else body = <>
     {targetState.failed && <div className="notes-targets-failed" role="alert">
       <p className="field-error">{t("notes.targetsFailed")}</p>

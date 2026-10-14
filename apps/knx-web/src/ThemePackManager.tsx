@@ -189,8 +189,8 @@ export default function ThemePackManager(props: { onDownload: (fileName: string,
       <p className="settings-field-hint">{t("themePack.manager.recoveryHint")}</p>
     </div>}
     <div className="theme-manager-state" role="status">
-      {busy && <p>{t("themePack.manager.saving")}</p>}
-      {reading && <p>{t("themePack.manager.reading")}</p>}
+      {busy && <p><span className="task-status-text">{t("themePack.manager.saving")}</span></p>}
+      {reading && <p><span className="task-status-text">{t("themePack.manager.reading")}</span></p>}
       {message && <p className={message === "themePack.manager.saved" || message === "themePack.manager.removed" ? undefined : "field-error"}>{t(message)}</p>}
       {cacheWarning && <p className="settings-diagnostic">{t("themePack.manager.cacheWarning")}</p>}
       {admission && <ThemePackDiagnostic diagnostic={admission} />}

@@ -14,10 +14,23 @@ No nested goal is launched.
 
 | Package | State |
 | --- | --- |
-| S1 | Structured preparation/start refusals and shared mapping accepted in corrected full branch gate; integration gate pending |
-| S2 | EN/DE pre-plan notice, local details/copy, invalid-address and late-target guards accepted; 92 focused tests, 513 fixture-browser and 33 production download tests pass; integration gate pending |
-| S3 | Fixed unsent docs/form/mail links, zero project-derived prefill, privacy tests and EN/DE scope documentation accepted in corrected branch gate; no external submission |
+| S1 | Complete: structured preparation/start refusals and shared mapping accepted in the full merged-result gate |
+| S2 | Complete: EN/DE pre-plan reason/actions, local details/copy and late-target guards; 92 focused tests, 522 merged fixture-browser and 33 production download tests pass |
+| S3 | Complete: fixed unsent docs/form/mail links, zero project-derived prefill, privacy tests and EN/DE scope documentation pass the merged gate; no external submission |
 | S4 | Two real offline corpus runs passed with identical privacy-checked aggregates (105 packages, 467 programs); bounded F1–F5 follow-ups documented; all executable dependencies remain unassessed |
+
+## Final acceptance
+
+Merged runtime `6bf86976` passes all 35 required stages with frozen inputs:
+Rust 4442/0 (200 ignored), Vitest 3504/0 in 249 files, Chromium 522/0,
+production download/report/scope/B15 specs 33/0, focused browser 8/0,
+private corpus 145/145; all typechecks, Clippy, build, bindings, documentation
+and repository checks pass. [Aggregate receipt](../evidence/device-support-guidance-acceptance-2026-10-14.json).
+Final closure is documentation-only; source equivalence and doc/disclosure gates
+are required before the ordinary main push. No release/deployment is included.
+[Bounded F1–F5 follow-ups](../research/2026-10-14-device-support-guidance-offline-audit.md)
+remain separate scopes; all audited executable dependencies remain unassessed.
+No further goal is launched.
 
 ## Invocation
 

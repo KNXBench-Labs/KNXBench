@@ -11,7 +11,8 @@ body:
         **This is a public issue. Attachments become publicly accessible as soon as you upload them, even before you post the issue.**
         Never attach original .knxproj/.knxprod files, customer data, passwords, keys, keyrings or confidential manufacturer files.
         Start with KNXBench's reduced report ZIP. If analysis/export was not possible, describe the problem without a ZIP.
-        Private intake is not confirmed. Submission starts human review; it does not prove compatibility or hardware support.
+        A device-programming refusal before a plan exists can be reported without a ZIP or download report. Email inquiries: issue@knxbench.com; this is not confirmation of private-original intake, encryption or delivery.
+        Private-original intake is not confirmed. Submission starts human review; it does not prove compatibility or hardware support.
         **Öffentlicher Beitrag:** Anhänge sind bereits beim Hochladen öffentlich – auch vor dem Absenden. Keine Originalarchive, Kundendaten, vertraulichen Herstellerdateien, Passwörter oder Schlüssel anhängen. Ohne ZIP kannst du das Problem trotzdem beschreiben. Der private Posteingang ist noch nicht bestätigt.
   - type: textarea
     id: problem

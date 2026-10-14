@@ -1,0 +1,64 @@
+{
+  "summary": {
+    "concreteProjectConfigurationCovered": false,
+    "executableDependencies": {
+      "knownAbsent": 0,
+      "knownRequired": 0,
+      "reason": "no reviewed dependency census; filename absence is not evidence",
+      "unassessed": 467
+    },
+    "format": 1,
+    "kind": "knxbench-support-guidance-offline-audit",
+    "newHardwareVerification": false,
+    "packages": 105,
+    "programs": 467,
+    "refusedByCategory": {
+      "image-structure": 33,
+      "not-memory-mapped": 273,
+      "parameter-evaluation": 51,
+      "parameter-value": 9,
+      "procedure-contents": 1,
+      "product-data": 1
+    },
+    "scope": "installed-product-defaults-no-links",
+    "selectedMaskAggregates": {
+      "MV-0701": {
+        "plannable": 43,
+        "programs": 50
+      },
+      "MV-0705": {
+        "plannable": 56,
+        "programs": 144
+      },
+      "MV-07B0": {
+        "plannable": 0,
+        "programs": 108
+      }
+    },
+    "untested": 98,
+    "verified": 1
+  },
+  "execution": {
+    "runs": [
+      {
+        "run": 1,
+        "exit": 0,
+        "summary": [
+          "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1364.91s"
+        ],
+        "artifact_created": true
+      },
+      {
+        "run": 2,
+        "exit": 0,
+        "summary": [
+          "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1354.76s"
+        ],
+        "artifact_created": true
+      }
+    ],
+    "identical_runs": true,
+    "privacy_shape_valid": true
+  },
+  "scopeNote": "Product defaults only; executable dependencies unassessed; no hardware or input-custody claim."
+}

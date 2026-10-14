@@ -158,10 +158,51 @@ Creating an issue is not a promise of a fix, compatibility approval or response 
 - **Private original blocked:** the app found known key-like fields or unexamined
   content. This guard cannot be overridden here. Do not publish that file manually.
 
+## Device programming refused before a plan exists
+
+In the device download tab, the notice shows the reason, a concrete next action,
+and **Instructions**, **Report support gap**, and **Email draft**. This source-build
+feature works before any plan, connection or download report exists. Screenshots
+of Alpha 11 still show the released UI, not this main-only addition.
+
+- **Untested**: a complete supported plan has no matching hardware verification.
+  It still needs the additional exact target-bound acknowledgement and ordinary
+  confirmation. All identity/key, freshness, backup/readback and bus guards remain.
+- **Unsupported**: a technical planning gap, not missing approval. Do not force it.
+  Missing application data calls for the exact package/version in the catalogue;
+  configuration errors call for the correction named in the local details;
+  missing byte-order/encoder/procedure/module support calls for evidence-based review.
+- A server/transport failure is not a device compatibility verdict. Check server
+  availability and retry deliberately. Required executable-extension behavior that
+  is unresolved remains outside this workflow; absence of a `.dll` filename proves
+  nothing. Plan-scoped backup is not full-device backup or universal rollback.
+
+To report a pre-plan refusal: open **Report support gap**, sign in to GitHub,
+describe what you tried and the shown reason/next action, review optional fields,
+and submit the `analysis.yml` support-gap form yourself. No ZIP is required.
+A refusal without a connection has no post-run download report: do not fabricate
+one. If you separately analyze permitted source data, use the reduced ZIP only
+after its existing preview and sharing checks.
+
+Alternatively, **Email draft** opens an unsent inquiry to **issue@knxbench.com**.
+This mailbox accepts device-programming support-gap inquiries as well as tester
+download reports. No attachments or project/device metadata are added. Write and
+review your own description, check the recipient and send deliberately. Email is
+not a promise of delivery, encryption, confidentiality, retention or deletion.
+Do not send private originals, customer data, passwords, keys or backups without
+a separately confirmed handling agreement. `contribute@knxbench.com` is not a
+confirmed alternative intake route.
+
+**Technical details (local)** may contain names, addresses, paths and values.
+The copy button only copies locally; it does not sanitize or authorize public
+sharing. The three fixed links contain no project-derived metadata. Nothing
+uploads, opens a bus connection, submits an issue or sends mail automatically.
+Use the separate **Download report** flow only after an actual ended run.
+
 ## Download reports are separate
 
 Tested a device download? That has its own route: the **Download report** issue form
-or **issue@knxbench.com** (a working mailbox, for download reports only), with the
+or **issue@knxbench.com** (the existing mailbox, also accepting device-programming support-gap inquiries), with the
 report file KNXBench writes
 ([how](../manual/user-guide/10-command-line.md#helping-to-verify-a-device)). The
 proposed mailbox below is for analysis contributions and is still unconfirmed.

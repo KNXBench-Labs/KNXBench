@@ -60,6 +60,17 @@ mailbox, for tester reports only), with the parameter values included.
 - **Put the whole report into the issue URL.** Rejected: GitHub answers
   `414 URI Too Long` beyond its limit, and values do not belong in a URL.
 
+## 2026-10-14 amendment — pre-plan support inquiries
+
+The owner extends the existing `issue@knxbench.com` mailbox scope to
+**device-programming support-gap inquiries**, including refusals before a plan,
+connection or report exists. The [support-guidance contract](../contracts/device-programming-support-guidance.md)
+uses `analysis.yml`, not a fabricated `download-report.yml` outcome, for that case.
+An unsent mail draft has no attachment or project-derived URL/body metadata. This
+is not confirmed private-original intake or a claim of tested delivery,
+confidentiality, encryption, retention or deletion. Actual ended-run reports and
+maintainer-owned verification evidence stay unchanged.
+
 ## Consequences
 
 - CLI and server produce reports (part A). Part B, the device download

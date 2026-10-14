@@ -14,6 +14,24 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-14 — Device-programming support guidance S1–S4: structured refusal
+  reasons/actions, EN/DE help before any plan/report, explicit local-copy privacy
+  and fixed unsent docs/issue/mail routes; supported untested admission and every
+  server guard retained. Corrected branch gate: Rust 4411/0 (200 ignored),
+  Vitest 3460/0 in 247 files, Chromium 513/0, production download specs 33/0,
+  focused browser 8/0, private corpus 145/145, all typechecks/Clippy/docs/xtask
+  zero; inputs frozen. Integration acceptance pending, not a release.
+  [Contract](contracts/device-programming-support-guidance.md),
+  [bounded offline audit](research/2026-10-14-device-support-guidance-offline-audit.md).
+  All audited executable dependencies remain unassessed; no new encoder or
+  hardware/mail-delivery evidence.
+
+- 2026-10-13 — Device support guidance S1: additive categorized preparation
+  refusals and pure next-action mapping; missing installed application data is
+  distinct from configuration errors. Existing safety/untested admission unchanged.
+  [Contract](contracts/device-programming-support-guidance.md). Pre-plan UI/reporting
+  and audit are pending S2–S4; this entry makes no hardware verification claim.
+
 - [2026-10-13 — Bug Hunters’ Hall of Fame: sixteen titles and a Golden Bus Probe](contracts/community-recognition.md).
   Public README/page/JSON, real GitHub counters, retained completion XP and
   automatic closure recognition. About display is handed to Goal B, not implemented

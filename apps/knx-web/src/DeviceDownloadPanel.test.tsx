@@ -11,6 +11,7 @@ const apiMock = vi.hoisted(() => ({
   pollDeviceDownload: vi.fn(),
   serverVersion: vi.fn(),
   getDeviceDownloadReport: vi.fn(),
+  getDeviceReadiness: vi.fn(),
 }));
 const savedReports = vi.hoisted(() => vi.fn());
 vi.mock("./localJsonDownload", () => ({ downloadLocalJson: savedReports }));
@@ -204,6 +205,7 @@ beforeEach(() => {
   apiMock.startDeviceDownload.mockReset().mockResolvedValue({ downloadId: 7 });
   apiMock.serverVersion.mockReset().mockResolvedValue({ version: "0.1.0-alpha.1" });
   apiMock.getDeviceDownloadReport.mockReset().mockResolvedValue(REPORT);
+  apiMock.getDeviceReadiness.mockReset().mockResolvedValue({ devices: [], counts: {} });
   savedReports.mockReset();
 });
 
@@ -213,6 +215,80 @@ afterEach(async () => {
   host = undefined;
   root = undefined;
   vi.useRealTimers();
+});
+
+it("shows pre-plan refusal, actionable help and exact local detail without a report", async () => {
+  apiMock.getDeviceReadiness.mockResolvedValue({ devices: [{ address: "1.1.67", name: "Private device", programRef: "M-0001_A-0001-01-0000", readiness: "unsupported", category: "byte-order", detail: "PRIVATE /home/customer 1.1.67", steps: null, octets: null }], counts: { unsupported: 1 } });
+  await render();
+  await choose("1.1.67");
+  const help = host!.querySelector<HTMLElement>("[data-support-guidance]")!;
+  expect(help).not.toBeNull();
+  expect(help.textContent).toContain(en["deviceDownload.readiness.reason.byteOrder"]);
+  expect(help.querySelector("[data-next-action=requestSupport]")).not.toBeNull();
+  expect(help.querySelector<HTMLTextAreaElement>("textarea")!.value).toContain("PRIVATE /home/customer 1.1.67");
+  expect(help.querySelectorAll("a")).toHaveLength(3);
+  expect(apiMock.planDeviceDownload).not.toHaveBeenCalled();
+  expect(apiMock.getDeviceDownloadReport).not.toHaveBeenCalled();
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it("shows failed preparation guidance even when readiness had no mark", async () => {
+  apiMock.planDeviceDownload.mockRejectedValue(Object.assign(new Error("PRIVATE plan detail"), { status: 422, body: { kind: "downloadPreparationRefused", category: "modules" } }));
+  await render();
+  await showPlan();
+  const help = host!.querySelector<HTMLElement>("[data-support-guidance]")!;
+  expect(help).not.toBeNull();
+  expect(help.querySelector("[data-next-action=requestSupport]")).not.toBeNull();
+  expect(help.querySelector<HTMLTextAreaElement>("textarea")!.value).toContain("PRIVATE plan detail");
+  expect(host!.querySelector(".device-download-plan")).toBeNull();
+  expect(host!.querySelector(".device-download-verify")).toBeNull();
+});
+
+it("drops old readiness immediately and ignores a late answer after project replacement", async () => {
+  let resolveOld!: (value: unknown) => void;
+  apiMock.getDeviceReadiness.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }));
+  const first = project();
+  await render(first);
+  await choose("1.1.67");
+  await act(async () => root!.render(<DeviceDownloadPanel project={project()} />));
+  await flush();
+  await act(async () => resolveOld({ devices: [{ address: "1.1.67", readiness: "unsupported", category: "modules", detail: "OLD SECRET" }], counts: {} }));
+  await flush();
+  expect(host!.textContent).not.toContain("OLD SECRET");
+  expect(host!.querySelector("[data-next-action=requestSupport]")).toBeNull();
+});
+
+it("does not show a late prepared plan or error for a replaced project", async () => {
+  let resolvePlan!: (value: unknown) => void;
+  apiMock.planDeviceDownload.mockImplementationOnce(() => new Promise((resolve) => { resolvePlan = resolve; }));
+  await render();
+  await showPlan();
+  await act(async () => root!.render(<DeviceDownloadPanel project={project()} />));
+  await act(async () => resolvePlan(PLAN));
+  await flush();
+  expect(host!.querySelector(".device-download-plan")).toBeNull();
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it("never downgrades compatibility after a transient readiness failure", async () => {
+  apiMock.getDeviceReadiness.mockRejectedValue(new Error("PRIVATE service detail"));
+  await render();
+  await choose("1.1.67");
+  const help = host!.querySelector<HTMLElement>("[data-support-guidance]")!;
+  expect(help).not.toBeNull();
+  expect(help.dataset.supportGuidance).toBe("transient");
+  expect(help.querySelector("[data-next-action=retryService]")).not.toBeNull();
+  expect(host!.querySelector("option[value='10']")!.textContent).not.toContain("unsupported");
+});
+
+it("clears refusal detail on selection change rather than painting the next device", async () => {
+  apiMock.planDeviceDownload.mockRejectedValue(Object.assign(new Error("FIRST TARGET SECRET"), { status: 422, body: { kind: "downloadPreparationRefused", category: "modules" } }));
+  await render();
+  await showPlan();
+  expect(host!.textContent).toContain("FIRST TARGET SECRET");
+  await choose("1.1.3");
+  expect(host!.textContent).not.toContain("FIRST TARGET SECRET");
+  expect(host!.querySelector("[data-support-guidance]")).toBeNull();
 });
 
 it("says what a download is, and needs a project", async () => {
@@ -349,6 +425,19 @@ it("drops a shown plan when the project changes", async () => {
   await act(async () => root!.render(<DeviceDownloadPanel project={project()} />));
   await flush();
   expect(host!.querySelector(".device-download-plan")).toBeNull();
+});
+
+it("drops a server-refused stale plan but retains its reason and prepare-again action", async () => {
+  await render();
+  await showPlan();
+  apiMock.startDeviceDownload.mockRejectedValue(Object.assign(new Error("Server revision changed; nothing sent"), { status: 409, body: { kind: "downloadPlanStale" } }));
+  await act(async () => button("Download to 1.1.67").click());
+  await flush();
+  await act(async () => button(en["programmingConsent.confirm"], consentDialog()!).click());
+  await flush();
+  expect(host!.querySelector(".device-download-plan")).toBeNull();
+  expect(host!.querySelector("[data-next-action=prepareAgain]")).not.toBeNull();
+  expect(host!.querySelector<HTMLTextAreaElement>("[data-support-guidance] textarea")!.value).toContain("Server revision changed; nothing sent");
 });
 
 it("shows the server's refusal and does not claim anything was written", async () => {

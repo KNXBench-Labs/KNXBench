@@ -296,6 +296,27 @@ communication objects), a datapoint type the database states as several alternat
 (filled with none, alternatives listed), and a reference the installed program does not
 contain.
 
+### When a device's application program cannot be found
+
+The **Parameters** tab says why it cannot show anything:
+
+- **No product database** on this server: nothing can be loaded at all.
+- **This project's product data is not installed** (with the number of missing
+  files): the project was saved by KNXBench alpha.11 or earlier, and the product
+  database it was made with is gone (a rebuilt Docker container, another computer).
+  **Restore from original .knxproj…** reads the project's original ETS export and
+  installs exactly the manufacturer files whose checksum matches. Files that
+  differ are listed and not installed. A password-protected export needs no
+  password, because its manufacturer files are not encrypted. The project itself
+  does not change. Save it afterwards, and its file carries the programs from then on.
+- **The application program is not in the product database**: the device comes
+  from a product package that was never installed. Install its `.knxprod` from the
+  catalogue.
+
+A project saved with a current build carries its application programs itself and
+installs them again when it is opened, so this only affects older files
+([ADR-0128](../../adr/0128-native-project-files-carry-their-manufacturer-files.md)).
+
 ## The device panel
 
 Select a device and the center of the workbench shows its panel: the name, the

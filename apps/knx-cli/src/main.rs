@@ -334,12 +334,15 @@ fn parse_import_args(args: &[String]) -> Result<ImportArgs, String> {
 
 /// Copies an import held in the in-memory `staged` store to `path` in one
 /// transaction: the project, its opaque entries and its manufacturer
-/// manifest land together or not at all.
+/// manifest land together or not at all. Then the file takes the
+/// manufacturer files themselves from `products` (ADR-0128); one it cannot
+/// carry is named on stderr, the project is still written.
 fn write_imported_store(
     path: &Path,
     staged: &knx_store::Connection,
     project: &knx_core::Project,
     report: &knx_etsproj::ImportReport,
+    products: Option<&knx_productdb::Connection>,
 ) -> Result<(), String> {
     let mut opaque = knx_store::load_opaque(staged).map_err(|e| e.to_string())?;
     // Capture final enriched findings before touching the destination. The
@@ -348,7 +351,17 @@ fn write_imported_store(
     let refs = knx_store::load_manufacturer_refs(staged).map_err(|e| e.to_string())?;
     let conn = knx_store::open_and_migrate(path).map_err(|e| e.to_string())?;
     knx_store::save_project_with_passthrough(&conn, project, &opaque, &refs)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    let carried = knx_app::manufacturer_files::embed_into(&conn, products, &[]).map_err(|e| {
+        format!("the project was written, but its manufacturer files were not: {e}")
+    })?;
+    for missing in &carried.unavailable {
+        eprintln!(
+            "warning: the store does not carry {} (not in the product database)",
+            missing.source_path
+        );
+    }
+    Ok(())
 }
 
 /// The first line of standard input as a project password: everything up
@@ -480,9 +493,13 @@ fn run_import(args: &[String]) -> ExitCode {
 
     // Only now does the `--store` file come into play.
     if let Some(store) = &parsed.store {
-        if let Err(e) =
-            write_imported_store(Path::new(store), &conn, &imported.project, &imported.report)
-        {
+        if let Err(e) = write_imported_store(
+            Path::new(store),
+            &conn,
+            &imported.project,
+            &imported.report,
+            products_conn.as_ref(),
+        ) {
             eprintln!("failed to save project to store {store}: {e}");
             return ExitCode::FAILURE;
         }

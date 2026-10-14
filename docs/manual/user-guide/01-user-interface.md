@@ -110,6 +110,11 @@ screenshots in this manual still show the released explorer.
 **The diagnostics block**, at the bottom: **Bus monitor**, **Log**, **Diagnostics
 window** and **Settings**. The first two swap the center workspace for a panel; the
 third opens a second window (below); the fourth opens the Settings overlay.
+In source builds after Alpha 11 (issue #23), selecting an already-active **Bus
+monitor** or **Log** entry keeps that panel open and preserves its current tab,
+input or filter. To leave it, choose another view explicitly; clicking the active
+entry is no longer a close toggle. Settings and the separate diagnostics window
+keep their existing opening behaviour. The screenshots still show the released UI.
 
 ![The Overview of an imported project, showing counts for schema version,
 installations, areas, lines, devices, group addresses, building parts and

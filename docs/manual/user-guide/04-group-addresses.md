@@ -175,6 +175,27 @@ in every installation. When the view is scoped to a range, or a range is selecte
 menu offers **Add group address in …** with that range preselected; with several
 installations the menu groups its entries by installation.
 
+### Creating an address right in its range
+
+In the tree table, every range heading has a small **+** next to its count
+*(source build after Alpha 11, issue #20)*. It opens **New group address in this
+range**, with two ways to choose the address:
+
+- **Next free address** (preselected) is the first address missing in the range's
+  sequence, between its lowest and its highest existing address. Without a gap, it
+  is the one after the highest. An empty range starts at its first address. When
+  the range end is reached, it is the lowest free address of the range. The
+  suggestion counts every address of the installation that falls inside the
+  range, including ones filed elsewhere. It never offers `0/0/0`, which is the
+  KNX broadcast address.
+- **Enter an address** takes whatever you type.
+
+Type a name and press Enter or **Create**. A full range says so and leaves only
+manual entry. The server checks every address again, so an address outside the
+range or one already in use is refused in the dialog, and nothing is created. After
+creation the range opens, so you see the new address where you asked for it. Undo
+removes it again.
+
 Deleting is done from the properties pane, or from the bulk action bar for several
 addresses at once. A group address that still has a communication object linked to it
 cannot be deleted; unlink first. The same holds for a group address that belongs to a

@@ -14,6 +14,21 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-14 — Issue #20: every range heading in the group-address tree table
+  gets a **+** that opens **New group address in this range**. The suggested
+  address is the range's first gap, else the one after its highest, else its
+  lowest free one; the whole installation counts, `0/0/0` (broadcast) is never
+  offered, and a typed address works too. The server still refuses duplicates
+  and out-of-range addresses; the dialog keeps its input on refusal and opens
+  the range after creating. Client-only: no API, domain or schema change.
+  Tests first (helper RED before the module): helper 23, workspace dialog 8,
+  EN/DE browser spec at 1440/400 px in two themes 4. Branch gate on
+  `9c871f06`: build and 16 typechecks 0, Vitest 3566/0 (253 files), five
+  xtask checks and the documentation check 0. Chromium 540/546 in a full run
+  shared with a Rust workspace gate; the six failures (two untouched specs,
+  CO table and UX feedback) pass 39/39 rerun alone. No Rust change, hardware,
+  release or deployment. [Manual](manual/user-guide/04-group-addresses.md#creating-an-address-right-in-its-range).
+
 - 2026-10-14 — Owner UI feedback P1 ([goal](goals/ui-feedback-p1-p4.md)): toasts
   enter with their exit animation played backwards (same keyframes, length and
   curve; the stack clips the slide instead of flashing a scrollbar). Every web

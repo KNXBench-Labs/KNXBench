@@ -101,9 +101,9 @@ opens. A closed branch shows how many entries it holds, for example a small **3*
 next to a line with three devices. The two buttons above the tree are **Expand
 all** and **Collapse all**; Collapse all keeps the installations open and folds
 their sections, so a large project shrinks to one screen. Thin lines connect each
-node to its children. When a branch opens, they grow from the parent down, level
-after level, and about every twelve seconds a soft pulse runs from the top of the
-tree through the open branches. Turn that down or off under **Settings → Motion by
+node to its children. When you open a branch, its lines grow from the parent
+down, and about every twelve seconds a soft pulse runs from the top of the tree
+through the rows on screen. Turn that down or off under **Settings → Motion by
 category → Structure lines in the explorer**; the lines themselves stay. The
 screenshots in this manual still show the released explorer.
 

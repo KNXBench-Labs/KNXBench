@@ -56,6 +56,12 @@ material. Do not mark a path implemented merely because its metadata is parsed.
   codecs — integrated and published
   as `ad5f0e49`; twelve-stage merged gate and isolated corpus152/152 pass.
   [Contract and residual scope](offline-download-codecs.md).
-- P2 onward: not implemented; dependencies above still need their own proof.
+- P2: explicit legacy indexed-association codec and evaluator-backed System2
+  offline source-image assembly implemented; fourteen-stage frozen branch
+  acceptance complete; actual integrated acceptance/publication pending.
+  [Source-image contract](offline-download-system2-image.md) separates successful
+  synthetic assembly from the actual Siemens multi-octet source refusal.
+- P3 onward: source-to-property plans, simulator execution and whole-mutation
+  recovery are not implemented; dependencies above still need their own proof.
 
 Status is deliberately per capability; issue #22 and broader KL-007 remain open.

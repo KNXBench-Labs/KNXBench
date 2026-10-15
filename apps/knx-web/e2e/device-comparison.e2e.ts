@@ -30,6 +30,9 @@ function result(binding: ComparisonBinding, address: string): BoundDeviceCompari
     decoded: [
       { kind: "groupAddress", label: "1", address: 0x4003, project: "2/2/3", device: different ? "2/2/4" : "2/2/3", reason: null },
       { kind: "association", label: "0", address: 0x4101, project: "TSAP 1 → 2/2/3 · object 7", device: `TSAP 1 → ${different ? "2/2/4" : "2/2/3"} · object 7`, reason: null },
+      { kind: "parameter", label: "Delay · R-Delay · bit 5 / 9", address: 0x4400, project: "235", device: different ? "345" : "235", reason: null },
+      { kind: "parameter", label: "Room text · R-Text · bit 0 / 48", address: 0x4410, project: "Grüß", device: different ? "5 € ok" : "Grüß", reason: null },
+      { kind: "parameter", label: "Unknown encoding · R-Unknown · bit 0 / 16", address: 0x4420, project: "12", device: null, reason: "parameterNotDecoded" },
       { kind: "raw", label: "", address: 0x4003, project: "12 03 A5", device: different ? "12 04 A5" : "12 03 A5", reason: null },
     ] };
 }
@@ -105,10 +108,16 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await dialog.locator(".comparison-results li").filter({ hasText: "Fictional device 2" }).locator("button").first().click();
     await expect(dialog.locator(".comparison-decoded")).toContainText("2/2/4");
     await expect(dialog.locator(".comparison-decoded")).toContainText("12 04 A5");
+    const parameter = dialog.locator(".comparison-decoded tbody tr").filter({ hasText: "R-Delay" });
+    await expect(parameter.locator("td").nth(0)).toHaveText("235");
+    await expect(parameter.locator("td").nth(1)).toHaveText("345");
+    await expect(dialog.locator(".comparison-decoded")).toContainText("5 € ok");
+    await expect(dialog.locator(".comparison-decoded .comparison-reason")).toHaveText(m["compare.parameterNotDecoded"]);
     await expect(dialog.locator(".comparison-tag-synced")).toHaveCSS("background-color", await dialog.evaluate((el) => getComputedStyle(el).backgroundColor));
     const box = await dialog.boundingBox(); expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
     expect(box!.y + box!.height).toBeLessThanOrEqual(884);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    await dialog.locator(".comparison-decoded").scrollIntoViewIfNeeded();
     await capture(page, `results-${language}-${width}`);
     if (width === 400) {
       const scroll = dialog.locator(".comparison-table-scroll");

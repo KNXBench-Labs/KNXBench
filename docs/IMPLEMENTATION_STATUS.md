@@ -14,6 +14,19 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Alpha 12 candidate `ffc95e0a` **not accepted**: full gate
+  passed58 stages including all three native edit proofs, then a private
+  bindings comparator failed to load the locked TypeScript7 API. Corrected
+  comparator passes all28 generated paths with literal-preserving token equality
+  and seven rejection/format controls. A same-source continuation then found
+  the screenshot config missing its explicit central browser-temp guard; the
+  original failure remains, not a completed release gate. Added only that import;
+  guard5, tooling163 (one skip), native-media types and actual config listing pass.
+  Actual guarded-config real-server capture also passes one test/ten frames in
+  loopback-only isolation. New full candidate acceptance remains pending.
+  No production/model/schema/compatibility claim or publication changed.
+  [Tooling refusal evidence](evidence/alpha12-tooling-refusals-2026-10-15.json).
+
 - 2026-10-15 — Alpha 12 full gate **refused**, not release-ready: candidate
   `02d823c4` passed frontend3626, ordinary Rust4597 (207 ignored), all declared
   fixture browsers and native-evidence, then stopped in the native naming proof.

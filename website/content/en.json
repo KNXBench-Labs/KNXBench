@@ -147,5 +147,5 @@
   "release_instructions_alt": "Alpha 12 candidate in Graphite: the actual device Instructions tab showing a native override for the fictional kitchen lighting.",
   "release_support_title": "Unknown device. Useful report.",
   "release_support_body": "Prepare an offline support report even without a matching product or gateway. Review it, choose what to share and save it locally. Nothing sends itself.",
-  "release_support_alt": "Alpha 12 candidate in Graphite: a real offline device-support preview with its disclosure checkbox still unticked and local save disabled."
+  "release_support_alt": "Alpha 12 candidate in Graphite: the real Device support report form with privacy guidance, optional identity fields and Prepare offline preview; no report has been shared."
 }

@@ -22,3 +22,37 @@ registry version/latest digest and isolated published-image smoke, and live Page
 
 Self-review will be labelled as such, not independent approval. Prior package gates
 remain historical evidence, never relabelled as an Alpha 12 run.
+
+## Integrated source and actual media
+
+P4 feature `519eff4b`, corpus fix `a6cdfd9d` and tested merge `facdd62e`
+are ancestors of published main `17cfd5b7`; its public delivered receipt records
+full51/51, OriginalData152/152 and explicit product16/16 under the original
+source identity. Current live gate leases were observed empty before capture.
+The release merged that source as `6d8bf9bb`; later P4 publication metadata is
+accepted only after checking its complete runtime delta is empty.
+
+Actual real-server capture successor passes one test/five stages with frozen
+tracked source. Ten final PNGs were inspected, including native instructions
+created via the wizard and separate support setup/preview frames. Seven WebPs
+are decoded-pixel-equal to the original PNGs. Media provenance binds actual
+server binary, application commit, capture source/config, dimensions and hashes.
+Three failed harness predecessors remain private and are not relabelled green;
+an earlier successful nine-frame run was superseded only for better framing.
+No production code, admission or old sample schema was changed for the camera.
+
+Website24, current docs checker, capture TypeScript and public website build
+pass after the media update. The actual release-variant browser review is a
+separate running preflight; full frozen-candidate acceptance is still pending.
+
+## Self-review (not independent approval)
+
+Corrected stale native14/15 versus actual16 and product22 versus23 reader copy;
+promoted delivered Functions/universal reporting in the feature inventory;
+retained historical release/media boundaries and exact approved Story bytes.
+Restored an older video's original declared height after replacing stills;
+updated browser recipes to await real navigation and distinguish production
+from private-preview banners. Native-origin instructions use their actual label,
+not the imported-override badge. Unsupported schema-11 instructions remain
+explicitly refused. No unresolved runtime/security finding has been identified;
+this is not a release-ready verdict before the complete gate and packaging runs.

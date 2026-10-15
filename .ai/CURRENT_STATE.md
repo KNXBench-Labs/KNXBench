@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 06:27
+- **Completed:** Issue #23 published on main 8307ff6d (source96354083, accepted runtimebb529169); exact local/tracking/live equality and source/contract/evidence readback verified. GitHub issue CLOSED/completed; exact friendly completion comment read back. Final accepted web/docs60/60 stages, source/build/tools frozen: Vitest3588/259files, default564, production323/15configs, typed spec and12 issue production repeats. Eight production PNGs EN/DE1440/400 inspected. Docs-only closure8/8 checks pass; no independent-review claim.
+- **Pending/Next Steps:** Only metadata closure checks, verified private archive and exact owned retirement remain; #23 implementation/runtime acceptance/publication/issue closure are finished. Preserve foreign P4 source/claim; no further implementation or test-suite rerun for bookkeeping.
+- **Notes for Codex oder Claude:** Later publication metadata is docs-only; runtime receipts remain bound to bb529169. No Rust delta from upstream, device/bus operation, native-WebKit certification, release/deploy or root sync. Original closure harness ref/import failures retained separately and corrected root-bound tool suite passes; no product failure hidden. Shared root stays intentionally stale/dirty; worktree removal follows verified evidence preservation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 06:24
 - **Completed:** Issue #23 final runtime bb529169 accepted against published P3:60/60 maintained web/docs stages zero/proof-valid, source/build/tools frozen; Vitest3588/0 in259 files, default564 (276 functional/288 exclusive), production323 across15configs, dedicated spec types and12 repeated issue production cases pass. All8 EN/DE1440/400 production PNGs inspected; current input/tab/filter and active sidebar retained. Existing transient achievement toast overlaps lower content at narrow widths; no new horizontal overflow. Test-first eight original failures and in-session self-review retained. No Rust delta from upstream.
 - **Pending/Next Steps:** Documentation-only closure checks and normal main push/readback, then #23 completion comment/closure and verified task-only archive/cleanup. This entry claims accepted runtime, not future publication or an installed release.

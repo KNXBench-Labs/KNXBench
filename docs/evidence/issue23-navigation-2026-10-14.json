@@ -1,7 +1,7 @@
 {
   "format": "knxbench-issue23-acceptance-v1",
   "scope": "UI-only diagnostic sidebar selection; self-review",
-  "status": "final-runtime-accepted-publication-pending",
+  "status": "published-issue-closed",
   "branch": {
     "success": true,
     "stageCount": 46,
@@ -170,5 +170,15 @@
     ],
     "observed": "Active sidebar and retained monitor tab/input / Log filter verified; narrow layout scrolls vertically; transient inherited achievement toast overlaps lower content.",
     "nativeWebKitGTKOrOrcaVerified": false
+  },
+  "publication": {
+    "revision": "8307ff6d41cc8448cc60b407790316cdcb3fbc1a",
+    "localTrackingLiveEqualAtPublication": true,
+    "exactSourceReadback": true,
+    "issueNumber": 23,
+    "issueState": "CLOSED",
+    "completionComment": "https://github.com/KNXBench-Labs/KNXBench/issues/23#issuecomment-6184404815",
+    "closureChecks": 8,
+    "runtimeUnchangedByClosure": true
   }
 }

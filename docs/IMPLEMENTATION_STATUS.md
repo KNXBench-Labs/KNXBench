@@ -14,6 +14,60 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Exact-approved story `2026-10-15.4` publication variant accepted
+  on integration `bb2961aa`: story76, website24, tooling163 (one inherited skip),
+  Chromium46/46 and Firefox46/46; all44 actual public-build frames inspected.
+  Four visual contexts confirm all8 release nodes, explicit private/local KB and
+  public-data-provision wording, no overflow or outgoing requests. Five explicit-
+  root repository checks, reference validation, docs, matching approval and
+  release38-file build pass. Complete story/site inputs remain unchanged.
+  Published commit `022d85a0` has successful Pages run `38701307431`; live HTTP200
+  HTML matches the accepted build byte for byte and carries the exact approved
+  digest. No product release, bus operation or root-checkout synchronization.
+  [Publication acceptance](evidence/story-publication-2026-10-15.json).
+
+- 2026-10-15 — Story `2026-10-15.4` received explicit exact-digest owner
+  publication approval. Approval, website pin and latest-only retirement are
+  applied together; prior editions remain in Git. Content digest
+  `081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8`
+  is unchanged from accepted preview. Release-check, integrated build and public
+  deployment verification are separate steps; approval alone does not claim
+  deployment. [Story](../story/README.md),
+  [accepted content](evidence/story-update-2026-10-15-editorial.json).
+
+- 2026-10-15 — Owner-reviewed story correction candidate `2026-10-15.4`:
+  specification knowledge base explicitly private/local and not distributed;
+  public product databases described only as provided for analysis. Every
+  evidenced alpha release has a separate event/atlas node: historical withdrawn
+  Alpha4 plus Alpha5–11, distinguishing original/republication dates and CEST.
+  Pinned source stays `2d4ec5f9`; 74 events/93 relations/twelve chapters. Three
+  editorial regressions proved RED→GREEN, full story76 and Git-reference
+  validation pass. Actual frozen .4 Chromium46/46 and Firefox46/46 pass; all44
+  main frames plus8 unoccluded-title supplements inspected across both engines
+  at desktop/mobile widths, including all eight real release graph labels.
+  Website24, five fresh explicit-root repository checks, docs and unchanged
+  old-approved website38-file build pass. The new edition correctly refuses
+  release-check without approval. [Current acceptance](evidence/story-update-2026-10-15-editorial.json).
+  No publication approval, push, Pages cutover, new release or hardware operation.
+
+- 2026-10-15 — Project-evolution story candidate `2026-10-15.2` prepared locally
+  for review, not publication. Pinned source `2d4ec5f9`, 07:04:36 CEST; 68 events,
+  87 relations and twelve chapters retain the Phosphor Atlas design. New strands
+  cover public users, reversible engineering and evidence boundaries, with
+  explicit source/release/hardware/design distinctions. Optional read-only
+  `storytool validate --repository` checks Git ancestry, cutoff time and file
+  references (six test-first regressions). Existing approved `2026-10-08.4` and
+  the website pin remain unchanged. Story73, website24 and repository tooling148
+  (one existing skip) pass; Chromium and Firefox each pass46/46 browser checks
+  with frozen inputs. Four visual contexts/24 original screenshots inspected;
+  mobile guided-graph labels remain dense, full text/atlas available. Five fresh
+  root-bound repository checks and documentation pass. The unchanged approved
+  website release build passes; the new unapproved edition correctly refuses
+  release-check. [Aggregate acceptance](evidence/story-update-2026-10-15.json).
+  Exact-edition owner publication approval remains pending; no push/deployment
+  or new bus operation.
+  [Preparation and boundaries](../story/README.md#update-prepared-on-15-october-2026).
+
 - 2026-10-15 — P4 package 1 tables accepted in source after Alpha 11: confirmed
   single/filtered device queue, progress/draining cancellation and session tags;
   P3 content revisions, verified five-byte application identity, bounded 0701

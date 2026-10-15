@@ -23,8 +23,15 @@ fragment aliases and update this index. Do not rewrite previous results.
   Vitest 3567/0 (256 files), Chromium 558/0, fifteen production configurations
   zero, devices-navigation repeats 51/0; Python 123 (one skip), all compiler,
   documentation and five repository checks pass. First merged result `b9a2decc`
-  also passed all 47 stages with the same test counts. New upstream test tooling
-  is integrated separately and final-source acceptance remains pending.
+  also passed all 47 stages with the same test counts. Maintained-runner merge
+  `2e803fef` passed 60 stages. Final integration `bb529169` with published P3:
+  all 60 maintained web/docs stages zero/proof-valid, inputs/build/tools frozen;
+  Vitest 3588/0 (259 files), default browser 564/0, production browser 323/0 in
+  fifteen configurations, twelve issue-specific production repeats and dedicated
+  spec types pass. All eight EN/DE 1440/400 production images inspected. The
+  inherited achievement toast can temporarily overlap lower narrow-screen content;
+  no horizontal overflow observed. Self-review, not independent approval.
+  [Aggregate acceptance](evidence/issue23-navigation-2026-10-14.json).
   [Behaviour and boundaries](contracts/diagnostic-sidebar-selection.md),
   [operating guide](manual/user-guide/01-user-interface.md#the-navigation-pane).
   No API/domain/storage/schema/protocol change, hardware, release or deployment.

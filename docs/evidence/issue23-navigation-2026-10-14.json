@@ -1,7 +1,7 @@
 {
   "format": "knxbench-issue23-acceptance-v1",
   "scope": "UI-only diagnostic sidebar selection; self-review",
-  "status": "pre-p3-integration-accepted-p3-merge-pending",
+  "status": "final-runtime-accepted-publication-pending",
   "branch": {
     "success": true,
     "stageCount": 46,
@@ -116,5 +116,59 @@
     "issue23ProductionRepeats": 12,
     "specTypecheck": "passed",
     "receiptSha256": "f9992354108a2a60e838abc5072a03045fc4cc9008b9b97996933de45b8705ed"
+  },
+  "finalIntegration": {
+    "success": true,
+    "revision": "bb529169394a3a7b689503a284c64f1054ac0346",
+    "stages": 60,
+    "inputsFrozen": true,
+    "vitest": {
+      "passed": 3588,
+      "failed": 0,
+      "files": 259
+    },
+    "browser": {
+      "total": 564,
+      "functional": 276,
+      "exclusive": 288
+    },
+    "production": {
+      "production-catalogue": 10,
+      "production-communication": 59,
+      "production-device-download-support": 33,
+      "production-devices": 23,
+      "production-dialogs": 14,
+      "production-ga-members-download": 23,
+      "production-group-addresses": 19,
+      "production-instructions": 15,
+      "production-notes": 13,
+      "production-parameters": 15,
+      "production-reload-guard": 2,
+      "production-structure": 8,
+      "production-task-status": 27,
+      "production-updates": 7,
+      "production-ux-feedback": 55
+    },
+    "productionTotal": 323,
+    "issue23ProductionRepeats": 12,
+    "specTypecheck": "passed",
+    "receiptSha256": "990c13b10e8a4d59c2599340c281fe918ea325b082cc801d272540a02a4d06a3"
+  },
+  "visualReview": {
+    "screenshots": 8,
+    "languages": [
+      "en",
+      "de"
+    ],
+    "widths": [
+      1440,
+      400
+    ],
+    "themes": [
+      "porcelain",
+      "graphite"
+    ],
+    "observed": "Active sidebar and retained monitor tab/input / Log filter verified; narrow layout scrolls vertically; transient inherited achievement toast overlaps lower content.",
+    "nativeWebKitGTKOrOrcaVerified": false
   }
 }

@@ -1,0 +1,107 @@
+{
+  "schema": "knxbench-story-update-acceptance/1",
+  "candidate": "2026-10-15.4",
+  "story_sha256": "081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8",
+  "source_cutoff": {
+    "conversations_through": "2026-10-15T07:04:36+02:00",
+    "git_commit": "2d4ec5f90ccc66ed7d03c65fdd02213faf34fc69",
+    "git_commit_time": "2026-10-15T07:04:36+02:00",
+    "git_ref": "origin/main",
+    "label": "Published main-branch source through 15 October 2026, 07:04:36 CEST (UTC+02:00); selected local project conversations through the same cutoff. Earlier source coverage is inherited and disclosed separately."
+  },
+  "counts": {
+    "chapters": 12,
+    "editorial_relations": 19,
+    "events": 74,
+    "events_with_uncertainty": 50,
+    "excerpts": 43,
+    "gaps": 8,
+    "relations": 93
+  },
+  "review": "In-session self-review, not independent review or owner publication approval.",
+  "scope": "Static offline story and editorial/reference checks only. No application, hardware or release certification.",
+  "tests": {
+    "story": {
+      "run": 76,
+      "exit": 0
+    },
+    "editorial_red_green": 3,
+    "website": {
+      "run": 24,
+      "exit": 0
+    },
+    "browsers": [
+      {
+        "browser": "chromium 153.0.8010.12 (Playwright)",
+        "checks": 46,
+        "failed": 0
+      },
+      {
+        "browser": "firefox 155.0 (Playwright)",
+        "checks": 46,
+        "failed": 0
+      }
+    ],
+    "repository_checks": [
+      {
+        "log": "check-layering.log",
+        "exit": 0
+      },
+      {
+        "log": "check-headers.log",
+        "exit": 0
+      },
+      {
+        "log": "check-anchors.log",
+        "exit": 0
+      },
+      {
+        "log": "check-ledger.log",
+        "exit": 0
+      },
+      {
+        "log": "check-corpus-gates.log",
+        "exit": 0
+      }
+    ],
+    "documentation": {
+      "exit": 0
+    }
+  },
+  "visual": {
+    "main_contexts": 4,
+    "main_original_frames": 44,
+    "supplement_contexts": 4,
+    "supplement_original_frames": 8,
+    "all_frames_inspected": true,
+    "eight_titles_unoccluded": true,
+    "all_alpha4_through_alpha11_nodes_present_and_labelled_in_each_context": true,
+    "external_requests": 0,
+    "horizontal_page_overflow": 0,
+    "limitation": "The retained small mobile guided graph has dense labels that can touch nodes/edges. Full text remains in event cards, text-only mode and searchable/zoomable atlas.",
+    "not_tested": [
+      "WebKit/Safari",
+      "native WebKitGTK",
+      "Orca or other actual screen readers"
+    ]
+  },
+  "inputs_frozen": true,
+  "provenance": {
+    "events_without_private_provenance": [],
+    "private_entries_without_public_event": 0,
+    "private_locators_found_in_payload": 0,
+    "status": "checked"
+  },
+  "privacy": "No private locators or untraced events. The one address-like scan warning is a historical semantic-version number, not an installation address. Knowledge base is explicitly private/local and not published or distributed. No acquisition mechanics remain in public product-data content.",
+  "release_inventory": "Seven primary current published alpha records (5–11) plus the retained withdrawn Alpha4 publication record; no unproved Alpha1–3 releases invented. Alpha5 original/private and public republication are distinct; Alpha7 publication day is 10 October in CEST.",
+  "publication": {
+    "approved": false,
+    "pushed": false,
+    "deployed": false,
+    "existing_approved_edition": "2026-10-08.4",
+    "existing_release_build_files": 38,
+    "existing_publication_inputs_unchanged": true,
+    "new_release_check_without_approval_exit": 3
+  },
+  "prior_attempts": "Previous .2 acceptance remains separate. Intermediate .3 was superseded before browser execution. The initial supplemental camera lease wait timed out before any browser/output; corrected notified supplement passed. No failed/setup-only attempt counts as product acceptance."
+}

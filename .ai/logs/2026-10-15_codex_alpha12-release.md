@@ -56,3 +56,29 @@ from private-preview banners. Native-origin instructions use their actual label,
 not the imported-override badge. Unsupported schema-11 instructions remain
 explicitly refused. No unresolved runtime/security finding has been identified;
 this is not a release-ready verdict before the complete gate and packaging runs.
+
+## Actual complete-gate refusal and scoped correction
+
+The complete gate on `02d823c4` passed 54 of 72 declared stages, including
+Vitest3626, ordinary Rust4597/0 (207 ignored), fixture browsers and native-evidence,
+then failed in native naming. Remaining stages did not run. This is a real test
+failure, not the separately identified finalizer issue, and it cannot be accepted
+through the prepared receipt-reconciliation tool. Full source/mode inventory after
+the refusal equals its original start inventory; the original failed receipt stays.
+
+Reset opens an active empty project, so a welcome-only Open button is absent.
+The first correction proved EN paths but exposed an unscoped-combobox/keyboard
+startup race on DE reload. The final correction uses the rendered Commands button
+and scopes the localized native Open command to its dialog in all three native
+specs. No production code, mock response, limit, timeout or core assertion changed.
+Targeted final proof passes12/12 (naming4, Functions4, naming recipe4), plus the
+native TypeScript configuration. All four steps exit0, edited spec hashes stay
+frozen, and each real-server suite verifies the untouched demo hash and teardown.
+This uses the unchanged predecessor runtime and is not full release acceptance.
+
+The successor private runner includes all three native specs and uses separate
+ordered-stage and corpus-count variables. Seven controls pass after reproducing
+the old runner's control failures. It will execute a fresh complete 74-stage gate
+on a newly committed frozen candidate, rather than relabel the failed execution.
+Both earlier exact-SHA packaging dry runs passed with publish jobs skipped; new
+SHA-specific dry runs remain required. No tag, release, Pages or Docker cutover.

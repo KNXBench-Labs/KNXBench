@@ -17,5 +17,14 @@ upstream additively in a separate owned tree, retain its runtime and handovers,
 and gate the actual story/site release build. Do not relabel source-only work
 beyond the cutoff as covered by this edition.
 
-Publication acceptance and actual Pages/public artifact readback are pending;
-no successful push/deploy is claimed by this initial entry.
+Publication acceptance now passes on actual merged `bb2961aa`: story76,
+website24, tools163/one inherited skip, Chromium46/46 and Firefox46/46,
+44 public-variant frames inspected across desktop/mobile engines. All eight
+release nodes and editorial boundaries verified; zero overflow/outgoing requests.
+Reference validation, matching approval, 38-file public build, five explicit-root
+repository checks and docs pass. Full consumed-input manifest unchanged.
+Fresh upstream remains `fbdfbddd`; runtime remains byte-identical to that source.
+
+Push, Pages and exact public artifact readback are still separate pending steps.
+Public acceptance is recorded without private paths or source transcript locators
+in `docs/evidence/story-publication-2026-10-15.json`.

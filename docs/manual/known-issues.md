@@ -13,7 +13,7 @@ the reconciliation; formal task dispositions remain in the engineering ledger.
 | Boundary | Practical meaning | Next check |
 | --- | --- | --- |
 | Import is one-way | Keep the original ETS archive; your edited working copy is `.knxdb`, not an ETS export | [Projects](user-guide/02-projects.md#there-is-no-knxproj-export) |
-| Native history is not an independent disaster backup | The local source package keeps versions inside the same file; alpha.6 still has no persistent history. Keep independent copies | [Project history](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions) |
+| Native history is not an independent disaster backup | Current releases keep versions inside the same file; alpha.6 had no persistent history. Keep independent copies | [Project history](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions) |
 | Browser files live on the server | Save is not a download; Export project gives you a local copy | [Web and desktop differences](user-guide/11-web-and-docker.md#web-build-versus-desktop-build) |
 | Shared server, shared project | One password and one undo stack are not collaborative editing | [Deployment](user-guide/11-web-and-docker.md#authentication) |
 | Programming marks are project belief (P3, Alpha 12) | Adr/App/Par/GA track edits and server writes, not a live comparison. Recovered snapshot undo after a later write can conservatively show additional pending parts. Reconcile external/CLI programming manually; resolve refresh/storage warnings before trusting flags | [Programming marks](user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11) |

@@ -1,0 +1,80 @@
+{
+  "schema": "knxbench-alpha12-media/1",
+  "captured_on": "2026-10-15",
+  "application_release_candidate": "v0.1.0-alpha.12",
+  "application_source_commit": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+  "network": "isolated loopback-only user/network namespace",
+  "data": "fictional schema-11 Sample house plus native device created through the real wizard; no real KNX device",
+  "server_binary_sha256": "409da8c976e8a648014cbb33cdf0eb1f6f263cce63705a92737c40c432e703ac",
+  "capture_spec_sha256": "cfc1e68077bdb2848046893f9eac15e17f513df419134dbb5642d9085a74e921",
+  "capture_config_sha256": "5a443816796fd839df1707a3d16a31b15e8c9bc5bc115c4079580ded5abfbcf8",
+  "capture_result": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "source_frozen": true,
+  "visual_review": "all ten final captures inspected; full-resolution predecessor stills plus final contact sheet and both final support frames; no native WebKitGTK/hardware certification",
+  "assets": {
+    "graphite-addresses.png": {
+      "sha256": "6e5cf799588212516be547f5ed77b71ec7f62efb67ea2de7a590e1d280b96121",
+      "bytes": 194860,
+      "width": 1440,
+      "height": 1080
+    },
+    "graphite-devices.png": {
+      "sha256": "21bf5c83a59e55bbd825171f27a4b63040d9112f9f902e5763ea2cde78834101",
+      "bytes": 192552,
+      "width": 1440,
+      "height": 1080
+    },
+    "graphite-instructions.png": {
+      "sha256": "76846ce1a673a3eeb6576198015ed64bb475957a793343f32d9942eaa140bac5",
+      "bytes": 175465,
+      "width": 1440,
+      "height": 1080
+    },
+    "graphite-support-preview.png": {
+      "sha256": "941c455a20f044ca16dac3e64e3cc25821743b2b0ad7ee9746c47f7ac556c3ff",
+      "bytes": 196202,
+      "width": 1440,
+      "height": 1080
+    },
+    "graphite-support.png": {
+      "sha256": "5982a1473a2629404ead9858e2545d2f990b7b67666a848f9bc39db67534bc88",
+      "bytes": 163226,
+      "width": 1440,
+      "height": 1080
+    },
+    "lcars-addresses.png": {
+      "sha256": "e3381b34a5e898dab251d314170652b6d4053f2ed481accfe065a4b4e55b50b5",
+      "bytes": 213039,
+      "width": 1440,
+      "height": 1080
+    },
+    "porcelain-addresses.png": {
+      "sha256": "24756dc2ac6e91faed64b3ee02e204b36cc4d7178720619fbf692d3b67e538bb",
+      "bytes": 193422,
+      "width": 1440,
+      "height": 1080
+    },
+    "porcelain-parameters.png": {
+      "sha256": "dea64533d832a15b008026b6cbb89db40f158bb32d9cae061da23ca5debd0b93",
+      "bytes": 170598,
+      "width": 1440,
+      "height": 1080
+    },
+    "porcelain-topology.png": {
+      "sha256": "dbf436ca6e680932f4e3b9dadef5e556c4bf3cfb568bfa8544ee828e8d07f627",
+      "bytes": 139623,
+      "width": 1440,
+      "height": 1080
+    },
+    "user-modern-retro-green-crt-addresses.png": {
+      "sha256": "bc2617e4306a369b719736ed49e22d6a5c70dd7bc417550f7fb2ce9ee398d00e",
+      "bytes": 230906,
+      "width": 1440,
+      "height": 1080
+    }
+  }
+}

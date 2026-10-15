@@ -205,8 +205,7 @@ afterwards.
 ### Updating with a preview (since Alpha 10)
 
 Got a newer `.knxprod` from a manufacturer? In Alpha 10 and 11, **Update with
-preview…**, under the install picker, checks it first. *(Source build after
-Alpha 11:)* there is one picker, and every `.knxprod` it takes, in the catalogue and
+preview…**, under the install picker, checks it first. *(Since Alpha 12:)* there is one picker, and every `.knxprod` it takes, in the catalogue and
 in the device wizard alike, is previewed first; an old ETS3 product database still
 goes straight to its own import. The command-line equivalent is
 [`knx products update`](10-command-line.md#knx-products-update--check-a-newer-product-file-before-installing-it).

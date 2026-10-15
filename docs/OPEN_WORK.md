@@ -1,5 +1,15 @@
 # Open work after the 0.1 alpha
 
+## Alpha 12 release preparation (15 October 2026)
+
+The admitted P4 parameter/corpus package is published and its leases released.
+Release-owned media/README/manual refresh is implemented locally; complete
+candidate acceptance, no-publish packaging builds, final owner publication
+approval, release/registry download-back verification and live website readback
+remain pending. This preparation does not close #7/#22 or authorize bus traffic.
+[Release scope](releases/alpha12.md).
+
+
 ## Siemens System-2 download support, issue #22 (14 October 2026)
 
 Exact product/application identified; [offline prerequisites](contracts/system2-download-prerequisites.md)

@@ -96,3 +96,31 @@ preparation only. A real release step needs its own design and approval.
   (`story/tests/browser/check_story.mjs`) must stay green for each candidate.
 - Publication, hosting, fonts and licensing of the public page remain open and
   require separate decisions.
+
+
+## Amendment: deployed companion and review-first updates (15 October 2026)
+
+The original "publication not designed" statements describe 4 October, not
+current implementation. [ADR-0095](0095-static-marketing-companion.md#amendment-release-and-deployment-2026-10-08)
+records the subsequent website integration. The website release builder consumes
+one pinned candidate plus its exact approval; `.github/workflows/pages.yml`
+builds and deploys inventoried artifacts on main pushes touching story or website.
+The storytool `publish` command itself still refuses deployment.
+
+Edition updates therefore retain the approved candidate, approval and website pin
+while a new unapproved candidate is reviewed. Removing the old edition before
+approval would break the existing release build. At an explicitly approved
+cutover, candidate, approval and pin move together, and only the latest edition
+remains in the tree; Git preserves earlier reviewed records. Never copy, redate
+or infer a new approval from the previous one.
+
+`storytool validate --repository <checkout>` adds an optional read-only Git check:
+the cutoff is a full available commit with its exact committer timestamp and
+timezone; every cited commit resolves uniquely into its ancestry; each cited
+document is a file in that pinned tree, not merely the local working copy.
+Historical commit maps are applied editorially before checking, never by
+rewriting Git or changing an immutable candidate. Archive locators explain removed
+source documents. The check proves reference resolution, not the truth of prose,
+author attribution, compatibility or authorization to publish.
+
+The companion remains stdlib-only, offline and independent of the KNX domain.

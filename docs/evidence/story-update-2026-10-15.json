@@ -1,0 +1,134 @@
+{
+  "schema": "knxbench-story-update-acceptance/1",
+  "candidate": "2026-10-15.2",
+  "story_sha256": "cea07d4065173501881da7f74d451ede1cd74fc64fd8f1177228caa18ebe4426",
+  "source_cutoff": {
+    "commit": "2d4ec5f90ccc66ed7d03c65fdd02213faf34fc69",
+    "time": "2026-10-15T07:04:36+02:00"
+  },
+  "counts": {
+    "chapters": 12,
+    "editorial_relations": 19,
+    "events": 68,
+    "events_with_uncertainty": 44,
+    "excerpts": 43,
+    "gaps": 8,
+    "relations": 87
+  },
+  "scope": "Offline story companion and its repository-reference validation, not KNX application or hardware certification.",
+  "review": "In-session self-review; no independent approval.",
+  "tests": {
+    "story": {
+      "run": 73,
+      "exit": 0
+    },
+    "website": {
+      "run": 24,
+      "exit": 0
+    },
+    "repository_tooling": {
+      "run": 148,
+      "skipped": 1,
+      "exit": 0
+    },
+    "browsers": [
+      {
+        "browser": "chromium 153.0.8010.12 (Playwright)",
+        "checks": 46,
+        "failed": 0
+      },
+      {
+        "browser": "firefox 155.0 (Playwright)",
+        "checks": 46,
+        "failed": 0
+      }
+    ],
+    "repository_gates": [
+      {
+        "log": "check-layering.log",
+        "exit": 0
+      },
+      {
+        "log": "check-headers.log",
+        "exit": 0
+      },
+      {
+        "log": "check-anchors.log",
+        "exit": 0
+      },
+      {
+        "log": "check-ledger.log",
+        "exit": 0
+      },
+      {
+        "log": "check-corpus-gates.log",
+        "exit": 0
+      }
+    ],
+    "documentation": {
+      "exit": 0
+    },
+    "story_javascript_syntax": {
+      "exit": 0
+    }
+  },
+  "browser_scope": [
+    "Desktop 1440x900 and mobile 390x844",
+    "All twelve chapters and 68-step growth",
+    "Keyboard navigation, focus, search, zoom and pan",
+    "Text view, persistence and no-JavaScript access",
+    "Live motion cancellation, OS reduced motion, finite growth and retreat",
+    "Hostile markup remains literal; no console/page/CSP errors"
+  ],
+  "visual_review": {
+    "contexts": 4,
+    "original_screenshots": 24,
+    "viewports": [
+      "1440x1000",
+      "390x844"
+    ],
+    "engines": [
+      "Chromium",
+      "Firefox"
+    ],
+    "reviewed": true,
+    "external_requests": 0,
+    "horizontal_page_overflow": 0,
+    "limitation": "The small guided mobile graph remains dense: some labels touch nodes/edges. Full text is available through event cards, text mode and searchable/zoomable atlas. This is not a claim of universal label legibility or screen-reader certification."
+  },
+  "frozen_inputs": true,
+  "provenance": {
+    "events_without_private_provenance": [],
+    "private_entries_without_public_event": 0,
+    "private_locators_found_in_payload": 0,
+    "status": "checked"
+  },
+  "privacy_warnings_reviewed": "Two historical semantic-version strings match the address-like pattern; neither is an installation address. No private locators or usage-limit remarks found in field-scoped review.",
+  "preservation": {
+    "existing_approved_edition": "2026-10-08.4",
+    "old_candidate_preview_approval_pin_workflow_byte_identical": true,
+    "existing_approved_website_release_build": {
+      "files": 38,
+      "exit": 0
+    },
+    "new_candidate_without_approval_release_check_exit": 3
+  },
+  "failed_attempts_retained": [
+    "Initial queued browser worker cancelled before execution after conservative socket-budget preflight; corrected attempt uses maintained temp guard and real launch probe.",
+    "Initial tooling invocations used shadowed imports or missing worktree dependencies; corrected environment passed without source changes.",
+    "Isolated story invocation removed the required local import root; canonical documented invocation passed.",
+    "Overly greedy private review regex matched across unrelated JSON fields; field-scoped review resolved this reader false positive."
+  ],
+  "not_tested": [
+    "WebKit/Safari",
+    "Native WebKitGTK",
+    "Orca or other actual screen readers",
+    "KNX bus or device operations"
+  ],
+  "publication": {
+    "approved": false,
+    "pushed": false,
+    "deployed": false,
+    "note": "Only local preparation accepted. The owner must approve this exact digest before a publication push; old edition remains intact until authorized cutover."
+  }
+}

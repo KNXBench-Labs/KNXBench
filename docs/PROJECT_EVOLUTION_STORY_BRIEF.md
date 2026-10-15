@@ -10,11 +10,17 @@ It records the intended experience, not permission to publish.
 documentation and local Claude Code, Codex, Hermes and Paperclip records. The
 stack is a static, offline companion prepared by a stdlib-only tool
 ([ADR-0068](adr/0068-project-evolution-story-is-a-static-offline-companion.md)).
-The current candidate is `2026-10-08.4`, **approved for publication by the
-owner on 8 October 2026** (`story/approvals/2026-10-08.4.json`); earlier
-editions were removed from the tree at the user's request and remain in Git
-history. The owner has a domain; hosting, the public page variant and the
-deployment step are not designed yet.
+The published edition is `2026-10-08.4`, **approved for publication by the
+owner on 8 October 2026** (`story/approvals/2026-10-08.4.json`). The new
+`2026-10-15.2` candidate is **unapproved**. It pins source
+`2d4ec5f90ccc66ed7d03c65fdd02213faf34fc69` (15 October 2026, 07:04:36 CEST),
+with 68 events in twelve chapters and selective, disclosed conversation coverage.
+The static website and GitHub Pages integration already exist
+([ADR-0095 amendment](adr/0095-static-marketing-companion.md#amendment-release-and-deployment-2026-10-08),
+[website contract](WEBSITE.md)). Keep the earlier approved candidate, approval and
+website pin intact until the owner approves the exact new digest. At that
+authorized cutover only, retire the superseded edition from the tree; Git retains
+its reviewed bytes. Preparation is not permission to trigger Pages.
 
 The central question is:
 
@@ -267,10 +273,12 @@ does not imply autonomous publication permission.
 
 Publish versioned releases with a visible evidence cutoff and traceable approved
 content. Retain earlier versions so the history does not silently rewrite itself.
-The exact release-identity, staging, rollback, and deployment mechanisms need a
-later engineering design; they are not implemented here.
+The exact-edition approval is implemented by storytool; the website release
+builder checks its pinned candidate and the Pages workflow deploys built artifacts.
+A new edition must not replace the pin, remove the old approval or trigger a
+publication push before its own explicit approval.
 
-## Next work, not yet authorized implementation
+## Original discovery next steps (historical, superseded by implementation)
 
 1. Audit available historical sources and identify the earliest usable prompt.
    Establish coverage across the relevant local and, only where separately

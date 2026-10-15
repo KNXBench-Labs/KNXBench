@@ -1,6 +1,6 @@
 /** Plain Playwright CLI function: verify the actual static marketing artifact. */
 async (page) => {
-  const origin = 'http://127.0.0.1:4198';
+  const origin = new URL(page.url()).origin;
   const manifest = await (await page.request.get(`${origin}/build-manifest.json`)).json();
   if (manifest.schema !== 'knxbench-website-build/1') throw new Error('unknown site artifact');
   const release = manifest.mode === 'release';
@@ -22,7 +22,7 @@ async (page) => {
   assert('artifact publication mode and alpha are visible', await page.locator('.hero .alpha-tag').isVisible() &&
     (release ? await page.locator('.preview-note').count() === 0 : await page.locator('.preview-note').isVisible()));
   assert('no video request before deliberate playback', !requests.some(path => path.endsWith('.mp4')));
-  assert('both locally hosted font families load', await page.evaluate(() => document.fonts.check('600 20px "Bench Display"') && document.fonts.check('400 20px "Bench Text"')));
+  assert('Story sans-serif typography is applied to body and headings', await page.evaluate(() => getComputedStyle(document.body).fontFamily.includes('Liberation Sans') && getComputedStyle(document.querySelector('h1')).fontFamily.includes('Liberation Sans') && getComputedStyle(document.querySelector('h1')).fontWeight === '700'));
   await page.screenshot({ path: 'website/output/playwright/desktop-de.png' });
   await page.screenshot({ path: 'website/output/playwright/full-de.png', fullPage: true });
   await page.keyboard.press('Tab');

@@ -10,7 +10,7 @@
   const boxes = new Map(), visible = new Set(), active = new Set();
   const SWAP = { duration: 720, easing: 'cubic-bezier(.65,0,.35,1)', id: 'ambient-char-swap' };
   const CLIP = 'inset(-0.4em -0.06em)';
-  let paused = false, unsupported = false, timer = 0;
+  let paused = false, unsupported = false, timer = 0, ticks = 0;
 
   function split(heading) {
     const label = heading.cloneNode(true);
@@ -58,10 +58,14 @@
   }
   function roll(box, delay) {
     const timing = { ...SWAP, delay };
+    const [axis, sign] = [['X', 1], ['X', -1], ['Y', -1], ['Y', 1]][Math.floor(Math.random() * 4)];
+    const outgoing = `translate${axis}(${sign * 105}%)`;
+    const incoming = `translate${axis}(${-sign * 105}%)`;
+    const clip = axis === 'Y' ? 'inset(0 -0.06em)' : CLIP;
     try {
-      track(box.animate([{ clipPath: CLIP }, { clipPath: CLIP }], timing));
-      track(box.firstChild.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(105%)' }], timing));
-      track(box.animate([{ transform: 'translateX(-105%)', opacity: 1 }, { transform: 'translateX(0)', opacity: 1 }],
+      track(box.animate([{ clipPath: clip }, { clipPath: clip }], timing));
+      track(box.firstChild.animate([{ transform: 'translate(0, 0)' }, { transform: outgoing }], timing));
+      track(box.animate([{ transform: incoming, opacity: 1 }, { transform: 'translate(0, 0)', opacity: 1 }],
         { ...timing, pseudoElement: '::after' }));
     } catch (_) {
       unsupported = true;
@@ -76,13 +80,26 @@
     for (const heading of visible) {
       for (const box of boxes.get(heading)) if (!box.getAnimations({ subtree: true }).length) pool.push(box);
     }
+    ticks += 1;
     for (let picked = 0; picked < 2 && pool.length && allowed(); picked += 1) {
       const [box] = pool.splice(Math.floor(Math.random() * pool.length), 1);
       roll(box, picked ? 60 + Math.random() * 160 : 0);
     }
+    // An occasional single-glyph displacement, never flashing prose or whole headings.
+    if (ticks % 7 === 0 && pool.length) {
+      const box = pool[0];
+      try {
+        track(box.firstChild.animate([
+          { transform: 'translate(0, 0)' },
+          { transform: 'translateX(.08em)', color: '#c1aff2', offset: .4 },
+          { transform: 'translate(0, 0)' }
+        ], { duration: 180, easing: 'steps(2, end)', id: 'phosphor-char-glitch' }));
+      } catch (_) { /* The normal rolling treatment remains available. */ }
+    }
     if (allowed() && visible.size) timer = window.setTimeout(tick, 2200 + Math.random() * 1600);
   }
   function sync() {
+    document.documentElement.dataset.motion = allowed() ? 'on' : 'off';
     if (!allowed() || !visible.size) {
       window.clearTimeout(timer);
       timer = 0;
@@ -102,6 +119,7 @@
   });
   headings.forEach(heading => observer.observe(heading));
   toggle.hidden = false;
+  sync();
   toggle.addEventListener('click', () => {
     paused = !paused;
     toggle.setAttribute('aria-pressed', String(paused));
@@ -115,6 +133,7 @@
     window.clearTimeout(timer);
     timer = 0;
     cancelWhere(() => true);
+    document.documentElement.dataset.motion = 'off';
   });
   window.addEventListener('pageshow', sync);
 })();

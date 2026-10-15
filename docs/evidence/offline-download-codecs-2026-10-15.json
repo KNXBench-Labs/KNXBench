@@ -28,8 +28,23 @@
   ],
   "mutationProof": {"startLengthFieldSwap": "rejected by named independent-byte assertions", "canonicalSourceRestored": true},
   "earlierGate": {"verdict": "failed", "stage": "clippy desktop build prerequisite", "cause": "actual frontend dist absent", "inputsFrozen": true, "resolution": "offline npm ci and actual frontend build, then distinct complete successor"},
-  "mergedAcceptance": "pending",
-  "publication": "pending",
+  "mergedAcceptance": {
+    "commit": "ad5f0e4906e8766785b26eb6dff6eee30409df7d",
+    "successfulStages": 12,
+    "sourcePaths": 2884,
+    "inputsFrozen": true,
+    "rustPassed": 4612,
+    "rustIgnored": 207,
+    "vitestPassed": 3626,
+    "privateCorpus": {"passed": 152, "required": 152, "targets": 33},
+    "scope": "actual merged workspace, build, tests and isolated corpus; no browser/field validation"
+  },
+  "publication": {
+    "codeCommit": "ad5f0e4906e8766785b26eb6dff6eee30409df7d",
+    "localTrackingLiveEquality": true,
+    "target": "main",
+    "selectedRootUpdated": false
+  },
   "hardwareOperations": 0,
   "compatibilityPromotion": false,
   "limitations": ["no complete family image", "no product-to-wire step planner", "no new simulator executor", "no whole-mutation property recovery", "no field verification", "no browser or native visual acceptance claimed"]

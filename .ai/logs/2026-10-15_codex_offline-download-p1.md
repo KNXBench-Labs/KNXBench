@@ -25,8 +25,11 @@ missing; original failed receipt retained. Offline npm ci and genuine frontend
 build fixed setup; distinct successor gate2 performed every declared step.
 Explicit ignored Release System2 source fixture:1 passed/0 failed/0 ignored.
 
-Integration gate, complete private-corpus regression and publication are pending.
-No code paths connect to hardware; no runtime certification/field compatibility,
+Actual integrated acceptance on ad5f0e49:12/12 stages, Rust4612/0/207ignored,
+Vitest3626, workspace Clippy/build/tools/five gates, and isolated OriginalData
+152/152 in33targets.2884path start/end/current equality checked. Normal main
+push verified local integration HEAD=tracking=live remote, with selected root
+untouched. No runtime certification/field compatibility,
 release/deploy, proprietary executable invocation or selected-root synchronisation.
 Private evidence in profile cache/scratch/offline-download-20261015; final archive
 and owned cleanup occur at package closure. Next work follows P2+ in the contract.

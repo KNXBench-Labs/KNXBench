@@ -53,7 +53,8 @@ material. Do not mark a path implemented merely because its metadata is parsed.
 
 - Discovery: direct-PDF scope audit complete; selected shared root preserved.
 - P1: System-2 metadata projection, independent legacy table and absolute-property
-  codecs — branch acceptance complete; integrated acceptance/publication pending.
+  codecs — integrated and published
+  as `ad5f0e49`; twelve-stage merged gate and isolated corpus152/152 pass.
   [Contract and residual scope](offline-download-codecs.md).
 - P2 onward: not implemented; dependencies above still need their own proof.
 

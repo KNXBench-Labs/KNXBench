@@ -1,4 +1,14 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 15:26
+- **Completed:** P4 parameter/corpus source delivered on main17cfd5b7359a with normal push and exact local/tracking/live readback. Feature519eff4b,fixa6cdfd9d,tested mergefacdd62e ancestry verified. Final frozen full51/51,Vitest3626,Chromium574,Rust4597,repeat87,OriginalData152/152,explicit product16/16; seven parameter+seven prerequisite mutants and separate self-review pass. EN/DE1440/400 final production images inspected. Docs/manual/FEATURES/goal/public evidence updated; documentation-only nine-stage closure passes with full consumed-source equality. No changed production limits/schema or new device support.
+- **Pending/Next Steps:** Only publication-metadata delta verification and compact evidence/owned retirement remain in this session. Runtime package has no blocker. Release owner may take the delivered prerequisite from verified main; P4 leases are released. After retirement this session PAUSES under Alpha12 freeze; do not begin new work or acquire new feature gates.
+- **Notes for Codex oder Claude:** Alpha12 owner reservation70e3de01 retained unchanged below. Selected root HEAD/index deliberately untouched and unsynchronized; preserve foreign research/edits. No bus/subagents/vendor/tag/deploy. Runtime tested mergefacdd62e remains distinct from docs-only publication17cfd5b7. Compact private completion receipt will hold final cleanup proof; no release/media edits by P4.
+
+Alpha 12 prerequisite delivered: P4 parameters and corpus
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 15:22
 - **Completed:** P4 current parameter/corpus package fully accepted on facdd62e9f6f: frozen full51/51 (Vitest3626,Chromium574,Rust4597,repeat87), OriginalData152/152 and explicit product16/16. Seven parameter and seven prerequisite mutants detected/restored; separate self-review closed; final production EN/DE1440/400 images inspected. Feature519eff4b and separate test/docs-only fixa6cdfd9d present. Alpha12 freeze70e3de01 journal-only merge preserves all consumed runtime inputs; no new package started. Docs/FEATURES/manual/goal/evidence synchronized with actual acceptance.
 - **Pending/Next Steps:** Documentation-only delta gate then normal main push/exact remote verification; publication marker, compact private evidence archive and owned worktree/scratch retirement. NOT YET PUSHED. After this P4 prerequisite delivery pause under Alpha12 freeze; no new package or hardware action.

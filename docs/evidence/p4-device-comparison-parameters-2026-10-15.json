@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "owner-ui-feedback-p4-parameters",
-  "status": "accepted-publication-pending",
+  "status": "delivered",
   "decisionRecord": "docs/goals/ui-feedback-p1-p4.md",
   "featureCommit": "519eff4b9cbb71e2a018f3e2a865ca1cf0b47f63",
   "prerequisiteFixCommit": "a6cdfd9d775c77ade0cf1f08f89c6ef73db68a8a",
@@ -451,9 +451,58 @@
     "No production resource guard relaxed"
   ],
   "publication": {
-    "status": "pending normal push and exact remote readback",
-    "upstreamJournalMerge": "70e3de01c4cdf4ba2fac90e9e106b53fedea494d",
-    "runtimeInputsMustMatch": "facdd62e9f6f0766df6245367dbbe45194c7768a"
+    "sourceCommit": "17cfd5b7359aeef5155549f5a031b7050683759a",
+    "localTrackingLiveEqualAtPush": true,
+    "featureAndPrerequisiteAndRuntimeMergeAncestors": true,
+    "normalPush": true,
+    "forcePush": false,
+    "runtimeTestedMerge": "facdd62e9f6f0766df6245367dbbe45194c7768a",
+    "documentationDeltaGate": {
+      "complete": true,
+      "success": true,
+      "inputsFrozen": true,
+      "head": "17cfd5b7359aeef5155549f5a031b7050683759a",
+      "steps": [
+        {
+          "name": "build",
+          "exit": 0
+        },
+        {
+          "name": "python",
+          "exit": 0
+        },
+        {
+          "name": "docs",
+          "exit": 0
+        },
+        {
+          "name": "check-layering",
+          "exit": 0
+        },
+        {
+          "name": "check-headers",
+          "exit": 0
+        },
+        {
+          "name": "check-anchors",
+          "exit": 0
+        },
+        {
+          "name": "check-ledger",
+          "exit": 0
+        },
+        {
+          "name": "check-corpus-gates",
+          "exit": 0
+        },
+        {
+          "name": "diff",
+          "exit": 0
+        }
+      ]
+    },
+    "readbackTimestamp": "2026-10-15T15:24:14+02:00",
+    "subsequentBookkeeping": "source-equivalent publication metadata only; runtime receipt retains actual tested merge"
   },
-  "cleanup": "pending compact archive and owned worktree/scratch retirement"
+  "cleanup": "Compact private completion receipt records artifact retirement separately; no shared-root synchronization."
 }

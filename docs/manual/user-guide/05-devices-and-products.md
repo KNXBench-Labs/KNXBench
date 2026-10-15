@@ -69,7 +69,7 @@ Alpha 5 AppImage does not include it.
 ## Comparing the project with devices (P4, source build after Alpha 11)
 
 **Main-only source after Alpha 11:** release screenshots in this manual still
-show the released UI. Both packages below are implemented and accepted in source,
+show the released UI. Both packages below are implemented and published on main,
 including named parameters and explicit unknowns. This does not update Alpha11;
 see the [source publication record](../../evidence/p4-device-comparison-parameters-2026-10-15.json).
 

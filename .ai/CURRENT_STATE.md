@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 22:08
+- **Completed:** Owner explicitly resumed offline download expansion until the evidence-based goal is reached; prior pause lifted for this scope only. Isolated feat/offline-download-20261015 at KNXBench-offline-download-20261015, fresh3a9fd92f baseline; selected dirty root preserved. Read architecture/current source/prerequisites, original Resources/Management PDF pages rendered directly. Finite contract docs/contracts/offline-download-expansion.md defines codec/planner/simulator/recovery layers and research-vs-field boundaries. P1 System2 source metadata plus independent table codecs is claimed here; no implementation or test result yet.
+- **Pending/Next Steps:** Implement P1 with RED/GREEN, independently specified bytes and negative shape/identity tests, then pursue remaining System2/SystemB and other-profile offline work to actual evidence limits. Deliver reviewed green packages at intermediate boundaries. No bus access, vendor executables or hardware verification promotion.
+- **Notes for Codex oder Claude:** Offline-download expansion: taken by codex-offline-download-20261015 — product/core adapter and later separately evidenced simulation/recovery scope. Other sessions must preserve this worktree; separate site-scroll work unchanged. Issue22 remains open until actual support criteria, not parsing, are fulfilled. Root-local owner resume at22:08 supersedes21:58 pause for this scope. No subagents.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 20:58
 - **Completed:** Phosphor CRT website PUBLISHED AND LIVE VERIFIED after owner commit/push Go. Source merged/gated d90b3d4b92a8c45fb63d6c56d64b7b6218993a82:23/23 frozen-source stages; website28/Story76/tooling163(1skip), Chromium394preview+416public, deterministic approved-artifact byte equality. Normal main push exact readback. Website38789580428 build/deploy success on exact SHA. Live root+36content files+manifest all38 hashes equal; canonical EN/DE/root/CSS/headlines match;124deployed-host Chromium checks and actual desktop/mobile rasters pass. Story/app/media/legal content unchanged. Receipt docs/evidence/phosphor-crt-publication-2026-10-15.json.
 - **Pending/Next Steps:** Publish docs-only closure after scoped gates and verify its same-artifact Pages run, archive evidence and retire own publication/review worktrees and previews. No remaining feature/runtime implementation or owner Go. Root selected checkout is not synchronization target; preserve foreign bytes/index/journals.

@@ -77,6 +77,14 @@ fn siemens_system2_preserves_the_whole_procedure_and_stays_not_executable() {
     assert_eq!(procedure.merge_id, None);
     assert_eq!(procedure.steps.len(), 21);
     assert_eq!(procedure.unmodelled().count(), 0);
+    let metadata = knx_productdb::system2::project_tool_metadata(&code)
+        .expect("exact source-bound tool metadata, not an executable plan");
+    assert_eq!(metadata.table_address, 0x0400);
+    assert_eq!(metadata.steps.len(), procedure.steps.len());
+    assert!(matches!(
+        metadata.steps[16],
+        knx_productdb::system2::ProjectedStep::ToolTableReference { address: 0x0400 }
+    ));
     assert_eq!(procedure.steps[0], LoadStep::Connect);
     assert_eq!(
         procedure.steps[1],

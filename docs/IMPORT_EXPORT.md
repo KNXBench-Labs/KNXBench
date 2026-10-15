@@ -28,7 +28,9 @@ malformed archives and unexplained metadata/structural limits still fail.
 Both formerly red cases and all **16** explicit product opt-ins pass in the
 isolated correction tree. Ordinary synthetic classifier tests and Clippy pass;
 all seven semantic mutants fail their named regressions and restored-source
-ordinary product tests pass. Final P4-integrated acceptance remains pending.
+ordinary product887 tests pass. Final P4-integrated full51/51, isolated regular
+corpus152/152 and explicit product16/16 pass on `facdd62e`; publication is
+recorded [separately](evidence/p4-device-comparison-parameters-2026-10-15.json).
 There is no production importer, safety-bound, database-schema or compatibility
 change in this test-only prerequisite correction.
 

@@ -1,0 +1,459 @@
+{
+  "schemaVersion": 1,
+  "package": "owner-ui-feedback-p4-parameters",
+  "status": "accepted-publication-pending",
+  "decisionRecord": "docs/goals/ui-feedback-p1-p4.md",
+  "featureCommit": "519eff4b9cbb71e2a018f3e2a865ca1cf0b47f63",
+  "prerequisiteFixCommit": "a6cdfd9d775c77ade0cf1f08f89c6ef73db68a8a",
+  "runtimeTestedMerge": "facdd62e9f6f0766df6245367dbbe45194c7768a",
+  "integrationBase": "bee4f016ace9c3979884d8335513e366a0598ff5",
+  "storeMigration": false,
+  "realBusAccess": false,
+  "review": {
+    "kind": "separate-in-session-self-review",
+    "independentApproval": false,
+    "blockingFindingsClosed": true
+  },
+  "branchGate": {
+    "complete": true,
+    "success": true,
+    "wrapperExit": 0,
+    "expectedStages": 49,
+    "actualStages": 49,
+    "sourceFrozen": true,
+    "sourceHead": "fbdfbddd915b37aa0af5cfa5c8369721f3a6bbba",
+    "sourceFiles": 2808,
+    "diffSha256": "09bd0b1fe1be10a860c749982dba1cd653d6fe4221fb71a5da188c0f93d92fc5",
+    "stages": {
+      "build": 0,
+      "tsc": 0,
+      "flow_study": 0,
+      "theme_fixtures": 0,
+      "tsc_tsconfig_browser_tooling": 0,
+      "tsc_tsconfig_catalogue_fixtures": 0,
+      "tsc_tsconfig_communication_fixtures": 0,
+      "tsc_tsconfig_comparison_fixtures": 0,
+      "tsc_tsconfig_device_download_support": 0,
+      "tsc_tsconfig_dialogs_fixtures": 0,
+      "tsc_tsconfig_flow_study": 0,
+      "tsc_tsconfig_ga_members_download_fixtures": 0,
+      "tsc_tsconfig_history_fixtures": 0,
+      "tsc_tsconfig_instructions_fixtures": 0,
+      "tsc_tsconfig_notes_fixtures": 0,
+      "tsc_tsconfig_parameters_fixtures": 0,
+      "tsc_tsconfig_rename_fixtures": 0,
+      "tsc_tsconfig_structure_fixtures": 0,
+      "tsc_tsconfig_task_status_fixtures": 0,
+      "tsc_tsconfig_theme_fixtures": 0,
+      "tsc_tsconfig_ux_feedback": 0,
+      "vitest": 0,
+      "chromium": 0,
+      "cfg_playwright_catalogue_config": 0,
+      "cfg_playwright_communication_config": 0,
+      "cfg_playwright_device_download_support_config": 0,
+      "cfg_playwright_devices_config": 0,
+      "cfg_playwright_dialogs_config": 0,
+      "cfg_playwright_ga_members_download_config": 0,
+      "cfg_playwright_group_addresses_config": 0,
+      "cfg_playwright_instructions_config": 0,
+      "cfg_playwright_notes_config": 0,
+      "cfg_playwright_parameters_config": 0,
+      "cfg_playwright_reload_guard_config": 0,
+      "cfg_playwright_structure_config": 0,
+      "cfg_playwright_task_status_config": 0,
+      "cfg_playwright_updates_config": 0,
+      "cfg_playwright_ux_feedback_config": 0,
+      "repeat": 0,
+      "fmt": 0,
+      "clippy": 0,
+      "rust_tests": 0,
+      "py_tools": 0,
+      "check-layering": 0,
+      "check-headers": 0,
+      "check-anchors": 0,
+      "check-ledger": 0,
+      "check-corpus-gates": 0,
+      "diff_check": 0
+    },
+    "counts": {
+      "vitest": {
+        "passed": 3611,
+        "failed": 0
+      },
+      "chromium": {
+        "passed": 570,
+        "failed": 0
+      },
+      "repeat": {
+        "passed": 87,
+        "failed": 0
+      },
+      "cfg_playwright_catalogue_config": {
+        "passed": 10,
+        "failed": 0
+      },
+      "cfg_playwright_communication_config": {
+        "passed": 59,
+        "failed": 0
+      },
+      "cfg_playwright_device_download_support_config": {
+        "passed": 33,
+        "failed": 0
+      },
+      "cfg_playwright_devices_config": {
+        "passed": 29,
+        "failed": 0
+      },
+      "cfg_playwright_dialogs_config": {
+        "passed": 14,
+        "failed": 0
+      },
+      "cfg_playwright_ga_members_download_config": {
+        "passed": 23,
+        "failed": 0
+      },
+      "cfg_playwright_group_addresses_config": {
+        "passed": 19,
+        "failed": 0
+      },
+      "cfg_playwright_instructions_config": {
+        "passed": 15,
+        "failed": 0
+      },
+      "cfg_playwright_notes_config": {
+        "passed": 13,
+        "failed": 0
+      },
+      "cfg_playwright_parameters_config": {
+        "passed": 15,
+        "failed": 0
+      },
+      "cfg_playwright_reload_guard_config": {
+        "passed": 2,
+        "failed": 0
+      },
+      "cfg_playwright_structure_config": {
+        "passed": 8,
+        "failed": 0
+      },
+      "cfg_playwright_task_status_config": {
+        "passed": 27,
+        "failed": 0
+      },
+      "cfg_playwright_updates_config": {
+        "passed": 7,
+        "failed": 0
+      },
+      "cfg_playwright_ux_feedback_config": {
+        "passed": 55,
+        "failed": 0
+      },
+      "rust": {
+        "passed": 4570,
+        "failed": 0,
+        "ignored": 207
+      }
+    },
+    "originalAggregatorVerdict": false,
+    "reconciliation": "All full source-content/mode/path manifests and HEAD identical; template hashes exact. Original outer diff SHA changes solely through template add-N of two new sources, independently reconstructed against a temporary index. Original receipt retained unchanged.",
+    "controls": {
+      "changedSourceRejected": true,
+      "nonzeroStageRejected": true,
+      "missingStageRejected": true,
+      "missingProofRejected": true,
+      "changedTemplateInputsRejected": true
+    }
+  },
+  "finalMergedGate": {
+    "complete": true,
+    "success": true,
+    "wrapperExit": 0,
+    "expectedStages": 51,
+    "actualStages": 51,
+    "sourceFrozen": true,
+    "sourceHead": "facdd62e9f6f0766df6245367dbbe45194c7768a",
+    "sourceFiles": 2840,
+    "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stages": {
+      "build": 0,
+      "tsc": 0,
+      "flow_study": 0,
+      "theme_fixtures": 0,
+      "tsc_tsconfig_browser_tooling": 0,
+      "tsc_tsconfig_catalogue_fixtures": 0,
+      "tsc_tsconfig_communication_fixtures": 0,
+      "tsc_tsconfig_comparison_fixtures": 0,
+      "tsc_tsconfig_device_download_support": 0,
+      "tsc_tsconfig_dialogs_fixtures": 0,
+      "tsc_tsconfig_flow_study": 0,
+      "tsc_tsconfig_ga_members_download_fixtures": 0,
+      "tsc_tsconfig_history_fixtures": 0,
+      "tsc_tsconfig_instructions_fixtures": 0,
+      "tsc_tsconfig_notes_fixtures": 0,
+      "tsc_tsconfig_parameters_fixtures": 0,
+      "tsc_tsconfig_rename_fixtures": 0,
+      "tsc_tsconfig_structure_fixtures": 0,
+      "tsc_tsconfig_support_fixtures": 0,
+      "tsc_tsconfig_task_status_fixtures": 0,
+      "tsc_tsconfig_theme_fixtures": 0,
+      "tsc_tsconfig_ux_feedback": 0,
+      "vitest": 0,
+      "chromium": 0,
+      "cfg_playwright_catalogue_config": 0,
+      "cfg_playwright_communication_config": 0,
+      "cfg_playwright_device_download_support_config": 0,
+      "cfg_playwright_devices_config": 0,
+      "cfg_playwright_dialogs_config": 0,
+      "cfg_playwright_ga_members_download_config": 0,
+      "cfg_playwright_group_addresses_config": 0,
+      "cfg_playwright_instructions_config": 0,
+      "cfg_playwright_notes_config": 0,
+      "cfg_playwright_parameters_config": 0,
+      "cfg_playwright_reload_guard_config": 0,
+      "cfg_playwright_structure_config": 0,
+      "cfg_playwright_support_config": 0,
+      "cfg_playwright_task_status_config": 0,
+      "cfg_playwright_updates_config": 0,
+      "cfg_playwright_ux_feedback_config": 0,
+      "repeat": 0,
+      "fmt": 0,
+      "clippy": 0,
+      "rust_tests": 0,
+      "py_tools": 0,
+      "check-layering": 0,
+      "check-headers": 0,
+      "check-anchors": 0,
+      "check-ledger": 0,
+      "check-corpus-gates": 0,
+      "diff_check": 0
+    },
+    "counts": {
+      "vitest": {
+        "passed": 3626,
+        "failed": 0
+      },
+      "chromium": {
+        "passed": 574,
+        "failed": 0
+      },
+      "repeat": {
+        "passed": 87,
+        "failed": 0
+      },
+      "cfg_playwright_catalogue_config": {
+        "passed": 10,
+        "failed": 0
+      },
+      "cfg_playwright_communication_config": {
+        "passed": 59,
+        "failed": 0
+      },
+      "cfg_playwright_device_download_support_config": {
+        "passed": 33,
+        "failed": 0
+      },
+      "cfg_playwright_devices_config": {
+        "passed": 29,
+        "failed": 0
+      },
+      "cfg_playwright_dialogs_config": {
+        "passed": 14,
+        "failed": 0
+      },
+      "cfg_playwright_ga_members_download_config": {
+        "passed": 23,
+        "failed": 0
+      },
+      "cfg_playwright_group_addresses_config": {
+        "passed": 19,
+        "failed": 0
+      },
+      "cfg_playwright_instructions_config": {
+        "passed": 15,
+        "failed": 0
+      },
+      "cfg_playwright_notes_config": {
+        "passed": 13,
+        "failed": 0
+      },
+      "cfg_playwright_parameters_config": {
+        "passed": 15,
+        "failed": 0
+      },
+      "cfg_playwright_reload_guard_config": {
+        "passed": 2,
+        "failed": 0
+      },
+      "cfg_playwright_structure_config": {
+        "passed": 8,
+        "failed": 0
+      },
+      "cfg_playwright_support_config": {
+        "passed": 4,
+        "failed": 0
+      },
+      "cfg_playwright_task_status_config": {
+        "passed": 27,
+        "failed": 0
+      },
+      "cfg_playwright_updates_config": {
+        "passed": 7,
+        "failed": 0
+      },
+      "cfg_playwright_ux_feedback_config": {
+        "passed": 55,
+        "failed": 0
+      },
+      "rust": {
+        "passed": 4597,
+        "failed": 0,
+        "ignored": 207
+      }
+    }
+  },
+  "regularCorpus": {
+    "complete": true,
+    "success": true,
+    "exit": 0,
+    "sourceFrozen": true,
+    "sourceHead": "facdd62e9f6f0766df6245367dbbe45194c7768a",
+    "expected": 152,
+    "targets": 33,
+    "passed": 152,
+    "sourceFiles": 2840,
+    "networkIsolated": true,
+    "hardwareEnvironmentCleared": true
+  },
+  "extraProductCorpus": {
+    "complete": true,
+    "success": true,
+    "head": "facdd62e9f6f0766df6245367dbbe45194c7768a",
+    "exit": 0,
+    "expected": 16,
+    "passed": 16,
+    "targets": 6,
+    "sourceFrozen": true,
+    "networkIsolated": true,
+    "explicitScopes": "Gira:MDT",
+    "matrixOutputOutsideCorpusFilesystem": true
+  },
+  "parameterMutations": {
+    "complete": true,
+    "success": true,
+    "cases": [
+      {
+        "case": "bit-order",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "missing-attribution",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "final-plan-guard",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "device-project-swap",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "text-padding",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "signed-unknown",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "raw-retention",
+        "exit": 101,
+        "namedFailure": true
+      }
+    ],
+    "restored": true,
+    "postflight": [
+      {
+        "crate": "knx-core",
+        "exit": 0
+      },
+      {
+        "crate": "knx-productdb",
+        "exit": 0
+      }
+    ]
+  },
+  "corpusMutations": {
+    "complete": true,
+    "success": true,
+    "cases": [
+      {
+        "case": "refusal-not-counted",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "all-size-refusals-hidden",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "inclusive-member",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "inclusive-total",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "all-errors-hidden",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "old-projection-pin",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "old-full-pin",
+        "exit": 101,
+        "namedFailure": true
+      }
+    ],
+    "restored": true,
+    "ordinaryProductExit": 0
+  },
+  "visual": {
+    "languages": [
+      "en",
+      "de"
+    ],
+    "widths": [
+      1440,
+      400
+    ],
+    "productionSource": "facdd62e9f6f0766df6245367dbbe45194c7768a",
+    "inspected": true,
+    "limitations": "Local table/list scroll; inherited global achievement toast can overlap lower modal content. No claim of continuous device freshness."
+  },
+  "limits": [
+    "No additional device/image admission or universal ETS compatibility",
+    "Negative signed project parameters remain refused; unverified device patterns stay Unknown",
+    "No production resource guard relaxed"
+  ],
+  "publication": {
+    "status": "pending normal push and exact remote readback",
+    "upstreamJournalMerge": "70e3de01c4cdf4ba2fac90e9e106b53fedea494d",
+    "runtimeInputsMustMatch": "facdd62e9f6f0766df6245367dbbe45194c7768a"
+  },
+  "cleanup": "pending compact archive and owned worktree/scratch retirement"
+}

@@ -22,14 +22,13 @@ Devices has explicitly confirmed single/filtered-batch read-only comparison,
 progress/cancel, per-device failures and volatile tags. P3 content revisions
 invalidate old readings; identity is checked before memory. The 0701 address
 and association tables are decoded; all raw read ranges remain visible.
-Package 2's source candidate adds parameter name/reference/bit metadata and
-separate project/device values for supported numeric and text fields. Unknown,
-incomplete or overwritten fields keep an explicit reason and all raw bytes.
-Negative signed values and new image types are not admitted. Package 1 is
-published; package 2 prior full branch/merged and regular corpus gates pass.
-Two inherited product-corpus checks are corrected in a separate test-only
-prerequisite commit (targeted16/16 and ordinary ProductDB887 pass). Final combined
-full/corpus acceptance and publication remain pending.
+Named parameter rows show name/reference/bit metadata and separate project/device
+values for supported numeric and text fields. Unknown, incomplete or overwritten
+fields keep an explicit reason and all raw bytes. Negative signed project values
+and new image types are not admitted. Both P4 packages are accepted in source;
+combined full51/51 and corpus152/152+16/16 pass after the separate inherited
+corpus-prerequisite correction. This is not an Alpha11 artifact update.
+[Publication record](../evidence/p4-device-comparison-parameters-2026-10-15.json).
 [Use and limits](user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11),
 [contract](../contracts/device-comparison.md).
 

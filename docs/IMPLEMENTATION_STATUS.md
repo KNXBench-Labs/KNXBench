@@ -14,6 +14,20 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — **P4 both packages accepted; final combined source `facdd62e`**:
+  single/current-filter batch comparisons, session tags/P3 invalidation,
+  verified application identity, decoded address/association tables and named
+  parameter values from actual image bit attribution; unknowns and all raw bytes
+  stay explicit. Full51/51: Vitest3626, Chromium574, Rust4597 and repeated87 pass,
+  original15 configurations plus upstream support pass. Isolated corpus152/152
+  and product16/16 pass. Seven parameter + seven corpus semantic mutants caught;
+  self-review (not independent approval) and EN/DE1440/400 production images pass.
+  Inherited prerequisite fix `a6cdfd9d` changes tests/docs only. No production
+  admission/schema/limit or device-support extension, hardware access or release.
+  Alpha12 journal-only upstream preserves all consumed source bytes; runtime
+  acceptance remains bound to `facdd62e`, documentation delta checked separately.
+  [Acceptance/publication](evidence/p4-device-comparison-parameters-2026-10-15.json).
+
 - 2026-10-15 — **Corpus-prerequisite correction a6cdfd9d, integrated candidate / unpublished**:
   two failures reproduced on unchanged pre-P4 main. Matrix pins lag ADR-0126's
   v23 modelling, not an importer regression: independent XML counts predict

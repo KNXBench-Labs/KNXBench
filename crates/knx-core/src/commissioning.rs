@@ -10,6 +10,7 @@ pub mod domain_address;
 pub mod error_code;
 pub mod group_object_table;
 pub mod group_tables;
+pub mod legacy_group_tables;
 pub mod legacy_object_table;
 pub mod load_control;
 pub mod load_control_memory;

@@ -1,5 +1,15 @@
 # Architecture
 
+## Offline System-2 source images (15 October 2026 source)
+
+[ADR-0132](adr/0132-offline-source-images-do-not-grant-download-admission.md)
+introduces a separate library source-image entry using the existing product
+parameter/Dynamic evaluator. Core encodes legacy indexed associations; ProductDB
+selects explicit layouts and owns focused source-evidence validation. The existing
+public image/planner/transport route and native/product schemas are unchanged.
+This inference-bearing offline image is not executable admission, recovery proof
+or a new hardware support claim. [Contract](contracts/offline-download-system2-image.md).
+
 ## Offline download codec expansion (15 October 2026 source)
 
 [The first offline codec slice](contracts/offline-download-codecs.md) keeps pure

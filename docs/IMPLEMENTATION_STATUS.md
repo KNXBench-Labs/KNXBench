@@ -14,6 +14,16 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Exact-approved story `2026-10-15.4` publication variant accepted
+  on integration `bb2961aa`: story76, website24, tooling163 (one inherited skip),
+  Chromium46/46 and Firefox46/46; all44 actual public-build frames inspected.
+  Four visual contexts confirm all8 release nodes, explicit private/local KB and
+  public-data-provision wording, no overflow or outgoing requests. Five explicit-
+  root repository checks, reference validation, docs, matching approval and
+  release38-file build pass. Complete story/site inputs remain unchanged.
+  Main push, Pages and exact public HTML readback are not yet claimed.
+  [Publication acceptance](evidence/story-publication-2026-10-15.json).
+
 - 2026-10-15 — Story `2026-10-15.4` received explicit exact-digest owner
   publication approval. Approval, website pin and latest-only retirement are
   applied together; prior editions remain in Git. Content digest

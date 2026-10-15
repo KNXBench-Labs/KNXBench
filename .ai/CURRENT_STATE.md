@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:48
+- **Completed:** Exact-approved story2026-10-15.4 actual PUBLIC variant accepted on merge bb2961aa: Chromium46/46,Firefox46/46 and44 inspected frames, story76,website24,tools163(one inherited skip), references,five repository/docs, matching approval and38-file release build pass. Complete consumed74-event/twelve-chapter inputs frozen; all8 releases are real SVG nodes; owner editorial boundaries verified. New public publication-acceptance receipt, no private locators. Fresh upstream remains fbdfbddd; all upstream product runtime preserved.
+- **Pending/Next Steps:** Commit acceptance docs, fresh fetch and normal main push with exact remote readback; verify commit-bound Pages success and live HTML equality/digest, then final public evidence/handover, private archive and owned cleanup. Push/deployment not yet claimed; no further owner decision needed for this exact approved digest.
+- **Notes for Codex oder Claude:** Review and public-build acceptance are distinct from actual deployment. Preserve historical preview reports and immutable source cutoff2d4ec5f9. Root/foreign universal-support/P4 remain untouched; no root sync, bus, product release, subagents, vendor access or force push. Known mobile graph density and unmeasured WebKit/screen-reader remain disclosed.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 09:35
 - **Completed:** Owner explicitly approved exact story2026-10-15.4 digest081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8 for website cutover/Pages. New approval created with project-owner identity and actual timestamp; website pin changed, old edition/preview/approval retired only after Go. Feature release-check, story76, website24, public38-file build, docs/whitespace pass. Isolated fresh-main integration on fbdfbddd retains all P4/community runtime and both additive status/journal sets. Candidate content unchanged. No push/deploy yet.
 - **Pending/Next Steps:** Gate actual committed integration: story/site unit suites, release-check/published build, explicit-root repository/docs and Chromium/Firefox against built published story; compare published payload exact approved digest and screenshot/readback. Then fresh-main delta reconciliation, normal main push/readback, verify actual Pages deployment/public artifact, publication closure and task-owned retirement. No new Go required within this exact approval.

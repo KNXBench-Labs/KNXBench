@@ -1,0 +1,60 @@
+{
+  "schema": "knxbench-story-publication-acceptance/1",
+  "edition": "2026-10-15.4",
+  "story_sha256": "081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8",
+  "runtime_tested_commit": "bb2961aa2761f816abacbb7319dd39622c297764",
+  "upstream_retained": "fbdfbddd915b37aa0af5cfa5c8369721f3a6bbba",
+  "source_cutoff": "2d4ec5f9",
+  "actual_variant": "published website release build, not preview",
+  "gates": {
+    "story_unit": {
+      "tests": 76,
+      "exit": 0
+    },
+    "website_unit": {
+      "tests": 24,
+      "exit": 0
+    },
+    "tooling": {
+      "tests": 163,
+      "skipped": 1,
+      "exit": 0
+    },
+    "chromium": {
+      "checks": 46,
+      "failed": 0
+    },
+    "firefox": {
+      "checks": 46,
+      "failed": 0
+    },
+    "visual": {
+      "contexts": 4,
+      "screenshots_inspected": 44,
+      "events": 74,
+      "chapters": 12,
+      "release_nodes_per_context": 8,
+      "overflow": 0,
+      "outgoing_network_requests": 0
+    },
+    "release_check": 0,
+    "website_build": {
+      "files": 38,
+      "exit": 0
+    },
+    "repository_checks": 5,
+    "docs": 0
+  },
+  "input_manifest_unchanged": true,
+  "review": {
+    "critical": 0,
+    "important": 0,
+    "new_minor": 0,
+    "known_limitations": [
+      "Dense small guided-mobile graph labels; searchable and zoomable atlas and full text available.",
+      "No WebKit/Safari/native WebKitGTK or actual screen-reader certification."
+    ],
+    "visual_result": "Both engines render hero, chapters, evidence cards and atlas without newly observed layout regressions."
+  },
+  "publication_state": "approved and locally accepted; main push, Pages and live artifact not yet verified"
+}

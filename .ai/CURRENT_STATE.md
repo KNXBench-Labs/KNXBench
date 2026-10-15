@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 20:58
+- **Completed:** Phosphor CRT website PUBLISHED AND LIVE VERIFIED after owner commit/push Go. Source merged/gated d90b3d4b92a8c45fb63d6c56d64b7b6218993a82:23/23 frozen-source stages; website28/Story76/tooling163(1skip), Chromium394preview+416public, deterministic approved-artifact byte equality. Normal main push exact readback. Website38789580428 build/deploy success on exact SHA. Live root+36content files+manifest all38 hashes equal; canonical EN/DE/root/CSS/headlines match;124deployed-host Chromium checks and actual desktop/mobile rasters pass. Story/app/media/legal content unchanged. Receipt docs/evidence/phosphor-crt-publication-2026-10-15.json.
+- **Pending/Next Steps:** Publish docs-only closure after scoped gates and verify its same-artifact Pages run, archive evidence and retire own publication/review worktrees and previews. No remaining feature/runtime implementation or owner Go. Root selected checkout is not synchronization target; preserve foreign bytes/index/journals.
+- **Notes for Codex oder Claude:** Current original-layout green CRT revision60d8eb7a replaces initial diagram candidate; real four-direction rolls/pause/reduced-motion confirmed locally and live. Self-review, not independent/Firefox/WebKit/Orca approval. No product tag/release, subagents, vendor, hardware or user-container change. Closure/runtime evidence remain separately bound, not restamped as new runtime execution. Late accepted worker notices must not restart this delivered source.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 20:51
 - **Completed:** Owner explicit commit/push Go for reviewed CRT revision60d8eb7a received. Fresh origin/main6c870caf unchanged; own isolated publish/phosphor-crt-20261015 integrates approved feature conflict-free. Source comparison retains approved website bytes; only publication-status docs/handover added. Selected dirty root HEAD/index/foreign bytes protected. Normal main push invokes existing Pages workflow; no product release/Story/app/media mutation.
 - **Pending/Next Steps:** Run full frozen-source merged23stage gate and actual both-variant Chromium under shared leases. If green publish exact candidate normally, verify live remote ref and source-bound Website workflow, compare live public artifact bytes, close docs/evidence and retire owned previews/worktrees/scratch. No new Go required for this publication.

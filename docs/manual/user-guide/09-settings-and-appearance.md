@@ -150,7 +150,7 @@ ordinary motion level: Standard gives a 2.5-second left-to-right sweep and a
 The glint stays steady even with Glitch style. Off or OS reduced motion leaves
 the real status text static. It does not animate ordinary connection states,
 errors, results or decision prompts, and adds no separate setting. This needs
-a source build after Alpha 11; the existing screenshots show the released UI.
+a since Alpha 12; the existing screenshots show the released UI.
 
 **Motion by category** (since Alpha 11) sets toast
 notifications, achievement popups and the telegram Flow separately. Source builds
@@ -308,7 +308,7 @@ What achievements never do:
 
 They are stored per server, not per person, and only actions in the
 application window count, not the command line. Two windows counting at
-the same moment both count *(source build after Alpha 11; earlier builds
+the same moment both count *(since Alpha 12; earlier builds
 could lose one of two simultaneous steps)*
 ([known limitation §164](../../KNOWN_LIMITATIONS.md#164-achievements-are-per-installation-count-only-in-the-ui-and-can-lose-a-concurrent-increment)).
 

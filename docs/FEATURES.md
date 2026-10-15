@@ -1,12 +1,12 @@
-Last updated: 2026-10-15 03:21 CEST
+Last updated: 2026-10-15 14:29 CEST
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.11` |
-| Released baseline | `v0.1.0-alpha.11` |
-| Main-only | Newer than released baseline |
+| Source snapshot | `v0.1.0-alpha.12` |
+| Released baseline | `v0.1.0-alpha.12` |
+| alpha.12 | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
@@ -26,29 +26,29 @@ Last updated: 2026-10-15 03:21 CEST
 | MCP server | Read-only saved-file tools; opt-in rename writer from alpha.10 | alpha.6 |
 | Remote browser | Authenticated server; networking-dependent | alpha.6 |
 
-## Main-only interface additions
+## New in Alpha 12
 
-The universal support reporter is available in source after Alpha11; its branch
-runtime acceptance and subsequent integration/publication boundaries are recorded
-in the delivery index, not implied by the released baseline. See its
-[contract](contracts/universal-device-support.md).
-
+These additions are part of the Alpha 12 candidate. Release acceptance and actual
+artifact publication are recorded separately; [release scope](releases/alpha12.md)
+keeps their limits together.
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| Project versus real devices (P4, package 1) | Confirmed single/filtered batch, progress/cancel, session tags, verified application identity, decoded 0701 address/association tables and visible raw bytes; named parameters pending package 2 ([guide](manual/user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11)) | Main-only (15 October 2026 source; tables package) |
-| Per-part pending programming | Adr/App/Par/GA chips and Pending only filter, explorer dot, same-step edit/undo tracking, full/partial/address settlement and undoable logged manual marks; project belief, not live comparison; recovered snapshot undo is conservative ([guide](manual/user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11)) | Main-only (15 October 2026 source) |
-| Active task text shimmer | Readable slow sweep plus pause on existing running-work status text; motion/accessibility gates; no fabricated progress ([contract](contracts/task-status-shimmer.md)) | Main-only (14 October 2026 source) |
-| Resume after reload | A reloaded or reopened web tab shows the project the server still holds, with a notice naming unsaved changes; read-only, no reopen ([ADR-0127](adr/0127-web-workbench-resumes-the-open-project.md)) | Main-only (14 October 2026 source) |
-| Overwrite question | Save As onto an existing file asks first; the server refuses an unconfirmed replacement (`409 fileExists`); the previous state stays in the file's history ([Projects](manual/user-guide/02-projects.md#saving)) | Main-only (14 October 2026 source) |
-| Explorer structure | Chevrons that turn, counts on closed branches, Expand/Collapse all, structure lines that grow and pulse; own motion category "Structure lines" ([user interface](manual/user-guide/01-user-interface.md)) | Main-only (14 October 2026 source) |
-| Mirrored toast entry | Every toast enters with its exit animation played backwards; motion settings apply as before | Main-only (14 October 2026 source) |
+| Project versus real devices (P4, package 1) | Confirmed single/filtered batch, progress/cancel, session tags, verified application identity, decoded 0701 address/association tables and visible raw bytes; named parameters pending package 2 ([guide](manual/user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11)) | alpha.12 |
+| Universal device-support reports | Offline without project/catalogue/plan; optional separately consented fixed read-only diagnostics, local review/ZIP/manual handoff; no programming unlock | alpha.12 |
+| Per-part pending programming | Adr/App/Par/GA chips and Pending only filter, explorer dot, same-step edit/undo tracking, full/partial/address settlement and undoable logged manual marks; project belief, not live comparison; recovered snapshot undo is conservative ([guide](manual/user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11)) | alpha.12 |
+| Active task text shimmer | Readable slow sweep plus pause on existing running-work status text; motion/accessibility gates; no fabricated progress ([contract](contracts/task-status-shimmer.md)) | alpha.12 |
+| Resume after reload | A reloaded or reopened web tab shows the project the server still holds, with a notice naming unsaved changes; read-only, no reopen ([ADR-0127](adr/0127-web-workbench-resumes-the-open-project.md)) | alpha.12 |
+| Overwrite question | Save As onto an existing file asks first; the server refuses an unconfirmed replacement (`409 fileExists`); the previous state stays in the file's history ([Projects](manual/user-guide/02-projects.md#saving)) | alpha.12 |
+| Explorer structure | Chevrons that turn, counts on closed branches, Expand/Collapse all, structure lines that grow and pulse; own motion category "Structure lines" ([user interface](manual/user-guide/01-user-interface.md)) | alpha.12 |
+| Mirrored toast entry | Every toast enters with its exit animation played backwards; motion settings apply as before | alpha.12 |
 
 ## Implemented — Projects
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
 | Project wizard | Structured project creation | alpha.6 |
-| Native storage | Open/save `.knxdb` | alpha.6 |
+| Native storage | Open/save `.knxdb`; schema 16 in alpha.12, older readers refuse upgraded files | alpha.6 |
+| Portable product sources | Native saves retain manufacturer bytes; Docker catalogue persists under mounted data; older files need matching sources once | alpha.12 |
 | Save As | Independent project copies | alpha.6 |
 | Browser export | Download `.knxdb` | alpha.6 |
 | Autosave | Existing project files | alpha.6 |
@@ -79,6 +79,7 @@ in the delivery index, not implied by the released baseline. See its
 | Group-address picker | Link row: type to filter by address, name or DPT; marks a type difference, never hides (#8) | alpha.11 |
 | Tree indentation | Address rows by level (capped at 12); channel groups in the object table (#9) | alpha.11 |
 | Object table | Channels/search/filter/sort | alpha.7 |
+| Literal batch naming | Group-address prefix/suffix; preview, confirmation, one undo step | alpha.12 |
 | Module-instance values | Stored per instance; read-only | alpha.8 |
 | Parameters | Validated edits; dynamic evaluation | alpha.6 |
 | Parameter tabs | Editor/diagnostics/manufacturer fields | alpha.6 |
@@ -103,7 +104,7 @@ in the delivery index, not implied by the released baseline. See its
 | Project comparison | Two-project; before/after values | alpha.6 |
 | ETS comparison | Import-based `.knxproj` comparison | alpha.6 |
 | Support-gap analysis | Read-only; disclosure preview | alpha.6 |
-| Programming refusal help | EN/DE reason/action, local details, docs/unsent issue/mail before any plan; no new device support | Main-only |
+| Programming refusal help | EN/DE reason/action, local details, docs/unsent issue/mail before any plan; no new device support | alpha.12 |
 | Evidence ZIP | Consented export; manual submission | alpha.6 |
 | Offline AP1 diagnostics | Unresolved steps; no execution | alpha.7 |
 | Original import report | Kept in native files; local download | alpha.10 |
@@ -140,8 +141,9 @@ in the delivery index, not implied by the released baseline. See its
 | Notes on objects | Communication objects as targets; tab-close prompt for drafts | alpha.11 |
 | Installation instructions | Device tab; imported hints, review-first | alpha.10 |
 | Checked parameter editor | Time count, integer slider; source-checked | alpha.10 |
-| Catalogue update with preview | Backup before install; restore listed backups | alpha.10 |
+| Catalogue update with preview | Every package uses review; backup before install, restore/delete listed backups (alpha.12) | alpha.10 |
 | Project information | Modeled facts; read-only | alpha.10 |
+| Stored bus access | Redacted by default; reveal one saved endpoint, no connection | alpha.12 |
 | Recorded device state | Load belief; read-only, no bus | alpha.10 |
 
 ## Implemented — Server and monitoring
@@ -191,11 +193,11 @@ in the delivery index, not implied by the released baseline. See its
 | MCP name-recipe writer | Opt-in; group-address prefix/suffix after preview and confirmation | alpha.10 |
 | Accessibility | Full screen-reader validation missing | alpha.6 |
 
-## In progress — Unpublished
+## Implemented — Project organisation
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| KNX Functions | Native editing; acceptance pending | Local-only |
+| KNX Functions | Room-owned named groups of existing group addresses; native edit/undo, bounded schema-23 mapping | alpha.12 |
 
 ## Planned — Later scope
 

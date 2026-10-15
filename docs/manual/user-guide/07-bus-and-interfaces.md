@@ -346,7 +346,7 @@ replaces the old one and clears its rows.
 
 The newer P4 **Devices** view adds confirmed single/filtered-batch comparison,
 session tags and decoded tables. See [project versus devices](05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11).
-It is source-only after Alpha 11; package 1 leaves parameters as raw bytes.
+It is included in Alpha 12; package 1 leaves parameters as raw bytes.
 The existing Device checks result also uses the shared decoded-table renderer.
 
 
@@ -395,7 +395,7 @@ changes, the project does not. Saving or exporting a project file is something e
    device without an individual address shows the button disabled with the reason. While
    a plan is being prepared or a download runs, the selection is not switched; if the
    tab cannot tell whether a download is running, it says so and leaves the choice to
-   you. *(Source build after Alpha 11, issue #18:)* the requested device is named at
+   you. *(Since Alpha 12, issue #18:)* the requested device is named at
    once — "Requested from Devices: … Checking whether a download is running before
    selecting it" — and selected as soon as that check answers; the tab also says when it
    is still checking the download status or which devices it can prepare, and offers
@@ -454,7 +454,7 @@ that the request names the device it was shown.
 
 ### When preparation or starting is refused
 
-*Source implementation after Alpha 11:* the selected device or failed request shows
+*Since Alpha 12:* the selected device or failed request shows
 **Why this request cannot proceed**, a plain reason and a matching next action.
 This works before a download plan or report exists. Missing product data directs
 you to the exact application package in the catalogue; configuration errors ask

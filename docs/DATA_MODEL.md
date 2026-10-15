@@ -1,5 +1,17 @@
 # Data model
 
+## Alpha 12 model and storage boundary
+
+The release candidate uses **model/native schema 16**: ordered room-owned
+Functions (15) and file-owned, compressed/hash-checked manufacturer sources (16).
+Manufacturer bytes are retained context, not copied into every history snapshot;
+notes/instructions and undo retain their existing semantics. Product data remains
+in its dedicated database, now schema **23** for verified text-parameter references.
+The P3 marks reuse existing commissioning flags, not another persisted state model.
+Alpha 11 and earlier refuse upgraded native files; keep independent pre-upgrade
+project and catalogue copies. [Release upgrade](releases/alpha12.md#upgrade-independent-backups-first).
+Older dated foundation sections below describe their original delivery boundary.
+
 ## Pending-programming belief (P3)
 
 [ADR-0129](adr/0129-per-part-pending-programming.md) activates the existing

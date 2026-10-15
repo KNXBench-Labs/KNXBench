@@ -1,5 +1,15 @@
 # Compatibility
 
+## Alpha 12 candidate compatibility boundary
+
+Native/model schema is **16**, dedicated product schema **23**. Independent
+pre-upgrade project/catalogue backups are required; Alpha 11 and earlier refuse
+upgraded native files. New Functions, product-source portability, P3 marks,
+read-only comparison and support evidence do not imply new physical-device
+verification. System-2/MV-0025 and little-endian downloads remain refused;
+ETS schema22, nested sub-module object IDs, Secure and ETS export are not solved.
+[Release scope and upgrade](releases/alpha12.md).
+
 ## Universal support evidence (15 October 2026 source)
 
 [The universal reporter](contracts/universal-device-support.md) admits unknown

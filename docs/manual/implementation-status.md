@@ -7,8 +7,8 @@ does not exist at all, area by area across the whole application.
 
 The detailed inventory retains its **8 October 2026** source audit and dated
 follow-ups. The current public snapshot is
-[`v0.1.0-alpha.11`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11),
-not a promise that every later source feature is bundled.
+[Alpha 12 candidate](../releases/alpha12.md), prepared on 15 October 2026;
+artifact publication is a separate recorded gate, not implied by a version bump.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
 
@@ -38,11 +38,10 @@ unknown, established refusal/support, prior run scope and a user's functional
 answer. Installation identifiers, configuration values and raw/vendor assets are
 excluded; an optional bounded numeric source projection needs rights confirmation.
 This does not enable System-2 programming or promote a device to Verified.
-Implementation acceptance/publication is tracked in the delivery index; source
-build only, not an Alpha11 binary feature.
+Implementation acceptance/publication is tracked in the delivery index; included in Alpha 12, not retroactively in an Alpha 11 binary.
 [Contract](../contracts/universal-device-support.md).
 
-## Diagnostic navigation selection (14 October 2026 source, main-only)
+## Diagnostic navigation selection (Alpha 12)
 
 Selecting the active Bus monitor or Log sidebar entry keeps the same workspace,
 including its tab/input or filter, rather than returning to the previous project
@@ -51,7 +50,9 @@ retain their separate overlay/window actions. No protocol or storage change.
 [User guide](user-guide/01-user-interface.md#the-navigation-pane),
 [contract](../contracts/diagnostic-sidebar-selection.md).
 
-## Per-part programming marks (15 October 2026 source, main-only)
+<a id="per-part-programming-marks-15-october-2026-source-main-only"></a>
+
+## Per-part programming marks (Alpha 12)
 
 Devices shows pending-only Adr/App/Par/GA chips, a Pending only filter and an
 explorer dot. Properties lists each part and offers undoable, logged manual
@@ -66,7 +67,9 @@ P4 live-device comparison; CLI/external work needs manual reconciliation.
 [Use and limits](user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11),
 [ADR-0129](../adr/0129-per-part-pending-programming.md).
 
-## Community Hall of Fame link (14 October 2026 source, main-only)
+<a id="community-hall-of-fame-link-14-october-2026-source-main-only"></a>
+
+## Community Hall of Fame link (Alpha 12)
 
 About links the public GitHub document instead of bundling its JSON snapshot.
 The Docker frontend no longer needs `docs/community` in its app-only build
@@ -75,7 +78,9 @@ local/offline participant list. Repository scoring and award automation are
 unchanged. [User guide](user-guide/01-user-interface.md),
 [contract](../contracts/community-recognition.md#about-dialog-issue-19-owner-amendment-14-october-2026).
 
-## Active task status shimmer (14 October 2026 source, main-only)
+<a id="active-task-status-shimmer-14-october-2026-source-main-only"></a>
+
+## Active task status shimmer (Alpha 12)
 
 Existing active-work text gains a slow monochrome sweep followed by a quiet
 pause; real text, counters and progress bars remain. It stops for results,
@@ -86,7 +91,9 @@ imported-theme contrast are not certified by this cosmetic change.
 [Use and controls](user-guide/01-user-interface.md#active-task-status-text-14-october-2026-source-main-only),
 [contract and boundaries](../contracts/task-status-shimmer.md).
 
-## Pre-plan programming support help (14 October 2026 source, main-only)
+<a id="pre-plan-programming-support-help-14-october-2026-source-main-only"></a>
+
+## Pre-plan programming support help (Alpha 12)
 
 The download tab shows a reason and next action before any plan or report exists,
 with EN/DE instructions, the support-gap issue form and an unsent email draft.
@@ -220,6 +227,17 @@ Stable builds exclude prereleases; alpha/beta builds include newer prereleases.
 No automatic installation or upgrade-compatibility approval is implied. Offline
 and rate-limited checks leave editing usable. Included in Alpha.10; Alpha.9 does not have it. [Contract and privacy](../contracts/RELEASE_NOTIFICATIONS.md),
 [verified source scope](../evidence/release-notifications-2026-10-11.json).
+
+## Alpha 12 release candidate boundary (15 October 2026)
+
+[Alpha 12](../releases/alpha12.md) includes the delivered post-Alpha 11 work:
+portable native product sources, per-part programming marks, read-only comparison,
+universal support reports, Functions, revision-bound workbench writes and the
+reported UI repairs. Native/model schema **16** and product schema **23** require
+independent pre-upgrade project/catalogue backups. Alpha 11 and earlier refuse
+upgraded native files. New artifact, registry and website publication results
+will be recorded only after actual verification; no new hardware compatibility
+or native screen-reader acceptance is implied.
 
 ## Alpha.11 release boundary (13 October 2026)
 
@@ -493,7 +511,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Product data ingested from inside a `.knxproj` | ✅ Implemented | The reference project's 4 manufacturers and 12 application programs ingest completely |
-| A `.knxdb` carries its application programs (store schema 16) | ✅ Local source package | Saved, Save As and the browser export embed the imported manufacturer files (compressed, hash-checked); opening reinstalls missing ones into the product database, so a Docker rebuild or another computer keeps device parameters. An older file names what is missing and offers **Restore from the original .knxproj…** (hash-matched, project untouched, no password needed) — issue #21, [ADR-0128](../adr/0128-native-project-files-carry-their-manufacturer-files.md), [§183](../KNOWN_LIMITATIONS.md#183-a-knxdb-saved-before-store-schema-v16-does-not-carry-its-application-programs) |
+| A `.knxdb` carries its application programs (store schema 16) | ✅ Included in Alpha 12 | Saved, Save As and the browser export embed the imported manufacturer files (compressed, hash-checked); opening reinstalls missing ones into the product database, so a Docker rebuild or another computer keeps device parameters. An older file names what is missing and offers **Restore from the original .knxproj…** (hash-matched, project untouched, no password needed) — issue #21, [ADR-0128](../adr/0128-native-project-files-carry-their-manufacturer-files.md), [§183](../KNOWN_LIMITATIONS.md#183-a-knxdb-saved-before-store-schema-v16-does-not-carry-its-application-programs) |
 | Standalone `.knxprod` at master data scheme 11 or 20 | ✅ Implemented | Four real files, content-addressed, idempotent re-install — [Devices and products](user-guide/05-devices-and-products.md) |
 | Legacy ETS3 `.vd3`/`.vd4`/`.vd5` product databases, offline use (web, CLI) | 🟡 Partial or experimental | The real `.vd3` and `.vd4` import completely; the real Siemens `.vd5` (88 programs) imports except its `string`/`long enum` parameters; password dialog and one remembered password; download plans from the file's own load procedure (untested: never run on a device); no DPTs yet — [Devices and products](user-guide/05-devices-and-products.md#old-ets3-product-databases-vd3-vd4-vd5), [ADR-0094](../adr/0094-legacy-exim-product-files.md) |
 | Standalone `.knxprod` at schemes 12, 13, 14 and exact-namespace 21 | 🟡 Partial or experimental | Synthetic tests and the passing read-only corpus matrix verify parser/persistence behavior, not full manufacturer semantics |
@@ -520,7 +538,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Create/delete and address/reference validation | ✅ Implemented | Numeric duplicate/still-linked rules; display names may repeat; a range heading's **+** creates in that range with the next free address suggested (issue #20, source build after Alpha 11) — [Working with group addresses](user-guide/04-group-addresses.md#creating-an-address-right-in-its-range) |
+| Create/delete and address/reference validation | ✅ Implemented | Numeric duplicate/still-linked rules; display names may repeat; a range heading's **+** creates in that range with the next free address suggested (issue #20, Alpha 12) — [Working with group addresses](user-guide/04-group-addresses.md#creating-an-address-right-in-its-range) |
 | Individual group-address name editing through Properties, F2/context menu | ✅ Current source, newer than alpha.6 | Name-only, all installations, guarded revision and exact undo/native history; [naming contract](../contracts/project-name-editing.md) |
 | Choosing free, two-level or three-level style when the project is created | ✅ Implemented | Initial display/address structure; the next row describes changing it later |
 | Changing the style afterwards | ✅ Implemented | On the Project node in the properties pane, undoable |

@@ -100,7 +100,11 @@ different project device programmed.
 A device write is not an undo step. Undoing an earlier edit after programming
 makes its affected part pending rather than claiming the old value is on the
 device. Native Save/Open and recovered working history preserve the marks and
-undo behavior without a storage migration.
+undo behavior without a storage migration. Recovered history uses whole
+snapshots: after a later device write, undoing one can conservatively show
+additional pending parts even where their values did not change. This is not
+proof of a device difference. Direct DPT/name edits do not add marks; do not
+repeat a physical write merely to tidy this conservative project status.
 
 For work done outside the server workbench (ETS, the separate CLI or another
 tool), use **Mark as programmed** or **Mark as not programmed** in Properties.

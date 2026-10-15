@@ -14,7 +14,7 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-15 — Owner UI feedback P3 source candidate ([goal](goals/ui-feedback-p1-p4.md),
+- 2026-10-15 — Owner UI feedback P3 delivered in source after Alpha 11 ([goal](goals/ui-feedback-p1-p4.md),
   [ADR-0129](adr/0129-per-part-pending-programming.md)): existing loaded flags
   follow edits in the same undo step and server full/partial/address write
   outcomes outside undo history. The Devices Programming column shows pending
@@ -37,9 +37,15 @@ fragment aliases and update this index. Do not rewrite previous results.
   Native Rust opt-ins remain reported separately (204 ignored); the earlier
   OriginalData sweep passes 149/149. Python runs 123 tests with one inherited skip.
   Production EN/DE screenshots at 1440/400 px are visually inspected. Fresh-main
-  merged acceptance/publication remain pending at this checkpoint.
+  merge `f35d9bda` passes all 52 stages on an unchanged 2787-file manifest:
+  Rust 4553/0 (205 opt-ins ignored), Vitest 3580/259 files, default browser560,
+  fifteen production configs319, repeats57, Python148/one inherited skip and
+  OriginalData-marked ignored sweep150/150 in33 targets, network-isolated.
+  All compiler/architecture/header/anchor/ledger/corpus/docs/diff checks pass.
+  Recovered snapshot undo deliberately invalidates old clean claims
+  conservatively; additional pending parts do not prove actual device differences.
+  Runtime acceptance, not a hardware test, release or native-WebKit certification.
   [Evidence and boundaries](evidence/p3-pending-programming-2026-10-15.json).
-  This entry is not yet a publication claim.
   [Operating guide](manual/user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11).
 
 - 2026-10-14 — Measured web-test tooling: a maintained Linux runner

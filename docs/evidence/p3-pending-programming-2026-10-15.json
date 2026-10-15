@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "owner-ui-feedback-p3",
-  "status": "branch-accepted-merged-gate-pending",
+  "status": "runtime-accepted-publication-pending",
   "decisionRecord": "docs/goals/ui-feedback-p1-p4.md",
   "architecture": "docs/adr/0129-per-part-pending-programming.md",
   "storeMigration": false,
@@ -33,7 +33,7 @@
       "themes": ["porcelain", "graphite"],
       "server": "development",
       "visuallyInspected": true,
-      "limits": "Production screenshots and final-source gates remain pending."
+      "limits": "Historical development-server check; later production/merged acceptance is recorded separately below."
     },
     "documentationCheck": "passed; local targets, image descriptions and chapter chain",
     "securityScan": "no added-line findings for secrets, dynamic code, shell injection, unsafe deserialization or raw HTML"
@@ -86,13 +86,37 @@
     "visualLimits": "At 400 px the wide table scrolls locally; not every chip is visible at the initial horizontal position. Existing transient notifications can overlap lower Inspector controls.",
     "preflight": "Original exit 4 refused before tests because the generated ts-rs banner exceeded the handwritten limit; narrow canonical-directory/banner correction, three negative/positive controls and actual generation equality verified. Regular repository header gate unchanged."
   },
-  "mergedGate": null,
+  "mergedGate": {
+    "status": "passed",
+    "sourceCommit": "f35d9bda95b87b91899ab3516c471f313ae1335b",
+    "upstreamParent": "19b506a6eb73de4704ec1cd422ade9921285d34c",
+    "featureParent": "19019348cc4e3bd139d147c940a757048787cd0c",
+    "stageCount": 52,
+    "allStageExitsZero": true,
+    "inputsFrozen": true,
+    "sourceFiles": 2787,
+    "sourceManifestSha256": "1b91434bb8da94d3c5384458e3dc92fe3275b2ddfc62afb5826476c6f33a28cd",
+    "rustPassed": 4553,
+    "rustIgnored": 205,
+    "vitestPassed": 3580,
+    "defaultBrowserPassed": 560,
+    "productionConfigs": 15,
+    "productionBrowserPassed": 319,
+    "repeatedBrowserPassed": 57,
+    "pythonRun": 148,
+    "pythonSkipped": 1,
+    "originalDataSweep": { "passed": 150, "expected": 150, "targets": 33, "networkIsolated": true },
+    "productionImagesVisuallyInspected": 8,
+    "temporaryCorpusLinksRemoved": true,
+    "scope": "Full RUST=1/PY=1 template, fifteen production configs, repeats, fresh-main guard and OriginalData-marked ignored sweep. Not separate product-matrix, hardware or native-WebKit certification."
+  },
   "publication": null,
   "boundaries": [
     "Project belief, not fresh device synchronization or universal ETS compatibility",
     "P4 comparison is not implemented",
     "No protocol/safety gate relaxation or real hardware operation",
     "CLI/external programming requires explicit manual reconciliation in the editor",
+    "Recovered snapshot undo after a later write can conservatively show extra pending parts, not a verified device difference",
     "Native persistence failure is logged, not reported as a successful save",
     "The earlier development-server timing samples are diagnostic only"
   ]

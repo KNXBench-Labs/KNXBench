@@ -54,9 +54,10 @@ legal/privacy pages stay static. No animation needed to read or navigate.
 Actual-browser recipes: `tests/verify-headlines.js`, `tests/verify-phosphor.js`,
 `tests/verify-roll-directions.js`. The direction recipe uses controlled RNG values
 against real WAAPI animations, not guessed randomness or a fake animation clock.
-Owner commit/push approval was received on15October2026. Default builds remain
-private previews; public publication is verified separately through Pages and
-live artifact readback. See `docs/WEBSITE.md` for the current delivery record.
+Owner commit/push approval was received on15October2026; this revision is now
+published at knxbench.com with successful Pages and live byte/browser readback.
+Default builds remain private previews. See `docs/WEBSITE.md` and its publication
+receipt for exact source-bound verification; the approved Story stays unchanged.
 
 ## Release build and deployment
 

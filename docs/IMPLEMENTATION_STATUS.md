@@ -14,6 +14,15 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Original-layout phosphor CRT website **published and verified**.
+  Owner-approved revision60d8eb7a integrated asd90b3d4b; Pages38789580428 build/deploy
+  success. Merged23/23 source-frozen stages: website28, Story76, tooling163(1skip),
+  Chromium394preview+416public-variant checks. Live root+36content files+manifest
+  equal accepted bytes, canonical EN/DE/CSS/headline readback equal;124deployed-host
+  Chromium checks pass. Story/application/media/legal content unchanged; no product
+  release/hardware or selected-root synchronization. In-session self-review only.
+  [Publication receipt](evidence/phosphor-crt-publication-2026-10-15.json).
+
 - 2026-10-15 — Owner-revised private website: added installation diagram removed,
   original screenshot-first layout restored, green Story-style headings/CRT palette
   and independently random horizontal/vertical rolling glyphs. Website28/Story76,

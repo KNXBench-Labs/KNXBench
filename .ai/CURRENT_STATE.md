@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 13:40
+- **Completed:** Owner-requested inherited corpus fixes committed separately as a6cdfd9d775c and integrated additively into P4. Proven v23 modelling delta465/463/463/157 with41 unchanged table counts; strict matrix passes. Standard-only nesting census accounts105=103+1+1 with unchanged row-change counter on refusal, no hidden errors. Product16/16,ordinary ProductDB887/0,7 named semantic mutants+byte-exact restore,Clippy,docs+five repo gates pass. No production/frontend/schema/limit changes versus previously accepted P4 merge788974e7. Both histories retained; separate in-session review closed,not independent approval.
+- **Pending/Next Steps:** Freeze final combined merge and run full maintained template RUST/PY plus required15 and new support config, isolated regular152 and explicit16 product corpus; inspect final screenshots or prove complete UI-input equality to already inspected merge; final evidence/docs closure,normal main push/readback and owned cleanup. P4 not yet pushed; no owner Go needed.
+- **Notes for Codex oder Claude:** Original red baseline and failed complete runs retained,not relabelled. Fix tree p4-corpus-fix-20261015; final tree p4-parameters-merge-20261015; all build/evidence profile scratch/p4-parameters-20261015. Shared root/foreign work untouched; no bus/subagents/vendor/release/deploy. Product-corpus skill now records host-scope/granularity and typed-refusal rules.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 13:33
+- **Completed:** Owner-authorized prerequisite correction for P4 inherited product-corpus reds in owned p4-corpus-fix-20261015 from bee4f016. v22/current matrix probes plus independent115/113 raw XML census prove exactly5 v23 aggregate deltas and41 unchanged table counts; pins updated only for ADR0126 retirement. Nesting census now counts exact standard-size refusal and verifies no database row changes;105=103 installs+1 duplicate+1 refusal,1678 modules/0 nested in admitted subset. Targeted16/16 product opt-ins,synthetic classifier cases,Clippy pass; no production source,limits,profile or schema change.
+- **Pending/Next Steps:** Seven semantic mutants detected; byte-exact restoration and ordinary product postflight887/0 pass. Finish repository checks, commit this fix separately, merge into owned P4 integration, final full template+regular/explicit corpus gates then publication/readback/evidence/cleanup. P4 not yet pushed. No owner Go needed.
+- **Notes for Codex oder Claude:** Original failures/initial incomplete-scope Python census retained privately, not relabelled as green. Only tests+docs change here. Shared root and foreign work untouched; no bus/subagents/vendor/release/deploy. Scratch p4-parameters-20261015 holds exact cause/delta proofs and earlier accepted merge51/51+OriginalData152/152; later final source needs its own acceptance.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 13:14
 - **Completed:** Actual P4 package2 merge788974e7 full template51/51 accepted with frozen inputs: Vitest3626, Chromium574, Rust4592, repeated87; original15 extra configs plus new upstream support config pass. Network-isolated OriginalData152/152 in33 targets passes. Actual merged EN/DE1440/400 parameter screenshots inspected; known global toast overlap retained. Explicit product opt-ins completed14/16, NOT accepted: matrix projected commitment mismatch and dynamic nested-module installer SizeLimit. Sources unchanged throughout.
 - **Pending/Next Steps:** Push remains BLOCKED by two inherited additional product-corpus failures. Unmodified upstream bee4f016 reproduction COMPLETED: both named tests fail with exactly the same matrix actual/expected commitments and same SizeLimit member as P4 merge. Baseline source/status clean; private signature-equivalence verdict saved. No active reproduction worker. Resolve the pre-existing corpus issue in a separate scoped fix before claiming a full pass; do not repin or enlarge limits blindly. Publication/readback/archive/cleanup remain pending.

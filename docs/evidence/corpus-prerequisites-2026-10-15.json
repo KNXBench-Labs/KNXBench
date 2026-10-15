@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "package": "p4-inherited-corpus-prerequisites",
+  "status": "targeted-accepted-final-integration-pending",
+  "fixCommit": "a6cdfd9d775c77ade0cf1f08f89c6ef73db68a8a",
+  "base": "bee4f016ace9c3979884d8335513e366a0598ff5",
+  "cause": "ADR-0126 schema-v23 typed attributes left matrix pins stale; broad corpus nesting census assumed standard admission",
+  "matrix": {
+    "changedAggregateLeaves": [
+      {
+        "path": "/isolation_report_totals/unknown_count",
+        "before": 24639,
+        "after": 24174
+      },
+      {
+        "path": "/shared_final_database_counts/ingest_unknown",
+        "before": 24911,
+        "after": 24448
+      },
+      {
+        "path": "/shared_final_database_counts/package_install_unknown",
+        "before": 10023,
+        "after": 9866
+      },
+      {
+        "path": "/shared_installed_report_totals/unknown_count",
+        "before": 24513,
+        "after": 24050
+      },
+      {
+        "path": "/shared_successful_attempt_report_totals/unknown_count",
+        "before": 24639,
+        "after": 24174
+      }
+    ],
+    "otherTableCountsUnchanged": 41,
+    "packageOutcomesUnchanged": true,
+    "independentXmlCounts": {
+      "instances": 115,
+      "uniquePackages": 113,
+      "programBlobs": 302,
+      "removedIsolatedUnknownRows": 465,
+      "removedUniquePackageReportRows": 463,
+      "removedSharedIngestUnknownRows": 463,
+      "removedSharedDistinctBlobKeys": 463,
+      "removedSharedSnapshotRows": 157,
+      "uniquePackageOccurrences": 35497,
+      "occurrencesByHost": {
+        "ComObjectRef": 33124,
+        "Channel": 723,
+        "ParameterSeparator": 686,
+        "ParameterBlock": 964
+      }
+    }
+  },
+  "nestingCensus": {
+    "discovered": 105,
+    "installed": 103,
+    "duplicates": 1,
+    "standardSizeRefusals": 1,
+    "moduleRows": 1678,
+    "nestedModuleRows": 0,
+    "semanticScope": "standard-admitted inputs only",
+    "refusalRowChanges": 0
+  },
+  "targetedProductCases": 16,
+  "ordinaryProductTests": 887,
+  "mutationEvidence": {
+    "complete": true,
+    "success": true,
+    "cases": [
+      {
+        "case": "refusal-not-counted",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "all-size-refusals-hidden",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "inclusive-member",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "inclusive-total",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "all-errors-hidden",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "old-projection-pin",
+        "exit": 101,
+        "namedFailure": true
+      },
+      {
+        "case": "old-full-pin",
+        "exit": 101,
+        "namedFailure": true
+      }
+    ],
+    "restored": true,
+    "ordinaryProductExit": 0
+  },
+  "review": {
+    "kind": "separate-in-session-self-review",
+    "independentApproval": false,
+    "blockingFindingsClosed": true
+  },
+  "productionSourcesChanged": false,
+  "limitsChanged": false,
+  "realBusAccess": false,
+  "publication": "pending"
+}

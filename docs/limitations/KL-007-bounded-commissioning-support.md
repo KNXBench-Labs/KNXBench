@@ -6,6 +6,18 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Session device comparison (P4 source after Alpha 11)
+
+Tags are volatile observations, not monitored device state. Relevant project
+edits invalidate them through P3 revisions. Decoding needs verified table
+profiles and actual active image writes; incomplete, overwritten, unverified
+signed-negative or unsupported-encoding fields remain Unknown with a reason,
+beside all raw ranges. No new image/device admission or universal ETS
+compatibility is claimed. Cancel drains the current read. The inherited global
+achievement toast can transiently overlap lower mobile modal content; local
+scrolling keeps values and close controls reachable.
+[Comparison contract](../contracts/device-comparison.md).
+
 ## Universal reporting boundary (15 October 2026 source)
 
 The [universal support reporter](../contracts/universal-device-support.md)

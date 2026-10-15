@@ -33,5 +33,18 @@ full-content manifests/template hashes and five rejection controls. Feature
 text allocation preflight and all handover history. PENDING: actual merged full
 template gates (original15 plus new upstream support config), corpus, merged
 screenshot inspection and normal remote push/readback.
+## Additional product corpus refusal (actual merge788974e7)
+
+Full template51/51 and OriginalData152/152 pass on frozen actual merge. The
+separate explicit product opt-ins measure14/16, not a full pass. Matrix rejects
+a projected commitment mismatch; nested-module measurement unwraps an installer
+SizeLimit. Installer and both failing tests are exact pre-P4 upstream bytes.
+Untouched upstream bee4f016 reproduction completed with both named failures:
+exact same actual/expected matrix commitments and SizeLimit member. The clean
+source baseline and matching signatures prove these failures predate P4, not
+the underlying cause or a full corpus pass. Distinct release target and cleared
+hardware/network namespace retained. No pin/limit changed; publication blocked. EN/DE1440/400 actual merged
+parameter screenshots inspected; inherited global achievement overlap disclosed.
+
 Private source-bound evidence is under profile scratch/p4-parameters-20261015;
 no licensed source or corpus copied into the public repository. No bus access.

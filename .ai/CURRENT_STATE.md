@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 13:14
+- **Completed:** Actual P4 package2 merge788974e7 full template51/51 accepted with frozen inputs: Vitest3626, Chromium574, Rust4592, repeated87; original15 extra configs plus new upstream support config pass. Network-isolated OriginalData152/152 in33 targets passes. Actual merged EN/DE1440/400 parameter screenshots inspected; known global toast overlap retained. Explicit product opt-ins completed14/16, NOT accepted: matrix projected commitment mismatch and dynamic nested-module installer SizeLimit. Sources unchanged throughout.
+- **Pending/Next Steps:** Push remains BLOCKED by two inherited additional product-corpus failures. Unmodified upstream bee4f016 reproduction COMPLETED: both named tests fail with exactly the same matrix actual/expected commitments and same SizeLimit member as P4 merge. Baseline source/status clean; private signature-equivalence verdict saved. No active reproduction worker. Resolve the pre-existing corpus issue in a separate scoped fix before claiming a full pass; do not repin or enlarge limits blindly. Publication/readback/archive/cleanup remain pending.
+- **Notes for Codex oder Claude:** Both failing tests and installer package.rs are byte-identical to pre-P4 upstream (private equivalence receipt). Baseline now proves both failures predate P4; underlying corpus/guard or stale-pin cause still needs separate investigation. Shared root untouched; no bus/subagents/release/deploy. Keep source-bound accepted merge receipts separate from product failure and later documentation-only changes. Current run evidence must not be deleted.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 11:55
 - **Completed:** P4 package2 feature519eff4b9cbb committed after full branch49/49: Vitest3611, Chromium570, repeated87, Rust4570 all pass, fifteen extra configs pass. Original outer freeze mismatch is index-only template add-N (exact temporary-index reconstruction); full source-content/mode/path manifests and template hashes unchanged, corrected verifier negative controls pass. Seven semantic mutants and self-review green. Fresh-main bee4f016 integration reconciles both image helper functions and preserves all upstream support/story state and handover suffix.
 - **Pending/Next Steps:** Full actual merged template RUST/PY gate (original15 configs plus new upstream support config), isolated corpus, merged screenshot inspection, publication/readback, evidence and owned cleanup. Not yet delivered/pushed.

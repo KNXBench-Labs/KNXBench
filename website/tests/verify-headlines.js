@@ -26,7 +26,7 @@ async (page) => {
     return animations.map(a => ({ duration: a.effect.getTiming().duration, easing: a.effect.getTiming().easing, target: a.effect.target.closest('h1,h2,h3').tagName, pseudo: a.effect.pseudoElement || '', frames: a.effect.getKeyframes().map(f => ({ transform: f.transform, opacity: f.opacity })) }));
   });
   assert('actual Story swaps use 720ms easing', proof.length > 0 && proof.every(a => a.duration === 720 && a.easing === 'cubic-bezier(0.65, 0, 0.35, 1)'));
-  assert('actual glyph slides out and its pseudo-element twin slides in', proof.some(a => a.frames.some(f => f.transform === 'translateX(105%)')) && proof.some(a => a.pseudo === '::after'));
+  assert('actual glyph slides out and its pseudo-element twin slides in', proof.some(a => a.frames.some(f => /^translate[XY]\(-?105%\)$/.test(f.transform))) && proof.some(a => a.pseudo === '::after'));
   assert('ambient rolls preserve the heading box', JSON.stringify(await page.locator('h1').boundingBox()) === JSON.stringify(before));
   await waitForRoll();
   await page.evaluate(async () => {

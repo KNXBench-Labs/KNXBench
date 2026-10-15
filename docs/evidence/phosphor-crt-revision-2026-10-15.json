@@ -1,0 +1,71 @@
+{
+  "schema": "knxbench-phosphor-crt-revision-acceptance/1",
+  "status": "private-preview-awaiting-owner-publication-approval",
+  "supersedes": "phosphor-atlas-2026-10-15.json",
+  "prior_candidate": "4610e1d01412bb8c6fe111f7e3e3e3fa7b160452",
+  "published_layout_base": "6c870caf2cd14c01acf180f1145126cd82c7150c",
+  "changes": [
+    "Removed added installation diagram, source/asset wiring, translations and graph motion",
+    "Original screenshot-first hero and section/responsive layout restored",
+    "Story palette, system typography and green h1/h2/h3",
+    "Random right/left/up/down glyph rolls, opposite incoming twin, original720ms timing",
+    "Motion off and live reduced-motion cancellation preserved"
+  ],
+  "acceptance": {
+    "gate_stages_passed": 23,
+    "source_paths_frozen": 2868,
+    "source_manifest_sha256": "0df92831d84b255970be7ff2b793fc06b70f15f6ce8b86e0df87f774021ff41b",
+    "uninterrupted_final_gate": true,
+    "website_tests": 28,
+    "story_tests": 76,
+    "tooling_tests": {
+      "ran": 163,
+      "existing_skips": 1
+    },
+    "chromium_preview": {
+      "checks": 394,
+      "recipes": 7,
+      "artifact_origin_and_mode_bound": true
+    },
+    "chromium_public_variant": {
+      "checks": 416,
+      "recipes": 8,
+      "artifact_origin_and_mode_bound": true
+    },
+    "four_direction_checks_per_variant": 28,
+    "reviewed_mobile_strips": 19,
+    "builds": {
+      "preview": {
+        "files": 37,
+        "manifest_sha256": "1bc09c0782ba68f42d9d8830e1db1121a04faa9f2cdaddb25f708e29cd9a38b4",
+        "story_sha256": "081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8"
+      },
+      "public-variant": {
+        "files": 38,
+        "manifest_sha256": "b5c8b15f603f73c4490a4cc5c72cee0be8b57acfd51197f9e983c709b7be5606",
+        "story_sha256": "081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8"
+      }
+    }
+  },
+  "historical_attempts": {
+    "named_red": [
+      "Diagram removal",
+      "Phosphor-green headings",
+      "Left roll direction",
+      "Artifact-origin regression"
+    ],
+    "superseded_gate": "Earlier23stage gate completed but fixed preview origins invalidated part of public-variant scope. Original receipt retained; corrected full gate is a new execution."
+  },
+  "preserved": [
+    "Story content/style/runtime/pin",
+    "Application/core/protocols",
+    "Original screenshot/video/font asset bytes and media manifest",
+    "Existing EN/DE content/legal wording",
+    "Dirty selected root HEAD/index"
+  ],
+  "limits": [
+    "Self-review, not independent approval",
+    "Chromium only; no native-screen-reader/Orca/Firefox/WebKit certification",
+    "No push, merge, release, deployment or hardware operation"
+  ]
+}

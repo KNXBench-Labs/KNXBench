@@ -30,6 +30,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # Screenshot provenance validates its recorded historical source commit.
+          fetch-depth: 0
       - name: Website and story tests
         run: |
           python3 -m unittest discover -s website/tests

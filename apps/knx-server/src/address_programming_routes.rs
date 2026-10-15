@@ -212,6 +212,7 @@ async fn start(
             give_up_after: Duration::from_secs(wait_seconds),
             pause_between_rounds: state.address_programming_pause,
         },
+        crate::programming_state::address_programming_settler(&state, new_address),
     ));
     drop(scan);
     drop(monitor);

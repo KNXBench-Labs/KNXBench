@@ -66,6 +66,60 @@ companion does not become another editing window. See the
 The Devices view first shipped with Alpha 6 and remains in every later release. The older
 Alpha 5 AppImage does not include it.
 
+## Programming marks (P3, source build after Alpha 11)
+
+The **Programming** column in Devices shows the parts the project still needs
+sent to each device: **Adr** (individual address), **App** (application),
+**Par** (parameters) and **GA** (group-address connections). Only pending parts
+have chips; an empty cell means none are pending. A muted dash means the server
+has not reported this state, not that the device is programmed. **Pending only**
+hides devices with no reported pending parts. Click Programming to sort by the
+number of pending parts. These controls are source-only after Alpha 11; the
+release screenshots above do not show them.
+
+An amber dot beside a device in either explorer branch means at least one part
+is pending. Hover the dot or a chip group for the full part names. Selecting the
+device shows all four states under **Programming** in Properties.
+
+The starting state comes from the ETS project's imported loaded flags. Editing
+an individual address marks Adr; a parameter value marks Par; linking/unlinking,
+changing an object's effective flags or renumbering/deleting a linked group
+address marks GA on each affected device. DPT choices, names and descriptions
+do not count. A mark is in the edit's same undo step. The application reference
+is part of App tracking, but this feature adds no application-swap editor.
+
+A finished full download clears all four parts; a partial download clears only
+the selected parts it writes. Programming an individual address clears Adr.
+An interrupted write marks the parts it may have touched pending, even if they
+were previously clean; parts not reached stay as they were. An unconfirmed
+closing restart keeps its separate warning: it does not undo verified memory
+readback. Edits made while the operation runs stay pending if they differ from
+what was sent. Reassigning the target or opening another project cannot mark a
+different project device programmed.
+
+A device write is not an undo step. Undoing an earlier edit after programming
+makes its affected part pending rather than claiming the old value is on the
+device. Native Save/Open and recovered working history preserve the marks and
+undo behavior without a storage migration. Recovered history uses whole
+snapshots: after a later device write, undoing one can conservatively show
+additional pending parts even where their values did not change. This is not
+proof of a device difference. Direct DPT/name edits do not add marks; do not
+repeat a physical write merely to tidy this conservative project status.
+
+For work done outside the server workbench (ETS, the separate CLI or another
+tool), use **Mark as programmed** or **Mark as not programmed** in Properties.
+Each action affects all four parts of this device, is undoable, and leaves a
+log entry. It does not contact the bus. If another edit makes the displayed
+snapshot stale, marking refuses and explains why; refresh before trying again.
+
+These marks are the **project's belief**, not a live synchronization test or
+proof that a device is running. The separate project/device comparison (P4) is
+not part of this feature. Existing programming support and recovery refusals
+still apply. A failed display refresh warns you to reload the project; do not
+repeat a physical write just to refresh its marks. A storage error during
+settlement is logged and must be resolved before trusting persisted flags.
+[Technical rules and boundaries](../../adr/0129-per-part-pending-programming.md).
+
 ## The product catalog
 
 Open it from the navigation pane (**Product catalog**) or from the `+` button on a

@@ -24,9 +24,31 @@ fragment aliases and update this index. Do not rewrite previous results.
   device-value access at 400 px. The frozen branch gate passes all 49 stages: Rust 4565 (206 opt-ins
   ignored), Vitest 3601/260 files, default Chromium566, fifteen production
   configs325 and repeated browser75; Python148/one inherited skip. All2802
-  source files are unchanged. Actual merged gates/publication are pending. Named parameter attribution remains package 2; no bus access.
+  source files are unchanged. Fresh-main merge `a9f429a4` passes49/49 frozen stages: Rust4565,
+  Vitest3609, default570, production329/15configs, repeats87; the network-
+  isolated corpus passes151/151 in33targets. Merge images inspected; publication pending. Named parameter attribution remains package 2; no bus access.
   [Goal](goals/ui-feedback-p1-p4.md), [contract](contracts/device-comparison.md),
   [ADR-0130](adr/0130-session-device-comparison.md).
+
+- 2026-10-15 — Community Hall of Fame: cumulative report medals every ten
+  issues and completed-report medals every five, both through 100; earned
+  names only in generated documents/data and completion notices. Public goals
+  give hints rather than an unearned catalogue. Table order is Place, Bug hunter,
+  Rank & title, Medal, XP, Issues, Replies, Resolved. External AI/Bot accounts
+  can earn points; the scoreboard bot stays excluded. Explicit notification
+  authors are separate from scoring opt-outs. XP/ranks and retained completion
+  awards are unchanged; historical medal backfill posts no repeat comments.
+  Test-first and separate in-session self-review: 47 community tests pass;
+  full tools suite 163 tests, one inherited skip, passes after installing the
+  lockfile-pinned frontend dependencies required by a tools test. All five
+  fresh-built repository checks and documentation validation pass. Real public
+  GitHub generation verifies consistent README/page/JSON, unchanged award ledger
+  and unchanged XP. Published source `fe1f4101`; all eleven files pass exact
+  GitHub content readback. Manual community workflow `38694177327` succeeds on
+  that source, including its 47-test verification and real GitHub reconciliation.
+  No UI/domain/storage/bus change or release/deployment.
+  [Contract](contracts/community-recognition.md),
+  [board and mystery goals](community/HALL_OF_FAME.md#the-next-mystery).
 
 - 2026-10-14 — Issue #23: diagnostic sidebar entries select instead of toggle.
   Re-clicking Bus monitor or Log keeps its panel and local state; choose another

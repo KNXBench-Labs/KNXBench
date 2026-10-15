@@ -1,8 +1,16 @@
 - **Last Agent:** codex
-- **Timestamp:** 2026-10-15 05:59
-- **Completed:** #23 maintained-runner integration 2e803fef accepted: 60/60 stages zero/proof-valid, input/build/tool identities frozen, Vitest3567/256 files, default558 (276 functional/282 exclusive), production317/15configs, twelve issue-specific production repeats and dedicated spec types pass. Original verifier import failure is a retained bookkeeping-only issue; isolated stdlib verifier validates exact original reports. Upstream P3 subsequently published, requiring new final merged web acceptance; older receipts remain bound to their sources.
-- **Pending/Next Steps:** Merge P3/main additively, run full maintained web/docs and issue-specific supplement on actual final source, then documentation closure, normal push/readback, #23 comment/close and owned cleanup. No publication or issue closure claimed yet.
-- **Notes for Codex oder Claude:** P3 source/accepted backend results are inherited, not modified; no Rust delta from upstream. Scope stays two sidebar selections and tests/docs. Root remains stale/dirty with foreign research preserved; no hardware, release/deploy, subagents or additional go required.
+- **Timestamp:** 2026-10-15 06:24
+- **Completed:** Issue #23 final runtime bb529169 accepted against published P3:60/60 maintained web/docs stages zero/proof-valid, source/build/tools frozen; Vitest3588/0 in259 files, default564 (276 functional/288 exclusive), production323 across15configs, dedicated spec types and12 repeated issue production cases pass. All8 EN/DE1440/400 production PNGs inspected; current input/tab/filter and active sidebar retained. Existing transient achievement toast overlaps lower content at narrow widths; no new horizontal overflow. Test-first eight original failures and in-session self-review retained. No Rust delta from upstream.
+- **Pending/Next Steps:** Documentation-only closure checks and normal main push/readback, then #23 completion comment/closure and verified task-only archive/cleanup. This entry claims accepted runtime, not future publication or an installed release.
+- **Notes for Codex oder Claude:** Minimal sidebar handlers select instead of toggle; Settings/companion unchanged. Operating guide, contract and aggregate evidence included. P4's latest handover preserved; no foreign source edits, root synchronization, hardware/release/deploy/subagent. Runtime receipt remains bound to bb529169; later docs-only commits do not retag its execution.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 06:04
+- **Completed:** Claimed owner-approved P4 from fresh origin/main 8c42e4f5 in isolated p4-compare-tables-20261015 worktree. Startup handover/goal read; shared root and foreign issue23 trees/index remain untouched. No implementation, runtime acceptance or hardware action claimed.
+- **Pending/Next Steps:** Map compare/identity, gateway admission, image generation and P3 tracking; deliver table comparison package, then parameter bit attribution package without stopping between them. Each needs RED/GREEN, targeted mutants, separate self-review, EN/DE1440/400 inspection, complete RUST=1/fifteen-config branch and fresh-main merged gates, normal push/readback and owned cleanup.
+- **Notes for Codex oder Claude:** Own evidence/builds live only in profile scratch/p4-20261015. No subagents, real bus access, vendor contact, root synchronization or unrelated refactor. Owner decisions are settled; unavailable protocol evidence must stay explicitly Not comparable, never guessed.
 
 ---
 

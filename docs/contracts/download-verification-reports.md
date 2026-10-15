@@ -43,11 +43,24 @@ could identify an installation needs an ADR.
   issue form (public) or mails it to `issue@knxbench.com` (not public).
   Nothing is sent automatically.
 
+## Universal pre-plan intake
+
+The separate [universal support envelope](universal-device-support.md) can now
+project only an ended report's typed outcome **and exact partial/full scope**,
+without copying its parameter values, names, warnings or free text. It can also
+be created before any plan, for unknown devices. It is not a replacement for the
+format1 download report or maintainer verification. Never infer that privacy
+rules for the universal envelope retrospectively remove parameter values from
+the older ended-download report.
+
 ## Pre-plan support inquiries remain separate
 
 The existing mailbox `issue@knxbench.com` also accepts device-programming
 support-gap inquiries. A refusal before a connection has no ended-run report:
-use `analysis.yml` or an unsent inquiry without attachments instead. Opening a
+use `analysis.yml` or an unsent inquiry. Source builds after Alpha11 can optionally
+attach a reviewed [universal support ZIP](universal-device-support.md), created
+before any plan and with separate disclosure consent; confidential originals
+remain withheld. Opening a
 form/draft does not submit/send; email is not a guarantee of delivery, privacy,
 encryption, retention or deletion. No private-original intake is confirmed by
 this scope amendment. See [support guidance](device-programming-support-guidance.md).

@@ -1,0 +1,129 @@
+{
+  "format": 1,
+  "feature": "Universal device-support evidence intake",
+  "boundary": "Offline reporting and separately consented fixed read-only diagnostics; never download admission",
+  "branch": {
+    "base": "2d4ec5f90ccc66ed7d03c65fdd02213faf34fc69",
+    "inputCommitment": "cbf93c1bce404b8096039c51a7dad63604b5dd120c54deaa303fd4f6708f7809",
+    "complete": true,
+    "inputsFrozen": true,
+    "stages": {
+      "passed": 10,
+      "expected": 10
+    },
+    "maintainedWebStages": {
+      "passed": 61,
+      "expected": 61
+    },
+    "rust": {
+      "passed": 4575,
+      "failed": 0,
+      "ignored": 205,
+      "resultBlocks": 331
+    },
+    "dedicatedProductionBrowser": {
+      "passed": 12,
+      "casesPerRepeat": 4,
+      "repeats": 3,
+      "languages": [
+        "en",
+        "de"
+      ],
+      "widths": [
+        1440,
+        400
+      ]
+    },
+    "visualInspection": {
+      "frames": 8,
+      "views": [
+        "setup",
+        "scrolled-preview"
+      ],
+      "result": "Readable wrapped notices and controls; bounded horizontal layout, ordinary vertical scrolling and capped JSON preview."
+    }
+  },
+  "review": {
+    "type": "Separate in-session self-review, not independent approval",
+    "blockingFindings": "Closed by named regression-first corrections and seven behavioral guard mutants; restored tests pass."
+  },
+  "guardMutations": {
+    "status": "passed",
+    "cases": [
+      {
+        "name": "live-consent",
+        "test": "live_collection_needs_no_download_plan_but_requires_explicit_consent",
+        "exit": 101,
+        "killed": true
+      },
+      {
+        "name": "export-consent",
+        "test": "unknown_device_preview_exports_only_after_snapshot_consent",
+        "exit": 101,
+        "killed": true
+      },
+      {
+        "name": "export-digest",
+        "test": "a_new_acquisition_replaces_its_live_projection_without_mixing_observations",
+        "exit": 101,
+        "killed": true
+      },
+      {
+        "name": "project-freshness",
+        "test": "changed_project_or_replaced_preview_cannot_export_or_contact_hardware",
+        "exit": 101,
+        "killed": true
+      },
+      {
+        "name": "http-context-rights",
+        "test": "source_rights_and_request_grammar_are_enforced_on_the_server",
+        "exit": 101,
+        "killed": true
+      },
+      {
+        "name": "producer-context-rights",
+        "test": "unsupported_product_keeps_useful_numeric_context_but_no_original_or_secret_payloads",
+        "exit": 101,
+        "killed": true
+      },
+      {
+        "name": "ui-preconsent",
+        "test": "preview and export have independent explicit consent and edits invalidate the preview",
+        "exit": 1,
+        "killed": true
+      }
+    ],
+    "restoredTestsPassed": true,
+    "canonicalNeverMutated": true
+  },
+  "integration": {
+    "status": "pending"
+  },
+  "publication": {
+    "status": "pending"
+  },
+  "readerRoutes": {
+    "README": "Source-only support pointer in Contributing & support",
+    "installation": "Unchanged: no new package, dependency, deployment or schema",
+    "operatingGuide": "docs/manual/user-guide/08-reports-and-diff.md",
+    "FAQ": "docs/manual/reference/04-faq.md",
+    "contract": "docs/contracts/universal-device-support.md",
+    "architectureDecision": "docs/adr/0131-universal-device-support.md",
+    "availability": "Source after Alpha11, not a released-binary feature"
+  },
+  "privacy": [
+    "Allowlisted typed facts with origins",
+    "Installation identifiers and values stay out of universal ZIP",
+    "Optional numeric source context needs rights confirmation",
+    "No originals, firmware, raw memory or unknown XML attachments",
+    "Local save and manual issue/mail handoff only"
+  ],
+  "limitations": [
+    "Only0025 detailed status and0012 programming-mode bit0 read recipes; other masks descriptor-only",
+    "Simulated transport coverage is not hardware verification",
+    "No programming unlock or Verified registry promotion",
+    "System2 image/table/LSM/recovery and target-specific hardware evidence remain open",
+    "No automatic upload, receiving service or private-original intake promise",
+    "No real bus operation, vendor contact, release or deployment performed"
+  ]
+}

@@ -344,6 +344,12 @@ replaces the old one and clears its rows.
 
 ## Device checks: offline readiness, then an optional read-only comparison
 
+The newer P4 **Devices** view adds confirmed single/filtered-batch comparison,
+session tags and decoded tables. See [project versus devices](05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11).
+It is source-only after Alpha 11; package 1 leaves parameters as raw bytes.
+The existing Device checks result also uses the shared decoded-table renderer.
+
+
 Open a project, choose **Bus monitor** in the navigation sidebar, then **Device
 checks** (German: **Geräteprüfung**). The readiness table checks every project
 device **offline** against the installed product database. It includes devices
@@ -600,7 +606,7 @@ This section is deliberately plain.
 **What KNXBench reads from a bus.** Telegrams that the interface forwards to it. The
 individual address an interface assigns to a tunneling session. During a line scan, the
 device descriptor that a device returns when asked. During a deliberately confirmed
-**Device checks** comparison, the memory regions a complete plan would overwrite,
+**Device checks** or **Devices** P4 comparison, the memory regions a complete plan would overwrite,
 plus affected load states and device identity. This is read-only management traffic,
 but it still occupies the gateway's tunnel; offline readiness contacts no device.
 

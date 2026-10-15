@@ -1,0 +1,74 @@
+# ADR-0130: Device comparison is bound, decoded, session-only evidence
+
+- **Status:** Accepted (owner UI-feedback P4 decision); package 1 implementation under acceptance
+- **Date:** 2026-10-15
+- **Decision record:** [UI feedback P1–P4](../goals/ui-feedback-p1-p4.md#p4--project-file-versus-real-devices-point-3)
+
+## Context and evidence
+
+P3 already defines device programming content and relevant changes in
+`knx_core::commissioning::pending::ProgrammingContent`. Loaded flags express a
+project belief, not a comparison revision. The old `compare_with_plan` checked
+only mask and manufacturer, so an unrelated application looked like byte drift.
+The partial-download precondition already identifies an application by five
+bytes, using the Application Program Object's `PID_PROGRAM_VERSION`.
+
+Primary sources rechecked locally, not newly tested on hardware:
+
+- *Management Procedures*, `03_05_02` v02.01.02, §3.31.2,
+  printed p.137: the absolute task record contains manufacturer, application
+  number and application version as a five-byte identity. This is the existing
+  Core task-record codec, not a new protocol interpretation.
+- *Standardized Identifier Tables*, `03_07_03` v01.04.01, property identifier
+  table, p.12: PID 13 is the five-byte application version property. The
+  existing `properties::PID_PROGRAM_VERSION` also cites Resources §4.19's
+  Application Program Object table.
+- Existing verified 0701 identity read and table byte order are recorded in
+  `partial_memory_download.rs`, `group_tables.rs` and RESEARCH §19. The
+  current work uses simulators and intercepted browser traffic only.
+
+Licensed source excerpts remain private. No vendor contact, new on-wire
+service, access key, object-index discovery assumption or hardware authority.
+
+## Decision
+
+1. Reuse the existing full/partial download plan and gateway admission guards.
+   Comparison is a read-only management session without write authorisation.
+   A confirmed UI queue sends one bound request at a time; a gateway-busy
+   refusal ends admission, while a device error is recorded and the queue
+   continues. Cancel finishes the current bounded read and starts no more.
+2. Check the complete application identity before reading plan memory. A valid
+   differing five-byte response is Wrong application. Missing, conflicting or
+   malformed identity cannot establish that claim and is Not comparable.
+   Never turn a short prefix into an application match or mismatch.
+3. Core maintains transient, monotone per-device comparison revisions using
+   P3 content semantics. Do/undo/redo and known affected bus-write settlement
+   invalidate old evidence; labels, DPT choices and manual loaded-flag marks
+   are not programmed content. No project or product-database migration.
+4. The server binds preparation on both sides to server/project incarnation,
+   stable device ID and comparison revision. It refuses a stale reviewed
+   target before connecting. A change during a read marks that result outdated.
+   The web client admits only a result matching its reviewed identity/scope.
+5. Tags belong to this mounted project session, not files or local storage.
+   No comparison attempt means no tag. They describe an observation, never
+   continuous monitoring or proof against external device changes.
+6. The product adapter decodes only verified image placements and format:
+   package 1's 0701 group-address and association tables, with each side's
+   own TSAP mapping. Invalid counts, missing ranges and unread bytes stay
+   unknown; decoding is bounded by declared capacity and segment extent.
+   Every raw read range remains visible, even when also decoded.
+7. Package 2 must capture actual active parameter bit attribution at the
+   existing image writer before adding named parameter project/device values.
+   It must not guess parameter ownership from a differing-byte address.
+
+## Consequences and limits
+
+UI contains no KNX table/parameter codec and no protocol code. Sessions are
+volatile and scoped; gateway and device refusals remain distinguishable. The
+read scope is exactly the plan's writable ranges, so masked/unwritten bytes
+are not claimed read. A matching image with an unloaded part does not earn
+Synced. Other masks remain raw-only at the decoder boundary; existing download
+admission is not broadened. Package 1 does not deliver parameter attribution,
+continuous freshness, a new backup format or full ETS/device compatibility.
+
+[Behavioural contract](../contracts/device-comparison.md).

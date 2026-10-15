@@ -2314,6 +2314,13 @@ pub(crate) fn tree_with_state(
     tree.server_incarnation = Some(state.server_incarnation.clone());
     tree.snapshot_revision = Some(snapshot_revision);
     tree.project_incarnation = Some(state.project_incarnation.load(Ordering::Relaxed));
+    tree.comparison_revisions = Some(
+        project
+            .devices
+            .iter()
+            .map(|d| (d.id.0, stack.comparison_revision(d.id)))
+            .collect(),
+    );
     tree.last_saved_at = last_saved_at.map(str::to_owned);
     tree.view_key = view_key(state);
     tree

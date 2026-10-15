@@ -136,3 +136,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0127](0127-web-workbench-resumes-the-open-project.md) | The web workbench resumes the server's open project on every mount | Accepted implementation decision | 2026-10-14 |
 | [0128](0128-native-project-files-carry-their-manufacturer-files.md) | A native project file carries its manufacturer files | Accepted implementation decision | 2026-10-14 |
 | [0129](0129-per-part-pending-programming.md) | Per-part pending programming uses the existing loaded flags | Accepted | 2026-10-14 |
+| [0130](0130-session-device-comparison.md) | Device comparison is bound, decoded, session-only evidence | Accepted; package 1 under acceptance | 2026-10-15 |

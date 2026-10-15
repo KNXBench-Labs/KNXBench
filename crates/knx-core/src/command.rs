@@ -3861,11 +3861,17 @@ impl HistoryEntry {
 pub struct CommandStack {
     undo: Vec<HistoryEntry>,
     redo: Vec<HistoryEntry>,
+    comparison_revisions: std::collections::BTreeMap<DeviceId, u64>,
 }
 
 impl CommandStack {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Session-only ordering for live device comparisons, never stored in a project.
+    pub fn comparison_revision(&self, device: DeviceId) -> u64 {
+        self.comparison_revisions.get(&device).copied().unwrap_or(0)
     }
 
     pub fn do_command(&mut self, project: &mut Project, cmd: Command) -> Result<(), CommandError> {
@@ -3901,6 +3907,12 @@ impl CommandStack {
         let before = programming_commands::before(project, &devices);
         let inverse = cmd.apply(project)?;
         programming_commands::candidates(&cmd, project, &mut devices);
+        programming_commands::record_revisions(
+            project,
+            &before,
+            &devices,
+            &mut self.comparison_revisions,
+        );
         let inverse = programming_commands::mark_changed(project, before, &devices, inverse);
         self.undo.push(HistoryEntry::Inverse(Box::new(inverse)));
         self.redo.clear();
@@ -3916,6 +3928,10 @@ impl CommandStack {
         device: DeviceId,
         parts: crate::commissioning::pending::ProgrammingParts,
     ) {
+        if !parts.is_empty() {
+            let revision = self.comparison_revisions.entry(device).or_default();
+            *revision = revision.saturating_add(1);
+        }
         for entry in self.undo.iter_mut().chain(self.redo.iter_mut()) {
             match entry {
                 HistoryEntry::Inverse(command) => {
@@ -3937,7 +3953,17 @@ impl CommandStack {
             .last()
             .cloned()
             .ok_or(CommandError::NothingToUndo)?;
+        let devices = project.devices.iter().map(|d| d.id).collect();
+        let before = programming_commands::before(project, &devices);
         let inverse = entry.apply(project)?;
+        let mut devices = devices;
+        devices.extend(project.devices.iter().map(|d| d.id));
+        programming_commands::record_revisions(
+            project,
+            &before,
+            &devices,
+            &mut self.comparison_revisions,
+        );
         self.undo.pop();
         self.redo.push(inverse);
         Ok(())
@@ -3949,7 +3975,17 @@ impl CommandStack {
             .last()
             .cloned()
             .ok_or(CommandError::NothingToRedo)?;
+        let devices = project.devices.iter().map(|d| d.id).collect();
+        let before = programming_commands::before(project, &devices);
         let inverse = entry.apply(project)?;
+        let mut devices = devices;
+        devices.extend(project.devices.iter().map(|d| d.id));
+        programming_commands::record_revisions(
+            project,
+            &before,
+            &devices,
+            &mut self.comparison_revisions,
+        );
         self.redo.pop();
         self.undo.push(inverse);
         Ok(())
@@ -4010,6 +4046,7 @@ impl CommandStack {
                 .into_iter()
                 .map(|p| HistoryEntry::Snapshot(Box::new(p)))
                 .collect(),
+            comparison_revisions: Default::default(),
         }
     }
 

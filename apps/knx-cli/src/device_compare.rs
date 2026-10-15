@@ -255,6 +255,11 @@ mod tests {
             manufacturer: 0x0083,
             steps: vec![
                 MemoryDownloadStep::Connect,
+                MemoryDownloadStep::CompareProperty {
+                    object_index: 3,
+                    property_id: knx_core::commissioning::properties::PID_PROGRAM_VERSION,
+                    inline_data: vec![0, 0x83, 0, 0x27, 0x15],
+                },
                 record(LoadEvent::Unload),
                 MemoryDownloadStep::WriteMemory {
                     address: 0x4000,
@@ -294,6 +299,11 @@ mod tests {
             ..SimulatorConfig::default()
         });
         device.preset_property(0, PID_MANUFACTURER_ID, &[0x00, 0x83]);
+        device.preset_property(
+            3,
+            knx_core::commissioning::properties::PID_PROGRAM_VERSION,
+            &[0, 0x83, 0, 0x27, 0x15],
+        );
         device.preset_load_state(ObjectIndex::new(1), LoadState::Loaded);
         device
     }

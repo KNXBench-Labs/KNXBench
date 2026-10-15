@@ -67,13 +67,10 @@ pub(super) fn candidates(cmd: &Command, project: &Project, out: &mut BTreeSet<De
                 candidates(command, project, out);
             }
         }
+        Command::CreateDevice { device, .. } | Command::RestoreDevice { device, .. } => { out.insert(device.id); }
+        Command::DeleteDevice { id } => { out.insert(*id); }
         // The belief itself, not content.
         Command::SetDeviceProgramming { .. }
-        // A created or restored device brings its own belief; a deleted one
-        // has nothing left to program.
-        | Command::CreateDevice { .. }
-        | Command::DeleteDevice { .. }
-        | Command::RestoreDevice { .. }
         // Datapoint types and texts are not programmed (the group object
         // table carries the product's object types).
         | Command::SetComObjectDpt { .. }
@@ -149,6 +146,23 @@ pub(super) fn before(
     devices: &BTreeSet<DeviceId>,
 ) -> BTreeMap<DeviceId, ProgrammingContent> {
     programming_content(project, devices)
+}
+
+/// Advances only changed device content, reusing P3's exact comparison semantics.
+/// Revisions are session-only: undo never resurrects an earlier bus observation.
+pub(super) fn record_revisions(
+    project: &Project,
+    before: &BTreeMap<DeviceId, ProgrammingContent>,
+    devices: &BTreeSet<DeviceId>,
+    revisions: &mut BTreeMap<DeviceId, u64>,
+) {
+    let after = programming_content(project, devices);
+    for device in devices {
+        if before.get(device) != after.get(device) {
+            let revision = revisions.entry(*device).or_default();
+            *revision = revision.saturating_add(1);
+        }
+    }
 }
 
 /// Marks every part whose content changed between `before` and `project` as

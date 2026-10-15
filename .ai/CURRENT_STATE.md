@@ -1,4 +1,14 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 14:19
+- **Completed:** Owner requested Alpha 12 release, main website refresh with current screenshots/short clips and README/documentation review, preserving existing English/DE style. Release owner codex-release-alpha12 works only in release-alpha12-20261015; selected root HEAD/index/research preserved. Fresh remote baseline bee4f016; latest published release v0.1.0-alpha.11. P4 parameter/corpus combined package is already in its final source-bound acceptance and is the only prerequisite admitted before cutoff.
+- **Pending/Next Steps:** P4 owner finishes its current combined parameter/corpus package through normal push/readback and releases its leases, then pauses; do not start another package. Other sessions pause new pushes/merges/lease acquisitions now; existing gates may finish without publication. Release owner prepares media/docs, waits for verified P4 delivery, freezes candidate, runs full local+workflow dry-run gates and presents exact candidate for final tag/publication Go. No tag/product release/deploy yet.
+- **Notes for Codex oder Claude:** Release freeze: taken by codex-release-alpha12 (Alpha 12; sole prerequisite P4 current parameter/corpus package). Requested standalone marker from P4 owner is `Alpha 12 prerequisite delivered: P4 parameters and corpus`. Also accept actual published parameter implementation plus corpus-fix a6cdfd9d ancestry and released P4 ownership, checked against live remote. Resume only after standalone release-freeze release line and external release/abort result; no lock breaking, foreign cleanup, root synchronization, subagents or hardware work. Existing approved Story edition/digest stays unchanged; homepage refresh does not rewrite the Story.
+
+Release freeze: taken by codex-release-alpha12
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 11:41
 - **Completed:** Universal device-support reporting published on main9b8d176aa75ef6575bcda62af13ecba6860c8f77; exact local/tracking/live equality and feature ancestry verified. Featurefa165f82, runtime-tested merge3444186c:11/11 stages, web62/62, Rust4587/0/206ignored, Vitest3624, browser574, private corpus151/151 in33 targets; seven guard mutants caught/restored,8 merged images inspected. Subsequent story/docs merge and15 frozen closure stages pass with application path/mode/blob equality. Documentation/public aggregate distinguish runtime acceptance from publication. No real bus/registry promotion/download unlock.
 - **Pending/Next Steps:** Only publish this observed-readback documentation closure, verified private evidence archive and owned worktree/branch/cache retirement remain. Future System2 image/table/LSM/recovery/hardware work stays open; no release/deploy or root synchronization. No new Go required for completing this delivery.

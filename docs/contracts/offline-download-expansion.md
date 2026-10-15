@@ -62,7 +62,12 @@ material. Do not mark a path implemented merely because its metadata is parsed.
   isolated corpus152/152 in33targets; exact main publication equality verified.
   [Source-image contract](offline-download-system2-image.md) separates successful
   synthetic assembly from the actual Siemens multi-octet source refusal.
-- P3 onward: source-to-property plans, simulator execution and whole-mutation
-  recovery are not implemented; dependencies above still need their own proof.
+- P3a: normalized offline property-plan validation and concrete-simulator
+  execution implemented; fifteen-stage frozen branch acceptance passes.
+  Actual merged acceptance/publication remain pending.
+  This is not yet a ProductDB source translator or durable recovery. See the
+  [bounded simulation contract](offline-property-plan-simulation.md).
+- P3 onward: source-to-property mapping and whole-mutation recovery remain
+  unimplemented; their dependencies above still need their own proof.
 
 Status is deliberately per capability; issue #22 and broader KL-007 remain open.

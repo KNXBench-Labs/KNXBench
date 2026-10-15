@@ -1,5 +1,16 @@
 # Import and export
 
+## Alpha 12 persistence boundary
+
+The candidate advances native/model14 → 16 and product22 → 23. Native saves and
+reviewed project downloads can retain exact manufacturer source files and restore
+missing catalogue data on application open; legacy files cannot recover bytes
+that were never retained. Matching original sources remain necessary for that
+case. Import remains one-way; no ETS writer, manufacturer executable host or
+complete format compatibility is added. Independently back up closed project and
+catalogue files before upgrade; Alpha 11 and earlier refuse native16.
+[Release scope](releases/alpha12.md), [ADR-0128](adr/0128-native-project-files-carry-their-manufacturer-files.md).
+
 ## Universal support ZIP (15 October 2026 source)
 
 [The support envelope](contracts/universal-device-support.md) is a separate,

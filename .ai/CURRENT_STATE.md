@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 07:06
+- **Completed:** Owner explicit Go: universal device-support reporter taken in feature/universal-support-20261015 (worktree universal-support-20261015). Interview decisions at root-local .ai/logs/2026-10-15_codex_support-sharing-grilling.md read; offline and optional bounded live diagnostics, privacy/IP-safe preview/export/manual handoff. Startup docs/overlap checked; no implementation yet.
+- **Pending/Next Steps:** Implement contract/ADR131 (130 reserved by P4), test-first App report and safe read-only diagnostic adapter, HTTP/UI/export and evidence. Unknown targets must report without plan/catalogue/gateway/profile; unknown/unsupported/untested stay distinct. Full tests/review/gates before publication. No actual bus operation.
+- **Notes for Codex oder Claude:** P4 owns DeviceInspectionPanel/DeviceComparison routes/product image comparison/net memory_download. Reporter uses new support modules and DownloadSupportNotice/ContributionButton; shared App/API/catalogues/docs integrate additively, no P4 rewrite. Root remains dirty/stale and untouched except local handover. Evidence profile scratch/universal-support-20261015. No subagents/vendor contact/direct upload/hardware/release/deploy.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 06:27
 - **Completed:** Issue #23 published on main 8307ff6d (source96354083, accepted runtimebb529169); exact local/tracking/live equality and source/contract/evidence readback verified. GitHub issue CLOSED/completed; exact friendly completion comment read back. Final accepted web/docs60/60 stages, source/build/tools frozen: Vitest3588/259files, default564, production323/15configs, typed spec and12 issue production repeats. Eight production PNGs EN/DE1440/400 inspected. Docs-only closure8/8 checks pass; no independent-review claim.
 - **Pending/Next Steps:** Only metadata closure checks, verified private archive and exact owned retirement remain; #23 implementation/runtime acceptance/publication/issue closure are finished. Preserve foreign P4 source/claim; no further implementation or test-suite rerun for bookkeeping.

@@ -63,6 +63,22 @@ See the [audit](research/2026-10-14-test-suite-performance-audit.md) and
 [measured matrix](evidence/web-test-optimization-2026-10-14.json). The approximately
 2× functional-lane gain is host/scope-specific, not a promised whole-gate speedup.
 
+## Native edit and reopen proofs
+
+`tools/verify_name_editing.py` serves the actual built frontend with an isolated
+real server. Its `--spec` selector covers `rename.native.ts`, `functions.native.ts`
+and `name-recipe.native.ts`; the default selects only the first. A release gate
+runs all three, in addition to `tools/verify_native_evidence.py`. Keep the usual
+workspace/alpha/browser execution leases around these exclusive checks.
+
+The reset API opens an empty project, and reload can restore an active project.
+Open the demo copy through the rendered Commands button and the localized native
+open command, scoped to the command dialog. The welcome-card button is not an
+always-present file control; an unscoped combobox can instead match project
+selects before a keyboard-opened palette is ready. These checks retain real
+file-picker, edit, conflict, undo, save and reopen assertions, in EN/DE and wide/
+narrow views. No mocked success or live bus operation is needed.
+
 ## Coverage contract
 
 Each gate prints `gate target: <canonical root>`. Verify that this is **your

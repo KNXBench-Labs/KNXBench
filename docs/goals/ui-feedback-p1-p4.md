@@ -16,7 +16,7 @@ claim the package there.
 | P1 | Toast entry, resume after reload, overwrite question | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
 | P2 | Explorer: visibly expandable nodes, structure lines with spread/pulse | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
 | P3 | Changes not yet programmed, per part | delivered 2026-10-15 (source after Alpha 11; [acceptance](../evidence/p3-pending-programming-2026-10-15.json)) |
-| P4 | Project file versus real devices: tags and comparison table | package 1 published; package 2 merged gates accepted, additional product-corpus blocker |
+| P4 | Project file versus real devices: tags and comparison table | package 1 published; package 2 corpus prerequisites corrected, final integrated acceptance pending |
 
 Starter for a fresh session (replace the package number):
 
@@ -102,11 +102,12 @@ captures actual active parameter writes and decodes named numeric/text values,
 with explicit unknowns and all raw ranges. Full branch49/49 and actual merge51/51
 pass, along with isolated OriginalData152/152, targeted RED/GREEN, seven semantic
 mutants and self-review. Integration preserves the published universal-support
-allocation preflight. Publication is blocked by two additional product opt-ins
-(matrix projected commitment and nested-module SizeLimit), measured14/16. Exact
-pre-P4 upstream reproduces both exact failure signatures; these failures are
-inherited, but the additional product corpus is still red. No pins or admission
-limits are changed. [Contract](../contracts/device-comparison.md),
+allocation preflight. Two inherited additional product opt-in failures were
+reproduced on unchanged upstream and corrected separately in `a6cdfd9d`: v23
+unknown-row pins now match independently predicted counts, and the nesting
+census explicitly accounts for unchanged-standard-size refusals. Targeted16/16,
+ordinary ProductDB887 and seven semantic mutants pass. No production admission
+limit changed; final combined full/template and corpus acceptance is pending. [Contract](../contracts/device-comparison.md),
 [ADR-0130](../adr/0130-session-device-comparison.md).
 
 

@@ -43,7 +43,18 @@ Untouched upstream bee4f016 reproduction completed with both named failures:
 exact same actual/expected matrix commitments and SizeLimit member. The clean
 source baseline and matching signatures prove these failures predate P4, not
 the underlying cause or a full corpus pass. Distinct release target and cleared
-hardware/network namespace retained. No pin/limit changed; publication blocked. EN/DE1440/400 actual merged
+hardware/network namespace retained. No pin/limit changed; publication blocked.
+
+Owner then authorized correction: separate a6cdfd9d fixes test prerequisites only.
+Matrix v23 pin delta independently predicted; no production limit was changed.
+Targeted16/16 and ProductDB887/0 pass, all7 named mutants fail as intended and
+restore cleanly. Combined final P4 full/template+regular/product corpus gates
+must run on the actual new merge before publication, not reuse old788974e7 logs.
+Documentation preflight also caught an authored section in the generated limitations
+overview; preserved it in canonical KL007 dossier/catalogue and regenerated the
+overview. Corrected documentation gate passes; original refusal retained.
+
+ EN/DE1440/400 actual merged
 parameter screenshots inspected; inherited global achievement overlap disclosed.
 
 Private source-bound evidence is under profile scratch/p4-parameters-20261015;

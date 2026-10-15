@@ -1,5 +1,18 @@
 # Research — Manufacturer and product data
 
+## 2026-10-15 — Scope correction for the stored nested-module census
+
+The recursive loose-package test must not assume every discovered manufacturer
+archive fits STANDARD import limits. Independent ZIP metadata census now predicts
+105 inputs,104 within-size / one expanded-total refusal. Actual storage measurement
+accounts for103 installs,one content duplicate and one atomic typed size refusal:
+1,678 Module rows,zero inside ModuleDef trees. The zero-nesting observation applies
+only to admitted inputs; refused bytes were not parsed into a database and cannot
+establish their nesting behavior. All other installation errors still fail the
+measurement. This does not increase a production budget or certify another device.
+[Matrix correction and aggregate evidence](../IMPORT_EXPORT.md#product-corpus-prerequisites--15-october-2026).
+
+
 ## 2026-10-14 — Positional text placeholders `{{0}}` (Goal B14, issue #17)
 
 Issue #17 showed `{{0:Page 1}}` as a channel heading and `Page 1 - {{0:Icon 1}}`

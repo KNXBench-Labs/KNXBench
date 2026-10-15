@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "scope": "Alpha 12 accepted source, not published",
+  "candidate": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+  "branch": "release/alpha12-20261015",
+  "accepted": true,
+  "review": "In-session self-review, not independent approval",
+  "chain": {
+    "originalPassed": 66,
+    "newlyExecutedPassed": 11,
+    "total": 77,
+    "singleUninterruptedExecution": false,
+    "originalLaunchRefusalRetained": true
+  },
+  "inputsFrozen": true,
+  "sourceFiles": 2860,
+  "counts": {
+    "vitest": {
+      "passed": 3626,
+      "files": 263
+    },
+    "rust": {
+      "passed": 4597,
+      "failed": 0,
+      "ignored": 207
+    },
+    "releaseMediaScreenshots": 10,
+    "productCorpus": {
+      "passed": 16,
+      "expected": 16,
+      "targets": 6
+    }
+  },
+  "fixtureChromium": {
+    "default": 574,
+    "additionalPassed": 365,
+    "additionalConfigurations": 22,
+    "perConfiguration": [
+      {
+        "stage": "browser-address-unavailable",
+        "exit": 0,
+        "passed": 4,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-catalogue",
+        "exit": 0,
+        "passed": 10,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-communication",
+        "exit": 0,
+        "passed": 59,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-device-checks",
+        "exit": 0,
+        "passed": 4,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-device-download-support",
+        "exit": 0,
+        "passed": 33,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-devices",
+        "exit": 0,
+        "passed": 29,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-dialogs",
+        "exit": 0,
+        "passed": 14,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-ga-members-download",
+        "exit": 0,
+        "passed": 23,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-group-addresses",
+        "exit": 0,
+        "passed": 19,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-instructions",
+        "exit": 0,
+        "passed": 15,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-issue09",
+        "exit": 0,
+        "passed": 10,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-monitor-control",
+        "exit": 0,
+        "passed": 6,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-notes",
+        "exit": 0,
+        "passed": 13,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-parameters",
+        "exit": 0,
+        "passed": 15,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-reload-guard",
+        "exit": 0,
+        "passed": 2,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-service-control",
+        "exit": 0,
+        "passed": 4,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-site",
+        "exit": 0,
+        "passed": 4,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-structure",
+        "exit": 0,
+        "passed": 8,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-support",
+        "exit": 0,
+        "passed": 4,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-task-status",
+        "exit": 0,
+        "passed": 27,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-updates",
+        "exit": 0,
+        "passed": 7,
+        "skipped": 0
+      },
+      {
+        "stage": "browser-ux-feedback",
+        "exit": 0,
+        "passed": 55,
+        "skipped": 0
+      }
+    ]
+  },
+  "nativeCases": {
+    "release-media-proof": 1,
+    "native-evidence": 12,
+    "naming": 4,
+    "native-functions": 4,
+    "native-name-recipe": 4
+  },
+  "pythonSuites": {
+    "tools": {
+      "run": 163,
+      "skipped": 1,
+      "exit": 0
+    },
+    "story": {
+      "run": 76,
+      "skipped": 0,
+      "exit": 0
+    },
+    "website-unit": {
+      "run": 24,
+      "skipped": 0,
+      "exit": 0
+    }
+  },
+  "corpus": {
+    "passed": 152,
+    "expected": 152,
+    "targets": 33
+  },
+  "websiteChecks": 492,
+  "repositoryChecks": [
+    "layering",
+    "headers",
+    "anchors",
+    "ledger",
+    "corpus-gates",
+    "documentation"
+  ],
+  "visualSelfReview": {
+    "applicationFrames": 10,
+    "websiteFrames": 19,
+    "websiteLongPageStrips": 30,
+    "findings": []
+  },
+  "packagingDryRuns": {
+    "head": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+    "runs": [
+      {
+        "workflow": "linux-appimage.yml",
+        "run": 38762340279,
+        "head": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+        "watchExit": 0,
+        "conclusion": "success",
+        "publicationJob": "Publish tag release",
+        "publicationConclusion": "skipped",
+        "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38762340279"
+      },
+      {
+        "workflow": "docker-release.yml",
+        "run": 38762344813,
+        "head": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+        "watchExit": 0,
+        "conclusion": "success",
+        "publicationJob": "Publish multi-arch image",
+        "publicationConclusion": "skipped",
+        "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38762344813"
+      }
+    ],
+    "success": true
+  },
+  "downloadedDryRunArtifacts": [
+    {
+      "name": "KNXBench_0.1.0-alpha.12_amd64.AppImage",
+      "size": 89364984,
+      "sha256": "5f9ad203b6afe228422ee52f5008ea8735b5c8094dba7f4114080584013659a5",
+      "sourceRun": 38762340279,
+      "candidate": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+      "purpose": "downloaded packaging dry-run evidence; not a published release"
+    },
+    {
+      "name": "knx-mcp-x86_64-linux",
+      "size": 12460848,
+      "sha256": "1253ff4a76e674e30c73567af95cc8d0c61c4aff7cef6b44a7eeaabba532095c",
+      "sourceRun": 38762340279,
+      "candidate": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+      "purpose": "downloaded packaging dry-run evidence; not a published release"
+    }
+  ],
+  "sourceReceiptSha256": "720d85dcfb5053016ec0226b8c0d84389bbf72a0c56c88bd2de93417f88ea689",
+  "upstreamAfterCutoff": [],
+  "publication": "Pending reserved owner Go; tag/release absent, no Pages cutover or container replacement",
+  "notVerified": [
+    "new physical gateway/device operation",
+    "broad KNX/ETS compatibility",
+    "native WebKitGTK/Orca feature acceptance",
+    "published-download/registry verification before publication"
+  ]
+}

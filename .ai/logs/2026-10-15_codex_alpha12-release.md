@@ -110,3 +110,19 @@ runner preflights comparator/tooling early, retains the later generated comparis
 and executes actual ten-frame capture after building the server (77 stages total).
 Original failures, earlier packaging evidence and accepted media stay historical;
 no source receipt is relabelled, and no tag/Pages/registry publication occurred.
+
+## Final source acceptance; owner publication decision pending
+
+Frozen candidate `16aefbe6a943406deb2876d11bca21c7e652b25a` has77/77
+ordered successful steps across66original and11actual continuation stages.
+The original website launch socket-path refusal remains; unchanged source,
+original logs and built-site commitments are proven. Only the private starter
+changed. Corpus152/152in33targets and product16/16in6targets pass. All2,860
+tracked source modes/content and HEAD equal the original start inventory.
+
+Ten current application and nineteen website frames/thirty long-page strips
+are self-reviewed. Exact-source packaging38762340279/38762344813 passes with
+publication skipped; downloaded dry-run artifact digests are in the dossier.
+This additive docs closure is separate from the immutable gated/tag candidate.
+Public evidence contains no private paths or inputs. Owner publication Go is
+pending; no tag, release, main, Pages or container cutover is claimed.

@@ -55,12 +55,46 @@ class CountingTests(unittest.TestCase):
                      [reply(login="Andre1Becker"), reply(2, login="helper")])["contributors"]
         self.assertEqual({row["login"] for row in rows}, {"tester", "helper"})
 
-    def test_bots_and_prs_are_excluded(self):
+    def test_external_agents_count_but_the_scoreboard_bot_and_prs_do_not(self):
         pr = issue(2, "pr-author", pull_request={"url": "example"})
         bot = issue(3, "robot"); bot["user"]["type"] = "Bot"
-        rows = build([issue(), pr, bot], [reply(number=2), reply(2, kind="Bot")])["contributors"]
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["xp"], 5)
+        app = issue(4, "external-agent[bot]"); app["user"]["type"] = "Bot"
+        own = issue(5, hall.BOT); own["user"]["type"] = "Bot"
+        rows = build([issue(), pr, bot, app, own],
+                     [reply(number=2), reply(2, login="robot", kind="Bot"),
+                      reply(3, login=hall.BOT, kind="Bot"),
+                      reply(4, login="external-agent[bot]", kind="Bot")])["contributors"]
+        self.assertEqual({row["login"]: row["xp"] for row in rows},
+                         {"tester": 5, "robot": 6, "external-agent[bot]": 6})
+        self.assertIn("https://github.com/external-agent%5Bbot%5D", hall.render_table({"contributors": rows}))
+
+    def test_external_bot_can_receive_completion_credit_and_medals(self):
+        issues = [issue(i + 1, "external-agent[bot]", state="closed", reason="completed") for i in range(5)]
+        for item in issues:
+            item["user"]["type"] = "Bot"
+        snapshot = build(issues)
+        row = snapshot["contributors"][0]
+        self.assertEqual((row["xp"], row["resolutions"], len(row["medals"])), (75, 5, 1))
+        api = FakeApi(); hall.notify_pending(snapshot, api)
+        self.assertEqual(len(api.posts), 5)
+        self.assertIn("@external-agent[bot]", api.posts[0][1])
+        self.assertEqual(build(issues, previous=snapshot)["contributors"], snapshot["contributors"])
+
+    def test_own_bot_is_excluded_case_insensitively_and_external_bots_can_opt_out(self):
+        policy = {**POLICY, "excluded_logins": POLICY["excluded_logins"] + ["external-agent[bot]"]}
+        rows = hall.build_snapshot([issue(login="GitHub-Actions[bot]"), issue(2, "external-agent[bot]")],
+                                   [], policy, "example/project", NOW)["contributors"]
+        self.assertEqual(rows, [])
+
+    def test_unknown_actor_types_still_fail_closed(self):
+        item = issue(); item["user"]["type"] = "Unexpected"
+        with self.assertRaises(ValueError):
+            build([item])
+
+    def test_workflow_admits_external_bot_replies_without_self_triggering(self):
+        workflow = (Path(__file__).resolve().parents[2] / ".github/workflows/community-hall-of-fame.yml").read_text()
+        self.assertIn("github.event.comment.user.login != 'github-actions[bot]'", workflow)
+        self.assertNotIn("github.event.comment.user.type != 'Bot'", workflow)
 
     def test_duplicate_api_records_are_counted_once(self):
         row = build([issue(), issue()], [reply(), reply()])["contributors"][0]
@@ -134,9 +168,81 @@ class PresentationTests(unittest.TestCase):
             if index:
                 self.assertEqual(hall.rank_for(rank["minimum_xp"] - 1)["title"], hall.RANKS[index - 1]["title"])
 
+    def test_report_medals_unlock_every_ten_reports_through_one_hundred(self):
+        previous = []
+        for count in range(101):
+            with self.subTest(count=count):
+                rows = build([issue(i + 1) for i in range(count)])["contributors"]
+                medals = rows[0]["medals"] if rows else []
+                self.assertEqual(len(medals), count // 10)
+                self.assertEqual(len(medals), len(set(medals)))
+                if count % 10:
+                    self.assertEqual(medals, previous)
+                previous = medals
+        self.assertEqual(build([issue(i + 1) for i in range(105)])["contributors"][0]["medals"], previous)
+
+    def test_completed_report_medals_unlock_every_five_through_one_hundred(self):
+        previous = []
+        for count in range(101):
+            with self.subTest(count=count):
+                issues = [issue(i + 1, state="closed", reason="completed") for i in range(count)]
+                snapshot = build(issues)
+                medals = snapshot["contributors"][0]["medals"] if count else []
+                completion_medals = medals[count // 10:]
+                self.assertEqual(len(completion_medals), count // 5)
+                self.assertEqual(len(medals), len(set(medals)))
+                if count % 5:
+                    self.assertEqual(completion_medals, previous)
+                previous = completion_medals
+        beyond = build([issue(i + 1, state="closed", reason="completed") for i in range(105)])
+        self.assertEqual(beyond["contributors"][0]["medals"][10:], previous)
+
+    def test_medals_use_retained_completions_not_all_closed_issues(self):
+        completed = [issue(i + 1, state="closed", reason="completed") for i in range(5)]
+        initial = build(completed)
+        self.assertEqual(len(initial["contributors"][0]["medals"]), 1)
+        reopened = build([issue(i + 1) for i in range(5)], previous=initial)
+        self.assertEqual(reopened["contributors"][0]["medals"], initial["contributors"][0]["medals"])
+        deleted = build([], previous=initial)
+        self.assertEqual(deleted["contributors"][0]["medals"], initial["contributors"][0]["medals"])
+        uncompleted = build([issue(i + 1, state="closed", reason="not_planned") for i in range(5)])
+        self.assertEqual(uncompleted["contributors"][0]["medals"], [])
+
     def test_ten_reports_award_the_golden_bus_probe(self):
         row = build([issue(i + 1) for i in range(10)])["contributors"][0]
         self.assertIn("Golden Bus Probe", row["medals"])
+
+    def test_table_uses_requested_column_order_and_all_earned_medals(self):
+        snapshot = build([issue(i + 1, state="closed", reason="completed") for i in range(20)])
+        table = hall.render_table(snapshot)
+        self.assertEqual(table.splitlines()[0],
+                         "| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved |")
+        for medal in snapshot["contributors"][0]["medals"]:
+            self.assertIn(medal, table)
+            self.assertIn(medal, hall.closing_note(snapshot, 20))
+        cells = table.splitlines()[2].split("|")[1:-1]
+        self.assertEqual([cell.strip() for cell in cells[4:]], ["**300**", "20", "0", "20"])
+
+    def test_empty_table_uses_the_same_column_order(self):
+        cells = hall.render_table(build([])).splitlines()[2].split("|")[1:-1]
+        self.assertEqual([cell.strip() for cell in cells],
+                         ["—", "Your first report belongs here.", "Telegram Trainee", "—", "0", "0", "0", "0"])
+
+    def test_public_goals_hint_without_revealing_unearned_medal_names(self):
+        snapshot = build([issue(i + 1, state="closed", reason="completed") for i in range(20)])
+        outputs = [hall.render_page(snapshot), hall.replace_readme(hall.START + hall.END, snapshot),
+                   json.dumps(snapshot), hall.closing_note(snapshot, 20)]
+        earned = snapshot["contributors"][0]["medals"]
+        for output in outputs:
+            for _, name in hall.REPORT_MEDALS + hall.RESOLUTION_MEDALS:
+                self.assertEqual(name in output, name in earned, name)
+        page = outputs[0]
+        self.assertIn("## The next mystery", page)
+        self.assertIn("every five", page)
+        self.assertIn("100", page)
+        self.assertNotIn("external human", page.lower())
+        self.assertIn("Reporter", page)
+        self.assertNotIn("Maintainers and bots", outputs[1])
 
     def test_every_contributor_is_in_the_public_table(self):
         snapshot = build([issue()], [reply(login="helper")])
@@ -211,6 +317,51 @@ class NotificationsTests(unittest.TestCase):
         hall.notify_pending(snapshot, api)
         self.assertEqual(len(api.posts), 1)
         self.assertTrue(snapshot["resolution_awards"]["1"]["notified"])
+
+    def test_opt_out_does_not_make_an_external_marker_trusted(self):
+        for kind in ["User", "Bot"]:
+            with self.subTest(kind=kind):
+                snapshot = build([issue(state="closed", reason="completed")])
+                snapshot["policy"]["excluded_logins"] = POLICY["excluded_logins"] + ["external-agent[bot]"]
+                api = FakeApi([reply(kind=kind, login="external-agent[bot]", body="<!-- knxbench-field-credit:1 -->")])
+                hall.notify_pending(snapshot, api)
+                self.assertEqual(len(api.posts), 1)
+
+    def test_explicitly_trusted_maintainer_marker_recovers_a_notice(self):
+        snapshot = build([issue(state="closed", reason="completed")])
+        snapshot["policy"]["trusted_notice_logins"] = ["Andre1Becker"]
+        api = FakeApi([reply(login="andre1becker", body="<!-- knxbench-field-credit:1 -->")])
+        hall.notify_pending(snapshot, api)
+        self.assertEqual(api.posts, [])
+        self.assertTrue(snapshot["resolution_awards"]["1"]["notified"])
+
+    def test_invalid_trusted_notice_policy_is_refused_before_posting(self):
+        for invalid in ["not-a-list", ["bad|handle"]]:
+            with self.subTest(invalid=invalid):
+                snapshot = build([issue(state="closed", reason="completed")])
+                snapshot["policy"]["trusted_notice_logins"] = invalid
+                api = FakeApi()
+                with self.assertRaises(ValueError):
+                    hall.notify_pending(snapshot, api)
+                self.assertEqual(api.posts, [])
+
+    def test_external_bot_marker_does_not_suppress_credit(self):
+        snapshot = build([issue(state="closed", reason="completed")])
+        api = FakeApi([reply(kind="Bot", login="external-agent[bot]", body="<!-- knxbench-field-credit:1 -->")])
+        hall.notify_pending(snapshot, api)
+        self.assertEqual(len(api.posts), 1)
+        self.assertTrue(snapshot["resolution_awards"]["1"]["notified"])
+
+    def test_historical_medal_backfill_does_not_repost_notified_awards(self):
+        snapshot = build([issue(i + 1, state="closed", reason="completed") for i in range(20)])
+        for award in snapshot["resolution_awards"].values():
+            award["notified"] = True
+        # Older snapshots had only the ten-report medal. Recompute, do not trust it.
+        snapshot["contributors"][0]["medals"] = ["Golden Bus Probe"]
+        updated = build([issue(i + 1, state="closed", reason="completed") for i in range(20)], previous=snapshot)
+        self.assertEqual(len(updated["contributors"][0]["medals"]), 6)
+        api = FakeApi(); hall.notify_pending(updated, api)
+        self.assertEqual(api.posts, [])
 
     def test_reopened_issue_receives_no_misleading_closure_note(self):
         snapshot = build([issue(state="closed", reason="completed")])

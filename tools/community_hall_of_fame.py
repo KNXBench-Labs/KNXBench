@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+from urllib.parse import quote
 
 RANKS = [
     {"minimum_xp": minimum, "title": title}
@@ -21,6 +22,48 @@ RANKS = [
         (4000, "Supreme Commander of the Blinking LED"), (6000, "Legend of the Twisted Pair"),
     ]
 ]
+# Only earned names enter generated documents/data; the public goals are hints.
+REPORT_MEDALS = [
+    (10, "Golden Bus Probe"),
+    (20, "Double-Decade Fault Finder"),
+    (30, "Topology Treasure Hunter"),
+    (40, "Four-Line Fault Patrol"),
+    (50, "Half-Century Bus Sleuth"),
+    (60, "Hexadecimal Hunch Master"),
+    (70, "Seven-Area Signal Scout"),
+    (80, "Octet of Observations"),
+    (90, "Almost-Centurion Antenna"),
+    (100, "Century of Bus Mysteries"),
+]
+RESOLUTION_MEDALS = [
+    (5, "Loose End Lasso"),
+    (10, "Regression Repair Ribbon"),
+    (15, "Acknowledgement Ace"),
+    (20, "Closed-Loop Champion"),
+    (25, "Quarter-Century Quencher"),
+    (30, "Topology Peacekeeper"),
+    (35, "Phantom Fault Buster"),
+    (40, "Bus Serenity Badge"),
+    (45, "Tunnel Light Keeper"),
+    (50, "Half-Century Fix Beacon"),
+    (55, "Parameter Peace Prize"),
+    (60, "Sixty Solutions Salute"),
+    (65, "Datapoint Harmony Seal"),
+    (70, "Routing Rescue Star"),
+    (75, "Three-Quarter Victory Lap"),
+    (80, "Octet of Quiet Lines"),
+    (85, "Lasting Fix Laureate"),
+    (90, "Regression Retirement Medal"),
+    (95, "Nearly Mythical Maintainer Ally"),
+    (100, "Centurion of the Unbroken Bus"),
+]
+
+
+def medals_for(issues, resolutions):
+    return ([name for minimum, name in REPORT_MEDALS if issues >= minimum] +
+            [name for minimum, name in RESOLUTION_MEDALS if resolutions >= minimum])
+
+
 START = "<!-- HALL-OF-FAME:START -->"
 END = "<!-- HALL-OF-FAME:END -->"
 BOT = "github-actions[bot]"
@@ -33,7 +76,7 @@ def positive(value):
 
 
 def login(value):
-    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})", value):
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})(?:\[bot\])?", value):
         raise ValueError("invalid public account identifier")
     return value
 
@@ -55,15 +98,18 @@ def validate_policy(policy):
     timestamp(policy["notify_since"])
     if not isinstance(policy["excluded_logins"], list):
         raise ValueError("excluded_logins must be a list")
-    return {login(value).casefold() for value in policy["excluded_logins"]}
+    trusted = policy.get("trusted_notice_logins", [])
+    if not isinstance(trusted, list):
+        raise ValueError("trusted_notice_logins must be a list")
+    for value in trusted:
+        login(value)
+    return {BOT.casefold()} | {login(value).casefold() for value in policy["excluded_logins"]}
 
 
-def human(actor, excluded):
+def participant(actor, excluded):
     if actor is None:
         return None
-    if actor.get("type") == "Bot":
-        return None
-    if actor.get("type") not in {"User", "Organization"}:
+    if actor.get("type") not in {"User", "Organization", "Bot"}:
         raise ValueError("unknown GitHub actor type")
     value = login(actor["login"])
     return value if value.casefold() not in excluded else None
@@ -116,7 +162,7 @@ def build_snapshot(issues, comments, policy, repository, now, previous=None):
         if item["state"] not in {"open", "closed"}:
             raise ValueError("unknown issue state")
         real_issues[number] = item
-        who = human(item.get("user"), excluded)
+        who = participant(item.get("user"), excluded)
         if who is None:
             continue
         row(who)["issues"] += 1
@@ -131,7 +177,7 @@ def build_snapshot(issues, comments, policy, repository, now, previous=None):
             raise ValueError("foreign or invalid comment issue URL")
         if int(match[1]) not in real_issues:
             continue  # Pull-request conversations are deliberately outside this scoreboard.
-        who = human(comment.get("user"), excluded)
+        who = participant(comment.get("user"), excluded)
         if who is not None:
             row(who)["replies"] += 1
     for award in awards.values():
@@ -142,7 +188,7 @@ def build_snapshot(issues, comments, policy, repository, now, previous=None):
     for target in contributors:
         target["xp"] = target["issues"] * policy["issue_xp"] + target["replies"] * policy["reply_xp"] + target.pop("resolution_xp")
         target["rank"] = rank_for(target["xp"])
-        target["medals"] = ["Golden Bus Probe"] if target["issues"] >= 10 else []
+        target["medals"] = medals_for(target["issues"], target["resolutions"])
     contributors.sort(key=lambda target: (-target["xp"], target["login"].casefold()))
     for index, target in enumerate(contributors):
         target["position"] = index + 1 if index == 0 or target["xp"] != contributors[index - 1]["xp"] else contributors[index - 1]["position"]
@@ -155,14 +201,14 @@ def build_snapshot(issues, comments, policy, repository, now, previous=None):
 
 
 def render_table(snapshot):
-    lines = ["| Place | Bug hunter | Issues | Replies | Resolved | XP | Rank & title | Medal |",
-             "| ---: | --- | ---: | ---: | ---: | ---: | --- | --- |"]
+    lines = ["| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved |",
+             "| ---: | --- | --- | --- | ---: | ---: | ---: | ---: |"]
     for target in snapshot["contributors"]:
         who = target["login"]
-        medal = "🏅 Golden Bus Probe" if target["medals"] else "—"
-        lines.append(f"| {target['position']} | [@{who}](https://github.com/{who}) | {target['issues']} | {target['replies']} | {target['resolutions']} | **{target['xp']}** | {target['rank']['title']} | {medal} |")
+        medal = "<br>".join(f"🏅 {name}" for name in target["medals"]) or "—"
+        lines.append(f"| {target['position']} | [@{who}](https://github.com/{quote(who, safe='')}) | {target['rank']['title']} | {medal} | **{target['xp']}** | {target['issues']} | {target['replies']} | {target['resolutions']} |")
     if not snapshot["contributors"]:
-        lines.append("| — | Your first report belongs here. | 0 | 0 | 0 | 0 | Telegram Trainee | — |")
+        lines.append("| — | Your first report belongs here. | Telegram Trainee | — | 0 | 0 | 0 | 0 |")
     return "\n".join(lines)
 
 
@@ -170,14 +216,14 @@ def replace_readme(text, snapshot):
     if text.count(START) != 1 or text.count(END) != 1 or text.index(START) >= text.index(END):
         raise ValueError("README must contain exactly one ordered hall-of-fame marker pair")
     before, rest = text.split(START); _, after = rest.split(END)
-    content = "\n" + render_table(snapshot) + f"\n\n*Snapshot: {snapshot['generated_at']}. Maintainers and bots sit this one out.*\n"
+    content = "\n" + render_table(snapshot) + f"\n\n*Snapshot: {snapshot['generated_at']}. Maintainers and the scoreboard bot sit this one out.*\n"
     return before + START + content + END + after
 
 
 def render_page(snapshot):
     policy = snapshot["policy"]
     title = "# Bug Hunters’ Hall of Fame\n\n"
-    intro = "**Every report makes the bus a little less mysterious.** This is our public\nthank-you to the people who test KNXBench, reproduce surprises and come back\nwith the details. You do not need to write code to earn a place here.\n\n"
+    intro = "**Every report makes the bus a little less mysterious.** This is our public\nthank-you to reporters who test KNXBench, reproduce surprises and come back\nwith the details. You do not need to write code to earn a place here.\n\n"
     rules = f"""## How the points work
 
 - **+{policy['issue_xp']} XP per issue** opened in this repository, open or closed.
@@ -185,11 +231,20 @@ def render_page(snapshot):
 - **+{policy['resolution_xp']} XP for the reporter** when an issue is closed as **completed**.
   This bonus is awarded once per issue and retained if it is reopened. Closing
   as **not planned** does not earn a completion bonus.
-- **Golden Bus Probe:** report ten issues. No actual bus probe is shipped;
-  ours fits comfortably in a Markdown table.
 
-Every external human reporter or replier is listed, not just the top ten.
-Maintainer accounts and bots are excluded. Pull requests, reviews, reactions,
+## The next mystery
+
+- **Reporter milestones:** a new medal waits at every ten reports, up to 100.
+  Twenty reports? There is more than one bus probe in the trophy cabinet.
+- **Resolution milestones:** every five reports closed as **completed** unlock
+  another medal, up to 100. Reopening and closing the same issue is not a shortcut.
+- **No spoilers:** medal names appear only once earned, in the table and completion
+  acknowledgements. Keep reporting and helping us close the loop to discover them.
+  These are thank-you medals, not extra XP — and no hardware needs shelf space.
+
+Reporters and issue-thread repliers are listed, not just the top ten. External
+AI agents are welcome to earn points too. Maintainer accounts, explicit opt-outs
+and the scoreboard bot itself are excluded. Pull requests, reviews, reactions,
 Discussions and private messages are not counted. Tied scores share a place;
 alphabetical order merely keeps the table stable. Counts measure participation,
 not report quality, correctness, or a promise that every request will be implemented.
@@ -226,7 +281,7 @@ def closing_note(snapshot, number):
     previous_rank = rank_for(target["xp"] - award["xp"])["title"]
     current_rank = target["rank"]["title"]
     rank_up = f"\n\n**Rank up:** {previous_rank} → **{current_rank}**." if current_rank != previous_rank else ""
-    medal = "\n\n🏅 **Golden Bus Probe** holder — ten reports and counting." if target["medals"] else ""
+    medal = ("\n\n**Medals earned:** " + " · ".join(f"🏅 {name}" for name in target["medals"])) if target["medals"] else ""
     return (f"🏅 **Field-test credit for @{target['login']}: +{award['xp']} XP** for this completed issue.\n\n"
             f"**Total: {target['xp']} XP · Title: {current_rank}**\n"
             f"{target['issues']} issues · {target['replies']} replies · {target['resolutions']} completed reports."
@@ -237,6 +292,7 @@ def closing_note(snapshot, number):
 
 def notify_pending(snapshot, api):
     excluded = validate_policy(snapshot["policy"])
+    trusted_authors = {value.casefold() for value in snapshot["policy"].get("trusted_notice_logins", [])}
     for identifier, award in sorted(snapshot["resolution_awards"].items(), key=lambda pair: int(pair[0])):
         if not award["notify"] or award["notified"] or award["login"].casefold() in excluded:
             continue
@@ -246,7 +302,7 @@ def notify_pending(snapshot, api):
         marker = f"<!-- knxbench-field-credit:{number} -->"
         trusted = [comment for comment in api.get_comments(number)
                    if comment.get("user") and
-                   (comment["user"].get("login", "").casefold() in excluded or
+                   (comment["user"].get("login", "").casefold() in trusted_authors or
                     (comment["user"].get("login") == BOT and comment["user"].get("type") == "Bot"))]
         if not any(marker in comment.get("body", "") for comment in trusted):
             body = closing_note(snapshot, number)

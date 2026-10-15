@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 08:41
+- **Completed:** Owner Hall-of-Fame amendment implemented in isolated feature/hall-of-fame-20261015: report medals every ten and retained-completion medals every five through100; no unearned names in generated outputs; requested eight-column order; external AI/Bot participation with own bot excluded. Notification recovery trust separated from scoring opt-outs after test-first self-review finding. Real GitHub generation confirms20 reports/19 completions for leading reporter, five earned medals, existing XP/award ledger unchanged.47 community and163 tools tests(one inherited skip), docs and five fresh-built xtask checks pass.
+- **Pending/Next Steps:** Final frozen package checks, commit as KNXBench, fresh-main integration/affected gate, normal main push/readback and manual community-workflow acceptance; archive compact evidence and clean only owned tree/scratch. No frontend/Rust runtime gate or hardware/release claim.
+- **Notes for Codex oder Claude:** Only community generator/tests/workflow/policy/README/board/data/contract/status/handover are in scope. Current About links directly to public board; no UI parser remains. No spoiler catalogue in docs; public source names are not secret. Foreign root/P4/story/universal-support work untouched; selected root not synchronized. Evidence profile scratch/hof-20261015.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 07:06
 - **Completed:** Owner explicit Go: universal device-support reporter taken in feature/universal-support-20261015 (worktree universal-support-20261015). Interview decisions at root-local .ai/logs/2026-10-15_codex_support-sharing-grilling.md read; offline and optional bounded live diagnostics, privacy/IP-safe preview/export/manual handoff. Startup docs/overlap checked; no implementation yet.
 - **Pending/Next Steps:** Implement contract/ADR131 (130 reserved by P4), test-first App report and safe read-only diagnostic adapter, HTTP/UI/export and evidence. Unknown targets must report without plan/catalogue/gateway/profile; unknown/unsupported/untested stay distinct. Full tests/review/gates before publication. No actual bus operation.

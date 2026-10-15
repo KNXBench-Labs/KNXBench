@@ -14,6 +14,67 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Owner approved full Alpha 12 publication after complete source
+  acceptance. Annotated `v0.1.0-alpha.12` points exactly to `16aefbe6`; the public
+  GitHub prerelease and hand-written scope were read back. Tag-triggered build/
+  artifact/registry jobs and live-site verification are in progress. Release/docs
+  integration preserves every gated application, test, workflow, Story and website
+  input; this entry does not claim published artifact verification yet.
+
+- 2026-10-15 — **Alpha 12 source accepted, not published**, frozen candidate
+  `16aefbe6`: complete77/77 source-bound chain (66 original successful steps,
+  11 actual continuation steps after private Chromium starter correction).
+  Vitest3626/263files; fixture Chromium574 plus additional configurations;
+  Rust4597/0 with207 ignored; native evidence12 and naming/Functions/recipe4each;
+  bindings28; tooling163(one skip), Story76, website24 and actual site492;
+  OriginalData152/152 in33targets and product16/16 in6targets. Full2,860path
+  mode/content/HEAD freeze verified. Ten app frames and nineteen website frames
+  plus thirty page strips self-reviewed, not independent approval. Exact-SHA
+  AppImage/MCP and amd64/arm64 Docker dry runs pass with publishing skipped;
+  downloaded build artifacts hashed. Owner final tag/publication Go is pending.
+  Original failed records remain; no tag, Pages or container cutover.
+  [Acceptance dossier](releases/alpha12-acceptance.md).
+
+- 2026-10-15 — Alpha 12 candidate `ffc95e0a` **not accepted**: full gate
+  passed58 stages including all three native edit proofs, then a private
+  bindings comparator failed to load the locked TypeScript7 API. Corrected
+  comparator passes all28 generated paths with literal-preserving token equality
+  and seven rejection/format controls. A same-source continuation then found
+  the screenshot config missing its explicit central browser-temp guard; the
+  original failure remains, not a completed release gate. Added only that import;
+  guard5, tooling163 (one skip), native-media types and actual config listing pass.
+  Actual guarded-config real-server capture also passes one test/ten frames in
+  loopback-only isolation. New full candidate acceptance remains pending.
+  No production/model/schema/compatibility claim or publication changed.
+  [Tooling refusal evidence](evidence/alpha12-tooling-refusals-2026-10-15.json).
+
+- 2026-10-15 — Alpha 12 full gate **refused**, not release-ready: candidate
+  `02d823c4` passed frontend3626, ordinary Rust4597 (207 ignored), all declared
+  fixture browsers and native-evidence, then stopped in the native naming proof.
+  Its test sought the welcome-only open button while a project was already open.
+  Original failure and unchanged source proof are retained; remaining checks did
+  not run and no finalizer override is admissible. The three native edit specs
+  now use the real, dialog-scoped Commands route: targeted EN/DE wide/narrow
+  native naming, Functions and naming-recipe proofs pass12/12, with TypeScript
+  and unchanged source/demo checks. This is test-route evidence, not acceptance
+  of a new release candidate; a fresh full74-stage candidate gate is pending.
+  Existing exact-candidate AppImage/MCP and amd64/arm64 Docker dry runs succeeded
+  with publication jobs skipped; they do not certify a future successor SHA.
+  [Refusal evidence](evidence/alpha12-gate-refusal-2026-10-15.json).
+
+- 2026-10-15 — Alpha 12 media/docs preparation: ten actual integrated-application
+  PNGs (real server, fictional house/native-created device, loopback-only network)
+  and seven decoded-pixel-equal lossless website WebPs. Website24, current docs,
+  capture TypeScript and public website build pass; actual production-variant
+  Chromium492 checks pass across EN/DE,320–1440px,JS/no-JS,motion/navigation/media.
+  All ten application frames and nineteen website frames (thirty long-page strips)
+  inspected. README/manual/feature/model/import/compatibility upgrade routes now
+  agree on native16/product23 and pre-upgrade independent backups. P4 delivered
+  source and its exact original acceptance are retained; approved Story unchanged.
+  Full exact-candidate gate, no-publish packaging builds and final tag/publication
+  approval remain separate and pending. No hardware operation or release claimed.
+  [Preparation evidence](evidence/alpha12-media-2026-10-15.json).
+
 - 2026-10-15 — **P4 delivered on main `17cfd5b7`**, normal push and exact
   local/tracking/live readback verified. Both packages, feature519eff4b and
   separate corpus-fixa6cdfd9d are included. Runtime tested mergefacdd62e has

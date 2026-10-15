@@ -140,7 +140,7 @@ one undoable action. Use Save/autosave for the native working file as usual.
 An unrelated snapshot refresh keeps an unsubmitted draft. Pending writes cannot
 be submitted twice from the same field. A reply arriving after a project/target
 change or unmount is not applied to the replacement view; this does **not** cancel
-an already submitted server operation. *(Source build after Alpha 11.)* The
+an already submitted server operation. *(Since Alpha 12.)* The
 rename is bound to the project state and the name you saw: if someone renamed
 the installation elsewhere in the meantime, nothing is applied, your draft stays,
 and **Refresh state** loads the current name before you apply again. A refused
@@ -337,7 +337,7 @@ put it, exactly as Save As does. The suggested name is `project.knxdb`.
 
 **Save As…** always asks.
 
-**Replacing an existing file asks first** (source builds after v0.1.0-alpha.11).
+**Replacing an existing file asks first** (Alpha 12).
 In the browser, picking a name that already exists opens **Replace the existing
 file?**: **Cancel** writes nothing and leaves the project unsaved, **Replace**
 makes this project that file's content. The desktop build's own save dialog
@@ -427,9 +427,10 @@ stays unchanged. Until the limit is resolved, a native-backed edit can be refuse
 Versions are stored **inside the same `.knxdb`**. They protect against an unwanted
 edit, not file/disk loss: keep independent copies of closed files. They preserve
 project data, opaque source bytes and manufacturer references, not the global
-catalogue, passwords or device/bus state. Alpha 10 uses native schema 14; Alpha 9
-and earlier refuse upgraded files. Builds after Alpha 11 use schema 15 (project
-Functions); Alpha 11 and earlier refuse files they have upgraded. Independently back up closed files before
+catalogue, passwords or device/bus state. Alpha 12 uses native schema 16:
+Functions at 15 and retained manufacturer files at 16. Alpha 11 and earlier
+refuse upgraded native files. The separate product database uses schema 23.
+Independently back up closed project files and the whole data directory before
 upgrading. Downgrading means returning to the pre-upgrade backup, not pressing Undo.
 Browser **Export project…** remains a fresh current-project serialization, not a
 copy of the source file's complete history. See [the detailed contract](../../PROJECT_HISTORY.md).

@@ -22,3 +22,107 @@ registry version/latest digest and isolated published-image smoke, and live Page
 
 Self-review will be labelled as such, not independent approval. Prior package gates
 remain historical evidence, never relabelled as an Alpha 12 run.
+
+## Integrated source and actual media
+
+P4 feature `519eff4b`, corpus fix `a6cdfd9d` and tested merge `facdd62e`
+are ancestors of published main `17cfd5b7`; its public delivered receipt records
+full51/51, OriginalData152/152 and explicit product16/16 under the original
+source identity. Current live gate leases were observed empty before capture.
+The release merged that source as `6d8bf9bb`; later P4 publication metadata is
+accepted only after checking its complete runtime delta is empty.
+
+Actual real-server capture successor passes one test/five stages with frozen
+tracked source. Ten final PNGs were inspected, including native instructions
+created via the wizard and separate support setup/preview frames. Seven WebPs
+are decoded-pixel-equal to the original PNGs. Media provenance binds actual
+server binary, application commit, capture source/config, dimensions and hashes.
+Three failed harness predecessors remain private and are not relabelled green;
+an earlier successful nine-frame run was superseded only for better framing.
+No production code, admission or old sample schema was changed for the camera.
+
+Website24, current docs checker, capture TypeScript and public website build
+pass after the media update. The actual release-variant browser review is a
+separate running preflight; full frozen-candidate acceptance is still pending.
+
+## Self-review (not independent approval)
+
+Corrected stale native14/15 versus actual16 and product22 versus23 reader copy;
+promoted delivered Functions/universal reporting in the feature inventory;
+retained historical release/media boundaries and exact approved Story bytes.
+Restored an older video's original declared height after replacing stills;
+updated browser recipes to await real navigation and distinguish production
+from private-preview banners. Native-origin instructions use their actual label,
+not the imported-override badge. Unsupported schema-11 instructions remain
+explicitly refused. No unresolved runtime/security finding has been identified;
+this is not a release-ready verdict before the complete gate and packaging runs.
+
+## Actual complete-gate refusal and scoped correction
+
+The complete gate on `02d823c4` passed 54 of 72 declared stages, including
+Vitest3626, ordinary Rust4597/0 (207 ignored), fixture browsers and native-evidence,
+then failed in native naming. Remaining stages did not run. This is a real test
+failure, not the separately identified finalizer issue, and it cannot be accepted
+through the prepared receipt-reconciliation tool. Full source/mode inventory after
+the refusal equals its original start inventory; the original failed receipt stays.
+
+Reset opens an active empty project, so a welcome-only Open button is absent.
+The first correction proved EN paths but exposed an unscoped-combobox/keyboard
+startup race on DE reload. The final correction uses the rendered Commands button
+and scopes the localized native Open command to its dialog in all three native
+specs. No production code, mock response, limit, timeout or core assertion changed.
+Targeted final proof passes12/12 (naming4, Functions4, naming recipe4), plus the
+native TypeScript configuration. All four steps exit0, edited spec hashes stay
+frozen, and each real-server suite verifies the untouched demo hash and teardown.
+This uses the unchanged predecessor runtime and is not full release acceptance.
+
+The successor private runner includes all three native specs and uses separate
+ordered-stage and corpus-count variables. Seven controls pass after reproducing
+the old runner's control failures. It will execute a fresh complete 74-stage gate
+on a newly committed frozen candidate, rather than relabel the failed execution.
+Both earlier exact-SHA packaging dry runs passed with publish jobs skipped; new
+SHA-specific dry runs remain required. No tag, release, Pages or Docker cutover.
+
+## Gate 3 tooling setup refusals
+
+Candidate `ffc95e0a` passed58 stages, including native naming, Functions and the
+naming recipe; the private comparator then tried a legacy TypeScript-directory
+CommonJS entry. The locked7.0.2 package exposes the observed AST scanner through
+its declared export instead. A corrected private helper compares all28 paths
+and literal-preserving tokens, with seven positive/rejection controls. No new
+dependency or production edit was required. The original refused receipt remains.
+
+A separately identified same-source continuation admitted the58 successful
+prefix stages after full path/mode/content/HEAD/log proof (eleven admission and
+five final-order controls), passed the corrected bindings comparison, then
+failed one of163 tooling tests: the new release-media config lacked its explicit
+central browserTmp import. It inherited an already guarded base, but the repository
+contract deliberately requires the explicit entry import too. Add that one line;
+never weaken the gate. Targeted guard5/tooling163 (one skip)/media TypeScript and
+config-list checks pass. First list probes omitted required environment values;
+those setup refusals remain distinct from the successful configured list.
+Actual guarded-config capture then passes one real-server test and produces all
+ten PNGs in loopback-only isolation; this is targeted proof with the predecessor
+binary, not complete new-source acceptance.
+
+A fresh full candidate is required because the config changes source. Its private
+runner preflights comparator/tooling early, retains the later generated comparison,
+and executes actual ten-frame capture after building the server (77 stages total).
+Original failures, earlier packaging evidence and accepted media stay historical;
+no source receipt is relabelled, and no tag/Pages/registry publication occurred.
+
+## Final source acceptance; owner publication decision pending
+
+Frozen candidate `16aefbe6a943406deb2876d11bca21c7e652b25a` has77/77
+ordered successful steps across66original and11actual continuation stages.
+The original website launch socket-path refusal remains; unchanged source,
+original logs and built-site commitments are proven. Only the private starter
+changed. Corpus152/152in33targets and product16/16in6targets pass. All2,860
+tracked source modes/content and HEAD equal the original start inventory.
+
+Ten current application and nineteen website frames/thirty long-page strips
+are self-reviewed. Exact-source packaging38762340279/38762344813 passes with
+publication skipped; downloaded dry-run artifact digests are in the dossier.
+This additive docs closure is separate from the immutable gated/tag candidate.
+Public evidence contains no private paths or inputs. Owner publication Go is
+pending; no tag, release, main, Pages or container cutover is claimed.

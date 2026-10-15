@@ -40,7 +40,7 @@ before any plan or report exists. See
 
 **How can I report an unknown device before a download plan exists?**
 
-In source builds after Alpha11, use **File → Device support report**, or the same
+Since Alpha 12, use **File → Device support report**, or the same
 action in the device download panel. An offline report needs no project, installed
 product package or gateway. Optional live diagnostics show a fixed read list and
 require separate consent; they never write, restart or enable programming.
@@ -105,7 +105,7 @@ exists," not certification by the KNX Association.
 **What does "alpha" mean for this project specifically?**
 
 Version `0.1.0-alpha` (each component counts its own `alpha.N`), with a public
-`v0.1.0-alpha.11` pre-release. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
+`v0.1.0-alpha.12` pre-release. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
 known limitations, several classified critical, and writing to a real device is verified
 only for narrowly recorded device/application cases. See
 [Project status](../getting-started/03-project-status.md) for the evidence boundaries and what

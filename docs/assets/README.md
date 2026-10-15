@@ -11,6 +11,28 @@ All device names, rooms and products come from the generated **Sample house**
 or the first-project **Practice house** exercise. No customer project or live
 bus capture belongs in this directory.
 
+## Alpha 12 website and README stills (15 October 2026)
+
+The ten current release-candidate PNGs are in [releases/alpha12](releases/alpha12/media-manifest.json).
+They use the integrated Alpha 12 production frontend and actual server, a
+fictional Sample house and one native device created through the real wizard.
+All capture operations ran in an isolated loopback-only namespace. No application
+API responses, device reads or programming successes were fabricated; no live bus
+was contacted. The schema-11 sample's imported instruction source remains refused;
+the instruction still deliberately shows a native-created device instead.
+
+Seven website WebPs preserve the PNG pixels exactly. README uses the new light
+addresses/parameters/topology stills and current theme gallery. Earlier wizard/
+Flow videos and most manual screenshots retain their original dates and scope.
+The final ten frames were visually reviewed; one scrolled support-preview frame
+is evidence, while the readable initial form is the public gallery still.
+
+Reproduction: `apps/knx-web/e2e/release-media.shots.ts`,
+`playwright.release-media.config.ts` and `tsconfig.release-media.json`; see
+[website media instructions](../../website/README.md#media). The manifest binds
+application source, actual binary, spec/config hashes, dimensions and one passing
+capture test. This does not certify native WebKitGTK, screen readers or hardware.
+
 ## Application header mark
 
 The workbench header uses the text-free symbol in

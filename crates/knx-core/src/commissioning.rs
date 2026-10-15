@@ -2,6 +2,7 @@
 //! physical installation. Modelled as domain data, not import metadata,
 //! because that delta is engineering-critical (DATA_MODEL §7).
 
+pub mod absolute_load_control;
 pub mod authorisation;
 pub mod byte_order_evidence;
 pub mod device_backup;
@@ -9,6 +10,7 @@ pub mod domain_address;
 pub mod error_code;
 pub mod group_object_table;
 pub mod group_tables;
+pub mod legacy_object_table;
 pub mod load_control;
 pub mod load_control_memory;
 pub mod load_state;

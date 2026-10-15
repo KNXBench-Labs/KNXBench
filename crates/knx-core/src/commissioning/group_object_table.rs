@@ -156,7 +156,7 @@ pub struct ObjectFlags {
 impl ObjectFlags {
     /// The config octet without the segment selector, which is not a flag
     /// of the object but of where its value lives.
-    fn config_bits(self) -> u8 {
+    pub(super) fn config_bits(self) -> u8 {
         let flag = |on: bool, bit: u8| if on { bit } else { 0 };
         flag(self.update, UPDATE_ENABLE)
             | flag(self.transmit, TRANSMIT_ENABLE)

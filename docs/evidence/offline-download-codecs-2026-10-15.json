@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "scope": "P1 pure codecs and source-bound metadata; not executable device support",
+  "baseCommit": "3a9fd92f8fff211a3922d095c2888a1216b53170",
+  "featureParent": "d5698c158d2a2d23326a9dbe05fc196c14f9f0ab",
+  "review": "separate in-session self-review; no independent approval",
+  "originalPdfEvidence": "docs/contracts/offline-download-codecs.md",
+  "branchGate": {
+    "complete": true,
+    "successfulStages": 11,
+    "sourcePaths": 2882,
+    "inputsFrozen": true,
+    "rust": {"passed": 4612, "failed": 0, "ignored": 207, "resultBlocks": 334},
+    "vitest": {"passed": 3626, "failed": 0, "files": 263},
+    "workspaceClippy": "all targets, warnings denied: passed",
+    "workspaceBuild": "passed",
+    "repositoryChecks": ["check-layering", "check-headers", "check-anchors", "check-ledger", "check-corpus-gates"],
+    "tooling": "passed; existing skip retained"
+  },
+  "explicitProductCorpus": {"passed": 1, "failed": 0, "ignored": 0, "profile": "release; exact existing System2 fixture; no hardware"},
+  "redEvidence": [
+    "missing source-metadata API",
+    "ambiguous additional TaskCtrl2 incorrectly accepted before guard",
+    "missing legacy descriptor API",
+    "wrong legacy header diagnostic before dedicated two-octet error",
+    "missing absolute property allocation API",
+    "missing property stack/task API"
+  ],
+  "mutationProof": {"startLengthFieldSwap": "rejected by named independent-byte assertions", "canonicalSourceRestored": true},
+  "earlierGate": {"verdict": "failed", "stage": "clippy desktop build prerequisite", "cause": "actual frontend dist absent", "inputsFrozen": true, "resolution": "offline npm ci and actual frontend build, then distinct complete successor"},
+  "mergedAcceptance": "pending",
+  "publication": "pending",
+  "hardwareOperations": 0,
+  "compatibilityPromotion": false,
+  "limitations": ["no complete family image", "no product-to-wire step planner", "no new simulator executor", "no whole-mutation property recovery", "no field verification", "no browser or native visual acceptance claimed"]
+}

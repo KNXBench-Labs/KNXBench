@@ -14,7 +14,7 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-15 — P4 package 2 **branch accepted, integration pending**: actual
+- 2026-10-15 — P4 package 2 **implemented; publication blocked by additional corpus checks**: actual
   active parameter writes retain name/reference/segment/offset/bit/width in
   transient DownloadImage metadata. Named project/device values invert existing
   numeric and text writers, checking exact coverage, matching supported masks
@@ -24,8 +24,14 @@ fragment aliases and update this index. Do not rewrite previous results.
   review and production EN/DE1440/400 browser cases pass. Full branch49/49:
   Vitest3611, Chromium570, repeated87 and Rust4570 pass. Source-content manifests
   and template input hashes are exact; the outer add-N index-only mismatch is
-  reconciled with negative controls, original receipt retained. Fresh-main
-  merged gates plus corpus/publication are pending.
+  reconciled with negative controls, original receipt retained. Actual merge
+  `788974e7` passes full51/51 (Vitest3626, Chromium574, Rust4592) and isolated
+  OriginalData152/152. Explicit product opt-ins measure14/16: projected matrix
+  commitment mismatch and nested-module installer SizeLimit block publication.
+  Both test sources and installer are exact pre-P4 upstream bytes. Unmodified
+  `bee4f016` reproduces both named failures with identical commitment values
+  and SizeLimit member: inherited, not introduced by P4. The additional product
+  corpus is still red. No limits/pins changed; no push claimed.
   [Contract](contracts/device-comparison.md), [ADR-0130](adr/0130-session-device-comparison.md).
 
 - 2026-10-15 — Exact-approved story `2026-10-15.4` publication variant accepted

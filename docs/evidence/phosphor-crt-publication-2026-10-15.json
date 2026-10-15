@@ -1,0 +1,103 @@
+{
+  "schema": "knxbench-phosphor-crt-publication/1",
+  "status": "published-and-live-verified",
+  "date": "2026-10-15",
+  "approved_revision": "60d8eb7a254252eca4d12fc40c2c754b8770fb59",
+  "deployed_merge": "d90b3d4b92a8c45fb63d6c56d64b7b6218993a82",
+  "base": "6c870caf2cd14c01acf180f1145126cd82c7150c",
+  "pages": {
+    "run": 38789580428,
+    "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38789580428",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "build",
+        "conclusion": "success"
+      },
+      {
+        "name": "deploy",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "merged_acceptance": {
+    "stages": 23,
+    "source_frozen": true,
+    "source_manifest_sha256": "5d30a89d69f9b6c7fe47b9604a26da955e14eb026a2eab90f0d8c9e68be37e5e",
+    "website_tests": 28,
+    "story_tests": 76,
+    "tooling_ran": 163,
+    "tooling_existing_skips": 1,
+    "chromium_preview_checks": 394,
+    "chromium_public_variant_checks": 416,
+    "approved_public_artifact_byte_equal": true
+  },
+  "live": {
+    "host": "knxbench.com",
+    "inventoried_content_files_compared": 36,
+    "build_manifest_compared": true,
+    "root_alias_compared": true,
+    "all_38_hashes_equal": true,
+    "public_manifest_sha256": "b5c8b15f603f73c4490a4cc5c72cee0be8b57acfd51197f9e983c709b7be5606",
+    "canonical_without_query": {
+      "/": {
+        "sha256": "18ac21944c7def55b32e19db9f173242950838fc873f1ffb47195e3bcf9ffdf4",
+        "status": 200,
+        "equal": true
+      },
+      "de/": {
+        "sha256": "c6666619d1bc381deeab82968eb147f51b62b88bbabfe6b2d9e37a17c7d7cd1e",
+        "status": 200,
+        "equal": true
+      },
+      "en/": {
+        "sha256": "85390ac3df7b281d1e60467b593ac522feb80af5d1a6fda52f90ac9657ccadc1",
+        "status": 200,
+        "equal": true
+      },
+      "assets/site.css": {
+        "sha256": "b129cd6005d0bdbdd9fbeb709eb6bef0747b64d50ab2c4f24589a5e9ce7099d7",
+        "status": 200,
+        "equal": true
+      },
+      "assets/headlines.js": {
+        "sha256": "a1a2f92ede1c02d94ea8304e34b7a1decde0277cd7455c32d3ca8bb318493f0b",
+        "status": 200,
+        "equal": true
+      }
+    },
+    "chromium_checks": 124,
+    "recipes": [
+      {
+        "recipe": "verify-phosphor",
+        "exit": 0,
+        "passed": true,
+        "count": 74
+      },
+      {
+        "recipe": "verify-roll-directions",
+        "exit": 0,
+        "passed": true,
+        "count": 28
+      },
+      {
+        "recipe": "verify-release",
+        "exit": 0,
+        "passed": true,
+        "count": 22
+      }
+    ]
+  },
+  "preserved": [
+    "Approved Story content/style/runtime/pin",
+    "Application/core/protocols",
+    "All original media and legal wording",
+    "Selected dirty root HEAD/index/foreign files",
+    "Running user container"
+  ],
+  "limits": [
+    "Self-review, not independent approval",
+    "No product tag/release/hardware operation",
+    "No Firefox/WebKit/native screen-reader certification"
+  ]
+}

@@ -9,14 +9,19 @@ Decision: [ADR-0095](adr/0095-static-marketing-companion.md).
 
 <a id="phosphor-atlas--private-implementation-15-october-2026"></a>
 
-## Story-style phosphor CRT — private revision (15 October 2026)
+<a id="story-style-phosphor-crt--private-revision-15-october-2026"></a>
+
+## Story-style phosphor CRT — published revision (15 October 2026)
 
 Owner review superseded the initial diagram-first Phosphor Atlas concept: **remove
 its installation diagram and restore the original marketing layout**, retaining
 phosphor CRT character and applying the existing Story's visual language. The owner authorized commit/push of this reviewed revision on15October2026.
-The source is being integrated and checked for Pages publication; public delivery
-will be recorded only after workflow and live-byte readback. Alpha12 release and
-freeze release were verified before implementation.
+**Published and verified:** merge `d90b3d4b`, Website run `38789580428` build/deploy
+success; live root,36inventoried content files and build manifest match the exact
+accepted public build. Canonical EN/DE/root/CSS/headline bytes also match without
+cache-busting, and124real Chromium checks pass against the deployed host.
+[Publication receipt](evidence/phosphor-crt-publication-2026-10-15.json).
+Alpha12 release and freeze release were verified before implementation.
 
 The screenshot-first hero, section order and responsive grids follow the original
 website. The added installation fragment, script, logical-path animation,

@@ -1,5 +1,38 @@
 # Import and export
 
+## Product-corpus prerequisites — 15 October 2026
+
+The v23 positional-text change (ADR-0126, `9d097e9c`) models
+`TextParameterRefId` on Channel, ParameterBlock, ParameterSeparator and
+ComObjectRef, including ModuleDef scope. The matrix still pinned v22's unknown
+rows. An actual v22/current pair over the same 115 instances / 113 unique
+packages changes exactly five aggregate leaves: isolated and successful-attempt
+unknown totals 24,639 → 24,174; unique-install unknown totals 24,513 → 24,050;
+`ingest_unknown` 24,911 → 24,448; `package_install_unknown` 10,023 → 9,866.
+All other **41** table counts, package outcomes, feature and catalogue totals
+are equal. An independent raw XML census, including bundled packages and
+program versus ModuleDef paths, predicts the 465 / 463 / 463 / 157 removals
+at their respective aggregation granularities. Pins now represent that already
+implemented modelling; original sources and other unknown attributes stay intact.
+
+The separate loose-package nesting census uses STANDARD admission and reports
+every discovered archive, including independently explained typed size refusals.
+It never opts into LARGE, treats other errors as success, or discards refused
+inputs. Current measurement: **105 discovered = 103 installs + 1 duplicate +
+1 expanded-total size refusal**; 1,678 Module rows / zero nested Module rows
+apply **only to standard-admitted inputs**, not the refused archive. An independent
+ZIP central-directory census predicts 104 within-size inputs / one total refusal.
+The size refusal must leave the connection's total row-change counter untouched;
+malformed archives and unexplained metadata/structural limits still fail.
+
+Both formerly red cases and all **16** explicit product opt-ins pass in the
+isolated correction tree. Ordinary synthetic classifier tests and Clippy pass;
+all seven semantic mutants fail their named regressions and restored-source
+ordinary product tests pass. Final P4-integrated acceptance remains pending.
+There is no production importer, safety-bound, database-schema or compatibility
+change in this test-only prerequisite correction.
+
+
 ## Universal support ZIP (15 October 2026 source)
 
 [The support envelope](contracts/universal-device-support.md) is a separate,

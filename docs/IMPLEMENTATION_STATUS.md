@@ -14,6 +14,19 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — **Corpus-prerequisite correction a6cdfd9d, integrated candidate / unpublished**:
+  two failures reproduced on unchanged pre-P4 main. Matrix pins lag ADR-0126's
+  v23 modelling, not an importer regression: independent XML counts predict
+  exactly465/463/463/157 retired unknown rows, all41 other table counts unchanged.
+  The nesting census explicitly accounts for standard size refusals, not a
+  larger admission profile; unexpected errors remain red and refusal row changes
+  are forbidden. Targeted product16/16, synthetic classifier cases and Clippy
+  pass; seven semantic mutants fail as intended and restored-source ordinary
+  product887/0 tests pass. Integrated candidate preserves exact previously
+  accepted P4 production/frontend bytes; final combined full/corpus gates remain
+  pending, rather than borrowing an earlier source receipt.
+  [Facts and limits](IMPORT_EXPORT.md#product-corpus-prerequisites--15-october-2026).
+
 - 2026-10-15 — P4 package 2 **implemented; publication blocked by additional corpus checks**: actual
   active parameter writes retain name/reference/segment/offset/bit/width in
   transient DownloadImage metadata. Named project/device values invert existing

@@ -91,14 +91,22 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// four legacy provenance tables, all empty here (pinned below). With them
 /// left out, the v16-shaped projection is unchanged (97f3a9d3…), so no
 /// outcome, report total or other table count moved. Previous pin 7b558cdd….
+/// Re-pinned for ADR-0126 (schema v23, 9d097e9c): TextParameterRefId is
+/// modelled on its four hosts, including ModuleDef scope. A v22/current matrix
+/// pair changes only five aggregate leaves: unknown report totals 24639 ->
+/// 24174 (isolation/successful), 24513 -> 24050 (unique installs), ingest_unknown
+/// 24911 -> 24448, package_install_unknown 10023 -> 9866. All other 41 table
+/// counts, outcomes, features and catalogue totals match. Independent XML
+/// census over 115 instances/113 unique packages/302 program blobs predicts
+/// -465/-463/-463/-157 at their actual aggregation granularities exactly.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "541d0afc77ef69433bdc28c95bb2235938a249dc7f3262662fbdff3f750317a0";
-/// Current v21 outcomes/counts projected without the four v17 tables, the
-/// v20 table and PDB-11 identity; the v20 pin a2181d65… moved only by the
-/// five ADR-0081 unknown totals above. Historical v16 pin: c204acc8… (see
+    "997e7cec1586c07d1680cd956256ca8a7d29dff0bad5466f664068adef7976dd";
+/// Current v23 outcomes/counts projected without the four v17 tables, the
+/// v20/v22 tables and PDB-11 identity; the previous v22 pin 97f3a9d3… moves
+/// only by the five ADR-0126 totals above. Historical v16 pin: c204acc8… (see
 /// Git history).
 const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
-    "97f3a9d36034246f257347aae3e19ae89a501523422c61b8fd486cd4d47ca062";
+    "b8179368bb330435d3bb102adbd74b91e2fec0bf0e9b481de5a330c9ca6aaf10";
 /// Tables schema v17 added (ADR-0043), left out of the v16 projection.
 const V17_TABLES: [&str; 4] = [
     "package_source_name",
@@ -950,7 +958,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 24639,
+            "unknown_count": 24174,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -961,7 +969,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 24513,
+            "unknown_count": 24050,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -972,7 +980,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 24639,
+            "unknown_count": 24174,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},
@@ -1005,11 +1013,11 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     // AR05 adds two TranslationUnit keys per package. ADR-0052's retired
     // Channel/@Number rows remain retired; no prior unknown evidence is lost.
     assert_eq!(
-        matrix["shared_final_database_counts"]["ingest_unknown"], 24911,
+        matrix["shared_final_database_counts"]["ingest_unknown"], 24448,
         "shared per-blob unknown evidence changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package_install_unknown"], 10023,
+        matrix["shared_final_database_counts"]["package_install_unknown"], 9866,
         "shared per-package unknown evidence changed"
     );
     for (table, rows) in [

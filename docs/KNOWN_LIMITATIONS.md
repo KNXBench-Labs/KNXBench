@@ -16,18 +16,6 @@ for next work see [OPEN_WORK](OPEN_WORK.md).
 then run `python3 tools/limitations_catalogue.py --write`. The documentation
 gate rejects drift. Keep existing IDs and anchors; never reuse a number.
 
-## Session device comparison (P4 source after Alpha 11)
-
-Tags are volatile observations, not monitored device state. Relevant project
-edits invalidate them through P3 revisions. Decoding needs verified table
-profiles and actual active image writes; incomplete, overwritten, unverified
-signed-negative or unsupported-encoding fields remain Unknown with a reason,
-beside all raw ranges. No new image/device admission or universal ETS
-compatibility is claimed. Cancel drains the current read. The inherited global
-achievement toast can transiently overlap lower mobile modal content; local
-scrolling keeps values and close controls reachable.
-[Comparison contract](contracts/device-comparison.md).
-
 ## Topics
 
 - [Import and export](#import-and-export)
@@ -701,7 +689,7 @@ A .knxdb saved before store schema v16 does not carry its application programs; 
 ### 7. Bounded commissioning support
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-7](status/LEDGER.md#snapshot-ids)).
-Memory downloads have scoped evidence, not general device support. Public K6/serial/K13 address writes fail before a tunnel without specific durable recovery.
+Memory downloads have scoped evidence, not general device support. Public K6/serial/K13 address writes fail before a tunnel without specific durable recovery. Project/device comparison is a session observation; unknown fields remain explicit beside raw ranges, and relevant edits invalidate tags.
 [Details and history](limitations/KL-007-bounded-commissioning-support.md)
 
 <a id="catalogue-kl-092"></a>

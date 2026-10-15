@@ -51,3 +51,14 @@ System2 image, source-to-property plan, real-executor simulator, full property+
 memory recovery or field compatibility. P3 and other independently implementable
 families remain active work under the owner goal; no additional Go is needed for
 offline scope. Selected root and separate site-scroll work remain untouched.
+
+
+## Observed delivery — 16 October 2026
+
+Featurebe01a228 and identical-tree non-FF merge79156a5d passed separate frozen
+14/15stage chains: Rust4623/0/207ignored, Vitest3626/263files; merged corpus
+152/152 in33targets. All2892merged source paths match start/end/current mode
+and content. Main publication local/tracking/live read back exactly79156a5d.
+The selected dirty root was not synchronized. Self-review is not an independent
+approval; real16-bit encoding refusal and no new hardware admission remain.
+P3 initial Core test now has actual E0432 RED; no P3 implementation is accepted.

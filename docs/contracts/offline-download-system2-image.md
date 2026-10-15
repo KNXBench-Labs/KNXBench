@@ -1,10 +1,12 @@
 # System-2 source-image assembly: offline contract
 
-Status: branch acceptance complete; actual merged acceptance/publication pending.
-Fourteen source-frozen stages pass: Rust4623/0/207ignored, Vitest3626/263files,
+Status: integrated and published as `79156a5d` on 16 October 2026; exact local,
+tracking and live remote main equality verified. Fourteen branch stages and
+fifteen actual merged stages pass: Rust4623/0/207ignored, Vitest3626/263files,
 workspace Clippy/build, actual frontend build, tooling/five repository checks and
-the explicit Release real-source refusal regression. This is not a successful
-whole-Siemens image. [Receipt](../evidence/offline-download-system2-image-2026-10-16.json).
+the explicit Release real-source refusal regression. Merged acceptance includes
+isolated corpus152/152 in33targets and2892unchanged source paths. This is not a
+successful whole-Siemens image or a new executable device path. [Receipt](../evidence/offline-download-system2-image-2026-10-16.json).
 
 ## Scope
 

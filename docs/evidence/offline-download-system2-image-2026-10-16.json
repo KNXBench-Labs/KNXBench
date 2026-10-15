@@ -48,8 +48,69 @@
     "caught Union-offset integer overflow",
     "owning-crate Clippy as_chunks correction"
   ],
-  "mergedAcceptance": "pending",
-  "publication": "pending",
+  "mergedAcceptance": {
+    "head": "79156a5dcc5ff2516ef7cbfed8763e9f54133919",
+    "stages": [
+      "format",
+      "web-install",
+      "web-build",
+      "explicit-system2-corpus",
+      "clippy",
+      "rust",
+      "build",
+      "vitest",
+      "tooling",
+      "corpus",
+      "check-layering",
+      "check-headers",
+      "check-anchors",
+      "check-ledger",
+      "check-corpus-gates"
+    ],
+    "rust": {
+      "passed": 4623,
+      "failed": 0,
+      "ignored": 207,
+      "resultBlocks": 336
+    },
+    "vitest": {
+      "passed": 3626,
+      "failed": 0,
+      "files": 263
+    },
+    "sourcePaths": 2892,
+    "inputsFrozen": true,
+    "logs": {
+      "format": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "web-install": "9e93b309a59cf5879cc001c341f4f44b84c341083d2648cbd7867dce0103884a",
+      "web-build": "a0b4eec2b4f6b83d2a58a3b4fd38f805e8b2e75001eb783b0a32b859ac31b96a",
+      "explicit-system2-corpus": "00f79e087ff0f5ea3bad997584611d3ee634ceef432e3c13209302eafc411c6c",
+      "clippy": "f50cfb3311f14ff27b6050862ca85760a95031b1f68ba3215ae11f2a37f585ba",
+      "rust": "817a5a1c050638bf2b69a07882439b9fa9468faa827e350bb114f3018d01a543",
+      "build": "8639645ee016c0ce731d73ac4dafbdcf7351aa26836bef754e983cb7a6444284",
+      "vitest": "790871382b47286d5d921bea8967bbce592ce2289b925e5f1e79dbc3a8a93390",
+      "tooling": "2d27b7fca963ba747520ce6a05e049c78308caf2adca071da56a98b19fa5b8d6",
+      "corpus": "94c5ad5ed48bda2f0d76da902d9deb25c3c9bac24359c97b6cbb9b6115568bf1",
+      "check-layering": "af62f670858d0b39bc8fbbf6f916c3e52f18c68e0a288453218dc719418bf4d0",
+      "check-headers": "a937364f10be3543602b92cdd3f67d45437bf815cfbb3bd05a8b97c7a603a7ed",
+      "check-anchors": "c136c6e92ab4969c76fbace8428b5b0e180d53c46e874a941ca7a5aac32db05b",
+      "check-ledger": "37c4714c3dfa7708e50972ce43387adfad2ff76283392f9b7a33b1505cd0822c",
+      "check-corpus-gates": "83a70c901ce5a0b2e15384dc59d87b1bad31a25bdb81c2aa7269cc730b31de4b"
+    },
+    "corpus": {
+      "passed": 152,
+      "total": 152,
+      "targets": 33
+    },
+    "time": "2026-10-16 00:52"
+  },
+  "publication": {
+    "commit": "79156a5dcc5ff2516ef7cbfed8763e9f54133919",
+    "tracking": "79156a5dcc5ff2516ef7cbfed8763e9f54133919",
+    "live": "79156a5dcc5ff2516ef7cbfed8763e9f54133919",
+    "time": "2026-10-16 00:52",
+    "selectedRootSynchronized": false
+  },
   "hardwareOperations": 0,
   "compatibilityPromotion": false
 }

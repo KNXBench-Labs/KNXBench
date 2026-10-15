@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "owner-ui-feedback-p3",
-  "status": "runtime-accepted-publication-pending",
+  "status": "delivered",
   "decisionRecord": "docs/goals/ui-feedback-p1-p4.md",
   "architecture": "docs/adr/0129-per-part-pending-programming.md",
   "storeMigration": false,
@@ -110,7 +110,15 @@
     "temporaryCorpusLinksRemoved": true,
     "scope": "Full RUST=1/PY=1 template, fifteen production configs, repeats, fresh-main guard and OriginalData-marked ignored sweep. Not separate product-matrix, hardware or native-WebKit certification."
   },
-  "publication": null,
+  "publication": {
+    "status": "verified",
+    "target": "origin/main",
+    "publishedCommit": "b2c3043f0bdb4c4b385d2549e05903e46f3dce77",
+    "runtimeAcceptedCommit": "f35d9bda95b87b91899ab3516c471f313ae1335b",
+    "verifiedAt": "2026-10-15 03:28 CEST",
+    "localTrackingLiveRefsEqual": true,
+    "closure": "Ten documentation-only checks passed with runtime bytes/modes unchanged; later metadata-only publication descendants retain this historical readback. No release or selected-root synchronization."
+  },
   "boundaries": [
     "Project belief, not fresh device synchronization or universal ETS compatibility",
     "P4 comparison is not implemented",

@@ -99,8 +99,8 @@ warning. The quick-start plaintext password is visible in the container environm
 and may enter shell history; use [Setting a password](#setting-a-password) for a
 hashed credential in a lasting setup.
 
-- **Tags:** the release version without its `v` (`0.1.0-alpha.11` for the tag
-  `v0.1.0-alpha.11`) and `latest`. While KNXBench is in alpha, `latest` moves
+- **Tags:** the release version without its `v` (`0.1.0-alpha.12` for the tag
+  `v0.1.0-alpha.12`) and `latest`. While KNXBench is in alpha, `latest` moves
   with every pre-release; pin a version tag if an update should be your own
   decision.
 - **Availability:** from `v0.1.0-alpha.6` (9 October 2026) on; `v0.1.0-alpha.5`
@@ -149,7 +149,7 @@ docker run -d --name knxbench --network host \
 Now `./data` on your host is `/data` in the container. Removing the container with
 `docker rm` leaves it alone; only `rm -rf` on your own directory removes your projects.
 
-**Product data lives there too (source build after alpha.11).** The product database
+**Product data lives there too (since Alpha 12).** The product database
 (the installed application programs) is `/data/.knxbench-share/knx/products.sqlite`
 in the image, so it survives a rebuild or an image update. Images up to alpha.11
 kept it inside the container, so every rebuild emptied it. Since the same change,
@@ -343,7 +343,7 @@ stopping fails, the service remains stopped until you correct it; this is not an
 automatic rollback.
 
 To choose a fixed release, replace `latest` in **both** image references with a
-published version such as `0.1.0-alpha.11`. The Linux default keeps
+published version such as `0.1.0-alpha.12`. The Linux default keeps
 `--network host` and `-e KNX_PORT=8484` (or your chosen port), as explained in
 [Networking](#networking). If migrating an older bridge deployment to host mode,
 review the firewall first: the authenticated listener becomes reachable on all

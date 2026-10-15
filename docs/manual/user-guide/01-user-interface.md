@@ -70,7 +70,7 @@ waiting for your input do not shimmer. Busy action-button captions are unchanged
 
 Turn **Settings → Appearance → Motion level → Off** to stop it. Your operating
 system's reduced-motion preference also wins; forced-colour mode and printing
-keep plain text. This needs a source build after Alpha 11; the published manual
+keep plain text. This needs a since Alpha 12; the published manual
 screenshots still show the earlier released UI. See
 [Motion settings](09-settings-and-appearance.md#motion-style-and-motion-level).
 
@@ -110,7 +110,7 @@ screenshots in this manual still show the released explorer.
 **The diagnostics block**, at the bottom: **Bus monitor**, **Log**, **Diagnostics
 window** and **Settings**. The first two swap the center workspace for a panel; the
 third opens a second window (below); the fourth opens the Settings overlay.
-In source builds after Alpha 11 (issue #23), selecting an already-active **Bus
+Since Alpha 12 (issue #23), selecting an already-active **Bus
 monitor** or **Log** entry keeps that panel open and preserves its current tab,
 input or filter. To leave it, choose another view explicitly; clicking the active
 entry is no longer a close toggle. Settings and the separate diagnostics window
@@ -187,7 +187,7 @@ the unsearched view. The result count compares shown entries with the
 retained total, including the explicitly separate UI notifications. Every
 entry shows its time in a column of its own (today's entries the time only,
 older ones the date too; hover for the full timestamp), then level, source and
-message, one line per entry *(source build after Alpha 11; earlier builds have
+message, one line per entry *(since Alpha 12; earlier builds have
 no time column and rows of uneven height)*. **Export…** opens a small dialog:
 choose the **server** entries shown now or all retained server entries, then
 **Export JSON** saves `session-log.json` to your computer *(up to Alpha 11:

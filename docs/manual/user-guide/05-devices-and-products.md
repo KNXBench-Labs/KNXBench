@@ -68,7 +68,7 @@ Alpha 5 AppImage does not include it.
 
 ## Comparing the project with devices (P4, source build after Alpha 11)
 
-**Source package 1:** requires a source build after Alpha 11; the release
+**Source package 1:** requires a since Alpha 12; the release
 screenshots in this manual still show the released UI. Named parameter
 comparison is not included in this first package: those bytes remain raw.
 
@@ -116,7 +116,7 @@ sent to each device: **Adr** (individual address), **App** (application),
 have chips; an empty cell means none are pending. A muted dash means the server
 has not reported this state, not that the device is programmed. **Pending only**
 hides devices with no reported pending parts. Click Programming to sort by the
-number of pending parts. These controls are source-only after Alpha 11; the
+number of pending parts. These controls are included in Alpha 12; the
 release screenshots above do not show them.
 
 An amber dot beside a device in either explorer branch means at least one part
@@ -219,7 +219,7 @@ was installed after it. Devices in your projects keep their references; one whos
 program is not in the backup shows no parameters until the program is installed
 again.
 
-*(Source build after Alpha 11:)* **Delete…** removes a backup you no longer need,
+*(Since Alpha 12:)* **Delete…** removes a backup you no longer need,
 after asking: **Keep the backup** is the default and **Delete backup** removes that
 file for good; the catalogue in use stays as it is. KNXBench deletes exactly the file
 it listed: if a file with that name changed in the meantime, nothing is deleted and
@@ -479,7 +479,7 @@ channel expansion; reapplying a filter reveals matches again.
 
 The open editor stays visible if its object leaves the result, marked **Editing —
 outside filter**, without inflating counts. Collapsing a channel hides all of its
-objects, open editors included *(source build after Alpha 11; Alpha 11 and earlier
+objects, open editors included *(since Alpha 12; Alpha 11 and earlier
 kept an open editor visible under a collapsed channel)*; expanding it again shows
 them as you left them. Inputs/refusal/pending state survive sort/filter/view/channel
 changes and collapsing; only committed data drives results. Removing an
@@ -605,7 +605,7 @@ The tab loads the device's parameters when you select the device. What you get:
 - **Fields.** A select for a choice parameter, a number field with the program's own
   minimum and maximum for a numeric one, a text field otherwise. Values commit on blur,
   and Enter is a shortcut for that. A rejected value snaps back with the reason.
-- **Changed elsewhere** *(source build after Alpha 11)*. Each write names the
+- **Changed elsewhere** *(since Alpha 12)*. Each write names the
   project state and the value you saw. If another window or client changed the
   value first, nothing is written, your value stays in the field and the current
   state is reloaded. Under the field, **Current value** shows the new value;

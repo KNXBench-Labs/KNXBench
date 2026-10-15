@@ -9,31 +9,27 @@ Read this chapter before you trust KNXBench with a project you care about.
 Every part of KNXBench carries its own version
 ([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). Since the
 `v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
-The CLI, desktop, web frontend, server and `knx-mcp` now carry `0.1.0-alpha.11`;
+The CLI, desktop, web frontend, server and `knx-mcp` now carry `0.1.0-alpha.12`;
 library crates keep their own numbers. The public pre-release is
-[`v0.1.0-alpha.11`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11), published on 13 October 2026: AppImage, `knx-mcp` and the Docker Hub
+[`v0.1.0-alpha.12`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.12), release candidate prepared on 15 October 2026: AppImage, `knx-mcp` and the Docker Hub
 image `knxbench/knxbench-server`. See [Installation](04-installation.md).
 
-Alpha 11 adds a group-address picker you can type into
-([#8](https://github.com/KNXBench-Labs/KNXBench/issues/8)), indents tree rows
-under their parent ([#9](https://github.com/KNXBench-Labs/KNXBench/issues/9)) and
-says which session holds the gateway or why it refused
-([#10](https://github.com/KNXBench-Labs/KNXBench/issues/10)). It also brings tester
-download reports, a read-only byte-order probe with a named download warning,
-steadier notifications, Flow images, motion per category and notes on
-communication objects. [Release notes](../../releases/alpha11.md) keep the exact
-scope together; [Alpha 10's](../../releases/alpha10.md) fixed the Mesa AppImage
-crash (#6) and ETS 5.7 import (#7). Most screenshots in this manual still show
-Alpha 9; newer views are marked where they differ.
+Alpha 12 brings portable project/product data, per-part pending programming,
+read-only device comparison, offline device-support reports and the UI repairs
+reported in issues #11–#21 and #23. It also includes Functions in rooms,
+revision-bound writes and a workbench that resumes the server's current project.
+[Release notes](../../releases/alpha12.md) keep the exact scope and remaining
+boundaries together. Current website/README stills use the Alpha 12 candidate;
+most manual images retain their explicitly dated earlier capture.
 
 **Before upgrading:** close the app and independently back up `.knxdb` files and
-Docker data. Alpha 10 and 11 use native schema **14**; Alpha 9 and earlier refuse upgraded
-files. Returning to an older build requires your pre-upgrade backup. In-file
-versions and Undo are not an independent backup. Update `knx-mcp` together with
-the application.
+all Docker data, including the product database. Alpha 12 uses native schema
+**16** and product schema **23**. Alpha 11 and earlier refuse upgraded native
+files. Returning means restoring the pre-upgrade copies, not pressing Undo.
+Update `knx-mcp` together with the application.
 
-Colour and picture parameters still use the plain fallback field, and the
-Functions/Sites work is not part of this release.
+Colour/picture value codecs and Site grouping are not part of this release;
+Functions are now project-editing tools, not device programming.
 
 **Source documentation and a release asset are different snapshots.** Check the
 running application's version and build commit before expecting a recently added

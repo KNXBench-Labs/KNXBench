@@ -52,7 +52,7 @@ both use the same validated project command, not separate edits.
 
 ## Creating structure
 
-Create from the **+ New** menu in the page header *(source build after Alpha 11;
+Create from the **+ New** menu in the page header *(since Alpha 12;
 Alpha 11 and earlier show separate fold-out forms in the middle of the page and a
 **+ Device** button)* or from the corresponding inline row in the project
 explorer. The menu lists everything the page can create; with more than one
@@ -183,7 +183,7 @@ automatic renumbering or cross-installation structure editor exists here.
 
 ## Functions
 
-*Source build after Alpha 11.* A Function bundles the group addresses that serve
+*Since Alpha 12.* A Function bundles the group addresses that serve
 one purpose in a room — a light, a blind, a heating circuit. Open a building
 part's Properties and unfold **Functions**: you see the Functions located there,
 their completion state, members and the **Source ID** they came with (an ETS

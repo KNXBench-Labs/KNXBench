@@ -1,5 +1,15 @@
 # Compatibility
 
+## Offline source-image assembly (15 October 2026 source)
+
+[The System2 source-image API](contracts/offline-download-system2-image.md) reuses
+actual product evaluation with explicit legacy table formats and always records
+an offline inference. Supported synthetic shapes can assemble; the real Siemens
+witness still refuses an uncorroborated16-bit source/default encoding. This is
+not a complete Siemens image, a new executable plan, physical verification or
+hardware admission. Overflowing union offsets now return a typed image refusal
+rather than panicking/wrapping; ordinary valid070nh inputs keep their behaviour.
+
 ## Offline download codec prerequisites (15 October 2026 source)
 
 [Legacy table, property-record and System2 metadata codecs](contracts/offline-download-codecs.md)

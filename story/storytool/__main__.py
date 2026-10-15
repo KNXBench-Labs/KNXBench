@@ -25,6 +25,10 @@ EXIT_OK, EXIT_INVALID, EXIT_REFUSED = 0, 1, 3
 def _cmd_validate(args: argparse.Namespace) -> int:
     content = json.loads(Path(args.content).read_text(encoding="utf-8"))
     validate(content)
+    if args.repository:
+        from .repository import validate_references
+        validate_references(content, Path(args.repository))
+        print("repository references checked against the pinned cutoff")
     print(f"valid: {len(content['events'])} events, {len(content['relations'])} relations, "
           f"{len(content['chapters'])} chapters")
     return EXIT_OK
@@ -107,6 +111,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("validate", help="check the candidate content against the schema")
     p.add_argument("--content", default=str(DEFAULT_CONTENT))
+    p.add_argument("--repository", help="also verify commit ancestry, cutoff time and file references in this Git repository")
     p.set_defaults(func=_cmd_validate)
 
     p = sub.add_parser("prepare", help="prepare an immutable private candidate (never publishes)")

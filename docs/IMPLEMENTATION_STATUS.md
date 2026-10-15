@@ -14,6 +14,24 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Project-evolution story candidate `2026-10-15.2` prepared locally
+  for review, not publication. Pinned source `2d4ec5f9`, 07:04:36 CEST; 68 events,
+  87 relations and twelve chapters retain the Phosphor Atlas design. New strands
+  cover public users, reversible engineering and evidence boundaries, with
+  explicit source/release/hardware/design distinctions. Optional read-only
+  `storytool validate --repository` checks Git ancestry, cutoff time and file
+  references (six test-first regressions). Existing approved `2026-10-08.4` and
+  the website pin remain unchanged. Story73, website24 and repository tooling148
+  (one existing skip) pass; Chromium and Firefox each pass46/46 browser checks
+  with frozen inputs. Four visual contexts/24 original screenshots inspected;
+  mobile guided-graph labels remain dense, full text/atlas available. Five fresh
+  root-bound repository checks and documentation pass. The unchanged approved
+  website release build passes; the new unapproved edition correctly refuses
+  release-check. [Aggregate acceptance](evidence/story-update-2026-10-15.json).
+  Exact-edition owner publication approval remains pending; no push/deployment
+  or new bus operation.
+  [Preparation and boundaries](../story/README.md#update-prepared-on-15-october-2026).
+
 - 2026-10-14 — Issue #23: diagnostic sidebar entries select instead of toggle.
   Re-clicking Bus monitor or Log keeps its panel and local state; choose another
   project view explicitly to leave. Settings/companion actions are unchanged.

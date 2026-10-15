@@ -4,7 +4,9 @@ A private, offline companion that tells how KNXBench grew from its earliest
 surviving prompt into an engineering project. It is **not** part of the KNX
 application and does not touch the KNX domain, project files or any bus.
 
-Status: first private version. Nothing here is approved for publication.
+Status: published companion plus a new **unapproved** candidate `2026-10-15.2`.
+The website remains pinned to approved `2026-10-08.4` during review. Nothing
+authorizes publishing the new edition until its exact digest is approved.
 Design and boundaries: [ADR-0068](../docs/adr/0068-project-evolution-story-is-a-static-offline-companion.md),
 [brief](../docs/PROJECT_EVOLUTION_STORY_BRIEF.md), [goal](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/PROJECT_EVOLUTION_GOAL.md).
 
@@ -31,18 +33,20 @@ absolute path (a missing ledger stops `prepare` before anything is written).
 Run from this directory.
 
 ```bash
-python3 -m storytool validate
+python3 -m storytool validate --repository ..
 python3 -m storytool prepare --private-provenance ../../KNXBench.story-private/provenance.json
-python3 -m storytool build 2026-10-08.4          # writes dist/2026-10-08.4/index.html
-python3 -m storytool build 2026-10-08.4 --preview  # writes previews/2026-10-08.4.html (commit it)
-python3 -m storytool serve 2026-10-08.4          # http://127.0.0.1:8765/, loopback only
-python3 -m storytool release-check 2026-10-08.4 --approval <approval.json>
+python3 -m storytool build 2026-10-15.2          # writes dist/2026-10-15.2/index.html
+python3 -m storytool build 2026-10-15.2 --preview  # writes previews/2026-10-15.2.html (commit it)
+python3 -m storytool serve 2026-10-15.2          # loopback only
+python3 -m storytool release-check 2026-10-15.2  # refuses: no approval
 python3 -m storytool publish                     # always refuses, exit code 3
 ```
 
 Every built page opens directly from disk, including the committed
 `previews/<id>.html`. On GitHub a page shows as source text only: download it
-(or use the raw file) and open it locally. Online hosting comes later.
+(or use the raw file) and open it locally. The approved edition is served at
+knxbench.com/story/ by the Pages workflow; a local candidate is not that
+published edition.
 
 Tests:
 
@@ -99,7 +103,9 @@ renders exactly as before.
 record naming the exact `story_sha256` of one candidate
 (`schema: knxbench-evolution-approval/1`, `decision: publish-exact-version`,
 `approved_by`, `approved_at`). `release-check` only verifies that match; no
-deployment step exists. Any change after approval needs a new approval.
+deployment action is performed by storytool itself. The website release builder
+and Pages workflow are the separate publication route. Any change after approval
+needs a new approval.
 
 Approval records live in `approvals/<id>.json`, committed with their candidate;
 `tests/test_approvals.py` fails as soon as one no longer matches. When a later
@@ -115,9 +121,9 @@ is deployed to knxbench.com/story/ by `.github/workflows/pages.yml`.
 ## Source archaeology, editions 2026-10-04 to 2026-10-08
 
 Pinned baseline since edition `2026-10-08.3`: published history `origin/main` at
-`138403ed60846d7cf2a964c3e0a360e52ae6155e` (8 October 2026, 13:18 CEST), 2,295
+`bca2d3336b9692e7a6ece18804d187ecdda6968f` (8 October 2026, 13:18 CEST), 2,295
 commits from 2 September 2026. The first editions were pinned to the 4 October
-state (old hash `75ad9650…`, now `4a4e89b3`).
+state, now reachable as `88a079a2` after the recorded privacy rewrites.
 
 **Hashes after the 7 October rewrite.** On 7 October the whole history was
 rewritten to the single identity `KNXBench <github@knxbench.com>`, so every
@@ -125,8 +131,9 @@ commit hash changed. Edition `2026-10-08.3` remapped all commit references
 through `docs/history/COMMIT_MAP_2026-10-07.txt` (each one unique, each one an
 ancestor of the pinned baseline). After the partial rewrite of 8 October
 (`docs/history/COMMIT_MAP_2026-10-08.txt`), edition `2026-10-08.4` remapped the
-three affected hashes, including the baseline, which is now `138403ed`. Later
-editions must cite current hashes only.
+three affected hashes. A subsequent public-launch purge remapped the baseline
+again to `bca2d333`; the maps, not an old edition's prose, resolve current hashes.
+Later editions must cite current hashes only.
 
 Edition `2026-10-08.3` added 13 steps from 4 to 8 October 2026 (exact-or-refused
 save, telegram flow, independent alpha review, first alpha and its replacement,
@@ -166,7 +173,7 @@ Findings that shaped the story:
 - **Origin of the strategy (edition `2026-10-05.1`):** written in ChatGPT between
   14:10 and 14:16 CEST the same day (prompt, session plan, Markdown summary,
   CLAUDE.md). Whitespace-normalised similarity: strategy 98.7 % to the first
-  commit, CLAUDE.md 96.4 % to `fdcc5ab9` (15:12 CEST).
+  commit, CLAUDE.md 96.4 % to `61dae496` (15:12 CEST).
 - **Origin of the specification knowledge base:** a ChatGPT-guided extraction
   pipeline with a local model via Ollama from 4 September, an audit of 2,232
   results by 5 September, a clean restart as `knx-spec-kb` on 7 September and
@@ -175,7 +182,7 @@ Findings that shaped the story:
 - The early Git history was rewritten twice for privacy on 20 September and the
   remote recreated; commit hashes from before then differ from those the agents
   saw at the time. The first commit's message still describes data that is gone.
-- All commits carry the user's identity; agent contributions are named only
+- All commits carry the project identity; agent contributions are named only
   where a conversation shows the hand-off.
 - Chronology is not causation: for example, the first newer-schema refusal
   (5 September) and the schema-21/23 design (6 September) are linked only as a
@@ -184,20 +191,55 @@ Findings that shaped the story:
   They stay in the private ledger, which is why automated collection never feeds
   the public content directly.
 
+## Update prepared on 15 October 2026
+
+Candidate `2026-10-15.2` pins `origin/main` at
+`2d4ec5f90ccc66ed7d03c65fdd02213faf34fc69`, timestamp
+`2026-10-15T07:04:36+02:00`. The guided narrative has 1,406 words (chapter
+ledes and bodies), 68 events, 87 relations and twelve chapters. Expandable
+records retain the technical detail; this is a curated story, not a changelog.
+The public-users, reversible-engineering and evidence-boundaries chapters cover
+website/demos, real-user import/launch feedback, native history, previewed edits
+and catalogue updates, the narrow MCP writer, Functions, travelling manufacturer
+files, exact hardware scopes, Alpha 11 versus later source delivery, pending
+programming and unresolved System-2 support. The universal support reporter is
+labelled a design reservation only at this cutoff.
+
+Private provenance is a separate ledger outside Git. Earlier curated excerpts
+are inherited; new project-scoped human requests were filtered locally. Native
+Claude/Codex stores were inventoried rather than described as fully reread.
+No new personal-export search or pre-project narrative was needed. Agent
+self-reports were checked against published source and maintained evidence.
+
+Use `validate --repository ..` to verify the cutoff timestamp, commit ancestry
+and document paths. It does not interpret prose or grant publication permission.
+Old hashes are remapped with `docs/history/COMMIT_MAP_*.txt`; the one removed
+schema-design reference points to its archive locator instead of a missing file.
+
+**Review gate:** the old approved edition stays alongside the new candidate only
+until the owner's exact-edition decision. No approval exists for `2026-10-15.2`.
+Do not push the update, change `website/story.json`, remove the old approval or
+trigger Pages before that decision. An approved cutover retires the earlier
+candidate/preview/approval from the tree, leaving its immutable history in Git.
+
 ## Known limitations
 
 - The privacy scan is pattern-based. It blocks local paths, e-mail and IP
   addresses, session identifiers and credential assignments, but it cannot
   recognise every private fact. Human review of every excerpt is required.
 - The graph uses a deterministic lane-per-strand, row-per-event layout. On
-  narrow screens the guided graph hides colliding labels; the text always
-  carries the full information.
+  narrow screens the guided graph suppresses some labels, but remaining labels
+  can still touch nodes/edges at dense stages. The full text remains available
+  through event cards, Text only and the searchable/zoomable atlas.
 - System fonts only; final typography and licensing are open.
-- The browser check passes in Chromium and Firefox (46/46 each on
-  `2026-10-05.1`, 5 October 2026). WebKit, the engine behind Safari, has not run
-  here: Playwright's WebKit build needs Ubuntu libraries (ICU 74, flite,
-  libWPEWebKit) that this Arch-based host lacks, and installing them would change
-  the system. Real screen readers have not been checked either.
+- The current candidate passes 46/46 browser checks in Chromium
+  153.0.8010.12 and 46/46 in Firefox 155.0 (15 October 2026). Desktop/mobile
+  growth, labels, keyboard, motion cancellation, text/no-JS fallbacks and hostile
+  content were exercised. Twenty-four original images across four engine/viewport
+  contexts were inspected, including every new chapter. No horizontal page
+  overflow or external request was observed. WebKit/Safari, native WebKitGTK
+  and real screen readers were not tested in this update; earlier host-library
+  constraints are not a fresh launch attempt. [Aggregate acceptance](../docs/evidence/story-update-2026-10-15.json).
 - Coverage of the human–AI workflow depends on local logs. Cloud sessions and
   anything outside the read sources are missing from this edition.
 - Commit references assume the repository's history may be shown publicly; that

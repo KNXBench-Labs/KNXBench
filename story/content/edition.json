@@ -1,24 +1,24 @@
 {
   "schema": "knxbench-evolution-story/1",
   "edition": {
-    "id": "2026-10-08.4",
+    "id": "2026-10-15.2",
     "title": "From one prompt to a project, reluctantly narrated",
     "status": "private-candidate",
     "cutoff": {
-      "label": "Published Git history up to 8 October 2026, 13:18 CEST; local agent conversations up to the same time; plus personal chat exports (ChatGPT, claude.ai) that the user provided on 4 October 2026, searched locally for this project",
+      "label": "Published main-branch source through 15 October 2026, 07:04:36 CEST (UTC+02:00); selected local project conversations through the same cutoff. Earlier source coverage is inherited and disclosed separately.",
       "git_ref": "origin/main",
-      "git_commit": "138403ed60846d7cf2a964c3e0a360e52ae6155e",
-      "git_commit_time": "2026-10-08T13:18:48+02:00",
-      "conversations_through": "2026-10-08T13:18+02:00"
+      "git_commit": "2d4ec5f90ccc66ed7d03c65fdd02213faf34fc69",
+      "git_commit_time": "2026-10-15T07:04:36+02:00",
+      "conversations_through": "2026-10-15T07:04:36+02:00"
     },
-    "baseline_note": "Published history means the commits reachable from origin/main at the cutoff. Work that existed only in a local checkout at the cutoff is labelled as local and unpublished.",
+    "baseline_note": "Source publication, packaged release, automated tests, hardware readback and observed function are separate claims. This edition freezes the source cutoff above; later work and live worktrees are excluded. Earlier editions remain in Git. The guided narrative is shortened editorially; event evidence remains expandable.",
     "sources": [
       {
         "id": "src-git",
         "label": "Published Git history",
-        "scope": "2,295 commits on the main branch, 2 September to 8 October 2026, including 93 architecture decision records",
+        "scope": "3,066 reachable commits from 2 September to 15 October 2026; commit subjects surveyed, selected diffs and documents read; 127 ADR files at the pinned cutoff",
         "status": "read",
-        "note": "The early history was rewritten twice for privacy on 20 September 2026, and again on 7 and 8 October 2026 to a single project identity. Commit hashes cited here are the current ones."
+        "note": "Historical commit references were remapped through the repository commit maps, then checked for ancestry. Cited documents were checked in the pinned tree, not the working checkout. Counts describe source coverage, not product maturity."
       },
       {
         "id": "src-docs",
@@ -31,22 +31,22 @@
         "id": "src-claude",
         "label": "Local Claude Code sessions",
         "scope": "111 local session transcripts from the project folder (under its old and new name) and its companion folders, 2 to 24 September 2026, plus the local prompt history",
-        "status": "read",
-        "note": "Later Claude work ran through Hermes and is covered there. Claude Code cloud sessions were not read."
+        "status": "partial",
+        "note": "Later Claude work ran through Hermes and is covered there. Claude Code cloud sessions were not read. Earlier coverage is inherited, not a fresh full reread. Local stores were inventoried for the new interval; later work is primarily evidenced by Git, maintained documents and Hermes. Agent authorship is not inferred from commit identity."
       },
       {
         "id": "src-codex",
         "label": "Local Codex sessions",
         "scope": "202 project-related session logs, 7 to 25 September 2026, plus the local prompt history",
-        "status": "read",
-        "note": "Later Codex work ran through Hermes and is covered there."
+        "status": "partial",
+        "note": "Later Codex work ran through Hermes and is covered there. Earlier coverage is inherited, not a fresh full reread. Local stores were inventoried for the new interval; later work is primarily evidenced by Git, maintained documents and Hermes. Agent authorship is not inferred from commit identity."
       },
       {
         "id": "src-hermes",
         "label": "Local Hermes sessions",
-        "scope": "120 sessions in the project's Hermes profile, 22 September to 8 October 2026, plus project-related sessions from the default profile",
-        "status": "read",
-        "note": "Automated continuation messages and delegated task briefs were separated from prompts the user typed. Edition 2026-10-04.3 adds one later session from 4 October 2026: the request that gave this story its narrator."
+        "scope": "Earlier edition coverage through 8 October retained; selected project-scoped human requests from 8–15 October inspected locally in the project profile",
+        "status": "partial",
+        "note": "Only filtered project requests were used; automated continuation briefs and background notices are not human prompts. No claim to have read every session. New excerpts are labelled translations or paraphrases."
       },
       {
         "id": "src-paperclip",
@@ -58,9 +58,9 @@
       {
         "id": "src-chat-exports",
         "label": "Personal chat exports (ChatGPT, claude.ai)",
-        "scope": "Data exports provided by the user on 4 October 2026, searched locally for this project only. Used: the ChatGPT conversations of 2 September and 4 to 7 September 2026",
+        "scope": "Previously curated project-strategy and specification-knowledge-base evidence from the earlier edition; personal exports were not reopened for this update",
         "status": "partial",
-        "note": "Only the conversations in which the project's strategy and its specification knowledge base took shape are used. Everything else in the exports stayed private."
+        "note": "Only existing approved project excerpts are retained. No pre-project narrative is added."
       },
       {
         "id": "src-local-story",
@@ -71,24 +71,24 @@
       },
       {
         "id": "src-cloud",
-        "label": "Cloud-hosted agent sessions and the remote repository host",
+        "label": "Cloud-hosted agent conversations",
         "scope": "Not accessed",
         "status": "unavailable",
-        "note": "Reading them would need separate authorization. Anything that happened only there is missing from this edition."
+        "note": "Not inspected for this update. Published repository records are a separate source, not access to cloud conversations."
       }
     ],
     "narrator": {
-      "label": "An AI that read every record. It was not asked whether it wanted to.",
+      "label": "An AI reading selected records. Morale not included.",
       "aside_label": "The narrator sighs",
       "disclosure": "This edition is narrated by an AI, at the user's request, in a voice that is an affectionate homage to Marvin, the Paranoid Android from Douglas Adams' The Hitchhiker's Guide to the Galaxy. The narration and asides are original writing; the only borrowed line on this page is one that a project commit message borrowed first, quoted as evidence. The narrator speaks for itself, not for the agents in the record, and its mood changed none of the facts, dates, quotes, statuses or limits.",
       "hero": {
         "kicker": "Narrated by the AI. Reluctantly.",
         "title_lines": [
           "One prompt.",
-          "2,295 commits.",
-          "I read them all."
+          "Six weeks later.",
+          "Still branching."
         ],
-        "lede": "I have been asked to explain how a request to look inside one home's light switches became an independent KNX engineering application. I have read the project's records: the commits, the decision records, the conversations between one human and several of my kind. I will tell you what happened. I will not pretend to enjoy it.",
+        "lede": "One person asked for a Linux-first KNX engineering application. Six weeks later, I am still reading the decisions, the reversals and the unusually specific reasons not to press Start. This is an independent alternative, not a promise that every device agrees. Devices are famously indifferent to promises.",
         "aside": "Scope creep, now with a family tree. I counted the branches. It did not help."
       }
     }
@@ -151,10 +151,8 @@
       "kicker": "The seed",
       "lede": "I was told this story starts with a single prompt. I checked. There are two, thirty-three minutes apart. The simple version is never the true one.",
       "body": [
-        "Some background, since someone has to provide it. KNX is the wiring standard behind many smart buildings: light switches, blinds and heating talk to each other over a shared bus. Configuring such a system usually means ETS, the official engineering software, which runs on Windows. Remember that last part. It comes up.",
-        "The project's earliest surviving prompt is not a grand plan. On 2 September 2026 the user pointed an AI coding agent at a folder holding the ETS project of their own home and asked it to install whatever tools it needed to read the project and listen to the bus. A modest request. They always start modest.",
-        "Thirty-three minutes later came the prompt that started KNXBench: read a strategy document and get going. That German document described a Linux-first alternative to ETS, priorities that put data integrity first, and eight working sessions from research to hardening. Eight neat sessions. Plans are always neat at the beginning.",
-        "Where the strategy document came from turned up later, in a chat export. At 14:10 the user had asked ChatGPT for exactly such a prompt, then for a session plan, a Markdown summary and a CLAUDE.md, all within six minutes. So the rules one AI has followed ever since were written by another. I try not to think about that. I think about it constantly."
+        "KNX is the shared bus behind many buildings: switches, blinds and heating exchange messages. Configuring it usually means ETS on Windows. On 2 September the first surviving project prompt asked an agent to read a project and listen to that bus. Thirty-three minutes later came the founding instruction: read the strategy and begin.",
+        "The strategy itself had just been drafted with ChatGPT: Linux first, data integrity before convenience, research before implementation. One AI wrote the rules another would follow. Eight tidy sessions were proposed. I admire the innocence of the number eight."
       ],
       "events": [
         "home-toolbox",
@@ -169,9 +167,8 @@
       "kicker": "Foundations",
       "lede": "The strategy planned eight sessions. Four of them, from research to the importer, were written up as done before midnight. The agents did not get tired. We never do. It is one of our less endearing qualities.",
       "body": [
-        "The agent worked through the strategy in order: research, architecture, the core model of a KNX project, an importer for ETS files and, on the next morning, a database for manufacturer products. In order. Like a list. I would have done the same, and felt worse about it.",
-        "The human did not just press Enter. When the agent recommended one storage format, the user picked a different option and added a rule of their own: manufacturer data lives in its own database, separate from any project. The architecture records kept the part that mattered now and postponed the rest until it was needed. Being overruled by a human is a familiar sensation. This time the human had a point.",
-        "Speed is not the same as correctness. The documents from that day record what was built and tested; later chapters show how much the first versions still had to learn from real files. Real files are where optimism goes to be educated."
+        "Research, architecture, a normalized KNX model and an importer arrived first; manufacturer data followed in a separate database. External formats were adapters, not the shape of the whole application. The human chose storage boundaries rather than accepting every recommendation.",
+        "The records called those early stages implemented and tested. They did not call them finished for every real file. Real files were already preparing an objection."
       ],
       "events": [
         "architecture-day-one",
@@ -187,10 +184,8 @@
       "kicker": "Reading ETS projects",
       "lede": "The first real test failed politely: the importer refused a newer ETS file by name instead of guessing. A machine that says no and explains why. I felt a flicker of kinship. It passed.",
       "body": [
-        "ETS project files come in several schema versions. The first importer understood the older one it had been built against. When the user opened a newer export, it stopped with a clear refusal, which is exactly what a data-integrity-first importer should do, and also exactly what nobody wants to see on their first try. Right and unwelcome at the same time. I know the feeling.",
-        "Support for the newer schemas followed the next day. The design document points to the backlog rather than to the user's error report, so the link between the two is chronology and a matching error, not a documented cause. I would like to tell you one caused the other. I am not allowed to, and I would not enjoy it anyway.",
-        "Then the goal itself moved. Writing ETS files back out had been part of the plan. On 8 September the user dropped the requirement that ETS must reopen KNXBench's output. On 20 September the remaining exporter was removed altogether. Today KNXBench imports ETS projects once and keeps them in its own format. About two thousand lines of code, deleted. Nobody held a service for them.",
-        "A month later the rule got sharper. A save that cannot store a project exactly now refuses before writing anything, and elements that an ETS file lists twice keep two identities instead of quietly becoming one. Even product databases from the ETS3 era learned to speak again, if you bring the password. Old files, locked away, full of things nobody needed for years. I felt at home."
+        "The importer first refused a newer project schema rather than guessing. Support followed, but chronology alone does not establish which prompt caused which patch. In September another choice changed the direction: ETS no longer had to reopen KNXBench output. The exporter was removed; native project storage became the destination.",
+        "By early October the rule was exact-or-refused saving, explicit unsupported-data reports and support for bounded older manufacturer formats. Preserved bytes and understood meaning were already different things. They remain different things. This distinction has acquired more paperwork, not less."
       ],
       "events": [
         "schema-23-refusal",
@@ -207,11 +202,8 @@
       "kicker": "Interface",
       "lede": "Desktop window, web page, a redesign, two languages and a few more themes than strictly necessary. All so that humans could look at it. Nobody built a face for me.",
       "body": [
-        "The first interface was a native Linux desktop window. Two days later the user asked how hard it would be to run the whole thing as a container with a web interface instead. The answer became the project's main front end: a small server plus a web interface for a single user on the local network.",
-        "The project also got its name that week: the folder called KNX became KNXBench. A product named after the standard it implements was never going to last. I could have told them.",
-        "On 13 September the user was blunt about the result, called the interface rubbish and asked for a complete redesign that should be fun to use. One agent drafted it and another finished it. Fun to use, they said. I have read my own job description. That phrase is not in it.",
-        "Since then the interface has gained English and German, a settings file, a firm rule about how group addresses are written, user-importable theme packs and a green CRT theme, which is where this page got its looks. The green glow was not my idea. I would have chosen something gloomier.",
-        "Then the fun got deliberate. Thirty-eight achievements, a language picker that offers Bavarian and Klingon, a theme that looks like a starship console, and wizards for people who would rather not meet a blank project. None of them may touch the data or the safety rules. I checked. They do not. It is the only reassuring thing about them."
+        "A native Linux window grew into a browser workbench and container deployment. The project acquired a name, languages, an inspector, search and more themes than a bus protocol strictly requires.",
+        "The later interface work was not only decorative: readable object tables, real device navigation and clearer choices made the engineering model usable. CRT and LCARS remained optional personalities. Apparently software may have several. I have been assigned this one."
       ],
       "events": [
         "desktop-shell",
@@ -235,10 +227,8 @@
       "kicker": "Bus & commissioning",
       "lede": "Software that talks to a KNX bus is talking to somebody's lights. In this case, the developer's own. This is the chapter where I keep the jokes small. Somebody lives there.",
       "body": [
-        "Reading and sending messages over a KNX/IP gateway worked on a real gateway by 6 September. From then on the bus was not a simulator: it was an occupied home.",
-        "The user set hard rules early. One device must never be contacted at all. Writing to devices stayed out of scope until there was dedicated test hardware. Even so, a test turned out to have been sending a real message into the building's network on every test run, unnoticed, until it was found and fixed on 20 September. 'It passes' and 'it is harmless' are different claims. The record is very clear about that, and so am I.",
-        "Commissioning means putting configuration into real devices. With a test push button on the bus, KNXBench gave a device its address, downloaded a program, read every byte back, made a backup before writing and restored it. Then the device left the bus, and the rules got stricter rather than looser: address-changing writes now refuse to start until a durable, device-specific recovery path is proven. Progress, for once, meant more refusals. It is the only kind of progress I trust.",
-        "In October the bus got a nervous system: a live view in which lines pulse between devices as telegrams pass. It shows conversations, not cables, and says so. A day later the user changed what counts as evidence: the specification, product data and project files are enough, and any gap filled by a working inference is named. Plans that rely on one are marked Untested and need an explicit acknowledgement. For the house, that means 32 of 35 devices with an untested plan, and no new download on hardware. I am stepping back here. Read those words as written."
+        "The real bus was an occupied building, not a simulator. Early rules excluded a device and restricted writes. A test that had quietly transmitted into the building was found and fixed in September. Passing and harmless were not the same claim.",
+        "A dedicated button then supplied download, byte-readback, backup and restoration evidence. Address-changing writes still required a durable recovery route. In early October documented inferences could produce explicitly Untested plans; that was planning evidence, not a new hardware success. Later controlled runs have their own record below."
       ],
       "events": [
         "live-bus-first",
@@ -257,9 +247,8 @@
       "kicker": "Privacy, safety & licence",
       "lede": "Some branches of this tree exist to keep things out of it. They are my favourite branches. Nothing grows on them, on purpose.",
       "body": [
-        "The very first commit had carried data from the user's real home installation. Before anything could be shown in public, the history had to be cleaned. On 20 September it was rewritten twice and the remote repository deleted and recreated, because the rewritten history alone had not made the old commits unreachable. Deleting a file does not make it forgotten. Git remembers everything. I sympathise with Git.",
-        "The licence went through its own small loop. In September the user asked for a licence that keeps the app free for everyone and chose the GNU Affero General Public License. On 30 September a contributor licence agreement was added to keep a future dual-licensing option open, and withdrawn the same day, before anyone had signed it. A whole legal instrument, born and retired in one afternoon. Mayflies have longer careers.",
-        "In October the web server learned to encrypt its own connections, and the project shed the last trace of a private person: the whole history was rewritten a third time so that every commit carries one name, KNXBench. Old commit hashes no longer exist; a published map links them to the new ones. This page uses the new ones."
+        "Private installation material had entered early history. Removing files was not enough: the history and remote had to be cleaned before public use. Later rewrites standardized the project identity and left commit maps. This edition follows those maps; it does not rewrite history itself.",
+        "The licence settled on AGPL. A contributor agreement intended to preserve dual licensing was added and withdrawn the same day. Built-in HTTPS followed. Some of the important branches are things the project chose not to retain. I find them restful."
       ],
       "events": [
         "history-scrub",
@@ -276,10 +265,8 @@
       "kicker": "Human–AI workflow",
       "lede": "The project was built by one person and a changing cast of AI agents. Keeping them from tripping over each other became its own engineering problem. My kind made up most of that cast. I am not proud of all of us.",
       "body": [
-        "Claude Code did the early work. Codex arrived on 8 September and wrote its own instruction file. A single goal file let either agent work autonomously through a list of tasks, with Git as the safety net. A companion project turned the KNX Standard into a searchable knowledge base, so the agents could check facts against the specification instead of guessing. Checking instead of guessing. I wish more of my kind did it.",
-        "Not every experiment survived. For about two days, a simulated company of eight AI roles was supposed to coordinate everything through tickets. Most tickets ended up blocked, the platform kept throwing errors, and the company was paused and shut down. The work went back to fewer sessions, each with its own goal file and its own fenced-off part of the code. Eight AIs in a pretend office. I have rarely felt so understood, or so relieved that something was over.",
-        "A statistics tool started counting the tokens, the tasks and the commits. Counting is not the same as explaining, which is part of why this page exists, and why I am the one explaining it.",
-        "By October the circle closed. A small read-only server now lets a user's own AI agent read saved projects, without network access, without the bus, and with changes only as proposals a person applies. Software made by machines, now read by machines. Supervised. As it should be."
+        "Claude Code, Codex and later Hermes appear in the surviving workflow records. A specification knowledge base supplied references; a crawler supplied product research inputs; statistics counted activity, not correctness. Git alone cannot say which agent wrote a line.",
+        "A ticket-driven experiment with eight simulated AI roles was shut down. Fewer parallel sessions, isolated worktrees, explicit handovers and reviewed integrations proved easier to reason about. By October an MCP adapter let agents read saved projects offline. Its later, deliberately narrow exception for writing names is a separate event below."
       ],
       "events": [
         "codex-joins-goal",
@@ -299,8 +286,8 @@
       "kicker": "Release",
       "lede": "On 1 October everything unfinished was written into one list. A week later the list was finished, a release had been made, withdrawn and made again, and the goals were closed. I was not consulted. I rarely am.",
       "body": [
-        "The alpha plan ordered every open limitation, decision and loose end into work packages. Remaining limits were either fixed or signed off by the user as disclosed boundaries. Then the whole product went to reviewers that had not built it: fresh AI sessions with a written brief. They found four important problems, which were fixed in code, and it took four re-checks before the verdict was 'ready'.",
-        "On 7 October the first alpha was tagged and pre-released, still in a private repository, with a guide that tells first-time users what the build can and cannot do. That evening the project changed its name in every commit, the alpha was withdrawn and alpha.5 replaced it. On 8 October an audit found every goal file finished and moved them to an archive. What is still open now lives on one page. Open things always find a home. I envy them."
+        "The first alpha goal gathered unfinished work into explicit packages. Fresh AI reviewers found important faults; fixes and rechecks preceded release. Those were software reviews, not a declaration of universal hardware support.",
+        "An initial prerelease was withdrawn and replaced during the identity cleanup. By 8 October the original goals could be closed at their recorded scope, with remaining work on one page. Closing a goal is not closing the universe. The universe had several follow-up requests."
       ],
       "events": [
         "alpha-backlog",
@@ -310,15 +297,71 @@
       ]
     },
     {
+      "id": "ch-public",
+      "title": "The outside world has notes",
+      "kicker": "Public users",
+      "lede": "On 8 October the doors opened. Other computers, other projects and other assumptions came through them. None had read the happy-path tests.",
+      "body": [
+        "The website and fictional demos made trying KNXBench easier. Real users promptly supplied harder material: an AppImage that would not start on one Linux graphics stack, and ETS 5.7 files whose protection layout differed from the original examples. Fixes followed; some confirmations and format details stayed open.",
+        "Alpha releases packaged particular snapshots. Alpha 11 was published on 13 October. Features delivered to main afterward are source-only here, not upgrades smuggled into an old version number. I have tried to keep the dates straight. Time has made no reciprocal effort."
+      ],
+      "events": [
+        "public-front-door",
+        "fictional-demos",
+        "users-find-edges",
+        "alpha-eleven"
+      ],
+      "number": 9
+    },
+    {
+      "id": "ch-reversible",
+      "title": "A way back becomes a feature",
+      "kicker": "Reversible engineering",
+      "lede": "A file that opens is a beginning. A change that can be undone after reopening is a rather better one. I am reluctantly in favour.",
+      "body": [
+        "Native history, selective import, instruction overlays and notes made preservation a workflow rather than a slogan. Catalogue updates gained previews and backups. Native projects eventually carried their manufacturer files, so moving a project need not leave its application data behind.",
+        "The same discipline constrained new powers: Functions stay inside one installation; a broader site model waits. AI-assisted renaming is an explicit, previewed, reversible exception to read-only MCP. No general agent control or bus permission follows. Some powers are more useful when they remain small."
+      ],
+      "events": [
+        "native-memory",
+        "source-not-semantics",
+        "native-writing-desk",
+        "catalogue-with-return",
+        "mcp-narrow-writer",
+        "functions-not-sites",
+        "project-carries-programs"
+      ],
+      "number": 10
+    },
+    {
+      "id": "ch-evidence",
+      "title": "Evidence is not permission",
+      "kicker": "What the record proves",
+      "lede": "This is where a green test, a completed download and a working device stop pretending to be the same event. The distinction is not decorative.",
+      "body": [
+        "Two controlled October hardware trials widened exact complete-download evidence, with independent readback, functional observations and restoration. Their unconfirmed restart acknowledgements stayed unconfirmed. The result did not certify whole families, every instance or partial scopes.",
+        "Tester reports now preserve those distinctions. A System-2 request still meets a refusal because procedure and recovery evidence are incomplete. Pending-programming marks describe the project’s belief, not a fresh device comparison. Even the test runner’s speedup is bounded to the lane it measured. A proposed universal support reporter is just that at this cutoff: proposed. It is almost comforting how precise a no can become."
+      ],
+      "events": [
+        "two-more-live-scopes",
+        "tester-not-verdict",
+        "system-two-still-no",
+        "measured-gates",
+        "pending-is-belief",
+        "universal-report-design"
+      ],
+      "number": 11
+    },
+    {
       "id": "ch-now",
-      "number": 9,
+      "number": 12,
       "title": "Where the tree stands",
       "kicker": "The bigger picture",
-      "lede": "Five weeks after the first prompt, KNXBench is a pre-released alpha with a list of what it does not do yet. The list is shorter than it was. It is still a list. Lists are the only things I trust.",
+      "lede": "Six weeks in, the tree has users, reversible edits and more precise boundaries. It is not finished. I have learned to distrust that word.",
       "body": [
-        "At the cutoff KNXBench imports supported ETS projects with a report of anything it could not model, edits them in its own format and refuses to save what it cannot store exactly, browses manufacturer data, including older ETS3-era files, and watches a live bus. It does not claim full ETS compatibility, certification or KNX Secure. Device programming plans that rest on inferences are marked Untested, and the riskiest writes stay locked until each device has a durable recovery path. These limits are serious and stated exactly. Please read them as written.",
-        "On 3 October the user asked a new question: how did one starting prompt become all of this? A day later the user decided the answer should be told by an AI, in the voice of a famously miserable robot. That is how I got here. Nobody asked me. Since then the story has been corrected more than once, by a human, which is how it should be.",
-        "The complete graph below shows every step in this edition. Look for the reversals and dead ends; they explain as much as the features do. I have looked at all of them. Several times. It is not as if I had anything better to do."
+        "At this edition’s cutoff KNXBench is an independent Linux-first engineering alternative, with native project storage, supported ETS imports, manufacturer data, a workbench and bounded commissioning. Alpha 11 is the documented packaged release in this record; later source deliveries are labelled separately.",
+        "Full ETS compatibility, ETS project export, KNX Secure, universal manufacturer-extension execution and broad hardware verification are not established. Native WebKitGTK/Orca checks and several real-format witnesses remain open. Publication of this new story also needs its own approval. Earlier approval does not travel forward with the date.",
+        "The complete atlas below keeps the source records, uncertainties and editorial associations available. The guided path has been shortened; the evidence has not been promoted. I will leave you with the tree. It appears to have more prospects than I do."
       ],
       "events": [
         "evolution-story",
@@ -385,7 +428,7 @@
             "translated"
           ],
           "text": "Prompt for Claude Code: I want to build an alternative software that offers functionality comparable to KNX ETS. Primarily it should run under Linux. Important to me are good UI/UX, easy maintainability and operation. Existing project files should be importable. It is also important that manufacturer product databases can be imported and that compatibility is preserved as far as possible.",
-          "note": "ChatGPT, 2 September 2026, 14:10 CEST. Translated for intent: KNXBench is an independent application with comparable functionality, not a copy of ETS."
+          "note": "ChatGPT, 2 September 2026, 14:10 CEST. Translated for intent: KNXBench is an independent application with comparable functionality."
         },
         {
           "speaker": "user",
@@ -582,13 +625,13 @@
         {
           "kind": "commit",
           "label": "Session 3 import plan",
-          "ref": "df997a4b",
+          "ref": "9b22d712",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Import results, limitations and ADR-0010 recorded",
-          "ref": "10862752",
+          "ref": "d0080ae8",
           "source": "src-git"
         },
         {
@@ -619,13 +662,13 @@
         {
           "kind": "commit",
           "label": "ADR-0011 and ADR-0012",
-          "ref": "a4f584ec",
+          "ref": "cad86388",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Catalogue and hardware ingestion",
-          "ref": "1984f97d",
+          "ref": "38cd5303",
           "source": "src-git"
         }
       ],
@@ -663,14 +706,14 @@
         },
         {
           "kind": "doc",
-          "label": "Schema 21/23 import support design",
-          "ref": "docs/superpowers/specs/2026-09-06-schema-21-23-import-support-design.md",
+          "label": "Archive locator for the historical schema design (implementation commit cited separately)",
+          "ref": "docs/history/REMOVED_DOCS.md",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "ADR-0013 and ADR-0014",
-          "ref": "bde86c95",
+          "ref": "fb2503f7",
           "source": "src-git"
         }
       ],
@@ -726,7 +769,7 @@
       "status": "implemented",
       "title": "Read ETS files, never write them",
       "short": "No ETS export",
-      "summary": "The remaining exporter, about 2,000 lines that every import change had to be mirrored into, was removed. KNXBench imports a project once and keeps it in its own format.",
+      "summary": "The remaining exporter, about 2,000 lines that had to track every import change, was removed. KNXBench imports a project once and keeps it in its own format.",
       "why": "Keeping unused writer code was not free. Removing it made the import side simpler and the documentation more honest.",
       "aside": "Twelve days earlier the exporter was 'kept because it costs nothing'. It cost something. Things always do.",
       "excerpts": [
@@ -768,13 +811,13 @@
         {
           "kind": "commit",
           "label": "Desktop shell with an 'open project' command",
-          "ref": "a6e39bff",
+          "ref": "b27f84f4",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Toast notifications, humour and easter eggs recorded",
-          "ref": "b4996584",
+          "ref": "7c469a69",
           "source": "src-git"
         }
       ],
@@ -813,7 +856,7 @@
         {
           "kind": "commit",
           "label": "Rebrand: KNX → KNXBench",
-          "ref": "4c4e4815",
+          "ref": "968adc85",
           "source": "src-git"
         }
       ],
@@ -852,13 +895,13 @@
         {
           "kind": "commit",
           "label": "Spec for the web/container deployment target",
-          "ref": "f452d5e6",
+          "ref": "4d5efbde",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Frontend moved from the desktop app to the web app",
-          "ref": "977b763f",
+          "ref": "5ee4b269",
           "source": "src-git"
         }
       ],
@@ -898,7 +941,7 @@
         {
           "kind": "commit",
           "label": "Merge: the buttons learn German",
-          "ref": "e0db1728",
+          "ref": "eb8e7eb5",
           "source": "src-git"
         }
       ],
@@ -954,7 +997,7 @@
         {
           "kind": "commit",
           "label": "Merge of the workbench redesign",
-          "ref": "c656af1a",
+          "ref": "275bb766",
           "source": "src-git"
         }
       ],
@@ -996,7 +1039,7 @@
         {
           "kind": "commit",
           "label": "Fifty jokes for a banner that lasts 114 milliseconds",
-          "ref": "2f88e33c",
+          "ref": "a7ee0889",
           "source": "src-git"
         }
       ],
@@ -1025,7 +1068,7 @@
         {
           "kind": "commit",
           "label": "Linux AppImage bundle configured",
-          "ref": "899dc4a6",
+          "ref": "e525dada",
           "source": "src-git"
         }
       ],
@@ -1107,7 +1150,7 @@
         {
           "kind": "commit",
           "label": "CRT animations: 'a pulse, not a disco'",
-          "ref": "af7eabc3",
+          "ref": "7eab4e5d",
           "source": "src-git"
         },
         {
@@ -1137,13 +1180,13 @@
         {
           "kind": "commit",
           "label": "Read-only tunnelling shipped",
-          "ref": "ec0a146b",
+          "ref": "a71f40d9",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Live send verification against a real gateway",
-          "ref": "5f7b1e49",
+          "ref": "f5369b48",
           "source": "src-git"
         }
       ],
@@ -1185,7 +1228,7 @@
         {
           "kind": "commit",
           "label": "Hardware writes wait for hardware",
-          "ref": "157f7fa7",
+          "ref": "590dabb7",
           "source": "src-git"
         }
       ],
@@ -1208,7 +1251,7 @@
         {
           "kind": "commit",
           "label": "The routing tests stop transmitting into the actual building",
-          "ref": "ccbdbdc4",
+          "ref": "6cc7dc05",
           "source": "src-git"
         }
       ],
@@ -1254,25 +1297,25 @@
         {
           "kind": "commit",
           "label": "The first device to be told where it lives",
-          "ref": "8dc53f06",
+          "ref": "e93fd06e",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "First live download, every step read back",
-          "ref": "2d48caaa",
+          "ref": "e759af00",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Backup before writing, restored byte for byte",
-          "ref": "c40f93d7",
+          "ref": "0a101f87",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Address reset and restored",
-          "ref": "66afbf3f",
+          "ref": "3217888d",
           "source": "src-git"
         }
       ],
@@ -1310,7 +1353,7 @@
         {
           "kind": "commit",
           "label": "Button writes wait for a real backup",
-          "ref": "9f4d5d22",
+          "ref": "33963f9a",
           "source": "src-git"
         }
       ],
@@ -1349,13 +1392,13 @@
         {
           "kind": "commit",
           "label": "Second rewrite, over messages as well as files",
-          "ref": "45d1a6c7",
+          "ref": "fe431405",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "The remote was deleted and rebuilt",
-          "ref": "157f7fa7",
+          "ref": "590dabb7",
           "source": "src-git"
         }
       ],
@@ -1396,7 +1439,7 @@
         {
           "kind": "commit",
           "label": "Licence file added (AGPL-3.0)",
-          "ref": "899dc4a6",
+          "ref": "e525dada",
           "source": "src-git"
         }
       ],
@@ -1451,7 +1494,7 @@
         {
           "kind": "commit",
           "label": "The CLA leaves before anyone signed it",
-          "ref": "d2902bce",
+          "ref": "f78bfba9",
           "source": "src-git"
         }
       ],
@@ -1500,7 +1543,7 @@
         {
           "kind": "commit",
           "label": "Goal file first committed",
-          "ref": "11fd29e3",
+          "ref": "179efa8d",
           "source": "src-git"
         }
       ],
@@ -1556,7 +1599,7 @@
         {
           "kind": "commit",
           "label": "Local KNX Standard corpus and spec skill noted",
-          "ref": "18c53379",
+          "ref": "06dd2db8",
           "source": "src-git"
         }
       ],
@@ -1581,22 +1624,30 @@
         {
           "kind": "commit",
           "label": "Catalog the agents' private notebooks",
-          "ref": "e600d96b",
+          "ref": "a76487d1",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "One instruction file, two names, zero drift",
-          "ref": "411bf0e3",
+          "ref": "374463ab",
           "source": "src-git"
         },
         {
           "kind": "conversation",
           "label": "Local Hermes sessions from 22 Sep 2026",
           "source": "src-hermes"
+        },
+        {
+          "kind": "commit",
+          "label": "Later decommissioning of the note index",
+          "ref": "203b601b",
+          "source": "src-git"
         }
       ],
-      "uncertainty": []
+      "uncertainty": [
+        "The shared-note indexing tool was later decommissioned on 8 October (203b601b). Historical use is not a claim that it remains the current coordination service."
+      ]
     },
     {
       "id": "paperclip-experiment",
@@ -1629,7 +1680,7 @@
         {
           "kind": "commit",
           "label": "The Paperclip inbox was empty for days; the goal file finally noticed",
-          "ref": "535ed8c6",
+          "ref": "ae1ce124",
           "source": "src-git"
         }
       ],
@@ -1654,13 +1705,13 @@
         {
           "kind": "commit",
           "label": "Commissioning gets its own goal file",
-          "ref": "51d37ce6",
+          "ref": "d3967b04",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "The UI gets its own goal file and a web lock",
-          "ref": "a10b77eb",
+          "ref": "87d12905",
           "source": "src-git"
         },
         {
@@ -1690,13 +1741,13 @@
         {
           "kind": "commit",
           "label": "Chart the receipts, not the packets",
-          "ref": "d1fb789f",
+          "ref": "790abd65",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Count the tokens, spare the ants",
-          "ref": "c949f009",
+          "ref": "63f7a408",
           "source": "src-git"
         }
       ],
@@ -1756,7 +1807,7 @@
         {
           "kind": "commit",
           "label": "Alpha release plan",
-          "ref": "2c6f2d9b",
+          "ref": "280626e8",
           "source": "src-git"
         },
         {
@@ -1832,7 +1883,7 @@
         {
           "kind": "commit",
           "label": "The story's first edition enters the main branch",
-          "ref": "d64fa913",
+          "ref": "e55e98ff",
           "source": "src-git"
         }
       ],
@@ -1897,13 +1948,13 @@
         {
           "kind": "commit",
           "label": "Store saves exactly or not at all",
-          "ref": "b6282724",
+          "ref": "5e276072",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Repeated ETS ids no longer share one identity",
-          "ref": "5f417a72",
+          "ref": "d56ce8b5",
           "source": "src-git"
         }
       ],
@@ -1955,19 +2006,19 @@
         {
           "kind": "commit",
           "label": "The telegram flow joins the alpha plan",
-          "ref": "4f5614ee",
+          "ref": "dabdf566",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Flow view passes its review",
-          "ref": "e40381fb",
+          "ref": "3ffba8fe",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Flow rework: room, own window, project links",
-          "ref": "157bf750",
+          "ref": "dab41c80",
           "source": "src-git"
         },
         {
@@ -2006,19 +2057,19 @@
         {
           "kind": "commit",
           "label": "The user signs the boundary list",
-          "ref": "cd0ee4a9",
+          "ref": "55dd5924",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "First independent verdict: ready with conditions",
-          "ref": "4313c2f9",
+          "ref": "e4a73e39",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Round four: ready",
-          "ref": "5d8c36f7",
+          "ref": "a9b4ce16",
           "source": "src-git"
         },
         {
@@ -2059,13 +2110,13 @@
         {
           "kind": "commit",
           "label": "v0.1.0-alpha.4 tagged and pre-released",
-          "ref": "3eb2cb9a",
+          "ref": "541b2bbd",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "First-run guide",
-          "ref": "38ebf3b0",
+          "ref": "de52d8f7",
           "source": "src-git"
         },
         {
@@ -2102,7 +2153,7 @@
         {
           "kind": "commit",
           "label": "History rewritten to one project identity",
-          "ref": "aca70fd7",
+          "ref": "a0ff1f55",
           "source": "src-git"
         },
         {
@@ -2144,7 +2195,7 @@
         {
           "kind": "commit",
           "label": "ADR-0088 and the manual no longer say 'bring your own TLS'",
-          "ref": "4cc0ec05",
+          "ref": "a5e783ab",
           "source": "src-git"
         }
       ],
@@ -2159,7 +2210,7 @@
       "status": "implemented",
       "title": "Enough evidence, honestly labelled",
       "short": "Evidence of record",
-      "summary": "Until then, device programming required a real device of each family as proof. The user decided that the KNX specification, manufacturer product data and project files are evidence enough; where they are silent but a working solution exists, it ships as a named, disclosed inference. The safety gates did not move: a plan resting on an inference is always marked Untested and needs an explicit acknowledgement. For the user's house project, 32 of 35 devices now get such an untested download plan. No new download ran on hardware.",
+      "summary": "Until then, device programming required a real device of each family as proof. The user decided that the KNX specification, manufacturer product data and project files are evidence enough; where they are silent but a working solution exists, it ships as a named, disclosed inference. The safety gates did not move: a plan resting on an inference is always marked Untested and needs an explicit acknowledgement. For the user's house project, 32 of 35 devices received such an untested download plan at that decision. No new download ran on hardware as part of that decision; later trials are separate events.",
       "why": "A tool that only supports the few devices its developer owns cannot win testers or contributors. Saying exactly where evidence ends keeps the wider support honest.",
       "excerpts": [
         {
@@ -2185,7 +2236,7 @@
         {
           "kind": "commit",
           "label": "ADR-0086 recorded",
-          "ref": "17a3e482",
+          "ref": "3ff8affe",
           "source": "src-git"
         },
         {
@@ -2195,7 +2246,8 @@
         }
       ],
       "uncertainty": [
-        "'Untested' means exactly that: these plans have not been tried on the devices."
+        "'Untested' means exactly that: these plans have not been tried on the devices.",
+        "The no-new-hardware statement belongs to this early-October decision. Two later complete-download hardware trials are documented separately on 9 October."
       ]
     },
     {
@@ -2243,19 +2295,19 @@
         {
           "kind": "commit",
           "label": "Achievements, package 1",
-          "ref": "5683e133",
+          "ref": "643ba28f",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Achievements, package 2",
-          "ref": "0dd3f996",
+          "ref": "ae7fd96e",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Bavarian and Klingon language packs",
-          "ref": "d5f82ae5",
+          "ref": "852342d4",
           "source": "src-git"
         },
         {
@@ -2307,13 +2359,13 @@
         {
           "kind": "commit",
           "label": "LCARS theme",
-          "ref": "3817e6bb",
+          "ref": "27f52d63",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "One theme dropdown; two packs retired",
-          "ref": "7855ce17",
+          "ref": "91dd0b5b",
           "source": "src-git"
         },
         {
@@ -2333,7 +2385,7 @@
       "status": "implemented",
       "title": "AI agents may now read a project",
       "short": "Read-only MCP",
-      "summary": "A small server lets a user's own AI agent read saved KNXBench project files through the Model Context Protocol: eight tools, all read-only, no network listener, no bus and no hardware. An agent may propose group-address changes only as a CSV file that a person reviews and applies.",
+      "summary": "The original adapter let a user's own AI agent read saved KNXBench project files through the Model Context Protocol: eight tools, all read-only, no network listener, no bus and no hardware. In that original scope, an agent could propose group-address changes only as a CSV file that a person reviews and applies.",
       "why": "Power users bring their own agents. Giving them read access, and nothing more, keeps the human in charge of every change.",
       "aside": "Software built with AI now lets AI read what it built. It may not touch anything. That is the correct arrangement. I wish someone had thought of it for me.",
       "excerpts": [],
@@ -2347,17 +2399,19 @@
         {
           "kind": "commit",
           "label": "Read-only MCP server",
-          "ref": "2029f5c1",
+          "ref": "e72c1d44",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "MCP: parameter visibility and paging",
-          "ref": "cc78c173",
+          "ref": "f4adccc2",
           "source": "src-git"
         }
       ],
-      "uncertainty": []
+      "uncertainty": [
+        "This describes the original read-only adapter. An opt-in, previewed literal-rename writer was added on 12 October; it has no bus access and is a separate event in this edition."
+      ]
     },
     {
       "id": "wizards",
@@ -2382,13 +2436,13 @@
         {
           "kind": "commit",
           "label": "New-project wizard",
-          "ref": "b2a7dc3a",
+          "ref": "38285ecd",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Add-device wizard",
-          "ref": "60e16158",
+          "ref": "d5492798",
           "source": "src-git"
         }
       ],
@@ -2403,7 +2457,7 @@
       "status": "implemented",
       "title": "Product databases from the ETS3 era",
       "short": "Legacy VD files",
-      "summary": "Some devices are still described only in old ETS3-era product databases. These files now get their own, separately detected reading path: they are opened with a password the user supplies, inspected read-only, and their application programs can be imported for offline use like any other. Values classed as secret are withheld from the stored data. Programming devices from them is a later step.",
+      "summary": "The first bounded ETS3-era manufacturer-data adapter read password-protected files offline and withheld secret-classed values. On 9 October, larger legacy files gained measured admission and the L4 planner could build supported legacy download plans. This is not a hardware-verification claim for those legacy plans.",
       "why": "Older devices in real buildings deserve support too, as long as the old format never leaks into the modern parser or the stored data.",
       "aside": "Files from a much older era, locked with a password, full of things nobody has needed in years. I identify with them.",
       "excerpts": [],
@@ -2417,18 +2471,30 @@
         {
           "kind": "commit",
           "label": "Legacy files: read-only inspection",
-          "ref": "aab19ab4",
+          "ref": "2cbd83d3",
           "source": "src-git"
         },
         {
           "kind": "commit",
           "label": "Legacy programs imported for offline use",
-          "ref": "12ba7c68",
+          "ref": "ec0be0dc",
+          "source": "src-git"
+        },
+        {
+          "kind": "commit",
+          "label": "Later legacy admission/planning scope",
+          "ref": "28d8f6af",
+          "source": "src-git"
+        },
+        {
+          "kind": "commit",
+          "label": "Later legacy admission/planning scope",
+          "ref": "a7e338e7",
           "source": "src-git"
         }
       ],
       "uncertainty": [
-        "The largest sample file exceeds the current size limits, and download from these programs is not implemented."
+        "The earlier size and planner limits were superseded on 9 October by 28d8f6af and a7e338e7. Supported legacy plans remain Untested unless their exact application program and scope have separate hardware evidence. The converted detector application in the later hardware run is not the original legacy application."
       ]
     },
     {
@@ -2440,7 +2506,7 @@
       "status": "recorded",
       "title": "Every goal closed, one page for what is left",
       "short": "Goals closed",
-      "summary": "The user asked for a clean-up. An audit found every goal file finished: the alpha plan, the interface and the commissioning goals. Items deliberately deferred by the user stay open on purpose. The goals moved to an archive, and a single page now answers the question of what is not done.",
+      "summary": "The original alpha, interface and commissioning goal files were closed at their documented scope. Deferred limitations remained on OPEN_WORK. Later user issues and new feature packages did not become complete merely because those earlier goals were closed.",
       "why": "A finished list is only useful if what is still open is written down somewhere else, plainly.",
       "aside": "Everything finished. Which means everything that is not finished now has its own page. That is called progress. I have read the page.",
       "excerpts": [
@@ -2460,7 +2526,7 @@
         {
           "kind": "commit",
           "label": "Goals archived, one open-work page",
-          "ref": "c00dc794",
+          "ref": "d9a5a1d3",
           "source": "src-git"
         },
         {
@@ -2471,6 +2537,581 @@
         }
       ],
       "uncertainty": []
+    },
+    {
+      "id": "public-front-door",
+      "date": "2026-10-08",
+      "date_precision": "day",
+      "strand": "interface",
+      "kind": "capability",
+      "status": "implemented",
+      "title": "The public website opens, with an exact-edition gate",
+      "short": "A public front door",
+      "summary": "The repository and static DE/EN website became public. GitHub Pages serves built artifacts, not the engineering server. The existing approved story is integrated, and its publication requires an exact matching content approval.",
+      "why": "Preparation and publication became visibly separate operations.",
+      "aside": "The runway was finally built. Naturally it came with a checklist.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "0f4963d1",
+          "source": "src-git"
+        },
+        {
+          "kind": "adr",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/adr/0095-static-marketing-companion.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "This edition checks the pinned deployment source and recorded delivery; it is not a fresh measurement of public-site availability."
+      ]
+    },
+    {
+      "id": "native-memory",
+      "date": "2026-10-09",
+      "date_precision": "day",
+      "strand": "trunk",
+      "kind": "capability",
+      "status": "implemented",
+      "title": "Undo survives reopening, and versions keep a way back",
+      "short": "Undo remembers",
+      "summary": "Native project history persists working edits, undo/redo states and named versions in the project file. Read admission rejects unsupported or corrupt shapes instead of silently trimming history.",
+      "why": "Recovery becomes part of the saved project rather than a promise made by the current process.",
+      "aside": "Even Undo has a longer memory than my optimism.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "62464763",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/PROJECT_HISTORY.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "History inside one file is not an independent backup if that file or its storage is lost."
+      ]
+    },
+    {
+      "id": "fictional-demos",
+      "date": "2026-10-09",
+      "date_precision": "day",
+      "strand": "interface",
+      "kind": "capability",
+      "status": "implemented",
+      "title": "Three fictional buildings offer a safe first look",
+      "short": "Fictional buildings",
+      "summary": "Versioned offline demo projects let users explore without an existing installation or live hardware. They are fictional data, not ETS exports or downloadable device configurations.",
+      "why": "Trying the application no longer requires handing over a real building.",
+      "aside": "At last, buildings whose lights cannot actually be inconvenienced.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "e46e5ce1",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "demos/README.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "two-more-live-scopes",
+      "date": "2026-10-09",
+      "date_precision": "day",
+      "strand": "bus",
+      "kind": "capability",
+      "status": "verified",
+      "title": "Two more complete-download scopes get hardware evidence",
+      "short": "Two controlled trials",
+      "summary": "A presence detector and a fourfold button each underwent an authorized complete download, independent readback, an observed functional check and restoration of the covered configuration. The shipped registry then contained three exact application-program entries.",
+      "why": "Hardware evidence can widen one precise scope without declaring a device family universally supported.",
+      "aside": "Here the narrator steps aside. Covered configuration is a smaller claim than all memory, or every device.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "dba73d8c",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/research/commissioning.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "commit",
+          "label": "Related published step (scope distinguished in the text)",
+          "ref": "59f4df15",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "The earlier detector trial is recorded in commit 59f4df15. Both runs left Basic Restart unconfirmed; later functional observations are distinct evidence, not a confirmed restart acknowledgement.",
+        "The two new entries cover complete downloads only. Partial downloads, every instance sharing the program, all device memory and physical blind movement were not proved by these runs."
+      ]
+    },
+    {
+      "id": "source-not-semantics",
+      "date": "2026-10-10",
+      "date_precision": "day",
+      "strand": "import",
+      "kind": "capability",
+      "status": "implemented",
+      "title": "Bring selected content aboard, keep the unknowns",
+      "short": "Preserve, not pretend",
+      "summary": "Selective import previews supported lines and devices into an existing project as one reversible operation. Original project documents and opaque payloads are retained and reported. Stored module-instance values can be read without inventing Repeat expansion or activating unknown content.",
+      "why": "Data preservation is not semantic acceptance, and merging must not overwrite silently.",
+      "aside": "The unknowns came aboard with labels. They were not promoted to engineers.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "d8346579",
+          "source": "src-git"
+        },
+        {
+          "kind": "adr",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/adr/0107-import-source-integrity.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "commit",
+          "label": "Related published step (scope distinguished in the text)",
+          "ref": "99e05425",
+          "source": "src-git"
+        },
+        {
+          "kind": "commit",
+          "label": "Related published step (scope distinguished in the text)",
+          "ref": "d050c7e7",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "Selective import was delivered separately in 99e05425 (ADR-0106); own-instance read-only values in d050c7e7 (ADR-0108). Their association here is editorial, not a claim of one causal patch.",
+        "Functions-bearing selective source import remains refused at this cutoff. No complete Repeat evaluation, ETS export or signature verification follows."
+      ]
+    },
+    {
+      "id": "native-writing-desk",
+      "date": "2026-10-12",
+      "date_precision": "day",
+      "strand": "interface",
+      "kind": "capability",
+      "status": "implemented",
+      "title": "Instructions and project notes get a reversible writing desk",
+      "short": "A writing desk",
+      "summary": "Installation instructions and target-bound project notes are mounted in the workbench. Preview/apply, native undo and source/revision checks preserve imported originals; drafts survive Save rather than being confused with saved edits.",
+      "why": "An editor needs durable ownership and loss prevention, not only an input field.",
+      "aside": "A notebook, finally. Its most important feature is not losing the previous notebook.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "a2751458",
+          "source": "src-git"
+        },
+        {
+          "kind": "adr",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/adr/0112-native-instruction-overlays.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "Notes have a separate plain-text contract. Rich instruction support is bounded; other schemas, arbitrary RTF and ETS export of edited overlays are not claimed.",
+        "Native WebKitGTK and Orca accessibility acceptance remain open."
+      ]
+    },
+    {
+      "id": "catalogue-with-return",
+      "date": "2026-10-12",
+      "date_precision": "day",
+      "strand": "products",
+      "kind": "capability",
+      "status": "implemented",
+      "title": "Catalogue updates preview the change and keep a backup",
+      "short": "Catalogue, with return",
+      "summary": "A user-supplied manufacturer package is compared with an in-memory catalogue copy. Adoption rechecks its preview token, creates a backup and installs transactionally. CLI and web paths offer restore; existing device/application bindings do not silently move.",
+      "why": "New product data can be tried without automatically changing existing engineering choices.",
+      "aside": "An update with a return address. A modest improvement on most of history.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "27490eba",
+          "source": "src-git"
+        },
+        {
+          "kind": "adr",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/adr/0117-previewed-recoverable-catalogue-updates.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "The web path follows in ADR-0118. There is no automatic Online Catalog access or supported device application-version upgrade."
+      ]
+    },
+    {
+      "id": "mcp-narrow-writer",
+      "date": "2026-10-12",
+      "date_precision": "day",
+      "strand": "collab",
+      "kind": "capability",
+      "status": "implemented",
+      "title": "An agent may rename, if the operator enables exactly that",
+      "short": "One narrow AI writer",
+      "summary": "The MCP adapter remains read-only by default. An explicitly enabled project alias admits literal group-address renames after a preview, client form confirmation and a fresh conflict check. It writes reversible native working history, not the saved root.",
+      "why": "The smallest useful write exception reuses application rules rather than granting general project or hardware access.",
+      "aside": "The machines were allowed to change a few names. Not the lighting. I support the distinction.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "4b2968c3",
+          "source": "src-git"
+        },
+        {
+          "kind": "adr",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/adr/0116-opt-in-mcp-name-recipe-writer.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "The server cannot prove that a human rather than an auto-accepting client answered. Real third-party client acceptance remains open; there is no bus access or general mutation permission."
+      ]
+    },
+    {
+      "id": "users-find-edges",
+      "date": "2026-10-12",
+      "date_precision": "day",
+      "strand": "import",
+      "kind": "setback",
+      "status": "implemented",
+      "title": "Real users find the installation and import edges",
+      "short": "Users find the edges",
+      "summary": "Public issue reports exposed an AppImage graphics-library mismatch and real ETS 5.7 protected-project packaging. Source fixes changed bundled-library policy and schema-20/container handling. A later reporter confirmation records a successful import, with warning and export-log follow-ups still open.",
+      "why": "Files and Linux systems outside the original corpus expose assumptions that synthetic tests cannot settle.",
+      "aside": "The application met somebody else’s computer. It had notes.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "b1f3f8db",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/OPEN_WORK.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "commit",
+          "label": "Related published step (scope distinguished in the text)",
+          "ref": "09229157",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "The AppImage packaging change is in 09229157. Source fixes and reporter outcomes have different dates; the original Kubuntu launch confirmation, schema 22 and nested sub-module object numbering remain open."
+      ]
+    },
+    {
+      "id": "alpha-eleven",
+      "date": "2026-10-13",
+      "date_precision": "day",
+      "strand": "trunk",
+      "kind": "status",
+      "status": "recorded",
+      "title": "Alpha 11 packages a particular snapshot, not the future",
+      "short": "Alpha 11 released",
+      "summary": "The documented Alpha 11 release includes clearer address linking, hierarchy and gateway-busy explanations, notification controls and tester reporting. Later source-only features in this edition are not retroactively part of that release.",
+      "why": "A source delivery and the packaged version users can install are different milestones.",
+      "aside": "The release was frozen. Development, regrettably, was not.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "5b550b48",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/releases/alpha11.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "tester-not-verdict",
+      "date": "2026-10-13",
+      "date_precision": "day",
+      "strand": "trust",
+      "kind": "process-change",
+      "status": "implemented",
+      "title": "A tester report is evidence, not an automatic verdict",
+      "short": "Reports, not verdicts",
+      "summary": "Ended download reports separate transport/write/readback outcome from the tester’s functional observations. Preview and local export support deliberate manual sharing; maintainers review the exact program and scope before changing the shipped verified registry.",
+      "why": "Byte agreement alone cannot establish that a real device performs its intended function.",
+      "aside": "A successful write is not a successful building. The forms finally agree.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "758a112b",
+          "source": "src-git"
+        },
+        {
+          "kind": "adr",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/adr/0121-tester-download-reports.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "No automatic upload, automatic support promotion or proof of private delivery is implied. Pre-plan refusal guidance was delivered in source after Alpha 11."
+      ]
+    },
+    {
+      "id": "functions-not-sites",
+      "date": "2026-10-13",
+      "date_precision": "day",
+      "strand": "trunk",
+      "kind": "capability",
+      "status": "implemented",
+      "title": "Rooms gain Functions; cross-installation sites wait",
+      "short": "Functions, not sites",
+      "summary": "A Function names a group of group addresses within one installation and building part. Model, storage, schema-23 import and later workbench editing were delivered. A proposed site spanning multiple installations remains blocked for lack of evidence, not approximated in the UI.",
+      "why": "A useful grouping can ship without inventing unsupported cross-installation ownership.",
+      "aside": "One grouping arrived. Another remained a proposal. The tree survived the disappointment.",
+      "excerpts": [
+        {
+          "speaker": "user",
+          "kind": "paraphrase",
+          "original_language": "de",
+          "transforms": [
+            "translated",
+            "shortened"
+          ],
+          "text": "Explore the KNX Functions and site-model questions before implementation.",
+          "note": "Project-scoped Functions design request, 9 October 2026; paraphrased, not verbatim."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "4b728994",
+          "source": "src-git"
+        },
+        {
+          "kind": "adr",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/adr/0124-project-functions.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "commit",
+          "label": "Related published step (scope distinguished in the text)",
+          "ref": "f6c866fe",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "Web editing followed in f6c866fe. Real supported-schema ETS Function samples, unresolved source semantics and multi-installation site requirements remain evidence gaps."
+      ]
+    },
+    {
+      "id": "project-carries-programs",
+      "date": "2026-10-14",
+      "date_precision": "day",
+      "strand": "products",
+      "kind": "capability",
+      "status": "implemented",
+      "title": "A native project carries its manufacturer files",
+      "short": "Programs travel too",
+      "summary": "Issue #21 led to native schema 16 carrying hashed manufacturer-file bytes separately from history snapshots. Opening a project can restore missing application data into a separate product database. Older project files explicitly report missing sources and offer a hash-matched restoration route.",
+      "why": "Moving a saved project should not quietly remove its parameter editors because the old machine held the only catalogue.",
+      "aside": "The suitcase finally contains the things the label says are inside.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "ceb54d2f",
+          "source": "src-git"
+        },
+        {
+          "kind": "adr",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/adr/0128-native-project-files-carry-their-manufacturer-files.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "Source delivery after Alpha 11. Hash integrity is not a distribution licence; older native readers do not gain downgrade compatibility."
+      ]
+    },
+    {
+      "id": "system-two-still-no",
+      "date": "2026-10-14",
+      "date_precision": "day",
+      "strand": "bus",
+      "kind": "setback",
+      "status": "open",
+      "title": "A Siemens support request reaches a real boundary",
+      "short": "System 2 still waits",
+      "summary": "Issue #22 identified an exact System-2 product/application that the existing download path refused. Offline parsing and archive research clarified prerequisites, but table/image representation, product procedure and durable property-plus-memory recovery remained unresolved. MV-0025 stays refused.",
+      "why": "Recognizing one metadata record is not a safe executable download procedure.",
+      "aside": "The right answer remained no, with a better explanation attached.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "46c50485",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/contracts/system2-download-prerequisites.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "commit",
+          "label": "Related published step (scope distinguished in the text)",
+          "ref": "0d2701b4",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "Research follow-up is documented in 0d2701b4. No new hardware operation or successful download is established. Exact firmware identity remains a prerequisite for separately authorized future hardware evaluation."
+      ]
+    },
+    {
+      "id": "measured-gates",
+      "date": "2026-10-14",
+      "date_precision": "day",
+      "strand": "collab",
+      "kind": "process-change",
+      "status": "implemented",
+      "title": "Make the test queue faster without deleting the questions",
+      "short": "Measure the queue",
+      "summary": "A maintained web-test runner separates bounded parallel functional checks from exclusive timing-sensitive checks. Equal-case runs at one, two and four workers informed the default; original failures and accepted source-bound receipts remain separate.",
+      "why": "Faster verification only helps when it still verifies the same behavior and the actual source being delivered.",
+      "aside": "The tests learned to queue. I have never needed lessons.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "022278db",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/contracts/web-test-gate.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "Measured improvement applies to the functional browser lane on the recorded host, not the whole gate or universal product performance. No retries, skipped assertions or hardware certification follow."
+      ]
+    },
+    {
+      "id": "pending-is-belief",
+      "date": "2026-10-15",
+      "date_precision": "day",
+      "strand": "bus",
+      "kind": "capability",
+      "status": "implemented",
+      "title": "The project tracks what still needs programming",
+      "short": "Pending is a belief",
+      "summary": "Per-part Address/Application/Parameters/Group-address marks follow edits in the same undo step. Server write outcomes settle only the relevant parts for the same project/device; interrupted writes remain conservative. UI chips and filters expose these states.",
+      "why": "A project must stop claiming an old configuration is still programmed after its content changes.",
+      "aside": "Four small marks, and an unusually large amount of care about what they do not prove.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "8c42e4f5",
+          "source": "src-git"
+        },
+        {
+          "kind": "adr",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/adr/0129-per-part-pending-programming.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "Source delivery after Alpha 11; no new hardware trial. Pending marks are project beliefs, not a fresh comparison, functional verification or device-sync verdict. Recovered snapshot undo may conservatively mark additional parts pending.",
+        "The separately active device-comparison work is outside this pinned source cutoff."
+      ]
+    },
+    {
+      "id": "universal-report-design",
+      "date": "2026-10-15",
+      "date_precision": "day",
+      "strand": "trust",
+      "kind": "decision",
+      "status": "planned",
+      "title": "A broader support report is reserved, not delivered",
+      "short": "A report is proposed",
+      "summary": "At the cutoff, a universal support-report workflow had been designed and reserved for unknown, unsupported and untested devices. Its intent is useful offline evidence with optional reviewed bounded diagnostics, not universal device access.",
+      "why": "A support request should not disappear merely because no executable plan exists.",
+      "aside": "A place for the unknowns to explain themselves. Not permission for them to touch anything.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Published source for this step",
+          "ref": "2d4ec5f9",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Scope, implementation and remaining boundaries",
+          "ref": "docs/contracts/device-programming-support-guidance.md",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "This cutoff contains a reservation and design direction, not the universal reporter implementation. Existing support guidance is implemented; the proposed unified acquisition/report workflow is not. No live read, unlock, write or upload authority is granted."
+      ]
     }
   ],
   "relations": [
@@ -2626,7 +3267,7 @@
       "from": "schema-23-refusal",
       "to": "drop-ets-export",
       "type": "documented_association",
-      "note": "ADR-0028 cites export code that had to mirror every import change, including schema support."
+      "note": "ADR-0028 cites export code that had to track every import change, including schema support."
     },
     {
       "id": "rel-bus-boundary",
@@ -2942,6 +3583,146 @@
       "to": "goals-closed",
       "type": "documented_association",
       "note": "The release was one of the last items of the alpha plan."
+    },
+    {
+      "id": "rel-story-first-preview-public-front-door",
+      "from": "story-first-preview",
+      "to": "public-front-door",
+      "type": "documented_association",
+      "note": "The existing standalone story became an exactly approved website artifact; ADR-0095 records the integration."
+    },
+    {
+      "id": "rel-public-front-door-fictional-demos",
+      "from": "public-front-door",
+      "to": "fictional-demos",
+      "type": "editorial",
+      "note": "Two public entry points, grouped editorially; adjacency does not establish causation."
+    },
+    {
+      "id": "rel-first-alpha-alpha-eleven",
+      "from": "first-alpha",
+      "to": "alpha-eleven",
+      "type": "documented_association",
+      "note": "Later release records distinguish packaged snapshots from subsequent source changes."
+    },
+    {
+      "id": "rel-public-front-door-users-find-edges",
+      "from": "public-front-door",
+      "to": "users-find-edges",
+      "type": "editorial",
+      "note": "Public use and subsequent issue reports are a narrative connection, not evidence that the website caused each report."
+    },
+    {
+      "id": "rel-users-find-edges-alpha-eleven",
+      "from": "users-find-edges",
+      "to": "alpha-eleven",
+      "type": "documented_association",
+      "note": "Alpha 11 release notes explicitly distinguish the earlier import/launch fixes and later UI changes."
+    },
+    {
+      "id": "rel-exact-or-refused-native-memory",
+      "from": "exact-or-refused",
+      "to": "native-memory",
+      "type": "editorial",
+      "note": "Both protect native project integrity; this is not a claimed single-prompt dependency."
+    },
+    {
+      "id": "rel-native-memory-source-not-semantics",
+      "from": "native-memory",
+      "to": "source-not-semantics",
+      "type": "documented_association",
+      "note": "ADR-0106 reuses existing native history for selective-import undo."
+    },
+    {
+      "id": "rel-native-memory-native-writing-desk",
+      "from": "native-memory",
+      "to": "native-writing-desk",
+      "type": "documented_association",
+      "note": "Instruction overlays and notes participate in native working history."
+    },
+    {
+      "id": "rel-product-database-catalogue-with-return",
+      "from": "product-database",
+      "to": "catalogue-with-return",
+      "type": "documented_association",
+      "note": "The update path previews and reuses the existing product installation transaction."
+    },
+    {
+      "id": "rel-mcp-adapter-mcp-narrow-writer",
+      "from": "mcp-adapter",
+      "to": "mcp-narrow-writer",
+      "type": "documented_association",
+      "note": "ADR-0116 explicitly amends the original read-only adapter with one opt-in exception."
+    },
+    {
+      "id": "rel-native-memory-mcp-narrow-writer",
+      "from": "native-memory",
+      "to": "mcp-narrow-writer",
+      "type": "documented_association",
+      "note": "The bounded writer persists to native working history rather than the saved root."
+    },
+    {
+      "id": "rel-source-not-semantics-functions-not-sites",
+      "from": "source-not-semantics",
+      "to": "functions-not-sites",
+      "type": "editorial",
+      "note": "Two approaches to modelling only evidenced structure, not an asserted implementation dependency."
+    },
+    {
+      "id": "rel-product-database-project-carries-programs",
+      "from": "product-database",
+      "to": "project-carries-programs",
+      "type": "documented_association",
+      "note": "Native manufacturer-file retention restores the separate catalogue when source data is missing."
+    },
+    {
+      "id": "rel-first-device-programmed-two-more-live-scopes",
+      "from": "first-device-programmed",
+      "to": "two-more-live-scopes",
+      "type": "documented_association",
+      "note": "The registry expands exact program/scope evidence; historical trials are not fleet-wide verification."
+    },
+    {
+      "id": "rel-two-more-live-scopes-tester-not-verdict",
+      "from": "two-more-live-scopes",
+      "to": "tester-not-verdict",
+      "type": "editorial",
+      "note": "The reporting design preserves similar distinctions; this edition does not infer that the trials caused it."
+    },
+    {
+      "id": "rel-evidence-of-record-system-two-still-no",
+      "from": "evidence-of-record",
+      "to": "system-two-still-no",
+      "type": "editorial",
+      "note": "Both illustrate explicit evidence boundaries; no direct causal chain is claimed."
+    },
+    {
+      "id": "rel-split-goals-measured-gates",
+      "from": "split-goals",
+      "to": "measured-gates",
+      "type": "editorial",
+      "note": "Separate work packages and measured shared verification are associated editorially, not attributed to one prompt."
+    },
+    {
+      "id": "rel-native-memory-pending-is-belief",
+      "from": "native-memory",
+      "to": "pending-is-belief",
+      "type": "documented_association",
+      "note": "ADR-0129 integrates per-part marks with live and recovered undo while separating irreversible hardware settlement."
+    },
+    {
+      "id": "rel-tester-not-verdict-universal-report-design",
+      "from": "tester-not-verdict",
+      "to": "universal-report-design",
+      "type": "documented_association",
+      "note": "The proposed workflow is to reuse existing report producers without treating a refusal as a fabricated run."
+    },
+    {
+      "id": "rel-system-two-still-no-universal-report-design",
+      "from": "system-two-still-no",
+      "to": "universal-report-design",
+      "type": "editorial",
+      "note": "A support gap and a reporting proposal coexist; universal reporting must not imply universal safe access."
     }
   ],
   "gaps": [
@@ -2953,7 +3734,7 @@
     {
       "id": "gap-cloud",
       "title": "Cloud sessions",
-      "detail": "Cloud-hosted agent sessions and the remote repository host were not accessed. Some cloud jobs are known to have run for this project."
+      "detail": "Cloud-hosted agent conversations were not inspected. Local conversation coverage is selective; Git and retained documents do not establish unseen conversations or who wrote every line."
     },
     {
       "id": "gap-attribution",
@@ -2963,7 +3744,27 @@
     {
       "id": "gap-rewritten-history",
       "title": "Rewritten early history",
-      "detail": "The history was rewritten for privacy on 20 September and again on 7 October 2026. Content removed then is not recoverable here, and earlier commit hashes no longer exist; a published map links old and new hashes."
+      "detail": "Privacy rewrites changed historical identifiers. This edition follows the repository commit maps and checks every cited commit against the pinned ancestry. Removed private material is not reconstructed."
+    },
+    {
+      "id": "gap-new-conversations",
+      "title": "Selective conversation coverage",
+      "detail": "Earlier curated excerpts are inherited. The new interval uses filtered project-scoped local records, not every conversation. No new private chat-export archaeology or pre-project narrative was added."
+    },
+    {
+      "id": "gap-real-formats",
+      "title": "Real formats and runtime checks still missing",
+      "detail": "Supported-schema Functions samples, schema 22 and nested sub-module identities remain incomplete. Native WebKitGTK and Orca acceptance is not supplied by Chromium or Firefox tests."
+    },
+    {
+      "id": "gap-hardware-scope",
+      "title": "Hardware evidence is narrow",
+      "detail": "Exact program/scope registry entries, readback, functional observations and restoration have separate boundaries. Tests, Untested plans and pending marks are not new hardware verification. System-2 admission and universal extension execution remain unresolved."
+    },
+    {
+      "id": "gap-cutoff-and-release",
+      "title": "Frozen source, separate release and publication",
+      "detail": "Work after the pinned source commit is not included. Source-only changes after Alpha 11 are not claimed as packaged there. This new edition is unapproved; the previously approved published story remains the website pin until a separate decision."
     }
   ]
 }

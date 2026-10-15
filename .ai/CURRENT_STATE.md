@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:52
+- **Completed:** P4 package2 implemented in owned p4-parameters-20261015: actual active-write bit attribution, named project/device numeric/text values, final-plan/coverage/profile guards and explicit EN/DE unknown reasons with raw ranges. Seven named semantic mutants fail as intended; sources restored and core/image postflight green. Separate in-session review findings closed; Clippy green. Six production comparison browser cases pass; EN/DE1440/400 screenshots visually inspected. Contract/ADR/handbook/FEATURES/goal updated honestly as candidate.
+- **Pending/Next Steps:** Freeze and full template RUST=1/PY=1/fifteen-config branch gate; commit reviewed scope; fresh-main owned merge, complete merged gate and network-isolated corpus; inspect merged images, normal push/readback, evidence archival and owned cleanup. No new owner Go needed.
+- **Notes for Codex oder Claude:** No independent-review claim, hardware access or broadened image/negative-signed support. Profile scratch/p4-parameters-20261015 retains RED/GREEN/mutations/simulator/browser proofs. Shared dirty root and foreign support/story trees unchanged; no subagents/release/deploy. Transient global achievement toast overlaps lower mobile content as inherited.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:28
+- **Completed:** P4 table package1 publication and metadata fbdfbddd verified local/tracking/live; compact440-file evidence hash-verified at profile evidence/p4-tables-a9f429a4. Both owned package1 worktrees/branches/scratch retired. Package2 now active in p4-parameters-20261015 from fresh published main, preparation/spec witnesses retained.
+- **Pending/Next Steps:** Parameter bit attribution at actual image writer; named numeric/text project/device decoding with raw fallbacks, RED/GREEN/mutants/self-review/EN-DE1440-400 then full template branch+merged gates and publication. No Go needed.
+- **Notes for Codex oder Claude:** All new builds/evidence profile scratch/p4-parameters-20261015. Keep support/story foreign owners and shared stale dirty root untouched; no hardware/subagents/vendor/release/deploy.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 09:26
 - **Completed:** P4 package1 tables published675df035f6decb976a120fec388126af06a06c0a on origin/main; exact local/tracking/live equality and unchanged accepted runtime paths verified. Actual merge a9f429a4 has49/49 frozen stages and151/151 corpus tests; nine docs/tooling closure checks pass. Branch/merged EN/DE1440/400 screenshots inspected. No bus access/migration/release.
 - **Pending/Next Steps:** Immediately package2 parameter bit attribution and named project/device values in a new fresh-main worktree. Finish verified package1 evidence archival/owned retirement; do not redo accepted runtime gates. Parameter package needs own RED/GREEN/mutants/review and complete branch+merged gates.

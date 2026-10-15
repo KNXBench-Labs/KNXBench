@@ -188,6 +188,29 @@ pub struct SegmentImage {
     pub mask: Option<Vec<u8>>,
 }
 
+/// One actually written active parameter and its verified image bit placement.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParameterAttribution {
+    pub reference: String,
+    pub name: String,
+    pub segment: String,
+    pub field: ParameterField,
+    pub value: AttributedValue,
+}
+
+/// Only encodings already admitted by the image writer, not guessed device semantics.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AttributedValue {
+    Number {
+        value: u64,
+        nonnegative_signed: bool,
+    },
+    Text {
+        value: String,
+        encoding: Option<String>,
+    },
+}
+
 /// The images of every segment the product ships data for, in the order
 /// the product file lists them, and what went into them.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -206,6 +229,8 @@ pub struct DownloadImage {
     pub objects: Vec<ActiveObject>,
     /// The inferences the image rests on (ADR-0086), in the order applied.
     pub inferences: Vec<Inference>,
+    /// Exact active parameter writes for read-only comparison; never persisted.
+    pub parameter_fields: Vec<ParameterAttribution>,
 }
 
 impl DownloadImage {
@@ -420,6 +445,7 @@ pub fn build_download_image(
     let mut fields: Vec<(&str, ParameterField, &str)> = Vec::new();
     let mut parameters = BTreeMap::new();
     let mut texts = BTreeMap::new();
+    let mut parameter_fields = Vec::new();
     for active in &activation.parameter_refs {
         let parameter_ref = active.ref_id.as_str();
         let parameter = types.parameter_of(parameter_ref)?;
@@ -469,6 +495,27 @@ pub fn build_download_image(
         }
         .map_err(|error| overlap_or(error, parameter_ref, segment_id, &fields))?;
         fields.push((segment_id, field, parameter_ref));
+        let facts = types.get(parameter_ref)?;
+        parameter_fields.push(ParameterAttribution {
+            reference: parameter_ref.to_string(),
+            name: facts
+                .name
+                .clone()
+                .filter(|name| !name.is_empty())
+                .unwrap_or_else(|| parameter.to_string()),
+            segment: segment_id.to_string(),
+            field,
+            value: match &value {
+                Encoded::Number(number) => AttributedValue::Number {
+                    value: *number,
+                    nonnegative_signed: facts.number_type.as_deref() == Some("signedInt"),
+                },
+                Encoded::Text { text, .. } => AttributedValue::Text {
+                    value: text.clone(),
+                    encoding: types.text_encoding.clone(),
+                },
+            },
+        });
         match &value {
             Encoded::Number(number) => parameters.insert(parameter_ref.to_string(), *number),
             Encoded::Text { text, .. } => {
@@ -585,6 +632,7 @@ pub fn build_download_image(
         texts,
         objects,
         inferences,
+        parameter_fields,
     })
 }
 
@@ -1016,6 +1064,7 @@ struct RefType {
     min: Option<String>,
     max: Option<String>,
     parameter_type: Option<String>,
+    name: Option<String>,
 }
 
 /// The program's parameter refs and their types, loaded once.
@@ -1036,6 +1085,17 @@ enum TextEncoding {
 }
 
 impl TextEncoding {
+    const LATIN_9: [(char, u8); 8] = [
+        ('€', 0xA4),
+        ('Š', 0xA6),
+        ('š', 0xA8),
+        ('Ž', 0xB4),
+        ('ž', 0xB8),
+        ('Œ', 0xBC),
+        ('œ', 0xBD),
+        ('Ÿ', 0xBE),
+    ];
+
     /// The encoding a declared name stands for. Encoding names are
     /// case-insensitive (RFC 2978).
     fn named(name: &str) -> Option<TextEncoding> {
@@ -1048,32 +1108,51 @@ impl TextEncoding {
         }
     }
 
+    fn character(self, octet: u8) -> char {
+        if matches!(self, Self::Latin9) {
+            if let Some((character, _)) = Self::LATIN_9.iter().find(|(_, byte)| *byte == octet) {
+                return *character;
+            }
+        }
+        char::from(octet)
+    }
+
     /// The octet for `c`, if the encoding has one.
     fn octet(self, c: char) -> Option<u8> {
         // ISO/IEC 8859-15 reassigns A4h, A6h, A8h, B4h, B8h, BCh, BDh, BEh.
-        const LATIN_9: [(char, u8); 8] = [
-            ('€', 0xA4),
-            ('Š', 0xA6),
-            ('š', 0xA8),
-            ('Ž', 0xB4),
-            ('ž', 0xB8),
-            ('Œ', 0xBC),
-            ('œ', 0xBD),
-            ('Ÿ', 0xBE),
-        ];
         let code = u32::from(c);
         match self {
             TextEncoding::Latin1 => u8::try_from(code).ok(),
             TextEncoding::Latin9 => {
-                if let Some((_, octet)) = LATIN_9.iter().find(|(known, _)| *known == c) {
+                if let Some((_, octet)) = Self::LATIN_9.iter().find(|(known, _)| *known == c) {
                     return Some(*octet);
                 }
                 u8::try_from(code)
                     .ok()
-                    .filter(|octet| !LATIN_9.iter().any(|(_, taken)| taken == octet))
+                    .filter(|octet| !Self::LATIN_9.iter().any(|(_, taken)| taken == octet))
             }
         }
     }
+}
+
+/// Exact inverse of the admitted text writer; noncanonical padding stays unknown.
+pub(crate) fn decode_parameter_text(encoding: Option<&str>, bytes: &[u8]) -> Option<String> {
+    let end = bytes.iter().position(|b| *b == 0).unwrap_or(bytes.len());
+    if bytes[end..].iter().any(|b| *b != 0) {
+        return None;
+    }
+    let encoding = match encoding {
+        Some(name) => Some(TextEncoding::named(name)?),
+        None => None,
+    };
+    bytes[..end]
+        .iter()
+        .map(|b| match encoding {
+            Some(encoding) => Some(encoding.character(*b)),
+            None if b.is_ascii() => Some(char::from(*b)),
+            None => None,
+        })
+        .collect()
 }
 
 impl ParameterTypes {
@@ -1084,7 +1163,7 @@ impl ParameterTypes {
     ) -> Result<Self, ImageError> {
         let mut stmt = conn.prepare(
             "SELECT pr.id, p.id, pt.kind, pt.size_in_bit, pt.base, pt.number_type,
-                    pt.min_inclusive, pt.max_inclusive, pt.id
+                    pt.min_inclusive, pt.max_inclusive, pt.id, p.name
              FROM parameter_ref pr
              JOIN parameter p ON p.program_id = pr.program_id AND p.id = pr.parameter_id
              LEFT JOIN parameter_type pt
@@ -1104,6 +1183,7 @@ impl ParameterTypes {
                         min: r.get(6)?,
                         max: r.get(7)?,
                         parameter_type: r.get(8)?,
+                        name: r.get(9)?,
                     },
                 ))
             })?
@@ -1382,6 +1462,56 @@ mod tests {
   </choose>
 </ParameterBlock></Channel></Dynamic>
 </ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    #[test]
+    fn attribution_captures_only_actual_active_writes_with_exact_bits_and_source_names() {
+        let (_dir, conn) = db(PROGRAM);
+        let image = build_download_image(&conn, &request(&[], vec![])).unwrap();
+        let fields = &image.parameter_fields;
+        assert_eq!(
+            fields.len(),
+            3,
+            "only Mode, Time and winning Wide are actually written"
+        );
+        let mode = fields.iter().find(|p| p.reference == "P-1_R-1").unwrap();
+        assert_eq!(mode.name, "Mode");
+        assert_eq!(mode.segment, "AS-4400");
+        assert_eq!(
+            mode.field,
+            ParameterField {
+                offset: 11,
+                bit_offset: 0,
+                size_in_bit: 2
+            }
+        );
+        assert_eq!(
+            mode.value,
+            AttributedValue::Number {
+                value: 1,
+                nonnegative_signed: false
+            }
+        );
+        let narrow = build_download_image(&conn, &request(&[("P-1_R-1", "2")], vec![])).unwrap();
+        assert_eq!(
+            narrow.parameter_fields.len(),
+            2,
+            "duplicate aliases do not invent a second write"
+        );
+        let winner = narrow
+            .parameter_fields
+            .iter()
+            .find(|p| p.reference == "UP-2_R-4")
+            .unwrap();
+        assert_eq!(winner.name, "Narrow");
+        assert_eq!(
+            winner.field,
+            ParameterField {
+                offset: 14,
+                bit_offset: 5,
+                size_in_bit: 2
+            }
+        );
+    }
 
     fn db(xml: &str) -> (tempfile::TempDir, Connection) {
         let dir = tempfile::tempdir().expect("tempdir");
@@ -2055,6 +2185,88 @@ mod tests {
             )
     }
 
+    #[test]
+    fn captured_parameter_pipeline_decodes_text_and_signed_positive_without_hiding_raw() {
+        use knx_core::commissioning::device_backup::{BackupRegion, DeviceBackup};
+        use knx_core::commissioning::load_state::MaskVersion;
+        use knx_core::commissioning::memory_download::{MemoryDownloadPlan, MemoryDownloadStep};
+        let image = build(&kinds_program(LATIN_9), &[], vec![]).unwrap();
+        let plan = MemoryDownloadPlan {
+            mask: MaskVersion(0x0701),
+            manufacturer: 1,
+            steps: image
+                .segments
+                .iter()
+                .map(|s| MemoryDownloadStep::WriteMemory {
+                    address: s.address as u16,
+                    octets: s.octets.clone(),
+                })
+                .collect(),
+        };
+        let mut held = DeviceBackup {
+            target: device(),
+            mask: plan.mask,
+            manufacturer: 1,
+            load_states: vec![],
+            regions: image
+                .segments
+                .iter()
+                .map(|s| BackupRegion {
+                    address: s.address as u16,
+                    octets: s.octets.clone(),
+                })
+                .collect(),
+        };
+        let device_values = held
+            .regions
+            .iter_mut()
+            .find(|r| r.address == 0x4600)
+            .unwrap();
+        device_values.octets[..9]
+            .copy_from_slice(&[3, 0x01, 0x91, b'5', b' ', 0xA4, b' ', b'o', b'k']);
+        let rows = crate::image_comparison::decode(&image, &held, &plan);
+        let text = rows
+            .iter()
+            .find(|r| r.kind == "parameter" && r.label.contains("P-T_R-1"))
+            .unwrap();
+        assert_eq!(text.label, "T · P-T_R-1 · bit 0 / 48");
+        assert_eq!(text.project.as_deref(), Some("Grüß"));
+        assert_eq!(text.device.as_deref(), Some("5 € ok"));
+        let signed = rows
+            .iter()
+            .find(|r| r.kind == "parameter" && r.label.contains("P-S16_R-1"))
+            .unwrap();
+        assert_eq!(signed.project.as_deref(), Some("300"));
+        assert_eq!(signed.device.as_deref(), Some("401"));
+        assert!(rows.iter().any(|r| r.kind == "raw"
+            && r.device
+                .as_deref()
+                .is_some_and(|s| s.contains("35 20 A4 20 6F 6B"))));
+        let device_values = held
+            .regions
+            .iter_mut()
+            .find(|r| r.address == 0x4600)
+            .unwrap();
+        device_values.octets[1] = 0x80;
+        device_values.octets[4] = 0;
+        device_values.octets[5] = b'x';
+        let rows = crate::image_comparison::decode(&image, &held, &plan);
+        assert_eq!(
+            rows.iter()
+                .find(|r| r.label.contains("P-S16_R-1"))
+                .unwrap()
+                .device,
+            None,
+            "negative sign interpretation unverified"
+        );
+        let text = rows.iter().find(|r| r.label.contains("P-T_R-1")).unwrap();
+        assert_eq!(
+            text.device, None,
+            "nonzero bytes after NUL cannot be silently trimmed"
+        );
+        assert!(text.reason.is_some());
+    }
+
     fn kinds_program(options: &str) -> String {
         kinds_program_with(options, "Grüß", "", "", "")
     }
@@ -2063,6 +2275,27 @@ mod tests {
 
     /// A signed number at or above zero, high octet first; the text in the
     /// declared ISO-8859-15, zero-filled to its field.
+    #[test]
+    fn comparison_text_inverse_respects_declared_encoding_and_canonical_padding() {
+        assert_eq!(
+            decode_parameter_text(None, b"abc\0\0").as_deref(),
+            Some("abc")
+        );
+        assert_eq!(decode_parameter_text(None, &[0xA4]), None);
+        assert_eq!(decode_parameter_text(Some("utf-8"), b"abc"), None);
+        assert_eq!(
+            decode_parameter_text(Some("ISO-8859-1"), &[0xA4, 0xBC, 0]).as_deref(),
+            Some("¤¼")
+        );
+        let bytes = [0xA4, 0xA6, 0xA8, 0xB4, 0xB8, 0xBC, 0xBD, 0xBE];
+        assert_eq!(
+            decode_parameter_text(Some("iso-8859-15"), &bytes).as_deref(),
+            Some("€ŠšŽžŒœŸ")
+        );
+        assert_eq!(decode_parameter_text(Some("iso-8859-15"), b"a\0x"), None);
+        assert_eq!(decode_parameter_text(None, b""), Some(String::new()));
+    }
+
     #[test]
     fn signed_numbers_and_text_are_encoded_into_the_image() {
         let image = build(&kinds_program(LATIN_9), &[], vec![]).expect("builds");

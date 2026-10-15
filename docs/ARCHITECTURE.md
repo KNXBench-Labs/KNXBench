@@ -7,8 +7,11 @@ for transient per-device comparison revisions and the existing read-only
 management/gateway path. The product adapter decodes verified image placements;
 UI owns the confirmed serial queue and volatile tags, never a KNX codec.
 Server requests/results bind server/project incarnation, device ID and content
-revision. Package 1 decodes tables and retains every raw range; named parameter
-attribution is a separate package. No project/product schema migration.
+revision. Package 1 decodes tables; package 2 captures actual active parameter
+writes in the product adapter's transient DownloadImage, then projects named
+project/device values through exactly compared ranges. Core supplies the
+existing bit writer's inverse, not UI codecs; unsupported patterns remain
+unknown beside complete raw ranges. No project/product schema migration.
 
 ## Per-part pending programming (P3)
 

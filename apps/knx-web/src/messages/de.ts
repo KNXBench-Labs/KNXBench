@@ -19,6 +19,7 @@
 import type { MessageKey } from "./en";
 
 export const messages: Record<MessageKey, string> = {
+  "compare.parameterNotDecoded": "Das Feld ist unvollständig, überschrieben oder die Gerätecodierung ist nicht verifiziert. Prüfe die Rohbytes darunter.",
   "compare.all": "Alle angezeigten vergleichen",
   "compare.one": "Vergleichen",
   "compare.column": "Gerätevergleich",

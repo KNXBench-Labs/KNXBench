@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 15:22
+- **Completed:** P4 current parameter/corpus package fully accepted on facdd62e9f6f: frozen full51/51 (Vitest3626,Chromium574,Rust4597,repeat87), OriginalData152/152 and explicit product16/16. Seven parameter and seven prerequisite mutants detected/restored; separate self-review closed; final production EN/DE1440/400 images inspected. Feature519eff4b and separate test/docs-only fixa6cdfd9d present. Alpha12 freeze70e3de01 journal-only merge preserves all consumed runtime inputs; no new package started. Docs/FEATURES/manual/goal/evidence synchronized with actual acceptance.
+- **Pending/Next Steps:** Documentation-only delta gate then normal main push/exact remote verification; publication marker, compact private evidence archive and owned worktree/scratch retirement. NOT YET PUSHED. After this P4 prerequisite delivery pause under Alpha12 freeze; no new package or hardware action.
+- **Notes for Codex oder Claude:** Keep release-owner upstream journal suffix/ownership exact. Runtime tested source facdd62e remains distinct from later docs-only delivery commit. No production resource guard/profile/schema extension; negative device patterns unknown/raw retained. Shared root/foreign work untouched; no bus/subagents/tag/deploy. Evidence under own profile scratch until verified compact archive.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 13:40
 - **Completed:** Owner-requested inherited corpus fixes committed separately as a6cdfd9d775c and integrated additively into P4. Proven v23 modelling delta465/463/463/157 with41 unchanged table counts; strict matrix passes. Standard-only nesting census accounts105=103+1+1 with unchanged row-change counter on refusal, no hidden errors. Product16/16,ordinary ProductDB887/0,7 named semantic mutants+byte-exact restore,Clippy,docs+five repo gates pass. No production/frontend/schema/limit changes versus previously accepted P4 merge788974e7. Both histories retained; separate in-session review closed,not independent approval.
 - **Pending/Next Steps:** Freeze final combined merge and run full maintained template RUST/PY plus required15 and new support config, isolated regular152 and explicit16 product corpus; inspect final screenshots or prove complete UI-input equality to already inspected merge; final evidence/docs closure,normal main push/readback and owned cleanup. P4 not yet pushed; no owner Go needed.
@@ -43,6 +51,16 @@
 - **Completed:** P4 table package1 publication and metadata fbdfbddd verified local/tracking/live; compact440-file evidence hash-verified at profile evidence/p4-tables-a9f429a4. Both owned package1 worktrees/branches/scratch retired. Package2 now active in p4-parameters-20261015 from fresh published main, preparation/spec witnesses retained.
 - **Pending/Next Steps:** Parameter bit attribution at actual image writer; named numeric/text project/device decoding with raw fallbacks, RED/GREEN/mutants/self-review/EN-DE1440-400 then full template branch+merged gates and publication. No Go needed.
 - **Notes for Codex oder Claude:** All new builds/evidence profile scratch/p4-parameters-20261015. Keep support/story foreign owners and shared stale dirty root untouched; no hardware/subagents/vendor/release/deploy.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 14:19
+- **Completed:** Owner requested Alpha 12 release, main website refresh with current screenshots/short clips and README/documentation review, preserving existing English/DE style. Release owner codex-release-alpha12 works only in release-alpha12-20261015; selected root HEAD/index/research preserved. Fresh remote baseline bee4f016; latest published release v0.1.0-alpha.11. P4 parameter/corpus combined package is already in its final source-bound acceptance and is the only prerequisite admitted before cutoff.
+- **Pending/Next Steps:** P4 owner finishes its current combined parameter/corpus package through normal push/readback and releases its leases, then pauses; do not start another package. Other sessions pause new pushes/merges/lease acquisitions now; existing gates may finish without publication. Release owner prepares media/docs, waits for verified P4 delivery, freezes candidate, runs full local+workflow dry-run gates and presents exact candidate for final tag/publication Go. No tag/product release/deploy yet.
+- **Notes for Codex oder Claude:** Release freeze: taken by codex-release-alpha12 (Alpha 12; sole prerequisite P4 current parameter/corpus package). Requested standalone marker from P4 owner is `Alpha 12 prerequisite delivered: P4 parameters and corpus`. Also accept actual published parameter implementation plus corpus-fix a6cdfd9d ancestry and released P4 ownership, checked against live remote. Resume only after standalone release-freeze release line and external release/abort result; no lock breaking, foreign cleanup, root synchronization, subagents or hardware work. Existing approved Story edition/digest stays unchanged; homepage refresh does not rewrite the Story.
+
+Release freeze: taken by codex-release-alpha12
 
 ---
 

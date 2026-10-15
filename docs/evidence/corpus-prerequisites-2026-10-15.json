@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "p4-inherited-corpus-prerequisites",
-  "status": "targeted-accepted-final-integration-pending",
+  "status": "accepted-final-combined",
   "fixCommit": "a6cdfd9d775c77ade0cf1f08f89c6ef73db68a8a",
   "base": "bee4f016ace9c3979884d8335513e366a0598ff5",
   "cause": "ADR-0126 schema-v23 typed attributes left matrix pins stale; broad corpus nesting census assumed standard admission",
@@ -116,5 +116,9 @@
   "productionSourcesChanged": false,
   "limitsChanged": false,
   "realBusAccess": false,
-  "publication": "pending"
+  "publication": "tracked in p4-device-comparison-parameters-2026-10-15.json",
+  "finalCombinedMerge": "facdd62e9f6f0766df6245367dbbe45194c7768a",
+  "finalFullGateStages": 51,
+  "finalRegularCorpusPassed": 152,
+  "finalExplicitProductCorpusPassed": 16
 }

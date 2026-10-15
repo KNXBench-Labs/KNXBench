@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 11:39
+- **Completed:** Universal support feature fa165f82 and tested integration3444186c accepted:11/11 outer,62/62 maintained-web, Rust4587/0/206ignored, Vitest3624, default browser574, dialog12/12, private OriginalData151/151 in33 targets under network isolation. Seven guard mutants caught/restored,8 branch and8 merged images inspected. Source/meta identity and read-only/consent/IP boundaries documented. Later upstream story/docs merge3921e122 preserves complete application/Rust path sets, modes and blobs (1560 protected paths); runtime results stay bound3444186c, no invented rerun.
+- **Pending/Next Steps:** Run affected documentation/story/site/tooling closure on exact current candidate, then authorized normal main push and exact local/tracking/live/source readback; publication receipt, verified private evidence archive and owned worktree/cache retirement. No new implementation, hardware, release or deploy authorized by this task. No new Go needed.
+- **Notes for Codex oder Claude:** Self-review only, no independent approval claim. Shared selected root remains dirty/stale and unsynchronized; preserve foreign P4/story/SessionRadar state. System2 programming/recovery and hardware verification remain open, report collection never unlocks programming or assigns Verified. No subagents/vendor contact/automatic upload.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 09:46
 - **Completed:** Universal device-support branch accepted on frozen cbf93c1b:10/10 stages, maintained web61/61, Rust4575/0 with205 explicit opt-ins ignored, production dialog12/12 and8 setup/preview images inspected. Seven realistic guard mutants behaviorally caught in isolated public-source copy; restored suites pass, canonical never mutated. Source-only reader-route closure added README/FAQ/support guidance/aggregate evidence without runtime edits. No actual bus/Verified promotion/unlock/upload.
 - **Pending/Next Steps:** Commit reviewed feature as KNXBench, merge into owned fresh-main universal-support-merge-20261015 (origin fbdfbddd, dependencies installed offline), reconcile additive journals/docs, complete merged web/Rust/private OriginalData acceptance, normal push and exact readback, evidence archive and owned cleanup. Explicit owner authorization holds; no new Go. No published feature claim yet.

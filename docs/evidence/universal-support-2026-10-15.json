@@ -97,7 +97,27 @@
     "canonicalNeverMutated": true
   },
   "integration": {
-    "status": "pending"
+    "status": "passed",
+    "testedCommit": "3444186cb51254101661ac6f340dba9d206a7dfc",
+    "inputCommitment": "1fee875d4864e27b5447a966f7936185063ba8c8821619f1118d3f5445213afa",
+    "inputsFrozen": true,
+    "stages": 11,
+    "maintainedWebStages": 62,
+    "rust": {
+      "passed": 4587,
+      "failed": 0,
+      "ignored": 206
+    },
+    "vitest": 3624,
+    "defaultBrowserCases": 574,
+    "privateCorpus": {
+      "passed": 151,
+      "expected": 151,
+      "targets": 33,
+      "networkIsolated": true
+    },
+    "dedicatedProductionBrowserPassed": 12,
+    "framesInspected": 8
   },
   "publication": {
     "status": "pending"
@@ -125,5 +145,11 @@
     "System2 image/table/LSM/recovery and target-specific hardware evidence remain open",
     "No automatic upload, receiving service or private-original intake promise",
     "No real bus operation, vendor contact, release or deployment performed"
-  ]
+  ],
+  "postGateMerge": {
+    "commit": "3921e1220b256f80bf37defa2b12ae247989928a",
+    "applicationPathModesAndBlobsEqual": true,
+    "protectedPaths": 1560,
+    "delta": "Upstream story/docs/tooling only; affected documentation/story/site checks required separately, runtime results retain their tested commit."
+  }
 }

@@ -1,0 +1,63 @@
+{
+  "schema": "knxbench-phosphor-atlas-acceptance/1",
+  "status": "private-preview-awaiting-owner-publication-approval",
+  "base": "6c870caf2cd14c01acf180f1145126cd82c7150c",
+  "gated_source_manifest_sha256": "982c6d7ae384789e5a23947bea258a05b0930e43ea7be21573f7d760031e9f63",
+  "source_paths_frozen": 2868,
+  "tests": {
+    "website": 27,
+    "story": 76,
+    "tooling": {
+      "ran": 163,
+      "skipped": 1
+    },
+    "chromium_preview_checks": 418,
+    "chromium_public_variant_checks": 418,
+    "recipes_per_variant": 7,
+    "fully_decoded_raster_supplement_checks": 4,
+    "fully_decoded_mobile_strips_inspected": 21
+  },
+  "repository_gates": [
+    "check-layering",
+    "check-headers",
+    "check-anchors",
+    "check-ledger",
+    "check-corpus-gates"
+  ],
+  "builds": {
+    "preview": {
+      "manifest_sha256": "84c741ad0cda84a030d1293370ca6e19981444cbabf186cba9c74f1fe09907d2",
+      "files": 38,
+      "mode": "private-preview"
+    },
+    "public_variant": {
+      "manifest_sha256": "897c1a5a1dada79f93b447c9f0028543171409f1b09bc01b8999736233371109",
+      "files": 39,
+      "mode": "release"
+    }
+  },
+  "integrity": {
+    "story_unchanged": true,
+    "application_unchanged": true,
+    "media_unchanged": true,
+    "existing_translation_values_unchanged": true
+  },
+  "execution": {
+    "uninterrupted_green_run": false,
+    "accepted_chain": [
+      "final-gate-2 (22 zero-exit stages, final browser stage has capture refusal)",
+      "final-public: six successful constituent recipes",
+      "public-continuation1: completed remaining whole-site recipe"
+    ],
+    "retained_refusals": [
+      "Missing isolated-worktree Playwright dependency; resolved dependency entries matched before reuse.",
+      "Chromium captureScreenshot refusal in public whole-site recipe; only incomplete recipe reexecuted with frozen sources."
+    ]
+  },
+  "review": "in-session source and representative real-raster self-review, not independent approval",
+  "limits": [
+    "No Firefox/WebKit/native screen-reader certification",
+    "Fictional illustration, no electrical/hardware or live-traffic evidence",
+    "No release, main push or Pages publication"
+  ]
+}

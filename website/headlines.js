@@ -10,7 +10,28 @@
   const boxes = new Map(), visible = new Set(), active = new Set();
   const SWAP = { duration: 720, easing: 'cubic-bezier(.65,0,.35,1)', id: 'ambient-char-swap' };
   const CLIP = 'inset(-0.4em -0.06em)';
-  let paused = false, unsupported = false, timer = 0;
+  let paused = false, unsupported = false, timer = 0, ticks = 0;
+  const atlas = document.querySelector('.atlas-diagram');
+  let atlasVisible = false, atlasStarted = false;
+
+  function revealAtlas() {
+    if (!atlas || !atlasVisible || atlasStarted || !allowed()) return;
+    atlasStarted = true;
+    try {
+      const paths = [...atlas.querySelectorAll('path')].filter(path => path.closest('svg').getBoundingClientRect().width > 0);
+      paths.forEach((path, index) => track(path.animate([
+        { strokeDasharray: '1 1', strokeDashoffset: 1 },
+        { strokeDasharray: '1 1', strokeDashoffset: 0 }
+      ], { duration: 850, delay: index * 180, fill: 'backwards', easing: 'ease-out', id: 'phosphor-path-draw' })));
+      atlas.querySelectorAll('[data-atlas-node]').forEach((node, index) => track(node.animate(
+        [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 380, delay: index * 180, fill: 'backwards', easing: 'ease-out', id: 'phosphor-node-appear' }
+      )));
+    } catch (_) {
+      // A partial/missing WAAPI implementation must leave the whole diagram visible.
+      cancelWhere(animation => animation.id.startsWith('phosphor-'));
+    }
+  }
 
   function split(heading) {
     const label = heading.cloneNode(true);
@@ -76,22 +97,41 @@
     for (const heading of visible) {
       for (const box of boxes.get(heading)) if (!box.getAnimations({ subtree: true }).length) pool.push(box);
     }
+    ticks += 1;
     for (let picked = 0; picked < 2 && pool.length && allowed(); picked += 1) {
       const [box] = pool.splice(Math.floor(Math.random() * pool.length), 1);
       roll(box, picked ? 60 + Math.random() * 160 : 0);
     }
+    // An occasional single-glyph displacement, never flashing prose or whole headings.
+    if (ticks % 7 === 0 && pool.length) {
+      const box = pool[0];
+      try {
+        track(box.firstChild.animate([
+          { transform: 'translateX(0)' },
+          { transform: 'translateX(.08em)', color: '#c1aff2', offset: .4 },
+          { transform: 'translateX(0)' }
+        ], { duration: 180, easing: 'steps(2, end)', id: 'phosphor-char-glitch' }));
+      } catch (_) { /* The normal rolling treatment remains available. */ }
+    }
     if (allowed() && visible.size) timer = window.setTimeout(tick, 2200 + Math.random() * 1600);
   }
   function sync() {
+    document.documentElement.dataset.motion = allowed() ? 'on' : 'off';
+    if (!allowed() || !atlasVisible) cancelWhere(animation => animation.id.startsWith('phosphor-'));
+    revealAtlas();
     if (!allowed() || !visible.size) {
       window.clearTimeout(timer);
       timer = 0;
-      cancelWhere(() => true);
+      cancelWhere(animation => !allowed() || animation.id === 'ambient-char-swap' || animation.id === 'phosphor-char-glitch');
     } else if (!timer) timer = window.setTimeout(tick, 1200);
   }
   headings.forEach(heading => boxes.set(heading, split(heading)));
   const observer = new IntersectionObserver(entries => {
     for (const entry of entries) {
+      if (entry.target === atlas) {
+        atlasVisible = entry.isIntersecting;
+        continue;
+      }
       if (entry.isIntersecting) visible.add(entry.target);
       else {
         visible.delete(entry.target);
@@ -101,7 +141,11 @@
     sync();
   });
   headings.forEach(heading => observer.observe(heading));
+  if (atlas) observer.observe(atlas);
+  // Responsive art uses a different path geometry; cancel, never replay mid-resize.
+  window.addEventListener('resize', () => cancelWhere(animation => animation.id.startsWith('phosphor-')));
   toggle.hidden = false;
+  sync();
   toggle.addEventListener('click', () => {
     paused = !paused;
     toggle.setAttribute('aria-pressed', String(paused));
@@ -115,6 +159,7 @@
     window.clearTimeout(timer);
     timer = 0;
     cancelWhere(() => true);
+    document.documentElement.dataset.motion = 'off';
   });
   window.addEventListener('pageshow', sync);
 })();

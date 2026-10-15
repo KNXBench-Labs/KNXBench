@@ -7,6 +7,65 @@ remote IPv6 HTTPS were verified on 2026-10-09; Pages actions now use Node 24.
 Owner privacy review and optional WebKit evidence remain separate follow-ups.
 Decision: [ADR-0095](adr/0095-static-marketing-companion.md).
 
+## Phosphor Atlas — private implementation (15 October 2026)
+
+This source branch contains the owner-approved **Phosphor Atlas** redesign, not
+an authorized Pages cutover. Alpha 12 publication and release-freeze release were
+verified before implementation. The separately approved Evolution Story, legal
+wording, application themes, manuals, real screenshot pixels/media provenance and
+release/download boundaries are preserved. Publication needs a separate owner Go.
+
+The whole canvas uses green-black `#03150c`, rich surfaces `#0b2d1c`, crisp
+reading ink `#eef5e9`, phosphor `#88ffad`, violet `#c1aff2` and amber `#e7c688`.
+Existing self-hosted Space Grotesk/Inter remain; monospace is limited to technical
+labels/metadata. Headings/paths glow, prose does not. Static scanlines exist only
+behind the diagram, not over reading text or screenshots. No borrowed proprietary
+assets, new framework, analytics, network API or application dependency.
+
+### A fictional installation, not project history
+
+The primary artwork explains one fictional TP line `1.1`, three devices
+`1.1.10`, `1.1.11`, `1.1.20` and group address `0/0/1` (“Kitchen light”).
+Solid green branches show line membership. Dashed violet connections show
+communication-object/group-address associations, **not** cabling, live telegrams,
+physical junctions, demonstrated device support or download success. The diagram
+is a simplified explanation, not an electrical plan. Semantics follow the existing
+manual's [topology](manual/knx-basics/02-topology-and-individual-addresses.md) and
+[group links](manual/knx-basics/03-group-addresses.md) explanations; it is not
+an import model, product database or protocol implementation.
+
+Nodes are ordinary fragment links without JavaScript; native disclosures keep all
+explanations available. Progressive enhancement selects a node, highlights its
+related paths and opens its explanation, with explicit controls/expanded state.
+Native disclosure closure mirrors that state. No hover-only content, dragging,
+editor, pan/zoom or live bus. Mobile uses a vertical composition with identical
+relationships and readable labels, rather than scaling a desktop atlas to dust.
+A genuine Alpha 12 application screenshot follows the diagram unchanged.
+
+### One motion owner
+
+`headlines.js` extends the existing rolling-character owner. The header's
+page-local pause/resume controls rolls, rare single-glyph 180ms glitches, the
+finite path/node reveal and button transitions together. OS reduced motion wins;
+no storage/cookies are introduced. Graph reveal runs at most once per document,
+then stays settled. Pause, live OS reduction, offscreen/hidden/pagehide lifecycle
+and responsive resize cancel affected native animation objects, exposing the
+complete static baseline; no mandatory boot or endless graph loop. Headings keep
+stable accessible names and word boundaries. No-JS/missing-animation-API pages
+remain readable and the nonfunctional motion switch stays hidden. Legal/privacy
+pages remain static and inherit the palette/typography without text changes.
+
+### Acceptance and limits
+
+Maintained recipes are `website/tests/test_phosphor.py`,
+`verify-phosphor.js` and `verify-phosphor-visual.js`, alongside the existing
+build/headline/language/legal/demo/whole-site regressions. They exercise actual
+Chromium, bilingual widths down to 320px, native keyboard/touch, no-JS/API
+fallback, finite reveal, active-effect cancellation and real raster inspection.
+No Firefox/WebKit, native screen-reader/Orca, electrical installation or hardware
+certification follows. In-session self-review is not independent approval.
+Local builds are previews; a successful public-variant build is not deployment.
+
 ## Alpha 12 refresh (15 October 2026)
 
 The existing dark DE/EN design, root language, editorial voice, legal/privacy
@@ -19,7 +78,7 @@ states native16/product23 and independent backups, old-reader refusal and the
 unchanged System-2/little-endian/Secure boundaries. Actual website acceptance and
 public deployment remain separate from media capture.
 
-## Agreed brief
+## Original brief (8 October; visual direction superseded above)
 
 - Encourage visitors to try the actual KNXBench application, not a hosted demo.
 - Product benefits first; Linux is the origin and a native deployment path, not

@@ -1,6 +1,6 @@
 /** Plain Playwright CLI function: verify the actual static marketing artifact. */
 async (page) => {
-  const origin = 'http://127.0.0.1:4198';
+  const origin = new URL(page.url()).origin;
   const manifest = await (await page.request.get(`${origin}/build-manifest.json`)).json();
   if (manifest.schema !== 'knxbench-website-build/1') throw new Error('unknown site artifact');
   const release = manifest.mode === 'release';

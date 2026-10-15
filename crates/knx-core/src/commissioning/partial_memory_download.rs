@@ -234,18 +234,37 @@ fn is_ignored_application_data(complete: &MemoryDownloadPlan, address: u16) -> b
 
 /// The application's `MM MM TT TT VV`, from the complete plan's application
 /// program task segment (`[D]` MP §3.31.2: `L3 02h 00h SSSS PP MMMM TTTT VV`).
-fn application_identity(complete: &MemoryDownloadPlan) -> Option<[u8; 5]> {
-    complete.steps.iter().find_map(|step| match step {
-        MemoryDownloadStep::LoadRecord(record)
-            if record.machine() == MemoryLoadStateMachine::ApplicationProgram
-                && record.event() == LoadEvent::AdditionalLoadControls
-                && record.octets()[1] == SEGMENT_TYPE_TASK =>
-        {
-            let octets = record.octets();
-            Some([octets[6], octets[7], octets[8], octets[9], octets[10]])
+pub fn application_identity(complete: &MemoryDownloadPlan) -> Option<[u8; 5]> {
+    let mut identity = None;
+    for step in &complete.steps {
+        let candidate = match step {
+            MemoryDownloadStep::CompareProperty {
+                object_index,
+                property_id,
+                inline_data,
+            } if *object_index == ObjectIndex::APPLICATION_PROGRAM.octet()
+                && *property_id == PID_PROGRAM_VERSION =>
+            {
+                Some(<[u8; 5]>::try_from(inline_data.as_slice()).ok()?)
+            }
+            MemoryDownloadStep::LoadRecord(record)
+                if record.machine() == MemoryLoadStateMachine::ApplicationProgram
+                    && record.event() == LoadEvent::AdditionalLoadControls
+                    && record.octets()[1] == SEGMENT_TYPE_TASK =>
+            {
+                let octets = record.octets();
+                Some([octets[6], octets[7], octets[8], octets[9], octets[10]])
+            }
+            _ => None,
+        };
+        if let Some(candidate) = candidate {
+            if identity.is_some_and(|earlier| earlier != candidate) {
+                return None;
+            }
+            identity = Some(candidate);
         }
-        _ => None,
-    })
+    }
+    identity
 }
 
 /// The `[A]` checks run before the first write.

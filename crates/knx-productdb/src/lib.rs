@@ -15,6 +15,7 @@ pub mod dynamic;
 pub mod enrich;
 pub mod identity;
 pub mod image;
+pub mod image_comparison;
 pub mod image_request;
 pub mod inference;
 pub mod ingest;

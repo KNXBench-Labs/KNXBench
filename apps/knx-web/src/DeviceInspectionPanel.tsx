@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import DeviceLink from "./DeviceLink";
+import ComparisonTable from "./ComparisonTable";
+import "./deviceComparisons.css";
 import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { splitGatewayEndpoint, validateGatewayFields } from "./gatewayEndpoint";
@@ -233,6 +235,7 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
           <h5>{t("deviceChecks.loadStates")}</h5>
           {result.loadStates.length === 0 ? <p>{t("deviceChecks.noLoadStates")}</p> :
             <ul>{result.loadStates.map((state, index) => <li key={index}>{state.machine}: {state.state}</li>)}</ul>}
+          {result.decoded && <ComparisonTable rows={result.decoded} />}
           <h5>{t("deviceChecks.changes")}</h5>
           {result.changes.length === 0 ? <p>{t("deviceChecks.noRanges")}</p> : <div className="device-checks-table-scroll" role="region" aria-label={t("deviceChecks.changes")} tabIndex={0}>
             <table className="device-checks-changes">

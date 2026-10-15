@@ -10,7 +10,7 @@ import { resetSettingsForTests, setSetting } from "./settingsStore";
 import { resetProductLanguageForTests } from "./productLanguage";
 import { resetUiLanguageForTests } from "./uiLanguage";
 
-const apiMock = vi.hoisted(() => ({ deviceCatalog: vi.fn() }));
+const apiMock = vi.hoisted(() => ({ deviceCatalog: vi.fn(), compareDevice: vi.fn() }));
 vi.mock("./api", () => ({ ...apiMock, errorMessage: (error: unknown) => error instanceof Error ? error.message : String(error) }));
 const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false,
   is_modified: false, group_address_style: "ThreeLevel", server_incarnation: "table-test", snapshot_revision: 1,
@@ -23,6 +23,7 @@ const click = vi.fn(); const catalogue = vi.fn();
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
   apiMock.deviceCatalog.mockReset(); apiMock.deviceCatalog.mockResolvedValue(batch);
+  apiMock.compareDevice.mockReset();
   click.mockClear(); catalogue.mockClear();
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
 });
@@ -39,6 +40,30 @@ async function query(value: string) {
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true })); });
 }
+it("compares only filtered rows after one gateway confirmation and makes relevant edits Outdated", async () => {
+  const project = { ...tree, project_incarnation: 4, comparison_revisions: { 2: 1, 10: 0 } };
+  apiMock.compareDevice.mockResolvedValue({ serverIncarnation: "table-test", projectIncarnation: 4, deviceId: 2, comparisonRevision: 1,
+    address: "1.1.2", deviceName: "Device 2", programId: "A", written: false, partial: false, mask: 0x0701, manufacturer: 0x83,
+    same: true, octets: 1, differingOctets: 0, changes: [], loadStates: [{ machine: "Application", state: "Loaded" }], outdated: false,
+    decoded: [{ kind: "raw", label: "", address: 0x4000, project: "21", device: "21", reason: null }] });
+  await render(true, project); await query("Device 2");
+  expect(host.querySelectorAll(".comparison-tag")).toHaveLength(0);
+  const all = [...host.querySelectorAll("button")].find((b) => b.textContent === "Compare all shown")!;
+  expect(all).toBeTruthy(); await act(async () => all.click());
+  expect(apiMock.compareDevice).not.toHaveBeenCalled();
+  const gateway = document.querySelector<HTMLInputElement>(".comparison-gateway")!;
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(gateway, "192.0.2.1:3671");
+    gateway.dispatchEvent(new Event("input", { bubbles: true })); });
+  const confirm = [...document.querySelectorAll("button")].find((b) => b.textContent === "Confirm read-only comparison")!;
+  await act(async () => confirm.click());
+  expect(apiMock.compareDevice).toHaveBeenCalledExactlyOnceWith("1.1.2", "192.0.2.1:3671",
+    { serverIncarnation: "table-test", projectIncarnation: 4, deviceId: 2, comparisonRevision: 1 });
+  expect(host.querySelector(".comparison-tag")?.textContent).toBe("Synced");
+  expect(document.querySelector(".comparison-decoded")?.textContent).toContain("21");
+  await render(true, { ...project, snapshot_revision: 2, comparison_revisions: { 2: 2, 10: 0 } });
+  expect(host.querySelector(".comparison-tag")?.textContent).toBe("Outdated");
+});
+
 it("marks untranslated product text when a product language was requested", async () => {
   await act(async () => setSetting("productLanguage", "de"));
   apiMock.deviceCatalog.mockResolvedValue({ ...batch, devices: [{ id: 2, device: tree.installations[0].unassigned[0],

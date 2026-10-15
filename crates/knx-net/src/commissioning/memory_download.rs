@@ -635,6 +635,14 @@ impl PlanComparison {
 /// `Display`, that nothing was written, because nothing can be.
 #[derive(Debug)]
 pub enum CompareError {
+    /// No verified application-object layout for this mask; no session was opened.
+    UnsupportedIdentityMask(MaskVersion),
+    /// The plan has no verified application identity; no session was opened.
+    ApplicationUnknown,
+    /// A complete five-octet application identifier differs. No plan memory was read.
+    ApplicationMismatch { expected: [u8; 5], found: [u8; 5] },
+    /// The identity response was not exactly five octets, so it cannot be classified.
+    ApplicationMalformed { found: Vec<u8> },
     /// No read-only session could be built.
     Session(SessionError),
     /// The read failed or was refused.
@@ -650,6 +658,10 @@ impl std::error::Error for CompareError {}
 impl fmt::Display for CompareError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::UnsupportedIdentityMask(mask) => write!(f, "no verified application identity layout for mask {:04X}h; nothing was written", mask.0),
+            Self::ApplicationUnknown => f.write_str("no verified application identity in the plan; nothing was written"),
+            Self::ApplicationMismatch { expected, found } => write!(f, "wrong application: expected {expected:02X?}, found {found:02X?}; nothing was written"),
+            Self::ApplicationMalformed { found } => write!(f, "application identity has {} octets instead of five; nothing was written", found.len()),
             Self::Session(error) => write!(f, "{error}; nothing was written"),
             // `ReadBackError` says "nothing was written" itself.
             Self::Read(error) => write!(f, "{error}"),
@@ -674,13 +686,48 @@ pub async fn compare_with_plan<T: ManagementTransport>(
     timing: SessionTiming,
     plan: &MemoryDownloadPlan,
 ) -> Result<PlanComparison, CompareError> {
+    if plan.mask.0 & 0xFFF0 != 0x0700 {
+        return Err(CompareError::UnsupportedIdentityMask(plan.mask));
+    }
     let address = target.address();
     let mut session =
         ManagementSession::read_only(transport, address, AuthorisationPlan::Skip, timing)
             .map_err(CompareError::Session)?;
-    let held = read_what_the_plan_overwrites(&mut session, plan)
-        .await
-        .map_err(CompareError::Read)?;
+    let identity = knx_core::commissioning::partial_memory_download::application_identity(plan)
+        .ok_or(CompareError::ApplicationUnknown)?;
+    session.adopt_mask(plan.mask);
+    session.connect().await.map_err(CompareError::Session)?;
+    let result = async {
+        check_identity(&mut session, plan.mask, plan.manufacturer)
+            .await
+            .map_err(CompareError::Read)?;
+        // Same verified path as the partial-download precondition (CP/RES; ADR-0129).
+        // Do not use prefix matching: a truncated response is not another application.
+        let found = session
+            .read_property(
+                knx_core::commissioning::properties::ObjectIndex::APPLICATION_PROGRAM,
+                knx_core::commissioning::properties::PID_PROGRAM_VERSION,
+                1,
+                1,
+            )
+            .await
+            .map_err(CompareError::Session)?;
+        let found: [u8; 5] = found
+            .try_into()
+            .map_err(|found| CompareError::ApplicationMalformed { found })?;
+        if found != identity {
+            return Err(CompareError::ApplicationMismatch {
+                expected: identity,
+                found,
+            });
+        }
+        read_after_identity(&mut session, plan)
+            .await
+            .map_err(CompareError::Read)
+    }
+    .await;
+    session.disconnect().await;
+    let held = result?;
     let changes = download_changes(plan, address, &held).map_err(CompareError::Shape)?;
     Ok(PlanComparison { held, changes })
 }
@@ -690,6 +737,13 @@ async fn read_after_connect<T: ManagementTransport>(
     plan: &MemoryDownloadPlan,
 ) -> Result<DeviceBackup, ReadBackError> {
     check_identity(session, plan.mask, plan.manufacturer).await?;
+    read_after_identity(session, plan).await
+}
+
+async fn read_after_identity<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &MemoryDownloadPlan,
+) -> Result<DeviceBackup, ReadBackError> {
     let limit = session
         .write_limit(None)
         .await
@@ -2632,10 +2686,122 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn compare_refuses_another_application_before_reading_memory() {
+        let device = loaded_device();
+        device.preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x28, 0x15]);
+        let error = compare_with_plan(
+            &device,
+            contactable(&device),
+            fast(),
+            &complete_with_application(),
+        )
+        .await
+        .expect_err("another application must not become ordinary byte differences");
+        assert!(error.to_string().contains("application"), "{error}");
+        assert!(
+            memory_reads(&device).is_empty(),
+            "wrong application read no plan memory"
+        );
+        assert!(
+            writes_of_any_kind(&device).is_empty(),
+            "comparison is read only"
+        );
+        assert_eq!(device.seen().last(), Some(&Seen::Disconnect));
+    }
+
+    #[tokio::test]
+    async fn compare_rejects_wrong_version_and_short_identity_without_guessing() {
+        for (identity, wrong) in [
+            (vec![0, 0x83, 0, 0x27, 0x14], true),
+            (vec![0, 0x83, 0, 0x27], false),
+        ] {
+            let device = loaded_device();
+            device.preset_property(3, PID_PROGRAM_VERSION, &identity);
+            let error = compare_with_plan(
+                &device,
+                contactable(&device),
+                fast(),
+                &complete_with_application(),
+            )
+            .await
+            .expect_err("identity does not establish this application/version");
+            assert_eq!(
+                matches!(error, CompareError::ApplicationMismatch { .. }),
+                wrong,
+                "{error}"
+            );
+            assert!(memory_reads(&device).is_empty());
+            assert!(writes_of_any_kind(&device).is_empty());
+            assert_eq!(device.seen().last(), Some(&Seen::Disconnect));
+        }
+    }
+
+    #[tokio::test]
+    async fn compare_without_an_application_identity_opens_no_session() {
+        let device = old_device();
+        assert!(matches!(
+            compare_with_plan(&device, contactable(&device), fast(), &plan()).await,
+            Err(CompareError::ApplicationUnknown)
+        ));
+        assert!(device.seen().is_empty());
+    }
+
+    #[tokio::test]
+    async fn conflicting_application_identity_witnesses_are_not_guessed() {
+        let device = loaded_device();
+        let mut plan = complete_with_application();
+        plan.steps.insert(
+            1,
+            MemoryDownloadStep::CompareProperty {
+                object_index: 3,
+                property_id: PID_PROGRAM_VERSION,
+                inline_data: vec![0, 0x83, 0, 0x28, 0x15],
+            },
+        );
+        let error = compare_with_plan(&device, contactable(&device), fast(), &plan)
+            .await
+            .expect_err("ambiguous identity");
+        assert!(matches!(error, CompareError::ApplicationUnknown), "{error}");
+        assert!(
+            device.seen().is_empty(),
+            "an ambiguous plan opens no session"
+        );
+    }
+
+    #[tokio::test]
+    async fn comparison_never_borrows_another_masks_application_object_layout() {
+        let device = loaded_device();
+        let mut plan = complete_with_application();
+        plan.mask = MaskVersion(0x0025);
+        let error = compare_with_plan(&device, contactable(&device), fast(), &plan)
+            .await
+            .expect_err("unsupported identity layout");
+        assert!(error.to_string().contains("nothing was written"));
+        assert!(
+            device.seen().is_empty(),
+            "no guessed object-index request on an unsupported mask"
+        );
+    }
+
+    fn comparison_plan() -> MemoryDownloadPlan {
+        let mut plan = plan();
+        plan.steps.insert(
+            1,
+            MemoryDownloadStep::CompareProperty {
+                object_index: 3,
+                property_id: PID_PROGRAM_VERSION,
+                inline_data: vec![0, 0x83, 0, 0x27, 0x15],
+            },
+        );
+        plan
+    }
+
+    #[tokio::test]
     async fn comparing_names_every_differing_run_and_writes_nothing() {
         let device = old_device();
+        device.preset_property(3, PID_PROGRAM_VERSION, &[0, 0x83, 0, 0x27, 0x15]);
         let before = device.memory(0x4000, 30);
-        let compared = compare_with_plan(&device, contactable(&device), fast(), &plan())
+        let compared = compare_with_plan(&device, contactable(&device), fast(), &comparison_plan())
             .await
             .expect("compared");
         assert!(!compared.is_same());
@@ -2661,11 +2827,12 @@ mod tests {
     #[tokio::test]
     async fn a_device_that_holds_the_plan_compares_the_same() {
         let device = old_device();
+        device.preset_property(3, PID_PROGRAM_VERSION, &[0, 0x83, 0, 0x27, 0x15]);
         run_memory_download(&mut session(&device, WriteScope::Download), &plan())
             .await
             .expect("the download runs");
         let writes = writes_of_any_kind(&device).len();
-        let compared = compare_with_plan(&device, contactable(&device), fast(), &plan())
+        let compared = compare_with_plan(&device, contactable(&device), fast(), &comparison_plan())
             .await
             .expect("compared");
         assert!(compared.is_same(), "{:?}", compared.changes);
@@ -2684,9 +2851,14 @@ mod tests {
             ..SimulatorConfig::default()
         });
         other_mask.preset_property(0, PID_MANUFACTURER_ID, &MANUFACTURER.to_be_bytes());
-        let error = compare_with_plan(&other_mask, contactable(&other_mask), fast(), &plan())
-            .await
-            .expect_err("refused");
+        let error = compare_with_plan(
+            &other_mask,
+            contactable(&other_mask),
+            fast(),
+            &comparison_plan(),
+        )
+        .await
+        .expect_err("refused");
         assert!(
             matches!(
                 error,

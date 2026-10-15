@@ -11,6 +11,9 @@ import { useProductLanguage } from "./productLanguage";
 import { useUiLanguage } from "./uiLanguage";
 import { fellBack, LanguageFallbackBadge } from "./languageFallback";
 import { createProgrammingChips } from "./ProgrammingChips";
+import { useDeviceComparisons } from "./useDeviceComparisons";
+import DeviceComparisonDialog, { ComparisonTag } from "./DeviceComparisonDialog";
+import "./deviceComparisons.css";
 
 const COLUMNS: { column: DeviceSortColumn; label: MessageKey }[] = [
   { column: "address", label: "workbench.address" },
@@ -32,6 +35,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
   onCatalogue: (catalogue: DeviceCatalog) => void;
 }) {
   const t = useTranslate();
+  const comparisons = useDeviceComparisons(tree);
   const [language] = useUiLanguage();
   const programmingChips = useMemo(() => createProgrammingChips(t, language), [t, language]);
   const [productLanguage] = useProductLanguage();
@@ -85,6 +89,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
       <label className="devices-pending-only"><input type="checkbox" checked={pendingOnly}
         onChange={(event) => setPendingOnly(event.target.checked)} />{t("devices.pendingOnly")}</label>
       <button type="button" onClick={() => setRefresh((value) => value + 1)} disabled={loading}>{t("devices.refresh")}</button>
+      <button type="button" disabled={comparisons.running || rows.length === 0} onClick={() => comparisons.open(rows)}>{t("compare.all")}</button>
     </div>
     {loading && <p role="status"><span className="task-status-text">{t("devices.loading")}</span></p>}
     {error && <p className="field-error" role="alert">{t("devices.catalogueFailed", { reason: error })}</p>}
@@ -95,6 +100,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
           <button type="button" onClick={() => setSort({ column, descending: sort.column === column && !sort.descending })}>
             {t(label)}{sort.column === column && <span aria-hidden="true">{sort.descending ? " ↓" : " ↑"}</span>}
           </button></th>)}
+      <th>{t("compare.column")}</th>
       </tr></thead><tbody>{rows.map((row) => <tr key={row.id} data-rename-kind="device" data-rename-id={row.id} data-rename-value={row.name}
         onClick={(event) => {
           if (event.target instanceof Element && event.target.closest("button, input")) return;
@@ -116,8 +122,11 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
         <td>{row.topology.length ? row.topology.join(" · ") : t("workbench.unassigned")}</td>
         <td>{row.building.length ? row.building.join(" · ") : t("workbench.unassigned")}</td>
         <td>{row.com_object_count}</td><td>{row.description ?? "—"}</td>
+        <td className="device-comparison-actions"><ComparisonTag entry={comparisons.entry(row.id)} onClick={() => comparisons.inspect(row)} />
+          <button type="button" disabled={comparisons.running} onClick={() => comparisons.open([row])}>{t("compare.one")}</button></td>
       </tr>)}</tbody></table>
     </div>
+    <DeviceComparisonDialog controller={comparisons} />
     {rows.length === 0 && <p role="status">{t(total === 0 ? "workbench.noDevices" : "devices.noMatches")}</p>}
   </section>;
 }

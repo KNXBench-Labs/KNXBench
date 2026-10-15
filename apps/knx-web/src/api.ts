@@ -1966,6 +1966,7 @@ export function getDeviceReadiness(): Promise<DeviceReadinessResponse> {
 // POST /api/device-compare (device_compare_routes.rs): read-only management
 // tunnel. This UI requests the complete plan, without optional `partial`.
 export interface DeviceCompareResponse {
+  decoded?: import("./deviceComparisons").DecodedComparisonRow[];
   address: string;
   deviceName: string;
   programId: string;
@@ -1980,8 +1981,8 @@ export interface DeviceCompareResponse {
   changes: { address: number; segment: string | null; device: number[]; project: number[] }[];
 }
 
-export function compareDevice(address: string, gateway: string): Promise<DeviceCompareResponse> {
-  return request("/api/device-compare", { method: "POST", body: JSON.stringify({ address, gateway }) });
+export function compareDevice(address: string, gateway: string, binding?: import("./deviceComparisons").ComparisonBinding): Promise<DeviceCompareResponse> {
+  return request("/api/device-compare", { method: "POST", body: JSON.stringify({ address, gateway, ...(binding ? { binding } : {}) }) });
 }
 
 // Device Object PID_SERVICE_CONTROL bit 2 (ADR-0051): separate debug-only

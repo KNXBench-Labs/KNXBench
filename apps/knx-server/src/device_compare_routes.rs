@@ -19,6 +19,7 @@
 //! no wait can form a cycle (ADR-0045 §4).
 
 use std::net::SocketAddrV4;
+use std::sync::atomic::Ordering;
 
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -28,7 +29,8 @@ use serde::{Deserialize, Serialize};
 
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::ContactableAddress;
-use knx_net::commissioning::memory_download::compare_with_plan;
+use knx_net::commissioning::memory_download::{compare_with_plan, CompareError, ReadBackError};
+use knx_net::SessionError;
 
 use crate::device_download::TunnelTransport;
 use crate::device_download_routes::{parse_target, prepare, PartialDto};
@@ -40,12 +42,50 @@ pub fn device_compare_routes() -> Router<SharedState> {
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct CompareRequest {
     address: String,
     gateway: String,
     #[serde(default)]
     partial: Option<PartialDto>,
+    #[serde(default)]
+    binding: Option<ComparisonBinding>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ComparisonBinding {
+    server_incarnation: String,
+    project_incarnation: u64,
+    device_id: u32,
+    comparison_revision: u64,
+}
+
+fn binding_at(
+    state: &SharedState,
+    target: knx_core::IndividualAddress,
+) -> Option<ComparisonBinding> {
+    let guard = state.project.lock().expect("state mutex poisoned");
+    let project = guard.as_ref()?;
+    let device = knx_app::programming_state::sole_device_at(project, target)?;
+    let stack = state.command_stack.lock().expect("state mutex poisoned");
+    Some(ComparisonBinding {
+        server_incarnation: state.server_incarnation.clone(),
+        project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
+        device_id: device.0,
+        comparison_revision: stack.comparison_revision(device),
+    })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DecodedDto {
+    kind: &'static str,
+    label: String,
+    address: u32,
+    project: Option<String>,
+    device: Option<String>,
+    reason: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -88,6 +128,11 @@ struct CompareResponse {
     /// `true` when the device holds every octet a download would write.
     same: bool,
     changes: Vec<ChangeDto>,
+    #[serde(flatten)]
+    binding: ComparisonBinding,
+    /// Content changed during the read: do not present an old plan as current.
+    outdated: bool,
+    decoded: Vec<DecodedDto>,
 }
 
 async fn compare(
@@ -104,8 +149,25 @@ async fn compare(
     let contactable =
         ContactableAddress::new(target).map_err(|e| ApiError::bad_request(e.to_string()))?;
     let partial = body.partial.map(PartialDownloadParts::from);
-    // Both of `prepare`'s locks are released before it returns.
+    // Bind both sides of preparation, so a concurrent edit/reload cannot lend
+    // a stale plan a fresh content revision. No project lock crosses an await.
+    let before = binding_at(&state, target);
     let prepared = prepare(&state, target, partial)?;
+    let binding = binding_at(&state, target)
+        .filter(|binding| {
+            before.as_ref() == Some(binding)
+                && binding.device_id == prepared.device.0
+                && body
+                    .binding
+                    .as_ref()
+                    .is_none_or(|expected| expected == binding)
+        })
+        .ok_or_else(|| {
+            ApiError::conflict(
+                "deviceCompareStale",
+                "The project/device changed; refresh and compare again. No tunnel was opened.",
+            )
+        })?;
 
     let Ok(programming) = state.address_programming.try_lock() else {
         return Err(crate::tunnel_holder::gateway_busy(
@@ -173,8 +235,20 @@ async fn compare(
     drop(scan);
     drop(monitor);
     drop(programming);
-    let compared =
-        compared.map_err(|e| ApiError::with_status(StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let compared = compared.map_err(compare_error)?;
+    let outdated = binding_at(&state, target).as_ref() != Some(&binding);
+    let decoded =
+        knx_productdb::image_comparison::decode(&prepared.image, &compared.held, &prepared.plan)
+            .into_iter()
+            .map(|row| DecodedDto {
+                kind: row.kind,
+                label: row.label,
+                address: row.address,
+                project: row.project,
+                device: row.device,
+                reason: row.reason,
+            })
+            .collect();
 
     let segments = &prepared.image.segments;
     let changes = compared
@@ -215,5 +289,22 @@ async fn compare(
         differing_octets: compared.differing_octets(),
         same: compared.is_same(),
         changes,
+        binding,
+        outdated,
+        decoded,
     }))
+}
+
+fn compare_error(error: CompareError) -> ApiError {
+    let kind = match &error {
+        CompareError::ApplicationMismatch { .. } => "deviceCompareWrongApplication",
+        CompareError::Session(
+            SessionError::NoAnswer { .. } | SessionError::ConnectionReleased { .. },
+        )
+        | CompareError::Read(ReadBackError::Session(
+            SessionError::NoAnswer { .. } | SessionError::ConnectionReleased { .. },
+        )) => "deviceCompareNoAnswer",
+        _ => "deviceCompareNotComparable",
+    };
+    ApiError::with_kind(StatusCode::BAD_GATEWAY, kind, error.to_string())
 }

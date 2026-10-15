@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 06:04
+- **Completed:** Claimed owner-approved P4 from fresh origin/main 8c42e4f5 in isolated p4-compare-tables-20261015 worktree. Startup handover/goal read; shared root and foreign issue23 trees/index remain untouched. No implementation, runtime acceptance or hardware action claimed.
+- **Pending/Next Steps:** Map compare/identity, gateway admission, image generation and P3 tracking; deliver table comparison package, then parameter bit attribution package without stopping between them. Each needs RED/GREEN, targeted mutants, separate self-review, EN/DE1440/400 inspection, complete RUST=1/fifteen-config branch and fresh-main merged gates, normal push/readback and owned cleanup.
+- **Notes for Codex oder Claude:** Own evidence/builds live only in profile scratch/p4-20261015. No subagents, real bus access, vendor contact, root synchronization or unrelated refactor. Owner decisions are settled; unavailable protocol evidence must stay explicitly Not comparable, never guessed.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 03:28
 - **Completed:** P3 published on origin/main as b2c3043f0bdb4c4b385d2549e05903e46f3dce77; actual normal push/readback proved local=tracking=live. Runtime source f35d9bda95b87b91899ab3516c471f313ae1335b passed all52 zero/frozen stages: Rust4553, Vitest3580/259files, default560, production319/15configs, repeats57, Python148/one inherited skip, OriginalData150/150/33targets. Branch48-stage acceptance, nine named mutants, native16-pattern/recovered-undo proof and eight actual merged EN/DE1440/400 production images retained. Ten docs-only closure checks zero; runtime bytes/modes unchanged. Goal P3 delivered; ADR, practical guide, FEATURES/status/evidence updated. Existing recovered snapshots conservatively invalidate old clean claims; no exact live-inverse precision/hardware comparison claimed. No migration/protocol change/release.
 - **Pending/Next Steps:** P4 stays open for a fresh session, using P3's change tracking; do not redo P3 implementation or runtime acceptance. Publication metadata is a documentation-only descendant of the already verified source publication. Selected shared root remains intentionally stale/dirty and is not synchronized; preserve its foreign edits/index. Current session performs private byte-verified archival and exact owned cleanup, not more feature work.

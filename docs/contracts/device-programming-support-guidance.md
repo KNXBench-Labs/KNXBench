@@ -76,6 +76,12 @@ opens a form and a mail link opens a draft; neither submits, sends or uploads.
 Email is not a privacy/encryption/delivery/retention/deletion guarantee. Mailbox
 scope is extended to device-programming support inquiries, not private originals.
 The retained post-run `DownloadVerification` workflow stays separate.
+Source builds after Alpha11 additionally offer the
+[universal support report](universal-device-support.md) from File and the download
+panel: offline without a plan/project, optional fixed read-only diagnostics, a
+separately reviewed/consented local ZIP and deliberate manual attachment. The
+original fixed inquiry links still prefill no project metadata; no private-original
+intake or automatic submission is introduced.
 
 ## Implementation boundary and audit (S4)
 

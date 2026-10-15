@@ -27,6 +27,21 @@ the actual merged gate and corpus pass; source publication is recorded in the de
 [Use and limits](user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11),
 [contract](../contracts/device-comparison.md).
 
+## Universal device-support evidence (15 October 2026 source)
+
+The File menu's universal support workflow accepts wholly unknown devices,
+selected project devices or a manually supplied local individual address.
+Offline preview needs no project/catalogue/plan/gateway. Optional fixed read-only
+recipes require separate target-specific consent; output is reviewed before a
+separate local ZIP save and manual issue/mail handoff. The report distinguishes
+unknown, established refusal/support, prior run scope and a user's functional
+answer. Installation identifiers, configuration values and raw/vendor assets are
+excluded; an optional bounded numeric source projection needs rights confirmation.
+This does not enable System-2 programming or promote a device to Verified.
+Implementation acceptance/publication is tracked in the delivery index; source
+build only, not an Alpha11 binary feature.
+[Contract](../contracts/universal-device-support.md).
+
 ## Diagnostic navigation selection (14 October 2026 source, main-only)
 
 Selecting the active Bus monitor or Log sidebar entry keeps the same workspace,

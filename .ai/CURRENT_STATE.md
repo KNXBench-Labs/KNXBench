@@ -1,4 +1,28 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:46
+- **Completed:** Universal device-support branch accepted on frozen cbf93c1b:10/10 stages, maintained web61/61, Rust4575/0 with205 explicit opt-ins ignored, production dialog12/12 and8 setup/preview images inspected. Seven realistic guard mutants behaviorally caught in isolated public-source copy; restored suites pass, canonical never mutated. Source-only reader-route closure added README/FAQ/support guidance/aggregate evidence without runtime edits. No actual bus/Verified promotion/unlock/upload.
+- **Pending/Next Steps:** Commit reviewed feature as KNXBench, merge into owned fresh-main universal-support-merge-20261015 (origin fbdfbddd, dependencies installed offline), reconcile additive journals/docs, complete merged web/Rust/private OriginalData acceptance, normal push and exact readback, evidence archive and owned cleanup. Explicit owner authorization holds; no new Go. No published feature claim yet.
+- **Notes for Codex oder Claude:** Separate in-session self-review only, not independent approval. Initial summary helper used nested-only planCompleted key and documentation helper guessed nonexistent check_docs.py; these are retained setup errors, no product gate failure or rerun. Use tools/check_documentation.py. Preserve foreign story/P4/community/root; story approval separate; no root sync, release/deploy/hardware/vendor/subagents.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 08:49
+- **Completed:** Universal reporter code/self-review ready for complete acceptance. Focused App8, HTTP7, Net6, source-length DB1 all pass; UI227/5files, dedicated TypeScript, fmt and touched-crate all-target clippy pass. Added metadata-only cumulative Text-buffer preflight, fresh live-projection replacement and catalogue-independent target-policy facts after named REDs. Initial production probe passed4/4 EN/DE1440/400 at08:31; four form views inspected, no horizontal overflow. Browser spec now captures setup AND scrolled report preview for final acceptance (initial frames were form-only). ADR0131/contract/manual/privacy/compatibility boundaries maintained. No hardware, acceptance/publication or release claim.
+- **Pending/Next Steps:** Old full runner proc_68846429e6f6/PID3185136 intentionally stopped with zero stages before budget fix; superseded receipt retained. Dispatch fresh complete branch runner in a new attempt path, keep all candidate bytes frozen, reconcile maintained web/Rust/actual production captures, then commit, fresh-main integration + merged gate with OriginalData, normal push/readback, documentation closure/evidence and owned cleanup. No new Go needed.
+- **Notes for Codex oder Claude:** Own feature/universal-support-20261015 on2d4ec5f9; all41 candidate paths are owned, no new dependencies/schema or programming-gate change. Reporter limits are not new download limits or whole-process resource attestation. Pure source identity/context survives omitted assessment; known exclusions stay explicit. All physical reads so far simulated; detailed recipes only0025/0012, others descriptor-only. Preserve foreign P4/story/Hall-of-Fame/root work and all journal suffixes; no root sync, subagents, vendor contact, upload or Verified promotion.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 07:55
+- **Completed:** Universal reporter implementation in isolated feature/universal-support-20261015: App allowlisted offline envelope/ZIP, fixed Net read-only recipes, snapshot/consent-bound HTTP routes, File/download-panel EN/DE UI, ADR0131/contract/manual/privacy boundaries. Focused HTTP6, App5 (before observed-suffix regression), Net5 and DB source-length tests passed; touched-crate clippy and focused UI/types passed. Self-review found and corrected source acquisition bounds, manual no-project targets, partial-run scope/functional-answer handling and strict client response admission. New suffix/family REDs retained; latest final Rust GREEN still pending. No real bus operation.
+- **Pending/Next Steps:** Browser probe proc_2ec4060b1ec3/PID2246686 queued on shared leases, evidence scratch/universal-support-20261015/browser-probe. Finish final focused regressions/review, actual EN/DE1440/400 production inspection, complete maintained branch gate and fresh-main merged-result verification, normal publication/readback, evidence and owned cleanup. Full acceptance/publication not claimed. Keep candidate runtime immutable during its actual gate; no new Go needed.
+- **Notes for Codex oder Claude:** Net detailed recipes limited to verified0025 mapping and0012 bit0;0020/0021/0701/others descriptor-only. Unknown sources remain reportable; no unlock/Verified promotion/upload/private-original intake promise. Preserve foreign P4 trees, shared test tooling and dirty/stale root. Root source/index/HEAD not synchronized. In-session self-review only, no subagents/hardware/vendor contact/release/deploy.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 09:26
 - **Completed:** P4 package1 tables published675df035f6decb976a120fec388126af06a06c0a on origin/main; exact local/tracking/live equality and unchanged accepted runtime paths verified. Actual merge a9f429a4 has49/49 frozen stages and151/151 corpus tests; nine docs/tooling closure checks pass. Branch/merged EN/DE1440/400 screenshots inspected. No bus access/migration/release.
 - **Pending/Next Steps:** Immediately package2 parameter bit attribution and named project/device values in a new fresh-main worktree. Finish verified package1 evidence archival/owned retirement; do not redo accepted runtime gates. Parameter package needs own RED/GREEN/mutants/review and complete branch+merged gates.

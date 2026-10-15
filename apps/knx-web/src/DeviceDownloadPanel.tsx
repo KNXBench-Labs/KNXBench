@@ -28,6 +28,7 @@ import { currentGuideStep, downloadGuide, type GuideMissing, type GuideStepId } 
 import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey } from "./i18n";
 import { collectDevices, projectContextKey } from "./treeUtils";
+import UniversalSupportButton from "./UniversalSupportButton";
 import { useProgrammingConsent } from "./useProgrammingConsent";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
@@ -433,6 +434,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             <span className="task-status-text">{t("deviceDownload.readiness.loading")}</span></p>}
           {shownGuidance && <DownloadSupportNotice key={`${deviceId}-${scope}-${shownGuidance.code}-${shownGuidance.detail}`}
             guidance={shownGuidance} failedRequest={selectedRefusal !== null} />}
+          <UniversalSupportButton project={project} deviceId={deviceId} downloadId={status && (status.status.state === "failed" || status.status.state === "finished") ? status.downloadId : undefined} />
           {currentReadiness?.error && !currentReadiness.checking && <button type="button" data-readiness-retry
             onClick={() => setReadinessAttempt((n) => n + 1)}>{t("deviceDownload.readiness.retry")}</button>}
           {handoffOutcome && (

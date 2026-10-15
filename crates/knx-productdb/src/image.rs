@@ -1076,6 +1076,30 @@ impl TextEncoding {
     }
 }
 
+/// Preflight cumulative padded Text widths without encoding defaults or values.
+/// Includes inactive/duplicate references conservatively; this is an investigation
+/// caller's allocation budget, not a new device compatibility/download limit.
+pub fn text_parameter_buffers_fit(
+    conn: &Connection,
+    program_id: &str,
+    code: &ProgramCode,
+    max_octets: u64,
+) -> Result<bool, ImageError> {
+    let types = ParameterTypes::load(conn, program_id, code)?;
+    let mut total = 0_u64;
+    for (reference, kind) in &types.refs {
+        if kind.kind.as_deref() != Some("Text") {
+            continue;
+        }
+        let width = u64::from(types.size(reference)?) / 8;
+        let Some(next) = total.checked_add(width).filter(|n| *n <= max_octets) else {
+            return Ok(false);
+        };
+        total = next;
+    }
+    Ok(true)
+}
+
 impl ParameterTypes {
     pub(crate) fn load(
         conn: &Connection,

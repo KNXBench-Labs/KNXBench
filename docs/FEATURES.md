@@ -28,6 +28,11 @@ Last updated: 2026-10-15 03:21 CEST
 
 ## Main-only interface additions
 
+The universal support reporter is available in source after Alpha11; its branch
+runtime acceptance and subsequent integration/publication boundaries are recorded
+in the delivery index, not implied by the released baseline. See its
+[contract](contracts/universal-device-support.md).
+
 | Feature | Scope | Availability |
 | --- | --- | --- |
 | Project versus real devices (P4, package 1) | Confirmed single/filtered batch, progress/cancel, session tags, verified application identity, decoded 0701 address/association tables and visible raw bytes; named parameters pending package 2 ([guide](manual/user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11)) | Main-only (15 October 2026 source; tables package) |

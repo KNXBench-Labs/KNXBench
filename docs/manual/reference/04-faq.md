@@ -38,6 +38,19 @@ source builds show actionable refusal help and deliberate docs/issue/mail links
 before any plan or report exists. See
 [the download workflow](../user-guide/07-bus-and-interfaces.md#when-preparation-or-starting-is-refused).
 
+**How can I report an unknown device before a download plan exists?**
+
+In source builds after Alpha11, use **File → Device support report**, or the same
+action in the device download panel. An offline report needs no project, installed
+product package or gateway. Optional live diagnostics show a fixed read list and
+require separate consent; they never write, restart or enable programming.
+Review the JSON and summary, give separate disclosure consent, save the ZIP and
+attach it manually to an issue or email. Optional source context needs rights
+confirmation; original vendor/customer files are not attachments. This universal
+ZIP excludes parameter values; the older ended-download verification report is
+separate and can contain them. See the
+[reporting guide](../user-guide/08-reports-and-diff.md#universal-device-support-reporting-source-after-alpha-11).
+
 **Is my project safe with KNXBench?**
 
 KNXBench never silently discards information it doesn't understand — unknown data is

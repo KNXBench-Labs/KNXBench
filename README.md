@@ -338,6 +338,10 @@ bus probe is shipped — this one is certified for Markdown only.
   [contribution form](https://github.com/KNXBench-Labs/KNXBench/issues/new?template=analysis.yml).
   Read the [step-by-step guide](docs/contribution-intake/README.md)
   ([Deutsch](docs/contribution-intake/DEUTSCH.md)) first, and never attach customer files.
+- **Unknown device or programming refused?** Source builds after Alpha11 offer
+  **File → Device support report** even without an open project. Preview the
+  evidence, save locally and attach it deliberately; this reports a support gap,
+  not an unlock. [Reporting guide](docs/manual/user-guide/08-reports-and-diff.md#universal-device-support-reporting-source-after-alpha-11).
 - **An idea?** Open an issue and describe the problem it solves.
 - **Code?** Quality gates and conventions are in
   [Contributing](docs/manual/development/01-contributing.md).

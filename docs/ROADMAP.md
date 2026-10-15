@@ -8,6 +8,15 @@ association tables) has a source candidate under full acceptance. Package 2
 immediately. No new device support, hardware operation or release is authorized.
 [Decision record](goals/ui-feedback-p1-p4.md), [contract](contracts/device-comparison.md).
 
+## Universal device-support intake (15 October 2026 source work)
+
+[Structured offline/optional read-only reporting](contracts/universal-device-support.md)
+addresses evidence intake for unknown/unresolved/refused devices, not their
+programming implementation. Unknown families, missing licensed source rights,
+complete image/table/LSM contracts, durable recovery and actual target-specific
+hardware verification remain explicit gates. Collection and manual handoff do
+not close issue22, promise support dates or authorize later bus writes.
+
 ## Small offline literal naming source slice (2026-10-12)
 
 [Explicit group-address prefix/suffix naming](contracts/offline-name-recipe.md)

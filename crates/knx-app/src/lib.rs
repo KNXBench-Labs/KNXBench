@@ -35,6 +35,7 @@ pub mod modeled_metadata;
 pub mod name_recipe;
 pub mod note_edit;
 pub mod note_targets;
+pub mod programming_state;
 pub mod progress;
 pub mod project_history;
 pub mod project_payloads;

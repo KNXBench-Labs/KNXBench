@@ -143,6 +143,7 @@ async fn a_waiting_address_programming_is_named_to_a_scan_and_a_monitor_start() 
             give_up_after: Duration::from_secs(30),
             pause_between_rounds: Duration::from_millis(10),
         },
+        Box::new(|_| {}),
     ));
     let app = knx_server::app(Arc::clone(&state), None);
     let expected = json!({ "kind": "addressProgramming", "address": "1.1.30", "state": "waiting" });

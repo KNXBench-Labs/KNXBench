@@ -175,6 +175,35 @@ pub struct DeviceNode {
     /// `is_active` — the dashboard's project-wide total sums this field
     /// across every `DeviceNode` it visits (Session 5, cycle 8).
     pub com_object_count: usize,
+    /// The parts the project believes the device does not hold yet
+    /// (ADR-0129). This server always sends it; it is optional on the wire
+    /// so that hand-written trees without it stay valid, and a client shows
+    /// nothing rather than guessing when it is absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub pending_programming: Option<PendingProgramming>,
+}
+
+/// Which of a device's four programming parts are pending: `true` means the
+/// project holds something the device has not been sent (ADR-0129).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct PendingProgramming {
+    pub address: bool,
+    pub application: bool,
+    pub parameters: bool,
+    pub group_addresses: bool,
+}
+
+impl From<knx_core::commissioning::pending::ProgrammingParts> for PendingProgramming {
+    fn from(parts: knx_core::commissioning::pending::ProgrammingParts) -> Self {
+        Self {
+            address: parts.address,
+            application: parts.application,
+            parameters: parts.parameters,
+            group_addresses: parts.group_addresses,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -589,6 +618,7 @@ pub fn build_device_node(device: &knx_core::DeviceInstance) -> DeviceNode {
         address: device.address.map(|a| a.to_string()),
         description: device.description.clone(),
         com_object_count: device.com_objects.len(),
+        pending_programming: Some(device.commissioning.pending_parts().into()),
     }
 }
 

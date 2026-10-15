@@ -22,6 +22,7 @@ fn session(
             last_started: Mutex::new(last),
             granted: Mutex::new(None),
             backup_file: Mutex::new(None),
+            on_end: Mutex::new(None),
         }),
         task: Some(task),
         report: synthetic_report(),
@@ -242,4 +243,35 @@ fn session_written(session: &DeviceDownloadSession) -> Written {
         }
         DownloadStatus::Running => panic!("still running"),
     }
+}
+
+#[tokio::test]
+async fn an_unexpected_end_settles_programming_once_before_publishing_failure() {
+    let task = tokio::spawn(async { panic!("synthetic post-write failure") });
+    let session = session(task, DownloadStatus::Running, Some(2));
+    let observed = Arc::new(Mutex::new(Vec::new()));
+    let observed_by_callback = Arc::clone(&observed);
+    *session.shared.on_end.lock().unwrap() = Some(Box::new(move |status| {
+        observed_by_callback.lock().unwrap().push(status.clone());
+    }));
+    wait_until_finished(&session).await;
+    let first = session.status();
+    assert!(matches!(
+        first,
+        DownloadStatus::Failed {
+            written: Written::Partially,
+            ..
+        }
+    ));
+    assert_eq!(
+        *observed.lock().unwrap(),
+        vec![first.clone()],
+        "settled before status is returned"
+    );
+    assert_eq!(session.status(), first);
+    assert_eq!(
+        observed.lock().unwrap().len(),
+        1,
+        "no repeated settlement on polling"
+    );
 }

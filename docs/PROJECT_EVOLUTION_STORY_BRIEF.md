@@ -12,9 +12,9 @@ stack is a static, offline companion prepared by a stdlib-only tool
 ([ADR-0068](adr/0068-project-evolution-story-is-a-static-offline-companion.md)).
 The published edition is `2026-10-08.4`, **approved for publication by the
 owner on 8 October 2026** (`story/approvals/2026-10-08.4.json`). The new
-`2026-10-15.2` candidate is **unapproved**. It pins source
+`2026-10-15.4` candidate is **unapproved**. It pins source
 `2d4ec5f90ccc66ed7d03c65fdd02213faf34fc69` (15 October 2026, 07:04:36 CEST),
-with 68 events in twelve chapters and selective, disclosed conversation coverage.
+with 74 events in twelve chapters and selective, disclosed conversation coverage.
 The static website and GitHub Pages integration already exist
 ([ADR-0095 amendment](adr/0095-static-marketing-companion.md#amendment-release-and-deployment-2026-10-08),
 [website contract](WEBSITE.md)). Keep the earlier approved candidate, approval and

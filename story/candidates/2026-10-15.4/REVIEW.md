@@ -1,8 +1,8 @@
-# Review checklist for candidate 2026-10-15.2
+# Review checklist for candidate 2026-10-15.4
 
 This candidate is **private** and **not approved for publication**. Preparing it does not
 approve it. Publication needs a separate, explicit approval of exactly
-`story_sha256 = cea07d4065173501881da7f74d451ede1cd74fc64fd8f1177228caa18ebe4426`; any later change needs a new approval.
+`story_sha256 = 081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8`; any later change needs a new approval.
 
 ## Manual checks
 
@@ -23,7 +23,6 @@ Automatic scanning cannot prove that content is safe to publish; it only flags p
 ## Automatic privacy scan
 
 - warning: possible KNX individual address or version number at `events[alpha-backlog].aside`: “…as written: version 0.1.0-alpha.1, no tag, no…”
-- warning: possible KNX individual address or version number at `events[first-alpha].summary`: “…s decision, version 0.1.0-alpha.4 was tagged …”
 
 ## Private traceability
 
@@ -127,27 +126,33 @@ Automatic scanning cannot prove that content is safe to publish; it only flags p
 - `fail-closed-writes`: date precision is approximate
 - `alpha-backlog`: Whether the README's wording was drafted with AI help is not recorded.
 - `theme-packs-crt`: Native desktop rendering and screen-reader behaviour of the theme are documented as not yet accepted.
-- `crawler-corpus`: Evidence from one run, not a repeatable gate; the downloaded files are not part of the repository.
+- `public-product-analysis`: The source product databases are not included in this story. Their availability for analysis does not establish successful device programming or universal product compatibility.
 - `story-first-preview`: The page itself is published only after a separate approval of one exact edition.
 - `story-narrator`: The voice is an editorial choice for this edition; earlier candidates keep their original narration.
 - `alpha-review`: The reviewers were AI sessions, independent of the work, but not of the kind of tool that did it.
-- `first-alpha`: The pre-releases were published in a private repository, so they were not publicly downloadable.
+- `first-alpha`: This withdrawn release is evidenced by the retained publication record in commit 541b2bbd, not a current release listing. Its original private publication was not a public download. Later Alpha 5 republication is a separate event.
 - `one-name`: The user's requests for this change are not quoted because they contain the very details that were removed.
 - `evidence-of-record`: 'Untested' means exactly that: these plans have not been tried on the devices.
 - `evidence-of-record`: The no-new-hardware statement belongs to this early-October decision. Two later complete-download hardware trials are documented separately on 9 October.
 - `mcp-adapter`: This describes the original read-only adapter. An opt-in, previewed literal-rename writer was added on 12 October; it has no bus access and is a separate event in this edition.
+- `release-alpha-5`: Historical original release and current republished record are distinguished. Old data-folder migration was manual; no portability or universal compatibility claim.
 - `legacy-vd`: The earlier size and planner limits were superseded on 9 October by 28d8f6af and a7e338e7. Supported legacy plans remain Untested unless their exact application program and scope have separate hardware evidence. The converted detector application in the later hardware run is not the original legacy application.
 - `public-front-door`: This edition checks the pinned deployment source and recorded delivery; it is not a fresh measurement of public-site availability.
 - `native-memory`: History inside one file is not an independent backup if that file or its storage is lost.
 - `two-more-live-scopes`: The earlier detector trial is recorded in commit 59f4df15. Both runs left Basic Restart unconfirmed; later functional observations are distinct evidence, not a confirmed restart acknowledgement.
 - `two-more-live-scopes`: The two new entries cover complete downloads only. Partial downloads, every instance sharing the program, all device memory and physical blind movement were not proved by these runs.
+- `release-alpha-6`: These are the Alpha 6 release contents. Later legacy download planning is not retroactively included, and CI launch checks are not every-desktop hardware tests.
 - `source-not-semantics`: Selective import was delivered separately in 99e05425 (ADR-0106); own-instance read-only values in d050c7e7 (ADR-0108). Their association here is editorial, not a claim of one causal patch.
 - `source-not-semantics`: Functions-bearing selective source import remains refused at this cutoff. No complete Repeat evaluation, ETS export or signature verification follows.
+- `release-alpha-7`: Published at 2026-10-10T00:11:11+02:00, after midnight locally; the preceding source commits are dated 9 October. Release publication did not itself perform a hardware trial.
+- `release-alpha-8`: Retained source bytes do not establish complete ETS semantics, signatures, Add-in execution or broader hardware support.
+- `release-alpha-9`: Project notes, Functions/Sites and later parallel work were not swept into this release. Old native readers refuse upgraded files.
 - `native-writing-desk`: Notes have a separate plain-text contract. Rich instruction support is bounded; other schemas, arbitrary RTF and ETS export of edited overlays are not claimed.
 - `native-writing-desk`: Native WebKitGTK and Orca accessibility acceptance remain open.
 - `catalogue-with-return`: The web path follows in ADR-0118. There is no automatic Online Catalog access or supported device application-version upgrade.
 - `mcp-narrow-writer`: The server cannot prove that a human rather than an auto-accepting client answered. Real third-party client acceptance remains open; there is no bus access or general mutation permission.
 - `users-find-edges`: The AppImage packaging change is in 09229157. Source fixes and reporter outcomes have different dates; the original Kubuntu launch confirmation, schema 22 and nested sub-module object numbering remain open.
+- `release-alpha-10`: Functions/Sites and the later UX-feedback package were not in this snapshot. Browser/CI evidence is not universal Linux startup or real-device acceptance.
 - `tester-not-verdict`: No automatic upload, automatic support promotion or proof of private delivery is implied. Pre-plan refusal guidance was delivered in source after Alpha 11.
 - `functions-not-sites`: Web editing followed in f6c866fe. Real supported-schema ETS Function samples, unresolved source semantics and multi-installation site requirements remain evidence gaps.
 - `project-carries-programs`: Source delivery after Alpha 11. Hash integrity is not a distribution licence; older native readers do not gain downgrade compatibility.

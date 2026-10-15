@@ -1,4 +1,4 @@
-# Changes in candidate 2026-10-15.2
+# Changes in candidate 2026-10-15.4
 
 Compared with candidate `2026-10-08.4`.
 
@@ -8,7 +8,7 @@ Compared with candidate `2026-10-08.4`.
 
 ## Events
 
-- Added `alpha-eleven`: Alpha 11 packages a particular snapshot, not the future
+- Added `alpha-eleven`: Alpha 11: clearer feedback and tester reports
 - Added `catalogue-with-return`: Catalogue updates preview the change and keep a backup
 - Added `fictional-demos`: Three fictional buildings offer a safe first look
 - Added `functions-not-sites`: Rooms gain Functions; cross-installation sites wait
@@ -19,12 +19,20 @@ Compared with candidate `2026-10-08.4`.
 - Added `pending-is-belief`: The project tracks what still needs programming
 - Added `project-carries-programs`: A native project carries its manufacturer files
 - Added `public-front-door`: The public website opens, with an exact-edition gate
+- Added `public-product-analysis`: Public product databases provided for analysis
+- Added `release-alpha-10`: Alpha 10: user fixes and editors reach the workbench
+- Added `release-alpha-5`: Alpha 5: a new identity, then a public relaunch
+- Added `release-alpha-6`: Alpha 6: ready-made containers join the AppImage
+- Added `release-alpha-7`: Alpha 7: persistent history and a dependable way home
+- Added `release-alpha-8`: Alpha 8: stronger imports, explicit evidence limits
+- Added `release-alpha-9`: Alpha 9: larger projects and clearer everyday screens
 - Added `source-not-semantics`: Bring selected content aboard, keep the unknowns
 - Added `system-two-still-no`: A Siemens support request reaches a real boundary
 - Added `tester-not-verdict`: A tester report is evidence, not an automatic verdict
 - Added `two-more-live-scopes`: Two more complete-download scopes get hardware evidence
 - Added `universal-report-design`: A broader support report is reserved, not delivered
 - Added `users-find-edges`: Real users find the installation and import edges
+- Removed `crawler-corpus`
 - Changed `alpha-backlog`: evidence
 - Changed `alpha-review`: evidence
 - Changed `appimage`: evidence
@@ -35,7 +43,7 @@ Compared with candidate `2026-10-08.4`.
 - Changed `evidence-of-record`: evidence, summary, uncertainty
 - Changed `exact-or-refused`: evidence
 - Changed `fail-closed-writes`: evidence
-- Changed `first-alpha`: evidence
+- Changed `first-alpha`: evidence, short, summary, title, uncertainty
 - Changed `first-device-programmed`: evidence
 - Changed `fun-features`: evidence
 - Changed `goals-closed`: evidence, summary
@@ -57,7 +65,7 @@ Compared with candidate `2026-10-08.4`.
 - Changed `rename-knxbench`: evidence
 - Changed `schema-23-refusal`: evidence
 - Changed `server-https`: evidence
-- Changed `spec-knowledge-base`: evidence
+- Changed `spec-knowledge-base`: evidence, summary, title
 - Changed `split-goals`: evidence
 - Changed `story-first-preview`: evidence
 - Changed `strategy-written`: excerpts
@@ -72,7 +80,6 @@ Compared with candidate `2026-10-08.4`.
 
 - Added `rel-evidence-of-record-system-two-still-no`
 - Added `rel-exact-or-refused-native-memory`
-- Added `rel-first-alpha-alpha-eleven`
 - Added `rel-first-device-programmed-two-more-live-scopes`
 - Added `rel-mcp-adapter-mcp-narrow-writer`
 - Added `rel-native-memory-mcp-narrow-writer`
@@ -81,8 +88,16 @@ Compared with candidate `2026-10-08.4`.
 - Added `rel-native-memory-source-not-semantics`
 - Added `rel-product-database-catalogue-with-return`
 - Added `rel-product-database-project-carries-programs`
+- Added `rel-products-public-analysis`
 - Added `rel-public-front-door-fictional-demos`
 - Added `rel-public-front-door-users-find-edges`
+- Added `rel-release-sequence-first-alpha-release-alpha-5`
+- Added `rel-release-sequence-release-alpha-10-alpha-eleven`
+- Added `rel-release-sequence-release-alpha-5-release-alpha-6`
+- Added `rel-release-sequence-release-alpha-6-release-alpha-7`
+- Added `rel-release-sequence-release-alpha-7-release-alpha-8`
+- Added `rel-release-sequence-release-alpha-8-release-alpha-9`
+- Added `rel-release-sequence-release-alpha-9-release-alpha-10`
 - Added `rel-source-not-semantics-functions-not-sites`
 - Added `rel-split-goals-measured-gates`
 - Added `rel-story-first-preview-public-front-door`
@@ -90,6 +105,7 @@ Compared with candidate `2026-10-08.4`.
 - Added `rel-tester-not-verdict-universal-report-design`
 - Added `rel-two-more-live-scopes-tester-not-verdict`
 - Added `rel-users-find-edges-alpha-eleven`
+- Removed `rel-products-crawler`
 - Changed `rel-schema-drop`: note
 
 ## Chapters
@@ -97,10 +113,10 @@ Compared with candidate `2026-10-08.4`.
 - Added `ch-evidence`
 - Added `ch-public`
 - Added `ch-reversible`
-- Changed `ch-alpha`: body
+- Changed `ch-alpha`: body, events, title
 - Changed `ch-bus`: body
 - Changed `ch-foundations`: body
-- Changed `ch-hands`: body
+- Changed `ch-hands`: body, events
 - Changed `ch-interface`: body
 - Changed `ch-now`: body, lede, number
 - Changed `ch-real-files`: body
@@ -119,3 +135,5 @@ Compared with candidate `2026-10-08.4`.
 ## Strands
 
 No changes.
+
+Graph rows shifted for 4 unchanged event(s) because of insertions.

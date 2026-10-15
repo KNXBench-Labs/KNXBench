@@ -9,8 +9,11 @@ SystemB integration, simulation and whole-mutation recovery where source evidenc
 permits. [P1 codec contract](contracts/offline-download-codecs.md) records delivered
 foundations; [P2 source-image contract](contracts/offline-download-system2-image.md)
 separates implemented synthetic/source grammar from the real Siemens encoding
-refusal. Source-to-property planning, whole-executor simulation and durable
-property+memory recovery are next, where exact contracts permit them.
+refusal. [P3a normalized property-plan simulation](contracts/offline-property-plan-simulation.md)
+has passed fifteen-stage frozen branch acceptance; actual merged acceptance and
+publication remain pending. It
+is not yet a source translator. Source-to-property mapping, restart and durable
+property+memory+setup/allocator recovery remain next where exact contracts permit.
 Hardware admission and broader family completion are not implied by these foundations. Unknown semantics remain explicit research
 blockers, not guessed simulator behaviour.
 

@@ -1,4 +1,28 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 11:55
+- **Completed:** P4 package2 feature519eff4b9cbb committed after full branch49/49: Vitest3611, Chromium570, repeated87, Rust4570 all pass, fifteen extra configs pass. Original outer freeze mismatch is index-only template add-N (exact temporary-index reconstruction); full source-content/mode/path manifests and template hashes unchanged, corrected verifier negative controls pass. Seven semantic mutants and self-review green. Fresh-main bee4f016 integration reconciles both image helper functions and preserves all upstream support/story state and handover suffix.
+- **Pending/Next Steps:** Full actual merged template RUST/PY gate (original15 configs plus new upstream support config), isolated corpus, merged screenshot inspection, publication/readback, evidence and owned cleanup. Not yet delivered/pushed.
+- **Notes for Codex oder Claude:** Owned p4-parameters(-merge)-20261015; scratch p4-parameters-20261015. Shared root untouched; no bus/subagents/release/deploy. Keep original wrapper refusal, reconciled branch receipt and exact upstream history. No owner Go needed.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:52
+- **Completed:** P4 package2 implemented in owned p4-parameters-20261015: actual active-write bit attribution, named project/device numeric/text values, final-plan/coverage/profile guards and explicit EN/DE unknown reasons with raw ranges. Seven named semantic mutants fail as intended; sources restored and core/image postflight green. Separate in-session review findings closed; Clippy green. Six production comparison browser cases pass; EN/DE1440/400 screenshots visually inspected. Contract/ADR/handbook/FEATURES/goal updated honestly as candidate.
+- **Pending/Next Steps:** Freeze and full template RUST=1/PY=1/fifteen-config branch gate; commit reviewed scope; fresh-main owned merge, complete merged gate and network-isolated corpus; inspect merged images, normal push/readback, evidence archival and owned cleanup. No new owner Go needed.
+- **Notes for Codex oder Claude:** No independent-review claim, hardware access or broadened image/negative-signed support. Profile scratch/p4-parameters-20261015 retains RED/GREEN/mutations/simulator/browser proofs. Shared dirty root and foreign support/story trees unchanged; no subagents/release/deploy. Transient global achievement toast overlaps lower mobile content as inherited.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:28
+- **Completed:** P4 table package1 publication and metadata fbdfbddd verified local/tracking/live; compact440-file evidence hash-verified at profile evidence/p4-tables-a9f429a4. Both owned package1 worktrees/branches/scratch retired. Package2 now active in p4-parameters-20261015 from fresh published main, preparation/spec witnesses retained.
+- **Pending/Next Steps:** Parameter bit attribution at actual image writer; named numeric/text project/device decoding with raw fallbacks, RED/GREEN/mutants/self-review/EN-DE1440-400 then full template branch+merged gates and publication. No Go needed.
+- **Notes for Codex oder Claude:** All new builds/evidence profile scratch/p4-parameters-20261015. Keep support/story foreign owners and shared stale dirty root untouched; no hardware/subagents/vendor/release/deploy.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 11:41
 - **Completed:** Universal device-support reporting published on main9b8d176aa75ef6575bcda62af13ecba6860c8f77; exact local/tracking/live equality and feature ancestry verified. Featurefa165f82, runtime-tested merge3444186c:11/11 stages, web62/62, Rust4587/0/206ignored, Vitest3624, browser574, private corpus151/151 in33 targets; seven guard mutants caught/restored,8 merged images inspected. Subsequent story/docs merge and15 frozen closure stages pass with application path/mode/blob equality. Documentation/public aggregate distinguish runtime acceptance from publication. No real bus/registry promotion/download unlock.
 - **Pending/Next Steps:** Only publish this observed-readback documentation closure, verified private evidence archive and owned worktree/branch/cache retirement remain. Future System2 image/table/LSM/recovery/hardware work stays open; no release/deploy or root synchronization. No new Go required for completing this delivery.

@@ -258,6 +258,19 @@ impl ParameterImage {
     }
 }
 
+/// Reads one supported unsigned field from its exact covering octets (MSB-first).
+pub fn read_number(field: ParameterField, octets: &[u8]) -> Option<u64> {
+    if !field.is_integer_shape() || octets.len() != field.octet_len() {
+        return None;
+    }
+    let mut value = 0u64;
+    for i in 0..field.size_in_bit {
+        let bit = u32::from(field.bit_offset) + i;
+        value = (value << 1) | u64::from((octets[(bit / 8) as usize] >> (7 - bit % 8)) & 1);
+    }
+    Some(value)
+}
+
 /// The two's-complement bit pattern of `value` in `size_in_bit` bits, for a
 /// signed parameter.
 pub fn signed_bits(value: i64, size_in_bit: u8) -> Result<u64, ParameterImageError> {
@@ -278,6 +291,71 @@ pub fn signed_bits(value: i64, size_in_bit: u8) -> Result<u64, ParameterImageErr
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn read_number_pins_cross_octet_msb_bits_and_exact_covering_length() {
+        use super::{read_number, ParameterField};
+        let field = ParameterField {
+            offset: 123,
+            bit_offset: 5,
+            size_in_bit: 9,
+        };
+        assert_eq!(
+            read_number(field, &[0b1110_1011, 0b1010_1101]),
+            Some(0b0_1110_1011)
+        );
+        assert_eq!(
+            read_number(field, &[0b0000_1011, 0b1010_1100]),
+            Some(0b0_1110_1011),
+            "neighbor bits excluded"
+        );
+        assert_eq!(read_number(field, &[0xFF]), None);
+        assert_eq!(read_number(field, &[0xFF, 0xFF, 0xFF]), None);
+        assert_eq!(
+            read_number(
+                ParameterField {
+                    offset: 0,
+                    bit_offset: 7,
+                    size_in_bit: 1
+                },
+                &[0x01]
+            ),
+            Some(1)
+        );
+        assert_eq!(
+            read_number(
+                ParameterField {
+                    offset: 0,
+                    bit_offset: 0,
+                    size_in_bit: 64
+                },
+                &[0x81, 2, 3, 4, 5, 6, 7, 8]
+            ),
+            Some(0x8102030405060708)
+        );
+        assert_eq!(
+            read_number(
+                ParameterField {
+                    offset: 0,
+                    bit_offset: 8,
+                    size_in_bit: 1
+                },
+                &[0]
+            ),
+            None
+        );
+        assert_eq!(
+            read_number(
+                ParameterField {
+                    offset: 0,
+                    bit_offset: 0,
+                    size_in_bit: 0
+                },
+                &[]
+            ),
+            None
+        );
+    }
+
     use super::*;
 
     fn field(offset: u32, bit_offset: u8, size_in_bit: u32) -> ParameterField {

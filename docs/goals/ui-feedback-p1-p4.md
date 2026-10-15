@@ -16,7 +16,7 @@ claim the package there.
 | P1 | Toast entry, resume after reload, overwrite question | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
 | P2 | Explorer: visibly expandable nodes, structure lines with spread/pulse | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
 | P3 | Changes not yet programmed, per part | delivered 2026-10-15 (source after Alpha 11; [acceptance](../evidence/p3-pending-programming-2026-10-15.json)) |
-| P4 | Project file versus real devices: tags and comparison table | package 1 tables accepted in source; package 2 parameters in progress |
+| P4 | Project file versus real devices: tags and comparison table | package 1 published; package 2 branch accepted, merged/corpus/publication pending |
 
 Starter for a fresh session (replace the package number):
 
@@ -97,8 +97,12 @@ batch, session tags, application identification and decoded address/association
 tables; **package 2** records actual parameter bit attribution and adds named
 project/device values. Each is independently reviewed, fully gated on branch
 and fresh-main merge, and published. Package 2 follows immediately after package 1.
-Package 1 table/batch implementation passes branch and merged acceptance; parameters stay
-visibly raw until package 2. [Contract](../contracts/device-comparison.md),
+Package 1 is published after branch/merged/corpus acceptance. Package 2 now
+captures actual active parameter writes and decodes named numeric/text values,
+with explicit unknowns and all raw ranges. Its full acceptance/publication is
+still pending; full branch49/49 passes along with targeted RED/GREEN, seven
+semantic mutants and self-review. Integration preserves the newly published
+universal-support allocation preflight; its acceptance is separately rerun. [Contract](../contracts/device-comparison.md),
 [ADR-0130](../adr/0130-session-device-comparison.md).
 
 

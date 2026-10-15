@@ -14,6 +14,65 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — **P4 delivered on main `17cfd5b7`**, normal push and exact
+  local/tracking/live readback verified. Both packages, feature519eff4b and
+  separate corpus-fixa6cdfd9d are included. Runtime tested mergefacdd62e has
+  full51/51, Vitest3626, Chromium574, Rust4597, repeated87 and corpus152/152+
+  product16/16; subsequent nine-stage documentation delta passes with complete
+  non-documentation path/mode/blob equality. Final EN/DE1440/400 screenshots
+  inspected; unsupported parameters remain Unknown alongside raw ranges.
+  Alpha12 prerequisite is delivered; this session pauses after owned retirement.
+  Shared root intentionally remains untouched/unsynchronized; no hardware,
+  new product release, deployment or independent-review claim.
+  [Exact acceptance/publication](evidence/p4-device-comparison-parameters-2026-10-15.json).
+
+- 2026-10-15 — **P4 both packages accepted; final combined source `facdd62e`**:
+  single/current-filter batch comparisons, session tags/P3 invalidation,
+  verified application identity, decoded address/association tables and named
+  parameter values from actual image bit attribution; unknowns and all raw bytes
+  stay explicit. Full51/51: Vitest3626, Chromium574, Rust4597 and repeated87 pass,
+  original15 configurations plus upstream support pass. Isolated corpus152/152
+  and product16/16 pass. Seven parameter + seven corpus semantic mutants caught;
+  self-review (not independent approval) and EN/DE1440/400 production images pass.
+  Inherited prerequisite fix `a6cdfd9d` changes tests/docs only. No production
+  admission/schema/limit or device-support extension, hardware access or release.
+  Alpha12 journal-only upstream preserves all consumed source bytes; runtime
+  acceptance remains bound to `facdd62e`, documentation delta checked separately.
+  [Acceptance/publication](evidence/p4-device-comparison-parameters-2026-10-15.json).
+
+- 2026-10-15 — **Corpus-prerequisite correction a6cdfd9d, integrated candidate / unpublished**:
+  two failures reproduced on unchanged pre-P4 main. Matrix pins lag ADR-0126's
+  v23 modelling, not an importer regression: independent XML counts predict
+  exactly465/463/463/157 retired unknown rows, all41 other table counts unchanged.
+  The nesting census explicitly accounts for standard size refusals, not a
+  larger admission profile; unexpected errors remain red and refusal row changes
+  are forbidden. Targeted product16/16, synthetic classifier cases and Clippy
+  pass; seven semantic mutants fail as intended and restored-source ordinary
+  product887/0 tests pass. Integrated candidate preserves exact previously
+  accepted P4 production/frontend bytes; final combined full/corpus gates remain
+  pending, rather than borrowing an earlier source receipt.
+  [Facts and limits](IMPORT_EXPORT.md#product-corpus-prerequisites--15-october-2026).
+
+- 2026-10-15 — P4 package 2 **implemented; publication blocked by additional corpus checks**: actual
+  active parameter writes retain name/reference/segment/offset/bit/width in
+  transient DownloadImage metadata. Named project/device values invert existing
+  numeric and text writers, checking exact coverage, matching supported masks
+  and final-plan equality. Unsupported/negative patterns stay unknown with
+  EN/DE reasons and every raw range visible. No schema/device support change.
+  Named RED/GREEN, seven restored-source semantic mutants, separate in-session
+  review and production EN/DE1440/400 browser cases pass. Full branch49/49:
+  Vitest3611, Chromium570, repeated87 and Rust4570 pass. Source-content manifests
+  and template input hashes are exact; the outer add-N index-only mismatch is
+  reconciled with negative controls, original receipt retained. Actual merge
+  `788974e7` passes full51/51 (Vitest3626, Chromium574, Rust4592) and isolated
+  OriginalData152/152. Explicit product opt-ins measure14/16: projected matrix
+  commitment mismatch and nested-module installer SizeLimit block publication.
+  Both test sources and installer are exact pre-P4 upstream bytes. Unmodified
+  `bee4f016` reproduces both named failures with identical commitment values
+  and SizeLimit member: inherited, not introduced by P4. The additional product
+  corpus is still red. No limits/pins changed; no push claimed.
+  [Contract](contracts/device-comparison.md), [ADR-0130](adr/0130-session-device-comparison.md).
+
 - 2026-10-15 — Exact-approved story `2026-10-15.4` publication variant accepted
   on integration `bb2961aa`: story76, website24, tooling163 (one inherited skip),
   Chromium46/46 and Firefox46/46; all44 actual public-build frames inspected.

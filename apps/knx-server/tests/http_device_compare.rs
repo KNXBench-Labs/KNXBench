@@ -306,6 +306,56 @@ async fn comparison_exposes_bound_decoded_values_and_rejects_wrong_application()
 }
 
 #[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and saved project); run with --ignored"]
+async fn named_parameters_are_project_and_device_values_not_swapped_raw_octets() {
+    let h = harness(SimulatorConfig::default()).await;
+    let (status, initial) =
+        compare(&h.app, json!({ "address": "1.1.67", "gateway": GATEWAY })).await;
+    assert_eq!(status, StatusCode::OK);
+    let row = initial["decoded"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| {
+            r["kind"] == "parameter"
+                && r["label"]
+                    .as_str()
+                    .is_some_and(|s| s.ends_with("bit 0 / 8"))
+                && r["project"]
+                    .as_str()
+                    .and_then(|s| s.parse::<u64>().ok())
+                    .is_some_and(|n| n != 37)
+                && r["device"] == "0"
+        })
+        .expect("an independently readable byte parameter");
+    let address = row["address"].as_u64().unwrap() as u32;
+    let label = row["label"].clone();
+    let expected_project = row["project"].clone();
+    h.device.preset_memory(address, &[37]);
+    let (status, changed) =
+        compare(&h.app, json!({ "address": "1.1.67", "gateway": GATEWAY })).await;
+    assert_eq!(status, StatusCode::OK);
+    let row = changed["decoded"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["label"] == label)
+        .unwrap();
+    assert_eq!(row["project"], expected_project);
+    assert_eq!(
+        row["device"], "37",
+        "the value actually preset in simulator memory"
+    );
+    assert_eq!(row["reason"], Value::Null);
+    assert!(changed["decoded"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|r| r["kind"] == "raw" && r["device"].as_str().is_some_and(|s| s.contains("25"))));
+    assert!(no_writes(&h.device));
+}
+
+#[tokio::test]
 async fn refusals_before_any_tunnel_need_no_corpus() {
     let (app, calls) = empty_app();
     let excluded = knx_core::EXCLUDED_INDIVIDUAL_ADDRESSES[0].to_string();

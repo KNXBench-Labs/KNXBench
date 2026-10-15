@@ -68,9 +68,11 @@ Alpha 5 AppImage does not include it.
 
 ## Comparing the project with devices (P4, source build after Alpha 11)
 
-**Source package 1:** requires a since Alpha 12; the release
-screenshots in this manual still show the released UI. Named parameter
-comparison is not included in this first package: those bytes remain raw.
+**Included in Alpha 12:** both table and named-parameter comparison packages.
+Most earlier manual screenshots retain their stated capture version. The new
+website/README stills show the Alpha 12 candidate. This adds no new physical-device
+verification; [source acceptance](../../evidence/p4-device-comparison-parameters-2026-10-15.json)
+remains separate from release acceptance.
 
 In **Devices**, use **Compare** on a row or **Compare all shown**. The latter
 uses exactly the current filtered/sorted list, **not** checkbox selection.
@@ -96,8 +98,16 @@ comparison claim. An external tool may change the device without notifying
 KNXBench: a tag records a reading, not continuous monitoring.
 
 The result table shows group-address entries and associations, resolving each
-side's associations through its own address table, followed by every raw
-read range. Wrong application is checked before plan memory is read, using
+side's associations through its own address table. Parameter rows then show
+name/reference, bit position/width, **project value** and **device value** for
+actually written active fields. Supported numeric fields exclude neighboring
+bits; text follows the program's already-supported encoding. Missing/masked,
+overwritten or unsupported fields show **Unknown / not read** with a reason,
+not a guessed zero or empty string. Negative signed device patterns remain
+unknown; negative signed project values still prevent a plan. No enum label or
+engineering unit is inferred. Every raw read range remains underneath, always
+visible rather than collapsed or filtered. Wrong application is checked before
+plan memory is read, using
 the existing verified application identity; missing/short/ambiguous identity
 is Not comparable, not a guessed mismatch. Unread, masked, malformed or
 unattributable fields stay unknown with a reason. Raw bytes are never hidden.

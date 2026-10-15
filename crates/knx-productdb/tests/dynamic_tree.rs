@@ -6,6 +6,7 @@
 //! migration-backfill/corpus-evaluation tests live further down this same
 //! file, after the storage tests above.
 
+mod dynamic_corpus_measurement;
 mod dynamic_scalar_copy;
 mod v16_rewind;
 mod v20_rewind;
@@ -3567,6 +3568,8 @@ fn corpus_nested_module_measurement_task_11() {
     // so a duplicate byte-identical package is asserted, not just true by
     // accident.
     let mut skipped_files = Vec::new();
+    let mut refused_size = 0_usize;
+    let mut visited = 0_usize;
     for path in knx_testsupport::walk_corpus_files(&root) {
         if path
             .extension()
@@ -3578,15 +3581,26 @@ fn corpus_nested_module_measurement_task_11() {
         }
         let name = path.file_name().unwrap().to_str().unwrap().to_string();
         let bytes = std::fs::read(&path).unwrap();
-        let report = knx_productdb::install_package(&conn, &name, &bytes).unwrap();
-        if report.skipped {
-            skipped_files.push(name.clone());
+        visited += 1;
+        match dynamic_corpus_measurement::measure(&conn, &name, &bytes)
+            .expect("unexpected corpus install refusal (not a measured standard size bound)")
+        {
+            dynamic_corpus_measurement::Outcome::Installed => installed.push(name),
+            dynamic_corpus_measurement::Outcome::Duplicate => {
+                skipped_files.push(name.clone());
+                installed.push(name);
+            }
+            dynamic_corpus_measurement::Outcome::StandardSizeRefusal => refused_size += 1,
         }
-        installed.push(name);
     }
     assert!(
         !installed.is_empty(),
         "OriginalData/ProductDatabases exists but contains no .knxprod archive"
+    );
+    assert_eq!(
+        visited,
+        installed.len() + refused_size,
+        "every discovered archive has an explicit outcome"
     );
     installed.sort();
     let distinct_packages = installed.len() - skipped_files.len();
@@ -3621,14 +3635,8 @@ fn corpus_nested_module_measurement_task_11() {
         .unwrap();
 
     eprintln!(
-        "corpus nesting measurement (task 11): installed {} .knxprod archives ({}), {} skipped \
-         as byte-identical duplicates ({}); total Module rows = {total_module_rows}; Module rows \
-         nested inside a ModuleDef's own tree (kind='Module' AND module_def_id != '') = \
-         {total_module_def_rows}",
-        installed.len(),
-        installed.join(", "),
-        skipped_files.len(),
-        skipped_files.join(", ")
+        "corpus nesting measurement: discovered={visited} installed={distinct_packages} duplicates={} standard_size_refusals={refused_size} module_rows={total_module_rows} nested_module_rows={total_module_def_rows}",
+        skipped_files.len()
     );
 
     // Measured, not guessed: zero of the installed database's Module rows

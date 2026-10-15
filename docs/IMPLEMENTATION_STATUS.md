@@ -14,14 +14,17 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-15 — Offline download P1 **branch accepted, integration pending**:
+- 2026-10-15 — Offline download P1 **integrated and published** as `ad5f0e49`:
   source-bound System2 tool metadata with complete source order, explicit legacy
   Type1/Type2 descriptor codec and ten-byte absolute property-load encoders.
   Direct original-PDF review pins distinct layouts and opposite checksum-bit
   polarity; named RED/GREEN controls and a restored field-swap mutant prove the
   byte assertions. Actual frozen eleven-stage gate passes: Rust4612/0/207ignored,
   Vitest3626/263files, workspace Clippy/build, tooling and five repository checks;
-  explicit Release System2 fixture1/1 passes. Initial missing-dist setup refusal
+  explicit Release System2 fixture1/1 passes. Actual merged twelve-stage gate
+  repeats the workspace/build/Vitest/repository checks and adds the isolated
+  OriginalData corpus152/152 in33targets, with2884path start/end/current equality.
+  Exact local/tracking/live main publication read back. Initial missing-dist setup refusal
   retained separately. No executable new family, recovery, hardware or field
   support claim. [Contract](contracts/offline-download-codecs.md) ·
   [Receipt](evidence/offline-download-codecs-2026-10-15.json).

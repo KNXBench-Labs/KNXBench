@@ -1,5 +1,18 @@
 # Architecture
 
+## Universal device-support evidence (source after Alpha 11)
+
+[ADR-0131](adr/0131-universal-device-support.md) separates investigation from
+programming admission. App builds a versioned allowlisted offline report even
+without a project, catalogue match, plan or gateway. Net owns fixed read-only
+family recipes; Server owns target/source-bound expiring previews, gateway
+admission, separate acquisition/export consents and the fixed-path ZIP. The UI
+only requests and reviews these services. ProductDB supplies actual source
+blob-length and metadata-only declared Text-buffer preflights; no Core/UI dependency, schema change or external package
+is added. Unknown facts, withheld licensed content and unsupported recipes stay
+explicit; reports never write the verification registry or enable a download.
+[Contract](contracts/universal-device-support.md).
+
 ## Per-part pending programming (P3)
 
 [ADR-0129](adr/0129-per-part-pending-programming.md) keeps transition rules out

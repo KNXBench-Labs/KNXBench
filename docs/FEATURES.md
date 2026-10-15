@@ -28,6 +28,11 @@ Last updated: 2026-10-15 03:21 CEST
 
 ## Main-only interface additions
 
+The universal support reporter is available in source after Alpha11; its branch
+runtime acceptance and subsequent integration/publication boundaries are recorded
+in the delivery index, not implied by the released baseline. See its
+[contract](contracts/universal-device-support.md).
+
 | Feature | Scope | Availability |
 | --- | --- | --- |
 | Per-part pending programming | Adr/App/Par/GA chips and Pending only filter, explorer dot, same-step edit/undo tracking, full/partial/address settlement and undoable logged manual marks; project belief, not live comparison; recovered snapshot undo is conservative ([guide](manual/user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11)) | Main-only (15 October 2026 source) |

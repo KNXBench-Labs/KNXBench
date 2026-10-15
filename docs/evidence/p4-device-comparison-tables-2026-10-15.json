@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "owner-ui-feedback-p4-tables",
-  "status": "accepted-source-publication",
+  "status": "delivered",
   "decisionRecord": "docs/goals/ui-feedback-p1-p4.md",
   "storeMigration": false,
   "busAccess": "none; simulator and intercepted browser only",
@@ -371,7 +371,7 @@
     "screenshotsVisuallyInspected": 4
   },
   "publication": {
-    "status": "pending-readback",
+    "status": "verified",
     "runtimeAcceptedCommit": "a9f429a4d6b2cc2e030c462edc0a25521c5cd620",
     "deltaAcceptance": {
       "complete": true,
@@ -417,7 +417,11 @@
         }
       ]
     },
-    "release": false
+    "release": false,
+    "at": "2026-10-15T09:26:22+02:00",
+    "publishedCommit": "675df035f6decb976a120fec388126af06a06c0a",
+    "localTrackingLiveEqual": true,
+    "runtimeAccepted": "a9f429a4d6b2cc2e030c462edc0a25521c5cd620"
   },
   "next": "Package 2 parameter bit attribution and named values; no stop after package 1 publication."
 }

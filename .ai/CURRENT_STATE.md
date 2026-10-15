@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:26
+- **Completed:** P4 package1 tables published675df035f6decb976a120fec388126af06a06c0a on origin/main; exact local/tracking/live equality and unchanged accepted runtime paths verified. Actual merge a9f429a4 has49/49 frozen stages and151/151 corpus tests; nine docs/tooling closure checks pass. Branch/merged EN/DE1440/400 screenshots inspected. No bus access/migration/release.
+- **Pending/Next Steps:** Immediately package2 parameter bit attribution and named project/device values in a new fresh-main worktree. Finish verified package1 evidence archival/owned retirement; do not redo accepted runtime gates. Parameter package needs own RED/GREEN/mutants/review and complete branch+merged gates.
+- **Notes for Codex oder Claude:** Publication readback profile scratch/p4-20261015/package1-push-readback.json. Shared root remains untouched/stale/dirty; foreign support/story/community preserved. No subagents/hardware/vendor/release/deploy. Runtime receipts remain bound a9f429a4 rather than metadata descendants.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 09:21
 - **Completed:** P4 table package1 actual merge a9f429a4 accepted:49/49 frozen stages,Rust4565,Vitest3609,default570,production329/15configs,repeats87,Python148/one inherited skip. Network-isolated OriginalData151/151 in33targets passed; all2804 source files frozen. Four actual merged EN/DE1440/400 production screenshots inspected. Reconciled later community/tooling main additively; no frontend/Rust delta. Branch/mutants remain original receipts.
 - **Pending/Next Steps:** Run docs/tooling delta closure, commit and normal push/readback; package1 not published yet. Then immediately package2 actual parameter bit attribution/named values, full branch+merged gates and cleanup. No further Go required.

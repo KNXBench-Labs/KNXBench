@@ -346,7 +346,9 @@ replaces the old one and clears its rows.
 
 The newer P4 **Devices** view adds confirmed single/filtered-batch comparison,
 session tags and decoded tables. See [project versus devices](05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11).
-It is included in Alpha 12; package 1 leaves parameters as raw bytes.
+Included in Alpha 12; package 2 adds named numeric/text parameter
+values from actual image bit attribution. Unknown values retain a reason and
+all raw bytes; existing image/device admission is unchanged.
 The existing Device checks result also uses the shared decoded-table renderer.
 
 

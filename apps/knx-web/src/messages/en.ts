@@ -39,6 +39,7 @@
 // two different ways in two files is a bug waiting to happen, not a
 // feature of the namespacing convention.
 export const messages = {
+  "compare.parameterNotDecoded": "The field is incomplete, overwritten or its device encoding is not verified. Inspect the raw bytes below.",
   "compare.all": "Compare all shown",
   "compare.one": "Compare",
   "compare.column": "Device comparison",

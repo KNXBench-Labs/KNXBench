@@ -3155,6 +3155,32 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .devices-table td { max-width: 28ch; overflow-wrap: anywhere; }
 .devices-table td:first-child { width: 36px; }
 .devices-table .table-select, .devices-table th button, .workbench .device-link, .devices-count-link { transform: none; box-shadow: none; }
+/* P3 (ADR-0129): parts the project still owes a device. Pending only; a
+   clean device shows nothing, an unreported state a muted dash. */
+.devices-toolbar .devices-pending-only { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.devices-toolbar .devices-pending-only input { flex: none; width: auto; min-width: 0; margin: 0; }
+.programming-chips { display: inline-flex; flex-wrap: nowrap; gap: 4px; vertical-align: middle; }
+.programming-chips[data-state="unknown"] { color: var(--knx-muted); }
+.programming-chip {
+  padding: 0 6px; border-radius: 999px; font-size: 11px; line-height: 18px; font-weight: 600; white-space: nowrap;
+  color: var(--knx-foreground);
+  border: 1px solid color-mix(in srgb, var(--knx-warning-color) 60%, transparent);
+  background: color-mix(in srgb, var(--knx-warning-color) 16%, transparent);
+}
+.workbench .tree-pending-dot {
+  flex: none; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%;
+  background: var(--knx-warning-color);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--knx-surface) 70%, transparent);
+}
+.device-programming { margin: 12px 0 16px; }
+.device-programming h3 { margin: 0 0 6px; font-size: 13px; }
+/* One part per row: the inspector is narrow at every window width. */
+.device-programming-parts { display: grid; gap: 2px; margin: 0; }
+.device-programming-parts > div { display: flex; justify-content: space-between; gap: 8px; min-width: 0; }
+.device-programming-parts dt { margin: 0; color: var(--knx-muted); }
+.device-programming-parts dd { margin: 0; text-align: right; }
+.device-programming-parts > div[data-pending="true"] dd { color: var(--knx-warning-color); font-weight: 600; }
+.device-programming-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .workbench .device-link { display: inline; padding: 2px 4px; min-width: 0; max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
 .device-link-unresolved { cursor: help; }
 .ga-linked-devices { padding-left: 18px; }

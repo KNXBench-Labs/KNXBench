@@ -186,6 +186,7 @@ async fn start_simulated(h: &Harness, wait_seconds: u64) -> Value {
             give_up_after: Duration::from_secs(wait_seconds),
             pause_between_rounds: Duration::from_millis(10),
         },
+        knx_server::address_programming_settler(&h.state, address),
     );
     assert!(h
         .state
@@ -333,6 +334,163 @@ async fn a_button_pressed_while_waiting_gets_the_address() {
     );
     assert_eq!(events[2]["currentAddress"], original.to_string());
     assert_eq!(h.calls.load(Ordering::SeqCst), 0, "no public start tunnel");
+}
+
+/// A project with one device per octet in `octets` on line 1.1, none of
+/// them with its address programmed.
+fn project_with_devices(octets: &[u8]) -> knx_core::Project {
+    let mut project = knx_core::Project::new(knx_core::Language("en".into()));
+    for (index, octet) in octets.iter().enumerate() {
+        let id = index as u32 + 1;
+        project.devices.insert(knx_core::DeviceInstance {
+            id: knx_core::DeviceId(id),
+            source: knx_core::SourceRef {
+                path: "t".into(),
+                ets_id: format!("d{id}"),
+            },
+            name: format!("Device {id}"),
+            description: None,
+            address: Some(format!("1.1.{octet}").parse().unwrap()),
+            product_ref: "P".into(),
+            program_ref: "H".into(),
+            commissioning: knx_core::CommissioningState {
+                application_program_loaded: true,
+                parameters_loaded: true,
+                communication_part_loaded: true,
+                ..knx_core::CommissioningState::default()
+            },
+            visibility_calculated: true,
+            com_objects: vec![],
+            binary_data: vec![],
+        });
+    }
+    project
+}
+
+fn loaded_addresses(h: &Harness) -> Vec<bool> {
+    let project = h.state.project.lock().unwrap();
+    project
+        .as_ref()
+        .unwrap()
+        .devices
+        .iter()
+        .map(|device| device.commissioning.individual_address_loaded)
+        .collect()
+}
+
+async fn press_and_finish(h: &Harness) -> Value {
+    start_simulated(h, 30).await;
+    let device = Arc::clone(&h.device);
+    let (end, _) = finish(h, |status| {
+        if status["state"] == "waiting" {
+            device.set_programming_mode(true);
+        }
+    })
+    .await;
+    end
+}
+
+#[test]
+fn address_settlement_does_not_follow_an_address_to_a_different_project_device() {
+    for octets in [&[29, 30][..], &[30, 30][..]] {
+        let h = harness(SimulatorConfig::default());
+        *h.state.project.lock().unwrap() = Some(project_with_devices(octets));
+        let settle = knx_server::address_programming_settler(&h.state, NEW.parse().unwrap());
+        {
+            let mut project = h.state.project.lock().unwrap();
+            let project = project.as_mut().unwrap();
+            project
+                .devices
+                .get_mut(knx_core::DeviceId(1))
+                .unwrap()
+                .address = Some("1.1.30".parse().unwrap());
+            project
+                .devices
+                .get_mut(knx_core::DeviceId(2))
+                .unwrap()
+                .address = Some("1.1.29".parse().unwrap());
+        }
+        settle(&knx_server::AddressProgrammingStatus::Finished {
+            written: knx_server::AddressWritten::Yes,
+            previous_address: "15.15.255".into(),
+            was_free: true,
+            restart_confirmed: true,
+        });
+        assert_eq!(
+            loaded_addresses(&h),
+            [false, false],
+            "neither a replacement nor a previously ambiguous device is confirmed"
+        );
+    }
+}
+
+/// ADR-0129: programming the individual address clears the Address part of
+/// the one project device that has it, outside the undo history, and says
+/// so in the log. Nothing else of the device changes.
+#[tokio::test]
+async fn a_programmed_address_is_no_longer_pending_on_its_project_device() {
+    let h = harness(SimulatorConfig::default());
+    *h.state.project.lock().unwrap() = Some(project_with_devices(&[29, 30]));
+    let revision = h.state.project_revision.load(Ordering::SeqCst);
+    let end = press_and_finish(&h).await;
+    assert_eq!(end["state"], "finished", "{end}");
+    assert_eq!(
+        loaded_addresses(&h),
+        [false, true],
+        "only the device at 1.1.30"
+    );
+    let project = h.state.project.lock().unwrap().clone().unwrap();
+    let device = project.devices.get(knx_core::DeviceId(2)).unwrap();
+    assert!(device.commissioning.parameters_loaded);
+    assert_eq!(device.commissioning.last_download, None);
+    assert_eq!(
+        h.state.command_stack.lock().unwrap().history_lengths(),
+        (0, 0)
+    );
+    assert!(h.state.project_revision.load(Ordering::SeqCst) > revision);
+    let (_, log) = send(&h.app, get("/api/log")).await;
+    assert!(
+        log.to_string()
+            .contains("Individual address 1.1.30 programmed into “Device 2” (1.1.30): address marked programmed"),
+        "{log}"
+    );
+}
+
+/// The project open when the programming started is the only one it may
+/// settle: after another project was opened, nothing is applied.
+#[tokio::test]
+async fn a_project_opened_meanwhile_is_left_alone() {
+    let h = harness(SimulatorConfig::default());
+    *h.state.project.lock().unwrap() = Some(project_with_devices(&[30]));
+    start_simulated(&h, 30).await;
+    // What opening, creating or importing another project does.
+    h.state.project_incarnation.fetch_add(1, Ordering::SeqCst);
+    let device = Arc::clone(&h.device);
+    let (end, _) = finish(&h, |status| {
+        if status["state"] == "waiting" {
+            device.set_programming_mode(true);
+        }
+    })
+    .await;
+    assert_eq!(end["state"], "finished", "{end}");
+    assert_eq!(loaded_addresses(&h), [false]);
+    let (_, log) = send(&h.app, get("/api/log")).await;
+    assert!(log.to_string().contains("another project is open"), "{log}");
+}
+
+#[tokio::test]
+async fn an_address_two_project_devices_share_changes_neither() {
+    let h = harness(SimulatorConfig::default());
+    *h.state.project.lock().unwrap() = Some(project_with_devices(&[30, 30]));
+    let end = press_and_finish(&h).await;
+    assert_eq!(end["state"], "finished", "{end}");
+    assert_eq!(loaded_addresses(&h), [false, false]);
+    let (_, log) = send(&h.app, get("/api/log")).await;
+    assert!(
+        log.to_string()
+            .contains("no unchanged, uniquely identified project device"),
+        "{log}"
+    );
 }
 
 #[tokio::test]

@@ -1,7 +1,7 @@
 {
   "format": "knxbench-issue23-acceptance-v1",
   "scope": "UI-only diagnostic sidebar selection; self-review",
-  "status": "first-integration-accepted-latest-main-gate-pending",
+  "status": "pre-p3-integration-accepted-p3-merge-pending",
   "branch": {
     "success": true,
     "stageCount": 46,
@@ -79,5 +79,42 @@
         "cfg_playwright_ux_feedback_config": 55
       }
     }
+  },
+  "preP3Integration": {
+    "success": true,
+    "revision": "2e803fef21fc0f2069a240ee8187a564ce2f3627",
+    "stages": 60,
+    "inputsFrozen": true,
+    "vitest": {
+      "passed": 3567,
+      "failed": 0,
+      "files": 256
+    },
+    "browser": {
+      "total": 558,
+      "functional": 276,
+      "exclusive": 282
+    },
+    "production": {
+      "production-catalogue": 10,
+      "production-communication": 59,
+      "production-device-download-support": 33,
+      "production-devices": 17,
+      "production-dialogs": 14,
+      "production-ga-members-download": 23,
+      "production-group-addresses": 19,
+      "production-instructions": 15,
+      "production-notes": 13,
+      "production-parameters": 15,
+      "production-reload-guard": 2,
+      "production-structure": 8,
+      "production-task-status": 27,
+      "production-updates": 7,
+      "production-ux-feedback": 55
+    },
+    "productionTotal": 317,
+    "issue23ProductionRepeats": 12,
+    "specTypecheck": "passed",
+    "receiptSha256": "f9992354108a2a60e838abc5072a03045fc4cc9008b9b97996933de45b8705ed"
   }
 }

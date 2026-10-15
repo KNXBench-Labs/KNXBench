@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "package": "owner-ui-feedback-p3",
+  "status": "delivered",
+  "decisionRecord": "docs/goals/ui-feedback-p1-p4.md",
+  "architecture": "docs/adr/0129-per-part-pending-programming.md",
+  "storeMigration": false,
+  "review": {
+    "kind": "separate-in-session-self-review",
+    "independentApproval": false,
+    "disposition": "All six findings closed before the frozen branch gate",
+    "findings": [
+      "R1: interrupted runs must bound pending parts by attempted plan steps",
+      "R2: address settlement must retain the initial unique device identity",
+      "R3: failed project refresh after a write must be visible",
+      "R4: explicit mutation and native lifecycle evidence is required",
+      "R5: unexpected download-task termination must settle once",
+      "R6: verified-memory clearing is independent of restart confirmation"
+    ]
+  },
+  "focusedEvidence": {
+    "coreCommandRegressionsPassed": 15,
+    "appSettlementRegressionsPassed": 16,
+    "httpProjectionManualNativeRestartPassed": 6,
+    "nativeFlagPatternsTested": 16,
+    "httpAddressProgrammingPassed": 15,
+    "downloadWorkerLifecyclePassed": 11,
+    "downloadAddressWebPanelsPassed": 59,
+    "initialBrowserCasesPassed": 6,
+    "initialScreenshots": {
+      "widths": [1440, 400],
+      "languages": ["en", "de"],
+      "themes": ["porcelain", "graphite"],
+      "server": "development",
+      "visuallyInspected": true,
+      "limits": "Historical development-server check; later production/merged acceptance is recorded separately below."
+    },
+    "documentationCheck": "passed; local targets, image descriptions and chapter chain",
+    "securityScan": "no added-line findings for secrets, dynamic code, shell injection, unsafe deserialization or raw HTML"
+  },
+  "mutationAcceptance": {
+    "semanticCasesPassed": 9,
+    "namedBehavioralFailuresRequired": true,
+    "sourceRestored": true,
+    "originalHarnessExit": 1,
+    "wrapperCorrection": "ANSI colors hid the UI failure from the original parser; raw log/exit retained, original results reconciled without claiming a rerun",
+    "parserControlsPassed": 5,
+    "restoredGreenAndCorpusStagesPassed": 8,
+    "corpus": { "passed": 149, "expected": 149, "targets": 32, "downloadHttpCases": 29 }
+  },
+  "productionPerformance": {
+    "browser": "headless distribution Chromium, production build, network-isolated intercepted API",
+    "devices": 5000,
+    "attributionRuns": 6,
+    "controlledComparisons": [
+      { "change": "bounded table-local chip reuse and smaller accessible markup", "runs": 12, "sequence": ["before", "after", "after", "before"], "changedRuntimeModules": 2,
+        "meanMainThreadMs": { "absent": [18679.2, 15843.6], "clean": [17539.0, 15656.3], "allPending": [25587.6, 23368.2] } },
+      { "change": "defer new chip nodes until the table's first visible visit, then retain them", "runs": 12, "sequence": ["before", "after", "after", "before"], "changedRuntimeModules": 1,
+        "meanMainThreadMs": { "absent": [15731.4, 14732.0], "clean": [15641.2, 14341.8], "allPending": [23204.2, 16455.1] },
+        "meanProjectOpenMsAllPending": [18209.0, 11449.0],
+        "meanTableOpenMsAllPending": [4542.0, 4551.0] }
+    ],
+    "sourceRestored": true,
+    "limits": "Two observations per state/variant in counterbalanced same-window comparisons; host load and raw renderer traces retained privately. Absent field is unknown, not clean. No whole-gate speedup, GPU, native WebKit or hardware certification. The existing table remains unvirtualized."
+  },
+  "branchGate": {
+    "status": "passed",
+    "stageCount": 48,
+    "allStageExitsZero": true,
+    "inputsFrozen": true,
+    "sourceHead": "0f2c1433729081588ee9a9c1c35e493727280126",
+    "candidateDiffSha256": "7dd9962809ffe795f21e72560c36d713d947a30fee5db39f5ba53634db3997cb",
+    "sourceManifestSha256": "f170be99ca2467bcfe54d9cc886c01f2627d81fe3ef77c1d698994246483099d",
+    "sourceFiles": 2770,
+    "rustPassed": 4545,
+    "rustIgnored": 204,
+    "vitestPassed": 3580,
+    "defaultBrowserPassed": 560,
+    "productionConfigs": 15,
+    "productionBrowserPassed": 319,
+    "repeatedBrowserPassed": 57,
+    "pythonRun": 123,
+    "pythonSkipped": 1,
+    "generatedBindingsCompared": 28,
+    "productionImagesVisuallyInspected": 8,
+    "visualLimits": "At 400 px the wide table scrolls locally; not every chip is visible at the initial horizontal position. Existing transient notifications can overlap lower Inspector controls.",
+    "preflight": "Original exit 4 refused before tests because the generated ts-rs banner exceeded the handwritten limit; narrow canonical-directory/banner correction, three negative/positive controls and actual generation equality verified. Regular repository header gate unchanged."
+  },
+  "mergedGate": {
+    "status": "passed",
+    "sourceCommit": "f35d9bda95b87b91899ab3516c471f313ae1335b",
+    "upstreamParent": "19b506a6eb73de4704ec1cd422ade9921285d34c",
+    "featureParent": "19019348cc4e3bd139d147c940a757048787cd0c",
+    "stageCount": 52,
+    "allStageExitsZero": true,
+    "inputsFrozen": true,
+    "sourceFiles": 2787,
+    "sourceManifestSha256": "1b91434bb8da94d3c5384458e3dc92fe3275b2ddfc62afb5826476c6f33a28cd",
+    "rustPassed": 4553,
+    "rustIgnored": 205,
+    "vitestPassed": 3580,
+    "defaultBrowserPassed": 560,
+    "productionConfigs": 15,
+    "productionBrowserPassed": 319,
+    "repeatedBrowserPassed": 57,
+    "pythonRun": 148,
+    "pythonSkipped": 1,
+    "originalDataSweep": { "passed": 150, "expected": 150, "targets": 33, "networkIsolated": true },
+    "productionImagesVisuallyInspected": 8,
+    "temporaryCorpusLinksRemoved": true,
+    "scope": "Full RUST=1/PY=1 template, fifteen production configs, repeats, fresh-main guard and OriginalData-marked ignored sweep. Not separate product-matrix, hardware or native-WebKit certification."
+  },
+  "publication": {
+    "status": "verified",
+    "target": "origin/main",
+    "publishedCommit": "b2c3043f0bdb4c4b385d2549e05903e46f3dce77",
+    "runtimeAcceptedCommit": "f35d9bda95b87b91899ab3516c471f313ae1335b",
+    "verifiedAt": "2026-10-15 03:28 CEST",
+    "localTrackingLiveRefsEqual": true,
+    "closure": "Ten documentation-only checks passed with runtime bytes/modes unchanged; later metadata-only publication descendants retain this historical readback. No release or selected-root synchronization."
+  },
+  "boundaries": [
+    "Project belief, not fresh device synchronization or universal ETS compatibility",
+    "P4 comparison is not implemented",
+    "No protocol/safety gate relaxation or real hardware operation",
+    "CLI/external programming requires explicit manual reconciliation in the editor",
+    "Recovered snapshot undo after a later write can conservatively show extra pending parts, not a verified device difference",
+    "Native persistence failure is logged, not reported as a successful save",
+    "The earlier development-server timing samples are diagnostic only"
+  ]
+}

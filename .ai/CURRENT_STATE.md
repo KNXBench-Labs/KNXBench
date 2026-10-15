@@ -1,9 +1,64 @@
 - **Last Agent:** codex
-- **Timestamp:** 2026-10-14 23:37
-- **Completed:** Issue #23 candidate accepted on branch: eight regressions RED before minimal sidebar change; App 172/172 and production EN/DE wide/narrow 4/4; full frozen web/docs branch gate 46/46 stages zero (Vitest 3567/0, Chromium 558/0, repeats 51/0, fifteen production configs zero). Operating docs/contract and aggregate receipt included. Self-review; no independent approval claim. Owner explicit Go lifted this session's pause.
-- **Pending/Next Steps:** Commit scoped candidate, merge fresh main in an owned integration checkout and require full merged web/docs acceptance before publication/issue closure. No shipped fix claimed yet.
-- **Notes for Codex oder Claude:** #23 owns only two sidebar selections, App tests and existing devices-navigation browser coverage. P3 carve-out and test-tooling ownership preserved. No Rust/domain/API/schema/protocol/hardware, release/deployment or subagent work; dirty root research/journal not synchronized/published.
+- **Timestamp:** 2026-10-15 05:59
+- **Completed:** #23 maintained-runner integration 2e803fef accepted: 60/60 stages zero/proof-valid, input/build/tool identities frozen, Vitest3567/256 files, default558 (276 functional/282 exclusive), production317/15configs, twelve issue-specific production repeats and dedicated spec types pass. Original verifier import failure is a retained bookkeeping-only issue; isolated stdlib verifier validates exact original reports. Upstream P3 subsequently published, requiring new final merged web acceptance; older receipts remain bound to their sources.
+- **Pending/Next Steps:** Merge P3/main additively, run full maintained web/docs and issue-specific supplement on actual final source, then documentation closure, normal push/readback, #23 comment/close and owned cleanup. No publication or issue closure claimed yet.
+- **Notes for Codex oder Claude:** P3 source/accepted backend results are inherited, not modified; no Rust delta from upstream. Scope stays two sidebar selections and tests/docs. Root remains stale/dirty with foreign research preserved; no hardware, release/deploy, subagents or additional go required.
 
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 03:28
+- **Completed:** P3 published on origin/main as b2c3043f0bdb4c4b385d2549e05903e46f3dce77; actual normal push/readback proved local=tracking=live. Runtime source f35d9bda95b87b91899ab3516c471f313ae1335b passed all52 zero/frozen stages: Rust4553, Vitest3580/259files, default560, production319/15configs, repeats57, Python148/one inherited skip, OriginalData150/150/33targets. Branch48-stage acceptance, nine named mutants, native16-pattern/recovered-undo proof and eight actual merged EN/DE1440/400 production images retained. Ten docs-only closure checks zero; runtime bytes/modes unchanged. Goal P3 delivered; ADR, practical guide, FEATURES/status/evidence updated. Existing recovered snapshots conservatively invalidate old clean claims; no exact live-inverse precision/hardware comparison claimed. No migration/protocol change/release.
+- **Pending/Next Steps:** P4 stays open for a fresh session, using P3's change tracking; do not redo P3 implementation or runtime acceptance. Publication metadata is a documentation-only descendant of the already verified source publication. Selected shared root remains intentionally stale/dirty and is not synchronized; preserve its foreign edits/index. Current session performs private byte-verified archival and exact owned cleanup, not more feature work.
+- **Notes for Codex oder Claude:** This entry records witnessed publication b2c3043f, not its own future metadata commit. Accepted runtime receipt remains bound to f35d9bda; no retagged logs. Private evidence/cleanup proof will be linked from the selected root's final handover. Preserve full upstream journal history and foreign issue23 worktrees; no vendor contact, hardware, subagents or deployment. Alpha11 released artifacts were not changed by source publication.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 03:21
+- **Completed:** P3 runtime acceptance complete on merge f35d9bda95b87b91899ab3516c471f313ae1335b (main19b506a6, feature19019348). Actual runner proc_a334b6dda81d exited0; all52 expected stages zero, HEAD/diff/complete2787-file manifest frozen. Rust4553/0 (205 opt-ins ignored), Vitest3580/259files, default560, production319/15configs, repeats57, Python148/one inherited skip, OriginalData150/150 in33targets network-isolated. Eight actual merged production EN/DE1440/400 images inspected, workers quiescent and input links removed. ADR/manual/FEATURES/status/Goal P3 delivered/evidence closure drafted, including existing conservative recovered-snapshot undo boundary. No runtime delta/migration/hardware/qualification or P4 work.
+- **Pending/Next Steps:** Verify documentation-only delta and documentation/build/Python checks; commit/push normally on fresh origin/main, exact remote readback. Record witnessed publication metadata separately, then archive with byte verification under shared leases and retire only owned feature/integration/detached-baseline worktrees, branches and scratch. Do not stop after reporting runtime acceptance; no further Go required. P4 stays for a fresh session.
+- **Notes for Codex oder Claude:** Accepted runtime receipt remains bound to f35d9bda, not later documentation commits. Keep full authoritative upstream journal suffix/status sections. Source selected root intentionally stale/dirty; no root sync, foreign tree/worker changes, vendor contact, subagents, release/deploy. Private closure helpers/proofs in profile scratch/p3/resume; do not publish raw corpus evidence.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 02:11
+- **Completed:** Focused feature19019348cc4e3bd139d147c940a757048787cd0c committed as KNXBench after frozen48-stage branch acceptance and seven documentation-only closure checks; all runtime inputs unchanged. Prepared owned fresh-main integration on19b506a6eb73de4704ec1cd422ade9921285d34c. Only handover/status conflicted; exact complete upstream handover suffix and both delivery sections preserved. Nine protected main runtime/tooling inputs (including App, npm/runner/policy and #22 protocol/product files) remain byte-identical; production Devices config retains both common temp guard and P3 cases. Shared dirty root/index preserved.
+- **Pending/Next Steps:** Commit the two-parent merge and dispatch a fresh full merged RUST=1/PY=1 gate with15extra configs/repeats, plus network-isolated OriginalData-marked ignored sweep with explicit corpus/oracle links. Inspect actual merged production screenshots; then docs-only delivery closure, normal push/readback, private evidence archival and owned cleanup. P3 not yet delivered/published; P4 not started.
+- **Notes for Codex oder Claude:** Integration worktree p3-pending-programming-merged-20261015; source feature19019348 atop core0f2c1433. Prior branch receipt remains historical, not relabelled as merged execution. Exact resolution witnesses/protected-root backups and gate helper controls retained in profile scratch/p3/resume. Preserve main's edited historical handover blocks; no foreign edits, subagents, hardware, release or deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 02:00
+- **Completed:** P3 frozen branch gate proc_23489c9ea0d0 exited0:48/48 stages, Rust4545/0 (204 opt-ins ignored), Vitest3580/259files, default browser560, production319 across15configs, repeated57, Python123/one inherited skip, all five xtask/docs/diff checks zero; 2770-file manifest and HEAD+diff unchanged. Actual production EN/DE1440/400 screenshots inspected (wide table scrolls locally; existing transient notifications noted). Standard generated-banner preflight refusal retained; 28 real regenerated bindings match, three canonical header controls pass, maintained skill template corrected. Source self-review closed; nine named mutants and native16-pattern/recovered-undo proof retained.
+- **Pending/Next Steps:** Documentation-only branch closure check and focused feature commit, then owned integration worktree on freshly fetched origin/main, additive handover/status resolution and complete merged RUST=1/PY=1 gate plus15configs/repeats. Main has product/protocol and browser-tooling changes, so branch acceptance is not merged acceptance. Bind OriginalData/oracle links and rerun the OriginalData-marked ignored sweep on merge, without hardware. Then final docs, push/readback, private archival and owned cleanup. P4 excluded.
+- **Notes for Codex oder Claude:** Accepted branch receipt at profile scratch/p3/branch-gate-retry/reconciliation.json; runtime source0f2c1433729081588ee9a9c1c35e493727280126 plus diff7dd9962809ffe795f21e72560c36d713d947a30fee5db39f5ba53634db3997cb. Do not retag this receipt as the later docs/feature/merge execution. Upstream handover edits its own older blocks: candidate is prepend-only but upstream is not; retain owned-only prefix plus exact fresh upstream body after inspecting actual three-way diff. Preserve dirty root/foreign work; no subagents, hardware, release or deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 01:09
+- **Completed:** P3 source self-review closed (no remaining blocking findings), nine named mutation failures reconciled with original ANSI-wrapper error retained, restored-green/clippy/headers passed, full private corpus149/149 in32targets incl29 download HTTP cases. Both controlled production comparisons complete12/12 each, base sources restored: immutable cells plus deferred first mount reduce measured work; final one-module all-pending mean RunTask23204.2→16455.1ms, open18209→11449ms, table4542→4551ms. No store migration. ADR/manual/FEATURES/evidence candidate prepared; source-only, no full delivery acceptance/publication yet.
+- **Pending/Next Steps:** Frozen full branch gate at profile scratch/p3/branch-gate using repository-delivery template with RUST=1/PY=1,15extra configs, docs check and P3/devices repeats; do not edit this worktree until it finishes. Then inspect production screenshots, commit reviewed scope, merge fresh origin/main in own integration worktree, full merged gate, docs-only closure, push/readback and owned cleanup. P4 excluded; no further Go required.
+- **Notes for Codex oder Claude:** Source feature/p3-pending-programming-20261014; prior performance/corpus jobs completed, scratch zz spec retired. Keep branch candidate (including this handover) unchanged during its gate. Foreign #23/#22 work and dirty root remain untouched; no subagents, real bus, release or deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 00:38
+- **Completed:** P3 separate self-review corrections implemented/tested; no migration. Production attribution completed six runs with source restoration: chip cells dominate the added CPU, dots do not. Table-local immutable presentation reuse (17 states max) and smaller accessible markup implemented RED→GREEN; focused table/explorer/chip suite 68/68. Nine mutants have actual named behavioral failures; original sweep wrapper exit1 is retained (ANSI parser defect corrected with five controls), sources byte-restored. Docs/ADR/handbook/FEATURES candidate updated; no full delivery acceptance or publication yet.
+- **Pending/Next Steps:** Counterbalanced production recheck proc_ec5338211102 and restored-green/clippy/headers/full-private-corpus proc_b28d5d267e07 queued behind #23's active maintained final-main gate (PID1423414). Then freeze, RUST=1/PY=1 template branch gate plus fifteen configs and repeats, fresh-main merge/full merged gate, publish/readback and exact owned cleanup. P4 excluded; owner Go remains active, no further Go needed.
+- **Notes for Codex oder Claude:** Own feature p3-pending-programming-20261014, scratch/p3; initial scratch zz spec already retired. Preserve every foreign gate/lease/root edit. Production recheck swaps only two UI modules in owned base checkout; do not edit them until it ends. Root intentionally unsynchronized. No subagents, real bus, release/deployment.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-14 23:38
+- **Completed:** P3 resumed after explicit owner Go/rate-limit continuation. Core committed 0f2c1433; App/server/projection/web remain an uncommitted candidate. Focused Rust, typechecks and six EN/DE browser checks passed before pause; 1440/400 screenshots inspected and two layout issues corrected. Full branch/merged acceptance NOT done. The old 5000-device A/B used development Vite: all six runs passed but its timings are diagnostic only, not production-performance evidence.
+- **Pending/Next Steps:** Attribute production performance under shared leases, add remaining mutation evidence, separate whole-feature self-review, documentation and complete RUST=1 plus fifteen-config branch/merged gates; push/readback and task-owned cleanup. P4 remains out of scope.
+- **Notes for Codex oder Claude:** Preserve #23/test-tooling owners, root research, shared leases. Existing own scratch p3/base and zz-pending-5000 spec are task-owned probes to retire before the gate. No store migration, subagents, bus/hardware, release or deployment.
 
 ---
 

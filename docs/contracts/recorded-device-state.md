@@ -11,6 +11,16 @@ Final supplemental server hash equals the exact final accepted binary; all four
 final sheets byte-equal the inspected sheets. Self-review, not independent
 approval or main/release integration.
 
+## P3 amendment: the recorded belief is now maintained
+
+[ADR-0129](../adr/0129-per-part-pending-programming.md) makes four of these same
+persisted flags follow project edits, server downloads/address programming and
+explicit undoable manual marks. `recordedDeviceModel` stays a read-only view of
+the current model: inspecting it still performs no device IO. The flags are no
+longer only an untouched import snapshot. `medium_config_loaded` and optional
+observations remain separate; no fresh-device/synchronization verdict is added.
+See [Programming marks](../manual/user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11).
+
 ## Meaning
 
 The independent domain already separates `CommissioningState`'s five persisted

@@ -16,14 +16,17 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
-## Project versus devices (P4 package 1, main-only source)
+## Project versus devices (P4, main-only source)
 
 Devices has explicitly confirmed single/filtered-batch read-only comparison,
 progress/cancel, per-device failures and volatile tags. P3 content revisions
 invalidate old readings; identity is checked before memory. The 0701 address
 and association tables are decoded; all raw read ranges remain visible.
-Named parameters are pending package 2, not silently interpreted. The full branch gate passes;
-the actual merged gate and corpus pass; source publication is recorded in the delivery evidence.
+Package 2's source candidate adds parameter name/reference/bit metadata and
+separate project/device values for supported numeric and text fields. Unknown,
+incomplete or overwritten fields keep an explicit reason and all raw bytes.
+Negative signed values and new image types are not admitted. Package 1 is
+published; package 2 full branch/merged gates and publication are pending.
 [Use and limits](user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11),
 [contract](../contracts/device-comparison.md).
 

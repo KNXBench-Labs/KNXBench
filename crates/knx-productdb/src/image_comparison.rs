@@ -1,5 +1,7 @@
 //! Decodes only verified image placements; retains every compared raw memory range.
 
+mod parameters;
+
 use crate::image::DownloadImage;
 use knx_core::commissioning::device_backup::DeviceBackup;
 use knx_core::commissioning::memory_download::MemoryDownloadPlan;
@@ -122,6 +124,9 @@ pub fn decode(
                 ));
             }
         }
+    }
+    if held.mask == plan.mask && plan.mask.0 & 0xFFF0 == 0x0700 {
+        rows.extend(parameters::rows(image, &project, &device));
     }
     // Keep *all* original ranges, not only changed/decoded fields. A decoder can
     // never turn bytes it cannot attribute into a silent loss (including padding).

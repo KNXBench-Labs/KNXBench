@@ -14,6 +14,17 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — P4 package 2 **candidate, not yet accepted/published**: actual
+  active parameter writes retain name/reference/segment/offset/bit/width in
+  transient DownloadImage metadata. Named project/device values invert existing
+  numeric and text writers, checking exact coverage, matching supported masks
+  and final-plan equality. Unsupported/negative patterns stay unknown with
+  EN/DE reasons and every raw range visible. No schema/device support change.
+  Named RED/GREEN, seven restored-source semantic mutants, separate in-session
+  review and production EN/DE1440/400 browser cases pass; complete branch and
+  fresh-main merged gates plus corpus/publication are pending.
+  [Contract](contracts/device-comparison.md), [ADR-0130](adr/0130-session-device-comparison.md).
+
 - 2026-10-15 — P4 package 1 tables accepted in source after Alpha 11: confirmed
   single/filtered device queue, progress/draining cancellation and session tags;
   P3 content revisions, verified five-byte application identity, bounded 0701

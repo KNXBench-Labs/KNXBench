@@ -2,10 +2,11 @@
 
 ## Owner UI feedback P4 (2026-10-15)
 
-P3 is delivered. P4 package 1 (bound comparison/tags and decoded group-address /
-association tables) has a source candidate under full acceptance. Package 2
-(named parameters from captured image bit attribution) follows its publication
-immediately. No new device support, hardware operation or release is authorized.
+P3 and P4 package 1 (bound comparison/tags and decoded group-address /
+association tables) are delivered. Package 2 implements named parameters from
+captured actual image bit attribution; full branch/merged acceptance and
+publication are still pending. No new device support, hardware operation or
+release is authorized.
 [Decision record](goals/ui-feedback-p1-p4.md), [contract](contracts/device-comparison.md).
 
 ## Small offline literal naming source slice (2026-10-12)

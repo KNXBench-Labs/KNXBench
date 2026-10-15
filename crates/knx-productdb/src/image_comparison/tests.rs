@@ -39,6 +39,7 @@ fn fixture() -> (DownloadImage, DeviceBackup, MemoryDownloadPlan) {
         texts: Default::default(),
         objects: vec![],
         inferences: vec![],
+        parameter_fields: vec![],
     };
     let held = DeviceBackup {
         target: "1.1.67".parse().unwrap(),
@@ -69,6 +70,76 @@ fn fixture() -> (DownloadImage, DeviceBackup, MemoryDownloadPlan) {
             .collect(),
     };
     (image, held, plan)
+}
+
+#[test]
+fn numeric_parameter_rows_use_captured_bits_and_never_swap_project_and_device_values() {
+    use crate::image::{AttributedValue, ParameterAttribution};
+    use knx_core::commissioning::parameter_image::ParameterField;
+    let (mut image, mut held, mut plan) = fixture();
+    image.segments.push(SegmentImage {
+        id: "P".into(),
+        address: 0x4400,
+        octets: vec![0xAB, 0xAC],
+        mask: None,
+    });
+    let field = ParameterField {
+        offset: 0,
+        bit_offset: 5,
+        size_in_bit: 9,
+    };
+    image.parameter_fields.push(ParameterAttribution {
+        reference: "P-Delay_R-1".into(),
+        name: "Delay".into(),
+        segment: "P".into(),
+        field,
+        value: AttributedValue::Number {
+            value: 235,
+            nonnegative_signed: false,
+        },
+    });
+    plan.steps.push(MemoryDownloadStep::WriteMemory {
+        address: 0x4400,
+        octets: vec![0xAB, 0xAC],
+    });
+    held.regions.push(BackupRegion {
+        address: 0x4400,
+        octets: vec![0xFD, 0x64],
+    });
+    let mut unknown = held.clone();
+    unknown.mask = MaskVersion(0x0025);
+    assert!(
+        decode(&image, &unknown, &plan)
+            .iter()
+            .all(|r| r.kind == "raw"),
+        "unknown profile never borrows parameter layout"
+    );
+    let rows = decode(&image, &held, &plan);
+    let parameter = rows
+        .iter()
+        .find(|r| r.kind == "parameter")
+        .expect("captured parameter row");
+    assert_eq!(parameter.label, "Delay · P-Delay_R-1 · bit 5 / 9");
+    assert_eq!(parameter.address, 0x4400);
+    assert_eq!(parameter.project.as_deref(), Some("235"));
+    assert_eq!(parameter.device.as_deref(), Some("345"));
+    assert_eq!(parameter.reason, None);
+    assert_eq!(rows.iter().filter(|r| r.kind == "raw").count(), 3);
+    held.regions.last_mut().unwrap().octets.pop();
+    let rows = decode(&image, &held, &plan);
+    let parameter = rows.iter().find(|r| r.kind == "parameter").unwrap();
+    assert_eq!(parameter.device, None);
+    assert!(parameter.reason.is_some());
+    // Later table/segment placement may overwrite a captured field: do not
+    // claim those bytes still represent the original parameter.
+    if let MemoryDownloadStep::WriteMemory { octets, .. } = plan.steps.last_mut().unwrap() {
+        octets[0] = 0;
+    }
+    let rows = decode(&image, &held, &plan);
+    assert_eq!(
+        rows.iter().find(|r| r.kind == "parameter").unwrap().project,
+        None
+    );
 }
 
 #[test]

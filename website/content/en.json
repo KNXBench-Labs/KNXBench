@@ -147,21 +147,5 @@
   "release_instructions_alt": "Alpha 12 candidate in Graphite: the actual device Instructions tab showing a native override for the fictional kitchen lighting.",
   "release_support_title": "Unknown device. Useful report.",
   "release_support_body": "Prepare an offline support report even without a matching product or gateway. Review it, choose what to share and save it locally. Nothing sends itself.",
-  "release_support_alt": "Alpha 12 candidate in Graphite: the real Device support report form with privacy guidance, optional identity fields and Prepare offline preview; no report has been shared.",
-  "atlas_title": "A small installation. A connected idea.",
-  "atlas_not_live": "Illustration, not live traffic",
-  "atlas_line": "TP line",
-  "atlas_switch": "Push button",
-  "atlas_sensor": "Presence sensor",
-  "atlas_actuator": "Lighting actuator",
-  "atlas_group": "Kitchen light",
-  "atlas_topology": "Topology · same TP line",
-  "atlas_logical": "Logical links · group address",
-  "atlas_disclosure": "Fictional installation. Solid branches show line membership; dashed links show communication-object associations, not wiring or telegrams. Select a node to explore. No cabinet was harmed.",
-  "atlas_notes": "Diagram explanations",
-  "atlas_line_note": "The three fictional devices belong to TP line 1.1. Individual addresses identify devices within the topology. This is a simplified membership diagram, not an electrical plan.",
-  "atlas_switch_note": "Push button 1.1.10 has a switching communication object linked to group address 0/0/1. The dashed path represents that configured association, not a telegram being sent.",
-  "atlas_sensor_note": "Presence sensor 1.1.11 has a switching communication object linked to the same group address, 0/0/1. Different devices can share a logical destination without sharing an individual address.",
-  "atlas_actuator_note": "Lighting actuator 1.1.20 has a switching communication object associated with 0/0/1. The illustration explains the relationship only; it does not demonstrate device support or a successful download.",
-  "atlas_group_note": "0/0/1 “Kitchen light” is a logical group address shared by communication objects on these devices. The violet paths converge here; this is not a physical junction or a live value."
+  "release_support_alt": "Alpha 12 candidate in Graphite: the real Device support report form with privacy guidance, optional identity fields and Prepare offline preview; no report has been shared."
 }

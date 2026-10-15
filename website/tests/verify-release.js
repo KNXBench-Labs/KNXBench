@@ -1,6 +1,6 @@
-/** Playwright CLI acceptance for the public release build served on 127.0.0.1:4198. */
+/** Playwright CLI acceptance for the selected loopback public-build artifact. */
 async (page) => {
-  const origin = 'http://127.0.0.1:4198';
+  const origin = new URL(page.url()).origin;
   const checks = [], unexpected = [], errors = [];
   const assert = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };
   page.on('pageerror', error => errors.push(error.message));

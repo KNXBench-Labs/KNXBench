@@ -1,8 +1,8 @@
-"""Static contracts for the fictional Phosphor Atlas marketing illustration."""
+"""Contracts for the original landing-page layout with Story-style CRT colours."""
 import unittest
 
 import test_build
-from test_build import Document
+from test_build import Document, WEBSITE
 
 
 class PhosphorTests(unittest.TestCase):
@@ -17,29 +17,33 @@ class PhosphorTests(unittest.TestCase):
             self.assertIn(color, css)
         for lang in ("en", "de"):
             page = (self.out / lang / "index.html").read_text()
-            header = page.split("</header>")[0]
-            self.assertIn("data-motion-toggle", header)
+            self.assertIn("data-motion-toggle", page.split("</header>")[0])
             self.assertEqual(page.count("data-motion-toggle"), 1)
             for kind in ("contact", "privacy"):
                 legal = (self.out / lang / kind / "index.html").read_text()
                 self.assertIn("assets/site.css", legal)
-    def test_fictional_atlas_precedes_real_product_evidence(self):
+
+    def test_browser_recipes_follow_the_current_artifact_origin(self):
+        for name in ("verify-browser", "verify-imprint", "verify-default-language", "verify-release",
+                     "verify-headlines", "verify-demos", "verify-phosphor", "verify-roll-directions"):
+            source = (WEBSITE / "tests" / (name + ".js")).read_text()
+            self.assertIn("new URL(page.url()).origin", source, name)
+            self.assertNotIn("const origin = 'http://127.0.0.1:", source, name)
+
+    def test_original_screenshot_hero_has_no_installation_atlas(self):
         self.require_build()
         for language in ("en", "de"):
             page = (self.out / language / "index.html").read_text()
             doc = Document(page)
-            atlases = [a for t, a in doc.elements if a.get("id") == "installation-atlas"]
-            self.assertEqual(len(atlases), 1, "missing fictional installation hero")
-            self.assertLess(page.index('id="installation-atlas"'), page.index('class="hero-media"'))
-            nodes = [a for t, a in doc.elements if "data-atlas-node" in a]
-            self.assertEqual({a["data-atlas-node"] for a in nodes},
-                             {"line", "switch", "sensor", "actuator", "group"})
-            notes = {a.get("id") for t, a in doc.elements if t == "details"}
-            self.assertTrue(all(a["href"][1:] in notes for a in nodes))
-            for kind in ("topology", "logical"):
-                self.assertTrue(any(a.get("data-relation") == kind for t, a in doc.elements))
-            self.assertIn("1.1.10", page)
-            self.assertIn("0/0/1", page)
+            self.assertFalse(any(a.get("id") == "installation-atlas" or "data-atlas-node" in a
+                                 for t, a in doc.elements), "owner removed the installation diagram")
+            self.assertLess(page.index('class="hero-intro"'), page.index('class="hero-media"'))
+            self.assertLess(page.index('class="hero-media"'), page.index('class="benefit-strip"'))
+            self.assertNotIn("atlas.js", page)
+        self.assertFalse((self.out / "assets/atlas.js").exists())
+        self.assertFalse((WEBSITE / "atlas.html").exists())
+        self.assertFalse((WEBSITE / "atlas.js").exists())
+        self.assertNotIn(".atlas", (self.out / "assets/site.css").read_text())
 
 
 if __name__ == "__main__":

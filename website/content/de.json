@@ -147,21 +147,5 @@
   "release_instructions_alt": "Releasekandidat Alpha 12 in Graphite: der echte Geräte-Tab Instructions mit einer nativen Überarbeitung für die fiktive Küchenbeleuchtung.",
   "release_support_title": "Unbekanntes Gerät. Brauchbarer Bericht.",
   "release_support_body": "Einen Offline-Supportbericht erstellen, auch ohne passendes Produkt oder Gateway. Prüfen, bewusst zur Weitergabe freigeben und lokal speichern. Nichts verschickt sich selbst.",
-  "release_support_alt": "Releasekandidat Alpha 12 in Graphite: das echte Formular Device support report mit Datenschutzhinweisen, optionalen Identitätsfeldern und Offline-Vorschau; nichts wurde weitergegeben.",
-  "atlas_title": "Eine kleine Anlage. Eine verbundene Idee.",
-  "atlas_not_live": "Illustration, kein Live-Verkehr",
-  "atlas_line": "TP-Linie",
-  "atlas_switch": "Taster",
-  "atlas_sensor": "Präsenzmelder",
-  "atlas_actuator": "Lichtaktor",
-  "atlas_group": "Küchenlicht",
-  "atlas_topology": "Topologie · dieselbe TP-Linie",
-  "atlas_logical": "Logische Links · Gruppenadresse",
-  "atlas_disclosure": "Fiktive Anlage. Durchgezogene Äste zeigen die Linienzugehörigkeit; gestrichelte Links die Zuordnung von Kommunikationsobjekten, keine Leitungen oder Telegramme. Wähle einen Knoten. Kein Schaltschrank kam zu Schaden.",
-  "atlas_notes": "Erklärungen zum Diagramm",
-  "atlas_line_note": "Die drei fiktiven Geräte gehören zur TP-Linie 1.1. Individuelle Adressen kennzeichnen Geräte in der Topologie. Das ist eine vereinfachte Zuordnung, kein Elektroplan.",
-  "atlas_switch_note": "Taster 1.1.10 hat ein Schalt-Kommunikationsobjekt, das mit Gruppenadresse 0/0/1 verbunden ist. Der gestrichelte Pfad zeigt diese projektierte Zuordnung, kein gesendetes Telegramm.",
-  "atlas_sensor_note": "Präsenzmelder 1.1.11 hat ein Schalt-Kommunikationsobjekt an derselben Gruppenadresse 0/0/1. Verschiedene Geräte können ein logisches Ziel teilen, ohne dieselbe individuelle Adresse zu haben.",
-  "atlas_actuator_note": "Lichtaktor 1.1.20 hat ein Schalt-Kommunikationsobjekt an 0/0/1. Die Illustration erklärt nur den Zusammenhang; sie belegt keine Geräteunterstützung oder einen erfolgreichen Download.",
-  "atlas_group_note": "0/0/1 „Küchenlicht“ ist eine logische Gruppenadresse, die Kommunikationsobjekte dieser Geräte verbindet. Hier laufen die violetten Pfade zusammen – kein physischer Knoten und kein Live-Wert."
+  "release_support_alt": "Releasekandidat Alpha 12 in Graphite: das echte Formular Device support report mit Datenschutzhinweisen, optionalen Identitätsfeldern und Offline-Vorschau; nichts wurde weitergegeben."
 }

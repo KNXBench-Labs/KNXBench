@@ -3,6 +3,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceNode } from "./bindings/DeviceNode";
 type ProductResolution = "Resolved" | "NoReference" | "NoDatabase" | "NotInDatabase" | "Unavailable";
 import { collectDevices, flattenBuildingParts } from "./treeUtils";
+import { isPendingProgramming, pendingParts } from "./programmingState";
 
 export interface DeviceCatalogRow {
   id: number;
@@ -29,7 +30,7 @@ export interface DeviceListRow extends DeviceNode {
   catalog?: DeviceCatalogRow;
 }
 export type DeviceSortColumn = "address" | "name" | "manufacturer" | "product" | "orderNumber"
-  | "topology" | "building" | "com_object_count" | "description";
+  | "topology" | "building" | "com_object_count" | "description" | "programming";
 export interface DeviceSort { column: DeviceSortColumn; descending: boolean }
 
 export function projectDeviceRows(tree: ProjectTree, metadata: DeviceCatalogRow[] = []): DeviceListRow[] {
@@ -62,20 +63,34 @@ function columnText(row: DeviceListRow, column: DeviceSortColumn): string {
     case "topology": return row.topology.join(" · ");
     case "building": return row.building.join(" · ");
     case "com_object_count": return String(row.com_object_count);
+    case "programming": return "";
     default: return row[column] ?? "";
   }
 }
 
-export function visibleDeviceRows(rows: DeviceListRow[], query: string, sort: DeviceSort, language: string): DeviceListRow[] {
+/** Pending parts count; a device whose state was not reported sorts apart, below none pending. */
+function pendingRank(row: DeviceListRow): number {
+  return row.pending_programming ? pendingParts(row).length : -1;
+}
+
+/** View options beyond the text filter. */
+export interface DeviceRowOptions {
+  /** Only devices with at least one part not programmed (ADR-0129). */
+  pendingOnly?: boolean;
+}
+
+export function visibleDeviceRows(rows: DeviceListRow[], query: string, sort: DeviceSort, language: string,
+  options: DeviceRowOptions = {}): DeviceListRow[] {
   const needle = query.trim().toLocaleLowerCase(language);
   const collator = new Intl.Collator(language, { numeric: true, sensitivity: "base" });
-  const filtered = rows.filter((row) => !needle || [
+  const filtered = rows.filter((row) => !options.pendingOnly || pendingParts(row).length > 0).filter((row) => !needle || [
     row.name, row.address, row.description, ...row.topology, ...row.building,
     row.catalog?.manufacturerName, row.catalog?.manufacturerId, row.catalog?.productText,
     row.catalog?.orderNumber, row.catalog?.productRef,
   ].some((value) => value?.toLocaleLowerCase(language).includes(needle)));
   return filtered.sort((a, b) => {
     const order = sort.column === "com_object_count" ? a.com_object_count - b.com_object_count
+      : sort.column === "programming" ? pendingRank(a) - pendingRank(b)
       : collator.compare(columnText(a, sort.column), columnText(b, sort.column));
     return (sort.descending ? -order : order) || a.id - b.id;
   });
@@ -109,7 +124,8 @@ export function admitDeviceCatalog(value: unknown): DeviceCatalog {
     if (!device || typeof device !== "object" || device.id !== row.id || typeof device.name !== "string"
         || (device.address !== null && typeof device.address !== "string")
         || (device.description !== null && typeof device.description !== "string")
-        || !Number.isSafeInteger(device.com_object_count) || (device.com_object_count as number) < 0) return fail();
+        || !Number.isSafeInteger(device.com_object_count) || (device.com_object_count as number) < 0
+        || (device.pending_programming !== undefined && !isPendingProgramming(device.pending_programming))) return fail();
     ids.add(row.id as number);
   }
   return value as DeviceCatalog;

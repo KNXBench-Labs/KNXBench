@@ -64,6 +64,10 @@ server_incarnation?: string,
  */
 project_incarnation?: number,
 /**
+ * Session-only per-device content revisions for read-only bus comparisons (P4).
+ */
+comparison_revisions?: Record<number, number>,
+/**
  * Application-owned response ordering. Pure/offline projections omit it;
  * the server stamps every UI-facing snapshot while holding its project
  * lock. This is transient metadata and is never persisted in a KNX or

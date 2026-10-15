@@ -14,6 +14,21 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — P4 package 1 source candidate, **not yet delivered**: confirmed
+  single/filtered device queue, progress/draining cancellation and session tags;
+  P3 content revisions, verified five-byte application identity, bounded 0701
+  group-address/association decoding and visible raw read ranges. Nine named
+  semantic mutants and restored-source postflight pass; separate self-review
+  closes identity/count/freshness and actual-browser contrast/height findings.
+  EN/DE production 1440/400 images were visually checked, including horizontal
+  device-value access at 400 px. The frozen branch gate passes all 49 stages: Rust 4565 (206 opt-ins
+  ignored), Vitest 3601/260 files, default Chromium566, fifteen production
+  configs325 and repeated browser75; Python148/one inherited skip. All2802
+  source files are unchanged. Actual merged gates/publication are pending. Named parameter attribution remains package 2; no bus access.
+  [Goal](goals/ui-feedback-p1-p4.md), [contract](contracts/device-comparison.md),
+  [ADR-0130](adr/0130-session-device-comparison.md).
+
+
 - 2026-10-15 — Owner UI feedback P3 delivered in source after Alpha 11 ([goal](goals/ui-feedback-p1-p4.md),
   [ADR-0129](adr/0129-per-part-pending-programming.md)): existing loaded flags
   follow edits in the same undo step and server full/partial/address write

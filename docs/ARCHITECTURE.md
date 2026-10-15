@@ -1,5 +1,15 @@
 # Architecture
 
+## Session device comparison (P4)
+
+[ADR-0130](adr/0130-session-device-comparison.md) reuses P3 programming content
+for transient per-device comparison revisions and the existing read-only
+management/gateway path. The product adapter decodes verified image placements;
+UI owns the confirmed serial queue and volatile tags, never a KNX codec.
+Server requests/results bind server/project incarnation, device ID and content
+revision. Package 1 decodes tables and retains every raw range; named parameter
+attribution is a separate package. No project/product schema migration.
+
 ## Per-part pending programming (P3)
 
 [ADR-0129](adr/0129-per-part-pending-programming.md) keeps transition rules out

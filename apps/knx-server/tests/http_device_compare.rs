@@ -115,6 +115,11 @@ fn mdt(config: SimulatorConfig) -> Arc<SimulatedDevice> {
         },
     );
     device.preset_property(0, PID_MANUFACTURER_ID, &[0x00, 0x83]);
+    device.preset_property(
+        3,
+        knx_core::commissioning::properties::PID_PROGRAM_VERSION,
+        &[0x00, 0x83, 0x00, 0x27, 0x15],
+    );
     device.preset_property(0, PID_HARDWARE_TYPE, &[0, 0, 0, 0, 0x01, 0x27]);
     device.preset_memory(0x4000, &[0x05]);
     device.preset_memory(0x4001, &[0x11, 0x43]);
@@ -251,6 +256,53 @@ fn no_writes(device: &SimulatedDevice) -> bool {
             Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. } | Seen::Restart { .. }
         )
     })
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn comparison_exposes_bound_decoded_values_and_rejects_wrong_application() {
+    let h = harness(SimulatorConfig::default()).await;
+    let (_, tree) = send(&h.app, get("/api/project")).await;
+    let (status, result) = compare(&h.app, json!({"address": "1.1.67", "gateway": GATEWAY})).await;
+    assert_eq!(status, StatusCode::OK, "{result}");
+    assert_eq!(result["serverIncarnation"], tree["server_incarnation"]);
+    assert_eq!(result["projectIncarnation"], tree["project_incarnation"]);
+    let id = result["deviceId"].as_u64().expect("stable device identity");
+    assert_eq!(
+        result["comparisonRevision"],
+        tree["comparison_revisions"][id.to_string()]
+    );
+    let decoded = result["decoded"]
+        .as_array()
+        .expect("decoded comparison rows");
+    let ia = decoded
+        .iter()
+        .find(|r| r["kind"] == "individualAddress")
+        .expect("individual address row");
+    assert_eq!(
+        ia["project"],
+        Value::Null,
+        "the download plan does not overwrite the individual address"
+    );
+    assert_eq!(
+        ia["device"],
+        Value::Null,
+        "unread bytes must not be invented"
+    );
+    assert!(ia["reason"].is_string());
+    assert!(decoded.iter().any(|r| r["kind"] == "association"));
+    assert!(decoded
+        .iter()
+        .any(|r| r["kind"] == "raw" && r["project"] != r["device"]));
+    h.device.preset_property(
+        3,
+        knx_core::commissioning::properties::PID_PROGRAM_VERSION,
+        &[0x00, 0x83, 0x00, 0x27, 0x14],
+    );
+    let (status, wrong) = compare(&h.app, json!({"address": "1.1.67", "gateway": GATEWAY})).await;
+    assert_eq!(status, StatusCode::BAD_GATEWAY, "{wrong}");
+    assert_eq!(wrong["kind"], "deviceCompareWrongApplication");
+    assert!(no_writes(&h.device));
 }
 
 #[tokio::test]

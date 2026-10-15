@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "package": "owner-ui-feedback-p4-tables",
+  "status": "branch-accepted-integration-pending",
+  "decisionRecord": "docs/goals/ui-feedback-p1-p4.md",
+  "storeMigration": false,
+  "busAccess": "none; simulator and intercepted browser only",
+  "review": {
+    "kind": "separate-in-session-self-review",
+    "independentApproval": false,
+    "findingsClosed": [
+      "R1 semantic badge contrast",
+      "R2 viewport budget",
+      "R3 bounded table attribution",
+      "R4 affected bus-write invalidation",
+      "R5 conflicting identity witnesses"
+    ]
+  },
+  "focused": {
+    "vitestPassed": 3601,
+    "vitestFiles": 260,
+    "browserPassed": 6,
+    "productionScreenshots": {
+      "widths": [
+        1440,
+        400
+      ],
+      "languages": [
+        "en",
+        "de"
+      ],
+      "visuallyInspected": true,
+      "limits": "Local horizontal table and vertical list scroll; global achievement toast can overlap a lower control."
+    }
+  },
+  "mutations": {
+    "count": 9,
+    "namedBehavioralFailuresRequired": true,
+    "allAccepted": true,
+    "sourceRestored": true,
+    "postflight": [
+      {
+        "stage": "core",
+        "exit": 0
+      },
+      {
+        "stage": "net",
+        "exit": 0
+      },
+      {
+        "stage": "tables",
+        "exit": 0
+      },
+      {
+        "stage": "web",
+        "exit": 0
+      }
+    ],
+    "cases": [
+      "application-guard",
+      "p3-content-revisions",
+      "table-byte-order",
+      "device-tsap-source",
+      "raw-retention",
+      "queue-continues",
+      "response-device-binding",
+      "queue-cancellation",
+      "visible-filter-scope"
+    ]
+  },
+  "branchGate": {
+    "complete": true,
+    "success": true,
+    "wrapperExit": 0,
+    "expectedStages": 49,
+    "actualStages": 49,
+    "sourceFrozen": true,
+    "sourceHead": "5f065bed48603b1a8bf8b377ef469aa6f71a72b8",
+    "sourceFiles": 2802,
+    "diffSha256": "9108dcc4c04c48181c60debe5e2576a231f8caacc97d19f3f48532ced2b08f5a",
+    "stages": {
+      "build": 0,
+      "tsc": 0,
+      "flow_study": 0,
+      "theme_fixtures": 0,
+      "tsc_tsconfig_browser_tooling": 0,
+      "tsc_tsconfig_catalogue_fixtures": 0,
+      "tsc_tsconfig_communication_fixtures": 0,
+      "tsc_tsconfig_comparison_fixtures": 0,
+      "tsc_tsconfig_device_download_support": 0,
+      "tsc_tsconfig_dialogs_fixtures": 0,
+      "tsc_tsconfig_flow_study": 0,
+      "tsc_tsconfig_ga_members_download_fixtures": 0,
+      "tsc_tsconfig_history_fixtures": 0,
+      "tsc_tsconfig_instructions_fixtures": 0,
+      "tsc_tsconfig_notes_fixtures": 0,
+      "tsc_tsconfig_parameters_fixtures": 0,
+      "tsc_tsconfig_rename_fixtures": 0,
+      "tsc_tsconfig_structure_fixtures": 0,
+      "tsc_tsconfig_task_status_fixtures": 0,
+      "tsc_tsconfig_theme_fixtures": 0,
+      "tsc_tsconfig_ux_feedback": 0,
+      "vitest": 0,
+      "chromium": 0,
+      "cfg_playwright_catalogue_config": 0,
+      "cfg_playwright_communication_config": 0,
+      "cfg_playwright_device_download_support_config": 0,
+      "cfg_playwright_devices_config": 0,
+      "cfg_playwright_dialogs_config": 0,
+      "cfg_playwright_ga_members_download_config": 0,
+      "cfg_playwright_group_addresses_config": 0,
+      "cfg_playwright_instructions_config": 0,
+      "cfg_playwright_notes_config": 0,
+      "cfg_playwright_parameters_config": 0,
+      "cfg_playwright_reload_guard_config": 0,
+      "cfg_playwright_structure_config": 0,
+      "cfg_playwright_task_status_config": 0,
+      "cfg_playwright_updates_config": 0,
+      "cfg_playwright_ux_feedback_config": 0,
+      "repeat": 0,
+      "fmt": 0,
+      "clippy": 0,
+      "rust_tests": 0,
+      "py_tools": 0,
+      "check-layering": 0,
+      "check-headers": 0,
+      "check-anchors": 0,
+      "check-ledger": 0,
+      "check-corpus-gates": 0,
+      "diff_check": 0
+    },
+    "counts": {
+      "vitest": {
+        "passed": 3601,
+        "failed": 0
+      },
+      "chromium": {
+        "passed": 566,
+        "failed": 0
+      },
+      "repeat": {
+        "passed": 75,
+        "failed": 0
+      },
+      "cfg_playwright_catalogue_config": {
+        "passed": 10,
+        "failed": 0
+      },
+      "cfg_playwright_communication_config": {
+        "passed": 59,
+        "failed": 0
+      },
+      "cfg_playwright_device_download_support_config": {
+        "passed": 33,
+        "failed": 0
+      },
+      "cfg_playwright_devices_config": {
+        "passed": 25,
+        "failed": 0
+      },
+      "cfg_playwright_dialogs_config": {
+        "passed": 14,
+        "failed": 0
+      },
+      "cfg_playwright_ga_members_download_config": {
+        "passed": 23,
+        "failed": 0
+      },
+      "cfg_playwright_group_addresses_config": {
+        "passed": 19,
+        "failed": 0
+      },
+      "cfg_playwright_instructions_config": {
+        "passed": 15,
+        "failed": 0
+      },
+      "cfg_playwright_notes_config": {
+        "passed": 13,
+        "failed": 0
+      },
+      "cfg_playwright_parameters_config": {
+        "passed": 15,
+        "failed": 0
+      },
+      "cfg_playwright_reload_guard_config": {
+        "passed": 2,
+        "failed": 0
+      },
+      "cfg_playwright_structure_config": {
+        "passed": 8,
+        "failed": 0
+      },
+      "cfg_playwright_task_status_config": {
+        "passed": 27,
+        "failed": 0
+      },
+      "cfg_playwright_updates_config": {
+        "passed": 7,
+        "failed": 0
+      },
+      "cfg_playwright_ux_feedback_config": {
+        "passed": 55,
+        "failed": 0
+      },
+      "rust": {
+        "passed": 4565,
+        "failed": 0,
+        "ignored": 206
+      }
+    },
+    "productionConfigs": 15,
+    "productionPassed": 325,
+    "screenshotsVisuallyInspected": 4,
+    "visualLimits": "Narrow tables and target lists scroll locally; existing transient achievement toast can overlap the lower Close control."
+  },
+  "mergedGate": {
+    "status": "pending"
+  },
+  "publication": {
+    "status": "pending"
+  },
+  "next": "Package 2 parameter bit attribution and named values; no stop after package 1 publication."
+}

@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 07:42
+- **Completed:** P4 package 1 frozen branch gate accepted:49/49 intended stages zero,2802 source files unchanged. Rust4565/0 (206 opt-ins ignored),Vitest3601/260files,default566,production325/15configs,repeats75,Python148/one inherited skip. Actual branch production EN/DE1440/400 images inspected. Nine named semantic mutants and four restored-green postflight stages retained. No real bus access or migration.
+- **Pending/Next Steps:** Commit reviewed package1 scope after docs-only closure checks, merge fresh origin/main in owned p4-compare-tables-merged-20261015, complete full merged gate plus network-isolated OriginalData/oracle sweep, inspect merged images, normal push/readback and private archival/cleanup. Then immediately package2 parameter bit attribution/named values. Not delivered yet; no further Go needed.
+- **Notes for Codex oder Claude:** Receipt profile cache/scratch/p4-20261015/package1-branch-gate/receipt.json binds5f065bed+diff9108dcc4, not a future commit. Existing narrow target/table scroll and transient achievement-toast overlap disclosed. Universal support reporter separately owns new support modules/ADR131; preserve all its upstream entries and additive API/catalogue/docs work. Shared root remains stale/dirty; no root sync/subagents/hardware/release/deploy.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 06:53
+- **Completed:** P4 package 1 implemented locally in isolated p4-compare-tables-20261015: bound single/filtered read-only queue, progress/draining cancellation, session tags using P3 content revisions; exact application identity before memory; bounded 0701 address/association decoding and complete raw ranges. Separate five-finding self-review corrected count/identity/freshness and actual-browser contrast/height issues. Nine named semantic mutants accepted, sources restored and four postflight stages zero. Full Vitest preflight 3601/260 files and six production browser cases pass; EN/DE1440/400 images inspected. Handbook/FEATURES/goal/ADR/contract explicitly mark package 2 pending.
+- **Pending/Next Steps:** Package 1 is NOT accepted/published: run full template RUST=1/fifteen-config branch gate, commit reviewed scope, integrate fresh origin/main and repeat full merged gate, inspect merged images, normal push/readback and own evidence/cleanup. Then immediately implement package 2 bit attribution/named parameter comparison. No new owner Go needed.
+- **Notes for Codex oder Claude:** Private evidence and builders: profile cache/scratch/p4-20261015; mutation receipt complete/successful, nine cases, four postflight stages. Initial browser sort-oracle error, two visual REDs and unavailable TypeScript JS scanner verifier retained separately; stdlib token comparison proves three unchanged generated files restored. Own ignored OriginalData link is for simulator/corpus tests only. No subagents, bus access, release/deploy or shared-root synchronization; preserve foreign #23 worktrees and root bytes/index.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 06:04
 - **Completed:** Claimed owner-approved P4 from fresh origin/main 8c42e4f5 in isolated p4-compare-tables-20261015 worktree. Startup handover/goal read; shared root and foreign issue23 trees/index remain untouched. No implementation, runtime acceptance or hardware action claimed.
 - **Pending/Next Steps:** Map compare/identity, gateway admission, image generation and P3 tracking; deliver table comparison package, then parameter bit attribution package without stopping between them. Each needs RED/GREEN, targeted mutants, separate self-review, EN/DE1440/400 inspection, complete RUST=1/fifteen-config branch and fresh-main merged gates, normal push/readback and owned cleanup.

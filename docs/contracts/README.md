@@ -6,6 +6,7 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 
 | Contract | Scope |
 | --- | --- |
+| [device-comparison](device-comparison.md) | P4 bound read-only comparison, volatile tags, decoder/raw integrity and staged parameter scope |
 | [IMPORT_BOUNDARY_CONTRACT](IMPORT_BOUNDARY_CONTRACT.md) | AR06 project-import boundary: namespaces, project vs. product-package evidence |
 | [MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md) | AR05 manufacturer-report omissions: design and evidence |
 | [PARAMETER_SEMANTICS_BOUNDARY](PARAMETER_SEMANTICS_BOUNDARY.md) | AR07 supported parameter semantics and their research boundary |

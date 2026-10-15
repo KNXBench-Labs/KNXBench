@@ -17,6 +17,7 @@ the reconciliation; formal task dispositions remain in the engineering ledger.
 | Browser files live on the server | Save is not a download; Export project gives you a local copy | [Web and desktop differences](user-guide/11-web-and-docker.md#web-build-versus-desktop-build) |
 | Shared server, shared project | One password and one undo stack are not collaborative editing | [Deployment](user-guide/11-web-and-docker.md#authentication) |
 | Programming marks are project belief (P3 source after Alpha 11) | Adr/App/Par/GA track edits and server writes, not a live comparison. Recovered snapshot undo after a later write can conservatively show additional pending parts. Reconcile external/CLI programming manually; resolve refresh/storage warnings before trusting flags | [Programming marks](user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11) |
+| Device comparison is a session observation (P4 source package 1) | Relevant edits invalidate tags, but external device changes are not monitored. The verified 0701 table decoder preserves all raw bytes; other table formats and named parameter values remain unsupported in package 1. Cancel drains the current read. | [Comparison scope](../contracts/device-comparison.md) |
 | Hardware support is narrow | A project edit is not commissioning, and undo does not reverse a bus write | [Bus boundaries](user-guide/07-bus-and-interfaces.md#what-knxbench-does-and-does-not-do-on-a-bus) |
 
 This chapter collects the limitations most likely to be noticed by someone

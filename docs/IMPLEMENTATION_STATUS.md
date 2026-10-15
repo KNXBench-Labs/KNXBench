@@ -14,6 +14,20 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Alpha 12 full gate **refused**, not release-ready: candidate
+  `02d823c4` passed frontend3626, ordinary Rust4597 (207 ignored), all declared
+  fixture browsers and native-evidence, then stopped in the native naming proof.
+  Its test sought the welcome-only open button while a project was already open.
+  Original failure and unchanged source proof are retained; remaining checks did
+  not run and no finalizer override is admissible. The three native edit specs
+  now use the real, dialog-scoped Commands route: targeted EN/DE wide/narrow
+  native naming, Functions and naming-recipe proofs pass12/12, with TypeScript
+  and unchanged source/demo checks. This is test-route evidence, not acceptance
+  of a new release candidate; a fresh full74-stage candidate gate is pending.
+  Existing exact-candidate AppImage/MCP and amd64/arm64 Docker dry runs succeeded
+  with publication jobs skipped; they do not certify a future successor SHA.
+  [Refusal evidence](evidence/alpha12-gate-refusal-2026-10-15.json).
+
 - 2026-10-15 — Alpha 12 media/docs preparation: ten actual integrated-application
   PNGs (real server, fictional house/native-created device, loopback-only network)
   and seven decoded-pixel-equal lossless website WebPs. Website24, current docs,

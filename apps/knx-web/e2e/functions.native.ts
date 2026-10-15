@@ -9,7 +9,11 @@ const data = process.env.KNX_RENAME_NATIVE_DATA!;
 const demo = process.env.KNX_RENAME_NATIVE_DEMO!;
 if (!data || !demo || process.env.KNX_RENAME_ISOLATED !== "1") throw new Error("Run only through the isolated verification runner.");
 async function openCopy(page: Page, m: typeof en | typeof de) {
-  await page.getByRole("button", { name: m["workbench.openNativeTitle"], exact: true }).click();
+  // The reset already opens a project; the welcome-only button is absent here and on reload.
+  await page.getByRole("button", { name: m["toolbar.commands"], exact: true }).click();
+  const commands = page.getByRole("dialog", { name: m["command.overlayLabel"], exact: true });
+  await commands.getByRole("combobox").fill(m["toolbar.openNativeProject"]);
+  await commands.getByRole("option", { name: m["toolbar.openNativeProject"], exact: true }).click();
   await page.getByRole("dialog", { name: m["fsPicker.open"], exact: true }).getByRole("button", { name: "functions-demo.knxdb", exact: true }).click();
   await expect(page.locator(".welcome-card")).toHaveCount(0);
 }

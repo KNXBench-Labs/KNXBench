@@ -14,6 +14,20 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — P4 package 2 **branch accepted, integration pending**: actual
+  active parameter writes retain name/reference/segment/offset/bit/width in
+  transient DownloadImage metadata. Named project/device values invert existing
+  numeric and text writers, checking exact coverage, matching supported masks
+  and final-plan equality. Unsupported/negative patterns stay unknown with
+  EN/DE reasons and every raw range visible. No schema/device support change.
+  Named RED/GREEN, seven restored-source semantic mutants, separate in-session
+  review and production EN/DE1440/400 browser cases pass. Full branch49/49:
+  Vitest3611, Chromium570, repeated87 and Rust4570 pass. Source-content manifests
+  and template input hashes are exact; the outer add-N index-only mismatch is
+  reconciled with negative controls, original receipt retained. Fresh-main
+  merged gates plus corpus/publication are pending.
+  [Contract](contracts/device-comparison.md), [ADR-0130](adr/0130-session-device-comparison.md).
+
 - 2026-10-15 — Exact-approved story `2026-10-15.4` publication variant accepted
   on integration `bb2961aa`: story76, website24, tooling163 (one inherited skip),
   Chromium46/46 and Firefox46/46; all44 actual public-build frames inspected.

@@ -1,0 +1,344 @@
+{
+ "base_candidate": "2026-10-08.4",
+ "candidate_id": "2026-10-15.2",
+ "content_sha256": "61653081a6ffa5eae1458a97056f1f56c2d4c8b2137677ceabdeb6e978b25e67",
+ "counts": {
+  "chapters": 12,
+  "editorial_relations": 19,
+  "events": 68,
+  "events_with_uncertainty": 44,
+  "excerpts": 43,
+  "gaps": 8,
+  "relations": 87
+ },
+ "cutoff": {
+  "conversations_through": "2026-10-15T07:04:36+02:00",
+  "git_commit": "2d4ec5f90ccc66ed7d03c65fdd02213faf34fc69",
+  "git_commit_time": "2026-10-15T07:04:36+02:00",
+  "git_ref": "origin/main",
+  "label": "Published main-branch source through 15 October 2026, 07:04:36 CEST (UTC+02:00); selected local project conversations through the same cutoff. Earlier source coverage is inherited and disclosed separately."
+ },
+ "diff": {
+  "base": "2026-10-08.4",
+  "chapters": {
+   "added": [
+    "ch-evidence",
+    "ch-public",
+    "ch-reversible"
+   ],
+   "changed": {
+    "ch-alpha": [
+     "body"
+    ],
+    "ch-bus": [
+     "body"
+    ],
+    "ch-foundations": [
+     "body"
+    ],
+    "ch-hands": [
+     "body"
+    ],
+    "ch-interface": [
+     "body"
+    ],
+    "ch-now": [
+     "body",
+     "lede",
+     "number"
+    ],
+    "ch-real-files": [
+     "body"
+    ],
+    "ch-seed": [
+     "body"
+    ],
+    "ch-trust": [
+     "body"
+    ]
+   },
+   "removed": []
+  },
+  "cutoff_changed": true,
+  "events": {
+   "added": [
+    "alpha-eleven",
+    "catalogue-with-return",
+    "fictional-demos",
+    "functions-not-sites",
+    "mcp-narrow-writer",
+    "measured-gates",
+    "native-memory",
+    "native-writing-desk",
+    "pending-is-belief",
+    "project-carries-programs",
+    "public-front-door",
+    "source-not-semantics",
+    "system-two-still-no",
+    "tester-not-verdict",
+    "two-more-live-scopes",
+    "universal-report-design",
+    "users-find-edges"
+   ],
+   "changed": {
+    "alpha-backlog": [
+     "evidence"
+    ],
+    "alpha-review": [
+     "evidence"
+    ],
+    "appimage": [
+     "evidence"
+    ],
+    "codex-joins-goal": [
+     "evidence"
+    ],
+    "desktop-shell": [
+     "evidence"
+    ],
+    "drop-ets-export": [
+     "summary"
+    ],
+    "ets-import": [
+     "evidence"
+    ],
+    "evidence-of-record": [
+     "evidence",
+     "summary",
+     "uncertainty"
+    ],
+    "exact-or-refused": [
+     "evidence"
+    ],
+    "fail-closed-writes": [
+     "evidence"
+    ],
+    "first-alpha": [
+     "evidence"
+    ],
+    "first-device-programmed": [
+     "evidence"
+    ],
+    "fun-features": [
+     "evidence"
+    ],
+    "goals-closed": [
+     "evidence",
+     "summary"
+    ],
+    "hermes-shared-memory": [
+     "evidence",
+     "uncertainty"
+    ],
+    "history-scrub": [
+     "evidence"
+    ],
+    "home-bus-boundary": [
+     "evidence"
+    ],
+    "languages": [
+     "evidence"
+    ],
+    "lcars-theme": [
+     "evidence"
+    ],
+    "legacy-vd": [
+     "evidence",
+     "summary",
+     "uncertainty"
+    ],
+    "licence-agpl": [
+     "evidence"
+    ],
+    "licence-cla-reversal": [
+     "evidence"
+    ],
+    "live-bus-first": [
+     "evidence"
+    ],
+    "loading-jokes": [
+     "evidence"
+    ],
+    "mcp-adapter": [
+     "evidence",
+     "summary",
+     "uncertainty"
+    ],
+    "one-name": [
+     "evidence"
+    ],
+    "paperclip-experiment": [
+     "evidence"
+    ],
+    "product-database": [
+     "evidence"
+    ],
+    "project-stats": [
+     "evidence"
+    ],
+    "rename-knxbench": [
+     "evidence"
+    ],
+    "schema-23-refusal": [
+     "evidence"
+    ],
+    "server-https": [
+     "evidence"
+    ],
+    "spec-knowledge-base": [
+     "evidence"
+    ],
+    "split-goals": [
+     "evidence"
+    ],
+    "story-first-preview": [
+     "evidence"
+    ],
+    "strategy-written": [
+     "excerpts"
+    ],
+    "telegram-flow": [
+     "evidence"
+    ],
+    "test-transmitting-building": [
+     "evidence"
+    ],
+    "theme-packs-crt": [
+     "evidence"
+    ],
+    "ui-redesign": [
+     "evidence"
+    ],
+    "web-docker": [
+     "evidence"
+    ],
+    "wizards": [
+     "evidence"
+    ]
+   },
+   "moved_in_graph": [],
+   "removed": []
+  },
+  "gaps": {
+   "added": [
+    "gap-cutoff-and-release",
+    "gap-hardware-scope",
+    "gap-new-conversations",
+    "gap-real-formats"
+   ],
+   "changed": {
+    "gap-cloud": [
+     "detail"
+    ],
+    "gap-rewritten-history": [
+     "detail"
+    ]
+   },
+   "removed": []
+  },
+  "initial": false,
+  "narrator_changed": true,
+  "relations": {
+   "added": [
+    "rel-evidence-of-record-system-two-still-no",
+    "rel-exact-or-refused-native-memory",
+    "rel-first-alpha-alpha-eleven",
+    "rel-first-device-programmed-two-more-live-scopes",
+    "rel-mcp-adapter-mcp-narrow-writer",
+    "rel-native-memory-mcp-narrow-writer",
+    "rel-native-memory-native-writing-desk",
+    "rel-native-memory-pending-is-belief",
+    "rel-native-memory-source-not-semantics",
+    "rel-product-database-catalogue-with-return",
+    "rel-product-database-project-carries-programs",
+    "rel-public-front-door-fictional-demos",
+    "rel-public-front-door-users-find-edges",
+    "rel-source-not-semantics-functions-not-sites",
+    "rel-split-goals-measured-gates",
+    "rel-story-first-preview-public-front-door",
+    "rel-system-two-still-no-universal-report-design",
+    "rel-tester-not-verdict-universal-report-design",
+    "rel-two-more-live-scopes-tester-not-verdict",
+    "rel-users-find-edges-alpha-eleven"
+   ],
+   "changed": {
+    "rel-schema-drop": [
+     "note"
+    ]
+   },
+   "removed": []
+  },
+  "sources_changed": true,
+  "strands": {
+   "added": [],
+   "changed": {},
+   "removed": []
+  },
+  "target": "2026-10-15.2"
+ },
+ "privacy_warnings": [
+  {
+   "category": "possible KNX individual address or version number",
+   "excerpt": "…as written: version 0.1.0-alpha.1, no tag, no…",
+   "location": "events[alpha-backlog].aside",
+   "severity": "warning"
+  },
+  {
+   "category": "possible KNX individual address or version number",
+   "excerpt": "…s decision, version 0.1.0-alpha.4 was tagged …",
+   "location": "events[first-alpha].summary",
+   "severity": "warning"
+  }
+ ],
+ "provenance": {
+  "events_without_private_provenance": [],
+  "private_entries_without_public_event": 0,
+  "private_locators_found_in_payload": 0,
+  "status": "checked"
+ },
+ "publication": {
+  "approved": false,
+  "note": "Prepared for private review only. Publishing requires a separate explicit approval of this exact story_sha256."
+ },
+ "schema": "knxbench-evolution-manifest/1",
+ "source_coverage": [
+  {
+   "id": "src-git",
+   "status": "read"
+  },
+  {
+   "id": "src-docs",
+   "status": "read"
+  },
+  {
+   "id": "src-claude",
+   "status": "partial"
+  },
+  {
+   "id": "src-codex",
+   "status": "partial"
+  },
+  {
+   "id": "src-hermes",
+   "status": "partial"
+  },
+  {
+   "id": "src-paperclip",
+   "status": "partial"
+  },
+  {
+   "id": "src-chat-exports",
+   "status": "partial"
+  },
+  {
+   "id": "src-local-story",
+   "status": "read"
+  },
+  {
+   "id": "src-cloud",
+   "status": "unavailable"
+  }
+ ],
+ "story_sha256": "cea07d4065173501881da7f74d451ede1cd74fc64fd8f1177228caa18ebe4426",
+ "tool_version": "0.1.0"
+}

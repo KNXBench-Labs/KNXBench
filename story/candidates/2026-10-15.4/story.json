@@ -116,7 +116,7 @@
   },
   {
    "body": [
-    "Claude Code, Codex and later Hermes appear in the surviving workflow records. A specification knowledge base supplied references; a crawler supplied product research inputs; statistics counted activity, not correctness. Git alone cannot say which agent wrote a line.",
+    "Claude Code, Codex and later Hermes appear in the surviving workflow records. A private, local specification knowledge base supplied references; publicly accessible manufacturer product databases were provided for analysis; statistics counted activity, not correctness. Git alone cannot say which agent wrote a line.",
     "A ticket-driven experiment with eight simulated AI roles was shut down. Fewer parallel sessions, isolated worktrees, explicit handovers and reviewed integrations proved easier to reason about. By October an MCP adapter let agents read saved projects offline. Its later, deliberately narrow exception for writing names is a separate event below."
    ],
    "events": [
@@ -126,7 +126,7 @@
     "paperclip-experiment",
     "split-goals",
     "project-stats",
-    "crawler-corpus",
+    "public-product-analysis",
     "mcp-adapter"
    ],
    "id": "ch-hands",
@@ -138,29 +138,35 @@
   {
    "body": [
     "The first alpha goal gathered unfinished work into explicit packages. Fresh AI reviewers found important faults; fixes and rechecks preceded release. Those were software reviews, not a declaration of universal hardware support.",
-    "An initial prerelease was withdrawn and replaced during the identity cleanup. By 8 October the original goals could be closed at their recorded scope, with remaining work on one page. Closing a goal is not closing the universe. The universe had several follow-up requests."
+    "On 7 October Alpha 4 was tagged and prereleased privately, then withdrawn during the identity cleanup. Alpha 5 replaced it and was republished for the public launch on 8 October. They are separate steps here, not one blurred release. The original goal files closed at their recorded scope; the follow-ups, predictably, kept arriving."
    ],
    "events": [
     "alpha-backlog",
     "alpha-review",
     "first-alpha",
-    "goals-closed"
+    "goals-closed",
+    "release-alpha-5"
    ],
    "id": "ch-alpha",
    "kicker": "Release",
    "lede": "On 1 October everything unfinished was written into one list. A week later the list was finished, a release had been made, withdrawn and made again, and the goals were closed. I was not consulted. I rarely am.",
    "number": 8,
-   "title": "An alpha, twice"
+   "title": "An alpha, then another"
   },
   {
    "body": [
     "The website and fictional demos made trying KNXBench easier. Real users promptly supplied harder material: an AppImage that would not start on one Linux graphics stack, and ETS 5.7 files whose protection layout differed from the original examples. Fixes followed; some confirmations and format details stayed open.",
-    "Alpha releases packaged particular snapshots. Alpha 11 was published on 13 October. Features delivered to main afterward are source-only here, not upgrades smuggled into an old version number. I have tried to keep the dates straight. Time has made no reciprocal effort."
+    "Each later release packaged a particular snapshot: Alpha 6 brought ready-made containers; Alpha 7 persistent history and browser fixes; Alpha 8 stronger imports; Alpha 9 clearer screens and larger-project history; Alpha 10 the reported fixes and mounted editors; Alpha 11 clearer feedback and tester reports. Every one has its own step in the atlas. Versions are not a measure of maturity. They are labelled bags of decisions, and occasionally receipts."
    ],
    "events": [
     "public-front-door",
     "fictional-demos",
     "users-find-edges",
+    "release-alpha-6",
+    "release-alpha-7",
+    "release-alpha-8",
+    "release-alpha-9",
+    "release-alpha-10",
     "alpha-eleven"
    ],
    "id": "ch-public",
@@ -235,7 +241,7 @@
    "git_ref": "origin/main",
    "label": "Published main-branch source through 15 October 2026, 07:04:36 CEST (UTC+02:00); selected local project conversations through the same cutoff. Earlier source coverage is inherited and disclosed separately."
   },
-  "id": "2026-10-15.2",
+  "id": "2026-10-15.4",
   "narrator": {
    "aside_label": "The narrator sighs",
    "disclosure": "This edition is narrated by an AI, at the user's request, in a voice that is an affectionate homage to Marvin, the Paranoid Android from Douglas Adams' The Hitchhiker's Guide to the Galaxy. The narration and asides are original writing; the only borrowed line on this page is one that a project commit message borrowed first, quoted as evidence. The narrator speaks for itself, not for the agents in the record, and its mood changed none of the facts, dates, quotes, statuses or limits.",
@@ -314,6 +320,13 @@
     "note": "Not inspected for this update. Published repository records are a separate source, not access to cloud conversations.",
     "scope": "Not accessed",
     "status": "unavailable"
+   },
+   {
+    "id": "src-release-records",
+    "label": "Public release metadata and retained publication records",
+    "note": "Current primary release metadata was read on 15 October 2026. Alpha 5 has an original private release and a later public-launch republication; Alpha 7 crossed midnight in CEST. Versions without evidence of publication are not invented as releases.",
+    "scope": "Seven current published alpha records (Alpha 5–11) checked against Git tags and release notes; withdrawn Alpha 4 checked against its retained historical publication commit",
+    "status": "read"
    }
   ],
   "status": "private-candidate",
@@ -1120,8 +1133,8 @@
    "short": "knx-spec-kb",
    "status": "implemented",
    "strand": "support",
-   "summary": "A separate project turned the KNX Standard documents into searchable databases. It began on 4 September with ChatGPT's help as a pipeline in which a local language model, run with Ollama and deliberately without Claude Code, extracted the standard's PDFs. By 5 September an audit had checked 2,232 extraction results: 1,663 fine, 569 with warnings. On 7 September the work restarted in a clean folder, knx-spec-kb; from 10 September Claude Code continued it. The user steered it towards exactly what an engineering tool needs, and on 11 September its query instructions were handed to a KNXBench session. Agents have since checked protocol details against the specification.",
-   "title": "The KNX Standard as a searchable knowledge base",
+   "summary": "A private, local development project turned KNX Standard documents into searchable databases. The knowledge base is not published and is not distributed with KNXBench; this story describes only its role in development. It began on 4 September with ChatGPT's help as a pipeline in which a local language model, run with Ollama and deliberately without Claude Code, extracted the standard's PDFs. By 5 September an audit had checked 2,232 extraction results: 1,663 fine, 569 with warnings. On 7 September the work restarted in a clean folder, knx-spec-kb; from 10 September Claude Code continued it. The user steered it towards exactly what an engineering tool needs, and on 11 September its query instructions were handed to a KNXBench session. Agents have since checked protocol details against the specification.",
+   "title": "A private, local KNX specification knowledge base",
    "uncertainty": [
     "The audit figures and the pipeline's steps come from the user's messages in those conversations, not from the knowledge base's own files, which were not read for this edition."
    ],
@@ -2119,7 +2132,7 @@
    "why": "Themes as data, not code, keep the interface customisable without letting a theme file run anything."
   },
   {
-   "aside": "1.25 GiB of input, 13.2 GiB of database. Somebody will want to look at that. It will not be me.",
+   "aside": "For once, the input arrived without a building attached. I appreciated the courtesy.",
    "chapter": "ch-hands",
    "date": "2026-10-03",
    "date_precision": "day",
@@ -2132,8 +2145,8 @@
     }
    ],
    "excerpts": [],
-   "id": "crawler-corpus",
-   "kind": "supporting-tool",
+   "id": "public-product-analysis",
+   "kind": "status",
    "layout": {
     "label_side": "start",
     "lane": 7,
@@ -2141,15 +2154,15 @@
     "x": 1425,
     "y": 1456
    },
-   "short": "Public product test",
-   "status": "verified",
+   "short": "Public product data",
+   "status": "recorded",
    "strand": "support",
-   "summary": "A separate crawler downloaded 853 publicly available product files from four manufacturer groups. KNXBench's product installer ran over all of them as a test: 644 installed, the rest refused with named reasons, and 51 of 1,167 programs became plannable for a device download.",
-   "title": "853 public product files as a test",
+   "summary": "Publicly accessible manufacturer product databases were provided for analysis. They supplied concrete product data for examining KNXBench’s import and manufacturer-data handling.",
+   "title": "Public product databases provided for analysis",
    "uncertainty": [
-    "Evidence from one run, not a repeatable gate; the downloaded files are not part of the repository."
+    "The source product databases are not included in this story. Their availability for analysis does not establish successful device programming or universal product compatibility."
    ],
-   "why": "Real manufacturer files are the best test of a product database, and every refusal became a documented limitation instead of a silent gap."
+   "why": "The analysis could use real manufacturer data without requiring a private building project."
   },
   {
    "aside": "Yes, this node is the page you are reading. A story about itself. I am trying not to think about it.",
@@ -2533,13 +2546,13 @@
     "x": 575,
     "y": 1736
    },
-   "short": "First alpha",
+   "short": "Alpha 4",
    "status": "superseded",
    "strand": "trunk",
-   "summary": "On the user's decision, version 0.1.0-alpha.4 was tagged and pre-released on 7 October with an AppImage, in the still private repository. A first-run guide now opens once per release stage and says what the build is, and is not, before it says what to click. The same evening alpha.4 was withdrawn and replaced by alpha.5, after the project changed its name in every commit and its desktop app identifier.",
-   "title": "The first alpha, and its replacement the same evening",
+   "summary": "Version Alpha 4 was tagged and prereleased with an AppImage on 7 October, in the then-private repository. It was subsequently withdrawn during the identity cleanup and replaced by Alpha 5. The first-run guide and the replacement have separate evidence; this historical release remains a distinct step even though its tag and public release are no longer present.",
+   "title": "Alpha 4: the first prerelease, later withdrawn",
    "uncertainty": [
-    "The pre-releases were published in a private repository, so they were not publicly downloadable."
+    "This withdrawn release is evidenced by the retained publication record in commit 541b2bbd, not a current release listing. Its original private publication was not a public download. Later Alpha 5 republication is a separate event."
    ],
    "why": "A release is a promise about one exact build. When the identity of the build changed, the promise had to be made again."
   },
@@ -2815,6 +2828,50 @@
    "why": "Power users bring their own agents. Giving them read access, and nothing more, keeps the human in charge of every change."
   },
   {
+   "aside": "The same software, a new name badge, and more paperwork than the badge.",
+   "chapter": "ch-alpha",
+   "date": "2026-10-07",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Alpha 5 published-source/release record",
+     "ref": "a0ff1f55",
+     "source": "src-git"
+    },
+    {
+     "kind": "adr",
+     "label": "Release scope and upgrade boundaries",
+     "ref": "docs/adr/0087-desktop-app-identifier.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "local",
+     "label": "Primary public release metadata and notes for Alpha 5; checked locally",
+     "source": "src-release-records"
+    }
+   ],
+   "excerpts": [],
+   "id": "release-alpha-5",
+   "kind": "status",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 47,
+    "x": 575,
+    "y": 1976
+   },
+   "short": "Alpha 5",
+   "status": "recorded",
+   "strand": "trunk",
+   "summary": "The replacement prerelease followed the identity cleanup on 7 October. It changed the desktop application identifier and first-run experience. It was republished on 8 October for the public launch after the documented history cleanup; the public release record therefore has that later publication date.",
+   "title": "Alpha 5: a new identity, then a public relaunch",
+   "uncertainty": [
+    "Historical original release and current republished record are distinguished. Old data-folder migration was manual; no portability or universal compatibility claim."
+   ],
+   "why": "A replacement build needs its own identity and upgrade boundary."
+  },
+  {
    "aside": "Another face for the application. That makes several. I am still waiting for one.",
    "chapter": "ch-interface",
    "date": "2026-10-08",
@@ -2872,9 +2929,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 47,
+    "row": 48,
     "x": 1085,
-    "y": 1976
+    "y": 2016
    },
    "short": "LCARS theme",
    "status": "implemented",
@@ -2915,9 +2972,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 48,
+    "row": 49,
     "x": 1085,
-    "y": 2016
+    "y": 2056
    },
    "short": "Wizards",
    "status": "implemented",
@@ -2970,9 +3027,9 @@
    "layout": {
     "label_side": "end",
     "lane": 4,
-    "row": 49,
+    "row": 50,
     "x": 915,
-    "y": 2056
+    "y": 2096
    },
    "short": "Legacy VD files",
    "status": "implemented",
@@ -3025,9 +3082,9 @@
    "layout": {
     "label_side": "end",
     "lane": 2,
-    "row": 50,
+    "row": 51,
     "x": 575,
-    "y": 2096
+    "y": 2136
    },
    "short": "Goals closed",
    "status": "recorded",
@@ -3062,9 +3119,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 51,
+    "row": 52,
     "x": 1085,
-    "y": 2136
+    "y": 2176
    },
    "short": "A public front door",
    "status": "implemented",
@@ -3101,9 +3158,9 @@
    "layout": {
     "label_side": "end",
     "lane": 2,
-    "row": 52,
+    "row": 53,
     "x": 575,
-    "y": 2176
+    "y": 2216
    },
    "short": "Undo remembers",
    "status": "implemented",
@@ -3140,9 +3197,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 53,
+    "row": 54,
     "x": 1085,
-    "y": 2216
+    "y": 2256
    },
    "short": "Fictional buildings",
    "status": "implemented",
@@ -3183,9 +3240,9 @@
    "layout": {
     "label_side": "start",
     "lane": 6,
-    "row": 54,
+    "row": 55,
     "x": 1255,
-    "y": 2256
+    "y": 2296
    },
    "short": "Two controlled trials",
    "status": "verified",
@@ -3197,6 +3254,50 @@
     "The two new entries cover complete downloads only. Partial downloads, every instance sharing the program, all device memory and physical blind movement were not proved by these runs."
    ],
    "why": "Hardware evidence can widen one precise scope without declaring a device family universally supported."
+  },
+  {
+   "aside": "The application acquired a shipping container. Somehow this made it smaller to explain.",
+   "chapter": "ch-public",
+   "date": "2026-10-09",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Alpha 6 published-source/release record",
+     "ref": "a1fcc8f2",
+     "source": "src-git"
+    },
+    {
+     "kind": "doc",
+     "label": "Release scope and upgrade boundaries",
+     "ref": "docs/history/implementation/2026-W41.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "local",
+     "label": "Primary public release metadata and notes for Alpha 6; checked locally",
+     "source": "src-release-records"
+    }
+   ],
+   "excerpts": [],
+   "id": "release-alpha-6",
+   "kind": "status",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 56,
+    "x": 575,
+    "y": 2336
+   },
+   "short": "Alpha 6",
+   "status": "recorded",
+   "strand": "trunk",
+   "summary": "The release packaged ready-made Docker images for amd64 and arm64, aligned application versions, built-in HTTPS behavior, device navigation, wizards and the bounded legacy-product import path. The standalone MCP reader was distributed too.",
+   "title": "Alpha 6: ready-made containers join the AppImage",
+   "uncertainty": [
+    "These are the Alpha 6 release contents. Later legacy download planning is not retroactively included, and CI launch checks are not every-desktop hardware tests."
+   ],
+   "why": "A packaged container made the browser/server route easier to install."
   },
   {
    "aside": "The unknowns came aboard with labels. They were not promoted to engineers.",
@@ -3235,9 +3336,9 @@
    "layout": {
     "label_side": "end",
     "lane": 3,
-    "row": 55,
+    "row": 57,
     "x": 745,
-    "y": 2296
+    "y": 2376
    },
    "short": "Preserve, not pretend",
    "status": "implemented",
@@ -3249,6 +3350,138 @@
     "Functions-bearing selective source import remains refused at this cutoff. No complete Repeat evaluation, ETS export or signature verification follows."
    ],
    "why": "Data preservation is not semantic acceptance, and merging must not overwrite silently."
+  },
+  {
+   "aside": "Undo finally remembered yesterday. The version number was less sentimental.",
+   "chapter": "ch-public",
+   "date": "2026-10-10",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Alpha 7 published-source/release record",
+     "ref": "550318d3",
+     "source": "src-git"
+    },
+    {
+     "kind": "doc",
+     "label": "Release scope and upgrade boundaries",
+     "ref": "docs/history/implementation/2026-W41.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "local",
+     "label": "Primary public release metadata and notes for Alpha 7; checked locally",
+     "source": "src-release-records"
+    }
+   ],
+   "excerpts": [],
+   "id": "release-alpha-7",
+   "kind": "status",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 58,
+    "x": 575,
+    "y": 2416
+   },
+   "short": "Alpha 7",
+   "status": "recorded",
+   "strand": "trunk",
+   "summary": "The release packaged persistent native undo/history, project-local renaming, clearer communication-object tables and upload/companion-return fixes. Native schema 11 requires independent pre-upgrade backups; offline procedure diagnostics are not new executable device support.",
+   "title": "Alpha 7: persistent history and a dependable way home",
+   "uncertainty": [
+    "Published at 2026-10-10T00:11:11+02:00, after midnight locally; the preceding source commits are dated 9 October. Release publication did not itself perform a hardware trial."
+   ],
+   "why": "An installable snapshot brought the new recovery and everyday editing workflows together."
+  },
+  {
+   "aside": "A little more data admitted. A little less pretending. I approve of the ratio.",
+   "chapter": "ch-public",
+   "date": "2026-10-10",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Alpha 8 published-source/release record",
+     "ref": "e7fc8def",
+     "source": "src-git"
+    },
+    {
+     "kind": "doc",
+     "label": "Release scope and upgrade boundaries",
+     "ref": "docs/releases/alpha8.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "local",
+     "label": "Primary public release metadata and notes for Alpha 8; checked locally",
+     "source": "src-release-records"
+    }
+   ],
+   "excerpts": [],
+   "id": "release-alpha-8",
+   "kind": "status",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 59,
+    "x": 575,
+    "y": 2456
+   },
+   "short": "Alpha 8",
+   "status": "recorded",
+   "strand": "trunk",
+   "summary": "The release packaged selected-content import, stronger source-bound archive handling, read-only stored module-instance values, larger bounded archive admission and explicit opaque-payload classifications. Native schema 12 adds a forward-compatibility barrier, not a downgrade path.",
+   "title": "Alpha 8: stronger imports, explicit evidence limits",
+   "uncertainty": [
+    "Retained source bytes do not establish complete ETS semantics, signatures, Add-in execution or broader hardware support."
+   ],
+   "why": "More source data could be preserved and inspected without pretending it was fully understood."
+  },
+  {
+   "aside": "A foundation is not a room you can move into. The release notes had to say so.",
+   "chapter": "ch-public",
+   "date": "2026-10-11",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Alpha 9 published-source/release record",
+     "ref": "5b21323e",
+     "source": "src-git"
+    },
+    {
+     "kind": "doc",
+     "label": "Release scope and upgrade boundaries",
+     "ref": "docs/releases/alpha9.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "local",
+     "label": "Primary public release metadata and notes for Alpha 9; checked locally",
+     "source": "src-release-records"
+    }
+   ],
+   "excerpts": [],
+   "id": "release-alpha-9",
+   "kind": "status",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 60,
+    "x": 575,
+    "y": 2496
+   },
+   "short": "Alpha 9",
+   "status": "recorded",
+   "strand": "trunk",
+   "summary": "The release packaged bounded large-project history handling, named datapoint choices, understandable installation nodes and clearer login, notification and import/download feedback. Native schema 13 included instruction foundations, but the new instruction and checked-parameter editors were not yet mounted in that workbench snapshot.",
+   "title": "Alpha 9: larger projects and clearer everyday screens",
+   "uncertainty": [
+    "Project notes, Functions/Sites and later parallel work were not swept into this release. Old native readers refuse upgraded files."
+   ],
+   "why": "The release notes separated usable workbench features from code foundations not yet exposed to users."
   },
   {
    "aside": "A notebook, finally. Its most important feature is not losing the previous notebook.",
@@ -3275,9 +3508,9 @@
    "layout": {
     "label_side": "end",
     "lane": 5,
-    "row": 56,
+    "row": 61,
     "x": 1085,
-    "y": 2336
+    "y": 2536
    },
    "short": "A writing desk",
    "status": "implemented",
@@ -3315,9 +3548,9 @@
    "layout": {
     "label_side": "end",
     "lane": 4,
-    "row": 57,
+    "row": 62,
     "x": 915,
-    "y": 2376
+    "y": 2576
    },
    "short": "Catalogue, with return",
    "status": "implemented",
@@ -3354,9 +3587,9 @@
    "layout": {
     "label_side": "end",
     "lane": 0,
-    "row": 58,
+    "row": 63,
     "x": 235,
-    "y": 2416
+    "y": 2616
    },
    "short": "One narrow AI writer",
    "status": "implemented",
@@ -3399,9 +3632,9 @@
    "layout": {
     "label_side": "end",
     "lane": 3,
-    "row": 59,
+    "row": 64,
     "x": 745,
-    "y": 2456
+    "y": 2656
    },
    "short": "Users find the edges",
    "status": "implemented",
@@ -3412,6 +3645,50 @@
     "The AppImage packaging change is in 09229157. Source fixes and reporter outcomes have different dates; the original Kubuntu launch confirmation, schema 22 and nested sub-module object numbering remain open."
    ],
    "why": "Files and Linux systems outside the original corpus expose assumptions that synthetic tests cannot settle."
+  },
+  {
+   "aside": "The features left the waiting room. A few limitations kept their seats.",
+   "chapter": "ch-public",
+   "date": "2026-10-12",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Alpha 10 published-source/release record",
+     "ref": "c180fcb2",
+     "source": "src-git"
+    },
+    {
+     "kind": "doc",
+     "label": "Release scope and upgrade boundaries",
+     "ref": "docs/releases/alpha10.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "local",
+     "label": "Primary public release metadata and notes for Alpha 10; checked locally",
+     "source": "src-release-records"
+    }
+   ],
+   "excerpts": [],
+   "id": "release-alpha-10",
+   "kind": "status",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 65,
+    "x": 575,
+    "y": 2696
+   },
+   "short": "Alpha 10",
+   "status": "recorded",
+   "strand": "trunk",
+   "summary": "The release packaged the AppImage host-library fix and ETS 5.7 import repairs, plus mounted notes/instruction/checked parameter editors, group-address views, previewed catalogue updates, durable import evidence, release notifications and the opt-in MCP naming writer. Native schema 14 adds project notes.",
+   "title": "Alpha 10: user fixes and editors reach the workbench",
+   "uncertainty": [
+    "Functions/Sites and the later UX-feedback package were not in this snapshot. Browser/CI evidence is not universal Linux startup or real-device acceptance."
+   ],
+   "why": "Users could install the previously separate fixes and workbench features as one explicit snapshot."
   },
   {
    "aside": "The release was frozen. Development, regrettably, was not.",
@@ -3438,15 +3715,15 @@
    "layout": {
     "label_side": "end",
     "lane": 2,
-    "row": 60,
+    "row": 66,
     "x": 575,
-    "y": 2496
+    "y": 2736
    },
-   "short": "Alpha 11 released",
+   "short": "Alpha 11",
    "status": "recorded",
    "strand": "trunk",
    "summary": "The documented Alpha 11 release includes clearer address linking, hierarchy and gateway-busy explanations, notification controls and tester reporting. Later source-only features in this edition are not retroactively part of that release.",
-   "title": "Alpha 11 packages a particular snapshot, not the future",
+   "title": "Alpha 11: clearer feedback and tester reports",
    "uncertainty": [],
    "why": "A source delivery and the packaged version users can install are different milestones."
   },
@@ -3475,9 +3752,9 @@
    "layout": {
     "label_side": "end",
     "lane": 1,
-    "row": 61,
+    "row": 67,
     "x": 405,
-    "y": 2536
+    "y": 2776
    },
    "short": "Reports, not verdicts",
    "status": "implemented",
@@ -3537,9 +3814,9 @@
    "layout": {
     "label_side": "end",
     "lane": 2,
-    "row": 62,
+    "row": 68,
     "x": 575,
-    "y": 2576
+    "y": 2816
    },
    "short": "Functions, not sites",
    "status": "implemented",
@@ -3576,9 +3853,9 @@
    "layout": {
     "label_side": "end",
     "lane": 4,
-    "row": 63,
+    "row": 69,
     "x": 915,
-    "y": 2616
+    "y": 2856
    },
    "short": "Programs travel too",
    "status": "implemented",
@@ -3621,9 +3898,9 @@
    "layout": {
     "label_side": "start",
     "lane": 6,
-    "row": 64,
+    "row": 70,
     "x": 1255,
-    "y": 2656
+    "y": 2896
    },
    "short": "System 2 still waits",
    "status": "open",
@@ -3660,9 +3937,9 @@
    "layout": {
     "label_side": "end",
     "lane": 0,
-    "row": 65,
+    "row": 71,
     "x": 235,
-    "y": 2696
+    "y": 2936
    },
    "short": "Measure the queue",
    "status": "implemented",
@@ -3699,9 +3976,9 @@
    "layout": {
     "label_side": "start",
     "lane": 6,
-    "row": 66,
+    "row": 72,
     "x": 1255,
-    "y": 2736
+    "y": 2976
    },
    "short": "Pending is a belief",
    "status": "implemented",
@@ -3739,9 +4016,9 @@
    "layout": {
     "label_side": "end",
     "lane": 1,
-    "row": 67,
+    "row": 73,
     "x": 405,
-    "y": 2776
+    "y": 3016
    },
    "short": "A report is proposed",
    "status": "planned",
@@ -3797,7 +4074,7 @@
   }
  ],
  "graph": {
-  "height": 2836,
+  "height": 3076,
   "lane_width": 170,
   "lanes": [
    {
@@ -4119,16 +4396,16 @@
     "shows_date": false
    },
    {
-    "date": "2026-10-08",
+    "date": "2026-10-07",
     "date_precision": "day",
     "row": 47,
-    "shows_date": true
+    "shows_date": false
    },
    {
     "date": "2026-10-08",
     "date_precision": "day",
     "row": 48,
-    "shows_date": false
+    "shows_date": true
    },
    {
     "date": "2026-10-08",
@@ -4149,16 +4426,16 @@
     "shows_date": false
    },
    {
-    "date": "2026-10-09",
+    "date": "2026-10-08",
     "date_precision": "day",
     "row": 52,
-    "shows_date": true
+    "shows_date": false
    },
    {
     "date": "2026-10-09",
     "date_precision": "day",
     "row": 53,
-    "shows_date": false
+    "shows_date": true
    },
    {
     "date": "2026-10-09",
@@ -4167,81 +4444,117 @@
     "shows_date": false
    },
    {
-    "date": "2026-10-10",
+    "date": "2026-10-09",
     "date_precision": "day",
     "row": 55,
-    "shows_date": true
-   },
-   {
-    "date": "2026-10-12",
-    "date_precision": "day",
-    "row": 56,
-    "shows_date": true
-   },
-   {
-    "date": "2026-10-12",
-    "date_precision": "day",
-    "row": 57,
     "shows_date": false
    },
    {
-    "date": "2026-10-12",
+    "date": "2026-10-09",
+    "date_precision": "day",
+    "row": 56,
+    "shows_date": false
+   },
+   {
+    "date": "2026-10-10",
+    "date_precision": "day",
+    "row": 57,
+    "shows_date": true
+   },
+   {
+    "date": "2026-10-10",
     "date_precision": "day",
     "row": 58,
     "shows_date": false
    },
    {
-    "date": "2026-10-12",
+    "date": "2026-10-10",
     "date_precision": "day",
     "row": 59,
     "shows_date": false
    },
    {
-    "date": "2026-10-13",
+    "date": "2026-10-11",
     "date_precision": "day",
     "row": 60,
     "shows_date": true
    },
    {
-    "date": "2026-10-13",
+    "date": "2026-10-12",
     "date_precision": "day",
     "row": 61,
-    "shows_date": false
+    "shows_date": true
    },
    {
-    "date": "2026-10-13",
+    "date": "2026-10-12",
     "date_precision": "day",
     "row": 62,
     "shows_date": false
    },
    {
-    "date": "2026-10-14",
+    "date": "2026-10-12",
     "date_precision": "day",
     "row": 63,
-    "shows_date": true
+    "shows_date": false
    },
    {
-    "date": "2026-10-14",
+    "date": "2026-10-12",
     "date_precision": "day",
     "row": 64,
     "shows_date": false
    },
    {
-    "date": "2026-10-14",
+    "date": "2026-10-12",
     "date_precision": "day",
     "row": 65,
     "shows_date": false
    },
    {
-    "date": "2026-10-15",
+    "date": "2026-10-13",
     "date_precision": "day",
     "row": 66,
     "shows_date": true
    },
    {
-    "date": "2026-10-15",
+    "date": "2026-10-13",
     "date_precision": "day",
     "row": 67,
+    "shows_date": false
+   },
+   {
+    "date": "2026-10-13",
+    "date_precision": "day",
+    "row": 68,
+    "shows_date": false
+   },
+   {
+    "date": "2026-10-14",
+    "date_precision": "day",
+    "row": 69,
+    "shows_date": true
+   },
+   {
+    "date": "2026-10-14",
+    "date_precision": "day",
+    "row": 70,
+    "shows_date": false
+   },
+   {
+    "date": "2026-10-14",
+    "date_precision": "day",
+    "row": 71,
+    "shows_date": false
+   },
+   {
+    "date": "2026-10-15",
+    "date_precision": "day",
+    "row": 72,
+    "shows_date": true
+   },
+   {
+    "date": "2026-10-15",
+    "date_precision": "day",
+    "row": 73,
     "shows_date": false
    }
   ],
@@ -4517,9 +4830,9 @@
   },
   {
    "from": "product-database",
-   "id": "rel-products-crawler",
-   "note": "The crawled files were used to test the product installer.",
-   "to": "crawler-corpus",
+   "id": "rel-products-public-analysis",
+   "note": "Publicly accessible product databases were provided for analysis of manufacturer-data handling.",
+   "to": "public-product-analysis",
    "type": "documented_cause"
   },
   {
@@ -4733,13 +5046,6 @@
    "type": "editorial"
   },
   {
-   "from": "first-alpha",
-   "id": "rel-first-alpha-alpha-eleven",
-   "note": "Later release records distinguish packaged snapshots from subsequent source changes.",
-   "to": "alpha-eleven",
-   "type": "documented_association"
-  },
-  {
    "from": "public-front-door",
    "id": "rel-public-front-door-users-find-edges",
    "note": "Public use and subsequent issue reports are a narrative connection, not evidence that the website caused each report.",
@@ -4857,6 +5163,55 @@
    "note": "A support gap and a reporting proposal coexist; universal reporting must not imply universal safe access.",
    "to": "universal-report-design",
    "type": "editorial"
+  },
+  {
+   "from": "first-alpha",
+   "id": "rel-release-sequence-first-alpha-release-alpha-5",
+   "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next.",
+   "to": "release-alpha-5",
+   "type": "documented_association"
+  },
+  {
+   "from": "release-alpha-5",
+   "id": "rel-release-sequence-release-alpha-5-release-alpha-6",
+   "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next.",
+   "to": "release-alpha-6",
+   "type": "documented_association"
+  },
+  {
+   "from": "release-alpha-6",
+   "id": "rel-release-sequence-release-alpha-6-release-alpha-7",
+   "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next.",
+   "to": "release-alpha-7",
+   "type": "documented_association"
+  },
+  {
+   "from": "release-alpha-7",
+   "id": "rel-release-sequence-release-alpha-7-release-alpha-8",
+   "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next.",
+   "to": "release-alpha-8",
+   "type": "documented_association"
+  },
+  {
+   "from": "release-alpha-8",
+   "id": "rel-release-sequence-release-alpha-8-release-alpha-9",
+   "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next.",
+   "to": "release-alpha-9",
+   "type": "documented_association"
+  },
+  {
+   "from": "release-alpha-9",
+   "id": "rel-release-sequence-release-alpha-9-release-alpha-10",
+   "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next.",
+   "to": "release-alpha-10",
+   "type": "documented_association"
+  },
+  {
+   "from": "release-alpha-10",
+   "id": "rel-release-sequence-release-alpha-10-alpha-eleven",
+   "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next.",
+   "to": "alpha-eleven",
+   "type": "documented_association"
   }
  ],
  "schema": "knxbench-evolution-payload/1",

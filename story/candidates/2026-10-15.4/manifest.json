@@ -1,15 +1,15 @@
 {
  "base_candidate": "2026-10-08.4",
- "candidate_id": "2026-10-15.2",
- "content_sha256": "61653081a6ffa5eae1458a97056f1f56c2d4c8b2137677ceabdeb6e978b25e67",
+ "candidate_id": "2026-10-15.4",
+ "content_sha256": "91bfa0696264fcf6dcc946962c954bca3c4078f85f08fe213eb7d50afdec2d20",
  "counts": {
   "chapters": 12,
   "editorial_relations": 19,
-  "events": 68,
-  "events_with_uncertainty": 44,
+  "events": 74,
+  "events_with_uncertainty": 50,
   "excerpts": 43,
   "gaps": 8,
-  "relations": 87
+  "relations": 93
  },
  "cutoff": {
   "conversations_through": "2026-10-15T07:04:36+02:00",
@@ -28,7 +28,9 @@
    ],
    "changed": {
     "ch-alpha": [
-     "body"
+     "body",
+     "events",
+     "title"
     ],
     "ch-bus": [
      "body"
@@ -37,7 +39,8 @@
      "body"
     ],
     "ch-hands": [
-     "body"
+     "body",
+     "events"
     ],
     "ch-interface": [
      "body"
@@ -73,6 +76,13 @@
     "pending-is-belief",
     "project-carries-programs",
     "public-front-door",
+    "public-product-analysis",
+    "release-alpha-10",
+    "release-alpha-5",
+    "release-alpha-6",
+    "release-alpha-7",
+    "release-alpha-8",
+    "release-alpha-9",
     "source-not-semantics",
     "system-two-still-no",
     "tester-not-verdict",
@@ -114,7 +124,11 @@
      "evidence"
     ],
     "first-alpha": [
-     "evidence"
+     "evidence",
+     "short",
+     "summary",
+     "title",
+     "uncertainty"
     ],
     "first-device-programmed": [
      "evidence"
@@ -186,7 +200,9 @@
      "evidence"
     ],
     "spec-knowledge-base": [
-     "evidence"
+     "evidence",
+     "summary",
+     "title"
     ],
     "split-goals": [
      "evidence"
@@ -216,8 +232,15 @@
      "evidence"
     ]
    },
-   "moved_in_graph": [],
-   "removed": []
+   "moved_in_graph": [
+    "goals-closed",
+    "lcars-theme",
+    "legacy-vd",
+    "wizards"
+   ],
+   "removed": [
+    "crawler-corpus"
+   ]
   },
   "gaps": {
    "added": [
@@ -242,7 +265,6 @@
    "added": [
     "rel-evidence-of-record-system-two-still-no",
     "rel-exact-or-refused-native-memory",
-    "rel-first-alpha-alpha-eleven",
     "rel-first-device-programmed-two-more-live-scopes",
     "rel-mcp-adapter-mcp-narrow-writer",
     "rel-native-memory-mcp-narrow-writer",
@@ -251,8 +273,16 @@
     "rel-native-memory-source-not-semantics",
     "rel-product-database-catalogue-with-return",
     "rel-product-database-project-carries-programs",
+    "rel-products-public-analysis",
     "rel-public-front-door-fictional-demos",
     "rel-public-front-door-users-find-edges",
+    "rel-release-sequence-first-alpha-release-alpha-5",
+    "rel-release-sequence-release-alpha-10-alpha-eleven",
+    "rel-release-sequence-release-alpha-5-release-alpha-6",
+    "rel-release-sequence-release-alpha-6-release-alpha-7",
+    "rel-release-sequence-release-alpha-7-release-alpha-8",
+    "rel-release-sequence-release-alpha-8-release-alpha-9",
+    "rel-release-sequence-release-alpha-9-release-alpha-10",
     "rel-source-not-semantics-functions-not-sites",
     "rel-split-goals-measured-gates",
     "rel-story-first-preview-public-front-door",
@@ -266,7 +296,9 @@
      "note"
     ]
    },
-   "removed": []
+   "removed": [
+    "rel-products-crawler"
+   ]
   },
   "sources_changed": true,
   "strands": {
@@ -274,19 +306,13 @@
    "changed": {},
    "removed": []
   },
-  "target": "2026-10-15.2"
+  "target": "2026-10-15.4"
  },
  "privacy_warnings": [
   {
    "category": "possible KNX individual address or version number",
    "excerpt": "…as written: version 0.1.0-alpha.1, no tag, no…",
    "location": "events[alpha-backlog].aside",
-   "severity": "warning"
-  },
-  {
-   "category": "possible KNX individual address or version number",
-   "excerpt": "…s decision, version 0.1.0-alpha.4 was tagged …",
-   "location": "events[first-alpha].summary",
    "severity": "warning"
   }
  ],
@@ -337,8 +363,12 @@
   {
    "id": "src-cloud",
    "status": "unavailable"
+  },
+  {
+   "id": "src-release-records",
+   "status": "read"
   }
  ],
- "story_sha256": "cea07d4065173501881da7f74d451ede1cd74fc64fd8f1177228caa18ebe4426",
+ "story_sha256": "081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8",
  "tool_version": "0.1.0"
 }

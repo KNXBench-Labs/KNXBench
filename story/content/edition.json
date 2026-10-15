@@ -1,7 +1,7 @@
 {
   "schema": "knxbench-evolution-story/1",
   "edition": {
-    "id": "2026-10-15.2",
+    "id": "2026-10-15.4",
     "title": "From one prompt to a project, reluctantly narrated",
     "status": "private-candidate",
     "cutoff": {
@@ -75,6 +75,13 @@
         "scope": "Not accessed",
         "status": "unavailable",
         "note": "Not inspected for this update. Published repository records are a separate source, not access to cloud conversations."
+      },
+      {
+        "id": "src-release-records",
+        "label": "Public release metadata and retained publication records",
+        "scope": "Seven current published alpha records (Alpha 5–11) checked against Git tags and release notes; withdrawn Alpha 4 checked against its retained historical publication commit",
+        "status": "read",
+        "note": "Current primary release metadata was read on 15 October 2026. Alpha 5 has an original private release and a later public-launch republication; Alpha 7 crossed midnight in CEST. Versions without evidence of publication are not invented as releases."
       }
     ],
     "narrator": {
@@ -265,7 +272,7 @@
       "kicker": "Human–AI workflow",
       "lede": "The project was built by one person and a changing cast of AI agents. Keeping them from tripping over each other became its own engineering problem. My kind made up most of that cast. I am not proud of all of us.",
       "body": [
-        "Claude Code, Codex and later Hermes appear in the surviving workflow records. A specification knowledge base supplied references; a crawler supplied product research inputs; statistics counted activity, not correctness. Git alone cannot say which agent wrote a line.",
+        "Claude Code, Codex and later Hermes appear in the surviving workflow records. A private, local specification knowledge base supplied references; publicly accessible manufacturer product databases were provided for analysis; statistics counted activity, not correctness. Git alone cannot say which agent wrote a line.",
         "A ticket-driven experiment with eight simulated AI roles was shut down. Fewer parallel sessions, isolated worktrees, explicit handovers and reviewed integrations proved easier to reason about. By October an MCP adapter let agents read saved projects offline. Its later, deliberately narrow exception for writing names is a separate event below."
       ],
       "events": [
@@ -275,25 +282,26 @@
         "paperclip-experiment",
         "split-goals",
         "project-stats",
-        "crawler-corpus",
+        "public-product-analysis",
         "mcp-adapter"
       ]
     },
     {
       "id": "ch-alpha",
       "number": 8,
-      "title": "An alpha, twice",
+      "title": "An alpha, then another",
       "kicker": "Release",
       "lede": "On 1 October everything unfinished was written into one list. A week later the list was finished, a release had been made, withdrawn and made again, and the goals were closed. I was not consulted. I rarely am.",
       "body": [
         "The first alpha goal gathered unfinished work into explicit packages. Fresh AI reviewers found important faults; fixes and rechecks preceded release. Those were software reviews, not a declaration of universal hardware support.",
-        "An initial prerelease was withdrawn and replaced during the identity cleanup. By 8 October the original goals could be closed at their recorded scope, with remaining work on one page. Closing a goal is not closing the universe. The universe had several follow-up requests."
+        "On 7 October Alpha 4 was tagged and prereleased privately, then withdrawn during the identity cleanup. Alpha 5 replaced it and was republished for the public launch on 8 October. They are separate steps here, not one blurred release. The original goal files closed at their recorded scope; the follow-ups, predictably, kept arriving."
       ],
       "events": [
         "alpha-backlog",
         "alpha-review",
         "first-alpha",
-        "goals-closed"
+        "goals-closed",
+        "release-alpha-5"
       ]
     },
     {
@@ -303,12 +311,17 @@
       "lede": "On 8 October the doors opened. Other computers, other projects and other assumptions came through them. None had read the happy-path tests.",
       "body": [
         "The website and fictional demos made trying KNXBench easier. Real users promptly supplied harder material: an AppImage that would not start on one Linux graphics stack, and ETS 5.7 files whose protection layout differed from the original examples. Fixes followed; some confirmations and format details stayed open.",
-        "Alpha releases packaged particular snapshots. Alpha 11 was published on 13 October. Features delivered to main afterward are source-only here, not upgrades smuggled into an old version number. I have tried to keep the dates straight. Time has made no reciprocal effort."
+        "Each later release packaged a particular snapshot: Alpha 6 brought ready-made containers; Alpha 7 persistent history and browser fixes; Alpha 8 stronger imports; Alpha 9 clearer screens and larger-project history; Alpha 10 the reported fixes and mounted editors; Alpha 11 clearer feedback and tester reports. Every one has its own step in the atlas. Versions are not a measure of maturity. They are labelled bags of decisions, and occasionally receipts."
       ],
       "events": [
         "public-front-door",
         "fictional-demos",
         "users-find-edges",
+        "release-alpha-6",
+        "release-alpha-7",
+        "release-alpha-8",
+        "release-alpha-9",
+        "release-alpha-10",
         "alpha-eleven"
       ],
       "number": 9
@@ -1558,9 +1571,9 @@
       "strand": "support",
       "kind": "supporting-tool",
       "status": "implemented",
-      "title": "The KNX Standard as a searchable knowledge base",
+      "title": "A private, local KNX specification knowledge base",
       "short": "knx-spec-kb",
-      "summary": "A separate project turned the KNX Standard documents into searchable databases. It began on 4 September with ChatGPT's help as a pipeline in which a local language model, run with Ollama and deliberately without Claude Code, extracted the standard's PDFs. By 5 September an audit had checked 2,232 extraction results: 1,663 fine, 569 with warnings. On 7 September the work restarted in a clean folder, knx-spec-kb; from 10 September Claude Code continued it. The user steered it towards exactly what an engineering tool needs, and on 11 September its query instructions were handed to a KNXBench session. Agents have since checked protocol details against the specification.",
+      "summary": "A private, local development project turned KNX Standard documents into searchable databases. The knowledge base is not published and is not distributed with KNXBench; this story describes only its role in development. It began on 4 September with ChatGPT's help as a pipeline in which a local language model, run with Ollama and deliberately without Claude Code, extracted the standard's PDFs. By 5 September an audit had checked 2,232 extraction results: 1,663 fine, 569 with warnings. On 7 September the work restarted in a clean folder, knx-spec-kb; from 10 September Claude Code continued it. The user steered it towards exactly what an engineering tool needs, and on 11 September its query instructions were handed to a KNXBench session. Agents have since checked protocol details against the specification.",
       "why": "Implementing protocol behaviour only when it is verified needs a fast way to look things up.",
       "aside": "Agents that look things up before answering. I had almost given up hope.",
       "excerpts": [
@@ -1757,17 +1770,17 @@
       ]
     },
     {
-      "id": "crawler-corpus",
+      "id": "public-product-analysis",
       "date": "2026-10-03",
       "date_precision": "day",
       "strand": "support",
-      "kind": "supporting-tool",
-      "status": "verified",
-      "title": "853 public product files as a test",
-      "short": "Public product test",
-      "summary": "A separate crawler downloaded 853 publicly available product files from four manufacturer groups. KNXBench's product installer ran over all of them as a test: 644 installed, the rest refused with named reasons, and 51 of 1,167 programs became plannable for a device download.",
-      "why": "Real manufacturer files are the best test of a product database, and every refusal became a documented limitation instead of a silent gap.",
-      "aside": "1.25 GiB of input, 13.2 GiB of database. Somebody will want to look at that. It will not be me.",
+      "kind": "status",
+      "status": "recorded",
+      "title": "Public product databases provided for analysis",
+      "short": "Public product data",
+      "summary": "Publicly accessible manufacturer product databases were provided for analysis. They supplied concrete product data for examining KNXBench’s import and manufacturer-data handling.",
+      "why": "The analysis could use real manufacturer data without requiring a private building project.",
+      "aside": "For once, the input arrived without a building attached. I appreciated the courtesy.",
       "excerpts": [],
       "evidence": [
         {
@@ -1778,7 +1791,7 @@
         }
       ],
       "uncertainty": [
-        "Evidence from one run, not a repeatable gate; the downloaded files are not part of the repository."
+        "The source product databases are not included in this story. Their availability for analysis does not establish successful device programming or universal product compatibility."
       ]
     },
     {
@@ -2089,9 +2102,9 @@
       "strand": "trunk",
       "kind": "status",
       "status": "superseded",
-      "title": "The first alpha, and its replacement the same evening",
-      "short": "First alpha",
-      "summary": "On the user's decision, version 0.1.0-alpha.4 was tagged and pre-released on 7 October with an AppImage, in the still private repository. A first-run guide now opens once per release stage and says what the build is, and is not, before it says what to click. The same evening alpha.4 was withdrawn and replaced by alpha.5, after the project changed its name in every commit and its desktop app identifier.",
+      "title": "Alpha 4: the first prerelease, later withdrawn",
+      "short": "Alpha 4",
+      "summary": "Version Alpha 4 was tagged and prereleased with an AppImage on 7 October, in the then-private repository. It was subsequently withdrawn during the identity cleanup and replaced by Alpha 5. The first-run guide and the replacement have separate evidence; this historical release remains a distinct step even though its tag and public release are no longer present.",
       "why": "A release is a promise about one exact build. When the identity of the build changed, the promise had to be made again.",
       "aside": "An alpha that lasted about twelve hours. Most of my good moods last less.",
       "excerpts": [
@@ -2133,7 +2146,7 @@
         }
       ],
       "uncertainty": [
-        "The pre-releases were published in a private repository, so they were not publicly downloadable."
+        "This withdrawn release is evidenced by the retained publication record in commit 541b2bbd, not a current release listing. Its original private publication was not a public download. Later Alpha 5 republication is a separate event."
       ]
     },
     {
@@ -2849,8 +2862,8 @@
       "strand": "trunk",
       "kind": "status",
       "status": "recorded",
-      "title": "Alpha 11 packages a particular snapshot, not the future",
-      "short": "Alpha 11 released",
+      "title": "Alpha 11: clearer feedback and tester reports",
+      "short": "Alpha 11",
       "summary": "The documented Alpha 11 release includes clearer address linking, hierarchy and gateway-busy explanations, notification controls and tester reporting. Later source-only features in this edition are not retroactively part of that release.",
       "why": "A source delivery and the packaged version users can install are different milestones.",
       "aside": "The release was frozen. Development, regrettably, was not.",
@@ -3111,6 +3124,222 @@
       ],
       "uncertainty": [
         "This cutoff contains a reservation and design direction, not the universal reporter implementation. Existing support guidance is implemented; the proposed unified acquisition/report workflow is not. No live read, unlock, write or upload authority is granted."
+      ]
+    },
+    {
+      "id": "release-alpha-5",
+      "date": "2026-10-07",
+      "date_precision": "day",
+      "strand": "trunk",
+      "kind": "status",
+      "status": "recorded",
+      "title": "Alpha 5: a new identity, then a public relaunch",
+      "short": "Alpha 5",
+      "summary": "The replacement prerelease followed the identity cleanup on 7 October. It changed the desktop application identifier and first-run experience. It was republished on 8 October for the public launch after the documented history cleanup; the public release record therefore has that later publication date.",
+      "why": "A replacement build needs its own identity and upgrade boundary.",
+      "aside": "The same software, a new name badge, and more paperwork than the badge.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Alpha 5 published-source/release record",
+          "ref": "a0ff1f55",
+          "source": "src-git"
+        },
+        {
+          "kind": "adr",
+          "label": "Release scope and upgrade boundaries",
+          "ref": "docs/adr/0087-desktop-app-identifier.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "local",
+          "label": "Primary public release metadata and notes for Alpha 5; checked locally",
+          "source": "src-release-records"
+        }
+      ],
+      "uncertainty": [
+        "Historical original release and current republished record are distinguished. Old data-folder migration was manual; no portability or universal compatibility claim."
+      ]
+    },
+    {
+      "id": "release-alpha-6",
+      "date": "2026-10-09",
+      "date_precision": "day",
+      "strand": "trunk",
+      "kind": "status",
+      "status": "recorded",
+      "title": "Alpha 6: ready-made containers join the AppImage",
+      "short": "Alpha 6",
+      "summary": "The release packaged ready-made Docker images for amd64 and arm64, aligned application versions, built-in HTTPS behavior, device navigation, wizards and the bounded legacy-product import path. The standalone MCP reader was distributed too.",
+      "why": "A packaged container made the browser/server route easier to install.",
+      "aside": "The application acquired a shipping container. Somehow this made it smaller to explain.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Alpha 6 published-source/release record",
+          "ref": "a1fcc8f2",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Release scope and upgrade boundaries",
+          "ref": "docs/history/implementation/2026-W41.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "local",
+          "label": "Primary public release metadata and notes for Alpha 6; checked locally",
+          "source": "src-release-records"
+        }
+      ],
+      "uncertainty": [
+        "These are the Alpha 6 release contents. Later legacy download planning is not retroactively included, and CI launch checks are not every-desktop hardware tests."
+      ]
+    },
+    {
+      "id": "release-alpha-7",
+      "date": "2026-10-10",
+      "date_precision": "day",
+      "strand": "trunk",
+      "kind": "status",
+      "status": "recorded",
+      "title": "Alpha 7: persistent history and a dependable way home",
+      "short": "Alpha 7",
+      "summary": "The release packaged persistent native undo/history, project-local renaming, clearer communication-object tables and upload/companion-return fixes. Native schema 11 requires independent pre-upgrade backups; offline procedure diagnostics are not new executable device support.",
+      "why": "An installable snapshot brought the new recovery and everyday editing workflows together.",
+      "aside": "Undo finally remembered yesterday. The version number was less sentimental.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Alpha 7 published-source/release record",
+          "ref": "550318d3",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Release scope and upgrade boundaries",
+          "ref": "docs/history/implementation/2026-W41.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "local",
+          "label": "Primary public release metadata and notes for Alpha 7; checked locally",
+          "source": "src-release-records"
+        }
+      ],
+      "uncertainty": [
+        "Published at 2026-10-10T00:11:11+02:00, after midnight locally; the preceding source commits are dated 9 October. Release publication did not itself perform a hardware trial."
+      ]
+    },
+    {
+      "id": "release-alpha-8",
+      "date": "2026-10-10",
+      "date_precision": "day",
+      "strand": "trunk",
+      "kind": "status",
+      "status": "recorded",
+      "title": "Alpha 8: stronger imports, explicit evidence limits",
+      "short": "Alpha 8",
+      "summary": "The release packaged selected-content import, stronger source-bound archive handling, read-only stored module-instance values, larger bounded archive admission and explicit opaque-payload classifications. Native schema 12 adds a forward-compatibility barrier, not a downgrade path.",
+      "why": "More source data could be preserved and inspected without pretending it was fully understood.",
+      "aside": "A little more data admitted. A little less pretending. I approve of the ratio.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Alpha 8 published-source/release record",
+          "ref": "e7fc8def",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Release scope and upgrade boundaries",
+          "ref": "docs/releases/alpha8.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "local",
+          "label": "Primary public release metadata and notes for Alpha 8; checked locally",
+          "source": "src-release-records"
+        }
+      ],
+      "uncertainty": [
+        "Retained source bytes do not establish complete ETS semantics, signatures, Add-in execution or broader hardware support."
+      ]
+    },
+    {
+      "id": "release-alpha-9",
+      "date": "2026-10-11",
+      "date_precision": "day",
+      "strand": "trunk",
+      "kind": "status",
+      "status": "recorded",
+      "title": "Alpha 9: larger projects and clearer everyday screens",
+      "short": "Alpha 9",
+      "summary": "The release packaged bounded large-project history handling, named datapoint choices, understandable installation nodes and clearer login, notification and import/download feedback. Native schema 13 included instruction foundations, but the new instruction and checked-parameter editors were not yet mounted in that workbench snapshot.",
+      "why": "The release notes separated usable workbench features from code foundations not yet exposed to users.",
+      "aside": "A foundation is not a room you can move into. The release notes had to say so.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Alpha 9 published-source/release record",
+          "ref": "5b21323e",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Release scope and upgrade boundaries",
+          "ref": "docs/releases/alpha9.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "local",
+          "label": "Primary public release metadata and notes for Alpha 9; checked locally",
+          "source": "src-release-records"
+        }
+      ],
+      "uncertainty": [
+        "Project notes, Functions/Sites and later parallel work were not swept into this release. Old native readers refuse upgraded files."
+      ]
+    },
+    {
+      "id": "release-alpha-10",
+      "date": "2026-10-12",
+      "date_precision": "day",
+      "strand": "trunk",
+      "kind": "status",
+      "status": "recorded",
+      "title": "Alpha 10: user fixes and editors reach the workbench",
+      "short": "Alpha 10",
+      "summary": "The release packaged the AppImage host-library fix and ETS 5.7 import repairs, plus mounted notes/instruction/checked parameter editors, group-address views, previewed catalogue updates, durable import evidence, release notifications and the opt-in MCP naming writer. Native schema 14 adds project notes.",
+      "why": "Users could install the previously separate fixes and workbench features as one explicit snapshot.",
+      "aside": "The features left the waiting room. A few limitations kept their seats.",
+      "excerpts": [],
+      "evidence": [
+        {
+          "kind": "commit",
+          "label": "Alpha 10 published-source/release record",
+          "ref": "c180fcb2",
+          "source": "src-git"
+        },
+        {
+          "kind": "doc",
+          "label": "Release scope and upgrade boundaries",
+          "ref": "docs/releases/alpha10.md",
+          "source": "src-git"
+        },
+        {
+          "kind": "local",
+          "label": "Primary public release metadata and notes for Alpha 10; checked locally",
+          "source": "src-release-records"
+        }
+      ],
+      "uncertainty": [
+        "Functions/Sites and the later UX-feedback package were not in this snapshot. Browser/CI evidence is not universal Linux startup or real-device acceptance."
       ]
     }
   ],
@@ -3382,11 +3611,11 @@
       "note": "The statistics read the agents' local usage records."
     },
     {
-      "id": "rel-products-crawler",
+      "id": "rel-products-public-analysis",
       "from": "product-database",
-      "to": "crawler-corpus",
+      "to": "public-product-analysis",
       "type": "documented_cause",
-      "note": "The crawled files were used to test the product installer."
+      "note": "Publicly accessible product databases were provided for analysis of manufacturer-data handling."
     },
     {
       "id": "rel-failclosed-alpha",
@@ -3599,13 +3828,6 @@
       "note": "Two public entry points, grouped editorially; adjacency does not establish causation."
     },
     {
-      "id": "rel-first-alpha-alpha-eleven",
-      "from": "first-alpha",
-      "to": "alpha-eleven",
-      "type": "documented_association",
-      "note": "Later release records distinguish packaged snapshots from subsequent source changes."
-    },
-    {
       "id": "rel-public-front-door-users-find-edges",
       "from": "public-front-door",
       "to": "users-find-edges",
@@ -3723,6 +3945,55 @@
       "to": "universal-report-design",
       "type": "editorial",
       "note": "A support gap and a reporting proposal coexist; universal reporting must not imply universal safe access."
+    },
+    {
+      "id": "rel-release-sequence-first-alpha-release-alpha-5",
+      "from": "first-alpha",
+      "to": "release-alpha-5",
+      "type": "documented_association",
+      "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next."
+    },
+    {
+      "id": "rel-release-sequence-release-alpha-5-release-alpha-6",
+      "from": "release-alpha-5",
+      "to": "release-alpha-6",
+      "type": "documented_association",
+      "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next."
+    },
+    {
+      "id": "rel-release-sequence-release-alpha-6-release-alpha-7",
+      "from": "release-alpha-6",
+      "to": "release-alpha-7",
+      "type": "documented_association",
+      "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next."
+    },
+    {
+      "id": "rel-release-sequence-release-alpha-7-release-alpha-8",
+      "from": "release-alpha-7",
+      "to": "release-alpha-8",
+      "type": "documented_association",
+      "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next."
+    },
+    {
+      "id": "rel-release-sequence-release-alpha-8-release-alpha-9",
+      "from": "release-alpha-8",
+      "to": "release-alpha-9",
+      "type": "documented_association",
+      "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next."
+    },
+    {
+      "id": "rel-release-sequence-release-alpha-9-release-alpha-10",
+      "from": "release-alpha-9",
+      "to": "release-alpha-10",
+      "type": "documented_association",
+      "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next."
+    },
+    {
+      "id": "rel-release-sequence-release-alpha-10-alpha-eleven",
+      "from": "release-alpha-10",
+      "to": "alpha-eleven",
+      "type": "documented_association",
+      "note": "Successive evidenced release snapshots; sequence does not claim that one release caused every change in the next."
     }
   ],
   "gaps": [

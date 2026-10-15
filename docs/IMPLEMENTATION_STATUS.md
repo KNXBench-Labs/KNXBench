@@ -14,6 +14,21 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Owner-reviewed story correction candidate `2026-10-15.4`:
+  specification knowledge base explicitly private/local and not distributed;
+  public product databases described only as provided for analysis. Every
+  evidenced alpha release has a separate event/atlas node: historical withdrawn
+  Alpha4 plus Alpha5–11, distinguishing original/republication dates and CEST.
+  Pinned source stays `2d4ec5f9`; 74 events/93 relations/twelve chapters. Three
+  editorial regressions proved RED→GREEN, full story76 and Git-reference
+  validation pass. Actual frozen .4 Chromium46/46 and Firefox46/46 pass; all44
+  main frames plus8 unoccluded-title supplements inspected across both engines
+  at desktop/mobile widths, including all eight real release graph labels.
+  Website24, five fresh explicit-root repository checks, docs and unchanged
+  old-approved website38-file build pass. The new edition correctly refuses
+  release-check without approval. [Current acceptance](evidence/story-update-2026-10-15-editorial.json).
+  No publication approval, push, Pages cutover, new release or hardware operation.
+
 - 2026-10-15 — Project-evolution story candidate `2026-10-15.2` prepared locally
   for review, not publication. Pinned source `2d4ec5f9`, 07:04:36 CEST; 68 events,
   87 relations and twelve chapters retain the Phosphor Atlas design. New strands

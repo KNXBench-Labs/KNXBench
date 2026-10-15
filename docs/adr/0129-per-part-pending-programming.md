@@ -72,6 +72,14 @@ that the old value is still on the device. It persists the candidate before
 publishing live state/revision, as other native mutations do. Persistence
 failure is explicitly logged; no durable-success claim is invented.
 
+Recovered history uses complete normalized snapshots, not the original live
+inverse commands. Invalidation deliberately marks the written parts pending in
+those old snapshots, so an undo after reopening can show additional pending
+parts even where their values did not change. This conservative loss of a clean
+claim is not a device-difference verdict; it avoids resurrecting obsolete claims
+without adding history metadata or a migration. Direct DPT/name edits still do
+not add programming marks.
+
 The worker settles once before publishing its terminal status. The existing
 unexpected-download-task-end fallback also settles once, using its conservative
 failed status. A weak state reference avoids a session/callback ownership cycle.

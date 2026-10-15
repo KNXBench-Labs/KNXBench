@@ -1,9 +1,13 @@
 {
   "schema_version": 1,
   "repository": "KNXBench-Labs/KNXBench",
-  "generated_at": "2026-10-15T04:27:33Z",
+  "generated_at": "2026-10-15T06:40:25Z",
   "policy": {
     "excluded_logins": [
+      "KNXBench-Labs",
+      "Andre1Becker"
+    ],
+    "trusted_notice_logins": [
       "KNXBench-Labs",
       "Andre1Becker"
     ],
@@ -232,7 +236,11 @@
         "title": "Datapoint Dragon Slayer"
       },
       "medals": [
-        "Golden Bus Probe"
+        "Golden Bus Probe",
+        "Double-Decade Fault Finder",
+        "Loose End Lasso",
+        "Regression Repair Ribbon",
+        "Acknowledgement Ace"
       ],
       "position": 1
     },

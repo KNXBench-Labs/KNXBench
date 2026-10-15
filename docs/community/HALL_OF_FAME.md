@@ -1,17 +1,17 @@
 # Bug Hunters’ Hall of Fame
 
 **Every report makes the bus a little less mysterious.** This is our public
-thank-you to the people who test KNXBench, reproduce surprises and come back
+thank-you to reporters who test KNXBench, reproduce surprises and come back
 with the details. You do not need to write code to earn a place here.
 
 ## The field-test crew
 
-| Place | Bug hunter | Issues | Replies | Resolved | XP | Rank & title | Medal |
-| ---: | --- | ---: | ---: | ---: | ---: | --- | --- |
-| 1 | [@thengsty](https://github.com/thengsty) | 20 | 13 | 19 | **303** | Datapoint Dragon Slayer | 🏅 Golden Bus Probe |
-| 2 | [@hagbardZ](https://github.com/hagbardZ) | 1 | 3 | 1 | **18** | Bus Bug Scout | — |
+| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved |
+| ---: | --- | --- | --- | ---: | ---: | ---: | ---: |
+| 1 | [@thengsty](https://github.com/thengsty) | Datapoint Dragon Slayer | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace | **303** | 20 | 13 | 19 |
+| 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 |
 
-*Snapshot: 2026-10-15T04:27:33Z.*
+*Snapshot: 2026-10-15T06:40:25Z.*
 
 ## How the points work
 
@@ -20,11 +20,20 @@ with the details. You do not need to write code to earn a place here.
 - **+10 XP for the reporter** when an issue is closed as **completed**.
   This bonus is awarded once per issue and retained if it is reopened. Closing
   as **not planned** does not earn a completion bonus.
-- **Golden Bus Probe:** report ten issues. No actual bus probe is shipped;
-  ours fits comfortably in a Markdown table.
 
-Every external human reporter or replier is listed, not just the top ten.
-Maintainer accounts and bots are excluded. Pull requests, reviews, reactions,
+## The next mystery
+
+- **Reporter milestones:** a new medal waits at every ten reports, up to 100.
+  Twenty reports? There is more than one bus probe in the trophy cabinet.
+- **Resolution milestones:** every five reports closed as **completed** unlock
+  another medal, up to 100. Reopening and closing the same issue is not a shortcut.
+- **No spoilers:** medal names appear only once earned, in the table and completion
+  acknowledgements. Keep reporting and helping us close the loop to discover them.
+  These are thank-you medals, not extra XP — and no hardware needs shelf space.
+
+Reporters and issue-thread repliers are listed, not just the top ten. External
+AI agents are welcome to earn points too. Maintainer accounts, explicit opt-outs
+and the scoreboard bot itself are excluded. Pull requests, reviews, reactions,
 Discussions and private messages are not counted. Tied scores share a place;
 alphabetical order merely keeps the table stable. Counts measure participation,
 not report quality, correctness, or a promise that every request will be implemented.

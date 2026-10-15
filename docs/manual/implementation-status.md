@@ -245,9 +245,14 @@ portable native product sources, per-part programming marks, read-only compariso
 universal support reports, Functions, revision-bound workbench writes and the
 reported UI repairs. Native/model schema **16** and product schema **23** require
 independent pre-upgrade project/catalogue backups. Alpha 11 and earlier refuse
-upgraded native files. New artifact, registry and website publication results
-will be recorded only after actual verification; no new hardware compatibility
-or native screen-reader acceptance is implied.
+upgraded native files. Public AppImage/MCP downloads match their checksums;
+Docker version/latest identify the same amd64/arm64 image set and the frozen
+source. An isolated HTTPS/auth/save/reopen and authentic predecessor-file
+migration probe passes; the user's running container was not replaced. The
+live website matches the accepted build, including the new stills and unchanged
+Story. AppImage Broadway/embedded-server startup is verified, not FUSE/native
+visual/EGL/Orca feature acceptance. No new hardware compatibility is implied.
+[Publication verification](../evidence/release-alpha12-2026-10-15.json).
 
 ## Alpha.11 release boundary (13 October 2026)
 

@@ -1,3 +1,35 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 02:00
+- **Completed:** P3 frozen branch gate proc_23489c9ea0d0 exited0:48/48 stages, Rust4545/0 (204 opt-ins ignored), Vitest3580/259files, default browser560, production319 across15configs, repeated57, Python123/one inherited skip, all five xtask/docs/diff checks zero; 2770-file manifest and HEAD+diff unchanged. Actual production EN/DE1440/400 screenshots inspected (wide table scrolls locally; existing transient notifications noted). Standard generated-banner preflight refusal retained; 28 real regenerated bindings match, three canonical header controls pass, maintained skill template corrected. Source self-review closed; nine named mutants and native16-pattern/recovered-undo proof retained.
+- **Pending/Next Steps:** Documentation-only branch closure check and focused feature commit, then owned integration worktree on freshly fetched origin/main, additive handover/status resolution and complete merged RUST=1/PY=1 gate plus15configs/repeats. Main has product/protocol and browser-tooling changes, so branch acceptance is not merged acceptance. Bind OriginalData/oracle links and rerun the OriginalData-marked ignored sweep on merge, without hardware. Then final docs, push/readback, private archival and owned cleanup. P4 excluded.
+- **Notes for Codex oder Claude:** Accepted branch receipt at profile scratch/p3/branch-gate-retry/reconciliation.json; runtime source0f2c1433729081588ee9a9c1c35e493727280126 plus diff7dd9962809ffe795f21e72560c36d713d947a30fee5db39f5ba53634db3997cb. Do not retag this receipt as the later docs/feature/merge execution. Upstream handover edits its own older blocks: candidate is prepend-only but upstream is not; retain owned-only prefix plus exact fresh upstream body after inspecting actual three-way diff. Preserve dirty root/foreign work; no subagents, hardware, release or deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 01:09
+- **Completed:** P3 source self-review closed (no remaining blocking findings), nine named mutation failures reconciled with original ANSI-wrapper error retained, restored-green/clippy/headers passed, full private corpus149/149 in32targets incl29 download HTTP cases. Both controlled production comparisons complete12/12 each, base sources restored: immutable cells plus deferred first mount reduce measured work; final one-module all-pending mean RunTask23204.2→16455.1ms, open18209→11449ms, table4542→4551ms. No store migration. ADR/manual/FEATURES/evidence candidate prepared; source-only, no full delivery acceptance/publication yet.
+- **Pending/Next Steps:** Frozen full branch gate at profile scratch/p3/branch-gate using repository-delivery template with RUST=1/PY=1,15extra configs, docs check and P3/devices repeats; do not edit this worktree until it finishes. Then inspect production screenshots, commit reviewed scope, merge fresh origin/main in own integration worktree, full merged gate, docs-only closure, push/readback and owned cleanup. P4 excluded; no further Go required.
+- **Notes for Codex oder Claude:** Source feature/p3-pending-programming-20261014; prior performance/corpus jobs completed, scratch zz spec retired. Keep branch candidate (including this handover) unchanged during its gate. Foreign #23/#22 work and dirty root remain untouched; no subagents, real bus, release or deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 00:38
+- **Completed:** P3 separate self-review corrections implemented/tested; no migration. Production attribution completed six runs with source restoration: chip cells dominate the added CPU, dots do not. Table-local immutable presentation reuse (17 states max) and smaller accessible markup implemented RED→GREEN; focused table/explorer/chip suite 68/68. Nine mutants have actual named behavioral failures; original sweep wrapper exit1 is retained (ANSI parser defect corrected with five controls), sources byte-restored. Docs/ADR/handbook/FEATURES candidate updated; no full delivery acceptance or publication yet.
+- **Pending/Next Steps:** Counterbalanced production recheck proc_ec5338211102 and restored-green/clippy/headers/full-private-corpus proc_b28d5d267e07 queued behind #23's active maintained final-main gate (PID1423414). Then freeze, RUST=1/PY=1 template branch gate plus fifteen configs and repeats, fresh-main merge/full merged gate, publish/readback and exact owned cleanup. P4 excluded; owner Go remains active, no further Go needed.
+- **Notes for Codex oder Claude:** Own feature p3-pending-programming-20261014, scratch/p3; initial scratch zz spec already retired. Preserve every foreign gate/lease/root edit. Production recheck swaps only two UI modules in owned base checkout; do not edit them until it ends. Root intentionally unsynchronized. No subagents, real bus, release/deployment.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-14 23:38
+- **Completed:** P3 resumed after explicit owner Go/rate-limit continuation. Core committed 0f2c1433; App/server/projection/web remain an uncommitted candidate. Focused Rust, typechecks and six EN/DE browser checks passed before pause; 1440/400 screenshots inspected and two layout issues corrected. Full branch/merged acceptance NOT done. The old 5000-device A/B used development Vite: all six runs passed but its timings are diagnostic only, not production-performance evidence.
+- **Pending/Next Steps:** Attribute production performance under shared leases, add remaining mutation evidence, separate whole-feature self-review, documentation and complete RUST=1 plus fifteen-config branch/merged gates; push/readback and task-owned cleanup. P4 remains out of scope.
+- **Notes for Codex oder Claude:** Preserve #23/test-tooling owners, root research, shared leases. Existing own scratch p3/base and zz-pending-5000 spec are task-owned probes to retire before the gate. No store migration, subagents, bus/hardware, release or deployment.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-14 21:58
 - **Completed:** P3 (changes not yet programmed, per part; goal `docs/goals/ui-feedback-p1-p4.md`): taken by Claude in `feature/p3-pending-programming-20261014` (worktree `KNXBench.worktrees/p3-pending-programming-20261014`, base 7b9620cf). Surfaces: knx-edit/knx-app edit commands setting the persisted `*_loaded` flags, download/IA-programming clearing in knx-server, manual mark command, device-view "Programming" column/filter and explorer dot in knx-web.

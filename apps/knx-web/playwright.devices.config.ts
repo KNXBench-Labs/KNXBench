@@ -4,7 +4,7 @@ import base from "./playwright.config";
 
 export default defineConfig({
   ...base,
-  testMatch: "**/devices-navigation.e2e.ts",
+  testMatch: ["**/devices-navigation.e2e.ts", "**/pending-programming.e2e.ts"],
   webServer: {
     command: "npm run preview -- --host 127.0.0.1 --port 4173 --strictPort",
     url: "http://127.0.0.1:4173/",

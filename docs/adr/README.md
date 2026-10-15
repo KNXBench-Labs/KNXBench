@@ -135,3 +135,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0125](0125-multi-installation-site-is-blocked.md) | A site over several installations is not modelled; its invariants are fixed and it waits for evidence | Proposed — blocked design | 2026-10-13 |
 | [0127](0127-web-workbench-resumes-the-open-project.md) | The web workbench resumes the server's open project on every mount | Accepted implementation decision | 2026-10-14 |
 | [0128](0128-native-project-files-carry-their-manufacturer-files.md) | A native project file carries its manufacturer files | Accepted implementation decision | 2026-10-14 |
+| [0129](0129-per-part-pending-programming.md) | Per-part pending programming uses the existing loaded flags | Accepted | 2026-10-14 |

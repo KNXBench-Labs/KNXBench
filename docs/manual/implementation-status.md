@@ -16,6 +16,19 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Per-part programming marks (14 October 2026 source, main-only)
+
+Devices shows pending-only Adr/App/Par/GA chips, a Pending only filter and an
+explorer dot. Properties lists each part and offers undoable, logged manual
+marks. The existing loaded flags now follow edits in their same undo step;
+server full/partial/address programming settles only the applicable parts,
+without adding an undoable hardware operation. Interrupted writes mark attempted
+parts pending; edits during a run do not gain false clean claims. Native flags
+and recovered undo need no migration. This is project belief, not P4 live-device
+comparison; CLI/external work needs manual reconciliation.
+[Use and limits](user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11),
+[ADR-0129](../adr/0129-per-part-pending-programming.md).
+
 ## Community Hall of Fame link (14 October 2026 source, main-only)
 
 About links the public GitHub document instead of bundling its JSON snapshot.

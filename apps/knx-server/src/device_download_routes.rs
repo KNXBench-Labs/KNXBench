@@ -441,6 +441,9 @@ async fn start(
         ));
     }
 
+    // Before `prepare`: a project opened after this read can only make the
+    // settlement skip, never land on the wrong project (ADR-0129).
+    let incarnation = crate::programming_state::incarnation(&state);
     let prepared = prepare(&state, target, partial)?;
     let keying = keying(&state, &prepared)?;
     // Recomputed from the plan that will run, not trusted from the shown
@@ -514,6 +517,7 @@ async fn start(
         dir: state.data_dir.join(BACKUP_DIR),
         taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
     };
+    let settler = crate::programming_state::download_settler(&state, incarnation, &prepared);
     *download = Some(DeviceDownloadSession::start(
         id,
         tunnel,
@@ -524,6 +528,7 @@ async fn start(
         backups,
         activity,
         report,
+        settler,
     ));
     drop(scan);
     drop(monitor);

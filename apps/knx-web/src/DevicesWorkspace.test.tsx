@@ -56,6 +56,23 @@ it("opens a device on ordinary row text clicks without double-activating name bu
   await act(async () => host.querySelector<HTMLButtonElement>("tbody td:nth-child(3) button")!.click());
   expect(click).toHaveBeenCalledTimes(1);
 });
+it("defers chip nodes in a never-opened table, then keeps them across hidden editor visits", async () => {
+  const shown: ProjectTree = { ...tree, installations: tree.installations.map((installation) => ({
+    ...installation, unassigned: installation.unassigned.map((device) => ({ ...device,
+      pending_programming: { address: true, application: true, parameters: true, group_addresses: true } })),
+  })) };
+  await render(false, shown);
+  expect(host.querySelectorAll(".programming-chip")).toHaveLength(0);
+  await render(true, shown);
+  expect(host.querySelectorAll(".programming-chip")).toHaveLength(8);
+  const first = host.querySelector(".programming-chips");
+  await render(false, shown);
+  expect(host.querySelectorAll(".programming-chip")).toHaveLength(8);
+  expect(host.querySelector(".programming-chips")).toBe(first);
+  await render(true, shown);
+  expect(host.querySelector(".programming-chips")).toBe(first);
+});
+
 it("does not fetch metadata before the list is opened", async () => {
   await render(false); expect(apiMock.deviceCatalog).not.toHaveBeenCalled();
   await render(); expect(apiMock.deviceCatalog).toHaveBeenCalledTimes(1);
@@ -110,4 +127,29 @@ it("refuses a correctly shaped batch bound to another server without losing the 
   await render(); expect(catalogue).not.toHaveBeenCalled();
   expect(host.querySelector('[role="alert"]')?.textContent).toContain("project changed");
   expect(host.querySelectorAll("tbody tr")).toHaveLength(2);
+});
+it("shows pending parts as chips and narrows to pending devices on request (ADR-0129)", async () => {
+  const pendingTree: ProjectTree = { ...tree, installations: [{ ...tree.installations[0], unassigned: [
+    { ...tree.installations[0].unassigned[0],
+      pending_programming: { address: true, application: false, parameters: true, group_addresses: false } },
+    { ...tree.installations[0].unassigned[1],
+      pending_programming: { address: false, application: false, parameters: false, group_addresses: false } },
+    { id: 11, name: "Device 11", address: "1.1.11", description: null, com_object_count: 0 },
+  ] }] };
+  await render(true, pendingTree);
+  const headers = [...host.querySelectorAll("th")].map((th) => th.textContent);
+  expect(headers.indexOf("Programming")).toBe(headers.indexOf("Name") + 1);
+  const cells = [...host.querySelectorAll("tbody tr")].map((row) => row.querySelector(".programming-chips"));
+  expect(cells.map((cell) => cell?.getAttribute("data-state"))).toEqual(["pending", "clean", "unknown"]);
+  expect([...cells[0]!.querySelectorAll(".programming-chip")].map((chip) => chip.textContent)).toEqual(["Adr", "Par"]);
+  expect(cells[0]!.getAttribute("role")).toBe("img");
+  expect(cells[0]!.getAttribute("aria-label")).toBe("Not programmed: Address and Parameters");
+  expect(cells[1]!.querySelectorAll(".programming-chip")).toHaveLength(0);
+  const pendingOnly = [...host.querySelectorAll<HTMLInputElement>(".devices-toolbar input[type=\"checkbox\"]")]
+    .find((input) => input.closest("label")?.textContent?.includes("Pending only"))!;
+  await act(async () => pendingOnly.click());
+  expect([...host.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-rename-id"))).toEqual(["2"]);
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("1 of 3 devices");
+  await act(async () => pendingOnly.click());
+  expect(host.querySelectorAll("tbody tr")).toHaveLength(3);
 });

@@ -61,8 +61,8 @@ export default function BusDiagnosticsPanel({
       <div hidden={tab !== "monitor"}><BusMonitorPanel active={active && tab === "monitor"} projectOpen={project !== null} project={project} projectScope={projectScope} onFlowNavigate={onFlowNavigate} /></div>
       {tab === "scan" && <LineScanPanel projectOpen={project !== null} projectRevision={project} onTreeUpdate={onTreeUpdate} />}
       {tab === "checks" && <DeviceInspectionPanel project={project} />}
-      {tab === "download" && <DeviceDownloadPanel project={project} handoff={pendingHandoff} onHandoffHandled={handoffHandled} />}
-      {tab === "address" && <AddressProgrammingPanel project={project} />}
+      {tab === "download" && <DeviceDownloadPanel project={project} handoff={pendingHandoff} onHandoffHandled={handoffHandled} onProjectChanged={onTreeUpdate} />}
+      {tab === "address" && <AddressProgrammingPanel project={project} onProjectChanged={onTreeUpdate} />}
       {tab === "service" && <ServiceControlPanel projectOpen={project !== null} projectRevision={project} />}
       {tab === "live" && <BusActivityLive />}
       {tab === "history" && <BusActivityHistory />}

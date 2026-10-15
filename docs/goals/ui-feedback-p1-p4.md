@@ -15,7 +15,7 @@ claim the package there.
 | --- | --- | --- |
 | P1 | Toast entry, resume after reload, overwrite question | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
 | P2 | Explorer: visibly expandable nodes, structure lines with spread/pulse | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
-| P3 | Changes not yet programmed, per part | open (fresh session) |
+| P3 | Changes not yet programmed, per part | branch gate 48/48 green; merged gate/publication pending |
 | P4 | Project file versus real devices: tags and comparison table | open (fresh session, after P3) |
 
 Starter for a fresh session (replace the package number):

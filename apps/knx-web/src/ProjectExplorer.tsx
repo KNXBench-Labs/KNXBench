@@ -13,6 +13,7 @@ import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { MultiSelection, Selection } from "./selection";
 import type { ItemClickHandler } from "./multiSelection";
 import { deviceInstallations, nestGroupRanges, owningInstallation, type GroupRangeTreeNode } from "./treeUtils";
+import { PendingLabelContext, PendingProgrammingDot, usePendingLabel } from "./ProgrammingChips";
 import type { DeviceWizardTarget } from "./deviceWizardPlacement";
 import ImportDiagnosticsNotice from "./ImportDiagnosticsNotice";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
@@ -113,6 +114,8 @@ function TreeNode(props: {
   renameId?: number;
   /** Real entries below this node (no "add" rows), shown while it is collapsed. */
   count?: number;
+  /** A small status mark after the label (a device's pending programming). */
+  marker?: React.ReactNode;
 }) {
   const t = useTranslate();
   const [open, setOpen] = useState(true);
@@ -188,6 +191,7 @@ function TreeNode(props: {
         >
           {props.label}
         </button>
+        {props.marker}
         {hasChildren && !open && props.count !== undefined && (
           <span className="tree-count">
             <span aria-hidden="true">{props.count}</span>
@@ -322,6 +326,7 @@ function DeviceItem(props: {
       scrollOnReveal={props.scrollOnReveal}
       onDragStart={draggable ? (event) => props.onDeviceDragStart(device, event) : undefined}
       onDragEnd={draggable ? props.onDeviceDragEnd : undefined}
+      marker={<PendingProgrammingDot device={device} />}
     />
   );
 }
@@ -1107,6 +1112,7 @@ export default function ProjectExplorer(
 ) {
   const { tree, onTreeUpdate, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
+  const pendingLabel = usePendingLabel();
   const [dragSource, setDragSource] = useState<DragSource | null>(null);
   const [expansion, setExpansion] = useState<ExpansionCommand | null>(null);
   // MODEL-01 / ADR-0070: a device can be moved inside the one installation
@@ -1196,6 +1202,7 @@ export default function ProjectExplorer(
 
   return (
     <RevealCompletionContext.Provider value={props.onRevealComplete}>
+    <PendingLabelContext.Provider value={pendingLabel}>
     <ExpansionContext.Provider value={expansion}>
     <div ref={explorerRef} className="project-explorer" data-tree-pulse={pulsing ? "" : undefined} onKeyDown={(e) => {
       if (!(e.target instanceof HTMLButtonElement) || !e.target.matches(".tree-label, .tree-toggle")) return;
@@ -1268,6 +1275,7 @@ export default function ProjectExplorer(
       )}
     </div>
     </ExpansionContext.Provider>
+    </PendingLabelContext.Provider>
     </RevealCompletionContext.Provider>
   );
 }

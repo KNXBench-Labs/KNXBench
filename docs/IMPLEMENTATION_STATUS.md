@@ -14,6 +14,34 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Owner UI feedback P3 source candidate ([goal](goals/ui-feedback-p1-p4.md),
+  [ADR-0129](adr/0129-per-part-pending-programming.md)): existing loaded flags
+  follow edits in the same undo step and server full/partial/address write
+  outcomes outside undo history. The Devices Programming column shows pending
+  Adr/App/Par/GA chips and a Pending only filter; explorer rows have a status
+  dot, Properties has undoable logged manual marks. DPT/name edits do not count.
+  Interrupted writes mark attempted parts, including uncertain writes; a
+  changed project/device cannot acquire another run's clean claim. Native
+  save/reopen/recovered undo uses the existing fields without a migration.
+  Separate self-review, nine named mutant failures, native restart/recovered
+  undo and all sixteen loaded-flag patterns are verified; the private corpus
+  passes 149/149 in 32 targets, including all 29 download HTTP cases.
+  Production attribution keeps the added chip work bounded: seventeen cached
+  presentations, mounted only on the first visible table visit and retained
+  thereafter. The controlled synthetic 5000-device all-pending comparison
+  reduced mean MainThread RunTask from 23.2 to 16.5 seconds without delaying
+  table opening; this is not a universal or whole-gate speedup claim.
+  The frozen branch gate passes all 48 stages: Rust 4545, Vitest 3580,
+  default browser 560, production browser 319 across fifteen configs and
+  repeated browser 57; all stage exits zero and all 2770 source files unchanged.
+  Native Rust opt-ins remain reported separately (204 ignored); the earlier
+  OriginalData sweep passes 149/149. Python runs 123 tests with one inherited skip.
+  Production EN/DE screenshots at 1440/400 px are visually inspected. Fresh-main
+  merged acceptance/publication remain pending at this checkpoint.
+  [Evidence and boundaries](evidence/p3-pending-programming-2026-10-15.json).
+  This entry is not yet a publication claim.
+  [Operating guide](manual/user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11).
+
 - 2026-10-14 — Owner UI feedback P2 ([goal](goals/ui-feedback-p1-p4.md)): the
   project explorer shows what opens. A chevron turns a quarter when a branch
   opens, a closed branch shows how many entries it holds, and Expand all /

@@ -12,6 +12,7 @@ const apiMock = vi.hoisted(() => ({
   pollAddressProgramming: vi.fn(),
   stopAddressProgramming: vi.fn(),
   serverVersion: vi.fn(),
+  currentProject: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -23,6 +24,7 @@ vi.mock("./api", () => ({
       : undefined,
 }));
 
+import type { ProjectTree } from "./bindings/ProjectTree";
 import AddressProgrammingPanel from "./AddressProgrammingPanel";
 import { messages as en } from "./messages/en";
 import type { AddressProgrammingStatusResponse } from "./api";
@@ -60,12 +62,12 @@ async function flush() {
   });
 }
 
-async function render() {
+async function render(onProjectChanged?: (tree: ProjectTree) => void) {
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
   await act(async () => {
-    root!.render(<AddressProgrammingPanel project={null} />);
+    root!.render(<AddressProgrammingPanel project={null} onProjectChanged={onProjectChanged} />);
   });
   await flush();
 }
@@ -376,4 +378,39 @@ it("reports a programmed address only when the device answers at it", async () =
       .toEqual([]);
   }
   expect(await achievementEventsFor({ state: "failed", written: "unconfirmed", step: 3, error: "silent" })).toEqual([]);
+});
+
+// ADR-0129: a programming that may have written changes the project's
+// programming state on the server; the editor reloads the project once.
+it("warns when programming state cannot be refreshed after address programming", async () => {
+  apiMock.currentProject.mockReset().mockRejectedValue(new Error("offline"));
+  apiMock.addressProgrammingAvailability.mockResolvedValue({ startAvailable: false, reason: "test" });
+  apiMock.pollAddressProgramming.mockReset().mockResolvedValue(
+    response({ state: "finished", written: "yes", previousAddress: "15.15.255", wasFree: true }, [], 1));
+  const changed = vi.fn();
+  await render(changed);
+  const warning = host!.querySelector('[data-programming-refresh]');
+  expect(warning?.getAttribute("role")).toBe("alert");
+  expect(warning?.textContent).toContain("Reload the project");
+  expect(warning?.textContent).toContain("offline");
+  expect(changed).not.toHaveBeenCalled();
+});
+
+it("reloads the project once after a programming that may have written", async () => {
+  const reloaded = { installations: [] } as unknown as ProjectTree;
+  apiMock.currentProject.mockReset().mockResolvedValue(reloaded);
+  apiMock.addressProgrammingAvailability.mockResolvedValue({ startAvailable: false, reason: "test" });
+  const changed = vi.fn();
+  apiMock.pollAddressProgramming.mockReset().mockResolvedValue(
+    response({ state: "finished", written: "yes", previousAddress: "15.15.255", wasFree: true }, [], 1));
+  await render(changed);
+  expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+  expect(changed).toHaveBeenCalledExactlyOnceWith(reloaded);
+  if (root) await act(async () => root!.unmount());
+  host?.remove();
+
+  apiMock.currentProject.mockClear(); changed.mockClear();
+  apiMock.pollAddressProgramming.mockReset().mockResolvedValue(response({ state: "stopped", rounds: 3 }, [], 1));
+  await render(changed);
+  expect(apiMock.currentProject).not.toHaveBeenCalled();
 });

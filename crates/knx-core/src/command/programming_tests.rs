@@ -132,6 +132,31 @@ fn renumbering_a_linked_group_address_marks_every_linked_device() {
 }
 
 #[test]
+fn deleting_a_linked_group_address_marks_every_linked_device() {
+    marks_then_round_trips(
+        // The delete service unlinks first; Core correctly refuses deleting
+        // a group address that is still in use. The whole batch is one edit.
+        Command::Batch(vec![
+            Command::UnlinkComObject {
+                com_object: CO1,
+                ga: GA1,
+                direction: Direction::Send,
+            },
+            Command::UnlinkComObject {
+                com_object: CO2,
+                ga: GA1,
+                direction: Direction::Receive,
+            },
+            Command::DeleteGroupAddress { id: GA1 },
+        ]),
+        &[
+            (D1, parts(|p| p.group_addresses = true)),
+            (D2, parts(|p| p.group_addresses = true)),
+        ],
+    );
+}
+
+#[test]
 fn renaming_marks_nothing() {
     marks_then_round_trips(
         Command::RenameDevice {

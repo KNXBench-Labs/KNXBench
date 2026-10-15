@@ -359,6 +359,23 @@ describe("expandable structure at a glance (owner feedback P2)", () => {
   });
 });
 
+describe("pending programming (owner feedback P3)", () => {
+  it("puts a named dot on a device row with parts not programmed, and none on a clean one", async () => {
+    const tree = baseTree();
+    const [a, b] = tree.installations[0].topology[0].lines[0].devices;
+    a.pending_programming = { address: false, application: false, parameters: true, group_addresses: true };
+    b.pending_programming = { address: false, application: false, parameters: false, group_addresses: false };
+    const { root } = await renderExplorer(tree);
+    const rowA = labelFor("Device A").closest(".tree-row")!;
+    const dot = rowA.querySelector(".tree-pending-dot")!;
+    expect(dot.getAttribute("role")).toBe("img");
+    expect(dot.getAttribute("aria-label")).toBe("Not programmed: Parameters and Group addresses");
+    expect(labelFor("Device B").closest(".tree-row")!.querySelector(".tree-pending-dot")).toBeNull();
+    expect(labelFor("Device C").closest(".tree-row")!.querySelector(".tree-pending-dot")).toBeNull();
+    await act(async () => root.unmount());
+  });
+});
+
 describe("installation nodes", () => {
   it.each(["en", "de"])("labels unnamed installations without changing their names (%s)", async (language) => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, language);

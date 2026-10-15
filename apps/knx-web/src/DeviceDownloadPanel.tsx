@@ -6,6 +6,7 @@
 // the project no longer gives (ADR-0045). Every data block is shown once
 // the device has read it back unchanged, with its address and octets.
 
+import { downloadEndChangesProject } from "./programmingState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import DeviceLink from "./DeviceLink";
@@ -71,9 +72,11 @@ interface DeviceDownloadPanelProps {
   handoff?: DownloadHandoff | null;
   /** Called once per request after it was resolved, whatever the outcome. */
   onHandoffHandled?: (nonce: number) => void;
+  /** The project as reloaded after a run that wrote ended (ADR-0129). */
+  onProjectChanged?: (tree: ProjectTree) => void;
 }
 
-export default function DeviceDownloadPanel({ project, handoff = null, onHandoffHandled }: DeviceDownloadPanelProps) {
+export default function DeviceDownloadPanel({ project, handoff = null, onHandoffHandled, onProjectChanged }: DeviceDownloadPanelProps) {
   const t = useTranslate();
   const consent = useProgrammingConsent();
   const devices = useMemo(
@@ -104,6 +107,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   const [status, setStatus] = useState<api.DeviceDownloadStatusResponse | null>(null);
   const [events, setEvents] = useState<api.DeviceDownloadEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [programmingRefreshError, setProgrammingRefreshError] = useState<string | null>(null);
   // What the last status read said. Until one answers, a running download
   // cannot be ruled out and a device hand-off waits; `connecting` is a 409
   // (a start is opening its tunnel), `unknown` any other failed read.
@@ -211,9 +215,17 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   // (`written: "yes"`) and the restart was not left unconfirmed; reported
   // once per download.
   const reportedRef = useRef<number | null>(null);
+  // ADR-0129: the server settled the programming state before it reported
+  // the end; reload the project once per run that may have written.
+  const reloadedRef = useRef<number | null>(null);
   function apply(next: api.DeviceDownloadStatusResponse) {
     if (downloadIdRef.current !== null && next.downloadId !== downloadIdRef.current) return;
     const done = next.status;
+    if (onProjectChanged && downloadEndChangesProject(done) && reloadedRef.current !== next.downloadId) {
+      reloadedRef.current = next.downloadId;
+      setProgrammingRefreshError(null);
+      api.currentProject().then(onProjectChanged, (reason) => setProgrammingRefreshError(api.errorMessage(reason)));
+    }
     if (done.state === "finished" && done.written === "yes" && done.restart !== "unconfirmed"
       && reportedRef.current !== next.downloadId) {
       reportedRef.current = next.downloadId;
@@ -490,6 +502,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
 
       {selectedDevice && <p><DeviceLink deviceId={selectedDevice.id}>{t("devices.openEditor")}</DeviceLink></p>}
       {error && <p className="form-error" role="alert">{error}</p>}
+      {programmingRefreshError && <p className="form-warning" role="alert" data-programming-refresh>
+        {t("programming.refreshFailed", { reason: programmingRefreshError })}</p>}
 
       {plan && (
         <section className="device-download-plan" aria-label={t("deviceDownload.planTitle")}>

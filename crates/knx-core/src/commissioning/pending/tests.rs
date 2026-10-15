@@ -1,3 +1,5 @@
+//! Pending-part sets and programming-content comparison regressions.
+
 use std::collections::BTreeSet;
 
 use super::fixture::{self, CO1, D1, D2, GA1};

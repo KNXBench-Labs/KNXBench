@@ -7,8 +7,10 @@
 //! dump stays in `detail` byte for byte, and every other command keeps the
 //! old message. Described from the project *before* the command runs, so an
 //! unlink still finds what it unlinks. English like every server message.
+use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
 use knx_core::{
-    string_table::Text, ComObjectInstanceId, Command, Direction, GroupAddressId, Override, Project,
+    string_table::Text, ComObjectInstanceId, Command, DeviceInstance, Direction, GroupAddressId,
+    Override, Project,
 };
 
 /// A sentence for `cmd`, or `None` to keep the command name.
@@ -24,6 +26,10 @@ pub(crate) fn describe(project: &Project, cmd: &Command) -> Option<String> {
             ga,
             direction,
         } => link_sentence(project, false, *com_object, *ga, direction_word(direction)),
+        Command::SetDeviceProgramming { device, change } => {
+            let device = project.devices.get(*device)?;
+            programming_sentence(device, change)
+        }
         // "Both" from the web is one batch of a send and a receive link.
         Command::Batch(commands) => match commands.as_slice() {
             [Command::LinkComObject {
@@ -79,10 +85,7 @@ fn link_sentence(
         Some(text) if !text.is_empty() => format!("object {} “{}”", object.number, text),
         _ => format!("object {}", object.number),
     };
-    let device_label = match &device.address {
-        Some(individual) => format!("“{}” ({individual})", device.name),
-        None => format!("“{}”", device.name),
-    };
+    let device_label = device_label(device);
     let ga_label = format!(
         "{} “{}”",
         address.address.format(project.info.group_address_style),
@@ -93,6 +96,57 @@ fn link_sentence(
     } else {
         format!("Unlinked {object_label} of {device_label} from {ga_label} ({direction})")
     })
+}
+
+/// A device as the log names it: “Name” (1.1.5).
+pub(crate) fn device_label(device: &DeviceInstance) -> String {
+    match &device.address {
+        Some(individual) => format!("“{}” ({individual})", device.name),
+        None => format!("“{}”", device.name),
+    }
+}
+
+/// The parts in reading order: "address, parameters and group addresses".
+pub(crate) fn parts_text(parts: ProgrammingParts) -> String {
+    let names: Vec<&str> = [
+        (parts.address, "address"),
+        (parts.application, "application"),
+        (parts.parameters, "parameters"),
+        (parts.group_addresses, "group addresses"),
+    ]
+    .into_iter()
+    .filter_map(|(member, name)| member.then_some(name))
+    .collect();
+    match names.as_slice() {
+        [] => String::new(),
+        [one] => (*one).to_string(),
+        [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+    }
+}
+
+/// "Marked as programmed" for all four parts, otherwise the parts named.
+fn programming_sentence(device: &DeviceInstance, change: &ProgrammingChange) -> Option<String> {
+    let label = device_label(device);
+    let set = |value: bool| ProgrammingParts {
+        address: change.address == Some(value),
+        application: change.application == Some(value),
+        parameters: change.parameters == Some(value),
+        group_addresses: change.group_addresses == Some(value),
+    };
+    let sentences: Vec<String> = [(true, "programmed"), (false, "not programmed")]
+        .into_iter()
+        .filter_map(|(value, word)| {
+            let parts = set(value);
+            if parts == ProgrammingParts::ALL {
+                Some(format!("{label} marked as {word}"))
+            } else if parts.is_empty() {
+                None
+            } else {
+                Some(format!("{label}: {} marked as {word}", parts_text(parts)))
+            }
+        })
+        .collect();
+    (!sentences.is_empty()).then(|| sentences.join("; "))
 }
 
 fn text_of(project: &Project, text: &Text) -> Option<String> {
@@ -251,5 +305,69 @@ mod tests {
             ),
             None
         );
+    }
+
+    #[test]
+    fn parts_read_as_a_list() {
+        let parts = |a, b, c, d| ProgrammingParts {
+            address: a,
+            application: b,
+            parameters: c,
+            group_addresses: d,
+        };
+        assert_eq!(parts_text(ProgrammingParts::NONE), "");
+        assert_eq!(parts_text(parts(false, false, true, false)), "parameters");
+        assert_eq!(
+            parts_text(parts(true, false, false, true)),
+            "address and group addresses"
+        );
+        assert_eq!(
+            parts_text(ProgrammingParts::ALL),
+            "address, application, parameters and group addresses"
+        );
+    }
+
+    #[test]
+    fn a_programming_change_reads_as_what_was_marked() {
+        let project = project(switch(), IndividualAddress::new(1, 1, 5).ok());
+        let mark = |change| Command::SetDeviceProgramming {
+            device: DeviceId(1),
+            change,
+        };
+        assert_eq!(
+            describe(
+                &project,
+                &mark(ProgrammingChange::mark(ProgrammingParts::ALL, true))
+            )
+            .unwrap(),
+            "“Kitchen actuator” (1.1.5) marked as programmed"
+        );
+        assert_eq!(
+            describe(
+                &project,
+                &mark(ProgrammingChange::mark(ProgrammingParts::ALL, false))
+            )
+            .unwrap(),
+            "“Kitchen actuator” (1.1.5) marked as not programmed"
+        );
+        let mixed = ProgrammingChange {
+            address: Some(true),
+            parameters: Some(false),
+            ..ProgrammingChange::default()
+        };
+        assert_eq!(
+            describe(&project, &mark(mixed)).unwrap(),
+            "“Kitchen actuator” (1.1.5): address marked as programmed; \
+             “Kitchen actuator” (1.1.5): parameters marked as not programmed"
+        );
+        assert_eq!(
+            describe(&project, &mark(ProgrammingChange::default())),
+            None
+        );
+        let missing = Command::SetDeviceProgramming {
+            device: DeviceId(9),
+            change: ProgrammingChange::mark(ProgrammingParts::ALL, true),
+        };
+        assert_eq!(describe(&project, &missing), None);
     }
 }

@@ -30,6 +30,7 @@ Last updated: 2026-10-14 12:58 CEST
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
+| Per-part pending programming | Adr/App/Par/GA chips and Pending only filter, explorer dot, same-step edit/undo tracking, full/partial/address settlement and undoable logged manual marks; project belief, not live comparison ([guide](manual/user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11)) | Main-only (14 October 2026 source) |
 | Active task text shimmer | Readable slow sweep plus pause on existing running-work status text; motion/accessibility gates; no fabricated progress ([contract](contracts/task-status-shimmer.md)) | Main-only (14 October 2026 source) |
 | Resume after reload | A reloaded or reopened web tab shows the project the server still holds, with a notice naming unsaved changes; read-only, no reopen ([ADR-0127](adr/0127-web-workbench-resumes-the-open-project.md)) | Main-only (14 October 2026 source) |
 | Overwrite question | Save As onto an existing file asks first; the server refuses an unconfirmed replacement (`409 fileExists`); the previous state stays in the file's history ([Projects](manual/user-guide/02-projects.md#saving)) | Main-only (14 October 2026 source) |

@@ -1,5 +1,15 @@
 # Architecture
 
+## Per-part pending programming (P3)
+
+[ADR-0129](adr/0129-per-part-pending-programming.md) keeps transition rules out
+of the UI. Core compares command content and folds flag changes into the same
+inverse; App settles verified/failed bus writes outside undo history; Server
+binds manual marks and terminal settlement to the correct project/device and
+persists before publishing. The existing loaded booleans remain the sole stored
+belief; ProjectTree derives optional per-part pending booleans for presentation.
+No store migration, new protocol grammar or P4 comparison is introduced.
+
 ## Native import evidence on main (2026-10-12)
 
 The ADR-0113 work further down, written as "local source", is integrated. `knx-app`

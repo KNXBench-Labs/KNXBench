@@ -59,8 +59,25 @@ describe("device list", () => {
     const rows = projectDeviceRows(deviceTree(), [metadata(device(2))]);
     expect(visibleDeviceRows(rows, query, { column: "name", descending: false }, "en").map((row) => row.id)).toEqual([2]);
   });
-  it.each(["name", "manufacturer", "product", "orderNumber", "topology", "building", "com_object_count", "description"] as DeviceSortColumn[])("sorts column %s without dropping devices", (column) => {
+  it.each(["name", "manufacturer", "product", "orderNumber", "topology", "building", "com_object_count", "description", "programming"] as DeviceSortColumn[])("sorts column %s without dropping devices", (column) => {
     expect(visibleDeviceRows(projectDeviceRows(deviceTree()), "", { column, descending: false }, "en")).toHaveLength(2);
+  });
+  it("sorts by how much is pending and filters to devices with pending parts (ADR-0129)", () => {
+    const tree = deviceTree();
+    const first = tree.installations[0].topology[0].lines[0].devices[0];
+    first.pending_programming = { address: false, application: false, parameters: true, group_addresses: true };
+    tree.installations[0].unassigned[0].pending_programming = { address: false, application: false, parameters: false, group_addresses: false };
+    const third = device(11);
+    third.pending_programming = { address: true, application: false, parameters: false, group_addresses: false };
+    tree.installations[0].unassigned.push(third, device(12));
+    const rows = projectDeviceRows(tree);
+    const sort = (descending: boolean) => ({ column: "programming" as const, descending });
+    expect(visibleDeviceRows(rows, "", sort(true), "en").map((row) => row.id)).toEqual([2, 11, 10, 12]);
+    expect(visibleDeviceRows(rows, "", sort(false), "en").map((row) => row.id)).toEqual([12, 10, 11, 2]);
+    const byName = { column: "name" as const, descending: false };
+    expect(visibleDeviceRows(rows, "", byName, "en", { pendingOnly: true }).map((row) => row.id)).toEqual([2, 11]);
+    expect(visibleDeviceRows(rows, "Device 1", byName, "en", { pendingOnly: true }).map((row) => row.id)).toEqual([11]);
+    expect(visibleDeviceRows(rows, "", byName, "en", { pendingOnly: false })).toHaveLength(4);
   });
   it("keeps 5000 devices and derives/filter/sorts their rows without quadratic placement lookup", () => {
     const tree = deviceTree(); tree.installations[0].buildings = [];
@@ -82,6 +99,9 @@ describe("device catalogue admission", () => {
 
   it("accepts the supported, snapshot-bound wire model", () => {
     expect(admitDeviceCatalog(batch([metadata(device(2))]))).toEqual(batch([metadata(device(2))]));
+    const reported = metadata({ ...device(2),
+      pending_programming: { address: false, application: true, parameters: false, group_addresses: false } });
+    expect(admitDeviceCatalog(batch([reported]))).toEqual(batch([reported]));
     expect(catalogueMatchesTree(batch(), deviceTree())).toBe(true);
   });
   it("rejects old/future/wrong-server metadata for the current tree", () => {
@@ -95,6 +115,7 @@ describe("device catalogue admission", () => {
     { ...batch(), devices: [{ ...metadata(device(2)), resolution: "Invented" }] },
     { ...batch(), devices: [{ ...metadata(device(2)), manufacturerName: 12 }] },
     { ...batch(), devices: [{ ...metadata(device(2)), resolution: "NoDatabase" }] },
+    { ...batch(), devices: [metadata({ ...device(2), pending_programming: { address: true } as never })] },
   ])("refuses malformed, unknown or conflicting batches", (value) => {
     expect(() => admitDeviceCatalog(value)).toThrow("device catalogue");
   });

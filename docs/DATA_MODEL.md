@@ -1,5 +1,14 @@
 # Data model
 
+## Pending-programming belief (P3)
+
+[ADR-0129](adr/0129-per-part-pending-programming.md) activates the existing
+`CommissioningState` loaded flags: Address/Application/Parameters/Communication
+part map to Adr/App/Par/GA. Pending is the inverse of its stored loaded boolean;
+MediumConfig remains untouched. Core commands and App settlement change those
+same fields; no second dirty-state model, native version bump or migration.
+Original imported XML and optional observed `DeviceLoadStates` remain separate.
+
 ## Native project notes, model/storage14 candidate (2026-10-11)
 
 [ADR-0031](adr/0031-project-notes-are-a-project-owned-collection.md) is implemented

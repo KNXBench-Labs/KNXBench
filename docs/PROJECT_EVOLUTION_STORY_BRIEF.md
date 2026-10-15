@@ -21,7 +21,11 @@ The static website and GitHub Pages integration already exist
 [website contract](WEBSITE.md)). The authorized cutover changes the pin and retires
 the earlier edition/preview/approval from the tree; Git retains their reviewed
 bytes. This exact approval is not approval of later content changes. Deployment
-status must be established independently from approval and local build success.
+status is independently verified: Pages run `38701307431` succeeded for
+`022d85a0ad3bdfe0e9862ea190e22898cc3a2f87`; the public page was fetched with
+HTTP 200 and matches the accepted public-build HTML byte for byte, including
+the exact approved story digest. See the
+[publication receipt](evidence/story-publication-2026-10-15.json).
 
 The central question is:
 

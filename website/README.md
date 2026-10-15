@@ -73,22 +73,40 @@ Imprint acceptance recipe: `tests/verify-imprint.js`.
 
 ## Media
 
-The hero, CRT/LCARS gallery and four release-feature stills show the published
-**Alpha 9** frontend and real server, with fictional data in a loopback-only
-network namespace. They are lossless WebPs from the manual PNGs; no API successes
-or UI controls were invented. Capture provenance and regeneration:
-[`docs/assets/README.md`](../docs/assets/README.md).
+The hero, CRT/LCARS gallery and four feature stills show the **Alpha 12
+candidate**, built from the integrated source, with the real server and fictional
+Sample house in a loopback-only namespace. The instruction frame uses a device
+created through the real wizard: the old schema-11 sample deliberately has no
+supported imported instruction source. No API successes or UI controls were
+invented. Ten PNGs (including a separate offline-preview evidence frame) and
+source/spec/server hashes live in `docs/assets/releases/alpha12/`.
+The seven public WebPs are lossless and pixel-equal to those PNGs; `media.json`
+records each source and output hash. The previous Alpha 9 capture record stays
+historical, not newly certified.
+
+Regenerate the candidate media after building the real server/frontend:
+
+```sh
+KNX_SERVER_BIN="$PWD/target/debug/knx-server" \
+KNX_RELEASE_MEDIA_DIR="$TMPDIR/alpha12-media" \
+KNX_RELEASE_MEDIA_ARTIFACT_DIR="$TMPDIR/alpha12-browser-artifacts" \
+unshare --user --map-root-user --net sh -c \
+  'ip link set lo up && cd apps/knx-web && exec npx playwright test -c playwright.release-media.config.ts'
+```
+
+Use the repository's shared gate leases before running alongside another session.
+The capture spec, dedicated TypeScript config and original PNGs are committed;
+failed capture attempts are retained privately, not counted as accepted runs.
+Current browser recipe: `tests/verify-release-features.js`.
 
 Videos remain **earlier recordings**, clearly labelled in both languages.
 `project-work.mp4` and `bus-flow.mp4` are first-loop transcodes of existing README
-recordings, not new performance measurements. The former includes camera
-zoom/timing and a half-duration transcode (28.2 s); the latter is the real monitor
-component with synthetic traffic. The historical `group-details.mp4` uses a fully
-intercepted fictional API fixture. Its original recording checks remain under
-`historicalRecording` in `media.json`, separate from `alpha9Capture`.
-The Alpha 9 feature section deliberately separates available workbench features
-from unmounted editor foundations, and the status section names native schema 13,
-independent backups and the lack of Alpha 8 downgrade support.
+recordings, not current-version or performance measurements. The former includes
+camera zoom/timing and a half-duration transcode (28.2 s); the latter is the real
+monitor component with synthetic traffic. Historical `group-details.mp4` uses a
+fully intercepted fictional API fixture. Its checks remain under
+`historicalRecording` in `media.json`. Alpha 12 copy names native16/product23,
+independent backups, old-reader refusal and actual remaining programming limits.
 
 Videos do not autoplay or loop. They have native controls, same-host posters,
 DE/EN descriptive captions and text walkthroughs. Do not silently swap in an old

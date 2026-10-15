@@ -1,6 +1,9 @@
 /** Plain Playwright CLI function: verify the actual static marketing artifact. */
 async (page) => {
   const origin = 'http://127.0.0.1:4198';
+  const manifest = await (await page.request.get(`${origin}/build-manifest.json`)).json();
+  if (manifest.schema !== 'knxbench-website-build/1') throw new Error('unknown site artifact');
+  const release = manifest.mode === 'release';
   const checks = [], requests = [], unexpected = [], errors = [], media = [];
   const assert = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };
   page.on('request', request => {
@@ -16,7 +19,8 @@ async (page) => {
   await page.locator('.hero-media img').waitFor();
   await page.evaluate(() => document.fonts.ready);
   assert('German hero renders actual marketing copy', (await page.locator('h1').textContent()).includes('Dein KNX-Projekt.'));
-  assert('private preview and alpha are visible', await page.locator('.preview-note').isVisible() && await page.locator('.hero .alpha-tag').isVisible());
+  assert('artifact publication mode and alpha are visible', await page.locator('.hero .alpha-tag').isVisible() &&
+    (release ? await page.locator('.preview-note').count() === 0 : await page.locator('.preview-note').isVisible()));
   assert('no video request before deliberate playback', !requests.some(path => path.endsWith('.mp4')));
   assert('both locally hosted font families load', await page.evaluate(() => document.fonts.check('600 20px "Bench Display"') && document.fonts.check('400 20px "Bench Text"')));
   await page.screenshot({ path: 'website/output/playwright/desktop-de.png' });
@@ -28,7 +32,8 @@ async (page) => {
   await page.locator('.hero-actions a').first().click();
   assert('primary CTA reaches the real-product installation section', new URL(page.url()).hash === '#start');
   assert('Docker is the prominent first path and AppImage is separate', await page.locator('.docker-path').isVisible() && (await page.locator('.install-paths article').first().textContent()).includes('Docker'));
-  assert('public installation targets and the site preview are disclosed', (await page.locator('.launch-note').first().textContent()).includes('öffentlich auf GitHub') && (await page.locator('.launch-note').first().textContent()).includes('Vorschau'));
+  assert('installation copy matches the publication mode', release ? await page.locator('.launch-note').count() === 0 :
+    (await page.locator('.launch-note').first().textContent()).includes('öffentlich auf GitHub') && (await page.locator('.launch-note').first().textContent()).includes('Vorschau'));
   const links = await page.locator('a[href]').evaluateAll(elements => [...new Set(elements.map(el => el.href))]);
   for (const href of links) {
     const url = new URL(href);
@@ -59,6 +64,7 @@ async (page) => {
   assert('motion reduction produces no active page animations', await page.evaluate(() => document.getAnimations().length === 0));
   assert('no cookies are set by the static site', (await page.context().cookies()).length === 0);
   await page.locator('.language-nav a[lang="en"]').click();
+  await page.waitForURL(`${origin}/en/`);
   assert('English language URL and content are complete', new URL(page.url()).pathname === '/en/' && await page.locator('html').getAttribute('lang') === 'en' && (await page.locator('h1').textContent()).includes('Your KNX project.'));
   await page.screenshot({ path: 'website/output/playwright/desktop-en.png' });
   for (const lang of ['de', 'en']) {
@@ -82,7 +88,7 @@ async (page) => {
   await page.screenshot({ path: 'website/output/playwright/mobile-de.png', fullPage: true });
   await page.locator('.site-footer a[href="../story/"]').click();
   assert('Evolution link opens the existing story companion', new URL(page.url()).pathname === '/story/' && await page.locator('.chapter-section').count() > 0 && await page.locator('.chapter-section').count() === await page.evaluate(() => JSON.parse(document.getElementById('story-data').textContent).chapters.length));
-  assert('story still displays its private-preview notice', await page.locator('.preview-banner').isVisible());
+  assert('story notice matches the artifact publication mode', release ? await page.locator('.preview-banner').count() === 0 : await page.locator('.preview-banner').isVisible());
   const nojs = await page.context().browser().newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   try {
     const basic = await nojs.newPage();
@@ -96,5 +102,5 @@ async (page) => {
   } finally { await nojs.close(); }
   assert('no third-party request at any tested stage', unexpected.length === 0);
   assert('no page or console errors', errors.length === 0);
-  return { checks, count: checks.length, media, unexpected, errors, requestPaths: [...new Set(requests)].sort(), externalLinks: 'not followed by this recipe; checked signed out separately', scope: 'Chromium; static preview; native screen readers and public hosting not verified' };
+  return { checks, count: checks.length, media, unexpected, errors, requestPaths: [...new Set(requests)].sort(), externalLinks: 'not followed by this recipe; checked signed out separately', scope: `Chromium; built ${manifest.mode} artifact; native screen readers and public hosting not verified` };
 }

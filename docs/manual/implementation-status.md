@@ -472,7 +472,7 @@ gives five, with the measured counts behind them.
 | Provenance for modelled layered values | ✅ Implemented | `Override` distinguishes absent/empty/malformed/value, and `Resolved` carries the source layer. Not every ordinary project attribute is layered — [Data model](../DATA_MODEL.md), [ADR-0010](../adr/0010-per-attribute-override-representation.md) |
 | Exporting the open project through the browser | ✅ Implemented | File → Export project… streams a newly serialized `.knxdb`; Save As still writes to the server's directory — [Projects](user-guide/02-projects.md) |
 | Autosave for a project that already has a file | ✅ Implemented | Configurable interval, cancellation notice and reported failures — [Projects](user-guide/02-projects.md#saving) |
-| Native project versions and persistent undo history | ✅ Local source package | Named/save/pre-restore versions, revision-bound confirmed restore, bounded atomic journal — [Projects](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions). Not in alpha.6; keep independent copies against file/disk loss |
+| Native project versions and persistent undo history | ✅ Included since Alpha 7 | Named/save/pre-restore versions, revision-bound confirmed restore, bounded atomic journal — [Projects](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions). Not in alpha.6; keep independent copies against file/disk loss |
 
 ## ETS project import
 

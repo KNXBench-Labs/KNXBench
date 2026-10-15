@@ -78,9 +78,28 @@ test("Alpha 12 website and README stills, real application without hardware", as
   await expect(page.getByRole("button", {name: "Compare all shown", exact: true})).toBeVisible();
   await shot(page, "graphite-devices");
 
-  await page.getByRole("button", {name: "1.1.1 Switch actuator ground floor", exact: true}).first().click();
-  const tabs = page.getByRole("tablist", {name: "Switch actuator ground floor", exact: true});
-  await tabs.getByRole("tab", {name: "Instructions", exact: true}).click();
+  // The older schema-11 sample has no supported imported instruction source.
+  // Create a native device through the actual wizard instead of inventing a source.
+  await nav(page, "Topology");
+  const line = page.locator("li").filter({
+    has: page.locator("button.tree-label", {hasText: /^Line 1: Ground floor$/}),
+  }).last();
+  await line.getByRole("button", {name: "+ Add device", exact: true}).click();
+  const wizard = page.getByRole("dialog", {name: "Add device", exact: true});
+  await wizard.getByRole("button", {name: /Switch actuator 4-fold, DIN rail/}).click();
+  await wizard.getByRole("button", {name: "Next", exact: true}).click();
+  await wizard.getByRole("button", {name: "Next", exact: true}).click();
+  await wizard.getByLabel("Device name", {exact: true}).fill("Kitchen handover actuator");
+  await wizard.getByLabel(/Assign free addresses on the line/).check();
+  await wizard.getByRole("button", {name: "Next", exact: true}).click();
+  await expect(wizard.getByText("1 device will be created", {exact: true})).toBeVisible();
+  await wizard.getByRole("button", {name: "Create device", exact: true}).click();
+  await expect(wizard.getByText("1 device created.", {exact: true})).toBeVisible();
+  await wizard.getByRole("button", {name: "Done", exact: true}).click();
+  await expect(wizard).toBeHidden();
+  await page.locator(".project-explorer").getByRole("button", {name: /Kitchen handover actuator/}).first().click();
+  const tabs = page.getByRole("tablist", {name: "Kitchen handover actuator", exact: true});
+  await tabs.getByRole("tab", {name: "Installation instructions", exact: true}).click();
   const instructions = page.locator(".device-instructions");
   await expect(instructions).toBeVisible();
   await instructions.locator("textarea").fill("Sample house — kitchen lighting.\nLabel the outgoing circuits before handover.");
@@ -88,18 +107,28 @@ test("Alpha 12 website and README stills, real application without hardware", as
   const preview = instructions.getByRole("region", {name: "Change preview", exact: true});
   await expect(preview).toContainText("Label the outgoing circuits");
   await preview.getByRole("button", {name: "Apply change", exact: true}).click();
-  await expect(instructions.getByText("Native override", {exact: true})).toBeVisible();
+  await expect(preview).toHaveCount(0);
+  await expect(instructions.getByText("Made in KNXBench: no imported original", {exact: true})).toBeVisible();
+  await expect(instructions.getByRole("button", {name: "Remove instructions", exact: true})).toBeEnabled();
+  await expect(instructions.locator("textarea")).toHaveValue("Sample house — kitchen lighting.\nLabel the outgoing circuits before handover.");
+  await expect(page.getByRole("button", {name: "Undo", exact: true})).toBeEnabled();
   await shot(page, "graphite-instructions");
 
   await page.locator(".file-menu > summary").click();
   await page.locator(".file-menu [data-support-open]").click();
   const support = page.getByRole("dialog", {name: "Device support report", exact: true});
   await expect(support).toBeVisible();
+  const resize = support.getByRole("button", {name: "Resize dialog with arrow keys", exact: true});
+  await resize.focus();
+  for (let step = 0; step < 12; step++) await resize.press("ArrowDown");
+  await support.evaluate(element => {element.scrollTop = 0;});
+  await expect(support.getByRole("heading", {name: "Device support report", exact: true})).toBeVisible();
+  await shot(page, "graphite-support");
   await support.locator("[data-support-preview]").click();
   await expect(support.locator("[data-support-preview-content]")).toBeVisible();
   await expect(support.locator("[data-support-save]")).toBeDisabled();
-  await support.locator("[data-support-preview-content]").scrollIntoViewIfNeeded();
-  await shot(page, "graphite-support");
+  await support.locator("[data-support-export-consent]").scrollIntoViewIfNeeded();
+  await shot(page, "graphite-support-preview");
   await support.getByRole("button", {name: "Close", exact: true}).click();
 
   for (const value of ["porcelain", "lcars", "user-modern-retro-green-crt"]) {
@@ -113,7 +142,8 @@ test("Alpha 12 website and README stills, real application without hardware", as
   await nav(page, "Topology");
   await shot(page, "porcelain-topology");
   await page.getByRole("button", {name: "1.1.1 Switch actuator ground floor", exact: true}).first().click();
-  await tabs.getByRole("tab", {name: "Parameters", exact: true}).click();
+  await page.getByRole("tablist", {name: "Switch actuator ground floor", exact: true})
+    .getByRole("tab", {name: "Parameters", exact: true}).click();
   await shot(page, "porcelain-parameters");
   expect(errors).toEqual([]);
   expect(forbidden).toEqual([]);

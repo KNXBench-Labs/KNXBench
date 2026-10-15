@@ -66,26 +66,26 @@
       }
     },
     "crt.webp": {
-      "sha256": "49b22cc4cc65823c2ce8a7eafedcfd21e2f42704d4d61c2c235afafcb9f8cef7",
-      "bytes": 83806,
+      "sha256": "3fdb9ebb66b731afc8efdac51c2f7915f380918dea2b228e07e4f373c25330dc",
+      "bytes": 108500,
       "width": 1440,
-      "height": 900,
-      "source": "docs/assets/screenshots/user-modern-retro-green-crt-group-addresses.png",
-      "sourceSha256": "0f61ee9ab2a07d69bdd196b40569258db1e51f7fc60814a954a0250440e608f6",
-      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
-      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
-      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
+      "height": 1080,
+      "source": "docs/assets/releases/alpha12/user-modern-retro-green-crt-addresses.png",
+      "sourceSha256": "bc2617e4306a369b719736ed49e22d6a5c70dd7bc417550f7fb2ce9ee398d00e",
+      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
+      "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "graphite.webp": {
-      "sha256": "ea3fa10b265a0565d8c788a889e76b6deda08267bed61cdb9dd03a1d629626d1",
-      "bytes": 49576,
+      "sha256": "4245a3b1659bf0208c54ca4eb867cfbb2b33ab80cfde849868cc399a783cfa6b",
+      "bytes": 58800,
       "width": 1440,
-      "height": 900,
-      "source": "docs/assets/screenshots/graphite-group-addresses.png",
-      "sourceSha256": "8da0889bf478b5a87e72c5d8bc0dca10d5a3ddd66bb27a81d1df9c8dc1ecdc86",
-      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
-      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
-      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
+      "height": 1080,
+      "source": "docs/assets/releases/alpha12/graphite-addresses.png",
+      "sourceSha256": "6e5cf799588212516be547f5ed77b71ec7f62efb67ea2de7a590e1d280b96121",
+      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
+      "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "group-details-de.vtt": {
       "sha256": "2005ef1a7ab7cae7414565fd9651aeccd188f6dad29ed07669f190d1fd67b227",
@@ -122,15 +122,15 @@
       "bytes": 23664
     },
     "lcars.webp": {
-      "sha256": "5c93c725328cbc933212d8802d5df2c44deefb02c9dff54cec710a540bcce7d1",
-      "bytes": 57920,
+      "sha256": "d1d0bda9c96cf36259aec142b594c7dbc8cca2aecc99f98512e62f9d2e7f14a2",
+      "bytes": 69568,
       "width": 1440,
-      "height": 900,
-      "source": "docs/assets/screenshots/lcars-group-addresses.png",
-      "sourceSha256": "9eb9ff1d7b9caa85e4709199d80fa69f3db8a3bb15f952014a626ce62da52c18",
-      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
-      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
-      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
+      "height": 1080,
+      "source": "docs/assets/releases/alpha12/lcars-addresses.png",
+      "sourceSha256": "e3381b34a5e898dab251d314170652b6d4053f2ed481accfe065a4b4e55b50b5",
+      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
+      "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "project-work-de.vtt": {
       "sha256": "7d85bd6ee6693e6504d91bb508fe7823168c1dae719bda83302c4c1a545f33fb",
@@ -186,49 +186,49 @@
       "sha256": "685bbbf69fa616df1ef81847c85fc76be097ddfb3468ff2257be54511ab3130f",
       "bytes": 13284
     },
-    "alpha9-devices.webp": {
-      "sha256": "f91ec18743a9bda44cac030e7bd4656c7905d9eb8ffe22c79e2e47e5d798cfb7",
-      "bytes": 46528,
-      "width": 1440,
-      "height": 900,
-      "source": "docs/assets/screenshots/graphite-devices.png",
-      "sourceSha256": "3569b8078f2056b8a0058b1da87bdab64e3b98594912937d54a442e4f9652914",
-      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
-      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
-      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
-    },
-    "alpha9-dpt.webp": {
-      "sha256": "da4ac86e99e8c097bc1e51bdbf076b6d6924e655f9d87fe28e0542c197c609e5",
-      "bytes": 57140,
+    "alpha12-devices.webp": {
+      "sha256": "48a6944a853e7ddcf4c29759721bd956d6a66d4464da980a0034c059c1dfe0c6",
+      "bytes": 55674,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/screenshots/graphite-dpt-selection.png",
-      "sourceSha256": "0919f0079f9eb90058893fb290aa649ced16985c23ff5e04853945fd08ec0243",
-      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
-      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
-      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
+      "source": "docs/assets/releases/alpha12/graphite-devices.png",
+      "sourceSha256": "21bf5c83a59e55bbd825171f27a4b63040d9112f9f902e5763ea2cde78834101",
+      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
+      "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
-    "alpha9-history.webp": {
-      "sha256": "6349eef8b54febd795481fe1db265b7c09064cb488e6b04260eac1f94d458d65",
-      "bytes": 56720,
+    "alpha12-addresses.webp": {
+      "sha256": "4245a3b1659bf0208c54ca4eb867cfbb2b33ab80cfde849868cc399a783cfa6b",
+      "bytes": 58800,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/screenshots/graphite-project-history.png",
-      "sourceSha256": "fb684e4813d9ef881f1700ec44743e09ae25636591ae631993a074648ce0d387",
-      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
-      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
-      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
+      "source": "docs/assets/releases/alpha12/graphite-addresses.png",
+      "sourceSha256": "6e5cf799588212516be547f5ed77b71ec7f62efb67ea2de7a590e1d280b96121",
+      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
+      "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
-    "alpha9-message-details.webp": {
-      "sha256": "e6ec3cf673bda26470a485bd74a4cec2337634a0febb1e92855f94437378e423",
-      "bytes": 42328,
+    "alpha12-instructions.webp": {
+      "sha256": "201feafa73d36171d10a8b153d16c82ef5e0e9dd8aa94fcf22c2d0c0b84527d6",
+      "bytes": 60574,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/screenshots/graphite-message-details.png",
-      "sourceSha256": "69eb686a4c2e10f09992cdc2ac6aa69507141f368cc0b1378ca8a2bd8c78e37a",
-      "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
-      "kind": "published Alpha 9 real-app screenshot; real server; fictional project; no live bus",
-      "encoding": "lossless WebP; original captured pixels, no repainting or synthetic controls"
+      "source": "docs/assets/releases/alpha12/graphite-instructions.png",
+      "sourceSha256": "76846ce1a673a3eeb6576198015ed64bb475957a793343f32d9942eaa140bac5",
+      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
+      "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
+    },
+    "alpha12-support.webp": {
+      "sha256": "0c8653803b3e1389513aca5cb30f3127136777d58c37373e0cd22ef99c1268ae",
+      "bytes": 55360,
+      "width": 1440,
+      "height": 1080,
+      "source": "docs/assets/releases/alpha12/graphite-support.png",
+      "sourceSha256": "5982a1473a2629404ead9858e2545d2f990b7b67666a848f9bc39db67534bc88",
+      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
+      "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     }
   },
   "historicalRecording": {
@@ -268,7 +268,7 @@
       "source": "production frontend, fictional API answers; no live KNX server"
     }
   },
-  "applicationSource": "5b21323e050f94953de9ff4683cc12462d753001",
+  "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
   "alpha9Capture": {
     "captured_on": "2026-10-11",
     "application_release": "v0.1.0-alpha.9",
@@ -284,5 +284,23 @@
       "failed": 0,
       "skipped": 0
     }
+  },
+  "alpha12Capture": {
+    "schema": "knxbench-alpha12-media/1",
+    "captured_on": "2026-10-15",
+    "application_release_candidate": "v0.1.0-alpha.12",
+    "application_source_commit": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+    "network": "isolated loopback-only user/network namespace",
+    "data": "fictional schema-11 Sample house plus native device created through the real wizard; no real KNX device",
+    "server_binary_sha256": "409da8c976e8a648014cbb33cdf0eb1f6f263cce63705a92737c40c432e703ac",
+    "capture_spec_sha256": "cfc1e68077bdb2848046893f9eac15e17f513df419134dbb5642d9085a74e921",
+    "capture_config_sha256": "5a443816796fd839df1707a3d16a31b15e8c9bc5bc115c4079580ded5abfbcf8",
+    "capture_result": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    },
+    "source_frozen": true,
+    "visual_review": "all ten final captures inspected; full-resolution predecessor stills plus final contact sheet and both final support frames; no native WebKitGTK/hardware certification"
   }
 }

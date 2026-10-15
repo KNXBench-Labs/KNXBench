@@ -65,8 +65,10 @@ better at explaining itself. It has not acquired a licence to guess at your bus.
   comparable. Verified application identity comes before bounded memory reads;
   supported 0701 address/association tables are decoded and every raw range is
   retained. Cancellation drains the current read before stopping the queue.
-  **PART-P4-PENDING:** named parameter comparison awaits the final published
-  parameter/corpus prerequisite; no unpublished branch is claimed as shipped.
+  Named numeric/text parameters show project/device values from actual active-write
+  bit attribution. Missing or masked fields, later overwrites, unsupported encodings
+  and negative signed device patterns stay Unknown with a reason and raw bytes.
+  No new image family or download admission is introduced.
   [Contract](../contracts/device-comparison.md).
 - **A useful report before a device can be programmed.** **File → Device support
   report** works offline without a project, matching product, executable plan or

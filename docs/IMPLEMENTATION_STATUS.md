@@ -14,6 +14,24 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — Offline expansion P3a **branch accepted, integration pending**:
+  immutable normalized0025 property plans validate source positions, explicit
+  object indices, identity ordering, load lifecycle, absolute allocation bounds
+  and non-overlapping writes. The concrete-simulator-only executor reuses
+  ManagementSession, delays Verify Mode until identity checks, preserves zero-wire
+  metadata and reports source-local failures without automatic rollback.
+  Focused Core8/8, Net7/7, one hardware-transport compile-refusal example and
+  owning-crate all-target Clippy pass. Original relative simulator allocation
+  baseline and setup/target guards produced named REDs before their fixes.
+  Fifteen-stage frozen branch acceptance passes: Rust4639/0/207ignored,
+  Vitest3626/263files, workspace Clippy/build, actual frontend build,
+  documentation/tooling/five repository checks and the explicit Release
+  real-source refusal regression;2898source paths remain unchanged.
+  ProductDB translation, restart, real-source16-bit encoding, complete durable
+  recovery and any new public/hardware support remain open.
+  [Receipt](evidence/offline-property-plan-simulation-2026-10-16.json) ·
+  [Contract](contracts/offline-property-plan-simulation.md).
+
 - 2026-10-16 — Offline expansion P2 **integrated and published** as `79156a5d`:
   legacy ASAP-indexed sending/FE-unused associations and an explicit System2
   source-image library path sharing the production product/Dynamic evaluator.

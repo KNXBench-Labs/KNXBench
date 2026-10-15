@@ -1,5 +1,14 @@
 # Compatibility
 
+## Normalized property simulation (16 October 2026 source)
+
+[The P3a offline executor](contracts/offline-property-plan-simulation.md) accepts
+explicit normalized0025 operations only against the concrete simulator. Focused
+software tests do not establish real product-step mapping, complete images,
+resource-specific profile support or durable recovery. Restart is not in this
+bounded plan grammar. No HTTP/CLI/UI route, schema, supported-device inventory,
+public admission gate or field-verification status changes.
+
 ## Offline source-image assembly (15 October 2026 source)
 
 [The System2 source-image API](contracts/offline-download-system2-image.md) reuses

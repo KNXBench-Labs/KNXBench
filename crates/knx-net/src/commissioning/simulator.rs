@@ -1498,7 +1498,29 @@ impl SimulatedDevice {
             // complaint. The client finds out by reading zero.
             return;
         }
-        let base = ALLOCATION_BASE + u32::from(object_index) * 0x1000;
+        // The 0025 offline slice uses MP §3.31.3.4's explicit absolute
+        // address, not the generic relative allocator's generated base. Decode
+        // independent raw offsets; never call the production payload builder.
+        let base = if self.config.mask_version == 0x0025 && matches!(subtype, 0..=2) {
+            if payload.len() != 10 {
+                return;
+            }
+            let start = u32::from(u16::from_be_bytes([payload[2], payload[3]]));
+            if subtype <= 1 {
+                let length = u32::from(u16::from_be_bytes([payload[4], payload[5]]));
+                if length == 0
+                    || start + length > 0x1_0000
+                    || !matches!(payload[7], 1..=3)
+                    || payload[8] & 0x7F != 0
+                    || payload[9] != 0
+                {
+                    return;
+                }
+            }
+            start
+        } else {
+            ALLOCATION_BASE + u32::from(object_index) * 0x1000
+        };
         self.lock().reference.insert(object_index, base);
     }
 

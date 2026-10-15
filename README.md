@@ -85,21 +85,21 @@ Retained bytes are not a promise of complete ETS semantics.
   inspector, drag & drop.
 - 🎨 **Looks the way you like it.**
   Porcelain, Graphite, Cupertino, LCARS and a phosphor-green CRT theme. English and
-  German, plus Boarisch (Bavarian) and Klingon packs for the brave. And 38 optional
+  German, plus Boarisch (Bavarian) and Klingon packs for the brave. And 42 optional
   achievements, because engineering work deserves a little applause.
-- 🤖 **Your AI agent may look. It may not touch.**
+- 🤖 **Your AI agent gets a workbench, not the bus keys.**
   `knx-mcp` lets an MCP client such as Claude Code or Hermes answer questions about your
-  saved projects — read-only, no bus; suggested addresses come back as a CSV you apply
-  yourself ([AI agents over MCP](docs/manual/user-guide/12-ai-agents.md), experimental).
+  saved projects — read-only by default, no bus. An explicit opt-in permits a
+  previewed, confirmed group-address naming recipe; address suggestions remain a CSV you apply yourself ([AI agents over MCP](docs/manual/user-guide/12-ai-agents.md), experimental).
 - 🐧 **Linux-native, browser-ready.**
   A Linux desktop app, or a Docker container you open in a browser — plus `knx`, a
   command line for the scriptable bits.
 
 > [!NOTE]
-> Alpha.8 retains the earlier wizards, themes, Devices view, native history and MCP,
-> and adds selected-line/device import, schema-23 integrity fixes, read-only stored
-> module-instance values, bounded payload evidence and the 1024 MiB expanded archive budget.
-> [Release notes](docs/releases/alpha8.md) explain the scope and schema12 upgrade.
+> **Alpha 12:** portable project/product data, per-part programming marks, deliberate
+> read-only device comparison and offline support reports — plus the UI fixes reported
+> by actual users. [Release notes](docs/releases/alpha12.md) explain the scope and the
+> native-schema **16** / product-schema **23** upgrade. Backups before bravery.
 
 ## See it in action
 
@@ -123,9 +123,9 @@ no actual building was switched on and off for this clip.</sub></p>
 
 <table>
   <tr>
-    <td><img src="docs/assets/screenshots/porcelain-group-addresses.png" alt="Group address table with ranges, datapoint types and sending/receiving link counts"></td>
-    <td><img src="docs/assets/screenshots/porcelain-device-tab-parameters.png" alt="Parameters tab of a fictional switch actuator, next to the Diagnostics and Manufacturer fields tabs"></td>
-    <td><img src="docs/assets/screenshots/porcelain-topology.png" alt="Topology view with area 1 House and the lines Ground floor and First floor"></td>
+    <td><img src="docs/assets/releases/alpha12/porcelain-addresses.png" alt="Group address table with ranges, datapoint types and sending/receiving link counts"></td>
+    <td><img src="docs/assets/releases/alpha12/porcelain-parameters.png" alt="Parameters tab of a fictional switch actuator, next to the Diagnostics and Manufacturer fields tabs"></td>
+    <td><img src="docs/assets/releases/alpha12/porcelain-topology.png" alt="Topology view with area 1 House and the lines Ground floor and First floor"></td>
   </tr>
   <tr>
     <td align="center"><sub>Group addresses</sub></td>
@@ -144,7 +144,7 @@ no actual building was switched on and off for this clip.</sub></p>
   </tr>
 </table>
 
-<p align="center"><sub>Every capture comes from the real application, with a fictional sample house.</sub></p>
+<p align="center"><sub>Current stills: Alpha 12 candidate, real server, fictional Sample house. The earlier workflow clips remain earlier recordings; no live bus.</sub></p>
 
 ## Getting started
 
@@ -167,7 +167,7 @@ import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
 Images are available for **x86-64 (`amd64`) and 64-bit Arm (`arm64`)**. `latest`
 follows published releases, including alphas, not the newest source. To stay on a
-specific release, use `knxbench/knxbench-server:0.1.0-alpha.11` in both commands
+specific release, use `knxbench/knxbench-server:0.1.0-alpha.12` in both commands
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
 
 Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
@@ -190,15 +190,15 @@ and may enter shell history.
 ### Linux desktop, via AppImage
 
 ```bash
-REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.11
-curl -LO "$REL/KNXBench_0.1.0-alpha.11_amd64.AppImage"
+REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.12
+curl -LO "$REL/KNXBench_0.1.0-alpha.12_amd64.AppImage"
 curl -LO "$REL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.11_amd64.AppImage
-./KNXBench_0.1.0-alpha.11_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.12_amd64.AppImage
+./KNXBench_0.1.0-alpha.12_amd64.AppImage
 ```
 
-This is the `v0.1.0-alpha.11` pre-release, x86-64 only, built by the release workflow.
+This is the `v0.1.0-alpha.12` pre-release, x86-64 only, built by the release workflow.
 `--ignore-missing` skips the `knx-mcp` binary listed in the same checksum file.
 Source changes after this tag still need a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The
@@ -207,7 +207,8 @@ packages it needs and what has been tested.
 
 > [!IMPORTANT]
 > Before upgrading, close KNXBench and back up native project files and Docker
-> data. Alpha.10 requires schema 14; Alpha.9 and earlier refuse upgraded files.
+> data, including the product database. Alpha 12 uses native schema 16 and product
+> schema 23; Alpha 11 and earlier refuse upgraded native files.
 > To go back, restore the pre-upgrade backup. Internal versions are not external backups.
 
 ### Where it runs
@@ -235,7 +236,7 @@ Alpha.10 is the first release with it; Alpha.9 and older packages do not check.
 ## Project status
 
 **Alpha — and we mean it.** The current pre-release is
-[`v0.1.0-alpha.11`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11).
+[`v0.1.0-alpha.12`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.12).
 The test suite is large, the documentation is honest, and things still move.
 
 - **Solid:** importing real ETS projects with a full report, editing with undo, the
@@ -257,12 +258,10 @@ code churn, AI tokens, models and tools, prompt-cache savings, and a fun-facts s
 that converts it all into *Lord of the Rings* re-reads and ant colonies. It is a
 generated snapshot (last run 7 October 2026), so read its numbers as "as of".
 
-A few numbers you can check yourself, as of 8 October 2026:
-
-- **3,721** Rust tests, **2,415** frontend unit tests and **175** browser tests passed in
-  the last full gate ([implementation log](docs/IMPLEMENTATION_STATUS.md)).
-- **95** [architecture decision records](docs/adr/README.md) explain why the code looks
-  the way it does.
+The [test catalogue](docs/TEST_CATALOGUE.md) explains what gets exercised; each
+[release note](docs/releases/alpha12.md) names its own scope. Test results belong to
+an exact source snapshot, not a perpetually growing badge. The
+[architecture decisions](docs/adr/README.md) explain the engineering behind it.
 
 ## Documentation
 
@@ -338,7 +337,7 @@ bus probe is shipped — this one is certified for Markdown only.
   [contribution form](https://github.com/KNXBench-Labs/KNXBench/issues/new?template=analysis.yml).
   Read the [step-by-step guide](docs/contribution-intake/README.md)
   ([Deutsch](docs/contribution-intake/DEUTSCH.md)) first, and never attach customer files.
-- **Unknown device or programming refused?** Source builds after Alpha11 offer
+- **Unknown device or programming refused?** Alpha 12 offers
   **File → Device support report** even without an open project. Preview the
   evidence, save locally and attach it deliberately; this reports a support gap,
   not an unlock. [Reporting guide](docs/manual/user-guide/08-reports-and-diff.md#universal-device-support-reporting-source-after-alpha-11).

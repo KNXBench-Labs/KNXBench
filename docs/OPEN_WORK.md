@@ -1,5 +1,15 @@
 # Open work after the 0.1 alpha
 
+## Alpha 12 publication verification (15 October 2026)
+
+Complete77/77 source acceptance, both exact-SHA packaging dry runs and final
+owner publication approval are recorded. The immutable tag and hand-written
+prerelease name `16aefbe6`; tag-triggered artifact/registry publication and
+download-back, digest/smoke and live website verification are in progress.
+Neither #7/#22 nor hardware admission is closed by a release.
+[Release scope](releases/alpha12.md) · [acceptance](releases/alpha12-acceptance.md).
+
+
 ## Siemens System-2 download support, issue #22 (14 October 2026)
 
 Exact product/application identified; [offline prerequisites](contracts/system2-download-prerequisites.md)

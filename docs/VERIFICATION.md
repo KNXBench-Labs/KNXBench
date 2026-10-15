@@ -63,6 +63,45 @@ See the [audit](research/2026-10-14-test-suite-performance-audit.md) and
 [measured matrix](evidence/web-test-optimization-2026-10-14.json). The approximately
 2× functional-lane gain is host/scope-specific, not a promised whole-gate speedup.
 
+## Native edit and reopen proofs
+
+`tools/verify_name_editing.py` serves the actual built frontend with an isolated
+real server. Its `--spec` selector covers `rename.native.ts`, `functions.native.ts`
+and `name-recipe.native.ts`; the default selects only the first. A release gate
+runs all three, in addition to `tools/verify_native_evidence.py`. Keep the usual
+workspace/alpha/browser execution leases around these exclusive checks.
+
+The reset API opens an empty project, and reload can restore an active project.
+Open the demo copy through the rendered Commands button and the localized native
+open command, scoped to the command dialog. The welcome-card button is not an
+always-present file control; an unscoped combobox can instead match project
+selects before a keyboard-opened palette is ready. These checks retain real
+file-picker, edit, conflict, undo, save and reopen assertions, in EN/DE and wide/
+narrow views. No mocked success or live bus operation is needed.
+
+## Generated bindings and release-media preflight
+
+A bindings check must compare the complete, nonempty producer/consumer path sets
+and preserve quoted literal content. Formatting differences outside tokens are
+not model drift; whitespace inside a quoted literal remains significant.
+
+The locked TypeScript 7.0.2 package exposes its scanner through
+`typescript/unstable/ast`; it does not have the legacy absolute-directory
+CommonJS entry used by an older private release comparator. Resolve the declared
+export from the web package and verify its installed signature before using it.
+Comparator controls must reject quoted/escaped-space drift, missing/extra/empty
+file sets and invalid literals, while admitting formatting-only differences.
+A comparator setup failure is not evidence of generated-type drift, nor a pass.
+Keep its original refusal and inspect unchanged input manifests before reusing
+successful predecessor stages; unstarted steps still need actual execution.
+
+Every `playwright*.config.ts`, including a config inheriting the manual capture
+config, explicitly imports `./browserTmp`. The repository tooling test checks
+that entry-point contract. Check tooling and scanner availability before long
+release suites, and execute the real release-media capture after the server
+build. A config-list preflight also needs `KNX_SERVER_BIN` and a task-owned
+`KNX_RELEASE_MEDIA_DIR`; it neither starts the server nor proves a capture.
+
 ## Coverage contract
 
 Each gate prints `gate target: <canonical root>`. Verify that this is **your

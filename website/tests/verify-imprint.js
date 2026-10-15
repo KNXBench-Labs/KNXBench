@@ -34,6 +34,7 @@ async (page) => {
   }
   await page.goto(`${origin}/`);
   await page.locator('.site-footer a').filter({ hasText: 'Legal notice' }).click();
+  await page.waitForURL(`${origin}/en/contact/`);
   assert('root English footer opens legal notice', new URL(page.url()).pathname === '/en/contact/');
   const basic = await page.context().browser().newContext({ javaScriptEnabled: false });
   try {

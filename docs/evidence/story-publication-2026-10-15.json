@@ -56,5 +56,20 @@
     ],
     "visual_result": "Both engines render hero, chapters, evidence cards and atlas without newly observed layout regressions."
   },
-  "publication_state": "approved and locally accepted; main push, Pages and live artifact not yet verified"
+  "publication_state": "published; commit-bound Pages success and exact live artifact verified",
+  "publication": {
+    "deployed_commit": "022d85a0ad3bdfe0e9862ea190e22898cc3a2f87",
+    "pages_run_id": 38701307431,
+    "pages_conclusion": "success",
+    "pages_updated_at": "2026-10-15T07:49:34Z",
+    "public_readback": {
+      "http_status": 200,
+      "edition": "2026-10-15.4",
+      "story_sha256": "081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8",
+      "html_sha256": "8b9251fb64a3220b294657c95c3e0f673a98fb7565e1b1c1ad88860d5a9f9cb4",
+      "matches_exact_accepted_html": true,
+      "source_commit": "022d85a0ad3bdfe0e9862ea190e22898cc3a2f87",
+      "publication": "public artifact read back and verified"
+    }
+  }
 }

@@ -25,6 +25,12 @@ Reference validation, matching approval, 38-file public build, five explicit-roo
 repository checks and docs pass. Full consumed-input manifest unchanged.
 Fresh upstream remains `fbdfbddd`; runtime remains byte-identical to that source.
 
-Push, Pages and exact public artifact readback are still separate pending steps.
+Normal main push and direct remote readback verify commit
+`022d85a0ad3bdfe0e9862ea190e22898cc3a2f87`. Its Pages run `38701307431`
+completed successfully. Actual public HTTP200 HTML is byte-identical to the
+accepted build, SHA256 `8b9251fb64a3220b294657c95c3e0f673a98fb7565e1b1c1ad88860d5a9f9cb4`,
+with the approved edition and story digest. These are observed delivery outcomes,
+not inferred from approval or a local build. Final docs-only closure does not
+alter any consumed story/site input or trigger another Pages build.
 Public acceptance is recorded without private paths or source transcript locators
 in `docs/evidence/story-publication-2026-10-15.json`.

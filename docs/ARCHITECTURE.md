@@ -1,5 +1,16 @@
 # Architecture
 
+## Normalized offline property simulation (16 October 2026 source)
+
+Core's immutable property-plan model validates explicit normalized operations and
+inventories setup/control/data mutation classes. It does not parse XML, resolve
+resource indices or establish profile admission. Net's bounded executor accepts
+only the existing concrete SimulatedDevice and reuses ManagementSession; a real
+transport cannot be substituted. Identity checks precede Verify Mode writes.
+ProductDB source translation, restart and durable whole-mutation recovery remain
+separate prerequisites. UI, public download routes and persistence schemas are
+unchanged. [Contract](contracts/offline-property-plan-simulation.md).
+
 ## Offline System-2 source images (15 October 2026 source)
 
 [ADR-0132](adr/0132-offline-source-images-do-not-grant-download-admission.md)

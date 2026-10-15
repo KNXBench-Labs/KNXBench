@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Normalized simulation boundary (16 October 2026 source)
+
+[The P3a normalized property-plan simulator](../contracts/offline-property-plan-simulation.md)
+executes a validated synthetic sequence using the existing management session.
+This is not the missing ProductDB source translator: Lsm/resource admission,
+modern XML SegFlags, real-source16-bit encoding and restart remain unresolved or
+unimplemented. A mutation inventory is not a durable backup. Complete direct and
+indirect property/memory/setup recovery and hardware validation remain open;
+public0025 programming stays refused.
+
 ## Offline source-image boundary (15 October 2026 source)
 
 [System2 source-image assembly](../contracts/offline-download-system2-image.md)

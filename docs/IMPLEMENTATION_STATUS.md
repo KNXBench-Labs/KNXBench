@@ -14,6 +14,20 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — **Alpha 12 source accepted, not published**, frozen candidate
+  `16aefbe6`: complete77/77 source-bound chain (66 original successful steps,
+  11 actual continuation steps after private Chromium starter correction).
+  Vitest3626/263files; fixture Chromium574 plus additional configurations;
+  Rust4597/0 with207 ignored; native evidence12 and naming/Functions/recipe4each;
+  bindings28; tooling163(one skip), Story76, website24 and actual site492;
+  OriginalData152/152 in33targets and product16/16 in6targets. Full2,860path
+  mode/content/HEAD freeze verified. Ten app frames and nineteen website frames
+  plus thirty page strips self-reviewed, not independent approval. Exact-SHA
+  AppImage/MCP and amd64/arm64 Docker dry runs pass with publishing skipped;
+  downloaded build artifacts hashed. Owner final tag/publication Go is pending.
+  Original failed records remain; no tag, Pages or container cutover.
+  [Acceptance dossier](releases/alpha12-acceptance.md).
+
 - 2026-10-15 — Alpha 12 candidate `ffc95e0a` **not accepted**: full gate
   passed58 stages including all three native edit proofs, then a private
   bindings comparator failed to load the locked TypeScript7 API. Corrected

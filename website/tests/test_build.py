@@ -96,6 +96,11 @@ class BuildTests(unittest.TestCase):
         self.assertIn("include-hidden-files: true", workflow)
         self.assertNotIn("FORCE_JAVASCRIPT_ACTIONS_TO_NODE24", workflow)
 
+    def test_pages_checkout_retains_history_for_media_provenance(self):
+        workflow = (WEBSITE.parent / ".github/workflows/pages.yml").read_text()
+        checkout = workflow.split("uses: actions/checkout@v7", 1)[1].split("- name:", 1)[0]
+        self.assertIn("fetch-depth: 0", checkout)
+
     def test_build_is_byte_deterministic_and_can_replace_its_own_output(self):
         self.require_build()
         before = {str(p.relative_to(self.out)): hashlib.sha256(p.read_bytes()).hexdigest()

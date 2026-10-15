@@ -126,3 +126,18 @@ publication skipped; downloaded dry-run artifact digests are in the dossier.
 This additive docs closure is separate from the immutable gated/tag candidate.
 Public evidence contains no private paths or inputs. Owner publication Go is
 pending; no tag, release, main, Pages or container cutover is claimed.
+
+## Owner-approved publication and Pages history repair
+
+Owner explicitly approved complete publication. Annotated tagv0.1.0-alpha.12
+peels exact16aefbe6; public hand-written prerelease is read back. Release/docs
+integration0bf2382a was pushed with local/tracking/live equality and complete
+application/test/workflow/site/Story equality to the candidate. Docker tag jobs
+completed successfully; public outside verification is still in progress.
+
+First Pages run38774188191 failed the mandatory media-source commit check:
+default depth-one checkout lacks the recorded ancestor. It never deployed.
+Named regression proves the missing fetch-depth setting; Pages now fetches full
+history, preserving provenance assertions. Website25/Story76 pass and every
+release-build output file is byte-identical to accepted site. This is only a
+deployment-checkout/test/docs change, not a retag or product repair.

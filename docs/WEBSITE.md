@@ -253,3 +253,11 @@ documentation and website tests passed again. `actions/deploy-pages@v5` still
 emits its upstream DEP0040 `punycode` deprecation warning, but no Node-20
 runtime warning was observed; deployment succeeds. No workaround in project
 code. Privacy review and optional WebKit remain open, not part of this task.
+
+## Checkout history for media provenance
+
+Pages checks the recorded source commit of each current screenshot. Its checkout
+therefore fetches full Git history (`fetch-depth: 0`); a depth-one checkout can
+contain every image but still lack the commit needed to verify its origin. The
+provenance assertion stays mandatory. This changes deployment input availability,
+not the approved Story, generated page content or release application sources.

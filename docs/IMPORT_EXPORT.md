@@ -1,5 +1,15 @@
 # Import and export
 
+## Universal support ZIP (15 October 2026 source)
+
+[The support envelope](contracts/universal-device-support.md) is a separate,
+versioned investigation report with fixed `report.json`/`README.txt` paths. It
+is not project export, ETS format conversion or a raw product/specification
+attachment. Unsupported/unknown/withheld/truncated evidence is explicit;
+optional reviewed numeric context requires rights confirmation. Original native
+source retention and the older ended-download report's disclosure rules remain
+unchanged. No receiving/upload backend or format-compatibility claim is added.
+
 ## System-2 TaskCtrl2 source projection (14 October 2026)
 
 The on-demand product-code reader now types the exact five-attribute

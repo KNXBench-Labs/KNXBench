@@ -1,5 +1,15 @@
 # Compatibility
 
+## Universal support evidence (15 October 2026 source)
+
+[The universal reporter](contracts/universal-device-support.md) admits unknown
+and unresolved devices for offline evidence collection, **not programming**.
+Fixed optional read-only recipes cover mask0025 status and mask0012 programming
+mode; all other/unspecified masks remain descriptor-only, without borrowing a
+similar family's resource mapping. This introduces no hardware verification,
+Secure commissioning, ETS compatibility or download/recovery admission. The
+System-2/issue22 programming gate remains unchanged.
+
 ## System-2 product-data prerequisite (14 October 2026 source)
 
 [Typed TaskCtrl2 parsing and property payloads](contracts/system2-download-prerequisites.md)

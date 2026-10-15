@@ -69,6 +69,18 @@ pub fn has_source_file(conn: &Connection, sha256: &str) -> Result<bool, ProductD
     Ok(found.is_some())
 }
 
+/// Returns the actual stored blob length without materializing its payload.
+/// The redundant historical `len` column is not an input-budget authority.
+pub fn source_file_length(conn: &Connection, sha256: &str) -> Result<Option<u32>, ProductDbError> {
+    Ok(conn
+        .query_row(
+            "SELECT length(bytes) FROM source_file WHERE sha256=?1",
+            [sha256],
+            |r| r.get(0),
+        )
+        .optional()?)
+}
+
 pub fn load_source_file(
     conn: &Connection,
     sha256: &str,

@@ -33,6 +33,7 @@ pub mod rf_configuration;
 pub mod serial_number_write;
 pub mod service_control;
 pub mod simulator;
+pub mod support_diagnostics;
 
 use std::convert::Infallible;
 use std::fmt;

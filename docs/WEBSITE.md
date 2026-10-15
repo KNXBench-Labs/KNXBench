@@ -7,6 +7,65 @@ remote IPv6 HTTPS were verified on 2026-10-09; Pages actions now use Node 24.
 Owner privacy review and optional WebKit evidence remain separate follow-ups.
 Decision: [ADR-0095](adr/0095-static-marketing-companion.md).
 
+<a id="phosphor-atlas--private-implementation-15-october-2026"></a>
+
+## Story-style phosphor CRT — private revision (15 October 2026)
+
+Owner review superseded the initial diagram-first Phosphor Atlas concept: **remove
+its installation diagram and restore the original marketing layout**, retaining
+phosphor CRT character and applying the existing Story's visual language. The owner authorized commit/push of this reviewed revision on15October2026.
+The source is being integrated and checked for Pages publication; public delivery
+will be recorded only after workflow and live-byte readback. Alpha12 release and
+freeze release were verified before implementation.
+
+The screenshot-first hero, section order and responsive grids follow the original
+website. The added installation fragment, script, logical-path animation,
+translations and diagram-specific CSS/tests are removed, not hidden. The original
+small Evolution Story teaser remains part of the original page. No new card kit,
+boot sequence or decorative content replaces the removed hero.
+
+The whole canvas uses the Story's green-black `#03150c`, surfaces `#0b2d1c` and
+`#0f3824`, reading ink `#eef5e9`, phosphor `#88ffad`, violet `#c1aff2`, amber
+`#e7c688` and rule `#316343`. Font stacks now match the Story's Liberation
+Sans/Arial and metadata monospace. **All marketing and legal/privacy h1/h2/h3
+headings are phosphor green** with controlled Story-style glow. Prose and original
+screenshots remain crisp, unfiltered and unchanged. Existing self-hosted font
+assets/licences stay inventoried but are not required to mimic the Story's system
+font stack. No copied proprietary assets, backend or new dependency.
+
+### Random-direction characters, one motion owner
+
+The existing `headlines.js` owner retains its 720ms rolling-glyph timing and
+selects **right, left, up or down independently per roll** with one uniform
+`Math.random()` direction choice. The outgoing glyph and its incoming twin move
+in opposite offsets on the chosen axis. Vertical rolls clip within their slot;
+no reflow, word changes or motion-dependent content. Rare isolated 180ms glitches
+remain; no constant flicker or blurred reading text.
+
+The header pause/resume applies to rolls, glitches and button transitions. Live
+OS reduced motion always wins; offscreen/hidden/pagehide lifecycle stops ambient
+effects. No storage, cookies or new network calls. Without JavaScript or motion
+APIs the original readable headings/screenshot remain and the nonfunctional
+motion switch stays hidden. Legal/privacy pages remain static; legal text,
+approved Story data/style/runtime/pin and application/media are unchanged.
+
+### Acceptance and limits
+
+`website/tests/test_phosphor.py` checks actual atlas removal and the retained
+palette/header control. `verify-phosphor.js` covers the restored hierarchy,
+computed green headings, responsive DE/EN320–1440, decoded screenshots, crisp
+prose, static/no-JS fallback and live CSS cancellation.
+`verify-roll-directions.js` exercises all four real WAAPI branches with controlled
+random inputs, opposite twins, stable bounds, sampled displaced glyphs and live
+keyboard/OS cancellation. Controlled RNG is explicit test instrumentation, not
+claimed natural-random distribution evidence. Existing whole-page, headline,
+language, imprint and demo recipes remain mandatory.
+
+Exact observed results live in the [revision evidence](evidence/phosphor-crt-revision-2026-10-15.json): website28, Story76, tooling163 (1 existing skip),23 frozen-source stages, Chromium394 preview and416 public-variant checks. Every recipe is admitted against the selected origin and artifact mode; a named regression prevents the legacy fixed-preview-port escape. Both builds are deterministic. Prior diagram
+acceptance remains historical, not acceptance of this replacement. No
+Firefox/WebKit/Orca/native-screen-reader, hardware or electrical-plan certification.
+Self-review is not independent approval. Preview/public-variant builds do not deploy.
+
 ## Alpha 12 refresh (15 October 2026)
 
 The existing dark DE/EN design, root language, editorial voice, legal/privacy
@@ -19,7 +78,7 @@ states native16/product23 and independent backups, old-reader refusal and the
 unchanged System-2/little-endian/Secure boundaries. Actual website acceptance and
 public deployment remain separate from media capture.
 
-## Agreed brief
+## Original brief (8 October; visual direction superseded above)
 
 - Encourage visitors to try the actual KNXBench application, not a hosted demo.
 - Product benefits first; Linux is the origin and a native deployment path, not

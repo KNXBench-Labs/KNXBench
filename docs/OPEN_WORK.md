@@ -371,7 +371,10 @@ local prune backup; see the triage note.
   `KNXBench-Contributions` repository was deleted on 2026-10-08.
 - **Marketing website** is in the repository (`website/`, ADR-0095) and
   deployed to knxbench.com by `.github/workflows/pages.yml`
-  ([WEBSITE.md](WEBSITE.md)).
+  ([WEBSITE.md](WEBSITE.md)). The owner-revised original-layout phosphor CRT
+  design (installation diagram removed) is owner-approved for publication;
+  merged acceptance and Pages/live-byte verification are in progress.
+  See [its acceptance](evidence/phosphor-crt-revision-2026-10-15.json).
 
 Do not work in the root checkout; publish each package from its own worktree
 off `origin/main`.

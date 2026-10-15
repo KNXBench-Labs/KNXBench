@@ -47,6 +47,22 @@ KNXnet/IP behavior changed.
   303 XP. README/page/JSON agree exactly, with unchanged prior award ledger and XP.
 - Separate in-session source/security self-review; no independent review claimed.
 
-Publication, actual remote workflow execution and final cleanup are recorded
-only after they happen in the closing handover/private evidence receipt.
-No Rust/frontend runtime suite, hardware operation, release or deployment claimed.
+## Witnessed publication
+
+Feature `4a76efce846ddb42529ee320694bf102998e089b` and fresh-main integration
+`fe1f4101fc5dc2cc3c6f6e02f5295434cd840105` committed as KNXBench, no co-author.
+Branch and actual merged eight-stage scoped gates pass with frozen owned inputs.
+Normal main push followed by exact local/tracking/live equality and byte-exact
+GitHub contents readback for all eleven owned files succeeds.
+
+Manual Community Hall of Fame workflow `38694177327` completes successfully
+on the integrated source: actual 47-test verification, public GitHub counter/
+notification reconciliation, documentation validation and no-op publication.
+The first immediate run-list query had not indexed the dispatched run yet;
+the dispatch receipt supplied its exact ID, whose direct readback was verified
+before watching completion. No duplicate workflow was dispatched.
+
+The closing metadata commit does not relabel earlier source-bound gate receipts.
+Private evidence retention and owned local cleanup are recorded after observation
+in the selected root handover. No Rust/frontend runtime suite, hardware
+operation, release or deployment claimed.

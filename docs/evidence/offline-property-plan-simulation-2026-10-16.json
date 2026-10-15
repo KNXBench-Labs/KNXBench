@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "scope": "P3a normalized property plans and concrete simulator execution only",
+  "baseCommit": "19e2827d2fc0e0e1ea8a0443bc48505876b5c90a",
+  "review": "separate in-session source/security self-review; not independent approval",
+  "branchGate": {
+    "head": "19e2827d2fc0e0e1ea8a0443bc48505876b5c90a",
+    "stages": [
+      "format",
+      "documentation",
+      "web-install",
+      "web-build",
+      "explicit-system2-corpus",
+      "clippy",
+      "rust",
+      "build",
+      "vitest",
+      "tooling",
+      "check-layering",
+      "check-headers",
+      "check-anchors",
+      "check-ledger",
+      "check-corpus-gates"
+    ],
+    "rust": {
+      "passed": 4639,
+      "failed": 0,
+      "ignored": 207,
+      "resultBlocks": 338
+    },
+    "vitest": {
+      "passed": 3626,
+      "failed": 0,
+      "files": 263
+    },
+    "sourcePaths": 2898,
+    "inputsFrozen": true,
+    "time": "2026-10-16 01:28",
+    "logs": {
+      "format": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "documentation": "35421603dceaf1a120dd865b020b673f5883227148df594fbe06fd5092b183f0",
+      "web-install": "9e93b309a59cf5879cc001c341f4f44b84c341083d2648cbd7867dce0103884a",
+      "web-build": "783c2049a6f54c2fdb40c8ece45f0ef2d9633ce98bdf9918f64fceda81707cae",
+      "explicit-system2-corpus": "3aac5d169a86dccf3b6c0a8c3255c14d5adeb847b57ff21508ce002860732cf4",
+      "clippy": "e82b28c3dfb1c7c2df0c66648f7f2a425f027798620d9fdcdb788cabcd7456be",
+      "rust": "386050100a2722e7db64786c088fd78ca555be3c730a65dc3d57a23d328df52b",
+      "build": "e1b5e6f95b5016efb422d1fda38b8219445ab0d054ea06b336b5dcdcbb6ad043",
+      "vitest": "a118f89abdd6c54f7f5ebaf6946899c669a7bcaff395648b8126cf78fe1ecf62",
+      "tooling": "c3a865aa4ec6c4e6b69052f5683dc116920a2472c307453003da2d90324758ed",
+      "check-layering": "4067a8b2d82cca85d5ce7b0e56933d72d05a7c9412a2eb725ca1b002a0f715af",
+      "check-headers": "7614e27d04775d7fe61153441a94433927795c0a88632b4d4ade044db70397a7",
+      "check-anchors": "8732f065a350f12de6a078771c6d206190f8487988544a652c2d78f97323fd64",
+      "check-ledger": "3906f4c92f8742c32ad6ee0c17cd0bad689bbfab24fecc56e0ca13ee5a3ba42d",
+      "check-corpus-gates": "e323dce5926c7267720d3a129000bedbbfb327bfb0c3df39d52e2980f5e0811e"
+    }
+  },
+  "focused": {
+    "core": 8,
+    "net": 7,
+    "hardwareTransportCompileRefusal": {
+      "passed": 1,
+      "error": "E0308: expected &SimulatedDevice, found &T"
+    }
+  },
+  "priorRefusals": [
+    "missing Core/Net API E0432",
+    "incorrect memory-type/attribute field validation",
+    "EEPROM type3 refused by initial validation",
+    "relative7000 instead of absolute3C00 simulator reference",
+    "missing connection authorization effect",
+    "wrong simulator instance not refused before connection",
+    "104-column test header",
+    "owned log trailing blank line"
+  ],
+  "sourceTranslatorImplemented": false,
+  "durableWholeMutationRecovery": false,
+  "restartImplemented": false,
+  "futureDropAbortOrRestore": false,
+  "newHardwareAdmission": false,
+  "hardwareOperations": 0,
+  "realSourceEncoding": "Siemens16-bit source/default encoding remains refused; existing negative regression passes",
+  "mergedAcceptance": "pending",
+  "publication": "pending"
+}

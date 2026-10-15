@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 13:33
+- **Completed:** Owner-authorized prerequisite correction for P4 inherited product-corpus reds in owned p4-corpus-fix-20261015 from bee4f016. v22/current matrix probes plus independent115/113 raw XML census prove exactly5 v23 aggregate deltas and41 unchanged table counts; pins updated only for ADR0126 retirement. Nesting census now counts exact standard-size refusal and verifies no database row changes;105=103 installs+1 duplicate+1 refusal,1678 modules/0 nested in admitted subset. Targeted16/16 product opt-ins,synthetic classifier cases,Clippy pass; no production source,limits,profile or schema change.
+- **Pending/Next Steps:** Seven semantic mutants detected; byte-exact restoration and ordinary product postflight887/0 pass. Finish repository checks, commit this fix separately, merge into owned P4 integration, final full template+regular/explicit corpus gates then publication/readback/evidence/cleanup. P4 not yet pushed. No owner Go needed.
+- **Notes for Codex oder Claude:** Original failures/initial incomplete-scope Python census retained privately, not relabelled as green. Only tests+docs change here. Shared root and foreign work untouched; no bus/subagents/vendor/release/deploy. Scratch p4-parameters-20261015 holds exact cause/delta proofs and earlier accepted merge51/51+OriginalData152/152; later final source needs its own acceptance.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 11:41
 - **Completed:** Universal device-support reporting published on main9b8d176aa75ef6575bcda62af13ecba6860c8f77; exact local/tracking/live equality and feature ancestry verified. Featurefa165f82, runtime-tested merge3444186c:11/11 stages, web62/62, Rust4587/0/206ignored, Vitest3624, browser574, private corpus151/151 in33 targets; seven guard mutants caught/restored,8 merged images inspected. Subsequent story/docs merge and15 frozen closure stages pass with application path/mode/blob equality. Documentation/public aggregate distinguish runtime acceptance from publication. No real bus/registry promotion/download unlock.
 - **Pending/Next Steps:** Only publish this observed-readback documentation closure, verified private evidence archive and owned worktree/branch/cache retirement remain. Future System2 image/table/LSM/recovery/hardware work stays open; no release/deploy or root synchronization. No new Go required for completing this delivery.

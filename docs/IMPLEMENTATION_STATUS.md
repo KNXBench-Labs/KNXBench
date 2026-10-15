@@ -14,6 +14,17 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — **Corpus-prerequisite correction, targeted accepted / unpublished**:
+  two failures reproduced on unchanged pre-P4 main. Matrix pins lag ADR-0126's
+  v23 modelling, not an importer regression: independent XML counts predict
+  exactly465/463/463/157 retired unknown rows, all41 other table counts unchanged.
+  The nesting census explicitly accounts for standard size refusals, not a
+  larger admission profile; unexpected errors remain red and refusal row changes
+  are forbidden. Targeted product16/16, synthetic classifier cases and Clippy
+  pass; seven semantic mutants fail as intended and restored-source ordinary
+  product tests pass. Final P4-integrated full acceptance remains pending.
+  [Facts and limits](IMPORT_EXPORT.md#product-corpus-prerequisites--15-october-2026).
+
 - 2026-10-15 — Exact-approved story `2026-10-15.4` publication variant accepted
   on integration `bb2961aa`: story76, website24, tooling163 (one inherited skip),
   Chromium46/46 and Firefox46/46; all44 actual public-build frames inspected.

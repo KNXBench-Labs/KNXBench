@@ -69,8 +69,9 @@ Alpha 5 AppImage does not include it.
 ## Comparing the project with devices (P4, source build after Alpha 11)
 
 **Main-only source after Alpha 11:** release screenshots in this manual still
-show the released UI. The tables package is delivered; the named parameter
-package below is implemented but its full acceptance/publication is pending.
+show the released UI. Both packages below are implemented and accepted in source,
+including named parameters and explicit unknowns. This does not update Alpha11;
+see the [source publication record](../../evidence/p4-device-comparison-parameters-2026-10-15.json).
 
 In **Devices**, use **Compare** on a row or **Compare all shown**. The latter
 uses exactly the current filtered/sorted list, **not** checkbox selection.

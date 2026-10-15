@@ -1,5 +1,15 @@
 # P4 package 2 — actual image bit attribution and named comparison
 
+## Final measured acceptance
+
+facdd62e combined source passes frozen full51/51, Vitest3626,Chromium574,
+Rust4597,repeat87,OriginalData152/152 and explicit product16/16. Final production
+EN/DE1440/400 screenshots inspected, inherited toast overlap remains disclosed.
+Fresh main70e3de01 only adds Alpha12 release reservation; source inputs exact.
+Documentation-only closure gate and normal push/readback still pending. P4 is
+the sole admitted release prerequisite; pause after its publication/cleanup.
+
+
 Package 1 is published on origin/main (tables/batch/identity/P3 revisions).
 Package 2 starts at fbdfbddd in p4-parameters-20261015; shared root untouched.
 

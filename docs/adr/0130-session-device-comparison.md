@@ -1,6 +1,6 @@
 # ADR-0130: Device comparison is bound, decoded, session-only evidence
 
-- **Status:** Accepted (owner UI-feedback P4 decision); package 1 delivered, package 2 under acceptance
+- **Status:** Accepted (owner UI-feedback P4 decision); both packages accepted in source; publication recorded separately
 - **Date:** 2026-10-15
 - **Decision record:** [UI feedback P1–P4](../goals/ui-feedback-p1-p4.md#p4--project-file-versus-real-devices-point-3)
 

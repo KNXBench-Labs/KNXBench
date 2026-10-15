@@ -14,6 +14,18 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Offline download P1 **branch accepted, integration pending**:
+  source-bound System2 tool metadata with complete source order, explicit legacy
+  Type1/Type2 descriptor codec and ten-byte absolute property-load encoders.
+  Direct original-PDF review pins distinct layouts and opposite checksum-bit
+  polarity; named RED/GREEN controls and a restored field-swap mutant prove the
+  byte assertions. Actual frozen eleven-stage gate passes: Rust4612/0/207ignored,
+  Vitest3626/263files, workspace Clippy/build, tooling and five repository checks;
+  explicit Release System2 fixture1/1 passes. Initial missing-dist setup refusal
+  retained separately. No executable new family, recovery, hardware or field
+  support claim. [Contract](contracts/offline-download-codecs.md) ·
+  [Receipt](evidence/offline-download-codecs-2026-10-15.json).
+
 - 2026-10-15 — Original-layout phosphor CRT website **published and verified**.
   Owner-approved revision60d8eb7a integrated asd90b3d4b; Pages38789580428 build/deploy
   success. Merged23/23 source-frozen stages: website28, Story76, tooling163(1skip),

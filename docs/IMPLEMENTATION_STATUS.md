@@ -119,6 +119,9 @@ fragment aliases and update this index. Do not rewrite previous results.
   private OriginalData151/151 in33 targets, network-isolated. Eight merged images
   inspected. Later story/docs-only integration preserves all application path
   sets, modes and blobs; runtime evidence remains bound to its tested revision.
+  Published on main `9b8d176a` with exact local/tracking/live/source readback;
+  fifteen frozen post-merge documentation/story/tooling closure stages pass.
+  No binary release, deployment or selected-root synchronization.
   Publication/readback is recorded separately in the aggregate evidence.
   [Contract](contracts/universal-device-support.md),
   [ADR0131](adr/0131-universal-device-support.md),

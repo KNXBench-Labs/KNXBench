@@ -64,6 +64,17 @@ beforeEach(() => {
 });
 afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); });
 
+it("shows server-decoded tables and keeps unattributed raw values visible", async () => {
+  apiMock.compareDevice.mockResolvedValue({ ...comparison, decoded: [
+    { kind: "groupAddress", label: "2", address: 0x4005, project: "2/2/3", device: "2/2/4", reason: null },
+    { kind: "raw", label: "", address: 0x4400, project: "AB 12", device: "CD 34", reason: null },
+  ] });
+  await render(); await prepare(); await act(async () => button(en["deviceChecks.confirm"]).click());
+  const table = host.querySelector(".comparison-decoded");
+  expect(table).not.toBeNull(); expect(table?.textContent).toContain("2/2/3");
+  expect(table?.textContent).toContain("2/2/4"); expect(table?.textContent).toContain("CD 34");
+});
+
 it("stays entirely offline until asked and shows every readiness grade with its evidence", async () => {
   await render();
   expect(apiMock.getDeviceReadiness).toHaveBeenCalledTimes(1);

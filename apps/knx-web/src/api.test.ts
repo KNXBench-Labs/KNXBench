@@ -25,6 +25,14 @@ function mockFetchOnce(body: unknown, ok = true, status = 200) {
 }
 
 describe("api", () => {
+  it("binds an explicit device comparison to the reviewed project content without write authority", async () => {
+    mockFetchOnce({ written: false });
+    const binding = { serverIncarnation: "session", projectIncarnation: 3, deviceId: 2, comparisonRevision: 7 };
+    await api.compareDevice("1.1.2", "192.0.2.1:3671", binding);
+    const [path, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(path).toBe("/api/device-compare");
+    expect(JSON.parse(options.body as string)).toEqual({ address: "1.1.2", gateway: "192.0.2.1:3671", binding });
+  });
   it("refuses malformed device catalogue batches before they reach rendering", async () => {
     mockFetchOnce({ schemaVersion: 1, serverIncarnation: "server", snapshotRevision: 1, devices: {} });
     await expect(api.deviceCatalog()).rejects.toThrow("device catalogue");

@@ -66,6 +66,48 @@ companion does not become another editing window. See the
 The Devices view first shipped with Alpha 6 and remains in every later release. The older
 Alpha 5 AppImage does not include it.
 
+## Comparing the project with devices (P4, source build after Alpha 11)
+
+**Source package 1:** requires a source build after Alpha 11; the release
+screenshots in this manual still show the released UI. Named parameter
+comparison is not included in this first package: those bytes remain raw.
+
+In **Devices**, use **Compare** on a row or **Compare all shown**. The latter
+uses exactly the current filtered/sorted list, **not** checkbox selection.
+Filtering for a KNX line compares that line's shown devices; changing the
+filter after opening review does not change the reviewed list. Choose a
+gateway and confirm the **read-only** operation once for the whole list.
+Opening the review alone contacts no device.
+
+The dialog shows completed/total and the current device. A device error is
+reported and the next device is tried. **Cancel** waits for the current
+bounded read to disconnect and then stops; it does not contact the remaining
+devices. A tunnel occupied by Bus monitor is explicitly refused: stop that
+monitor before trying again. This is a comparison, not a download or backup;
+no key, phrase or write permission is sent.
+
+Tags are session-only: **Synced**, **Different**, **Outdated**, **Wrong
+application**, **No answer**, and grey **Not comparable** with its reason.
+Without an attempted comparison a row has no tag. Click a tag to inspect its
+result without contacting the bus. Relevant P3 content edits, undo/redo and
+known affected write settlement make old readings outdated; names, DPT labels
+and manual programming marks alone do not. Reloading/reopening has no cached
+comparison claim. An external tool may change the device without notifying
+KNXBench: a tag records a reading, not continuous monitoring.
+
+The result table shows group-address entries and associations, resolving each
+side's associations through its own address table, followed by every raw
+read range. Wrong application is checked before plan memory is read, using
+the existing verified application identity; missing/short/ambiguous identity
+is Not comparable, not a guessed mismatch. Unread, masked, malformed or
+unattributable fields stay unknown with a reason. Raw bytes are never hidden.
+A byte match with an unloaded compared part does not earn Synced. At narrow
+widths scroll the comparison table horizontally to reach the device value
+and memory columns; long target lists also scroll within their list.
+
+[Exact scope and limits](../../contracts/device-comparison.md),
+[device checks](07-bus-and-interfaces.md#device-checks-offline-readiness-then-an-optional-read-only-comparison).
+
 ## Programming marks (P3, source build after Alpha 11)
 
 The **Programming** column in Devices shows the parts the project still needs

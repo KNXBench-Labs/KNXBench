@@ -16,6 +16,17 @@ The [ideas/roadmap audit](../status/2026-10-08-ideas-roadmap-audit.md) checked
 source `608a204b`, actual UI callers and recorded boundaries. An accepted
 alpha boundary is not implemented functionality or an active work package.
 
+## Project versus devices (P4 package 1 source candidate)
+
+Devices has explicitly confirmed single/filtered-batch read-only comparison,
+progress/cancel, per-device failures and volatile tags. P3 content revisions
+invalidate old readings; identity is checked before memory. The 0701 address
+and association tables are decoded; all raw read ranges remain visible.
+Named parameters are pending package 2, not silently interpreted. The full branch gate passes;
+actual merged and publication acceptance are pending for this candidate.
+[Use and limits](user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11),
+[contract](../contracts/device-comparison.md).
+
 ## Diagnostic navigation selection (14 October 2026 source, main-only)
 
 Selecting the active Bus monitor or Log sidebar entry keeps the same workspace,

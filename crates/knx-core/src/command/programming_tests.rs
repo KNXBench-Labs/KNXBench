@@ -54,6 +54,67 @@ fn marks_then_round_trips(cmd: Command, expected: &[(DeviceId, ProgrammingParts)
 }
 
 #[test]
+fn comparison_revisions_survive_edit_undo_redo_without_following_manual_marks() {
+    let mut project = fixture::project();
+    let mut stack = CommandStack::new();
+    let first = stack.comparison_revision(D1);
+    stack.do_command(&mut project, set_parameter("2")).unwrap();
+    assert!(
+        stack.comparison_revision(D1) > first,
+        "edit invalidates a comparison even if already pending"
+    );
+    assert_eq!(
+        stack.comparison_revision(D2),
+        0,
+        "unrelated device stays current"
+    );
+    let edited = stack.comparison_revision(D1);
+    stack.undo(&mut project).unwrap();
+    assert!(
+        stack.comparison_revision(D1) > edited,
+        "undo does not resurrect an old bus reading"
+    );
+    let undone = stack.comparison_revision(D1);
+    stack.redo(&mut project).unwrap();
+    assert!(stack.comparison_revision(D1) > undone);
+    let redone = stack.comparison_revision(D1);
+    stack
+        .do_command(
+            &mut project,
+            Command::SetDeviceProgramming {
+                device: D1,
+                change: ProgrammingChange::mark(ProgrammingParts::ALL, true),
+            },
+        )
+        .unwrap();
+    stack
+        .do_command(
+            &mut project,
+            Command::RenameDevice {
+                device: D1,
+                name: "Label only".into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        stack.comparison_revision(D1),
+        redone,
+        "belief and documentation are not device content"
+    );
+}
+
+#[test]
+fn a_bus_write_invalidates_old_comparison_evidence_even_without_an_edit() {
+    let mut stack = CommandStack::new();
+    let before = stack.comparison_revision(D1);
+    stack.forget_programmed_claims(D1, ProgrammingParts::NONE);
+    assert_eq!(stack.comparison_revision(D1), before);
+    stack.forget_programmed_claims(D1, parts(|p| p.parameters = true));
+    assert!(stack.comparison_revision(D1) > before);
+    assert_eq!(stack.comparison_revision(D2), 0);
+}
+
+#[test]
 fn a_parameter_edit_marks_parameters_of_that_device() {
     marks_then_round_trips(set_parameter("2"), &[(D1, parts(|p| p.parameters = true))]);
 }

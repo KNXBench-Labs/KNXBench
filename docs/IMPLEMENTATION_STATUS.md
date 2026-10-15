@@ -31,7 +31,9 @@ fragment aliases and update this index. Do not rewrite previous results.
   spec types pass. All eight EN/DE 1440/400 production images inspected. The
   inherited achievement toast can temporarily overlap lower narrow-screen content;
   no horizontal overflow observed. Self-review, not independent approval.
-  [Aggregate acceptance](evidence/issue23-navigation-2026-10-14.json).
+  Published on main `8307ff6d`; issue #23 closed after exact remote/source
+  readback. Eight documentation-only closure checks pass with runtime inputs
+  unchanged. [Aggregate acceptance](evidence/issue23-navigation-2026-10-14.json).
   [Behaviour and boundaries](contracts/diagnostic-sidebar-selection.md),
   [operating guide](manual/user-guide/01-user-interface.md#the-navigation-pane).
   No API/domain/storage/schema/protocol change, hardware, release or deployment.

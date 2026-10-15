@@ -1,8 +1,8 @@
 # Session device comparison (owner P4)
 
 Implementation scope: [ADR-0130](../adr/0130-session-device-comparison.md).
-Package 1 implements the table/batch surface; package 2 (parameter bit attribution)
-is not included in package 1. Acceptance and publication are recorded separately
+Package 1 implements the table/batch surface; package 2 captures actual image
+parameter bit attribution and adds named values. Acceptance and publication remain separate
 in [implementation status](../IMPLEMENTATION_STATUS.md).
 
 ## Scope, admission and cancellation
@@ -63,9 +63,22 @@ local Not comparable outcome.
   differences-only filter or collapsed raw disclosure hides unattributed bytes.
   Unwritten/masked bytes are outside the read scope, even when the image has a
   desired value there. Another mask is raw-only, not a borrowed table codec.
-- Parameter name/bit/value decoding is **pending package 2**. Package 1 shows
-  those bytes raw. Existing image admission and unsupported-type limitations
-  are unchanged; this is not full ETS/device compatibility.
+- Parameter attribution is captured only after an actual successful active image
+  write, including the winning union field. Each row carries the source name
+  (parameter ID fallback), reference and exact segment/offset/bit/width; no
+  ownership is inferred from differing bytes or inactive references.
+- Named numeric values use the existing MSB-first writer's bit order, excluding
+  neighboring bits even across byte boundaries. Text is the exact inverse of
+  the existing ASCII/declared Latin-1/Latin-9 writer, with zero padding only.
+  The project value must still match the final plan; later layout overwrites,
+  missing/masked bytes, unsupported encodings and negative signed patterns
+  remain Unknown with an EN/DE reason. Negative signed project values remain
+  refused by existing image admission, not newly encoded here.
+- Parameter decoding needs matching supported 070nh masks, exact field coverage
+  and the declared segment bound. Every raw range remains visible even when a
+  named row is unknown. Manufacturer names, stable references and technical bit
+  metadata are not invented translations. No schema migration, new device type
+  admission, enum/DPT unit inference or full ETS/device compatibility claim.
 
 ## Required evidence
 

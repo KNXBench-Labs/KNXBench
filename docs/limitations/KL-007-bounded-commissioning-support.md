@@ -6,6 +6,15 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Offline source-image boundary (15 October 2026 source)
+
+[System2 source-image assembly](../contracts/offline-download-system2-image.md)
+now has an explicit inference-bearing library path and indexed legacy association
+codec. This is not full System2 support: the real Siemens witness reaches an
+uncorroborated16-bit parameter encoding and remains refused. No public download,
+property/memory recovery or hardware verification promotion follows. Successful
+synthetic assembly and a pinned real-source refusal are different evidence.
+
 ## Offline codec prerequisite (15 October 2026 source)
 
 [Pure legacy table/property codecs and System2 tool metadata](../contracts/offline-download-codecs.md)

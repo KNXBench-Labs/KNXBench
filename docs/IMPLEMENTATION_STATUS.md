@@ -21,7 +21,9 @@ fragment aliases and update this index. Do not rewrite previous results.
   public-data-provision wording, no overflow or outgoing requests. Five explicit-
   root repository checks, reference validation, docs, matching approval and
   release38-file build pass. Complete story/site inputs remain unchanged.
-  Main push, Pages and exact public HTML readback are not yet claimed.
+  Published commit `022d85a0` has successful Pages run `38701307431`; live HTTP200
+  HTML matches the accepted build byte for byte and carries the exact approved
+  digest. No product release, bus operation or root-checkout synchronization.
   [Publication acceptance](evidence/story-publication-2026-10-15.json).
 
 - 2026-10-15 — Story `2026-10-15.4` received explicit exact-digest owner

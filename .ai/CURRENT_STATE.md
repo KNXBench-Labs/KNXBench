@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:51
+- **Completed:** Story2026-10-15.4 PUBLISHED on main022d85a0ad3bdfe0e9862ea190e22898cc3a2f87; exact remote readback verified. Commit-bound Pages38701307431 completed success. PublicHTTP200 HTML equals accepted build byte-for-byte (8b9251fb64a3220b294657c95c3e0f673a98fb7565e1b1c1ad88860d5a9f9cb4); exact approved story digest081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8. Runtime-tested mergebb2961aa: story76/website24/tools163(one inherited skip), Chromium46/46,Firefox46/46,44 inspected public frames, five repository/docs/ref/release38file pass. All8 release nodes/KB privacy/public-data wording verified. Public acceptance and status updated; original preview evidence remains distinct.
+- **Pending/Next Steps:** Publish documentation-only observed-delivery closure, archive private source-bound receipts/screenshots and retire only the owned story feature/integration trees, branches and stopped-worker scratch. Story implementation/publication has no outstanding blocker or owner decision; no new content authorized by this closure.
+- **Notes for Codex oder Claude:** Deployment is independently verified, not inferred; docs-only closure preserves complete consumed story/site manifest and deployed artifact. Original source cutoff2d4ec5f9 stays frozen. Root HEAD/index/protected research and foreign universal-support/P4 are deliberately unsynchronized/untouched. Known dense mobile graph and unmeasured WebKit/screen-reader retained. No product release, hardware action, subagents, vendor access or force push.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 09:48
 - **Completed:** Exact-approved story2026-10-15.4 actual PUBLIC variant accepted on merge bb2961aa: Chromium46/46,Firefox46/46 and44 inspected frames, story76,website24,tools163(one inherited skip), references,five repository/docs, matching approval and38-file release build pass. Complete consumed74-event/twelve-chapter inputs frozen; all8 releases are real SVG nodes; owner editorial boundaries verified. New public publication-acceptance receipt, no private locators. Fresh upstream remains fbdfbddd; all upstream product runtime preserved.
 - **Pending/Next Steps:** Commit acceptance docs, fresh fetch and normal main push with exact remote readback; verify commit-bound Pages success and live HTML equality/digest, then final public evidence/handover, private archive and owned cleanup. Push/deployment not yet claimed; no further owner decision needed for this exact approved digest.

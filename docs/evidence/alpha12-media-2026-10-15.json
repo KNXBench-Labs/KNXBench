@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "scope": "Alpha 12 media/documentation preparation, not release acceptance or publication",
+  "previousRelease": "v0.1.0-alpha.11",
+  "applicationCaptureSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+  "capture": {
+    "passed": 1,
+    "failed": 0,
+    "screenshots": 10,
+    "network": "isolated loopback-only namespace",
+    "realServer": true,
+    "inventedApiResponses": false,
+    "hardwareContact": false
+  },
+  "websiteWebPs": {
+    "count": 7,
+    "losslessPixelEquality": true
+  },
+  "websiteUnitTests": 24,
+  "websiteBrowser": {
+    "complete": true,
+    "success": true,
+    "results": [
+      {
+        "name": "verify-browser",
+        "count": 66
+      },
+      {
+        "name": "verify-default-language",
+        "count": 18
+      },
+      {
+        "name": "verify-headlines",
+        "count": 48
+      },
+      {
+        "name": "verify-imprint",
+        "count": 26
+      },
+      {
+        "name": "verify-demos",
+        "count": 134
+      },
+      {
+        "name": "verify-release",
+        "count": 22
+      },
+      {
+        "name": "verify-release-features",
+        "count": 178
+      }
+    ],
+    "total": 492
+  },
+  "visualReview": {
+    "applicationFrames": 10,
+    "websiteFrames": 19,
+    "longPageStripsInspected": 30,
+    "kind": "in-session self-review",
+    "independentApproval": false
+  },
+  "documentsChecked": true,
+  "nativeSchema": 16,
+  "productSchema": 23,
+  "storyChanged": false,
+  "historicalVideosUnchanged": true,
+  "pending": [
+    "frozen candidate full release gate",
+    "AppImage/MCP and multiarchitecture Docker no-publish builds",
+    "final owner exact-candidate publication approval",
+    "published artifact/registry/website readback"
+  ]
+}

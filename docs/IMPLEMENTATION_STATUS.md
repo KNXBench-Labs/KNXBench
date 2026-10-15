@@ -14,6 +14,21 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — **Alpha 12 published and verified**: immutable annotated
+  `v0.1.0-alpha.12` → `16aefbe6`, owner-approved public prerelease with hand-written
+  notes. Tag workflows38773736127/38773736107 pass. Downloaded AppImage/MCP and
+  SHA256SUMS match GitHub digests; MCP/server versions resolve the exact tag.
+  AppImage extracts without bundled libwayland-client and its isolated Broadway
+  startup serves the actual embedded frontend/API. Registry version/latest share
+  one native amd64/arm64 index; anonymous version pull and network-none HTTPS,
+  auth401/200, save/reopen plus authentic public schema10→16 migration pass.
+  Original fixture and user's container identity/start remain unchanged. Corrected
+  Pages38774710136 passes; root and36 public content files match accepted bytes.
+  Initial shallow-checkout Pages refusal retained; narrow checkout-history fix
+  has website25/Story76 and byte-identical generated output. No FUSE/native visual,
+  EGL/Orca, new hardware or broad ETS-compatibility claim; dirty root unsynchronized.
+  [Publication receipt](evidence/release-alpha12-2026-10-15.json).
+
 - 2026-10-15 — Owner approved full Alpha 12 publication after complete source
   acceptance. Annotated `v0.1.0-alpha.12` points exactly to `16aefbe6`; the public
   GitHub prerelease and hand-written scope were read back. Tag-triggered build/

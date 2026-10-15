@@ -141,6 +141,12 @@ No existing container is replaced merely because an image is published.
 
 ## Distribution
 
+Published on **15 October 2026** from frozen commit `16aefbe6`. Public downloads,
+registry version/latest identity and isolated lifecycle/migration smoke, plus
+live website bytes, are verified separately from source acceptance.
+[Publication record](../evidence/release-alpha12-2026-10-15.json).
+
+
 Linux x86-64 AppImage and standalone `knx-mcp` with `SHA256SUMS`; Docker image
 `knxbench/knxbench-server:0.1.0-alpha.12` for `linux/amd64` and `linux/arm64`.
 `latest` is intended to follow the published release, not moving source.

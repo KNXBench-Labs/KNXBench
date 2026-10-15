@@ -1,15 +1,5 @@
 # Open work after the 0.1 alpha
 
-## Alpha 12 publication verification (15 October 2026)
-
-Complete77/77 source acceptance, both exact-SHA packaging dry runs and final
-owner publication approval are recorded. The immutable tag and hand-written
-prerelease name `16aefbe6`; tag-triggered artifact/registry publication and
-download-back, digest/smoke and live website verification are in progress.
-Neither #7/#22 nor hardware admission is closed by a release.
-[Release scope](releases/alpha12.md) · [acceptance](releases/alpha12-acceptance.md).
-
-
 ## Siemens System-2 download support, issue #22 (14 October 2026)
 
 Exact product/application identified; [offline prerequisites](contracts/system2-download-prerequisites.md)
@@ -464,6 +454,17 @@ owned by finished sessions (`FUTURE-05`, `KL-110`, `GAP-T30-04`, `KL-43`) moved
 to owner `later`. Routes naming removed goal files are kept as history.
 
 ## 5. Repository chores
+
+- **Alpha12 publication** (15 October 2026): immutable `v0.1.0-alpha.12` on
+  `16aefbe6`, complete77/77 source chain and corpus152/152+product16/16 green.
+  Public AppImage/MCP checksums, Docker amd64/arm64 version/latest identity,
+  anonymous network-none HTTPS/auth/save/reopen and authentic schema10→16 fixture
+  migration verified; user container unchanged. AppImage Broadway/embedded API
+  startup passes, not native visual/FUSE/EGL acceptance. Live Pages root and all36
+  public content files match accepted bytes. Native/model16 and product23 require
+  independent pre-upgrade backups. Open: #7/#22 and explicit platform/hardware
+  limitations, not release packaging. [Scope](releases/alpha12.md) ·
+  [Publication receipt](evidence/release-alpha12-2026-10-15.json).
 
 - **Alpha11 publication** (13 October 2026): tag `v0.1.0-alpha.11` on `758a112b`
   (main cutoff `2a43ad5c`), 44-stage gate and corpus 144/144 green, downloaded

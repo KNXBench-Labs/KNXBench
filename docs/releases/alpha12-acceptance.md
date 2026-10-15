@@ -1,6 +1,9 @@
 # Alpha 12 release acceptance — 15 October 2026
 
-**Ready for the owner’s publication decision; not published.**
+**Historical source acceptance, recorded before the owner’s publication decision.**
+Owner Go and the later verified publication are recorded in the
+[publication receipt](../evidence/release-alpha12-2026-10-15.json). The acceptance-time
+absence of a release below is historical, not the current publication status.
 
 Frozen candidate: `16aefbe6a943406deb2876d11bca21c7e652b25a` on
 `release/alpha12-20261015`. Tag this exact commit, not a moving tip. This

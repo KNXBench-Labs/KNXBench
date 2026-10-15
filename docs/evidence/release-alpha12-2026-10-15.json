@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "release": "v0.1.0-alpha.12",
+  "published": true,
+  "verifiedAt": "2026-10-15T19:14:53.189293+02:00",
+  "ownerApproved": true,
+  "candidate": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+  "annotatedTagObject": "cd6bd6a3cf4a8d4cca6cc738bf98661d1d46dae0",
+  "releaseUrl": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.12",
+  "prerelease": true,
+  "sourceAcceptance": {
+    "steps": 77,
+    "originalSuccessful": 66,
+    "actualContinuation": 11,
+    "inputsFrozen": true,
+    "record": "alpha12-acceptance-2026-10-15.json"
+  },
+  "assets": [
+    {
+      "name": "KNXBench_0.1.0-alpha.12_amd64.AppImage",
+      "bytes": 89364984,
+      "sha256": "e705dd3a4f64998395b15ea04d2f64e71b0e1bfdbcd5406b9ce33f3038c9cc82"
+    },
+    {
+      "name": "SHA256SUMS",
+      "bytes": 194,
+      "sha256": "2adb4feda54fe33ffba7dc433a9c2ab9b7007a946ebb3e8c97bf90340e8bae7b"
+    },
+    {
+      "name": "knx-mcp-x86_64-linux",
+      "bytes": 12460848,
+      "sha256": "1253ff4a76e674e30c73567af95cc8d0c61c4aff7cef6b44a7eeaabba532095c"
+    }
+  ],
+  "publishedDownloads": {
+    "sha256sumsPassed": true,
+    "githubAssetDigestsEqual": true,
+    "handwrittenNotesPreserved": true,
+    "mcpVersion": "knx-mcp 0.1.0-alpha.12+g16aefbe"
+  },
+  "appimage": {
+    "extracted": true,
+    "libwaylandClientBundled": false,
+    "broadwayStartup": {
+      "success": true,
+      "aliveAfterSeconds": 12.17,
+      "embeddedApiVersion": {
+        "version": "0.1.0-alpha.12+g16aefbe"
+      },
+      "embeddedFrontendServed": true
+    },
+    "notVerified": [
+      "FUSE launch",
+      "native visual WebKitGTK/Orca acceptance",
+      "Mesa EGL backend in this startup probe"
+    ]
+  },
+  "docker": {
+    "image": "knxbench/knxbench-server:0.1.0-alpha.12",
+    "versionDigest": "sha256:0b2557aaf5f586aced8c4f510d8e0cda2ef09f7bddf8b76898cfd8ec689a5d34",
+    "latestDigest": "sha256:0b2557aaf5f586aced8c4f510d8e0cda2ef09f7bddf8b76898cfd8ec689a5d34",
+    "equal": true,
+    "platforms": [
+      {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      {
+        "architecture": "arm64",
+        "os": "linux"
+      }
+    ],
+    "revision": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+    "anonymousVersionPull": true,
+    "serverVersion": "knx-server 0.1.0-alpha.12+g16aefbe",
+    "networkNoneSmoke": true,
+    "httpsHealth": true,
+    "unauthenticated401": true,
+    "authenticated200": true,
+    "createSaveReopen": true,
+    "authenticPublicFixture": {
+      "originalSchema": 10,
+      "savedSchema": 16,
+      "originalUnchanged": true,
+      "workingInstallationsEqual": true,
+      "undoCountPreserved": true,
+      "redoCountPreserved": true,
+      "undoSteps": 0,
+      "redoSteps": 0
+    },
+    "probeStoppedExit": 0,
+    "probeRemoved": true,
+    "userContainerUnchanged": true
+  },
+  "website": {
+    "origin": "https://knxbench.com",
+    "mainCommit": "659b4c9a2d47e0553b512b4a58bd4d2434c9c38e",
+    "pagesRun": 38774710136,
+    "publicFilesVerified": 36,
+    "rootMatchesAcceptedBuild": true,
+    "expectedBuildMatchesOriginalAcceptance": true,
+    "approvedStoryUnchanged": true,
+    "previewBannerAbsent": true
+  },
+  "pagesFirstFailure": {
+    "run": 38774188191,
+    "reason": "Shallow checkout lacked recorded screenshot source commit",
+    "fixCommit": "659b4c9a2d47e0553b512b4a58bd4d2434c9c38e",
+    "websiteTestsAfterRegression": 25,
+    "storyTests": 76,
+    "generatedSiteByteEqual": true
+  },
+  "tagWorkflows": [
+    {
+      "workflow": "linux-appimage.yml",
+      "run": 38773736127,
+      "head": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+      "watchExit": 0,
+      "conclusion": "success",
+      "publishConclusion": "success",
+      "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38773736127"
+    },
+    {
+      "workflow": "docker-release.yml",
+      "run": 38773736107,
+      "head": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+      "watchExit": 0,
+      "conclusion": "success",
+      "publishConclusion": "success",
+      "url": "https://github.com/KNXBench-Labs/KNXBench/actions/runs/38773736107"
+    }
+  ],
+  "notDone": [
+    "replace user container",
+    "synchronize dirty selected checkout",
+    "physical KNX operation",
+    "claim broad ETS compatibility"
+  ]
+}

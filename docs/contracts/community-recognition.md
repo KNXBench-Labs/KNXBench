@@ -136,3 +136,11 @@ Real API generation was exercised. Full tools suite must run with checkout-bound
 `PYTHONPATH`; the initial unbound discovery imported the wrong tools namespace and
 failed, not the counting feature. Remote workflow execution/acceptance is recorded
 in the delivery log; local tests alone do not certify GitHub write permissions.
+
+15 October 2026 amendment: 47 community tests pass, including all integer medal
+boundaries through 100 and the beyond-cap cases, all earned-name rendering,
+unearned-name exclusion, external Bot scoring, own-bot event suppression,
+backfill without duplicate notices and scoring-opt-out/marker-trust separation.
+The full tools run has 163 tests with one inherited skip. Branch and merged
+scoped gates pass. Real GitHub workflow `38694177327` completes successfully
+on published source `fe1f4101`, including verification and live reconciliation.

@@ -27,7 +27,10 @@ fragment aliases and update this index. Do not rewrite previous results.
   lockfile-pinned frontend dependencies required by a tools test. All five
   fresh-built repository checks and documentation validation pass. Real public
   GitHub generation verifies consistent README/page/JSON, unchanged award ledger
-  and unchanged XP. No UI/domain/storage/bus change or release/deployment.
+  and unchanged XP. Published source `fe1f4101`; all eleven files pass exact
+  GitHub content readback. Manual community workflow `38694177327` succeeds on
+  that source, including its 47-test verification and real GitHub reconciliation.
+  No UI/domain/storage/bus change or release/deployment.
   [Contract](contracts/community-recognition.md),
   [board and mystery goals](community/HALL_OF_FAME.md#the-next-mystery).
 

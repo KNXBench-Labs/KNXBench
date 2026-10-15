@@ -104,6 +104,50 @@ async fn call(
     )
 }
 
+#[tokio::test]
+async fn comparison_revision_is_transient_content_order_not_loaded_flags() {
+    let state = state();
+    let (status, initial) = call(&state, "GET", "/api/project", None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(initial["comparison_revisions"]["1"], 0);
+    {
+        let mut guard = state.project.lock().unwrap();
+        state
+            .command_stack
+            .lock()
+            .unwrap()
+            .do_command(
+                guard.as_mut().unwrap(),
+                knx_core::Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: Some("1.1.3".parse().unwrap()),
+                },
+            )
+            .unwrap();
+    }
+    let (_, changed) = call(&state, "GET", "/api/project", None).await;
+    assert_eq!(changed["comparison_revisions"]["1"], 1);
+    assert_eq!(changed["comparison_revisions"]["2"], 0);
+    let stored = serde_json::to_value(
+        state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .devices
+            .get(DeviceId(1))
+            .unwrap()
+            .id
+            .0,
+    )
+    .unwrap();
+    assert_eq!(
+        stored, 1,
+        "comparison metadata does not change project identity"
+    );
+}
+
 fn node(tree: &Value, id: u32) -> Value {
     tree["installations"][0]["unassigned"]
         .as_array()

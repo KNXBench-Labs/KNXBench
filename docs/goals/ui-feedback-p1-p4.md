@@ -16,7 +16,7 @@ claim the package there.
 | P1 | Toast entry, resume after reload, overwrite question | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
 | P2 | Explorer: visibly expandable nodes, structure lines with spread/pulse | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
 | P3 | Changes not yet programmed, per part | delivered 2026-10-15 (source after Alpha 11; [acceptance](../evidence/p3-pending-programming-2026-10-15.json)) |
-| P4 | Project file versus real devices: tags and comparison table | open (fresh session, after P3) |
+| P4 | Project file versus real devices: tags and comparison table | in progress: package 1 table/batch candidate under acceptance; package 2 parameters pending |
 
 Starter for a fresh session (replace the package number):
 
@@ -91,6 +91,16 @@ Implement P3 in its own worktree: review, full gate, push.
   and a small dot on the device row in the explorer.
 
 ## P4 — project file versus real devices (point 3)
+
+Delivery order within P4 (owner approved): **package 1** includes single/filtered
+batch, session tags, application identification and decoded address/association
+tables; **package 2** records actual parameter bit attribution and adds named
+project/device values. Each is independently reviewed, fully gated on branch
+and fresh-main merge, and published. Package 2 follows immediately after package 1.
+Current package 1 implementation is not yet accepted/published; parameters stay
+visibly raw until package 2. [Contract](../contracts/device-comparison.md),
+[ADR-0130](../adr/0130-session-device-comparison.md).
+
 
 - A Compare button per device, and Compare all over the devices currently
   shown in the device view (filtering by line = comparing a line): one

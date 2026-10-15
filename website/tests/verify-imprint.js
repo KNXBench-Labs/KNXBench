@@ -1,6 +1,6 @@
 /** Playwright CLI acceptance for the owner-supplied bilingual legal notice. */
 async (page) => {
-  const origin = 'http://127.0.0.1:4198';
+  const origin = new URL(page.url()).origin;
   const checks = [], errors = [], unexpected = [];
   const assert = (name, condition) => {
     if (!condition) throw new Error(name);

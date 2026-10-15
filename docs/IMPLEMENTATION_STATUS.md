@@ -14,6 +14,27 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Owner-revised private website: added installation diagram removed,
+  original screenshot-first layout restored, green Story-style headings/CRT palette
+  and independently random horizontal/vertical rolling glyphs. Website28/Story76,
+  tooling163 (1 existing skip),23 frozen-source stages; actual Chromium394 preview
+  and416 public-variant checks with every recipe origin/mode-bound. Earlier
+  mixed-origin gate and prior diagram design remain historical/superseded, not
+  silently relabelled. Story/application/media/legal text unchanged; no publication.
+  [Contract](WEBSITE.md#story-style-phosphor-crt--private-revision-15-october-2026) ·
+  [Evidence](evidence/phosphor-crt-revision-2026-10-15.json).
+
+- 2026-10-15 — Phosphor Atlas marketing redesign accepted as a **private preview**,
+  not a Pages publication: whole green-dark canvas, fictional TP-line/logical-link
+  diagram before real Alpha12 screenshots, keyboard/touch explanations, vertical
+  mobile layout and unified live motion cancellation. Existing Story, application,
+  media and legal wording unchanged. Website27, Story76, tooling163 (1 existing
+  skip), Chromium418 preview +418 public-variant checks, five repository gates and
+  deterministic builds pass. Acceptance is a frozen-source execution chain retaining
+  the original dependency/capture refusals, not an uninterrupted green run.
+  [Contract](WEBSITE.md#phosphor-atlas--private-implementation-15-october-2026) ·
+  [Evidence](evidence/phosphor-atlas-2026-10-15.json). Owner publication approval pending.
+
 - 2026-10-15 — **Alpha 12 published and verified**: immutable annotated
   `v0.1.0-alpha.12` → `16aefbe6`, owner-approved public prerelease with hand-written
   notes. Tag workflows38773736127/38773736107 pass. Downloaded AppImage/MCP and

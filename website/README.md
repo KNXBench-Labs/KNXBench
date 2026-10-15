@@ -37,13 +37,26 @@ Default-language acceptance recipe: `tests/verify-default-language.js`.
 - `dist/`, `output/`: generated artifacts, ignored; never copy source wholesale
   to a Pages artifact. The output contains `.nojekyll` for plain static hosting.
 
-## Headline motion
+## Story-style CRT and motion
 
-Marketing h1/h2/h3 use the Story's ambient rolling-glyph treatment. Only visible
-headings animate; OS reduced motion and footer Pause/Resume cancel effects live.
-The setting is page-local and not persisted. No JS/missing APIs retain readable
-static text; legal/privacy pages never load the effect. Story sources unchanged.
-`tests/verify-headlines.js` is the actual-browser recipe.
+Original screenshot-first marketing layout, with the approved Story's green
+canvas, typography and phosphor-green headings. The added installation diagram
+and all its code/labels are removed following owner review. Story source is
+unchanged; shared visual principles do not mean loading its application runtime.
+
+Marketing h1/h2/h3 retain rolling glyphs: each roll randomly chooses right, left,
+up or down with an oppositely offset twin. Timing stays720ms. Rare single-glyph
+180ms glitches remain. Only visible headings animate; header Pause/Resume and
+live OS reduced motion cancel all effects, including button transitions. The
+setting is page-local, never persisted. No-JS/missing APIs leave static text;
+legal/privacy pages stay static. No animation needed to read or navigate.
+
+Actual-browser recipes: `tests/verify-headlines.js`, `tests/verify-phosphor.js`,
+`tests/verify-roll-directions.js`. The direction recipe uses controlled RNG values
+against real WAAPI animations, not guessed randomness or a fake animation clock.
+Owner commit/push approval was received on15October2026. Default builds remain
+private previews; public publication is verified separately through Pages and
+live artifact readback. See `docs/WEBSITE.md` for the current delivery record.
 
 ## Release build and deployment
 

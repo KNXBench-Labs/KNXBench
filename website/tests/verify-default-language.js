@@ -1,6 +1,6 @@
 /** Playwright CLI acceptance: English root, explicit DE/EN and no locale redirect. */
 async (page) => {
-  const origin = 'http://127.0.0.1:4198';
+  const origin = new URL(page.url()).origin;
   const checks = [], errors = [], unexpected = [];
   const assert = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };
   page.on('pageerror', error => errors.push(error.message));

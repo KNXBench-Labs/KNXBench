@@ -113,8 +113,13 @@ fragment aliases and update this index. Do not rewrite previous results.
   browser12/12 (EN/DE1440/400, three repeats); all8 setup/preview frames inspected.
   Seven named guard mutations were behaviorally caught in an isolated source
   snapshot; restored tests pass and canonical bytes remained unchanged.
-  Separate in-session self-review, not independent approval. Fresh-main merged
-  acceptance, private corpus and publication are separate pending boundaries.
+  Separate in-session self-review, not independent approval. Fresh-main merge
+  `3444186c` passes11/11 stages with frozen inputs: Rust4587/0 (206 opt-ins ignored),
+  maintained web62/62, Vitest3624, default browser574, dedicated dialog12/12 and
+  private OriginalData151/151 in33 targets, network-isolated. Eight merged images
+  inspected. Later story/docs-only integration preserves all application path
+  sets, modes and blobs; runtime evidence remains bound to its tested revision.
+  Publication/readback is recorded separately in the aggregate evidence.
   [Contract](contracts/universal-device-support.md),
   [ADR0131](adr/0131-universal-device-support.md),
   [aggregate evidence](evidence/universal-support-2026-10-15.json),

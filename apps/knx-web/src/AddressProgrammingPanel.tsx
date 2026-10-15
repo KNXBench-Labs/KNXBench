@@ -7,6 +7,7 @@
 // person at the device must do, and only then; once the device is found
 // MP §2.3 runs to its end and there is no stop button.
 
+import { addressEndChangesProject } from "./programmingState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import DeviceLink from "./DeviceLink";
@@ -22,13 +23,15 @@ const DEFAULT_WAIT_SECONDS = 120;
 
 interface AddressProgrammingPanelProps {
   project: ProjectTree | null;
+  /** The project as reloaded after a programming that may have written (ADR-0129). */
+  onProjectChanged?: (tree: ProjectTree) => void;
 }
 
 function active(status: api.AddressProgrammingStatus | undefined): boolean {
   return status?.state === "waiting" || status?.state === "programming";
 }
 
-export default function AddressProgrammingPanel({ project }: AddressProgrammingPanelProps) {
+export default function AddressProgrammingPanel({ project, onProjectChanged }: AddressProgrammingPanelProps) {
   const t = useTranslate();
   const consent = useProgrammingConsent();
   // Suggestions only: the address typed is the one programmed.
@@ -49,6 +52,7 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
   const [status, setStatus] = useState<api.AddressProgrammingStatusResponse | null>(null);
   const [events, setEvents] = useState<api.AddressProgrammingEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [programmingRefreshError, setProgrammingRefreshError] = useState<string | null>(null);
   const [availability, setAvailability] = useState<api.AddressProgrammingAvailability | null>(null);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const availabilityRequestRef = useRef(0);
@@ -87,8 +91,16 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
   // ADR-0089: only `written: "yes"` — the device answers at the new
   // address — counts; reported once per programming run.
   const reportedRef = useRef<number | null>(null);
+  // ADR-0129: the server settled the address part before it reported the
+  // end; reload the project once per run that may have written.
+  const reloadedRef = useRef<number | null>(null);
   function apply(next: api.AddressProgrammingStatusResponse) {
     if (idRef.current !== null && next.programmingId !== idRef.current) return;
+    if (onProjectChanged && addressEndChangesProject(next.status) && reloadedRef.current !== next.programmingId) {
+      reloadedRef.current = next.programmingId;
+      setProgrammingRefreshError(null);
+      api.currentProject().then(onProjectChanged, (reason) => setProgrammingRefreshError(api.errorMessage(reason)));
+    }
     if (next.status.state === "finished" && next.status.written === "yes" && reportedRef.current !== next.programmingId) {
       reportedRef.current = next.programmingId;
       emitAchievementEvent({ type: "individualAddressVerified" });
@@ -264,6 +276,8 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
       )}
 
       {error && <p className="form-error" role="alert">{error}</p>}
+      {programmingRefreshError && <p className="form-warning" role="alert" data-programming-refresh>
+        {t("programming.refreshFailed", { reason: programmingRefreshError })}</p>}
 
       {status && current && (
         <section className="address-programming-progress" aria-live="polite">

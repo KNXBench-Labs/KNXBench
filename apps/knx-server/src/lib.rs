@@ -50,13 +50,16 @@ mod debug_report;
 mod device_catalog;
 mod device_compare_routes;
 mod device_download;
-pub use device_download::{DeviceDownloadSession, DownloadStatus, ProgressEvent, Restart, Written};
+pub use device_download::{
+    DeviceDownloadSession, DownloadStatus, OnDownloadEnd, ProgressEvent, Restart, Written,
+};
 mod device_download_routes;
 mod device_readiness_routes;
 pub use device_download_routes::ShownPlan;
 mod address_programming;
 pub use address_programming::{
     AddressProgrammingEvent, AddressProgrammingSession, AddressProgrammingStatus, AddressWritten,
+    OnProgrammingEnd,
 };
 mod address_programming_routes;
 mod bus_activity_routes;
@@ -84,6 +87,8 @@ pub use load_progress::*;
 mod catalogue_update_routes;
 mod function_routes;
 mod one_shot_activity;
+mod programming_state;
+pub use programming_state::address_programming_settler;
 mod parameter_editor_routes;
 mod paths;
 mod project_history;
@@ -197,6 +202,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(name_recipe_routes::router(state.clone()))
         .merge(note_routes::router(state.clone()))
         .merge(function_routes::router())
+        .merge(programming_state::router())
         .merge(parameter_editor_routes::router())
         .merge(catalogue_update_routes::router())
         .merge(stored_bus_access_routes::router())

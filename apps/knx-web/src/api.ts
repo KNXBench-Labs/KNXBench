@@ -226,6 +226,18 @@ export function renameEntity(kind: "device" | "group_address" | "installation", 
   });
 }
 
+/**
+ * "Mark as programmed / not programmed" for all four parts (ADR-0129), bound to
+ * the tree that showed the device. One undo step; `409 programmingStale` changes nothing.
+ */
+export function markDeviceProgramming(deviceId: number, programmed: boolean, tree: ProjectTree): Promise<ProjectTree> {
+  return request(`/api/device/${deviceId}/programming`, {
+    method: "POST", body: JSON.stringify({ programmed,
+      serverIncarnation: tree.server_incarnation, projectIncarnation: tree.project_incarnation,
+      snapshotRevision: tree.snapshot_revision }),
+  });
+}
+
 export interface ImportSelection {
   sourceInstallation: number; targetInstallation: number; devices: number[]; lines: number[];
 }

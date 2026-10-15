@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { LineStoredBusAccess } from "./StoredBusAccess";
 import { carriesGroupAddress, readDraggedGroupAddress } from "./groupAddressDrag";
 import * as api from "./api";
+import DeviceProgrammingField from "./DeviceProgrammingField";
 import RecordedDeviceStatePanel from "./RecordedDeviceStatePanel";
 import { emitAchievementEvent } from "./achievementEvents";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
@@ -1096,6 +1097,7 @@ function DeviceInspector(props: {
       {error && <span className="field-error">{error}</span>}
       <DevicePlacementRepair detail={detail} tree={tree} onApplied={onApplied} />
       <AddressField detail={detail} tree={tree} onApplied={onApplied} />
+      <DeviceProgrammingField deviceId={detail.id} tree={tree} onApplied={onApplied} />
       <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <BuildingPartMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceDescriptionField detail={detail} onApplied={onApplied} />

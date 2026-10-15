@@ -4,6 +4,9 @@
 //! that changes a `Resolved<T>` sets its layer to `Layer::UserEdit`.
 
 mod function_commands;
+mod programming_commands;
+#[cfg(test)]
+mod programming_tests;
 
 use std::collections::HashSet;
 use std::fmt;
@@ -235,6 +238,14 @@ pub enum Command {
         device: DeviceId,
         ets_id: String,
         raw: Option<String>,
+    },
+    /// Changes the project's belief about which parts a device holds
+    /// (ADR-0129): the user's "Mark as programmed / not programmed", and the
+    /// marks the command stack adds to an edit's undo step. Its inverse is
+    /// the same command carrying the previous values of the parts it set.
+    SetDeviceProgramming {
+        device: DeviceId,
+        change: crate::commissioning::pending::ProgrammingChange,
     },
     /// `entry.id` is pre-allocated by the caller via
     /// `Project::ids::next_group_address_id`.
@@ -2100,6 +2111,9 @@ impl Command {
             Command::MoveFunction { id, location } => {
                 function_commands::relocate(project, *id, *location)
             }
+            Command::SetDeviceProgramming { device, change } => {
+                programming_commands::set(project, *device, *change)
+            }
             Command::AddFunctionMember {
                 function,
                 member,
@@ -3879,10 +3893,42 @@ impl CommandStack {
                 return Ok(());
             }
         }
+        // ADR-0129: the parts this edit changes on a device become pending in
+        // the same undo step. Devices are looked up on both sides, so links
+        // and objects a batch adds or removes are found.
+        let mut devices = std::collections::BTreeSet::new();
+        programming_commands::candidates(&cmd, project, &mut devices);
+        let before = programming_commands::before(project, &devices);
         let inverse = cmd.apply(project)?;
+        programming_commands::candidates(&cmd, project, &mut devices);
+        let inverse = programming_commands::mark_changed(project, before, &devices, inverse);
         self.undo.push(HistoryEntry::Inverse(Box::new(inverse)));
         self.redo.clear();
         Ok(())
+    }
+
+    /// After `parts` of `device` were written to the device (or a write to
+    /// them failed), no undo or redo may bring back the claim that they are
+    /// programmed: the device no longer holds what that claim was about.
+    /// Every such claim in either direction becomes "pending" (ADR-0129).
+    pub fn forget_programmed_claims(
+        &mut self,
+        device: DeviceId,
+        parts: crate::commissioning::pending::ProgrammingParts,
+    ) {
+        for entry in self.undo.iter_mut().chain(self.redo.iter_mut()) {
+            match entry {
+                HistoryEntry::Inverse(command) => {
+                    programming_commands::drop_programmed_claims(command, device, parts);
+                }
+                HistoryEntry::Snapshot(state) => {
+                    if let Some(instance) = state.devices.get_mut(device) {
+                        crate::commissioning::pending::ProgrammingChange::mark(parts, false)
+                            .apply_to(&mut instance.commissioning);
+                    }
+                }
+            }
+        }
     }
 
     pub fn undo(&mut self, project: &mut Project) -> Result<(), CommandError> {

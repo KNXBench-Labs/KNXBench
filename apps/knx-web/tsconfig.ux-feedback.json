@@ -4,6 +4,7 @@
   "include": [
     "src",
     "e2e/ux-feedback.e2e.ts",
+    "e2e/pending-programming.e2e.ts",
     "e2e/achievements-fixture.ts",
     "e2e/achievements.e2e.ts",
     "e2e/flow-camera.e2e.ts",

@@ -10,10 +10,12 @@ import { useTranslate, type MessageKey } from "./i18n";
 import { useProductLanguage } from "./productLanguage";
 import { useUiLanguage } from "./uiLanguage";
 import { fellBack, LanguageFallbackBadge } from "./languageFallback";
+import { createProgrammingChips } from "./ProgrammingChips";
 
 const COLUMNS: { column: DeviceSortColumn; label: MessageKey }[] = [
   { column: "address", label: "workbench.address" },
   { column: "name", label: "workbench.name" },
+  { column: "programming", label: "devices.programming" },
   { column: "manufacturer", label: "devices.manufacturer" },
   { column: "product", label: "devices.product" },
   { column: "orderNumber", label: "devices.orderNumber" },
@@ -31,8 +33,14 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
 }) {
   const t = useTranslate();
   const [language] = useUiLanguage();
+  const programmingChips = useMemo(() => createProgrammingChips(t, language), [t, language]);
   const [productLanguage] = useProductLanguage();
   const [query, setQuery] = useState("");
+  const [pendingOnly, setPendingOnly] = useState(false);
+  // Do not build thousands of hidden chip nodes on project open. Once
+  // visited, retain them across editor visits with the table's other DOM.
+  const [programmingMounted, setProgrammingMounted] = useState(active);
+  if (active && !programmingMounted) setProgrammingMounted(true);
   const [sort, setSort] = useState<DeviceSort>({ column: "address", descending: false });
   const [metadata, setMetadata] = useState<{ tree: ProjectTree; language: string | null; rows: DeviceCatalogRow[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,8 +62,8 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
     return () => { disposed = true; };
   }, [active, tree, productLanguage, refresh]);
   const currentMetadata = metadata?.tree === tree && metadata.language === productLanguage ? metadata.rows : [];
-  const rows = useMemo(() => visibleDeviceRows(projectDeviceRows(tree, currentMetadata), query, sort, language),
-    [tree, metadata, productLanguage, query, sort, language]);
+  const rows = useMemo(() => visibleDeviceRows(projectDeviceRows(tree, currentMetadata), query, sort, language, { pendingOnly }),
+    [tree, metadata, productLanguage, query, sort, language, pendingOnly]);
   const visibleOrder = rows.map((row) => row.id);
   const total = useMemo(() => projectDeviceRows(tree, currentMetadata).length, [tree, metadata, productLanguage]);
   function resolution(row: (typeof rows)[number]): string {
@@ -74,6 +82,8 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
     <div className="devices-toolbar">
       <input type="search" aria-label={t("devices.filter")} placeholder={t("devices.filterHint")}
         value={query} onChange={(event) => setQuery(event.target.value)} />
+      <label className="devices-pending-only"><input type="checkbox" checked={pendingOnly}
+        onChange={(event) => setPendingOnly(event.target.checked)} />{t("devices.pendingOnly")}</label>
       <button type="button" onClick={() => setRefresh((value) => value + 1)} disabled={loading}>{t("devices.refresh")}</button>
     </div>
     {loading && <p role="status"><span className="task-status-text">{t("devices.loading")}</span></p>}
@@ -96,6 +106,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
           onChange={() => onItemClick(CHECKBOX_CLICK, "device", row.id, { kind: "device", id: row.id }, visibleOrder)} /></td>
         <td className="mono"><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{row.address ?? t("workbench.unassigned")}</button></td>
         <td><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{row.name}</button></td>
+        <td>{programmingMounted ? programmingChips(row) : null}</td>
         <td>{row.catalog?.manufacturerName ?? row.catalog?.manufacturerId ?? resolution(row)}</td>
         <td>{row.catalog?.productText ?? resolution(row)}
           {productLanguage && fellBack(row.catalog?.productText, row.catalog?.productTextLanguage)

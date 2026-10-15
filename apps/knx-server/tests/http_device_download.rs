@@ -1877,6 +1877,7 @@ async fn a_waiting_simulated_address_programming_holds_off_the_download() {
             give_up_after: Duration::from_secs(30),
             pause_between_rounds: Duration::from_millis(10),
         },
+        Box::new(|_| {}),
     ));
     let (status, body) = start(&h, &shown["planId"], "I confirm download to 1.1.67").await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
@@ -2184,4 +2185,185 @@ async fn an_untested_download_needs_its_acknowledgement_before_any_tunnel() {
     // This is an acknowledgement-gate test, not hardware evidence for the
     // selected sibling program. Identity/load checks can still refuse it.
     let _ = finish(&h).await;
+}
+
+// --- P3 (ADR-0129): the programming belief follows the run ---------------
+
+/// Sets every part of the project device at 1.1.67 programmed or pending.
+fn set_belief(h: &Harness, programmed: bool) {
+    let mut project = h.state.project.lock().unwrap();
+    let project = project.as_mut().unwrap();
+    let address: IndividualAddress = "1.1.67".parse().unwrap();
+    let id = project
+        .devices
+        .iter()
+        .find(|d| d.address == Some(address))
+        .unwrap()
+        .id;
+    let state = &mut project.devices.get_mut(id).unwrap().commissioning;
+    state.individual_address_loaded = programmed;
+    state.application_program_loaded = programmed;
+    state.parameters_loaded = programmed;
+    state.communication_part_loaded = programmed;
+}
+
+/// The device node of 1.1.67 in a fresh `GET /api/project`.
+async fn node_at_67(h: &Harness) -> Value {
+    let (status, tree) = send(&h.app, get("/api/project")).await;
+    assert_eq!(status, StatusCode::OK, "{tree}");
+    fn find(value: &Value) -> Option<Value> {
+        match value {
+            Value::Object(map) => {
+                if map.get("address") == Some(&json!("1.1.67"))
+                    && map.contains_key("pending_programming")
+                {
+                    return Some(value.clone());
+                }
+                map.values().find_map(find)
+            }
+            Value::Array(items) => items.iter().find_map(find),
+            _ => None,
+        }
+    }
+    find(&tree).expect("1.1.67 is in the tree")
+}
+
+fn pending(address: bool, application: bool, parameters: bool, tables: bool) -> Value {
+    json!({
+        "address": address,
+        "application": application,
+        "parameters": parameters,
+        "group_addresses": tables,
+    })
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn a_complete_download_leaves_nothing_pending() {
+    let h = harness(SimulatorConfig::default()).await;
+    set_belief(&h, false);
+    let plan = plan(&h).await;
+    let (status, body) = start(&h, &plan["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (end, _) = finish(&h).await;
+    assert_eq!(end["state"], "finished", "{end}");
+    assert_eq!(end["written"], "yes");
+    let node = node_at_67(&h).await;
+    assert_eq!(
+        node["pending_programming"],
+        pending(false, false, false, false),
+        "{node}"
+    );
+    let project = h.state.project.lock().unwrap().clone().unwrap();
+    let device = project
+        .devices
+        .iter()
+        .find(|d| d.address.map(|a| a.to_string()).as_deref() == Some("1.1.67"))
+        .unwrap();
+    assert!(device.commissioning.last_download.is_some());
+    assert_eq!(
+        h.state.command_stack.lock().unwrap().history_lengths(),
+        (0, 0),
+        "a download is not an undo step"
+    );
+    let (_, log) = send(&h.app, get("/api/log")).await;
+    assert!(
+        log.to_string().contains(
+            "finished: address, application, parameters and group addresses marked programmed"
+        ),
+        "{log}"
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn verified_memory_clears_pending_parts_even_when_the_restart_is_unconfirmed() {
+    let h = harness(SimulatorConfig {
+        restart_unanswered: true,
+        ..SimulatorConfig::default()
+    })
+    .await;
+    set_belief(&h, false);
+    let shown = plan(&h).await;
+    let (status, body) = start(&h, &shown["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (end, _) = finish(&h).await;
+    assert_eq!(end["state"], "finished", "{end}");
+    assert_eq!(end["restart"], "unconfirmed", "the warning remains visible");
+    assert_eq!(
+        node_at_67(&h).await["pending_programming"],
+        pending(false, false, false, false)
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn a_partial_download_clears_only_what_it_wrote() {
+    let h = harness(SimulatorConfig::default()).await;
+    h.device
+        .preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x27, 0x15]);
+    set_belief(&h, false);
+    let (status, plan) = send(
+        &h.app,
+        post(
+            "/api/device-download/plan",
+            json!({
+                "address": "1.1.67",
+                "partial": { "parameters": true, "groupAddresses": false }
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{plan}");
+    let (status, body) = start(&h, &plan["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (end, _) = finish(&h).await;
+    assert_eq!(end["state"], "finished", "{end}");
+    let node = node_at_67(&h).await;
+    assert_eq!(
+        node["pending_programming"],
+        pending(true, true, false, true),
+        "{node}"
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn a_download_lost_partway_marks_what_it_touched_even_when_clean() {
+    let h = harness(SimulatorConfig {
+        drop_connection_after: Some(400),
+        ..SimulatorConfig::default()
+    })
+    .await;
+    set_belief(&h, true);
+    let plan = plan(&h).await;
+    let (status, _) = start(&h, &plan["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::OK);
+    let (end, _) = finish(&h).await;
+    assert_eq!(end["written"], "partially", "{end}");
+    let node = node_at_67(&h).await;
+    assert_eq!(
+        node["pending_programming"],
+        pending(false, true, true, true),
+        "the address was not written: {node}"
+    );
+
+    // Nothing written: nothing changes.
+    let early = harness(SimulatorConfig {
+        drop_connection_after: Some(12),
+        ..SimulatorConfig::default()
+    })
+    .await;
+    set_belief(&early, true);
+    let plan = self::plan(&early).await;
+    let (status, _) = start(&early, &plan["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::OK);
+    let (end, _) = finish(&early).await;
+    assert_eq!(end["written"], "no", "{end}");
+    let node = node_at_67(&early).await;
+    assert_eq!(
+        node["pending_programming"],
+        pending(false, false, false, false),
+        "{node}"
+    );
 }

@@ -12,6 +12,7 @@ const apiMock = vi.hoisted(() => ({
   serverVersion: vi.fn(),
   getDeviceDownloadReport: vi.fn(),
   getDeviceReadiness: vi.fn(),
+  currentProject: vi.fn(),
 }));
 const savedReports = vi.hoisted(() => vi.fn());
 vi.mock("./localJsonDownload", () => ({ downloadLocalJson: savedReports }));
@@ -150,12 +151,12 @@ async function flush() {
   });
 }
 
-async function render(tree: ProjectTree | null = project()) {
+async function render(tree: ProjectTree | null = project(), onProjectChanged?: (tree: ProjectTree) => void) {
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
   await act(async () => {
-    root!.render(<DeviceDownloadPanel project={tree} />);
+    root!.render(<DeviceDownloadPanel project={tree} onProjectChanged={onProjectChanged} />);
   });
   await flush();
 }
@@ -772,4 +773,41 @@ it("says why no report is available", async () => {
   await act(async () => button(en["deviceDownload.verify.create"], verify).click());
   await flush();
   expect(verify.querySelector('[role="alert"]')!.textContent).toBe("No report available: download 7 has been replaced");
+});
+
+// ADR-0129: the server settles the programming state when a download that
+// wrote ends; the editor reloads the project once per such run.
+it("warns when programming state cannot be refreshed without changing the download outcome", async () => {
+  apiMock.currentProject.mockReset().mockRejectedValue(new Error("offline"));
+  const changed = vi.fn();
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response({ state: "finished", written: "yes", restart: "acknowledged", restartNote: null }, [], 1));
+  await render(project(), changed);
+  const warning = host!.querySelector('[data-programming-refresh]');
+  expect(warning?.getAttribute("role")).toBe("alert");
+  expect(warning?.textContent).toContain("Reload the project");
+  expect(warning?.textContent).toContain("offline");
+  expect(host!.querySelector('[data-download-state]')?.getAttribute("data-download-state")).toBe("finished");
+  expect(host!.querySelector('[data-written]')?.getAttribute("data-written")).toBe("yes");
+  expect(changed).not.toHaveBeenCalled();
+});
+
+it("reloads the project once after a download that wrote, and not after one that wrote nothing", async () => {
+  const reloaded = project();
+  apiMock.currentProject.mockReset().mockResolvedValue(reloaded);
+  const changed = vi.fn();
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response({ state: "failed", written: "partially", stoppedInStep: 2, error: "lost" }, [], 1));
+  await render(project(), changed);
+  expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+  expect(changed).toHaveBeenCalledExactlyOnceWith(reloaded);
+  if (root) await act(async () => root!.unmount());
+  host?.remove();
+
+  apiMock.currentProject.mockClear(); changed.mockClear();
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response({ state: "failed", written: "no", stoppedInStep: null, error: "refused" }, [], 1));
+  await render(project(), changed);
+  expect(apiMock.currentProject).not.toHaveBeenCalled();
+  expect(changed).not.toHaveBeenCalled();
 });

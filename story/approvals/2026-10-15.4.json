@@ -1,0 +1,14 @@
+{
+ "schema": "knxbench-evolution-approval/1",
+ "decision": "publish-exact-version",
+ "candidate_id": "2026-10-15.4",
+ "story_sha256": "081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8",
+ "approved_by": "project owner",
+ "approved_at": "2026-10-15T09:33:06+02:00",
+ "scope": "Owner explicitly approved this exact edition after preview, changes, hash and test disclosure. Includes website pin cutover, retiring the earlier edition from the current tree with Git history retained, normal publication push and Pages deployment after successful publication checks. Any content change needs a new approval.",
+ "known_gaps": [
+  "Dense labels in the small guided mobile graph; full text and searchable/zoomable atlas remain available.",
+  "WebKit/Safari, native WebKitGTK and actual screen readers not tested.",
+  "Selective conversation coverage and hardware verification limited to the exact recorded scopes."
+ ]
+}

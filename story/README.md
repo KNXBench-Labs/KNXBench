@@ -4,9 +4,10 @@ A private, offline companion that tells how KNXBench grew from its earliest
 surviving prompt into an engineering project. It is **not** part of the KNX
 application and does not touch the KNX domain, project files or any bus.
 
-Status: published companion plus a new **unapproved** candidate `2026-10-15.4`.
-The website remains pinned to approved `2026-10-08.4` during review. Nothing
-authorizes publishing the new edition until its exact digest is approved.
+Status: edition `2026-10-15.4` was explicitly approved by the project owner on
+15 October 2026 for the exact digest in `approvals/2026-10-15.4.json`. The website
+pin now targets it. The earlier edition is retired from the current tree and
+remains immutable in Git; deployment is verified separately from approval.
 Design and boundaries: [ADR-0068](../docs/adr/0068-project-evolution-story-is-a-static-offline-companion.md),
 [brief](../docs/PROJECT_EVOLUTION_STORY_BRIEF.md), [goal](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/PROJECT_EVOLUTION_GOAL.md).
 
@@ -38,7 +39,7 @@ python3 -m storytool prepare --private-provenance ../../KNXBench.story-private/p
 python3 -m storytool build 2026-10-15.4          # writes dist/2026-10-15.4/index.html
 python3 -m storytool build 2026-10-15.4 --preview  # writes previews/2026-10-15.4.html (commit it)
 python3 -m storytool serve 2026-10-15.4          # loopback only
-python3 -m storytool release-check 2026-10-15.4  # refuses: no approval
+python3 -m storytool release-check 2026-10-15.4 --approval approvals/2026-10-15.4.json
 python3 -m storytool publish                     # always refuses, exit code 3
 ```
 
@@ -110,8 +111,8 @@ needs a new approval.
 Approval records live in `approvals/<id>.json`, committed with their candidate;
 `tests/test_approvals.py` fails as soon as one no longer matches. When a later
 edition replaces an approved one, remove or renew the record with it.
-**Current state:** `2026-10-08.4` is approved for publication (record of
-8 October 2026, `approved_by: project owner`). `python3 -m storytool build
+**Current state:** `2026-10-15.4` is approved for publication (record of
+15 October 2026, `approved_by: project owner`). `python3 -m storytool build
 <id> --out <dir> --approval approvals/<id>.json` renders the published
 variant (no preview banner, no `noindex`, "Published edition") and refuses,
 writing nothing, unless the record matches the exact candidate. Committed
@@ -225,11 +226,13 @@ and document paths. It does not interpret prose or grant publication permission.
 Old hashes are remapped with `docs/history/COMMIT_MAP_*.txt`; the one removed
 schema-design reference points to its archive locator instead of a missing file.
 
-**Review gate:** the old approved edition stays alongside the new candidate only
-until the owner's exact-edition decision. No approval exists for `2026-10-15.4`.
-Do not push the update, change `website/story.json`, remove the old approval or
-trigger Pages before that decision. An approved cutover retires the earlier
-candidate/preview/approval from the tree, leaving its immutable history in Git.
+**Publication gate:** the owner explicitly approved `2026-10-15.4` and
+`081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8`
+after reviewing the preview, changes and actual checks. The new approval, website
+pin and latest-only retirement form one cutover. The earlier candidate/preview/
+approval remain in Git; approval is not copied or redated. Any content change
+requires another edition and explicit approval. Build, push and public deployment
+readback remain separately checked operations.
 
 ## Known limitations
 

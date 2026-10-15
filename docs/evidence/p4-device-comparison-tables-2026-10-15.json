@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "owner-ui-feedback-p4-tables",
-  "status": "merged-accepted-publication-pending",
+  "status": "accepted-source-publication",
   "decisionRecord": "docs/goals/ui-feedback-p1-p4.md",
   "storeMigration": false,
   "busAccess": "none; simulator and intercepted browser only",
@@ -371,7 +371,53 @@
     "screenshotsVisuallyInspected": 4
   },
   "publication": {
-    "status": "pending"
+    "status": "pending-readback",
+    "runtimeAcceptedCommit": "a9f429a4d6b2cc2e030c462edc0a25521c5cd620",
+    "deltaAcceptance": {
+      "complete": true,
+      "success": true,
+      "inputsFrozen": true,
+      "head": "13bb018246b7209774c3c0c4df312dd1d4c1ccfb",
+      "steps": [
+        {
+          "name": "build",
+          "exit": 0
+        },
+        {
+          "name": "python",
+          "exit": 0
+        },
+        {
+          "name": "docs",
+          "exit": 0
+        },
+        {
+          "name": "check-layering",
+          "exit": 0
+        },
+        {
+          "name": "check-headers",
+          "exit": 0
+        },
+        {
+          "name": "check-anchors",
+          "exit": 0
+        },
+        {
+          "name": "check-ledger",
+          "exit": 0
+        },
+        {
+          "name": "check-corpus-gates",
+          "exit": 0
+        },
+        {
+          "name": "diff",
+          "exit": 0
+        }
+      ]
+    },
+    "release": false
   },
   "next": "Package 2 parameter bit attribution and named values; no stop after package 1 publication."
 }

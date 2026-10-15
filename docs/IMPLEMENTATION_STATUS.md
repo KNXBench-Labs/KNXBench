@@ -14,7 +14,7 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-15 — P4 package 1 source candidate, **not yet delivered**: confirmed
+- 2026-10-15 — P4 package 1 tables accepted in source after Alpha 11: confirmed
   single/filtered device queue, progress/draining cancellation and session tags;
   P3 content revisions, verified five-byte application identity, bounded 0701
   group-address/association decoding and visible raw read ranges. Nine named
@@ -26,7 +26,7 @@ fragment aliases and update this index. Do not rewrite previous results.
   configs325 and repeated browser75; Python148/one inherited skip. All2802
   source files are unchanged. Fresh-main merge `a9f429a4` passes49/49 frozen stages: Rust4565,
   Vitest3609, default570, production329/15configs, repeats87; the network-
-  isolated corpus passes151/151 in33targets. Merge images inspected; publication pending. Named parameter attribution remains package 2; no bus access.
+  isolated corpus passes151/151 in33targets. Merge images inspected; later docs/tooling delta passes nine closure checks with runtime unchanged. Named parameter attribution remains package 2; no bus access.
   [Goal](goals/ui-feedback-p1-p4.md), [contract](contracts/device-comparison.md),
   [ADR-0130](adr/0130-session-device-comparison.md).
 

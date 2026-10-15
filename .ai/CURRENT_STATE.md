@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 11:41
+- **Completed:** Universal device-support reporting published on main9b8d176aa75ef6575bcda62af13ecba6860c8f77; exact local/tracking/live equality and feature ancestry verified. Featurefa165f82, runtime-tested merge3444186c:11/11 stages, web62/62, Rust4587/0/206ignored, Vitest3624, browser574, private corpus151/151 in33 targets; seven guard mutants caught/restored,8 merged images inspected. Subsequent story/docs merge and15 frozen closure stages pass with application path/mode/blob equality. Documentation/public aggregate distinguish runtime acceptance from publication. No real bus/registry promotion/download unlock.
+- **Pending/Next Steps:** Only publish this observed-readback documentation closure, verified private evidence archive and owned worktree/branch/cache retirement remain. Future System2 image/table/LSM/recovery/hardware work stays open; no release/deploy or root synchronization. No new Go required for completing this delivery.
+- **Notes for Codex oder Claude:** Preserve foreign P4/story/SessionRadar and dirty/stale selected root. Self-review, not independent approval. Original source/test/Corpus receipts stay bound3444186c; later doc-only publication cannot be called a new runtime run. Commit identity KNXBench <github@knxbench.com>, no coauthor/subagents/vendor contact/upload.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 11:39
 - **Completed:** Universal support feature fa165f82 and tested integration3444186c accepted:11/11 outer,62/62 maintained-web, Rust4587/0/206ignored, Vitest3624, default browser574, dialog12/12, private OriginalData151/151 in33 targets under network isolation. Seven guard mutants caught/restored,8 branch and8 merged images inspected. Source/meta identity and read-only/consent/IP boundaries documented. Later upstream story/docs merge3921e122 preserves complete application/Rust path sets, modes and blobs (1560 protected paths); runtime results stay bound3444186c, no invented rerun.
 - **Pending/Next Steps:** Run affected documentation/story/site/tooling closure on exact current candidate, then authorized normal main push and exact local/tracking/live/source readback; publication receipt, verified private evidence archive and owned worktree/cache retirement. No new implementation, hardware, release or deploy authorized by this task. No new Go needed.

@@ -120,7 +120,12 @@
     "framesInspected": 8
   },
   "publication": {
-    "status": "pending"
+    "status": "published-and-read-back",
+    "mainCommit": "9b8d176aa75ef6575bcda62af13ecba6860c8f77",
+    "localTrackingLiveEqual": true,
+    "featureCommit": "fa165f82",
+    "selectedRootSynchronized": false,
+    "releasedBinaryOrDeployment": false
   },
   "readerRoutes": {
     "README": "Source-only support pointer in Contributing & support",
@@ -150,6 +155,12 @@
     "commit": "3921e1220b256f80bf37defa2b12ae247989928a",
     "applicationPathModesAndBlobsEqual": true,
     "protectedPaths": 1560,
-    "delta": "Upstream story/docs/tooling only; affected documentation/story/site checks required separately, runtime results retain their tested commit."
+    "delta": "Upstream story/docs/tooling only; fifteen affected closure stages passed with frozen inputs on9b8d176a. Runtime results retain their tested commit.",
+    "deltaAcceptance": {
+      "commit": "9b8d176aa75ef6575bcda62af13ecba6860c8f77",
+      "stagesPassed": 15,
+      "inputsFrozen": true,
+      "scope": "Docs/tools/story/website tests and validation/release build, app build, format and five explicit-root repository checks; no repeated runtime test claim."
+    }
   }
 }

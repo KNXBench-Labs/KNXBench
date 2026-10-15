@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "scope": "Alpha 12 complete gate refusal; not release acceptance",
+  "candidate": "02d823c402f8daee24fa31b538c3ac7091d97470",
+  "complete": true,
+  "success": false,
+  "expectedStages": 72,
+  "passedStages": 54,
+  "failedStage": "naming",
+  "counts": {
+    "vitest": {
+      "passed": 3626,
+      "files": 263
+    },
+    "rust": {
+      "passed": 4597,
+      "failed": 0,
+      "ignored": 207
+    }
+  },
+  "reason": "Native browser test tried a welcome-only open control after reset had already opened a project. The failure is not the separately discovered finalizer issue.",
+  "sourceAfterRefusalEqualsStart": true,
+  "publication": "not attempted",
+  "next": "Correct the native test-only open route and run a new full frozen-candidate gate; original failed execution is retained.",
+  "correctedNativeProof": {
+    "success": true,
+    "inputsFrozen": true,
+    "passedCases": 12,
+    "suites": {
+      "rename": 4,
+      "functions": 4,
+      "name-recipe": 4
+    },
+    "sourceHashes": {
+      "apps/knx-web/e2e/rename.native.ts": "6d99d216eceb76f0eb7077094880b7d3de333838de69b222c27bb59d87608541",
+      "apps/knx-web/e2e/functions.native.ts": "ee9fb74573386ba5006577a530aedd8c396de361072be373a6a801eccdd85bf3",
+      "apps/knx-web/e2e/name-recipe.native.ts": "35d7e7c9a59d97481fe62d95293c2aa5e8ec8024f7c9f8d639c9d82cf1ed4c60"
+    },
+    "productionSource": "unchanged predecessor build; targeted test-route proof only",
+    "finalCandidateAcceptance": "pending complete new 74-stage execution"
+  }
+}

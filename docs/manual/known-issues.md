@@ -13,11 +13,11 @@ the reconciliation; formal task dispositions remain in the engineering ledger.
 | Boundary | Practical meaning | Next check |
 | --- | --- | --- |
 | Import is one-way | Keep the original ETS archive; your edited working copy is `.knxdb`, not an ETS export | [Projects](user-guide/02-projects.md#there-is-no-knxproj-export) |
-| Native history is not an independent disaster backup | The local source package keeps versions inside the same file; alpha.6 still has no persistent history. Keep independent copies | [Project history](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions) |
+| Native history is not an independent disaster backup | Current releases keep versions inside the same file; alpha.6 had no persistent history. Keep independent copies | [Project history](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions) |
 | Browser files live on the server | Save is not a download; Export project gives you a local copy | [Web and desktop differences](user-guide/11-web-and-docker.md#web-build-versus-desktop-build) |
 | Shared server, shared project | One password and one undo stack are not collaborative editing | [Deployment](user-guide/11-web-and-docker.md#authentication) |
-| Programming marks are project belief (P3 source after Alpha 11) | Adr/App/Par/GA track edits and server writes, not a live comparison. Recovered snapshot undo after a later write can conservatively show additional pending parts. Reconcile external/CLI programming manually; resolve refresh/storage warnings before trusting flags | [Programming marks](user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11) |
-| Device comparison is a session observation (P4 source) | Relevant edits invalidate tags, but external device changes are not monitored. The verified 0701 tables and parameter-package candidate preserve all raw bytes. Named fields need exact active-write attribution and complete coverage; overwritten/masked fields, unknown encodings and negative signed device patterns remain Unknown with a reason. Other table profiles/new image types stay unsupported. Cancel drains the current read. | [Comparison scope](../contracts/device-comparison.md) |
+| Programming marks are project belief (P3, Alpha 12) | Adr/App/Par/GA track edits and server writes, not a live comparison. Recovered snapshot undo after a later write can conservatively show additional pending parts. Reconcile external/CLI programming manually; resolve refresh/storage warnings before trusting flags | [Programming marks](user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11) |
+| Device comparison is a session observation (P4, Alpha 12) | Relevant edits invalidate tags, but external device changes are not monitored. The verified 0701 tables and named parameter decoder preserve all raw bytes. Named fields need exact active-write attribution and complete coverage; overwritten/masked fields, unknown encodings and negative signed device patterns remain Unknown with a reason. Other table profiles/new image types stay unsupported. Cancel drains the current read. | [Comparison scope](../contracts/device-comparison.md) |
 | Hardware support is narrow | A project edit is not commissioning, and undo does not reverse a bus write | [Bus boundaries](user-guide/07-bus-and-interfaces.md#what-knxbench-does-and-does-not-do-on-a-bus) |
 
 This chapter collects the limitations most likely to be noticed by someone
@@ -31,17 +31,14 @@ only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-This is the source-level `0.1.0-alpha` series, checked on **8 October 2026**.
-The [public Alpha.11 pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.11)
-(AppImage, `knx-mcp`, Docker Hub image) adds the searchable group-address picker
-(#8), tree indentation (#9), named gateway busy/refused states (#10), tester
-download reports and the byte-order warning; Alpha.10 fixed the Mesa AppImage crash
-(#6) and ETS 5.7 import (#7). [Release notes](../releases/alpha11.md) preserve the
-exact frozen scope.
-Independently back up native projects and Docker data before upgrading: schema 14
-is refused by Alpha.9 and earlier, and rollback needs the pre-upgrade backup.
-Alpha.11 keeps schema 14.
-The version number is not a promise that anything is finished.
+The current pre-release is
+[Alpha 12](../releases/alpha12.md), published on **15 October 2026**. It includes
+the UI/import-log/portable-product fixes since Alpha 11, per-part programming
+marks, read-only comparison and universal offline support reports. Historical
+measurements below retain their original source dates; they are not new hardware
+verification. Native schema is **16**, product schema **23**. Independently back
+up projects and the full Docker data directory before updating: Alpha 11 and
+earlier refuse upgraded native files, and rollback needs pre-upgrade copies.
 
 > A long list of known issues is what happens when a project writes its
 > problems down, not proof that it has more of them than software that
@@ -672,7 +669,9 @@ must not be described as either universally guessed or universally explicit.
   ([issue #6](https://github.com/KNXBench-Labs/KNXBench/issues/6)).
 - **Details:** [§176](../KNOWN_LIMITATIONS.md#176-appimages-up-to-alpha9-abort-on-hosts-with-newer-mesa-egl).
 
-### AppImages up to alpha.11 cannot save the session log or a monitor capture — fixed in source
+<a id="appimages-up-to-alpha11-cannot-save-the-session-log-or-a-monitor-capture--fixed-in-source"></a>
+
+### AppImages up to alpha.11 cannot save the session log or a monitor capture — fixed in Alpha 12
 
 - **Affected:** *Export log (JSON)…* in the session log and *Export capture* in
   the bus monitor, in the AppImage from `v0.1.0-alpha.5` to `v0.1.0-alpha.11`.
@@ -681,11 +680,13 @@ must not be described as either universally guessed or universally explicit.
   (or `save_bus_monitor_capture`): the desktop window's permission list never
   granted these two commands.
 - **Workaround:** open the Docker image in a browser; there both files are
-  ordinary downloads. Or update once the next AppImage is out
+  ordinary downloads. Or update to the Alpha 12 AppImage
   ([issue #7](https://github.com/KNXBench-Labs/KNXBench/issues/7)).
 - **Details:** [§181](../KNOWN_LIMITATIONS.md#181-appimages-up-to-alpha11-cannot-save-the-session-log-or-a-bus-monitor-capture).
 
-### AppImages up to alpha.11 save downloads silently and can replace files — fixed in source
+<a id="appimages-up-to-alpha11-save-downloads-silently-and-can-replace-files--fixed-in-source"></a>
+
+### AppImages up to alpha.11 save downloads silently and can replace files — fixed in Alpha 12
 
 - **Affected:** every *Download* or *Export* in the AppImage that is not a save
   dialog: the full import report, source reports, retained payloads, the download
@@ -694,7 +695,7 @@ must not be described as either universally guessed or universally explicit.
 - **Limitation:** nothing visible happens. The file is written straight into your
   Downloads folder, and a file of the same name already there is replaced.
 - **Workaround:** before downloading again, rename or move the previous file in
-  Downloads; or use the Docker image in a browser. The next AppImage asks where to
+  Downloads; or use the Docker image in a browser. Alpha 12 asks where to
   save each download.
 - **Details:** [§182](../KNOWN_LIMITATIONS.md#182-appimages-up-to-alpha11-save-in-app-downloads-silently-into-downloads-and-replace-same-named-files).
 

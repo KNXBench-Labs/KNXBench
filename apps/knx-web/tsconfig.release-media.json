@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["e2e/release-media.shots.ts", "playwright.release-media.config.ts"]
+}

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "scope": "Alpha 12 verification-tooling refusals; not release acceptance",
+  "candidate": "ffc95e0acbf2fcdf265bbfb8742ce8b97f9a2d73",
+  "gate3": {
+    "success": false,
+    "passedStages": 58,
+    "expectedStages": 74,
+    "failedStage": "binding-equality",
+    "reason": "Private comparator imported a legacy absolute-directory CommonJS entry absent in locked TypeScript7.0.2.",
+    "sourceAfterRefusalEqualsStart": true,
+    "counts": {
+      "vitest": {
+        "passed": 3626,
+        "files": 263
+      },
+      "rust": {
+        "passed": 4597,
+        "failed": 0,
+        "ignored": 207
+      }
+    }
+  },
+  "sameSourceContinuation": {
+    "success": false,
+    "admittedOriginalStages": 58,
+    "newPassedStages": 1,
+    "failedStage": "tools",
+    "reason": "Explicit browserTmp import missing from new release-media config. Tooling ran163 tests with1 failure and1 skip.",
+    "originalRefusalsRetained": true
+  },
+  "comparatorCorrection": {
+    "actualGeneratedFiles": 28,
+    "pathSetsEqual": true,
+    "literalPreservingTokensEqual": true,
+    "syntheticControlsPassed": 7,
+    "dependencyOrProductionChange": false
+  },
+  "guardCorrection": {
+    "change": "Add explicit browserTmp import to release-media configuration, without weakening the all-config entry contract.",
+    "targetedGuardTests": 5,
+    "toolingTestsRun": 163,
+    "toolingFailures": 0,
+    "toolingSkipped": 1,
+    "typecheckPassed": true,
+    "configListPassed": true,
+    "actualCaptureProof": {
+      "passedTests": 1,
+      "screenshots": 10,
+      "network": "loopback-only namespace",
+      "runtime": "unchanged built predecessor; targeted guarded-config proof, not final candidate acceptance"
+    }
+  },
+  "next": "New committed candidate and fresh complete77-stage execution; prior runtime successes are historical, not new-source acceptance.",
+  "publication": "not attempted"
+}

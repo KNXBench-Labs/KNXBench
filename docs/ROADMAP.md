@@ -1,5 +1,16 @@
 # Roadmap
 
+## Alpha 12 release boundary (15 October 2026)
+
+The owner requested a release of delivered source, not new feature work. Both P4
+packages are integrated; the release candidate includes Functions, portable native
+product sources and universal reporting. Media and current reader routes are
+refreshed without changing the approved Story. Full exact-candidate gates,
+AppImage/Docker no-publish workflow builds and final tag/publication approval
+remain distinct. [Release scope](releases/alpha12.md) retains all hardware and
+format limits; no new commissioning support or ETA is promised.
+
+
 ## Owner UI feedback P4 (2026-10-15)
 
 P3 and both P4 packages are accepted in source: bound single/filtered comparisons,

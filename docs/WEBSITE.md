@@ -7,6 +7,18 @@ remote IPv6 HTTPS were verified on 2026-10-09; Pages actions now use Node 24.
 Owner privacy review and optional WebKit evidence remain separate follow-ups.
 Decision: [ADR-0095](adr/0095-static-marketing-companion.md).
 
+## Alpha 12 refresh (15 October 2026)
+
+The existing dark DE/EN design, root language, editorial voice, legal/privacy
+copy, no-tracking policy and exact approved Story are unchanged. Hero/theme
+stills and four feature cards now use the Alpha 12 candidate's real server and
+fictional data: programming marks, in-range creation, native instructions and
+universal offline support. Ten source PNGs and seven pixel-equal lossless WebPs
+have explicit provenance. Earlier videos stay visibly historical. Current copy
+states native16/product23 and independent backups, old-reader refusal and the
+unchanged System-2/little-endian/Secure boundaries. Actual website acceptance and
+public deployment remain separate from media capture.
+
 ## Agreed brief
 
 - Encourage visitors to try the actual KNXBench application, not a hosted demo.

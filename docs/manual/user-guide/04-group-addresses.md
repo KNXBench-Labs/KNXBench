@@ -77,7 +77,7 @@ the properties pane and the existing commands; no view edits on its own.
 
 *Tree table, the default. Range headings fold away; the count stays visible.*
 
-**Which ranges are open** *(source build after Alpha 11; Alpha 11 and earlier open
+**Which ranges are open** *(since Alpha 12; Alpha 11 and earlier open
 every range and forget what you closed)*. The tree table opens compact: main and
 middle ranges show with their counts, but no range unfolds its address list.
 **Expand all** and **Collapse all** sit in the toolbar. Selecting an address — in
@@ -153,7 +153,7 @@ See [the naming contract](../../contracts/project-name-editing.md).
 
 ### Renaming several addresses at once
 
-*(Source build after Alpha 11.)* Tick the addresses in the table, then
+*(Since Alpha 12.)* Tick the addresses in the table, then
 **Rename…** in the bulk action bar. The dialog adds the same text before and/or
 after each selected name, exactly as typed: no placeholders, patterns or
 numbering, and spaces count. **Show preview** lists every selected address with
@@ -168,7 +168,7 @@ other edit. At most 256 addresses at a time. See the
 ## Creating and deleting addresses
 
 Group addresses are created from **+ New → Add group address** in the group-address
-view's header *(source build after Alpha 11)*, or in the project explorer under each
+view's header *(since Alpha 12)*, or in the project explorer under each
 installation's **Group Addresses** branch: type the address (`1/1/1`), a name,
 optionally pick a range from the select, and press Enter or click Add. Creation works
 in every installation. When the view is scoped to a range, or a range is selected, the
@@ -178,7 +178,7 @@ installations the menu groups its entries by installation.
 ### Creating an address right in its range
 
 In the tree table, every range heading has a small **+** next to its count
-*(source build after Alpha 11, issue #20)*. It opens **New group address in this
+*(since Alpha 12, issue #20)*. It opens **New group address in this
 range**, with two ways to choose the address:
 
 - **Next free address** (preselected) is the first address missing in the range's

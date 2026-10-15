@@ -1,0 +1,21 @@
+# Exact-edition story publication — 15 October 2026
+
+The owner explicitly chose to publish edition `2026-10-15.4` and digest
+`081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8`
+after the preview, changes, full digest, real test results and limitations were
+presented. This is a new exact approval, not a copy of the previous edition's.
+
+The cutover adds the approval and changes the website pin, then retires the
+previous candidate/preview/approval from the current tree. Their original bytes
+remain in Git. The immutable new candidate remains byte-identical. Only this
+edition and the approved publication route are authorized; no product release,
+hardware action, manufacturer contact, history rewrite or root synchronization.
+
+Fresh upstream at cutover includes unrelated P4 and community-recognition work.
+The story cutoff remains the earlier explicitly approved source snapshot. Integrate
+upstream additively in a separate owned tree, retain its runtime and handovers,
+and gate the actual story/site release build. Do not relabel source-only work
+beyond the cutoff as covered by this edition.
+
+Publication acceptance and actual Pages/public artifact readback are pending;
+no successful push/deploy is claimed by this initial entry.

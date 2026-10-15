@@ -1,5 +1,14 @@
 # P4 package 2 — actual image bit attribution and named comparison
 
+## Verified publication
+
+Normal main push17cfd5b7359a verified local=tracking=live; feature519eff4b,
+fixa6cdfd9d and testedfacdd62e ancestry exact. Nine-stage documentation delta
+passes; all non-doc paths/modes/blobs match actual accepted source. Alpha12
+prerequisite marker is published with final metadata closure; session pauses
+then, no new feature/release/bus work. Compact private evidence and owned-only
+retirement proof recorded separately; selected dirty root remains untouched.
+
 ## Final measured acceptance
 
 facdd62e combined source passes frozen full51/51, Vitest3626,Chromium574,

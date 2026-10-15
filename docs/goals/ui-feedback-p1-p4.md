@@ -16,7 +16,7 @@ claim the package there.
 | P1 | Toast entry, resume after reload, overwrite question | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
 | P2 | Explorer: visibly expandable nodes, structure lines with spread/pulse | delivered 2026-10-14 (see `IMPLEMENTATION_STATUS.md`) |
 | P3 | Changes not yet programmed, per part | delivered 2026-10-15 (source after Alpha 11; [acceptance](../evidence/p3-pending-programming-2026-10-15.json)) |
-| P4 | Project file versus real devices: tags and comparison table | both packages accepted 2026-10-15; [publication record](../evidence/p4-device-comparison-parameters-2026-10-15.json) |
+| P4 | Project file versus real devices: tags and comparison table | delivered 2026-10-15 (source after Alpha 11); [publication record](../evidence/p4-device-comparison-parameters-2026-10-15.json) |
 
 Starter for a fresh session (replace the package number):
 
@@ -97,7 +97,8 @@ batch, session tags, application identification and decoded address/association
 tables; **package 2** records actual parameter bit attribution and adds named
 project/device values. Each is independently reviewed, fully gated on branch
 and fresh-main merge, and published. Package 2 follows immediately after package 1.
-Package 1 is published after branch/merged/corpus acceptance. Package 2 captures
+Both packages are published on main; package 2 source delivery `17cfd5b7`
+passed exact remote readback after full/corpus acceptance. Package 2 captures
 actual active parameter writes and decodes named numeric/text values, with explicit
 unknowns and all raw ranges. Branch49/49 and final combined merge51/51 pass;
 isolated OriginalData152/152 and explicit product16/16 pass. Seven parameter

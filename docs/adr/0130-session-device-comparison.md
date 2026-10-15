@@ -1,8 +1,16 @@
 # ADR-0130: Device comparison is bound, decoded, session-only evidence
 
-- **Status:** Accepted (owner UI-feedback P4 decision); both packages accepted in source; publication recorded separately
+- **Status:** Accepted (owner UI-feedback P4 decision); both packages delivered on main; source/publication evidence below
 - **Date:** 2026-10-15
 - **Decision record:** [UI feedback P1–P4](../goals/ui-feedback-p1-p4.md#p4--project-file-versus-real-devices-point-3)
+
+## Publication update (15 October 2026)
+
+Both owner-approved packages are delivered. Parameter implementation519eff4b
+and separate inherited-corpus fixa6cdfd9d are ancestors of verified main17cfd5b7;
+full/corpus runtime acceptance remains pinned to actual tested mergefacdd62e.
+[Publication record](../evidence/p4-device-comparison-parameters-2026-10-15.json).
+No new release, hardware verification or full ETS compatibility is implied.
 
 ## Context and evidence
 

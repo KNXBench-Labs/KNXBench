@@ -25,7 +25,7 @@ and association tables are decoded; all raw read ranges remain visible.
 Named parameter rows show name/reference/bit metadata and separate project/device
 values for supported numeric and text fields. Unknown, incomplete or overwritten
 fields keep an explicit reason and all raw bytes. Negative signed project values
-and new image types are not admitted. Both P4 packages are accepted in source;
+and new image types are not admitted. Both P4 packages are published in source on main (`17cfd5b7`);
 combined full51/51 and corpus152/152+16/16 pass after the separate inherited
 corpus-prerequisite correction. This is not an Alpha11 artifact update.
 [Publication record](../evidence/p4-device-comparison-parameters-2026-10-15.json).

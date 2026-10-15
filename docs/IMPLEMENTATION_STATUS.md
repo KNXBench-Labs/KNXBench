@@ -14,6 +14,18 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — **P4 delivered on main `17cfd5b7`**, normal push and exact
+  local/tracking/live readback verified. Both packages, feature519eff4b and
+  separate corpus-fixa6cdfd9d are included. Runtime tested mergefacdd62e has
+  full51/51, Vitest3626, Chromium574, Rust4597, repeated87 and corpus152/152+
+  product16/16; subsequent nine-stage documentation delta passes with complete
+  non-documentation path/mode/blob equality. Final EN/DE1440/400 screenshots
+  inspected; unsupported parameters remain Unknown alongside raw ranges.
+  Alpha12 prerequisite is delivered; this session pauses after owned retirement.
+  Shared root intentionally remains untouched/unsynchronized; no hardware,
+  new product release, deployment or independent-review claim.
+  [Exact acceptance/publication](evidence/p4-device-comparison-parameters-2026-10-15.json).
+
 - 2026-10-15 — **P4 both packages accepted; final combined source `facdd62e`**:
   single/current-filter batch comparisons, session tags/P3 invalidation,
   verified application identity, decoded address/association tables and named

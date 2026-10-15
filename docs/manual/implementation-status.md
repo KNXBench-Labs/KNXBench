@@ -26,7 +26,9 @@ Package 2's source candidate adds parameter name/reference/bit metadata and
 separate project/device values for supported numeric and text fields. Unknown,
 incomplete or overwritten fields keep an explicit reason and all raw bytes.
 Negative signed values and new image types are not admitted. Package 1 is
-published; package 2 full branch gate passes; merged/corpus/publication are pending.
+published; package 2 full branch/merged and regular corpus gates pass. Two
+additional product-corpus checks are red; publication remains blocked pending
+investigation, not silently accepted.
 [Use and limits](user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11),
 [contract](../contracts/device-comparison.md).
 

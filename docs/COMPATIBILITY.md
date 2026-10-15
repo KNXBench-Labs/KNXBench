@@ -1,5 +1,16 @@
 # Compatibility
 
+## Offline download codec prerequisites (15 October 2026 source)
+
+[Legacy table, property-record and System2 metadata codecs](contracts/offline-download-codecs.md)
+are hardware-free implementation prerequisites, not a new executable download
+path. No source/release/field verification promotion follows. `MV-0025` remains
+refused, and the current `070nh`/ProductProcedure admission, project/product schemas
+and unknown-source preservation rules are unchanged. Type1 config bit7 and
+property-allocation checksum polarity are intentionally distinct from Type2 and
+BIM-M112 memory records. Full family-specific image/planner/recovery work remains
+open under [the expansion contract](contracts/offline-download-expansion.md).
+
 ## Alpha 12 candidate compatibility boundary
 
 Native/model schema is **16**, dedicated product schema **23**. Independent

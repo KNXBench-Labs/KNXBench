@@ -1,5 +1,16 @@
 # Roadmap
 
+## Offline-first download expansion (15 October 2026)
+
+Owner authorised implementation without owning the target devices; later field
+validation remains separate. [The finite expansion contract](contracts/offline-download-expansion.md)
+starts with System2 codecs/metadata, then complete image/planning, existing
+SystemB integration, simulation and whole-mutation recovery where source evidence
+permits. [P1 codec contract](contracts/offline-download-codecs.md) records the
+implemented software boundary; hardware admission and broader family completion
+are not implied by these foundations. Unknown semantics remain explicit research
+blockers, not guessed simulator behaviour.
+
 ## Alpha 12 release boundary (15 October 2026)
 
 The owner requested a release of delivered source, not new feature work. Both P4

@@ -6,6 +6,13 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Offline codec prerequisite (15 October 2026 source)
+
+[Pure legacy table/property codecs and System2 tool metadata](../contracts/offline-download-codecs.md)
+are implemented with offline regression evidence. They do not build a complete
+System2 image or executable plan, define all property/memory recovery, or change
+public mask admission/field verification. Broader commissioning remains open.
+
 ## Session device comparison (P4 source after Alpha 11)
 
 Tags are volatile observations, not monitored device state. Relevant project

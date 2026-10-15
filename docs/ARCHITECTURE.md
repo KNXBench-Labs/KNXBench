@@ -1,5 +1,16 @@
 # Architecture
 
+## Offline download codec expansion (15 October 2026 source)
+
+[The first offline codec slice](contracts/offline-download-codecs.md) keeps pure
+legacy table and absolute property-payload grammars in Core; ProductDB owns the
+source-bound System2 tool-metadata projection. It borrows original declarations
+without producing an executable plan. Existing image/planner/transport admission,
+UI and storage schemas are unchanged. No format is selected from a guessed mask,
+no object5 operation is silently skipped and no hardware capability is enabled.
+Further family image/planner/simulator/recovery work follows the
+[offline expansion contract](contracts/offline-download-expansion.md).
+
 ## Session device comparison (P4)
 
 [ADR-0130](adr/0130-session-device-comparison.md) reuses P3 programming content

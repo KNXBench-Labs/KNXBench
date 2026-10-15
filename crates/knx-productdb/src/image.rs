@@ -75,6 +75,8 @@
 //!   (`[V]`, docs/RESEARCH.md §19.1). Any other change to a masked octet is
 //!   refused.
 
+mod system2;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -405,6 +407,45 @@ pub fn build_download_image(
     conn: &Connection,
     request: &ImageRequest,
 ) -> Result<DownloadImage, ImageError> {
+    build_image(conn, request, ImageLayout::Easy3)
+}
+
+/// Builds a source-bound System-2 image for offline inspection, never a wire plan.
+///
+/// Uses explicit legacy Type2/indexed-association formats and records the source
+/// interpretation as an inference. Public download admission remains unchanged.
+/// Uncorroborated placement, unsupported flags/encoding and overlapping tables
+/// refuse rather than borrowing the hardware evidence of the Easy3 path.
+pub fn build_system2_image(
+    conn: &Connection,
+    request: &ImageRequest,
+) -> Result<DownloadImage, ImageError> {
+    build_image(conn, request, ImageLayout::System2)
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ImageLayout {
+    Easy3,
+    System2,
+}
+
+impl ImageLayout {
+    fn object_shape(self) -> (usize, usize) {
+        match self {
+            Self::Easy3 => (
+                knx_core::commissioning::group_object_table::HEADER_OCTETS,
+                knx_core::commissioning::group_object_table::DESCRIPTOR_OCTETS,
+            ),
+            Self::System2 => (2, 3),
+        }
+    }
+}
+
+fn build_image(
+    conn: &Connection,
+    request: &ImageRequest,
+    layout: ImageLayout,
+) -> Result<DownloadImage, ImageError> {
     let program_id = request.program_id.as_str();
     let code = load_program_code(conn, program_id)?
         .ok_or_else(|| ImageError::UnknownProgram(program_id.to_string()))?;
@@ -417,6 +458,14 @@ pub fn build_download_image(
             order: order.clone(),
         });
     }
+    let protected_tables = if layout == ImageLayout::System2 {
+        crate::system2::project_tool_metadata(&code).map_err(|error| ImageError::Unsupported {
+            what: error.to_string(),
+        })?;
+        system2::table_spans(&code)?
+    } else {
+        Vec::new()
+    };
     let types = ParameterTypes::load(conn, program_id, &code)?;
 
     // Every chosen value is checked before evaluation, so that a value the
@@ -436,9 +485,26 @@ pub fn build_download_image(
         .collect();
 
     // 1. Parameters.
-    let group_objects = com_object_span(&code)?;
-    let (superseded, mut inferences) =
-        superseded_union_members(&activation.parameter_refs, &types, &code);
+    let group_objects = com_object_span_with_layout(&code, layout)?;
+    let defaults = if layout == ImageLayout::System2 {
+        Some(resolve_values(conn, program_id, &Default::default())?)
+    } else {
+        None
+    };
+    let (superseded, mut inferences) = if layout == ImageLayout::System2 {
+        // No cross-family last-union-member inference: inferred placements need
+        // source corroboration and overlapping alternatives still refuse.
+        (BTreeSet::new(), Vec::new())
+    } else {
+        superseded_union_members(&activation.parameter_refs, &types, &code)
+    };
+    if layout == ImageLayout::System2 {
+        inferences.push(Inference {
+            rule: "system2-source-image",
+            detail: "Offline source interpretation: Type2 descriptors, indexed association slots, big-endian fields and retained source masks; not device or executable-plan evidence".into(),
+            reference: "docs/contracts/offline-download-system2-image.md",
+        });
+    }
     let mut written: BTreeMap<String, (String, Encoded)> = BTreeMap::new();
     // Every field written so far, with its segment and `ParameterRef`, so
     // that an overlap can name both parties.
@@ -472,9 +538,35 @@ pub fn build_download_image(
             None => {}
         }
         let (segment_id, field) = field_of(parameter, placement, types.size(parameter_ref)?)?;
+        if let Some(defaults) = &defaults {
+            let raw_default =
+                defaults
+                    .get_unscoped(parameter_ref)
+                    .ok_or_else(|| ImageError::Unsupported {
+                        what: format!("{parameter_ref}: System2 source default unavailable"),
+                    })?;
+            let default_value = types.value(parameter_ref, raw_default)?;
+            system2::validate_default(
+                &code,
+                segment_id,
+                field,
+                parameter_ref,
+                placement,
+                &default_value,
+                &value,
+            )?;
+        }
         let field_start = field.offset as usize;
         let field_end =
             field_start + (u32::from(field.bit_offset) + field.size_in_bit).div_ceil(8) as usize;
+        if protected_tables
+            .iter()
+            .any(|(id, start, end)| id == segment_id && field_start < *end && *start < field_end)
+        {
+            return Err(ImageError::Unsupported {
+                what: format!("{parameter}: overlaps a reserved System2 table region"),
+            });
+        }
         if group_objects.as_ref().is_some_and(|(id, start, end)| {
             id == segment_id && field_start < *end && *start < field_end
         }) {
@@ -547,6 +639,12 @@ pub fn build_download_image(
         let view = views.get(*ref_id).ok_or_else(|| ImageError::Unsupported {
             what: format!("{ref_id}: no such ComObjectRef"),
         })?;
+        if layout == ImageLayout::System2 && !matches!(view.priority.as_deref(), None | Some("Low"))
+        {
+            return Err(ImageError::Unsupported {
+                what: format!("{ref_id}: System2 priority mapping is not established"),
+            });
+        }
         let (mut object, product_read_on_init) = active_object(ref_id, view, &mut inferences)?;
         let overrides = request.flag_overrides.get(*ref_id);
         if let Some(overrides) = overrides {
@@ -556,6 +654,11 @@ pub fn build_download_image(
             .and_then(|overrides| overrides.read_on_init)
             .unwrap_or(product_read_on_init)
         {
+            if layout == ImageLayout::System2 {
+                return Err(ImageError::Unsupported {
+                    what: format!("{ref_id}: System2 ReadOnInit encoding is not established"),
+                });
+            }
             inferences.push(Inference {
                 rule: READ_ON_INIT_NOT_ON_070N,
                 detail: format!(
@@ -571,8 +674,18 @@ pub fn build_download_image(
     match &group_objects {
         Some((segment_id, start, _)) => {
             let image = segment_mut(&mut segments, segment_id)?;
-            let table = write_group_object_table(&image.octets[*start..], &objects)
-                .map_err(ImageError::GroupObjects)?;
+            let table = match layout {
+                ImageLayout::Easy3 => write_group_object_table(&image.octets[*start..], &objects)
+                    .map_err(ImageError::GroupObjects)?,
+                ImageLayout::System2 => knx_core::commissioning::legacy_object_table::rewrite(
+                    knx_core::commissioning::legacy_object_table::LegacyObjectFormat::Type2,
+                    &image.octets[*start..],
+                    &objects,
+                )
+                .map_err(|error| ImageError::Unsupported {
+                    what: error.to_string(),
+                })?,
+            };
             image.octets[*start..].copy_from_slice(&table);
         }
         None if !objects.is_empty() => {
@@ -600,8 +713,37 @@ pub fn build_download_image(
                 group_addresses: max_entries(addresses),
                 associations: max_entries(associations),
             };
-            let tables = build_group_tables(request.individual_address, &request.links, capacity)
-                .map_err(ImageError::GroupTables)?;
+            let tables = match layout {
+                ImageLayout::Easy3 => {
+                    build_group_tables(request.individual_address, &request.links, capacity)
+                        .map_err(ImageError::GroupTables)?
+                }
+                ImageLayout::System2 => {
+                    let (id, start, _) =
+                        group_objects
+                            .as_ref()
+                            .ok_or_else(|| ImageError::Unsupported {
+                                what: "System2 image requires a source object count".into(),
+                            })?;
+                    let count = code
+                        .segment(id)
+                        .and_then(|s| s.data.as_ref())
+                        .and_then(|data| data.get(*start))
+                        .copied()
+                        .ok_or_else(|| ImageError::Unsupported {
+                            what: "System2 object count missing".into(),
+                        })?;
+                    knx_core::commissioning::legacy_group_tables::build(
+                        request.individual_address,
+                        count,
+                        &request.links,
+                        capacity,
+                    )
+                    .map_err(|error| ImageError::Unsupported {
+                        what: error.to_string(),
+                    })?
+                }
+            };
             place(
                 &mut segments,
                 addresses,
@@ -803,6 +945,13 @@ pub(crate) fn field_of<'a>(
     placement: &'a ParameterPlacement,
     size_in_bit: u32,
 ) -> Result<(&'a str, ParameterField), ImageError> {
+    if let ParameterPlacement::UnionMember { union, offset, .. } = placement {
+        if union.offset.checked_add(*offset).is_none() {
+            return Err(ImageError::Unsupported {
+                what: format!("{parameter}: union member offset exceeds 32-bit source placement"),
+            });
+        }
+    }
     let field = |memory: &MemoryPlacement, offset: u32, bit_offset: u8| ParameterField {
         offset: memory.offset + offset,
         bit_offset,
@@ -846,7 +995,10 @@ pub(crate) fn field_of<'a>(
 
 /// `(segment, first octet, end)` of the group object table, from its
 /// placement and its size octet.
-fn com_object_span(code: &ProgramCode) -> Result<Option<(String, usize, usize)>, ImageError> {
+fn com_object_span_with_layout(
+    code: &ProgramCode,
+    layout: ImageLayout,
+) -> Result<Option<(String, usize, usize)>, ImageError> {
     let Some(placement) = &code.com_object_table else {
         return Ok(None);
     };
@@ -858,9 +1010,13 @@ fn com_object_span(code: &ProgramCode) -> Result<Option<(String, usize, usize)>,
         .ok_or_else(|| ImageError::Unsupported {
             what: format!("ComObjectTable: offset {start} is past {}", segment.id),
         })?;
-    let end = start
-        + knx_core::commissioning::group_object_table::HEADER_OCTETS
-        + usize::from(size) * knx_core::commissioning::group_object_table::DESCRIPTOR_OCTETS;
+    let (header, descriptor) = layout.object_shape();
+    let end = start + header + usize::from(size) * descriptor;
+    if layout == ImageLayout::System2 && end > data.len() {
+        return Err(ImageError::Unsupported {
+            what: "System2 descriptors extend beyond their source segment".into(),
+        });
+    }
     Ok(Some((segment.id.clone(), start, end)))
 }
 

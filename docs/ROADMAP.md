@@ -6,9 +6,12 @@ Owner authorised implementation without owning the target devices; later field
 validation remains separate. [The finite expansion contract](contracts/offline-download-expansion.md)
 starts with System2 codecs/metadata, then complete image/planning, existing
 SystemB integration, simulation and whole-mutation recovery where source evidence
-permits. [P1 codec contract](contracts/offline-download-codecs.md) records the
-implemented software boundary; hardware admission and broader family completion
-are not implied by these foundations. Unknown semantics remain explicit research
+permits. [P1 codec contract](contracts/offline-download-codecs.md) records delivered
+foundations; [P2 source-image contract](contracts/offline-download-system2-image.md)
+separates implemented synthetic/source grammar from the real Siemens encoding
+refusal. Source-to-property planning, whole-executor simulation and durable
+property+memory recovery are next, where exact contracts permit them.
+Hardware admission and broader family completion are not implied by these foundations. Unknown semantics remain explicit research
 blockers, not guessed simulator behaviour.
 
 ## Alpha 12 release boundary (15 October 2026)

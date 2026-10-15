@@ -3,10 +3,12 @@
 ## Boundary
 
 Owner-approved repository recognition, 2026-10-13. The README and
-[Hall of Fame](../community/HALL_OF_FAME.md) list every external human issue author
-and issue-thread replier. Maintainer accounts are **excluded entirely**, not given
-a second table. Bots and PR threads are excluded. English titles and humour are
-part of this acknowledgement, not a measure of technical competence.
+[Hall of Fame](../community/HALL_OF_FAME.md) list reporters and issue-thread
+repliers, including external AI agents and GitHub Bot accounts (owner amendment,
+15 October 2026). Maintainer accounts, explicit opt-outs and the scoreboard's own
+`github-actions[bot]` account are **excluded entirely**, not given a second table.
+PR threads are excluded. English titles and humour are part of this
+acknowledgement, not a measure of technical competence.
 
 This has no connection to the application's local achievements, customer projects,
 bus operations or analytics. `tools/community_hall_of_fame.py` uses only the public
@@ -28,7 +30,17 @@ snapshot of a concurrently changing GitHub repository.
 - Retain the completion award across reopen/reclose/deletion/transfer.
 - Reply deletion changes its live counter; edits do not create a second reply.
 - Sixteen thresholded titles, listed in the public page/data.
-- Golden Bus Probe at ten authored issues.
+- Cumulative report medals at every ten authored issues, through 100 (including
+  a new milestone at 20); the existing ten-report medal is preserved.
+- Cumulative resolution medals at every five retained completed-report awards,
+  through 100. `not_planned`/unspecified closures never advance this track.
+  Reopen/reclose cannot duplicate an award; deletion/transfer retains completion
+  progress, while authored-issue medals follow the live authored counter.
+- Medals do not alter XP or the sixteen existing rank/title thresholds.
+- Public goals give cadence and hints, never an unearned medal-name catalogue.
+  Generated README/page/JSON and completion notices show only earned names.
+  The source and tests are public: this is presentation-level surprise, not a
+  secrecy/security promise. No new notification ledger or snapshot schema.
 - Stable alphabetical tiebreak; equal XP has equal position.
 
 The award ledger stores only issue number, public handle, first observed completed
@@ -57,8 +69,12 @@ Concurrency has no active-run cancellation; each run reconciles **all** pending
 eligible awards, not just its triggering issue. This recovers a close event whose
 pending run GitHub superseded. Default-branch pushes retry from a fresh disposable
 Actions checkout, never force-push or reset a developer worktree. Publication uses
-`KNXBench <github@knxbench.com>` with no co-author trailer. Bot replies do not count
-or retrigger this workflow.
+`KNXBench <github@knxbench.com>` with no co-author trailer. External bot replies
+count and trigger refreshes; only the scoreboard bot's own replies are ignored
+by the event guard and counter, preventing self-scoring/notification loops.
+Bot handles may include a bounded literal `[bot]` suffix; profile URL path
+segments are percent-encoded. Unknown actor types still fail closed. Being an
+eligible participant does not make an external bot's award marker trusted.
 
 ## Completion acknowledgement
 
@@ -71,13 +87,18 @@ Total: 15 XP · Title: Bus Bug Scout
 Rank up: Telegram Trainee → Bus Bug Scout.
 ```
 
-Real comments also link the board and include the medal when earned. Do not invent
+Real comments also link the board and include every currently earned medal.
+New milestones are reconciled retroactively on the board, without reposting
+already-notified issue comments or creating separate milestone-comment spam. Do not invent
 an extra rank-up when the bonus stays within the current band. Historical closures
 before `notify_since` receive scoreboard credit without retroactive comment spam.
 
 Before posting, re-read that the issue remains closed/completed. A per-issue marker
-from GitHub Actions or an excluded maintainer recovers interrupted posting; an
-external comment cannot spoof it. Mark notified only after exact target readback.
+from GitHub Actions or an explicitly trusted maintainer recovers interrupted
+posting; an external comment cannot spoof it. The optional policy list
+`trusted_notice_logins` is validated separately from `excluded_logins`; opting
+out of scoring grants no notification-marker trust. Without that list only the
+scoreboard bot is trusted. Mark notified only after exact target readback.
 The persisted flag prevents duplicate notices after reopen or deletion of the
 original notice. If posting succeeded but persistence failed, the trusted marker
 recovers the next run. A deletion in that narrow crash window cannot be recovered
@@ -106,11 +127,20 @@ and acceptance remain historical in the delivery archive.
 
 ## Acceptance
 
-Thirty-two new unit tests cover counting, reply-only contributors, maintainer/bot/PR
-exclusion, pagination-record deduplication, once-only/retained completion credit,
+The original thirty-two unit tests covered counting, reply-only contributors,
+maintainer/bot/PR exclusion under the original policy, pagination-record
+deduplication, once-only/retained completion credit,
 thresholds, all-user rendering, malformed inputs, README bounds, unchanged data,
 trusted notice recovery, post readback and stale/reopened closure handling.
 Real API generation was exercised. Full tools suite must run with checkout-bound
 `PYTHONPATH`; the initial unbound discovery imported the wrong tools namespace and
 failed, not the counting feature. Remote workflow execution/acceptance is recorded
 in the delivery log; local tests alone do not certify GitHub write permissions.
+
+15 October 2026 amendment: 47 community tests pass, including all integer medal
+boundaries through 100 and the beyond-cap cases, all earned-name rendering,
+unearned-name exclusion, external Bot scoring, own-bot event suppression,
+backfill without duplicate notices and scoring-opt-out/marker-trust separation.
+The full tools run has 163 tests with one inherited skip. Branch and merged
+scoped gates pass. Real GitHub workflow `38694177327` completes successfully
+on published source `fe1f4101`, including verification and live reconciliation.

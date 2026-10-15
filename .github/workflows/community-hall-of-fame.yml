@@ -24,7 +24,7 @@ jobs:
     if: >-
       github.repository == 'KNXBench-Labs/KNXBench' &&
       (github.event_name != 'issue_comment' ||
-       (!github.event.issue.pull_request && github.event.comment.user.type != 'Bot'))
+       (!github.event.issue.pull_request && github.event.comment.user.login != 'github-actions[bot]'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:

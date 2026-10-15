@@ -1,5 +1,6 @@
 {
   "excluded_logins": ["KNXBench-Labs", "Andre1Becker"],
+  "trusted_notice_logins": ["KNXBench-Labs", "Andre1Becker"],
   "issue_xp": 5,
   "reply_xp": 1,
   "resolution_xp": 10,

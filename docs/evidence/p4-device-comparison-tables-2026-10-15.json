@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "owner-ui-feedback-p4-tables",
-  "status": "branch-accepted-integration-pending",
+  "status": "merged-accepted-publication-pending",
   "decisionRecord": "docs/goals/ui-feedback-p1-p4.md",
   "storeMigration": false,
   "busAccess": "none; simulator and intercepted browser only",
@@ -214,7 +214,161 @@
     "visualLimits": "Narrow tables and target lists scroll locally; existing transient achievement toast can overlap the lower Close control."
   },
   "mergedGate": {
-    "status": "pending"
+    "complete": true,
+    "success": true,
+    "wrapperExit": 0,
+    "expectedStages": 49,
+    "actualStages": 49,
+    "sourceFrozen": true,
+    "sourceHead": "a9f429a4d6b2cc2e030c462edc0a25521c5cd620",
+    "sourceFiles": 2804,
+    "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stages": {
+      "build": 0,
+      "tsc": 0,
+      "flow_study": 0,
+      "theme_fixtures": 0,
+      "tsc_tsconfig_browser_tooling": 0,
+      "tsc_tsconfig_catalogue_fixtures": 0,
+      "tsc_tsconfig_communication_fixtures": 0,
+      "tsc_tsconfig_comparison_fixtures": 0,
+      "tsc_tsconfig_device_download_support": 0,
+      "tsc_tsconfig_dialogs_fixtures": 0,
+      "tsc_tsconfig_flow_study": 0,
+      "tsc_tsconfig_ga_members_download_fixtures": 0,
+      "tsc_tsconfig_history_fixtures": 0,
+      "tsc_tsconfig_instructions_fixtures": 0,
+      "tsc_tsconfig_notes_fixtures": 0,
+      "tsc_tsconfig_parameters_fixtures": 0,
+      "tsc_tsconfig_rename_fixtures": 0,
+      "tsc_tsconfig_structure_fixtures": 0,
+      "tsc_tsconfig_task_status_fixtures": 0,
+      "tsc_tsconfig_theme_fixtures": 0,
+      "tsc_tsconfig_ux_feedback": 0,
+      "vitest": 0,
+      "chromium": 0,
+      "cfg_playwright_catalogue_config": 0,
+      "cfg_playwright_communication_config": 0,
+      "cfg_playwright_device_download_support_config": 0,
+      "cfg_playwright_devices_config": 0,
+      "cfg_playwright_dialogs_config": 0,
+      "cfg_playwright_ga_members_download_config": 0,
+      "cfg_playwright_group_addresses_config": 0,
+      "cfg_playwright_instructions_config": 0,
+      "cfg_playwright_notes_config": 0,
+      "cfg_playwright_parameters_config": 0,
+      "cfg_playwright_reload_guard_config": 0,
+      "cfg_playwright_structure_config": 0,
+      "cfg_playwright_task_status_config": 0,
+      "cfg_playwright_updates_config": 0,
+      "cfg_playwright_ux_feedback_config": 0,
+      "repeat": 0,
+      "fmt": 0,
+      "clippy": 0,
+      "rust_tests": 0,
+      "py_tools": 0,
+      "check-layering": 0,
+      "check-headers": 0,
+      "check-anchors": 0,
+      "check-ledger": 0,
+      "check-corpus-gates": 0,
+      "diff_check": 0
+    },
+    "counts": {
+      "vitest": {
+        "passed": 3609,
+        "failed": 0
+      },
+      "chromium": {
+        "passed": 570,
+        "failed": 0
+      },
+      "repeat": {
+        "passed": 87,
+        "failed": 0
+      },
+      "cfg_playwright_catalogue_config": {
+        "passed": 10,
+        "failed": 0
+      },
+      "cfg_playwright_communication_config": {
+        "passed": 59,
+        "failed": 0
+      },
+      "cfg_playwright_device_download_support_config": {
+        "passed": 33,
+        "failed": 0
+      },
+      "cfg_playwright_devices_config": {
+        "passed": 29,
+        "failed": 0
+      },
+      "cfg_playwright_dialogs_config": {
+        "passed": 14,
+        "failed": 0
+      },
+      "cfg_playwright_ga_members_download_config": {
+        "passed": 23,
+        "failed": 0
+      },
+      "cfg_playwright_group_addresses_config": {
+        "passed": 19,
+        "failed": 0
+      },
+      "cfg_playwright_instructions_config": {
+        "passed": 15,
+        "failed": 0
+      },
+      "cfg_playwright_notes_config": {
+        "passed": 13,
+        "failed": 0
+      },
+      "cfg_playwright_parameters_config": {
+        "passed": 15,
+        "failed": 0
+      },
+      "cfg_playwright_reload_guard_config": {
+        "passed": 2,
+        "failed": 0
+      },
+      "cfg_playwright_structure_config": {
+        "passed": 8,
+        "failed": 0
+      },
+      "cfg_playwright_task_status_config": {
+        "passed": 27,
+        "failed": 0
+      },
+      "cfg_playwright_updates_config": {
+        "passed": 7,
+        "failed": 0
+      },
+      "cfg_playwright_ux_feedback_config": {
+        "passed": 55,
+        "failed": 0
+      },
+      "rust": {
+        "passed": 4565,
+        "failed": 0,
+        "ignored": 206
+      }
+    },
+    "productionConfigs": 15,
+    "productionPassed": 329,
+    "corpus": {
+      "complete": true,
+      "success": true,
+      "exit": 0,
+      "sourceFrozen": true,
+      "sourceHead": "a9f429a4d6b2cc2e030c462edc0a25521c5cd620",
+      "expected": 151,
+      "targets": 33,
+      "passed": 151,
+      "sourceFiles": 2804,
+      "networkIsolated": true,
+      "hardwareEnvironmentCleared": true
+    },
+    "screenshotsVisuallyInspected": 4
   },
   "publication": {
     "status": "pending"

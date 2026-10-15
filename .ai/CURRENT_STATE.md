@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:21
+- **Completed:** P4 table package1 actual merge a9f429a4 accepted:49/49 frozen stages,Rust4565,Vitest3609,default570,production329/15configs,repeats87,Python148/one inherited skip. Network-isolated OriginalData151/151 in33targets passed; all2804 source files frozen. Four actual merged EN/DE1440/400 production screenshots inspected. Reconciled later community/tooling main additively; no frontend/Rust delta. Branch/mutants remain original receipts.
+- **Pending/Next Steps:** Run docs/tooling delta closure, commit and normal push/readback; package1 not published yet. Then immediately package2 actual parameter bit attribution/named values, full branch+merged gates and cleanup. No further Go required.
+- **Notes for Codex oder Claude:** Private evidence profile scratch/p4-20261015. Existing mobile target/table local scroll and transient global toast overlap remain disclosed. Preserve all universal-support/story/community ownership and upstream journal; root not synchronized, no subagents/bus/vendor/release/deploy. Runtime acceptance binds a9f429a4, not later docs-only descendants.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 07:42
 - **Completed:** P4 package 1 frozen branch gate accepted:49/49 intended stages zero,2802 source files unchanged. Rust4565/0 (206 opt-ins ignored),Vitest3601/260files,default566,production325/15configs,repeats75,Python148/one inherited skip. Actual branch production EN/DE1440/400 images inspected. Nine named semantic mutants and four restored-green postflight stages retained. No real bus access or migration.
 - **Pending/Next Steps:** Commit reviewed package1 scope after docs-only closure checks, merge fresh origin/main in owned p4-compare-tables-merged-20261015, complete full merged gate plus network-isolated OriginalData/oracle sweep, inspect merged images, normal push/readback and private archival/cleanup. Then immediately package2 parameter bit attribution/named values. Not delivered yet; no further Go needed.
@@ -11,6 +19,22 @@
 - **Completed:** P4 package 1 implemented locally in isolated p4-compare-tables-20261015: bound single/filtered read-only queue, progress/draining cancellation, session tags using P3 content revisions; exact application identity before memory; bounded 0701 address/association decoding and complete raw ranges. Separate five-finding self-review corrected count/identity/freshness and actual-browser contrast/height issues. Nine named semantic mutants accepted, sources restored and four postflight stages zero. Full Vitest preflight 3601/260 files and six production browser cases pass; EN/DE1440/400 images inspected. Handbook/FEATURES/goal/ADR/contract explicitly mark package 2 pending.
 - **Pending/Next Steps:** Package 1 is NOT accepted/published: run full template RUST=1/fifteen-config branch gate, commit reviewed scope, integrate fresh origin/main and repeat full merged gate, inspect merged images, normal push/readback and own evidence/cleanup. Then immediately implement package 2 bit attribution/named parameter comparison. No new owner Go needed.
 - **Notes for Codex oder Claude:** Private evidence and builders: profile cache/scratch/p4-20261015; mutation receipt complete/successful, nine cases, four postflight stages. Initial browser sort-oracle error, two visual REDs and unavailable TypeScript JS scanner verifier retained separately; stdlib token comparison proves three unchanged generated files restored. Own ignored OriginalData link is for simulator/corpus tests only. No subagents, bus access, release/deploy or shared-root synchronization; preserve foreign #23 worktrees and root bytes/index.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 08:45
+- **Completed:** Hall-of-Fame amendment published on main fe1f4101 (feature4a76efce). Exact local/tracking/live equality and byte-exact GitHub readback of all11 owned files verified. Manual Community Hall of Fame run38694177327 completed SUCCESS on that source: real47-test verification and GitHub counter/notification reconciliation, documentation validation and no-op publication all pass. Branch and merged eight-stage scoped gates pass with frozen inputs;163 tools tests(one inherited skip),47 focused tests, docs/five fresh-built xtask checks. New report/completion milestones through100, surprise hints, requested columns and external AI/Bot participation delivered. Existing XP/award ledger unchanged; five earned medals now shown for20-report/19-completion reporter.
+- **Pending/Next Steps:** No community implementation/publication work remains. Compact private evidence retention and task-owned local retirement are the remaining local bookkeeping; their observed completion is recorded separately in the selected root handover. No unrelated goal, frontend/Rust runtime rerun, hardware, release/deployment or root synchronization.
+- **Notes for Codex oder Claude:** Source/self-review only, no independent approval. Optional trusted_notice_logins separates notification-marker authors from scoring opt-outs. Own Actions bot cannot self-score or retrigger reply refresh. Public outputs reveal only earned medal names; source is public, not secret. P4/story/universal-support trees and dirty selected root preserved.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 08:41
+- **Completed:** Owner Hall-of-Fame amendment implemented in isolated feature/hall-of-fame-20261015: report medals every ten and retained-completion medals every five through100; no unearned names in generated outputs; requested eight-column order; external AI/Bot participation with own bot excluded. Notification recovery trust separated from scoring opt-outs after test-first self-review finding. Real GitHub generation confirms20 reports/19 completions for leading reporter, five earned medals, existing XP/award ledger unchanged.47 community and163 tools tests(one inherited skip), docs and five fresh-built xtask checks pass.
+- **Pending/Next Steps:** Final frozen package checks, commit as KNXBench, fresh-main integration/affected gate, normal main push/readback and manual community-workflow acceptance; archive compact evidence and clean only owned tree/scratch. No frontend/Rust runtime gate or hardware/release claim.
+- **Notes for Codex oder Claude:** Only community generator/tests/workflow/policy/README/board/data/contract/status/handover are in scope. Current About links directly to public board; no UI parser remains. No spoiler catalogue in docs; public source names are not secret. Foreign root/P4/story/universal-support work untouched; selected root not synchronized. Evidence profile scratch/hof-20261015.
 
 ---
 

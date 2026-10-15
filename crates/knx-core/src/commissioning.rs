@@ -27,6 +27,7 @@ pub mod pending;
 pub mod procedure;
 pub mod programming_mode;
 pub mod properties;
+pub mod property_download;
 pub mod rf_configuration;
 pub mod serial_number;
 

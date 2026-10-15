@@ -158,3 +158,20 @@ resolutions retain the exact complete authoritative handover suffix and both
 full delivery sections. Nine protected main runtime/tooling inputs are unchanged.
 Devices production config retains the new temp guard and the six P3 cases.
 No merged runtime acceptance or publication is claimed at this checkpoint.
+
+## Merged runtime acceptance — 2026-10-15 03:21 CEST
+
+Actual runner proc_a334b6dda81d exited0; all52 expected stages pass on
+f35d9bda95b87b91899ab3516c471f313ae1335b, complete2787-file manifest unchanged.
+Rust4553/0 (205 opt-ins ignored), Vitest3580/259files, default560, production319
+in15configs, repeats57, Python148/one inherited skip. The explicitly linked,
+network-isolated OriginalData sweep passes150/150 in33targets, including the
+new upstream prerequisite fixture; no raw private output persisted by its filter.
+All compiler/architecture/header/anchor/ledger/corpus/docs/diff stages zero.
+Workers quiescent and temporary input links removed. Eight actual merged
+production EN/DE1440/400 PNGs inspected. This is not hardware or WebKit proof.
+
+Documentation closure makes the existing conservative recovered-snapshot policy
+explicit: after a later write, old snapshots can show additional pending parts,
+not actual device differences. No runtime rule, migration or P4 work was added.
+Publication and owned archival/cleanup follow separately.

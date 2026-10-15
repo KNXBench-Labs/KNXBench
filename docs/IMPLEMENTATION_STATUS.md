@@ -14,6 +14,15 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Story `2026-10-15.4` received explicit exact-digest owner
+  publication approval. Approval, website pin and latest-only retirement are
+  applied together; prior editions remain in Git. Content digest
+  `081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8`
+  is unchanged from accepted preview. Release-check, integrated build and public
+  deployment verification are separate steps; approval alone does not claim
+  deployment. [Story](../story/README.md),
+  [accepted content](evidence/story-update-2026-10-15-editorial.json).
+
 - 2026-10-15 — Owner-reviewed story correction candidate `2026-10-15.4`:
   specification knowledge base explicitly private/local and not distributed;
   public product databases described only as provided for analysis. Every

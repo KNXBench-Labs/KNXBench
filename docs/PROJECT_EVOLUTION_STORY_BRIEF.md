@@ -10,17 +10,18 @@ It records the intended experience, not permission to publish.
 documentation and local Claude Code, Codex, Hermes and Paperclip records. The
 stack is a static, offline companion prepared by a stdlib-only tool
 ([ADR-0068](adr/0068-project-evolution-story-is-a-static-offline-companion.md)).
-The published edition is `2026-10-08.4`, **approved for publication by the
-owner on 8 October 2026** (`story/approvals/2026-10-08.4.json`). The new
-`2026-10-15.4` candidate is **unapproved**. It pins source
+The owner explicitly approved edition `2026-10-15.4` on **15 October 2026**
+for exact digest `081d2c4c42b03a0b97ae803ac7f78375e4ca5593f3687453872200aab8398cf8`
+(`story/approvals/2026-10-15.4.json`), including website cutover and Pages deployment
+after successful publication checks. It pins source
 `2d4ec5f90ccc66ed7d03c65fdd02213faf34fc69` (15 October 2026, 07:04:36 CEST),
 with 74 events in twelve chapters and selective, disclosed conversation coverage.
 The static website and GitHub Pages integration already exist
 ([ADR-0095 amendment](adr/0095-static-marketing-companion.md#amendment-release-and-deployment-2026-10-08),
-[website contract](WEBSITE.md)). Keep the earlier approved candidate, approval and
-website pin intact until the owner approves the exact new digest. At that
-authorized cutover only, retire the superseded edition from the tree; Git retains
-its reviewed bytes. Preparation is not permission to trigger Pages.
+[website contract](WEBSITE.md)). The authorized cutover changes the pin and retires
+the earlier edition/preview/approval from the tree; Git retains their reviewed
+bytes. This exact approval is not approval of later content changes. Deployment
+status must be established independently from approval and local build success.
 
 The central question is:
 

@@ -1,8 +1,16 @@
 # ADR-0130: Device comparison is bound, decoded, session-only evidence
 
-- **Status:** Accepted (owner UI-feedback P4 decision); package 1 implementation under acceptance
+- **Status:** Accepted (owner UI-feedback P4 decision); both packages delivered on main; source/publication evidence below
 - **Date:** 2026-10-15
 - **Decision record:** [UI feedback P1–P4](../goals/ui-feedback-p1-p4.md#p4--project-file-versus-real-devices-point-3)
+
+## Publication update (15 October 2026)
+
+Both owner-approved packages are delivered. Parameter implementation519eff4b
+and separate inherited-corpus fixa6cdfd9d are ancestors of verified main17cfd5b7;
+full/corpus runtime acceptance remains pinned to actual tested mergefacdd62e.
+[Publication record](../evidence/p4-device-comparison-parameters-2026-10-15.json).
+No new release, hardware verification or full ETS compatibility is implied.
 
 ## Context and evidence
 
@@ -57,9 +65,15 @@ service, access key, object-index discovery assumption or hardware authority.
    own TSAP mapping. Invalid counts, missing ranges and unread bytes stay
    unknown; decoding is bounded by declared capacity and segment extent.
    Every raw read range remains visible, even when also decoded.
-7. Package 2 must capture actual active parameter bit attribution at the
-   existing image writer before adding named parameter project/device values.
-   It must not guess parameter ownership from a differing-byte address.
+7. Package 2 captures active parameter bit attribution after each successful
+   existing image write, including the selected union field, source name/ref
+   and exact segment/offset/bit/width. It never guesses ownership from a diff.
+   The adapter projects named project/device values from exactly compared
+   bytes using the existing writer's inverse. It rechecks attribution against
+   the final plan, so later layout writes cannot silently repurpose its bits.
+   Unsupported/negative patterns and incomplete coverage stay unknown with a
+   localized reason, alongside every original raw range. This metadata is
+   transient and does not change the database or native project format.
 
 ## Consequences and limits
 
@@ -68,7 +82,9 @@ volatile and scoped; gateway and device refusals remain distinguishable. The
 read scope is exactly the plan's writable ranges, so masked/unwritten bytes
 are not claimed read. A matching image with an unloaded part does not earn
 Synced. Other masks remain raw-only at the decoder boundary; existing download
-admission is not broadened. Package 1 does not deliver parameter attribution,
-continuous freshness, a new backup format or full ETS/device compatibility.
+admission is not broadened. Numeric bit order and text encoding are inverses
+of existing admitted writers, not new protocol claims. Negative signed project
+values remain refused; unknown device patterns are not guessed. Neither package
+promises continuous freshness, a new backup format or full ETS compatibility.
 
 [Behavioural contract](../contracts/device-comparison.md).

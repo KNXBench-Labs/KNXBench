@@ -689,7 +689,7 @@ A .knxdb saved before store schema v16 does not carry its application programs; 
 ### 7. Bounded commissioning support
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-7](status/LEDGER.md#snapshot-ids)).
-Memory downloads have scoped evidence, not general device support. Public K6/serial/K13 address writes fail before a tunnel without specific durable recovery.
+Memory downloads have scoped evidence, not general device support. Public K6/serial/K13 address writes fail before a tunnel without specific durable recovery. Project/device comparison is a session observation; unknown fields remain explicit beside raw ranges, and relevant edits invalidate tags.
 [Details and history](limitations/KL-007-bounded-commissioning-support.md)
 
 <a id="catalogue-kl-092"></a>

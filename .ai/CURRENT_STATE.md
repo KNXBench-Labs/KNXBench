@@ -1,4 +1,70 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 15:26
+- **Completed:** P4 parameter/corpus source delivered on main17cfd5b7359a with normal push and exact local/tracking/live readback. Feature519eff4b,fixa6cdfd9d,tested mergefacdd62e ancestry verified. Final frozen full51/51,Vitest3626,Chromium574,Rust4597,repeat87,OriginalData152/152,explicit product16/16; seven parameter+seven prerequisite mutants and separate self-review pass. EN/DE1440/400 final production images inspected. Docs/manual/FEATURES/goal/public evidence updated; documentation-only nine-stage closure passes with full consumed-source equality. No changed production limits/schema or new device support.
+- **Pending/Next Steps:** Only publication-metadata delta verification and compact evidence/owned retirement remain in this session. Runtime package has no blocker. Release owner may take the delivered prerequisite from verified main; P4 leases are released. After retirement this session PAUSES under Alpha12 freeze; do not begin new work or acquire new feature gates.
+- **Notes for Codex oder Claude:** Alpha12 owner reservation70e3de01 retained unchanged below. Selected root HEAD/index deliberately untouched and unsynchronized; preserve foreign research/edits. No bus/subagents/vendor/tag/deploy. Runtime tested mergefacdd62e remains distinct from docs-only publication17cfd5b7. Compact private completion receipt will hold final cleanup proof; no release/media edits by P4.
+
+Alpha 12 prerequisite delivered: P4 parameters and corpus
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 15:22
+- **Completed:** P4 current parameter/corpus package fully accepted on facdd62e9f6f: frozen full51/51 (Vitest3626,Chromium574,Rust4597,repeat87), OriginalData152/152 and explicit product16/16. Seven parameter and seven prerequisite mutants detected/restored; separate self-review closed; final production EN/DE1440/400 images inspected. Feature519eff4b and separate test/docs-only fixa6cdfd9d present. Alpha12 freeze70e3de01 journal-only merge preserves all consumed runtime inputs; no new package started. Docs/FEATURES/manual/goal/evidence synchronized with actual acceptance.
+- **Pending/Next Steps:** Documentation-only delta gate then normal main push/exact remote verification; publication marker, compact private evidence archive and owned worktree/scratch retirement. NOT YET PUSHED. After this P4 prerequisite delivery pause under Alpha12 freeze; no new package or hardware action.
+- **Notes for Codex oder Claude:** Keep release-owner upstream journal suffix/ownership exact. Runtime tested source facdd62e remains distinct from later docs-only delivery commit. No production resource guard/profile/schema extension; negative device patterns unknown/raw retained. Shared root/foreign work untouched; no bus/subagents/tag/deploy. Evidence under own profile scratch until verified compact archive.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 13:40
+- **Completed:** Owner-requested inherited corpus fixes committed separately as a6cdfd9d775c and integrated additively into P4. Proven v23 modelling delta465/463/463/157 with41 unchanged table counts; strict matrix passes. Standard-only nesting census accounts105=103+1+1 with unchanged row-change counter on refusal, no hidden errors. Product16/16,ordinary ProductDB887/0,7 named semantic mutants+byte-exact restore,Clippy,docs+five repo gates pass. No production/frontend/schema/limit changes versus previously accepted P4 merge788974e7. Both histories retained; separate in-session review closed,not independent approval.
+- **Pending/Next Steps:** Freeze final combined merge and run full maintained template RUST/PY plus required15 and new support config, isolated regular152 and explicit16 product corpus; inspect final screenshots or prove complete UI-input equality to already inspected merge; final evidence/docs closure,normal main push/readback and owned cleanup. P4 not yet pushed; no owner Go needed.
+- **Notes for Codex oder Claude:** Original red baseline and failed complete runs retained,not relabelled. Fix tree p4-corpus-fix-20261015; final tree p4-parameters-merge-20261015; all build/evidence profile scratch/p4-parameters-20261015. Shared root/foreign work untouched; no bus/subagents/vendor/release/deploy. Product-corpus skill now records host-scope/granularity and typed-refusal rules.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 13:33
+- **Completed:** Owner-authorized prerequisite correction for P4 inherited product-corpus reds in owned p4-corpus-fix-20261015 from bee4f016. v22/current matrix probes plus independent115/113 raw XML census prove exactly5 v23 aggregate deltas and41 unchanged table counts; pins updated only for ADR0126 retirement. Nesting census now counts exact standard-size refusal and verifies no database row changes;105=103 installs+1 duplicate+1 refusal,1678 modules/0 nested in admitted subset. Targeted16/16 product opt-ins,synthetic classifier cases,Clippy pass; no production source,limits,profile or schema change.
+- **Pending/Next Steps:** Seven semantic mutants detected; byte-exact restoration and ordinary product postflight887/0 pass. Finish repository checks, commit this fix separately, merge into owned P4 integration, final full template+regular/explicit corpus gates then publication/readback/evidence/cleanup. P4 not yet pushed. No owner Go needed.
+- **Notes for Codex oder Claude:** Original failures/initial incomplete-scope Python census retained privately, not relabelled as green. Only tests+docs change here. Shared root and foreign work untouched; no bus/subagents/vendor/release/deploy. Scratch p4-parameters-20261015 holds exact cause/delta proofs and earlier accepted merge51/51+OriginalData152/152; later final source needs its own acceptance.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 13:14
+- **Completed:** Actual P4 package2 merge788974e7 full template51/51 accepted with frozen inputs: Vitest3626, Chromium574, Rust4592, repeated87; original15 extra configs plus new upstream support config pass. Network-isolated OriginalData152/152 in33 targets passes. Actual merged EN/DE1440/400 parameter screenshots inspected; known global toast overlap retained. Explicit product opt-ins completed14/16, NOT accepted: matrix projected commitment mismatch and dynamic nested-module installer SizeLimit. Sources unchanged throughout.
+- **Pending/Next Steps:** Push remains BLOCKED by two inherited additional product-corpus failures. Unmodified upstream bee4f016 reproduction COMPLETED: both named tests fail with exactly the same matrix actual/expected commitments and same SizeLimit member as P4 merge. Baseline source/status clean; private signature-equivalence verdict saved. No active reproduction worker. Resolve the pre-existing corpus issue in a separate scoped fix before claiming a full pass; do not repin or enlarge limits blindly. Publication/readback/archive/cleanup remain pending.
+- **Notes for Codex oder Claude:** Both failing tests and installer package.rs are byte-identical to pre-P4 upstream (private equivalence receipt). Baseline now proves both failures predate P4; underlying corpus/guard or stale-pin cause still needs separate investigation. Shared root untouched; no bus/subagents/release/deploy. Keep source-bound accepted merge receipts separate from product failure and later documentation-only changes. Current run evidence must not be deleted.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 11:55
+- **Completed:** P4 package2 feature519eff4b9cbb committed after full branch49/49: Vitest3611, Chromium570, repeated87, Rust4570 all pass, fifteen extra configs pass. Original outer freeze mismatch is index-only template add-N (exact temporary-index reconstruction); full source-content/mode/path manifests and template hashes unchanged, corrected verifier negative controls pass. Seven semantic mutants and self-review green. Fresh-main bee4f016 integration reconciles both image helper functions and preserves all upstream support/story state and handover suffix.
+- **Pending/Next Steps:** Full actual merged template RUST/PY gate (original15 configs plus new upstream support config), isolated corpus, merged screenshot inspection, publication/readback, evidence and owned cleanup. Not yet delivered/pushed.
+- **Notes for Codex oder Claude:** Owned p4-parameters(-merge)-20261015; scratch p4-parameters-20261015. Shared root untouched; no bus/subagents/release/deploy. Keep original wrapper refusal, reconciled branch receipt and exact upstream history. No owner Go needed.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:52
+- **Completed:** P4 package2 implemented in owned p4-parameters-20261015: actual active-write bit attribution, named project/device numeric/text values, final-plan/coverage/profile guards and explicit EN/DE unknown reasons with raw ranges. Seven named semantic mutants fail as intended; sources restored and core/image postflight green. Separate in-session review findings closed; Clippy green. Six production comparison browser cases pass; EN/DE1440/400 screenshots visually inspected. Contract/ADR/handbook/FEATURES/goal updated honestly as candidate.
+- **Pending/Next Steps:** Freeze and full template RUST=1/PY=1/fifteen-config branch gate; commit reviewed scope; fresh-main owned merge, complete merged gate and network-isolated corpus; inspect merged images, normal push/readback, evidence archival and owned cleanup. No new owner Go needed.
+- **Notes for Codex oder Claude:** No independent-review claim, hardware access or broadened image/negative-signed support. Profile scratch/p4-parameters-20261015 retains RED/GREEN/mutations/simulator/browser proofs. Shared dirty root and foreign support/story trees unchanged; no subagents/release/deploy. Transient global achievement toast overlaps lower mobile content as inherited.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 09:28
+- **Completed:** P4 table package1 publication and metadata fbdfbddd verified local/tracking/live; compact440-file evidence hash-verified at profile evidence/p4-tables-a9f429a4. Both owned package1 worktrees/branches/scratch retired. Package2 now active in p4-parameters-20261015 from fresh published main, preparation/spec witnesses retained.
+- **Pending/Next Steps:** Parameter bit attribution at actual image writer; named numeric/text project/device decoding with raw fallbacks, RED/GREEN/mutants/self-review/EN-DE1440-400 then full template branch+merged gates and publication. No Go needed.
+- **Notes for Codex oder Claude:** All new builds/evidence profile scratch/p4-parameters-20261015. Keep support/story foreign owners and shared stale dirty root untouched; no hardware/subagents/vendor/release/deploy.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 14:40
 - **Completed:** Alpha12 preparation in owned release-alpha12-20261015: all four application versions/web/Cargo lock aligned0.1.0-alpha.12 (lock verified version-only); EN/DE homepage copy and four semantic current-feature cards, README/install/status/FAQ/operating/model/import/compatibility routes updated for native16/product23, Functions/reporting inventory corrected. Real-server fictional-house nine-still capture spec/config and dedicated TypeScript config compile. Task-private server/frontend prebuild exits0/0 with frozen runtime inputs. Two website regressions observed RED on missing Alpha12 media/provenance; GREEN is pending real capture. Separate self-review corrections retained; no independent approval or release test totals claimed.
 - **Pending/Next Steps:** Sole admitted prerequisite P4 final combined package: full-template green at14:30, OriginalData/explicit-product corpus and owner publication still pending at last observation. Await published P4 parameter/corpus source, then merge fresh main preserving both journals/docs, finalize named-parameter release scope, rebuild changed runtime and capture nine actual screenshots under established leases/loopback isolation. Inspect all frames; produce lossless WebPs plus honest source/hash provenance, finish reader routes/website tests and exact-candidate clean commit. Run prepared complete release gate and AppImage/MCP+amd64/arm64 Docker workflow dry runs; present exact SHA, actual counts and skipped publishing jobs for final owner tag/publication Go. No tag/deploy yet.

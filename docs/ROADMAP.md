@@ -2,11 +2,12 @@
 
 ## Owner UI feedback P4 (2026-10-15)
 
-P3 is delivered. P4 package 1 (bound comparison/tags and decoded group-address /
-association tables) has a source candidate under full acceptance. Package 2
-(named parameters from captured image bit attribution) follows its publication
-immediately. No new device support, hardware operation or release is authorized.
-[Decision record](goals/ui-feedback-p1-p4.md), [contract](contracts/device-comparison.md).
+P3 and both P4 packages are accepted in source: bound single/filtered comparisons,
+session tags, verified identity, decoded address/association tables and named
+parameters from actual bit attribution. Combined full51/51 and isolated corpus
+152/152+16/16 pass; [publication record](evidence/p4-device-comparison-parameters-2026-10-15.json)
+tracks remote delivery separately. No new device support, hardware action or
+release is implied.
 
 ## Universal device-support intake (15 October 2026 source work)
 

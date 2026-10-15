@@ -1108,7 +1108,7 @@
       "number": 7,
       "title": "Bounded commissioning support",
       "topic": "Commissioning and recovery",
-      "summary": "Memory downloads have scoped evidence, not general device support. Public K6/serial/K13 address writes fail before a tunnel without specific durable recovery.",
+      "summary": "Memory downloads have scoped evidence, not general device support. Public K6/serial/K13 address writes fail before a tunnel without specific durable recovery. Project/device comparison is a session observation; unknown fields remain explicit beside raw ranges, and relevant edits invalidate tags.",
       "file": "KL-007-bounded-commissioning-support.md",
       "ledger_ids": [
         "KL-7"

@@ -33,7 +33,7 @@ artifact publication are recorded separately; [release scope](releases/alpha12.m
 keeps their limits together.
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| Project versus real devices (P4, package 1) | Confirmed single/filtered batch, progress/cancel, session tags, verified application identity, decoded 0701 address/association tables and visible raw bytes; named parameters pending package 2 ([guide](manual/user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11)) | alpha.12 |
+| Project versus real devices (P4) | Confirmed single/filtered batch, progress/cancel, session tags, verified application identity and decoded 0701 address/association tables; named parameter project/device values with exact bit attribution, explicit unknowns and visible raw bytes ([guide](manual/user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11)) | alpha.12 |
 | Universal device-support reports | Offline without project/catalogue/plan; optional separately consented fixed read-only diagnostics, local review/ZIP/manual handoff; no programming unlock | alpha.12 |
 | Per-part pending programming | Adr/App/Par/GA chips and Pending only filter, explorer dot, same-step edit/undo tracking, full/partial/address settlement and undoable logged manual marks; project belief, not live comparison; recovered snapshot undo is conservative ([guide](manual/user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11)) | alpha.12 |
 | Active task text shimmer | Readable slow sweep plus pause on existing running-work status text; motion/accessibility gates; no fabricated progress ([contract](contracts/task-status-shimmer.md)) | alpha.12 |

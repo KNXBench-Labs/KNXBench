@@ -1,5 +1,19 @@
 # Gira and MDT product-database corpus
 
+## Matrix v23 and bounded nesting census — 15 October 2026
+
+[Current correction evidence](IMPORT_EXPORT.md#product-corpus-prerequisites--15-october-2026)
+separates schema-v23 unknown-row retirement from actual import behavior. The
+115-instance matrix now pins the independently predicted five aggregate deltas;
+all41 other table counts and package outcomes are unchanged. The loose-package
+nesting measurement accounts for every one of105 archives:103 installs,one
+duplicate,one STANDARD expanded-size refusal. Zero nested Module rows describes
+only the admitted subset. No limit increase or implicit LARGE profile is used.
+Targeted16/16 and seven semantic mutants pass; restored-source ordinary product
+tests pass. Final combined full51/51 and corpus152/152+16/16 pass on `facdd62e`;
+[source publication](evidence/p4-device-comparison-parameters-2026-10-15.json)
+is distinct from prior baseline failures and the instrumented research probes.
+
 ## Scheme23 bounded import acceptance — 2026-10-04
 
 Original same-Release Full853 remains producer-bound to Source713 versus712:

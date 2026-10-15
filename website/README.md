@@ -27,7 +27,7 @@ Default-language acceptance recipe: `tests/verify-default-language.js`.
 
 ## Source and artifact boundary
 
-- `page.html`, `site.css`, `site.js`, `headlines.js`, `content/`: curated site sources.
+- `page.html`, `atlas.html`, `site.css`, `site.js`, `atlas.js`, `headlines.js`, `content/`: curated site sources.
 - `assets/`, `media.json`: explicitly inventoried demo media and font licences.
 - `story.json`: pinned existing story candidate; not publication permission.
 - `build.py`: deterministic stdlib builder, output inventory/hashes and safe
@@ -37,13 +37,22 @@ Default-language acceptance recipe: `tests/verify-default-language.js`.
 - `dist/`, `output/`: generated artifacts, ignored; never copy source wholesale
   to a Pages artifact. The output contains `.nojekyll` for plain static hosting.
 
-## Headline motion
+## Phosphor Atlas and motion
 
-Marketing h1/h2/h3 use the Story's ambient rolling-glyph treatment. Only visible
-headings animate; OS reduced motion and footer Pause/Resume cancel effects live.
+The dark-green canvas leads with a fictional installation diagram: solid green
+line membership and dashed violet logical group links, never actual wiring or
+live traffic. Keyboard/touch selection opens native explanations; without JS the
+fragment links and disclosures still work. Mobile has a vertical diagram.
+
+Marketing h1/h2/h3 keep the Story's ambient rolling-glyph treatment, plus rare
+180ms single-glyph glitches. One finite path/node reveal introduces the diagram.
+Only visible headings animate; OS reduced motion and header Pause/Resume cancel
+all effects live, including button transitions. Resuming never replays the diagram.
 The setting is page-local and not persisted. No JS/missing APIs retain readable
 static text; legal/privacy pages never load the effect. Story sources unchanged.
-`tests/verify-headlines.js` is the actual-browser recipe.
+`tests/verify-headlines.js`, `tests/verify-phosphor.js` and
+`tests/verify-phosphor-visual.js` are actual-browser recipes. The redesign remains
+a private preview pending separate owner publication approval; Story unchanged.
 
 ## Release build and deployment
 

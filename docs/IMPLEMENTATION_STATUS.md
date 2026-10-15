@@ -14,6 +14,19 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Alpha 12 media/docs preparation: ten actual integrated-application
+  PNGs (real server, fictional house/native-created device, loopback-only network)
+  and seven decoded-pixel-equal lossless website WebPs. Website24, current docs,
+  capture TypeScript and public website build pass; actual production-variant
+  Chromium492 checks pass across EN/DE,320–1440px,JS/no-JS,motion/navigation/media.
+  All ten application frames and nineteen website frames (thirty long-page strips)
+  inspected. README/manual/feature/model/import/compatibility upgrade routes now
+  agree on native16/product23 and pre-upgrade independent backups. P4 delivered
+  source and its exact original acceptance are retained; approved Story unchanged.
+  Full exact-candidate gate, no-publish packaging builds and final tag/publication
+  approval remain separate and pending. No hardware operation or release claimed.
+  [Preparation evidence](evidence/alpha12-media-2026-10-15.json).
+
 - 2026-10-15 — **P4 delivered on main `17cfd5b7`**, normal push and exact
   local/tracking/live readback verified. Both packages, feature519eff4b and
   separate corpus-fixa6cdfd9d are included. Runtime tested mergefacdd62e has

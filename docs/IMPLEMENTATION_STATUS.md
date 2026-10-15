@@ -14,6 +14,20 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — Offline expansion P2 **branch accepted, integration pending**:
+  legacy ASAP-indexed sending/FE-unused associations and an explicit System2
+  source-image library path sharing the production product/Dynamic evaluator.
+  Original-PDF evidence distinguishes table grammar and intended template
+  modification. Synthetic source assembly covers parameters, objects and links;
+  new overflow/default/overlap tests retain honest RED/GREEN. Real Siemens
+  whole-image assembly is still refused at a specific uncorroborated16-bit
+  source/default field, not claimed compatible. P3 planning/simulation/recovery
+  and field validation remain open. Actual14stage frozen branch gate passes:
+  Rust4623/0/207ignored, Vitest3626/263files, workspace Clippy/build, frontend
+  build, tooling/five repository checks and explicit Release real-source refusal
+  regression. [Receipt](evidence/offline-download-system2-image-2026-10-16.json) ·
+  [Contract](contracts/offline-download-system2-image.md).
+
 - 2026-10-15 — Offline download P1 **integrated and published** as `ad5f0e49`:
   source-bound System2 tool metadata with complete source order, explicit legacy
   Type1/Type2 descriptor codec and ten-byte absolute property-load encoders.

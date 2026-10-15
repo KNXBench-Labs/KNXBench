@@ -113,6 +113,20 @@ fn siemens_system2_preserves_the_whole_procedure_and_stays_not_executable() {
     );
     assert_eq!(procedure.steps[20], LoadStep::Disconnect);
     assert!(!procedure.steps.contains(&LoadStep::Restart));
+    let image_request = knx_productdb::image::ImageRequest {
+        program_id: program.into(),
+        individual_address: knx_core::IndividualAddress::from_raw(0x1234),
+        values: Default::default(),
+        links: vec![],
+        flag_overrides: Default::default(),
+    };
+    let error = knx_productdb::image::build_system2_image(&conn, &image_request)
+        .expect_err("this real source lacks a verified multi-octet encoding witness");
+    assert!(
+        matches!(error, knx_productdb::image::ImageError::Unsupported { ref what }
+        if what.ends_with("System2 default disagrees with source bits"))
+    );
+    assert_eq!(code.mask_version.as_deref(), Some("MV-0025"));
     let LoadStep::TaskCtrl2 {
         callback,
         address,

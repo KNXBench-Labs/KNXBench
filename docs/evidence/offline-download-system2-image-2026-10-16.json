@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "scope": "P2 offline legacy association/source-image software; not new executable device support",
+  "baseCommit": "eff119eb30c7424f9c75b2a34b127f2c5c76e839",
+  "review": "separate in-session source/security self-review",
+  "branchGate": {
+    "stages": [
+      "format",
+      "web-install",
+      "web-build",
+      "explicit-system2-corpus",
+      "clippy",
+      "rust",
+      "build",
+      "vitest",
+      "tooling",
+      "check-layering",
+      "check-headers",
+      "check-anchors",
+      "check-ledger",
+      "check-corpus-gates"
+    ],
+    "rust": {
+      "passed": 4623,
+      "failed": 0,
+      "ignored": 207,
+      "resultBlocks": 336
+    },
+    "vitest": {
+      "passed": 3626,
+      "files": 263
+    },
+    "sourcePaths": 2891,
+    "time": "2026-10-16 00:14"
+  },
+  "inputsFrozen": true,
+  "realProductResult": {
+    "successfullyAssembled": false,
+    "testOutcome": "passed precise unresolved-encoding refusal regression",
+    "reason": "16-bit source/default encoding lacks corroboration"
+  },
+  "mutation": "TSAP/ASAP field swap killed; exact canonical restoration",
+  "priorFailures": [
+    "incomplete debug tool timeout",
+    "unimplemented union placement",
+    "over-strict explicit octet equality",
+    "unresolved real 16-bit source/default witness",
+    "caught Union-offset integer overflow",
+    "owning-crate Clippy as_chunks correction"
+  ],
+  "mergedAcceptance": "pending",
+  "publication": "pending",
+  "hardwareOperations": 0,
+  "compatibilityPromotion": false
+}

@@ -27,7 +27,7 @@ Default-language acceptance recipe: `tests/verify-default-language.js`.
 
 ## Source and artifact boundary
 
-- `page.html`, `atlas.html`, `site.css`, `site.js`, `atlas.js`, `headlines.js`, `content/`: curated site sources.
+- `page.html`, `site.css`, `site.js`, `headlines.js`, `content/`: curated site sources.
 - `assets/`, `media.json`: explicitly inventoried demo media and font licences.
 - `story.json`: pinned existing story candidate; not publication permission.
 - `build.py`: deterministic stdlib builder, output inventory/hashes and safe
@@ -37,22 +37,24 @@ Default-language acceptance recipe: `tests/verify-default-language.js`.
 - `dist/`, `output/`: generated artifacts, ignored; never copy source wholesale
   to a Pages artifact. The output contains `.nojekyll` for plain static hosting.
 
-## Phosphor Atlas and motion
+## Story-style CRT and motion
 
-The dark-green canvas leads with a fictional installation diagram: solid green
-line membership and dashed violet logical group links, never actual wiring or
-live traffic. Keyboard/touch selection opens native explanations; without JS the
-fragment links and disclosures still work. Mobile has a vertical diagram.
+Original screenshot-first marketing layout, with the approved Story's green
+canvas, typography and phosphor-green headings. The added installation diagram
+and all its code/labels are removed following owner review. Story source is
+unchanged; shared visual principles do not mean loading its application runtime.
 
-Marketing h1/h2/h3 keep the Story's ambient rolling-glyph treatment, plus rare
-180ms single-glyph glitches. One finite path/node reveal introduces the diagram.
-Only visible headings animate; OS reduced motion and header Pause/Resume cancel
-all effects live, including button transitions. Resuming never replays the diagram.
-The setting is page-local and not persisted. No JS/missing APIs retain readable
-static text; legal/privacy pages never load the effect. Story sources unchanged.
-`tests/verify-headlines.js`, `tests/verify-phosphor.js` and
-`tests/verify-phosphor-visual.js` are actual-browser recipes. The redesign remains
-a private preview pending separate owner publication approval; Story unchanged.
+Marketing h1/h2/h3 retain rolling glyphs: each roll randomly chooses right, left,
+up or down with an oppositely offset twin. Timing stays720ms. Rare single-glyph
+180ms glitches remain. Only visible headings animate; header Pause/Resume and
+live OS reduced motion cancel all effects, including button transitions. The
+setting is page-local, never persisted. No-JS/missing APIs leave static text;
+legal/privacy pages stay static. No animation needed to read or navigate.
+
+Actual-browser recipes: `tests/verify-headlines.js`, `tests/verify-phosphor.js`,
+`tests/verify-roll-directions.js`. The direction recipe uses controlled RNG values
+against real WAAPI animations, not guessed randomness or a fake animation clock.
+This remains a private review candidate pending separate owner publication Go.
 
 ## Release build and deployment
 

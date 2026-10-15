@@ -117,7 +117,7 @@ def build(target: Path, release: bool = False, story_approval: Path | None = Non
     if media.get("schema") != "knxbench-website-media/1" or not media.get("assets"):
         raise BuildError("missing explicit media inventory")
     source_hashes = {}
-    sources = [WEBSITE / name for name in ("build.py", "page.html", "atlas.html", "site.css", "site.js", "headlines.js", "atlas.js", "story.json", "media.json")]
+    sources = [WEBSITE / name for name in ("build.py", "page.html", "site.css", "site.js", "headlines.js", "story.json", "media.json")]
     sources += sorted((REPO / "story" / "storytool").glob("*.py"))
     sources += [REPO / "story" / "site" / name for name in ("style.css", "app.js")]
     for path in sources:
@@ -158,7 +158,7 @@ def build(target: Path, release: bool = False, story_approval: Path | None = Non
         (stage / "assets").mkdir(parents=True)
         for name in media["assets"]:
             shutil.copyfile(WEBSITE / "assets" / name, stage / "assets" / name)
-        for name in ("site.css", "site.js", "headlines.js", "atlas.js"):
+        for name in ("site.css", "site.js", "headlines.js"):
             shutil.copyfile(WEBSITE / name, stage / "assets" / name)
         for lang, base, path in (("de", "../", "de/index.html"), ("en", "../", "en/index.html"), ("en", "", "index.html")):
             values = {key: escape(value, quote=True) for key, value in content[lang].items()}
@@ -169,7 +169,6 @@ def build(target: Path, release: bool = False, story_approval: Path | None = Non
                           launch_block="" if release else f'      <p class="launch-note">{values["launch_note"]}</p>\n')
             page = stage / path
             page.parent.mkdir(parents=True, exist_ok=True)
-            values["atlas"] = string.Template((WEBSITE / "atlas.html").read_text(encoding="utf-8")).substitute(values)
             page.write_text(template.substitute(values), encoding="utf-8")
         for lang in ("de", "en"):
             for kind in ("privacy", "contact"):

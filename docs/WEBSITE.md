@@ -7,64 +7,63 @@ remote IPv6 HTTPS were verified on 2026-10-09; Pages actions now use Node 24.
 Owner privacy review and optional WebKit evidence remain separate follow-ups.
 Decision: [ADR-0095](adr/0095-static-marketing-companion.md).
 
-## Phosphor Atlas — private implementation (15 October 2026)
+<a id="phosphor-atlas--private-implementation-15-october-2026"></a>
 
-This source branch contains the owner-approved **Phosphor Atlas** redesign, not
-an authorized Pages cutover. Alpha 12 publication and release-freeze release were
-verified before implementation. The separately approved Evolution Story, legal
-wording, application themes, manuals, real screenshot pixels/media provenance and
-release/download boundaries are preserved. Publication needs a separate owner Go.
+## Story-style phosphor CRT — private revision (15 October 2026)
 
-The whole canvas uses green-black `#03150c`, rich surfaces `#0b2d1c`, crisp
-reading ink `#eef5e9`, phosphor `#88ffad`, violet `#c1aff2` and amber `#e7c688`.
-Existing self-hosted Space Grotesk/Inter remain; monospace is limited to technical
-labels/metadata. Headings/paths glow, prose does not. Static scanlines exist only
-behind the diagram, not over reading text or screenshots. No borrowed proprietary
-assets, new framework, analytics, network API or application dependency.
+Owner review superseded the initial diagram-first Phosphor Atlas concept: **remove
+its installation diagram and restore the original marketing layout**, retaining
+phosphor CRT character and applying the existing Story's visual language. This is
+an implemented private preview, not an authorized Pages cutover. Alpha12 release
+and freeze release were verified; publication still needs separate owner approval.
 
-### A fictional installation, not project history
+The screenshot-first hero, section order and responsive grids follow the original
+website. The added installation fragment, script, logical-path animation,
+translations and diagram-specific CSS/tests are removed, not hidden. The original
+small Evolution Story teaser remains part of the original page. No new card kit,
+boot sequence or decorative content replaces the removed hero.
 
-The primary artwork explains one fictional TP line `1.1`, three devices
-`1.1.10`, `1.1.11`, `1.1.20` and group address `0/0/1` (“Kitchen light”).
-Solid green branches show line membership. Dashed violet connections show
-communication-object/group-address associations, **not** cabling, live telegrams,
-physical junctions, demonstrated device support or download success. The diagram
-is a simplified explanation, not an electrical plan. Semantics follow the existing
-manual's [topology](manual/knx-basics/02-topology-and-individual-addresses.md) and
-[group links](manual/knx-basics/03-group-addresses.md) explanations; it is not
-an import model, product database or protocol implementation.
+The whole canvas uses the Story's green-black `#03150c`, surfaces `#0b2d1c` and
+`#0f3824`, reading ink `#eef5e9`, phosphor `#88ffad`, violet `#c1aff2`, amber
+`#e7c688` and rule `#316343`. Font stacks now match the Story's Liberation
+Sans/Arial and metadata monospace. **All marketing and legal/privacy h1/h2/h3
+headings are phosphor green** with controlled Story-style glow. Prose and original
+screenshots remain crisp, unfiltered and unchanged. Existing self-hosted font
+assets/licences stay inventoried but are not required to mimic the Story's system
+font stack. No copied proprietary assets, backend or new dependency.
 
-Nodes are ordinary fragment links without JavaScript; native disclosures keep all
-explanations available. Progressive enhancement selects a node, highlights its
-related paths and opens its explanation, with explicit controls/expanded state.
-Native disclosure closure mirrors that state. No hover-only content, dragging,
-editor, pan/zoom or live bus. Mobile uses a vertical composition with identical
-relationships and readable labels, rather than scaling a desktop atlas to dust.
-A genuine Alpha 12 application screenshot follows the diagram unchanged.
+### Random-direction characters, one motion owner
 
-### One motion owner
+The existing `headlines.js` owner retains its 720ms rolling-glyph timing and
+selects **right, left, up or down independently per roll** with one uniform
+`Math.random()` direction choice. The outgoing glyph and its incoming twin move
+in opposite offsets on the chosen axis. Vertical rolls clip within their slot;
+no reflow, word changes or motion-dependent content. Rare isolated 180ms glitches
+remain; no constant flicker or blurred reading text.
 
-`headlines.js` extends the existing rolling-character owner. The header's
-page-local pause/resume controls rolls, rare single-glyph 180ms glitches, the
-finite path/node reveal and button transitions together. OS reduced motion wins;
-no storage/cookies are introduced. Graph reveal runs at most once per document,
-then stays settled. Pause, live OS reduction, offscreen/hidden/pagehide lifecycle
-and responsive resize cancel affected native animation objects, exposing the
-complete static baseline; no mandatory boot or endless graph loop. Headings keep
-stable accessible names and word boundaries. No-JS/missing-animation-API pages
-remain readable and the nonfunctional motion switch stays hidden. Legal/privacy
-pages remain static and inherit the palette/typography without text changes.
+The header pause/resume applies to rolls, glitches and button transitions. Live
+OS reduced motion always wins; offscreen/hidden/pagehide lifecycle stops ambient
+effects. No storage, cookies or new network calls. Without JavaScript or motion
+APIs the original readable headings/screenshot remain and the nonfunctional
+motion switch stays hidden. Legal/privacy pages remain static; legal text,
+approved Story data/style/runtime/pin and application/media are unchanged.
 
 ### Acceptance and limits
 
-Maintained recipes are `website/tests/test_phosphor.py`,
-`verify-phosphor.js` and `verify-phosphor-visual.js`, alongside the existing
-build/headline/language/legal/demo/whole-site regressions. They exercise actual
-Chromium, bilingual widths down to 320px, native keyboard/touch, no-JS/API
-fallback, finite reveal, active-effect cancellation and real raster inspection.
-No Firefox/WebKit, native screen-reader/Orca, electrical installation or hardware
-certification follows. In-session self-review is not independent approval.
-Local builds are previews; a successful public-variant build is not deployment.
+`website/tests/test_phosphor.py` checks actual atlas removal and the retained
+palette/header control. `verify-phosphor.js` covers the restored hierarchy,
+computed green headings, responsive DE/EN320–1440, decoded screenshots, crisp
+prose, static/no-JS fallback and live CSS cancellation.
+`verify-roll-directions.js` exercises all four real WAAPI branches with controlled
+random inputs, opposite twins, stable bounds, sampled displaced glyphs and live
+keyboard/OS cancellation. Controlled RNG is explicit test instrumentation, not
+claimed natural-random distribution evidence. Existing whole-page, headline,
+language, imprint and demo recipes remain mandatory.
+
+Exact observed results live in the [revision evidence](evidence/phosphor-crt-revision-2026-10-15.json): website28, Story76, tooling163 (1 existing skip),23 frozen-source stages, Chromium394 preview and416 public-variant checks. Every recipe is admitted against the selected origin and artifact mode; a named regression prevents the legacy fixed-preview-port escape. Both builds are deterministic. Prior diagram
+acceptance remains historical, not acceptance of this replacement. No
+Firefox/WebKit/Orca/native-screen-reader, hardware or electrical-plan certification.
+Self-review is not independent approval. Preview/public-variant builds do not deploy.
 
 ## Alpha 12 refresh (15 October 2026)
 

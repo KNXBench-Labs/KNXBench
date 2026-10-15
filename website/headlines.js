@@ -11,27 +11,6 @@
   const SWAP = { duration: 720, easing: 'cubic-bezier(.65,0,.35,1)', id: 'ambient-char-swap' };
   const CLIP = 'inset(-0.4em -0.06em)';
   let paused = false, unsupported = false, timer = 0, ticks = 0;
-  const atlas = document.querySelector('.atlas-diagram');
-  let atlasVisible = false, atlasStarted = false;
-
-  function revealAtlas() {
-    if (!atlas || !atlasVisible || atlasStarted || !allowed()) return;
-    atlasStarted = true;
-    try {
-      const paths = [...atlas.querySelectorAll('path')].filter(path => path.closest('svg').getBoundingClientRect().width > 0);
-      paths.forEach((path, index) => track(path.animate([
-        { strokeDasharray: '1 1', strokeDashoffset: 1 },
-        { strokeDasharray: '1 1', strokeDashoffset: 0 }
-      ], { duration: 850, delay: index * 180, fill: 'backwards', easing: 'ease-out', id: 'phosphor-path-draw' })));
-      atlas.querySelectorAll('[data-atlas-node]').forEach((node, index) => track(node.animate(
-        [{ opacity: 0 }, { opacity: 1 }],
-        { duration: 380, delay: index * 180, fill: 'backwards', easing: 'ease-out', id: 'phosphor-node-appear' }
-      )));
-    } catch (_) {
-      // A partial/missing WAAPI implementation must leave the whole diagram visible.
-      cancelWhere(animation => animation.id.startsWith('phosphor-'));
-    }
-  }
 
   function split(heading) {
     const label = heading.cloneNode(true);
@@ -79,10 +58,14 @@
   }
   function roll(box, delay) {
     const timing = { ...SWAP, delay };
+    const [axis, sign] = [['X', 1], ['X', -1], ['Y', -1], ['Y', 1]][Math.floor(Math.random() * 4)];
+    const outgoing = `translate${axis}(${sign * 105}%)`;
+    const incoming = `translate${axis}(${-sign * 105}%)`;
+    const clip = axis === 'Y' ? 'inset(0 -0.06em)' : CLIP;
     try {
-      track(box.animate([{ clipPath: CLIP }, { clipPath: CLIP }], timing));
-      track(box.firstChild.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(105%)' }], timing));
-      track(box.animate([{ transform: 'translateX(-105%)', opacity: 1 }, { transform: 'translateX(0)', opacity: 1 }],
+      track(box.animate([{ clipPath: clip }, { clipPath: clip }], timing));
+      track(box.firstChild.animate([{ transform: 'translate(0, 0)' }, { transform: outgoing }], timing));
+      track(box.animate([{ transform: incoming, opacity: 1 }, { transform: 'translate(0, 0)', opacity: 1 }],
         { ...timing, pseudoElement: '::after' }));
     } catch (_) {
       unsupported = true;
@@ -107,9 +90,9 @@
       const box = pool[0];
       try {
         track(box.firstChild.animate([
-          { transform: 'translateX(0)' },
+          { transform: 'translate(0, 0)' },
           { transform: 'translateX(.08em)', color: '#c1aff2', offset: .4 },
-          { transform: 'translateX(0)' }
+          { transform: 'translate(0, 0)' }
         ], { duration: 180, easing: 'steps(2, end)', id: 'phosphor-char-glitch' }));
       } catch (_) { /* The normal rolling treatment remains available. */ }
     }
@@ -117,21 +100,15 @@
   }
   function sync() {
     document.documentElement.dataset.motion = allowed() ? 'on' : 'off';
-    if (!allowed() || !atlasVisible) cancelWhere(animation => animation.id.startsWith('phosphor-'));
-    revealAtlas();
     if (!allowed() || !visible.size) {
       window.clearTimeout(timer);
       timer = 0;
-      cancelWhere(animation => !allowed() || animation.id === 'ambient-char-swap' || animation.id === 'phosphor-char-glitch');
+      cancelWhere(() => true);
     } else if (!timer) timer = window.setTimeout(tick, 1200);
   }
   headings.forEach(heading => boxes.set(heading, split(heading)));
   const observer = new IntersectionObserver(entries => {
     for (const entry of entries) {
-      if (entry.target === atlas) {
-        atlasVisible = entry.isIntersecting;
-        continue;
-      }
       if (entry.isIntersecting) visible.add(entry.target);
       else {
         visible.delete(entry.target);
@@ -141,9 +118,6 @@
     sync();
   });
   headings.forEach(heading => observer.observe(heading));
-  if (atlas) observer.observe(atlas);
-  // Responsive art uses a different path geometry; cancel, never replay mid-resize.
-  window.addEventListener('resize', () => cancelWhere(animation => animation.id.startsWith('phosphor-')));
   toggle.hidden = false;
   sync();
   toggle.addEventListener('click', () => {

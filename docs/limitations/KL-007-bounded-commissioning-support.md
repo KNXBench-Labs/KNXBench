@@ -6,6 +6,23 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Universal reporting boundary (15 October 2026 source)
+
+The [universal support reporter](../contracts/universal-device-support.md)
+collects structured offline evidence even for wholly unknown devices and offers
+only reviewed, separately consented read-only diagnostics. It does not unlock a
+download, assign Verified status, provide arbitrary memory/property exploration
+or implement System-2 image/table/LSM/recovery contracts. Mask0025 status and
+mask0012 bit0 recipes are source/spec/simulator evidence, not hardware support;
+0020/0021/0701 and other families stay descriptor-only here. Source projection is
+bounded and rights-gated; original firmware/binaries/full XML/spec pages are not
+attachments. Unknown redistribution rights remain a reason to withhold content,
+including email. A whole-session timeout can yield an explicitly unavailable
+acquisition. The reporter's8MiB source and cumulative declared Text-buffer
+assessment budgets can leave support unknown despite some available catalogue
+facts; they do not impose a new device-programming limit or guarantee whole-process
+resource use. Safe bounded context remains available when assessment is omitted. [ADR0131](../adr/0131-universal-device-support.md).
+
 <!-- BEGIN retained catalogue record -->
 
 <a id="7-commissioning-and-device-download-are-required-but-blocked"></a>

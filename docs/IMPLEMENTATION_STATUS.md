@@ -14,6 +14,22 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-15 — Universal device-support evidence intake, source after Alpha11.
+  Offline reports work without a project/catalogue/plan/gateway; optional fixed
+  read-only diagnostics, context rights and ZIP disclosure have separate consents.
+  Unknown/withheld/unsupported evidence is explicit; no download unlock, registry
+  promotion or real bus operation. Frozen branch acceptance:10/10 stages,
+  maintained web61/61, Rust4575/0 (205 opt-ins ignored), dedicated production
+  browser12/12 (EN/DE1440/400, three repeats); all8 setup/preview frames inspected.
+  Seven named guard mutations were behaviorally caught in an isolated source
+  snapshot; restored tests pass and canonical bytes remained unchanged.
+  Separate in-session self-review, not independent approval. Fresh-main merged
+  acceptance, private corpus and publication are separate pending boundaries.
+  [Contract](contracts/universal-device-support.md),
+  [ADR0131](adr/0131-universal-device-support.md),
+  [aggregate evidence](evidence/universal-support-2026-10-15.json),
+  [operating guide](manual/user-guide/08-reports-and-diff.md#universal-device-support-reporting-source-after-alpha-11).
+
 - 2026-10-14 — Issue #23: diagnostic sidebar entries select instead of toggle.
   Re-clicking Bus monitor or Log keeps its panel and local state; choose another
   project view explicitly to leave. Settings/companion actions are unchanged.

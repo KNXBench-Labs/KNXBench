@@ -1,0 +1,13 @@
+/* Scoped support-intake layout; raw local target details never enter the report preview. */
+.universal-support { max-width: calc(100vw - 24px); }
+.universal-support header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.universal-support fieldset { display:grid; gap:12px; min-width:0; border:0; padding:0; }
+.universal-support label { display:grid; gap:6px; min-width:0; margin:10px 0; }
+.universal-support input:not([type=checkbox]), .universal-support select { width:100%; min-width:0; box-sizing:border-box; }
+.universal-support .support-check { display:flex; align-items:flex-start; gap:10px; }
+.universal-support .support-check input { flex:none; margin-top:3px; }
+.universal-support pre { max-width:100%; max-height:320px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
+.universal-support p,.universal-support li,.universal-support a { overflow-wrap:anywhere; }
+.universal-support .support-actions { display:flex; flex-wrap:wrap; gap:16px; }
+.universal-support button { transform:none; }
+.universal-support details { margin:16px 0; }

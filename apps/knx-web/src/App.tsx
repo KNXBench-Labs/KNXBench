@@ -68,6 +68,7 @@ import SelectiveImportButton from "./SelectiveImportButton";
 import DocumentationExportButton from "./DocumentationExportButton";
 import DebugReportButton from "./DebugReportButton";
 import ContributionButton from "./ContributionButton";
+import UniversalSupportButton from "./UniversalSupportButton";
 import ProjectDiffPanel from "./ProjectDiffPanel";
 import LoadProgressBanner from "./LoadProgressBanner";
 import { localFailure, ownsOperation } from "./loadProgress";
@@ -1502,6 +1503,7 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
       <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
       <ContributionButton />
+      <UniversalSupportButton project={tree} />
       <button onClick={guide.show}>{t("command.showIntroduction")}</button>
       {achievementsEnabled && <button onClick={() => setAchievementsOpen(true)}>{t("achievements.command")}</button>}
       <button onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</button>

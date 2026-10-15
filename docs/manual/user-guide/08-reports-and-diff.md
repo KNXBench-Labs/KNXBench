@@ -12,6 +12,45 @@ Two things you will eventually want from any engineering project: a document tha
 describes it to someone who cannot open it, and an answer to "what changed?". KNXBench
 has one feature for each.
 
+## Universal device-support reporting (source after Alpha 11)
+
+This separate workflow needs **no open project**. Open **File → Device support report**, or use the same action in a device's download panel. The released
+screenshots in this manual still show the Alpha11 interface; use a newer source
+build for this feature.
+
+1. Select a project device, or keep manual identity and optionally enter its local
+   individual address. Enter an application ID, mask or firmware only if known;
+   unknown fields are a valid report, not a reason to invent values.
+2. Generate the offline preview. It states fact origins, known support/refusal and
+   missing/withheld evidence even without an installed product package or plan.
+3. Optional: expand live diagnostics, review the local target and **exact read
+   list**, enter one gateway and give acquisition consent. No scan, setup, key,
+   write, restart or download is performed. Unknown families stay descriptor-only;
+   reads may be unavailable. This is still active bus communication: obtain the
+   installation owner's authorization before using it.
+4. Optional source context needs a separate rights confirmation. It contains only
+   a bounded reviewed numeric projection, not original XML, firmware or binaries.
+   Do not include protected assets merely because a download URL is public.
+5. Inspect both the summary and JSON. Confirm disclosure separately, then save
+   the local ZIP. Its two files are `report.json` and `README.txt`. Input/target/
+   project changes invalidate the old preview and consents; previews expire after
+   fifteen minutes and another tab's preview can replace yours.
+6. Deliberately open an issue form or mail draft and attach the saved report
+   yourself. Nothing uploads automatically. Email is not a privacy/encryption or
+   delivery guarantee; unclear rights mean withholding content even in email.
+
+Installation names/addresses, gateways, keys, parameter values, paths, raw memory,
+firmware and unknown source content are not copied into this envelope. Do not
+enter personal information or secrets in manual technical fields, and review the
+actual preview before sharing. An earlier ended-run projection keeps its exact
+partial/full scope; a successful transfer is not proof the device functions.
+The older **download verification report is separate** and can contain parameter
+values: its own disclosure guidance still applies.
+
+The report gives maintainers evidence to investigate. It does not enable a
+blocked download, certify an unknown device or add Verified status.
+[Detailed limits](../../contracts/universal-device-support.md).
+
 ## Documentation export
 
 ### What it produces

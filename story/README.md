@@ -4,7 +4,7 @@ A private, offline companion that tells how KNXBench grew from its earliest
 surviving prompt into an engineering project. It is **not** part of the KNX
 application and does not touch the KNX domain, project files or any bus.
 
-Status: published companion plus a new **unapproved** candidate `2026-10-15.2`.
+Status: published companion plus a new **unapproved** candidate `2026-10-15.4`.
 The website remains pinned to approved `2026-10-08.4` during review. Nothing
 authorizes publishing the new edition until its exact digest is approved.
 Design and boundaries: [ADR-0068](../docs/adr/0068-project-evolution-story-is-a-static-offline-companion.md),
@@ -35,10 +35,10 @@ Run from this directory.
 ```bash
 python3 -m storytool validate --repository ..
 python3 -m storytool prepare --private-provenance ../../KNXBench.story-private/provenance.json
-python3 -m storytool build 2026-10-15.2          # writes dist/2026-10-15.2/index.html
-python3 -m storytool build 2026-10-15.2 --preview  # writes previews/2026-10-15.2.html (commit it)
-python3 -m storytool serve 2026-10-15.2          # loopback only
-python3 -m storytool release-check 2026-10-15.2  # refuses: no approval
+python3 -m storytool build 2026-10-15.4          # writes dist/2026-10-15.4/index.html
+python3 -m storytool build 2026-10-15.4 --preview  # writes previews/2026-10-15.4.html (commit it)
+python3 -m storytool serve 2026-10-15.4          # loopback only
+python3 -m storytool release-check 2026-10-15.4  # refuses: no approval
 python3 -m storytool publish                     # always refuses, exit code 3
 ```
 
@@ -193,10 +193,10 @@ Findings that shaped the story:
 
 ## Update prepared on 15 October 2026
 
-Candidate `2026-10-15.2` pins `origin/main` at
+Candidate `2026-10-15.4` pins `origin/main` at
 `2d4ec5f90ccc66ed7d03c65fdd02213faf34fc69`, timestamp
-`2026-10-15T07:04:36+02:00`. The guided narrative has 1,406 words (chapter
-ledes and bodies), 68 events, 87 relations and twelve chapters. Expandable
+`2026-10-15T07:04:36+02:00`. The guided narrative has 1,448 words (chapter
+ledes and bodies), 74 events, 93 relations and twelve chapters. Expandable
 records retain the technical detail; this is a curated story, not a changelog.
 The public-users, reversible-engineering and evidence-boundaries chapters cover
 website/demos, real-user import/launch feedback, native history, previewed edits
@@ -204,6 +204,15 @@ and catalogue updates, the narrow MCP writer, Functions, travelling manufacturer
 files, exact hardware scopes, Alpha 11 versus later source delivery, pending
 programming and unresolved System-2 support. The universal support reporter is
 labelled a design reservation only at this cutoff.
+
+Owner review clarified two publication boundaries: the specification knowledge
+base is a **private, local development aid**, not published or distributed with
+KNXBench; publicly accessible manufacturer product databases were **provided for
+analysis**, without describing acquisition mechanics. Every evidenced alpha
+release has its own event and atlas node: withdrawn Alpha 4 and Alpha 5–11.
+Alpha 5 distinguishes original private publication from the 8 October public
+republication; Alpha 7 was published after midnight CEST on 10 October. Versions
+without publication evidence are not invented as releases.
 
 Private provenance is a separate ledger outside Git. Earlier curated excerpts
 are inherited; new project-scoped human requests were filtered locally. Native
@@ -217,7 +226,7 @@ Old hashes are remapped with `docs/history/COMMIT_MAP_*.txt`; the one removed
 schema-design reference points to its archive locator instead of a missing file.
 
 **Review gate:** the old approved edition stays alongside the new candidate only
-until the owner's exact-edition decision. No approval exists for `2026-10-15.2`.
+until the owner's exact-edition decision. No approval exists for `2026-10-15.4`.
 Do not push the update, change `website/story.json`, remove the old approval or
 trigger Pages before that decision. An approved cutover retires the earlier
 candidate/preview/approval from the tree, leaving its immutable history in Git.
@@ -232,14 +241,14 @@ candidate/preview/approval from the tree, leaving its immutable history in Git.
   can still touch nodes/edges at dense stages. The full text remains available
   through event cards, Text only and the searchable/zoomable atlas.
 - System fonts only; final typography and licensing are open.
-- The current candidate passes 46/46 browser checks in Chromium
-  153.0.8010.12 and 46/46 in Firefox 155.0 (15 October 2026). Desktop/mobile
-  growth, labels, keyboard, motion cancellation, text/no-JS fallbacks and hostile
-  content were exercised. Twenty-four original images across four engine/viewport
-  contexts were inspected, including every new chapter. No horizontal page
-  overflow or external request was observed. WebKit/Safari, native WebKitGTK
-  and real screen readers were not tested in this update; earlier host-library
-  constraints are not a fresh launch attempt. [Aggregate acceptance](../docs/evidence/story-update-2026-10-15.json).
+- Edition `.4` passes 76 story tests, website24, Chromium46/46 and Firefox46/46
+  on its actual frozen bytes. Four engine/viewport contexts verify all eight
+  release nodes and both editorial corrections. All44 main frames and8
+  supplemental unoccluded-card frames were inspected. No horizontal page overflow
+  or external requests were observed. WebKit/Safari, native WebKitGTK and real
+  screen readers were not tested. [Current .4 acceptance](../docs/evidence/story-update-2026-10-15-editorial.json);
+  [historical .2 acceptance](../docs/evidence/story-update-2026-10-15.json) stays
+  separately source-bound, not relabelled as a later run.
 - Coverage of the human–AI workflow depends on local logs. Cloud sessions and
   anything outside the read sources are missing from this edition.
 - Commit references assume the repository's history may be shown publicly; that

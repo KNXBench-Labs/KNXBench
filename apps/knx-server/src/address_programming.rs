@@ -93,6 +93,10 @@ impl AddressProgrammingStatus {
     }
 }
 
+/// Called once with a programming's final status, before that status
+/// becomes readable (ADR-0129: the programming belief follows the run).
+pub type OnProgrammingEnd = Box<dyn FnOnce(&AddressProgrammingStatus) + Send>;
+
 /// One line of the log: only rounds whose answer changed, and the find.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
@@ -199,6 +203,7 @@ impl AddressProgrammingSession {
         authorisation: AddressProgrammingAuthorisation,
         timing: knx_net::SessionTiming,
         wait: ButtonWait,
+        on_end: OnProgrammingEnd,
     ) -> Self {
         let shared = Arc::new(Shared {
             status: Mutex::new(AddressProgrammingStatus::Waiting {
@@ -215,6 +220,7 @@ impl AddressProgrammingSession {
             timing,
             wait,
             Arc::clone(&shared),
+            on_end,
         ));
         Self {
             id,
@@ -366,6 +372,7 @@ async fn run(
     timing: knx_net::SessionTiming,
     wait: ButtonWait,
     shared: Arc<Shared>,
+    on_end: OnProgrammingEnd,
 ) {
     let status = {
         let transport = TunnelTransport(tunnel.as_ref());
@@ -397,6 +404,7 @@ async fn run(
             Err(err) => failed(&err),
         }
     };
+    on_end(&status);
     *shared.status.lock().expect("programming status poisoned") = status;
     let _ = tunnel.disconnect().await;
 }

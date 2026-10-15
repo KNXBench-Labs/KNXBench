@@ -2659,6 +2659,56 @@ fn durable_mutation<T>(
     Ok(result)
 }
 
+/// What a bus write did to the programming belief, for the session log.
+pub(crate) struct Settled {
+    pub message: String,
+    /// Whether the project or its history changed; a message alone is only
+    /// logged.
+    pub changed: bool,
+}
+
+/// Applies a bus write's effect on the programming belief (ADR-0129). A
+/// write is not an edit: no undo step, but the change is persisted like one
+/// and published as a new revision. Skipped, and logged, when another
+/// project was opened, created or imported since the write began.
+pub(crate) fn settle_programming(
+    state: &AppState,
+    incarnation: u64,
+    source: &str,
+    settle: impl FnOnce(&mut knx_core::Project, &mut knx_core::CommandStack) -> Option<Settled>,
+) {
+    let mut lock = state.project.lock().expect("state mutex poisoned");
+    let Some(project) = lock.as_mut() else {
+        return;
+    };
+    if state.project_incarnation.load(Ordering::Relaxed) != incarnation {
+        log_outcome::<()>(
+            state,
+            source,
+            "Programming state not updated: another project is open now".into(),
+            None,
+            &Ok(()),
+        );
+        return;
+    }
+    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
+    let mut candidate = project.clone();
+    let mut candidate_stack = stack.clone();
+    let Some(settled) = settle(&mut candidate, &mut candidate_stack) else {
+        return;
+    };
+    let result = if settled.changed {
+        persist_native_working(state, &candidate, &candidate_stack).map(|()| {
+            *project = candidate;
+            *stack = candidate_stack;
+            next_project_revision(state);
+        })
+    } else {
+        Ok(())
+    };
+    log_outcome(state, source, settled.message, None, &result);
+}
+
 fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
     apply_with_expected_revision(state, None, cmd)
 }
@@ -2805,6 +2855,37 @@ pub(crate) fn apply_bound_command(
     detail: String,
     build: impl FnOnce(&mut knx_core::Project) -> Result<knx_core::Command, String>,
 ) -> Result<(), BoundCommandError> {
+    apply_bound(state, binding, label, None, detail, build).map(|_| ())
+}
+
+/// [`apply_bound_command`] for a command built before the lock: the log
+/// line is the command's plain sentence (#13), and the new tree is returned.
+pub(crate) fn apply_bound_prepared(
+    state: &AppState,
+    binding: &SnapshotBinding,
+    label: &str,
+    cmd: knx_core::Command,
+) -> Result<ProjectTree, BoundCommandError> {
+    // Described from the project as it is now; if it changes before the
+    // command runs, the binding check refuses the command anyway.
+    let message = state
+        .project
+        .lock()
+        .expect("state mutex poisoned")
+        .as_ref()
+        .and_then(|project| crate::log_text::describe(project, &cmd));
+    let detail = format!("{cmd:?}");
+    apply_bound(state, binding, label, message, detail, move |_| Ok(cmd))
+}
+
+fn apply_bound(
+    state: &AppState,
+    binding: &SnapshotBinding,
+    label: &str,
+    message: Option<String>,
+    detail: String,
+    build: impl FnOnce(&mut knx_core::Project) -> Result<knx_core::Command, String>,
+) -> Result<ProjectTree, BoundCommandError> {
     let mut lock = state.project.lock().expect("state mutex poisoned");
     let project = lock.as_mut().ok_or(BoundCommandError::NoProject)?;
     if !snapshot_is_current(
@@ -2816,13 +2897,14 @@ pub(crate) fn apply_bound_command(
         return Err(BoundCommandError::Stale);
     }
     let mut refused = false;
-    let result = commit_locked(state, project, label, label, detail, |p, s| {
+    let message = message.as_deref().unwrap_or(label);
+    let result = commit_locked(state, project, label, message, detail, |p, s| {
         let outcome = build(p).and_then(|cmd| s.do_command(p, cmd).map_err(|e| e.to_string()));
         refused = outcome.is_err();
         outcome
     });
     match result {
-        Ok(_) => Ok(()),
+        Ok(tree) => Ok(tree),
         Err(message) if refused => Err(BoundCommandError::Refused(message)),
         Err(message) => Err(BoundCommandError::Failure(message)),
     }

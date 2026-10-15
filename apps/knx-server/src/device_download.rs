@@ -83,6 +83,10 @@ pub struct BackupDestination {
 /// Shared payload-free write and restart evidence; the server keeps its progress DTO.
 pub use knx_app::commissioning_activity::{Restart, Written};
 
+/// Called once with a download's final status, before that status becomes
+/// readable (ADR-0129: the programming belief follows the run).
+pub type OnDownloadEnd = Box<dyn FnOnce(&DownloadStatus) + Send>;
+
 /// Where a download stands.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
@@ -109,7 +113,6 @@ pub enum DownloadStatus {
     },
 }
 
-#[derive(Debug)]
 struct Shared {
     status: Mutex<DownloadStatus>,
     events: Mutex<Vec<ProgressEvent>>,
@@ -121,6 +124,7 @@ struct Shared {
     granted: Mutex<Option<(Authorisation, bool)>>,
     /// The backup file, once written.
     backup_file: Mutex<Option<std::path::PathBuf>>,
+    on_end: Mutex<Option<OnDownloadEnd>>,
 }
 
 /// One download, running or finished. Kept after it ends so the final
@@ -152,6 +156,7 @@ impl DeviceDownloadSession {
         backups: BackupDestination,
         activity: crate::one_shot_activity::DownloadGuard,
         report: DownloadReport,
+        on_end: OnDownloadEnd,
     ) -> Self {
         let shared = Arc::new(Shared {
             status: Mutex::new(DownloadStatus::Running),
@@ -164,6 +169,7 @@ impl DeviceDownloadSession {
             last_started: Mutex::new(None),
             granted: Mutex::new(None),
             backup_file: Mutex::new(None),
+            on_end: Mutex::new(Some(on_end)),
         });
         let session = Self {
             id,
@@ -269,12 +275,22 @@ impl DeviceDownloadSession {
                 .last_started
                 .lock()
                 .expect("download progress poisoned");
-            *status = DownloadStatus::Failed {
+            let failed = DownloadStatus::Failed {
                 written,
                 stopped_in_step: stopped.map(|index| index + 1),
                 error: "the download task ended without a terminal result; any attempted write has an unknown outcome; connection cleanup is unconfirmed".into(),
                 hint: None,
             };
+            if let Some(on_end) = self
+                .shared
+                .on_end
+                .lock()
+                .expect("download settlement poisoned")
+                .take()
+            {
+                on_end(&failed);
+            }
+            *status = failed;
         }
     }
 
@@ -435,6 +451,14 @@ async fn run(
         }
     };
     let _ = activity.record_result(&witnessed);
+    if let Some(on_end) = shared
+        .on_end
+        .lock()
+        .expect("download settlement poisoned")
+        .take()
+    {
+        on_end(&status);
+    }
     *shared.status.lock().expect("download status poisoned") = status;
     let cleanup = tunnel.disconnect().await;
     let _ = activity.record_cleanup(cleanup.is_ok());
@@ -509,6 +533,7 @@ impl DeviceDownloadSession {
                 last_started: Mutex::new(None),
                 granted: Mutex::new(None),
                 backup_file: Mutex::new(None),
+                on_end: Mutex::new(None),
             }),
             task: Some(task),
             report: task_tests::synthetic_report(),

@@ -29,6 +29,40 @@ fragment aliases and update this index. Do not rewrite previous results.
   [operating guide](manual/user-guide/01-user-interface.md#the-navigation-pane).
   No API/domain/storage/schema/protocol change, hardware, release or deployment.
 
+- 2026-10-15 — Owner UI feedback P3 delivered in source after Alpha 11 ([goal](goals/ui-feedback-p1-p4.md),
+  [ADR-0129](adr/0129-per-part-pending-programming.md)): existing loaded flags
+  follow edits in the same undo step and server full/partial/address write
+  outcomes outside undo history. The Devices Programming column shows pending
+  Adr/App/Par/GA chips and a Pending only filter; explorer rows have a status
+  dot, Properties has undoable logged manual marks. DPT/name edits do not count.
+  Interrupted writes mark attempted parts, including uncertain writes; a
+  changed project/device cannot acquire another run's clean claim. Native
+  save/reopen/recovered undo uses the existing fields without a migration.
+  Separate self-review, nine named mutant failures, native restart/recovered
+  undo and all sixteen loaded-flag patterns are verified; the private corpus
+  passes 149/149 in 32 targets, including all 29 download HTTP cases.
+  Production attribution keeps the added chip work bounded: seventeen cached
+  presentations, mounted only on the first visible table visit and retained
+  thereafter. The controlled synthetic 5000-device all-pending comparison
+  reduced mean MainThread RunTask from 23.2 to 16.5 seconds without delaying
+  table opening; this is not a universal or whole-gate speedup claim.
+  The frozen branch gate passes all 48 stages: Rust 4545, Vitest 3580,
+  default browser 560, production browser 319 across fifteen configs and
+  repeated browser 57; all stage exits zero and all 2770 source files unchanged.
+  Native Rust opt-ins remain reported separately (204 ignored); the earlier
+  OriginalData sweep passes 149/149. Python runs 123 tests with one inherited skip.
+  Production EN/DE screenshots at 1440/400 px are visually inspected. Fresh-main
+  merge `f35d9bda` passes all 52 stages on an unchanged 2787-file manifest:
+  Rust 4553/0 (205 opt-ins ignored), Vitest 3580/259 files, default browser560,
+  fifteen production configs319, repeats57, Python148/one inherited skip and
+  OriginalData-marked ignored sweep150/150 in33 targets, network-isolated.
+  All compiler/architecture/header/anchor/ledger/corpus/docs/diff checks pass.
+  Recovered snapshot undo deliberately invalidates old clean claims
+  conservatively; additional pending parts do not prove actual device differences.
+  Runtime acceptance, not a hardware test, release or native-WebKit certification.
+  [Evidence and boundaries](evidence/p3-pending-programming-2026-10-15.json).
+  [Operating guide](manual/user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11).
+
 - 2026-10-14 — Measured web-test tooling: a maintained Linux runner
   replaces ad-hoc web wrappers, retains all default/production cases and derived
   TypeScript configs, removes three exact compiler duplicates and admits only

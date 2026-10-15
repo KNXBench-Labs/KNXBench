@@ -318,12 +318,12 @@ Sixteen KNX-flavoured titles; ten reports earn the **Golden Bus Probe**. No actu
 bus probe is shipped — this one is certified for Markdown only.
 
 <!-- HALL-OF-FAME:START -->
-| Place | Bug hunter | Issues | Replies | Resolved | XP | Rank & title | Medal |
-| ---: | --- | ---: | ---: | ---: | ---: | --- | --- |
-| 1 | [@thengsty](https://github.com/thengsty) | 20 | 13 | 19 | **303** | Datapoint Dragon Slayer | 🏅 Golden Bus Probe |
-| 2 | [@hagbardZ](https://github.com/hagbardZ) | 1 | 3 | 1 | **18** | Bus Bug Scout | — |
+| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved |
+| ---: | --- | --- | --- | ---: | ---: | ---: | ---: |
+| 1 | [@thengsty](https://github.com/thengsty) | Datapoint Dragon Slayer | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace | **303** | 20 | 13 | 19 |
+| 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 |
 
-*Snapshot: 2026-10-15T04:27:33Z. Maintainers and bots sit this one out.*
+*Snapshot: 2026-10-15T06:40:25Z. Maintainers and the scoreboard bot sit this one out.*
 <!-- HALL-OF-FAME:END -->
 
 [All ranks, scoring rules and the full honour roll](docs/community/HALL_OF_FAME.md).
